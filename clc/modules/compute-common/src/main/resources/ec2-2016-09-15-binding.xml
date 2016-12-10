@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+  -->
+<binding force-classes="true" add-constructors="true" name="ec2_amazonaws_com_doc_2016_09_15">
+  <namespace uri="http://ec2.amazonaws.com/doc/2016-09-15/" default="elements" />
+  <include path="classpath:ec2-base.xml" />
+  <include path="classpath:ec2-instances-14-05-01.xml" />
+  <include path="classpath:ec2-bundling.xml" />
+  <include path="classpath:ec2-images-15-04-15.xml" />
+  <include path="classpath:ec2-image-attr.xml" />
+  <include path="classpath:ec2-import-13-10-15.xml" />
+  <include path="classpath:ec2-export-12-05-01.xml" />
+  <include path="classpath:ec2-ips-15-04-15.xml" />
+  <include path="classpath:ec2-keypairs-10-08-31.xml" />
+  <include path="classpath:ec2-security-11-01-01.xml" />
+  <include path="classpath:ec2-zones-10-08-31.xml" />
+  <include path="classpath:ec2-regions-10-08-31.xml" />
+  <include path="classpath:ec2-ebs-volumes-14-09-01.xml" />
+  <include path="classpath:ec2-ebs-snapshots-14-05-01.xml" />
+  <include path="classpath:ec2-ebs-snapshot-attr.xml" />
+  <include path="classpath:ec2-filters-tags-10-06-15.xml" />
+  <include path="classpath:ec2-placement-10-06-15.xml" />
+  <include path="classpath:ec2-vpc-15-10-01.xml" />
+  <include path="classpath:ec2-unimplemented.xml" />
+  <include path="classpath:euca-instance-types.xml" />
+  <include path="classpath:euca-migration.xml" />
+  <include path="classpath:ec2-flow-logs.xml" />
+  <include path="classpath:ec2-id-format.xml" />
+</binding>

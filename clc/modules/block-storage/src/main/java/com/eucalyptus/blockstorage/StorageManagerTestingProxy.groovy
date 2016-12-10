@@ -21,6 +21,7 @@ package com.eucalyptus.blockstorage
 
 import com.eucalyptus.storage.common.CheckerTask
 import com.eucalyptus.util.EucalyptusCloudException
+import com.google.common.base.Function;
 import com.google.common.collect.Maps
 import edu.ucsb.eucalyptus.msgs.ComponentProperty
 import groovy.transform.CompileStatic
@@ -117,8 +118,8 @@ class StorageManagerTestingProxy implements LogicalStorageManager {
   }
 
   @Override
-  StorageResource prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB) throws EucalyptusCloudException {
-    return delegateStorageManager.prepareSnapshot(snapshotId, sizeExpected, actualSizeInMB)
+  StorageResourceWithCallback prepSnapshotForDownload(String snapshotId, int sizeExpected, long actualSizeInMB) throws EucalyptusCloudException {
+    return delegateStorageManager.prepSnapshotForDownload(snapshotId, sizeExpected, actualSizeInMB)
   }
 
   @Override
@@ -266,10 +267,11 @@ class StorageManagerTestingProxy implements LogicalStorageManager {
     delegateStorageManager.cleanSnapshot(snapshotId)
   }
 
-  public StorageResource createSnapshot(String volumeId, String snapshotId, String snapshotPointId, Boolean shouldTransferSnapshots) throws EucalyptusCloudException {
+  @Override
+  void createSnapshot(String volumeId, String snapshotId, String snapshotPointId) throws EucalyptusCloudException {
     try {
       check(snapshotId, sizeMap.get(volumeId));
-      return delegateStorageManager.createSnapshot(volumeId, snapshotId, snapshotPointId, shouldTransferSnapshots)
+      delegateStorageManager.createSnapshot(volumeId, snapshotId, snapshotPointId)
     } catch(Throwable f) {
       removeVolumeUsage(volumeId)
       throw f
@@ -279,5 +281,54 @@ class StorageManagerTestingProxy implements LogicalStorageManager {
   @Override
   List<String> prepareForTransfer(String snapshotId) throws EucalyptusCloudException {
     return delegateStorageManager.prepareForTransfer(snapshotId)
+  }
+
+  @Override
+  public boolean supportsIncrementalSnapshots() throws EucalyptusCloudException {
+    return delegateStorageManager.supportsIncrementalSnapshots()
+  }
+
+  @Override
+  public StorageResourceWithCallback prepIncrementalSnapshotForUpload(String volumeId, String snapshotId, String snapPointId, String prevSnapshotId,
+      String prevSnapPointId) throws EucalyptusCloudException {
+    try {
+      check(snapshotId, sizeMap.get(volumeId))
+      return delegateStorageManager.prepIncrementalSnapshotForUpload(volumeId, snapshotId, snapPointId, prevSnapshotId, prevSnapPointId)
+    } catch(Throwable f) {
+      removeVolumeUsage(volumeId)
+      throw f
+    }
+  }
+
+  @Override
+  public StorageResource prepSnapshotForUpload(String volumeId, String snapshotId, String snapPointId) throws EucalyptusCloudException {
+    try {
+      check(snapshotId, sizeMap.get(volumeId));
+      return delegateStorageManager.prepSnapshotForUpload(volumeId, snapshotId, snapPointId)
+    } catch(Throwable f) {
+      removeVolumeUsage(volumeId)
+      throw f
+    }
+  }
+
+  @Override
+  public StorageResourceWithCallback prepSnapshotBaseForRestore(String snapshotId, int size, String snapshotPointId)
+  throws EucalyptusCloudException {
+    return delegateStorageManager.prepSnapshotBaseForRestore(snapshotId, size, snapshotPointId)
+  }
+
+  @Override
+  public <F, T> T executeCallback(Function<F, T> callback, F input) throws EucalyptusCloudException {
+    return delegateStorageManager.executeCallback(callback, input)
+  }
+
+  @Override
+  public void restoreSnapshotDelta(String currentSnapId, String prevSnapId, String baseId, StorageResource sr) throws EucalyptusCloudException {
+    delegateStorageManager.restoreSnapshotDelta(currentSnapId, prevSnapId, baseId, sr)
+  }
+
+  @Override
+  public void completeSnapshotRestorationFromDeltas(String snapshotId) throws EucalyptusCloudException {
+    delegateStorageManager.completeSnapshotRestorationFromDeltas(snapshotId)
   }
 }

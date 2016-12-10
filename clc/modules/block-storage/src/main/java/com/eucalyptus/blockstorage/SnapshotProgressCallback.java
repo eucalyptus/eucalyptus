@@ -129,7 +129,7 @@ public class SnapshotProgressCallback {
 
   public synchronized void updateBackendProgress(final int percentComplete) {
     int progress = (int) percentComplete / 2; // halving the progress as backend stuff is one half of snapshot creation process
-    if (progress >= 50 || (progress - this.backendProgress < PROGRESS_TICK)) {
+    if (progress > 50 || (progress - this.backendProgress < PROGRESS_TICK)) {
       // Don't update. Either not enough change or snapshot is 100% complete
       return;
     } else {
@@ -175,8 +175,11 @@ public class SnapshotProgressCallback {
                   } else { // probably setting progress for the first time, go ahead and set it
                     snap.setProgress(String.valueOf(progress));
                   }
-                } else { // probably setting progress for the first time, go ahead and set it
+                } else if (!StorageProperties.Status.failed.toString().equals(snap.getStatus())) {
+                  // probably setting progress for the first time, go ahead and set it
                   snap.setProgress(String.valueOf(progress));
+                } else {
+                  // don't set the progress if the snapshot has been marked failed
                 }
               } catch (TransactionException | NoSuchElementException e) {
                 LOG.debug("Could not find the SC database entity for " + snapshot + ". Skipping progress update");

@@ -67,6 +67,7 @@ import java.util.concurrent.ExecutionException;
 
 import javax.annotation.Nullable;
 
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.ClientUnauthorizedComputeException;
@@ -194,13 +195,14 @@ public class VolumeManager {
     for ( int i = 0; i < VOL_CREATE_RETRIES; i++ ) {
       try {
         final ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( partition ) );
+        final String arn = Accounts.getAuthenticatedArn( ctx.getUser( ) );
         final UserFullName owner = ctx.getUserFullName( );
         Function<Long, Volume> allocator = new Function<Long, Volume>( ) {
 
           @Override
           public Volume apply( Long size ) {
             try {
-              return Volumes.createStorageVolume( sc, owner, snapId, Ints.checkedCast( size ), request );
+              return Volumes.createStorageVolume( sc, arn, owner, snapId, Ints.checkedCast( size ), request );
             } catch ( ExecutionException ex ) {
               throw Exceptions.toUndeclared( ex );
             }

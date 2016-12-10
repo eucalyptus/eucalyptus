@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.compute.service;
 
+import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 import static com.eucalyptus.util.Strings.append;
 import static com.eucalyptus.util.Strings.prepend;
 import java.util.ArrayList;
@@ -39,8 +40,15 @@ import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Restrictions;
 
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthContextSupplier;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.AuthQuotaException;
+import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.auth.type.RestrictedType;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
@@ -49,6 +57,10 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.*;
+import com.eucalyptus.compute.common.internal.account.IdentityIdFormat;
+import com.eucalyptus.compute.common.internal.account.IdentityIdFormat.IdResource;
+import com.eucalyptus.compute.common.internal.account.IdentityIdFormat.IdType;
+import com.eucalyptus.compute.common.internal.account.IdentityIdFormats;
 import com.eucalyptus.compute.common.internal.address.AddressI;
 import com.eucalyptus.compute.common.internal.address.AllocatedAddressEntity;
 import com.eucalyptus.compute.common.internal.blockstorage.Snapshot;
@@ -112,6 +124,7 @@ import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
@@ -146,7 +159,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessages;
 /**
  *
  */
-@SuppressWarnings( "UnusedDeclaration" )
+@SuppressWarnings( { "UnusedDeclaration", "Guava", "StaticPseudoFunctionalStyleMethod" } )
 @ComponentNamed
 public class ComputeService {
   private static Logger LOG = Logger.getLogger( ComputeService.class );
@@ -685,6 +698,18 @@ public class ComputeService {
     return request.getReply( );
   }
 
+  public GetReservedInstancesExchangeQuoteResponseType getReservedInstancesExchangeQuote(
+      final GetReservedInstancesExchangeQuoteType request
+  ) {
+    return request.getReply( );
+  }
+
+  public AcceptReservedInstancesExchangeQuoteResponseType acceptReservedInstancesExchangeQuote(
+      final AcceptReservedInstancesExchangeQuoteType request
+  ) {
+    return request.getReply( );
+  }
+
   public CancelSpotInstanceRequestsResponseType cancelSpotInstanceRequests( CancelSpotInstanceRequestsType request ) {
     return request.getReply( );
   }
@@ -726,6 +751,10 @@ public class ComputeService {
   }
 
   public RequestSpotFleetResponseType requestSpotFleet( RequestSpotFleetType request ) {
+    return request.getReply( );
+  }
+
+  public ModifySpotFleetRequestResponseType modifySpotFleet( ModifySpotFleetRequestType request ) {
     return request.getReply( );
   }
 
@@ -1224,6 +1253,21 @@ public class ComputeService {
     return reply;
   }
 
+  public ModifyVpcPeeringConnectionOptionsResponseType modifyVpcPeeringConnectionOptions(ModifyVpcPeeringConnectionOptionsType request) throws EucalyptusCloudException {
+    ModifyVpcPeeringConnectionOptionsResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public DescribeSecurityGroupReferencesResponseType describeSecurityGroupReferences(DescribeSecurityGroupReferencesType request) throws EucalyptusCloudException {
+    DescribeSecurityGroupReferencesResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public DescribeStaleSecurityGroupsResponseType describeStaleSecurityGroups(DescribeStaleSecurityGroupsType request) throws EucalyptusCloudException {
+    DescribeStaleSecurityGroupsResponseType reply = request.getReply( );
+    return reply;
+  }
+
   public DescribeVpcsResponseType describeVpcs( final DescribeVpcsType request ) throws EucalyptusCloudException {
     final DescribeVpcsResponseType reply = request.getReply( );
     describe(
@@ -1284,6 +1328,18 @@ public class ComputeService {
     return request.getReply( );
   }
 
+  public DescribeVpcClassicLinkDnsSupportResponseType describeVpcClassicLinkDnsSupport( DescribeVpcClassicLinkDnsSupportType request ) {
+    return request.getReply( );
+  }
+
+  public DisableVpcClassicLinkDnsSupportResponseType disableVpcClassicLinkDnsSupport( DisableVpcClassicLinkDnsSupportType request ) {
+    return request.getReply( );
+  }
+
+  public EnableVpcClassicLinkDnsSupportResponseType enableVpcClassicLinkDnsSupport( EnableVpcClassicLinkDnsSupportType request ) {
+    return request.getReply( );
+  }
+
   public CreateVpcEndpointResponseType createVpcEndpoint( CreateVpcEndpointType request ) {
     return request.getReply( );
   }
@@ -1318,6 +1374,85 @@ public class ComputeService {
 
   public DescribeFlowLogsResponseType describeFlowLogs( final DescribeFlowLogsType request ) {
     return request.getReply( );
+  }
+
+  public DescribeIdentityIdFormatResponseType describeIdentityIdFormat(
+      final DescribeIdentityIdFormatType request
+  ) throws EucalyptusCloudException {
+    final Context context = checkAuthorized( );
+    final DescribeIdentityIdFormatResponseType response = request.getReply( );
+    final Pair<IdType,String> identity =
+        verifyIdentity( context.getAccountNumber( ), request.getPrincipalArn( ), false );
+    final Optional<String> resource = Optional.fromNullable( verifyIdentifierResource( request.getResource( ) ) );
+    response.setStatuses( Lists.newArrayList(
+        Iterables.transform(
+            IdentityIdFormats.listIdFormatsWithDefaults(
+                context.getAccountNumber( ),
+                identity.getLeft( ),
+                identity.getRight( ),
+                resource.transform( FUtils.valueOfFunction( IdResource.class ) ) ),
+            TypeMappers.lookup( IdentityIdFormat.class, IdFormatItemType.class ) )
+    ) );
+    return response;
+  }
+
+  public ModifyIdentityIdFormatResponseType modifyIdentityIdFormat(
+      final ModifyIdentityIdFormatType request
+  ) throws EucalyptusCloudException {
+    final ModifyIdentityIdFormatResponseType response = request.getReply( );
+    final Context context = checkAuthorized( );
+    final Pair<IdType,String> identity =
+        verifyIdentity( context.getAccountNumber( ), request.getPrincipalArn( ), true );
+    final Optional<String> resource = Optional.fromNullable( verifyIdentifierResource( request.getResource( ) ) );
+    final Boolean useLongIds = request.getUseLongIds( );
+    if ( !IdentityIdFormats.saveIdFormat(
+        context.getAccountNumber( ),
+        identity.getLeft( ),
+        identity.getRight( ),
+        IdResource.valueOf( resource.get( ) ),
+        useLongIds ) ) {
+      response.markFailed( );
+    }
+    return response;
+  }
+
+  public DescribeIdFormatResponseType describeIdFormat(
+      final DescribeIdFormatType request
+  ) throws EucalyptusCloudException {
+    final Context context = checkAuthorized( );
+    final DescribeIdFormatResponseType response = request.getReply( );
+    final Pair<IdType,String> identity = getRequestIdentity( context );
+    final Optional<String> resource = Optional.fromNullable( verifyIdentifierResource( request.getResource( ) ) );
+    response.setStatuses( Lists.newArrayList(
+        Iterables.transform(
+            IdentityIdFormats.listIdFormatsWithDefaults(
+                context.getAccountNumber( ),
+                identity.getLeft( ),
+                identity.getRight( ),
+                resource.transform( FUtils.valueOfFunction( IdResource.class ) ) ),
+            TypeMappers.lookup( IdentityIdFormat.class, IdFormatItemType.class ) )
+    ) );
+    return response;
+  }
+
+  public ModifyIdFormatResponseType modifyIdFormat(
+      final ModifyIdFormatType request
+  ) throws EucalyptusCloudException {
+    final ModifyIdFormatResponseType response = request.getReply( );
+    final Context context = checkAuthorized( );
+    final Pair<IdType,String> identity = getRequestIdentity( context );
+    final Optional<String> resource = Optional.fromNullable( verifyIdentifierResource( request.getResource( ) ) );
+    final Boolean useLongIds = request.getUseLongIds( );
+    if ( !IdentityIdFormats.saveIdFormat(
+        context.getAccountNumber( ),
+        identity.getLeft( ),
+        identity.getRight( ),
+        IdResource.valueOf( resource.get( ) ),
+        useLongIds ) ) {
+      response.markFailed( );
+    }
+    return response;
+
   }
 
   public ComputeMessage proxy( final ComputeMessage request ) throws EucalyptusCloudException {
@@ -1429,6 +1564,25 @@ public class ComputeService {
         filter;
   }
 
+  private static Context checkAuthorized( ) throws EucalyptusCloudException {
+    final Context ctx = Contexts.lookup( );
+    final User requestUser = ctx.getUser( );
+    final AuthContextSupplier requestUserSupplier = ctx.getAuthContext( );
+
+    if ( !Permissions.isAuthorized(
+        PolicySpec.VENDOR_EC2,
+        "",
+        "",
+        null,
+        getIamActionByMessageType( ),
+        requestUserSupplier ) ) {
+      throw new ComputeServiceAuthorizationException(
+          "UnauthorizedOperation",
+          "You are not authorized to perform this operation." );
+    }
+    return ctx;
+  }
+
   private static boolean canModifyImage( final ImageInfo imgInfo ) {
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
@@ -1450,6 +1604,53 @@ public class ComputeService {
         item.setTagSet( tags );
       }
     }
+  }
+
+  private static Pair<IdType,String> getRequestIdentity( final Context context ) {
+    final UserPrincipal principal = context.getUser( );
+    return Accounts.isRoleIdentifier( principal.getAuthenticatedId( ) ) ?
+        Pair.pair( IdType.role, Accounts.getAuthenticatedFullName( principal ) ):
+        Pair.pair( IdType.user, Accounts.getUserFullName( principal ) );
+  }
+
+  private static Pair<IdType,String> verifyIdentity(
+      final String accountNumber,
+      final String arn,
+      final boolean checkExists
+  ) throws ComputeServiceClientException {
+    final Optional<Pair<IdType,String>> identityOption =
+        IdentityIdFormats.tryParseIdentity( accountNumber, arn ).transform( Pair.right( ) );
+    if ( !identityOption.isPresent( ) ) {
+      throw new ComputeServiceClientException(
+          "InvalidTargetArn.Unknown",
+          "Invalid TargetArn: " + arn );
+    }
+    final Pair<IdType,String> identity = identityOption.get( );
+    if ( checkExists ) {
+      try {
+        final String name = Accounts.getNameFromFullName( identity.getRight( ) );
+        switch ( identity.getLeft( ) ) {
+          case user:
+            Accounts.lookupPrincipalByAccountNumberAndUsername( accountNumber, name );
+            break;
+          case role:
+            Accounts.lookupRoleByName( accountNumber, name );
+            break;
+        }
+      } catch ( final AuthException e ) {
+        throw new ComputeServiceClientException(
+            "InvalidTargetArn.Unknown",
+            "Invalid TargetArn: " + arn );
+      }
+    }
+    return identity;
+  }
+
+  private static String verifyIdentifierResource( final String resource ) throws ComputeServiceClientException {
+    if ( resource != null && !IdentityIdFormats.isValidResource( resource ) ) {
+      throw new ComputeServiceClientException( "InvalidParameterValue", "Invalid resource type: " + resource );
+    }
+    return resource;
   }
 
   private static String imageIdentifier( final String identifier ) throws EucalyptusCloudException {

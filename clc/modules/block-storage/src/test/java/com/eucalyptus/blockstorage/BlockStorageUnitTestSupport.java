@@ -49,6 +49,7 @@ import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.storage.common.CheckerTask;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 
@@ -58,7 +59,7 @@ public class BlockStorageUnitTestSupport {
   private static Map<String, List<String>> userMap = new HashMap<>();
 
   public static void setupBlockStoragePersistenceContext() {
-    Map<String,String> props = Maps.newHashMap( );
+    Map<String, String> props = Maps.newHashMap();
     props.put("hibernate.ejb.interceptor.session_scoped", "com.eucalyptus.entities.DelegatingInterceptor");
     props.put("hibernate.show_sql", "false");
     props.put("hibernate.format_sql", "false");
@@ -72,29 +73,23 @@ public class BlockStorageUnitTestSupport {
     props.put("hibernate.dialect", "org.hibernate.dialect.DerbyDialect");
     props.put("hibernate.connection.url", "jdbc:derby:memory:test;create=true");
 
-    PersistenceContextConfiguration config = new PersistenceContextConfiguration(
-        "eucalyptus_storage",
-        ImmutableList.<Class<?>>builder( ).add( BlockStorageGlobalConfiguration.class ).add( CHAPUserInfo.class )
-            .add( DASInfo.class ).add( DirectStorageInfo.class ).add( ISCSIMetaInfo.class )
-            .add( ISCSIVolumeInfo.class ).add( SnapshotInfo.class ).add( SnapshotPart.class )
-            .add( SnapshotTransferConfiguration.class ).add( SnapshotUploadInfo.class ).add( StorageInfo.class )
-            .add( VolumeExportRecord.class ).add( VolumeInfo.class ).add( VolumeToken.class )
-            .add( SANVolumeInfo.class ).add( SANInfo.class ).build( ),
-        props
-    );
+    PersistenceContextConfiguration config = new PersistenceContextConfiguration("eucalyptus_storage",
+        ImmutableList.<Class<?>>builder().add(BlockStorageGlobalConfiguration.class).add(CHAPUserInfo.class).add(DASInfo.class)
+            .add(DirectStorageInfo.class).add(ISCSIMetaInfo.class).add(ISCSIVolumeInfo.class).add(SnapshotInfo.class).add(SnapshotPart.class)
+            .add(SnapshotTransferConfiguration.class).add(SnapshotUploadInfo.class).add(StorageInfo.class).add(VolumeExportRecord.class)
+            .add(VolumeInfo.class).add(VolumeToken.class).add(SANVolumeInfo.class).add(SANInfo.class).build(),
+        props);
 
-    PersistenceContexts.registerPersistenceContext( config );
+    PersistenceContexts.registerPersistenceContext(config);
   }
 
   public static void tearDownBlockStoragePersistenceContext() {
     PersistenceContexts.shutdown();
   }
 
-  public static void setupAuthPersistenceContext() {
-  }
+  public static void setupAuthPersistenceContext() {}
 
-  public static void tearDownAuthPersistenceContext() {
-  }
+  public static void tearDownAuthPersistenceContext() {}
 
   /**
    * Create a set of accounts and users for use in test units
@@ -103,8 +98,7 @@ public class BlockStorageUnitTestSupport {
    * @param usersPerAccount
    * @throws Exception
    */
-  public static void initializeAuth(int numAccounts, int usersPerAccount) throws Exception {
-  }
+  public static void initializeAuth(int numAccounts, int usersPerAccount) throws Exception {}
 
   public static void flushSnapshotInfos() {
     try (TransactionResource tran = Entities.transactionFor(SnapshotInfo.class)) {
@@ -295,9 +289,8 @@ public class BlockStorageUnitTestSupport {
       }
 
       @Override
-      public StorageResource createSnapshot(String volumeId, String snapshotId, String snapshotPointId, Boolean shouldTransferSnapshots)
-          throws EucalyptusCloudException {
-        return null;
+      public void createSnapshot(String volumeId, String snapshotId, String snapshotPointId) throws EucalyptusCloudException {
+
       }
 
       @Override
@@ -356,7 +349,8 @@ public class BlockStorageUnitTestSupport {
       }
 
       @Override
-      public StorageResource prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB) throws EucalyptusCloudException {
+      public StorageResourceWithCallback prepSnapshotForDownload(String snapshotId, int sizeExpected, long actualSizeInMB)
+          throws EucalyptusCloudException {
         return null;
       }
 
@@ -454,6 +448,40 @@ public class BlockStorageUnitTestSupport {
       public List<CheckerTask> getCheckers() {
         return null;
       }
+
+      @Override
+      public boolean supportsIncrementalSnapshots() throws EucalyptusCloudException {
+        return false;
+      }
+
+      @Override
+      public StorageResourceWithCallback prepIncrementalSnapshotForUpload(String volumeId, String snapshotId, String snapPointId,
+          String prevSnapshotId, String prevSnapPointId) throws EucalyptusCloudException {
+        return null;
+      }
+
+      @Override
+      public StorageResource prepSnapshotForUpload(String volumeId, String snapshotId, String snapPointId) throws EucalyptusCloudException {
+        return null;
+      }
+
+      @Override
+      public StorageResourceWithCallback prepSnapshotBaseForRestore(String snapshotId, int size, String snapshotPointId)
+          throws EucalyptusCloudException {
+        return null;
+      }
+
+      @Override
+      public void restoreSnapshotDelta(String currentSnapId, String prevSnapId, String baseId, StorageResource sr) throws EucalyptusCloudException {}
+
+      @Override
+      public void completeSnapshotRestorationFromDeltas(String snapshotId) throws EucalyptusCloudException {}
+
+      @Override
+      public <F, T> T executeCallback(Function<F, T> callback, F input) throws EucalyptusCloudException {
+        return null;
+      }
+
     };
   }
 

@@ -44,6 +44,7 @@ import com.eucalyptus.loadbalancing.*;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerVersionException;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
 import com.eucalyptus.loadbalancing.workflow.InstanceStatusWorkflowImpl;
+import com.eucalyptus.loadbalancing.workflow.LoadBalancingWorkflowException;
 import com.eucalyptus.system.Threads;
 import org.apache.log4j.Logger;
 
@@ -434,11 +435,7 @@ public class LoadBalancingService {
 
     Entities.evictCache( LoadBalancer.class );
     try {
-      if(! LoadBalancingWorkflows.createLoadBalancerSync(ctx.getAccountNumber(), lbName, Lists.newArrayList(zones))) {
-        rollback.apply(lbName);
-        throw new InternalFailure400Exception("Workflow for creating loadbalancer has failed");
-      }
-
+      LoadBalancingWorkflows.createLoadBalancerSync(ctx.getAccountNumber(), lbName, Lists.newArrayList(zones));
       if( !listeners.isEmpty( ) ){
         LoadBalancers.createLoadbalancerListener(lbName,  ctx, Lists.newArrayList(listeners));
         if (! LoadBalancingWorkflows.createListenersSync(ctx.getAccountNumber(), lbName, Lists.newArrayList(listeners))) {
@@ -455,7 +452,22 @@ public class LoadBalancingService {
       LoadBalancingWorkflows.runInstanceStatusPolling(ctx.getAccountNumber(), lbName);
       LoadBalancingWorkflows.runCloudWatchPutMetric(ctx.getAccountNumber(), lbName);
       LoadBalancingWorkflows.runUpdateLoadBalancer(ctx.getAccountNumber(), lbName);
-    }catch(final Exception e) {
+    } catch(final LoadBalancingWorkflowException ex) {
+      rollback.apply(lbName);
+      final int statusCode = ex.getStatusCode();
+      final String reason = ex.getMessage();
+      if (statusCode == 400) {
+        final String errorMessage = reason!=null ? "Failed to create loadbalancer: " + reason : "Failed to create loadbalancer: internal error";
+        throw new InternalFailure400Exception(errorMessage);
+      } else if (reason != null) {
+        throw new InternalFailureException("Failed to create loadbalancer: " + reason);
+      } else {
+        throw new InternalFailureException("Failed to create loadbalancer: internal error");
+      }
+    } catch(final LoadBalancingException ex) {
+      rollback.apply(lbName);
+      throw ex;
+    } catch(final Exception e) {
       rollback.apply(lbName);
       LOG.error( "Error creating the loadbalancer: " + e.getMessage(), e );
       final String reason = e.getCause()!=null && e.getCause().getMessage()!=null ? e.getMessage() : "internal error";
@@ -762,16 +774,16 @@ public class LoadBalancingService {
             }
           } ) );
 
-          if (!LoadBalancingWorkflows.deleteListenersSync(ctx.getAccountNumber(), candidateLB,
+          if (!LoadBalancingWorkflows.deleteListenersSync(lb.getOwnerAccountNumber(), lbToDelete,
               Lists.newArrayList(ports))) {
             throw new Exception("Workflow for deleting listeners has failed");
-          } else if(!LoadBalancingWorkflows.deleteLoadBalancerSync(ctx.getAccountNumber(), candidateLB)) {
+          } else if(!LoadBalancingWorkflows.deleteLoadBalancerSync(lb.getOwnerAccountNumber(), lbToDelete)) {
             throw new Exception("Workflow for deleting loadbalancer has failed");
           } else {
             /// perhaps these workflows should be stopped in the clean-up workflow
-            LoadBalancingWorkflows.cancelInstanceStatusPolling(ctx.getAccountNumber(), candidateLB);
-            LoadBalancingWorkflows.cancelCloudWatchPutMetric(ctx.getAccountNumber(), candidateLB);
-            LoadBalancingWorkflows.cancelUpdateLoadBalancer(ctx.getAccountNumber(), candidateLB);
+            LoadBalancingWorkflows.cancelInstanceStatusPolling(lb.getOwnerAccountNumber(), lbToDelete);
+            LoadBalancingWorkflows.cancelCloudWatchPutMetric(lb.getOwnerAccountNumber(), lbToDelete);
+            LoadBalancingWorkflows.cancelUpdateLoadBalancer(lb.getOwnerAccountNumber(), lbToDelete);
             LoadBalancers.deleteLoadbalancer(UserFullName.getInstanceForAccount(lb.getOwnerAccountNumber(),lb.getOwnerUserId()), lbToDelete);
           }
         }
@@ -2375,6 +2387,14 @@ public class LoadBalancingService {
     final ModifyLoadBalancerAttributesResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final String accountNumber = ctx.getAccount( ).getAccountNumber( );
+
+    try {
+      LoadBalancers.getLoadbalancer(accountNumber, request.getLoadBalancerName());
+    } catch (final NoSuchElementException ex) {
+      throw new AccessPointNotFoundException( );
+    } catch (final Exception ex) {
+      throw new InternalFailure400Exception("Failed to modify attributes: unable to find the loadbalancer");
+    }
 
     final Function<String, LoadBalancerAttributes> modifyAttributes = new Function<String, LoadBalancerAttributes>( ) {
       @Override

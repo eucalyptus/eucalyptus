@@ -390,6 +390,59 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
     }, parentPoolName);
   }
 
+  @Override
+  public String deleteAllSnapshots(final String imageName, final String poolName, final String snapName) {
+    LOG.debug("Delete ceph-rbd snapshots on imageName=" + imageName + ", poolName=" + poolName);
+    return executeRbdOpInPool(new Function<CephRbdConnectionManager, String>() {
+
+      @Override
+      public String apply(@Nonnull CephRbdConnectionManager arg0) {
+        RbdImage image = null;
+        try {
+          LOG.trace("Opening image=" + imageName + ", pool=" + arg0.getPool() + ", mode=read-write");
+          image = arg0.getRbd().open(imageName);
+
+          LOG.trace("Listing snapshots of image=" + imageName + ", pool=" + arg0.getPool());
+          List<RbdSnapInfo> snapList = image.snapList();
+
+          if (snapList != null && !snapList.isEmpty()) {
+            for (RbdSnapInfo snap : snapList) {
+              if (image.snapIsProtected(snap.name)) {
+                LOG.trace("Unprotecting snapshot=" + snap.name + ", image=" + imageName + ", pool=" + arg0.getPool());
+                image.snapUnprotect(snap.name);
+              }
+              LOG.debug("Removing snapshot=" + snap.name + ", image=" + imageName + ", pool=" + arg0.getPool());
+              image.snapRemove(snap.name);
+            }
+          }
+
+          if (snapName != null && !snapName.isEmpty()) {
+            LOG.debug("Creating snapshot=" + snapName + ", image=" + poolName + ", pool=" + arg0.getPool());
+            image.snapCreate(snapName);
+            LOG.debug("Protecting snapshot=" + snapName + ", image=" + poolName + ", pool=" + arg0.getPool());
+            image.snapProtect(snapName);
+
+            return arg0.getPool() + CephRbdInfo.POOL_IMAGE_DELIMITER + imageName + CephRbdInfo.IMAGE_SNAPSHOT_DELIMITER + snapName;
+          } else {
+            return null;
+          }
+        } catch (Exception e) {
+          LOG.warn("Caught error while deleting snapshots on image " + imageName + ": " + e.getMessage());
+          throw new EucalyptusCephException("Caught error while deleting snapshots on image " + imageName, e);
+        } finally {
+          if (image != null) {
+            try {
+              LOG.trace("Closing image=" + imageName + ", pool=" + arg0.getPool());
+              arg0.getRbd().close(image);
+            } catch (Exception e) {
+              LOG.debug("Caught exception closing image " + imageName, e);
+            }
+          }
+        }
+      }
+    }, poolName);
+  }
+
   /**
    * <p>
    * In its current state, following is the order of steps. Please document if any of the steps change

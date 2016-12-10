@@ -24,9 +24,11 @@ import com.eucalyptus.cloudformation.CloudFormationException
 import com.eucalyptus.cloudformation.ValidationErrorException
 import com.eucalyptus.cloudformation.resources.ResourceInfo
 import com.eucalyptus.cloudformation.resources.annotations.AttributeJson
+import com.fasterxml.jackson.databind.JsonNode
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import groovy.transform.ToString
+import static com.eucalyptus.cloudformation.template.TemplateParser.Capabilities;
 
 @ToString(includeNames=true)
 public class AWSAutoScalingAutoScalingGroupResourceInfo extends ResourceInfo {
@@ -103,9 +105,9 @@ public class AWSCloudFormationStackResourceInfo extends ResourceInfo {
     return copy;
   }
   @Override
-  public Collection<String> getRequiredCapabilities() {
+  public Collection<String> getRequiredCapabilities(JsonNode propertiesJson) {
     ArrayList<String> capabilities = new ArrayList<String>();
-    capabilities.add("CAPABILITY_IAM");
+    capabilities.add(Capabilities.CAPABILITY_IAM.toString());
     return capabilities;
   }
 
@@ -441,9 +443,9 @@ public class AWSIAMAccessKeyResourceInfo extends ResourceInfo {
     setType("AWS::IAM::AccessKey");
   }
   @Override
-  public Collection<String> getRequiredCapabilities() {
+  public Collection<String> getRequiredCapabilities(JsonNode propertiesJson) {
     ArrayList<String> capabilities = new ArrayList<String>();
-    capabilities.add("CAPABILITY_IAM");
+    capabilities.add(Capabilities.CAPABILITY_IAM.toString());
     return capabilities;
   }
 }
@@ -457,9 +459,14 @@ public class AWSIAMGroupResourceInfo extends ResourceInfo {
     setType("AWS::IAM::Group");
   }
   @Override
-  public Collection<String> getRequiredCapabilities() {
+  public Collection<String> getRequiredCapabilities(JsonNode propertiesJson) {
     ArrayList<String> capabilities = new ArrayList<String>();
-    capabilities.add("CAPABILITY_IAM");
+    // Hack....Really didn't want to have to depend on named properties
+    if (propertiesJson != null && propertiesJson.isObject() && propertiesJson.has("GroupName")) {
+      capabilities.add(Capabilities.CAPABILITY_NAMED_IAM.toString());
+    } else {
+      capabilities.add(Capabilities.CAPABILITY_IAM.toString());
+    }
     return capabilities;
   }
 }
@@ -473,9 +480,9 @@ public class AWSIAMInstanceProfileResourceInfo extends ResourceInfo {
     setType("AWS::IAM::InstanceProfile");
   }
   @Override
-  public Collection<String> getRequiredCapabilities() {
+  public Collection<String> getRequiredCapabilities(JsonNode propertiesJson) {
     ArrayList<String> capabilities = new ArrayList<String>();
-    capabilities.add("CAPABILITY_IAM");
+    capabilities.add(Capabilities.CAPABILITY_IAM.toString());
     return capabilities;
   }
 }
@@ -487,9 +494,9 @@ public class AWSIAMPolicyResourceInfo extends ResourceInfo {
     setType("AWS::IAM::Policy");
   }
   @Override
-  public Collection<String> getRequiredCapabilities() {
+  public Collection<String> getRequiredCapabilities(JsonNode propertiesJson) {
     ArrayList<String> capabilities = new ArrayList<String>();
-    capabilities.add("CAPABILITY_IAM");
+    capabilities.add(Capabilities.CAPABILITY_IAM.toString());
     return capabilities;
   }
 }
@@ -503,9 +510,14 @@ public class AWSIAMRoleResourceInfo extends ResourceInfo {
     setType("AWS::IAM::Role");
   }
   @Override
-  public Collection<String> getRequiredCapabilities() {
+  public Collection<String> getRequiredCapabilities(JsonNode propertiesJson) {
     ArrayList<String> capabilities = new ArrayList<String>();
-    capabilities.add("CAPABILITY_IAM");
+    // Hack....Really didn't want to have to depend on named properties
+    if (propertiesJson != null && propertiesJson.isObject() && propertiesJson.has("RoleName")) {
+      capabilities.add(Capabilities.CAPABILITY_NAMED_IAM.toString());
+    } else {
+      capabilities.add(Capabilities.CAPABILITY_IAM.toString());
+    }
     return capabilities;
   }
 }
@@ -519,9 +531,14 @@ public class AWSIAMUserResourceInfo extends ResourceInfo {
     setType("AWS::IAM::User");
   }
   @Override
-  public Collection<String> getRequiredCapabilities() {
+  public Collection<String> getRequiredCapabilities(JsonNode propertiesJson) {
     ArrayList<String> capabilities = new ArrayList<String>();
-    capabilities.add("CAPABILITY_IAM");
+    // Hack....Really didn't want to have to depend on named properties
+    if (propertiesJson != null && propertiesJson.isObject() && propertiesJson.has("UserName")) {
+      capabilities.add(Capabilities.CAPABILITY_NAMED_IAM.toString());
+    } else {
+      capabilities.add(Capabilities.CAPABILITY_IAM.toString());
+    }
     return capabilities;
   }
 }
@@ -534,9 +551,9 @@ public class AWSIAMUserToGroupAdditionResourceInfo extends ResourceInfo {
   }
 
   @Override
-  public Collection<String> getRequiredCapabilities() {
+  public Collection<String> getRequiredCapabilities(JsonNode propertiesJson) {
     ArrayList<String> capabilities = new ArrayList<String>();
-    capabilities.add("CAPABILITY_IAM");
+    capabilities.add(Capabilities.CAPABILITY_IAM.toString());
     return capabilities;
   }
 }

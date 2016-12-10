@@ -67,6 +67,7 @@ import java.util.List;
 
 import com.eucalyptus.storage.common.CheckerTask;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.base.Function;
 
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 
@@ -95,15 +96,14 @@ public interface LogicalStorageManager {
   /**
    * If snapshotPointId == null, then create full snapshot, if != null then use snapPointId as starting point and complete snapshot creation
    * 
+   * TODO use another method to check for snapshot completion
+   * 
    * @param volumeId
    * @param snapshotId
    * @param snapshotPointId - The opaque id used to identify a snap point on the given backend. This is backend-specific and not universal.
-   * @param shouldTransferSnapshots
-   * @return A subclass of StorageResource - Wrapper around, file, block or other types of storage resources
    * @throws EucalyptusCloudException
    */
-  public StorageResource createSnapshot(String volumeId, String snapshotId, String snapshotPointId, Boolean shouldTransferSnapshots)
-      throws EucalyptusCloudException;
+  public void createSnapshot(String volumeId, String snapshotId, String snapshotPointId) throws EucalyptusCloudException;
 
   public List<String> prepareForTransfer(String snapshotId) throws EucalyptusCloudException;
 
@@ -134,8 +134,6 @@ public interface LogicalStorageManager {
   public int getSnapshotSize(String snapshotId) throws EucalyptusCloudException;
 
   public void finishVolume(String snapshotId) throws EucalyptusCloudException;
-
-  public StorageResource prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB) throws EucalyptusCloudException;
 
   public ArrayList<ComponentProperty> getStorageProps();
 
@@ -214,4 +212,28 @@ public interface LogicalStorageManager {
   public void checkVolume(String volumeId) throws EucalyptusCloudException;
 
   public List<CheckerTask> getCheckers();
+
+  /**
+   * 
+   * @return
+   * @throws EucalyptusCloudException
+   */
+  public boolean supportsIncrementalSnapshots() throws EucalyptusCloudException;
+
+  public StorageResourceWithCallback prepIncrementalSnapshotForUpload(String volumeId, String snapshotId, String snapPointId, String prevSnapshotId,
+      String prevSnapPointId) throws EucalyptusCloudException;
+
+  public StorageResource prepSnapshotForUpload(String volumeId, String snapshotId, String snapPointId) throws EucalyptusCloudException;
+
+  public StorageResourceWithCallback prepSnapshotForDownload(String snapshotId, int sizeExpected, long actualSizeInMB)
+      throws EucalyptusCloudException;
+
+  public StorageResourceWithCallback prepSnapshotBaseForRestore(String snapshotId, int size, String snapshotPointId) throws EucalyptusCloudException;
+
+  public void restoreSnapshotDelta(String currentSnapId, String prevSnapId, String baseId, StorageResource sr) throws EucalyptusCloudException;
+
+  public void completeSnapshotRestorationFromDeltas(String snapshotId) throws EucalyptusCloudException;
+
+  public <F, T> T executeCallback(Function<F, T> callback, F input) throws EucalyptusCloudException;
+
 }

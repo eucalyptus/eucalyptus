@@ -74,6 +74,7 @@ import org.hibernate.annotations.Parent;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.upgrade.Upgrades;
+import com.eucalyptus.util.Strings;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import groovy.sql.Sql;
@@ -202,7 +203,7 @@ public class VmBundleTask {
   }
 
   public String getBundleId( ) {
-    return getInstanceId( ).replaceFirst( "i-", "bun-" );
+    return Strings.truncate( getInstanceId( ), 10 ).replaceFirst( "i-", "bun-" );
   }
   
   public BundleState getState( ) {

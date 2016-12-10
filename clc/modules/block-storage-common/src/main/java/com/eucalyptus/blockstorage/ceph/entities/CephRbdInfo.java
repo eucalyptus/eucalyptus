@@ -80,6 +80,7 @@ import com.eucalyptus.configurable.ConfigurableIdentifier;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Transactions;
+import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 
 @Entity
@@ -95,6 +96,8 @@ public class CephRbdInfo extends AbstractPersistent {
   public static final String IMAGE_SNAPSHOT_DELIMITER = "@";
   public static final String SNAPSHOT_ON_PREFIX = "sp-on-";
   public static final String SNAPSHOT_FOR_PREFIX = "sp-for-";
+  public static final Splitter POOL_IMAGE_SPLITTER = Splitter.on(POOL_IMAGE_DELIMITER).trimResults().omitEmptyStrings();
+  public static final Splitter IMAGE_SNAPSHOT_SPLITTER = Splitter.on(IMAGE_SNAPSHOT_DELIMITER).trimResults().omitEmptyStrings();
 
   private static final String DEFAULT_CEPH_USER = "eucalyptus";
   private static final String DEFAULT_CEPH_KEYRING_FILE = "/etc/ceph/ceph.client.eucalyptus.keyring";

@@ -140,7 +140,7 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
       String remoteHostOrInstanceId = remoteAddr.getAddress( ).getHostAddress( );
       if ( "127.0.0.1".equals( remoteHostOrInstanceId ) &&
           request.containsHeader( INSTANCE_ID_HEADER ) &&
-          request.getHeader( INSTANCE_ID_HEADER ).matches( "i-[0-9a-fA-F]{8}" ) ) {
+          request.getHeader( INSTANCE_ID_HEADER ).matches( "i-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?" ) ) {
         remoteHostOrInstanceId = request.getHeader( INSTANCE_ID_HEADER );
       }
       final String newUri;

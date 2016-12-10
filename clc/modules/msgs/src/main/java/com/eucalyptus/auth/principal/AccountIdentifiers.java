@@ -40,7 +40,7 @@ public interface AccountIdentifiers {
   String SYSTEM_ACCOUNT = "eucalyptus";
   String SYSTEM_ACCOUNT_PREFIX = "(eucalyptus)";
   Long SYSTEM_ACCOUNT_ID = 0l;
-  String SYSTEM_CANONICAL_ID = ""; // Should never be used as a lookup key;
+  String SYSTEM_CANONICAL_ID = "0"; // Should never be used as a lookup key;
   
   //EUCA-9376 - Workaround to avoid multiple admin users in the blockstorage account due to EUCA-9635
   String BLOCKSTORAGE_SYSTEM_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "blockstorage";

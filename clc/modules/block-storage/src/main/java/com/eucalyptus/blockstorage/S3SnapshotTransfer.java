@@ -267,6 +267,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
     try {
       // Get the uncompressed file size for uploading as metadata
       Long uncompressedSize = storageResource.getSize();
+      LOG.debug("Uncompressed size of content to be uploaded for " + snapshotId + ": " + uncompressedSize + " bytes");
 
       // Setup the snapshot and part entities.
       snapUploadInfo = SnapshotUploadInfo.create(snapshotId, bucketName, keyName);

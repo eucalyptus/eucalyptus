@@ -74,12 +74,18 @@
 #define MIDO_HOST_INTERFACE_ALL                0xFFFFFFFF
 
 #define MIDONAME_LIST_CAPACITY_STEP            1000
-#define MIDONAME_LIST_RELEASES_B4INVALIDATE    1000
+#define MIDONAME_LIST_RELEASES_B4INVALIDATE    36000
 
 #define MIDONET_API_RELOAD_THREADS             6
 #define MIDONET_API_USE_THREADS_THRESHOLD      100
 
 #define MIDO_CACHE_THREAD_NAME_LEN             8
+
+#define MIDONET_API_BASE_URL_8080              "http://127.0.0.1:8080/midonet-api"
+#define MIDONET_API_BASE_URL_8181              "http://127.0.0.1:8181/midonet-api"
+
+#define MIDONET_API_V19                        "v1.9"
+#define MIDONET_API_V50                        "v5.0"
 
 #define APPLICATION_JSON_V5                               "application/vnd.org.midonet.Application-v5+json"
 #define APPLICATION_HOST_INTERFACE_PORT_V1                "application/vnd.org.midonet.HostInterfacePort-v1+json"
@@ -247,6 +253,7 @@ typedef struct midoname_rule_extras_t {
 } midoname_rule_extras;
 
 typedef struct midoname_port_extras_t {
+    char *type;
     char *hostid;
     char *peerid;
     char *ifname;
@@ -435,6 +442,8 @@ extern int http_posts;
 extern int http_puts;
 extern int http_deletes;
 
+extern char midonet_api_version[16];
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                             EXPORTED PROTOTYPES                            |
@@ -471,6 +480,8 @@ int mido_cmp_midoname(midoname *a, midoname *b);
 int mido_merge_midoname_lists(midoname *lista, int lista_max, midoname *listb, int listb_max, midoname **addmidos, int addmidos_max, midoname **delmidos, int delmidos_max);
 
 int mido_check_state(void);
+char *mido_get_apiuribase(void);
+void mido_set_apiuribase(const char *apiuribase);
 int mido_initialize_apiuribase(void);
 
 int mido_get_tunnelzones(char *tenant, midoname ***outnames, int *outnames_max);
@@ -498,9 +509,15 @@ int mido_create_route(midonet_api_router *rt, midoname *router, midoname *rport,
 int mido_delete_route(midonet_api_router *router, midoname *name);
 int mido_get_routes(midoname *router, midoname ***outnames, int *outnames_max);
 
+int mido_create_bgp(midoname *dev, u32 localAS, u32 peerAS, char *peerAddr, midoname **outname);
+int mido_create_bgp_v1(midoname *port, u32 localAS, u32 peerAS, char *peerAddr, midoname **outname);
+int mido_create_bgp_v5(midoname *router, u32 localAS, u32 peerAS, char *peerAddr, midoname **outname);
 int mido_get_bgps(midoname *dev, midoname ***outnames, int *outnames_max);
 int mido_get_bgps_v1(midoname *port, midoname ***outnames, int *outnames_max);
 int mido_get_bgps_v5(midoname *router, midoname ***outnames, int *outnames_max);
+int mido_create_bgp_route(midoname *dev, char *nwPrefix, char *prefixLength, midoname **outname);
+int mido_create_bgp_route_v1(midoname *bgp, char *nwPrefix, char *prefixLength, midoname **outname);
+int mido_create_bgp_route_v5(midoname *router, char *nwPrefix, char *prefixLength, midoname **outname);
 int mido_get_bgp_routes(midoname *dev, midoname ***outnames, int *outnames_max);
 int mido_get_bgp_routes_v1(midoname *bgp, midoname ***outnames, int *outnames_max);
 int mido_get_bgp_routes_v5(midoname *router, midoname ***outnames, int *outnames_max);
@@ -552,6 +569,7 @@ int mido_unlink_host_port(midoname *host, midoname *port);
 
 int mido_get_hosts(midoname ***outnames, int *outnames_max);
 midonet_api_host *mido_get_host(char *name, char *uuid);
+midonet_api_host *mido_get_host_byname(char *hostname);
 midonet_api_host *mido_get_host_byip(char *ip);
 int mido_get_interfaces(midoname *host, u32 iftype, u32 ifendpoint, midoname **outnames, int *outnames_max);
 int mido_get_addresses(midoname *host, u32 **outnames, int *outnames_max);
@@ -605,7 +623,9 @@ char *mido_jsonize(char *tenant, va_list * al);
 
 void midonet_api_init(void);
 void midonet_api_cleanup(void);
-void midonet_api_get_version(char **version);
+char *midonet_api_get_version(char **version);
+
+char *midonet_api_get_uribase(char **uribase);
 int mido_libcurl_cleanup_handles(mido_libcurl_handles *handles);
 int mido_libcurl_init(mido_libcurl_handles *handles);
 int mido_libcurl_cleanup(mido_libcurl_handles *handles);
@@ -626,10 +646,11 @@ int midoname_list_get_midonames(midoname_list *list, midoname ***outnames, int m
 
 midonet_api_cache *midonet_api_cache_init(void);
 midoname_list *midonet_api_cache_midos_init(void);
+midoname_list *midonet_api_cache_midos_get(void);
 
 midonet_api_cache *midonet_api_cache_get(void);
 int midonet_api_cache_check(void);
-int midonet_api_cache_flush(void);
+int midonet_api_cache_flush(midonet_api_cache *cache);
 int midonet_api_cache_populate(void);
 int midonet_api_cache_refresh(void);
 int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode);
@@ -643,8 +664,11 @@ int midonet_api_cache_refresh_ipagips(midonet_api_cache *cache, int start, int e
 void *midonet_api_cache_refresh_objects_worker_thread(void *worker_param);
 void *midonet_api_cache_refresh_objects_main_thread(void *main_params);
 
+int midonet_api_cache_refresh_tunnelzones(midonet_api_cache *cache);
 int midonet_api_cache_refresh_hosts(midonet_api_cache *cache);
 int midonet_api_cache_iphostmap_populate(midonet_api_cache *cache);
+int midonet_api_cache_get_nhosts(midonet_api_cache *cache);
+int midonet_api_cache_get_ntzhosts(midonet_api_cache *cache);
 
 midonet_api_tunnelzone *midonet_api_cache_lookup_tunnelzone(midoname *tzone);
 midonet_api_host *midonet_api_cache_lookup_host(midoname *name);
@@ -742,5 +766,33 @@ int compare_midonet_api_chain(const void *p1, const void *p2);
  |                          STATIC INLINE IMPLEMENTATION                      |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             INLINE IMPLEMENTATION                          |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/**
+ * Check if MidoNet API matches version "v1.9"
+ * @return TRUE if detected MidoNet API version is "v1.9". FALSE otherwise.
+ */
+inline boolean is_midonet_api_v1(void) {
+    if (!strcmp(midonet_api_version, MIDONET_API_V19)) {
+        return (TRUE);
+    }
+    return (FALSE);
+}
+
+/**
+ * Check if MidoNet API matches version "v5.0"
+ * @return TRUE if detected MidoNet API version is "v5.0". FALSE otherwise.
+ */
+inline boolean is_midonet_api_v5(void) {
+    if (!strcmp(midonet_api_version, MIDONET_API_V50)) {
+        return (TRUE);
+    }
+    return (FALSE);
+}
 
 #endif /* ! _INCLUDE_MIDONET_API_H_ */

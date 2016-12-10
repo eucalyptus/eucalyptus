@@ -2338,7 +2338,7 @@ public class ActivityManager {
       final Optional<AsyncWebServiceError> errorOptional = AsyncExceptions.asWebServiceError( throwable );
       if ( errorOptional.isPresent( ) && "InvalidInstanceID.NotFound".equals( errorOptional.get( ).getCode( ) ) ) {
         final List<String> healthyInstanceIds = Lists.newArrayList( instanceIds );
-        final Matcher matcher = Pattern.compile( "i-[0-9A-Fa-f]{8}").matcher( errorOptional.get( ).getMessage( ) );
+        final Matcher matcher = Pattern.compile( "i-[0-9A-Fa-f]{8}(?:[0-9a-fA-F]{9})?").matcher( errorOptional.get( ).getMessage( ) );
         while ( matcher.find( ) ) {
           healthyInstanceIds.remove( matcher.group( ) );
         }

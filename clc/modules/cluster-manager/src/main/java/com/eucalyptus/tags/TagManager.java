@@ -226,7 +226,7 @@ public class TagManager {
       public CloudMetadata apply( final String resourceId ) {
         final TagSupport tagSupport = TagSupport.fromIdentifier( resourceId );
         try {
-          if ( tagSupport != null && resourceId.matches( "[a-z]{1,32}-[0-9a-fA-F]{8}" )) {
+          if ( tagSupport != null && resourceId.matches( "[a-z]{1,32}-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?" )) {
             return tagSupport.lookup( ResourceIdentifiers.tryNormalize( ).apply( resourceId ) );
           } else {
             throw Exceptions.toUndeclared( new ClientComputeException(

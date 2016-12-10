@@ -66,6 +66,7 @@ import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.OSGChannelWriter;
 import com.eucalyptus.objectstorage.OSGMessageResponse;
+import com.eucalyptus.objectstorage.exceptions.s3.MissingContentLengthException;
 import com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication;
 import com.eucalyptus.objectstorage.pipeline.handlers.AwsChunkStream.StreamingHttpRequest;
 import com.google.common.base.Strings;
@@ -82,7 +83,7 @@ import static com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication.AWS_
  * Aggregates streaming and chunked data for V4 signed request authentication.
  */
 public class ObjectStorageAuthenticationAggregator extends HttpChunkAggregator {
-  private static final String STREAMING_CONTENT = "STREAMING-AWS4-HMAC-SHA256-PAYLOAD";
+
 
   // Http chunking required
   private boolean httpChunked;
@@ -104,7 +105,7 @@ public class ObjectStorageAuthenticationAggregator extends HttpChunkAggregator {
       String authHeader = request.getHeader(SecurityParameter.Authorization.toString());
 
       // Handle V4 streaming requests
-      if (STREAMING_CONTENT.equals(request.getHeader(AWS_CONTENT_SHA_HEADER))) {
+      if (S3V4Authentication.STREAMING_PAYLOAD.equals(request.getHeader(AWS_CONTENT_SHA_HEADER))) {
         initialRequest = request;
         awsChunkStream = new AwsChunkStream();
         ctx.sendUpstream(event);
@@ -127,13 +128,12 @@ public class ObjectStorageAuthenticationAggregator extends HttpChunkAggregator {
         StreamingHttpRequest streamingRequest;
         if (!chunk.isLast()) {
           streamingRequest = awsChunkStream.append(chunk);
+          if (streamingRequest != null) {
+            streamingRequest.setInitialRequest(initialRequest);
+            ctx.sendUpstream(new UpstreamMessageEvent(ctx.getChannel(), streamingRequest, event.getRemoteAddress()));
+          }
         } else {
-          streamingRequest = awsChunkStream.currentRequest;
-        }
-
-        if (streamingRequest != null) {
-          streamingRequest.setInitialRequest(initialRequest);
-          ctx.sendUpstream(new UpstreamMessageEvent(ctx.getChannel(), streamingRequest, event.getRemoteAddress()));
+          ctx.sendUpstream(event);
         }
 
         return;

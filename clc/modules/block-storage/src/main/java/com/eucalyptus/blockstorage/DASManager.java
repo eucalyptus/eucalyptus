@@ -108,6 +108,8 @@ import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.common.CheckerTask;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Function;
 
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.SystemUtil;
@@ -127,6 +129,7 @@ public class DASManager implements LogicalStorageManager {
   private static String volumeGroup;
   protected ConcurrentHashMap<String, VolumeOpMonitor> volumeOps;
 
+  @Override
   public void checkPreconditions() throws EucalyptusCloudException {
     // check if binaries exist, commands can be executed, etc.
     if (!new File(EUCA_ROOT_WRAPPER).exists()) {
@@ -250,6 +253,7 @@ public class DASManager implements LogicalStorageManager {
     return createFile(fileName, size);
   }
 
+  @Override
   public void initialize() throws EucalyptusCloudException {
     if (!initialized) {
       // DO NOT WANT!
@@ -259,6 +263,7 @@ public class DASManager implements LogicalStorageManager {
     }
   }
 
+  @Override
   public void configure() throws EucalyptusCloudException {
     exportManager.configure();
     // Initialize StorageInfo, DirectStorageInfo and DASInfo entities
@@ -361,6 +366,7 @@ public class DASManager implements LogicalStorageManager {
     }
   }
 
+  @Override
   public void createVolume(String volumeId, int size) throws EucalyptusCloudException {
     updateVolumeGroup();
     File volumeDir = new File(DirectStorageInfo.getStorageInfo().getVolumesDir());
@@ -393,13 +399,14 @@ public class DASManager implements LogicalStorageManager {
     }
   }
 
+  @Override
   public int createVolume(String volumeId, String snapshotId, int size) throws EucalyptusCloudException {
     updateVolumeGroup();
     try (VolumeMetadataManager volumeManager = new VolumeMetadataManager()) {
       LVMVolumeInfo foundSnapshotInfo = volumeManager.getVolumeInfo(snapshotId);
       if (foundSnapshotInfo != null) {
         String status = foundSnapshotInfo.getStatus();
-        if (status.equals(StorageProperties.Status.available.toString())) {
+        if (StorageProperties.Status.available.toString().equals(status)) {
           String lvName = generateLVName(volumeId); // "lv-" + Hashes.getRandom(4);
           LVMVolumeInfo lvmVolumeInfo = volumeManager.getVolumeInfo();
           String snapId = foundSnapshotInfo.getVolumeId();
@@ -407,7 +414,7 @@ public class DASManager implements LogicalStorageManager {
           volumeManager.finish();
           try {
             File snapshotFile = new File(DirectStorageInfo.getStorageInfo().getVolumesDir() + PATH_SEPARATOR + snapId);
-            assert(snapshotFile.exists());
+            assert (snapshotFile.exists());
             long absoluteSize;
             if (size <= 0 || size == foundSnapshotInfo.getSize()) {
               // size = (int)(snapshotFile.length() / StorageProperties.GB);
@@ -435,6 +442,9 @@ public class DASManager implements LogicalStorageManager {
             LOG.error(error);
             throw new EucalyptusCloudException(error);
           }
+        } else {
+          throw new EucalyptusCloudException(
+              "Cannot create volume " + volumeId + " from snapshot " + snapshotId + " since snapshot status is " + status);
         }
       } else {
         throw new EucalyptusCloudException("Unable to find snapshot: " + snapshotId);
@@ -443,6 +453,7 @@ public class DASManager implements LogicalStorageManager {
     }
   }
 
+  @Override
   public void cloneVolume(String volumeId, String parentVolumeId) throws EucalyptusCloudException {
     updateVolumeGroup();
     try (VolumeMetadataManager volumeManager = new VolumeMetadataManager()) {
@@ -456,7 +467,7 @@ public class DASManager implements LogicalStorageManager {
         volumeManager.finish();
         try {
           File parentVolumeFile = new File(DirectStorageInfo.getStorageInfo().getVolumesDir() + PATH_SEPARATOR + parentVolumeId);
-          assert(parentVolumeFile.exists());
+          assert (parentVolumeFile.exists());
           long absouluteSize = (parentVolumeFile.length() / StorageProperties.MB);
           // create physical volume, volume group and logical volume
           createLogicalVolume(volumeId, lvName, absouluteSize);
@@ -491,6 +502,7 @@ public class DASManager implements LogicalStorageManager {
     }
   }
 
+  @Override
   public void addSnapshot(String snapshotId) throws EucalyptusCloudException {
     String snapshotRawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + snapshotId;
     File snapshotFile = new File(snapshotRawFileName);
@@ -509,6 +521,7 @@ public class DASManager implements LogicalStorageManager {
     }
   }
 
+  @Override
   public void deleteVolume(String volumeId) throws EucalyptusCloudException {
     updateVolumeGroup();
     LVMVolumeInfo foundLVMVolumeInfo = null;
@@ -597,8 +610,8 @@ public class DASManager implements LogicalStorageManager {
     return "euca-ebs-storage-vg-" + baseName;
   }
 
-  public StorageResource createSnapshot(String volumeId, String snapshotId, String snapshotPointId, Boolean shouldTransferSnapshot)
-      throws EucalyptusCloudException {
+  @Override
+  public void createSnapshot(String volumeId, String snapshotId, String snapshotPointId) throws EucalyptusCloudException {
     if (snapshotPointId != null) {
       throw new EucalyptusCloudException("Synchronous snapshot points not supported in DAS storage manager");
     }
@@ -606,7 +619,7 @@ public class DASManager implements LogicalStorageManager {
     updateVolumeGroup();
     try (VolumeMetadataManager volumeManager = new VolumeMetadataManager()) {
       LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(volumeId);
-      StorageResource snapInfo = null;
+      // StorageResource snapInfo = null;
       if (foundLVMVolumeInfo != null) {
         LVMVolumeInfo snapshotInfo = volumeManager.getVolumeInfo();
         snapshotInfo.setVolumeId(snapshotId);
@@ -655,14 +668,13 @@ public class DASManager implements LogicalStorageManager {
             nestedVolumeManager.add(snapshotInfo);
             nestedVolumeManager.finish();
           }
-          snapInfo = new FileResource(snapshotId, snapRawFileName);
+          // snapInfo = new FileResource(snapshotId, snapRawFileName);
         } catch (Exception ex) {
           String error = "Unable to run command: " + ex.getMessage();
           LOG.error(error);
           throw new EucalyptusCloudException(error);
         }
       }
-      return snapInfo;
     }
   }
 
@@ -950,7 +962,8 @@ public class DASManager implements LogicalStorageManager {
   }
 
   @Override
-  public StorageResource prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB) throws EucalyptusCloudException {
+  public StorageResourceWithCallback prepSnapshotForDownload(String snapshotId, int sizeExpected, long actualSizeInMB)
+      throws EucalyptusCloudException {
     try (VolumeMetadataManager volumeManager = new VolumeMetadataManager()) {
       String deviceName = null;
       LVMVolumeInfo foundSnapshotInfo = volumeManager.getVolumeInfo(snapshotId);
@@ -964,7 +977,20 @@ public class DASManager implements LogicalStorageManager {
       }
 
       volumeManager.finish();
-      return new FileResource(snapshotId, deviceName);
+      return new StorageResourceWithCallback(new FileResource(snapshotId, deviceName), new Function<StorageResource, String>() {
+
+        @Override
+        public String apply(StorageResource arg0) {
+          try {
+            LOG.debug("Executing callback after prepping for download of " + snapshotId);
+            finishVolume(snapshotId);
+          } catch (Exception e) {
+            LOG.warn("Failed to execute callback after prepping for download of " + snapshotId, e);
+            Exceptions.toUndeclared("Failed to execute callback for prepSnapshotForDownload() " + snapshotId, e);
+          }
+          return null;
+        }
+      });
       // return DirectStorageInfo.getStorageInfo().getVolumesDir() + File.separator + snapshotId;
     }
   }
@@ -1283,4 +1309,52 @@ public class DASManager implements LogicalStorageManager {
     volumeOps.remove(key);
   }
 
+  @Override
+  public boolean supportsIncrementalSnapshots() throws EucalyptusCloudException {
+    return false;
+  }
+
+  @Override
+  public StorageResourceWithCallback prepIncrementalSnapshotForUpload(String volumeId, String snapshotId, String snapPointId, String prevSnapshotId,
+      String prevSnapPointId) throws EucalyptusCloudException {
+    // TODO may be throw unsupported exception?
+    return null;
+  }
+
+  @Override
+  public StorageResource prepSnapshotForUpload(String volumeId, String snapshotId, String snapPointId) throws EucalyptusCloudException {
+    try (VolumeMetadataManager volumeManager = new VolumeMetadataManager()) {
+      LVMVolumeInfo snapshotInfo = volumeManager.getVolumeInfo(snapshotId);
+      volumeManager.finish();
+      return new FileResource(snapshotId, snapshotInfo.getLoFileName());
+    } catch (Exception e) {
+      LOG.warn("Failed to lookup lo file name for snapshot " + snapshotId, e);
+      throw new EucalyptusCloudException("Failed to lookup lo file name for snapshot " + snapshotId, e);
+    }
+  }
+
+  @Override
+  public StorageResourceWithCallback prepSnapshotBaseForRestore(String snapshotId, int size, String snapshotPointId) throws EucalyptusCloudException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public <F, T> T executeCallback(Function<F, T> callback, F input) throws EucalyptusCloudException {
+    try {
+      return callback.apply(input);
+    } catch (Throwable t) {
+      throw new EucalyptusCloudException("Unable to execute callback for due to", t);
+    }
+  }
+
+  @Override
+  public void restoreSnapshotDelta(String currentSnapId, String prevSnapId, String baseId, StorageResource sr) throws EucalyptusCloudException {
+    // TODO Auto-generated method stub
+  }
+
+  @Override
+  public void completeSnapshotRestorationFromDeltas(String snapshotId) throws EucalyptusCloudException {
+    // TODO Auto-generated method stub
+  }
 }

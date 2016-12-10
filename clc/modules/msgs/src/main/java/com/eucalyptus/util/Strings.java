@@ -86,6 +86,19 @@ public class Strings {
   }
 
   /**
+   * Truncate the given text to the specified length.
+   *
+   * @param text The text to trim
+   * @param length The maximum length
+   * @return The trimmed text
+   */
+  public static String truncate( @Nonnull final String text, final int length ) {
+    return text.length( ) <= length ?
+        text :
+        text.substring( 0, length );
+  }
+
+  /**
    * Get the substring of text that precedes the match, empty if not found.
    *
    * @param match The boundary string to search for

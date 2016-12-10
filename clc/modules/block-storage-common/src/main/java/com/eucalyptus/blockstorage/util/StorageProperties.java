@@ -66,6 +66,8 @@ import java.util.NoSuchElementException;
 import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
+import org.hibernate.criterion.Criterion;
+import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.component.Components;
@@ -74,6 +76,7 @@ import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.system.BaseDirectory;
+import com.google.common.collect.ImmutableSet;
 
 import edu.ucsb.eucalyptus.util.ConfigParser;
 import edu.ucsb.eucalyptus.util.StreamConsumer;
@@ -119,11 +122,11 @@ public class StorageProperties {
   public static final String DEFAULT_ASSUME_ROLE_POLICY =
       "{\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":[\"s3.amazonaws.com\"]},\"Action\":[\"sts:AssumeRole\"]}]}";
 
-  public static final String S3_SNAPSHOT_BUCKET_ACCESS_POLICY = "{\"Statement\":[" + "{" + "\"Effect\":\"Allow\"," + "\"Action\": [\"s3:*\"],"
-      + "\"Resource\": \"arn:aws:s3:::*\"" + "}" + "]}";
+  public static final String S3_SNAPSHOT_BUCKET_ACCESS_POLICY =
+      "{\"Statement\":[" + "{" + "\"Effect\":\"Allow\"," + "\"Action\": [\"s3:*\"]," + "\"Resource\": \"arn:aws:s3:::*\"" + "}" + "]}";
 
-  public static final String S3_SNAPSHOT_OBJECT_ACCESS_POLICY = "{\"Statement\":[" + "{" + "\"Effect\":\"Allow\"," + "\"Action\": [\"s3:*\"],"
-      + "\"Resource\": \"arn:aws:s3:::*/*\"" + "}" + "]}";
+  public static final String S3_SNAPSHOT_OBJECT_ACCESS_POLICY =
+      "{\"Statement\":[" + "{" + "\"Effect\":\"Allow\"," + "\"Action\": [\"s3:*\"]," + "\"Resource\": \"arn:aws:s3:::*/*\"" + "}" + "]}";
 
   /**
    * <p>
@@ -144,6 +147,20 @@ public class StorageProperties {
    * Use this regex pattern for parsing the block device string /dev/disk/by-id/dm-uuid-mpath-3600a098037542d68732b447869397146
    */
   public static final Pattern PARSE_BLOCK_DEVICE = Pattern.compile("source.* dev='([^']*)'");
+
+  public static final ImmutableSet<String> DELTA_GENERATION_STATE_EXCLUSION = ImmutableSet.of(StorageProperties.Status.failed.toString(),
+      StorageProperties.Status.deleted.toString(), StorageProperties.Status.deletedfromebs.toString(), StorageProperties.Status.error.toString());
+
+  public static final ImmutableSet<String> DELTA_RESTORATION_STATE_EXCLUSION = ImmutableSet.of(StorageProperties.Status.failed.toString(),
+      StorageProperties.Status.deleted.toString(), StorageProperties.Status.error.toString());
+
+  public static final Criterion SNAPSHOT_DELTA_GENERATION_CRITERION =
+      Restrictions.not(Restrictions.in("status", DELTA_GENERATION_STATE_EXCLUSION));
+  
+  public static final Criterion SNAPSHOT_DELTA_RESTORATION_CRITERION =
+      Restrictions.not(Restrictions.in("status", DELTA_RESTORATION_STATE_EXCLUSION));
+
+  
 
   public static String formatVolumeAttachmentTokenForTransfer(String token, String volumeId) {
     return TOKEN_PREFIX + volumeId + "," + token;
@@ -211,7 +228,7 @@ public class StorageProperties {
   }
 
   public enum Status {
-    creating, available, pending, completed, failed, error, deleting, deleted
+    creating, available, pending, completed, failed, error, deleting, deleted, deletedfromebs
   }
 
   public enum StorageParameters {

@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
+import com.amazonaws.services.simpleworkflow.model.UnknownResourceException;
 import org.apache.log4j.Logger;
 
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionAlreadyStartedException;
@@ -44,12 +45,13 @@ import com.google.common.base.Supplier;
 public class LoadBalancingWorkflows {
   private static Logger LOG  = Logger.getLogger( LoadBalancingWorkflows.class );
 
-  public static boolean createLoadBalancerSync(final String accountId, final String loadbalancer, final List<String> availabilityZones) {
-    final  Future<Boolean> task = Threads.enqueue(LoadBalancing.class, LoadBalancingWorkflows.class,  createLoadBalancerImpl(accountId, loadbalancer, availabilityZones ));
-    try{ 
-      return task.get();
-    }catch(final Exception ex) {
-      return false;
+  public static void createLoadBalancerSync(final String accountId, final String loadbalancer, final List<String> availabilityZones)
+          throws Exception {
+    final Future<LoadBalancingWorkflowException> task =
+            Threads.enqueue(LoadBalancing.class, LoadBalancingWorkflows.class,  createLoadBalancerImpl(accountId, loadbalancer, availabilityZones ));
+    final LoadBalancingWorkflowException ex = task.get();
+    if (ex != null) {
+      throw ex;
     }
   }
 
@@ -57,19 +59,26 @@ public class LoadBalancingWorkflows {
    Threads.enqueue(LoadBalancing.class, LoadBalancingWorkflows.class,  createLoadBalancerImpl(accountId, loadbalancer, availabilityZones ));
   }
   
-  private static Callable<Boolean> createLoadBalancerImpl(final String accountId, final String loadbalancer, final List<String> availabilityZones) { 
-    return new Callable<Boolean>() {
+  private static Callable<LoadBalancingWorkflowException> createLoadBalancerImpl(final String accountId, final String loadbalancer, final List<String> availabilityZones) {
+    return new Callable<LoadBalancingWorkflowException>() {
       @Override
-      public Boolean call() throws Exception {
+      public LoadBalancingWorkflowException call() throws Exception {
         final CreateLoadBalancerWorkflowClientExternal workflow =
             WorkflowClients.getCreateLbWorkflow();
         workflow.createLoadBalancer(accountId, loadbalancer, availabilityZones.toArray(new String[availabilityZones.size()]));
-        return waitFor(new Supplier<ElbWorkflowState>() {
-          @Override
-          public ElbWorkflowState get() {
-            return workflow.getState();
-          } 
-        });
+        try {
+          waitForException(new Supplier<ElbWorkflowState>() {
+            @Override
+            public ElbWorkflowState get() {
+              return workflow.getState();
+            }
+          });
+        } catch (final LoadBalancingWorkflowException ex) {
+          return ex;
+        } catch (final Exception ex) {
+          return new LoadBalancingWorkflowException(null, ex);
+        }
+        return null;
       }
     };
   }
@@ -384,6 +393,26 @@ public class LoadBalancingWorkflows {
     } while (state == null || state == ElbWorkflowState.WORKFLOW_RUNNING );
     return state == ElbWorkflowState.WORKFLOW_SUCCESS;
   }
+
+  private static void waitForException(Supplier<ElbWorkflowState> supplier) throws LoadBalancingWorkflowException{
+    ElbWorkflowState state = ElbWorkflowState.WORKFLOW_RUNNING;
+    do {
+      try{
+        Thread.sleep(500);
+      }catch(final Exception ex){
+        ;
+      }
+      state = supplier.get();
+    } while (state == null || state == ElbWorkflowState.WORKFLOW_RUNNING );
+
+    if (ElbWorkflowState.WORKFLOW_FAILED.equals(state)) {
+      final int statusCode = state.getStatusCode();
+      final String reason = state.getReason();
+      throw new LoadBalancingWorkflowException(reason, statusCode);
+    } else if (ElbWorkflowState.WORKFLOW_CANCELLED.equals(state)) {
+      throw new LoadBalancingWorkflowException("Cancelled workflow");
+    }
+  }
   
   private static String getUpdateLoadBalancerWorkflowId(final String accountId, final String loadbalancer) {
     return String.format("update-loadbalancer-%s-%s", accountId, loadbalancer);
@@ -410,7 +439,7 @@ public class LoadBalancingWorkflows {
       LOG.debug(String.format("Cancelled update-loadbalancer workflow for %s-%s", 
           accountId, loadbalancer));
     }catch(final Exception ex) {
-      LOG.error("Failed to cance update-loadbalancer workflow", ex);
+      LOG.error("Failed to cancel update-loadbalancer workflow", ex);
     }
   }
 
@@ -420,6 +449,8 @@ public class LoadBalancingWorkflows {
       final UpdateLoadBalancerWorkflowClientExternal workflow =
           WorkflowClients.getUpdateLoadBalancerWorkflowClient(accountId, loadbalancer, workflowId);
       workflow.updateImmediately();
+    }catch(final UnknownResourceException ex) {
+      ;
     }catch(final Exception ex) {
       LOG.error("Failed to signal update-loadbalancer workflow", ex);
     }
@@ -435,6 +466,8 @@ public class LoadBalancingWorkflows {
       final InstanceStatusWorkflowClientExternal workflow =
               WorkflowClients.getinstanceStatusWorkflowClient(accountId, loadbalancer, workflowId);
       workflow.pollImmediately();
+    }catch(final UnknownResourceException ex) {
+      ;
     }catch(final Exception ex) {
       LOG.error("Failed to signal PollInstanceStatus workflow", ex);
     }

@@ -290,19 +290,6 @@
 #define DETACH_VOL_TIMEOUT_SECONDS	180 //!< CC Timeout for an doDetachVolume() operation on the NC. In failure cases NC may take 60 sec.
 
 //! @}
-
-#if 0
-// DO NO USE.
-// Will be removed at the end of 3.3.
-// Use the euca_error_e enum instead.
-#define OK                                       0
-#define ERROR                                    1
-#define ERROR_FATAL                              1
-#define ERROR_RETRY                             -1
-#define READER                                   2
-#define WRITER                                   3
-#endif /* 0 */
-
 #define MEGABYTE                                 1048576
 
 #ifndef _attribute_format_

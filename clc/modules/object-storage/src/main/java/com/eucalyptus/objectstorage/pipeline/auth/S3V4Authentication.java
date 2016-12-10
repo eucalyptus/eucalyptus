@@ -28,6 +28,7 @@ import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
 import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
+import com.eucalyptus.objectstorage.exceptions.s3.MissingContentLengthException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.SubResource;
 import com.eucalyptus.ws.util.HmacUtils.SignatureCredential;
@@ -36,6 +37,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.io.BaseEncoding;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import java.nio.ByteBuffer;
 import java.util.Date;
@@ -54,7 +56,8 @@ public final class S3V4Authentication {
   private static final String AWS_V4_TERMINATOR = "aws4_request";
   public static final String AWS_V4_AUTH_TYPE = "AWS4-HMAC-SHA256";
   public static final String AWS_CONTENT_SHA_HEADER = "x-amz-content-sha256";
-  static final String STREAMING_PAYLOAD = "STREAMING-AWS4-HMAC-SHA256-PAYLOAD";
+  public static final String AWS_DECODED_CONTENT_LEN = "x-amz-decoded-content-length";
+  public static final String STREAMING_PAYLOAD = "STREAMING-AWS4-HMAC-SHA256-PAYLOAD";
   private static final String STREAMING_PAYLOAD_CHUNK_PREFIX = "AWS4-HMAC-SHA256-PAYLOAD";
   static final String UNSIGNED_PAYLOAD = "UNSIGNED-PAYLOAD";
 
@@ -210,6 +213,19 @@ public final class S3V4Authentication {
       return hashedPayload;
     } else
       throw new AccessDeniedException("x-amz-content-sha256 header is missing.");
+  }
+
+  static Long getAndVerifyDecodedContentLength(MappingHttpRequest request, String contentSha) throws S3Exception {
+    if (!STREAMING_PAYLOAD.equals(contentSha))
+      return null;
+    String decodedContentLength = request.getHeader(AWS_DECODED_CONTENT_LEN);
+    if (Strings.isNullOrEmpty(decodedContentLength))
+      throw new MissingContentLengthException("Missing x-amz-decoded-content-length header");
+    try {
+      return Long.valueOf(decodedContentLength);
+    } catch (NumberFormatException e) {
+      throw new MissingContentLengthException("Invalid x-amz-decoded-content-length header");
+    }
   }
 
   static SignatureCredential getAndVerifyCredential(Date date, String credentialStr) throws AccessDeniedException {

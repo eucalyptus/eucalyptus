@@ -232,7 +232,15 @@ public class PostgresqlQueuePersistence implements QueuePersistence {
   }
 
   @Override
-  public Collection<Queue.Key> listActiveQueues(String partitionToken) {
+  public long countQueues(String accountNumber) {
+    try (TransactionResource db =
+           Entities.transactionFor(QueueEntity.class)) {
+      return Entities.count(QueueEntity.class).whereEqual(QueueEntity_.accountId, accountNumber).uniqueResult();
+    }
+  }
+
+  @Override
+  public Collection<Queue.Key> listActiveQueues(String partitionToken) {  
     try (TransactionResource db =
            Entities.transactionFor(QueueEntity.class)) {
       long nowSecs = SimpleQueueService.currentTimeSeconds();

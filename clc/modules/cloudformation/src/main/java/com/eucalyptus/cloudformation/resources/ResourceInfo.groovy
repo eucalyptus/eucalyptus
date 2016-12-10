@@ -20,6 +20,7 @@
 package com.eucalyptus.cloudformation.resources
 
 import com.eucalyptus.cloudformation.CloudFormationException
+import com.fasterxml.jackson.databind.JsonNode
 
 /**
  * Created by ethomas on 12/18/13.
@@ -48,7 +49,7 @@ public abstract class ResourceInfo {
     return ResourceAttributeResolver.resourceHasAttribute(this, attributeName);
   }
 
-  public Collection<String> getRequiredCapabilities() {
+  public Collection<String> getRequiredCapabilities(JsonNode propertiesJson) {
     return new ArrayList<String>();
   }
   String accountId;

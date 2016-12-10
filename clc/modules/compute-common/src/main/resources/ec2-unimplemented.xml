@@ -165,6 +165,45 @@
     <structure map-as="com.eucalyptus.compute.common.ReservedInstanceMessage" />
   </mapping>
 
+  <mapping name="GetReservedInstancesExchangeQuote"
+           class="com.eucalyptus.compute.common.GetReservedInstancesExchangeQuoteType"
+           extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
+    <collection name="reservedInstanceId" factory="org.jibx.runtime.Utility.arrayListFactory" field="reservedInstanceId" usage="optional">
+      <structure name="item" />
+    </collection>
+    <collection name="targetConfiguration" field="targetConfiguration" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" map-as="com.eucalyptus.compute.common.TargetConfigurationRequestType"/>
+    </collection>
+  </mapping>
+
+  <mapping name="GetReservedInstancesExchangeQuoteResponse"
+           class="com.eucalyptus.compute.common.GetReservedInstancesExchangeQuoteResponseType"
+           extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
+    <structure map-as="com.eucalyptus.compute.common.ReservedInstanceMessage" />
+  </mapping>
+
+  <mapping name="AcceptReservedInstancesExchangeQuote"
+           class="com.eucalyptus.compute.common.AcceptReservedInstancesExchangeQuoteType"
+           extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
+    <collection name="reservedInstanceId" factory="org.jibx.runtime.Utility.arrayListFactory" field="reservedInstanceId" usage="optional">
+      <structure name="item" />
+    </collection>
+    <collection name="targetConfiguration" field="targetConfiguration" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" map-as="com.eucalyptus.compute.common.TargetConfigurationRequestType"/>
+    </collection>
+  </mapping>
+
+  <mapping name="AcceptReservedInstancesExchangeQuoteResponse"
+           class="com.eucalyptus.compute.common.AcceptReservedInstancesExchangeQuoteResponseType"
+           extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
+    <structure map-as="com.eucalyptus.compute.common.ReservedInstanceMessage" />
+  </mapping>
+
+  <mapping class="com.eucalyptus.compute.common.TargetConfigurationRequestType" abstract="true">
+    <value name="instanceCount" field="instanceCount" usage="optional"/>
+    <value name="offeringId" field="offeringId" usage="optional"/>
+  </mapping>
+
   <mapping class="com.eucalyptus.compute.common.SpotInstanceMessage" extends="com.eucalyptus.compute.common.ComputeMessage"
     abstract="true">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
@@ -319,6 +358,20 @@
 
   <mapping name="RequestSpotFleetResponse"
            class="com.eucalyptus.compute.common.RequestSpotFleetResponseType"
+           extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+    <structure map-as="com.eucalyptus.compute.common.SpotInstanceMessage" />
+  </mapping>
+
+  <mapping name="ModifySpotFleetRequest"
+           class="com.eucalyptus.compute.common.ModifySpotFleetRequestType"
+           extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+    <value name="excessCapacityTerminationPolicy" field="excessCapacityTerminationPolicy" usage="optional"/>
+    <value name="spotFleetRequestId" field="spotFleetRequestId" usage="optional"/>
+    <value name="targetCapacity" field="targetCapacity" usage="optional"/>
+  </mapping>
+
+  <mapping name="ModifySpotFleetRequestResponse"
+           class="com.eucalyptus.compute.common.ModifySpotFleetRequestResponseType"
            extends="com.eucalyptus.compute.common.SpotInstanceMessage">
     <structure map-as="com.eucalyptus.compute.common.SpotInstanceMessage" />
   </mapping>

@@ -62,6 +62,7 @@
 
 package com.eucalyptus.compute.common.internal.vm;
 
+import static com.eucalyptus.util.Strings.truncate;
 import java.lang.Object;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -487,6 +488,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.runtimeState = null;
     this.networkConfig = null;
     this.transientVolumeState = null;
+  }
+
+  @Override
+  protected String createUniqueName() {
+    return getDisplayName( ) == null ? null : truncate( getDisplayName( ), 10 );  //TODO:STEVE: this will impact instance lookup post upgrade
   }
 
   /**

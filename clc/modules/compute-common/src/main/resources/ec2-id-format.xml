@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+  -->
+<binding force-classes="true" add-constructors="true">
+
+  <mapping class="com.eucalyptus.compute.common.IdFormatItemType" abstract="true">
+    <value name="resource" field="resource" />
+    <value name="useLongIds" field="useLongIds" />
+    <value name="deadline" field="deadline" usage="optional"/>
+  </mapping>
+
+  <mapping name="DescribeIdentityIdFormat" class="com.eucalyptus.compute.common.DescribeIdentityIdFormatType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="principalArn" field="principalArn" usage="required"/>
+    <value name="resource" field="resource" usage="optional"/>
+  </mapping>
+
+  <mapping name="DescribeIdentityIdFormatResponse" class="com.eucalyptus.compute.common.DescribeIdentityIdFormatResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <collection name="statusSet" field="statuses">
+      <structure name="item" type="com.eucalyptus.compute.common.IdFormatItemType"/>
+    </collection>
+  </mapping>
+
+  <mapping name="DescribeIdFormat" class="com.eucalyptus.compute.common.DescribeIdFormatType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="resource" field="resource" usage="optional"/>
+  </mapping>
+
+  <mapping name="DescribeIdFormatResponse" class="com.eucalyptus.compute.common.DescribeIdFormatResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <collection name="statusSet" field="statuses">
+      <structure name="item" type="com.eucalyptus.compute.common.IdFormatItemType"/>
+    </collection>
+  </mapping>
+
+  <mapping name="ModifyIdentityIdFormat" class="com.eucalyptus.compute.common.ModifyIdentityIdFormatType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="principalArn" field="principalArn"/>
+    <value name="resource" field="resource"/>
+    <value name="useLongIds" field="useLongIds"/>
+  </mapping>
+
+  <mapping name="ModifyIdentityIdFormatResponse" class="com.eucalyptus.compute.common.ModifyIdentityIdFormatResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+
+  <mapping name="ModifyIdFormat" class="com.eucalyptus.compute.common.ModifyIdFormatType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="resource" field="resource"/>
+    <value name="useLongIds" field="useLongIds"/>
+  </mapping>
+
+  <mapping name="ModifyIdFormatResponse" class="com.eucalyptus.compute.common.ModifyIdFormatResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+
+</binding>

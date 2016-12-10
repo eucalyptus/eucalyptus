@@ -1497,6 +1497,20 @@ class CreateVpcPeeringConnectionResponseType extends VpcMessage {
   VpcPeeringConnectionType vpcPeeringConnection;
   CreateVpcPeeringConnectionResponseType() {  }
 }
+class PeeringConnectionOptionsRequestType extends EucalyptusData {
+  Boolean allowDnsResolutionFromRemoteVpc
+  Boolean allowEgressFromLocalClassicLinkToRemoteVpc
+  Boolean allowEgressFromLocalVpcToRemoteClassicLink
+}
+class ModifyVpcPeeringConnectionOptionsType extends VpcMessage {
+  String vpcPeeringConnectionId
+  PeeringConnectionOptionsRequestType accepterPeeringConnectionOptions
+  PeeringConnectionOptionsRequestType requesterPeeringConnectionOptions
+}
+class ModifyVpcPeeringConnectionOptionsResponseType extends VpcMessage {
+  PeeringConnectionOptionsRequestType accepterPeeringConnectionOptions
+  PeeringConnectionOptionsRequestType requesterPeeringConnectionOptions
+}
 class DhcpValueType extends EucalyptusData {
   @HttpValue
   @FieldRegex( FieldRegexValue.STRING_255 )
@@ -1817,6 +1831,36 @@ class EnableVpcClassicLinkType extends VpcMessage {
 class EnableVpcClassicLinkResponseType extends VpcMessage {
 }
 
+class DescribeVpcClassicLinkDnsSupportType extends VpcMessage {
+  Integer maxResults
+  String nextToken
+  ArrayList<String> vpcIds
+}
+
+class ClassicLinkDnsSupportType extends EucalyptusData {
+  Boolean classicLinkDnsSupported
+  String vpcId
+}
+
+class DescribeVpcClassicLinkDnsSupportResponseType extends VpcMessage {
+  String nextToken
+  ArrayList<ClassicLinkDnsSupportType> vpcs
+}
+
+class DisableVpcClassicLinkDnsSupportType extends VpcMessage {
+  String vpcId
+}
+
+class DisableVpcClassicLinkDnsSupportResponseType extends VpcMessage {
+}
+
+class EnableVpcClassicLinkDnsSupportType extends VpcMessage {
+  String vpcId
+}
+
+class EnableVpcClassicLinkDnsSupportResponseType extends VpcMessage {
+}
+
 class CreateVpcEndpointType extends VpcMessage {
   String clientToken
   String policyDocument
@@ -1876,4 +1920,18 @@ class ModifyVpcEndpointType extends VpcMessage {
 }
 
 class ModifyVpcEndpointResponseType extends VpcMessage {
+}
+
+
+class DescribeSecurityGroupReferencesType extends VpcMessage {
+  ArrayList<String> groupId
+}
+class DescribeSecurityGroupReferencesResponseType extends VpcMessage {
+}
+class DescribeStaleSecurityGroupsType extends VpcMessage {
+  Integer maxResults
+  String nextToken
+  String vpcId
+}
+class DescribeStaleSecurityGroupsResponseType extends VpcMessage {
 }

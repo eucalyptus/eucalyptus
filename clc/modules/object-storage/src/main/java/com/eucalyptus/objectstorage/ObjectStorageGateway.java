@@ -630,12 +630,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
         throw new InvalidBucketNameException(request.getBucket());
       }
 
-      if (Principals.isFakeIdentify(canonicalId)) {
-        LOG.error("CorrelationId: " + request.getCorrelationId() + " Create bucket " + request.getBucket()
-        + " access is denied because the request's user ID is not allowed to create buckets.");
-        throw new AccessDeniedException(request.getBucket());
-      }
-      
       final AccessControlPolicy acPolicy = getFullAcp(request.getAccessControlList(), requestUser, null);
       Bucket bucket = Bucket.getInitializedBucket(request.getBucket(), requestUser.getUserId(), acPolicy, request.getLocationConstraint());
 
@@ -689,7 +683,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         }
       } else {
         LOG.error("CorrelationId: " + request.getCorrelationId() + " Create bucket " + request.getBucket()
-            + " access is denied based on acl and/or IAM policy");
+            + " access is denied based on ACL and/or IAM policy");
         throw new AccessDeniedException(request.getBucket());
       }
     } catch (AccessDeniedException e) {

@@ -77,6 +77,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.storage.common.CheckerTask;
+import com.google.common.base.Strings;
 
 /**
  * Checker task for cleaning snapshots marked in failed status
@@ -149,15 +150,17 @@ public class FailedSnapshotCleaner extends CheckerTask {
 
     // Delete snapshot from OSG
     try {
-      LOG.trace("Deleting snapshot " + snapshotId + " from objectsotrage");
-      if (snapshotTransfer == null) {
-        snapshotTransfer = new S3SnapshotTransfer();
+      if (!Strings.isNullOrEmpty(snapInfo.getSnapshotLocation())) {
+        LOG.trace("Deleting snapshot " + snapshotId + " from objectsotrage");
+        if (snapshotTransfer == null) {
+          snapshotTransfer = new S3SnapshotTransfer();
+        }
+        String[] names = SnapshotInfo.getSnapshotBucketKeyNames(snapInfo.getSnapshotLocation());
+        snapshotTransfer.setSnapshotId(snapshotId);
+        snapshotTransfer.setBucketName(names[0]);
+        snapshotTransfer.setKeyName(names[1]);
+        snapshotTransfer.cancelUpload();
       }
-      String[] names = SnapshotInfo.getSnapshotBucketKeyNames(snapInfo.getSnapshotLocation());
-      snapshotTransfer.setSnapshotId(snapshotId);
-      snapshotTransfer.setBucketName(names[0]);
-      snapshotTransfer.setKeyName(names[1]);
-      snapshotTransfer.cancelUpload();
     } catch (Exception e) {
       LOG.debug("Attempt to delete uploaded snapshot " + snapshotId + " from objectstorage failed because: " + e.getMessage());
     }

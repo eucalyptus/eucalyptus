@@ -63,7 +63,8 @@
 package com.eucalyptus.blockstorage.async;
 
 import java.io.File;
-import java.util.Date;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Random;
 
@@ -73,12 +74,14 @@ import org.hibernate.Criteria;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.blockstorage.FileResource;
 import com.eucalyptus.blockstorage.LogicalStorageManager;
 import com.eucalyptus.blockstorage.S3SnapshotTransfer;
 import com.eucalyptus.blockstorage.SnapshotTransfer;
 import com.eucalyptus.blockstorage.StorageResource;
+import com.eucalyptus.blockstorage.StorageResourceWithCallback;
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.blockstorage.entities.VolumeInfo;
 import com.eucalyptus.blockstorage.util.StorageProperties;
@@ -88,6 +91,7 @@ import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.metrics.MonitoredAction;
 import com.eucalyptus.util.metrics.ThruputMetrics;
+import com.google.common.base.Strings;
 
 import edu.ucsb.eucalyptus.util.EucaSemaphore;
 import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
@@ -104,7 +108,8 @@ public class VolumeCreator implements Runnable {
   private int size;
   private LogicalStorageManager blockManager;
 
-  public VolumeCreator(String volumeId, String snapshotSetName, String snapshotId, String parentVolumeId, int size, LogicalStorageManager blockManager) {
+  public VolumeCreator(String volumeId, String snapshotSetName, String snapshotId, String parentVolumeId, int size,
+      LogicalStorageManager blockManager) {
     this.volumeId = volumeId;
     this.snapshotId = snapshotId;
     this.parentVolumeId = parentVolumeId;
@@ -117,167 +122,164 @@ public class VolumeCreator implements Runnable {
     boolean success = true;
     if (snapshotId != null) {
       try {
-        SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
-        List<SnapshotInfo> foundSnapshotInfos = Transactions.findAll(snapshotInfo);
+        SnapshotInfo searchFor = new SnapshotInfo(snapshotId);
+        searchFor.setStatus(StorageProperties.Status.available.toString()); // search only for available snapshot in the az
 
-        if (foundSnapshotInfos.size() == 0) {// SC *may not* have a database record for the snapshot and or the actual snapshot
+        List<SnapshotInfo> foundSnapshotInfos = Transactions.findAll(searchFor);
 
+        if (foundSnapshotInfos == null || foundSnapshotInfos.isEmpty()) {
+          // SC *may not* have a database record for the snapshot and or the actual snapshot
           EucaSemaphore semaphore = EucaSemaphoreDirectory.getSolitarySemaphore(snapshotId);
           try {
             semaphore.acquire(); // Get the semaphore to avoid concurrent access by multiple threads
-            foundSnapshotInfos = Transactions.findAll(snapshotInfo); // Check if another thread setup the snapshot
+            foundSnapshotInfos = Transactions.findAll(searchFor); // Check if another thread setup the snapshot
 
             if (foundSnapshotInfos.size() == 0) { // SC does not have a database record for the snapshot
-              SnapshotInfo firstSnap = null;
+              SnapshotInfo azSnap = null;
+              SnapshotInfo sourceSnap = null;
 
-              // Search for the snapshots on other clusters in the ascending order of creation time stamp and get the first one
-              snapshotInfo.setScName(null);
               try (TransactionResource tr = Entities.transactionFor(SnapshotInfo.class)) {
-                Criteria snapCriteria =
-                    Entities.createCriteria(SnapshotInfo.class).setReadOnly(true).setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY)
-                        .setCacheable(true).add(Example.create(snapshotInfo).enableLike(MatchMode.EXACT)).addOrder(Order.asc("creationTimestamp"));
-                foundSnapshotInfos = (List<SnapshotInfo>) snapCriteria.list();
+                searchFor.setScName(null);
+                searchFor.setIsOrigin(Boolean.TRUE);
+
+                Criteria searchCriteria = Entities.createCriteria(SnapshotInfo.class);
+                searchCriteria.setReadOnly(true);
+                searchCriteria.setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY);
+                searchCriteria.setCacheable(true);
+                searchCriteria.add(Example.create(searchFor).enableLike(MatchMode.EXACT));
+                searchCriteria.setMaxResults(1);
+
+                foundSnapshotInfos = (List<SnapshotInfo>) searchCriteria.list();
+
+                if (foundSnapshotInfos == null || foundSnapshotInfos.isEmpty()) { // pre 4.4.0 scneario
+
+                  // Search for the snapshots on other clusters in the ascending order of creation time stamp and get the first one
+                  searchFor.setIsOrigin(null);
+                  Criteria snapCriteria =
+                      Entities.createCriteria(SnapshotInfo.class).setReadOnly(true).setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY)
+                          .setCacheable(true).add(Example.create(searchFor).enableLike(MatchMode.EXACT)).addOrder(Order.asc("creationTimestamp"));
+
+                  foundSnapshotInfos = (List<SnapshotInfo>) snapCriteria.list();
+                }
+
                 tr.commit();
               }
 
               if (foundSnapshotInfos != null && foundSnapshotInfos.size() > 0) {
-                firstSnap = foundSnapshotInfos.get(0);
+                sourceSnap = foundSnapshotInfos.get(0);
               } else {
-                throw new EucalyptusCloudException("No record of snapshot " + snapshotId + " on any SC");
+                throw new EucalyptusCloudException("No record of snapshot " + snapshotId + " in any availability zone");
               }
 
+              // TODO this might be unnecessary
               // If size was not found in database, bail out. Can't create a snapshot without the size
-              if (firstSnap.getSizeGb() == null || firstSnap.getSizeGb() <= 0) {
-                throw new EucalyptusCloudException("Snapshot size for " + snapshotId
-                    + " is unknown. Cannot prep snapshot holder on the storage backend");
+              if (sourceSnap.getSizeGb() == null || sourceSnap.getSizeGb() <= 0) {
+                throw new EucalyptusCloudException(
+                    "Snapshot size for " + snapshotId + " is unknown. Cannot prep snapshot holder on the storage backend");
               }
+
+              // Copy base snapshot info to this snapshot
+              azSnap = copySnapshotInfo(sourceSnap);
 
               // Check for the snpahsot on the storage backend. Clusters/zones/partitions may be connected to the same storage backend in
               // which case snapshot does not have to be downloaded from ObjectStorage.
-              if (!blockManager.getFromBackend(snapshotId, firstSnap.getSizeGb())) { // Storage backend does not contain
-                                                                                     // snapshot. Download snapshot
-                // from OSG
+              if (!blockManager.getFromBackend(snapshotId, sourceSnap.getSizeGb())) {
+                // Storage backend does not contain snapshot. Download snapshot from OSG
                 LOG.debug(snapshotId + " not found on storage backend. Will attempt to download from objectstorage gateway");
 
-                String bucket = null;
-                String key = null;
+                // check whether upload is incremental snapshot
+                if (!Strings.isNullOrEmpty(sourceSnap.getPreviousSnapshotId())) {
 
-                if (StringUtils.isBlank(firstSnap.getSnapshotLocation())) {
-                  throw new EucalyptusCloudException("Snapshot location (bucket, key) for " + snapshotId
-                      + " is unknown. Cannot download snapshot from objectstorage.");
-                }
-                String[] names = SnapshotInfo.getSnapshotBucketKeyNames(firstSnap.getSnapshotLocation());
-                bucket = names[0];
-                key = names[1];
-                if (StringUtils.isBlank(bucket) || StringUtils.isBlank(key)) {
-                  throw new EucalyptusCloudException("Failed to parse bucket and key information for downloading " + snapshotId
-                      + ". Cannot download snapshot from objectstorage.");
-                }
+                  LOG.info(snapshotId + " is an incremental snapshot orignating from az " + sourceSnap.getScName());
 
-                // Try to fetch the snapshot size before preparing the snapshot holder on the backend. If size is unavailable, the snapshot
-                // must be downloaded, unzipped and measured before creating the snapshot holder on the backend. Some SANs (Equallogic) add
-                // arbitrary amount of writable space to the lun and hence the exact size of the snapshot is required for preparing the
-                // holder on the backend
-                SnapshotTransfer snapshotTransfer = new S3SnapshotTransfer(snapshotId, bucket, key);
-                Long actualSizeInBytes = null;
-                try {
-                  actualSizeInBytes = snapshotTransfer.getSizeInBytes();
-                } catch (Exception e) {
-                  LOG.debug("Snapshot size not found", e);
-                }
+                  // check if backend supports incremental snapshot
+                  if (blockManager.supportsIncrementalSnapshots()) {
 
-                if (actualSizeInBytes == null) { // Download the snapshot from OSG and find out the size
+                    List<SnapshotInfo> allDeltas = null;
+                    List<SnapshotInfo> nonDeltas = null;
+                    SnapshotInfo firstNonDelta = null;
 
-                  String tmpSnapshotFileName = null;
-                  try {
-                    tmpSnapshotFileName = downloadSnapshotToTempFile(snapshotTransfer);
+                    try (TransactionResource tr = Entities.transactionFor(SnapshotInfo.class)) {
+                      SnapshotInfo searcher = new SnapshotInfo(null);
+                      searcher.setVolumeId(sourceSnap.getVolumeId());
+                      searcher.setScName(sourceSnap.getScName());
+                      searcher.setIsOrigin(Boolean.TRUE);
 
-                    File snapFile = new File(tmpSnapshotFileName);
-                    if (!snapFile.exists()) {
-                      throw new EucalyptusCloudException("Unable to find snapshot " + snapshotId + "on SC");
-                    }
+                      Criteria nonDeltaCriteria = Entities.createCriteria(SnapshotInfo.class);
+                      nonDeltaCriteria.add(Example.create(searcher).enableLike(MatchMode.EXACT));
+                      nonDeltaCriteria.add(Restrictions.and(StorageProperties.SNAPSHOT_DELTA_RESTORATION_CRITERION,
+                          Restrictions.lt("startTime", sourceSnap.getStartTime()), Restrictions.isNull("previousSnapshotId")));
+                      nonDeltaCriteria.addOrder(Order.desc("startTime"));
+                      nonDeltaCriteria.setReadOnly(true);
+                      nonDeltaCriteria.setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY);
+                      nonDeltaCriteria.setMaxResults(1);
+                      nonDeltas = (List<SnapshotInfo>) nonDeltaCriteria.list();
 
-                    // TODO add snapshot size to osg object metadata
-
-                    long actualSnapSizeInMB = (long) Math.ceil((double) snapFile.length() / StorageProperties.MB);
-
-                    try {
-                      // Allocates the necessary resources on the backend
-                      StorageResource storageResource = blockManager.prepareSnapshot(snapshotId, firstSnap.getSizeGb(), actualSnapSizeInMB);
-
-                      if (storageResource != null) {
-                        // Check if the destination is a block device
-                        if (storageResource.getPath().startsWith("/dev/")) {
-                          CommandOutput output =
-                              SystemUtil.runWithRawOutput(new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=" + tmpSnapshotFileName,
-                                  "of=" + storageResource.getPath(), "bs=" + StorageProperties.blockSize});
-                          LOG.debug("Output of dd command: " + output.error);
-                          if (output.returnValue != 0) {
-                            throw new EucalyptusCloudException("Failed to copy the snapshot to the right location due to: " + output.error);
-                          }
-                          cleanupFile(tmpSnapshotFileName);
-                        } else {
-                          // Rename file
-                          if (!snapFile.renameTo(new File(storageResource.getPath()))) {
-                            throw new EucalyptusCloudException("Failed to rename the snapshot");
-                          }
-                        }
-
-                        // Finish the snapshot
-                        blockManager.finishVolume(snapshotId);
+                      if (nonDeltas != null && !nonDeltas.isEmpty()) {
+                        firstNonDelta = nonDeltas.get(0);
                       } else {
-                        LOG.warn("Block Manager replied that " + snapshotId
-                            + " not on backend, but snapshot preparation indicated that the snapshot is already present");
+                        tr.commit();
+                        LOG.warn("Unable to lookup metadata for last full/non-delta snapshot taken on volume " + sourceSnap.getVolumeId());
+                        throw new EucalyptusCloudException(
+                            "Unable to lookup metadata for last full/non-delta snapshot taken on volume " + sourceSnap.getVolumeId());
                       }
-                    } catch (Exception ex) {
-                      LOG.error("Failed to prepare the snapshot " + snapshotId + " on storage backend. Cleaning up the snapshot on backend", ex);
-                      cleanFailedSnapshot(snapshotId);
-                      throw ex;
+
+                      Criteria deltaCriteria = Entities.createCriteria(SnapshotInfo.class);
+                      deltaCriteria.add(Example.create(searcher).enableLike(MatchMode.EXACT));
+                      deltaCriteria.add(
+                          Restrictions.and(StorageProperties.SNAPSHOT_DELTA_RESTORATION_CRITERION, Restrictions.gt("startTime", firstNonDelta.getStartTime()),
+                              Restrictions.le("startTime", sourceSnap.getStartTime()), Restrictions.isNotNull("previousSnapshotId")));
+                      deltaCriteria.addOrder(Order.asc("startTime"));
+                      deltaCriteria.setReadOnly(true);
+                      deltaCriteria.setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY);
+                      allDeltas = (List<SnapshotInfo>) deltaCriteria.list();
+
+                      tr.commit();
                     }
-                  } catch (Exception ex) {
-                    LOG.error("Failed to prepare the snapshot " + snapshotId + " on the storage backend. Cleaning up the snapshot on SC", ex);
-                    cleanupFile(tmpSnapshotFileName);
-                    throw ex;
-                  }
-                } else { // Prepare the snapshot holder and download the snapshot directly to it
 
-                  long actualSnapSizeInMB = (long) Math.ceil((double) actualSizeInBytes / StorageProperties.MB);
-
-                  try {
-                    // Allocates the necessary resources on the backend
-                    StorageResource storageResource = blockManager.prepareSnapshot(snapshotId, firstSnap.getSizeGb(), actualSnapSizeInMB);
-
-                    if (storageResource != null) {
-                      // Download the snapshot to the destination
-                      snapshotTransfer.download(storageResource);
-
-                      // Finish the snapshot
-                      blockManager.finishVolume(snapshotId);
-                    } else {
-                      LOG.warn("Block Manager replied that " + snapshotId
-                          + " not on backend, but snapshot preparation indicated that the snapshot is already present");
+                    if (allDeltas == null || allDeltas.isEmpty()) {
+                      LOG.warn("Unable to lookup metadata for snapshot deltas taken on volume " + sourceSnap.getVolumeId());
+                      throw new EucalyptusCloudException("Unable to lookup metadata for snapshot deltas taken on volume " + sourceSnap.getVolumeId());
                     }
-                  } catch (Exception ex) {
-                    LOG.error("Failed to prepare the snapshot " + snapshotId + " on storage backend. Cleaning up the snapshot on backend", ex);
-                    cleanFailedSnapshot(snapshotId);
-                    throw ex;
+
+                    // restore base snapshot with first snap
+                    downloadAndRestoreBase(firstNonDelta);
+
+                    SnapshotInfo prevSnap = firstNonDelta;
+
+                    // apply deltas
+                    for (SnapshotInfo currentSnap : allDeltas) {
+                      downloadAndRestoreDelta(currentSnap, prevSnap);
+                      prevSnap = currentSnap;
+                    }
+
+                    // Cleanup snapshot state and set it up for volume creation
+                    blockManager.completeSnapshotRestorationFromDeltas(snapshotId);
+                  } else {
+                    LOG.warn("Snapshot " + this.snapshotId
+                        + " cannot be restored in this availability zone since it does not support incremental snapshots. Failing volume "
+                        + this.volumeId);
+                    throw new EucalyptusCloudException("Snapshot " + this.snapshotId
+                        + " cannot be restored in this availability zone since it does not support incremental snapshots. Failing volume "
+                        + this.volumeId);
                   }
+                } else {
+                  // Not a delta, regular download operation
+                  downloadSnapshot(sourceSnap);
                 }
+
+                // no metadata changes required beyond copying the info from source
 
               } else { // Storage backend contains snapshot
                 // Just create a record of it for this partition in the DB and get going!
                 LOG.debug(snapshotId + " found on storage backend");
+                // update the metadata as necessary
+                azSnap.setPreviousSnapshotId(sourceSnap.getPreviousSnapshotId());
+                azSnap.setSnapPointId(sourceSnap.getSnapPointId());
               }
 
               // Create a snapshot record for this SC
-              try (TransactionResource tr = Entities.transactionFor(SnapshotInfo.class)) {
-                snapshotInfo = copySnapshotInfo(firstSnap);
-                snapshotInfo.setProgress("100");
-                snapshotInfo.setStartTime(new Date());
-                snapshotInfo.setStatus(StorageProperties.Status.available.toString());
-                Entities.persist(snapshotInfo);
-                tr.commit();
-              }
+              Transactions.save(azSnap);
             } else { // SC has a database record for the snapshot
               // This condition is hit when concurrent threads compete to create a volume from a snapshot that did not exist on this SC. One
               // of the concurrent threads may have finished the snapshot prep there by making it available to all other threads
@@ -340,8 +342,8 @@ public class VolumeCreator implements Runnable {
       if (foundVolumeInfo != null) {
         if (success) {
           foundVolumeInfo.setStatus(StorageProperties.Status.available.toString());
-          ThruputMetrics.endOperation(snapshotId != null ? MonitoredAction.CREATE_VOLUME_FROM_SNAPSHOT : MonitoredAction.CREATE_VOLUME,
-              volumeId, System.currentTimeMillis());
+          ThruputMetrics.endOperation(snapshotId != null ? MonitoredAction.CREATE_VOLUME_FROM_SNAPSHOT : MonitoredAction.CREATE_VOLUME, volumeId,
+              System.currentTimeMillis());
         } else {
           foundVolumeInfo.setStatus(StorageProperties.Status.failed.toString());
         }
@@ -381,6 +383,10 @@ public class VolumeCreator implements Runnable {
     copy.setSnapshotLocation(source.getSnapshotLocation());
     copy.setUserName(source.getUserName());
     copy.setVolumeId(source.getVolumeId());
+    copy.setStartTime(source.getStartTime());
+    copy.setProgress(source.getProgress());
+    copy.setStatus(source.getStatus());
+    copy.setIsOrigin(Boolean.FALSE);
     return copy;
   }
 
@@ -432,4 +438,189 @@ public class VolumeCreator implements Runnable {
       }
     }
   }
+
+  private void downloadSnapshot(SnapshotInfo sourceSnap) throws Exception {
+
+    String bucket = null;
+    String key = null;
+
+    if (StringUtils.isBlank(sourceSnap.getSnapshotLocation())) {
+      throw new EucalyptusCloudException(
+          "Snapshot location (bucket, key) for " + snapshotId + " is unknown. Cannot download snapshot from objectstorage.");
+    }
+    String[] names = SnapshotInfo.getSnapshotBucketKeyNames(sourceSnap.getSnapshotLocation());
+    bucket = names[0];
+    key = names[1];
+    if (StringUtils.isBlank(bucket) || StringUtils.isBlank(key)) {
+      throw new EucalyptusCloudException(
+          "Failed to parse bucket and key information for downloading " + snapshotId + ". Cannot download snapshot from objectstorage.");
+    }
+
+    // Try to fetch the snapshot size before preparing the snapshot holder on the backend. If size is unavailable, the snapshot
+    // must be downloaded, unzipped and measured before creating the snapshot holder on the backend. Some SANs (Equallogic) add
+    // arbitrary amount of writable space to the lun and hence the exact size of the snapshot is required for preparing the
+    // holder on the backend
+    SnapshotTransfer snapshotTransfer = new S3SnapshotTransfer(snapshotId, bucket, key);
+    Long actualSizeInBytes = null;
+    try {
+      actualSizeInBytes = snapshotTransfer.getSizeInBytes();
+    } catch (Exception e) {
+      LOG.debug("Snapshot size not found", e);
+    }
+
+    if (actualSizeInBytes == null) { // Download the snapshot from OSG and find out the size
+
+      String tmpSnapshotFileName = null;
+      try {
+        tmpSnapshotFileName = downloadSnapshotToTempFile(snapshotTransfer);
+
+        File snapFile = new File(tmpSnapshotFileName);
+        if (!snapFile.exists()) {
+          throw new EucalyptusCloudException("Unable to find snapshot " + snapshotId + "on SC");
+        }
+
+        // TODO add snapshot size to osg object metadata
+
+        long actualSnapSizeInMB = (long) Math.ceil((double) snapFile.length() / StorageProperties.MB);
+
+        try {
+          // Allocates the necessary resources on the backend
+          StorageResourceWithCallback srwc = blockManager.prepSnapshotForDownload(snapshotId, sourceSnap.getSizeGb(), actualSnapSizeInMB);
+
+          if (srwc != null && srwc.getSr() != null && srwc.getCallback() != null) {
+            StorageResource storageResource = srwc.getSr();
+
+            // Check if the destination is a block device
+            if (storageResource.getPath().startsWith("/dev/")) {
+              CommandOutput output = SystemUtil.runWithRawOutput(new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=" + tmpSnapshotFileName,
+                  "of=" + storageResource.getPath(), "bs=" + StorageProperties.blockSize});
+              LOG.debug("Output of dd command: " + output.error);
+              if (output.returnValue != 0) {
+                throw new EucalyptusCloudException("Failed to copy the snapshot to the right location due to: " + output.error);
+              }
+              cleanupFile(tmpSnapshotFileName);
+            } else {
+              // Rename file
+              if (!snapFile.renameTo(new File(storageResource.getPath()))) {
+                throw new EucalyptusCloudException("Failed to rename the snapshot");
+              }
+            }
+
+            // Execute the callback to finish the snapshot
+            blockManager.executeCallback(srwc.getCallback(), srwc.getSr());
+          } else {
+            LOG.warn("Block Manager replied that " + snapshotId
+                + " not on backend, but snapshot preparation indicated that the snapshot is already present");
+          }
+        } catch (Exception ex) {
+          LOG.error("Failed to prepare the snapshot " + snapshotId + " on storage backend. Cleaning up the snapshot on backend", ex);
+          cleanFailedSnapshot(snapshotId);
+          throw ex;
+        }
+      } catch (Exception ex) {
+        LOG.error("Failed to prepare the snapshot " + snapshotId + " on the storage backend. Cleaning up the snapshot on SC", ex);
+        cleanupFile(tmpSnapshotFileName);
+        throw ex;
+      }
+    } else { // Prepare the snapshot holder and download the snapshot directly to it
+
+      long actualSnapSizeInMB = (long) Math.ceil((double) actualSizeInBytes / StorageProperties.MB);
+
+      try {
+        // Allocates the necessary resources on the backend
+        StorageResourceWithCallback srwc = blockManager.prepSnapshotForDownload(snapshotId, sourceSnap.getSizeGb(), actualSnapSizeInMB);
+
+        if (srwc != null && srwc.getSr() != null && srwc.getCallback() != null) {
+          // Download the snapshot to the destination
+          snapshotTransfer.download(srwc.getSr());
+
+          // Execute the callback to finish the snapshot
+          blockManager.executeCallback(srwc.getCallback(), srwc.getSr());
+        } else {
+          LOG.warn("Block Manager replied that " + snapshotId
+              + " not on backend, but snapshot preparation indicated that the snapshot is already present");
+        }
+      } catch (Exception ex) {
+        LOG.error("Failed to prepare the snapshot " + snapshotId + " on storage backend. Cleaning up the snapshot on backend", ex);
+        cleanFailedSnapshot(snapshotId);
+        throw ex;
+      }
+    }
+  }
+
+  private void downloadAndRestoreBase(SnapshotInfo snap) throws Exception {
+    String bucket = null;
+    String key = null;
+
+    if (StringUtils.isBlank(snap.getSnapshotLocation())) {
+      throw new EucalyptusCloudException(
+          "Snapshot location (bucket, key) for " + snap.getSnapshotId() + " is unknown. Cannot download snapshot from objectstorage.");
+    }
+    String[] names = SnapshotInfo.getSnapshotBucketKeyNames(snap.getSnapshotLocation());
+    bucket = names[0];
+    key = names[1];
+    if (StringUtils.isBlank(bucket) || StringUtils.isBlank(key)) {
+      throw new EucalyptusCloudException(
+          "Failed to parse bucket and key information for downloading " + snap.getSnapshotId() + ". Cannot download snapshot from objectstorage.");
+    }
+
+    // Try to fetch the snapshot size before preparing the snapshot holder on the backend. If size is unavailable, the snapshot
+    // must be downloaded, unzipped and measured before creating the snapshot holder on the backend. Some SANs (Equallogic) add
+    // arbitrary amount of writable space to the lun and hence the exact size of the snapshot is required for preparing the
+    // holder on the backend
+    SnapshotTransfer snapshotTransfer = new S3SnapshotTransfer(snap.getSnapshotId(), bucket, key);
+    Long actualSizeInBytes = null;
+    try {
+      actualSizeInBytes = snapshotTransfer.getSizeInBytes();
+    } catch (Exception e) {
+      LOG.debug("Snapshot size not found", e);
+    }
+
+    if (actualSizeInBytes != null) { // Prepare the snapshot holder and download the snapshot directly to it
+      long actualSnapSizeInMB = (long) Math.ceil((double) actualSizeInBytes / StorageProperties.MB);
+
+      // Allocates the necessary resources on the backend
+      StorageResourceWithCallback srwc = blockManager.prepSnapshotBaseForRestore(snapshotId, snap.getSizeGb(), snap.getSnapPointId());
+
+      if (srwc != null && srwc.getSr() != null && srwc.getCallback() != null) {
+        // Download the snapshot to the destination
+        snapshotTransfer.download(srwc.getSr());
+
+        // Callback with snapshot ID
+        String snapshotPoint = blockManager.executeCallback(srwc.getCallback(), srwc.getSr());
+      } else {
+        LOG.warn("Failed to download base " + snap.getSnapshotId() + " for restoring " + snapshotId);
+        throw new EucalyptusCloudException("Failed to download base " + snap.getSnapshotId() + " for restoring " + snapshotId);
+      }
+    } else {
+      // doomed!
+    }
+  }
+
+  private void downloadAndRestoreDelta(SnapshotInfo snap, SnapshotInfo prevSnap) throws Exception {
+    String bucket = null;
+    String key = null;
+
+    if (StringUtils.isBlank(snap.getSnapshotLocation())) {
+      throw new EucalyptusCloudException(
+          "Snapshot location (bucket, key) for " + snap.getSnapshotId() + " is unknown. Cannot download snapshot from objectstorage.");
+    }
+    String[] names = SnapshotInfo.getSnapshotBucketKeyNames(snap.getSnapshotLocation());
+    bucket = names[0];
+    key = names[1];
+    if (StringUtils.isBlank(bucket) || StringUtils.isBlank(key)) {
+      throw new EucalyptusCloudException(
+          "Failed to parse bucket and key information for downloading " + snap.getSnapshotId() + ". Cannot download snapshot from objectstorage.");
+    }
+    SnapshotTransfer snapshotTransfer = new S3SnapshotTransfer(snap.getSnapshotId(), bucket, key);
+    Path diffPath = Files.createTempFile(snap.getSnapshotId() + "_" + prevSnap.getSnapshotId() + "_", ".diff");
+
+    // Download snapshot delta
+    StorageResource sr = new FileResource(snap.getSnapshotId(), diffPath.toString());
+    snapshotTransfer.download(sr);
+
+    // Apply the snapshot delta
+    blockManager.restoreSnapshotDelta(snap.getSnapshotId(), prevSnap.getSnapshotId(), snapshotId, sr);
+  }
+
 }
