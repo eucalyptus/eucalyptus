@@ -92,6 +92,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.metrics.MonitoredAction;
 import com.eucalyptus.util.metrics.ThruputMetrics;
 import com.google.common.base.Function;
+import com.google.common.base.Strings;
 
 import edu.ucsb.eucalyptus.util.EucaSemaphore;
 import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
@@ -176,13 +177,16 @@ public class SnapshotCreator implements Runnable {
           // gather what needs to be uploaded
           try {
             // Check if backend supports snap deltas
-            if (blockManager.supportsIncrementalSnapshots()) { // backend supports delta, evaluate if a delta can be uploaded
+            Integer maxDeltaLimit = StorageInfo.getStorageInfo().getMaxSnapshotDeltas();
+            maxDeltaLimit = maxDeltaLimit != null ? maxDeltaLimit : 0;
+
+            if (maxDeltaLimit > 0 && blockManager.supportsIncrementalSnapshots()) { // backend supports delta, evaluate if a delta can be uploaded
               LOG.debug("EBS backend supports incremental snapshots");
 
               int attempts = 0;
               do {
                 attempts++;
-                prevSnap = fetchPreviousSnapshot();
+                prevSnap = fetchPreviousSnapshot(maxDeltaLimit);
 
                 if (prevSnap != null) {
                   // Acquire a semaphore to previous snapshot before updating the metadata for current snapshot
@@ -205,7 +209,7 @@ public class SnapshotCreator implements Runnable {
               } while (currSnap == null && attempts < 10);
 
             } else { // backend does not support deltas, upload entire snapshot
-              LOG.debug("EBS backend does not support incremental snapshots");
+              LOG.debug("Either EBS backend does not support incremental snapshots or the feature is disabled");
               currSnap = updateSnapshotInfo(snapshotLocation);
             }
 
@@ -351,7 +355,7 @@ public class SnapshotCreator implements Runnable {
     Entities.asTransaction(SnapshotInfo.class, updateFunction).apply(snapshotId);
   }
 
-  private SnapshotInfo fetchPreviousSnapshot() throws Exception {
+  private SnapshotInfo fetchPreviousSnapshot(int maxDeltas) throws Exception {
 
     SnapshotInfo prevSnap = null;
     SnapshotInfo currSnap = Transactions.find(new SnapshotInfo(snapshotId));
@@ -364,7 +368,6 @@ public class SnapshotCreator implements Runnable {
       search.add(Restrictions.and(StorageProperties.SNAPSHOT_DELTA_GENERATION_CRITERION, Restrictions.lt("startTime", currSnap.getStartTime())));
       search.addOrder(Order.desc("startTime"));
       search.setReadOnly(true);
-      search.setMaxResults(1);
 
       List<SnapshotInfo> previousSnaps = (List<SnapshotInfo>) search.list();
       tr.commit();
@@ -373,7 +376,22 @@ public class SnapshotCreator implements Runnable {
         if (prevSnap.getSnapshotLocation() != null && prevSnap.getIsOrigin() != null) { // check origin to validate that snapshot was uploaded in its
                                                                                         // entirety at least once post 4.4
           LOG.debug(this.volumeId + " has been snapshotted and uploaded before. Most recent such snapshot is " + prevSnap.getSnapshotId());
-          return prevSnap;
+
+          // count number of deltas that have been created after the last full check point
+          int numDeltas;
+          for (numDeltas = 0; numDeltas < previousSnaps.size(); numDeltas++) {
+            if (Strings.isNullOrEmpty(previousSnaps.get(numDeltas).getPreviousSnapshotId()))
+              break;
+            else
+              continue;
+          }
+
+          LOG.debug(this.volumeId + " has " + numDeltas + " delta(s) since the last full checkpoint. Max limit is " + maxDeltas);
+          if (numDeltas < maxDeltas) {
+            return prevSnap;
+          } else {
+            // nothing to do here
+          }
         } else {
           LOG.debug(this.volumeId + " has not been snapshotted and or uploaded after the support for incremental snapshots was added");
         }

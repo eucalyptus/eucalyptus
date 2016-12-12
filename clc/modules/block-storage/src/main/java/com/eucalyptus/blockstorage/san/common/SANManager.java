@@ -1162,10 +1162,10 @@ public class SANManager implements LogicalStorageManager {
           @Override
           public String apply(StorageResource arg0) {
             try {
-              LOG.debug("Executing callback post incremental snapshot generation for " + snapshotId);
+              LOG.debug("Executing callback after generating incremental snapshot for " + snapshotId);
               connectionManager.cleanupSnapshotDelta(sanSnapId, arg0);
             } catch (Exception e) {
-              LOG.warn("Failed to execute callback post incremental snapshot generation for " + snapshotId, e);
+              LOG.warn("Failed to execute callback after generating incremental snapshot for " + snapshotId, e);
             }
             return null;
           }
@@ -1317,7 +1317,7 @@ public class SANManager implements LogicalStorageManager {
           @Override
           public String apply(StorageResource arg0) {
             try {
-              LOG.debug("Executing callback for prepSnapshotBaseForRestore() " + snapshotId);
+              LOG.debug("Executing callback after prepping base for restoration of " + snapshotId);
 
               SANVolumeInfo snapInfo = null;
               String iqnAndLun = null;
@@ -1431,11 +1431,11 @@ public class SANManager implements LogicalStorageManager {
 
     // Any remaining tasks/clean up for restoring post delta application
     try {
-      LOG.debug("Completing snapshot restoration process post delta for " + snapshotId);
+      LOG.debug("Finishing up restoration and configuration of expected snapshot state for " + snapshotId);
       connectionManager.completeSnapshotDeltaRestoration(sanVolumeId, iqn);
     } catch (Exception e) {
-      LOG.warn("Failed to complete snapshot restoration process post delta application for " + snapshotId);
-      throw new EucalyptusCloudException("Failed to complete snapshot restoration process post delta application for " + snapshotId, e);
+      LOG.warn("Failed to finish restoration and configuration of expected snapshot state for  " + snapshotId);
+      throw new EucalyptusCloudException("Failed to finish restoration and configuration of expected snapshot state for " + snapshotId, e);
     }
   }
 
