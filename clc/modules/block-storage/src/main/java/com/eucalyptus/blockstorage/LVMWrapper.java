@@ -147,6 +147,12 @@ public class LVMWrapper {
     return SystemUtil.run(new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "vgscan"});
   }
 
+  public static String scanPhysicalVolume(String lvName) throws EucalyptusCloudException {
+    // Scan a PV and update lvmetad's cache. 
+    // OK to use --cache even if lvmetad daemon is not running.
+    return SystemUtil.run(new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "pvscan", "--cache", lvName});
+  }
+
   public static String createLogicalVolume(String volumeId, String vgName, String lvName) throws EucalyptusCloudException {
     // '--wipesignatures y' turns on signature detection and wiping during lvcreate. It overrides the configuration in /etc/lvm/lvm.conf
     // '--yes' flag suppresses the interactive prompt and enforces the wipe operation
