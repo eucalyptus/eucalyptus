@@ -172,7 +172,7 @@ public class EventHandlerChainEnableVmDatabase extends EventHandlerChain<EnableD
   }
   
   public static class WaitOnDb extends AbstractEventHandler<EnableDBInstanceEvent> implements StoredResult<String> {
-    private static final String PING_DB_NAME = "eucalyptus_reporting_backend";
+    private static final String PING_DB_NAME = "eucalyptus_cloudwatch_backend";
     private String instanceIp = null;
     protected WaitOnDb(EventHandlerChain<EnableDBInstanceEvent> chain) {
       super(chain);

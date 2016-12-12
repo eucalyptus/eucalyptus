@@ -214,6 +214,54 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     return true;
   }
 
+  private static class UpgradeUtils {
+    private static void deleteRemovedProperties(
+        final Logger logger,
+        final Iterable<String> propertyNames
+    ) {
+      try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
+        for ( final String propertyName : propertyNames ) try {
+          final StaticDatabasePropertyEntry property =
+              Entities.criteriaQuery( StaticDatabasePropertyEntry.class )
+                  .whereEqual( StaticDatabasePropertyEntry_.propName, propertyName )
+                  .uniqueResult( );
+          logger.info( "Deleting cloud property: " + propertyName );
+          Entities.delete( property );
+        } catch ( NoSuchElementException e ) {
+          logger.info( "Property not found, skipped delete for: " + propertyName );
+        }
+        db.commit( );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+
+    private static void updateMovedProperties(
+        final Logger logger,
+        final Iterable<Tuple3<String,String,String>> movedProperties
+    ) {
+      try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
+        for ( final Tuple3<String,String,String> movedProperty : movedProperties ) {
+          final String propName = movedProperty._1( );
+          final String oldFieldName = movedProperty._2( );
+          final String newFieldName = movedProperty._3( );
+          Entities.criteriaQuery( StaticDatabasePropertyEntry.class )
+              .whereEqual( StaticDatabasePropertyEntry_.propName, propName )
+              .uniqueResultOption( ).transform( property -> {
+            if ( oldFieldName.equals( property.getFieldName( ) ) ) {
+              logger.info( "Updating field for "+propName+" property" );
+              property.setFieldName( newFieldName );
+            }
+            return property;
+          } );
+        }
+        db.commit( );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+  }
+
   @EntityUpgrade( entities = StaticDatabasePropertyEntry.class, since = Version.v3_2_0, value = Empyrean.class )
   public enum StaticPropertyEntryUpgrade implements Predicate<Class> {
     INSTANCE;
@@ -728,46 +776,6 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     INSTANCE;
     private static Logger LOG = Logger.getLogger( StaticPropertyEntryUpgrade440.class );
 
-    private void deleteRemovedProperties( final Iterable<String> propertyNames ) {
-      try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
-        for ( final String propertyName : propertyNames ) try {
-          final StaticDatabasePropertyEntry property =
-              Entities.criteriaQuery( StaticDatabasePropertyEntry.class )
-                  .whereEqual( StaticDatabasePropertyEntry_.propName, propertyName )
-                  .uniqueResult( );
-          LOG.info( "Deleting cloud property: " + propertyName );
-          Entities.delete( property );
-        } catch ( NoSuchElementException e ) {
-          LOG.info( "Property not found, skipped delete for: " + propertyName );
-        }
-        db.commit( );
-      } catch ( Exception ex ) {
-        throw Exceptions.toUndeclared( ex );
-      }
-    }
-
-    private void updateMovedProperties( final Iterable<Tuple3<String,String,String>> movedProperties ) {
-      try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
-        for ( final Tuple3<String,String,String> movedProperty : movedProperties ) {
-          final String propName = movedProperty._1( );
-          final String oldFieldName = movedProperty._2( );
-          final String newFieldName = movedProperty._3( );
-          Entities.criteriaQuery( StaticDatabasePropertyEntry.class )
-              .whereEqual( StaticDatabasePropertyEntry_.propName, propName )
-              .uniqueResultOption( ).transform( property -> {
-            if ( oldFieldName.equals( property.getFieldName( ) ) ) {
-              LOG.info( "Updating field for "+propName+" property" );
-              property.setFieldName( newFieldName );
-            }
-            return property;
-          } );
-        }
-        db.commit( );
-      } catch ( Exception ex ) {
-        throw Exceptions.toUndeclared( ex );
-      }
-    }
-
     private void updatePropertyValues( final Iterable<Tuple3<String,String,String>> updatedProperties ) {
       try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
         for ( final Tuple3<String,String,String> updatedProperty : updatedProperties ) {
@@ -813,7 +821,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
 
     @Override
     public boolean apply( final Class arg0 ) {
-      deleteRemovedProperties( ImmutableList.of(
+      UpgradeUtils.deleteRemovedProperties( LOG, ImmutableList.of(
           "bootstrap.servicebus.max_outstanding_messages",
           "bootstrap.servicebus.min_scheduler_core_size",
           "bootstrap.servicebus.workers_per_stage",
@@ -828,7 +836,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
           "services.loadbalancing.worker.lb_poll_interval"
       ) );
 
-      updateMovedProperties( ImmutableList.of(
+      UpgradeUtils.updateMovedProperties( LOG, ImmutableList.of(
           Tuple.of( "dns.recursive.enabled",
               "com.eucalyptus.dns.resolvers.RecursiveDnsResolver.enabled",
               "com.eucalyptus.vm.dns.RecursiveDnsResolver.enabled" )
@@ -850,6 +858,35 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       ) );
 
       configureCloudformationStrictResourcePropertyEnforcement();
+      return true;
+    }
+  }
+
+  @EntityUpgrade( entities = StaticDatabasePropertyEntry.class, since = Version.v5_0_0, value = Empyrean.class )
+  public enum StaticPropertyEntryUpgrade500 implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( StaticPropertyEntryUpgrade500.class );
+
+    @Override
+    public boolean apply( final Class arg0 ) {
+      UpgradeUtils.deleteRemovedProperties( LOG, ImmutableList.of(
+          "reporting.data_collection_enabled",
+          "reporting.default_size_time_size_unit",
+          "reporting.default_size_time_time_unit",
+          "reporting.default_size_unit",
+          "reporting.default_time_unit",
+          "reporting.default_write_interval_mins"
+      ) );
+
+      UpgradeUtils.updateMovedProperties( LOG, ImmutableList.of(
+          Tuple.of( "cloud.monitor.default_poll_interval_mins",
+              "com.eucalyptus.reporting.modules.backend.DescribeSensorsListener.default_poll_interval_mins",
+              "com.eucalyptus.cluster.callback.reporting.DescribeSensorsListener.default_poll_interval_mins" ),
+          Tuple.of( "cloud.monitor.history_size",
+              "com.eucalyptus.reporting.modules.backend.DescribeSensorsListener.history_size",
+              "com.eucalyptus.cluster.callback.reporting.DescribeSensorsListener.history_size" )
+      ) );
+
       return true;
     }
   }

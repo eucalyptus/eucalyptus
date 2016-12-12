@@ -18,10 +18,9 @@
  * additional information or have any questions.
  ************************************************************************/
 
-package com.eucalyptus.reporting.modules.backend;
+package com.eucalyptus.cluster.callback.reporting;
 
-import com.eucalyptus.cluster.callback.reporting.CloudWatchHelper;
-import com.eucalyptus.component.id.Reporting;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
@@ -54,10 +53,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-@ConfigurableClass( root = "cloud.monitor", description = "Parameters controlling cloud watch and reporting")
+@ConfigurableClass( root = "cloud.monitor", description = "Parameters controlling cloud watch")
 public class DescribeSensorsListener implements EventListener<Hertz> {
 
-  @ConfigurableField(initial = "5", description = "How often the reporting system requests information from the cluster controller")
+  @ConfigurableField(initial = "5", description = "How often to request information from the cluster controller")
   public static Long DEFAULT_POLL_INTERVAL_MINS = 5L;
 
   private Integer COLLECTION_INTERVAL_TIME_MS;
@@ -100,11 +99,11 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
               for ( final ServiceConfiguration ccConfig : Topology.enabledServices( ClusterController.class ) ) {
                 final String ccHost = ccConfig.getHostName( );
                 if ( busyHosts.replace( ccHost, false, true ) || busyHosts.putIfAbsent( ccHost, true ) == null ) {
-                  Threads.lookup( Reporting.class, DescribeSensorsListener.class ).submit( new Callable<Object>() {
+                  Threads.lookup( Eucalyptus.class, DescribeSensorsListener.class ).submit( new Callable<Object>() {
 
                     @Override
                     public Object call() throws Exception {
-                      final ExecutorService executorService = Threads.lookup( Reporting.class, DescribeSensorsListener.class, "response-processing" ).limitTo( 4 );
+                      final ExecutorService executorService = Threads.lookup( Eucalyptus.class, DescribeSensorsListener.class, "response-processing" ).limitTo( 4 );
                       final long startTime = System.currentTimeMillis( );
                       try {
                         final List<String> allInstanceIds = VmInstances.listWithProjection(
