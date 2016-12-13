@@ -55,6 +55,20 @@ public class NotifyClient {
       this.name = name;
     }
 
+    public static NotifyTaskList of( final AccountFullName accountFullName,
+                                     final String domain,
+                                     final String type,
+                                     final String name ) {
+      return new NotifyTaskList( accountFullName, domain, type, name );
+    }
+
+    public static NotifyTaskList of( final String accountNumber,
+                                     final String domain,
+                                     final String type,
+                                     final String name ) {
+      return new NotifyTaskList( accountNumber, domain, type, name );
+    }
+
     public String getChannelName( ) {
       return Joiner.on( ':' ).join( accountNumber, type, domain, name );
     }
