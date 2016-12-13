@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -51,6 +52,10 @@ import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.AbstractPersistentSupport;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.PersistenceExceptions;
+import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Listeners;
+import com.eucalyptus.simpleworkflow.NotifyClient.NotifyTaskList;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflowMetadatas;
 import com.eucalyptus.simpleworkflow.common.model.*;
 import com.eucalyptus.simpleworkflow.tokens.TaskToken;
@@ -87,6 +92,7 @@ import com.google.common.collect.Sets;
 public class SimpleWorkflowService {
 
   private static final Logger logger = Logger.getLogger( SimpleWorkflowService.class );
+  private static final ConcurrentMap<NotifyTaskList, Long> taskListActivity = Maps.newConcurrentMap( );
 
   private final Domains domains;
   private final ActivityTasks activityTasks;
@@ -826,7 +832,7 @@ public class SimpleWorkflowService {
 
     final String domain = request.getDomain( );
     final String taskList = request.getTaskList( ).getName( );
-    final Callable<SimpleWorkflowMessage> taskCallable =
+    final Callable<com.eucalyptus.simpleworkflow.common.model.ActivityTask> taskCallable =
         () -> {
           com.eucalyptus.simpleworkflow.common.model.ActivityTask activityTask = null;
           final List<ActivityTask> pending = activityTasks.listByExample(
@@ -903,12 +909,10 @@ public class SimpleWorkflowService {
         };
 
     try {
-      handleTaskPolling( accountFullName, domain, "activity", taskList, request.getCorrelationId( ), new com.eucalyptus.simpleworkflow.common.model.ActivityTask( ), taskCallable );
+      return handleTaskPolling( accountFullName, domain, "activity", taskList, request.getCorrelationId( ), new com.eucalyptus.simpleworkflow.common.model.ActivityTask( ), taskCallable );
     } catch ( Exception e ) {
       throw handleException( e );
     }
-
-    return null;
   }
 
   public ActivityTaskStatus recordActivityTaskHeartbeat( final RecordActivityTaskHeartbeatRequest request ) throws SimpleWorkflowException {
@@ -1168,7 +1172,7 @@ public class SimpleWorkflowService {
 
     final String domain = request.getDomain( );
     final String taskList = request.getTaskList( ).getName( );
-    final Callable<SimpleWorkflowMessage> taskCallable = () -> {
+    final Callable<DecisionTask> taskCallable = () -> {
       final List<WorkflowExecution> pending = workflowExecutions.listByExample(
           WorkflowExecution.exampleWithPendingDecision( accountFullName, domain, taskList ),
           accessible,
@@ -1254,12 +1258,10 @@ public class SimpleWorkflowService {
     };
 
     try {
-      handleTaskPolling( accountFullName, domain, "decision", taskList, request.getCorrelationId(), new DecisionTask(), taskCallable );
+      return handleTaskPolling( accountFullName, domain, "decision", taskList, request.getCorrelationId(), new DecisionTask(), taskCallable );
     } catch ( Exception e ) {
       throw handleException( e );
     }
-
-    return null;
   }
 
   public SimpleWorkflowMessage respondDecisionTaskCompleted( final RespondDecisionTaskCompletedRequest request ) throws SimpleWorkflowException {
@@ -2254,36 +2256,69 @@ public class SimpleWorkflowService {
         segment -> { List<T> copy = Lists.newArrayList( segment ); Collections.shuffle( copy ); return copy; } );
   }
 
+  private static void noteTaskListActivity( final AccountFullName accountFullName,
+                                            final String domain,
+                                            final String type,
+                                            final String taskList ) {
+    taskListActivity.put( NotifyTaskList.of( accountFullName, domain, type, taskList ), System.currentTimeMillis( ) );
+  }
+
+  private static boolean taskListActive( final AccountFullName accountFullName,
+                                         final String domain,
+                                         final String type,
+                                         final String taskList,
+                                         final long timestamp ) {
+    return taskListActivity.getOrDefault( NotifyTaskList.of( accountFullName, domain, type, taskList ), 0L ) > timestamp;
+  }
+
+  private static void taskListActivityCleanup( long timestamp ) {
+    for ( final Map.Entry<NotifyTaskList,Long> entry : taskListActivity.entrySet( ) ) {
+      if ( entry.getValue( ) < timestamp ) {
+        taskListActivity.remove( entry.getKey( ), entry.getValue( ) );
+      }
+    }
+  }
+
   private static void notifyTaskList( final AccountFullName accountFullName,
                                       final String domain,
                                       final String type,
                                       final String taskList ) {
+    noteTaskListActivity( accountFullName, domain, type, taskList );
     NotifyClient.notifyTaskList( accountFullName, domain, type, taskList );
   }
 
   private static final long EXPIRY_MILLIS = TimeUnit.SECONDS.toMillis( 30 );
 
-  private static void handleTaskPolling( final AccountFullName accountFullName,
+  private static <R extends SimpleWorkflowMessage> R handleTaskPolling( final AccountFullName accountFullName,
                                          final String domain,
                                          final String type,
                                          final String taskList,
                                          final String correlationId,
-                                         final SimpleWorkflowMessage emptyResponse,
-                                         final Callable<SimpleWorkflowMessage> responseCallable) {
+                                         final R emptyResponse,
+                                         final Callable<R> responseCallable) {
     final Long pollTimeout = System.currentTimeMillis() + EXPIRY_MILLIS;
-    handleTaskPolling(accountFullName, domain, type, taskList, correlationId, emptyResponse, responseCallable, pollTimeout);
+    return handleTaskPolling(accountFullName, domain, type, taskList, correlationId, emptyResponse, responseCallable, true, pollTimeout);
   }
 
-  private static void handleTaskPolling( final AccountFullName accountFullName,
+  private static <R extends SimpleWorkflowMessage> R handleTaskPolling( final AccountFullName accountFullName,
                                          final String domain,
                                          final String type,
                                          final String taskList,
                                          final String correlationId,
-                                         final SimpleWorkflowMessage emptyResponse,
-                                         final Callable<SimpleWorkflowMessage> responseCallable,
+                                         final R emptyResponse,
+                                         final Callable<R> responseCallable,
+                                         final boolean checkImmediately,
                                          final long pollTimeout) {
     final String list = Joiner.on('/').join( type, domain, taskList );
     try {
+        final long activityTimestamp = System.currentTimeMillis( ) - TimeUnit.SECONDS.toMillis( 1L );
+        if ( checkImmediately && taskListActive( accountFullName, domain, type, taskList, activityTimestamp ) ) {
+          final R taskResponse = responseCallable.call( );
+          if ( taskResponse != null ) {
+            taskResponse.setCorrelationId(correlationId);
+            return taskResponse;
+          }
+        }
         NotifyClient.pollTaskList(accountFullName, domain, type, taskList, pollTimeout, Contexts.consumerWithCurrentContext(
                 (notified) -> {
                   try {
@@ -2294,7 +2329,7 @@ public class SimpleWorkflowService {
                         Contexts.response(taskResponse);
                         return;
                       } else if ( System.currentTimeMillis() < pollTimeout ) {
-                        handleTaskPolling( accountFullName, domain, type, taskList, correlationId, emptyResponse, responseCallable, pollTimeout );
+                        handleTaskPolling( accountFullName, domain, type, taskList, correlationId, emptyResponse, responseCallable, false, pollTimeout );
                         return;
                       }
                     }
@@ -2308,10 +2343,23 @@ public class SimpleWorkflowService {
                   }
                 }
         ));
+        return null;
     } catch ( Exception e ) {
       logger.error( "Error polling for task " + list, e );
       emptyResponse.setCorrelationId( correlationId );
-      Contexts.response( emptyResponse );
+      return emptyResponse;
+    }
+  }
+
+  public static class SimpleWorkflowServiceActivityCleanup implements EventListener<ClockTick> {
+
+    public static void register() {
+      Listeners.register( ClockTick.class, new SimpleWorkflowServiceActivityCleanup( ) );
+    }
+
+    @Override
+    public void fireEvent( final ClockTick event ) {
+      taskListActivityCleanup( System.currentTimeMillis( ) - TimeUnit.SECONDS.toMillis( 10 ) );
     }
   }
 
