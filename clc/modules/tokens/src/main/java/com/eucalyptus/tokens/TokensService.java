@@ -203,7 +203,7 @@ public class TokensService {
       throw new TokensException( Code.ValidationError, "Invalid role session name" );
     }
 
-    final BaseRole role = lookupRole( request.getRoleArn( ) );
+    final BaseRole role = lookupRole( request.getRoleArn( ), "AssumeRole" );
 
     try {
       // check for ec2 principal (instance profile)
@@ -234,6 +234,8 @@ public class TokensService {
             RestrictedTypes.doPrivilegedWithoutOwner(
                 Accounts.getRoleFullName( role ),
                 new RoleResolver( role ) ) );
+      } catch ( final AuthException e ) {
+        throw new TokensException( Code.AccessDenied, "Not authorized to perform sts:AssumeRole" );
       } catch ( final Exception e ) {
         throw new TokensException( Code.AccessDenied, e.getMessage( ) );
       }
@@ -285,7 +287,7 @@ public class TokensService {
       throw new TokensException( Code.ValidationError, "Token invalid" );
     }
 
-    final BaseRole role = lookupRole( request.getRoleArn( ) );
+    final BaseRole role = lookupRole( request.getRoleArn( ), "AssumeRoleWithWebIdentity" );
 
     try {
       final String identityToken = request.getWebIdentityToken( );
@@ -567,7 +569,8 @@ public class TokensService {
     return "arn:aws:sts::"+role.getAccountNumber()+":assumed-role"+Accounts.getRoleFullName( role )+"/"+roleSessionName;
   }
 
-  private static BaseRole lookupRole( final String roleArnStringWithAlias ) throws TokensException {
+  private static BaseRole lookupRole( final String roleArnStringWithAlias,
+                                      final String action ) throws TokensException {
     try {
       final Matcher matcher = ROLE_ARN_PATTERN.matcher( roleArnStringWithAlias );
       if ( !matcher.matches( ) ) {
@@ -589,10 +592,8 @@ public class TokensService {
       final String roleAccountId = roleArn.getAccount( );
       final String roleName = ( (EuareResourceName) roleArn ).getName( );
       return Accounts.lookupRoleByName( roleAccountId, roleName );
-    } catch ( IllegalArgumentException | JSONException e ) {
-      throw new TokensException( Code.ValidationError, "Invalid role ARN: " + roleArnStringWithAlias );
     } catch ( Exception e ) {
-      throw new TokensException( Code.InvalidParameterValue, "Invalid role: " + roleArnStringWithAlias );
+      throw new TokensException( Code.AccessDenied, "Not authorized to perform sts:" + action );
     }
   }
 
