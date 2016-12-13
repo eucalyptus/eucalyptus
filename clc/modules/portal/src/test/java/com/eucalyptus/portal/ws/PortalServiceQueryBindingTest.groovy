@@ -20,6 +20,8 @@ import com.eucalyptus.portal.common.model.ModifyAccountType
 import com.eucalyptus.portal.common.model.PortalMessage
 import com.eucalyptus.portal.common.model.ViewAccountResponseType
 import com.eucalyptus.portal.common.model.ViewAccountResult
+import com.eucalyptus.portal.common.model.ViewMonthlyUsageType
+import com.eucalyptus.portal.common.model.ViewUsageType
 import com.eucalyptus.ws.protocol.QueryJsonBindingTestSupport
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import org.junit.Test
@@ -48,12 +50,12 @@ class PortalServiceQueryBindingTest extends QueryJsonBindingTestSupport {
 
     // ModifyAccount
     bindAndAssertObject( binding, ModifyAccountType, 'ModifyAccount', new ModifyAccountType(
-        userBillingAccess: true
+            userBillingAccess: true
     ), 1 )
     bindAndAssertParameters( binding, ModifyAccountType, 'ModifyAccount', new ModifyAccountType(
-        userBillingAccess: true
+            userBillingAccess: true
     ), [
-        UserBillingAccess: 'true'
+            UserBillingAccess: 'true'
     ] )
 
     // ViewAccount
@@ -64,5 +66,18 @@ class PortalServiceQueryBindingTest extends QueryJsonBindingTestSupport {
             )
         )
     ), '''{"accountSettings":{"userBillingAccess":true}}''' )
+
+    bindAndAssertObject(binding, ViewUsageType, 'ViewUsage', new ViewUsageType(
+            services: 'Ec2',
+            usageTypes: 'all',
+            operations: 'all',
+            timePeriodFrom: (new Date(System.currentTimeMillis()-24*60*60*1000)),
+            timePeriodTo: new Date(System.currentTimeMillis()),
+            reportGranularity: 'Hours'), 6);
+
+    bindAndAssertObject(binding, ViewMonthlyUsageType, 'ViewMonthlyUsage', new ViewMonthlyUsageType(
+            year: '2016',
+            month: '12'
+    ), 2);
   }
 }

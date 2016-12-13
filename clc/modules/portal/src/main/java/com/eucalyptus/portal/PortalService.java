@@ -19,6 +19,8 @@ import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 import java.util.Set;
 import java.util.function.Function;
 import javax.inject.Inject;
+
+import com.eucalyptus.portal.common.model.*;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthContextSupplier;
 import com.eucalyptus.auth.Permissions;
@@ -26,17 +28,6 @@ import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.portal.common.TagClient;
-import com.eucalyptus.portal.common.model.AccountSettings;
-import com.eucalyptus.portal.common.model.BillingSettings;
-import com.eucalyptus.portal.common.model.GetTagKeysType;
-import com.eucalyptus.portal.common.model.ModifyAccountResponseType;
-import com.eucalyptus.portal.common.model.ModifyAccountType;
-import com.eucalyptus.portal.common.model.ModifyBillingResponseType;
-import com.eucalyptus.portal.common.model.ModifyBillingType;
-import com.eucalyptus.portal.common.model.ViewAccountResponseType;
-import com.eucalyptus.portal.common.model.ViewAccountType;
-import com.eucalyptus.portal.common.model.ViewBillingResponseType;
-import com.eucalyptus.portal.common.model.ViewBillingType;
 import com.eucalyptus.portal.common.policy.PortalPolicySpec;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMappers;
@@ -180,6 +171,27 @@ public class PortalService {
     } catch ( Exception e ) {
       logger.error( "Error loading tag keys", e );
     }
+    return response;
+  }
+
+  public ViewUsageResponseType viewUsage(final ViewUsageType request) throws PortalServiceException {
+    final Context context = checkAuthorized( );
+    final ViewUsageResponseType response = request.getReply();
+    final ViewUsageResult result = new ViewUsageResult();
+    result.setData("Service, Operation, UsageType, Resource, StartTime, EndTime, UsageValue");
+    response.setResult(result);
+    return response;
+  }
+
+  public ViewMonthlyUsageResponseType viewMonthlyUsage(final ViewMonthlyUsageType request) throws PortalServiceException {
+    final Context context = checkAuthorized( );
+    final ViewMonthlyUsageResponseType response = request.getReply();
+    final ViewMonthlyUsageResult result = new ViewMonthlyUsageResult();
+    result.setData("\"InvoiceID\",\"PayerAccountId\",\"LinkedAccountId\",\"RecordType\",\"RecordID\",\"BillingPeriodStartDate\"," +
+            "\"BillingPeriodEndDate\",\"InvoiceDate\",\"PayerAccountName\",\"LinkedAccountName\",\"TaxationAddress\",\"PayerPONumber\"," +
+            "\"ProductCode\",\"ProductName\",\"SellerOfRecord\",\"UsageType\",\"Operation\",\"RateId\",\"ItemDescription\",\"UsageStartDate\"," +
+            "\"UsageEndDate\",\"UsageQuantity\",\"BlendedRate\",\"CurrencyCode\",\"CostBeforeTax\",\"Credits\",\"TaxAmount\",\"TaxType\",\"TotalCost\"");
+    response.setResult(result);
     return response;
   }
 

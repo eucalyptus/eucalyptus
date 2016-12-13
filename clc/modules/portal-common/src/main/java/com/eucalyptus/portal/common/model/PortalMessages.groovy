@@ -16,8 +16,10 @@
 @GroovyAddClassUUID
 package com.eucalyptus.portal.common.model
 
+import com.eucalyptus.auth.policy.annotation.PolicyAction
 import com.eucalyptus.component.annotation.ComponentMessage
 import com.eucalyptus.portal.common.Portal
+import com.eucalyptus.portal.common.policy.PortalPolicySpec
 import com.eucalyptus.ws.WebServiceError
 import com.fasterxml.jackson.annotation.JsonUnwrapped
 import com.google.common.collect.Lists
@@ -37,6 +39,47 @@ class PortalMessage extends PortalBaseMessage {
         "",
         this )
   }
+}
+
+class ViewUsageType extends PortalMessage {
+  String services;
+  String usageTypes;
+  String operations;
+  Date timePeriodFrom;
+  Date timePeriodTo;
+  String reportGranularity;
+}
+
+class ViewUsageResult extends EucalyptusData {
+  ViewUsageResult() { }
+  ViewUsageResult(data) {
+    this.data = data
+  }
+  String data;
+}
+
+class ViewUsageResponseType extends PortalMessage {
+  @JsonUnwrapped
+  ViewUsageResult result = new ViewUsageResult();
+}
+
+@PolicyAction(vendor=PortalPolicySpec.VENDOR_PORTAL, action="viewbilling")
+class ViewMonthlyUsageType extends PortalMessage {
+  String year;
+  String month;
+}
+
+class ViewMonthlyUsageResult extends EucalyptusData {
+  ViewMonthlyUsageResult() { }
+  ViewMonthlyUsageResult(data) {
+    this.data = data
+  }
+  String data;
+}
+
+class ViewMonthlyUsageResponseType extends PortalMessage {
+  @JsonUnwrapped
+  ViewMonthlyUsageResult result = new ViewMonthlyUsageResult();
 }
 
 class ModifyAccountType extends PortalMessage {
