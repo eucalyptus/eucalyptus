@@ -32,7 +32,7 @@ class DeleteStackWorkflowClient implements DeleteStackWorkflow {
   }
 
   @Override
-  void deleteStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int deletedStackVersion) {
-    workflow.deleteStack(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, deletedStackVersion);
+  void deleteStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int deletedStackVersion, String retainedResourcesStr) {
+    workflow.deleteStack(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, deletedStackVersion, retainedResourcesStr);
   }
 }

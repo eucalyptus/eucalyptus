@@ -39,7 +39,7 @@ public interface StackActivity {
   public String determineCreateResourceFailures(String stackId, String accountId, int createdResourceVersion);
   public String determineUpdateResourceFailures(String stackId, String accountId, int updatedResourceVersion);
   public String determineDeleteResourceFailures(String stackId, String accountId, int deletedResourceVersion);
-  public String initDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId, int deletedResourceVersion);
+  public String initDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId, int deletedResourceVersion, String retainedResourcesStr);
   public String createGlobalStackEvent(String stackId, String accountId, String resourceStatus, String resourceStatusReason, int stackVersion);
   public String finalizeCreateStack(String stackId, String accountId, String effectiveUserId, int createdStackVersion);
   public String finalizeUpdateStack(String stackId, String accountId, String effectiveUserId, int updatedStackVersion);

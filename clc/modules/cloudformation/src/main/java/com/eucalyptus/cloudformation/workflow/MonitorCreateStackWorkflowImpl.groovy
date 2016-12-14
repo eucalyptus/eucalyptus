@@ -116,7 +116,7 @@ public class MonitorCreateStackWorkflowImpl implements MonitorCreateStackWorkflo
         "Create stack failed.  Delete requested by user.",
         Status.DELETE_FAILED.toString(),
         Status.DELETE_COMPLETE.toString(),
-        true).getPromise(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, createdStackVersion);
+        true).getPromise(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, createdStackVersion, "");
 
     } else if ("ROLLBACK".equals(onFailure)) {
       return new CommonDeleteRollbackPromises(workflowOperations,
@@ -124,7 +124,7 @@ public class MonitorCreateStackWorkflowImpl implements MonitorCreateStackWorkflo
         "Create stack failed.  Rollback requested by user.",
         Status.ROLLBACK_FAILED.toString(),
         Status.ROLLBACK_COMPLETE.toString(),
-        false).getPromise(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, createdStackVersion);
+        false).getPromise(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, createdStackVersion, "");
     } else {
       throw new InternalFailureException("Invalid onFailure value " + onFailure);
     }

@@ -59,7 +59,7 @@ public class CommonDeleteRollbackPromises {
     this.deleteStackRecordsWhenSuccessful = deleteStackRecordsWhenSuccessful
   }
 
-  public Promise<?> getPromise(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int stackVersion) {
+  public Promise<?> getPromise(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int stackVersion, String retainedResourcesStr) {
     Promise<String> deleteInitialStackPromise = activities.createGlobalStackEvent(
       stackId,
       accountId,
@@ -88,7 +88,7 @@ public class CommonDeleteRollbackPromises {
           }
           AndPromise dependentAndPromise = new AndPromise(promisesDependedOn);
           waitFor(dependentAndPromise) {
-            Promise<String> currentResourcePromise = getDeletePromise(resourceIdLocalCopy, stackId, accountId, effectiveUserId, stackVersion);
+            Promise<String> currentResourcePromise = getDeletePromise(resourceIdLocalCopy, stackId, accountId, effectiveUserId, stackVersion, retainedResourcesStr);
             deletedResourcePromiseMap.get(resourceIdLocalCopy).chain(currentResourcePromise);
             return currentResourcePromise;
           }
@@ -151,11 +151,12 @@ public class CommonDeleteRollbackPromises {
                                    String stackId,
                                    String accountId,
                                    String effectiveUserId,
-                                   int deletedResourceVersion) {
+                                   int deletedResourceVersion,
+                                   String retainedResourcesStr) {
     Promise<String> getResourceTypePromise = activities.getResourceType(stackId, accountId, resourceId, deletedResourceVersion);
     waitFor(getResourceTypePromise) { String resourceType ->
       ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceType);
-      Promise<String> initPromise = activities.initDeleteResource(resourceId, stackId, accountId, effectiveUserId, deletedResourceVersion);
+      Promise<String> initPromise = activities.initDeleteResource(resourceId, stackId, accountId, effectiveUserId, deletedResourceVersion, retainedResourcesStr);
       waitFor(initPromise) { String result ->
         if ("SKIP".equals(result)) {
           return promiseFor("SUCCESS");

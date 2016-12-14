@@ -292,6 +292,7 @@
   </mapping>
   <mapping name="DeleteStack" class="com.eucalyptus.cloudformation.DeleteStackType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
     <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
+    <structure name="RetainResources" field="retainResources" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
     <value name="StackName" field="stackName" usage="required"/>
   </mapping>
   <mapping name="DeleteStackResponse" class="com.eucalyptus.cloudformation.DeleteStackResponseType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">

@@ -29,6 +29,8 @@ import com.eucalyptus.cloudformation.CloudFormation
 import com.eucalyptus.cloudformation.InternalFailureException
 import com.eucalyptus.cloudformation.ValidationErrorException
 import com.eucalyptus.cloudformation.config.CloudFormationProperties
+import com.eucalyptus.cloudformation.entity.DeleteStackWorkflowExtraInfoEntity
+import com.eucalyptus.cloudformation.entity.DeleteStackWorkflowExtraInfoEntityManager
 import com.eucalyptus.cloudformation.entity.SignalEntityManager
 import com.eucalyptus.cloudformation.entity.StackEntity
 import com.eucalyptus.cloudformation.entity.StackEntityHelper
@@ -65,6 +67,8 @@ import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
+import com.google.common.base.Splitter
+import com.google.common.base.Strings
 import com.google.common.base.Throwables
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
@@ -213,8 +217,12 @@ public class StackActivityImpl implements StackActivity {
   }
 
   @Override
-  public String initDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId, int deletedResourceVersion) {
+  public String initDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId, int deletedResourceVersion, String retainedResourcesStr) {
     LOG.info("Deleting resource " + resourceId);
+    List<String> retainedResources = Lists.newArrayList();
+    if (!Strings.isNullOrEmpty(retainedResourcesStr)) {
+      retainedResources.addAll(Splitter.on(",").omitEmptyStrings().splitToList(retainedResourcesStr));
+    }
     VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, deletedResourceVersion);
     String stackName = stackEntity.getStackName();
     StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId, deletedResourceVersion);
@@ -225,8 +233,8 @@ public class StackActivityImpl implements StackActivity {
       ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
       resourceAction.setStackEntity(stackEntity);
       resourceAction.setResourceInfo(resourceInfo);
-      if ("Retain".equals(resourceInfo.getDeletionPolicy())) {
-        LOG.info("Resource " + resourceId + " has a 'Retain' DeletionPolicy, skipping.");
+      if ("Retain".equals(resourceInfo.getDeletionPolicy()) || retainedResources.contains(resourceId) || stackResourceEntity.getResourceStatus() == Status.DELETE_SKIPPED) {
+        LOG.info("Resource " + resourceId + " has a 'Retain' DeletionPolicy, already DELETE_SKIPPED, or is explicity retained in a delete-stack command, skipping.");
         stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
         stackResourceEntity.setResourceStatus(Status.DELETE_SKIPPED);
         stackResourceEntity.setResourceStatusReason(null);
@@ -512,6 +520,7 @@ public class StackActivityImpl implements StackActivity {
     StackResourceEntityManager.deleteStackResources(stackId, accountId);
     StackEventEntityManager.deleteStackEvents(stackId, accountId);
     StackEntityManager.deleteStack(stackId, accountId);
+    DeleteStackWorkflowExtraInfoEntityManager.deleteExtraInfoEntities(stackId);
     StackWorkflowEntityManager.deleteStackWorkflowEntities(stackId);
     StackUpdateInfoEntityManager.deleteStackUpdateInfo(stackId, accountId);
     StacksWithNoUpdateToPerformEntityManager.deleteStackWithNoUpdateToPerform(stackId, accountId);

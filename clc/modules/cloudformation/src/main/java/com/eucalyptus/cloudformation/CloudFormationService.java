@@ -33,6 +33,8 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.tokens.SecurityTokenAWSCredentialsProvider;
 import com.eucalyptus.cloudformation.common.policy.CloudFormationPolicySpec;
 import com.eucalyptus.cloudformation.config.CloudFormationProperties;
+import com.eucalyptus.cloudformation.entity.DeleteStackWorkflowExtraInfoEntity;
+import com.eucalyptus.cloudformation.entity.DeleteStackWorkflowExtraInfoEntityManager;
 import com.eucalyptus.cloudformation.entity.SignalEntity;
 import com.eucalyptus.cloudformation.entity.SignalEntityManager;
 import com.eucalyptus.cloudformation.entity.StackEntity;
@@ -93,7 +95,9 @@ import com.eucalyptus.util.Json;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.dns.DomainNames;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
+import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.HashMultiset;
@@ -123,6 +127,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -549,6 +554,11 @@ public class CloudFormationService {
 
   public DeleteStackResponseType deleteStack( final DeleteStackType request ) throws CloudFormationException {
     DeleteStackResponseType reply = request.getReply();
+    String retainedResourcesStr = "";
+    if (request.getRetainResources() != null && request.getRetainResources().getMember() != null &&
+      !request.getRetainResources().getMember().isEmpty()) {
+      retainedResourcesStr = Joiner.on(",").join(request.getRetainResources().getMember());
+    }
     try {
       final Context ctx = Contexts.lookup();
       final User user = ctx.getUser();
@@ -578,7 +588,9 @@ public class CloudFormationService {
         }
 
         // check to see if there has been a delete workflow.  If one exists and is still going on, just quit:
+        // unless its retain resources list doesn't match what is passed in.
         boolean existingOpenDeleteWorkflow = false;
+        boolean existingOpenDeleteWorkflowWithDifferentRetainedResources = false;
         List<StackWorkflowEntity> deleteWorkflows = StackWorkflowEntityManager.getStackWorkflowEntities(stackEntity.getStackId(), StackWorkflowEntity.WorkflowType.DELETE_STACK_WORKFLOW);
         if ( deleteWorkflows != null && !deleteWorkflows.isEmpty( ) ) {
           if (deleteWorkflows.size() > 1) {
@@ -597,13 +609,45 @@ public class CloudFormationService {
             WorkflowExecutionDetail workflowExecutionDetail = simpleWorkflowClient.describeWorkflowExecution(describeWorkflowExecutionRequest);
             if ("OPEN".equals(workflowExecutionDetail.getExecutionInfo().getExecutionStatus())) {
               existingOpenDeleteWorkflow = true;
+              String currentWorkflowRetainedResources = getRetainedResourcesFromCurrentOpenWorkflow(stackEntity, deleteStackWorkflowEntity);
+              if (!Strings.isNullOrEmpty(retainedResourcesStr) && !Objects.equals(retainedResourcesStr, currentWorkflowRetainedResources)) {
+                existingOpenDeleteWorkflowWithDifferentRetainedResources = true;
+              }
             }
           } catch (Exception ex) {
             LOG.error("Unable to get status of delete workflow for " + stackEntity.getStackId() + ", assuming not open");
             LOG.debug(ex);
           }
         }
+        if (existingOpenDeleteWorkflowWithDifferentRetainedResources) {
+          throw new ValidationErrorException("A delete stack operation is already in progress for stack " + stackEntity.getStackId()+ ". " +
+            "Do not submit another delete stack request specifying different resources to retain or resources to retain in a different order.");
+        }
         if (!existingOpenDeleteWorkflow) {
+          if (!Strings.isNullOrEmpty(retainedResourcesStr) && stackEntity.getStackStatus() != Status.DELETE_FAILED) {
+            throw new ValidationErrorException("Invalid operation on stack " + stackEntity.getStackId() + ". When " +
+              "you delete a stack, specify which resources to retain only when the stack is in the DELETE_FAILED state.");
+          }
+
+          if (!Strings.isNullOrEmpty(retainedResourcesStr)) {
+            Set<String> alreadyDeletedResources = Sets.newHashSet();
+            Set<String> realResources = Sets.newHashSet();
+            // see that we don't try to delete resources that are already deleted
+            for (StackResourceEntity stackResourceEntity:
+              StackResourceEntityManager.describeStackResources(accountId, stackEntity.getStackId())) {
+              if (stackResourceEntity.getResourceStatus() == Status.DELETE_COMPLETE) {
+                alreadyDeletedResources.add(stackResourceEntity.getLogicalResourceId());
+              }
+              realResources.add(stackResourceEntity.getLogicalResourceId());
+            }
+            for (String retainedResource: Splitter.on(",").omitEmptyStrings().split(retainedResourcesStr)) {
+              if (alreadyDeletedResources.contains(retainedResource) || !realResources.contains(retainedResource)) {
+                throw new ValidationErrorException("The specified resources to retain must be in a valid state. Do not " +
+                  "specify resources that are in the DELETE_COMPLETE state.");
+              }
+            }
+          }
+
           String stackId = stackEntity.getStackId();
           StackWorkflowTags stackWorkflowTags =
               new StackWorkflowTags(stackId, stackName, stackAccountId, accountAlias );
@@ -613,18 +657,39 @@ public class CloudFormationService {
           InterfaceBasedWorkflowClient<DeleteStackWorkflow> client = workflowClientFactory
             .getNewWorkflowClient(DeleteStackWorkflow.class, workflowDescriptionTemplate, stackWorkflowTags);
           DeleteStackWorkflow deleteStackWorkflow = new DeleteStackWorkflowClient(client);
-          deleteStackWorkflow.deleteStack(stackId, stackAccountId, stackEntity.getResourceDependencyManagerJson(), userId, stackEntity.getStackVersion());
+          deleteStackWorkflow.deleteStack(stackId, stackAccountId, stackEntity.getResourceDependencyManagerJson(), userId, stackEntity.getStackVersion(), retainedResourcesStr);
           StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackEntity.getStackId(),
             StackWorkflowEntity.WorkflowType.DELETE_STACK_WORKFLOW,
             CloudFormationProperties.SWF_DOMAIN,
             client.getWorkflowExecution().getWorkflowId(),
             client.getWorkflowExecution().getRunId());
+          DeleteStackWorkflowExtraInfoEntityManager.addOrUpdateExtraInfo(stackEntity.getStackId(),
+            CloudFormationProperties.SWF_DOMAIN,
+            client.getWorkflowExecution().getWorkflowId(),
+            client.getWorkflowExecution().getRunId(),
+            retainedResourcesStr);
         }
       }
     } catch (Exception ex) {
       handleException(ex);
     }
     return reply;
+  }
+
+  private String getRetainedResourcesFromCurrentOpenWorkflow(StackEntity stackEntity, StackWorkflowEntity deleteStackWorkflowEntity) {
+    String currentWorkflowRetainedResources = "";
+    List<DeleteStackWorkflowExtraInfoEntity> extraInfoEntityList = DeleteStackWorkflowExtraInfoEntityManager.getExtraInfoEntities(stackEntity.getStackId());
+    if (extraInfoEntityList != null) {
+      for (DeleteStackWorkflowExtraInfoEntity extraInfoEntity: extraInfoEntityList) {
+        if (deleteStackWorkflowEntity.getDomain().equals(extraInfoEntity.getDomain()) &&
+          deleteStackWorkflowEntity.getRunId().equals(extraInfoEntity.getRunId()) &&
+          deleteStackWorkflowEntity.getWorkflowId().equals(extraInfoEntity.getWorkflowId())) {
+          currentWorkflowRetainedResources = extraInfoEntity.getRetainedResourcesStr();
+          break;
+        }
+      }
+    }
+    return currentWorkflowRetainedResources;
   }
 
   public DescribeStackEventsResponseType describeStackEvents( final DescribeStackEventsType request ) throws CloudFormationException {

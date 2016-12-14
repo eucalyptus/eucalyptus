@@ -59,7 +59,7 @@ public interface StackActivityClient {
   Promise<String> determineDeleteResourceFailures(String stackId, String accountId, int deletedResourceVersion);
 
   @Activity(name = "StackActivity.initDeleteResource")
-  Promise<String> initDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId, int deletedResourceVersion);
+  Promise<String> initDeleteResource(String resourceId, String stackId, String accountId, String effectiveUserId, int deletedResourceVersion, String retainedResourcesStr);
 
   @Activity(name = "StackActivity.createGlobalStackEvent")
   Promise<String> createGlobalStackEvent(String stackId, String accountId, String resourceStatus, String resourceStatusReason, int stackVersion);

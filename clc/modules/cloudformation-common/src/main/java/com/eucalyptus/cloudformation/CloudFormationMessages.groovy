@@ -493,6 +493,8 @@ public class CreateStackResponseType extends CloudFormationMessage {
 }
 public class DeleteStackType extends CloudFormationMessage {
   String stackName;
+  @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
+  ResourceList retainResources;
   public DeleteStackType() {  }
 }
 public class DeleteStackResponseType extends CloudFormationMessage {
