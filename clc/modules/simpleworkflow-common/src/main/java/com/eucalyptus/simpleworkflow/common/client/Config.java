@@ -33,6 +33,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import org.apache.http.NoHttpResponseException;
+import org.apache.http.conn.ConnectTimeoutException;
 import org.apache.log4j.Logger;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
@@ -165,6 +166,8 @@ public class Config {
           resetEndpoint = true;
         } else if ( Exceptions.isCausedBy( e, ConnectException.class ) ) {
           resetEndpoint = true;
+        } else if ( Exceptions.isCausedBy( e, ConnectTimeoutException.class ) ) {
+          resetEndpoint = true;
         } else if ( Exceptions.isCausedBy( e, NoHttpResponseException.class ) ) {
           resetEndpoint = true;
         }
@@ -293,6 +296,10 @@ public class Config {
         public void uncaughtException( final Thread t, final Throwable e ) {
           if ( Exceptions.isCausedBy( e, ConnectException.class ) ) {
             logger.warn( "Connection error (retrying) for " + type + " worker " + t.getName() + "/" + t.getId() );
+          } else if ( Exceptions.isCausedBy( e, ConnectTimeoutException.class ) ) {
+            logger.warn( "Connection timeout (retrying) for " + type + " worker " + t.getName() + "/" + t.getId() );
+          } else if ( Exceptions.isCausedBy( e, NoHttpResponseException.class ) ) {
+            logger.warn( "No response (retrying) for " + type + " worker " + t.getName() + "/" + t.getId() );
           } else if ( Exceptions.isCausedBy( e, AmazonServiceException.class ) &&
               403 == (Exceptions.findCause( e, AmazonServiceException.class )).getStatusCode( ) ) {
             logger.warn( "Authentication failure (retrying) for " + type + " worker " + t.getName() + "/" + t.getId() );
