@@ -331,9 +331,9 @@ static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pG
     // dhcpd
     char cmd[EUCA_MAX_PATH] = "";
     snprintf(cmd, EUCA_MAX_PATH, "%s pkill -f euca-dhcp.pid", pConfig->cmdprefix);
-    rc = timeshell_nb(cmd, 10, TRUE);
+    rc = timeshell_nb(cmd, 10, FALSE);
     if (rc != 0) {
-        LOGERROR("Failed to terminate dhcpd\n");
+        LOGDEBUG("Failed to terminate dhcpd\n");
     }
     // iptables
     ipt_handler_repopulate(pConfig->ipt);
