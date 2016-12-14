@@ -638,15 +638,18 @@ static u32 network_driver_system_scrub(eucanetdConfig *pConfig, globalNetworkInf
     int do_sgs = 1;
     int do_allprivate = 1;
     if (pGniApplied && (pGni != pGniApplied)) {
-        edgeConfigApplied->gni = pGniApplied;
-        edgeConfigApplied->config = pConfig;
+        int config_changed = cmp_gni_config(pGni, pGniApplied);
+        if ((config_changed & GNI_CONFIG_DIFF_SUBNETS) == 0) {
+            edgeConfigApplied->gni = pGniApplied;
+            edgeConfigApplied->config = pConfig;
 
-        rc = extract_edge_config_from_gni(edgeConfigApplied);
-        if (!rc) {
-            if (!cmp_edge_config(edgeConfig, edgeConfigApplied, &do_instances,
-                    &do_sgs, &do_allprivate)) {
-                do_edge_update = FALSE;
-                LOGINFO("\tSystem is already up-to-date\n");
+            rc = extract_edge_config_from_gni(edgeConfigApplied);
+            if (!rc) {
+                if (!cmp_edge_config(edgeConfig, edgeConfigApplied, &do_instances,
+                        &do_sgs, &do_allprivate)) {
+                    do_edge_update = FALSE;
+                    LOGINFO("\tSystem is already up-to-date\n");
+                }
             }
         }
     }

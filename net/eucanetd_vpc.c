@@ -541,7 +541,7 @@ static u32 network_driver_system_scrub(eucanetdConfig *pConfig, globalNetworkInf
         return (ret);
     }
 
-    int config_changed = cmp_gni_vpcmido_config(pGni, pGniApplied);
+    int config_changed = cmp_gni_config(pGni, pGniApplied);
     if (!IS_INITIALIZED() || (pGni && pGniApplied && config_changed)) {
         LOGINFO("(re)initializing %s driver.\n", DRIVER_NAME());
         if (pMidoConfig) {
@@ -559,7 +559,7 @@ static u32 network_driver_system_scrub(eucanetdConfig *pConfig, globalNetworkInf
         pGniApplied = NULL;
     }
 
-    if (config_changed & GNI_VPCMIDO_CONFIG_DIFF_MIDONODES) {
+    if (config_changed & GNI_CONFIG_DIFF_MIDONODES) {
         pMidoConfig->midotz_ok = FALSE;
     }
 
