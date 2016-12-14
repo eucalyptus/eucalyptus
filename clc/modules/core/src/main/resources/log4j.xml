@@ -358,6 +358,9 @@
   <category name="com.amazonaws.services.simpleworkflow.flow.worker.SynchronousActivityTaskPoller">
     <priority value="FATAL"/>
   </category>
+  <category name="com.amazonaws.services.simpleworkflow.flow.worker.AsyncDecider">
+    <priority value="FATAL"/>
+  </category>
   <!-- Disable logging of stack traces at INFO level on connection failures -->
   <category name="com.amazonaws.http.AmazonHttpClient">
     <priority value="ERROR"/>
