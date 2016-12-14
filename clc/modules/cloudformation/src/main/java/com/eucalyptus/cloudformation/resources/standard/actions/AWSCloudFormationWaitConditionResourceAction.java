@@ -25,6 +25,7 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.amazonaws.services.s3.model.S3VersionSummary;
 import com.amazonaws.services.s3.model.VersionListing;
+import com.eucalyptus.cloudformation.Limits;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.bootstrap.CloudFormationAWSCredentialsProvider;
 import com.eucalyptus.cloudformation.entity.SignalEntity;
@@ -227,6 +228,10 @@ public class AWSCloudFormationWaitConditionResourceAction extends StepBasedResou
               }
               LOG.trace("Getting version: " + versionSummary.getVersionId());
               try {
+                if (s3c.getObjectMetadata(bucketName, keyName).getContentLength() > Limits.MAX_LENGTH_WAIT_CONDITION_SIGNAL) {
+                  LOG.debug("Found s3 object " + bucketName + "/" + keyName + " in wait condition signal search that exceeds the maximum byte count, skipping");
+                  continue;
+                }
                 GetObjectRequest getObjectRequest = new GetObjectRequest(bucketName, keyName, versionSummary.getVersionId());
                 S3Object s3Object = s3c.getObject(getObjectRequest);
                 JsonNode jsonNode = null;
