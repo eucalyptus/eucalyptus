@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow.stateful;
 
+import com.eucalyptus.simpleworkflow.common.stateful.PolledNotificationChecker;
 import org.apache.log4j.Logger;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;

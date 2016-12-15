@@ -17,7 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.simpleworkflow.stateful;
+package com.eucalyptus.simpleworkflow.common.stateful;
 
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.CloudControllerColocatingBootstrapper;

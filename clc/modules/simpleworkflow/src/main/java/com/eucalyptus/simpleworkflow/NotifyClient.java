@@ -19,7 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow;
 
-import com.eucalyptus.simpleworkflow.stateful.NotifyClientUtils;
+import com.eucalyptus.simpleworkflow.common.stateful.NotifyClientUtils;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.util.Consumer;

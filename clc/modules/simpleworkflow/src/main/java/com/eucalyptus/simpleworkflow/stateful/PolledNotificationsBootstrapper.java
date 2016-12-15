@@ -23,6 +23,7 @@ import static com.eucalyptus.bootstrap.Bootstrapper.Simple;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.simpleworkflow.common.stateful.PolledNotifications;
 
 /**
  *

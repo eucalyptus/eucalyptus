@@ -28,6 +28,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import javax.annotation.Nullable;
+
+import com.eucalyptus.simpleworkflow.common.stateful.PolledNotifications;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;

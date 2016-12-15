@@ -27,6 +27,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+
+import com.eucalyptus.simpleworkflow.common.stateful.PolledNotificationChecker;
+import com.eucalyptus.simpleworkflow.common.stateful.PolledNotifications;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.local.LocalChannel;
 import com.eucalyptus.bootstrap.Bootstrap;

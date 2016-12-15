@@ -23,6 +23,7 @@ import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.DistributedServiceBuilder;
 import com.eucalyptus.component.annotation.ComponentPart;
+import com.eucalyptus.simpleworkflow.common.stateful.PolledNotifications;
 
 /**
  *

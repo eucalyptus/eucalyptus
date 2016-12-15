@@ -21,6 +21,7 @@
 package com.eucalyptus.simpleworkflow.stateful
 
 import com.eucalyptus.component.annotation.ComponentMessage
+import com.eucalyptus.simpleworkflow.common.stateful.PolledNotifications
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 

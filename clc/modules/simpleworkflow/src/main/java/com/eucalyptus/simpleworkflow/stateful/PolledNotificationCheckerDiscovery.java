@@ -21,6 +21,8 @@ package com.eucalyptus.simpleworkflow.stateful;
 
 import java.lang.reflect.Modifier;
 import java.util.concurrent.CopyOnWriteArrayList;
+
+import com.eucalyptus.simpleworkflow.common.stateful.PolledNotificationChecker;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.google.common.base.Supplier;
