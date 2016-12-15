@@ -65,6 +65,7 @@ package com.eucalyptus.blockstorage.ceph;
 import java.util.List;
 
 import com.eucalyptus.blockstorage.ceph.entities.CephRbdInfo;
+import com.google.common.collect.SetMultimap;
 
 public interface CephRbdAdapter {
 
@@ -103,6 +104,15 @@ public interface CephRbdAdapter {
    * @param toBeDeleted Set of images that have never been cleaned up
    */
   public void cleanUpImages(String poolName, String imagePrefix, List<String> toBeDeleted);
+
+  /**
+   * Try deleting RBD snapshots and return the ones that cannot deleted since they are busy (parent-child relationship with other images)
+   * 
+   * @param poolName Name of the pool
+   * @param toBeDeleted Mapping of image and RBD snapshots to be deleted
+   * @return Returns a mapping of RBD image and RBD snapshots that cannot be deleted due to their inheritance
+   */
+  public SetMultimap<String, String> cleanUpSnapshots(String poolName, SetMultimap<String, String> toBeDeleted);
 
   /**
    * Rename RBD image
@@ -161,5 +171,13 @@ public interface CephRbdAdapter {
    */
   public List<String> listPool(String poolName);
 
+  /**
+   * Delete all existing RBD snapshots on the image and create a new RBD snapshot
+   * 
+   * @param imageName Name of the image
+   * @param poolName Name of the pool to which the image belongs
+   * @param snapName Name of the new snapshot to be created
+   * @return Returns a representation of the newly created snapshot
+   */
   public String deleteAllSnapshots(String imageName, String poolName, String snapName);
 }

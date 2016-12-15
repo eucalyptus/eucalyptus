@@ -65,6 +65,7 @@ package com.eucalyptus.blockstorage.ceph;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 import javax.annotation.Nonnull;
 
@@ -78,6 +79,11 @@ import com.eucalyptus.blockstorage.ceph.exceptions.CannotDeleteCephImageExceptio
 import com.eucalyptus.blockstorage.ceph.exceptions.CephImageNotFoundException;
 import com.eucalyptus.blockstorage.ceph.exceptions.EucalyptusCephException;
 import com.google.common.base.Function;
+import com.google.common.base.Supplier;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 
 /**
  * Eucalyptus RBD adapter for managing Ceph RBD images of type Format 2
@@ -196,7 +202,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
 
   @Override
   public void cleanUpImages(final String poolName, final String imagePrefix, final List<String> toBeDeleted) {
-    LOG.debug("Clean up ceph-rbd images poolName=" + poolName + ", prefix=" + imagePrefix);
+    LOG.debug("Cleanup RBD images poolName=" + poolName + ", prefix=" + imagePrefix);
     executeRbdOpInPool(new Function<CephRbdConnectionManager, String>() {
 
       @Override
@@ -204,6 +210,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
         try {
           LOG.trace("Listing images in pool=" + poolName);
           List<String> imageNames = Arrays.asList(arg0.getRbd().list());
+          LOG.trace("Found " + imageNames.size() + " image(s) in pool=" + poolName);
 
           for (String imageName : imageNames) {
 
@@ -261,7 +268,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
                   }
                 }
               } catch (RbdException e) {
-                LOG.warn("Caught error while checking or deleting image " + imageName + " in pool " + poolName + ": " + e.getMessage());
+                LOG.debug("Caught error while checking or deleting image " + imageName + " in pool " + poolName + ": " + e.getMessage());
               } finally {
                 if (image != null) {
                   try {
@@ -279,12 +286,85 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
 
           return null;
         } catch (RbdException e) {
-          LOG.warn("Caught error while listing or deleting images in pool " + poolName + ": " + e.getMessage());
-          throw new EucalyptusCephException("Failed to delete images in pool " + poolName, e);
+          LOG.warn("Caught error while listing or deleting RBD images in pool " + poolName + ": " + e.getMessage());
+          throw new EucalyptusCephException("Failed to delete RBD images in pool " + poolName, e);
         }
       }
     }, poolName);
+  }
 
+  @Override
+  public SetMultimap<String, String> cleanUpSnapshots(final String poolName, final SetMultimap<String, String> toBeDeleted) {
+    LOG.debug("Cleanup RBD snapshots poolName=" + poolName);
+    return executeRbdOpInPool(new Function<CephRbdConnectionManager, SetMultimap<String, String>>() {
+
+      @Override
+      public SetMultimap<String, String> apply(CephRbdConnectionManager arg0) {
+        try {
+          SetMultimap<String, String> cantBeDeleted = Multimaps.newSetMultimap(Maps.newHashMap(), new Supplier<Set<String>>() {
+
+            @Override
+            public Set<String> get() {
+              return Sets.newHashSet();
+            }
+          });
+
+          for (String imageName : toBeDeleted.keySet()) {
+            RbdImage image = null;
+            Set<String> snapNames = null;
+
+            if ((snapNames = toBeDeleted.get(imageName)) != null && !snapNames.isEmpty()) {
+              try {
+                LOG.trace("Opening image=" + imageName + ", pool=" + arg0.getPool() + ", mode=read-write");
+                image = arg0.getRbd().open(imageName);
+
+                for (String snapName : snapNames) {
+                  LOG.debug(
+                      "RBD snapshot=" + snapName + ", image=" + imageName + ", pool=" + poolName + " marked for deletion, trying to clean it up");
+
+                  List<String> snapChildren = null;
+
+                  LOG.trace("Listing clones of RBD snapshot=" + snapName + ", image=" + imageName + ", pool=" + arg0.getPool());
+                  if ((snapChildren = image.listChildren(snapName)) == null || snapChildren.isEmpty()) {
+
+                    LOG.trace("No clones found for RBD snapshot=" + snapName);
+                    if (image.snapIsProtected(snapName)) {
+                      LOG.trace("Unprotecting RBD snapshot=" + snapName + ", image=" + imageName + ", pool=" + arg0.getPool());
+                      image.snapUnprotect(snapName);
+                    }
+                    LOG.debug("Removing RBD snapshot=" + snapName + ", image=" + imageName + ", pool=" + arg0.getPool());
+                    image.snapRemove(snapName);
+                  } else {
+                    LOG.debug("Cannot delete RBD snapshot=" + snapName + ", image=" + imageName + ", pool=" + poolName
+                        + " as it may be a parent to other images");
+                    cantBeDeleted.put(imageName, snapName);
+                  }
+                }
+              } catch (RbdException e) {
+                LOG.debug("Cannot delete RBD snapshots on image " + imageName + " in pool " + poolName + ": " + e.getMessage());
+              } finally {
+                if (image != null) {
+                  try {
+                    LOG.trace("Closing image=" + imageName + ", pool=" + arg0.getPool());
+                    arg0.getRbd().close(image);
+                  } catch (Exception e) {
+                    LOG.debug("Caught exception in RBD snapshot deletion while closing the image " + imageName, e);
+                  }
+                }
+              }
+            } else {
+              // no snaps to be deleted for this image, nothing to see here, move on!
+              LOG.trace("No input RBD snapshots to be deleted on image=" + imageName);
+            }
+          }
+
+          return cantBeDeleted;
+        } catch (Exception e) {
+          LOG.warn("Caught error while deleting RBD snapshots in pool " + poolName + ": " + e.getMessage());
+          throw new EucalyptusCephException("Failed to delete RBD snapshots in pool " + poolName, e);
+        }
+      }
+    }, poolName);
   }
 
   @Override
@@ -460,7 +540,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
   @Override
   public String cloneAndResizeImage(final String parentName, final String snapName, final String cloneName, final Long size,
       final String parentPoolName) {
-    LOG.debug("Clone (and resize) ceph-rbd image parentName=" + parentName + ", snapName=" + snapName + ", cloneName" + cloneName + ", size=" + size
+    LOG.debug("Clone (and resize) ceph-rbd image parentName=" + parentName + ", snapName=" + snapName + ", cloneName=" + cloneName + ", size=" + size
         + ", parentPoolName=" + parentPoolName);
     return executeRbdOpInPool(new Function<CephRbdConnectionManager, String>() {
 

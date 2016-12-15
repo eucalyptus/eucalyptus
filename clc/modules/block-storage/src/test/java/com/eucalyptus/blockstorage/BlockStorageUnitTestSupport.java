@@ -284,7 +284,7 @@ public class BlockStorageUnitTestSupport {
       }
 
       @Override
-      public void cleanSnapshot(String snapshotId) {
+      public void cleanSnapshot(String snapshotId, String snapshotPointId) {
 
       }
 
@@ -324,7 +324,7 @@ public class BlockStorageUnitTestSupport {
       }
 
       @Override
-      public void deleteSnapshot(String snapshotId) throws EucalyptusCloudException {
+      public void deleteSnapshot(String snapshotId, String snapshotPointId) throws EucalyptusCloudException {
 
       }
 

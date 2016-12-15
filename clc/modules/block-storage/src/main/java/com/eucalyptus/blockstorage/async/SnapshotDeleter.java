@@ -242,7 +242,7 @@ public class SnapshotDeleter extends CheckerTask {
     LOG.debug("Deleting snapshot " + snapshotId + " from EBS backend...");
 
     try {
-      blockManager.deleteSnapshot(snapshotId);
+      blockManager.deleteSnapshot(snapshotId, snap.getSnapPointId());
     } catch (EucalyptusCloudException e) {
       LOG.warn("Unable to delete " + snapshotId + " from EBS backend. Will retry later", e);
       return;

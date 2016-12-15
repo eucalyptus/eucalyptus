@@ -196,7 +196,8 @@ public class SANManager implements LogicalStorageManager {
 
   }
 
-  public void cleanSnapshot(String snapshotId) {
+  @Override
+  public void cleanSnapshot(String snapshotId, String snapshotPointId) {
     SANVolumeInfo sanSnapshot = null;
     String sanSnapshotId = null;
     String iqn = null;
@@ -211,7 +212,7 @@ public class SANManager implements LogicalStorageManager {
     }
 
     LOG.info("Deleting " + sanSnapshotId + " on backend");
-    if (connectionManager.deleteVolume(sanSnapshotId, iqn)) {
+    if (connectionManager.deleteSnapshot(sanSnapshotId, iqn, snapshotPointId)) {
       try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
         SANVolumeInfo snapInfo = Entities.uniqueResult(new SANVolumeInfo(snapshotId).withSanVolumeId(sanSnapshotId));
         Entities.delete(snapInfo);
@@ -602,7 +603,8 @@ public class SANManager implements LogicalStorageManager {
     }
   }
 
-  public void deleteSnapshot(String snapshotId) throws EucalyptusCloudException {
+  @Override
+  public void deleteSnapshot(String snapshotId, String snapshotPointId) throws EucalyptusCloudException {
     SANVolumeInfo sanSnapshot = null;
     String sanSnapshotId = null;
     String iqn = null;
@@ -621,7 +623,7 @@ public class SANManager implements LogicalStorageManager {
 
     // Try deleting the snapshot. It might fail as snapshots are global and another SC may have already deleted it
     LOG.info("Deleting " + sanSnapshotId + " on backend");
-    if (connectionManager.deleteVolume(sanSnapshotId, iqn)) {
+    if (connectionManager.deleteSnapshot(sanSnapshotId, iqn, snapshotPointId)) {
       deleteEntity = true;
     } else {
       // If snapshot deletion failed, check to see if the snapshot even exists

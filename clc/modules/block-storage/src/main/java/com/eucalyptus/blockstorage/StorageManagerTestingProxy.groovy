@@ -92,9 +92,9 @@ class StorageManagerTestingProxy implements LogicalStorageManager {
   }
 
   @Override
-  void deleteSnapshot(String snapshotId) throws EucalyptusCloudException {
+  void deleteSnapshot(String snapshotId, String snapshotPointId) throws EucalyptusCloudException {
     removeVolumeUsage(snapshotId)
-    delegateStorageManager.deleteSnapshot(snapshotId)
+    delegateStorageManager.deleteSnapshot(snapshotId, snapshotPointId)
   }
 
   @Override
@@ -262,9 +262,9 @@ class StorageManagerTestingProxy implements LogicalStorageManager {
   }
 
   @Override
-  void cleanSnapshot(String snapshotId) {
+  void cleanSnapshot(String snapshotId, String snapshotPointId) {
     removeVolumeUsage(snapshotId)
-    delegateStorageManager.cleanSnapshot(snapshotId)
+    delegateStorageManager.cleanSnapshot(snapshotId, snapshotPointId)
   }
 
   @Override

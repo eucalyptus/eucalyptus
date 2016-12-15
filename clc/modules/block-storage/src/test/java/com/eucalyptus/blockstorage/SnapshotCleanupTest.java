@@ -89,6 +89,7 @@ public class SnapshotCleanupTest {
     deleted.setSnapshotId("snap-0000");
     deleted.setSnapshotLocation("http://osg.host/snaps/good");
     deleted.setDeletionTime(twoHoursAgo.getTime());
+    deleted.setSnapPointId("snap-point-foo");
 
     SnapshotInfo good = new SnapshotInfo();
     good.setStatus(StorageProperties.Status.available.toString());
@@ -101,6 +102,7 @@ public class SnapshotCleanupTest {
     good.setVolumeId("vol-0000");
     good.setSnapshotId("snap-0001");
     good.setSnapshotLocation("http://osg.host/snaps/good");
+    good.setSnapPointId("snap-point-foo");
 
     SnapshotInfo failOne = new SnapshotInfo();
     failOne.setStatus(StorageProperties.Status.deleting.toString());
@@ -113,6 +115,7 @@ public class SnapshotCleanupTest {
     failOne.setVolumeId("vol-0001");
     failOne.setSnapshotId("snap-0002");
     failOne.setSnapshotLocation("http://osg.host/snaps/failOne");
+    failOne.setSnapPointId("snap-point-foo");
 
     SnapshotInfo failTwo = new SnapshotInfo();
     failTwo.setStatus(StorageProperties.Status.deleting.toString());
@@ -125,6 +128,7 @@ public class SnapshotCleanupTest {
     failTwo.setVolumeId("vol-0002");
     failTwo.setSnapshotId("snap-0003");
     failTwo.setSnapshotLocation("http://osg.host/snaps/failTwo");
+    failTwo.setSnapPointId("snap-point-foo");
 
     try (TransactionResource tran = Entities.transactionFor(SnapshotInfo.class)) {
       Entities.persist(deleted);
@@ -137,7 +141,7 @@ public class SnapshotCleanupTest {
     final LogicalStorageManager storageManager = context.mock(LogicalStorageManager.class);
     context.checking(new Expectations() {
       {
-        exactly(2).of(storageManager).deleteSnapshot(with(any(String.class)));
+        exactly(2).of(storageManager).deleteSnapshot(with(any(String.class)), with(any(String.class)));
       }
     });
 
@@ -185,10 +189,10 @@ public class SnapshotCleanupTest {
 
     assertTrue("expected to have a result set querying the eucalyptus_storage persistence context for deleted snapshotinfos", remaining != null);
     assertTrue("expected two SnapshotInfos with deleted status to exist but found " + remaining.size(), remaining.size() == 2);
-    assertTrue("expected a valid deletionTime and snapshot ID other than snap-0000", remaining.get(0).getDeletionTime() != null
-        && !remaining.get(0).getSnapshotId().equals("snap-0000"));
-    assertTrue("expected a valid deletionTime and snapshot ID other than snap-0000", remaining.get(1).getDeletionTime() != null
-        && !remaining.get(0).getSnapshotId().equals("snap-0000"));
+    assertTrue("expected a valid deletionTime and snapshot ID other than snap-0000",
+        remaining.get(0).getDeletionTime() != null && !remaining.get(0).getSnapshotId().equals("snap-0000"));
+    assertTrue("expected a valid deletionTime and snapshot ID other than snap-0000",
+        remaining.get(1).getDeletionTime() != null && !remaining.get(0).getSnapshotId().equals("snap-0000"));
 
   }
 
@@ -208,6 +212,8 @@ public class SnapshotCleanupTest {
     good.setSnapshotLocation("http://osg.host/snaps/good");
     good.setVolumeId("vol-0000");
     good.setSnapshotId("snap-0000");
+    good.setSnapPointId("snap-point-foo");
+    
 
     SnapshotInfo failOne = new SnapshotInfo();
     failOne.setStatus(StorageProperties.Status.failed.toString());
@@ -220,7 +226,8 @@ public class SnapshotCleanupTest {
     failOne.setSnapshotLocation("http://osg.host/snaps/failOne");
     failOne.setVolumeId("vol-0001");
     failOne.setSnapshotId("snap-0001");
-
+    failOne.setSnapPointId("snap-point-foo");
+    
     SnapshotInfo failTwo = new SnapshotInfo();
     failTwo.setStatus(StorageProperties.Status.failed.toString());
     failTwo.setProgress("0");
@@ -233,6 +240,7 @@ public class SnapshotCleanupTest {
     failTwo.setVolumeId("vol-0002");
     failTwo.setSnapshotId("snap-0002");
     failTwo.setDeletionTime(twoHoursAgo.getTime());
+    failTwo.setSnapPointId("snap-point-foo");
 
     try (TransactionResource tran = Entities.transactionFor(SnapshotInfo.class)) {
       good = Entities.persist(good);
@@ -247,7 +255,7 @@ public class SnapshotCleanupTest {
         oneOf(storageManager).finishVolume(with(any(String.class)));
       }
       {
-        oneOf(storageManager).cleanSnapshot(with(any(String.class)));
+        oneOf(storageManager).cleanSnapshot(with(any(String.class)), with(any(String.class)));
       }
     });
 
@@ -297,7 +305,7 @@ public class SnapshotCleanupTest {
 
     assertTrue("expected to have a result set querying the eucalyptus_storage persistence context for deleted snapshotinfos", remaining != null);
     assertTrue("expected one SnapshotInfo with failed status to exist but found " + remaining.size(), remaining.size() == 1);
-    assertTrue("expected a valid deletionTime and snapshot ID snap-0001", remaining.get(0).getDeletionTime() != null
-        && remaining.get(0).getSnapshotId().equals("snap-0001"));
+    assertTrue("expected a valid deletionTime and snapshot ID snap-0001",
+        remaining.get(0).getDeletionTime() != null && remaining.get(0).getSnapshotId().equals("snap-0001"));
   }
 }

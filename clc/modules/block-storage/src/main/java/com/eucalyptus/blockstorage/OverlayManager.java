@@ -288,7 +288,7 @@ public class OverlayManager extends DASManager {
   }
 
   @Override
-  public void cleanSnapshot(String snapshotId) {
+  public void cleanSnapshot(String snapshotId, String snapshotPointId) {
     try (VolumeMetadataManager volumeManager = new VolumeMetadataManager()) {
       LVMVolumeInfo lvmVolInfo = volumeManager.getVolumeInfo(snapshotId);
       if (lvmVolInfo != null) {
@@ -829,7 +829,7 @@ public class OverlayManager extends DASManager {
   }
 
   @Override
-  public void deleteSnapshot(String snapshotId) throws EucalyptusCloudException {
+  public void deleteSnapshot(String snapshotId, String snapshotPointId) throws EucalyptusCloudException {
     try (VolumeMetadataManager volumeManager = new VolumeMetadataManager()) {
       LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(snapshotId);
 
@@ -1192,7 +1192,7 @@ public class OverlayManager extends DASManager {
     return getVolumeConnectionString(volumeId);
   }
 
-private String enableLogicalVolume(String lvName) throws EucalyptusCloudException {
+  private String enableLogicalVolume(String lvName) throws EucalyptusCloudException {
 
     EucalyptusCloudException ex = null;
     String result = null;
@@ -1200,7 +1200,7 @@ private String enableLogicalVolume(String lvName) throws EucalyptusCloudExceptio
     // 1st timeout is 10 ms, 2nd is 40. Last (9th) is 2.56 sec. Total 3.41 sec.
     int attempt = 1;
     final int max_attempts = 9;
-    int timeout = 10; //ms
+    int timeout = 10; // ms
     final int timeout_multiplier = 4;
 
     do {
@@ -1213,8 +1213,8 @@ private String enableLogicalVolume(String lvName) throws EucalyptusCloudExceptio
           break;
         }
       } catch (EucalyptusCloudException ece) {
-        // If the enable fails, it might be because lvmetad hasn't scanned 
-        // the VG and LV into its metadata cache. 
+        // If the enable fails, it might be because lvmetad hasn't scanned
+        // the VG and LV into its metadata cache.
         // Force a pvscan, wait a bit longer, then try again.
         ex = ece;
         LOG.warn("Failed to enable logical volume " + lvName + " on attempt " + attempt, ece);
