@@ -47,6 +47,7 @@ import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
+import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.Ern;
@@ -617,6 +618,8 @@ public class ActivityManager {
   private void setScalingNotRequired( final AutoScalingGroupCoreView group ) {
     try {
       updateScalingRequiredFlag( group, false );
+    } catch ( AutoScalingMetadataNotFoundException e ) {
+      logger.info( "Group not found for scaling not required " + group.getArn( ) );
     } catch ( AutoScalingMetadataException e ) {
       logger.error( e, e );
     }
@@ -1510,7 +1513,11 @@ public class ActivityManager {
         try {
           autoScalingInstances.save( instance );
         } catch ( AutoScalingMetadataException e ) {
-          logger.error( e, e );
+          if ( Exceptions.isCausedBy( e, ConstraintViolationException.class ) ) {
+            logger.warn( "Group not found " + getGroup( ).getArn( ) + " for launched instance " + item.getInstanceId( ) );
+          } else {
+            logger.error( e, e );
+          }
         }
       }
 
@@ -1593,6 +1600,8 @@ public class ActivityManager {
                       SuspendedProcess.createAdministrative( ScalingProcessType.Launch ) );
                 }
               } );
+        } catch ( AutoScalingMetadataNotFoundException e ) {
+          logger.info( "Group not found for administrative suspension " + getGroup( ).getArn( ) );
         } catch ( AutoScalingMetadataException e ) {
           logger.error( e, e );
         }
@@ -1621,6 +1630,8 @@ public class ActivityManager {
             autoScalingGroup.setCapacity( autoScalingGroup.getCapacity() + instanceIds.size() );
           }
         } );
+      } catch ( AutoScalingMetadataNotFoundException e ) {
+        logger.info( "Group not found for capacity update after scaling " + getGroup( ).getArn( ) );
       } catch ( AutoScalingMetadataException e ) {
         logger.error( e, e );
       }
@@ -2077,7 +2088,7 @@ public class ActivityManager {
               }
             } );
       } catch ( AutoScalingMetadataNotFoundException e ) {
-        // Not an error as user termination can be run when group is deleted
+        logger.debug( "Group not found for capacity update after instance termination " + getGroup( ).getArn( ) );
       } catch ( AutoScalingMetadataException e ) {
         logger.error( e, e );
       }
