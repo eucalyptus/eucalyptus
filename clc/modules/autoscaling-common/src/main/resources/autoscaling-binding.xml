@@ -58,7 +58,7 @@
   </mapping>
   <mapping name="EnableMetricsCollection" class="com.eucalyptus.autoscaling.common.msgs.EnableMetricsCollectionType">
     <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
-    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
     <structure name="Metrics" field="metrics" usage="optional" type="com.eucalyptus.autoscaling.common.msgs.Metrics"/>
     <value name="Granularity" field="granularity" usage="required"/>
   </mapping>
@@ -68,7 +68,7 @@
   </mapping>
   <mapping name="ResumeProcesses" class="com.eucalyptus.autoscaling.common.msgs.ResumeProcessesType">
     <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
-    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
     <structure name="ScalingProcesses" field="scalingProcesses" usage="optional" type="com.eucalyptus.autoscaling.common.msgs.ProcessNames"/>
   </mapping>
   <mapping name="ResumeProcessesResponse" class="com.eucalyptus.autoscaling.common.msgs.ResumeProcessesResponseType">
@@ -77,7 +77,7 @@
   </mapping>
   <mapping name="DeleteLaunchConfiguration" class="com.eucalyptus.autoscaling.common.msgs.DeleteLaunchConfigurationType">
     <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
-    <value name="LaunchConfigurationName" field="launchConfigurationName" usage="required"/>
+    <value name="LaunchConfigurationName" field="launchConfigurationName" usage="optional"/>
   </mapping>
   <mapping name="DeleteLaunchConfigurationResponse" class="com.eucalyptus.autoscaling.common.msgs.DeleteLaunchConfigurationResponseType">
     <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
@@ -112,10 +112,10 @@
   </mapping>
   <mapping name="CreateAutoScalingGroup" class="com.eucalyptus.autoscaling.common.msgs.CreateAutoScalingGroupType">
     <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
-    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
-    <value name="LaunchConfigurationName" field="launchConfigurationName" usage="required"/>
-    <value name="MinSize" field="minSize" usage="required"/>
-    <value name="MaxSize" field="maxSize" usage="required"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
+    <value name="LaunchConfigurationName" field="launchConfigurationName" usage="optional"/>
+    <value name="MinSize" field="minSize" usage="optional"/>
+    <value name="MaxSize" field="maxSize" usage="optional"/>
     <value name="DesiredCapacity" field="desiredCapacity" usage="optional"/>
     <value name="DefaultCooldown" field="defaultCooldown" usage="optional"/>
     <structure name="AvailabilityZones" field="availabilityZones" usage="required" type="com.eucalyptus.autoscaling.common.msgs.AvailabilityZones"/>
@@ -191,7 +191,7 @@
   <mapping name="ExecutePolicy" class="com.eucalyptus.autoscaling.common.msgs.ExecutePolicyType">
     <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
     <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
-    <value name="PolicyName" field="policyName" usage="required"/>
+    <value name="PolicyName" field="policyName" usage="optional"/>
     <value name="HonorCooldown" field="honorCooldown" usage="optional"/>
   </mapping>
   <mapping name="ExecutePolicyResponse" class="com.eucalyptus.autoscaling.common.msgs.ExecutePolicyResponseType">
@@ -208,10 +208,10 @@
   </mapping>
   <mapping name="PutScalingPolicy" class="com.eucalyptus.autoscaling.common.msgs.PutScalingPolicyType">
     <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
-    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
-    <value name="PolicyName" field="policyName" usage="required"/>
-    <value name="ScalingAdjustment" field="scalingAdjustment" usage="required"/>
-    <value name="AdjustmentType" field="adjustmentType" usage="required"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
+    <value name="PolicyName" field="policyName" usage="optional"/>
+    <value name="ScalingAdjustment" field="scalingAdjustment" usage="optional"/>
+    <value name="AdjustmentType" field="adjustmentType" usage="optional"/>
     <value name="Cooldown" field="cooldown" usage="optional"/>
     <value name="MinAdjustmentStep" field="minAdjustmentStep" usage="optional"/>
   </mapping>
@@ -236,7 +236,7 @@
   <mapping name="DeletePolicy" class="com.eucalyptus.autoscaling.common.msgs.DeletePolicyType">
     <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
     <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
-    <value name="PolicyName" field="policyName" usage="required"/>
+    <value name="PolicyName" field="policyName" usage="optional"/>
   </mapping>
   <mapping name="DeletePolicyResponse" class="com.eucalyptus.autoscaling.common.msgs.DeletePolicyResponseType">
     <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
@@ -262,8 +262,8 @@
   </mapping>
   <mapping name="SetInstanceHealth" class="com.eucalyptus.autoscaling.common.msgs.SetInstanceHealthType">
     <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
-    <value name="InstanceId" field="instanceId" usage="required"/>
-    <value name="HealthStatus" field="healthStatus" usage="required"/>
+    <value name="InstanceId" field="instanceId" usage="optional"/>
+    <value name="HealthStatus" field="healthStatus" usage="optional"/>
     <value name="ShouldRespectGracePeriod" field="shouldRespectGracePeriod" usage="optional"/>
   </mapping>
   <mapping name="SetInstanceHealthResponse" class="com.eucalyptus.autoscaling.common.msgs.SetInstanceHealthResponseType">
@@ -291,7 +291,7 @@
   </mapping>
   <mapping name="SuspendProcesses" class="com.eucalyptus.autoscaling.common.msgs.SuspendProcessesType">
     <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
-    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
     <structure name="ScalingProcesses" field="scalingProcesses" usage="optional" type="com.eucalyptus.autoscaling.common.msgs.ProcessNames"/>
   </mapping>
   <mapping name="SuspendProcessesResponse" class="com.eucalyptus.autoscaling.common.msgs.SuspendProcessesResponseType">
@@ -315,12 +315,12 @@
   </mapping>
   <mapping name="CreateLaunchConfiguration" class="com.eucalyptus.autoscaling.common.msgs.CreateLaunchConfigurationType">
     <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
-    <value name="LaunchConfigurationName" field="launchConfigurationName" usage="required"/>
-    <value name="ImageId" field="imageId" usage="required"/>
+    <value name="LaunchConfigurationName" field="launchConfigurationName" usage="optional"/>
+    <value name="ImageId" field="imageId" usage="optional"/>
     <value name="KeyName" field="keyName" usage="optional"/>
     <structure name="SecurityGroups" field="securityGroups" usage="optional" type="com.eucalyptus.autoscaling.common.msgs.SecurityGroups"/>
     <value name="UserData" field="userData" usage="optional"/>
-    <value name="InstanceType" field="instanceType" usage="required"/>
+    <value name="InstanceType" field="instanceType" usage="optional"/>
     <value name="KernelId" field="kernelId" usage="optional"/>
     <value name="RamdiskId" field="ramdiskId" usage="optional"/>
     <structure name="BlockDeviceMappings" field="blockDeviceMappings" usage="optional" type="com.eucalyptus.autoscaling.common.msgs.BlockDeviceMappings"/>
@@ -337,7 +337,7 @@
   </mapping>
   <mapping name="DeleteAutoScalingGroup" class="com.eucalyptus.autoscaling.common.msgs.DeleteAutoScalingGroupType">
     <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
-    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
     <value name="ForceDelete" field="forceDelete" usage="optional"/>
   </mapping>
   <mapping name="DeleteAutoScalingGroupResponse" class="com.eucalyptus.autoscaling.common.msgs.DeleteAutoScalingGroupResponseType">
@@ -346,7 +346,7 @@
   </mapping>
   <mapping name="DisableMetricsCollection" class="com.eucalyptus.autoscaling.common.msgs.DisableMetricsCollectionType">
     <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
-    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
     <structure name="Metrics" field="metrics" usage="optional" type="com.eucalyptus.autoscaling.common.msgs.Metrics"/>
   </mapping>
   <mapping name="DisableMetricsCollectionResponse" class="com.eucalyptus.autoscaling.common.msgs.DisableMetricsCollectionResponseType">
@@ -355,7 +355,7 @@
   </mapping>
   <mapping name="UpdateAutoScalingGroup" class="com.eucalyptus.autoscaling.common.msgs.UpdateAutoScalingGroupType">
     <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
-    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
     <value name="LaunchConfigurationName" field="launchConfigurationName" usage="optional"/>
     <value name="MinSize" field="minSize" usage="optional"/>
     <value name="MaxSize" field="maxSize" usage="optional"/>
@@ -446,8 +446,8 @@
   </mapping>
   <mapping name="SetDesiredCapacity" class="com.eucalyptus.autoscaling.common.msgs.SetDesiredCapacityType">
     <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
-    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
-    <value name="DesiredCapacity" field="desiredCapacity" usage="required"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
+    <value name="DesiredCapacity" field="desiredCapacity" usage="optional"/>
     <value name="HonorCooldown" field="honorCooldown" usage="optional"/>
   </mapping>
   <mapping name="SetDesiredCapacityResponse" class="com.eucalyptus.autoscaling.common.msgs.SetDesiredCapacityResponseType">
@@ -456,8 +456,8 @@
   </mapping>
   <mapping name="TerminateInstanceInAutoScalingGroup" class="com.eucalyptus.autoscaling.common.msgs.TerminateInstanceInAutoScalingGroupType">
     <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
-    <value name="InstanceId" field="instanceId" usage="required"/>
-    <value name="ShouldDecrementDesiredCapacity" field="shouldDecrementDesiredCapacity" usage="required"/>
+    <value name="InstanceId" field="instanceId" usage="optional"/>
+    <value name="ShouldDecrementDesiredCapacity" field="shouldDecrementDesiredCapacity" usage="optional"/>
   </mapping>
   <mapping name="TerminateInstanceInAutoScalingGroupResponse" class="com.eucalyptus.autoscaling.common.msgs.TerminateInstanceInAutoScalingGroupResponseType">
     <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
