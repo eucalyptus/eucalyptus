@@ -15,6 +15,8 @@
  ************************************************************************/
 package com.eucalyptus.simplequeue.persistence;
 
+import com.eucalyptus.simplequeue.Constants;
+import com.eucalyptus.simplequeue.common.policy.SimpleQueueResourceName;
 import com.eucalyptus.simplequeue.config.SimpleQueueProperties;
 import com.eucalyptus.simplequeue.persistence.cassandra.CassandraMessagePersistence;
 import com.eucalyptus.simplequeue.persistence.cassandra.CassandraQueuePersistence;
@@ -36,4 +38,12 @@ public class PersistenceFactory {
     return "cassandra".equalsIgnoreCase(SimpleQueueProperties.DB_TO_USE) ? cassandraMessagePersistence: postgresqlMessagePersistence;
   }
 
+  public static boolean queueHasMessages(SimpleQueueResourceName ern) {
+    // TODO: make a new persistence method somewhere
+    Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(ern.getAccount(), ern.getResourceName());
+    if (queue == null) {
+      return false;
+    }
+    return Long.parseLong(PersistenceFactory.getMessagePersistence().getApproximateMessageCounts(queue.getKey()).get(Constants.APPROXIMATE_NUMBER_OF_MESSAGES)) > 0;
+  }
 }

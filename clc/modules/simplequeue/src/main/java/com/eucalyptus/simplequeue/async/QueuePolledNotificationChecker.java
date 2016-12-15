@@ -40,13 +40,10 @@ public class QueuePolledNotificationChecker implements PolledNotificationChecker
       if (!(ern instanceof SimpleQueueResourceName)) {
         return false;
       }
-      Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(ern.getAccount(), ern.getResourceName());
-      if (queue == null) {
-        return false;
-      }
-      return Long.parseLong(PersistenceFactory.getMessagePersistence().getApproximateMessageCounts(queue.getKey()).get(Constants.APPROXIMATE_NUMBER_OF_MESSAGES)) > 0;
+      return PersistenceFactory.queueHasMessages((SimpleQueueResourceName) ern);
     } catch (Exception ignore) {
     }
     return false;
   }
+
 }
