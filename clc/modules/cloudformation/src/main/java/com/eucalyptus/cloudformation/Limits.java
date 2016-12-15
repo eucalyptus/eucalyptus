@@ -58,4 +58,6 @@ public class Limits {
 
   public final static long TEMPLATE_DESCRIPTION_MAX_LENGTH_BYTES = 1024;
 
+  public final static long DEFAULT_MAX_LENGTH_WAIT_CONDITION_SIGNAL = 102400;
+
 }
