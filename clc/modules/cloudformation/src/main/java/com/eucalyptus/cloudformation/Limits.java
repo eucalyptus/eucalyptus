@@ -58,7 +58,6 @@ public class Limits {
 
   public final static long TEMPLATE_DESCRIPTION_MAX_LENGTH_BYTES = 1024;
 
-  @ConfigurableField(initial = "102400", description = "The maximum number of bytes allowed in a wait condition signal", changeListener = WebServices.CheckNonNegativeLongPropertyChangeListener.class)
-  public volatile static long MAX_LENGTH_WAIT_CONDITION_SIGNAL = 102400;
+  public final static long DEFAULT_MAX_LENGTH_WAIT_CONDITION_SIGNAL = 102400;
 
 }

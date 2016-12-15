@@ -53,6 +53,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Maps;
+import com.google.common.io.ByteStreams;
 import org.apache.log4j.Logger;
 
 import javax.annotation.Nullable;
@@ -60,6 +61,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+import static com.eucalyptus.cloudformation.Limits.DEFAULT_MAX_LENGTH_WAIT_CONDITION_SIGNAL;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -228,15 +231,16 @@ public class AWSCloudFormationWaitConditionResourceAction extends StepBasedResou
               }
               LOG.trace("Getting version: " + versionSummary.getVersionId());
               try {
-                if (s3c.getObjectMetadata(bucketName, keyName).getContentLength() > Limits.MAX_LENGTH_WAIT_CONDITION_SIGNAL) {
-                  LOG.debug("Found s3 object " + bucketName + "/" + keyName + " in wait condition signal search that exceeds the maximum byte count, skipping");
-                  continue;
-                }
                 GetObjectRequest getObjectRequest = new GetObjectRequest(bucketName, keyName, versionSummary.getVersionId());
                 S3Object s3Object = s3c.getObject(getObjectRequest);
                 JsonNode jsonNode = null;
                 try (S3ObjectInputStream s3ObjectInputStream = s3Object.getObjectContent()) {
-                  jsonNode = Json.parse(s3ObjectInputStream);
+                  long maxLength = DEFAULT_MAX_LENGTH_WAIT_CONDITION_SIGNAL;
+                  try {
+                    maxLength = Long.parseLong(System.getProperty("cloudformation.max_length_wait_condition_signal"));
+                  } catch (Exception ignore) {
+                  }
+                  jsonNode = Json.parse(ByteStreams.limit(s3ObjectInputStream, maxLength));
                 }
                 if (!jsonNode.isObject()) {
                   LOG.trace("Read object, json but not object..skipping file");
