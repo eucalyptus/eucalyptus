@@ -15,33 +15,10 @@
  ************************************************************************/
 package com.eucalyptus.simplequeue.async;
 
-import com.ctc.wstx.exc.WstxEOFException;
-import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.Topology;
 import com.eucalyptus.simplequeue.persistence.Queue;
-import com.eucalyptus.simpleworkflow.stateful.NotifyClientUtils;
-import com.eucalyptus.simpleworkflow.stateful.NotifyResponseType;
-import com.eucalyptus.simpleworkflow.stateful.NotifyType;
-import com.eucalyptus.simpleworkflow.stateful.PollForNotificationResponseType;
-import com.eucalyptus.simpleworkflow.stateful.PollForNotificationType;
-import com.eucalyptus.simpleworkflow.stateful.PolledNotifications;
+import com.eucalyptus.simpleworkflow.common.stateful.NotifyClientUtils;
 import com.eucalyptus.util.Consumer;
-import com.eucalyptus.util.Consumers;
-import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.util.async.ConnectionException;
-import com.eucalyptus.util.concurrent.ListenableFuture;
-import com.eucalyptus.ws.WebServicesException;
-import com.google.common.base.Joiner;
-import com.google.common.base.Objects;
-import com.google.common.base.Throwables;
 import org.apache.log4j.Logger;
-
-import java.net.ConnectException;
-import java.util.NoSuchElementException;
-import java.util.concurrent.ExecutionException;
 
 /**
  *

@@ -17,21 +17,33 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.simpleworkflow.stateful;
+package com.eucalyptus.simplequeue.async;
 
-import com.eucalyptus.bootstrap.Handles;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.DistributedServiceBuilder;
-import com.eucalyptus.component.annotation.ComponentPart;
-import com.eucalyptus.simpleworkflow.common.stateful.PolledNotifications;
+import com.eucalyptus.auth.policy.ern.Ern;
+import com.eucalyptus.simplequeue.Constants;
+import com.eucalyptus.simplequeue.common.policy.SimpleQueueResourceName;
+import com.eucalyptus.simplequeue.persistence.PersistenceFactory;
+import com.eucalyptus.simplequeue.persistence.Queue;
+import com.eucalyptus.simpleworkflow.common.stateful.PolledNotificationChecker;
+
+import javax.annotation.Nullable;
 
 /**
- *
+ * Created by ethomas on 12/14/16.
  */
-@ComponentPart( PolledNotifications.class )
-@Handles({})
-public class PolledNotificationsServiceBuilder extends DistributedServiceBuilder {
-  public PolledNotificationsServiceBuilder( ) {
-    super( ComponentIds.lookup( PolledNotifications.class ) );
+public class QueuePolledNotificationChecker implements PolledNotificationChecker {
+  @Override
+  public boolean apply(@Nullable String channel) {
+    try {
+      Ern ern = Ern.parse(channel);
+      // may be applicable only if channel is a queue arn
+      if (!(ern instanceof SimpleQueueResourceName)) {
+        return false;
+      }
+      return PersistenceFactory.queueHasMessages((SimpleQueueResourceName) ern);
+    } catch (Exception ignore) {
+    }
+    return false;
   }
+
 }

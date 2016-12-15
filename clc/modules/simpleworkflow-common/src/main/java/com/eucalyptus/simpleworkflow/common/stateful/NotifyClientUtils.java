@@ -17,12 +17,16 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.simpleworkflow.stateful;
+package com.eucalyptus.simpleworkflow.common.stateful;
 
 import com.ctc.wstx.exc.WstxEOFException;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.simpleworkflow.stateful.NotifyResponseType;
+import com.eucalyptus.simpleworkflow.stateful.NotifyType;
+import com.eucalyptus.simpleworkflow.stateful.PollForNotificationResponseType;
+import com.eucalyptus.simpleworkflow.stateful.PollForNotificationType;
 import com.eucalyptus.util.Consumer;
 import com.eucalyptus.util.Consumers;
 import com.eucalyptus.util.Exceptions;

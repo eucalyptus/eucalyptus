@@ -25,7 +25,7 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
-import com.eucalyptus.simpleworkflow.stateful.PolledNotifications;
+import com.eucalyptus.simpleworkflow.common.stateful.PolledNotifications;
 
 /**
 *

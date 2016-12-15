@@ -39,4 +39,5 @@ public class SimpleQueueResourceName extends ResourceNameSupport {
       .append( getResourceName( ) ).toString( );
 
   }
+
 }
