@@ -77,6 +77,7 @@ import com.eucalyptus.util.dns.DomainNames;
 import com.eucalyptus.ws.server.FilteredPipeline;
 import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
@@ -162,13 +163,13 @@ public abstract class ObjectStorageRESTPipeline extends FilteredPipeline {
    * @return
    */
   private boolean maybeBucketHostedStyle(String fullHostHeader) {
-    final String host = Iterables.getFirst(hostSplitter.split(fullHostHeader), fullHostHeader);
-    try {
+    if ( !Strings.isNullOrEmpty( fullHostHeader ) ) try {
+      final String host = Iterables.getFirst( hostSplitter.split( fullHostHeader ), fullHostHeader );
       final Name hostDnsName = Name.fromString( host, Name.root );
       return DomainNames.systemDomainFor( ObjectStorage.class, hostDnsName ).isPresent( );
     } catch (Exception e) {
       LOG.error("Error parsing domain name from hostname: " + fullHostHeader, e);
-      return false;
     }
+    return false;
   }
 }
