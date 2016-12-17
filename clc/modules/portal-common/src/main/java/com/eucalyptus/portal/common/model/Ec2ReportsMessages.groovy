@@ -16,6 +16,8 @@
 package com.eucalyptus.portal.common.model
 
 import com.eucalyptus.auth.policy.annotation.PolicyAction
+import com.eucalyptus.binding.HttpEmbedded
+import com.eucalyptus.binding.HttpParameterMapping
 import com.eucalyptus.component.annotation.ComponentMessage
 import com.eucalyptus.portal.common.Ec2Reports
 import com.eucalyptus.portal.common.policy.Ec2ReportsPolicySpec
@@ -24,6 +26,8 @@ import com.fasterxml.jackson.annotation.JsonUnwrapped
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
+
+import javax.annotation.Nonnull
 
 import static com.eucalyptus.util.MessageValidation.validateRecursively
 
@@ -41,8 +45,39 @@ class Ec2ReportsMessage extends PortalBaseMessage {
 
 @PolicyAction(vendor=Ec2ReportsPolicySpec.VENDOR_EC2REPORTS, action="viewinstanceusagereport")
 class ViewInstanceUsageReportType extends Ec2ReportsMessage {
+    String granularity;
+    InstanceUsageFilters filters;
+    Date timeRangeStart;
+    Date timeRangeEnd;
+    InstanceUsageGroup groupBy;
 }
 
+class InstanceUsageFilters extends EucalyptusData {
+    InstanceUsageFilters() {  }
+
+    @HttpEmbedded(multiple=true)
+    @HttpParameterMapping(parameter="member")
+    ArrayList<InstanceUsageFilter> member = new ArrayList<InstanceUsageFilter>();
+}
+
+class InstanceUsageFilter extends EucalyptusData {
+    InstanceUsageFilter() { }
+    @Nonnull
+    String type;
+
+    @Nonnull
+    String key;
+
+    String value;
+}
+
+class InstanceUsageGroup extends EucalyptusData {
+    InstanceUsageGroup() { }
+    @Nonnull
+    String type;
+
+    String key;
+}
 class ViewInstanceUsageResult extends EucalyptusData {
     ViewInstanceUsageResult() { }
     ViewInstanceUsageResult(data) {

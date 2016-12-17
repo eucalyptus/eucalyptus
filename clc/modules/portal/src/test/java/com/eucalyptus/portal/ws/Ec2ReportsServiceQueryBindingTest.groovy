@@ -16,9 +16,13 @@
 package com.eucalyptus.portal.ws
 
 import com.eucalyptus.portal.common.model.Ec2ReportsMessage
+import com.eucalyptus.portal.common.model.InstanceUsageFilter
+import com.eucalyptus.portal.common.model.InstanceUsageFilters
+import com.eucalyptus.portal.common.model.InstanceUsageGroup
 import com.eucalyptus.portal.common.model.ViewInstanceUsageReportType
 import com.eucalyptus.portal.common.model.ViewReservedInstanceUtilizationReportType
 import com.eucalyptus.ws.protocol.QueryJsonBindingTestSupport
+import com.google.common.collect.Lists
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import org.junit.Test
 
@@ -42,7 +46,36 @@ class Ec2ReportsServiceQueryBindingTest  extends QueryJsonBindingTestSupport {
 
         // ViewInstanceUsageReport
         bindAndAssertObject(binding, ViewInstanceUsageReportType,
-                'ViewInstanceUsageReport', new ViewInstanceUsageReportType(), 0);
+                'ViewInstanceUsageReport', new ViewInstanceUsageReportType(
+                granularity: 'Daily',
+                timeRangeStart:  (new Date(System.currentTimeMillis()-30*24*60*60*1000)),
+                timeRangeEnd: new Date(System.currentTimeMillis()),
+                groupBy: new InstanceUsageGroup(
+                        type: 'Tag',
+                        key: 'User'
+                ),
+                filters: new InstanceUsageFilters(
+                        member: Lists.newArrayList(
+                                new InstanceUsageFilter(
+                                        type: 'InstanceType',
+                                        key: 'm1.small'
+                                ),
+                                new InstanceUsageFilter(
+                                        type: 'Tag',
+                                        key: 'User',
+                                        value: 'EUCA'
+                                ),
+                                new InstanceUsageFilter(
+                                        type: 'Platforms',
+                                        key: 'Linux/Unix'
+                                ),
+                                new InstanceUsageFilter(
+                                        type: 'Platforms',
+                                        key: 'Windows'
+                                )
+                        )
+                )
+        ), 14);
 
         // ViewReservedInstanceUtilizationReport
         bindAndAssertObject(binding, ViewReservedInstanceUtilizationReportType,
