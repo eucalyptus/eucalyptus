@@ -181,7 +181,7 @@ public class ServiceContextManager {
         .compound( Ordering.natural( ).onResultOf( 
             Functions.compose( Classes.canonicalNameFunction( ), Functions.<ComponentId>identity( ) ) ) )
         .sortedCopy( ComponentIds.list( ) ) );
-    LOG.error( "Restarting service context with these enabled services: " + currentComponentIds );
+    LOG.info( "Restarting service context with these enabled services: " + currentComponentIds );
     final Set<Resource> configs = Sets.newHashSet( );
     ConfigurableApplicationContext context = null;
     for ( final ComponentId componentId : currentComponentIds ) {
