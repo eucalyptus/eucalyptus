@@ -109,15 +109,19 @@ public class FaultRegistry {
 		LOG.debug("Crawling fault directory " + rootDir);
 		if (rootDir != null && rootDir.isDirectory()) {
 			File commonXMLFile = new File(rootDir, COMMON_XML);
-			parseCommonXMLFile(commonXMLFile, commonMap);
-			File[] faultFiles = rootDir.listFiles(new FaultFileFilter());
-			if (faultFiles != null) {
-				for (File faultFile: faultFiles) {
-					parseFaultXMLFile(faultFile, faultMap, commonMap, suppressedFaults);
+			if ( commonXMLFile.isFile( ) ) {
+				parseCommonXMLFile( commonXMLFile, commonMap );
+				File[] faultFiles = rootDir.listFiles( new FaultFileFilter( ) );
+				if ( faultFiles != null ) {
+					for ( File faultFile : faultFiles ) {
+						parseFaultXMLFile( faultFile, faultMap, commonMap, suppressedFaults );
+					}
 				}
+			} else {
+				LOG.info(commonXMLFile + " either does not exist or is not a file, skipping directory.");
 			}
 		} else {
-			LOG.warn(rootDir + " either does not exist or is not a directory, skipping.");
+			LOG.info(rootDir + " either does not exist or is not a directory, skipping.");
 		}
 	}
 
@@ -148,10 +152,8 @@ public class FaultRegistry {
 		      LOG.debug("Successfully parsed " + commonXMLFile);
 			}
 		} catch (SAXException ex) {
-			ex.printStackTrace();
 			LOG.error(ex);
 		} catch (IOException ex) {
-			ex.printStackTrace();
 			LOG.error(ex);
 		}
 	}
