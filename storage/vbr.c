@@ -2100,7 +2100,15 @@ f_out:
                     break;
             }
 
-            a = art_alloc(art_id, art_sig, vbr->sizeBytes, !is_migration_dest, must_be_file, FALSE, partition_creator, vbr);
+            boolean may_be_cached = !is_migration_dest;
+#if !defined( _UNIT_TEST) && !defined(_NO_EBS)
+            extern struct nc_state_t nc_state;
+            float vbr_size_gb = (float)vbr->sizeBytes/GIBIBYTE;
+            if(vbr_size_gb > (float)nc_state.ephemeral_cache_highwater_gb) {
+                may_be_cached = FALSE;
+            }
+#endif
+            a = art_alloc(art_id, art_sig, vbr->sizeBytes, may_be_cached, must_be_file, FALSE, partition_creator, vbr);
             break;
         }
     default:

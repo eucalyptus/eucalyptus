@@ -241,6 +241,7 @@
 #define CONFIG_NC_CEPH_USER                     "CEPH_USER_NAME"
 #define CONFIG_NC_CEPH_KEYS                     "CEPH_KEYRING_PATH"
 #define CONFIG_NC_CEPH_CONF                     "CEPH_CONFIG_PATH"
+#define CONFIG_NC_EPHEMERAL_CACHE_HIGHWATER_GB  "EPHEMERAL_CACHE_HIGHWATER_GB"
 
 //! @}
 //! path to axis on NC
@@ -291,6 +292,7 @@
 
 //! @}
 #define MEGABYTE                                 1048576
+#define GIBIBYTE                                 1073741824
 
 #ifndef _attribute_format_
 #define _attribute_format_(index, first)         __attribute__ ((format (printf, index, first)))

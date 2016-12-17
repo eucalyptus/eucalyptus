@@ -151,6 +151,7 @@ struct nc_state_t {
     int migration_ready_threshold;
     int shutdown_grace_period_sec;
     boolean migration_capable;
+    int ephemeral_cache_highwater_gb;
     //! @}
 
     //! @{
