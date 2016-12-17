@@ -561,6 +561,7 @@ int do_midonet_list(mido_config *mido);
 int do_midonet_list_gateways(mido_config *mido);
 int do_midonet_delete_unconnected(mido_config *mido, boolean checkonly);
 
+int do_midonet_create_tzone(mido_config *mido, char *type, char *dev, boolean refreshmido);
 void do_midonet_test(mido_config *mido);
 int do_midonet_tag_midonames(mido_config *mido);
 

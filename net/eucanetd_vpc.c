@@ -389,6 +389,10 @@ static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pG
 static int network_driver_system_flush(eucanetdConfig *pConfig, globalNetworkInfo *pGni) {
     int rc = 0;
     int ret = 0;
+    char *dev_tztype = NULL;
+    char *dev = NULL;
+    char *type = NULL;
+    char *slash = NULL;
 
     // Is our driver initialized?
     if (!IS_INITIALIZED()) {
@@ -458,6 +462,21 @@ static int network_driver_system_flush(eucanetdConfig *pConfig, globalNetworkInf
                 if (rc) {
                     ret = 1;
                 }
+                break;
+            case FLUSH_MIDO_TZONE:
+                dev_tztype = strdup(pMidoConfig->config->flushmodearg);
+                dev = dev_tztype;
+                type = NULL;
+                slash = strchr(dev_tztype, '/');
+                if (slash) {
+                    *slash = '\0';
+                    type = ++slash;
+                }
+                rc = do_midonet_create_tzone(pMidoConfig, type, dev, TRUE);
+                if (rc) {
+                    ret = 1;
+                }
+                EUCA_FREE(dev_tztype);
                 break;
             case FLUSH_MIDO_LISTGATEWAYS:
                 rc = do_midonet_delete_vpc_object(pMidoConfig, "list_gateways", TRUE);

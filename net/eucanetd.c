@@ -318,7 +318,7 @@ int main(int argc, char **argv) {
 
     // parse commandline arguments
     config->flushmode = FLUSH_NONE;
-    while ((opt = getopt(argc, argv, "dhHlgfFmMuUCZv:V:z:")) != -1) {
+    while ((opt = getopt(argc, argv, "dhHlgfFmMuUCZT:v:V:z:")) != -1) {
         switch (opt) {
         case 'd':
             config->debug = EUCANETD_DEBUG_TRACE;
@@ -378,6 +378,11 @@ int main(int argc, char **argv) {
             config->debug = EUCANETD_DEBUG_INFO;
             config->flushmodearg = optarg;
             break;
+        case 'T':
+            config->flushmode = FLUSH_MIDO_TZONE;
+            config->debug = EUCANETD_DEBUG_INFO;
+            config->flushmodearg = optarg;
+            break;
         case 'z':
             config->flushmode = FLUSH_MIDO_TEST;
             config->debug = EUCANETD_DEBUG_INFO;
@@ -393,9 +398,12 @@ int main(int argc, char **argv) {
                     "\t%-12s| detect and flush unconnected objects in MidoNet\n"
                     "\t%-12s| check a VPC model (i-x | eni-x | vpc-x | subnet-x | nat-x | sg-x)\n"
                     "\t%-12s| flush a VPC model (i-x | eni-x | vpc-x | subnet-x | nat-x | sg-x)\n"
+                    "\t%-12s| create tunnel-zone using IP on (dev)\n"
+                    "\t\t\tbefore using -T make sure that midolman is running on all hosts\n"
+                    "\t\t\tall hosts are assumed to have device (dev) with 1 IP address\n"
                     "\t\tlowercase options are read-only, and work with eucanetd service running\n"
                     "\t\tuppercase options can only be executed with eucanetd service stopped\n"
-                     , "-l", "-g", "-m", "-M", "-u", "-U", "-v (id)", "-V (id)");
+                     , "-l", "-g", "-m", "-M", "-u", "-U", "-v (id)", "-V (id)", "-T (dev)");
             exit (1);
             break;
         case 'h':

@@ -9265,6 +9265,91 @@ int do_midonet_delete_unconnected(mido_config *mido, boolean checkonly) {
 }
 
 /**
+ * Creates mido-tz tunnel-zone and adds all detected hosts as member. IP address
+ * of device dev is used as address of each member.
+ * @param mido [in] data structure that holds MidoNet configuration
+ * @param type [in] type of tunnel-zone (gre|vxlan) - defaults to gre
+ * @param dev [in] device with the IP address of each tunnel-zone member host
+ * @param refreshmido [in] if TRUE, reload mido data structures
+ * @return 0 on success. Positive integer on error.
+ */
+int do_midonet_create_tzone(mido_config *mido, char *type, char *dev, boolean refreshmido) {
+    int rc = 0;
+    int i = 0;
+    midoname **tzs = NULL;
+    int max_tzs = 0;
+    midoname **tzhosts = NULL;
+    int max_tzhosts = 0;
+    midoname *midotz = NULL;
+
+    LOGINFO("\n");
+    LOGINFO("Creating VPCMIDO tunnel-zone\n");
+    log_params_set(EUCA_LOG_ERROR, 0, 100000);
+    if (refreshmido) {
+        LOGINFO("Loading objects from MidoNet.\n");
+        rc = midonet_api_cache_refresh_v_threads(MIDO_CACHE_REFRESH_ALL);
+        if (rc) {
+            LOGERROR("failed to retrieve objects from MidoNet.\n");
+            return (1);
+        }
+        rc = reinitialize_mido(mido);
+        if (rc) {
+            LOGERROR("unable to initialize data structures\n");
+            return (1);
+        }
+    }
+
+    rc = mido_get_tunnelzones(VPCMIDO_TENANT, &tzs, &max_tzs);
+    if (rc == 0) {
+        for (i = 0; i < max_tzs; i++) {
+            if ((rc == 0) && (strstr(VPCMIDO_TUNNELZONE, tzs[i]->name))) {
+                midotz = tzs[i];
+            }
+        }
+    }
+
+    char *tzname = NULL;
+    midonet_api_tunnelzone *tz = NULL;
+    if (midotz) {
+        tzname = strdup(midotz->name);
+        tz = midonet_api_cache_lookup_tunnelzone(midotz);
+    } else {
+        tzname = strdup(VPCMIDO_DEFAULT_TZ);
+    }
+    char *tztype = NULL;
+    if (!type || (strcmp(type, "gre") && strcmp(type, "vxlan"))) {
+        tztype = strdup("gre");
+    } else {
+        tztype = strdup(type);
+    }
+    tz = mido_create_tunnelzone(tzname, tztype, &midotz);
+    EUCA_FREE(tzname);
+    EUCA_FREE(tztype);
+    
+    log_params_set(EUCA_LOG_INFO, 0, 100000);
+
+    rc = mido_get_hosts(&tzhosts, &max_tzhosts);
+    if (!rc) {
+        for (i = 0; i < max_tzhosts; i++) {
+            u32 addr = 0;
+            rc = mido_get_address(tzhosts[i], dev, &addr);
+            if (!rc) {
+                char *ipAddress = hex2dot_s(addr);
+                midoname *tzmember = NULL;
+                LOGINFO("\tadding %s %s\n", tzhosts[i]->name, ipAddress);
+                mido_create_tunnelzone_member(tz, NULL, tzhosts[i], ipAddress, &tzmember);
+            }
+        }
+    }
+    EUCA_FREE(tzhosts);
+
+    if (tzs) {
+        EUCA_FREE(tzs);
+    }
+    return (0);
+}
+
+/**
  * Use for VPCMIDO test. Should be left empty once tests are done.
  * @param mido [in] data structure that holds MidoNet configuration
  */
