@@ -76,6 +76,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.ServiceUris;
@@ -226,7 +227,7 @@ public class Databases {
   
   public static void setVolatile( boolean isVolatile ) {
     if ( volatileAtomic.compareAndSet( !isVolatile, isVolatile ) ) {
-      LOG.error( "Database availability changed to: " + !isVolatile );
+      LOG.log( isVolatile ? Level.ERROR : Level.INFO, "Database availability changed to: " + !isVolatile );
     }
   }
 
