@@ -359,6 +359,12 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
     }
 
     @Test
+    void testValidBinding2016_11_15() {
+        URL resource = ComputeQueryBindingTest.getResource('/ec2-2016-11-15-binding.xml')
+        assertValidBindingXml(resource)
+    }
+
+    @Test
     void testBindingsForAllActions(){
       // http://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_Operations.html
       String actionsCopiedAndPastedFromAWSEC2Docs = '''
@@ -370,6 +376,8 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     AllocateHosts
 
+    AssignIpv6Addresses
+
     AssignPrivateIpAddresses
 
     AssociateAddress
@@ -377,6 +385,10 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
     AssociateDhcpOptions
 
     AssociateRouteTable
+
+    AssociateSubnetCidrBlock
+
+    AssociateVpcCidrBlock
 
     AttachClassicLinkVpc
 
@@ -417,6 +429,8 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
     CreateCustomerGateway
 
     CreateDhcpOptions
+
+    CreateEgressOnlyInternetGateway
 
     CreateFlowLogs
 
@@ -471,6 +485,8 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
     DeleteCustomerGateway
 
     DeleteDhcpOptions
+
+    DeleteEgressOnlyInternetGateway
 
     DeleteFlowLogs
 
@@ -533,6 +549,8 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
     DescribeCustomerGateways
 
     DescribeDhcpOptions
+
+    DescribeEgressOnlyInternetGateways
 
     DescribeExportTasks
 
@@ -666,6 +684,10 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     DisassociateRouteTable
 
+    DisassociateSubnetCidrBlock
+
+    DisassociateVpcCidrBlock
+
     EnableVgwRoutePropagation
 
     EnableVolumeIO
@@ -782,6 +804,8 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     TerminateInstances
 
+    UnassignIpv6Addresses
+
     UnassignPrivateIpAddresses
 
     UnmonitorInstances
@@ -789,21 +813,26 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
       List<String> whitelist = [
           'AllocateHosts',
+          'AssignIpv6Addresses',
+          'AssociateSubnetCidrBlock',
+          'AssociateVpcCidrBlock',
+          'CreateEgressOnlyInternetGateway',
+          'DeleteEgressOnlyInternetGateway',
+          'DescribeEgressOnlyInternetGateways',
           'DescribeHostReservationOfferings',
           'DescribeHostReservations',
           'DescribeHosts',
+          'DescribeScheduledInstanceAvailability',
+          'DescribeScheduledInstances',
+          'DisassociateSubnetCidrBlock',
+          'DisassociateVpcCidrBlock',
           'GetHostReservationPurchasePreview',
           'ModifyHosts',
           'PurchaseHostReservation',
-          'ReleaseHosts',
-          'DescribeScheduledInstanceAvailability',
-          'DescribeScheduledInstances',
           'PurchaseScheduledInstances',
+          'ReleaseHosts',
           'RunScheduledInstances',
-          'DescribeIdentityIdFormat',
-          'DescribeIdFormat',
-          'ModifyIdentityIdFormat',
-          'ModifyIdFormat',
+          'UnassignIpv6Addresses',
       ]
       Splitter.on(' ').trimResults( ).omitEmptyStrings( ).split( actionsCopiedAndPastedFromAWSEC2Docs ).each { String action ->
         try {
