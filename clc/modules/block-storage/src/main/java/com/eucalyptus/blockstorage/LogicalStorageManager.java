@@ -91,7 +91,7 @@ public interface LogicalStorageManager {
 
   public void cleanVolume(String volumeId);
 
-  public void cleanSnapshot(String snapshotId);
+  public void cleanSnapshot(String snapshotId, String snapshotPointId);
 
   /**
    * If snapshotPointId == null, then create full snapshot, if != null then use snapPointId as starting point and complete snapshot creation
@@ -117,7 +117,7 @@ public interface LogicalStorageManager {
 
   public void deleteVolume(String volumeId) throws EucalyptusCloudException;
 
-  public void deleteSnapshot(String snapshotId) throws EucalyptusCloudException;
+  public void deleteSnapshot(String snapshotId, String snapshotPointId) throws EucalyptusCloudException;
 
   /**
    * Gets the connection string for the volume. This is no longer used. Connection string should be returned on the attach call since it may be

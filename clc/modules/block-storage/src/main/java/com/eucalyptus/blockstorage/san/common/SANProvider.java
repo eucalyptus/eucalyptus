@@ -189,15 +189,14 @@ public interface SANProvider {
   public String createSnapshot(String volumeId, String snapshotId, String snapshotPointId) throws EucalyptusCloudException;
 
   /**
-   * Delete a snapshot -- This is never used in SANManager.
+   * Delete a snapshot
    * 
-   * @param volumeId
    * @param snapshotId
-   * @param locallyCreated
    * @param snapshotIqn
+   * @param snapshotPointId
    * @return
    */
-  public boolean deleteSnapshot(String volumeId, String snapshotId, boolean locallyCreated, String snapshotIqn);
+  public boolean deleteSnapshot(String snapshotId, String snapshotIqn, String snapshotPointId);
 
   /**
    * Delete the specified CHAP username from the device

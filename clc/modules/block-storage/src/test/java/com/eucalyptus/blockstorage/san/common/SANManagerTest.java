@@ -121,6 +121,7 @@ public class SANManagerTest {
     final String snapId = "foo";
     final String sanVolId = "bar";
     final String iqn = "foo-iqn";
+    final String snapshotPointId = "snap-point-foo";
     SANVolumeInfo volInfo = new SANVolumeInfo(snapId);
     volInfo.setSanVolumeId(sanVolId);
     volInfo.setIqn(iqn);
@@ -132,13 +133,13 @@ public class SANManagerTest {
     final SANProvider sanProvider = context.mock(SANProvider.class);
     context.checking(new Expectations() {
       {
-        oneOf(sanProvider).deleteVolume(sanVolId, iqn);
+        oneOf(sanProvider).deleteSnapshot(sanVolId, iqn, snapshotPointId);
         will(returnValue(Boolean.TRUE));
       }
     });
 
     SANManager test = new SANManager(sanProvider);
-    test.cleanSnapshot(snapId);
+    test.cleanSnapshot(snapId, snapshotPointId);
 
     try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
       List<SANVolumeInfo> results = Entities.query(new SANVolumeInfo());
@@ -149,11 +150,12 @@ public class SANManagerTest {
   @Test
   public void cleanSnapshot_NoVolTest() throws Exception {
     final String snapId = "foo";
+    final String snapshotPointId = "snap-point-foo";
     final SANProvider sanProvider = context.mock(SANProvider.class);
     context.checking(new Expectations());
 
     SANManager test = new SANManager(sanProvider);
-    test.cleanSnapshot(snapId);
+    test.cleanSnapshot(snapId, snapshotPointId);
     assertTrue("expected to reach this statement without an exception", true);
   }
 
@@ -162,6 +164,7 @@ public class SANManagerTest {
     final String volId = "foo";
     final String sanVolId = "bar";
     final String iqn = "iqn";
+
     SANVolumeInfo volInfo = new SANVolumeInfo(volId);
     volInfo.setSanVolumeId(sanVolId);
     volInfo.setIqn(iqn);
@@ -179,7 +182,7 @@ public class SANManagerTest {
     });
 
     SANManager test = new SANManager(sanProvider);
-    test.cleanSnapshot(volId);
+    test.cleanVolume(volId);
 
     try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
       List<SANVolumeInfo> results = Entities.query(new SANVolumeInfo());
@@ -190,11 +193,12 @@ public class SANManagerTest {
   @Test
   public void cleanVolume_NoVolTest() throws Exception {
     final String snapId = "foo";
+    final String snapshotPointId = "snap-point-foo";
     final SANProvider sanProvider = context.mock(SANProvider.class);
     context.checking(new Expectations());
 
     SANManager test = new SANManager(sanProvider);
-    test.cleanSnapshot(snapId);
+    test.cleanSnapshot(snapId, snapshotPointId);
     assertTrue("expected to reach this statement without an exception", true);
   }
 
@@ -284,6 +288,8 @@ public class SANManagerTest {
   public void deleteSnapshot_BasicTest() throws Exception {
     final String volId = "foo";
     final String iqn = "foo-iqn";
+    final String snapshotPointId = "snap-point-foo";
+
     final SANVolumeInfo existing = new SANVolumeInfo(volId).withSanVolumeId("fooprefix" + volId + "foosuffix");
     existing.setIqn(iqn);
 
@@ -295,13 +301,13 @@ public class SANManagerTest {
     final SANProvider sanProvider = context.mock(SANProvider.class);
     context.checking(new Expectations() {
       {
-        oneOf(sanProvider).deleteVolume(existing.getSanVolumeId(), iqn);
+        oneOf(sanProvider).deleteSnapshot(existing.getSanVolumeId(), iqn, snapshotPointId);
         will(returnValue(Boolean.TRUE));
       }
     });
 
     SANManager test = new SANManager(sanProvider);
-    test.deleteSnapshot(volId);
+    test.deleteSnapshot(volId, snapshotPointId);
 
     try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
       List<SANVolumeInfo> results = Entities.query(new SANVolumeInfo());
@@ -313,6 +319,7 @@ public class SANManagerTest {
   public void deleteSnapshot_NoSANSnapshot() throws Exception {
     final String volId = "foo";
     final String iqn = "foo-iqn";
+    final String snapshotPointId = "snap-point-foo";
     final SANVolumeInfo existing = new SANVolumeInfo(volId).withSanVolumeId("fooprefix" + volId + "foosuffix");
     existing.setIqn(iqn);
 
@@ -324,7 +331,7 @@ public class SANManagerTest {
     final SANProvider sanProvider = context.mock(SANProvider.class);
     context.checking(new Expectations() {
       {
-        oneOf(sanProvider).deleteVolume(existing.getSanVolumeId(), iqn);
+        oneOf(sanProvider).deleteSnapshot(existing.getSanVolumeId(), iqn, snapshotPointId);
         will(returnValue(Boolean.FALSE));
         oneOf(sanProvider).snapshotExists(existing.getSanVolumeId(), iqn);
         will(returnValue(Boolean.FALSE));
@@ -332,7 +339,7 @@ public class SANManagerTest {
     });
 
     SANManager test = new SANManager(sanProvider);
-    test.deleteSnapshot(volId);
+    test.deleteSnapshot(volId, snapshotPointId);
 
     try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
       List<SANVolumeInfo> results = Entities.query(new SANVolumeInfo());

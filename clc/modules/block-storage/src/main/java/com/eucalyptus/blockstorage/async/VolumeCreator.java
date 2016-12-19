@@ -373,7 +373,7 @@ public class VolumeCreator implements Runnable {
       LOG.error("Error finishing failed snapshot " + snapshotId, e);
     } finally {
       try {
-        blockManager.cleanSnapshot(snapshotId);
+        blockManager.cleanSnapshot(snapshotId, null);
       } catch (Exception e) {
         LOG.error("Error deleting failed snapshot " + snapshotId, e);
       }

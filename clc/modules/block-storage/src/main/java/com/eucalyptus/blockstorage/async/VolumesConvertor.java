@@ -84,7 +84,7 @@ public class VolumesConvertor extends Thread {
   private LogicalStorageManager toBlockManager;
 
   public VolumesConvertor(LogicalStorageManager fromBlockManager, LogicalStorageManager toBlockManager) {
-    super( Threads.threadUniqueName( "storage-volumes-convertor" ) );
+    super(Threads.threadUniqueName("storage-volumes-convertor"));
     this.fromBlockManager = fromBlockManager;
     this.toBlockManager = toBlockManager;
   }
@@ -141,7 +141,7 @@ public class VolumesConvertor extends Thread {
         } catch (Exception ex) {
           LOG.error(ex);
           try {
-            toBlockManager.deleteSnapshot(snapshotId);
+            toBlockManager.deleteSnapshot(snapshotId, snap.getSnapPointId());
           } catch (EucalyptusCloudException e1) {
             LOG.error(e1);
           }

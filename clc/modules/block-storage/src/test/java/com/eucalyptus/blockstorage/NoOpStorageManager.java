@@ -84,7 +84,7 @@ public class NoOpStorageManager implements LogicalStorageManager {
   }
 
   @Override
-  public void cleanSnapshot(String snapshotId) {
+  public void cleanSnapshot(String snapshotId, String snapshotPointId) {
     // TODO Auto-generated method stub
 
   }
@@ -131,7 +131,7 @@ public class NoOpStorageManager implements LogicalStorageManager {
   }
 
   @Override
-  public void deleteSnapshot(String snapshotId) throws EucalyptusCloudException {
+  public void deleteSnapshot(String snapshotId, String snapshotPointId) throws EucalyptusCloudException {
     // TODO Auto-generated method stub
 
   }
@@ -161,7 +161,8 @@ public class NoOpStorageManager implements LogicalStorageManager {
   }
 
   @Override
-  public StorageResourceWithCallback prepSnapshotForDownload(String snapshotId, int sizeExpected, long actualSizeInMB) throws EucalyptusCloudException {
+  public StorageResourceWithCallback prepSnapshotForDownload(String snapshotId, int sizeExpected, long actualSizeInMB)
+      throws EucalyptusCloudException {
     // TODO Auto-generated method stub
     return null;
   }
@@ -314,13 +315,13 @@ public class NoOpStorageManager implements LogicalStorageManager {
   @Override
   public void restoreSnapshotDelta(String currentSnapId, String prevSnapId, String baseId, StorageResource sr) throws EucalyptusCloudException {
     // TODO Auto-generated method stub
-    
+
   }
 
   @Override
   public void completeSnapshotRestorationFromDeltas(String snapshotId) throws EucalyptusCloudException {
     // TODO Auto-generated method stub
-    
+
   }
 
 }

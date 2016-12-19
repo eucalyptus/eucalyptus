@@ -303,7 +303,8 @@ public class DASManager implements LogicalStorageManager {
     }
   }
 
-  public void cleanSnapshot(String snapshotId) {
+  @Override
+  public void cleanSnapshot(String snapshotId, String snapshotPointId) {
     try {
       updateVolumeGroup();
       try (VolumeMetadataManager volumeManager = new VolumeMetadataManager()) {
@@ -694,7 +695,8 @@ public class DASManager implements LogicalStorageManager {
     }
   }
 
-  public void deleteSnapshot(String snapshotId) throws EucalyptusCloudException {
+  @Override
+  public void deleteSnapshot(String snapshotId, String snapshotPointId) throws EucalyptusCloudException {
     updateVolumeGroup();
     try (VolumeMetadataManager volumeManager = new VolumeMetadataManager()) {
       LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(snapshotId);

@@ -143,7 +143,7 @@ public class FailedSnapshotCleaner extends CheckerTask {
     // Delete snapshot from backend
     try {
       LOG.trace("Cleaning snapshot " + snapshotId + " on storage backend");
-      blockManager.cleanSnapshot(snapshotId);
+      blockManager.cleanSnapshot(snapshotId, snapInfo.getSnapPointId());
     } catch (Exception e) {
       LOG.debug("Attempt to clean snapshot " + snapshotId + " on storage backend failed because: " + e.getMessage());
     }
