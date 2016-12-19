@@ -75,7 +75,6 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.objectstorage.ObjectStorageGateway;
 import com.eucalyptus.objectstorage.msgs.CopyObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetResponseType;
@@ -98,7 +97,6 @@ import com.eucalyptus.ws.handlers.MessageStackHandler;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
-@ChannelPipelineCoverage("one")
 public class ObjectStorageOutboundHandler extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger(ObjectStorageOutboundHandler.class);
 
@@ -194,7 +192,9 @@ public class ObjectStorageOutboundHandler extends MessageStackHandler {
           if (msg instanceof SetObjectAccessControlPolicyResponseType && ((SetObjectAccessControlPolicyResponseType) msg).getVersionId() != null) {
             httpResponse.setHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, ((SetObjectAccessControlPolicyResponseType) msg).getVersionId());
           }
-
+          if (((ObjectStorageResponseType)msg).getStatus( ) != null) {
+            httpResponse.setStatus(((ObjectStorageResponseType)msg).getStatus( ));
+          }
           removeResponseBody(msg, httpResponse);
         }
       }
