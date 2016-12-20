@@ -14,8 +14,8 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see http://www.gnu.org/licenses/.
   -->
-<binding name="queue_amazonaws_com_doc_2012_11_05" xmlns:tns="http://queue.amazonaws.com/doc/2012-11-05/" force-classes="true" add-constructors="true">
-  <namespace uri="http://queue.amazonaws.com/doc/2012-11-05/" prefix="tns" default="elements"/>
+<binding name="queue_amazonaws_com_doc_2012_11_05" force-classes="true" add-constructors="true">
+  <namespace uri="http://queue.amazonaws.com/doc/2012-11-05/" default="elements"/>
   <mapping name="CreateQueue" class="com.eucalyptus.simplequeue.CreateQueueType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
     <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
     <value name="QueueName" field="queueName" usage="required"/>
