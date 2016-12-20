@@ -2446,6 +2446,8 @@ static int init(void)
     GET_VAR_INT(nc_state.createImage_cleanup_threshold, CONFIG_NC_CREATEIMAGE_CLEANUP_THRESHOLD, default_createImage_cleanup_threshold);
     GET_VAR_INT(nc_state.teardown_state_duration, CONFIG_NC_TEARDOWN_STATE_DURATION, default_teardown_state_duration);
     GET_VAR_INT(nc_state.migration_ready_threshold, CONFIG_NC_MIGRATION_READY_THRESHOLD, default_migration_ready_threshold);
+    // largest ephemeral volume that NC will cache; larger volumes will be created under 'work' blobstore
+    GET_VAR_INT(nc_state.ephemeral_cache_highwater_gb, CONFIG_NC_EPHEMERAL_CACHE_HIGHWATER_GB, 0);
     int max_attempts;
     GET_VAR_INT(max_attempts, CONFIG_WALRUS_DOWNLOAD_MAX_ATTEMPTS, -1);
     if (max_attempts > 0 && max_attempts < 99)
