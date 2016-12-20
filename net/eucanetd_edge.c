@@ -329,11 +329,22 @@ static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pG
         return (1);
     }
     // dhcpd
+        // terminate pre-4.4 dhcpd
     char cmd[EUCA_MAX_PATH] = "";
     snprintf(cmd, EUCA_MAX_PATH, "%s pkill -f euca-dhcp.pid", pConfig->cmdprefix);
     rc = timeshell_nb(cmd, 10, FALSE);
     if (rc != 0) {
         LOGDEBUG("Failed to terminate dhcpd\n");
+    }
+        // possible use_systemctl changes
+    if (!pConfig->use_systemctl) {
+        pConfig->use_systemctl = TRUE;
+        eucanetd_stop_dhcpd_server(pConfig);
+        pConfig->use_systemctl = FALSE;   
+    } else {
+        pConfig->use_systemctl = FALSE;
+        eucanetd_stop_dhcpd_server(pConfig);
+        pConfig->use_systemctl = TRUE;   
     }
     // iptables
     ipt_handler_repopulate(pConfig->ipt);

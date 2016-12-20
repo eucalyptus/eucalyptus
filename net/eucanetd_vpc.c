@@ -375,6 +375,17 @@ static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pG
         }
     }
 
+        // possible use_systemctl changes
+    if (!pConfig->use_systemctl) {
+        pConfig->use_systemctl = TRUE;
+        do_md_nginx_maintain(pMidoConfig, VPCMIDO_NGINX_STOP);
+        pConfig->use_systemctl = FALSE;   
+    } else {
+        pConfig->use_systemctl = FALSE;
+        do_md_nginx_maintain(pMidoConfig, VPCMIDO_NGINX_STOP);
+        pConfig->use_systemctl = TRUE;   
+    }
+    
     EUCA_FREE(mido_euca_version_str);
     return (ret);
 }

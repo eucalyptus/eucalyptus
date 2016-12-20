@@ -438,11 +438,75 @@ int do_md_nginx_maintain(mido_config *mido, enum vpcmido_nginx_t mode) {
     int rc = 0;
     boolean do_start = FALSE;
     boolean do_stop = FALSE;
-    char cmd[EUCA_MAX_PATH] = "";
+    pid_t npid = 0;
+    char cmd[EUCA_MAX_PATH], *pidstr = NULL, pidfile[EUCA_MAX_PATH];
+    sequence_executor cmds;
 
     if (!mido || mode < VPCMIDO_NGINX_START || mode > VPCMIDO_NGINX_STOP) {
         LOGERROR("invalid argument: unable to maintain md nginx\n");
         return (1);
+    }
+
+    // Due to complexity in Eucalyptus packaging (EUCA-12424), do not use systemctl by default
+    if (!mido->config->use_systemctl) {
+        se_init(&cmds, mido->config->cmdprefix, 4, 1);
+
+        snprintf(pidfile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/nginx_md.pid", mido->eucahome);
+        if (!check_file(pidfile)) {
+            pidstr = file2str(pidfile);
+            if (pidstr) {
+                npid = atoi(pidstr);
+            } else {
+                npid = 0;
+            }
+            EUCA_FREE(pidstr);
+        } else {
+            npid = 0;
+        }
+
+        if (mode == VPCMIDO_NGINX_START) {
+            if (npid > 1) {
+                if (check_process(npid, "nginx")) {
+                    unlink(pidfile);
+                    do_start = TRUE;
+                }
+            } else {
+                do_start = TRUE;
+            }
+        } else if (mode == VPCMIDO_NGINX_STOP) {
+            if (npid > 1 && !check_process(npid, "nginx")) {
+                do_stop = TRUE;
+            }
+        }
+
+        if (do_start) {
+            LOGINFO("\tstarting md nginx process\n");
+            snprintf(cmd, EUCA_MAX_PATH,
+                    "nginx -p . -c " EUCALYPTUS_DATA_DIR "/nginx_md.conf -g 'pid "
+                    EUCALYPTUS_RUN_DIR "/nginx_md.pid; env NEXTHOP=127.0.0.1; "
+                    "env NEXTHOPPORT=8773; env EUCAHOME=%s;'",
+                    mido->eucahome, mido->eucahome, mido->eucahome);
+            se_add(&cmds, cmd, NULL, ignore_exit);
+        }
+        if (do_stop) {
+            LOGINFO("\tstopping md nginx process\n");
+            snprintf(cmd, EUCA_MAX_PATH,
+                    "nginx -p . -s stop -c " EUCALYPTUS_DATA_DIR "/nginx_md.conf -g 'pid "
+                    EUCALYPTUS_RUN_DIR "/nginx_md.pid; env NEXTHOP=127.0.0.1; "
+                    "env NEXTHOPPORT=8773; env EUCAHOME=%s;'",
+                    mido->eucahome, mido->eucahome, mido->eucahome);
+            se_add(&cmds, cmd, NULL, ignore_exit);
+        }
+
+        se_print(&cmds);
+        rc = se_execute(&cmds);
+        if (rc) {
+            LOGERROR("could not perform md nginx maintenance\n");
+            ret = 1;
+        }
+        se_free(&cmds);
+
+        return (ret);
     }
 
     snprintf(cmd, EUCA_MAX_PATH, "%s %s status %s", mido->config->cmdprefix,
