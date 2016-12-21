@@ -271,7 +271,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 
       // Setup the snapshot and part entities.
       snapUploadInfo = SnapshotUploadInfo.create(snapshotId, bucketName, keyName);
-      Path zipFilePath = Files.createTempFile(keyName + '-', '-' + String.valueOf(partNumber));
+      Path zipFilePath = Files.createTempFile(Paths.get("/var/tmp"), keyName + '-', '-' + String.valueOf(partNumber));
       part = SnapshotPart.createPart(snapUploadInfo, zipFilePath.toString(), partNumber, readOffset);
 
       InputStream inputStream = storageResource.getInputStream();
@@ -324,7 +324,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
             bytesWritten = 0L;
 
             // Setup the part entity for next part
-            zipFilePath = Files.createTempFile(keyName + '-', '-' + String.valueOf((++partNumber)));
+            zipFilePath = Files.createTempFile(Paths.get("/var/tmp"), keyName + '-', '-' + String.valueOf((++partNumber)));
             part = SnapshotPart.createPart(snapUploadInfo, zipFilePath.toString(), partNumber, readOffset);
 
             gzipStream = new GZIPOutputStream(baos);
@@ -497,7 +497,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
           int partNumber = 1;
 
           try {
-            Path filePath = Files.createTempFile(snapshotId + '-', '-' + String.valueOf(partNumber));
+            Path filePath = Files.createTempFile(Paths.get("/var/tmp"), snapshotId + '-', '-' + String.valueOf(partNumber));
             fileOutputStream = new FileOutputStream(filePath.toString());
             SnapshotPart part = new SnapshotPart();
             part.setFileName(filePath.toString());
@@ -525,7 +525,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 
                 // Prep for the next part
                 bytesWritten = 0;
-                filePath = Files.createTempFile(snapshotId + '-', '-' + String.valueOf(++partNumber));
+                filePath = Files.createTempFile(Paths.get("/var/tmp"), snapshotId + '-', '-' + String.valueOf(++partNumber));
                 fileOutputStream = new FileOutputStream(filePath.toString());
                 part = new SnapshotPart();
                 part.setFileName(filePath.toString());
