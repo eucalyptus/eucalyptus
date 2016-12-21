@@ -65,6 +65,7 @@ package com.eucalyptus.blockstorage.async;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Random;
 
@@ -620,7 +621,7 @@ public class VolumeCreator implements Runnable {
           "Failed to parse bucket and key information for downloading " + snap.getSnapshotId() + ". Cannot download snapshot from objectstorage.");
     }
     SnapshotTransfer snapshotTransfer = new S3SnapshotTransfer(snap.getSnapshotId(), bucket, key);
-    Path diffPath = Files.createTempFile(snap.getSnapshotId() + "_" + prevSnap.getSnapshotId() + "_", ".diff");
+    Path diffPath = Files.createTempFile(Paths.get("/var/tmp"), snap.getSnapshotId() + "_" + prevSnap.getSnapshotId() + "_", ".diff");
 
     // Download snapshot delta
     StorageResource sr = new FileResource(snap.getSnapshotId(), diffPath.toString());

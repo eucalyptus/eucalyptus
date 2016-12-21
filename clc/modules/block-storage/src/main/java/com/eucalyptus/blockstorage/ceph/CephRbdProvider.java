@@ -64,6 +64,7 @@ package com.eucalyptus.blockstorage.ceph;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -599,7 +600,7 @@ public class CephRbdProvider implements SANProvider {
       } else {
         prevSnapPoint = prevSnapPointId;
       }
-      Path diffPath = Files.createTempFile(snapshotId + "_" + prevSnapshotId + "_", ".diff");
+      Path diffPath = Files.createTempFile(Paths.get("/var/tmp"), snapshotId + "_" + prevSnapshotId + "_", ".diff");
       Files.deleteIfExists(diffPath); // Delete the file before invoking rbd. rbd does not like the file being present
       diffName = diffPath.toString();
 
@@ -636,6 +637,7 @@ public class CephRbdProvider implements SANProvider {
     LOG.debug("Cleaning up snapshot delta for snapshotId=" + snapshotId);
     if (sr != null && !Strings.isNullOrEmpty(sr.getPath())) {
       try {
+        // root wrap shell out to delete the file since its owned by root and sticky bits on /var/tmp don't let unprivileged users to delete
         String[] cmd = new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "rm", "-f", sr.getPath()};
         LOG.debug("Executing: " + Joiner.on(" ").skipNulls().join(cmd));
         CommandOutput output = SystemUtil.runWithRawOutput(cmd);
@@ -694,9 +696,10 @@ public class CephRbdProvider implements SANProvider {
     } finally {
       // clean up the diff file
       try {
-        new File(sr.getPath()).delete();
+        if (!Files.deleteIfExists(Paths.get(sr.getPath())))
+          LOG.warn("Cannot delete file " + sr.getPath());
       } catch (Exception e) {
-        LOG.warn("Failed to remove file " + sr.getPath());
+        LOG.warn("Failed to delete file " + sr.getPath(), e);
       }
     }
   }
