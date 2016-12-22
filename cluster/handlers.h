@@ -227,7 +227,7 @@ enum {
 
 typedef struct instance_t {
     char instanceId[INSTANCE_ID_LEN];
-    char reservationId[16];
+    char reservationId[LID_LEN];
 
     char amiId[16];
     char kernelId[16];
