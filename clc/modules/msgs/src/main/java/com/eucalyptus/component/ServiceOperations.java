@@ -69,6 +69,7 @@ import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.TextParseException;
+import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.annotation.ComponentMessage;
@@ -77,6 +78,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.context.ServiceContext;
+import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.Logs;
@@ -273,13 +275,17 @@ public class ServiceOperations {
         final String hostHeader = request.getHeader( HttpHeaders.HOST );
         if ( hostHeader != null && componentId.isAlwaysLocal( ) ) {
           final String host = HostAndPort.fromString( hostHeader ).getHostText( );
+          final Host coordinator = Hosts.getCoordinator( );
           if ( !InetAddresses.isInetAddress( host ) &&
-              !Hosts.isCoordinator( ) &&
+              (coordinator == null || !coordinator.isLocalHost( )) &&
               DomainNames.isExternalSubdomain( Name.fromString( host, Name.root ) ) ) {
+            if ( coordinator == null ) {
+              throw Exceptions.toUndeclared( new ServiceStateException( "Service not available" ) );
+            }
             try {
               final BaseMessage backendRequest = BaseMessages.deepCopy( baseMessage, baseMessage.getClass( ) );
               final BaseMessage backendResponse = send(
-                  ServiceConfigurations.createEphemeral( componentId, Hosts.getCoordinator( ).getBindAddress( ) ),
+                  ServiceConfigurations.createEphemeral( componentId, coordinator.getBindAddress( ) ),
                   backendRequest );
               final T response = BaseMessages.deepCopy( backendResponse, (Class<T>)baseMessage.getReply( ).getClass( ) );
               response.setCorrelationId( request.getCorrelationId( ) );
