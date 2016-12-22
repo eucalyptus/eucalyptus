@@ -11,7 +11,9 @@ LimitNPROC=100000
 # Need to come up with a better way of preserving nginx and dhcpd
 # processes across service restarts
 # https://eucalyptus.atlassian.net/browse/EUCA-12390
-KillMode=process
+#KillMode=process
+
+# KillMode removed per http://eucalyptus.atlassian.net/browse/EUCA-12424
 
 [Install]
 WantedBy=multi-user.target

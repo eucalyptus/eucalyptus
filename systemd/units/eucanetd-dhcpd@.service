@@ -1,0 +1,11 @@
+[Unit]
+Description=Eucalyptus DHCP daemon
+Documentation=man:dhcpd(8) man:dhcpd.conf(5)
+Wants=network-online.target
+After=network-online.target time-sync.target
+
+[Service]
+Type=notify
+ExecStart=/usr/sbin/dhcpd -f -cf /var/run/eucalyptus/net/euca-dhcp.conf %i 
+
+# vim: set syntax=dosini:

@@ -69,8 +69,6 @@
 #include "stats.h"
 
 configEntry configKeysRestartCC[] = {
-    {"DISABLE_TUNNELING", "N"}
-    ,
     {"ENABLE_WS_SECURITY", "Y"}
     ,
     {"EUCALYPTUS", "/"}
@@ -82,10 +80,6 @@ configEntry configKeysRestartCC[] = {
     {"SCHEDPOLICY", "ROUNDROBIN"}
     ,
     {"VNET_BRIDGE", NULL}
-    ,
-    {"VNET_DHCPDAEMON", "/usr/sbin/dhcpd"}
-    ,
-    {"VNET_DHCPUSER", "dhcpd"}
     ,
     {"VNET_MODE", NETMODE_INVALID}
     ,

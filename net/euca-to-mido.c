@@ -434,7 +434,8 @@ int do_metaproxy_maintain(mido_config *mido, int mode) {
  * @return 0 on success. Positive integer otherwise.
  */
 int do_md_nginx_maintain(mido_config *mido, enum vpcmido_nginx_t mode) {
-    int ret = 0, rc;
+    int ret = 0;
+    int rc = 0;
     boolean do_start = FALSE;
     boolean do_stop = FALSE;
     pid_t npid = 0;
@@ -446,62 +447,100 @@ int do_md_nginx_maintain(mido_config *mido, enum vpcmido_nginx_t mode) {
         return (1);
     }
 
-    se_init(&cmds, mido->config->cmdprefix, 4, 1);
+    // Due to complexity in Eucalyptus packaging (EUCA-12424), do not use systemctl by default
+    if (!mido->config->use_systemctl) {
+        se_init(&cmds, mido->config->cmdprefix, 4, 1);
 
-    snprintf(pidfile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/nginx_md.pid", mido->eucahome);
-    if (!check_file(pidfile)) {
-        pidstr = file2str(pidfile);
-        if (pidstr) {
-            npid = atoi(pidstr);
+        snprintf(pidfile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/nginx_md.pid", mido->eucahome);
+        if (!check_file(pidfile)) {
+            pidstr = file2str(pidfile);
+            if (pidstr) {
+                npid = atoi(pidstr);
+            } else {
+                npid = 0;
+            }
+            EUCA_FREE(pidstr);
         } else {
             npid = 0;
         }
-        EUCA_FREE(pidstr);
-    } else {
-        npid = 0;
-    }
 
-    if (mode == VPCMIDO_NGINX_START) {
-        if (npid > 1) {
-            if (check_process(npid, "nginx")) {
-                unlink(pidfile);
+        if (mode == VPCMIDO_NGINX_START) {
+            if (npid > 1) {
+                if (check_process(npid, "nginx")) {
+                    unlink(pidfile);
+                    do_start = TRUE;
+                }
+            } else {
                 do_start = TRUE;
             }
-        } else {
+        } else if (mode == VPCMIDO_NGINX_STOP) {
+            if (npid > 1 && !check_process(npid, "nginx")) {
+                do_stop = TRUE;
+            }
+        }
+
+        if (do_start) {
+            LOGINFO("\tstarting md nginx process\n");
+            snprintf(cmd, EUCA_MAX_PATH,
+                    "nginx -p . -c " EUCALYPTUS_DATA_DIR "/nginx_md.conf -g 'pid "
+                    EUCALYPTUS_RUN_DIR "/nginx_md.pid; env NEXTHOP=127.0.0.1; "
+                    "env NEXTHOPPORT=8773; env EUCAHOME=%s;'",
+                    mido->eucahome, mido->eucahome, mido->eucahome);
+            se_add(&cmds, cmd, NULL, ignore_exit);
+        }
+        if (do_stop) {
+            LOGINFO("\tstopping md nginx process\n");
+            snprintf(cmd, EUCA_MAX_PATH,
+                    "nginx -p . -s stop -c " EUCALYPTUS_DATA_DIR "/nginx_md.conf -g 'pid "
+                    EUCALYPTUS_RUN_DIR "/nginx_md.pid; env NEXTHOP=127.0.0.1; "
+                    "env NEXTHOPPORT=8773; env EUCAHOME=%s;'",
+                    mido->eucahome, mido->eucahome, mido->eucahome);
+            se_add(&cmds, cmd, NULL, ignore_exit);
+        }
+
+        se_print(&cmds);
+        rc = se_execute(&cmds);
+        if (rc) {
+            LOGERROR("could not perform md nginx maintenance\n");
+            ret = 1;
+        }
+        se_free(&cmds);
+
+        return (ret);
+    }
+
+    snprintf(cmd, EUCA_MAX_PATH, "%s %s status %s", mido->config->cmdprefix,
+            mido->config->systemctl, EUCANETD_NGINX_UNIT);
+    rc = timeshell_nb(cmd, 10, FALSE);
+
+    if (mode == VPCMIDO_NGINX_START) {
+        if (rc != 0) {
             do_start = TRUE;
         }
     } else if (mode == VPCMIDO_NGINX_STOP) {
-        if (npid > 1 && !check_process(npid, "nginx")) {
+        if (rc == 0) {
             do_stop = TRUE;
         }
     }
 
     if (do_start) {
         LOGINFO("\tstarting md nginx process\n");
-        snprintf(cmd, EUCA_MAX_PATH,
-                "nginx -p . -c " EUCALYPTUS_DATA_DIR "/nginx_md.conf -g 'pid "
-                EUCALYPTUS_RUN_DIR "/nginx_md.pid; env NEXTHOP=127.0.0.1; "
-                "env NEXTHOPPORT=8773; env EUCAHOME=%s;'",
-                mido->eucahome, mido->eucahome, mido->eucahome);
-        se_add(&cmds, cmd, NULL, ignore_exit);
+        snprintf(cmd, EUCA_MAX_PATH, "%s %s start %s", mido->config->cmdprefix,
+                mido->config->systemctl, EUCANETD_NGINX_UNIT);
+        rc = timeshell_nb(cmd, 10, FALSE);
+        if (rc != 0) {
+            LOGWARN("failed to start eucanetd-nginx\n");
+        }
     }
     if (do_stop) {
         LOGINFO("\tstopping md nginx process\n");
-        snprintf(cmd, EUCA_MAX_PATH,
-                "nginx -p . -s stop -c " EUCALYPTUS_DATA_DIR "/nginx_md.conf -g 'pid "
-                EUCALYPTUS_RUN_DIR "/nginx_md.pid; env NEXTHOP=127.0.0.1; "
-                "env NEXTHOPPORT=8773; env EUCAHOME=%s;'",
-                mido->eucahome, mido->eucahome, mido->eucahome);
-        se_add(&cmds, cmd, NULL, ignore_exit);
+        snprintf(cmd, EUCA_MAX_PATH, "%s %s start %s", mido->config->cmdprefix,
+                mido->config->systemctl, EUCANETD_NGINX_UNIT);
+        rc = timeshell_nb(cmd, 10, FALSE);
+        if (rc != 0) {
+            LOGWARN("failed to stop eucanetd-nginx\n");
+        }
     }
-
-    se_print(&cmds);
-    rc = se_execute(&cmds);
-    if (rc) {
-        LOGERROR("could not perform md nginx maintenance\n");
-        ret = 1;
-    }
-    se_free(&cmds);
 
     return (ret);
 }
@@ -5703,8 +5742,8 @@ char *discover_mido_bgps_v5(mido_config *mido) {
             resptr = &(res[strlen(res)]);
             snprintf(resptr, 1024, "$MNA -e router name eucart add bgp-peer asn %d address %s\n",
                     gw->peer_asn, gw->peer_ip);
-            for (int j = 0; j < gw->max_ad_routes; j++) {
-                mido_gw_ad_route *ar = gw->ad_routes[j];
+            for (int j = 0; j < gw->max_bgp_networks; j++) {
+                mido_gw_ad_route *ar = gw->bgp_networks[j];
                 if (!ar) continue;
                 resptr = &(res[strlen(res)]);
                 snprintf(resptr, 1024, "$MNA -e router name eucart add bgp-network net %s\n",
@@ -9285,6 +9324,91 @@ int do_midonet_delete_unconnected(mido_config *mido, boolean checkonly) {
     if (!gDetected) {
         LOGINFO("\t=== ok ===\n");
         return (0);
+    }
+    return (0);
+}
+
+/**
+ * Creates mido-tz tunnel-zone and adds all detected hosts as member. IP address
+ * of device dev is used as address of each member.
+ * @param mido [in] data structure that holds MidoNet configuration
+ * @param type [in] type of tunnel-zone (gre|vxlan) - defaults to gre
+ * @param dev [in] device with the IP address of each tunnel-zone member host
+ * @param refreshmido [in] if TRUE, reload mido data structures
+ * @return 0 on success. Positive integer on error.
+ */
+int do_midonet_create_tzone(mido_config *mido, char *type, char *dev, boolean refreshmido) {
+    int rc = 0;
+    int i = 0;
+    midoname **tzs = NULL;
+    int max_tzs = 0;
+    midoname **tzhosts = NULL;
+    int max_tzhosts = 0;
+    midoname *midotz = NULL;
+
+    LOGINFO("\n");
+    LOGINFO("Creating VPCMIDO tunnel-zone\n");
+    log_params_set(EUCA_LOG_ERROR, 0, 100000);
+    if (refreshmido) {
+        LOGINFO("Loading objects from MidoNet.\n");
+        rc = midonet_api_cache_refresh_v_threads(MIDO_CACHE_REFRESH_ALL);
+        if (rc) {
+            LOGERROR("failed to retrieve objects from MidoNet.\n");
+            return (1);
+        }
+        rc = reinitialize_mido(mido);
+        if (rc) {
+            LOGERROR("unable to initialize data structures\n");
+            return (1);
+        }
+    }
+
+    rc = mido_get_tunnelzones(VPCMIDO_TENANT, &tzs, &max_tzs);
+    if (rc == 0) {
+        for (i = 0; i < max_tzs; i++) {
+            if ((rc == 0) && (strstr(VPCMIDO_TUNNELZONE, tzs[i]->name))) {
+                midotz = tzs[i];
+            }
+        }
+    }
+
+    char *tzname = NULL;
+    midonet_api_tunnelzone *tz = NULL;
+    if (midotz) {
+        tzname = strdup(midotz->name);
+        tz = midonet_api_cache_lookup_tunnelzone(midotz);
+    } else {
+        tzname = strdup(VPCMIDO_DEFAULT_TZ);
+    }
+    char *tztype = NULL;
+    if (!type || (strcmp(type, "gre") && strcmp(type, "vxlan"))) {
+        tztype = strdup("gre");
+    } else {
+        tztype = strdup(type);
+    }
+    tz = mido_create_tunnelzone(tzname, tztype, &midotz);
+    EUCA_FREE(tzname);
+    EUCA_FREE(tztype);
+    
+    log_params_set(EUCA_LOG_INFO, 0, 100000);
+
+    rc = mido_get_hosts(&tzhosts, &max_tzhosts);
+    if (!rc) {
+        for (i = 0; i < max_tzhosts; i++) {
+            u32 addr = 0;
+            rc = mido_get_address(tzhosts[i], dev, &addr);
+            if (!rc) {
+                char *ipAddress = hex2dot_s(addr);
+                midoname *tzmember = NULL;
+                LOGINFO("\tadding %s %s\n", tzhosts[i]->name, ipAddress);
+                mido_create_tunnelzone_member(tz, NULL, tzhosts[i], ipAddress, &tzmember);
+            }
+        }
+    }
+    EUCA_FREE(tzhosts);
+
+    if (tzs) {
+        EUCA_FREE(tzs);
     }
     return (0);
 }
