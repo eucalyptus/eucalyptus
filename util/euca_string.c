@@ -573,6 +573,52 @@ char *euca_strncpy(char *restrict to, const char *restrict from, size_t size)
     return (sRet);
 }
 
+/**
+ * Truncate the given id with prefix to idlen.
+ * Ex.: id "eni-123456789abcdef01", prefix "eni-", idlen "8" - result "eni-12345678"
+ * 
+ * @param id [in] the id string of interest.
+ * @param prefix [in] prefix of the id - i.e., "eni-", "i-", "sg-", etc
+ * @param idlen [in] length of the truncated id.
+ * @return the truncated id when successful. NULL if unable to truncate. Memory is
+ * allocated for the return string, and the caller must release it. 
+ */
+char *euca_truncate_id(const char *id, const char *prefix, size_t idlen) {
+    char *ret = NULL;
+    char *strptr = NULL;
+    if (!id || !prefix) {
+        return (NULL);
+    }
+    if (strlen(id) < (strlen(prefix) + idlen)) {
+        return (NULL);
+    }
+
+    ret = strdup(id);
+    if (strlen(prefix)) {
+        strptr = strstr(ret, prefix);
+    } else {
+        strptr = ret;
+    }
+    if (!strptr) {
+        EUCA_FREE(ret);
+    } else {
+        *(strptr + strlen(prefix) + idlen) = '\0';
+    }
+    return (ret);
+}
+
+/**
+ * Truncate the given id (assumed to be i-* or eni-*) to be a short AWS ID.
+ * Ex.: id "eni-123456789abcdef01" - result "eni-12345678"
+ * 
+ * @param id [in] the id string of interest.
+ * @return the truncated id when successful. NULL if unable to truncate. Memory is
+ * allocated for the return string, and the caller must release it. 
+ */
+char *euca_truncate_interfaceid(const char *id) {
+    return (euca_truncate_id(id, "i-", 8));
+}
+
 //!
 //! Converts a human readable IP address to its binary counter part
 //!

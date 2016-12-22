@@ -1529,49 +1529,19 @@ void *monitoring_thread(void *arg)
 
             if (!strcmp(nc->pEucaNet->sMode, NETMODE_VPCMIDO)) {
                 bridge_instance_interfaces_remove(nc, instance);
-/*
-                char iface[16], cmd[EUCA_MAX_PATH], obuf[256], ebuf[256], sPath[EUCA_MAX_PATH];
-                int rc;
-                snprintf(iface, 16, "vn_%s", instance->instanceId);
-                LOGTRACE("checking if VM interface is attached to a bridge (%s/%s)\n", iface, instance->params.guestNicDeviceName);
-
-                // If this device does not have a 'brport' path, this isn't a bridge device
-                snprintf(sPath, EUCA_MAX_PATH, "/sys/class/net/%s/brport/", iface);
-                if (!check_directory(sPath)) {
-                    LOGTRACE("VM interface is attached to a bridge (%s/%s)\n", iface, instance->params.guestNicDeviceName);
-                    snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc_state.rootwrap_cmd_path, instance->params.guestNicDeviceName, iface);
-                    if (timeshell(cmd, obuf, ebuf, 256, 10)) {
-                        LOGERROR("unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n");
-                    } else {
-                        LOGTRACE("VM interface removed from bridge (%s/%s)\n", iface, instance->params.guestNicDeviceName);
-                    }
-                }
-
-                // Repeat process for secondary interfaces as well
-                for (int i=0; i < EUCA_MAX_NICS; i++) {
-                    if (strlen(instance->secNetCfgs[i].interfaceId) == 0)
-                        continue;
-
-                    snprintf(iface, 16, "vn_%s", instance->secNetCfgs[i].interfaceId);
-
-                    // If this device does not have a 'brport' path, this isn't a bridge device
-                    snprintf(sPath, EUCA_MAX_PATH, "/sys/class/net/%s/brport/", iface);
-                    if (!check_directory(sPath)) {
-                        LOGDEBUG("[%s] removing instance interface %s from host bridge\n", instance->instanceId, iface);
-                        snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc->rootwrap_cmd_path, instance->params.guestNicDeviceName, iface);
-                        rc = timeshell(cmd, obuf, ebuf, 256, 10);
-                        if (rc) {
-                            LOGERROR("unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n");
-                        }
-                    }
-                }
-*/
             }
 
             // Fix for EUCA-12608
             if (!strcmp(nc->pEucaNet->sMode, NETMODE_EDGE)) {
-                char iface[16];
-                snprintf(iface, 16, "vn_%s", instance->instanceId);
+                char iface[IF_NAME_LEN];
+                char *ishort = euca_truncate_interfaceid(instance->instanceId);
+                if (ishort) {
+                    snprintf(iface, IF_NAME_LEN, "vn_%s", ishort);
+                } else {
+                    LOGWARN("Failed to get short id from %s\n", instance->instanceId);
+                    snprintf(iface, IF_NAME_LEN, "vn_%s", instance->instanceId);
+                }
+                EUCA_FREE(ishort);
                 bridge_interface_set_hairpin(nc, instance, iface);
             } 
 
@@ -1918,45 +1888,18 @@ void *startup_thread(void *arg)
 
                     if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_VPCMIDO)) {
                         bridge_instance_interfaces_remove(&nc_state, instance);
-/*
-                        char iface[16], cmd[EUCA_MAX_PATH], obuf[256], ebuf[256], sPath[EUCA_MAX_PATH];
-                        snprintf(iface, 16, "vn_%s", instance->instanceId);
-
-                        // If this device does not have a 'brport' path, this isn't a bridge device
-                        snprintf(sPath, EUCA_MAX_PATH, "/sys/class/net/%s/brport/", iface);
-                        if (!check_directory(sPath)) {
-                            LOGDEBUG("[%s] removing instance interface %s from host bridge\n", instance->instanceId, iface);
-                            snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc_state.rootwrap_cmd_path, instance->params.guestNicDeviceName, iface);
-                            rc = timeshell(cmd, obuf, ebuf, 256, 10);
-                            if (rc) {
-                                LOGERROR("unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n");
-                            }
-                        }
-
-                        // Repeat process for secondary interfaces as well
-                        for (int i=0; i < EUCA_MAX_NICS; i++) {
-                            if (strlen(instance->secNetCfgs[i].interfaceId) == 0)
-                                continue;
-
-                            snprintf(iface, 16, "vn_%s", instance->secNetCfgs[i].interfaceId);
-
-                            // If this device does not have a 'brport' path, this isn't a bridge device
-                            snprintf(sPath, EUCA_MAX_PATH, "/sys/class/net/%s/brport/", iface);
-                            if (!check_directory(sPath)) {
-                                LOGDEBUG("[%s] removing instance interface %s from host bridge\n", instance->instanceId, iface);
-                                snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc_state.rootwrap_cmd_path, instance->params.guestNicDeviceName, iface);
-                                rc = timeshell(cmd, obuf, ebuf, 256, 10);
-                                if (rc) {
-                                    LOGERROR("unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n");
-                                }
-                            }
-                        }
-*/
                     }
                     // Fix for EUCA-12608
                     if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_EDGE)) {
-                        char iface[16];
-                        snprintf(iface, 16, "vn_%s", instance->instanceId);
+                        char iface[IF_NAME_LEN];
+                        char *ishort = euca_truncate_interfaceid(instance->instanceId);
+                        if (ishort) {
+                            snprintf(iface, IF_NAME_LEN, "vn_%s", ishort);
+                        } else {
+                            LOGWARN("Failed to get short id from %s\n", instance->instanceId);
+                            snprintf(iface, IF_NAME_LEN, "vn_%s", instance->instanceId);
+                        }
+                        EUCA_FREE(ishort);
                         bridge_interface_set_hairpin(&nc_state, instance, iface);
                     } 
 
@@ -4161,14 +4104,22 @@ int bridge_interface_remove(struct nc_state_t *nc, ncInstance *instance, char *i
  * @return 0 on success. Positive integer otherwise.
  */
 int bridge_instance_interfaces_remove(struct nc_state_t *nc, ncInstance *instance) {
-    char iface[16];
+    char iface[IF_NAME_LEN];
+    char *ishort = NULL;
     int rc = 0;
     
     if (!nc || !instance) {
         LOGWARN("Invalid argument: cannot remove NULL bridge interface.\n");
         return (1);
     }
-    snprintf(iface, 16, "vn_%s", instance->instanceId);
+    ishort = euca_truncate_interfaceid(instance->instanceId);
+    if (ishort) {
+        snprintf(iface, IF_NAME_LEN, "vn_%s", ishort);
+    } else {
+        LOGWARN("Failed to get short id from %s\n", instance->instanceId);
+        snprintf(iface, IF_NAME_LEN, "vn_%s", instance->instanceId);
+    }
+    EUCA_FREE(ishort);
     rc += bridge_interface_remove(nc, instance, iface);
 
     // Repeat process for secondary interfaces as well
@@ -4176,7 +4127,15 @@ int bridge_instance_interfaces_remove(struct nc_state_t *nc, ncInstance *instanc
         if (strlen(instance->secNetCfgs[i].interfaceId) == 0)
             continue;
 
-        snprintf(iface, 16, "vn_%s", instance->secNetCfgs[i].interfaceId);
+        ishort = NULL;
+        ishort = euca_truncate_interfaceid(instance->secNetCfgs[i].interfaceId);
+        if (ishort) {
+            snprintf(iface, IF_NAME_LEN, "vn_%s", ishort);
+        } else {
+            LOGWARN("Failed to get short id from %s\n", instance->secNetCfgs[i].interfaceId);
+            snprintf(iface, IF_NAME_LEN, "vn_%s", instance->secNetCfgs[i].interfaceId);
+        }
+        EUCA_FREE(ishort);
         rc += bridge_interface_remove(nc, instance, iface);
     }
     

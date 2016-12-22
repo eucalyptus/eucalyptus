@@ -125,6 +125,9 @@ char *euca_strdupcat(char *restrict s1, const char *restrict s2);
 char *euca_strncat(char *restrict dest, const char *restrict src, size_t size);
 char *euca_strncpy(char *restrict to, const char *restrict from, size_t size);
 
+char *euca_truncate_id(const char *id, const char *prefix, size_t idlen);
+char *euca_truncate_interfaceid(const char *id);
+
 //! @{
 //! @name IP conversion APIs
 u32 euca_dot2hex(const char *psDot);

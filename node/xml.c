@@ -478,7 +478,7 @@ static void write_vbr_xml(xmlNodePtr vbrs, const virtualBootRecord * vbr)
 //!
 //!
 static void prep_nic_xml_node(xmlNodePtr nic, const netConfig * net, const char * bridgeDeviceName, const char * hypervisorType, const char * osPlatform, const char * osVirtioNetwork) {
-    char str[16];
+    char str[32];
     snprintf(str, sizeof(str), "%d", net->vlan);
     _ATTRIBUTE(nic, "vlan", str);
     snprintf(str, sizeof(str), "%d", net->networkIndex);
@@ -487,7 +487,14 @@ static void prep_nic_xml_node(xmlNodePtr nic, const netConfig * net, const char 
     _ATTRIBUTE(nic, "publicIp", net->publicIp);
     _ATTRIBUTE(nic, "privateIp", net->privateIp);
     _ATTRIBUTE(nic, "bridgeDeviceName", bridgeDeviceName);
-    snprintf(str, sizeof(str), "vn_%s", net->interfaceId);
+    char *ishort = euca_truncate_interfaceid(net->interfaceId);
+    if (ishort) {
+        snprintf(str, sizeof(str), "vn_%s", ishort);
+    } else {
+        LOGWARN("Failed to get short id from %s\n", net->interfaceId);
+        snprintf(str, sizeof(str), "vn_%s", net->interfaceId);
+    }
+    EUCA_FREE(ishort);
     _ATTRIBUTE(nic, "guestDeviceName", str);
     snprintf(str, sizeof(str), "%d", net->device);
     _ATTRIBUTE(nic, "device", str);
