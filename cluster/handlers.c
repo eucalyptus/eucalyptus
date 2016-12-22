@@ -2990,7 +2990,7 @@ int ncInstance_to_ccInstance(ccInstance * dst, ncInstance * src)
     int i;
 
     euca_strncpy(dst->uuid, src->uuid, 48);
-    euca_strncpy(dst->instanceId, src->instanceId, 16);
+    euca_strncpy(dst->instanceId, src->instanceId, INSTANCE_ID_LEN);
     euca_strncpy(dst->reservationId, src->reservationId, 16);
     euca_strncpy(dst->accountId, src->accountId, 48);
     euca_strncpy(dst->ownerId, src->ownerId, 48);
@@ -3649,7 +3649,7 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
 {
     int rc = 0, i = 0, done = 0, runCount = 0, resid = 0, foundnet = 0, error = 0, nidx = 0, thenidx = 0, pid = 0;
     ccInstance *myInstance = NULL, *retInsts = NULL;
-    char instId[16], uuid[48];
+    char instId[INSTANCE_ID_LEN], uuid[48];
     ccResource *res = NULL;
     char *mac = NULL;
     char privip[32] = "";
@@ -3736,7 +3736,7 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
     for (i = 0; i < maxCount && !done; i++) {
         mac = EUCA_ZALLOC(32, sizeof(char)); 
 
-        snprintf(instId, 16, "%s", instIds[i]);
+        snprintf(instId, INSTANCE_ID_LEN, "%s", instIds[i]);
         if (uuidsLen > i) {
             snprintf(uuid, 48, "%s", uuids[i]);
         } else {
@@ -6848,7 +6848,7 @@ int allocate_ccInstance(ccInstance * out, char *id, char *amiId, char *kernelId,
     if (out != NULL) {
         bzero(out, sizeof(ccInstance));
         if (id)
-            euca_strncpy(out->instanceId, id, 16);
+            euca_strncpy(out->instanceId, id, INSTANCE_ID_LEN);
         if (amiId)
             euca_strncpy(out->amiId, amiId, 16);
         if (kernelId)
