@@ -48,6 +48,7 @@
 \*----------------------------------------------------------------------------*/
 #define VPCMIDO_TENANT     "euca_tenant_1"
 #define VPCMIDO_TUNNELZONE "mido-tz midotz euca-tz eucatz"
+#define VPCMIDO_DEFAULT_TZ "mido-tz"
 #define VPCMIDO_EUCAVER    "euca_version"
 #define VPCMIDO_CORERT     "eucart"
 #define VPCMIDO_COREBR     "eucabr"
@@ -484,8 +485,10 @@ char *mido_get_apiuribase(void);
 void mido_set_apiuribase(const char *apiuribase);
 int mido_initialize_apiuribase(void);
 
+midonet_api_tunnelzone *mido_create_tunnelzone(char *name, char *type, midoname **outname);
 int mido_get_tunnelzones(char *tenant, midoname ***outnames, int *outnames_max);
 int mido_get_tunnelzone_hosts(midoname *tzone, midoname ***outnames, int *outnames_max);
+int mido_create_tunnelzone_member(midonet_api_tunnelzone *tz, midoname *tzmn, midoname *host, char *ip, midoname **outname);
 
 midonet_api_bridge *mido_create_bridge(char *tenant, char *name, midoname **outname);
 int mido_update_bridge(midoname *name, ...);
@@ -572,7 +575,9 @@ midonet_api_host *mido_get_host(char *name, char *uuid);
 midonet_api_host *mido_get_host_byname(char *hostname);
 midonet_api_host *mido_get_host_byip(char *ip);
 int mido_get_interfaces(midoname *host, u32 iftype, u32 ifendpoint, midoname **outnames, int *outnames_max);
+int mido_get_interface(midoname *host, char *dev, midoname *outname);
 int mido_get_addresses(midoname *host, u32 **outnames, int *outnames_max);
+int mido_get_address(midoname *host, char *dev, u32 *outaddress);
 
 midonet_api_chain *mido_create_chain(char *tenant, char *name, midoname **outname);
 int mido_update_chain(midoname *name, ...);
@@ -671,6 +676,9 @@ int midonet_api_cache_get_nhosts(midonet_api_cache *cache);
 int midonet_api_cache_get_ntzhosts(midonet_api_cache *cache);
 
 midonet_api_tunnelzone *midonet_api_cache_lookup_tunnelzone(midoname *tzone);
+midonet_api_tunnelzone *midonet_api_cache_add_tunnelzone(midoname *tunnelzone);
+int midonet_api_cache_add_tunnelzone_host(midonet_api_tunnelzone *tzone, midoname *host);
+
 midonet_api_host *midonet_api_cache_lookup_host(midoname *name);
 
 int midonet_api_cache_add_port(midoname *port);

@@ -1,0 +1,18 @@
+[Unit]
+Description=Eucalyptus metadata service proxy
+Documentation=man:nginx(8)
+
+[Service]
+Type=forking
+PIDFile=/run/nginx.pid
+Environment="NEXTHOP=127.0.0.1"
+Environment="NEXTHOPPORT=8773"
+Environment="EUCAHOME=/"
+ExecStartPre=/usr/bin/rm -f /run/nginx.pid
+ExecStartPre=/usr/sbin/nginx -t -c /usr/share/eucalyptus/nginx_md.conf
+ExecStart=/usr/sbin/nginx -c /usr/share/eucalyptus/nginx_md.conf
+ExecReload=/bin/kill -s HUP $MAINPID
+KillSignal=SIGQUIT
+TimeoutStopSec=5
+KillMode=process
+PrivateTmp=true

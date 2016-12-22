@@ -963,9 +963,15 @@ int daemonrun(char *incmd, char *pidfile)
         sigaction(SIGTERM, &newsigact, NULL);
 
         rc = daemon(0, 0);
+        if (rc) {
+            LOGWARN("daemon() failed with %d\n", errno);
+        }
 
         // become parent of session
         sid = setsid();
+        if (sid < 0) {
+            LOGWARN("setsid() failed with %d\n", errno);
+        }
 
         if ((cmd = strdup(incmd)) == NULL)
             exit(-1);
@@ -1584,8 +1590,12 @@ int drop_privs(void)
     char buf[16384] = { 0 };           // man-page said this is enough
 
     s = getpwnam_r(EUCALYPTUS_ADMIN, &pwd, buf, sizeof(buf), &result);
-    if (result == NULL)
+    if (result == NULL) {
+        if (s) {
+            LOGWARN("getpwnam_r() failed with %d\n", s);
+        }
         return (EUCA_ERROR);           // not found if s==0, check errno otherwise
+    }
 
     if (setgid(pwd.pw_gid) != 0)
         return (EUCA_ERROR);
@@ -1596,17 +1606,34 @@ int drop_privs(void)
     return (EUCA_OK);
 }
 
-//!
-//! run shell command with timeout and get back: return value, stdout and stderr all in one
-//!
-//! @param[in] command
-//! @param[in] stdout_str
-//! @param[in] stderr_str
-//! @param[in] max_size
-//! @param[in] timeout
-//!
-//! @return -1 for any failures, 0 if a timeout occured or a positive value is success.
-//!
+/**
+ * run shell command with timeout.
+ * @param command [in] command to be executed (1 line string)
+ * @param timeout [in] timeout in seconds to wait for the command to complete
+ * @param logerr [in] log STDOUT and STDERR if return code of command is not 0
+ * @return the return code of command.
+ */
+int timeshell_nb(char *command, int timeout, boolean logerr) {
+    char cmd_sout[1024] = "";
+    char cmd_serr[1024] = "";
+    int rc = timeshell(command, cmd_sout, cmd_serr, 1024, timeout);
+    if (rc && logerr) {
+        LOGINFO("%s failed\nSTDOUT: %s\nSTDERR:%s\n", command, cmd_sout, cmd_serr);
+    }
+    return (rc);
+}
+
+/**
+ * run shell command with timeout. STDOUT and STDERR are copied to strings stdout_str
+ * and stderr_str respectively (at most max_size chars)
+ * @param command [in] command to be executed (1 line string)
+ * @param stdout_str [in] char buffer to store STDOUT of command
+ * @param stderr_str [in] char buffer to store STDERR of command
+ * @param max_size [in] maximum number of chars to store in stdout_str and strerr_str.
+ * Needs to be the min of buffer length of strout_str and strerr_str.
+ * @param timeout [in] timeout in seconds to wait for the command to complete
+ * @return the return code of command.
+ */
 int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, int timeout)
 {
     int retval;

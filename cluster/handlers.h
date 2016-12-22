@@ -346,7 +346,6 @@ typedef struct ccConfig_t {
     int proxy_max_cache_size;
     char configFiles[2][EUCA_MAX_PATH];
     int use_wssec;
-    int use_tunnels;
     char policyFile[EUCA_MAX_PATH];
     int initialized;
     int kick_dhcp;
