@@ -9309,16 +9309,7 @@ int compare_midoname_name(const void *p1, const void *p2) {
     if (e2 && e2->name && strlen(e2->name)) {
         name2 = e2->name;
     }
-    if (name1 == name2) {
-        return (0);
-    }
-    if (name1 == NULL) {
-        return (1);
-    }
-    if (name2 == NULL) {
-        return (-1);
-    }
-    return (strcmp(name1, name2));
+    return (euca_strcmp(name1, name2));
 }
 
 /**
@@ -9351,16 +9342,7 @@ int compare_midonet_api_bridge(const void *p1, const void *p2) {
     if (e2 && e2->obj && e2->obj->name && strlen(e2->obj->name)) {
         name2 = e2->obj->name;
     }
-    if (name1 == name2) {
-        return (0);
-    }
-    if (name1 == NULL) {
-        return (1);
-    }
-    if (name2 == NULL) {
-        return (-1);
-    }
-    return (strcmp(name1, name2));
+    return (euca_strcmp(name1, name2));
 }
 
 /**
@@ -9393,16 +9375,7 @@ int compare_midonet_api_router(const void *p1, const void *p2) {
     if (e2 && e2->obj && e2->obj->name && strlen(e2->obj->name)) {
         name2 = e2->obj->name;
     }
-    if (name1 == name2) {
-        return (0);
-    }
-    if (name1 == NULL) {
-        return (1);
-    }
-    if (name2 == NULL) {
-        return (-1);
-    }
-    return (strcmp(name1, name2));
+    return (euca_strcmp(name1, name2));
 }
 
 /**
@@ -9411,6 +9384,7 @@ int compare_midonet_api_router(const void *p1, const void *p2) {
  * @param p2 [in] pointer to midonet_api_ipaddrgroup pointer 2.
  * @return 0 iff p1->.->obj->name == p2->.->obj->name. -1 iff p1->.->obj->name < p2->.->obj->name.
  * 1 iff p1->.->obj->name > p2->.->obj->name.
+ * Substring accepted as exact match to support AWS long IDs.
  * NULL is considered larger than a non-NULL string.
  */
 int compare_midonet_api_ipaddrgroup(const void *p1, const void *p2) {
@@ -9435,16 +9409,7 @@ int compare_midonet_api_ipaddrgroup(const void *p1, const void *p2) {
     if (e2 && e2->obj && e2->obj->name && strlen(e2->obj->name)) {
         name2 = e2->obj->name;
     }
-    if (name1 == name2) {
-        return (0);
-    }
-    if (name1 == NULL) {
-        return (1);
-    }
-    if (name2 == NULL) {
-        return (-1);
-    }
-    return (strcmp(name1, name2));
+    return (euca_strstrcmp(name1, name2));
 }
 
 /**
@@ -9477,16 +9442,7 @@ int compare_midonet_api_chain(const void *p1, const void *p2) {
     if (e2 && e2->obj && e2->obj->name && strlen(e2->obj->name)) {
         name2 = e2->obj->name;
     }
-    if (name1 == name2) {
-        return (0);
-    }
-    if (name1 == NULL) {
-        return (1);
-    }
-    if (name2 == NULL) {
-        return (-1);
-    }
-    return (strcmp(name1, name2));
+    return (euca_strcmp(name1, name2));
 }
 
 #ifdef MIDONET_API_TEST

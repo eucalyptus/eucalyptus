@@ -228,69 +228,6 @@ int dev_remove_ips(dev_handler *devh, in_addr_entry * pIps, int nbIps);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-/**
- * Free a list of device names.
- *
- * @param[in,out] pList a pointer to a list of string that will contain the device names
- * @param[in]     nbItems number of items to free in the list
- *
- * @pre
- *     psDevNames SHOULD not be NULL
- *
- * @post
- *     The memory is freed and pList is set to NULL
- */
-static inline void dev_free_list(dev_entry **pList, int nbItems) {
-    if (pList != NULL) {
-        EUCA_FREE((*pList));
-    }
-}
-
-/**
- * Free a list of ips.
- *
- * @param pList [in,out] a pointer to a list of in_addr_entry
- *
- * @pre
- *     psDevNames SHOULD not be NULL
- *
- * @post
- *     The memory is freed and pList is set to NULL
- */
-static inline void dev_free_ips(in_addr_entry **pList) {
-    if (pList != NULL) {
-        EUCA_FREE((*pList));
-    }
-}
-
-/**
- * Initialize an in_addr_entry structure with the given information.
- *
- * @param pEntry [in,out] a pointer to the structure to initialize
- * @param psDeviceName [in] a string pointer to the device name associated with this IP entry
- * @param address [in] the IP address
- * @param netmask [in] the netmask address
- *
- * @pre
- *     pEntry SHOULD not be NULL
- *
- * @post
- *     The structure is initialized
- */
-static inline void dev_in_addr_entry(in_addr_entry *pEntry, const char *psDeviceName, in_addr_t address, in_addr_t netmask) {
-    char *sAddress = NULL;
-    if (pEntry) {
-        snprintf(pEntry->sDevName, IF_NAME_LEN, "%s", psDeviceName);
-        pEntry->address = address;
-        pEntry->netmask = netmask;
-        pEntry->slashnet = NETMASK_TO_SLASHNET(netmask);
-        pEntry->broascast = (address | ~netmask);
-        sAddress = hex2dot(address);
-        snprintf(pEntry->sHost, NETWORK_ADDR_LEN, "%s/%u", sAddress, pEntry->slashnet);
-        EUCA_FREE(sAddress);
-    }
-}
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                   MACROS                                   |

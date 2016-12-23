@@ -481,6 +481,7 @@ int delete_mido_vpc_instance(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *
 int find_mido_vpc_instance(mido_vpc_subnet *vpcsubnet, char *instancename, mido_vpc_instance **outvpcinstance);
 int find_mido_vpc_instance_global(mido_config *mido, char *instancename, mido_vpc **outvpc,
         mido_vpc_subnet **outvpcsubnet, mido_vpc_instance **outvpcinstance);
+char *find_mido_vpc_instance_id(const char *id);
 
 int populate_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vpcsubnet, mido_vpc_natgateway *vpcnatgateway);
 int create_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vpcsubnet, mido_vpc_natgateway *vpcnatgateway);

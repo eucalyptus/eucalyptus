@@ -76,6 +76,7 @@
  |                                  INCLUDES                                  |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+#include <string.h>
 #include "data.h"
 
 /*----------------------------------------------------------------------------*\
@@ -152,6 +153,9 @@ char *euca_gettok(char *haystack, char *needle);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+int inline euca_strcmp(const char *str1, const char *str2);
+int inline euca_strstrcmp(const char *str1, const char *str2);
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                   MACROS                                   |
@@ -182,5 +186,61 @@ char *euca_gettok(char *haystack, char *needle);
  |                          STATIC INLINE IMPLEMENTATION                      |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+/**
+ * Compares strings str1 and str2. Returns an integer less than, equal to, or
+ * greater than zero if str1 is found, respectively to be less than, to match,
+ * or to be greater than str2. NULL pointer is considered greater than non NULL
+ * string pointer.
+ * @param str1 [in] string of interest
+ * @param str2 [in] string of interest
+ * @return 0 iff str1 == str2. -1 iff str1 < str2. 1 iff str1 > str2.
+ */
+int inline euca_strcmp(const char *str1, const char *str2) {
+    if (str1 == str2) {
+        return (0);
+    }
+    if (str1 == NULL) {
+        return (1);
+    }
+    if (str2 == NULL) {
+        return (-1);
+    }
+    return (strcmp(str1, str2));
+}
+
+/**
+ * Compares strings str1 and str2. Returns an integer less than, equal to, or
+ * greater than zero if str1 is found, respectively to be less than, to match,
+ * or to be greater than str2. NULL pointer is considered greater than non NULL
+ * string pointer.
+ * If one of the strings is a substring of the other, starting at the beginning,
+ * the comparison will be considered an exact match (returns 0).
+ * @param str1 [in] string of interest
+ * @param str2 [in] string of interest
+ * @return 0 iff str1 == str2. -1 iff str1 < str2. 1 iff str1 > str2.
+ */
+int inline euca_strstrcmp(const char *str1, const char *str2) {
+    if (str1 == str2) {
+        return (0);
+    }
+    if (str1 == NULL) {
+        return (1);
+    }
+    if (str2 == NULL) {
+        return (-1);
+    }
+    if (strlen(str1) > strlen(str2)) {
+        if (strstr(str1, str2) == str1) {
+            return (0);
+        }
+    }
+    if (strlen(str1) < strlen(str2)) {
+        if (strstr(str2, str1) == str2) {
+            return (0);
+        }
+    }
+    return (strcmp(str1, str2));
+}
 
 #endif /* ! _INCLUDE_EUCA_STRING_H_ */
