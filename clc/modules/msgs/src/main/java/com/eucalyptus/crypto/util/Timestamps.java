@@ -66,6 +66,7 @@ import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.TimeZone;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.login.AuthenticationException;
@@ -74,6 +75,7 @@ import com.google.common.base.Strings;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
 public class Timestamps {
@@ -179,6 +181,13 @@ public class Timestamps {
   private static final String iso8601ShortDate = "yyyyMMdd";
 
   /**
+   * Time zone to be used for simple date format.
+   */
+  private static final Map<String,String> zonesByPattern = ImmutableMap.of(
+      rfc822Timestamp, "GMT"
+  );
+
+  /**
    * RFC 2616 / HTTP 1.1 date formats (http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1)
    */
   private static final List<PatternHolder> rfc2616 = ImmutableList.of(
@@ -238,10 +247,14 @@ public class Timestamps {
     SimpleDateFormat format = patternLocal.get( ).getIfPresent( pattern );
     if ( format == null ) {
       format = new SimpleDateFormat( pattern );
-      format.setTimeZone( TimeZone.getTimeZone( "UTC" ) );
+      format.setTimeZone( TimeZone.getTimeZone( zone( pattern ) ) );
       patternLocal.get( ).put( pattern, format );
     }
     return format;
+  }
+
+  private static String zone( final String pattern ) {
+    return zonesByPattern.getOrDefault( pattern, "UTC" );
   }
 
   private static final class PatternHolder {
