@@ -149,6 +149,21 @@ class TimestampsTest {
     
   }
 
+  @Test
+  void testRfc822TimeZoneIsGmt( ) {
+    assertEquals(
+        "Formatted rfc 822 HTTP compatible date",
+        "Mon, 14 Jan 2013 21:49:29 GMT",
+        Timestamps.formatRfc822Timestamp( new Date( 1358200169000L ) ) )
+  }
+
+  @Test
+  void testIso8601UTCLongDateMillisTimezoneUses0000( ) {
+    assertEquals(
+        "Formatted ISO 8601 compatible date with millis and 0 zone offset",
+        "2013-01-14T21:49:29.000+0000",
+        Timestamps.formatIso8601UTCLongDateMillisTimezone( new Date( 1358200169000L ) ) )
+  }
 
   private SimpleDateFormat sdf( final String pattern ) {
     final SimpleDateFormat format = new SimpleDateFormat( pattern )
