@@ -286,7 +286,7 @@
         <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="exposeHeaders" />
     </mapping>
 
-    <mapping name="Delete" class="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessage">
+    <mapping name="DeleteMultipleObjects" class="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessage">
         <value name="Quiet" field="quiet" usage="optional"/>
         <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="objects">
             <structure name="Object" map-as="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntry"/>
@@ -298,7 +298,7 @@
         <value name="VersionId" field="versionId" usage="optional"/>
     </mapping>
 
-    <mapping name="DeleteResult" class="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessageReply">
+    <mapping name="DeleteMultipleObjectsResult" class="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessageReply">
         <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="deleted" usage="optional">
             <structure name="Deleted" map-as="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntryVersioned"/>
         </collection>
@@ -307,15 +307,15 @@
         </collection>
     </mapping>
 
-    <mapping class="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntryVersioned"
-             extends="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntry" abstract="true">
+    <mapping name="DeleteMultipleObjectsVersioned" class="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntryVersioned"
+             extends="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntry">
         <structure map-as="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntry"/>
         <value name="DeleteMarker" field="deleteMarker" usage="optional"/>
         <value name="DeleteMarkerVersionId" field="deleteMarkerVersionId" usage="optional"/>
     </mapping>
 
-    <mapping class="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsError"
-             extends="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntry" abstract="true">
+    <mapping name="DeleteMultipleObjectsError" class="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsError"
+             extends="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntry">
         <structure map-as="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntry"/>
         <value name="Code" field="code"/>
         <value name="Message" field="message"/>
