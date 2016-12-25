@@ -153,6 +153,15 @@ public class BlockStorageUnitTestSupport {
       throw new RuntimeException("error deleting remaining SANInfos - " + t.getMessage(), t);
     }
   }
+  
+  public static void flushStorageInfos() {
+    try (TransactionResource tran = Entities.transactionFor(StorageInfo.class)) {
+      Entities.deleteAll(StorageInfo.class);
+      tran.commit();
+    } catch (Throwable t) {
+      throw new RuntimeException("error deleting remaining StorageInfos - " + t.getMessage(), t);
+    }
+  }
 
   public static void flushBlockStorageEntities() {
     flushSnapshotInfos();
@@ -208,7 +217,7 @@ public class BlockStorageUnitTestSupport {
 
       @Override
       public String prepareForUpload() throws SnapshotTransferException {
-        return null;
+        return "bucket-for-upload";
       }
 
       @Override
@@ -485,4 +494,7 @@ public class BlockStorageUnitTestSupport {
     };
   }
 
+  public static SnapshotProgressCallback createMockSnapshotProgressCallback() {
+    return new MockSnapshotProgressCallback();
+  }
 }
