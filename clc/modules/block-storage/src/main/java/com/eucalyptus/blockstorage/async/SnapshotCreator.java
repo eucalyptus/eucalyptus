@@ -104,6 +104,8 @@ public class SnapshotCreator implements Runnable {
   private String snapshotId;
   private String snapPointId;
   private LogicalStorageManager blockManager;
+  private SnapshotTransfer snapshotTransfer;
+  private SnapshotProgressCallback progressCallback;
 
   /**
    * Initializes the Snapshotter task. snapPointId should be null if no snap point has been created yet.
@@ -120,14 +122,32 @@ public class SnapshotCreator implements Runnable {
     this.blockManager = blockManager;
   }
 
+  /**
+   * Strictly for use by unit tests only, SnapshotTransfer and ProgressCallback are mocked and instantiated which should never be the case for actual
+   * use
+   * 
+   * @param volumeId
+   * @param snapshotId
+   * @param snapPointId
+   * @param mockBlockManager
+   * @param mockSnapshotTransfer
+   * @param mockProgressCallback
+   */
+  protected SnapshotCreator(String volumeId, String snapshotId, String snapPointId, LogicalStorageManager mockBlockManager,
+      SnapshotTransfer mockSnapshotTransfer, SnapshotProgressCallback mockProgressCallback) {
+    this(volumeId, snapshotId, snapPointId, mockBlockManager);
+    this.snapshotTransfer = mockSnapshotTransfer;
+    this.progressCallback = mockProgressCallback;
+  }
+
   @Override
   public void run() {
     EucaSemaphore semaphore = EucaSemaphoreDirectory.getSolitarySemaphore(volumeId);
     try {
       Boolean shouldTransferSnapshots = true;
-      SnapshotTransfer snapshotTransfer = null;
+      // SnapshotTransfer snapshotTransfer = null;
       String bucket = null;
-      SnapshotProgressCallback progressCallback = null;
+      // SnapshotProgressCallback progressCallback = null;
 
       // Check whether the snapshot needs to be uploaded
       shouldTransferSnapshots = StorageInfo.getStorageInfo().getShouldTransferSnapshots();
@@ -135,7 +155,9 @@ public class SnapshotCreator implements Runnable {
       if (shouldTransferSnapshots) {
         // Prepare for the snapshot upload (fetch credentials for snapshot upload to osg, create the bucket). Error out if this fails without
         // creating the snapshot on the blockstorage backend
-        snapshotTransfer = new S3SnapshotTransfer(snapshotId, snapshotId);
+        if (null == snapshotTransfer) {
+          snapshotTransfer = new S3SnapshotTransfer(snapshotId, snapshotId);
+        }
         bucket = snapshotTransfer.prepareForUpload();
 
         if (snapshotTransfer == null || StringUtils.isBlank(bucket)) {
@@ -153,7 +175,9 @@ public class SnapshotCreator implements Runnable {
 
         // Check to ensure that a failed/cancellation has not be set
         if (!isSnapshotMarkedFailed(snapshotId)) {
-          progressCallback = new SnapshotProgressCallback(snapshotId); // Setup the progress callback, that should start the progress
+          if (null == progressCallback) {
+            progressCallback = new SnapshotProgressCallback(snapshotId); // Setup the progress callback, that should start the progress
+          }
           blockManager.createSnapshot(this.volumeId, this.snapshotId, this.snapPointId);
           progressCallback.updateBackendProgress(50); // to indicate that backend snapshot process is 50% done
         } else {
