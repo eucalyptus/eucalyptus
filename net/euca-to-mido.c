@@ -1066,7 +1066,6 @@ int do_midonet_populate_vpcs(mido_config *mido) {
                         }
                         EUCA_FREE(mido_instanceId);
                         LOGTRACE("discovered VPC subnet instance/interface: %s/%s/%s\n", vpc->name, vpcsubnet->name, instanceId);
-                        LOGINFO("13000: discovered VPC subnet instance/interface: %s/%s/%s\n", vpc->name, vpcsubnet->name, instanceId);
 
                         vpcsubnet->instances = EUCA_REALLOC_C(vpcsubnet->instances,
                                 (vpcsubnet->max_instances + 1), sizeof (mido_vpc_instance));
