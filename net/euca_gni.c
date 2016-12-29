@@ -6078,9 +6078,8 @@ int cmp_gni_config(globalNetworkInfo *a, globalNetworkInfo *b) {
                 }
             }
         }
-    } else {
-        ret |= GNI_CONFIG_DIFF_OTHER;
     }
+
     if (IS_NETMODE_EDGE(a) && IS_NETMODE_EDGE(b)) {
         if (a->max_subnets != b->max_subnets) {
             ret |= GNI_CONFIG_DIFF_SUBNETS;
@@ -6093,8 +6092,10 @@ int cmp_gni_config(globalNetworkInfo *a, globalNetworkInfo *b) {
                 }
             }
         }
-    } else {
-        ret |= GNI_CONFIG_DIFF_OTHER;
+    }
+
+    if (a->nmCode != b->nmCode) {
+        ret |= GNI_CONFIG_DIFF_SUBNETS;
     }
     return (ret);
 }
