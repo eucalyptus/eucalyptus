@@ -66,6 +66,8 @@ public class AutoScalingInstanceCoreView implements AutoScalingInstanceMetadata 
     return instance.getHealthStatus();
   }
 
+  public Boolean getProtectedFromScaleIn() { return instance.getProtectedFromScaleIn( ); }
+
   public String getLaunchConfigurationName() {
     return instance.getLaunchConfigurationName();
   }

@@ -106,7 +106,12 @@ public class AutoScalingGroupMinimumView implements AutoScalingGroupMetadata {
 
   public AutoScalingInstance createInstance( final String instanceId,
                                              final String availabilityZone ) {
-    return AutoScalingInstance.create( getOwner(), instanceId, availabilityZone, group );
+    return AutoScalingInstance.create(
+        getOwner( ),
+        instanceId,
+        availabilityZone,
+        group.getNewInstancesProtectedFromScaleIn( ),
+        group );
   }
 
   public ScalingActivity createActivity( final String clientToken, final List<ActivityCause> causes ) {

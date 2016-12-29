@@ -20,13 +20,12 @@
 package com.eucalyptus.autoscaling.instances;
 
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
-import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingInstanceMetadata;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
-import com.eucalyptus.autoscaling.common.backend.msgs.AutoScalingInstanceDetails;
-import com.eucalyptus.autoscaling.common.backend.msgs.Instance;
+import com.eucalyptus.autoscaling.common.msgs.AutoScalingInstanceDetails;
+import com.eucalyptus.autoscaling.common.msgs.Instance;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.auth.principal.OwnerFullName;
@@ -112,7 +111,8 @@ public abstract class AutoScalingInstances {
       details.setHealthStatus( Strings.toString( autoScalingInstance.getHealthStatus() ) );
       details.setInstanceId( autoScalingInstance.getInstanceId() );
       details.setLaunchConfigurationName( autoScalingInstance.getLaunchConfigurationName() );
-      details.setLifecycleState( Strings.toString( autoScalingInstance.getLifecycleState() ) );      
+      details.setLifecycleState( Strings.toString( autoScalingInstance.getLifecycleState() ) );
+      details.setProtectedFromScaleIn( autoScalingInstance.getProtectedFromScaleIn() );
       return details; 
     }
   }
@@ -149,6 +149,7 @@ public abstract class AutoScalingInstances {
       details.setInstanceId( autoScalingInstance.getInstanceId() );
       details.setLaunchConfigurationName( autoScalingInstance.getLaunchConfigurationName() );
       details.setLifecycleState( Strings.toString( autoScalingInstance.getLifecycleState() ) );
+      details.setProtectedFromScaleIn( autoScalingInstance.getProtectedFromScaleIn( ) );
       return details;
     }
   }

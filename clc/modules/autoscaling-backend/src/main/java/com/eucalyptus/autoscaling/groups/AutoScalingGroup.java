@@ -49,15 +49,23 @@ import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
+import org.apache.log4j.Logger;
 import com.eucalyptus.autoscaling.activities.ScalingActivity;
+import com.eucalyptus.autoscaling.common.AutoScalingBackend;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
+import com.eucalyptus.autoscaling.instances.AutoScalingInstance_;
 import com.eucalyptus.autoscaling.policies.ScalingPolicy;
 import com.eucalyptus.autoscaling.tags.AutoScalingGroupTag;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.upgrade.Upgrades;
+import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Joiner;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -104,6 +112,9 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @Column( name = "metadata_health_check_type", nullable = false )
   @Enumerated( EnumType.STRING )
   private HealthCheckType healthCheckType;
+
+  @Column( name = "metadata_new_instances_protected_from_scale_in" )
+  private Boolean newInstancesProtectedFromScaleIn;
 
   @ElementCollection
   @CollectionTable( name = "metadata_auto_scaling_group_availability_zones" )
@@ -259,6 +270,14 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
     this.healthCheckType = healthCheckType;
   }
 
+  public Boolean getNewInstancesProtectedFromScaleIn() {
+    return newInstancesProtectedFromScaleIn;
+  }
+
+  public void setNewInstancesProtectedFromScaleIn( final Boolean newInstancesProtectedFromScaleIn ) {
+    this.newInstancesProtectedFromScaleIn = newInstancesProtectedFromScaleIn;
+  }
+
   public List<String> getAvailabilityZones() {
     return availabilityZones;
   }
@@ -408,11 +427,13 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
                                          final LaunchConfiguration launchConfiguration,
                                          final Integer minSize,
                                          final Integer maxSize,
+                                         final Boolean newInstancesProtectedFromScaleIn,
                                          final List<AutoScalingGroupTag> tags ) {
     final AutoScalingGroup autoScalingGroup = new AutoScalingGroup( ownerFullName, name );
     autoScalingGroup.setLaunchConfiguration( launchConfiguration );
     autoScalingGroup.setMinSize( minSize );
     autoScalingGroup.setMaxSize( maxSize );
+    autoScalingGroup.setNewInstancesProtectedFromScaleIn( newInstancesProtectedFromScaleIn );
     autoScalingGroup.setCapacity( 0 );
     for ( final AutoScalingGroupTag tag : tags ) {
       tag.setGroup( autoScalingGroup );
@@ -439,6 +460,7 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
     private Integer desiredCapacity;
     private Integer healthCheckGracePeriod;
     private HealthCheckType healthCheckType;
+    private Boolean newInstancesProtectedFromScaleIn;
     private LaunchConfiguration launchConfiguration;
     private Set<String> availabilityZones = Sets.newLinkedHashSet();
     private Map<String,String> subnetsByZone = Maps.newHashMap();
@@ -480,6 +502,11 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
       return builder();
     }
 
+    public T withNewInstancesProtectedFromScaleIn( final Boolean newInstancesProtectedFromScaleIn ) {
+      this.newInstancesProtectedFromScaleIn  = newInstancesProtectedFromScaleIn;
+      return builder();
+    }
+
     public T withAvailabilityZones( final Iterable<String> availabilityZones ) {
       if ( availabilityZones != null ) {
         Iterables.addAll( this.availabilityZones, availabilityZones );
@@ -517,11 +544,12 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
 
     protected AutoScalingGroup build() {
       final AutoScalingGroup group =
-          AutoScalingGroup.create( ownerFullName, name, launchConfiguration, minSize, maxSize, tags );
-      group.setDefaultCooldown( Objects.firstNonNull( defaultCooldown, 300 ) ); 
-      group.setDesiredCapacity( Objects.firstNonNull( desiredCapacity, minSize ) );
-      group.setHealthCheckGracePeriod( Objects.firstNonNull( healthCheckGracePeriod, 0 ) );
-      group.setHealthCheckType( Objects.firstNonNull( healthCheckType, HealthCheckType.EC2 ) );
+          AutoScalingGroup.create( ownerFullName, name, launchConfiguration, minSize, maxSize,
+              MoreObjects.firstNonNull( newInstancesProtectedFromScaleIn, false ), tags );
+      group.setDefaultCooldown( MoreObjects.firstNonNull( defaultCooldown, 300 ) );
+      group.setDesiredCapacity( MoreObjects.firstNonNull( desiredCapacity, minSize ) );
+      group.setHealthCheckGracePeriod( MoreObjects.firstNonNull( healthCheckGracePeriod, 0 ) );
+      group.setHealthCheckType( MoreObjects.firstNonNull( healthCheckType, HealthCheckType.EC2 ) );
       group.setAvailabilityZones( Lists.newArrayList( availabilityZones ) );
       group.setSubnetIdByZone( Maps.newHashMap( subnetsByZone ) );
       group.setTerminationPolicies( terminationPolicies.isEmpty() ?
@@ -531,5 +559,34 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
       group.setScalingRequired( group.getDesiredCapacity() > 0 );
       return group;
     }
-  }  
+  }
+
+  @Upgrades.EntityUpgrade( entities = AutoScalingGroup.class, since = Upgrades.Version.v5_0_0, value = AutoScalingBackend.class)
+  public enum AutoScalingGroupUpgrade500 implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger(AutoScalingGroupUpgrade500.class);
+
+    @Override
+    public boolean apply(@Nullable Class aClass) {
+      try ( final TransactionResource tran = Entities.transactionFor( AutoScalingGroup.class ) ) {
+        final List<AutoScalingGroup> groups =
+            Entities.criteriaQuery( Entities.restriction( AutoScalingGroup.class )
+                .isNull( AutoScalingGroup_.newInstancesProtectedFromScaleIn )
+            ).list( );
+        for ( final AutoScalingGroup group : groups ) {
+          if ( group.getNewInstancesProtectedFromScaleIn( ) == null ) {
+            group.setNewInstancesProtectedFromScaleIn( false );
+            LOG.info( "Set default scale in protection for auto scaling grpup : " + group.getArn( ) );
+          }
+        }
+        tran.commit( );
+      }
+      catch (Exception ex) {
+        LOG.error("Exception during upgrade while attempting to initialize scaling protection for groups");
+        throw Exceptions.toUndeclared(ex);
+      }
+      return true;
+    }
+  }
+
 }

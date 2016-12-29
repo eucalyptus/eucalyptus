@@ -18,7 +18,7 @@
   CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
   additional information or have any questions.
   -->
-<binding name="autoscaling_amazonaws_com_doc_2011_01_01" xmlns:tns="http://autoscaling.amazonaws.com/doc/2011-01-01/" force-classes="true" add-constructors="true">
+<binding name="autoscaling_amazonaws_com_doc_2011_01_01" force-classes="true" add-constructors="true">
   <namespace uri="http://autoscaling.amazonaws.com/doc/2011-01-01/" default="elements"/>
   <format
      type="java.util.Date"
@@ -126,6 +126,7 @@
     <value name="VPCZoneIdentifier" field="vpcZoneIdentifier" usage="optional"/>
     <structure name="TerminationPolicies" field="terminationPolicies" usage="optional" type="com.eucalyptus.autoscaling.common.msgs.TerminationPolicies"/>
     <structure name="Tags" field="tags" usage="optional" type="com.eucalyptus.autoscaling.common.msgs.Tags"/>
+    <value name="NewInstancesProtectedFromScaleIn" field="newInstancesProtectedFromScaleIn" usage="optional"/>
   </mapping>
   <mapping name="CreateAutoScalingGroupResponse" class="com.eucalyptus.autoscaling.common.msgs.CreateAutoScalingGroupResponseType">
     <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
@@ -367,6 +368,7 @@
     <value name="PlacementGroup" field="placementGroup" usage="optional"/>
     <value name="VPCZoneIdentifier" field="vpcZoneIdentifier" usage="optional"/>
     <structure name="TerminationPolicies" field="terminationPolicies" usage="optional" type="com.eucalyptus.autoscaling.common.msgs.TerminationPolicies"/>
+    <value name="NewInstancesProtectedFromScaleIn" field="newInstancesProtectedFromScaleIn" usage="optional"/>
   </mapping>
   <mapping name="UpdateAutoScalingGroupResponse" class="com.eucalyptus.autoscaling.common.msgs.UpdateAutoScalingGroupResponseType">
     <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
@@ -545,6 +547,7 @@
     <value name="Status" field="status" usage="optional"/>
     <structure name="Tags" field="tags" usage="optional" type="com.eucalyptus.autoscaling.common.msgs.TagDescriptionList"/>
     <structure name="TerminationPolicies" field="terminationPolicies" usage="optional" type="com.eucalyptus.autoscaling.common.msgs.TerminationPolicies"/>
+    <value name="NewInstancesProtectedFromScaleIn" field="newInstancesProtectedFromScaleIn" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.msgs.Ebs" abstract="true">
     <value name="SnapshotId" field="snapshotId" usage="optional"/>
@@ -561,6 +564,7 @@
     <value name="LifecycleState" field="lifecycleState" usage="required"/>
     <value name="HealthStatus" field="healthStatus" usage="required"/>
     <value name="LaunchConfigurationName" field="launchConfigurationName" usage="required"/>
+    <value name="ProtectedFromScaleIn" field="protectedFromScaleIn" usage="required"/>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.msgs.Instances" abstract="true">
     <collection field="member">
@@ -589,6 +593,7 @@
     <value name="LifecycleState" field="lifecycleState" usage="required"/>
     <value name="HealthStatus" field="healthStatus" usage="required"/>
     <value name="LaunchConfigurationName" field="launchConfigurationName" usage="required"/>
+    <value name="ProtectedFromScaleIn" field="protectedFromScaleIn" usage="required"/>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.msgs.EnabledMetrics" abstract="true">
     <collection field="member">
@@ -790,6 +795,19 @@
   <mapping class="com.eucalyptus.autoscaling.common.msgs.DescribeAccountLimitsResult" abstract="true">
     <structure name="MaxNumberOfLaunchConfigurations"/>
     <structure name="MaxNumberOfAutoScalingGroups"/>
+  </mapping>
+  <mapping name="SetInstanceProtection" class="com.eucalyptus.autoscaling.common.msgs.SetInstanceProtectionType">
+    <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
+    <structure name="InstanceIds" field="instanceIds" usage="optional" type="com.eucalyptus.autoscaling.common.msgs.InstanceIds"/>
+    <value name="ProtectedFromScaleIn" field="protectedFromScaleIn" usage="optional"/>
+  </mapping>
+  <mapping name="SetInstanceProtectionResponse" class="com.eucalyptus.autoscaling.common.msgs.SetInstanceProtectionResponseType">
+    <structure map-as="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage"/>
+    <structure name="SetInstanceProtectionResult" field="setInstanceProtectionResult" usage="required" type="com.eucalyptus.autoscaling.common.msgs.SetInstanceProtectionResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.common.msgs.SetInstanceProtectionResult" abstract="true">
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage" abstract="true"/>
 </binding>

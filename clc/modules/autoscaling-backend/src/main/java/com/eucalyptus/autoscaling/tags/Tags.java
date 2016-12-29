@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 import javax.persistence.EntityTransaction;
 import org.hibernate.criterion.Criterion;
-import com.eucalyptus.autoscaling.common.backend.msgs.TagDescription;
+import com.eucalyptus.autoscaling.common.msgs.TagDescription;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;

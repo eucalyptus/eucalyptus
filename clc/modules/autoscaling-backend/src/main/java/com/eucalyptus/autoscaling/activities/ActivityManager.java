@@ -668,29 +668,34 @@ public class ActivityManager {
     boolean anyRegisteredInstances = false;
     int currentCapacity = 0;
     try {
+      final Predicate<AutoScalingInstanceCoreView> unprotected = Predicates.not( Predicates.and(
+          LifecycleState.InService.forView( ),
+          AutoScalingInstanceCoreView::getProtectedFromScaleIn
+      ) );
       final List<AutoScalingInstanceCoreView> currentInstances =
           autoScalingInstances.listByGroup( group, Predicates.alwaysTrue(), TypeMappers.lookup( AutoScalingInstance.class, AutoScalingInstanceCoreView.class ) );
+      final Iterable<AutoScalingInstanceCoreView> candidateInstances = Iterables.filter( currentInstances, unprotected );
       currentCapacity = currentInstances.size();
-      if ( currentInstances.size() == terminateCount ) {
+      if ( Iterables.size( candidateInstances ) == terminateCount ) {
         Iterables.addAll(
             instancesToTerminate,
-            Iterables.transform( currentInstances, RestrictedTypes.toDisplayName() ) );
-        anyRegisteredInstances = Iterables.any( currentInstances, ConfigurationState.Registered.forView( ) );
+            Iterables.transform( candidateInstances, RestrictedTypes.toDisplayName() ) );
+        anyRegisteredInstances = Iterables.any( candidateInstances, ConfigurationState.Registered.forView( ) );
       } else {
         // First terminate instances in zones that are no longer in use
         final Set<String> groupZones = Sets.newLinkedHashSet( group.getAvailabilityZones() );
         groupZones.removeAll( zoneMonitor.getUnavailableZones( AutoScalingConfiguration.getZoneFailureThresholdMillis() ) ) ;
-        final Set<String> unwantedZones = Sets.newHashSet( Iterables.transform( currentInstances, availabilityZone() ) );
+        final Set<String> unwantedZones = Sets.newHashSet( Iterables.transform( candidateInstances, availabilityZone() ) );
         unwantedZones.removeAll( groupZones );
 
         final Set<String> targetZones;
-        final List<AutoScalingInstanceCoreView> remainingInstances = Lists.newArrayList( currentInstances );
+        final List<AutoScalingInstanceCoreView> remainingInstances = Lists.newArrayList( candidateInstances );
         if ( !unwantedZones.isEmpty() ) {
           int unwantedInstanceCount = CollectionUtils.reduce(
-              currentInstances, 0, CollectionUtils.count( withAvailabilityZone( unwantedZones ) ) );
+              candidateInstances, 0, CollectionUtils.count( withAvailabilityZone( unwantedZones ) ) );
           if ( unwantedInstanceCount < terminateCount ) {
             Iterable<AutoScalingInstanceCoreView> unwantedInstances =
-                Iterables.filter( currentInstances, withAvailabilityZone( unwantedZones ) );
+                Iterables.filter( candidateInstances, withAvailabilityZone( unwantedZones ) );
             Iterables.addAll( instancesToTerminate, Iterables.transform( unwantedInstances, RestrictedTypes.toDisplayName() ) );
             Iterables.removeAll( remainingInstances, Lists.newArrayList( unwantedInstances ) );
             anyRegisteredInstances = Iterables.any( unwantedInstances, ConfigurationState.Registered.forView( ) );
@@ -703,7 +708,7 @@ public class ActivityManager {
         }
 
         final Map<String,Integer> zoneCounts =
-            buildAvailabilityZoneInstanceCounts( currentInstances, targetZones );
+            buildAvailabilityZoneInstanceCounts( candidateInstances, targetZones );
 
         for ( int i=instancesToTerminate.size(); i<terminateCount && remainingInstances.size()>=1; i++ ) {
           final Map.Entry<String,Integer> entry = selectEntry( zoneCounts, Ordering.natural().reverse() );
@@ -1026,8 +1031,8 @@ public class ActivityManager {
     return ( timestamp() - timestamp.getTime() ) > AutoScalingConfiguration.getActivityTimeoutMillis();
   }
 
-  private Map<String,Integer> buildAvailabilityZoneInstanceCounts( final Collection<AutoScalingInstanceCoreView> instances,
-                                                                   final Collection<String> availabilityZones ) {
+  private Map<String,Integer> buildAvailabilityZoneInstanceCounts( final Iterable<AutoScalingInstanceCoreView> instances,
+                                                                   final Iterable<String> availabilityZones ) {
     final Map<String,Integer> instanceCountByAz = Maps.newTreeMap();
     for ( final String az : availabilityZones ) {
       instanceCountByAz.put( az,
