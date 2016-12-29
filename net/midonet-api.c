@@ -6417,26 +6417,27 @@ int mido_initialize_apiuribase(void) {
     int rc = 1;
     char url[URI_LEN] = { 0 };
     char *outbuf = NULL;
+    int max_att = 100;
 
     if (strlen(midonet_api_uribase)) {
         snprintf(url, URI_LEN, "%s/", midonet_api_uribase);
         midonet_api_uribase[0] = '\0';
-        for (int i = 0; i < 30 && rc; i++) {
+        for (int i = 0; i < max_att && rc; i++) {
             rc = midonet_http_get(url, midonet_api_mtypes[APPLICATION_JSON], &outbuf);
             if (rc) {
-                sleep(1);
+                sleep(5);
             }
         }
     } else {
         midonet_api_uribase[0] = '\0';
-        for (int i = 0; i < 30 && rc; i++) {
+        for (int i = 0; i < max_att && rc; i++) {
             snprintf(url, URI_LEN, "%s/", MIDONET_API_BASE_URL_8080);
             rc = midonet_http_get(url, midonet_api_mtypes[APPLICATION_JSON], &outbuf);
             if (rc) {
                 snprintf(url, URI_LEN, "%s/", MIDONET_API_BASE_URL_8181);
                 rc = midonet_http_get(url, midonet_api_mtypes[APPLICATION_JSON], &outbuf);
                 if (rc) {
-                    sleep(1);
+                    sleep(5);
                 }
             }
         }
