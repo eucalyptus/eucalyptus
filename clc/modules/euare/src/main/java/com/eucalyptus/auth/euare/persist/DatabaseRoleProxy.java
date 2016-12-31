@@ -33,12 +33,16 @@ import com.eucalyptus.auth.euare.checker.InvalidValueException;
 import com.eucalyptus.auth.euare.checker.ValueChecker;
 import com.eucalyptus.auth.euare.checker.ValueCheckerFactory;
 import com.eucalyptus.auth.euare.persist.entities.AccountEntity_;
+import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
+import com.eucalyptus.auth.euare.persist.entities.GroupEntity_;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity_;
+import com.eucalyptus.auth.euare.persist.entities.ManagedPolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity_;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
+import com.eucalyptus.auth.euare.principal.EuareManagedPolicy;
 import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.policy.PolicyPolicy;
@@ -264,6 +268,64 @@ public class DatabaseRoleProxy implements EuareRole {
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to remove policy " + name + " in " + this.delegate );
       throw new AuthException( "Failed to remove policy", e );
+    }
+  }
+
+  @Override
+  public List<EuareManagedPolicy> getAttachedPolicies( ) {
+    final List<EuareManagedPolicy> results = Lists.newArrayList( );
+    try {
+      DatabaseAuthUtils.invokeUnique( RoleEntity.class, RoleEntity_.roleId, getRoleId( ), new Tx<RoleEntity>( ) {
+        @Override
+        public void fire( final RoleEntity roleEntity ) {
+          for ( ManagedPolicyEntity p : roleEntity.getAttachedPolicies( ) ) {
+            results.add( new DatabaseManagedPolicyProxy( p ) );
+          }
+        }
+      } );
+    } catch ( ExecutionException e ) {
+      Debugging.logError( LOG, e, "Failed to getAttachedPolicies for " + this.delegate );
+    }
+    return results;
+  }
+
+  @Override
+  public void attachPolicy( final EuareManagedPolicy policy ) throws AuthException {
+    try {
+      final String accountNumber = policy.getAccountNumber( );
+      DatabaseAuthUtils.invokeUnique( RoleEntity.class, RoleEntity_.roleId, getRoleId( ), new Tx<RoleEntity>( ) {
+        @Override
+        public void fire( final RoleEntity roleEntity ) {
+          roleEntity.getAttachedPolicies( ).add( Entities.criteriaQuery(
+              ManagedPolicyEntity.exampleWithName( accountNumber, policy.getName( ) )
+          ).uniqueResult( ) );
+        }
+      } );
+    } catch ( ExecutionException e ) {
+      Debugging.logError( LOG, e, "Failed to getAttachedPolicies for " + this.delegate );
+    }
+  }
+
+  @Override
+  public void detachPolicy( final EuareManagedPolicy policy ) throws AuthException {
+    try {
+      DatabaseAuthUtils.invokeUnique( RoleEntity.class, RoleEntity_.roleId, getRoleId( ), new Tx<RoleEntity>( ) {
+        @Override
+        public void fire( final RoleEntity roleEntity ) {
+          ManagedPolicyEntity policyEntity = null;
+          for ( final ManagedPolicyEntity attachedPolicy : roleEntity.getAttachedPolicies( ) ) {
+            if ( attachedPolicy.getPolicyId( ).equals( policy.getPolicyId( ) ) ) {
+              policyEntity = attachedPolicy;
+              break;
+            }
+          }
+          if ( policyEntity != null ) {
+            roleEntity.getAttachedPolicies( ).remove( policyEntity );
+          }
+        }
+      } );
+    } catch ( ExecutionException e ) {
+      Debugging.logError( LOG, e, "Failed to getAttachedPolicies for " + this.delegate );
     }
   }
 

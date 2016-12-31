@@ -69,6 +69,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.euare.common.policy.IamPolicySpec;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareGroup;
+import com.eucalyptus.auth.euare.principal.EuareManagedPolicy;
 import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.euare.principal.GlobalNamespace;
@@ -220,6 +221,18 @@ public class Accounts extends com.eucalyptus.auth.Accounts {
 
   public static String getGroupArn( final EuareGroup group ) throws AuthException {
     return buildArn( group.getAccountNumber( ), IamPolicySpec.IAM_RESOURCE_GROUP, group.getPath(), group.getName() );
+  }
+
+  public static String getManagedPolicyFullName( final EuareManagedPolicy policy ) {
+    if ( policy.getPath( ).endsWith( "/" ) ) {
+      return policy.getPath( ) + policy.getName( );
+    } else {
+      return policy.getPath( ) + "/" + policy.getName( );
+    }
+  }
+
+  public static String getManagedPolicyArn( final EuareManagedPolicy policy ) throws AuthException {
+    return buildArn( policy.getAccountNumber( ), IamPolicySpec.IAM_RESOURCE_POLICY, policy.getPath(), policy.getName() );
   }
 
   public static Predicate<EuareGroup> isUserGroup( ) {

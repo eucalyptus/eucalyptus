@@ -193,7 +193,22 @@ public class ValueCheckerFactory {
 
     };
   }
-  
+
+  public static ValueChecker createManagedPolicyNameChecker( ) {
+    return value -> {
+      if ( Strings.isNullOrEmpty( value ) ) {
+        throw new InvalidValueException( "Policy names can not be empty" );
+      }
+      if ( value.length( ) > 128 ) {
+        throw new InvalidValueException( "Policy name too long" );
+      }
+      if ( !value.matches( "[\\w+=,.@-]+" ) ) {
+        throw new InvalidValueException( "Invalid characters in policy name" );
+      }
+      return value;
+    };
+  }
+
   private static void checkUserOrGroupName( final String value, final int maxLength ) throws InvalidValueException {
     if ( Strings.isNullOrEmpty( value ) ) {
       throw new InvalidValueException( "User or group name can not be empty" );

@@ -29,6 +29,8 @@ import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Index;
 import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
+import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
@@ -37,6 +39,8 @@ import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.crypto.Crypto;
@@ -78,6 +82,14 @@ public class RoleEntity extends AbstractPersistent implements Serializable {
 
   @OneToMany( cascade = CascadeType.ALL, mappedBy = "role" )
   private Set<PolicyEntity> policies;
+
+  // Attached policies for the role
+  @NotFound( action = NotFoundAction.IGNORE )
+  @JoinTable( name = "auth_role_attached_policies",
+      joinColumns =        @JoinColumn( name = "auth_role_id" ),
+      inverseJoinColumns = @JoinColumn( name = "auth_managed_policy_id" ) )
+  @ManyToMany
+  Set<ManagedPolicyEntity> attachedPolicies;
 
   @OneToMany( mappedBy = "role" )
   private Set<InstanceProfileEntity> instanceProfiles;
@@ -143,6 +155,14 @@ public class RoleEntity extends AbstractPersistent implements Serializable {
 
   public void setPolicies( final Set<PolicyEntity> policies ) {
     this.policies = policies;
+  }
+
+  public Set<ManagedPolicyEntity> getAttachedPolicies( ) {
+    return attachedPolicies;
+  }
+
+  public void setAttachedPolicies( final Set<ManagedPolicyEntity> attachedPolicies ) {
+    this.attachedPolicies = attachedPolicies;
   }
 
   public Set<InstanceProfileEntity> getInstanceProfiles() {

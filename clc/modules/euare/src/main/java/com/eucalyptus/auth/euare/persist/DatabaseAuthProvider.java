@@ -76,6 +76,8 @@ import com.eucalyptus.auth.euare.persist.entities.CertificateEntity_;
 import com.eucalyptus.auth.euare.persist.entities.GroupEntity_;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity_;
+import com.eucalyptus.auth.euare.persist.entities.ManagedPolicyEntity;
+import com.eucalyptus.auth.euare.persist.entities.ManagedPolicyEntity_;
 import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity;
 import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity_;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
@@ -312,6 +314,11 @@ public class DatabaseAuthProvider implements AccountProvider {
         Entities.delete( GroupEntity.class )
             .whereIn( GroupEntity_.id, GroupEntity.class, GroupEntity_.id, subquery -> subquery
                 .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName ) )
+            .delete( );
+
+        Entities.delete( ManagedPolicyEntity.class )
+            .whereIn( ManagedPolicyEntity_.id, ManagedPolicyEntity.class,ManagedPolicyEntity_.id, subquery -> subquery
+                .join( ManagedPolicyEntity_.account ).whereEqual( AccountEntity_.name, accountName ) )
             .delete( );
       }
       Entities.delete( account.get( ) );

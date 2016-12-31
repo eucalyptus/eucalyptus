@@ -84,6 +84,7 @@ public class AuthException extends Exception {
   public static final String EMPTY_OPENID_PROVIDER_URL = "Empty openId connect provider URL";
   public static final String USER_DELETE_CONFLICT = "User has resources attached and can not be deleted";
   public static final String GROUP_DELETE_CONFLICT = "Group has resources attached and can not be deleted";
+  public static final String POLICY_DELETE_CONFLICT = "Policy has resources attached and can not be deleted";
   public static final String ROLE_DELETE_CONFLICT = "Role has resources attached and can not be deleted";
   public static final String ACCOUNT_DELETE_CONFLICT = "Account still has groups and can not be deleted";
   public static final String DELETE_ACCOUNT_ADMIN = "Can not delete account admin";
@@ -94,6 +95,7 @@ public class AuthException extends Exception {
   public static final String GROUP_DELETE_FAILURE = "Can not delete group";
   public static final String ROLE_CREATE_FAILURE = "Can not create role";
   public static final String INSTANCE_PROFILE_CREATE_FAILURE = "Can not create instance profile";
+  public static final String POLICY_CREATE_FAILURE = "Can not create policy";
   public static final String ROLE_DELETE_FAILURE = "Can not delete role";
   public static final String ACCOUNT_CREATE_FAILURE = "Can not create account";
   public static final String ACCOUNT_DELETE_FAILURE = "Can not delete account";
@@ -102,8 +104,10 @@ public class AuthException extends Exception {
   public static final String ROLE_ALREADY_EXISTS = "Role already exists";
   public static final String INSTANCE_PROFILE_ALREADY_EXISTS = "Instance profile already exists";
   public static final String ACCOUNT_ALREADY_EXISTS = "Account already exists";
+  public static final String POLICY_ALREADY_EXISTS = "Policy already exists";
   public static final String NO_SUCH_USER = "No such user";
   public static final String NO_SUCH_GROUP = "No such group";
+  public static final String NO_SUCH_POLICY = "No such policy";
   public static final String NO_SUCH_ROLE = "No such role";
   public static final String NO_SUCH_INSTANCE_PROFILE = "No such instance profile";
   public static final String NO_SUCH_ACCOUNT = "No such account";
@@ -119,6 +123,7 @@ public class AuthException extends Exception {
   public static final String INVALID_NAME = "Invalid name";
   public static final String INVALID_PATH = "Invalid path";
   public static final String INVALID_CERT = "Invalid cert";
+  public static final String INVALID_DESCRIPTION = "Invalid description";
   public static final String INVALID_PASSWORD = "Invalid password";
   public static final String CONFLICT = "Conflict";
   public static final String EMPTY_POLICY_NAME = "Empty policy name";

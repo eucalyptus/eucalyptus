@@ -182,6 +182,19 @@ public class PolicyParser {
    * @throws PolicyParseException for policy syntax error.
    */
   public PolicyPolicy parse( String policy ) throws PolicyParseException {
+    return parse( policy, null );
+  }
+
+  /**
+   * Parse the input policy text and returns an PolicyEntity object that
+   * represents the policy internally.
+   *
+   * @param policy The input policy text.
+   * @param minimumVersion The required (minimum) policy version
+   * @return The parsed the policy entity.
+   * @throws PolicyParseException for policy syntax error.
+   */
+  public PolicyPolicy parse( String policy, String minimumVersion ) throws PolicyParseException {
     if ( policy == null ) {
       throw new PolicyParseException( PolicyParseException.EMPTY_POLICY );
     }
@@ -199,6 +212,9 @@ public class PolicyParser {
     try {
       JSONObject policyJsonObj = JSONObject.fromObject( policy );
       String version = JsonUtils.getByType( String.class, policyJsonObj, PolicySpec.VERSION );
+      if ( minimumVersion != null && ( version == null || minimumVersion.compareTo( version ) < 0 ) ) {
+        throw new PolicyParseException( "Version must be at least " + minimumVersion );
+      }
       // Policy statements
       List<PolicyAuthorization> authorizations = parseStatements( new PolicyParseContext( version ), policyJsonObj );
       return PolicyUtils.intern( new PolicyPolicy( version, authorizations ) );

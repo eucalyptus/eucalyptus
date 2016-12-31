@@ -55,6 +55,10 @@ public interface AuthenticationLimitProvider {
       return getIntValue( AuthenticationLimit.POLICY_SIZE );
     }
 
+    public static int getPolicyAttachmentLimit( ) {
+      return 10;
+    }
+
     public static int getOpenIdConnectProviderClientIdLimit( ) { return 100; }
 
     public static int getOpenIdConnectProviderThumprintLimit( ) { return 5; }

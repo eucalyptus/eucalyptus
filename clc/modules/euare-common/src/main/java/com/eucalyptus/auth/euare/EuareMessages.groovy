@@ -1559,7 +1559,7 @@ class PolicyType extends EucalyptusData {
 }
 
 class CreatePolicyResultType extends EucalyptusData {
-  PolicyType policyType
+  PolicyType policy
 }
 
 class CreatePolicyType extends EuareMessage implements EuareMessageWithDelegate {
@@ -1572,7 +1572,7 @@ class CreatePolicyType extends EuareMessage implements EuareMessageWithDelegate 
 
 class CreatePolicyResponseType extends EuareMessage {
   ResponseMetadataType responseMetadata = new ResponseMetadataType( )
-  CreatePolicyResultType createPolicyResult
+  CreatePolicyResultType createPolicyResult = new CreatePolicyResultType( );
 }
 
 class PolicyVersionType extends EucalyptusData {
@@ -1620,7 +1620,7 @@ class DeletePolicyVersionResponseType extends EuareMessage {
 class DetachGroupPolicyType extends EuareMessage implements EuareMessageWithDelegate {
   String delegateAccount
   String groupName
-  String policyarn
+  String policyArn
 }
 
 class DetachGroupPolicyResponseType extends EuareMessage {
@@ -1658,7 +1658,7 @@ class GetPolicyType extends EuareMessage implements EuareMessageWithDelegate {
 
 class GetPolicyResponseType extends EuareMessage {
   ResponseMetadataType responseMetadata = new ResponseMetadataType( )
-  GetPolicyResultType getPolicyResult;
+  GetPolicyResultType getPolicyResult = new GetPolicyResultType( )
 }
 
 class GetPolicyVersionResultType extends EucalyptusData {
@@ -1682,7 +1682,7 @@ class AttachedPolicyType extends EucalyptusData {
 }
 
 class ListAttachedGroupPoliciesResultType extends EucalyptusData {
-  ArrayList<AttachedPolicyType> attachedPolicies
+  ArrayList<AttachedPolicyType> attachedPolicies = Lists.newArrayList( )
   Boolean isTruncated
   String marker
 }
@@ -1697,11 +1697,11 @@ class ListAttachedGroupPoliciesType extends EuareMessage implements EuareMessage
 
 class ListAttachedGroupPoliciesResponseType extends EuareMessage {
   ResponseMetadataType responseMetadata = new ResponseMetadataType( )
-  ListAttachedGroupPoliciesResultType listAttachedGroupPoliciesResult
+  ListAttachedGroupPoliciesResultType listAttachedGroupPoliciesResult = new ListAttachedGroupPoliciesResultType( )
 }
 
 class ListAttachedRolePoliciesResultType extends EucalyptusData {
-  ArrayList<AttachedPolicyType> attachedPolicies
+  ArrayList<AttachedPolicyType> attachedPolicies = Lists.newArrayList( )
   Boolean isTruncated
   String marker
 }
@@ -1716,11 +1716,11 @@ class ListAttachedRolePoliciesType extends EuareMessage implements EuareMessageW
 
 class ListAttachedRolePoliciesResponseType extends EuareMessage {
   ResponseMetadataType responseMetadata = new ResponseMetadataType( )
-  ListAttachedRolePoliciesResultType listAttachedRolePoliciesResult
+  ListAttachedRolePoliciesResultType listAttachedRolePoliciesResult = new ListAttachedRolePoliciesResultType()
 }
 
 class ListAttachedUserPoliciesResultType extends EucalyptusData {
-  ArrayList<AttachedPolicyType> attachedPolicies
+  ArrayList<AttachedPolicyType> attachedPolicies = Lists.newArrayList( )
   Boolean isTruncated
   String marker
 }
@@ -1735,27 +1735,45 @@ class ListAttachedUserPoliciesType extends EuareMessage implements EuareMessageW
 
 class ListAttachedUserPoliciesResponseType extends EuareMessage {
   ResponseMetadataType responseMetadata = new ResponseMetadataType( )
-  ListAttachedUserPoliciesResultType listAttachedUserPoliciesResult
+  ListAttachedUserPoliciesResultType listAttachedUserPoliciesResult = new ListAttachedUserPoliciesResultType( )
 }
 
 class PolicyGroup extends EucalyptusData {
   String groupName
+  String groupId
+  PolicyGroup( ){}
+  PolicyGroup( String groupName, String groupId ){
+    this.groupName = groupName
+    this.groupId = groupId
+  }
 }
 
 class PolicyRole extends EucalyptusData {
   String roleName
+  String roleId
+  PolicyRole( ){}
+  PolicyRole( String roleName, String roleId ){
+    this.roleName = roleName
+    this.roleId = roleId
+  }
 }
 
 class PolicyUser extends EucalyptusData {
   String userName
+  String userId
+  PolicyUser( ){}
+  PolicyUser( String userName, String userId ){
+    this.userName = userName
+    this.userId = userId
+  }
 }
 
 class ListEntitiesForPolicyResultType extends EucalyptusData {
   Boolean isTruncated
   String marker
-  List<PolicyGroup> policyGroups
-  List<PolicyRole> policyRoles
-  List<PolicyUser> policyUsers
+  ArrayList<PolicyGroup> policyGroups = Lists.newArrayList( )
+  ArrayList<PolicyRole> policyRoles = Lists.newArrayList( )
+  ArrayList<PolicyUser> policyUsers = Lists.newArrayList( )
 }
 
 class ListEntitiesForPolicyType extends EuareMessage implements EuareMessageWithDelegate {
@@ -1769,13 +1787,13 @@ class ListEntitiesForPolicyType extends EuareMessage implements EuareMessageWith
 
 class ListEntitiesForPolicyResponseType extends EuareMessage {
   ResponseMetadataType responseMetadata = new ResponseMetadataType( )
-  ListEntitiesForPolicyResultType listEntitiesForPolicyResult
+  ListEntitiesForPolicyResultType listEntitiesForPolicyResult = new ListEntitiesForPolicyResultType( )
 }
 
 class ListPoliciesResultType extends EucalyptusData {
   Boolean isTruncated
   String marker
-  List<PolicyType> policies
+  ArrayList<PolicyType> policies = Lists.newArrayList( )
 }
 
 class ListPoliciesType extends EuareMessage implements EuareMessageWithDelegate {
@@ -1789,13 +1807,13 @@ class ListPoliciesType extends EuareMessage implements EuareMessageWithDelegate 
 
 class ListPoliciesResponseType extends EuareMessage {
   ResponseMetadataType responseMetadata = new ResponseMetadataType( )
-  ListPoliciesResultType listPoliciesResult
+  ListPoliciesResultType listPoliciesResult = new ListPoliciesResultType( )
 }
 
 class ListPolicyVersionsResultType extends EucalyptusData {
   Boolean isTruncated
   String marker
-  List<PolicyVersionType> versions
+  ArrayList<PolicyVersionType> versions
 }
 
 class ListPolicyVersionsType extends EuareMessage implements EuareMessageWithDelegate {

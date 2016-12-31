@@ -82,6 +82,7 @@ import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
 import com.eucalyptus.auth.euare.persist.entities.CertificateEntity;
 import com.eucalyptus.auth.euare.persist.entities.CertificateEntity_;
 import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
+import com.eucalyptus.auth.euare.persist.entities.ManagedPolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity_;
@@ -89,6 +90,7 @@ import com.eucalyptus.auth.euare.principal.EuareAccessKey;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareCertificate;
 import com.eucalyptus.auth.euare.principal.EuareGroup;
+import com.eucalyptus.auth.euare.principal.EuareManagedPolicy;
 import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.policy.PolicyPolicy;
@@ -700,6 +702,62 @@ public class DatabaseUserProxy implements EuareUser {
       }
     }
     return false;
+  }
+
+  @Override
+  public List<EuareManagedPolicy> getAttachedPolicies( ) {
+    final List<EuareManagedPolicy> results = Lists.newArrayList( );
+    try {
+      DatabaseAuthUtils.invokeUnique( UserEntity.class, UserEntity_.userId, DatabaseUserProxy.this.delegate.getUserId( ), new Tx<UserEntity>( ) {
+        public void fire( UserEntity t ) {
+          for ( ManagedPolicyEntity p : t.getAttachedPolicies( ) ) {
+            results.add( new DatabaseManagedPolicyProxy( p ) );
+          }
+        }
+      } );
+    } catch ( ExecutionException e ) {
+      Debugging.logError( LOG, e, "Failed to getAttachedPolicies for " + this.delegate );
+    }
+    return results;
+  }
+
+  @Override
+  public void attachPolicy( final EuareManagedPolicy policy ) throws AuthException {
+    try {
+      final String accountNumber = policy.getAccountNumber( );
+      DatabaseAuthUtils.invokeUnique( UserEntity.class, UserEntity_.userId, DatabaseUserProxy.this.delegate.getUserId( ), new Tx<UserEntity>( ) {
+        public void fire( UserEntity t ) {
+          t.getAttachedPolicies( ).add( Entities.criteriaQuery(
+              ManagedPolicyEntity.exampleWithName( accountNumber, policy.getName( ) )
+          ).uniqueResult( ) );
+        }
+      } );
+    } catch ( ExecutionException e ) {
+      Debugging.logError( LOG, e, "Failed to getAttachedPolicies for " + this.delegate );
+    }
+  }
+
+  @Override
+  public void detachPolicy( final EuareManagedPolicy policy ) throws AuthException {
+    try {
+      final String accountNumber = policy.getAccountNumber( );
+      DatabaseAuthUtils.invokeUnique( UserEntity.class, UserEntity_.userId, DatabaseUserProxy.this.delegate.getUserId( ), new Tx<UserEntity>( ) {
+        public void fire( UserEntity t ) {
+          ManagedPolicyEntity policyEntity = null;
+          for ( final ManagedPolicyEntity attachedPolicy : t.getAttachedPolicies( ) ) {
+            if ( attachedPolicy.getPolicyId( ).equals( policy.getPolicyId( ) ) ) {
+              policyEntity = attachedPolicy;
+              break;
+            }
+          }
+          if ( policyEntity != null ) {
+            t.getAttachedPolicies( ).remove( policyEntity );
+          }
+        }
+      } );
+    } catch ( ExecutionException e ) {
+      Debugging.logError( LOG, e, "Failed to getAttachedPolicies for " + this.delegate );
+    }
   }
 
   private Supplier<Map<String,String>> getUserInfoSupplier( ) {

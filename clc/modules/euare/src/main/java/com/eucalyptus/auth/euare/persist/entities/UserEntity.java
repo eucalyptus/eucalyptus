@@ -75,6 +75,8 @@ import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Index;
+import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
 import javax.persistence.MapKeyColumn;
 import javax.persistence.OneToMany;
@@ -83,6 +85,8 @@ import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.entities.AbstractPersistent;
@@ -174,6 +178,13 @@ public class UserEntity extends AbstractPersistent implements Serializable {
   @ManyToMany( fetch = FetchType.LAZY, mappedBy="users" ) // not owning side
   List<GroupEntity> groups;
 
+  // Attached policies for the user
+  @NotFound( action = NotFoundAction.IGNORE )
+  @JoinTable( name = "auth_user_attached_policies",
+      joinColumns =        @JoinColumn( name = "auth_user_id" ),
+      inverseJoinColumns = @JoinColumn( name = "auth_managed_policy_id" ) )
+  @ManyToMany
+  Set<ManagedPolicyEntity> attachedPolicies;
 
   public UserEntity( ) {
     this.keys = Sets.newHashSet( );
@@ -310,6 +321,14 @@ public class UserEntity extends AbstractPersistent implements Serializable {
 
   public String getUserId( ) {
     return this.userId;
+  }
+
+  public Set<ManagedPolicyEntity> getAttachedPolicies( ) {
+    return attachedPolicies;
+  }
+
+  public void setAttachedPolicies( final Set<ManagedPolicyEntity> attachedPolicies ) {
+    this.attachedPolicies = attachedPolicies;
   }
 
   @Upgrades.PreUpgrade( value = Euare.class, since = v4_2_0 )

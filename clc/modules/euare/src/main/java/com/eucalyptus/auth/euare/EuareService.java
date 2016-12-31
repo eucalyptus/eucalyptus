@@ -76,6 +76,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.TimeZone;
+import java.util.stream.Stream;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -91,9 +92,11 @@ import com.eucalyptus.auth.euare.ldap.LdapSync;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareGroup;
+import com.eucalyptus.auth.euare.principal.EuareManagedPolicy;
 import com.eucalyptus.auth.euare.principal.EuareOpenIdConnectProvider;
 import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.euare.principal.EuareUser;
+import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.policy.key.Iso8601DateParser;
 import com.eucalyptus.auth.principal.AccessKey;
@@ -111,13 +114,16 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
+import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
-@SuppressWarnings( "UnusedDeclaration" )
+@SuppressWarnings( { "UnusedDeclaration", "Guava" } )
 @ComponentNamed
 public class EuareService {
   
@@ -125,7 +131,33 @@ public class EuareService {
 
   private static final boolean ENCODE_POLICIES =
       Boolean.valueOf( System.getProperty( "com.eucalyptus.auth.euare.encodePolicies", "true" ) );
-  
+
+  enum EntityFilter {
+    User,
+    Role,
+    Group,
+    LocalManagedPolicy( User, Role, Group ),
+    AWSManagedPolicy,
+    ;
+
+    EntityFilter( ) {
+      this.filters = ImmutableSet.of( this.name( ) );
+    }
+
+    EntityFilter( final EntityFilter... filters ) {
+      this.filters = ImmutableSet.<String>builder( )
+          .add( this.name( ) )
+          .addAll( Stream.of( filters ).map( EntityFilter::name ).iterator( ) )
+          .build( );
+    }
+
+    private final ImmutableSet<String> filters;
+
+    public boolean listLocalUsers( ) { return filters.contains( User.name( ) ); }
+    public boolean listLocalRoles( ) { return filters.contains( Role.name( ) ); }
+    public boolean listLocalGroups( ) { return filters.contains( Group.name( ) ); }
+  }
+
   public CreateAccountResponseType createAccount(CreateAccountType request) throws EucalyptusCloudException {
     CreateAccountResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
@@ -1425,6 +1457,7 @@ public class EuareService {
       map.add( new SummaryMapTypeEntryType( "InstanceProfiles", account.getInstanceProfiles().size( ) ) );
       map.add( new SummaryMapTypeEntryType( "ServerCertificates", account.listServerCertificates("/").size()));
       map.add( new SummaryMapTypeEntryType( "Providers", account.listOpenIdConnectProviders().size()));
+      map.add( new SummaryMapTypeEntryType( "Policies", account.getPolicies(false).size()));
       return reply;
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
@@ -2162,21 +2195,124 @@ public class EuareService {
 
   public AttachGroupPolicyResponseType attachGroupPolicy( final AttachGroupPolicyType request ) throws EucalyptusCloudException {
     final AttachGroupPolicyResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    final Ern ern = Ern.parse( request.getPolicyArn( ) );
+    if ( !(ern instanceof EuareResourceName) ) {
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy arn" );
+    }
+    final EuareManagedPolicy policyFound = lookupPolicyByName( account, ((EuareResourceName)ern).getName( ) );
+    final EuareGroup groupFound = lookupGroupByName( account, request.getGroupName( ) );
+    try {
+      Privileged.attachGroupPolicy( requestUser, account, groupFound, policyFound );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException ) {
+        if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to attach policy by " + ctx.getUser( ).getName( ) );
+        } else if ( AuthException.QUOTA_EXCEEDED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Attachment limit exceeded" );
+        }
+      }
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
   public AttachRolePolicyResponseType attachRolePolicy( final AttachRolePolicyType request ) throws EucalyptusCloudException {
     final AttachRolePolicyResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    final Ern ern = Ern.parse( request.getPolicyArn( ) );
+    if ( !(ern instanceof EuareResourceName) ) {
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy arn" );
+    }
+    final EuareManagedPolicy policyFound = lookupPolicyByName( account, ((EuareResourceName)ern).getName( ) );
+    final EuareRole roleFound = lookupRoleByName( account, request.getRoleName( ) );
+    try {
+      Privileged.attachRolePolicy( requestUser, account, roleFound, policyFound );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException ) {
+        if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to attach policy by " + ctx.getUser( ).getName( ) );
+        } else if ( AuthException.QUOTA_EXCEEDED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Attachment limit exceeded" );
+        }
+      }
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
   public AttachUserPolicyResponseType attachUserPolicy( final AttachUserPolicyType request ) throws EucalyptusCloudException {
     final AttachUserPolicyResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    final Ern ern = Ern.parse( request.getPolicyArn( ) );
+    if ( !(ern instanceof EuareResourceName) ) {
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy arn" );
+    }
+    final EuareManagedPolicy policyFound = lookupPolicyByName( account, ((EuareResourceName)ern).getName( ) );
+    final EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
+    try {
+      Privileged.attachUserPolicy( requestUser, account, userFound, policyFound );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException ) {
+        if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to attach policy by " + ctx.getUser( ).getName( ) );
+        } else if ( AuthException.QUOTA_EXCEEDED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Attachment limit exceeded" );
+        }
+      }
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
   public CreatePolicyResponseType createPolicy( final CreatePolicyType request ) throws EucalyptusCloudException {
     final CreatePolicyResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    try {
+      final EuareManagedPolicy newManagedPolicy = Privileged.createManagedPolicy(
+          requestUser,
+          account,
+          request.getPolicyName( ),
+          sanitizePath( request.getPath( ) ),
+          request.getDescription( ),
+          request.getPolicyDocument( )
+      );
+      reply.getCreatePolicyResult( ).setPolicy( fillManagedPolicyResult( new PolicyType(), newManagedPolicy ) );
+    } catch ( PolicyParseException e ) {
+      LOG.error( e, e );
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in policy: " + e.getMessage(), e );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException ) {
+        if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create policy by " + ctx.getUser( ).getName( ) );
+        } else if ( AuthException.QUOTA_EXCEEDED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Policy quota exceeded" );
+        } else if ( AuthException.ROLE_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Policy " + request.getPolicyName( ) + " already exists." );
+        } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid policy name " + request.getPolicyName() );
+        } else if ( AuthException.INVALID_PATH.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid policy path " + request.getPath( ) );
+        }
+      }
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
@@ -2187,6 +2323,28 @@ public class EuareService {
 
   public DeletePolicyResponseType deletePolicy( final DeletePolicyType request ) throws EucalyptusCloudException {
     final DeletePolicyResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    final Ern ern = Ern.parse( request.getPolicyArn( ) );
+    if ( !(ern instanceof EuareResourceName) ) {
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy arn" );
+    }
+    final EuareManagedPolicy policyFound = lookupPolicyByName( account, ((EuareResourceName)ern).getName( ) );
+    try {
+      Privileged.deletePolicy( requestUser, account, policyFound );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException ) {
+        if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete policy by " + ctx.getUser( ).getName( ) );
+        } else if ( AuthException.POLICY_DELETE_CONFLICT.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.DELETE_CONFLICT, "Attempted to delete policy with resources attached by " + ctx.getUser( ).getName( ) );
+        }
+      }
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
@@ -2197,21 +2355,104 @@ public class EuareService {
 
   public DetachGroupPolicyResponseType detachGroupPolicy( final DetachGroupPolicyType request ) throws EucalyptusCloudException {
     final DetachGroupPolicyResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    final Ern ern = Ern.parse( request.getPolicyArn( ) );
+    if ( !(ern instanceof EuareResourceName) ) {
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy arn" );
+    }
+    final EuareManagedPolicy policyFound = lookupPolicyByName( account, ((EuareResourceName)ern).getName( ) );
+    final EuareGroup groupFound = lookupGroupByName( account, request.getGroupName( ) );
+    try {
+      Privileged.detachGroupPolicy( requestUser, account, groupFound, policyFound );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException ) {
+        if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to detach policy by " + ctx.getUser( ).getName( ) );
+        }
+      }
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
   public DetachRolePolicyResponseType detachRolePolicy( final DetachRolePolicyType request ) throws EucalyptusCloudException {
     final DetachRolePolicyResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    final Ern ern = Ern.parse( request.getPolicyArn( ) );
+    if ( !(ern instanceof EuareResourceName) ) {
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy arn" );
+    }
+    final EuareManagedPolicy policyFound = lookupPolicyByName( account, ((EuareResourceName)ern).getName( ) );
+    final EuareRole roleFound = lookupRoleByName( account, request.getRoleName( ) );
+    try {
+      Privileged.detachRolePolicy( requestUser, account, roleFound, policyFound );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException ) {
+        if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to detach policy by " + ctx.getUser( ).getName( ) );
+        }
+      }
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
   public DetachUserPolicyResponseType detachUserPolicy( final DetachUserPolicyType request ) throws EucalyptusCloudException {
     final DetachUserPolicyResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    final Ern ern = Ern.parse( request.getPolicyArn( ) );
+    if ( !(ern instanceof EuareResourceName) ) {
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy arn" );
+    }
+    final EuareManagedPolicy policyFound = lookupPolicyByName( account, ((EuareResourceName)ern).getName( ) );
+    final EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
+    try {
+      Privileged.detachUserPolicy( requestUser, account, userFound, policyFound );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException ) {
+        if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to detach policy by " + ctx.getUser( ).getName( ) );
+        }
+      }
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
   public GetPolicyResponseType getPolicy( final GetPolicyType request ) throws EucalyptusCloudException {
     final GetPolicyResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    final Ern ern = Ern.parse( request.getPolicyArn( ) );
+    if ( !(ern instanceof EuareResourceName) ) {
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy arn" );
+    }
+    final EuareManagedPolicy policyFound = lookupPolicyByName( account, ((EuareResourceName)ern).getName( ) );
+    try {
+      if ( !Privileged.allowReadPolicy( requestUser, account, policyFound ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get policy " + request.getPolicyArn() + " by " + ctx.getUser( ).getName( ) );
+      }
+      reply.getGetPolicyResult( ).setPolicy( fillManagedPolicyResult( new PolicyType( ), policyFound ) );
+    } catch ( EuareException e ) {
+      throw e;
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
@@ -2222,26 +2463,174 @@ public class EuareService {
 
   public ListAttachedGroupPoliciesResponseType listAttachedGroupPolicies( final ListAttachedGroupPoliciesType request ) throws EucalyptusCloudException {
     final ListAttachedGroupPoliciesResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    String path = "/";
+    if ( !Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
+      path = request.getPathPrefix( );
+    }
+    reply.getListAttachedGroupPoliciesResult( ).setIsTruncated( false );
+    final ArrayList<AttachedPolicyType> policies = reply.getListAttachedGroupPoliciesResult( ).getAttachedPolicies( );
+    try ( final AutoCloseable euareTx = readonlyTx( ) ) {
+      final EuareGroup groupFound = lookupGroupByName( account, request.getGroupName( ) );
+      for ( final EuareManagedPolicy attachedPolicy : Privileged.listGroupAttachedPolicies( requestUser, account, groupFound ) ) {
+        if ( attachedPolicy.getPath( ).startsWith( path ) ) {
+          policies.add( fillAttachedPolicyResult( new AttachedPolicyType(), attachedPolicy ) );
+        }
+      }
+    } catch ( Exception e ) {
+      Exceptions.findAndRethrow( e, EuareException.class );
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
   public ListAttachedRolePoliciesResponseType listAttachedRolePolicies( final ListAttachedRolePoliciesType request ) throws EucalyptusCloudException {
     final ListAttachedRolePoliciesResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    String path = "/";
+    if ( !Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
+      path = request.getPathPrefix( );
+    }
+    reply.getListAttachedRolePoliciesResult( ).setIsTruncated( false );
+    final ArrayList<AttachedPolicyType> policies = reply.getListAttachedRolePoliciesResult( ).getAttachedPolicies( );
+    try ( final AutoCloseable euareTx = readonlyTx( ) ) {
+      final EuareRole roleFound = lookupRoleByName( account, request.getRoleName( ) );
+      for ( final EuareManagedPolicy attachedPolicy : Privileged.listRoleAttachedPolicies( requestUser, account, roleFound ) ) {
+        if ( attachedPolicy.getPath( ).startsWith( path ) ) {
+          policies.add( fillAttachedPolicyResult( new AttachedPolicyType(), attachedPolicy ) );
+        }
+      }
+    } catch ( Exception e ) {
+      Exceptions.findAndRethrow( e, EuareException.class );
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
   public ListAttachedUserPoliciesResponseType listAttachedUserPolicies( final ListAttachedUserPoliciesType request ) throws EucalyptusCloudException {
     final ListAttachedUserPoliciesResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    String path = "/";
+    if ( !Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
+      path = request.getPathPrefix( );
+    }
+    reply.getListAttachedUserPoliciesResult( ).setIsTruncated( false );
+    final ArrayList<AttachedPolicyType> policies = reply.getListAttachedUserPoliciesResult( ).getAttachedPolicies( );
+    try ( final AutoCloseable euareTx = readonlyTx( ) ) {
+      final EuareUser userFound = lookupUserByName( account, request.getUserName( ) );
+      for ( final EuareManagedPolicy attachedPolicy : Privileged.listUserAttachedPolicies( requestUser, account, userFound ) ) {
+        if ( attachedPolicy.getPath( ).startsWith( path ) ) {
+          policies.add( fillAttachedPolicyResult( new AttachedPolicyType(), attachedPolicy ) );
+        }
+      }
+    } catch ( Exception e ) {
+      Exceptions.findAndRethrow( e, EuareException.class );
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
   public ListEntitiesForPolicyResponseType listEntitiesForPolicy( final ListEntitiesForPolicyType request ) throws EucalyptusCloudException {
     final ListEntitiesForPolicyResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    String path = "/";
+    if ( !Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
+      path = request.getPathPrefix( );
+    }
+    final Ern ern = Ern.parse( request.getPolicyArn( ) );
+    if ( !(ern instanceof EuareResourceName) ) {
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy arn" );
+    }
+    final EntityFilter entityFilter = ( request.getEntityFilter( ) == null ?
+        Optional.<EntityFilter>absent( ) :
+        Enums.getIfPresent( EntityFilter.class, request.getEntityFilter( ) ) ).or( EntityFilter.LocalManagedPolicy );
+    if ( !Permissions.perhapsAuthorized( IamPolicySpec.VENDOR_IAM, IamPolicySpec.IAM_LISTENTITIESFORPOLICY, ctx.getAuthContext( ) ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list entities for policy" );
+    }
+    reply.getListEntitiesForPolicyResult( ).setIsTruncated( false );
+    final ArrayList<PolicyGroup> groups = reply.getListEntitiesForPolicyResult( ).getPolicyGroups( );
+    final ArrayList<PolicyRole> roles = reply.getListEntitiesForPolicyResult( ).getPolicyRoles( );
+    final ArrayList<PolicyUser> users = reply.getListEntitiesForPolicyResult( ).getPolicyUsers( );
+    try ( final AutoCloseable euareTx = readonlyTx( ) ) {
+      final EuareManagedPolicy policyFound = lookupPolicyByName( account, ((EuareResourceName)ern).getName( ) );
+      if ( entityFilter.listLocalGroups( ) ) {
+        for ( final EuareGroup group : Privileged.listGroupsWithAttachedPolicy( requestUser, policyFound ) ) {
+          if ( group.getPath( ).startsWith( path ) ) {
+            groups.add( new PolicyGroup( group.getName( ), group.getGroupId( ) ) );
+          }
+        }
+      }
+      if ( entityFilter.listLocalRoles( ) ) {
+        for ( final EuareRole role : Privileged.listRolesWithAttachedPolicy( requestUser, policyFound ) ) {
+          if ( role.getPath( ).startsWith( path ) ) {
+            roles.add( new PolicyRole( role.getName( ), role.getRoleId( ) ) );
+          }
+        }
+      }
+      if ( entityFilter.listLocalUsers( ) ) {
+        for ( final EuareUser user : Privileged.listUsersWithAttachedPolicy( requestUser, policyFound ) ) {
+          if ( user.getPath( ).startsWith( path ) ) {
+            users.add( new PolicyUser( user.getName( ), user.getUserId( ) ) );
+          }
+        }
+      }
+    } catch ( Exception e ) {
+      Exceptions.findAndRethrow( e, EuareException.class );
+      if ( e instanceof AuthException ) {
+        if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list entities for policy by " + ctx.getUser( ).getName( ) );
+        }
+      }
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
   public ListPoliciesResponseType listPolicies( final ListPoliciesType request ) throws EucalyptusCloudException {
     final ListPoliciesResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    String path = "/";
+    if ( !Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
+      path = request.getPathPrefix( );
+    }
+    if ( !Permissions.perhapsAuthorized( IamPolicySpec.VENDOR_IAM, IamPolicySpec.IAM_LISTPOLICIES, ctx.getAuthContext( ) ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list policies" );
+    }
+    reply.getListPoliciesResult( ).setIsTruncated( false );
+    final ArrayList<PolicyType> policies = reply.getListPoliciesResult( ).getPolicies( );
+    if ( request.getScope( ) == null || !"AWS".equals( request.getScope( ) ) ) {
+      try ( final AutoCloseable euareTx = readonlyTx( ) ) {
+        for ( final EuareManagedPolicy policy : account.getPolicies( request.getOnlyAttached( ) ) ) {
+          if ( policy.getPath( ).startsWith( path ) ) {
+            if ( Privileged.allowListPolicy( requestUser, account, policy ) ) {
+              policies.add( fillManagedPolicyResult( new PolicyType( ), policy ) );
+            }
+          }
+        }
+      } catch ( Exception e ) {
+        LOG.error( e, e );
+        throw new EucalyptusCloudException( e );
+      }
+    }
     return reply;
   }
 
@@ -2302,6 +2691,27 @@ public class EuareService {
     roleType.setArn( Accounts.getRoleArn( roleFound ) );
     roleType.setCreateDate( roleFound.getCreationTimestamp() );
     return roleType;
+  }
+
+  private PolicyType fillManagedPolicyResult( final PolicyType policy, final EuareManagedPolicy managedPolicy ) throws AuthException {
+    policy.setPolicyName( managedPolicy.getName( ) );
+    policy.setDefaultVersionId( "v1" );
+    policy.setPolicyId( managedPolicy.getPolicyId( ) );
+    policy.setPath( managedPolicy.getPath( ) );
+    policy.setArn( Accounts.getManagedPolicyArn( managedPolicy ) );
+    policy.setAttachmentCount( 0 ); //TODO:STEVE: managed policy attachment count
+    policy.setCreateDate( managedPolicy.getCreateDate( ) );
+    policy.setUpdateDate( managedPolicy.getUpdateDate( ) );
+    return policy;
+  }
+
+  private AttachedPolicyType fillAttachedPolicyResult(
+      final AttachedPolicyType policy,
+      final EuareManagedPolicy managedPolicy
+  ) throws AuthException {
+    policy.setPolicyName( managedPolicy.getName( ) );
+    policy.setPolicyArn( Accounts.getManagedPolicyArn( managedPolicy ) );
+    return policy;
   }
 
   private static AuthContext getAuthContext( final Context ctx ) throws EucalyptusCloudException {
@@ -2427,6 +2837,22 @@ public class EuareService {
     }
   }
 
+  private static EuareManagedPolicy lookupPolicyByName( EuareAccount account, String policyName ) throws EucalyptusCloudException {
+    try {
+      return account.lookupPolicyByName( policyName );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException ) {
+        if ( AuthException.NO_SUCH_POLICY.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find policy " + policyName );
+        } else if ( AuthException.EMPTY_POLICY_NAME.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
+        }
+      }
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
+  }
+
   private static EuareAccount lookupAccountByName( String accountName ) throws EucalyptusCloudException {
     try {
       return Accounts.lookupAccountByName( accountName );
@@ -2442,7 +2868,7 @@ public class EuareService {
       throw new EucalyptusCloudException( e );
     }
   }
-  
+
   private static EuareOpenIdConnectProvider lookupOpenIdConnectProvider( EuareAccount account, String url ) throws EucalyptusCloudException {
     try {
       return account.lookupOpenIdConnectProvider( url );

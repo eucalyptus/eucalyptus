@@ -1280,4 +1280,312 @@
     <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
   </mapping>
+  <mapping name="AttachGroupPolicyResponse" class="com.eucalyptus.auth.euare.AttachGroupPolicyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="optional" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="AttachGroupPolicy" class="com.eucalyptus.auth.euare.AttachGroupPolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="GroupName" field="groupName" usage="optional"/>
+    <value name="PolicyArn" field="policyArn" usage="optional"/>
+  </mapping>
+  <mapping name="AttachRolePolicyResponse" class="com.eucalyptus.auth.euare.AttachRolePolicyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="optional" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="AttachRolePolicy" class="com.eucalyptus.auth.euare.AttachRolePolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="PolicyArn" field="policyArn" usage="optional"/>
+    <value name="RoleName" field="roleName" usage="optional"/>
+  </mapping>
+  <mapping name="AttachUserPolicyResponse" class="com.eucalyptus.auth.euare.AttachUserPolicyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="optional" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="AttachUserPolicy" class="com.eucalyptus.auth.euare.AttachUserPolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="PolicyArn" field="policyArn" usage="optional"/>
+    <value name="UserName" field="userName" usage="optional"/>
+  </mapping>
+  <mapping name="CreatePolicyResponse" class="com.eucalyptus.auth.euare.CreatePolicyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="CreatePolicyResult" field="createPolicyResult" usage="optional" type="com.eucalyptus.auth.euare.CreatePolicyResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="optional" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="CreatePolicy" class="com.eucalyptus.auth.euare.CreatePolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="Description" field="description" usage="optional"/>
+    <value name="Path" field="path" usage="optional"/>
+    <value name="PolicyDocument" field="policyDocument" usage="optional"/>
+    <value name="PolicyName" field="policyName" usage="optional"/>
+  </mapping>
+  <mapping name="CreatePolicyVersionResponse" class="com.eucalyptus.auth.euare.CreatePolicyVersionResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="CreatePolicyVersionResult" field="createPolicyVersionResult" usage="optional" type="com.eucalyptus.auth.euare.CreatePolicyVersionResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="optional" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="CreatePolicyVersion" class="com.eucalyptus.auth.euare.CreatePolicyVersionType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="PolicyArn" field="policyArn" usage="optional"/>
+    <value name="PolicyDocument" field="policyDocument" usage="optional"/>
+    <value name="SetAsDefault" field="setAsDefault" usage="optional"/>
+  </mapping>
+  <mapping name="DeletePolicyResponse" class="com.eucalyptus.auth.euare.DeletePolicyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="optional" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="DeletePolicy" class="com.eucalyptus.auth.euare.DeletePolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="PolicyArn" field="policyArn" usage="optional"/>
+  </mapping>
+  <mapping name="DeletePolicyVersionResponse" class="com.eucalyptus.auth.euare.DeletePolicyVersionResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="optional" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="DeletePolicyVersion" class="com.eucalyptus.auth.euare.DeletePolicyVersionType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="PolicyArn" field="policyArn" usage="optional"/>
+    <value name="VersionId" field="versionId" usage="optional"/>
+  </mapping>
+  <mapping name="DetachGroupPolicyResponse" class="com.eucalyptus.auth.euare.DetachGroupPolicyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="optional" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="DetachGroupPolicy" class="com.eucalyptus.auth.euare.DetachGroupPolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="GroupName" field="groupName" usage="optional"/>
+    <value name="PolicyArn" field="policyArn" usage="optional"/>
+  </mapping>
+  <mapping name="DetachRolePolicyResponse" class="com.eucalyptus.auth.euare.DetachRolePolicyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="optional" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="DetachRolePolicy" class="com.eucalyptus.auth.euare.DetachRolePolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="PolicyArn" field="policyArn" usage="optional"/>
+    <value name="RoleName" field="roleName" usage="optional"/>
+  </mapping>
+  <mapping name="DetachUserPolicyResponse" class="com.eucalyptus.auth.euare.DetachUserPolicyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="optional" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="DetachUserPolicy" class="com.eucalyptus.auth.euare.DetachUserPolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="PolicyArn" field="policyArn" usage="optional"/>
+    <value name="UserName" field="userName" usage="optional"/>
+  </mapping>
+  <mapping name="GetPolicyResponse" class="com.eucalyptus.auth.euare.GetPolicyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="GetPolicyResult" field="getPolicyResult" usage="optional" type="com.eucalyptus.auth.euare.GetPolicyResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="optional" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="GetPolicy" class="com.eucalyptus.auth.euare.GetPolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="PolicyArn" field="policyArn" usage="optional"/>
+  </mapping>
+  <mapping name="GetPolicyVersionResponse" class="com.eucalyptus.auth.euare.GetPolicyVersionResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="GetPolicyVersionResult" field="getPolicyVersionResult" usage="optional" type="com.eucalyptus.auth.euare.GetPolicyVersionResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="optional" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="GetPolicyVersion" class="com.eucalyptus.auth.euare.GetPolicyVersionType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="PolicyArn" field="policyArn" usage="optional"/>
+    <value name="VersionId" field="versionId" usage="optional"/>
+  </mapping>
+  <mapping name="ListAttachedGroupPoliciesResponse" class="com.eucalyptus.auth.euare.ListAttachedGroupPoliciesResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ListAttachedGroupPoliciesResult" field="listAttachedGroupPoliciesResult" usage="optional" type="com.eucalyptus.auth.euare.ListAttachedGroupPoliciesResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="optional" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="ListAttachedGroupPolicies" class="com.eucalyptus.auth.euare.ListAttachedGroupPoliciesType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="GroupName" field="groupName" usage="optional"/>
+    <value name="Marker" field="marker" usage="optional"/>
+    <value name="MaxItems" field="maxItems" usage="optional"/>
+    <value name="PathPrefix" field="pathPrefix" usage="optional"/>
+  </mapping>
+  <mapping name="ListAttachedRolePoliciesResponse" class="com.eucalyptus.auth.euare.ListAttachedRolePoliciesResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ListAttachedRolePoliciesResult" field="listAttachedRolePoliciesResult" usage="optional" type="com.eucalyptus.auth.euare.ListAttachedRolePoliciesResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="optional" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="ListAttachedRolePolicies" class="com.eucalyptus.auth.euare.ListAttachedRolePoliciesType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="Marker" field="marker" usage="optional"/>
+    <value name="MaxItems" field="maxItems" usage="optional"/>
+    <value name="PathPrefix" field="pathPrefix" usage="optional"/>
+    <value name="RoleName" field="roleName" usage="optional"/>
+  </mapping>
+  <mapping name="ListAttachedUserPoliciesResponse" class="com.eucalyptus.auth.euare.ListAttachedUserPoliciesResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ListAttachedUserPoliciesResult" field="listAttachedUserPoliciesResult" usage="optional" type="com.eucalyptus.auth.euare.ListAttachedUserPoliciesResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="optional" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="ListAttachedUserPolicies" class="com.eucalyptus.auth.euare.ListAttachedUserPoliciesType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="Marker" field="marker" usage="optional"/>
+    <value name="MaxItems" field="maxItems" usage="optional"/>
+    <value name="PathPrefix" field="pathPrefix" usage="optional"/>
+    <value name="UserName" field="userName" usage="optional"/>
+  </mapping>
+  <mapping name="ListEntitiesForPolicyResponse" class="com.eucalyptus.auth.euare.ListEntitiesForPolicyResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ListEntitiesForPolicyResult" field="listEntitiesForPolicyResult" usage="optional" type="com.eucalyptus.auth.euare.ListEntitiesForPolicyResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="optional" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="ListEntitiesForPolicy" class="com.eucalyptus.auth.euare.ListEntitiesForPolicyType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="EntityFilter" field="entityFilter" usage="optional"/>
+    <value name="Marker" field="marker" usage="optional"/>
+    <value name="MaxItems" field="maxItems" usage="optional"/>
+    <value name="PathPrefix" field="pathPrefix" usage="optional"/>
+    <value name="PolicyArn" field="policyArn" usage="optional"/>
+  </mapping>
+  <mapping name="ListPoliciesResponse" class="com.eucalyptus.auth.euare.ListPoliciesResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ListPoliciesResult" field="listPoliciesResult" usage="optional" type="com.eucalyptus.auth.euare.ListPoliciesResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="optional" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="ListPolicies" class="com.eucalyptus.auth.euare.ListPoliciesType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="Marker" field="marker" usage="optional"/>
+    <value name="MaxItems" field="maxItems" usage="optional"/>
+    <value name="OnlyAttached" field="onlyAttached" usage="optional"/>
+    <value name="PathPrefix" field="pathPrefix" usage="optional"/>
+    <value name="Scope" field="scope" usage="optional"/>
+  </mapping>
+  <mapping name="ListPolicyVersionsResponse" class="com.eucalyptus.auth.euare.ListPolicyVersionsResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ListPolicyVersionsResult" field="listPolicyVersionsResult" usage="optional" type="com.eucalyptus.auth.euare.ListPolicyVersionsResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="optional" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="ListPolicyVersions" class="com.eucalyptus.auth.euare.ListPolicyVersionsType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="Marker" field="marker" usage="optional"/>
+    <value name="MaxItems" field="maxItems" usage="optional"/>
+    <value name="PolicyArn" field="policyArn" usage="optional"/>
+  </mapping>
+  <mapping name="SetDefaultPolicyVersionResponse" class="com.eucalyptus.auth.euare.SetDefaultPolicyVersionResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="optional" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="SetDefaultPolicyVersion" class="com.eucalyptus.auth.euare.SetDefaultPolicyVersionType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="DelegateAccount" field="delegateAccount" usage="optional"/>
+    <value name="PolicyArn" field="policyArn" usage="optional"/>
+    <value name="VersionId" field="versionId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.CreatePolicyResultType" abstract="true">
+    <structure name="Policy" field="policy" usage="optional" type="com.eucalyptus.auth.euare.PolicyType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.CreatePolicyVersionResultType" abstract="true">
+    <structure name="PolicyVersion" field="policyVersion" usage="optional" type="com.eucalyptus.auth.euare.PolicyVersionType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.GetPolicyResultType" abstract="true">
+    <structure name="Policy" field="policy" usage="optional" type="com.eucalyptus.auth.euare.PolicyType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.GetPolicyVersionResultType" abstract="true">
+    <structure name="PolicyVersion" field="policyVersion" usage="optional" type="com.eucalyptus.auth.euare.PolicyVersionType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.ListAttachedGroupPoliciesResultType" abstract="true">
+    <collection name="AttachedPolicies" field="attachedPolicies" usage="optional">>
+      <structure name="member" type="com.eucalyptus.auth.euare.AttachedPolicyType"/>
+    </collection>
+    <value name="IsTruncated" field="isTruncated" usage="optional"/>
+    <value name="Marker" field="marker" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.ListAttachedRolePoliciesResultType" abstract="true">
+    <collection name="AttachedPolicies" field="attachedPolicies" usage="optional">>
+      <structure name="member" type="com.eucalyptus.auth.euare.AttachedPolicyType"/>
+    </collection>
+    <value name="IsTruncated" field="isTruncated" usage="optional"/>
+    <value name="Marker" field="marker" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.ListAttachedUserPoliciesResultType" abstract="true">
+    <collection name="AttachedPolicies" field="attachedPolicies" usage="optional">>
+      <structure name="member" type="com.eucalyptus.auth.euare.AttachedPolicyType"/>
+    </collection>
+    <value name="IsTruncated" field="isTruncated" usage="optional"/>
+    <value name="Marker" field="marker" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.ListEntitiesForPolicyResultType" abstract="true">
+    <value name="IsTruncated" field="isTruncated" usage="optional"/>
+    <value name="Marker" field="marker" usage="optional"/>
+    <collection name="PolicyGroups" field="policyGroups" usage="optional">>
+      <structure name="member" type="com.eucalyptus.auth.euare.PolicyGroup"/>
+    </collection>
+    <collection name="PolicyRoles" field="policyRoles" usage="optional">>
+      <structure name="member" type="com.eucalyptus.auth.euare.PolicyRole"/>
+    </collection>
+    <collection name="PolicyUsers" field="policyUsers" usage="optional">>
+      <structure name="member" type="com.eucalyptus.auth.euare.PolicyUser"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.ListPoliciesResultType" abstract="true">
+    <value name="IsTruncated" field="isTruncated" usage="optional"/>
+    <value name="Marker" field="marker" usage="optional"/>
+    <collection name="Policies" field="policies" usage="optional">>
+      <structure name="member" type="com.eucalyptus.auth.euare.PolicyType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.ListPolicyVersionsResultType" abstract="true">
+    <value name="IsTruncated" field="isTruncated" usage="optional"/>
+    <value name="Marker" field="marker" usage="optional"/>
+    <collection name="Versions" field="versions" usage="optional">>
+      <structure name="member" type="com.eucalyptus.auth.euare.PolicyVersionType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.AttachedPolicyType" abstract="true">
+    <value name="PolicyArn" field="policyArn" usage="optional"/>
+    <value name="PolicyName" field="policyName" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.PolicyGroup" abstract="true">
+    <value name="GroupName" field="groupName" usage="optional"/>
+    <value name="GroupId" field="groupId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.PolicyRole" abstract="true">
+    <value name="RoleName" field="roleName" usage="optional"/>
+    <value name="RoleId" field="roleId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.PolicyType" abstract="true">
+    <value name="Arn" field="arn" usage="optional"/>
+    <value name="AttachmentCount" field="attachmentCount" usage="optional"/>
+    <value name="CreateDate" field="createDate" usage="optional"/>
+    <value name="DefaultVersionId" field="defaultVersionId" usage="optional"/>
+    <value name="Description" field="description" usage="optional"/>
+    <value name="IsAttachable" field="isAttachable" usage="optional"/>
+    <value name="Path" field="path" usage="optional"/>
+    <value name="PolicyId" field="policyId" usage="optional"/>
+    <value name="PolicyName" field="policyName" usage="optional"/>
+    <value name="UpdateDate" field="updateDate" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.PolicyUser" abstract="true">
+    <value name="UserName" field="userName" usage="optional"/>
+    <value name="UserId" field="userId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.auth.euare.PolicyVersionType" abstract="true">
+    <value name="CreateDate" field="createDate" usage="optional"/>
+    <value name="Document" field="document" usage="optional"/>
+    <value name="IsDefaultVersion" field="isDefaultVersion" usage="optional"/>
+    <value name="VersionId" field="versionId" usage="optional"/>
+  </mapping>
 </binding>
