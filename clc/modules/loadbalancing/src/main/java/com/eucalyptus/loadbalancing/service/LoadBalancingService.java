@@ -215,6 +215,7 @@ import com.google.common.net.HostSpecifier;
 public class LoadBalancingService {
   private static Logger    LOG     = Logger.getLogger( LoadBalancingService.class );
   private static final int MIN_HEALTHCHECK_INTERVAL_SEC = 5;
+  public static final int MAX_HEALTHCHECK_INTERVAL_SEC = 120;
   private static final int MIN_HEALTHCHECK_THRESHOLDS = 2;
   private static final int MAX_TAGS = 10;
 
@@ -1044,7 +1045,10 @@ public class LoadBalancingService {
             try {
               final LoadBalancerBackendInstance beInstance =
                       LoadBalancerBackendInstance.newInstance(ownerFullName, lb, vm.getInstanceId());
-              beInstance.setState(LoadBalancerBackendInstance.STATE.OutOfService);
+              final LoadBalancerBackendInstanceStates registration = LoadBalancerBackendInstanceStates.InitialRegistration;
+              beInstance.setState(registration.getState());
+              beInstance.setReasonCode(registration.getReasonCode());
+              beInstance.setDescription(registration.getDescription());
               Entities.persist(beInstance);
             } catch (final LoadBalancingException ex) {
               throw Exceptions.toUndeclared(ex);
@@ -1401,6 +1405,12 @@ public class LoadBalancingService {
     	throw new InvalidConfigurationRequestException(
     			String.format("Interval must be longer than %d seconds", MIN_HEALTHCHECK_INTERVAL_SEC));
     }
+
+    if(interval > MAX_HEALTHCHECK_INTERVAL_SEC) {
+      throw new InvalidConfigurationRequestException(
+              String.format("Interval must be smaller than %d seconds", MAX_HEALTHCHECK_INTERVAL_SEC));
+    }
+
     if(healthyThreshold < MIN_HEALTHCHECK_THRESHOLDS){
     	throw new InvalidConfigurationRequestException(
     			String.format("Healthy thresholds must be larger than %d", MIN_HEALTHCHECK_THRESHOLDS));
@@ -1458,79 +1468,40 @@ public class LoadBalancingService {
       throw new InternalFailureException("Failed to find the loadbalancer");
     }
 
-	List<LoadBalancerBackendInstanceCoreView> lbInstances = Lists.newArrayList(lb.getBackendInstances());
-	List<LoadBalancerBackendInstanceCoreView> instancesFound;
-	List<LoadBalancerBackendInstanceCoreView> stateOutdated= Lists.newArrayList();
+    List<LoadBalancerBackendInstanceCoreView> lbInstances = Lists.newArrayList(lb.getBackendInstances());
+    List<LoadBalancerBackendInstanceCoreView> instancesFound;
 
-	final int healthUpdateTimeoutSec =
-          5 * Math.max(lb.getHealthCheckInterval(), InstanceStatusWorkflowImpl.MIN_POLLING_PERIOD_SEC);
+    if(instances != null && instances.getMember()!= null && instances.getMember().size()>0){
+      instancesFound = Lists.newArrayList();
+      for(Instance inst : instances.getMember()){
+        String instId = inst.getInstanceId();
+        for(final LoadBalancerBackendInstanceCoreView lbInstance : lbInstances){
+          if(instId.equals(lbInstance.getInstanceId())){
+            instancesFound.add(lbInstance);
+            break;
+          }
+        }
+      }
+    }else{
+      instancesFound = Lists.newArrayList(lb.getBackendInstances());
+    }
 
-	final long currentTime = System.currentTimeMillis();
- 	if(instances != null && instances.getMember()!= null && instances.getMember().size()>0){
- 		instancesFound = Lists.newArrayList();
- 		for(Instance inst : instances.getMember()){
- 			String instId = inst.getInstanceId();
- 			for(final LoadBalancerBackendInstanceCoreView lbInstance : lbInstances){
- 				if(instId.equals(lbInstance.getInstanceId())){
- 					instancesFound.add(lbInstance);
- 					break;
- 				}
- 			}
- 		}
- 	}else{
- 		instancesFound = Lists.newArrayList(lb.getBackendInstances());
- 	}
+    final ArrayList<InstanceState> stateList = Lists.newArrayList();
+    for(final LoadBalancerBackendInstanceCoreView instance : instancesFound) {
+      InstanceState state = new InstanceState();
+      state.setInstanceId(instance.getDisplayName());
+      state.setState(instance.getState().name());
+      if(instance.getReasonCode()!=null)
+        state.setReasonCode(instance.getReasonCode());
+      if(instance.getDescription()!=null)
+        state.setDescription(instance.getDescription());
+      stateList.add(state);
+    }
 
- 	final ArrayList<InstanceState> stateList = Lists.newArrayList();
- 	for(final LoadBalancerBackendInstanceCoreView instance : instancesFound){
-		boolean outdated = false;
-		Date lastUpdated = instance.instanceStateLastUpdated();
-		if (lastUpdated == null)
-		  lastUpdated = instance.instanceCreationTimestamp();
-
-		final int diffSec = (int)((currentTime - lastUpdated.getTime())/1000.0);
-		if( diffSec > healthUpdateTimeoutSec ) {
-			stateOutdated.add(instance);
-			outdated = true;
-		}
-
- 		InstanceState state = new InstanceState();
- 		state.setInstanceId(instance.getDisplayName());
- 		if(outdated){
- 			state.setState(LoadBalancerBackendInstance.STATE.Unknown.toString());
-			state.setReasonCode("ELB");
- 			state.setDescription("Internal error: ELB VMs are not reachable. Contact administrator if problem continues");
- 		} else {
- 			state.setState(instance.getState().name());
- 			if(instance.getState().equals(LoadBalancerBackendInstance.STATE.OutOfService) && instance.getReasonCode()!=null)
-	 			state.setReasonCode(instance.getReasonCode());
-	 		if(instance.getDescription()!=null)
-	 			state.setDescription(instance.getDescription());
- 		}
-
- 		stateList.add(state);
- 	}
-
- 	if(! stateOutdated.isEmpty()){
- 		try ( TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ){
-	 		for(final LoadBalancerBackendInstanceCoreView instanceView : stateOutdated){
-	 			final LoadBalancerBackendInstance sample = LoadBalancerBackendInstance.LoadBalancerBackendInstanceEntityTransform.INSTANCE.apply(instanceView);
-	 			final LoadBalancerBackendInstance update = Entities.uniqueResult(sample);
-	 			update.setState(LoadBalancerBackendInstance.STATE.Unknown);
-	 			update.setReasonCode("ELB");
-	 			update.setDescription("Internal error: ELB VMs are not reachable. Contact administrator if problem continues");
-	 			Entities.persist(update);
-	 		}
-	 		db.commit();
- 		} catch(final Exception ex){
-      ;
- 		}
- 	}
-
- 	final InstanceStates states = new InstanceStates();
- 	states.setMember(stateList);
- 	final DescribeInstanceHealthResult result = new DescribeInstanceHealthResult();
- 	result.setInstanceStates(states);
+    final InstanceStates states = new InstanceStates();
+    states.setMember(stateList);
+    final DescribeInstanceHealthResult result = new DescribeInstanceHealthResult();
+    result.setInstanceStates(states);
     reply.setDescribeInstanceHealthResult(result);
     return reply;
   }

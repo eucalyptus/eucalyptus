@@ -21,6 +21,7 @@ package com.eucalyptus.loadbalancing.workflow;
 
 import static com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView.name;
 import static com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView.subnetId;
+import static com.eucalyptus.loadbalancing.service.LoadBalancingService.MAX_HEALTHCHECK_INTERVAL_SEC;
 
 import com.eucalyptus.compute.common.*;
 import com.eucalyptus.loadbalancing.*;
@@ -1327,9 +1328,15 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     }
 
     final Map<String, String> instanceToZone = Maps.newHashMap();
+    final Set<String> stoppedInstances = Sets.newHashSet();
     try{
       final LoadBalancer lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
       lb.getBackendInstances().stream().forEach ( instance -> instanceToZone.put(instance.getInstanceId(), instance.getPartition()));
+      stoppedInstances.addAll(lb.getBackendInstances().stream()
+              .filter(v -> LoadBalancerBackendInstanceStates.InstanceStopped.isInstanceState(v))
+              .map(v -> v.getInstanceId())
+              .collect(Collectors.toList())
+      );
     }catch(final Exception ex) {
       throw new LoadBalancingActivityException("Failed to lookup the loadbalancer with name="+lbName);
     }
@@ -1337,6 +1344,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     final Set<String> validStates = Sets.newHashSet(
             LoadBalancerBackendInstance.STATE.InService.name(),
             LoadBalancerBackendInstance.STATE.OutOfService.name());
+
     final Map<String, String> instanceToStatus = Maps.newHashMap();
       try{
         final Map<String,String> statusMap = VmWorkflowMarshaller.unmarshalInstances(encodedStatus);
@@ -1347,6 +1355,8 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
           if (!(instanceToZone.containsKey(instanceId) &&
                   instanceToZone.get(instanceId).equals(monitoringZone)))
             continue;
+          if (stoppedInstances.contains(instanceId))
+            continue; // EUCA-11859: do not update health check result if instance stopped
           instanceToStatus.put(instanceId, instanceStatus);
         }
       }catch(final Exception ex) {
@@ -1391,12 +1401,16 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
           if (!oldState.equals(newState))
             updated = true;
           update.setBackendState(newState);
-          if (LoadBalancerBackendInstance.STATE.InService.equals(newState)) {
-            update.setReasonCode("");
-            update.setDescription("");
-          } else if (LoadBalancerBackendInstance.STATE.OutOfService.equals(newState)) {
-            update.setReasonCode("Instance");
-            update.setDescription("Instance has failed at least the UnhealthyThreshold number of health checks consecutively.");
+          final LoadBalancerBackendInstanceStates failure =
+                  LoadBalancerBackendInstanceStates.HealthCheckFailure;
+          final LoadBalancerBackendInstanceStates success =
+                  LoadBalancerBackendInstanceStates.HealthCheckSuccess;
+          if (success.getState().equals(newState)) {
+            update.setReasonCode(success.getReasonCode());
+            update.setDescription(success.getDescription());
+          } else if ( failure.getState().equals(newState)) {
+            update.setReasonCode(failure.getReasonCode());
+            update.setDescription(failure.getDescription());
           }
           update.updateInstanceStateTimestamp();
           Entities.persist(update);
@@ -1853,9 +1867,11 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
         try ( TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ){
           final LoadBalancerBackendInstance update = Entities.uniqueResult(
               LoadBalancerBackendInstance.named(lb, instance.getInstanceId()));
-          update.setState(LoadBalancerBackendInstance.STATE.OutOfService);
-          update.setReasonCode("ELB");
-          update.setDescription("Zone disabled");
+          final LoadBalancerBackendInstanceStates azDisabled =
+                  LoadBalancerBackendInstanceStates.AvailabilityZoneDisabled;
+          update.setState(azDisabled.getState());
+          update.setReasonCode(azDisabled.getReasonCode());
+          update.setDescription(azDisabled.getDescription());
           Entities.persist(update);
           db.commit();
         }catch(final NoSuchElementException ex){
@@ -2860,31 +2876,25 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   public void checkBackendInstances() throws LoadBalancingActivityException {
     final int NUM_INSTANCES_TO_DESCRIBE = 8;
 
-    /// determine the BE instances to query
-    final List<LoadBalancerBackendInstance> allInstances = Lists.newArrayList();
-    //final List<LoadBalancerBackendInstance> stateOutdated = Lists.newArrayList();
+    /// determine backend instances to query (an instance can be registered to multiple ELBs)
+    final Map<String, List<LoadBalancerBackendInstance>> allInstances = Maps.newHashMap();
     try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
-      allInstances.addAll(
-          Entities.query(LoadBalancerBackendInstance.named()));
+      final List<LoadBalancerBackendInstance>  instances =
+              Entities.query(LoadBalancerBackendInstance.named());
+      for (final LoadBalancerBackendInstance instance : instances) {
+        if(!allInstances.containsKey(instance.getInstanceId())) {
+          allInstances.put(instance.getInstanceId(), Lists.newArrayList());
+        }
+        allInstances.get(instance.getInstanceId()).add(instance);
+      }
     }catch(final Exception ex){
       throw new LoadBalancingActivityException("Failed to query backend instances", ex);
     }
 
-    final List<LoadBalancerBackendInstance> stateOutdated = allInstances;
-    final Set<String> instancesToCheck = 
-        Sets.newHashSet(Lists.transform(stateOutdated, new Function<LoadBalancerBackendInstance,String>(){
-          @Override
-          @Nullable
-          public String apply(
-              @Nullable LoadBalancerBackendInstance arg0) {
-            return arg0.getInstanceId();
-          }
-    }));
-    
-    final List<RunningInstancesItemType> result  = Lists.newArrayList();
-    for(final List<String> partition : Iterables.partition(instancesToCheck, NUM_INSTANCES_TO_DESCRIBE)) {
+    final List<RunningInstancesItemType> queryResult  = Lists.newArrayList();
+    for(final List<String> partition : Iterables.partition(allInstances.keySet(), NUM_INSTANCES_TO_DESCRIBE)) {
       try{
-        result.addAll(
+        queryResult.addAll(
             EucalyptusActivityTasks.getInstance().describeSystemInstancesWithVerbose(partition));
       }catch(final Exception ex){
         LOG.warn("Failed to query instances", ex);
@@ -2893,75 +2903,134 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     }
     
     //EUCA-9919: remove registered instances when terminated
-    final Set<String> instancesToDelete = 
+    final Set<String> terminatedInstances =
         Sets.newHashSet();
-    final Map<String, STATE> stateMap = new HashMap<String, STATE>();
-    final Map<String, RunningInstancesItemType> instanceMap = 
+    final Map<String, LoadBalancerBackendInstanceStates> stateMap =
+            new HashMap<>();
+    final Map<String, RunningInstancesItemType> runningInstances =
         new HashMap<String, RunningInstancesItemType>();
-    for(final RunningInstancesItemType instance : result){
+    for(final RunningInstancesItemType instance : queryResult){
       final String state = instance.getStateName();
       if("pending".equals(state))
-        stateMap.put(instance.getInstanceId(), STATE.OutOfService);
+        stateMap.put(instance.getInstanceId(), LoadBalancerBackendInstanceStates.InitialRegistration);
       else if("running".equals(state)){
-        instanceMap.put(instance.getInstanceId(), instance);
+        runningInstances.put(instance.getInstanceId(), instance);
       }else if("shutting-down".equals(state))
-        stateMap.put(instance.getInstanceId(), STATE.Error);
+        stateMap.put(instance.getInstanceId(), LoadBalancerBackendInstanceStates.InstanceInvalidState);
       else if("terminated".equals(state)) {
-        stateMap.put(instance.getInstanceId(), STATE.Error);
-        instancesToDelete.add(instance.getInstanceId());
+        stateMap.put(instance.getInstanceId(), LoadBalancerBackendInstanceStates.InstanceInvalidState);
+        terminatedInstances.add(instance.getInstanceId());
       }else if("stopping".equals(state))
-        stateMap.put(instance.getInstanceId(), STATE.Error);
+        stateMap.put(instance.getInstanceId(), LoadBalancerBackendInstanceStates.InstanceStopped);
       else if("stopped".equals(state))
-        stateMap.put(instance.getInstanceId(), STATE.Error);
+        stateMap.put(instance.getInstanceId(), LoadBalancerBackendInstanceStates.InstanceStopped);
     }
     
-    final List<LoadBalancerBackendInstance> beToDelete = Lists.newArrayList();
-
-    for(final LoadBalancerBackendInstance be : stateOutdated){
-      if(instancesToDelete.contains(be.getInstanceId())){
-        beToDelete.add(be);
-        continue;
-      }
-      if(stateMap.containsKey(be.getInstanceId())){ // OutOfService || Error
-        try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
-          final STATE trueState = stateMap.get(be.getInstanceId());
-          final LoadBalancerBackendInstance update = Entities.uniqueResult(be);
-          update.setBackendState(trueState);
-          Entities.persist(update);
-          db.commit();
-        }catch(final Exception ex) {
-          ;
+    final Set<LoadBalancerBackendInstance> backendsToDelete = Sets.newHashSet();
+    for(final String instanceId : allInstances.keySet()) {
+      for (final LoadBalancerBackendInstance be : allInstances.get(instanceId)) {
+        if (terminatedInstances.contains(instanceId)) { // case 1: instance terminated
+          backendsToDelete.add(be);
+          continue;
         }
-      }else if (instanceMap.containsKey(be.getInstanceId())) {
-        String instanceIpAddress = null;
-        if (be.getLoadBalancer().getVpcId() == null)
-          instanceIpAddress = instanceMap.get(be.getInstanceId()).getIpAddress();
-        else
-          instanceIpAddress = instanceMap.get(be.getInstanceId()).getPrivateIpAddress();
-        if(instanceIpAddress==null) {
-          LOG.warn(String.format("Failed to determine ELB backend instance's IP address: %s", 
-              be.getInstanceId()));
-        }else if(!instanceIpAddress.equals(be.getIpAddress())) {
-          try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
+        if (stateMap.containsKey(instanceId)) { // case 2: instance not in running state
+          try (final TransactionResource db = Entities.transactionFor(LoadBalancerBackendInstance.class)) {
+            final LoadBalancerBackendInstanceStates trueState = stateMap.get(be.getInstanceId());
             final LoadBalancerBackendInstance update = Entities.uniqueResult(be);
-            update.setIpAddress(instanceIpAddress);
-            update.setPartition(instanceMap.get(be.getInstanceId()).getPlacement());
+            update.setBackendState(trueState.getState());
+            update.setReasonCode(trueState.getReasonCode());
+            update.setDescription(trueState.getDescription());
             Entities.persist(update);
             db.commit();
-          }catch(final Exception ex) {
+          } catch (final Exception ex) {
             ;
+          }
+        } else if (runningInstances.containsKey(instanceId)) { // case 3: instance running
+          // case 3.a: check if instance was re-started (EUCA-11859)
+          if (LoadBalancerBackendInstanceStates.InstanceStopped.isInstanceState(be)) {
+            final LoadBalancerBackendInstanceStates registration = LoadBalancerBackendInstanceStates.InitialRegistration;
+            try (final TransactionResource db = Entities.transactionFor(LoadBalancerBackendInstance.class)) {
+              final LoadBalancerBackendInstance update = Entities.uniqueResult(be);
+              update.setBackendState(registration.getState());
+              update.setReasonCode(registration.getReasonCode());
+              update.setDescription(registration.getDescription());
+              Entities.persist(update);
+              db.commit();
+            } catch (final Exception ex) {
+              ;
+            }
+          }
+
+          // case 3.b: check instance's IP address change
+          String instanceIpAddress = null;
+          if (be.getLoadBalancer().getVpcId() == null)
+            instanceIpAddress = runningInstances.get(instanceId).getIpAddress();
+          else
+            instanceIpAddress = runningInstances.get(instanceId).getPrivateIpAddress();
+          if (instanceIpAddress == null) {
+            LOG.warn(String.format("Failed to determine ELB backend instance's IP address: %s",
+                    instanceId));
+          } else if (!instanceIpAddress.equals(be.getIpAddress())) {
+            try (final TransactionResource db = Entities.transactionFor(LoadBalancerBackendInstance.class)) {
+              final LoadBalancerBackendInstance update = Entities.uniqueResult(be);
+              update.setIpAddress(instanceIpAddress);
+              update.setPartition(runningInstances.get(instanceId).getPlacement());
+              Entities.persist(update);
+              db.commit();
+            } catch (final Exception ex) {
+              ;
+            }
           }
         }
       }
     }
 
-    for(final LoadBalancerBackendInstance be : beToDelete) {
+    for(final LoadBalancerBackendInstance be : backendsToDelete) {
       try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
         final LoadBalancerBackendInstance entity = Entities.uniqueResult(be);
         Entities.delete(entity);
         LOG.info("Instance "+be.getInstanceId()+" is terminated and removed from ELB");
         db.commit();
       }catch(final Exception ex) {
+        ;
+      }
+    }
+
+    /// mark outdated instances as Error
+    final int HealthUpdateTimeoutSec = 3 * MAX_HEALTHCHECK_INTERVAL_SEC; /// 6 minutes
+    final Predicate<LoadBalancerBackendInstance> unreachableLoadbalancer =
+            (instance) -> {
+              if (LoadBalancerBackendInstanceStates.UnrechableLoadBalancer.isInstanceState(instance))
+                return false;
+              if (LoadBalancerBackendInstanceStates.InstanceStopped.isInstanceState(instance))
+                return false;
+              final long currentTime = System.currentTimeMillis();
+              Date lastUpdated = instance.instanceStateLastUpdated();
+              if (lastUpdated == null)
+                lastUpdated = instance.getCreationTimestamp();
+              final int diffSec = (int) ((currentTime - lastUpdated.getTime()) / 1000.0);
+              return diffSec > HealthUpdateTimeoutSec;
+            };
+
+    final Set<LoadBalancerBackendInstance> outdatedInstances =
+            allInstances.values().stream()
+                    .flatMap(Collection::stream)
+                    .filter(v -> !backendsToDelete.contains(v)) // DB records deleted already
+                    .filter(v -> unreachableLoadbalancer.apply(v))
+                    .collect(Collectors.toSet());
+
+    if (! outdatedInstances.isEmpty()) {
+      final LoadBalancerBackendInstanceStates unreachable = LoadBalancerBackendInstanceStates.UnrechableLoadBalancer;
+      try (TransactionResource db = Entities.transactionFor(LoadBalancerBackendInstance.class)) {
+        for (final LoadBalancerBackendInstance instance : outdatedInstances) {
+          final LoadBalancerBackendInstance update = Entities.uniqueResult(instance);
+          update.setState(unreachable.getState());
+          update.setReasonCode(unreachable.getReasonCode());
+          update.setDescription(unreachable.getDescription());
+          Entities.persist(update);
+        }
+        db.commit();
+      } catch (final Exception ex) {
         ;
       }
     }
