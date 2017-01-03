@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.autoscaling.common.AutoScalingBackend;
-import com.eucalyptus.autoscaling.common.backend.msgs.AutoScalingBackendMessage;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage;
 import com.eucalyptus.autoscaling.common.msgs.ResponseMetadata;
 import com.eucalyptus.autoscaling.common.policy.AutoScalingPolicySpec;
@@ -65,7 +64,7 @@ public class AutoScalingService {
 
     // Dispatch
     try {
-      final AutoScalingBackendMessage backendRequest = (AutoScalingBackendMessage) BaseMessages.deepCopy( request, getBackendMessageClass( request ) );
+      final AutoScalingMessage backendRequest = (AutoScalingMessage) BaseMessages.deepCopy( request, getBackendMessageClass( request ) );
       final BaseMessage backendResponse = send( backendRequest );
       final AutoScalingMessage response = (AutoScalingMessage) BaseMessages.deepCopy( backendResponse, request.getReply().getClass() );
       final ResponseMetadata metadata = AutoScalingMessage.getResponseMetadata( response );

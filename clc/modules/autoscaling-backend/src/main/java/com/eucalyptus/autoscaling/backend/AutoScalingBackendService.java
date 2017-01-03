@@ -52,12 +52,6 @@ import com.eucalyptus.autoscaling.activities.ScalingActivity;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.common.AutoScalingResourceName;
-import com.eucalyptus.autoscaling.common.backend.msgs.Activity;
-import com.eucalyptus.autoscaling.common.backend.msgs.AdjustmentTypes;
-import com.eucalyptus.autoscaling.common.backend.msgs.Alarms;
-import com.eucalyptus.autoscaling.common.backend.msgs.AutoScalingGroupType;
-import com.eucalyptus.autoscaling.common.backend.msgs.AutoScalingInstanceDetails;
-import com.eucalyptus.autoscaling.common.backend.msgs.BlockDeviceMappingType;
 import com.eucalyptus.autoscaling.common.backend.msgs.CreateAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.CreateAutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.backend.msgs.CreateLaunchConfigurationResponseType;
@@ -110,12 +104,6 @@ import com.eucalyptus.autoscaling.common.backend.msgs.EnableMetricsCollectionRes
 import com.eucalyptus.autoscaling.common.backend.msgs.EnableMetricsCollectionType;
 import com.eucalyptus.autoscaling.common.backend.msgs.ExecutePolicyResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.ExecutePolicyType;
-import com.eucalyptus.autoscaling.common.backend.msgs.Filter;
-import com.eucalyptus.autoscaling.common.backend.msgs.LaunchConfigurationType;
-import com.eucalyptus.autoscaling.common.backend.msgs.MetricCollectionTypes;
-import com.eucalyptus.autoscaling.common.backend.msgs.MetricGranularityType;
-import com.eucalyptus.autoscaling.common.backend.msgs.MetricGranularityTypes;
-import com.eucalyptus.autoscaling.common.backend.msgs.ProcessType;
 import com.eucalyptus.autoscaling.common.backend.msgs.PutNotificationConfigurationResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.PutNotificationConfigurationType;
 import com.eucalyptus.autoscaling.common.backend.msgs.PutScalingPolicyResponseType;
@@ -124,20 +112,34 @@ import com.eucalyptus.autoscaling.common.backend.msgs.PutScheduledUpdateGroupAct
 import com.eucalyptus.autoscaling.common.backend.msgs.PutScheduledUpdateGroupActionType;
 import com.eucalyptus.autoscaling.common.backend.msgs.ResumeProcessesResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.ResumeProcessesType;
-import com.eucalyptus.autoscaling.common.backend.msgs.ScalingPolicyType;
 import com.eucalyptus.autoscaling.common.backend.msgs.SetDesiredCapacityResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.SetDesiredCapacityType;
 import com.eucalyptus.autoscaling.common.backend.msgs.SetInstanceHealthResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.SetInstanceHealthType;
+import com.eucalyptus.autoscaling.common.backend.msgs.SetInstanceProtectionResponseType;
+import com.eucalyptus.autoscaling.common.backend.msgs.SetInstanceProtectionType;
 import com.eucalyptus.autoscaling.common.backend.msgs.SuspendProcessesResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.SuspendProcessesType;
-import com.eucalyptus.autoscaling.common.backend.msgs.TagDescription;
-import com.eucalyptus.autoscaling.common.backend.msgs.TagDescriptionList;
-import com.eucalyptus.autoscaling.common.backend.msgs.TagType;
 import com.eucalyptus.autoscaling.common.backend.msgs.TerminateInstanceInAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.TerminateInstanceInAutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.backend.msgs.UpdateAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.UpdateAutoScalingGroupType;
+import com.eucalyptus.autoscaling.common.msgs.Activity;
+import com.eucalyptus.autoscaling.common.msgs.AdjustmentTypes;
+import com.eucalyptus.autoscaling.common.msgs.Alarms;
+import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupType;
+import com.eucalyptus.autoscaling.common.msgs.AutoScalingInstanceDetails;
+import com.eucalyptus.autoscaling.common.msgs.BlockDeviceMappingType;
+import com.eucalyptus.autoscaling.common.msgs.Filter;
+import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationType;
+import com.eucalyptus.autoscaling.common.msgs.MetricCollectionTypes;
+import com.eucalyptus.autoscaling.common.msgs.MetricGranularityType;
+import com.eucalyptus.autoscaling.common.msgs.MetricGranularityTypes;
+import com.eucalyptus.autoscaling.common.msgs.ProcessType;
+import com.eucalyptus.autoscaling.common.msgs.ScalingPolicyType;
+import com.eucalyptus.autoscaling.common.msgs.TagDescription;
+import com.eucalyptus.autoscaling.common.msgs.TagDescriptionList;
+import com.eucalyptus.autoscaling.common.msgs.TagType;
 import com.eucalyptus.autoscaling.common.policy.AutoScalingPolicySpec;
 import com.eucalyptus.autoscaling.config.AutoScalingConfiguration;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
@@ -185,7 +187,7 @@ import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Splitter;
@@ -198,7 +200,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 
-@SuppressWarnings( "UnusedDeclaration" )
+@SuppressWarnings( { "UnusedDeclaration", "Guava", "StaticPseudoFunctionalStyleMethod", "Convert2Lambda", "Convert2streamapi" } )
 @ComponentNamed
 public class AutoScalingBackendService {
   private static final Logger logger = Logger.getLogger( AutoScalingBackendService.class );
@@ -489,7 +491,7 @@ public class AutoScalingBackendService {
           final AutoScalingGroups.PersistingBuilder builder = autoScalingGroups.create(
               ctx.getUserFullName(),
               request.getAutoScalingGroupName(),
-              verifyOwnership( accountFullName, launchConfigurations.lookup( accountFullName, request.getLaunchConfigurationName(), Functions.<LaunchConfiguration>identity() ) ),
+              verifyOwnership( accountFullName, launchConfigurations.lookup( accountFullName, request.getLaunchConfigurationName(), Functions.identity() ) ),
               minSize,
               maxSize )
               .withAvailabilityZones( request.availabilityZones( ) != null && !request.availabilityZones( ).isEmpty( ) ?
@@ -502,6 +504,7 @@ public class AutoScalingBackendService {
               .withHealthCheckGracePeriod( Numbers.intValue( request.getHealthCheckGracePeriod() ) )
               .withHealthCheckType(
                   request.getHealthCheckType()==null ? null : HealthCheckType.valueOf( request.getHealthCheckType() ) )
+              .withNewInstancesProtectedFromScaleIn( request.getNewInstancesProtectedFromScaleIn( ) )
               .withLoadBalancerNames( request.loadBalancerNames() )
               .withTerminationPolicyTypes( request.terminationPolicies() == null ? null :
                   Collections2.filter( Collections2.transform(
@@ -594,9 +597,9 @@ public class AutoScalingBackendService {
       if ( extractor == null ) {
         throw new ValidationErrorException( "Filter type "+filter.getName()+" is not correct. Allowed Filter types are: auto-scaling-group key value propagate-at-launch" );
       }
-      final Function<String,String> tagValueConverter = Objects.firstNonNull(
+      final Function<String,String> tagValueConverter = MoreObjects.firstNonNull(
           tagValuePreProcessors.get( filter.getName() ),
-          Functions.<String>identity() );
+          Functions.identity() );
       tagFilters.add( Predicates.compose(
           Predicates.in( Collections2.transform( filter.values(), tagValueConverter ) ),
           extractor ) );
@@ -613,7 +616,7 @@ public class AutoScalingBackendService {
           context.getUserFullName().asAccountFullName(),
           Predicates.and( tagFilters ),
           Restrictions.conjunction(),
-          Collections.<String,String>emptyMap() ) ) ) {
+          Collections.emptyMap() ) ) ) {
         if ( Permissions.isAuthorized(
             AutoScalingPolicySpec.VENDOR_AUTOSCALING,
             tag.getResourceType(),
@@ -663,9 +666,9 @@ public class AutoScalingBackendService {
           final Integer desiredCapacity = scalingPolicy.getAdjustmentType().adjustCapacity(
               autoScalingGroup.getDesiredCapacity( ),
               scalingPolicy.getScalingAdjustment( ),
-              Objects.firstNonNull( scalingPolicy.getMinAdjustmentStep( ), 0 ),
-              Objects.firstNonNull( autoScalingGroup.getMinSize( ), 0 ),
-              Objects.firstNonNull( autoScalingGroup.getMaxSize( ), Integer.MAX_VALUE )
+              MoreObjects.firstNonNull( scalingPolicy.getMinAdjustmentStep( ), 0 ),
+              MoreObjects.firstNonNull( autoScalingGroup.getMinSize( ), 0 ),
+              MoreObjects.firstNonNull( autoScalingGroup.getMaxSize( ), Integer.MAX_VALUE )
           );
           setDesiredCapacityWithCooldown(
               autoScalingGroup,
@@ -699,7 +702,7 @@ public class AutoScalingBackendService {
 
     final Context context = Contexts.lookup();
     final OwnerFullName ownerFullName = context.getUserFullName().asAccountFullName();
-    final List<TagType> tagTypes = Objects.firstNonNull( request.getTags().getMember(), Collections.<TagType>emptyList() );
+    final List<TagType> tagTypes = MoreObjects.firstNonNull( request.getTags().getMember(), Collections.emptyList() );
 
     for ( final TagType tagType : tagTypes ) {
       final String key = tagType.getKey();
@@ -804,7 +807,7 @@ public class AutoScalingBackendService {
 
             final ScalingPolicies.PersistingBuilder builder = scalingPolicies.create(
                 ctx.getUserFullName( ),
-                verifyOwnership( accountFullName, autoScalingGroups.lookup( accountFullName, request.getAutoScalingGroupName(), Functions.<AutoScalingGroup>identity() ) ),
+                verifyOwnership( accountFullName, autoScalingGroups.lookup( accountFullName, request.getAutoScalingGroupName(), Functions.identity() ) ),
                 request.getPolicyName(),
                 adjustmentType,
                 request.getScalingAdjustment() )
@@ -884,7 +887,7 @@ public class AutoScalingBackendService {
         @Override
         public void fire( final AutoScalingInstance instance ) {
           if ( RestrictedTypes.filterPrivileged().apply( instance ) ) {
-            if ( !Objects.firstNonNull( request.getShouldRespectGracePeriod(), Boolean.FALSE ) ||
+            if ( !MoreObjects.firstNonNull( request.getShouldRespectGracePeriod(), Boolean.FALSE ) ||
                 instance.healthStatusGracePeriodExpired() ) {
               instance.setHealthStatus( FUtils.valueOfFunction( HealthStatus.class ).apply( request.getHealthStatus( ) ) );
             }
@@ -947,7 +950,7 @@ public class AutoScalingBackendService {
 
               final String key = nullToEmpty( tagType.getKey() ).trim();
               final String value = nullToEmpty( tagType.getValue() ).trim();
-              final Boolean propagateAtLaunch = Objects.firstNonNull( tagType.getPropagateAtLaunch(), Boolean.FALSE );
+              final Boolean propagateAtLaunch = MoreObjects.firstNonNull( tagType.getPropagateAtLaunch(), Boolean.FALSE );
               tagSupport.createOrUpdate( resource, ownerFullName, key, value, propagateAtLaunch );
 
               final Tag example = tagSupport.example( resource, accountFullName, null, null );
@@ -1036,7 +1039,7 @@ public class AutoScalingBackendService {
             .buildPredicate( );
 
     try {
-      final List<AutoScalingInstanceDetails> results = 
+      final List<AutoScalingInstanceDetails> results =
           reply.getDescribeAutoScalingInstancesResult().getAutoScalingInstances().getMember();
       results.addAll( autoScalingInstances.list(
           ownerFullName,
@@ -1085,7 +1088,7 @@ public class AutoScalingBackendService {
               Iterables.filter( Lists.newArrayList( request.getImageId(), request.getKernelId(), request.getRamdiskId() ), Predicates.notNull() ),
               request.getInstanceType(),
               request.getKeyName(),
-              request.getSecurityGroups() == null ? Collections.<String>emptyList() : request.getSecurityGroups().getMember(),
+              request.getSecurityGroups() == null ? Collections.emptyList() : request.getSecurityGroups().getMember(),
               request.getIamInstanceProfile()
           );
 
@@ -1120,7 +1123,7 @@ public class AutoScalingBackendService {
           TypeMappers.lookup( AutoScalingGroup.class, AutoScalingGroupCoreView.class ) );
       if ( RestrictedTypes.filterPrivileged().apply( group ) ) {
         // Terminate instances first if requested (but don't wait for success ...)
-        if ( Objects.firstNonNull( request.getForceDelete(), Boolean.FALSE ) ) {
+        if ( MoreObjects.firstNonNull( request.getForceDelete(), Boolean.FALSE ) ) {
           final List<String> instanceIds = autoScalingInstances.listByGroup(
               group,
               Predicates.alwaysTrue(),
@@ -1198,11 +1201,13 @@ public class AutoScalingBackendService {
               autoScalingGroup.setHealthCheckGracePeriod( Numbers.intValue( request.getHealthCheckGracePeriod( ) ) );
             if ( request.getHealthCheckType( ) != null )
               autoScalingGroup.setHealthCheckType( FUtils.valueOfFunction( HealthCheckType.class ).apply( request.getHealthCheckType( ) ) );
+            if ( request.getNewInstancesProtectedFromScaleIn( ) != null )
+              autoScalingGroup.setNewInstancesProtectedFromScaleIn( request.getNewInstancesProtectedFromScaleIn( ) );
             if ( request.getLaunchConfigurationName( ) != null )
               try {
                 autoScalingGroup.setLaunchConfiguration( verifyOwnership(
                     accountFullName,
-                    launchConfigurations.lookup( accountFullName, request.getLaunchConfigurationName(), Functions.<LaunchConfiguration>identity() ) ) );
+                    launchConfigurations.lookup( accountFullName, request.getLaunchConfigurationName(), Functions.identity() ) ) );
               } catch ( AutoScalingMetadataNotFoundException e ) {
                 throw Exceptions.toUndeclared( new ValidationErrorException( "Launch configuration not found: " + request.getLaunchConfigurationName() ) );
               } catch ( AutoScalingMetadataException e ) {
@@ -1248,7 +1253,7 @@ public class AutoScalingBackendService {
                 autoScalingGroup.getOwner(),
                 Consumers.atomic( subnetsByZone ),
                 request.availabilityZones( ),
-                Collections.<String>emptyList(), // load balancer names cannot be updated
+                Collections.emptyList(), // load balancer names cannot be updated
                 subnetIds
             );
             verifyUnsupportedReferences( referenceErrors, request.getPlacementGroup() );
@@ -1282,6 +1287,37 @@ public class AutoScalingBackendService {
     
     return reply;
   }
+
+  public SetInstanceProtectionResponseType setInstanceProtection( SetInstanceProtectionType request) throws EucalyptusCloudException {
+    final SetInstanceProtectionResponseType reply = request.getReply( );
+
+    final Context ctx = Contexts.lookup( );
+    try {
+      final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
+      final Callback<AutoScalingGroup> groupCallback = new Callback<AutoScalingGroup>() {
+        @Override
+        public void fire( final AutoScalingGroup autoScalingGroup ) {
+          if ( RestrictedTypes.filterPrivileged().apply( autoScalingGroup ) ) {
+            for ( final AutoScalingInstance instance : autoScalingGroup.getAutoScalingInstances( ) ) {
+              if ( request.getInstanceIds( ).getMember( ).contains( instance.getInstanceId( ) ) ) {
+                instance.setProtectedFromScaleIn( request.getProtectedFromScaleIn( ) );
+              }
+            }
+          }
+        }
+      };
+      autoScalingGroups.update(
+          accountFullName,
+          request.getAutoScalingGroupName( ),
+          groupCallback );
+    } catch ( AutoScalingMetadataNotFoundException e ) {
+      throw new ValidationErrorException( "Auto scaling group not found: " + request.getAutoScalingGroupName() );
+    } catch ( Exception e ) {
+      handleException( e );
+    }
+    return reply;
+  }
+
 
   public DescribeLaunchConfigurationsResponseType describeLaunchConfigurations(DescribeLaunchConfigurationsType request) throws EucalyptusCloudException {
     final DescribeLaunchConfigurationsResponseType reply = request.getReply( );
@@ -1413,7 +1449,7 @@ public class AutoScalingBackendService {
       if ( !RestrictedTypes.filterPrivileged().apply( instance ) ) {
         throw new AutoScalingMetadataNotFoundException("Instance not found");
       }
-      
+
       final List<ScalingActivity> activities = activityManager.terminateInstances(
           instance.getAutoScalingGroup(),
           Collections.singletonList( instance.getInstanceId() ) );
@@ -1428,7 +1464,7 @@ public class AutoScalingBackendService {
       final Callback<AutoScalingGroup> groupCallback = new Callback<AutoScalingGroup>() {
         @Override
         public void fire( final AutoScalingGroup autoScalingGroup ) {
-          if ( Objects.firstNonNull( request.getShouldDecrementDesiredCapacity(), Boolean.FALSE ) ) {
+          if ( MoreObjects.firstNonNull( request.getShouldDecrementDesiredCapacity(), Boolean.FALSE ) ) {
             autoScalingGroup.setDesiredCapacity( autoScalingGroup.getDesiredCapacity() - 1 );
           } else {
             autoScalingGroup.setScalingRequired( true );
@@ -1465,8 +1501,8 @@ public class AutoScalingBackendService {
                                                       final Integer cooldown,
                                                       final int capacity,
                                                       final String reason ) {
-    final long cooldownMs = TimeUnit.SECONDS.toMillis( Objects.firstNonNull( cooldown, autoScalingGroup.getDefaultCooldown() ) );
-    if ( !Objects.firstNonNull( honorCooldown, Boolean.FALSE ) ||
+    final long cooldownMs = TimeUnit.SECONDS.toMillis( MoreObjects.firstNonNull( cooldown, autoScalingGroup.getDefaultCooldown() ) );
+    if ( !MoreObjects.firstNonNull( honorCooldown, Boolean.FALSE ) ||
         ( System.currentTimeMillis() - autoScalingGroup.getCapacityTimestamp().getTime() ) > cooldownMs ) {
       autoScalingGroup.updateDesiredCapacity( capacity, reason );
       autoScalingGroup.setCapacityTimestamp( new Date() );

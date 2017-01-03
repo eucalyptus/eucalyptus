@@ -22,11 +22,14 @@ package com.eucalyptus.autoscaling.instances;
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingInstanceMetadata;
 
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EntityTransaction;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
@@ -38,11 +41,19 @@ import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
+import org.apache.log4j.Logger;
+import com.eucalyptus.autoscaling.common.AutoScalingBackend;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.upgrade.Upgrades;
+import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Objects;
+import com.google.common.base.Predicate;
 
 /**
  *
@@ -84,6 +95,9 @@ public class AutoScalingInstance extends AbstractOwnedPersistent implements Auto
 
   @Column( name = "metadata_registration_attempts", nullable = false )
   private Integer registrationAttempts;
+
+  @Column( name = "metadata_protected_from_scale_in" )
+  private Boolean protectedFromScaleIn;
 
   protected AutoScalingInstance() {
   }
@@ -172,6 +186,14 @@ public class AutoScalingInstance extends AbstractOwnedPersistent implements Auto
     this.registrationAttempts = registrationAttempts;
   }
 
+  public Boolean getProtectedFromScaleIn() {
+    return protectedFromScaleIn;
+  }
+
+  public void setProtectedFromScaleIn( final Boolean protectedFromScaleIn ) {
+    this.protectedFromScaleIn = protectedFromScaleIn;
+  }
+
   public boolean healthStatusGracePeriodExpired() {
     final long gracePeriodMillis = TimeUnit.SECONDS.toMillis( 
         Objects.firstNonNull( getAutoScalingGroup( ).getHealthCheckGracePeriod(), 0 ) );
@@ -240,9 +262,11 @@ public class AutoScalingInstance extends AbstractOwnedPersistent implements Auto
   public static AutoScalingInstance create( @Nonnull final OwnerFullName ownerFullName,
                                             @Nonnull final String instanceId,
                                             @Nonnull final String availabilityZone,
+                                            @Nonnull final Boolean protectedFromScaleIn,
                                             @Nonnull final AutoScalingGroup group ) {
     final AutoScalingInstance autoScalingInstance = new AutoScalingInstance( ownerFullName, instanceId );
     autoScalingInstance.setAvailabilityZone( availabilityZone );
+    autoScalingInstance.setProtectedFromScaleIn( protectedFromScaleIn );
     autoScalingInstance.setAutoScalingGroup( group );
     autoScalingInstance.setLaunchConfigurationName(
         AutoScalingMetadatas.toDisplayName().apply( group.getLaunchConfiguration() ) );
@@ -259,6 +283,34 @@ public class AutoScalingInstance extends AbstractOwnedPersistent implements Auto
     autoScalingGroupName = AutoScalingMetadatas.toDisplayName().apply( autoScalingGroup );
     if ( lifecycleState == LifecycleState.InService && getInServiceTimestamp() == null ) {
       setInServiceTimestamp( new Date() );
+    }
+  }
+
+  @EntityUpgrade( entities = AutoScalingInstance.class, since = Upgrades.Version.v5_0_0, value = AutoScalingBackend.class)
+  public enum AutoScalingInstanceUpgrade500 implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger(AutoScalingInstanceUpgrade500.class);
+
+    @Override
+    public boolean apply(@Nullable Class aClass) {
+      try ( final TransactionResource tran = Entities.transactionFor( AutoScalingInstance.class ) ) {
+        final List<AutoScalingInstance> instances =
+            Entities.criteriaQuery( Entities.restriction( AutoScalingInstance.class )
+                .isNull( AutoScalingInstance_.protectedFromScaleIn )
+            ).list( );
+        for ( final AutoScalingInstance instance : instances ) {
+          if ( instance.getProtectedFromScaleIn( ) == null ) {
+            instance.setProtectedFromScaleIn( false );
+            LOG.info( "Set default scale in protection for auto scaling instance : " + instance.getInstanceId( ) );
+          }
+        }
+        tran.commit( );
+      }
+      catch (Exception ex) {
+        LOG.error("Exception during upgrade while attempting to initialize scaling protection for instances");
+        throw Exceptions.toUndeclared(ex);
+      }
+      return true;
     }
   }
 }

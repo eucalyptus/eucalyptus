@@ -39,34 +39,30 @@ import com.google.common.base.Predicate
 
 import static com.eucalyptus.util.MessageValidation.validateRecursively
 
-public class DescribeMetricCollectionTypesType extends AutoScalingMessage {
-  public DescribeMetricCollectionTypesType() {  }
+class DescribeMetricCollectionTypesType extends AutoScalingMessage {
 }
-public class Alarm extends EucalyptusData {
+class Alarm extends EucalyptusData {
   String alarmName
   String alarmARN
-  public Alarm() {  }
 }
-public class MetricGranularityTypes extends EucalyptusData {
-  public MetricGranularityTypes() {  }
-  public MetricGranularityTypes( final Collection<MetricGranularityType> member ) {
+class MetricGranularityTypes extends EucalyptusData {
+  MetricGranularityTypes() {  }
+  MetricGranularityTypes( final Collection<MetricGranularityType> member ) {
     this.member = Lists.newArrayList( member )
   }
   ArrayList<MetricGranularityType> member = Lists.newArrayList( )
 }
-public class DescribeAutoScalingNotificationTypesResponseType extends AutoScalingMessage {
-  public DescribeAutoScalingNotificationTypesResponseType() {  }
+class DescribeAutoScalingNotificationTypesResponseType extends AutoScalingMessage {
   DescribeAutoScalingNotificationTypesResult describeAutoScalingNotificationTypesResult = new DescribeAutoScalingNotificationTypesResult()
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class LaunchConfigurationNames extends EucalyptusData {
-  public LaunchConfigurationNames() {  }
+class LaunchConfigurationNames extends EucalyptusData {
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
-@ComponentMessage(AutoScaling.class)
-public class AutoScalingMessage extends BaseMessage {
+@ComponentMessage(AutoScaling)
+class AutoScalingMessage extends BaseMessage {
 
   @Override
   def <TYPE extends BaseMessage> TYPE getReply() {
@@ -95,23 +91,20 @@ public class AutoScalingMessage extends BaseMessage {
         this )
   }
 }
-public class SuspendProcessesResponseType extends AutoScalingMessage {
-  public SuspendProcessesResponseType() {  }
+class SuspendProcessesResponseType extends AutoScalingMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class AutoScalingNotificationTypes extends EucalyptusData {
-  public AutoScalingNotificationTypes() {  }
+class AutoScalingNotificationTypes extends EucalyptusData {
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
-public class TerminateInstanceInAutoScalingGroupType extends AutoScalingMessage {
+class TerminateInstanceInAutoScalingGroupType extends AutoScalingMessage {
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_INSTANCE)
   String instanceId
   @Nonnull
   Boolean shouldDecrementDesiredCapacity
-  public TerminateInstanceInAutoScalingGroupType() {  }
 }
-public class ErrorResponse extends AutoScalingMessage implements WebServiceError {
+class ErrorResponse extends AutoScalingMessage implements WebServiceError {
   String requestId
   ArrayList<Error> error = new ArrayList<Error>( )
 
@@ -134,54 +127,48 @@ public class ErrorResponse extends AutoScalingMessage implements WebServiceError
     error?.getAt(0)?.message
   }
 }
-public class BlockDeviceMappings extends EucalyptusData {
-  public BlockDeviceMappings() {  }
-  public BlockDeviceMappings( Collection<BlockDeviceMappingType> mappings ) { 
+class BlockDeviceMappings extends EucalyptusData {
+  BlockDeviceMappings() {  }
+  BlockDeviceMappings( Collection<BlockDeviceMappingType> mappings ) {
     member.addAll( mappings )
   }
   @HttpEmbedded(multiple=true)
   @HttpParameterMapping(parameter="member")
   ArrayList<BlockDeviceMappingType> member = new ArrayList<BlockDeviceMappingType>()
 }
-public class LoadBalancerNames extends EucalyptusData {
-  public LoadBalancerNames() {  }
-  public LoadBalancerNames( Collection<String> names ) {
+class LoadBalancerNames extends EucalyptusData {
+  LoadBalancerNames() {  }
+  LoadBalancerNames( Collection<String> names ) {
     if ( names != null ) member.addAll( names )
   }
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.ELB_NAME)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
-public class PolicyNames extends EucalyptusData {
-  public PolicyNames() {  }
+class PolicyNames extends EucalyptusData {
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
-public class DescribeTerminationPolicyTypesType extends AutoScalingMessage {
-  public DescribeTerminationPolicyTypesType() {  }
+class DescribeTerminationPolicyTypesType extends AutoScalingMessage {
 }
-public class DeleteTagsResponseType extends AutoScalingMessage {
-  public DeleteTagsResponseType() {  }
+class DeleteTagsResponseType extends AutoScalingMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class SetInstanceHealthResponseType extends AutoScalingMessage {
-  public SetInstanceHealthResponseType() {  }
+class SetInstanceHealthResponseType extends AutoScalingMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class DeleteAutoScalingGroupType extends AutoScalingMessage {
+class DeleteAutoScalingGroupType extends AutoScalingMessage {
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
   Boolean forceDelete
-  public DeleteAutoScalingGroupType() {  }
 }
-public class DescribeNotificationConfigurationsType extends AutoScalingMessage {
+class DescribeNotificationConfigurationsType extends AutoScalingMessage {
   AutoScalingGroupNames autoScalingGroupNames
   String nextToken
   Integer maxRecords
-  public DescribeNotificationConfigurationsType() {  }
 }
-public class ScheduledUpdateGroupAction extends EucalyptusData {
+class ScheduledUpdateGroupAction extends EucalyptusData {
   String autoScalingGroupName
   String scheduledActionName
   String scheduledActionARN
@@ -192,114 +179,97 @@ public class ScheduledUpdateGroupAction extends EucalyptusData {
   Integer minSize
   Integer maxSize
   Integer desiredCapacity
-  public ScheduledUpdateGroupAction() {  }
 }
-public class PutScheduledUpdateGroupActionResponseType extends AutoScalingMessage {
-  public PutScheduledUpdateGroupActionResponseType() {  }
+class PutScheduledUpdateGroupActionResponseType extends AutoScalingMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class ProcessType extends EucalyptusData {
+class ProcessType extends EucalyptusData {
   String processName
-  public ProcessType() {  }
-  public ProcessType( String processName ) {
+  ProcessType() {  }
+  ProcessType( String processName ) {
     this.processName = processName
   }
 }
-public class TagDescription extends EucalyptusData {
+class TagDescription extends EucalyptusData {
   String resourceId
   String resourceType
   String key
   String value
   Boolean propagateAtLaunch
-  public TagDescription() {  }
 }
-public class DeleteNotificationConfigurationType extends AutoScalingMessage {
+class DeleteNotificationConfigurationType extends AutoScalingMessage {
   String autoScalingGroupName
   String topicARN
-  public DeleteNotificationConfigurationType() {  }
 }
-public class ExecutePolicyType extends AutoScalingMessage {
+class ExecutePolicyType extends AutoScalingMessage {
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String policyName
   Boolean honorCooldown
-  public ExecutePolicyType() {  }
 }
-public class AutoScalingInstanceDetails extends EucalyptusData {
+class AutoScalingInstanceDetails extends EucalyptusData {
   String instanceId
   String autoScalingGroupName
   String availabilityZone
   String lifecycleState
   String healthStatus
   String launchConfigurationName
-  public AutoScalingInstanceDetails() {  }
+  Boolean protectedFromScaleIn
 }
-public class DeletePolicyType extends AutoScalingMessage {
+class DeletePolicyType extends AutoScalingMessage {
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String policyName
-  public DeletePolicyType() {  }
 }
-public class DescribeAutoScalingGroupsResult extends EucalyptusData {
+class DescribeAutoScalingGroupsResult extends EucalyptusData {
   AutoScalingGroupsType autoScalingGroups = new AutoScalingGroupsType()
   String nextToken
-  public DescribeAutoScalingGroupsResult() {  }
 }
-public class CreateLaunchConfigurationResponseType extends AutoScalingMessage {
-  public CreateLaunchConfigurationResponseType() {  }
+class CreateLaunchConfigurationResponseType extends AutoScalingMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class TerminateInstanceInAutoScalingGroupResponseType extends AutoScalingMessage {
-  public TerminateInstanceInAutoScalingGroupResponseType() {  }
+class TerminateInstanceInAutoScalingGroupResponseType extends AutoScalingMessage {
   TerminateInstanceInAutoScalingGroupResult terminateInstanceInAutoScalingGroupResult = new TerminateInstanceInAutoScalingGroupResult()
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class DescribeAutoScalingInstancesResponseType extends AutoScalingMessage {
-  public DescribeAutoScalingInstancesResponseType() {  }
+class DescribeAutoScalingInstancesResponseType extends AutoScalingMessage {
   DescribeAutoScalingInstancesResult describeAutoScalingInstancesResult = new DescribeAutoScalingInstancesResult()
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class PutNotificationConfigurationType extends AutoScalingMessage {
+class PutNotificationConfigurationType extends AutoScalingMessage {
   String autoScalingGroupName
   String topicARN
   AutoScalingNotificationTypes notificationTypes
-  public PutNotificationConfigurationType() {  }
 }
-public class MetricCollectionTypes extends EucalyptusData {
-  public MetricCollectionTypes() {  }
-  public MetricCollectionTypes( Collection<String> types ) {
+class MetricCollectionTypes extends EucalyptusData {
+  MetricCollectionTypes() {  }
+  MetricCollectionTypes( Collection<String> types ) {
     member.addAll( types.collect{ String type -> new MetricCollectionType( metric: type ) } )
   }
   ArrayList<MetricCollectionType> member = new ArrayList<MetricCollectionType>()
 }
-public class CreateAutoScalingGroupResponseType extends AutoScalingMessage {
-  public CreateAutoScalingGroupResponseType() {  }
+class CreateAutoScalingGroupResponseType extends AutoScalingMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class DeleteNotificationConfigurationResponseType extends AutoScalingMessage {
-  public DeleteNotificationConfigurationResponseType() {  }
+class DeleteNotificationConfigurationResponseType extends AutoScalingMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class TagDescriptionList extends EucalyptusData {
-  public TagDescriptionList() {  }
+class TagDescriptionList extends EucalyptusData {
   ArrayList<TagDescription> member = new ArrayList<TagDescription>()
 }
-public class DescribeTerminationPolicyTypesResult extends EucalyptusData {
+class DescribeTerminationPolicyTypesResult extends EucalyptusData {
   TerminationPolicies terminationPolicyTypes = new TerminationPolicies()
-  public DescribeTerminationPolicyTypesResult() {  }
 }
-public class DescribeScalingProcessTypesResponseType extends AutoScalingMessage {
-  public DescribeScalingProcessTypesResponseType() {  }
+class DescribeScalingProcessTypesResponseType extends AutoScalingMessage {
   DescribeScalingProcessTypesResult describeScalingProcessTypesResult = new DescribeScalingProcessTypesResult()
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class PutNotificationConfigurationResponseType extends AutoScalingMessage {
-  public PutNotificationConfigurationResponseType() {  }
+class PutNotificationConfigurationResponseType extends AutoScalingMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class Activity extends EucalyptusData {
+class Activity extends EucalyptusData {
   String activityId
   String autoScalingGroupName
   String description
@@ -310,49 +280,45 @@ public class Activity extends EucalyptusData {
   String statusMessage
   Integer progress
   String details
-  public Activity() {  }
+  Activity() {  }
 
-  public static Function<Activity, String> startTime() {
+  static Function<Activity, String> startTime() {
     { Activity activity -> activity.startTime } as Function<Activity, String>
   }
 }
-public class SuspendedProcesses extends EucalyptusData {
-  public SuspendedProcesses() {  }
+class SuspendedProcesses extends EucalyptusData {
   ArrayList<SuspendedProcessType> member = new ArrayList<SuspendedProcessType>()
 }
-public class InstanceMonitoring extends EucalyptusData {
+class InstanceMonitoring extends EucalyptusData {
   Boolean enabled
-  public InstanceMonitoring() {  }
-  public InstanceMonitoring( Boolean enabled ) {
+  InstanceMonitoring() {  }
+  InstanceMonitoring( Boolean enabled ) {
     this.enabled = enabled  
   }
 }
-public class DescribeScheduledActionsType extends AutoScalingMessage {
+class DescribeScheduledActionsType extends AutoScalingMessage {
   String autoScalingGroupName
   ScheduledActionNames scheduledActionNames
   Date startTime
   Date endTime
   String nextToken
   Integer maxRecords
-  public DescribeScheduledActionsType() {  }
 }
-public class Filter extends EucalyptusData {
+class Filter extends EucalyptusData {
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.TAG_FILTER)
   String name
   Values values
-  public Filter() {  }
-  public List<String> values() {
+  List<String> values() {
     values != null ?
       values.getMember() :
       []
   }
 }
-public class ErrorDetail extends EucalyptusData {
-  public ErrorDetail() {  }
+class ErrorDetail extends EucalyptusData {
 }
-public class Alarms extends EucalyptusData {
-  public Alarms() {  }
-  public Alarms( Iterable<String> alarmArns ) {
+class Alarms extends EucalyptusData {
+  Alarms() {  }
+  Alarms( Iterable<String> alarmArns ) {
     alarmArns.each { String alarmArn ->
       int nameIndex = alarmArn.indexOf( ":alarm:" );
       String alarmName = nameIndex > 0 ?
@@ -366,17 +332,15 @@ public class Alarms extends EucalyptusData {
   }
   ArrayList<Alarm> member = new ArrayList<Alarm>()
 }
-public class DescribeAutoScalingInstancesResult extends EucalyptusData {
+class DescribeAutoScalingInstancesResult extends EucalyptusData {
   AutoScalingInstances autoScalingInstances = new AutoScalingInstances()
   String nextToken
-  public DescribeAutoScalingInstancesResult() {  }
 }
-public class DescribeLaunchConfigurationsType extends AutoScalingMessage {
+class DescribeLaunchConfigurationsType extends AutoScalingMessage {
   LaunchConfigurationNames launchConfigurationNames = new LaunchConfigurationNames()
   String nextToken
   Integer maxRecords
-  public DescribeLaunchConfigurationsType() {  }
-  public List<String> launchConfigurationNames() {
+  List<String> launchConfigurationNames() {
     List<String> names = Lists.newArrayList()
     if ( launchConfigurationNames != null ) {
       names = launchConfigurationNames.getMember()  
@@ -384,40 +348,34 @@ public class DescribeLaunchConfigurationsType extends AutoScalingMessage {
     return names
   }
 }
-public class DescribeMetricCollectionTypesResponseType extends AutoScalingMessage {
-  public DescribeMetricCollectionTypesResponseType() {  }
+class DescribeMetricCollectionTypesResponseType extends AutoScalingMessage {
   DescribeMetricCollectionTypesResult describeMetricCollectionTypesResult = new DescribeMetricCollectionTypesResult()
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class AutoScalingInstances extends EucalyptusData {
-  public AutoScalingInstances() {  }
+class AutoScalingInstances extends EucalyptusData {
   ArrayList<AutoScalingInstanceDetails> member = new ArrayList<AutoScalingInstanceDetails>()
 }
-public class DescribeTagsType extends AutoScalingMessage {
+class DescribeTagsType extends AutoScalingMessage {
   Filters filters
   String nextToken
   Integer maxRecords
-  public DescribeTagsType() {  }
-  public List<Filter> filters() {
+  List<Filter> filters() {
     filters != null ?
         filters.member :
         []
   }
 }
-public class AdjustmentType extends EucalyptusData {
+class AdjustmentType extends EucalyptusData {
   String adjustmentType
-  public AdjustmentType() {  }
 }
-public class DeleteScheduledActionType extends AutoScalingMessage {
+class DeleteScheduledActionType extends AutoScalingMessage {
   String autoScalingGroupName
   String scheduledActionName
-  public DeleteScheduledActionType() {  }
 }
-public class DisableMetricsCollectionResponseType extends AutoScalingMessage {
-  public DisableMetricsCollectionResponseType() {  }
+class DisableMetricsCollectionResponseType extends AutoScalingMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class CreateAutoScalingGroupType extends AutoScalingMessage {
+class CreateAutoScalingGroupType extends AutoScalingMessage {
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME)
   String autoScalingGroupName
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
@@ -436,6 +394,7 @@ public class CreateAutoScalingGroupType extends AutoScalingMessage {
   String healthCheckType
   @AutoScalingMessageValidation.FieldRange
   Integer healthCheckGracePeriod
+  Boolean newInstancesProtectedFromScaleIn
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
   String placementGroup
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.VPC_ZONE_IDENTIFIER)
@@ -443,14 +402,13 @@ public class CreateAutoScalingGroupType extends AutoScalingMessage {
   String vpcZoneIdentifier
   TerminationPolicies terminationPolicies
   Tags tags
-  public CreateAutoScalingGroupType() {  }
-  public Collection<String> availabilityZones() {
+  Collection<String> availabilityZones() {
     return availabilityZones?.member
   }
-  public Collection<String> loadBalancerNames() {
+  Collection<String> loadBalancerNames() {
     return loadBalancerNames?.member
   }
-  public Collection<String> terminationPolicies() {
+  Collection<String> terminationPolicies() {
     return terminationPolicies?.member
   }
 
@@ -475,90 +433,77 @@ public class CreateAutoScalingGroupType extends AutoScalingMessage {
     errors
   }
 }
-public class DisableMetricsCollectionType extends AutoScalingMessage {
+class DisableMetricsCollectionType extends AutoScalingMessage {
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
   Metrics metrics
-  public DisableMetricsCollectionType() {  }
 }
-public class DescribeAdjustmentTypesType extends AutoScalingMessage {
-  public DescribeAdjustmentTypesType() {  }
+class DescribeAdjustmentTypesType extends AutoScalingMessage {
 }
-public class TerminationPolicies extends EucalyptusData {
-  public TerminationPolicies() {  }
-  public TerminationPolicies( Collection<String> terminationPolicies ) { 
+class TerminationPolicies extends EucalyptusData {
+  TerminationPolicies() {  }
+  TerminationPolicies( Collection<String> terminationPolicies ) {
     if ( terminationPolicies != null ) member.addAll( terminationPolicies )
   }
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.TERMINATION_POLICY)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
-public class NotificationConfiguration extends EucalyptusData {
+class NotificationConfiguration extends EucalyptusData {
   String autoScalingGroupName
   String topicARN
   String notificationType
-  public NotificationConfiguration() {  }
 }
-public class DescribeTagsResult extends EucalyptusData {
+class DescribeTagsResult extends EucalyptusData {
   TagDescriptionList tags
   String nextToken
-  public DescribeTagsResult() {  }
 }
-public class DescribeNotificationConfigurationsResponseType extends AutoScalingMessage {
-  public DescribeNotificationConfigurationsResponseType() {  }
+class DescribeNotificationConfigurationsResponseType extends AutoScalingMessage {
   DescribeNotificationConfigurationsResult describeNotificationConfigurationsResult = new DescribeNotificationConfigurationsResult()
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class ScheduledActionNames extends EucalyptusData {
-  public ScheduledActionNames() {  }
+class ScheduledActionNames extends EucalyptusData {
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
-public class AvailabilityZones extends EucalyptusData {
-  public AvailabilityZones() {  }
-  public AvailabilityZones( Collection<String> zones ) { 
+class AvailabilityZones extends EucalyptusData {
+  AvailabilityZones() {  }
+  AvailabilityZones( Collection<String> zones ) {
     if ( zones != null ) member.addAll( zones )
   }
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
-public class DescribeScalingActivitiesResult extends EucalyptusData {
+class DescribeScalingActivitiesResult extends EucalyptusData {
   Activities activities = new Activities()
   String nextToken
-  public DescribeScalingActivitiesResult() {  }
 }
-public class DescribeAutoScalingNotificationTypesType extends AutoScalingMessage {
-  public DescribeAutoScalingNotificationTypesType() {  }
+class DescribeAutoScalingNotificationTypesType extends AutoScalingMessage {
 }
-public class Metrics extends EucalyptusData {
-  public Metrics() {  }
+class Metrics extends EucalyptusData {
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.METRIC)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
-public class DeleteScheduledActionResponseType extends AutoScalingMessage {
-  public DeleteScheduledActionResponseType() {  }
+class DeleteScheduledActionResponseType extends AutoScalingMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class DescribeNotificationConfigurationsResult extends EucalyptusData {
+class DescribeNotificationConfigurationsResult extends EucalyptusData {
   NotificationConfigurations notificationConfigurations = new NotificationConfigurations()
   String nextToken
-  public DescribeNotificationConfigurationsResult() {  }
 }
-public class EnableMetricsCollectionType extends AutoScalingMessage {
+class EnableMetricsCollectionType extends AutoScalingMessage {
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
   Metrics metrics
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.METRIC_GRANULARITY)
   String granularity
-  public EnableMetricsCollectionType() {  }
 }
-public class EnableMetricsCollectionResponseType extends AutoScalingMessage {
-  public EnableMetricsCollectionResponseType() {  }
+class EnableMetricsCollectionResponseType extends AutoScalingMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class PutScheduledUpdateGroupActionType extends AutoScalingMessage {
+class PutScheduledUpdateGroupActionType extends AutoScalingMessage {
   String autoScalingGroupName
   String scheduledActionName
   Date time
@@ -568,87 +513,72 @@ public class PutScheduledUpdateGroupActionType extends AutoScalingMessage {
   Integer minSize
   Integer maxSize
   Integer desiredCapacity
-  public PutScheduledUpdateGroupActionType() {  }
 }
-public class SuspendedProcessType extends EucalyptusData {
+class SuspendedProcessType extends EucalyptusData {
   String processName
   String suspensionReason
-  public SuspendedProcessType() {  }
 }
-public class SecurityGroups extends EucalyptusData {
-  public SecurityGroups() {  }
-  public SecurityGroups( Collection<String> groups ) {
+class SecurityGroups extends EucalyptusData {
+  SecurityGroups() {  }
+  SecurityGroups( Collection<String> groups ) {
     member.addAll( groups )  
   }
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
-public class NotificationConfigurations extends EucalyptusData {
-  public NotificationConfigurations() {  }
+class NotificationConfigurations extends EucalyptusData {
   ArrayList<NotificationConfiguration> member = new ArrayList<NotificationConfiguration>()
 }
-public class DeleteLaunchConfigurationResponseType extends AutoScalingMessage {
-  public DeleteLaunchConfigurationResponseType() {  }
+class DeleteLaunchConfigurationResponseType extends AutoScalingMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class DescribeScheduledActionsResponseType extends AutoScalingMessage {
-  public DescribeScheduledActionsResponseType() {  }
+class DescribeScheduledActionsResponseType extends AutoScalingMessage {
   DescribeScheduledActionsResult describeScheduledActionsResult = new DescribeScheduledActionsResult()
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class Filters extends EucalyptusData {
-  public Filters() {  }
+class Filters extends EucalyptusData {
   @HttpEmbedded(multiple=true)
   @HttpParameterMapping(parameter="member")
   ArrayList<Filter> member = new ArrayList<Filter>()
 }
-public class ResumeProcessesType extends AutoScalingMessage {
+class ResumeProcessesType extends AutoScalingMessage {
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
   ProcessNames scalingProcesses
-  public ResumeProcessesType() {  }
 }
-public class DescribeAdjustmentTypesResponseType extends AutoScalingMessage {
-  public DescribeAdjustmentTypesResponseType() {  }
+class DescribeAdjustmentTypesResponseType extends AutoScalingMessage {
   DescribeAdjustmentTypesResult describeAdjustmentTypesResult = new DescribeAdjustmentTypesResult()
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class InstanceIds extends EucalyptusData {
-  public InstanceIds() {  }
+class InstanceIds extends EucalyptusData {
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_INSTANCE_VERBOSE)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
-public class SuspendProcessesType extends AutoScalingMessage {
+class SuspendProcessesType extends AutoScalingMessage {
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
   ProcessNames scalingProcesses
-  public SuspendProcessesType() {  }
 }
-public class LaunchConfigurationsType extends EucalyptusData {
-  public LaunchConfigurationsType() {  }
+class LaunchConfigurationsType extends EucalyptusData {
   ArrayList<LaunchConfigurationType> member = new ArrayList<LaunchConfigurationType>()
 }
-public class Instances extends EucalyptusData {
-  public Instances() {  }
+class Instances extends EucalyptusData {
   ArrayList<Instance> member = new ArrayList<Instance>()
 }
-public class TerminateInstanceInAutoScalingGroupResult extends EucalyptusData {
+class TerminateInstanceInAutoScalingGroupResult extends EucalyptusData {
   Activity activity
-  public TerminateInstanceInAutoScalingGroupResult() {  }
 }
-public class DescribeScheduledActionsResult extends EucalyptusData {
+class DescribeScheduledActionsResult extends EucalyptusData {
   ScheduledUpdateGroupActions scheduledUpdateGroupActions
   String nextToken
-  public DescribeScheduledActionsResult() {  }
 }
-public class DescribeAutoScalingInstancesType extends AutoScalingMessage {
+class DescribeAutoScalingInstancesType extends AutoScalingMessage {
   InstanceIds instanceIds
   Integer maxRecords
   String nextToken
-  public DescribeAutoScalingInstancesType() {  }
-  public List<String> instanceIds() {
+  List<String> instanceIds() {
     List<String> names = Lists.newArrayList()
     if ( instanceIds != null ) {
       names = instanceIds.getMember()
@@ -656,26 +586,22 @@ public class DescribeAutoScalingInstancesType extends AutoScalingMessage {
     return names
   }
 }
-public class DeleteTagsType extends AutoScalingMessage {
+class DeleteTagsType extends AutoScalingMessage {
   @Nonnull
   Tags tags
-  public DeleteTagsType() {  }
 }
-public class UpdateAutoScalingGroupResponseType extends AutoScalingMessage {
-  public UpdateAutoScalingGroupResponseType() {  }
+class UpdateAutoScalingGroupResponseType extends AutoScalingMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class EnabledMetric extends EucalyptusData {
+class EnabledMetric extends EucalyptusData {
   String metric
   String granularity = "1Minute"
-  public EnabledMetric() {  }
 }
-public class DescribePoliciesResponseType extends AutoScalingMessage {
-  public DescribePoliciesResponseType() {  }
+class DescribePoliciesResponseType extends AutoScalingMessage {
   DescribePoliciesResult describePoliciesResult = new DescribePoliciesResult()
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class TagType extends EucalyptusData {
+class TagType extends EucalyptusData {
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME)
   String resourceId
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.TAG_RESOURCE)
@@ -685,78 +611,68 @@ public class TagType extends EucalyptusData {
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.STRING_256)
   String value
   Boolean propagateAtLaunch
-  public TagType() {  }
 }
-public class DescribeTagsResponseType extends AutoScalingMessage {
-  public DescribeTagsResponseType() {  }
+class DescribeTagsResponseType extends AutoScalingMessage {
   DescribeTagsResult describeTagsResult = new DescribeTagsResult()
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class ScheduledUpdateGroupActions extends EucalyptusData {
-  public ScheduledUpdateGroupActions() {  }
+class ScheduledUpdateGroupActions extends EucalyptusData {
   ArrayList<ScheduledUpdateGroupAction> member = new ArrayList<ScheduledUpdateGroupAction>()
 }
-public class DeletePolicyResponseType extends AutoScalingMessage {
-  public DeletePolicyResponseType() {  }
+class DeletePolicyResponseType extends AutoScalingMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class Instance extends EucalyptusData {
+class Instance extends EucalyptusData {
   String instanceId
   String availabilityZone
   String lifecycleState
   String healthStatus
   String launchConfigurationName
-  public Instance() {  }
+  Boolean protectedFromScaleIn
 }
-public class ExecutePolicyResponseType extends AutoScalingMessage {
-  public ExecutePolicyResponseType() {  }
+class ExecutePolicyResponseType extends AutoScalingMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class ActivityIds extends EucalyptusData {
-  public ActivityIds() {  }
+class ActivityIds extends EucalyptusData {
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.UUID_VERBOSE)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
-public class MetricGranularityType extends EucalyptusData {
+class MetricGranularityType extends EucalyptusData {
   String granularity
-  public MetricGranularityType() {  }
-  public MetricGranularityType(final String granularity) {
+  MetricGranularityType() {  }
+  MetricGranularityType(final String granularity) {
     this.granularity = granularity
   }
 }
-public class AdjustmentTypes extends EucalyptusData {
-  public AdjustmentTypes() {  }
-  public AdjustmentTypes( Collection<String> values ) {
+class AdjustmentTypes extends EucalyptusData {
+  AdjustmentTypes() {  }
+  AdjustmentTypes( Collection<String> values ) {
     member = values.collect { String value ->
       new AdjustmentType( adjustmentType: value )
     } as ArrayList<AdjustmentType>
   }
   ArrayList<AdjustmentType> member = new ArrayList<AdjustmentType>()
 }
-public class PutScalingPolicyResponseType extends AutoScalingMessage {
-  public PutScalingPolicyResponseType() {  }
+class PutScalingPolicyResponseType extends AutoScalingMessage {
   PutScalingPolicyResult putScalingPolicyResult = new PutScalingPolicyResult()
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class Tags extends EucalyptusData {
-  public Tags() {  }
+class Tags extends EucalyptusData {
   @HttpParameterMapping(parameter="member")
   @HttpEmbedded(multiple=true)
   ArrayList<TagType> member = new ArrayList<TagType>()
 }
-public class SetDesiredCapacityResponseType extends AutoScalingMessage {
-  public SetDesiredCapacityResponseType() {  }
+class SetDesiredCapacityResponseType extends AutoScalingMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class DescribeScalingActivitiesType extends AutoScalingMessage {
+class DescribeScalingActivitiesType extends AutoScalingMessage {
   ActivityIds activityIds
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
   Integer maxRecords
   String nextToken
-  public DescribeScalingActivitiesType() {  }
-  public List<String> activityIds() {
+  List<String> activityIds() {
     List<String> ids = Lists.newArrayList()
     if ( activityIds != null ) {
       ids = activityIds.getMember()
@@ -764,7 +680,7 @@ public class DescribeScalingActivitiesType extends AutoScalingMessage {
     return ids
   }
 }
-public class LaunchConfigurationType extends EucalyptusData {
+class LaunchConfigurationType extends EucalyptusData {
   String launchConfigurationName
   String launchConfigurationARN
   String imageId
@@ -781,28 +697,24 @@ public class LaunchConfigurationType extends EucalyptusData {
   Date createdTime
   Boolean ebsOptimized
   Boolean associatePublicIpAddress
-  public LaunchConfigurationType() {  }
 }
-public class Processes extends EucalyptusData {
-  public Processes() {  }
+class Processes extends EucalyptusData {
   ArrayList<ProcessType> member = new ArrayList<ProcessType>()
 }
-public class Ebs extends EucalyptusData {
+class Ebs extends EucalyptusData {
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_SNAPSHOT)
   String snapshotId
   @AutoScalingMessageValidation.FieldRange
   Integer volumeSize
-  public Ebs() {  }
 }
-public class SetInstanceHealthType extends AutoScalingMessage {
+class SetInstanceHealthType extends AutoScalingMessage {
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_INSTANCE)
   String instanceId
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.HEALTH_STATUS)
   String healthStatus
   Boolean shouldRespectGracePeriod
-  public SetInstanceHealthType() {  }
 }
-public class UpdateAutoScalingGroupType extends AutoScalingMessage {
+class UpdateAutoScalingGroupType extends AutoScalingMessage {
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
@@ -820,17 +732,17 @@ public class UpdateAutoScalingGroupType extends AutoScalingMessage {
   String healthCheckType
   @AutoScalingMessageValidation.FieldRange
   Integer healthCheckGracePeriod
+  Boolean newInstancesProtectedFromScaleIn
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
   String placementGroup
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
   @HttpParameterMapping(parameter="VPCZoneIdentifier")
   String vpcZoneIdentifier
   TerminationPolicies terminationPolicies
-  public UpdateAutoScalingGroupType() {  }
-  public Collection<String> availabilityZones() {
+  Collection<String> availabilityZones() {
     return availabilityZones?.member
   }
-  public Collection<String> terminationPolicies() {
+  Collection<String> terminationPolicies() {
     return terminationPolicies?.member
   }
   @Override
@@ -848,19 +760,18 @@ public class UpdateAutoScalingGroupType extends AutoScalingMessage {
     errors
   }
 }
-public class DescribeMetricCollectionTypesResult extends EucalyptusData {
+class DescribeMetricCollectionTypesResult extends EucalyptusData {
   MetricCollectionTypes metrics
   MetricGranularityTypes granularities = new MetricGranularityTypes()
-  public DescribeMetricCollectionTypesResult() {  }
 }
-public class BlockDeviceMappingType extends EucalyptusData {
+class BlockDeviceMappingType extends EucalyptusData {
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
   String virtualName
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
   String deviceName
   Ebs ebs
-  public BlockDeviceMappingType() {  }
-  public BlockDeviceMappingType( String deviceName, String virtualName, String snapshotId, Integer volumeSize ) {
+  BlockDeviceMappingType() {  }
+  BlockDeviceMappingType( String deviceName, String virtualName, String snapshotId, Integer volumeSize ) {
     this.deviceName = deviceName
     this.virtualName = virtualName
     if ( snapshotId != null || volumeSize != null ) {
@@ -868,49 +779,42 @@ public class BlockDeviceMappingType extends EucalyptusData {
     }
   }
 }
-public class ScalingPolicies extends EucalyptusData {
-  public ScalingPolicies() {  }
+class ScalingPolicies extends EucalyptusData {
   ArrayList<ScalingPolicyType> member = new ArrayList<ScalingPolicyType>()
 }
-public class ResponseMetadata extends EucalyptusData {
+class ResponseMetadata extends EucalyptusData {
   String requestId
-  public ResponseMetadata() {  }
 }
-public class DescribeTerminationPolicyTypesResponseType extends AutoScalingMessage {
-  public DescribeTerminationPolicyTypesResponseType() {  }
+class DescribeTerminationPolicyTypesResponseType extends AutoScalingMessage {
   DescribeTerminationPolicyTypesResult describeTerminationPolicyTypesResult = new DescribeTerminationPolicyTypesResult()
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class DescribeLaunchConfigurationsResult extends EucalyptusData {
+class DescribeLaunchConfigurationsResult extends EucalyptusData {
   LaunchConfigurationsType launchConfigurations = new LaunchConfigurationsType()
   String nextToken
-  public DescribeLaunchConfigurationsResult() {  }
 }
-public class DescribePoliciesResult extends EucalyptusData {
+class DescribePoliciesResult extends EucalyptusData {
   ScalingPolicies scalingPolicies = new ScalingPolicies()
   String nextToken
-  public DescribePoliciesResult() {  }
 }
-public class AutoScalingGroupsType extends EucalyptusData {
-  public AutoScalingGroupsType() {  }
+class AutoScalingGroupsType extends EucalyptusData {
   ArrayList<AutoScalingGroupType> member = new ArrayList<AutoScalingGroupType>()
 }
-public class EnabledMetrics extends EucalyptusData {
-  public EnabledMetrics() {  }
-  public EnabledMetrics( Collection<String> enabledMetrics ) {
+class EnabledMetrics extends EucalyptusData {
+  EnabledMetrics() {  }
+  EnabledMetrics( Collection<String> enabledMetrics ) {
     if ( enabledMetrics != null ) member.addAll( enabledMetrics.collect{ String metric -> new EnabledMetric(metric: metric) } )
   }
   ArrayList<EnabledMetric> member = new ArrayList<EnabledMetric>()
 }
-public class SetDesiredCapacityType extends AutoScalingMessage {
+class SetDesiredCapacityType extends AutoScalingMessage {
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
   @Nonnull @AutoScalingMessageValidation.FieldRange
   Integer desiredCapacity
   Boolean honorCooldown
-  public SetDesiredCapacityType() {  }
 }
-public class PutScalingPolicyType extends AutoScalingMessage {
+class PutScalingPolicyType extends AutoScalingMessage {
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME)
@@ -922,14 +826,12 @@ public class PutScalingPolicyType extends AutoScalingMessage {
   @AutoScalingMessageValidation.FieldRange
   Integer cooldown
   Integer minAdjustmentStep
-  public PutScalingPolicyType() {  }
 }
-public class DescribeAutoScalingGroupsResponseType extends AutoScalingMessage {
-  public DescribeAutoScalingGroupsResponseType() {  }
+class DescribeAutoScalingGroupsResponseType extends AutoScalingMessage {
   DescribeAutoScalingGroupsResult describeAutoScalingGroupsResult = new DescribeAutoScalingGroupsResult()
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class AutoScalingGroupType extends EucalyptusData {
+class AutoScalingGroupType extends EucalyptusData {
   String autoScalingGroupName
   String autoScalingGroupARN
   String launchConfigurationName
@@ -944,33 +846,30 @@ public class AutoScalingGroupType extends EucalyptusData {
   Instances instances
   Date createdTime
   SuspendedProcesses suspendedProcesses
+  Boolean newInstancesProtectedFromScaleIn
   String placementGroup
   String vpcZoneIdentifier
   EnabledMetrics enabledMetrics
   String status
   TagDescriptionList tags
   TerminationPolicies terminationPolicies
-  public AutoScalingGroupType() {  }
 
-  public static Function<AutoScalingGroupType, String> groupName() {
+  static Function<AutoScalingGroupType, String> groupName() {
     { AutoScalingGroupType group -> group.autoScalingGroupName } as Function<AutoScalingGroupType, String>
   }
 }
-public class DeleteLaunchConfigurationType extends AutoScalingMessage {
+class DeleteLaunchConfigurationType extends AutoScalingMessage {
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String launchConfigurationName
-  public DeleteLaunchConfigurationType() {  }
 }
-public class DeleteAutoScalingGroupResponseType extends AutoScalingMessage {
-  public DeleteAutoScalingGroupResponseType() {  }
+class DeleteAutoScalingGroupResponseType extends AutoScalingMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class DescribeScalingActivitiesResponseType extends AutoScalingMessage {
-  public DescribeScalingActivitiesResponseType() {  }
+class DescribeScalingActivitiesResponseType extends AutoScalingMessage {
   DescribeScalingActivitiesResult describeScalingActivitiesResult = new DescribeScalingActivitiesResult()
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class ScalingPolicyType extends EucalyptusData {
+class ScalingPolicyType extends EucalyptusData {
   String autoScalingGroupName
   String policyName
   Integer scalingAdjustment
@@ -979,47 +878,40 @@ public class ScalingPolicyType extends EucalyptusData {
   String policyARN
   Alarms alarms
   Integer minAdjustmentStep
-  public ScalingPolicyType() {  }
 
-  public static Function<ScalingPolicyType, String> policyArn() {
+  static Function<ScalingPolicyType, String> policyArn() {
     { ScalingPolicyType policy -> policy.policyARN } as Function<ScalingPolicyType, String>
   }
 }
-public class AutoScalingGroupNames extends EucalyptusData {
-  public AutoScalingGroupNames() {  }
+class AutoScalingGroupNames extends EucalyptusData {
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
-public class Values extends EucalyptusData {
-  public Values() {  }
+class Values extends EucalyptusData {
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.STRING_256)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
-public class Error extends EucalyptusData {
+class Error extends EucalyptusData {
   String type
   String code
   String message
-  public Error() {  }
   ErrorDetail detail = new ErrorDetail()
 }
-public class CreateOrUpdateTagsResponseType extends AutoScalingMessage {
-  public CreateOrUpdateTagsResponseType() {  }
+class CreateOrUpdateTagsResponseType extends AutoScalingMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class Activities extends EucalyptusData {
-  public Activities() {  }
+class Activities extends EucalyptusData {
   ArrayList<Activity> member = new ArrayList<Activity>()
 }
-public class DescribePoliciesType extends AutoScalingMessage {
+class DescribePoliciesType extends AutoScalingMessage {
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
   PolicyNames policyNames
   String nextToken
   Integer maxRecords
-  public DescribePoliciesType() {  }
-  public List<String> policyNames() {
+  List<String> policyNames() {
     List<String> names = Lists.newArrayList()
     if ( policyNames != null ) {
       names = policyNames.getMember()
@@ -1027,20 +919,17 @@ public class DescribePoliciesType extends AutoScalingMessage {
     return names
   }
 }
-public class PutScalingPolicyResult extends EucalyptusData {
+class PutScalingPolicyResult extends EucalyptusData {
   String policyARN
-  public PutScalingPolicyResult() {  }
 }
-public class ResumeProcessesResponseType extends AutoScalingMessage {
-  public ResumeProcessesResponseType() {  }
+class ResumeProcessesResponseType extends AutoScalingMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class DescribeAutoScalingGroupsType extends AutoScalingMessage {
+class DescribeAutoScalingGroupsType extends AutoScalingMessage {
   AutoScalingGroupNames autoScalingGroupNames
   String nextToken
   Integer maxRecords
-  public DescribeAutoScalingGroupsType() {  }
-  public List<String> autoScalingGroupNames() {
+  List<String> autoScalingGroupNames() {
     List<String> names = Lists.newArrayList()
     if ( autoScalingGroupNames != null ) {
       names = autoScalingGroupNames.getMember()
@@ -1048,7 +937,7 @@ public class DescribeAutoScalingGroupsType extends AutoScalingMessage {
     return names
   }  
 }
-public class CreateLaunchConfigurationType extends AutoScalingMessage {
+class CreateLaunchConfigurationType extends AutoScalingMessage {
   Boolean associatePublicIpAddress
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME)
   String launchConfigurationName
@@ -1074,7 +963,6 @@ public class CreateLaunchConfigurationType extends AutoScalingMessage {
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.IAM_NAME_OR_ARN)
   String iamInstanceProfile
   Boolean ebsOptimized
-  public CreateLaunchConfigurationType() {  }
 
   @Override
   Map<String, String> validate() {
@@ -1094,47 +982,52 @@ public class CreateLaunchConfigurationType extends AutoScalingMessage {
     errors
   }
 }
-public class MetricCollectionType extends EucalyptusData {
+class MetricCollectionType extends EucalyptusData {
   String metric
-  public MetricCollectionType() {  }
 }
-public class DescribeLaunchConfigurationsResponseType extends AutoScalingMessage {
-  public DescribeLaunchConfigurationsResponseType() {  }
+class DescribeLaunchConfigurationsResponseType extends AutoScalingMessage {
   DescribeLaunchConfigurationsResult describeLaunchConfigurationsResult = new DescribeLaunchConfigurationsResult()
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class DescribeScalingProcessTypesType extends AutoScalingMessage {
-  public DescribeScalingProcessTypesType() {  }
+class DescribeScalingProcessTypesType extends AutoScalingMessage {
 }
-public class CreateOrUpdateTagsType extends AutoScalingMessage {
+class CreateOrUpdateTagsType extends AutoScalingMessage {
   @Nonnull
   Tags tags
-  public CreateOrUpdateTagsType() {  }
 }
-public class ProcessNames extends EucalyptusData {
-  public ProcessNames() {  }
+class ProcessNames extends EucalyptusData {
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.SCALING_PROCESS)
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
-public class DescribeAdjustmentTypesResult extends EucalyptusData {
+class DescribeAdjustmentTypesResult extends EucalyptusData {
   AdjustmentTypes adjustmentTypes
-  public DescribeAdjustmentTypesResult() {  }
 }
-public class DescribeScalingProcessTypesResult extends EucalyptusData {
+class DescribeScalingProcessTypesResult extends EucalyptusData {
   Processes processes = new Processes()
-  public DescribeScalingProcessTypesResult() {  }
 }
-public class DescribeAutoScalingNotificationTypesResult extends EucalyptusData {
+class DescribeAutoScalingNotificationTypesResult extends EucalyptusData {
   AutoScalingNotificationTypes autoScalingNotificationTypes
-  public DescribeAutoScalingNotificationTypesResult() {  }
 }
-public class DescribeAccountLimitsType extends AutoScalingMessage {
+class DescribeAccountLimitsType extends AutoScalingMessage {
 }
-public class DescribeAccountLimitsResponseType extends AutoScalingMessage {
-  public DescribeAccountLimitsResponseType() {  }
+class DescribeAccountLimitsResponseType extends AutoScalingMessage {
   DescribeAccountLimitsResult describeAccountLimitsResult = new DescribeAccountLimitsResult()
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class DescribeAccountLimitsResult extends EucalyptusData {
+class DescribeAccountLimitsResult extends EucalyptusData {
+}
+class SetInstanceProtectionType extends AutoScalingMessage {
+  @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
+  String autoScalingGroupName
+  @Nonnull
+  InstanceIds instanceIds
+  @Nonnull
+  Boolean protectedFromScaleIn
+}
+class SetInstanceProtectionResponseType extends AutoScalingMessage {
+  SetInstanceProtectionResult setInstanceProtectionResult = new SetInstanceProtectionResult()
+  ResponseMetadata responseMetadata = new ResponseMetadata()
+}
+class SetInstanceProtectionResult extends EucalyptusData {
 }

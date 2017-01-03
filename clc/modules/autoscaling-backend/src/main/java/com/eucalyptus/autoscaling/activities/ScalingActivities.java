@@ -25,7 +25,7 @@ import java.util.Collection;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import com.eucalyptus.autoscaling.common.backend.msgs.Activity;
+import com.eucalyptus.autoscaling.common.msgs.Activity;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.util.Callback;

@@ -38,6 +38,7 @@ import com.eucalyptus.autoscaling.common.msgs.Ebs
 import com.eucalyptus.autoscaling.common.msgs.ExecutePolicyType
 import com.eucalyptus.autoscaling.common.msgs.Filter
 import com.eucalyptus.autoscaling.common.msgs.Filters
+import com.eucalyptus.autoscaling.common.msgs.InstanceIds
 import com.eucalyptus.autoscaling.common.msgs.InstanceMonitoring
 import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationNames
 import com.eucalyptus.autoscaling.common.msgs.LoadBalancerNames
@@ -45,6 +46,7 @@ import com.eucalyptus.autoscaling.common.msgs.PolicyNames
 import com.eucalyptus.autoscaling.common.msgs.PutScalingPolicyType
 import com.eucalyptus.autoscaling.common.msgs.SecurityGroups
 import com.eucalyptus.autoscaling.common.msgs.SetDesiredCapacityType
+import com.eucalyptus.autoscaling.common.msgs.SetInstanceProtectionType
 import com.eucalyptus.autoscaling.common.msgs.TerminationPolicies
 import com.eucalyptus.autoscaling.common.msgs.UpdateAutoScalingGroupType
 import com.eucalyptus.autoscaling.common.msgs.Values
@@ -100,8 +102,9 @@ class AutoScalingBindingTest extends QueryBindingTestSupport {
         loadBalancerNames: new LoadBalancerNames( member: [ 'Balancer1', 'Balancer1', 'Balancer2' ] ),
         healthCheckType: 'EC2',
         healthCheckGracePeriod: 3000,
-        terminationPolicies: new TerminationPolicies( member: [ 'Default' ] )
-    ), 14 )
+        terminationPolicies: new TerminationPolicies( member: [ 'Default' ] ),
+        newInstancesProtectedFromScaleIn: true,
+    ), 15 )
 
     // CreateLaunchConfiguration
     bindAndAssertObject( asb, CreateLaunchConfigurationType.class, "CreateLaunchConfiguration", new CreateLaunchConfigurationType(
@@ -116,7 +119,7 @@ class AutoScalingBindingTest extends QueryBindingTestSupport {
         blockDeviceMappings: new BlockDeviceMappings( member: [
             new BlockDeviceMappingType( deviceName: '/dev/sdf', virtualName: 'ephemeral0' ),
             new BlockDeviceMappingType( deviceName: '/dev/sdh', ebs: new Ebs( volumeSize: 12, snapshotId: 'snap-00000001' ) ) ] ),
-        instanceMonitoring: new InstanceMonitoring( enabled: true )
+        instanceMonitoring: new InstanceMonitoring( enabled: true ),
     ), 15 )
 
     // DeleteAutoScalingGroup
@@ -201,8 +204,9 @@ class AutoScalingBindingTest extends QueryBindingTestSupport {
         availabilityZones: new AvailabilityZones( member: [ 'C', 'B', '1' ] ),
         healthCheckType: 'ELB',
         healthCheckGracePeriod: 4534,
-        terminationPolicies: new TerminationPolicies( member: [ 'Default' ] )
-    ), 12 )
+        terminationPolicies: new TerminationPolicies( member: [ 'Default' ] ),
+        newInstancesProtectedFromScaleIn: true,
+    ), 13 )
 
     // DescribeTags
     bindAndAssertObject( asb, DescribeTagsType.class, "DescribeTags", new DescribeTagsType(
@@ -219,5 +223,15 @@ class AutoScalingBindingTest extends QueryBindingTestSupport {
             ],
         )
     ), 2 )
+
+    // SetInstanceProtection
+    bindAndAssertObject( asb, SetInstanceProtectionType.class, "SetInstanceProtection", new SetInstanceProtectionType(
+        autoScalingGroupName: 'GroupName',
+        instanceIds: new InstanceIds(
+          member: [ 'i-00000000' ]
+        ),
+        protectedFromScaleIn: true,
+    ), 3 )
+
   }
 }
