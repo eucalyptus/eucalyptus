@@ -457,6 +457,7 @@ int gni_vpcsubnet_get_interfaces(globalNetworkInfo *gni, gni_vpcsubnet *vpcsubne
 gni_vpc *gni_get_vpc(globalNetworkInfo *gni, char *name, int *startidx);
 gni_vpcsubnet *gni_get_vpcsubnet(gni_vpc *vpc, char *name, int *startidx);
 gni_instance *gni_get_interface(gni_vpcsubnet *vpcsubnet, char *name, int *startidx);
+gni_instance *gni_get_interface_by_shortid(gni_vpcsubnet *vpcsubnet, char *name, int *startidx);
 gni_nat_gateway *gni_get_natgateway(gni_vpc *vpc, char *name, int *startidx);
 gni_route_table *gni_get_routetable(gni_vpc *vpc, char *name, int *startidx);
 gni_secgroup *gni_get_secgroup(globalNetworkInfo *gni, char *name, int *startidx);

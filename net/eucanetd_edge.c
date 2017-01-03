@@ -1285,7 +1285,7 @@ int do_edge_update_l2(edge_config *edge) {
     char cmd[EUCA_MAX_PATH] = "";
     char *strptra = NULL;
     char *strptrb = NULL;
-    char vnetinterface[64];
+    char vnetinterface[IF_NAME_LEN];
     char *gwip = NULL;
     char *brmac = NULL;
     gni_instance *instances = NULL;
@@ -1357,7 +1357,14 @@ int do_edge_update_l2(edge_config *edge) {
                 strptra = hex2dot(instances[i].privateIp);
                 hex2mac(instances[i].macAddress, &strptrb);
 
-                snprintf(vnetinterface, 63, "vn_%s", instances[i].name);
+                char *ishort = euca_truncate_interfaceid(instances[i].name);
+                if (ishort) {
+                    snprintf(vnetinterface, IF_NAME_LEN, "vn_%s", ishort);
+                } else {
+                    LOGWARN("Failed to get short id from %s\n", instances[i].name);
+                    snprintf(vnetinterface, IF_NAME_LEN, "vn_%s", instances[i].name);
+                }
+                EUCA_FREE(ishort);
 
                 if (strptra && strptrb) {
                     if (!edge->config->disable_l2_isolation) {

@@ -4842,6 +4842,38 @@ gni_instance *gni_get_interface(gni_vpcsubnet *vpcsubnet, char *name, int *start
 }
 
 /**
+ * Searches and returns the VPC subnet interface that matches the name (short ID), if found.
+ * This search matches both long and short IDs.
+ * @param vpcsubnet [in] gni_vpcsubnet structure that contains the interface to search.
+ * @param name [in] name of the interface of interest.
+ * @param startidx [i/o] start index to the array of VPC subnets interfaces in gni. If a matching VPC
+ * subnet interface is found, startidx is updated to aid subsequent searches (ordering of objects in
+ * GNI is assumed).
+ * @return pointer to the gni_vpcsubnet of interest when found. NULL otherwise.
+ */
+gni_instance *gni_get_interface_by_shortid(gni_vpcsubnet *vpcsubnet, char *name, int *startidx) {
+    gni_instance **interfaces = NULL;
+    int start = 0;
+
+    if ((vpcsubnet == NULL) || (name == NULL)) {
+        return NULL;
+    }
+    if (startidx) {
+        start = *startidx;
+    }
+    interfaces = vpcsubnet->interfaces;
+    for (int i = start; i < vpcsubnet->max_interfaces; i++) {
+        if (strstr(interfaces[i]->name, name)) {
+            if (startidx) {
+                *startidx = i + 1;
+            }
+            return (interfaces[i]);
+        }
+    }
+    return (NULL);
+}
+
+/**
  * Searches and returns the VPC natgateway that matches the name in the argument, if found.
  * @param vpc [in] gni_vpc that contains the natgateway to search.
  * @param name [in] name of the VPC natgateway of interest.

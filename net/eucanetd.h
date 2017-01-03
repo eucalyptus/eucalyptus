@@ -326,7 +326,7 @@ void eucanetd_emulate_sigusr2(void);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-//! Macro to check wether or not a given peer value is valid
+//! Macro to check whether or not a given peer value is valid
 #define PEER_IS_VALID(_peer)             (((_peer) > PEER_INVALID) && ((_peer) < PEER_MAX))
 
 //! Macro to determine if we are on a CLC

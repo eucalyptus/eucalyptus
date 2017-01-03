@@ -146,6 +146,10 @@ static inline boolean dev_is_vlan_valid(u16 vlan);
 //! API to force remove a bridge device
 static int dev_remove_bridge_forced(dev_handler *devh, const char *psBridgeName);
 
+static inline void dev_free_list(dev_entry **pList, int nbItems);
+static inline void dev_free_ips(in_addr_entry **pList);
+static inline void dev_in_addr_entry(in_addr_entry *pEntry, const char *psDeviceName, in_addr_t address, in_addr_t netmask);
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                   MACROS                                   |
@@ -422,7 +426,7 @@ boolean dev_exist(const char *psDeviceName) {
 }
 
 /**
- * Checks wether or not a given device is currently UP
+ * Checks whether or not a given device is currently UP
  *
  * @param psDeviceName [in] a string pointer to the device name we are checking
  *
@@ -617,7 +621,7 @@ int dev_rename(dev_handler *devh, const char *psDeviceName, const char *psNewDev
 }
 
 /**
- * Checks wether or not a given VLAN identifier is valid. It should be between 0 and 4095.
+ * Checks whether or not a given VLAN identifier is valid. It should be between 0 and 4095.
  *
  * @param vlan [in] the VLAN identifier to validate
  *
@@ -691,7 +695,7 @@ int dev_get_vlan_id(const char *psDeviceName) {
 }
 
 /**
- * Checks wether or not a given VLAN is configured on a given device. Under Linux,
+ * Checks whether or not a given VLAN is configured on a given device. Under Linux,
  * when adding a VLAN to a network device, this results in creating a new device
  * with the name set as [device_name].[vlan].
  *
@@ -884,7 +888,7 @@ boolean dev_is_bridge(const char *psDeviceName) {
 }
 
 /**
- * Checks wether or not a given device is a bridged interface. If the bridge
+ * Checks whether or not a given device is a bridged interface. If the bridge
  * device name is provided, it will also check if the device is a member of
  * the given bridge device.
  *
@@ -929,7 +933,7 @@ boolean dev_is_bridge_interface(const char *psDeviceName, const char *psBridgeNa
 }
 
 /**
- * Checks wether or not a given bridge device has associated interfaces.
+ * Checks whether or not a given bridge device has associated interfaces.
  *
  * @param devh [in] pointer to the device handler
  * @param psBridgeName [in] a constant string pointer to the bridge device name to validate
@@ -1294,6 +1298,69 @@ static int dev_remove_bridge_forced(dev_handler *devh, const char *psBridgeName)
 }
 
 /**
+ * Free a list of device names.
+ *
+ * @param[in,out] pList a pointer to a list of string that will contain the device names
+ * @param[in]     nbItems number of items to free in the list
+ *
+ * @pre
+ *     psDevNames SHOULD not be NULL
+ *
+ * @post
+ *     The memory is freed and pList is set to NULL
+ */
+static inline void dev_free_list(dev_entry **pList, int nbItems) {
+    if (pList != NULL) {
+        EUCA_FREE((*pList));
+    }
+}
+
+/**
+ * Free a list of ips.
+ *
+ * @param pList [in,out] a pointer to a list of in_addr_entry
+ *
+ * @pre
+ *     psDevNames SHOULD not be NULL
+ *
+ * @post
+ *     The memory is freed and pList is set to NULL
+ */
+static inline void dev_free_ips(in_addr_entry **pList) {
+    if (pList != NULL) {
+        EUCA_FREE((*pList));
+    }
+}
+
+/**
+ * Initialize an in_addr_entry structure with the given information.
+ *
+ * @param pEntry [in,out] a pointer to the structure to initialize
+ * @param psDeviceName [in] a string pointer to the device name associated with this IP entry
+ * @param address [in] the IP address
+ * @param netmask [in] the netmask address
+ *
+ * @pre
+ *     pEntry SHOULD not be NULL
+ *
+ * @post
+ *     The structure is initialized
+ */
+static inline void dev_in_addr_entry(in_addr_entry *pEntry, const char *psDeviceName, in_addr_t address, in_addr_t netmask) {
+    char *sAddress = NULL;
+    if (pEntry) {
+        snprintf(pEntry->sDevName, IF_NAME_LEN, "%s", psDeviceName);
+        pEntry->address = address;
+        pEntry->netmask = netmask;
+        pEntry->slashnet = NETMASK_TO_SLASHNET(netmask);
+        pEntry->broascast = (address | ~netmask);
+        sAddress = hex2dot(address);
+        snprintf(pEntry->sHost, NETWORK_ADDR_LEN, "%s/%u", sAddress, pEntry->slashnet);
+        EUCA_FREE(sAddress);
+    }
+}
+
+/**
  * Creates a bridge device. If the device already exists and is a bridge, this is
  * basically a no-op.
  *
@@ -1471,7 +1538,7 @@ int dev_bridge_delete_interface(dev_handler *devh, const char *psBridgeName, con
 }
 
 /**
- * This checks wether or not a given device is a tunnel device. For our current
+ * This checks whether or not a given device is a tunnel device. For our current
  * purpose, any tunnel device has its nane starting with "tap-".
  *
  * @param psDeviceName [in] a constant string pointer to the device name we are assessing
@@ -1708,7 +1775,7 @@ boolean dev_has_ip(const char *psDeviceName, in_addr_t ip) {
 }
 
 /**
- * Checks wether or not an IP host is installed on the given device. If NULL, this act as
+ * Checks whether or not an IP host is installed on the given device. If NULL, this act as
  * looking for the IP address on the entire system
  *
  * @param psDeviceName [in] an optional string pointer to the device name to lookup

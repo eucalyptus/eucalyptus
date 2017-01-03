@@ -911,9 +911,9 @@ int do_midonet_populate_vpcs(mido_config *mido) {
     // - for each VPC, for each subnet, find all instances (and populate instances)
 
     int i = 0, j = 0, k = 0, rc = 0, rtid = 0, natgrtid = 0, ret = 0;
-    char subnetname[16], vpcname[16], sgname[16];
-    char instanceId[16];
-    char natgname[32];
+    char subnetname[LID_LEN], vpcname[LID_LEN], sgname[LID_LEN];
+    char instanceId[LID_LEN];
+    char natgname[LID_LEN];
     char tmpstr[64];
     midoname **chains = NULL;
     int max_chains = 0;
@@ -962,8 +962,8 @@ int do_midonet_populate_vpcs(mido_config *mido) {
     for (i = 0; i < max_bridges; i++) {
         LOGTRACE("inspecting bridge '%s'\n", bridges[i]->obj->name);
 
-        bzero(vpcname, 16);
-        bzero(subnetname, 16);
+        memset(vpcname, 0, LID_LEN);
+        memset(subnetname, 0, LID_LEN);
 
         sscanf(bridges[i]->obj->name, "vb_%12s_%15s", vpcname, subnetname);
         if (strlen(vpcname) && strlen(subnetname)) {
@@ -1054,18 +1054,23 @@ int do_midonet_populate_vpcs(mido_config *mido) {
                 if (!brports[k]) {
                     continue;
                 }
-                bzero(instanceId, 16);
+                memset(instanceId, 0, LID_LEN);
 
                 if (brports[k]->port && brports[k]->port->ifname) {
                     sscanf(brports[k]->port->ifname, "vn_%s", instanceId);
 
                     if (strlen(instanceId)) {
+                        char *mido_instanceId = find_mido_vpc_instance_id(instanceId);
+                        if (mido_instanceId) {
+                            snprintf(instanceId, LID_LEN, "%s", mido_instanceId);
+                        }
+                        EUCA_FREE(mido_instanceId);
                         LOGTRACE("discovered VPC subnet instance/interface: %s/%s/%s\n", vpc->name, vpcsubnet->name, instanceId);
 
                         vpcsubnet->instances = EUCA_REALLOC_C(vpcsubnet->instances,
                                 (vpcsubnet->max_instances + 1), sizeof (mido_vpc_instance));
                         vpcinstance = &(vpcsubnet->instances[vpcsubnet->max_instances]);
-                        bzero(vpcinstance, sizeof (mido_vpc_instance));
+                        memset(vpcinstance, 0, sizeof (mido_vpc_instance));
                         vpcsubnet->max_instances++;
                         snprintf(vpcinstance->name, INTERFACE_ID_LEN, "%s", instanceId);
                         vpcinstance->midos[INST_VPCBR_VMPORT] = brports[k];
@@ -3185,7 +3190,7 @@ void print_mido_gw(mido_gw *gw, log_level_e llevel) {
 /**
  * Searches the discovered VPC data structure for the instance/interface in the argument.
  *
- * @param vpcsubnet [in] data structure holding information about a the subnet in
+ * @param vpcsubnet [in] data structure holding information about the subnet in
  * which the interface of interest is connected.
  * @param instancename [in] name of the instance/interface of interest.
  * @param outvpcinstance [out] pointer to vpcinstance data structure of interest (if found).
@@ -3242,6 +3247,30 @@ int find_mido_vpc_instance_global(mido_config *mido, char *instancename, mido_vp
     }
 
     return (1);
+}
+
+/**
+ * Searches for the instance/interface id in MidoNet and extracts/returns the
+ * matching id from MidoNet object(s). The argument id is expected to be a short
+ * id. Long id is returned if found. The search looks for ip-address-group named
+ * elip_post_id.
+ * The returned pointer points to a newly allocated string or NULL if the search
+ * fails.
+ * @param id [in] instance or interface id of interest.
+ * @return a string with the id found in MidoNet object(s). NULL if not found.
+ */
+char *find_mido_vpc_instance_id(const char *id) {
+    if (!id) {
+        LOGWARN("Invalid argument: unable to find NULL instance id\n");
+        return (NULL);
+    }
+    char iagname[64];
+    snprintf(iagname, 64, "elip_post_%s", id);
+    midonet_api_ipaddrgroup *iag = mido_get_ipaddrgroup(iagname);
+    if (iag) {
+        return(strdup(strstr(iag->obj->name, id)));
+    }
+    return NULL;
 }
 
 /**
@@ -4469,11 +4498,9 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc 
     midonet_api_bridge *subnetbr = vpcsubnet->subnetbr;
     if (subnetbr != NULL) {
         LOGTRACE("Found subnet bridge %s\n", subnetbr->obj->name);
-        //midoname *instanceport = find_mido_bridge_port_byinterface(subnetbr, vpcinstance->name);
         midoname *instanceport = vpcinstance->midos[INST_VPCBR_VMPORT];
         if (instanceport != NULL) {
             LOGTRACE("Found instance port %s\n", instanceport->name);
-            //vpcinstance->midos[INST_VPCBR_VMPORT] = instanceport;
             midonet_api_host *instancehost = NULL;
             if (instanceport->port && instanceport->port->hostid && strlen(instanceport->port->hostid)) {
                 instancehost = mido_get_host(NULL, instanceport->port->hostid);
@@ -7034,7 +7061,13 @@ int connect_mido_vpc_instance(mido_vpc_subnet *vpcsubnet, mido_vpc_instance *vpc
     char *macAddr = NULL, *ipAddr = NULL;
     char ifacename[IF_NAME_LEN];
 
-    snprintf(ifacename, IF_NAME_LEN, "vn_%s", vpcinstance->gniInst->name);
+    char *shortid = euca_truncate_interfaceid(vpcinstance->gniInst->name);
+    if (shortid) {
+        snprintf(ifacename, IF_NAME_LEN, "vn_%s", shortid);
+    } else {
+        snprintf(ifacename, IF_NAME_LEN, "vn_%s", vpcinstance->gniInst->name);
+    }
+    EUCA_FREE(shortid);
 
     // create the Exterior port for VMs
     rc = mido_create_bridge_port(vpcsubnet->subnetbr, vpcsubnet->midos[SUBN_BR], &(vpcinstance->midos[INST_VPCBR_VMPORT]));
