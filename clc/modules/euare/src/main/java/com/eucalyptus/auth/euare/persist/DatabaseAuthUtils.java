@@ -76,6 +76,8 @@ import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
 import com.eucalyptus.auth.euare.persist.entities.GroupEntity_;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity_;
+import com.eucalyptus.auth.euare.persist.entities.ManagedPolicyEntity;
+import com.eucalyptus.auth.euare.persist.entities.ManagedPolicyEntity_;
 import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity;
 import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity_;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
@@ -217,7 +219,20 @@ public class DatabaseAuthUtils {
       throw new NoSuchElementException( "Can not find policy " + policyName + " for group " + groupId );
     }
   }
-  
+
+  /**
+   * Must call within a transacton.
+   */
+  public static ManagedPolicyEntity getUniqueManagedPolicy(  String policyName, String accountName ) throws Exception {
+    try {
+      return Entities.criteriaQuery( ManagedPolicyEntity.class ).whereEqual( ManagedPolicyEntity_.name, policyName )
+          .join( ManagedPolicyEntity_.account ).whereEqual( AccountEntity_.name, accountName )
+          .uniqueResult( );
+    } catch ( final NoSuchElementException e ) {
+      throw new NoSuchElementException( "Can not find policy " + policyName + " in " + accountName );
+    }
+  }
+
   public static PolicyEntity removeGroupPolicy( GroupEntity group, String name ) throws Exception {
     return removeNamedPolicy( group.getPolicies(), name );
   }
@@ -392,6 +407,24 @@ public class DatabaseAuthUtils {
   }
 
   /**
+   * Check if a managed policy exists.
+   */
+  public static boolean checkPolicyExists( String policyName, String accountName ) throws AuthException {
+    if ( policyName == null || accountName == null ) {
+      throw new AuthException( "Empty policy name or account name" );
+    }
+    try ( final TransactionResource db = Entities.transactionFor( ManagedPolicyEntity.class ) ) {
+      final Optional<ManagedPolicyEntity> policyOptional = Entities
+          .criteriaQuery( ManagedPolicyEntity.class ).whereEqual( ManagedPolicyEntity_.name, policyName )
+          .join( ManagedPolicyEntity_.account ).whereEqual( AccountEntity_.name, accountName )
+          .uniqueResultOption( );
+      return policyOptional.isPresent( );
+    } catch ( Exception e ) {
+      throw new AuthException( "Failed to find policy", e );
+    }
+  }
+
+  /**
    * Check if the account is empty (no roles, no groups, no users, etc).
    */
   public static boolean isAccountEmpty( String accountName ) throws AuthException {
@@ -416,7 +449,12 @@ public class DatabaseAuthUtils {
           .whereEqual( AccountEntity_.name, accountName )
           .uniqueResult( );
 
-      return roles + groups + profiles + providers == 0;
+      final long policies = Entities.count( ManagedPolicyEntity.class )
+          .join( ManagedPolicyEntity_.account )
+          .whereEqual( AccountEntity_.name, accountName )
+          .uniqueResult( );
+
+      return roles + groups + profiles + providers + policies == 0;
     } catch ( Exception e ) {
       throw new AuthException( "Error checking if account is empty", e );
     }

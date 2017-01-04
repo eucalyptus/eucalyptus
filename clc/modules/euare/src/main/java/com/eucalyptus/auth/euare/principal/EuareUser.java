@@ -97,6 +97,11 @@ public interface EuareUser extends User, EuareAccountScopedPrincipal {
   Policy putPolicy( String name, String policy ) throws AuthException, PolicyParseException;
   void removePolicy( String name ) throws AuthException;
 
+
+  List<EuareManagedPolicy> getAttachedPolicies() throws AuthException;
+  void attachPolicy( EuareManagedPolicy policy ) throws AuthException;
+  void detachPolicy( EuareManagedPolicy policy ) throws AuthException;
+
   boolean isSystemAdmin( );
 
   boolean isSystemUser( );

@@ -95,6 +95,8 @@ import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
 import com.eucalyptus.auth.euare.persist.entities.GroupEntity_;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity_;
+import com.eucalyptus.auth.euare.persist.entities.ManagedPolicyEntity;
+import com.eucalyptus.auth.euare.persist.entities.ManagedPolicyEntity_;
 import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity;
 import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity_;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
@@ -105,6 +107,7 @@ import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity_;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareGroup;
+import com.eucalyptus.auth.euare.principal.EuareManagedPolicy;
 import com.eucalyptus.auth.euare.principal.EuareOpenIdConnectProvider;
 import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.euare.principal.EuareUser;
@@ -140,6 +143,7 @@ public class DatabaseAccountProxy implements EuareAccount {
   private static final ValueChecker ACCOUNT_NAME_CHECKER = ValueCheckerFactory.createAccountNameChecker( );
   private static final ValueChecker USER_NAME_CHECKER = ValueCheckerFactory.createUserNameChecker( );
   private static final ValueChecker GROUP_NAME_CHECKER = ValueCheckerFactory.createGroupNameChecker( );
+  private static final ValueChecker MANAGED_POLICY_NAME_CHECKER = ValueCheckerFactory.createManagedPolicyNameChecker( );
   private static final ValueChecker PATH_CHECKER = ValueCheckerFactory.createPathChecker( );
 
   private AccountEntity delegate;
@@ -302,6 +306,24 @@ public class DatabaseAccountProxy implements EuareAccount {
   }
 
   @Override
+  public List<EuareManagedPolicy> getPolicies( final Boolean attached ) throws AuthException {
+    final List<EuareManagedPolicy> results = Lists.newArrayList( );
+    try ( final TransactionResource db = Entities.transactionFor( ManagedPolicyEntity.class ) ) {
+      List<ManagedPolicyEntity> policies = Entities
+          .criteriaQuery( ManagedPolicyEntity.class ).where( ManagedPolicyEntity.exampleWithAttachment( attached ) )
+          .join( ManagedPolicyEntity_.account ).whereEqual( AccountEntity_.name, this.delegate.getName( ) )
+          .list( );
+      for ( final ManagedPolicyEntity policy : policies ) {
+        results.add( new DatabaseManagedPolicyProxy( policy ) );
+      }
+      return results;
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to get policies for " + this.delegate.getName( ) );
+      throw new AuthException( "Failed to get policies", e );
+    }
+  }
+
+  @Override
   public EuareUser addUser( String userName, String path, boolean enabled, Map<String, String> info ) throws AuthException {
     try {
       USER_NAME_CHECKER.check( userName );
@@ -318,16 +340,16 @@ public class DatabaseAccountProxy implements EuareAccount {
     if ( DatabaseAuthUtils.checkUserExists( userName, this.delegate.getName( ) ) ) {
       throw new AuthException( AuthException.USER_ALREADY_EXISTS );
     }
-    UserEntity newUser = new UserEntity( this.getAccountNumber(), userName );
+    UserEntity newUser = new UserEntity( this.getAccountNumber( ), userName );
     newUser.setPath( path );
     newUser.setEnabled( enabled );
     newUser.setPasswordExpires( System.currentTimeMillis( ) + AuthenticationLimitProvider.Values.getDefaultPasswordExpiry( ) );
     if ( info != null ) {
       newUser.getInfo( ).putAll( info );
     }
-    newUser.setToken( Crypto.generateSessionToken() );
+    newUser.setToken( Crypto.generateSessionToken( ) );
     //newUser.setConfirmationCode( Crypto.generateSessionToken( userName ) );
-    GroupEntity newGroup = new GroupEntity( this.getAccountNumber(), DatabaseAuthUtils.getUserGroupName( userName ) );
+    GroupEntity newGroup = new GroupEntity( this.getAccountNumber( ), DatabaseAuthUtils.getUserGroupName( userName ) );
     newGroup.setUserGroup( true );
     try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
       AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, AccountEntity_.name, this.delegate.getName( ) );
@@ -369,6 +391,19 @@ public class DatabaseAccountProxy implements EuareAccount {
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to check role " + roleName + " in " + accountName );
       throw new AuthException( AuthException.NO_SUCH_ROLE, e );
+    }
+  }
+
+  private boolean policyHasResourceAttached( String policyName, String accountName ) throws AuthException {
+    try ( final TransactionResource db = Entities.transactionFor( ManagedPolicyEntity.class ) ) {
+      final ManagedPolicyEntity policyEntity = DatabaseAuthUtils.getUniqueManagedPolicy( policyName, accountName );
+      return
+          !policyEntity.getUsers( ).isEmpty( ) ||
+          !policyEntity.getGroups( ).isEmpty( ) ||
+          !policyEntity.getRoles( ).isEmpty( );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to check policy " + policyName + " in " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_POLICY, e );
     }
   }
 
@@ -415,7 +450,7 @@ public class DatabaseAccountProxy implements EuareAccount {
       Debugging.logError( LOG, e, "Invalid path " + path );
       throw new AuthException( AuthException.INVALID_PATH, e );
     }
-    if ( DatabaseAuthUtils.checkRoleExists( roleName, this.delegate.getName() ) ) {
+    if ( DatabaseAuthUtils.checkRoleExists( roleName, this.delegate.getName( ) ) ) {
       throw new AuthException( AuthException.ROLE_ALREADY_EXISTS );
     }
     final PolicyPolicy policyPolicy = PolicyParser.getResourceInstance( ).parse( assumeRolePolicy );
@@ -427,12 +462,12 @@ public class DatabaseAccountProxy implements EuareAccount {
       newRole.setPath( path );
       newRole.setAccount( account );
       newRole.setAssumeRolePolicy( parsedPolicy );
-      parsedPolicy.setName( "assume-role-policy-for-" + newRole.getRoleId() );
+      parsedPolicy.setName( "assume-role-policy-for-" + newRole.getRoleId( ) );
       final RoleEntity persistedRole = Entities.persist( newRole );
       db.commit( );
       return new DatabaseRoleProxy( persistedRole );
     } catch ( Exception e ) {
-      Debugging.logError( LOG, e, "Failed to add role: " + roleName + " in " + this.delegate.getName() );
+      Debugging.logError( LOG, e, "Failed to add role: " + roleName + " in " + this.delegate.getName( ) );
       throw new AuthException( AuthException.ROLE_CREATE_FAILURE, e );
     }
   }
@@ -475,7 +510,7 @@ public class DatabaseAccountProxy implements EuareAccount {
     }
     try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
       AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, AccountEntity_.name, this.delegate.getName( ) );
-      GroupEntity group = new GroupEntity( this.getAccountNumber(), groupName );
+      GroupEntity group = new GroupEntity( this.getAccountNumber( ), groupName );
       group.setPath( path );
       group.setUserGroup( false );
       group.setAccount( account );
@@ -538,7 +573,7 @@ public class DatabaseAccountProxy implements EuareAccount {
       Debugging.logError( LOG, e, "Invalid path " + path );
       throw new AuthException( AuthException.INVALID_PATH, e );
     }
-    if ( DatabaseAuthUtils.checkInstanceProfileExists( instanceProfileName, this.delegate.getName() ) ) {
+    if ( DatabaseAuthUtils.checkInstanceProfileExists( instanceProfileName, this.delegate.getName( ) ) ) {
       throw new AuthException( AuthException.INSTANCE_PROFILE_ALREADY_EXISTS );
     }
     try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
@@ -550,7 +585,7 @@ public class DatabaseAccountProxy implements EuareAccount {
       db.commit( );
       return new DatabaseInstanceProfileProxy( persistedInstanceProfile );
     } catch ( Exception e ) {
-      Debugging.logError( LOG, e, "Failed to add instance profile: " + instanceProfileName + " in " + this.delegate.getName() );
+      Debugging.logError( LOG, e, "Failed to add instance profile: " + instanceProfileName + " in " + this.delegate.getName( ) );
       throw new AuthException( AuthException.INSTANCE_PROFILE_CREATE_FAILURE, e );
     }
   }
@@ -569,6 +604,73 @@ public class DatabaseAccountProxy implements EuareAccount {
       Debugging.logError( LOG, e, "Failed to delete instance profile: " + instanceProfileName + " in " + accountName );
       throw new AuthException( AuthException.NO_SUCH_INSTANCE_PROFILE, e );
     }
+  }
+
+  @Override
+  public EuareManagedPolicy addPolicy(
+      final String policyName,
+      final String path,
+      final String description,
+      final String policy
+  ) throws AuthException {
+    // validate policy
+    try {
+       MANAGED_POLICY_NAME_CHECKER.check( policyName );
+    } catch ( InvalidValueException e ) {
+      throw new AuthException( AuthException.INVALID_NAME, e );
+    }
+    try {
+      PATH_CHECKER.check( path );
+    } catch ( InvalidValueException e ) {
+      throw new AuthException( AuthException.INVALID_PATH, e );
+    }
+    if ( description != null && description.length( ) > 1000 ) {
+      throw new AuthException( AuthException.INVALID_DESCRIPTION );
+    }
+    try {
+      PolicyParser.getInstance( ).parse( policy, "2012-10-17" );
+    } catch ( final PolicyParseException e ) {
+      throw new AuthException( "Invalid policy: " + e.getMessage( ) );
+    }
+    // check duplicate
+    if ( DatabaseAuthUtils.checkPolicyExists( policyName, this.delegate.getName() ) ) {
+      throw new AuthException( AuthException.POLICY_ALREADY_EXISTS );
+    }
+    try ( final TransactionResource db = Entities.transactionFor( ManagedPolicyEntity.class ) ) {
+      final AccountEntity account = DatabaseAuthUtils.getUnique( AccountEntity.class, AccountEntity_.name, this.delegate.getName( ) );
+      final ManagedPolicyEntity newManagedPolicyEntity = new ManagedPolicyEntity( policyName );
+      newManagedPolicyEntity.setPath( path );
+      newManagedPolicyEntity.setDescription( description );
+      newManagedPolicyEntity.setText( policy );
+      newManagedPolicyEntity.setAccount( account );
+      final ManagedPolicyEntity persistedManagedPolicyEntity = Entities.persist( newManagedPolicyEntity );
+      db.commit( );
+      return new DatabaseManagedPolicyProxy( persistedManagedPolicyEntity );
+
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to add policy " + policy + " for " + this.delegate.getName( ) );
+      throw new AuthException( AuthException.POLICY_CREATE_FAILURE, e );
+    }
+  }
+
+  @Override
+  public void deletePolicy( final String policyName ) throws AuthException {
+    final String accountName = this.delegate.getName( );
+    if ( policyName == null ) {
+      throw new AuthException( AuthException.EMPTY_POLICY_NAME );
+    }
+    if ( policyHasResourceAttached( policyName, accountName ) ) {
+      throw new AuthException( AuthException.POLICY_DELETE_CONFLICT );
+    }
+    try ( final TransactionResource db = Entities.transactionFor( RoleEntity.class ) ) {
+      final ManagedPolicyEntity policy = DatabaseAuthUtils.getUniqueManagedPolicy( policyName, accountName );
+      Entities.delete( policy );
+      db.commit( );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to delete policy: " + policyName + " in " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_POLICY, e );
+    }
+
   }
 
   @Override
@@ -621,6 +723,21 @@ public class DatabaseAccountProxy implements EuareAccount {
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to get role " + roleName + " for " + accountName );
       throw new AuthException( AuthException.NO_SUCH_ROLE, e );
+    }
+  }
+
+  @Override
+  public EuareManagedPolicy lookupPolicyByName( final String policyName ) throws AuthException {
+    final String accountName = this.delegate.getName( );
+    if ( policyName == null ) {
+      throw new AuthException( AuthException.EMPTY_POLICY_NAME );
+    }
+    try ( final TransactionResource db = Entities.transactionFor( ManagedPolicyEntity.class ) ) {
+      final ManagedPolicyEntity policyEntity = DatabaseAuthUtils.getUniqueManagedPolicy( policyName, accountName );
+      return new DatabaseManagedPolicyProxy( policyEntity );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to get policy " + policyName + " for " + accountName );
+      throw new AuthException( AuthException.NO_SUCH_POLICY, e );
     }
   }
 

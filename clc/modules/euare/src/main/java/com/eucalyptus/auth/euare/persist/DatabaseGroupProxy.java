@@ -76,11 +76,13 @@ import com.eucalyptus.auth.euare.checker.ValueChecker;
 import com.eucalyptus.auth.euare.checker.ValueCheckerFactory;
 import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
 import com.eucalyptus.auth.euare.persist.entities.GroupEntity_;
+import com.eucalyptus.auth.euare.persist.entities.ManagedPolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity_;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareGroup;
+import com.eucalyptus.auth.euare.principal.EuareManagedPolicy;
 import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.policy.PolicyPolicy;
@@ -332,7 +334,62 @@ public class DatabaseGroupProxy implements EuareGroup {
       throw new AuthException( "Failed to remove policy", e );
     }
   }
-  
+
+  @Override
+  public List<EuareManagedPolicy> getAttachedPolicies( ) {
+    final List<EuareManagedPolicy> results = Lists.newArrayList( );
+    try {
+      DatabaseAuthUtils.invokeUnique( GroupEntity.class, GroupEntity_.groupId, this.delegate.getGroupId( ), new Tx<GroupEntity>( ) {
+        public void fire( GroupEntity t ) {
+          for ( ManagedPolicyEntity p : t.getAttachedPolicies( ) ) {
+            results.add( new DatabaseManagedPolicyProxy( p ) );
+          }
+        }
+      } );
+    } catch ( ExecutionException e ) {
+      Debugging.logError( LOG, e, "Failed to getAttachedPolicies for " + this.delegate );
+    }
+    return results;
+  }
+
+  @Override
+  public void attachPolicy( final EuareManagedPolicy policy ) throws AuthException {
+    try {
+      final String accountNumber = policy.getAccountNumber( );
+      DatabaseAuthUtils.invokeUnique( GroupEntity.class, GroupEntity_.groupId, this.delegate.getGroupId( ), new Tx<GroupEntity>( ) {
+        public void fire( GroupEntity t ) {
+          t.getAttachedPolicies( ).add( Entities.criteriaQuery(
+              ManagedPolicyEntity.exampleWithName( accountNumber, policy.getName( ) )
+          ).uniqueResult( ) );
+        }
+      } );
+    } catch ( ExecutionException e ) {
+      Debugging.logError( LOG, e, "Failed to getAttachedPolicies for " + this.delegate );
+    }
+  }
+
+  @Override
+  public void detachPolicy( final EuareManagedPolicy policy ) throws AuthException {
+    try {
+      DatabaseAuthUtils.invokeUnique( GroupEntity.class, GroupEntity_.groupId, this.delegate.getGroupId( ), new Tx<GroupEntity>( ) {
+        public void fire( GroupEntity t ) {
+          ManagedPolicyEntity policyEntity = null;
+          for ( final ManagedPolicyEntity attachedPolicy : t.getAttachedPolicies( ) ) {
+            if ( attachedPolicy.getPolicyId( ).equals( policy.getPolicyId( ) ) ) {
+              policyEntity = attachedPolicy;
+              break;
+            }
+          }
+          if ( policyEntity != null ) {
+            t.getAttachedPolicies( ).remove( policyEntity );
+          }
+        }
+      } );
+    } catch ( ExecutionException e ) {
+      Debugging.logError( LOG, e, "Failed to getAttachedPolicies for " + this.delegate );
+    }
+  }
+
   @Override
   public List<EuareUser> getUsers( ) {
     final List<EuareUser> results = Lists.newArrayList( );

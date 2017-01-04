@@ -83,6 +83,8 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.entities.AuxiliaryDatabaseObject;
@@ -145,7 +147,15 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
   // Policies for the group
   @OneToMany( cascade = { CascadeType.ALL }, mappedBy = "group" )
   Set<PolicyEntity> policies;
-  
+
+  // Attached policies for the group
+  @NotFound( action = NotFoundAction.IGNORE )
+  @JoinTable( name = "auth_group_attached_policies",
+      joinColumns =        @JoinColumn( name = "auth_group_id" ),
+      inverseJoinColumns = @JoinColumn( name = "auth_managed_policy_id" ) )
+  @ManyToMany
+  Set<ManagedPolicyEntity> attachedPolicies;
+
   // The owning account
   @ManyToOne( fetch = FetchType.LAZY )
   @JoinColumn( name = "auth_group_owning_account" )
@@ -243,7 +253,11 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
   public Set<PolicyEntity> getPolicies( ) {
     return this.policies;
   }
-  
+
+  public Set<ManagedPolicyEntity> getAttachedPolicies( ) {
+    return attachedPolicies;
+  }
+
   public Set<UserEntity> getUsers( ) {
     return this.users;
   }

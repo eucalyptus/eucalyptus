@@ -34,6 +34,7 @@ public interface IamPolicySpec {
   String IAM_RESOURCE_ACCESS_KEY = "access-key";
   String IAM_RESOURCE_SIGNING_CERTIFICATE = "signing-certificate";
   String IAM_RESOURCE_OPENID_CONNECT_PROVIDER = PolicySpec.IAM_RESOURCE_OPENID_CONNECT_PROVIDER;
+  String IAM_RESOURCE_POLICY = PolicySpec.IAM_RESOURCE_POLICY;
 
   // Condition keys
   String IAM_QUOTA_USER_NUMBER = "iam:quota-usernumber";
@@ -47,6 +48,9 @@ public interface IamPolicySpec {
   String IAM_ADDCLIENTIDTOOPENIDCONNECTPROVIDER = "addclientidtoopenidconnectprovider";
   String IAM_ADDROLETOINSTANCEPROFILE = "addroletoinstanceprofile";
   String IAM_ADDUSERTOGROUP = "addusertogroup";
+  String IAM_ATTACHGROUPPOLICY = "attachgrouppolicy";
+  String IAM_ATTACHROLEPOLICY = "attachrolepolicy";
+  String IAM_ATTACHUSERPOLICY = "attachuserpolicy";
   String IAM_CHANGEPASSWORD = "changepassword";
   String IAM_CREATEACCESSKEY = "createaccesskey";
   String IAM_CREATEACCOUNT = "createaccount"; // eucalyptus administrative extension
@@ -55,6 +59,7 @@ public interface IamPolicySpec {
   String IAM_CREATEINSTANCEPROFILE = "createinstanceprofile";
   String IAM_CREATELOGINPROFILE = "createloginprofile";
   String IAM_CREATEOPENIDCONNECTPROVIDER = "createopenidconnectprovider";
+  String IAM_CREATEPOLICY = "createpolicy";
   String IAM_CREATEROLE = "createrole";
   String IAM_CREATEUSER = "createuser";
   String IAM_CREATEVIRTUALMFADEVICE = "createvirtualmfadevice";
@@ -69,6 +74,7 @@ public interface IamPolicySpec {
   String IAM_DELETEINSTANCEPROFILE = "deleteinstanceprofile";
   String IAM_DELETELOGINPROFILE = "deleteloginprofile";
   String IAM_DELETEOPENIDCONNECTPROVIDER = "deleteopenidconnectprovider";
+  String IAM_DELETEPOLICY = "deletepolicy";
   String IAM_DELETEROLE = "deleterole";
   String IAM_DELETEROLEPOLICY = "deleterolepolicy";
   String IAM_DELETESERVERCERTIFICATE = "deleteservercertificate";
@@ -76,6 +82,9 @@ public interface IamPolicySpec {
   String IAM_DELETEUSER = "deleteuser";
   String IAM_DELETEUSERPOLICY = "deleteuserpolicy";
   String IAM_DELETEVIRTUALMFADEVICE = "deletevirtualmfadevice";
+  String IAM_DETACHGROUPPOLICY = "detachgrouppolicy";
+  String IAM_DETACHROLEPOLICY = "detachrolepolicy";
+  String IAM_DETACHUSERPOLICY = "detachuserpolicy";
   String IAM_ENABLEMFADEVICE = "enablemfadevice";
   String IAM_GETACCOUNTPASSWORDPOLICY = "getaccountpasswordpolicy";
   String IAM_GETACCOUNTPOLICY = "getaccountpolicy"; // eucalyptus administrative extension
@@ -85,6 +94,7 @@ public interface IamPolicySpec {
   String IAM_GETINSTANCEPROFILE = "getinstanceprofile";
   String IAM_GETLOGINPROFILE = "getloginprofile";
   String IAM_GETOPENIDCONNECTPROVIDER = "getopenidconnectprovider";
+  String IAM_GETPOLICY = "getpolicy";
   String IAM_GETROLE = "getrole";
   String IAM_GETROLEPOLICY = "getrolepolicy";
   String IAM_GETSERVERCERTIFICATE = "getservercertificate";
@@ -94,6 +104,10 @@ public interface IamPolicySpec {
   String IAM_LISTACCOUNTS = "listaccounts"; // eucalyptus administrative extension
   String IAM_LISTACCOUNTALIASES = "listaccountaliases";
   String IAM_LISTACCOUNTPOLICIES = "listaccountpolicies"; // eucalyptus administrative extension
+  String IAM_LISTATTACHEDGROUPPOLICIES = "listattachedgrouppolicies";
+  String IAM_LISTATTACHEDROLEPOLICIES = "listattachedrolepolicies";
+  String IAM_LISTATTACHEDUSERPOLICIES = "listattacheduserpolicies";
+  String IAM_LISTENTITIESFORPOLICY = "listentitiesforpolicy";
   String IAM_LISTGROUPPOLICIES = "listgrouppolicies";
   String IAM_LISTGROUPS = "listgroups";
   String IAM_LISTGROUPSFORUSER = "listgroupsforuser";
@@ -101,6 +115,7 @@ public interface IamPolicySpec {
   String IAM_LISTINSTANCEPROFILESFORROLE = "listinstanceprofilesforrole";
   String IAM_LISTMFADEVICES = "listmfadevices";
   String IAM_LISTOPENIDCONNECTPROVIDERS = "listopenidconnectproviders";
+  String IAM_LISTPOLICIES = "listpolicies";
   String IAM_LISTROLEPOLICIES = "listrolepolicies";
   String IAM_LISTROLES = "listroles";
   String IAM_LISTSERVERCERTIFICATES = "listservercertificates";

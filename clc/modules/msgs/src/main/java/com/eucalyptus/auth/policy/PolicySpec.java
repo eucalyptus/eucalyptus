@@ -350,6 +350,9 @@ public class PolicySpec {
   public static final String IAM_RESOURCE_INSTANCE_PROFILE = "instance-profile";
   public static final String IAM_RESOURCE_SERVER_CERTIFICATE = "server-certificate";
   public static final String IAM_RESOURCE_OPENID_CONNECT_PROVIDER = "oidc-provider";
+  public static final String IAM_RESOURCE_ACCESS_KEY = "access-key";
+  public static final String IAM_RESOURCE_SIGNING_CERTIFICATE = "signing-certificate";
+  public static final String IAM_RESOURCE_POLICY = "policy";
 
   // STS selected resource types
   public static final String STS_RESOURCE_ASSUMED_ROLE = "assumed-role";

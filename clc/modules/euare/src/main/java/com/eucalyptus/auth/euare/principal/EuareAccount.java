@@ -39,63 +39,70 @@ import com.eucalyptus.auth.type.RestrictedType;
 @PolicyResourceType( IamPolicySpec.IAM_RESOURCE_ACCOUNT )
 public interface EuareAccount extends AccountIdentifiers, BasePrincipal, RestrictedType, Serializable {
 
-  public boolean hasAccountAlias( );
+  boolean hasAccountAlias( );
 
-  public void setName( String name ) throws AuthException;
+  void setName( String name ) throws AuthException;
 
   /**
    * Set name without performing syntax validation
    */
-  public void setNameUnsafe( String name ) throws AuthException;
+  void setNameUnsafe( String name ) throws AuthException;
 
-  public List<EuareUser> getUsers( ) throws AuthException;
+  List<EuareUser> getUsers( ) throws AuthException;
 
-  public List<EuareGroup> getGroups( ) throws AuthException;
+  List<EuareGroup> getGroups( ) throws AuthException;
 
-  public List<EuareRole> getRoles( ) throws AuthException;
+  List<EuareRole> getRoles( ) throws AuthException;
 
-  public List<EuareInstanceProfile> getInstanceProfiles( ) throws AuthException;
+  List<EuareInstanceProfile> getInstanceProfiles( ) throws AuthException;
 
-  public EuareUser addUser( String userName, String path, boolean enabled, Map<String, String> info ) throws AuthException;
-  public void deleteUser( String userName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException;
+  List<EuareManagedPolicy> getPolicies( Boolean attached ) throws AuthException;
 
-  public EuareRole addRole( String roleName, String path, String assumeRolePolicy ) throws AuthException, PolicyParseException;
-  public void deleteRole( String roleName ) throws AuthException;
+  EuareUser addUser( String userName, String path, boolean enabled, Map<String, String> info ) throws AuthException;
+  void deleteUser( String userName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException;
 
-  public EuareGroup addGroup( String groupName, String path ) throws AuthException;
-  public void deleteGroup( String groupName, boolean recursive ) throws AuthException;
+  EuareRole addRole( String roleName, String path, String assumeRolePolicy ) throws AuthException, PolicyParseException;
+  void deleteRole( String roleName ) throws AuthException;
 
-  public EuareInstanceProfile addInstanceProfile( String instanceProfileName, String path ) throws AuthException;
-  public void deleteInstanceProfile( String instanceProfileName ) throws AuthException;
+  EuareGroup addGroup( String groupName, String path ) throws AuthException;
+  void deleteGroup( String groupName, boolean recursive ) throws AuthException;
 
-  public ServerCertificate addServerCertificate(String certName, String certBody, String certChain, String path, String pk) throws AuthException;
-  public ServerCertificate deleteServerCertificate(String certName) throws AuthException;
+  EuareInstanceProfile addInstanceProfile( String instanceProfileName, String path ) throws AuthException;
+  void deleteInstanceProfile( String instanceProfileName ) throws AuthException;
 
-  public EuareGroup lookupGroupByName( String groupName ) throws AuthException;
+  ServerCertificate addServerCertificate(String certName, String certBody, String certChain, String path, String pk) throws AuthException;
+  ServerCertificate deleteServerCertificate(String certName) throws AuthException;
 
-  public EuareUser lookupUserByName( String userName ) throws AuthException;
+  EuareManagedPolicy addPolicy( String policyName, String path, String description, String policy ) throws AuthException;
+  void deletePolicy( String policyName ) throws AuthException;
 
-  public EuareRole lookupRoleByName( String roleName ) throws AuthException;
+  EuareGroup lookupGroupByName( String groupName ) throws AuthException;
 
-  public EuareInstanceProfile lookupInstanceProfileByName( String instanceProfileName ) throws AuthException;
+  EuareUser lookupUserByName( String userName ) throws AuthException;
 
-  public EuareUser lookupAdmin() throws AuthException;
+  EuareRole lookupRoleByName( String roleName ) throws AuthException;
 
-  public EuareOpenIdConnectProvider lookupOpenIdConnectProvider( String url ) throws AuthException;
+  EuareInstanceProfile lookupInstanceProfileByName( String instanceProfileName ) throws AuthException;
 
-  public ServerCertificate lookupServerCertificate(String certName) throws AuthException;
-  public List<ServerCertificate> listServerCertificates(String pathPrefix) throws AuthException;
-  public void updateServerCeritificate(String certName, String newCertName, String newPath) throws AuthException;
+  EuareManagedPolicy lookupPolicyByName( String policyName ) throws AuthException;
 
-  public String getAccountNumber( );
-  public String getCanonicalId( );
+  EuareUser lookupAdmin() throws AuthException;
 
-  public EuareOpenIdConnectProvider createOpenIdConnectProvider(String url, List<String> clientIDList, List<String> thumbprintList) throws AuthException;
-  public void deleteOpenIdConnectProvider(String openIDConnectProviderArn) throws AuthException;
-  public EuareOpenIdConnectProvider getOpenIdConnectProvider(String arn) throws AuthException;
-  public List<EuareOpenIdConnectProvider> listOpenIdConnectProviders() throws AuthException;
+  EuareOpenIdConnectProvider lookupOpenIdConnectProvider( String url ) throws AuthException;
 
-  public void addClientIdToOpenIdConnectProvider(String clientId, String arn) throws AuthException;
-  public void removeClientIdFromOpenIdConnectProvider(String clientId, String arn) throws AuthException;
-  public void updateOpenIdConnectProviderThumbprint(String arn, List<String> thumbprintList) throws AuthException;
+  ServerCertificate lookupServerCertificate(String certName) throws AuthException;
+  List<ServerCertificate> listServerCertificates(String pathPrefix) throws AuthException;
+  void updateServerCeritificate(String certName, String newCertName, String newPath) throws AuthException;
+
+  String getAccountNumber( );
+  String getCanonicalId( );
+
+  EuareOpenIdConnectProvider createOpenIdConnectProvider(String url, List<String> clientIDList, List<String> thumbprintList) throws AuthException;
+  void deleteOpenIdConnectProvider(String openIDConnectProviderArn) throws AuthException;
+  EuareOpenIdConnectProvider getOpenIdConnectProvider(String arn) throws AuthException;
+  List<EuareOpenIdConnectProvider> listOpenIdConnectProviders() throws AuthException;
+
+  void addClientIdToOpenIdConnectProvider(String clientId, String arn) throws AuthException;
+  void removeClientIdFromOpenIdConnectProvider(String clientId, String arn) throws AuthException;
+  void updateOpenIdConnectProviderThumbprint(String arn, List<String> thumbprintList) throws AuthException;
 }

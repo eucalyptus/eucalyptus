@@ -33,14 +33,17 @@ import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.euare.common.policy.IamPolicySpec;
 import com.eucalyptus.auth.euare.persist.DatabaseAuthUtils;
+import com.eucalyptus.auth.euare.persist.DatabaseManagedPolicyProxy;
 import com.eucalyptus.auth.euare.persist.entities.AccessKeyEntity;
 import com.eucalyptus.auth.euare.persist.entities.AccountEntity;
 import com.eucalyptus.auth.euare.persist.entities.CertificateEntity;
 import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
+import com.eucalyptus.auth.euare.persist.entities.ManagedPolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareGroup;
+import com.eucalyptus.auth.euare.principal.EuareManagedPolicy;
 import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
@@ -155,6 +158,10 @@ public class UserPrincipalImpl implements UserPrincipal, HasRole {
                     Functions.compose( PolicyVersions.policyVersion( PolicyScope.User, new EuareResourceName( account.getAccountNumber( ), IamPolicySpec.IAM_RESOURCE_USER, user.getPath( ), user.getName( ) ).toString( ) ), PolicyTransform.INSTANCE ) ) );
           }
         }
+        for ( final ManagedPolicyEntity managedPolicy : user.getAttachedPolicies( ) ) {
+          final EuareManagedPolicy euareManagedPolicy = new DatabaseManagedPolicyProxy( managedPolicy );
+          policies.add( PolicyVersions.policyVersion( euareManagedPolicy, Accounts.getManagedPolicyArn( euareManagedPolicy ) ) );
+        }
 
         for ( final GroupEntity group : groups ) {
           if ( !group.isUserGroup( ) ) {
@@ -163,6 +170,10 @@ public class UserPrincipalImpl implements UserPrincipal, HasRole {
                 Iterables.transform(
                     group.getPolicies( ),
                     Functions.compose( PolicyVersions.policyVersion( PolicyScope.Group, new EuareResourceName( account.getAccountNumber( ), IamPolicySpec.IAM_RESOURCE_GROUP, group.getPath( ), group.getName( ) ).toString( ) ), PolicyTransform.INSTANCE ) ) );
+            for ( final ManagedPolicyEntity managedPolicy : group.getAttachedPolicies( ) ) {
+              final EuareManagedPolicy euareManagedPolicy = new DatabaseManagedPolicyProxy( managedPolicy );
+              policies.add( PolicyVersions.policyVersion( euareManagedPolicy, Accounts.getManagedPolicyArn( euareManagedPolicy ) ) );
+            }
           }
         }
       }
@@ -220,12 +231,18 @@ public class UserPrincipalImpl implements UserPrincipal, HasRole {
             Iterables.transform(
                 user.getPolicies( ),
                 PolicyVersions.policyVersion( PolicyScope.User, Accounts.getUserArn( user ) ) ) );
+        for ( final EuareManagedPolicy managedPolicy : user.getAttachedPolicies( ) ) {
+          policies.add( PolicyVersions.policyVersion( managedPolicy, Accounts.getManagedPolicyArn( managedPolicy ) ) );
+        }
         for ( final EuareGroup group : Iterables.filter( user.getGroups(), Predicates.not( Accounts.isUserGroup() ) ) ) {
           Iterables.addAll(
               policies,
               Iterables.transform(
                   group.getPolicies( ),
                   PolicyVersions.policyVersion( PolicyScope.Group, Accounts.getGroupArn( group ) ) ) );
+          for ( final EuareManagedPolicy managedPolicy : group.getAttachedPolicies( ) ) {
+            policies.add( PolicyVersions.policyVersion( managedPolicy, Accounts.getManagedPolicyArn( managedPolicy ) ) );
+          }
         }
       }
       EuareUser admin;
@@ -274,6 +291,9 @@ public class UserPrincipalImpl implements UserPrincipal, HasRole {
         Iterables.transform(
             role.getPolicies( ),
             PolicyVersions.policyVersion( PolicyScope.Role, Accounts.getRoleArn( role ) ) ) );
+    for ( final EuareManagedPolicy managedPolicy : role.getAttachedPolicies( ) ) {
+      policies.add( PolicyVersions.policyVersion( managedPolicy, Accounts.getManagedPolicyArn( managedPolicy ) ) );
+    }
     Iterables.addAll(
         policies,
         Iterables.transform(

@@ -1514,3 +1514,326 @@ public class UpdateOpenIdConnectProviderThumbprintResponseType extends EuareMess
   ResponseMetadataType responseMetadata = new ResponseMetadataType( );
   public UpdateOpenIdConnectProviderThumbprintResponseType() {  }
 }
+
+class AttachGroupPolicyType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount
+  String groupName
+  String policyArn
+}
+
+class AttachGroupPolicyResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( )
+}
+
+class AttachRolePolicyType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount
+  String policyArn
+  String roleName
+}
+
+class AttachRolePolicyResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( )
+}
+
+class AttachUserPolicyType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount
+  String policyArn
+  String userName
+}
+
+class AttachUserPolicyResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( )
+}
+
+class PolicyType extends EucalyptusData {
+  String arn
+  Integer attachmentCount
+  Date createDate
+  String defaultVersionId
+  String description
+  Boolean isAttachable
+  String path
+  String policyId
+  String policyName
+  Date updateDate
+}
+
+class CreatePolicyResultType extends EucalyptusData {
+  PolicyType policy
+}
+
+class CreatePolicyType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount
+  String description
+  String path
+  String policyDocument
+  String policyName
+}
+
+class CreatePolicyResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( )
+  CreatePolicyResultType createPolicyResult = new CreatePolicyResultType( );
+}
+
+class PolicyVersionType extends EucalyptusData {
+  Date createDate
+  String document
+  Boolean isDefaultVersion
+  String versionId
+}
+
+class CreatePolicyVersionResultType extends EucalyptusData {
+  PolicyVersionType policyVersion
+}
+
+class CreatePolicyVersionType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount
+  String policyArn
+  String policyDocument
+  Boolean setAsDefault
+}
+
+class CreatePolicyVersionResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( )
+  CreatePolicyVersionResultType createPolicyVersionResult
+}
+
+class DeletePolicyType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount
+  String policyArn
+}
+
+class DeletePolicyResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( )
+}
+
+class DeletePolicyVersionType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount
+  String policyArn
+  String versionId
+}
+
+class DeletePolicyVersionResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( )
+}
+
+class DetachGroupPolicyType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount
+  String groupName
+  String policyArn
+}
+
+class DetachGroupPolicyResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( )
+}
+
+class DetachRolePolicyType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount
+  String policyArn
+  String roleName
+}
+
+class DetachRolePolicyResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( )
+}
+
+class DetachUserPolicyType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount
+  String policyArn
+  String userName
+}
+
+class DetachUserPolicyResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( )
+}
+
+class GetPolicyResultType extends EucalyptusData {
+  PolicyType policy
+}
+
+class GetPolicyType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount
+  String policyArn
+}
+
+class GetPolicyResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( )
+  GetPolicyResultType getPolicyResult = new GetPolicyResultType( )
+}
+
+class GetPolicyVersionResultType extends EucalyptusData {
+  PolicyVersionType policyVersion
+}
+
+class GetPolicyVersionType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount
+  String policyArn
+  String versionId
+}
+
+class GetPolicyVersionResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( )
+  GetPolicyVersionResultType getPolicyVersionResult
+}
+
+class AttachedPolicyType extends EucalyptusData {
+  String policyArn
+  String policyName
+}
+
+class ListAttachedGroupPoliciesResultType extends EucalyptusData {
+  ArrayList<AttachedPolicyType> attachedPolicies = Lists.newArrayList( )
+  Boolean isTruncated
+  String marker
+}
+
+class ListAttachedGroupPoliciesType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount
+  String groupName
+  String marker
+  Integer maxItems
+  String pathPrefix
+}
+
+class ListAttachedGroupPoliciesResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( )
+  ListAttachedGroupPoliciesResultType listAttachedGroupPoliciesResult = new ListAttachedGroupPoliciesResultType( )
+}
+
+class ListAttachedRolePoliciesResultType extends EucalyptusData {
+  ArrayList<AttachedPolicyType> attachedPolicies = Lists.newArrayList( )
+  Boolean isTruncated
+  String marker
+}
+
+class ListAttachedRolePoliciesType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount
+  String marker
+  Integer maxItems
+  String pathPrefix
+  String roleName
+}
+
+class ListAttachedRolePoliciesResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( )
+  ListAttachedRolePoliciesResultType listAttachedRolePoliciesResult = new ListAttachedRolePoliciesResultType()
+}
+
+class ListAttachedUserPoliciesResultType extends EucalyptusData {
+  ArrayList<AttachedPolicyType> attachedPolicies = Lists.newArrayList( )
+  Boolean isTruncated
+  String marker
+}
+
+class ListAttachedUserPoliciesType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount
+  String marker
+  Integer maxItems
+  String pathPrefix
+  String userName
+}
+
+class ListAttachedUserPoliciesResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( )
+  ListAttachedUserPoliciesResultType listAttachedUserPoliciesResult = new ListAttachedUserPoliciesResultType( )
+}
+
+class PolicyGroup extends EucalyptusData {
+  String groupName
+  String groupId
+  PolicyGroup( ){}
+  PolicyGroup( String groupName, String groupId ){
+    this.groupName = groupName
+    this.groupId = groupId
+  }
+}
+
+class PolicyRole extends EucalyptusData {
+  String roleName
+  String roleId
+  PolicyRole( ){}
+  PolicyRole( String roleName, String roleId ){
+    this.roleName = roleName
+    this.roleId = roleId
+  }
+}
+
+class PolicyUser extends EucalyptusData {
+  String userName
+  String userId
+  PolicyUser( ){}
+  PolicyUser( String userName, String userId ){
+    this.userName = userName
+    this.userId = userId
+  }
+}
+
+class ListEntitiesForPolicyResultType extends EucalyptusData {
+  Boolean isTruncated
+  String marker
+  ArrayList<PolicyGroup> policyGroups = Lists.newArrayList( )
+  ArrayList<PolicyRole> policyRoles = Lists.newArrayList( )
+  ArrayList<PolicyUser> policyUsers = Lists.newArrayList( )
+}
+
+class ListEntitiesForPolicyType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount
+  String entityFilter
+  String marker
+  Integer maxItems
+  String pathPrefix
+  String policyArn
+}
+
+class ListEntitiesForPolicyResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( )
+  ListEntitiesForPolicyResultType listEntitiesForPolicyResult = new ListEntitiesForPolicyResultType( )
+}
+
+class ListPoliciesResultType extends EucalyptusData {
+  Boolean isTruncated
+  String marker
+  ArrayList<PolicyType> policies = Lists.newArrayList( )
+}
+
+class ListPoliciesType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount
+  String marker
+  Integer maxItems
+  Boolean onlyAttached
+  String pathPrefix
+  String scope
+}
+
+class ListPoliciesResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( )
+  ListPoliciesResultType listPoliciesResult = new ListPoliciesResultType( )
+}
+
+class ListPolicyVersionsResultType extends EucalyptusData {
+  Boolean isTruncated
+  String marker
+  ArrayList<PolicyVersionType> versions
+}
+
+class ListPolicyVersionsType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount
+  String marker
+  Integer maxItems
+  String policyArn
+}
+
+class ListPolicyVersionsResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( )
+  ListPolicyVersionsResultType listPolicyVersionsResult
+}
+
+class SetDefaultPolicyVersionType extends EuareMessage implements EuareMessageWithDelegate {
+  String delegateAccount
+  String policyArn
+  String versionId
+}
+
+class SetDefaultPolicyVersionResponseType extends EuareMessage {
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( )
+}

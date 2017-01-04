@@ -83,6 +83,7 @@ import com.eucalyptus.auth.euare.principal.EuareAccessKey;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareCertificate;
 import com.eucalyptus.auth.euare.principal.EuareGroup;
+import com.eucalyptus.auth.euare.principal.EuareManagedPolicy;
 import com.eucalyptus.auth.euare.principal.EuareOpenIdConnectProvider;
 import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.euare.principal.EuareUser;
@@ -455,6 +456,152 @@ class Privileged {
             requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_INSTANCE_PROFILE, IAM_LISTINSTANCEPROFILESFORROLE ),
             account.getAccountNumber( ),
             Accounts.getInstanceProfileFullName( instanceProfile ) );
+  }
+
+  public static boolean allowReadPolicy( AuthContext requestUser, EuareAccount account, EuareManagedPolicy policy ) throws AuthException {
+    return Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_POLICY, Accounts.getManagedPolicyFullName( policy ), account, IAM_GETPOLICY, requestUser );
+  }
+
+  public static boolean allowListPolicy( AuthContext requestUser, EuareAccount account, EuareManagedPolicy policy ) throws AuthException {
+    return
+        Permissions.isAuthorized(
+            requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_POLICY, IAM_LISTPOLICIES ),
+            account.getAccountNumber( ),
+            Accounts.getManagedPolicyFullName( policy ) );
+  }
+
+  public static EuareManagedPolicy createManagedPolicy(
+      final AuthContext requestUser,
+      final EuareAccount account,
+      final String name,
+      final String path,
+      final String description,
+      final String policy  ) throws AuthException, PolicyParseException {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_POLICY, "", account, IAM_CREATEPOLICY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    if ( !Permissions.canAllocate( VENDOR_IAM, IAM_RESOURCE_POLICY, "", IAM_CREATEPOLICY, requestUser, 1L ) ) {
+      throw new AuthException( AuthException.QUOTA_EXCEEDED );
+    }
+    return account.addPolicy( name, path, description, policy );
+  }
+
+  public static void deletePolicy( AuthContext requestUser, EuareAccount account, EuareManagedPolicy policy ) throws AuthException {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_POLICY, Accounts.getManagedPolicyFullName( policy ), account, IAM_DELETEPOLICY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    account.deletePolicy( policy.getName( ) );
+  }
+
+  public static void attachGroupPolicy( AuthContext requestUser, EuareAccount account, EuareGroup group, EuareManagedPolicy policy ) throws AuthException  {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, IAM_ATTACHGROUPPOLICY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_POLICY, Accounts.getManagedPolicyFullName( policy ), policy.getAccount( ), IAM_ATTACHGROUPPOLICY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    if ( group.getAttachedPolicies( ).size( ) >= AuthenticationLimitProvider.Values.getPolicyAttachmentLimit( ) ) {
+      throw new AuthException( AuthException.QUOTA_EXCEEDED );
+    }
+    group.attachPolicy( policy );
+  }
+
+  public static void attachRolePolicy( AuthContext requestUser, EuareAccount account, EuareRole role, EuareManagedPolicy policy ) throws AuthException  {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, IAM_ATTACHROLEPOLICY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_POLICY, Accounts.getManagedPolicyFullName( policy ), policy.getAccount( ), IAM_ATTACHROLEPOLICY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    if ( role.getAttachedPolicies( ).size( ) >= AuthenticationLimitProvider.Values.getPolicyAttachmentLimit( ) ) {
+      throw new AuthException( AuthException.QUOTA_EXCEEDED );
+    }
+    role.attachPolicy( policy );
+  }
+
+  public static void attachUserPolicy( AuthContext requestUser, EuareAccount account, EuareUser user, EuareManagedPolicy policy ) throws AuthException  {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_ATTACHUSERPOLICY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_POLICY, Accounts.getManagedPolicyFullName( policy ), policy.getAccount( ), IAM_ATTACHUSERPOLICY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    if ( user.getAttachedPolicies( ).size( ) >= AuthenticationLimitProvider.Values.getPolicyAttachmentLimit( ) ) {
+      throw new AuthException( AuthException.QUOTA_EXCEEDED );
+    }
+    user.attachPolicy( policy );
+  }
+
+  public static void detachGroupPolicy( AuthContext requestUser, EuareAccount account, EuareGroup group, EuareManagedPolicy policy ) throws AuthException  {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, IAM_DETACHGROUPPOLICY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_POLICY, Accounts.getManagedPolicyFullName( policy ), policy.getAccount( ), IAM_DETACHGROUPPOLICY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    group.detachPolicy( policy );
+  }
+
+  public static void detachRolePolicy( AuthContext requestUser, EuareAccount account, EuareRole role, EuareManagedPolicy policy ) throws AuthException  {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, IAM_DETACHROLEPOLICY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_POLICY, Accounts.getManagedPolicyFullName( policy ), policy.getAccount( ), IAM_DETACHROLEPOLICY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    role.detachPolicy( policy );
+  }
+
+  public static void detachUserPolicy( AuthContext requestUser, EuareAccount account, EuareUser user, EuareManagedPolicy policy ) throws AuthException  {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_DETACHUSERPOLICY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_POLICY, Accounts.getManagedPolicyFullName( policy ), policy.getAccount( ), IAM_DETACHUSERPOLICY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    user.detachPolicy( policy );
+  }
+
+  public static List<EuareManagedPolicy> listGroupAttachedPolicies( AuthContext requestUser, EuareAccount account, EuareGroup group ) throws AuthException {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, IAM_LISTATTACHEDGROUPPOLICIES, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    return group.getAttachedPolicies( );
+  }
+
+  public static List<EuareManagedPolicy> listRoleAttachedPolicies( AuthContext requestUser, EuareAccount account, EuareRole role ) throws AuthException {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, IAM_LISTATTACHEDROLEPOLICIES, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    return role.getAttachedPolicies( );
+  }
+
+  public static List<EuareManagedPolicy> listUserAttachedPolicies( AuthContext requestUser, EuareAccount account, EuareUser user ) throws AuthException {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_LISTATTACHEDUSERPOLICIES, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    return user.getAttachedPolicies( );
+  }
+
+  public static List<EuareGroup> listGroupsWithAttachedPolicy( AuthContext requestUser, EuareManagedPolicy policy ) throws AuthException {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_POLICY, Accounts.getManagedPolicyFullName( policy ), policy.getAccount( ), IAM_LISTENTITIESFORPOLICY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    return policy.getGroups( );
+  }
+
+  public static List<EuareRole> listRolesWithAttachedPolicy( AuthContext requestUser, EuareManagedPolicy policy ) throws AuthException {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_POLICY, Accounts.getManagedPolicyFullName( policy ), policy.getAccount( ), IAM_LISTENTITIESFORPOLICY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    return policy.getRoles( );
+  }
+
+  public static List<EuareUser> listUsersWithAttachedPolicy( AuthContext requestUser, EuareManagedPolicy policy ) throws AuthException {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_POLICY, Accounts.getManagedPolicyFullName( policy ), policy.getAccount( ), IAM_LISTENTITIESFORPOLICY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    return policy.getUsers( );
   }
 
   public static void putAccountPolicy( AuthContext requestUser, EuareAccount account, String name, String policy ) throws AuthException, PolicyParseException {

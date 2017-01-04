@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * Copyright 2009-2016 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,39 +22,36 @@ package com.eucalyptus.auth.euare.principal;
 import java.util.Date;
 import java.util.List;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.principal.Policy;
-import com.eucalyptus.auth.principal.BaseRole;
 
 /**
  *
  */
-public interface EuareRole extends BaseRole, EuareAccountScopedPrincipal {
+public interface EuareManagedPolicy extends Policy {
+
+  String getAccountNumber( ) throws AuthException;
 
   EuareAccount getAccount( ) throws AuthException;
 
-  Policy getAssumeRolePolicy( ) throws AuthException;
-  Policy setAssumeRolePolicy( String policy ) throws AuthException, PolicyParseException;
+  String getPolicyId( );
 
-  List<EuareInstanceProfile> getInstanceProfiles() throws AuthException;
+  Integer getPolicyVersion( );
 
-  Date getCreationTimestamp( );
+  String getName( );
 
-  List<Policy> getPolicies( ) throws AuthException;
+  String getPath( );
 
-  /**
-   * Add a policy, fail if exists.
-   */
-  Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException;
+  String getDescription( );
 
-  /**
-   * Add or update the named policy.
-   */
-  Policy putPolicy( String name, String policy ) throws AuthException, PolicyParseException;
-  void removePolicy( String name ) throws AuthException;
+  String getText( );
 
+  Date getCreateDate( );
 
-  List<EuareManagedPolicy> getAttachedPolicies() throws AuthException;
-  void attachPolicy( EuareManagedPolicy policy ) throws AuthException;
-  void detachPolicy( EuareManagedPolicy policy ) throws AuthException;
+  Date getUpdateDate( );
+
+  List<EuareGroup> getGroups( ) throws AuthException;
+
+  List<EuareRole> getRoles( ) throws AuthException;
+
+  List<EuareUser> getUsers( ) throws AuthException;
 }

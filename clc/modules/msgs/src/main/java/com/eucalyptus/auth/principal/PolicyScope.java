@@ -28,4 +28,5 @@ public enum PolicyScope {
   Group,
   Role,
   Resource,
+  Managed
 }

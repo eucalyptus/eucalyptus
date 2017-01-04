@@ -70,6 +70,19 @@ class PolicyVersions {
     } as Function<Policy,PolicyVersion>
   }
 
+  /**
+   * Policy version for a managed policy.
+   */
+  public static PolicyVersion policyVersion( final Policy sourcePolicy, final String policyArn ) {
+    new PolicyVersionImpl(
+        "${policyArn},${sourcePolicy.policyVersion}",
+        sourcePolicy.name,
+        PolicyScope.Managed,
+        sourcePolicy.text,
+        hash( sourcePolicy.text )
+    )
+  }
+
   public static String hash( String text ) {
     return BaseEncoding.base64( ).encode( Digest.SHA256.digestBinary( text.getBytes( StandardCharsets.UTF_8 ) ) );
   }
