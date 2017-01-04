@@ -1962,7 +1962,6 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
           // will terminate all instances
         }catch(final Exception ex){
           error = true;
-          LOG.warn(String.format("Failed to delete autoscale group (%d'th attempt): %s", (i+1), groupName));
           try{
             long sleepMs = (i+1) * 500;
             Thread.sleep(sleepMs);
