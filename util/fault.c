@@ -711,7 +711,7 @@ int init_eucafaults(const char *fileprefix)
     for (int i = 0; i < NUM_FAULTDIR_TYPES; i++) {
         if (faultdirs[i][0]) {
             if (stat(faultdirs[i], &dirstat) != 0) {
-                LOGINFO("stat() problem with %s: %s\n", faultdirs[i], strerror(errno));
+                LOGTRACE("stat() problem with %s: %s\n", faultdirs[i], strerror(errno));
             } else if (!S_ISDIR(dirstat.st_mode)) {
                 LOGINFO("stat() problem with %s: Not a directory. errno=%d(%s)\n", faultdirs[i], errno, strerror(errno));
             } else {
