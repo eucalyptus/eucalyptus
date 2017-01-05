@@ -1,6 +1,6 @@
 # Makefile for eucalyptus/tools
 #
-# Copyright 2009-2015 Eucalyptus Systems, Inc.
+# Copyright 2009-2017 Hewlett Packard Enterprise Development Company LP
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -111,7 +111,7 @@ install: build
 	@$(INSTALL) -m 644 libvirt.xsl $(DESTDIR)$(etcdir)/eucalyptus
 	@$(INSTALL) -m 644 nc-hooks/example.sh $(DESTDIR)$(etcdir)/eucalyptus/nc-hooks/
 	@$(INSTALL) -m 755 generate-migration-keys.sh $(DESTDIR)$(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 authorize-migration-keys.py $(DESTDIR)$(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 authorize-migration-keys $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 euca-upgrade $(DESTDIR)$(libexecdir)/eucalyptus
 	@$(INSTALL) -m 644 iptables-preload.template $(DESTDIR)$(datarootdir)/eucalyptus/doc/
 	@$(INSTALL) -m 644 nginx_proxy.conf $(DESTDIR)$(datarootdir)/eucalyptus
