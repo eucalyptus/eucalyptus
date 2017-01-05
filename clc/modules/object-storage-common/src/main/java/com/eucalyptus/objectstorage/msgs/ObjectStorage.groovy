@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright (c) 2009-2017 Hewlett Packard Enterprise Development LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,9 +38,9 @@ import com.eucalyptus.objectstorage.util.ObjectStorageProperties
 import com.eucalyptus.storage.msgs.BucketLogData
 import com.eucalyptus.storage.msgs.s3.AccessControlList
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy
-import com.eucalyptus.storage.msgs.s3.CorsConfiguration;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser
 import com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry
+import com.eucalyptus.storage.msgs.s3.CorsConfiguration
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessage
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessageReply
 import com.eucalyptus.storage.msgs.s3.Initiator
@@ -189,6 +189,7 @@ public class ObjectStorageRequestType extends BaseMessage {
   protected String key;
   protected String origin;
   protected String httpMethod;
+  protected String versionId;
 
   public ObjectStorageRequestType() {}
 
@@ -239,6 +240,14 @@ public class ObjectStorageRequestType extends BaseMessage {
 
   public void setHttpMethod(String httpMethod) {
     this.httpMethod = httpMethod;
+  }
+
+  public String getVersionId() {
+    return this.versionId;
+  }
+
+  public void setVersionId(String versionId) {
+    this.versionId = versionId;
   }
 
   public UserPrincipal getUser() {
@@ -469,7 +478,7 @@ public class ObjectStorageRedirectMessageType extends ObjectStorageErrorMessageT
 /* GET /bucket?acl */
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_GETBUCKETACL])
+@RequiresPermission(standard = [PolicySpec.S3_GETBUCKETACL], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.READ_ACP])
 public class GetBucketAccessControlPolicyType extends ObjectStorageRequestType {}
@@ -481,11 +490,10 @@ public class GetBucketAccessControlPolicyResponseType extends ObjectStorageRespo
 /* GET /bucket/object?acl */
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_GETOBJECTACL])
+@RequiresPermission(standard = [PolicySpec.S3_GETOBJECTACL], version = [PolicySpec.S3_GETOBJECTVERSIONACL])
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object = [ObjectStorageProperties.Permission.READ_ACP], bucket = [])
 public class GetObjectAccessControlPolicyType extends ObjectStorageRequestType {
-  String versionId;
 }
 
 public class GetObjectAccessControlPolicyResponseType extends ObjectStorageResponseType {
@@ -502,7 +510,7 @@ public class GetObjectAccessControlPolicyResponseType extends ObjectStorageRespo
  */
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_LISTALLMYBUCKETS])
+@RequiresPermission(standard = [PolicySpec.S3_LISTALLMYBUCKETS], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
 public class ListAllMyBucketsType extends ObjectStorageRequestType {}
@@ -515,7 +523,7 @@ public class ListAllMyBucketsResponseType extends ObjectStorageResponseType {
 /* HEAD /bucket */
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_LISTBUCKET])
+@RequiresPermission(standard = [PolicySpec.S3_LISTBUCKET], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.READ])
 public class HeadBucketType extends ObjectStorageRequestType {}
@@ -525,7 +533,7 @@ public class HeadBucketResponseType extends ObjectStorageResponseType {}
 /* PUT /bucket */
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_CREATEBUCKET])
+@RequiresPermission(standard = [PolicySpec.S3_CREATEBUCKET], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
 //No ACLs for creating a bucket, weird like ListAllMyBuckets.
@@ -564,7 +572,7 @@ public class CreateBucketResponseType extends ObjectStorageResponseType {
 /* DELETE /bucket */
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_DELETEBUCKET])
+@RequiresPermission(standard = [PolicySpec.S3_DELETEBUCKET], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
 //No ACLs for deleting a bucket, only owner account can delete
@@ -575,7 +583,7 @@ public class DeleteBucketResponseType extends ObjectStorageResponseType {}
 /* PUT /bucket/object */
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_PUTOBJECT])
+@RequiresPermission(standard = [PolicySpec.S3_PUTOBJECT], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.WRITE])
 //Account must have write access to the bucket
@@ -597,7 +605,7 @@ public class PutObjectResponseType extends ObjectStorageDataResponseType {}
 /* POST /bucket/object */
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_PUTOBJECT])
+@RequiresPermission(standard = [PolicySpec.S3_PUTOBJECT], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.WRITE])
 public class PostObjectType extends ObjectStorageDataRequestType {
@@ -621,7 +629,7 @@ public class PostObjectResponseType extends ObjectStorageDataResponseType {
 /* GET /bucket/object */
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_GETOBJECT])
+@RequiresPermission(standard = [PolicySpec.S3_GETOBJECT], version = [PolicySpec.S3_GETOBJECTVERSION])
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object = [ObjectStorageProperties.Permission.READ], bucket = [])
 public class GetObjectType extends ObjectStorageDataGetRequestType {
@@ -629,7 +637,6 @@ public class GetObjectType extends ObjectStorageDataGetRequestType {
   Boolean inlineData;
   Boolean deleteAfterGet;
   Boolean getTorrent;
-  String versionId;
 
   def GetObjectType() {
   }
@@ -649,7 +656,7 @@ public class GetObjectResponseType extends ObjectStorageDataGetResponseType {
 
 //TODO: zhill -- remove this request type and fold into regular GetObject
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_GETOBJECT])
+@RequiresPermission(standard = [PolicySpec.S3_GETOBJECT], version = [PolicySpec.S3_GETOBJECTVERSION])
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object = [ObjectStorageProperties.Permission.READ], bucket = [])
 public class GetObjectExtendedType extends ObjectStorageDataGetRequestType {
@@ -662,7 +669,6 @@ public class GetObjectExtendedType extends ObjectStorageDataGetRequestType {
   String ifMatch;
   String ifNoneMatch;
   Boolean returnCompleteObjectOnConditionFailure;
-  String versionId;
 }
 
 public class GetObjectExtendedResponseType extends ObjectStorageDataGetResponseType {
@@ -671,7 +677,7 @@ public class GetObjectExtendedResponseType extends ObjectStorageDataGetResponseT
 /* PUT /bucket/object with x-amz-copy-source header */
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_GETOBJECT])
+@RequiresPermission(standard = [], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 //TODO: need to add support for both, refactor annotation into a set of k,v pairs
 @RequiresACLPermission(object = [ObjectStorageProperties.Permission.READ], bucket = [ObjectStorageProperties.Permission.WRITE])
@@ -718,25 +724,6 @@ public class CopyObjectType extends ObjectStorageRequestType {
   }
 }
 
-/* HEAD /bucket/object */
-
-@AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_HEADOBJECT])
-@ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
-@RequiresACLPermission(object = [ObjectStorageProperties.Permission.READ], bucket = [])
-public class HeadObjectType extends ObjectStorageDataGetRequestType {
-  String versionId;
-
-  def HeadObjectType() {
-  }
-
-  def HeadObjectType(final String bucketName, final String key) {
-    super(bucketName, key);
-  }
-}
-
-public class HeadObjectResponseType extends ObjectStorageDataResponseType {}
-
 public class CopyObjectResponseType extends ObjectStorageResponseType {
   String etag;
   String lastModified;
@@ -748,6 +735,23 @@ public class CopyObjectResponseType extends ObjectStorageResponseType {
   String versionId;
   String copySourceVersionId;
 }
+
+/* HEAD /bucket/object */
+
+@AdminOverrideAllowed
+@RequiresPermission(standard = [PolicySpec.S3_GETOBJECT], version = [PolicySpec.S3_GETOBJECTVERSION])
+@ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
+@RequiresACLPermission(object = [ObjectStorageProperties.Permission.READ], bucket = [])
+public class HeadObjectType extends ObjectStorageDataGetRequestType {
+  def HeadObjectType() {
+  }
+
+  def HeadObjectType(final String bucketName, final String key) {
+    super(bucketName, key);
+  }
+}
+
+public class HeadObjectResponseType extends ObjectStorageDataResponseType {}
 
 //TODO: REMOVE THIS
 /* SOAP put object */
@@ -767,7 +771,7 @@ public class PutObjectInlineResponseType extends ObjectStorageDataResponseType {
 /* DELETE /bucket/object */
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_DELETEOBJECT])
+@RequiresPermission(standard = [PolicySpec.S3_DELETEOBJECT], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.WRITE])
 public class DeleteObjectType extends ObjectStorageRequestType {}
@@ -777,11 +781,10 @@ public class DeleteObjectResponseType extends DeleteResponseType {}
 /* DELETE /bucket/object?versionid=x */
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_DELETEOBJECTVERSION])
+@RequiresPermission(standard = [PolicySpec.S3_DELETEOBJECTVERSION], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
 public class DeleteVersionType extends ObjectStorageRequestType {
-  String versionId;
 }
 
 public class DeleteVersionResponseType extends DeleteResponseType {}
@@ -794,7 +797,7 @@ public class DeleteResponseType extends ObjectStorageResponseType {
 /* GET /bucket */
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_LISTBUCKET])
+@RequiresPermission(standard = [PolicySpec.S3_LISTBUCKET], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.READ])
 public class ListBucketType extends ObjectStorageRequestType {
@@ -825,7 +828,7 @@ public class ListBucketResponseType extends ObjectStorageResponseType {
 /* GET /bucket?versions */
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_LISTBUCKETVERSIONS])
+@RequiresPermission(standard = [PolicySpec.S3_LISTBUCKETVERSIONS], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.READ] /*, bucketOwnerOnly = true*/) // TODO check bucketOwnerOnly flag necessary
 public class ListVersionsType extends ObjectStorageRequestType {
@@ -857,7 +860,7 @@ public class ListVersionsResponseType extends ObjectStorageResponseType {
 /* PUT /bucket?acl */
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_PUTBUCKETACL])
+@RequiresPermission(standard = [PolicySpec.S3_PUTBUCKETACL], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.WRITE_ACP])
 public class SetBucketAccessControlPolicyType extends ObjectStorageRequestType {
@@ -869,12 +872,11 @@ public class SetBucketAccessControlPolicyResponseType extends ObjectStorageRespo
 /* PUT /bucket/object?acl */
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_PUTOBJECTACL])
+@RequiresPermission(standard = [PolicySpec.S3_PUTOBJECTACL], version = [PolicySpec.S3_PUTOBJECTVERSIONACL])
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object = [ObjectStorageProperties.Permission.WRITE_ACP], bucket = [])
 public class SetObjectAccessControlPolicyType extends ObjectStorageRequestType {
   AccessControlPolicy accessControlPolicy;
-  String versionId;
 }
 
 public class SetObjectAccessControlPolicyResponseType extends ObjectStorageResponseType {
@@ -884,7 +886,7 @@ public class SetObjectAccessControlPolicyResponseType extends ObjectStorageRespo
 /* GET /bucket?location */
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_GETBUCKETLOCATION])
+@RequiresPermission(standard = [PolicySpec.S3_GETBUCKETLOCATION], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
 public class GetBucketLocationType extends ObjectStorageRequestType {}
@@ -896,7 +898,7 @@ public class GetBucketLocationResponseType extends ObjectStorageResponseType {
 /* GET /bucket?logging */
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_GETBUCKETLOGGING])
+@RequiresPermission(standard = [PolicySpec.S3_GETBUCKETLOGGING], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
 public class GetBucketLoggingStatusType extends ObjectStorageRequestType {}
@@ -908,7 +910,7 @@ public class GetBucketLoggingStatusResponseType extends ObjectStorageResponseTyp
 /* PUT /bucket?logging */
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_PUTBUCKETLOGGING])
+@RequiresPermission(standard = [PolicySpec.S3_PUTBUCKETLOGGING], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
 public class SetBucketLoggingStatusType extends ObjectStorageRequestType {
@@ -920,7 +922,7 @@ public class SetBucketLoggingStatusResponseType extends ObjectStorageResponseTyp
 /* GET /bucket?versioning */
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_GETBUCKETVERSIONING])
+@RequiresPermission(standard = [PolicySpec.S3_GETBUCKETVERSIONING], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
 public class GetBucketVersioningStatusType extends ObjectStorageRequestType {}
@@ -936,7 +938,7 @@ public class GetBucketVersioningStatusResponseType extends ObjectStorageResponse
 /* PUT /bucket?versioning */
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_PUTBUCKETVERSIONING])
+@RequiresPermission(standard = [PolicySpec.S3_PUTBUCKETVERSIONING], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
 public class SetBucketVersioningStatusType extends ObjectStorageRequestType {
@@ -948,7 +950,7 @@ public class SetBucketVersioningStatusResponseType extends ObjectStorageResponse
 /* GET /bucket?lifecycle */
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_GETLIFECYCLECONFIGURATION])
+@RequiresPermission(standard = [PolicySpec.S3_GETLIFECYCLECONFIGURATION], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
 public class GetBucketLifecycleType extends ObjectStorageRequestType {}
@@ -960,7 +962,7 @@ public class GetBucketLifecycleResponseType extends ObjectStorageResponseType {
 /* PUT /bucket?lifecycle */
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_PUTLIFECYCLECONFIGURATION])
+@RequiresPermission(standard = [PolicySpec.S3_PUTLIFECYCLECONFIGURATION], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
 public class SetBucketLifecycleType extends ObjectStorageRequestType {
@@ -973,7 +975,7 @@ public class SetBucketLifecycleResponseType extends ObjectStorageResponseType {}
 
 @AdminOverrideAllowed
 /* according to docs, this is the appropriate permission, as of Jan 7, 2013 */
-@RequiresPermission([PolicySpec.S3_PUTLIFECYCLECONFIGURATION])
+@RequiresPermission(standard = [PolicySpec.S3_PUTLIFECYCLECONFIGURATION], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
 public class DeleteBucketLifecycleType extends ObjectStorageRequestType {}
@@ -984,7 +986,7 @@ public class DeleteBucketLifecycleResponseType extends ObjectStorageResponseType
 
 /* PUT /bucket/?tagging */
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_PUTBUCKETTAGGING])
+@RequiresPermission(standard = [PolicySpec.S3_PUTBUCKETTAGGING], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
 public class SetBucketTaggingType extends ObjectStorageRequestType {
@@ -995,7 +997,7 @@ public class SetBucketTaggingResponseType extends ObjectStorageResponseType {}
 
 /* GET /bucket/?tagging */
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_GETBUCKETTAGGING])
+@RequiresPermission(standard = [PolicySpec.S3_GETBUCKETTAGGING], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
 public class GetBucketTaggingType extends ObjectStorageRequestType {}
@@ -1006,7 +1008,7 @@ public class GetBucketTaggingResponseType extends ObjectStorageResponseType {
 
 /* DELETE /bucket/?tagging */
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_PUTBUCKETTAGGING])
+@RequiresPermission(standard = [PolicySpec.S3_PUTBUCKETTAGGING], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
 public class DeleteBucketTaggingType extends ObjectStorageRequestType {}
@@ -1017,7 +1019,7 @@ public class DeleteBucketTaggingResponseType extends ObjectStorageResponseType {
 
 /* PUT /bucket/?cors */
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_PUTBUCKETCORS])
+@RequiresPermission(standard = [PolicySpec.S3_PUTBUCKETCORS], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
 public class SetBucketCorsType extends ObjectStorageRequestType {
@@ -1028,7 +1030,7 @@ public class SetBucketCorsResponseType extends ObjectStorageResponseType {}
 
 /* GET /bucket/?cors */
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_GETBUCKETCORS])
+@RequiresPermission(standard = [PolicySpec.S3_GETBUCKETCORS], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
 public class GetBucketCorsType extends ObjectStorageRequestType {}
@@ -1039,7 +1041,7 @@ public class GetBucketCorsResponseType extends ObjectStorageResponseType {
 
 /* DELETE /bucket/?cors */
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_PUTBUCKETCORS])
+@RequiresPermission(standard = [PolicySpec.S3_PUTBUCKETCORS], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket])
 public class DeleteBucketCorsType extends ObjectStorageRequestType {}
@@ -1108,7 +1110,7 @@ public class ObjectStorageComponentMessageResponseType extends ComponentMessageR
 
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_PUTOBJECT])
+@RequiresPermission(standard = [PolicySpec.S3_PUTOBJECT], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.WRITE])
 //Account must have write access to the bucket
@@ -1129,7 +1131,7 @@ public class InitiateMultipartUploadResponseType extends ObjectStorageDataRespon
 }
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_PUTOBJECT])
+@RequiresPermission(standard = [PolicySpec.S3_PUTOBJECT], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.WRITE], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.object])
 //Account must have write access to the bucket and must be the initiator of mpu
@@ -1147,7 +1149,7 @@ public class UploadPartResponseType extends ObjectStorageDataResponseType {
 }
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_PUTOBJECT])
+@RequiresPermission(standard = [PolicySpec.S3_PUTOBJECT], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.WRITE], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.object])
 //Account must have write access to the bucket and must be the initiator of mpu
@@ -1164,7 +1166,7 @@ public class CompleteMultipartUploadResponseType extends ObjectStorageDataRespon
 }
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_ABORTMULTIPARTUPLOAD])
+@RequiresPermission(standard = [PolicySpec.S3_ABORTMULTIPARTUPLOAD], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.WRITE], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket, ObjectStorageProperties.Resource.object])
 //Account must have write access to the bucket and must be either the bucket owning account or the initiator of mpu
@@ -1176,7 +1178,7 @@ public class AbortMultipartUploadResponseType extends ObjectStorageDataResponseT
 }
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_LISTMULTIPARTUPLOADPARTS])
+@RequiresPermission(standard = [PolicySpec.S3_LISTMULTIPARTUPLOADPARTS], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.READ], ownerOnly = true, ownerOf = [ObjectStorageProperties.Resource.bucket, ObjectStorageProperties.Resource.object])
 //Account must have read access to the bucket and must be either the bucket owning account or the initiator of mpu
@@ -1201,7 +1203,7 @@ public class ListPartsResponseType extends ObjectStorageDataResponseType {
 }
 
 @AdminOverrideAllowed
-@RequiresPermission([PolicySpec.S3_LISTBUCKETMULTIPARTUPLOADS])
+@RequiresPermission(standard = [PolicySpec.S3_LISTBUCKETMULTIPARTUPLOADS], version = [])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.READ])
 //Account must have read access to the bucket
