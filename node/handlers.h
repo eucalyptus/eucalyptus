@@ -373,7 +373,8 @@ int is_migration_dst(const ncInstance * instance);
 int is_migration_src(const ncInstance * instance);
 int migration_rollback(ncInstance * instance);
 int get_service_url(const char *service_type, struct nc_state_t *nc, char *dest_buffer);
-int authorize_migration_keys(char *options, char *host, char *credentials, ncInstance * instance, boolean lock_hyp_sem);
+int authorize_migration_keys(char *host, char *credentials, ncInstance * instance, boolean lock_hyp_sem);
+int deauthorize_migration_keys(boolean lock_hyp_sem);
 int connect_ebs(const char *dev_name, const char *dev_serial, const char *dev_bus, struct nc_state_t *nc, char *instanceId, char *volumeId, char *attachmentToken,
                 char **libvirt_xml, ebs_volume_data ** vol_data);
 int disconnect_ebs(struct nc_state_t *nc, char *instanceId, char *volumeId, char *attachmentToken, char *connect_string);

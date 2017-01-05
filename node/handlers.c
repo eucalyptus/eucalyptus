@@ -432,10 +432,46 @@ cleanup:
     return ret;
 }
 
+
 //!
-//! Authorize (or deauthorize) migration keys on destination host.
+//! Deauthorize all migration keys on destination host
+//! @param[in] lock_hyp_sem set to true to hold the 'lock_hyp_sem' semaphore
 //!
-//! @param[in] options command-line options to pass to the authorization script
+//! @return EUCA_OK, EUCA_SYSTEM_ERROR
+//!
+int deauthorize_migration_keys(boolean lock_hyp_sem) 
+{
+    int rc = 0;
+    char euca_rootwrap[EUCA_MAX_PATH] = "";
+    char command[EUCA_MAX_PATH] = "";
+    char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
+
+    snprintf(command, EUCA_MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS, NP(euca_base));
+    snprintf(euca_rootwrap, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, NP(euca_base));
+
+    LOGDEBUG("migration key de-authorization command: '%s %s %s %s'\n", euca_rootwrap, command, "-D", "-r");
+    if (lock_hyp_sem == TRUE) {
+        sem_p(hyp_sem);
+    }
+
+    rc = euca_execlp(NULL, euca_rootwrap, command, "-D", "-r", NULL);
+
+    if (lock_hyp_sem == TRUE) {
+        sem_v(hyp_sem);
+    }
+
+    if (rc != EUCA_OK) {
+        LOGERROR("'%s %s %s %s' failed. rc=%d\n", euca_rootwrap, command, "-D", "-r", rc);
+        return (EUCA_SYSTEM_ERROR);
+    } else {
+        LOGDEBUG("migration key deauthorization succeeded\n");
+    }
+    return (EUCA_OK);
+}
+
+//!
+//! Authorize migration keys on destination host.
+//!
 //! @param[in] host hostname (IP address) to authorize
 //! @param[in] credentials shared secret to authorize
 //! @param[in] instance pointer to instance struct for logging information (optional--can be NULL)
@@ -443,7 +479,7 @@ cleanup:
 //!
 //! @return EUCA_OK, EUCA_INVALID_ERROR, or EUCA_SYSTEM_ERROR
 //!
-int authorize_migration_keys(char *options, char *host, char *credentials, ncInstance * instance, boolean lock_hyp_sem)
+int authorize_migration_keys(char *host, char *credentials, ncInstance * instance, boolean lock_hyp_sem)
 {
     int rc = 0;
     char euca_rootwrap[EUCA_MAX_PATH] = "";
@@ -451,29 +487,29 @@ int authorize_migration_keys(char *options, char *host, char *credentials, ncIns
     char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
     char *instanceId = instance ? instance->instanceId : "UNSET";
 
-    if (!options && !host && !credentials) {
-        LOGERROR("[%s] called with invalid arguments: options=%s, host=%s, creds=%s\n", SP(instanceId), SP(options), SP(host), (credentials == NULL) ? "UNSET" : "present");
+    if (!host && !credentials) {
+        LOGERROR("[%s] called with invalid arguments: host=%s, creds=%s\n", SP(instanceId), SP(host), (credentials == NULL) ? "UNSET" : "present");
         return (EUCA_INVALID_ERROR);
     }
 
     snprintf(command, EUCA_MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS, NP(euca_base));
     snprintf(euca_rootwrap, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, NP(euca_base));
-    LOGDEBUG("[%s] migration key authorization command: '%s %s %s %s %s'\n", SP(instanceId), euca_rootwrap, command, NP(options), NP(host), NP(credentials));
+    LOGDEBUG("[%s] migration key authorization command: '%s %s %s %s %s'\n", SP(instanceId), euca_rootwrap, command, "-a", NP(host), NP(credentials));
     if (lock_hyp_sem == TRUE) {
         sem_p(hyp_sem);
     }
 
-    rc = euca_execlp(NULL, euca_rootwrap, command, NP(options), NP(host), NP(credentials), NULL);
+    rc = euca_execlp(NULL, euca_rootwrap, command, "-a", NP(host), NP(credentials), NULL);
 
     if (lock_hyp_sem == TRUE) {
         sem_v(hyp_sem);
     }
 
     if (rc != EUCA_OK) {
-        LOGERROR("[%s] '%s %s %s %s %s' failed. rc=%d\n", SP(instanceId), euca_rootwrap, command, NP(options), NP(host), NP(credentials), rc);
+        LOGERROR("[%s] '%s %s %s %s %s' failed. rc=%d\n", SP(instanceId), euca_rootwrap, command, "-a", NP(host), NP(credentials), rc);
         return (EUCA_SYSTEM_ERROR);
     } else {
-        LOGDEBUG("[%s] migration key authorization/deauthorization succeeded\n", SP(instanceId));
+        LOGDEBUG("[%s] migration key authorization succeeded\n", SP(instanceId));
     }
     return (EUCA_OK);
 }
@@ -1254,7 +1290,7 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                         }
                         if (!incoming_migrations_pending) {
                             LOGINFO("no remaining incoming or pending migrations -- deauthorizing all migration client keys\n");
-                            authorize_migration_keys("-D -r", NULL, NULL, NULL, FALSE);
+                            deauthorize_migration_keys(FALSE);
                         }
                     } else {
                         // Verify that our count of incoming_migrations_in_progress matches our version of reality.
@@ -2456,7 +2492,7 @@ static int init(void)
     // initialize the EBS subsystem
     update_ebs_params();
 
-    authorize_migration_keys("-D -r", NULL, NULL, NULL, TRUE);
+    deauthorize_migration_keys(TRUE);
 
     // NOTE: this is the only call which needs to be called on both
     // the default and the specific handler! All the others will be
@@ -2474,7 +2510,7 @@ static int init(void)
         // check on hypervisor and pull out capabilities
         virConnectPtr conn = lock_hypervisor_conn();
         if (conn == NULL) {
-            // libvirt could be unresponsive for some time if there are log of instances after previous restart via authorize_migration_keys call
+            // libvirt could be unresponsive for some time if there are log of instances after previous restart via deauthorize_migration_keys call
             // let's wait a bit and ask for a connection again
             sleep(LIBVIRT_TIMEOUT_SEC);
             conn = lock_hypervisor_conn();

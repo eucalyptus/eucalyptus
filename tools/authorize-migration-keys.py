@@ -1,0 +1,349 @@
+#!/usr/bin/python -tt
+
+#
+# (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see http://www.gnu.org/licenses/.
+#
+
+import os
+import re
+import sys
+import time
+import shutil
+import logging
+import os.path
+import argparse
+import StringIO
+import subprocess
+from subprocess import CalledProcessError
+
+MAX_RETRIES = 20
+LIBVIRT_CONF = '/etc/libvirt/libvirtd.conf'
+KEYPATH = "{}/var/lib/eucalyptus/keys/node-cert.pem".format(os.getenv('EUCALYPTUS', ''))
+CERT_TOOL = ['certtool', '-i', '--infile', KEYPATH]
+DN_ORDERS = (('C', 'O', 'L', 'CN'),
+             ('CN', 'O', 'L', 'C'))
+EMPTY_TLS_ALLOWED = 'tls_allowed_dn_list = []\n'
+TLS_ALLOWED_BEGIN = 'tls_allowed_dn_list = ['
+
+def getLogger(name, verbose):
+    '''
+    Setup simple logging to stdout
+    '''
+    logger = logging.getLogger(name)
+    if verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
+    ch = logging.StreamHandler()
+    if verbose:
+        ch.setLevel(logging.DEBUG)
+    else:
+        ch.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(message)s')
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+
+    return logger
+
+
+def parse_dn(dn):
+    '''
+    Parse a string in the form: 'CN=v1,O=v2,L=secret...' into a dictionary.
+    strips off Subject: prefix if present.
+    '''
+    dn_split = dn.strip().replace('Subject: ', '').split(',')
+    dn_dict = {i: j for i, j in [(k.split('=')) for k in dn_split]}
+    return dn_dict
+
+
+def get_cert_subject():
+    '''
+    Read the certificate using certtool and get the subject line to
+    parse out the components. Certificate errors are considered fatal
+
+    certificate: /var/lib/eucalyptus/keys/node-cert.pem
+
+    returns: Dictionary with component names as keys on success
+             Empty dictionary on failure
+    '''
+    subject_dict = {}
+
+    try:
+        cert_output = subprocess.check_output(CERT_TOOL)
+    except OSError as e:
+        logger.error("Unable to execute command: %s error: %s:%s"
+                     % (CERT_TOOL[0],e.errno, e.strerror))
+        sys.exit(1)
+    except subprocess.CalledProcessError as e:
+        logger.error("Abnormal exit code from %s: returncode: %s"
+                     % (e.cmd, e.returncode))
+        sys.exit(1)
+    except:
+        logger.error("Unknown error encountered: %s"
+                     % sys.exc_info()[0])
+        sys.exit(1)
+
+    subject = None
+    for line in cert_output.split('\n'):
+        if "Subject:" in line:
+            subject = line
+            break
+
+    if subject is not None:
+        subject_dict = parse_dn(subject)
+
+    return subject_dict
+
+
+def generate_new_dn(client, secret):
+    '''
+    Given the client and secret passed, construct the appropriate
+    Subject DNs to be used in the configuration file.
+    '''
+    new_dn = {'CN': client, 'L': secret}
+
+    subject = get_cert_subject()
+    if 'CN' in subject:
+        new_dn['O'] = subject['CN']
+    if 'C' in subject:
+        new_dn['C'] = subject['C']
+
+    # Make sure that we found an 'O' and 'C' attributes in the certificate
+    if 'O' not in new_dn and 'C' not in new_dn:
+        logger.error("Cannot construct new entry for %s %s exiting",
+                     new_dn['CN'],
+                     new_dn['L'])
+        sys.exit(1)
+
+    # multiple DNs are needed to accommodate different Linux release
+    # ordering output from certtool
+    new_dn_list = []
+    for dn_order in DN_ORDERS:
+        new_dn_list.append(','.join(["{}={}".format(i, new_dn[i]) for i in dn_order]))
+    return new_dn_list
+
+def copy_file(src, dst):
+    '''
+    Copy a file, on failure exit program
+    '''
+    try:
+        shutil.copy(src, dst)
+    except IOError as e:
+        logger.error("Unable to copy %s to %s errno: %d error: %s",
+                     src, dst, e.errno, e.strerror)
+        sys.exit(1)
+
+def move_file(src, dst):
+    '''
+    Move file, exit program on failure
+    '''
+    try:
+        shutil.move(src, dst)
+    except IOError as e:
+        logger.error("Unable to move file %s to %s errno: %d error: %s",
+                     src, dst, e.errno, e.strerror)
+        sys.exit(1)
+
+def write_config(tls_allowed_dn_list, config_file):
+    '''
+    Modifies the configuration file on disk, in the default
+    case (deauthorizing all clients) libvirtd will
+    not be restarted if the list was originally empty.
+
+    Creates a backup of the distribution configuration
+    file to: config_file + '.orig', if not already present.
+
+    If the file did not need to be modified, then no changes
+    will be made to the file.
+
+    returns: True - if the configuration file was modified.
+             False - if there was no need to modify the configuration file
+    '''
+    updated = False
+
+    config_file_orig = config_file + '.orig'
+    config_file_bak = config_file + '.bak'
+    config_file_new = config_file + '.new'
+
+    if not os.path.exists(config_file):
+        logger.error("Configuration file: %s is missing, exiting", config_file)
+        sys.exit(1)
+
+    # Copy distribution original to .orig
+    if not os.path.exists(config_file_orig):
+        copy_file(config_file, config_file_orig)
+
+    # regex to pull the DNs within the buffer: ["dn1","dn2","dn3"]
+    dn_regex = re.compile('"(.*?)"', re.MULTILINE)
+
+    # buffer to run multiline regex against
+    buffer = StringIO.StringIO()
+
+    # Construct the list of CNs to possibly replace
+    remove_dn_list = [i['CN'] for i in
+                      [parse_dn(j) for j in tls_allowed_dn_list]]
+
+    # Construct the new configuration file
+    with open(config_file) as cf:
+        try:
+            with open(config_file_new, 'wc') as nf:
+                for line in cf:
+                    if 'tls_allowed_dn_list' in line:
+                        #
+                        # Read the list of DNs into a buffer to parse
+                        # Note the call to cf.next()
+                        #
+                        line_is_commented = line.strip().startswith('#')
+
+                        buffer.write(line)
+                        if ']' not in line:
+                            # Read lines until we get the end bracket
+                            while True:
+                                l = cf.next()
+                                buffer.write(l)
+                                if ']' in l:
+                                    break
+
+                        # Construct our current list of DNs
+                        DN_list = dn_regex.findall(buffer.getvalue())
+
+                        # Current list is empty, see if it is commented out or not
+                        if len(DN_list) == 0 and len(tls_allowed_dn_list) == 0:
+                            if line_is_commented:
+                                nf.write(EMPTY_TLS_ALLOWED)
+                                updated = True
+                            else:
+                                break  # No change needed to the configuration file
+                        elif len(tls_allowed_dn_list) == 0:
+                            nf.write(EMPTY_TLS_ALLOWED)
+                            updated = True
+                        else:
+                            # Read each current dn, if it matches what we are trying to add, we'll replace
+                            # it. Otherwise, we'll add onto the current list
+                            if line_is_commented:
+                                # commented config entry,
+                                # need to disregard the contents
+                                DN_list = []
+
+                            new_dn_list = tls_allowed_dn_list[:]
+
+                            for dn in DN_list:
+                                dn_dict = parse_dn(dn)
+                                if dn_dict['CN'] not in remove_dn_list:
+                                    new_dn_list.append(dn)
+
+                            #
+                            # Write out the new list of dns
+                            #
+                            nf.write(TLS_ALLOWED_BEGIN)
+                            padding = len(TLS_ALLOWED_BEGIN)
+
+                            for i, dn in enumerate(new_dn_list):
+                                nf.write('"{}"'.format(dn))
+
+                                # Append comma, except at end of list, add padding on new line
+                                if i < len(new_dn_list)-1:
+                                    nf.write(",\n")
+                                    nf.write(" " * padding)
+                            else:
+                                nf.write("]\n")
+                            updated = True
+                    else:
+                        nf.write(line)
+        except IOError as e:
+            logger.error("Unable to write to new file: %s [Errno:%d] %s",
+                         config_file_new,
+                         e.errno,
+                         e.strerror)
+            sys.exit(1)
+
+    if updated:
+        # Copy current config to .bak
+        copy_file(config_file, config_file_bak)
+
+        # move .new file to real conf file
+        move_file(config_file_new, config_file)
+
+    elif os.path.exists(config_file_new):
+        # No differences, remove the generated config file
+        os.unlink(config_file_new)
+    return updated
+
+if __name__ == '__main__':
+
+    tls_allowed_dn_list = []
+    config_updated = False
+
+    parser = argparse.ArgumentParser(description='Modify migration keys for libvirtd')
+    parser.add_argument('-v', action='store_true', dest='verbose',
+                        help='Verbose')
+    parser.add_argument('-r', action='store_true', dest='restart',
+                        help='Restart libvirtd, if file changes were made')
+    parser.add_argument('-c', metavar='filename', dest='config',
+                        default=LIBVIRT_CONF,
+                        help="Configuration file, default: %s" % LIBVIRT_CONF)
+
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('-a', nargs=2, metavar=('client', 'secret'),
+                       help='Authorize client')
+    group.add_argument('-D', action='store_true',
+                       help='Deauthorize all migration clients')
+
+    # Handle case where NC is calling with extra parameters that we don't need.
+    parser.add_argument('args', metavar='', nargs=argparse.REMAINDER,
+                        help=argparse.SUPPRESS) 
+    args = parser.parse_args()
+
+    logger = getLogger('authorize-migration-keys', args.verbose)
+
+    if not os.path.exists(args.config):
+        logger.error("Error, configuration file: %s not found, exiting", args.config)
+        sys.exit(1)
+    #
+    # If called with -D then we need to clear the tls_allowed_dn_list.
+    # If called with '-a client secret' then we need to *add*
+    # to the tls_allowed_dn_list or replace current entries.
+    #
+    if not args.D:
+        tls_allowed_dn_list = generate_new_dn(args.a[0], args.a[1])
+
+    config_updated = write_config(tls_allowed_dn_list, args.config)
+
+    if args.restart and config_updated:
+        logger.debug("Restarting libvirtd")
+        subprocess.call(['/usr/bin/systemctl', 'restart', 'libvirtd.service'])
+
+        #
+        # After restarting libvirtd, we need to wait for it to become available so
+        # that the node controller can connect with the hypervisor in startup
+        # situations.
+        #
+        connected = False
+        for i in range(0,MAX_RETRIES):
+            try:
+                subprocess.check_call(['virsh','connect'],stdin=open('/dev/null'), stdout=open('/dev/null','w'))
+                connected = True
+                break
+            except CalledProcessError as e:
+                logger.debug("Unable to connect to hypervisor on attempt number: [%d]", i+1)
+                sleep(1)
+        if not connected:
+            logger.error("Error, unable to connect to hypervisor after %d seconds",MAX_RETRIES)
+            sys.exit(1)
+    elif not config_updated:
+        logger.debug("No configuration change, will not restart libvirtd")
+    else:
+        logger.debug("Configuration file changed, libvirtd restart not requested")
+

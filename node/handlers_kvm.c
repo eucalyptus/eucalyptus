@@ -918,7 +918,7 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                     (instance->migration_credentials == NULL) ? "UNSET" : "present");
             // First, call config-file modification script to authorize source node.
             LOGDEBUG("[%s] authorizing migration source node %s\n", instance->instanceId, instance->migration_src);
-            if (authorize_migration_keys("-a", instance->migration_src, instance->migration_credentials, instance, TRUE) != EUCA_OK) {
+            if (authorize_migration_keys(instance->migration_src, instance->migration_credentials, instance, TRUE) != EUCA_OK) {
                 goto failed_dest;
             }
             // Then, generate keys and restart libvirtd.
@@ -1053,7 +1053,7 @@ failed_dest:
                 // TO-DO: Add belt and suspenders?
                 if (!incoming_migrations_pending) {
                     LOGINFO("[%s] no remaining incoming or pending migrations -- deauthorizing all migration client keys\n", instance->instanceId);
-                    authorize_migration_keys("-D -r", NULL, NULL, NULL, FALSE);
+                    deauthorize_migration_keys(FALSE);
                 }
             }
             sem_v(inst_sem);
