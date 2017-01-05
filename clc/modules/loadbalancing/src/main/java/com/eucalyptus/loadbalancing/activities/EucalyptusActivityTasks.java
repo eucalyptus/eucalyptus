@@ -2208,6 +2208,14 @@ public class EucalyptusActivityTasks {
 			req.setForceDelete(this.terminateInstances);
 			return req;
 		}
+
+		@Override
+		boolean dispatchFailure(ActivityContext<AutoScalingMessage, AutoScaling> context, Throwable throwable) {
+			if ( !AsyncExceptions.isWebServiceErrorCode( throwable, "ScalingActivityInProgress" ) ) {
+				return super.dispatchFailure( context, throwable );
+			}
+			return false;
+		}
 	}
 
 	private class AutoScalingDeleteLaunchConfigTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
