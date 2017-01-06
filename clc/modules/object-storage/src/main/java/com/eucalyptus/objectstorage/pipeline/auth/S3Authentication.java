@@ -69,7 +69,7 @@ public final class S3Authentication {
         String accessKeyId = signatureElements[0];
         String signature = signatureElements[1];
         String dateStr = getDateFromHeaders(request);
-        parseDateAndAssertNotExpired(dateStr);
+        parseDate(dateStr);
         String canonicalizedAmzHeaders = S3V2Authentication.buildCanonicalHeaders(request, false);
         String securityToken = request.getHeader(SecurityParameter.X_Amz_Security_Token.parameter());
         S3V2Authentication.login(request, dateStr, canonicalizedAmzHeaders, accessKeyId, signature, securityToken);
@@ -78,12 +78,12 @@ public final class S3Authentication {
 
     V2_PARAMS {
       public void authenticate(MappingHttpRequest request, Map<String, String> lowercaseParams) throws S3Exception {
-        String dateStr = S3V2Authentication.getAndValidateDateFromParameters(lowercaseParams);
+        String expiresStr = S3V2Authentication.getAndValidateExpiresFromParameters(lowercaseParams);
         String canonicalizedAmzHeaders = S3V2Authentication.buildCanonicalHeaders(request, true);
         String accessKeyId = request.getParameters().remove(SecurityParameter.AWSAccessKeyId.toString());
         String signature = getSignatureFromParameters(lowercaseParams);
         String securityToken = lowercaseParams.get(SecurityParameter.X_Amz_Security_Token.parameter().toLowerCase());
-        S3V2Authentication.login(request, dateStr, canonicalizedAmzHeaders, accessKeyId, signature, securityToken);
+        S3V2Authentication.login(request, expiresStr, canonicalizedAmzHeaders, accessKeyId, signature, securityToken);
       }
     },
 
@@ -92,7 +92,7 @@ public final class S3Authentication {
         Map<V4AuthComponent, String> authComponents = S3V4Authentication.getV4AuthComponents(request.getHeader(HttpHeaders.Names
             .AUTHORIZATION));
         String dateStr = getDateFromHeaders(request);
-        Date date = parseDateAndAssertNotExpired(dateStr);
+        Date date = parseDate(dateStr);
         SignatureCredential credential = S3V4Authentication.getAndVerifyCredential(date, authComponents.get(V4AuthComponent.Credential));
         String signedHeaders = authComponents.get(V4AuthComponent.SignedHeaders);
         String signature = authComponents.get(V4AuthComponent.Signature);
@@ -110,7 +110,8 @@ public final class S3Authentication {
     V4_PARAMS {
       public void authenticate(MappingHttpRequest request, Map<String, String> lowercaseParams) throws S3Exception {
         String dateStr = S3V4Authentication.getDateFromParams(lowercaseParams);
-        Date date = parseDateAndAssertNotExpired(dateStr);
+        Date date = parseDate(dateStr);
+        S3V4Authentication.validateExpiresFromParams(lowercaseParams, date);
         String credentialStr = lowercaseParams.get(SecurityParameter.X_Amz_Credential.parameter().toLowerCase());
         SignatureCredential credential = S3V4Authentication.getAndVerifyCredential(date, credentialStr);
         String signedHeaders = lowercaseParams.get(SecurityParameter.X_Amz_SignedHeaders.parameter().toLowerCase());
@@ -176,7 +177,7 @@ public final class S3Authentication {
     Map<V4AuthComponent, String> authComponents = S3V4Authentication.getV4AuthComponents(request.getHeader(HttpHeaders.Names
         .AUTHORIZATION));
     String dateStr = getDateFromHeaders(request);
-    Date date = parseDateAndAssertNotExpired(dateStr);
+    Date date = parseDate(dateStr);
     SignatureCredential credential = S3V4Authentication.getAndVerifyCredential(date, authComponents.get(V4AuthComponent.Credential));
     String signedHeaders = authComponents.get(V4AuthComponent.SignedHeaders);
     String securityToken = request.getHeader(SecurityParameter.X_Amz_Security_Token.parameter());
@@ -246,7 +247,7 @@ public final class S3Authentication {
     return result;
   }
 
-  static Date parseDateAndAssertNotExpired(String dateStr) throws AccessDeniedException {
+  static Date parseDate(String dateStr) throws AccessDeniedException {
     Date date = null;
 
     try {
@@ -262,9 +263,6 @@ public final class S3Authentication {
       throw new AccessDeniedException(null, "Unable to parse date.");
     }
 
-    Date currentDate = new Date();
-    if (Math.abs(currentDate.getTime() - date.getTime()) > ObjectStorageProperties.EXPIRATION_LIMIT)
-      throw new AccessDeniedException(null, "Cannot process request. Expired.");
     return date;
   }
 

@@ -31,13 +31,14 @@ import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.MissingContentLengthException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.SubResource;
+import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.util.HmacUtils.SignatureCredential;
 import com.google.common.base.*;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.io.BaseEncoding;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
 import java.util.Date;
@@ -56,6 +57,7 @@ public final class S3V4Authentication {
   private static final String AWS_V4_TERMINATOR = "aws4_request";
   public static final String AWS_V4_AUTH_TYPE = "AWS4-HMAC-SHA256";
   public static final String AWS_CONTENT_SHA_HEADER = "x-amz-content-sha256";
+  public static final String AWS_EXPIRES_PARAM = "x-amz-expires";
   public static final String AWS_DECODED_CONTENT_LEN = "x-amz-decoded-content-length";
   public static final String STREAMING_PAYLOAD = "STREAMING-AWS4-HMAC-SHA256-PAYLOAD";
   private static final String STREAMING_PAYLOAD_CHUNK_PREFIX = "AWS4-HMAC-SHA256-PAYLOAD";
@@ -220,6 +222,22 @@ public final class S3V4Authentication {
     if (result == null)
       throw new AccessDeniedException(null, "X-Amz-Date parameter must be specified.");
     return result;
+  }
+
+  static void validateExpiresFromParams(Map<String, String> parameters, Date date) throws AccessDeniedException {
+    String expires = parameters.get(AWS_EXPIRES_PARAM);
+    if (expires == null)
+      throw new AccessDeniedException(null, "X-Amz-Expires parameter must be specified.");
+    Long expireTime;
+    try {
+      expireTime = Long.parseLong(expires);
+    } catch (NumberFormatException e) {
+      throw new AccessDeniedException(null, "Invalid X-Amz-Expires parameter.");
+    }
+
+    DateTime dt = new DateTime(date).plusSeconds(expireTime.intValue() + StackConfiguration.CLOCK_SKEW_SEC);
+    if (dt.isBeforeNow())
+      throw new AccessDeniedException(null, "Cannot process request. Expired.");
   }
 
   static Long getAndVerifyDecodedContentLength(MappingHttpRequest request, String contentSha) throws S3Exception {

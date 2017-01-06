@@ -206,18 +206,26 @@ final class S3V2Authentication {
   /**
    * Gets and validates a date obtained from an Expires parameter.
    */
-  static String getAndValidateDateFromParameters(Map<String, String> parameters) throws InvalidSecurityException, AccessDeniedException {
+  static String getAndValidateExpiresFromParameters(Map<String, String> parameters) throws InvalidSecurityException, AccessDeniedException {
     String expires = parameters.remove(SecurityParameter.Expires.toString().toLowerCase());
     if (expires == null)
-      throw new InvalidSecurityException("Expiration parameter must be specified.");
+      throw new InvalidSecurityException("Expires parameter must be specified.");
 
     // Assert not expired
-    Long expireTime = Long.parseLong(expires);
+    Long expireTime;
+    try {
+      expireTime = Long.parseLong(expires);
+    } catch (NumberFormatException e) {
+      throw new AccessDeniedException(null, "Invalid Expires parameter.");
+    }
+
+    if (expireTime < 1 || expireTime > 604800)
+      throw new AccessDeniedException(null, "Invalid Expires parameter.");
+
     Long currentTime = new Date().getTime() / 1000;
     if (currentTime > expireTime)
       throw new AccessDeniedException(null, "Cannot process request. Expired.");
-
-    return Long.valueOf(expires).toString();
+    return expires;
   }
 
   private static void processHeaderValue(String name, String value, Map<String, String> aggregatingMap) {
