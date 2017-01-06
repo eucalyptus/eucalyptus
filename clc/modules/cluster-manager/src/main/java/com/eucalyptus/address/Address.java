@@ -672,7 +672,10 @@ public class Address implements AccountRestrictedType, AddressI, AddressMetadata
         ((OwnedAddressStateMetadataSupport)metadata).ownerUserId.equals( owner.getUserId( ) ) ) {
       return owner;
     } else if ( metadata instanceof OwnedAddressStateMetadataSupport ) {
-      final UserFullName newOwner = UserFullName.getInstance( ((OwnedAddressStateMetadataSupport)metadata).ownerUserId );
+      final UserFullName newOwner = UserFullName.getInstanceForAccount(
+          ((OwnedAddressStateMetadataSupport)metadata).ownerAccountNumber,
+          ((OwnedAddressStateMetadataSupport)metadata).ownerUserId
+      );
       cachedUser.set( newOwner );
       return newOwner;
     } else {

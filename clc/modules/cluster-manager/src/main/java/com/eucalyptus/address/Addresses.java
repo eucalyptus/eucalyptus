@@ -427,9 +427,11 @@ public class Addresses {
             disable( address.getAddress( ) );
 
             LOG.debug( "Released address: " + String.valueOf( address ) );
-            if ( releaseTransition.get( ).oldAddressInfo( ).getOwnerUserId( ) != null ) {
+            final String oldAccountNumber = releaseTransition.get( ).oldAddressInfo( ).getOwnerAccountNumber( );
+            final String oldUserId = releaseTransition.get( ).oldAddressInfo( ).getOwnerUserId( );
+            if ( oldAccountNumber != null && oldUserId != null ) {
               fireUsageEvent(
-                  releaseTransition.get( ).oldAddressInfo( ).getOwnerUserId( ),
+                  UserFullName.getInstanceForAccount( oldAccountNumber, oldUserId ),
                   address.getDisplayName( ),
                   Suppliers.ofInstance( AddressEvent.forRelease( ) ) );
             }
@@ -732,44 +734,42 @@ public class Addresses {
   }
 
   private void fireAssociateUsageEvent( final AddressStateTransition transition ) {
-    fireUsageEvent(
-        transition.newAddressInfo( ).getOwnerUserId( ),
-        transition.newAddressInfo( ).getAddress( ),
-        new Supplier<EventActionInfo<AddressEvent.AddressAction>>( ) {
-          @Override
-          public EventActionInfo<AddressEvent.AddressAction> get( ) {
-            return AddressEvent.forAssociate(
-                transition.newAddressInfo( ).getInstanceUuid( ),
-                transition.newAddressInfo( ).getInstanceId( )
-            );
+    final String oldAccountNumber = transition.oldAddressInfo( ).getOwnerAccountNumber( );
+    final String oldUserId = transition.oldAddressInfo( ).getOwnerUserId( );
+    if ( oldAccountNumber != null && oldUserId != null ) {
+      fireUsageEvent(
+          UserFullName.getInstanceForAccount( oldAccountNumber, oldUserId ),
+          transition.newAddressInfo( ).getAddress( ),
+          new Supplier<EventActionInfo<AddressEvent.AddressAction>>( ) {
+            @Override
+            public EventActionInfo<AddressEvent.AddressAction> get( ) {
+              return AddressEvent.forAssociate(
+                  transition.newAddressInfo( ).getInstanceUuid( ),
+                  transition.newAddressInfo( ).getInstanceId( )
+              );
+            }
           }
-        }
-    );
+      );
+    }
   }
 
   private void fireDisassociateUsageEvent( final AddressStateTransition transition ) {
-    fireUsageEvent(
-        transition.oldAddressInfo( ).getOwnerUserId( ),
-        transition.oldAddressInfo( ).getAddress( ),
-        new Supplier<EventActionInfo<AddressEvent.AddressAction>>( ) {
-          @Override
-          public EventActionInfo<AddressEvent.AddressAction> get( ) {
-            return AddressEvent.forDisassociate(
-                transition.oldAddressInfo( ).getInstanceUuid( ),
-                transition.oldAddressInfo( ).getInstanceId( )
-            );
+    final String oldAccountNumber = transition.oldAddressInfo( ).getOwnerAccountNumber( );
+    final String oldUserId = transition.oldAddressInfo( ).getOwnerUserId( );
+    if ( oldAccountNumber != null && oldUserId != null ) {
+      fireUsageEvent(
+          UserFullName.getInstanceForAccount( oldAccountNumber, oldUserId ),
+          transition.oldAddressInfo( ).getAddress( ),
+          new Supplier<EventActionInfo<AddressEvent.AddressAction>>( ) {
+            @Override
+            public EventActionInfo<AddressEvent.AddressAction> get( ) {
+              return AddressEvent.forDisassociate(
+                  transition.oldAddressInfo( ).getInstanceUuid( ),
+                  transition.oldAddressInfo( ).getInstanceId( )
+              );
+            }
           }
-        }
-    );
-  }
-
-  private void fireUsageEvent( final String ownerUserId,
-                               final String address,
-                               final Supplier<EventActionInfo<AddressEvent.AddressAction>> actionInfoSupplier ) {
-    try {
-      fireUsageEvent( UserFullName.getInstance( ownerUserId ), address, actionInfoSupplier );
-    } catch ( final Throwable e ) {
-      LOG.error( e, e );
+      );
     }
   }
 

@@ -87,12 +87,13 @@ import javax.annotation.Nullable;
 
 public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
   private static Logger             LOG         = Logger.getLogger( ServiceContextHandler.class );
-  private ChannelLocal<Long>        startTime   = new ChannelLocal<Long>(true);
-  private ChannelLocal<Long>        openTime    = new ChannelLocal<Long>(true);
-  private ChannelLocal<BaseMessage> messageType = new ChannelLocal<BaseMessage>(true) {
+  private ChannelLocal<Long>        startTime   = new ChannelLocal<>(true);
+  private ChannelLocal<Long>        openTime    = new ChannelLocal<>(true);
+  private ChannelLocal<Class<? extends BaseMessage>>
+                                    messageType = new ChannelLocal<Class<? extends BaseMessage>>(true) {
                                                   @Override
-                                                  protected BaseMessage initialValue( Channel channel ) {
-                                                    return new BaseMessage( );
+                                                  protected Class<? extends BaseMessage> initialValue( Channel channel ) {
+                                                    return BaseMessage.class;
                                                   }
                                                 };
 
@@ -204,7 +205,7 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
 
   private void messageReceived( final ChannelHandlerContext ctx, final BaseMessage msg ) throws ServiceDispatchException {
     this.startTime.set( ctx.getChannel( ), System.currentTimeMillis( ) );
-    this.messageType.set( ctx.getChannel( ), msg );
+    this.messageType.set( ctx.getChannel( ), msg.getClass( ) );
     EventRecord.here( ServiceContextHandler.class, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ).trace( );
     ServiceOperations.dispatch( msg );
   }
@@ -219,10 +220,10 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
     }
     try {
       if ( ctx.getChannel() != null ) {
-        @Nullable final BaseMessage msg = this.messageType.get( ctx.getChannel( ) );
+        @Nullable final Class<?> msgClass = this.messageType.get( ctx.getChannel( ) );
         @Nullable final Long openTime = this.openTime.get( ctx.getChannel( ) );
-        if ( msg != null && openTime != null ) {
-          Logs.extreme( ).debug( EventRecord.here( msg.getClass( ), EventClass.MESSAGE, EventType.MSG_SERVICED, "rtt-ms", Long.toString( System.currentTimeMillis( ) - openTime ) ) );
+        if ( msgClass != null && openTime != null ) {
+          Logs.extreme( ).debug( EventRecord.here( msgClass, EventClass.MESSAGE, EventType.MSG_SERVICED, "rtt-ms", Long.toString( System.currentTimeMillis( ) - openTime ) ) );
         }
       }
     } catch ( Exception ex ) {

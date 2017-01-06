@@ -2125,7 +2125,8 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
         } else if ( !ValidateVmInfo.INSTANCE.apply( input ) ) {
           return false;
         } else {
-          final UserFullName userFullName = UserFullName.getInstance( input.getOwnerId( ) );
+          final UserFullName userFullName =
+              UserFullName.getInstanceForAccount( input.getAccountId( ), input.getOwnerId( ) );
           Allocations.Allocation allocation = null;
           try {
             final String imageId = RestoreHandler.restoreImage( input );
@@ -2182,7 +2183,8 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
         } else if ( !ValidateVmInfo.INSTANCE.apply( input ) ) {
           return false;
         } else {
-          final UserFullName userFullName = UserFullName.getInstance( input.getOwnerId( ) );
+          final UserFullName userFullName =
+              UserFullName.getInstanceForAccount( input.getAccountId( ), input.getOwnerId( ) );
           Allocations.Allocation allocation = null;
           try {
             final String imageId = RestoreHandler.restoreImage( input );
