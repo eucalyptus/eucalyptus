@@ -66,6 +66,12 @@ enum vpcmido_nginx_t {
     VPCMIDO_NGINX_STOP
 };
 
+enum vpc_nacl_midos_t {
+    VPCNACL_INGRESS,
+    VPCNACL_EGRESS,
+    VPCNACL_END
+};
+
 enum vpc_sg_midos_t {
     VPCSG_INGRESS,
     VPCSG_EGRESS,
@@ -184,6 +190,20 @@ typedef struct mido_vpc_subnet_t mido_vpc_subnet;
 typedef struct mido_vpc_natgateway_t mido_vpc_natgateway;
 typedef struct mido_vpc_instance_t mido_vpc_instance;
 typedef struct mido_vpc_secgroup_t mido_vpc_secgroup;
+typedef struct mido_vpc_nacl_t mido_vpc_nacl;
+
+struct mido_vpc_nacl_t {
+    gni_network_acl *gniNacl;
+    char name[NETWORK_ACL_ID_LEN];
+    midonet_api_chain *ingress;
+    midonet_api_chain *egress;
+    midoname *midos[VPCNACL_END];
+    int ingress_changed;
+    int egress_changed;
+    int population_failed;
+    int midopresent;
+    int gnipresent;
+};
 
 struct mido_vpc_secgroup_t {
     gni_secgroup *gniSecgroup;
@@ -271,7 +291,9 @@ struct mido_vpc_t {
     midonet_api_chain *rt_mduplink_outfilter;
     midoname *midos[VPC_END];
     mido_vpc_subnet *subnets;
+    mido_vpc_nacl *nacls;
     int max_subnets;
+    int max_nacls;
     int population_failed;
     int midopresent;
     int gnipresent;
@@ -509,6 +531,9 @@ int parse_mido_secgroup_rule_v1(mido_config *mido, gni_rule *rule, mido_parsed_c
 int parse_mido_secgroup_rule_v5(mido_config *mido, gni_rule *rule, mido_parsed_chain_rule *parsed_rule);
 int clear_parsed_chain_rule(mido_parsed_chain_rule *rule);
 
+int create_mido_vpc_nacl(mido_config *mido, mido_vpc_nacl *vpcnacl);
+int delete_mido_vpc_nacl(mido_config *mido, mido_vpc_nacl *vpcnacl);
+
 int connect_mido_vpc_instance(mido_vpc_subnet *vpcsubnet, mido_vpc_instance *inst, char *instanceDNSDomain);
 int disconnect_mido_vpc_instance(mido_vpc_subnet *subnet, mido_vpc_instance *vpcinstance);
 
@@ -530,6 +555,7 @@ int free_mido_vpc_subnet(mido_vpc_subnet *vpcsubnet);
 int free_mido_vpc_instance(mido_vpc_instance *vpcinstance);
 int free_mido_vpc_natgateway(mido_vpc_natgateway *vpcnatgateway);
 int free_mido_vpc_secgroup(mido_vpc_secgroup *vpcsecgroup);
+int free_mido_vpc_nacl(mido_vpc_nacl *vpcnacl);
 
 void print_mido_vpc(mido_vpc *vpc);
 void print_mido_vpc_subnet(mido_vpc_subnet *vpcsubnet);
@@ -546,6 +572,7 @@ int do_midonet_update_pass2(globalNetworkInfo *gni, mido_config *mido);
 int do_midonet_update_pass3_vpcs(globalNetworkInfo *gni, mido_config *mido);
 int do_midonet_update_pass3_sgs(globalNetworkInfo *gni, mido_config *mido);
 int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido);
+int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido);
 
 int do_midonet_teardown(mido_config *mido);
 int do_midonet_delete_all(mido_config *mido);

@@ -1252,6 +1252,14 @@ int do_midonet_update_pass1(globalNetworkInfo *gni, globalNetworkInfo *appliedGn
                 // Allocate vpcsubnets buffer for the worst case
                 vpc->subnets = EUCA_REALLOC_C(vpc->subnets, vpc->max_subnets + gnivpc->max_subnets, sizeof (mido_vpc_subnet));
             }
+            if ((gnivpc->max_networkAcls > 0) && (ret == 0)) {
+                // Allocate vpc_nacls buffer for the worst case
+                vpc->nacls = EUCA_REALLOC_C(vpc->nacls, vpc->max_nacls + gnivpc->max_networkAcls, sizeof (mido_vpc_nacl));
+            }
+        }
+
+        for (j = 0; j < gnivpc->max_networkAcls; j++) {
+            LOGINFO("11622: pass1 %s\n", gnivpc->networkAcls[j].name);
         }
 
         vpcsubnetidx = 0;
@@ -2751,6 +2759,71 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
 }
 
 /**
+ * Implements network acls (create mido objects) as described in GNI.
+ * @param gni [in] Global Network Information to be applied.
+ * @param mido [in] data structure that holds MidoNet configuration
+ * @return 0 on success. 1 otherwise.
+ */
+int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
+    int rc = 0;
+    int ret = 0;
+    for (int i = 0; i < gni->max_vpcs; i++) {
+        gni_vpc *gnivpc = &(gni->vpcs[i]);
+        mido_vpc *vpc = (mido_vpc *) gnivpc->mido_present;
+        if (!vpc) {
+            LOGWARN("Unable to process network acls for %s\n", gnivpc->name);
+            continue;
+        }
+        for (int j = 0; j < gnivpc->max_networkAcls; j++) {
+            gni_network_acl *gninacl = &(gnivpc->networkAcls[j]);
+            mido_vpc_nacl *vpcnacl = (mido_vpc_nacl *) gninacl->mido_present;
+            if (vpcnacl != NULL) {
+                LOGINFO("11622 found gni %s already extant\n", gninacl->name);
+            } else {
+                LOGINFO("11622\tcreating %s\n", gninacl->name);
+                // necessary memory should have been allocated in pass1
+                vpcnacl = &(vpc->nacls[vpc->max_nacls]);
+                memset(vpcnacl, 0, sizeof (mido_vpc_nacl));
+                vpc->max_nacls++;
+                snprintf(vpcnacl->name, NETWORK_ACL_ID_LEN, "%s", gninacl->name);
+                vpcnacl->gniNacl = gninacl;
+                gninacl->mido_present = vpcnacl;
+                vpcnacl->egress_changed = 1;
+                vpcnacl->ingress_changed = 1;
+            }
+
+            if (vpcnacl->midopresent) {
+                // nacl presence test passed in pass1
+                LOGTRACE("\t\t%s found in mido\n", gninacl->name);
+            } else {
+                rc = create_mido_vpc_nacl(mido, vpcnacl);
+                if (rc) {
+                    LOGERROR("cannot create mido network acl %s: check midonet health\n", vpcnacl->name);
+                    rc = delete_mido_vpc_nacl(mido, vpcnacl);
+                    if (rc) {
+                        LOGERROR("failed to cleanup %s\n", gninacl->name);
+                    }
+                    ret++;
+                    continue;
+                } else {
+                    vpcnacl->population_failed = 0;
+                }
+            }
+            vpcnacl->gnipresent = 1;
+            LOGINFO("11622\t\t%s ingress %d egress %d\n", vpcnacl->name,
+                    vpcnacl->ingress_changed, vpcnacl->egress_changed);
+            for (int k = 0; k < gninacl->max_ingress; k++) {
+                gni_acl_entry *acl_entry = &(gninacl->ingress[k]);
+                LOGINFO("11622: \t%d %d %s %x/%d %d:%d %d:%d %s\n", acl_entry->number, acl_entry->protocol, acl_entry->cidr,
+                        acl_entry->cidrNetaddr, acl_entry->cidrSlashnet, acl_entry->icmpType, acl_entry->icmpCode,
+                        acl_entry->fromPort, acl_entry->toPort, (!acl_entry->allow ? "DENY" : "ALLOW"));
+            }
+        }
+    }
+    return (ret);
+}
+
+/**
  * Executes VPCMIDO maintenance.
  * @param mido [in] data structure that holds MidoNet configuration
  * @return 0 on success. 1 otherwise.
@@ -2990,6 +3063,15 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
         return (-rc);
     }
     LOGINFO("\tinstances processed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+
+    rc = do_midonet_update_pass3_nacls(gni, mido);
+    if (rc) {
+        LOGERROR("pass3_nacls: failed update - check midonet health\n");
+        ret++;
+        mido->config->eucanetd_err = EUCANETD_ERR_VPCMIDO_NACLS;
+        return (ret);
+    }
+    LOGINFO("\tnetwork acls processed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
 
     mido_info_http_count();
     return (ret);
@@ -4212,6 +4294,22 @@ int free_mido_vpc_secgroup(mido_vpc_secgroup *vpcsecgroup) {
 }
 
 /**
+ * Releases resources allocated to hold information about network ACL vpcnacl.
+ * @param vpcnacl [in] data structure holding information about the network ACL of interest
+ * @return 0 on success. Positive integer otherwise.
+ */
+int free_mido_vpc_nacl(mido_vpc_nacl *vpcnacl) {
+    int ret = 0;
+    
+    if (!vpcnacl) {
+        return (ret);
+    }
+    
+    memset(vpcnacl, 0, sizeof (mido_vpc_nacl));
+    return (ret);
+}
+
+/**
  * Parses the given gni_rule to get its corresponding mido_parsed_chain_rule
  * @param mido [in] mido current mido_config data structure.
  * @param rule [in] rule gni_rule of interest.
@@ -4475,6 +4573,65 @@ int clear_parsed_chain_rule(mido_parsed_chain_rule *rule) {
     }
 
     return(0);
+}
+
+/**
+ * Create necessary objects in MidoNet to implement a Network ACL.
+ *
+ * @param mido [in] data structure that holds MidoNet configuration.
+ * @param vpcnacl [in] data structure that holds information about the Network ACL of interest.
+ *
+ * @return 0 on success. 1 on any error.
+ */
+int create_mido_vpc_nacl(mido_config *mido, mido_vpc_nacl *vpcnacl) {
+    int ret = 0;
+    char name[LID_LEN];
+    midonet_api_chain *ch = NULL;
+
+    if (!mido || !vpcnacl) {
+        return (1);
+    }
+    snprintf(name, LID_LEN, "acl_ingress_%s", vpcnacl->name);
+    ch = mido_create_chain(VPCMIDO_TENANT, name, &(vpcnacl->midos[VPCNACL_INGRESS]));
+    if (!ch) {
+        LOGWARN("Failed to create chain %s.\n", name);
+        ret = 1;
+    } else {
+        vpcnacl->ingress = ch;
+    }
+
+    snprintf(name, LID_LEN, "acl_egress_%s", vpcnacl->name);
+    ch = mido_create_chain(VPCMIDO_TENANT, name, &(vpcnacl->midos[VPCNACL_EGRESS]));
+    if (!ch) {
+        LOGWARN("Failed to create chain %s.\n", name);
+        ret = 1;
+    } else {
+        vpcnacl->egress = ch;
+    }
+
+    return (ret);
+}
+
+/**
+ * Deletes mido objects of a VPC network acl.
+ *
+ * @param mido [in] data structure holding all discovered MidoNet resources.
+ * @param vpcnacl [in] network acl of interest.
+ *
+ * @return 0 on success. 1 otherwise.
+ */
+int delete_mido_vpc_nacl(mido_config *mido, mido_vpc_nacl *vpcnacl) {
+    int ret = 0, rc = 0;
+
+    if ((!vpcnacl) || (strlen(vpcnacl->name) == 0)) {
+        return (1);
+    }
+
+    rc += mido_delete_chain(vpcnacl->midos[VPCNACL_INGRESS]);
+    rc += mido_delete_chain(vpcnacl->midos[VPCNACL_EGRESS]);
+
+    free_mido_vpc_nacl(vpcnacl);
+    return (ret);
 }
 
 /**
@@ -7271,6 +7428,11 @@ int free_mido_vpc(mido_vpc *vpc) {
         free_mido_vpc_subnet(&(vpc->subnets[i]));
     }
     EUCA_FREE(vpc->subnets);
+    
+    for (i = 0; i < vpc->max_nacls; i++) {
+        free_mido_vpc_nacl(&(vpc->nacls[i]));
+    }
+    EUCA_FREE(vpc->nacls);
     
     memset(vpc, 0, sizeof (mido_vpc));
 

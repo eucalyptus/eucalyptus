@@ -71,6 +71,7 @@
 #define EUCANETD_ERR_VPCMIDO_VPCS                90
 #define EUCANETD_ERR_VPCMIDO_SGS                100
 #define EUCANETD_ERR_VPCMIDO_ENIS               110
+#define EUCANETD_ERR_VPCMIDO_NACLS              120
 #define EUCANETD_ERR_VPCMIDO_OTHER              255
 
 //! @{

@@ -233,6 +233,7 @@ typedef struct gni_network_acl_t {
     gni_acl_entry *egress;
     int max_egress;
     int changed;
+    void *mido_present;
 } gni_network_acl;
 
 typedef struct gni_dhcp_os_t {
