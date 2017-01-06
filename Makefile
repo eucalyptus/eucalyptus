@@ -118,9 +118,18 @@ install: deploy
 	@$(INSTALL) -m 0644 VERSION $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus-version
 	@$(INSTALL) -d $(DESTDIR)$(etcdir)/init.d
 	@$(INSTALL) -d $(DESTDIR)$(etcdir)/logrotate.d
-	@$(INSTALL) -d $(DESTDIR)$(vardir)/run/eucalyptus/net
-	@$(INSTALL) -d $(DESTDIR)$(vardir)/lib/eucalyptus/keys
-	@$(INSTALL) -d $(DESTDIR)$(vardir)/lib/eucalyptus/CC
+	$(INSTALL) -d -m 0700 $(DESTDIR)$(vardir)/lib/eucalyptus/CC
+	$(INSTALL) -d -m 0700 $(DESTDIR)$(vardir)/lib/eucalyptus/bukkits
+	$(INSTALL) -d -m 0700 $(DESTDIR)$(vardir)/lib/eucalyptus/db
+	$(INSTALL) -d -m 0771 $(DESTDIR)$(vardir)/lib/eucalyptus/instances
+	$(INSTALL) -d -m 0700 $(DESTDIR)$(vardir)/lib/eucalyptus/keys
+	$(INSTALL) -d -m 0700 $(DESTDIR)$(vardir)/lib/eucalyptus/ldap
+	$(INSTALL) -d -m 0700 $(DESTDIR)$(vardir)/lib/eucalyptus/upgrade
+	$(INSTALL) -d -m 0700 $(DESTDIR)$(vardir)/lib/eucalyptus/volumes
+	$(INSTALL) -d -m 0700 $(DESTDIR)$(vardir)/lib/eucalyptus/webapps
+	touch $(DESTDIR)$(vardir)/lib/eucalyptus/services
+	$(INSTALL) -d -m 0755 $(DESTDIR)$(vardir)/run/eucalyptus/net
+	$(INSTALL) -d -m 0750 $(DESTDIR)$(vardir)/run/eucalyptus/status
 	@$(INSTALL) -d $(DESTDIR)$(vardir)/log/eucalyptus -m 750
 	@$(INSTALL) -d $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -d $(DESTDIR)$(datarootdir)/eucalyptus/doc
