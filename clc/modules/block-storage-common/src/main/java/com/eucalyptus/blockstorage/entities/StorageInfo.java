@@ -64,6 +64,7 @@ package com.eucalyptus.blockstorage.entities;
 
 import static com.eucalyptus.upgrade.Upgrades.Version.v4_1_0;
 import static com.eucalyptus.upgrade.Upgrades.Version.v4_2_0;
+import static com.eucalyptus.upgrade.Upgrades.Version.v4_4_0;
 import groovy.sql.GroovyRowResult;
 import groovy.sql.Sql;
 
@@ -105,7 +106,6 @@ import com.google.common.base.Predicate;
 @ConfigurableClass(root = "storage", alias = "basic", description = "Basic storage controller configuration.", singleton = false, deferred = true)
 public class StorageInfo extends AbstractPersistent {
   private static final Boolean DEFAULT_SHOULD_TRANSFER_SNAPSHOTS = Boolean.TRUE;
-  private static final Integer DEFAULT_MAX_SNAP_TRANSFER_RETRIES = 50;
   private static final Integer DEFAULT_SNAPSHOT_PART_SIZE_IN_MB = 100;
   private static final Integer DEFAULT_MAX_SNAPSHOT_PARTS_QUEUE_SIZE = 5;
   private static final Integer DEFAULT_MAX_SNAPSHOT_CONCURRENT_TRANSFERS = 3;
@@ -138,10 +138,6 @@ public class StorageInfo extends AbstractPersistent {
       type = ConfigurableFieldType.BOOLEAN)
   @Column(name = "system_storage_transfer_snapshots")
   private Boolean shouldTransferSnapshots;
-
-  @ConfigurableField(description = "Maximum retry count for snapshot transfer", displayName = "Max Snaphot Transfer Retries", initial = "50")
-  @Column(name = "max_snap_transfer_retries")
-  private Integer maxSnapTransferRetries;
 
   @ConfigurableField(
       description = "Time interval in minutes after which Storage Controller metadata for volumes that have been physically removed from the block storage backend will be deleted",
@@ -239,14 +235,6 @@ public class StorageInfo extends AbstractPersistent {
 
   public void setShouldTransferSnapshots(Boolean shouldTransferSnapshots) {
     this.shouldTransferSnapshots = shouldTransferSnapshots;
-  }
-
-  public Integer getMaxSnapTransferRetries() {
-    return maxSnapTransferRetries;
-  }
-
-  public void setMaxSnapTransferRetries(Integer maxSnapTransferRetries) {
-    this.maxSnapTransferRetries = maxSnapTransferRetries;
   }
 
   public Integer getVolExpiration() {
@@ -379,9 +367,6 @@ public class StorageInfo extends AbstractPersistent {
     if (shouldTransferSnapshots == null) {
       shouldTransferSnapshots = DEFAULT_SHOULD_TRANSFER_SNAPSHOTS;
     }
-    if (maxSnapTransferRetries == null) {
-      maxSnapTransferRetries = DEFAULT_MAX_SNAP_TRANSFER_RETRIES;
-    }
     if (volExpiration == null) {
       volExpiration = DEFAULT_DELETED_VOL_EXPIRATION_TIME;
     }
@@ -424,7 +409,6 @@ public class StorageInfo extends AbstractPersistent {
     info.setShouldTransferSnapshots(DEFAULT_SHOULD_TRANSFER_SNAPSHOTS);
     info.setVolExpiration(DEFAULT_DELETED_VOL_EXPIRATION_TIME);
     info.setSnapExpiration(DEFAULT_DELETED_SNAP_EXPIRATION_TIME);
-    info.setMaxSnapTransferRetries(DEFAULT_MAX_SNAP_TRANSFER_RETRIES);
     info.setSnapshotPartSizeInMB(DEFAULT_SNAPSHOT_PART_SIZE_IN_MB);
     info.setMaxSnapshotPartsQueueSize(DEFAULT_MAX_SNAPSHOT_PARTS_QUEUE_SIZE);
     info.setMaxConcurrentSnapshotTransfers(DEFAULT_MAX_SNAPSHOT_CONCURRENT_TRANSFERS);
@@ -656,6 +640,40 @@ public class StorageInfo extends AbstractPersistent {
         Exceptions.toUndeclared("Failed to perform entity upgrade for StorageInfo entities", e);
       }
       return true;
+    }
+  }
+
+  @PreUpgrade(since = v4_4_0, value = Storage.class)
+  public static class RemoveMaxSnapTransferRetries implements Callable<Boolean> {
+
+    private static final Logger LOG = Logger.getLogger(RemoveMaxSnapTransferRetries.class);
+
+    @Override
+    public Boolean call() throws Exception {
+      Sql sql = null;
+      try {
+        sql = DatabaseFilters.NEWVERSION.getConnection("eucalyptus_storage");
+        String table = "storage_info";
+        // check if the old column exists before renaming it
+        String column = "max_snap_transfer_retries";
+        List<GroovyRowResult> result =
+            sql.rows(String.format("select column_name from information_schema.columns where table_name='%s' and column_name='%s'", table, column));
+        if (result != null && !result.isEmpty()) {
+          // drop column if it exists
+          LOG.info("Dropping column if it exists " + column);
+          sql.execute(String.format("alter table %s drop column if exists %s", table, column));
+        } else {
+          LOG.debug("Column " + column + " not found, nothing to drop");
+        }
+        return Boolean.TRUE;
+      } catch (Exception e) {
+        LOG.warn("Failed to drop columns in table storage_info", e);
+        return Boolean.TRUE;
+      } finally {
+        if (sql != null) {
+          sql.close();
+        }
+      }
     }
   }
 }
