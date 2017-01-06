@@ -2869,7 +2869,9 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
         // Check unconnected objects in MN if errors were detected
         if (mido->config->eucanetd_first_update || mido->config->eucanetd_err) {
             LOGINFO("Checking unconnected objects:\n");
-            do_midonet_delete_unconnected(mido, FALSE);            
+            if (do_midonet_delete_unconnected(mido, FALSE) < 0) {
+                return (1);
+            }            
         }
 
         // Check mido_md config changes
@@ -9283,7 +9285,8 @@ int do_midonet_list_gateways(mido_config *mido) {
  * Search and delete unconnected bridge/router ports, ip-address-groups, and chains.
  * @param mido [in] data structure that holds MidoNet configuration
  * @param onlycheck [in] if true, do not delete (only perform sanity check)
- * @return 0 on success. Positive integer on any error.
+ * @return 0 on success. Negative integer if unconnected object(s) was/were detected.
+ * Positive integer on any error.
  */
 int do_midonet_delete_unconnected(mido_config *mido, boolean checkonly) {
     boolean gDetected = FALSE;
@@ -9323,7 +9326,8 @@ int do_midonet_delete_unconnected(mido_config *mido, boolean checkonly) {
 
     if (!gDetected) {
         LOGINFO("\t=== ok ===\n");
-        return (0);
+    } else {
+        return (-1);
     }
     return (0);
 }

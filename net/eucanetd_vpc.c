@@ -444,14 +444,14 @@ static int network_driver_system_flush(eucanetdConfig *pConfig, globalNetworkInf
             case FLUSH_MIDO_CHECKUNCONNECTED:
                 LOGINFO("Check for unconnected objects in MidoNet\n");
                 rc = do_midonet_delete_vpc_object(pMidoConfig, "unconnected", TRUE);
-                if (rc) {
+                if (rc > 0) {
                     ret = 1;
                 }
                 break;
             case FLUSH_MIDO_UNCONNECTED:
                 LOGINFO("Flush unconnected objects in MidoNet\n");
                 rc = do_midonet_delete_vpc_object(pMidoConfig, "unconnected", FALSE);
-                if (rc) {
+                if (rc > 0) {
                     ret = 1;
                 }
                 break;
