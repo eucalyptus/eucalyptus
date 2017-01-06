@@ -106,18 +106,18 @@ public class UserFullName implements OwnerFullName {
     this.qName = this.authority + this.relativeId;
   }
 
-  public static UserFullName getInstance( final String userId, final String... relativePath ) {
-    if ( userIdMap.asMap().containsKey( userId ) ) {
-      return userIdMap.getIfPresent( userId );
-    } else {
+  public static UserFullName getInstance( final String userId ) {
+    UserFullName userFullName = userIdMap.getIfPresent( userId );
+    if ( userFullName == null ) {
       try {
-        userIdMap.put( userId, getInstance( Accounts.lookupPrincipalByUserId( userId ), relativePath ) );
-        return userIdMap.getIfPresent( userId );
+        userFullName = getInstance( Accounts.lookupPrincipalByUserId( userId ) );
+        userIdMap.put( userId, userFullName );
+        return userFullName;
       } catch ( final AuthException ex ) {
-        userIdMap.put( userId, getInstance( Principals.systemUser( ), relativePath ) );
-        return userIdMap.getIfPresent( userId );
+        userFullName = getInstance( Principals.systemUser( ) );
       }
     }
+    return userFullName;
   }
 
   /**
@@ -142,7 +142,7 @@ public class UserFullName implements OwnerFullName {
     return userFullName;
   }
 
-  public static UserFullName getInstance( final User user, final String... relativePath ) {
+  public static UserFullName getInstance( final User user ) {
     try {
       if ( ( user != null ) && !Principals.isFakeIdentify( user.getUserId( ) ) ) {
         if ( !userIdMap.asMap().containsKey( user.getUserId( ) ) ) {

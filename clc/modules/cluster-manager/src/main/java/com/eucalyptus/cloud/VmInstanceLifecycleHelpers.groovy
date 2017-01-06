@@ -593,7 +593,7 @@ class VmInstanceLifecycleHelpers {
               assign.call( pendingAddress )
             }
           } else { // Check for / restore an Elastic IP
-            final UserFullName userFullName = UserFullName.getInstance( input.ownerId )
+            final UserFullName userFullName = UserFullName.getInstanceForAccount( input.accountId, input.ownerId )
             final Address address = Addresses.getInstance().lookupActiveAddress( input.netParams.ignoredPublicIp )
             if ( address.isAssigned( ) &&
                 address.instanceAddress.equals( input.netParams.ipAddress ) &&
