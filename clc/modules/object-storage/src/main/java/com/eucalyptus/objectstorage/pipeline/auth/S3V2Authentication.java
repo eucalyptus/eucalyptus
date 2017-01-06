@@ -215,7 +215,7 @@ final class S3V2Authentication {
     Long expireTime = Long.parseLong(expires);
     Long currentTime = new Date().getTime() / 1000;
     if (currentTime > expireTime)
-      throw new AccessDeniedException("Cannot process request. Expired.");
+      throw new AccessDeniedException(null, "Cannot process request. Expired.");
 
     return Long.valueOf(expires).toString();
   }

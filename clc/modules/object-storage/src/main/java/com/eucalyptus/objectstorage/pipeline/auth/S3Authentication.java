@@ -242,7 +242,7 @@ public final class S3Authentication {
     if (result == null)
       result = request.getHeader(SecurityHeader.Date.header());
     if (result == null)
-      throw new AccessDeniedException("X-Amz-Date header must be specified.");
+      throw new AccessDeniedException(null, "X-Amz-Date header must be specified.");
     return result;
   }
 
@@ -259,12 +259,12 @@ public final class S3Authentication {
         date = Timestamps.parseTimestamp(dateStr, Type.RFC_2616);
     } catch (Exception ex) {
       LOG.error("Cannot parse date: " + dateStr);
-      throw new AccessDeniedException("Unable to parse date.");
+      throw new AccessDeniedException(null, "Unable to parse date.");
     }
 
     Date currentDate = new Date();
     if (Math.abs(currentDate.getTime() - date.getTime()) > ObjectStorageProperties.EXPIRATION_LIMIT)
-      throw new AccessDeniedException("Cannot process request. Expired.");
+      throw new AccessDeniedException(null, "Cannot process request. Expired.");
     return date;
   }
 

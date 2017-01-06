@@ -209,16 +209,16 @@ public final class S3V4Authentication {
       ByteBuffer payload = request.getContent().toByteBuffer();
       String hashedPayload = BaseEncoding.base16().lowerCase().encode(Digest.SHA256.digestBinary(payload));
       if (!contentShaHeader.equals(hashedPayload))
-        throw new AccessDeniedException("x-amz-content-sha256 header is invalid.");
+        throw new AccessDeniedException(null, "x-amz-content-sha256 header is invalid.");
       return hashedPayload;
     } else
-      throw new AccessDeniedException("x-amz-content-sha256 header is missing.");
+      throw new AccessDeniedException(null, "x-amz-content-sha256 header is missing.");
   }
 
   static String getDateFromParams(Map<String, String> parameters) throws AccessDeniedException {
     String result = parameters.get(SecurityHeader.X_Amz_Date.header().toLowerCase());
     if (result == null)
-      throw new AccessDeniedException("X-Amz-Date parameter must be specified.");
+      throw new AccessDeniedException(null, "X-Amz-Date parameter must be specified.");
     return result;
   }
 
@@ -241,7 +241,7 @@ public final class S3V4Authentication {
       credential.verify(date, null, null, AWS_V4_TERMINATOR);
       return credential;
     } catch (AuthenticationException e) {
-      throw new AccessDeniedException("Credential header is invalid.");
+      throw new AccessDeniedException(null, "Credential header is invalid.");
     }
   }
 
