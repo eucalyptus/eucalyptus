@@ -215,6 +215,13 @@ public final class S3V4Authentication {
       throw new AccessDeniedException("x-amz-content-sha256 header is missing.");
   }
 
+  static String getDateFromParams(Map<String, String> parameters) throws AccessDeniedException {
+    String result = parameters.get(SecurityHeader.X_Amz_Date.header().toLowerCase());
+    if (result == null)
+      throw new AccessDeniedException("X-Amz-Date parameter must be specified.");
+    return result;
+  }
+
   static Long getAndVerifyDecodedContentLength(MappingHttpRequest request, String contentSha) throws S3Exception {
     if (!STREAMING_PAYLOAD.equals(contentSha))
       return null;

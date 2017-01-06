@@ -37,9 +37,7 @@ import com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication.V4AuthCompo
 import com.eucalyptus.objectstorage.pipeline.handlers.AwsChunkStream.AwsChunk;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.ws.util.HmacUtils.SignatureCredential;
-import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
 import javaslang.control.Try.CheckedFunction;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -50,7 +48,6 @@ import java.net.URLEncoder;
 import java.util.*;
 
 import static com.eucalyptus.objectstorage.pipeline.auth.S3V2Authentication.AWS_V2_AUTH_TYPE;
-import static com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication.getAndVerifyDecodedContentLength;
 
 /**
  * REST and query string based V2 and V4 authentication for S3.
@@ -81,7 +78,7 @@ public final class S3Authentication {
 
     V2_PARAMS {
       public void authenticate(MappingHttpRequest request, Map<String, String> lowercaseParams) throws S3Exception {
-        String dateStr = getDateFromParameters(lowercaseParams);
+        String dateStr = S3V2Authentication.getAndValidateDateFromParameters(lowercaseParams);
         String canonicalizedAmzHeaders = S3V2Authentication.buildCanonicalHeaders(request, true);
         String accessKeyId = request.getParameters().remove(SecurityParameter.AWSAccessKeyId.toString());
         String signature = getSignatureFromParameters(lowercaseParams);
@@ -112,7 +109,7 @@ public final class S3Authentication {
 
     V4_PARAMS {
       public void authenticate(MappingHttpRequest request, Map<String, String> lowercaseParams) throws S3Exception {
-        String dateStr = getDateFromParams(request);
+        String dateStr = S3V4Authentication.getDateFromParams(lowercaseParams);
         Date date = parseDateAndAssertNotExpired(dateStr);
         String credentialStr = lowercaseParams.get(SecurityParameter.X_Amz_Credential.parameter().toLowerCase());
         SignatureCredential credential = S3V4Authentication.getAndVerifyCredential(date, credentialStr);
@@ -240,38 +237,12 @@ public final class S3Authentication {
     }
   }
 
-  /**
-   * Gets and validates a date obtained from an Expires parameter.
-   */
-  private static String getDateFromParameters(Map<String, String> parameters) throws InvalidSecurityException, AccessDeniedException {
-    String expires = parameters.remove(SecurityParameter.Expires.toString().toLowerCase());
-    if (expires == null)
-      throw new InvalidSecurityException("Expiration parameter must be specified.");
-
-    // Assert not expired
-    Long expireTime = Long.parseLong(expires);
-    Long currentTime = new Date().getTime() / 1000;
-    if (currentTime > expireTime)
-      throw new AccessDeniedException("Cannot process request. Expired.");
-
-    return Long.valueOf(expires).toString();
-  }
-
   private static String getDateFromHeaders(MappingHttpRequest request) throws AccessDeniedException {
     String result = request.getHeader(SecurityHeader.X_Amz_Date.header());
     if (result == null)
       result = request.getHeader(SecurityHeader.Date.header());
     if (result == null)
       throw new AccessDeniedException("X-Amz-Date header must be specified.");
-    return result;
-  }
-
-  private static String getDateFromParams(MappingHttpRequest request) throws AccessDeniedException {
-    String result = request.getParameters().get(SecurityHeader.X_Amz_Date.header().toLowerCase());
-    if (result == null)
-      result = request.getHeader(SecurityHeader.Date.header());
-    if (result == null)
-      throw new AccessDeniedException("X-Amz-Date parameter must be specified.");
     return result;
   }
 
