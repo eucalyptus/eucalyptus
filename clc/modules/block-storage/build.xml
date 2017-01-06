@@ -1,5 +1,5 @@
 <!--
-  Copyright 2009-2012 Eucalyptus Systems, Inc.
+  Copyright (c) 2009-2016 Hewlett Packard Enterprise Development LP
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -63,7 +63,6 @@
 <project name="eucalyptus-block-storage" basedir=".">
         <property name="builder.suffix" value="groovy" />
 	<import file="../module-inc.xml" />
-	<property name="euca.udev.dir" value="${euca.home}/usr/share/eucalyptus/udev" />
 	<target name="indent-module"></target>
 	<!--================================== BUILD TARGETS ==================================-->
 	<!--================================== install target ==================================-->
@@ -76,12 +75,5 @@
 		<copy todir="${DESTDIR}${euca.lib.dir}" overwrite="true">
 			<fileset file="${jar.file}" />
 		</copy>
-	        <!-- copy udev config over -->
-                <mkdir dir="${DESTDIR}${euca.udev.dir}" />
-                <copy todir="${DESTDIR}${euca.udev.dir}" overwrite="true">
-                  <fileset dir="${basedir}/udev">
-                    <include name="**/*" />
-                  </fileset>
-                </copy>                                                              
 	</target>
 </project>
