@@ -2796,7 +2796,7 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
                 // nacl presence test passed in pass1
                 LOGTRACE("\t\t%s found in mido\n", gninacl->name);
             } else {
-                rc = create_mido_vpc_nacl(mido, vpcnacl);
+                rc = create_mido_vpc_nacl(mido, vpc, vpcnacl);
                 if (rc) {
                     LOGERROR("cannot create mido network acl %s: check midonet health\n", vpcnacl->name);
                     rc = delete_mido_vpc_nacl(mido, vpcnacl);
@@ -4579,19 +4579,21 @@ int clear_parsed_chain_rule(mido_parsed_chain_rule *rule) {
  * Create necessary objects in MidoNet to implement a Network ACL.
  *
  * @param mido [in] data structure that holds MidoNet configuration.
+ * @param vpc [in] data structure that holds information about the VPC in which
+ * the network ACL of interest is associated with.
  * @param vpcnacl [in] data structure that holds information about the Network ACL of interest.
  *
  * @return 0 on success. 1 on any error.
  */
-int create_mido_vpc_nacl(mido_config *mido, mido_vpc_nacl *vpcnacl) {
+int create_mido_vpc_nacl(mido_config *mido, mido_vpc *vpc, mido_vpc_nacl *vpcnacl) {
     int ret = 0;
-    char name[LID_LEN];
+    char name[LID_LEN * 2];
     midonet_api_chain *ch = NULL;
 
-    if (!mido || !vpcnacl) {
+    if (!mido || !vpc || !vpcnacl) {
         return (1);
     }
-    snprintf(name, LID_LEN, "acl_ingress_%s", vpcnacl->name);
+    snprintf(name, LID_LEN * 2, "acl_ingress_%s_%s", vpc->name, vpcnacl->name);
     ch = mido_create_chain(VPCMIDO_TENANT, name, &(vpcnacl->midos[VPCNACL_INGRESS]));
     if (!ch) {
         LOGWARN("Failed to create chain %s.\n", name);
@@ -4600,7 +4602,7 @@ int create_mido_vpc_nacl(mido_config *mido, mido_vpc_nacl *vpcnacl) {
         vpcnacl->ingress = ch;
     }
 
-    snprintf(name, LID_LEN, "acl_egress_%s", vpcnacl->name);
+    snprintf(name, LID_LEN * 2, "acl_egress_%s_%s", vpc->name, vpcnacl->name);
     ch = mido_create_chain(VPCMIDO_TENANT, name, &(vpcnacl->midos[VPCNACL_EGRESS]));
     if (!ch) {
         LOGWARN("Failed to create chain %s.\n", name);

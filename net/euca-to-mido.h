@@ -531,7 +531,7 @@ int parse_mido_secgroup_rule_v1(mido_config *mido, gni_rule *rule, mido_parsed_c
 int parse_mido_secgroup_rule_v5(mido_config *mido, gni_rule *rule, mido_parsed_chain_rule *parsed_rule);
 int clear_parsed_chain_rule(mido_parsed_chain_rule *rule);
 
-int create_mido_vpc_nacl(mido_config *mido, mido_vpc_nacl *vpcnacl);
+int create_mido_vpc_nacl(mido_config *mido, mido_vpc *vpc, mido_vpc_nacl *vpcnacl);
 int delete_mido_vpc_nacl(mido_config *mido, mido_vpc_nacl *vpcnacl);
 
 int connect_mido_vpc_instance(mido_vpc_subnet *vpcsubnet, mido_vpc_instance *inst, char *instanceDNSDomain);
