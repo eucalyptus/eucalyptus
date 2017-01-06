@@ -158,7 +158,6 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
   // Instantiate from database for uploads
   private Long partSize;
   private Integer queueSize;
-  private Integer transferRetries;
   private Integer transferTimeout;
   private Integer readBufferSize;
   private Integer writeBufferSize;
@@ -167,7 +166,6 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
   private static BaseRole role;
 
   // Constants
-  private static final Integer TX_RETRIES = 20;
   private static final Integer REFRESH_TOKEN_RETRIES = 1;
   private static final String UNCOMPRESSED_SIZE_KEY = "uncompressedsize";
 
@@ -680,7 +678,6 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
     StorageInfo info = StorageInfo.getStorageInfo();
     this.partSize = (long) (info.getSnapshotPartSizeInMB() * 1024 * 1024);
     this.queueSize = info.getMaxSnapshotPartsQueueSize();
-    this.transferRetries = info.getMaxSnapTransferRetries();
     this.transferTimeout = info.getSnapshotTransferTimeoutInHours();
     this.readBufferSize = info.getReadBufferSizeInMB() * 1024 * 1024;
     this.writeBufferSize = info.getWriteBufferSizeInMB() * 1024 * 1024;
