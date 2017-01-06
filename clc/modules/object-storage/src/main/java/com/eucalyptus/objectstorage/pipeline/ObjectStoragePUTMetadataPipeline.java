@@ -62,17 +62,13 @@
 
 package com.eucalyptus.objectstorage.pipeline;
 
+import com.eucalyptus.objectstorage.pipeline.stages.*;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageMetadataAggregatorStage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStoragePUTBindingStage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStoragePUTOutboundStage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageRESTExceptionStage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageUserAuthenticationStage;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
@@ -85,6 +81,7 @@ import com.eucalyptus.ws.stages.UnrollableStage;
 @ComponentPart(ObjectStorage.class)
 public class ObjectStoragePUTMetadataPipeline extends ObjectStorageRESTPipeline {
   private static Logger LOG = Logger.getLogger(ObjectStoragePUTMetadataPipeline.class);
+  private final UnrollableStage authAggregator = new ObjectStorageAuthenticationAggregatorStage();
   private final UnrollableStage auth = new ObjectStorageUserAuthenticationStage();
   private final UnrollableStage metadataAggregator = new ObjectStorageMetadataAggregatorStage();
   private final UnrollableStage bind = new ObjectStoragePUTBindingStage();
@@ -109,6 +106,7 @@ public class ObjectStoragePUTMetadataPipeline extends ObjectStorageRESTPipeline 
 
   @Override
   public ChannelPipeline addHandlers(ChannelPipeline pipeline) {
+    authAggregator.unrollStage(pipeline);
     auth.unrollStage(pipeline);
     metadataAggregator.unrollStage(pipeline);
     bind.unrollStage(pipeline);
