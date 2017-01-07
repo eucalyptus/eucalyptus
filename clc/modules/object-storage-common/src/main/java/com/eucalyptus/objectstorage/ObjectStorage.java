@@ -91,11 +91,11 @@ public class ObjectStorage extends ComponentId {
 
   @Override
   public String getServicePath(final String... pathParts) {
-    return "/services/" + this.getClass().getSimpleName().toLowerCase();
+    return "/services/" + name( );
   }
 
   @Override
   public String getInternalServicePath(final String... pathParts) {
-    return "/internal/" + this.getClass().getSimpleName().toLowerCase();
+    return "/internal/" + name( );
   }
 }

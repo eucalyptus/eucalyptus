@@ -40,11 +40,6 @@ public class AutoScalingBackend extends ComponentId {
   private static final long serialVersionUID = 1L;
 
   @Override
-  public String getInternalNamespaceSuffix() {
-    return "/autoscaling/backend";
-  }
-
-  @Override
   public Boolean isCloudLocal() {
     return Boolean.TRUE;
   }

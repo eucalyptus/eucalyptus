@@ -67,7 +67,6 @@ import javax.security.auth.login.LoginException;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 
@@ -91,7 +90,6 @@ import com.google.common.base.Strings;
  * Performs POST form authentication using the POST Policy and form fields. Works exclusively off the formFields collection in the httpRequest. That
  * map must be populated prior to this handler's execution
  */
-@ChannelPipelineCoverage("one")
 public class ObjectStorageFormPOSTAuthenticationHandler extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger(ObjectStorageFormPOSTAuthenticationHandler.class);
 

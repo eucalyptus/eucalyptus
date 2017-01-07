@@ -38,9 +38,4 @@ import com.eucalyptus.component.annotation.PublicService;
 @Description( "Auto Scaling API service" )
 public class AutoScaling extends ComponentId {
   private static final long serialVersionUID = 1L;
-
-  @Override
-  public String getInternalNamespaceSuffix() {
-    return "/autoscaling/service";
-  }
 }

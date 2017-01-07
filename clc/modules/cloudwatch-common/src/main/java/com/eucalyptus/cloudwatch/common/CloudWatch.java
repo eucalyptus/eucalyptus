@@ -21,8 +21,6 @@ package com.eucalyptus.cloudwatch.common;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AwsServiceName;
-import com.eucalyptus.component.annotation.ComponentDatabase;
-import com.eucalyptus.component.annotation.DatabaseNamingStrategy;
 import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
@@ -37,13 +35,7 @@ import com.eucalyptus.component.annotation.PublicService;
 @PolicyVendor( "cloudwatch" )
 @Partition( value = CloudWatch.class, manyToOne = true )
 @FaultLogPrefix( "services" )
-@ComponentDatabase( namingStrategy = DatabaseNamingStrategy.Schema )
 @Description( "CloudWatch API service" )
 public class CloudWatch extends ComponentId {
   private static final long serialVersionUID = 1L;
-
-  @Override
-  public String getInternalNamespaceSuffix() {
-    return "/cloudwatch/service";
-  }
 }

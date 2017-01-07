@@ -84,7 +84,6 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.objectstorage.ObjectStorageGateway;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
@@ -99,7 +98,6 @@ import com.google.common.base.Strings;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
-@ChannelPipelineCoverage("one")
 public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundHandler {
   private static Logger LOG = Logger.getLogger(ObjectStorageGETOutboundHandler.class);
 

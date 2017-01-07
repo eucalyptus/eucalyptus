@@ -182,20 +182,6 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     return "/internal/" + this.capitalizedName;
   }
 
-  /**
-   * Components may declare a namespace suffix for internal use.
-   *
-   * <p>To avoid binding conflicts between components a namespace suffix may be
-   * declared. By default all components use the same namespace in the internal
-   * binding.</p>
-   *
-   * @return The suffix or null for no suffix
-   */
-  @Nullable
-  public String getInternalNamespaceSuffix() {
-    return null;
-  }
-
   public Map<String,String> getServiceQueryParameters() {
     return Collections.emptyMap();
   }

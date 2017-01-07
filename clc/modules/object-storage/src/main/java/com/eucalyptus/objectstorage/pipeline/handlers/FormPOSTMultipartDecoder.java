@@ -26,7 +26,6 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -44,7 +43,6 @@ import com.eucalyptus.ws.handlers.MessageStackHandler;
 /**
  * Populates the form field map in the message based on the content body Subsequent stages/handlers can use the map exclusively
  */
-@ChannelPipelineCoverage("one")
 public class FormPOSTMultipartDecoder extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger(FormPOSTMultipartDecoder.class);
   private static final int S3_FORM_BUFFER_SIZE = 25 * 1024; // 20KB buffer for S3, give a bit of room extra to be safe here

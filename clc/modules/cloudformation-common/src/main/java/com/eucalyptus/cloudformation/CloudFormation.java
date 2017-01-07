@@ -36,9 +36,4 @@ import com.eucalyptus.component.annotation.PublicService;
 @Description( "Cloudformation API service" )
 public class CloudFormation extends ComponentId {
   private static final long serialVersionUID = 1L;
-
-  @Override
-  public String getInternalNamespaceSuffix() {
-    return "/cloudformation";
-  }
 }

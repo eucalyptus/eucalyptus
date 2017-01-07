@@ -67,24 +67,18 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.msgs.PreflightCheckCorsResponseType;
-import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.common.DateFormatter;
-import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.PreflightResponse;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
-import com.google.common.base.Strings;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
-@ChannelPipelineCoverage("one")
 public class ObjectStorageOPTIONSOutboundHandler extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger(ObjectStorageOPTIONSOutboundHandler.class);
 

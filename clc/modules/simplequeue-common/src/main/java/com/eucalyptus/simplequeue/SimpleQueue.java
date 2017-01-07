@@ -19,8 +19,6 @@ package com.eucalyptus.simplequeue;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AwsServiceName;
-import com.eucalyptus.component.annotation.ComponentDatabase;
-import com.eucalyptus.component.annotation.DatabaseNamingStrategy;
 import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
@@ -35,15 +33,8 @@ import com.eucalyptus.util.techpreview.TechPreview;
 @PolicyVendor( "sqs" )
 @Partition( value = SimpleQueue.class, manyToOne = true )
 @FaultLogPrefix( "services" )
-@ComponentDatabase( namingStrategy = DatabaseNamingStrategy.Schema )
 @Description( "Simple Queue API service" )
 @TechPreview(enableByDefaultProperty = "enable.sqs.tech.preview")
 public class SimpleQueue extends ComponentId {
   private static final long serialVersionUID = 1L;
-
-  @Override
-  public String getInternalNamespaceSuffix() {
-    return "/SimpleQueue";
-  }
-  
 }

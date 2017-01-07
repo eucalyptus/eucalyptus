@@ -66,13 +66,11 @@ import java.util.Date;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.objectstorage.ObjectStorageGateway;
 import com.eucalyptus.objectstorage.msgs.DeleteResponseType;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.objectstorage.util.OSGUtil;
@@ -83,7 +81,6 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
-@ChannelPipelineCoverage("one")
 public class ObjectStorageDELETEOutboundHandler extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger(ObjectStorageDELETEOutboundHandler.class);
 

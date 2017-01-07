@@ -63,21 +63,17 @@
 package com.eucalyptus.objectstorage.pipeline.handlers;
 
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.objectstorage.entities.S3ProviderConfiguration;
 import com.eucalyptus.objectstorage.exceptions.s3.*;
 import com.eucalyptus.objectstorage.pipeline.auth.S3Authentication;
 import com.eucalyptus.objectstorage.pipeline.auth.S3Authentication.S3Authenticator;
 import com.eucalyptus.objectstorage.pipeline.handlers.AwsChunkStream.AwsChunk;
 import com.eucalyptus.objectstorage.pipeline.handlers.AwsChunkStream.StreamingHttpRequest;
-import com.eucalyptus.storage.config.ConfigurationCache;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.eucalyptus.ws.server.MessageStatistics;
-import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.*;
-import org.jboss.netty.handler.codec.http.HttpChunk;
 
 import java.util.HashMap;
 import java.util.List;
@@ -85,7 +81,6 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 
-@ChannelPipelineCoverage("one")
 public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
   private static final Logger LOG = Logger.getLogger(ObjectStorageAuthenticationHandler.class);
 

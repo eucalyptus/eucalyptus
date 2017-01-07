@@ -63,7 +63,6 @@
 package com.eucalyptus.objectstorage.pipeline.stages;
 
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
@@ -74,7 +73,6 @@ import com.eucalyptus.objectstorage.msgs.ObjectStorageResponseType;
 import com.eucalyptus.storage.msgs.BucketLogData;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 
-@ChannelPipelineCoverage("one")
 public class ObjectStorageRESTLoggerOutbound extends MessageStackHandler {
 
   @Override

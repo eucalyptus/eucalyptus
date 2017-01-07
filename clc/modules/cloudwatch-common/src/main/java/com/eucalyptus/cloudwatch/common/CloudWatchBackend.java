@@ -37,11 +37,6 @@ public class CloudWatchBackend extends ComponentId {
   private static final long serialVersionUID = 1L;
 
   @Override
-  public String getInternalNamespaceSuffix() {
-    return "/cloudwatch/backend";
-  }
-
-  @Override
   public Boolean isCloudLocal() {
     return Boolean.TRUE;
   }

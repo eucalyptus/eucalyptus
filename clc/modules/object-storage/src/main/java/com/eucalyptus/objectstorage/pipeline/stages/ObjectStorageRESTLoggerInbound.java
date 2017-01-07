@@ -66,7 +66,6 @@ import java.net.InetSocketAddress;
 import java.util.Calendar;
 
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
@@ -77,7 +76,6 @@ import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
 import com.eucalyptus.storage.msgs.BucketLogData;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 
-@ChannelPipelineCoverage("one")
 public class ObjectStorageRESTLoggerInbound extends MessageStackHandler {
   @Override
   public void incomingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {

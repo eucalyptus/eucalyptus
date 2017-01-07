@@ -66,12 +66,10 @@ import java.util.Date;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.objectstorage.ObjectStorageGateway;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
@@ -82,7 +80,6 @@ import com.google.common.base.Strings;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
-@ChannelPipelineCoverage("one")
 public class ObjectStorageHEADOutboundHandler extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger(ObjectStorageHEADOutboundHandler.class);
 
