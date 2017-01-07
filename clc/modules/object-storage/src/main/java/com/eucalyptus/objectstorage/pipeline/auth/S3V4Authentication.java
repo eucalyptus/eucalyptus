@@ -235,6 +235,9 @@ public final class S3V4Authentication {
       throw new AccessDeniedException(null, "Invalid X-Amz-Expires parameter.");
     }
 
+    if (expireTime < 1 || expireTime > 604800)
+      throw new AccessDeniedException(null, "Invalid Expires parameter.");
+
     DateTime dt = new DateTime(date).plusSeconds(expireTime.intValue() + StackConfiguration.CLOCK_SKEW_SEC);
     if (dt.isBeforeNow())
       throw new AccessDeniedException(null, "Cannot process request. Expired.");
