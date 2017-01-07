@@ -23,12 +23,15 @@ import com.eucalyptus.ws.server.QueryPipeline;
 import org.jboss.netty.channel.ChannelPipeline;
 
 import java.util.EnumSet;
+import java.util.regex.Pattern;
 
 /**
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
 @ComponentPart(SimpleQueue.class)
 public class SimpleQueueQueryPipeline extends QueryPipeline {
+
+  private static final Pattern pathPattern = Pattern.compile("/[0-9]{12}/[A-Za-z0-9_-]+");
 
   public SimpleQueueQueryPipeline() {
     super(
@@ -43,5 +46,10 @@ public class SimpleQueueQueryPipeline extends QueryPipeline {
     super.addHandlers( pipeline );
     pipeline.addLast( "simplequeue-query-binding", new SimpleQueueQueueUrlQueryBinding(pipeline) );
     return pipeline;
+  }
+
+  @Override
+  protected boolean validPathForService( final String path ) {
+    return super.validPathForService( path ) || pathPattern.matcher( path ).matches( );
   }
 }

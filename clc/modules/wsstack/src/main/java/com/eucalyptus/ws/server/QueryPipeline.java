@@ -133,8 +133,8 @@ public abstract class QueryPipeline extends FilteredPipeline {
   public boolean checkAccepts( final HttpRequest message ) {
     if ( message instanceof MappingHttpRequest && !message.getHeaderNames().contains( "SOAPAction" )) {
       final boolean usesServicePath = Iterables.any( servicePathPrefixes, Strings.isPrefixOf( message.getUri( ) ) );
-      final boolean noPath = message.getUri( ).isEmpty( ) || message.getUri( ).equals( "/" ) || message.getUri( ).startsWith( "/?" );
-      if ( !usesServicePath && !( noPath && resolvesByHost( message.getHeader( HttpHeaders.Names.HOST ) ) ) ) {
+      final boolean pathValidForService = validPathForService( message.getUri( ) );
+      if ( !usesServicePath && !( pathValidForService && resolvesByHost( message.getHeader( HttpHeaders.Names.HOST ) ) ) ) {
         return false;
       }
       return true;
@@ -142,8 +142,22 @@ public abstract class QueryPipeline extends FilteredPipeline {
       return false;
     }
   }
+
   @Override
   public String getName( ) {
     return name;
+  }
+
+  /**
+   * Is the non-prefixed path one handled by this service.
+   *
+   * Non-prefixed paths that the service recognises are handled as long as the
+   * host is also valid.
+   *
+   * @param path The non-prefixed path to check.
+   * @return True if this this path is valid for the service
+   */
+  protected boolean validPathForService( final String path ) {
+    return path.isEmpty( ) || path.equals( "/" ) || path.startsWith( "/?" );
   }
 }
