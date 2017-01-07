@@ -129,6 +129,6 @@ public class S3V4AuthenticationTest {
   public void testParseDateAndAssertNotExpired() throws Throwable {
     DateTime dt = DateTime.now();
     DateTimeFormatter fmt = ISODateTimeFormat.dateTime();
-    S3Authentication.parseDateAndAssertNotExpired(fmt.print(dt));
+    S3Authentication.parseDate(fmt.print(dt));
   }
 }
