@@ -43,6 +43,7 @@ public interface IamPolicySpec {
   String IAM_QUOTA_INSTANCE_PROFILE_NUMBER = "iam:quota-instanceprofilenumber";
   String IAM_QUOTA_SERVER_CERTIFICATE_NUMBER = "iam:quota-servercertificatenumber";
   String IAM_QUOTA_OPENID_CONNECT_PROVIDER_NUMBER = "iam:quota-openidconnectprovidernumber";
+  String IAM_QUOTA_POLICY_NUMBER = "iam:quota-policynumber";
 
   // Actions
   String IAM_ADDCLIENTIDTOOPENIDCONNECTPROVIDER = "addclientidtoopenidconnectprovider";

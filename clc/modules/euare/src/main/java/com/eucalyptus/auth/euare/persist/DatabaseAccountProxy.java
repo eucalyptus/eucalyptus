@@ -324,6 +324,18 @@ public class DatabaseAccountProxy implements EuareAccount {
   }
 
   @Override
+  public long countPolicies( ) throws AuthException {
+    try ( final TransactionResource db = Entities.transactionFor( ManagedPolicyEntity.class ) ) {
+      return Entities.count( ManagedPolicyEntity.class )
+          .join( ManagedPolicyEntity_.account ).whereEqual( AccountEntity_.name, this.delegate.getName( ) )
+          .uniqueResult( );
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to count policies for " + this.delegate.getName( ) );
+      throw new AuthException( "Failed to count policies", e );
+    }
+  }
+
+  @Override
   public EuareUser addUser( String userName, String path, boolean enabled, Map<String, String> info ) throws AuthException {
     try {
       USER_NAME_CHECKER.check( userName );

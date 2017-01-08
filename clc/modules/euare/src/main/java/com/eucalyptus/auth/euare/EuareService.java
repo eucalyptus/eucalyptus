@@ -1457,7 +1457,7 @@ public class EuareService {
       map.add( new SummaryMapTypeEntryType( "InstanceProfiles", account.getInstanceProfiles().size( ) ) );
       map.add( new SummaryMapTypeEntryType( "ServerCertificates", account.listServerCertificates("/").size()));
       map.add( new SummaryMapTypeEntryType( "Providers", account.listOpenIdConnectProviders().size()));
-      map.add( new SummaryMapTypeEntryType( "Policies", account.getPolicies(false).size()));
+      map.add( new SummaryMapTypeEntryType( "Policies", (int)account.countPolicies()));
       return reply;
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
