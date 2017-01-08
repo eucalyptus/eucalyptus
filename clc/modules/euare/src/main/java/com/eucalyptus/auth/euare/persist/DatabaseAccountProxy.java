@@ -633,6 +633,9 @@ public class DatabaseAccountProxy implements EuareAccount {
     }
     try {
       PATH_CHECKER.check( path );
+      if ( !path.endsWith( "/" ) ) {
+        throw new InvalidValueException( );
+      }
     } catch ( InvalidValueException e ) {
       throw new AuthException( AuthException.INVALID_PATH, e );
     }

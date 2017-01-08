@@ -96,6 +96,8 @@ public class AuthenticationProperties {
 
   private static final String DEFAULT_AUTHORIZATION_CACHE = "maximumSize=1000, expireAfterWrite=1m";
 
+  private static final String DEFAULT_MAX_ATTACHMENTS_TEXT = "10";
+
   private static final String DEFAULT_MAX_POLICY_SIZE_TEXT = "16384";
 
   @ConfigurableField( description = "CIDR to match against for host address selection", initial = "", changeListener = CidrChangeListener.class )
@@ -133,6 +135,9 @@ public class AuthenticationProperties {
 
   @ConfigurableField( description = "Default expiry for re-use of cached authorization metadata on failure", initial = "0s", changeListener = AuthenticationIntervalPropertyChangeListener.class )
   public static volatile String AUTHORIZATION_REUSE_EXPIRY = "0s";
+
+  @ConfigurableField( description = "Maximum number of attached managed policies", initial = DEFAULT_MAX_ATTACHMENTS_TEXT )
+  public static volatile int MAX_POLICY_ATTACHMENTS = Integer.parseInt( DEFAULT_MAX_ATTACHMENTS_TEXT );
 
   @ConfigurableField( description = "Maximum size for an IAM policy (bytes)", initial = DEFAULT_MAX_POLICY_SIZE_TEXT )
   public static volatile int MAX_POLICY_SIZE = Integer.parseInt( DEFAULT_MAX_POLICY_SIZE_TEXT );
@@ -241,6 +246,10 @@ public class AuthenticationProperties {
       return SIGNING_CERTIFICATES_LIMIT;
     }
 
+    @Override
+    public int getPolicyAttachmentLimitSpi( ) {
+      return MAX_POLICY_ATTACHMENTS;
+    }
     @Override
     public int getPolicySizeLimitSpi( ) {
       return MAX_POLICY_SIZE;
