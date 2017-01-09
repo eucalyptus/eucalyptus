@@ -502,6 +502,7 @@ int cmp_gni_vpcsubnet(gni_vpcsubnet *a, gni_vpcsubnet *b);
 int cmp_gni_nat_gateway(gni_nat_gateway *a, gni_nat_gateway *b);
 int cmp_gni_route_table(gni_route_table *a, gni_route_table *b);
 int cmp_gni_secgroup(gni_secgroup *a, gni_secgroup *b, int *ingress_diff, int *egress_diff, int *interfaces_diff);
+int cmp_gni_nacl(gni_network_acl *a, gni_network_acl *b, int *ingress_diff, int *egress_diff);
 int cmp_gni_interface(gni_instance *a, gni_instance *b, int *pubip_diff, int *sdc_diff, int *host_diff, int *sg_diff);
 int cmp_gni_instance(gni_instance *a, gni_instance *b);
 int cmp_gni_mido_gateway(gni_mido_gateway *a, gni_mido_gateway *b);

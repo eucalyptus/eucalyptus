@@ -6339,6 +6339,88 @@ int cmp_gni_secgroup(gni_secgroup *a, gni_secgroup *b, int *ingress_diff, int *e
 }
 
 /**
+ * Compares two gni_network_acl structures a and b.
+ *
+ * @param a [in] gni_network_acl structure of interest.
+ * @param b [in] gni_network_acl structure of interest.
+ * @param ingress_diff [out] set to 1 iff ingress rules of a and b differ.
+ * @param egress_diff [out] set to 1 iff egress rules of a and b differ.
+ * @return 0 if name and rule entries match. Non-zero otherwise.
+ *
+ * @note order of rules are assumed to be the same for both a and b.
+ */
+int cmp_gni_nacl(gni_network_acl *a, gni_network_acl *b, int *ingress_diff, int *egress_diff) {
+    int abmatch = 1;
+    if (a == b) {
+        if (ingress_diff) *ingress_diff = 0;
+        if (egress_diff) *egress_diff = 0;
+        return (0);
+    }
+
+    if (ingress_diff) *ingress_diff = 1;
+    if (egress_diff) *egress_diff = 1;
+
+    if ((a == NULL) || (b == NULL)) {
+        return (1);
+    }
+    if (strcmp(a->name, b->name)) {
+        abmatch = 0;
+    } else {
+        if (a->max_ingress == b->max_ingress) {
+            int diffound = 0;
+            for (int i = 0; i < a->max_ingress && !diffound; i++) {
+                if ((a->ingress[i].number != b->ingress[i].number) ||
+                        (a->ingress[i].allow != b->ingress[i].allow) ||
+                        (a->ingress[i].cidrNetaddr != b->ingress[i].cidrNetaddr) ||
+                        (a->ingress[i].cidrSlashnet != b->ingress[i].cidrSlashnet) ||
+                        (a->ingress[i].protocol != b->ingress[i].protocol) ||
+                        (a->ingress[i].fromPort != b->ingress[i].fromPort) ||
+                        (a->ingress[i].toPort != b->ingress[i].toPort) ||
+                        (a->ingress[i].icmpCode != b->ingress[i].icmpCode) ||
+                        (a->ingress[i].icmpType != b->ingress[i].icmpType)) {
+                    diffound = 1;
+                }
+            }
+            if (!diffound) {
+                if (ingress_diff) *ingress_diff = 0;
+            } else {
+                abmatch = 0;
+            }
+        } else {
+            abmatch = 0;
+        }
+        if (a->max_egress == b->max_egress) {
+            int diffound = 0;
+            for (int i = 0; i < a->max_egress && !diffound; i++) {
+                if ((a->egress[i].number != b->egress[i].number) ||
+                        (a->egress[i].allow != b->egress[i].allow) ||
+                        (a->egress[i].cidrNetaddr != b->egress[i].cidrNetaddr) ||
+                        (a->egress[i].cidrSlashnet != b->egress[i].cidrSlashnet) ||
+                        (a->egress[i].protocol != b->egress[i].protocol) ||
+                        (a->egress[i].fromPort != b->egress[i].fromPort) ||
+                        (a->egress[i].toPort != b->egress[i].toPort) ||
+                        (a->egress[i].icmpCode != b->egress[i].icmpCode) ||
+                        (a->egress[i].icmpType != b->egress[i].icmpType)) {
+                    diffound = 1;
+                }
+            }
+            if (!diffound) {
+                if (egress_diff) *egress_diff = 0;
+            } else {
+                abmatch = 0;
+            }
+        } else {
+            abmatch = 0;
+        }
+    }
+
+    if (abmatch) {
+        return (0);
+    }
+    return (1);
+}
+
+/**
  * Compares two gni_instance structures a and b. a and b are assumed to represent
  * VPC mode interfaces.
  *

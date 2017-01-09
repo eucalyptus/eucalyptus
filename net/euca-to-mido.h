@@ -536,6 +536,7 @@ int clear_parsed_chain_rule(mido_parsed_chain_rule *rule);
 int populate_mido_vpc_nacl(mido_config *mido, mido_vpc_nacl *vpcnacl);
 int create_mido_vpc_nacl(mido_config *mido, mido_vpc *vpc, mido_vpc_nacl *vpcnacl);
 int delete_mido_vpc_nacl(mido_config *mido, mido_vpc_nacl *vpcnacl);
+int find_mido_vpc_nacl(mido_vpc *vpc, char *naclname, mido_vpc_nacl **outvpcnacl);
 
 int connect_mido_vpc_instance(mido_vpc_subnet *vpcsubnet, mido_vpc_instance *inst, char *instanceDNSDomain);
 int disconnect_mido_vpc_instance(mido_vpc_subnet *subnet, mido_vpc_instance *vpcinstance);

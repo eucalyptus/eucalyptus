@@ -1197,6 +1197,7 @@ int do_midonet_update_pass1(globalNetworkInfo *gni, globalNetworkInfo *appliedGn
     int ret = 0, i = 0, j = 0, k = 0, rc = 0;
     int vpcidx = 0;
     int vpcsubnetidx = 0;
+    int vpcnaclidx = 0;
     int vpcnatgidx = 0;
     int vpcroutetidx = 0;
     int vpcsgidx = 0;
@@ -1212,6 +1213,7 @@ int do_midonet_update_pass1(globalNetworkInfo *gni, globalNetworkInfo *appliedGn
     mido_vpc_instance *vpcinstance = NULL;
     mido_vpc_subnet *vpcsubnet = NULL;
     mido_vpc_natgateway *vpcnatgateway = NULL;
+    mido_vpc_nacl *vpcnacl = NULL;
 
     gni_vpc *gnivpc = NULL;
     gni_vpcsubnet *gnivpcsubnet = NULL;
@@ -1219,6 +1221,7 @@ int do_midonet_update_pass1(globalNetworkInfo *gni, globalNetworkInfo *appliedGn
     gni_route_table *gniroutetable = NULL;
     gni_instance *gniinstance = NULL;
     gni_secgroup *gnisecgroup = NULL;
+    gni_network_acl *gninacl = NULL;
 
     gni_vpc *appliedvpc = NULL;
     gni_vpcsubnet *appliedvpcsubnet = NULL;
@@ -1226,6 +1229,7 @@ int do_midonet_update_pass1(globalNetworkInfo *gni, globalNetworkInfo *appliedGn
     gni_route_table *appliedroutetable = NULL;
     gni_instance *appliedinstance = NULL;
     gni_secgroup *appliedsecgroup = NULL;
+    gni_network_acl *appliednacl = NULL;
 
     // pass1: ensure that the meta-data map is populated right away
     snprintf(mapfile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/eucanetd_vpc_instance_ip_map", mido->eucahome);
@@ -1290,8 +1294,47 @@ int do_midonet_update_pass1(globalNetworkInfo *gni, globalNetworkInfo *appliedGn
             }
         }
 
+        vpcnaclidx = 0;
         for (j = 0; j < gnivpc->max_networkAcls; j++) {
-            LOGINFO("11622: pass1 %s\n", gnivpc->networkAcls[j].name);
+            appliednacl = NULL;
+            gninacl = &(gnivpc->networkAcls[j]);
+            rc = find_mido_vpc_nacl(vpc, gninacl->name, &vpcnacl);
+            if (rc) {
+                LOGTRACE("pass1: global VPC Network ACL %s in mido: N\n", gninacl->name);
+                LOGINFO("11622: pass1: global VPC Network ACL %s in mido: N\n", gninacl->name);
+            } else {
+                LOGTRACE("pass1: global VPC Network ACL %s in mido: Y\n", gninacl->name);
+                LOGINFO("11622: pass1: global VPC Network ACL %s in mido: Y\n", gninacl->name);
+                if (appliedGni) {
+                    if (vpcnacl->gniNacl) {
+                        appliednacl = vpcnacl->gniNacl;
+                    } else {
+                        appliednacl = gni_get_networkacl(appliedvpc, vpcnacl->name, &vpcnaclidx);
+                    }
+                }
+                if (!vpcnacl->population_failed && !cmp_gni_nacl(appliednacl, gninacl,
+                        &(vpcnacl->ingress_changed), &(vpcnacl->egress_changed))) {
+                    LOGEXTREME("\t\t%s fully implemented \n", vpcnacl->name);
+                    LOGINFO("11622\t\t%s fully implemented \n", vpcnacl->name);
+                    vpcnacl->midopresent = 1;
+                } else {
+                    vpcnacl->midopresent = 0;
+                    // skip NACL egress and ingress chain flush on eucanetd restart (if number of rules matches)
+                    if (appliednacl == NULL) {
+                        LOGINFO("11622: egress  gni %d rules mido %d rules\n", gninacl->max_egress, vpcnacl->egress->rules_count);
+                        LOGINFO("11622: ingress gni %d rules mido %d rules\n", gninacl->max_ingress, vpcnacl->ingress->rules_count);
+                        if (vpcnacl->egress && (gninacl->max_egress == vpcnacl->egress->rules_count)) {
+                            vpcnacl->egress_changed = 0;
+                        }
+                        if (vpcnacl->ingress && (gninacl->max_ingress == vpcnacl->ingress->rules_count)) {
+                            vpcnacl->ingress_changed = 0;
+                        }
+                    }
+                }
+                vpcnacl->gniNacl = gninacl;
+                vpcnacl->gnipresent = 1;
+                gninacl->mido_present = vpcnacl;
+            }
         }
 
         vpcsubnetidx = 0;
@@ -1472,7 +1515,6 @@ int do_midonet_update_pass1(globalNetworkInfo *gni, globalNetworkInfo *appliedGn
             vpcsecgroup->gniSecgroup = gnisecgroup;
             vpcsecgroup->gnipresent = 1;
             gnisecgroup->mido_present = vpcsecgroup;
-            
         }
     }
 
@@ -4718,6 +4760,31 @@ int delete_mido_vpc_nacl(mido_config *mido, mido_vpc_nacl *vpcnacl) {
 
     free_mido_vpc_nacl(vpcnacl);
     return (ret);
+}
+
+/**
+ * Searches for the vpc network acl with name aclname (the vpc of interest is known)
+ * @param vpc [in] the vpc in which the network acl will be searched
+ * @param naclname [in] name of the network acl of interest
+ * @param outvpcsubnet [out] pointer to the mido_vpc_nacl structure when found
+ * @return 0 on success. 1 otherwise.
+ */
+int find_mido_vpc_nacl(mido_vpc *vpc, char *naclname, mido_vpc_nacl **outvpcnacl) {
+    int i;
+
+    if (!vpc || !naclname || !outvpcnacl) {
+        return (1);
+    }
+
+    *outvpcnacl = NULL;
+
+    for (i = 0; i < vpc->max_nacls; i++) {
+        if (!strcmp(naclname, vpc->nacls[i].name)) {
+            *outvpcnacl = &(vpc->nacls[i]);
+            return (0);
+        }
+    }
+    return (1);
 }
 
 /**
