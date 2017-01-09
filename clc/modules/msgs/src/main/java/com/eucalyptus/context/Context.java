@@ -361,7 +361,7 @@ public class Context {
           }
           return createImpersona( ctx, user );
         } catch ( AuthException ex ) {
-          return ctx;
+          throw Exceptions.toUndeclared( ex );
         } catch ( NoSuchContextException e ) {
           throw Exceptions.toUndeclared( new AuthException( e ) );
         }
