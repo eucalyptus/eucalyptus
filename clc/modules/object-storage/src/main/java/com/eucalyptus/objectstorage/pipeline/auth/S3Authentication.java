@@ -70,6 +70,8 @@ public final class S3Authentication {
         String signature = signatureElements[1];
         String dateStr = getDateFromHeaders(request);
         parseDate(dateStr);
+        if (request.getHeader(SecurityHeader.X_Amz_Date.header()) != null)
+          dateStr = "";
         String canonicalizedAmzHeaders = S3V2Authentication.buildCanonicalHeaders(request, false);
         String securityToken = request.getHeader(SecurityParameter.X_Amz_Security_Token.parameter());
         S3V2Authentication.login(request, dateStr, canonicalizedAmzHeaders, accessKeyId, signature, securityToken);
