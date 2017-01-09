@@ -219,9 +219,6 @@ final class S3V2Authentication {
       throw new AccessDeniedException(null, "Invalid Expires parameter.");
     }
 
-    if (expireTime < 1 || expireTime > 604800)
-      throw new AccessDeniedException(null, "Invalid Expires parameter.");
-
     Long currentTime = new Date().getTime() / 1000;
     if (currentTime > expireTime)
       throw new AccessDeniedException(null, "Cannot process request. Expired.");
