@@ -113,6 +113,10 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
             authenticate((MappingHttpRequest) event.getMessage());
           ctx.sendUpstream(channelEvent);
         }
+      } catch (AccessDeniedException | SignatureDoesNotMatchException
+          | InvalidAccessKeyIdException | MissingSecurityHeaderException ex) {
+        LOG.debug(ex.getMessage());
+        Channels.fireExceptionCaught(ctx, ex);
       } catch (Throwable e) {
         LOG.error(e, e);
         Channels.fireExceptionCaught(ctx, e);
@@ -130,7 +134,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
    *
    * @throws AccessDeniedException          if the auth header is invalid
    * @throws SignatureDoesNotMatchException if the signature is invalid
-   * @throws InvalidAccessKeyIdException    if the contextual AWS key is is invalid
+   * @throws InvalidAccessKeyIdException    if the contextual AWS key is invalid
    * @throws InternalErrorException         if something unexpected occurs
    * @throws MissingSecurityHeaderException is the auth header is invalid
    */
