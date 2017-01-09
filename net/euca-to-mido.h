@@ -195,6 +195,8 @@ typedef struct mido_vpc_nacl_t mido_vpc_nacl;
 struct mido_vpc_nacl_t {
     gni_network_acl *gniNacl;
     char name[NETWORK_ACL_ID_LEN];
+    char vpcname[VPC_ID_LEN];
+    mido_vpc *vpc;
     midonet_api_chain *ingress;
     midonet_api_chain *egress;
     midoname *midos[VPCNACL_END];
@@ -531,6 +533,7 @@ int parse_mido_secgroup_rule_v1(mido_config *mido, gni_rule *rule, mido_parsed_c
 int parse_mido_secgroup_rule_v5(mido_config *mido, gni_rule *rule, mido_parsed_chain_rule *parsed_rule);
 int clear_parsed_chain_rule(mido_parsed_chain_rule *rule);
 
+int populate_mido_vpc_nacl(mido_config *mido, mido_vpc_nacl *vpcnacl);
 int create_mido_vpc_nacl(mido_config *mido, mido_vpc *vpc, mido_vpc_nacl *vpcnacl);
 int delete_mido_vpc_nacl(mido_config *mido, mido_vpc_nacl *vpcnacl);
 

@@ -911,7 +911,7 @@ int do_midonet_populate_vpcs(mido_config *mido) {
     // - for each VPC, for each subnet, find all instances (and populate instances)
 
     int i = 0, j = 0, k = 0, rc = 0, rtid = 0, natgrtid = 0, ret = 0;
-    char subnetname[LID_LEN], vpcname[LID_LEN], sgname[LID_LEN];
+    char subnetname[LID_LEN], vpcname[LID_LEN], aclname[LID_LEN], sgname[LID_LEN];
     char instanceId[LID_LEN];
     char natgname[LID_LEN];
     char tmpstr[64];
@@ -921,6 +921,7 @@ int do_midonet_populate_vpcs(mido_config *mido) {
     mido_vpc_instance *vpcinstance = NULL;
     mido_vpc_subnet *vpcsubnet = NULL;
     mido_vpc_natgateway *vpcnatg = NULL;
+    mido_vpc_nacl *vpcnacl = NULL;
     mido_vpc *vpc = NULL;
     struct timeval tv;
 
@@ -975,8 +976,8 @@ int do_midonet_populate_vpcs(mido_config *mido) {
                 vpcsubnet = &(vpc->subnets[vpc->max_subnets]);
                 vpc->max_subnets++;
                 bzero(vpcsubnet, sizeof (mido_vpc_subnet));
-                snprintf(vpcsubnet->name, 16, "%s", subnetname);
-                snprintf(vpcsubnet->vpcname, 16, "%s", vpcname);
+                snprintf(vpcsubnet->name, VPC_SUBNET_ID_LEN, "%s", subnetname);
+                snprintf(vpcsubnet->vpcname, VPC_ID_LEN, "%s", vpcname);
                 vpcsubnet->vpc = vpc;
                 vpcsubnet->subnetbr = bridges[i];
                 vpcsubnet->midos[SUBN_BR] = bridges[i]->obj;
@@ -1023,8 +1024,39 @@ int do_midonet_populate_vpcs(mido_config *mido) {
     EUCA_FREE(natgrouters);
     LOGINFO("\tvpc subnets populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
 
+    // Network ACLs
+    mido_get_chains(VPCMIDO_TENANT, &chains, &max_chains);
+    for (i = 0; i < max_chains; i++) {
+        LOGTRACE("inspecting chain '%s'\n", chains[i]->name);
+
+        memset(vpcname, 0, LID_LEN);
+        memset(aclname, 0, LID_LEN);
+
+        sscanf(chains[i]->name, "acl_ingress_%12s_%12s", vpcname, aclname);
+        if (strlen(vpcname) && strlen(aclname)) {
+            LOGTRACE("discovered VPC network acl installed in midonet: %s/%s\n", vpcname, aclname);
+            LOGINFO("11622: discovered VPC network acl installed in midonet: %s/%s\n", vpcname, aclname);
+            find_mido_vpc(mido, vpcname, &vpc);
+            if (vpc) {
+                LOGTRACE("found VPC matching discovered network acl: %s/%s\n", vpc->name, aclname);
+                LOGTRACE("11622: found VPC matching discovered network acl: %s/%s\n", vpc->name, aclname);
+                vpc->nacls = EUCA_REALLOC_C(vpc->nacls, (vpc->max_nacls + 1), sizeof (mido_vpc_nacl));
+                vpcnacl = &(vpc->nacls[vpc->max_nacls]);
+                vpc->max_nacls++;
+                memset(vpcnacl, 0, sizeof (mido_vpc_nacl));
+                snprintf(vpcnacl->name, NETWORK_ACL_ID_LEN, "%s", aclname);
+                snprintf(vpcnacl->vpcname, VPC_ID_LEN, "%s", vpcname);
+                vpcnacl->vpc = vpc;
+
+                populate_mido_vpc_nacl(mido, vpcnacl);
+            }
+        }
+    }
+    EUCA_FREE(chains);
+    LOGINFO("\tvpc subnets populated in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
+
     // SECGROUPS
-    rc = mido_get_chains(VPCMIDO_TENANT, &chains, &max_chains);
+    mido_get_chains(VPCMIDO_TENANT, &chains, &max_chains);
     for (i = 0; i < max_chains; i++) {
         LOGTRACE("inspecting chain '%s'\n", chains[i]->name);
         sgname[0] = '\0';
@@ -2786,6 +2818,8 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
                 memset(vpcnacl, 0, sizeof (mido_vpc_nacl));
                 vpc->max_nacls++;
                 snprintf(vpcnacl->name, NETWORK_ACL_ID_LEN, "%s", gninacl->name);
+                snprintf(vpcnacl->vpcname, VPC_ID_LEN, "%s", vpc->name);
+                vpcnacl->vpc = vpc;
                 vpcnacl->gniNacl = gninacl;
                 gninacl->mido_present = vpcnacl;
                 vpcnacl->egress_changed = 1;
@@ -2946,10 +2980,12 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
 
         // Check unconnected objects in MN if errors were detected
         if (mido->config->eucanetd_first_update || mido->config->eucanetd_err) {
+/* 11622
             LOGINFO("Checking unconnected objects:\n");
             if (do_midonet_delete_unconnected(mido, FALSE) < 0) {
                 return (1);
             }            
+*/
         }
 
         // Check mido_md config changes
@@ -4573,6 +4609,54 @@ int clear_parsed_chain_rule(mido_parsed_chain_rule *rule) {
     }
 
     return(0);
+}
+
+/**
+ * Populates an euca Network ACL model.
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
+ * @param vpcsecgroup [i/o] data structure that holds the euca Network ACL model of interest.
+ * @return 0 on success. 1 on any failure.
+ */
+int populate_mido_vpc_nacl(mido_config *mido, mido_vpc_nacl *vpcnacl) {
+    int ret = 0;
+    int i = 0;
+    char name[64];
+
+    if (!mido || !vpcnacl || !strlen(vpcnacl->name) || !strlen(vpcnacl->vpcname)) {
+        return (1);
+    }
+
+    snprintf(name, 64, "acl_ingress_%s_%s", vpcnacl->vpcname, vpcnacl->name);
+    midonet_api_chain *aclchain = mido_get_chain(name);
+    if (aclchain != NULL) {
+        LOGTRACE("Found NACL ingress chain %s\n", aclchain->obj->name);
+        LOGINFO("11622: Found NACL ingress chain %s\n", aclchain->obj->name);
+        vpcnacl->ingress = aclchain;
+        vpcnacl->midos[VPCNACL_INGRESS] = aclchain->obj;
+    }
+
+    snprintf(name, 64, "acl_egress_%s_%s", vpcnacl->vpcname, vpcnacl->name);
+    aclchain = mido_get_chain(name);
+    if (aclchain != NULL) {
+        LOGTRACE("Found NACL egress chain %s\n", aclchain->obj->name);
+        LOGINFO("11622: Found NACL egress chain %s\n", aclchain->obj->name);
+        vpcnacl->egress = aclchain;
+        vpcnacl->midos[VPCNACL_EGRESS] = aclchain->obj;
+    }
+
+    LOGTRACE("vpc nacl (%s): AFTER POPULATE\n", vpcnacl->name);
+    for (i = 0; i < VPCNACL_END; i++) {
+        if (vpcnacl->midos[i]) {
+            LOGTRACE("\tmidos[%d]: %d\n", i, vpcnacl->midos[i]->init);
+            LOGINFO("11622: \tmidos[%d]: %d\n", i, vpcnacl->midos[i]->init);
+        }
+        if (!vpcnacl->midos[i] || !vpcnacl->midos[i]->init) {
+            LOGWARN("failed to populate %s midos[%d]\n", vpcnacl->name, i);
+            vpcnacl->population_failed = 1;
+        }
+    }
+
+    return (ret);
 }
 
 /**
