@@ -82,12 +82,13 @@ public class S3ProviderConfiguration extends AbstractPersistent implements Cache
   @Type(type = "org.hibernate.type.StringClobType")
   protected String S3SecretKey;
 
-  @ConfigurableField(description = "Use HTTPS for communication to service backend.", displayName = "use_https", initial = "false")
+  @ConfigurableField(description = "Use HTTPS for communication to service backend.", displayName = "use_https", initial = "false",
+      type = ConfigurableFieldType.BOOLEAN)
   @Column(name = "use_https")
   protected Boolean S3UseHttps;
 
   @ConfigurableField(description = "Use DNS virtual-hosted-style bucket names for communication to service backend.", displayName = "use_backend_dns",
-      initial = "false")
+      initial = "false", type = ConfigurableFieldType.BOOLEAN)
   @Column(name = "use_backend_dns")
   protected Boolean S3UseBackendDns;
 
@@ -96,11 +97,11 @@ public class S3ProviderConfiguration extends AbstractPersistent implements Cache
   @Column(name = "endpoint_head_response")
   protected Integer S3EndpointHeadResponse;
 
-  public boolean getS3UseBackendDns() {
+  public Boolean getS3UseBackendDns() {
     return S3UseBackendDns;
   }
 
-  public void setS3UserBackendDns(boolean useDns) {
+  public void setS3UseBackendDns(Boolean useDns) {
     S3UseBackendDns = useDns;
   }
 
@@ -163,7 +164,7 @@ public class S3ProviderConfiguration extends AbstractPersistent implements Cache
 
   public S3ProviderConfiguration initializeDefaults() {
     this.setS3Endpoint(DEFAULT_S3_ENDPOINT);
-    this.setS3UserBackendDns(DEFAULT_BACKEND_DNS);
+    this.setS3UseBackendDns(DEFAULT_BACKEND_DNS);
     this.setS3UseHttps(DEFAULT_BACKEND_HTTPS);
     this.setS3EndpointHeadResponse(Integer.valueOf(DEFAULT_S3_HEAD_RESPONSE));
     return this;
