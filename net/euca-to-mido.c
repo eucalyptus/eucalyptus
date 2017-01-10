@@ -1536,7 +1536,7 @@ int do_midonet_update_pass2(globalNetworkInfo *gni, mido_config *mido) {
     mido_vpc_natgateway *vpcnatgateway = NULL;
     mido_vpc_instance *vpcinstance = NULL;
     mido_vpc_subnet *vpcsubnet = NULL;
-    //mido_resource_ipaddrgroup *ipag = NULL;
+    mido_vpc_nacl *vpcnacl = NULL;
 
     // pass2 - remove anything in MIDO that is not in GNI
     for (i = 0; i < mido->max_vpcsecgroups; i++) {
@@ -1733,6 +1733,20 @@ int do_midonet_update_pass2(globalNetworkInfo *gni, mido_config *mido) {
                 ret += delete_mido_vpc_subnet(mido, vpc, vpcsubnet);
             } else {
                 LOGTRACE("pass2: mido VPC SUBNET %s in global: Y\n", vpcsubnet->name);
+            }
+        }
+        for (j = 0; j < vpc->max_nacls; j++) {
+            vpcnacl = &(vpc->nacls[j]);
+            if (strlen(vpcnacl->name) == 0) {
+                continue;
+            }
+            LOGINFO("11622: pass 2 %s %d %s %d\n", vpc->name, vpc->gnipresent, vpcnacl->name, vpcnacl->gnipresent);
+            if (!vpc->gnipresent || !vpcnacl->gnipresent) {
+                LOGINFO("\tdeleting %s\n", vpcnacl->name);
+                ret += delete_mido_vpc_nacl(mido, vpcnacl);
+            } else {
+                LOGTRACE("pass2: mido VPC Network ACL %s in global: Y\n", vpcnacl->name);
+                LOGINFO("11622: pass2: mido VPC Network ACL %s in global: Y\n", vpcnacl->name);
             }
         }
         if (!vpc->gnipresent) {
