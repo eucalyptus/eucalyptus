@@ -4321,7 +4321,7 @@ int gni_iterate(globalNetworkInfo * gni, int mode)
 
     if (mode == GNI_ITERATE_PRINT)
         LOGTRACE("managed_subnets: \n");
-    for (i = 0; i < gni->max_subnets; i++) {
+    for (i = 0; i < gni->max_managedSubnets; i++) {
         strptra = hex2dot(gni->managedSubnet[i].subnet);
         if (mode == GNI_ITERATE_PRINT)
             LOGTRACE("\tmanaged_subnet %d: %s\n", i, SP(strptra));
