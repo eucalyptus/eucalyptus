@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2016 Hewlett Packard Enterprise Development LP
+# Copyright (c) 2015-2017 Hewlett Packard Enterprise Development LP
 #
 # Redistribution and use of this software in source and binary forms,
 # with or without modification, are permitted provided that the following
@@ -51,6 +51,8 @@ PROPERTY_TYPES = {'authentication.ldap_integration_configuration': 'json',
 def _property_key_value(kvp_str):
     if '=' in kvp_str:
         key, val = kvp_str.split('=', 1)
+        if not key:
+            return (None, None)
         if val.startswith('@'):
             with open(val[1:]) as val_file:
                 val = val_file.read()
