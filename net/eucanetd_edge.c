@@ -330,9 +330,6 @@ static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pG
     }
     // dhcpd
         // terminate pre-4.4 dhcpd
-    char cmd[EUCA_MAX_PATH] = "";
-    snprintf(cmd, EUCA_MAX_PATH, "%s pkill -f euca-dhcp.pid", pConfig->cmdprefix);
-    rc = timeshell_nb(cmd, 10, FALSE);
     if (rc != 0) {
         LOGDEBUG("Failed to terminate dhcpd\n");
     }
