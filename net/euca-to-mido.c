@@ -5846,6 +5846,7 @@ int clear_mido_gnitags(mido_config *mido) {
     mido_vpc *vpc = NULL;
     mido_vpc_subnet *subnet = NULL;
     mido_vpc_instance *instance = NULL;
+    mido_vpc_nacl *nacl = NULL;
     mido_vpc_secgroup *sg = NULL;
 
     // go through vpcs
@@ -5872,6 +5873,12 @@ int clear_mido_gnitags(mido_config *mido) {
             subnet->gnipresent = 0;
             subnet->midopresent = 0;
             //subnet->gniSubnet = NULL;
+        }
+        // for ecah VPC, go through network acls
+        for (j = 0; j < vpc->max_nacls; j++) {
+            nacl = &(vpc->nacls[j]);
+            nacl->gnipresent = 0;
+            nacl->midopresent = 0;
         }
         vpc->gnipresent = 0;
         vpc->midopresent = 0;
