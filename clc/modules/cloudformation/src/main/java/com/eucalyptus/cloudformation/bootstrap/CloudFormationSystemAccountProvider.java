@@ -22,9 +22,6 @@ package com.eucalyptus.cloudformation.bootstrap;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.util.SystemAccountProvider;
 
-import java.util.Collections;
-import java.util.List;
-
 /**
  *
  */
@@ -33,15 +30,5 @@ public class CloudFormationSystemAccountProvider implements SystemAccountProvide
   @Override
   public String getAlias( ) {
     return AccountIdentifiers.CLOUDFORMATION_SYSTEM_ACCOUNT;
-  }
-
-  @Override
-  public boolean isCreateAdminAccessKey( ) {
-    return false;
-  }
-
-  @Override
-  public List<SystemAccountRole> getRoles( ) {
-    return Collections.emptyList();
   }
 }

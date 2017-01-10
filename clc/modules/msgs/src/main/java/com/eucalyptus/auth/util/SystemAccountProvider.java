@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.auth.util;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.ServiceLoader;
 import com.eucalyptus.auth.AuthException;
@@ -30,9 +31,13 @@ public interface SystemAccountProvider {
 
   String getAlias( );
 
-  boolean isCreateAdminAccessKey( );
+  default boolean isCreateAdminAccessKey( ) {
+    return false;
+  }
 
-  List<SystemAccountRole> getRoles( );
+  default List<SystemAccountRole> getRoles( ) {
+    return Collections.emptyList( );
+  }
 
   static class Init {
     public static void initialize( final SystemAccountProvider provider ) throws AuthException {

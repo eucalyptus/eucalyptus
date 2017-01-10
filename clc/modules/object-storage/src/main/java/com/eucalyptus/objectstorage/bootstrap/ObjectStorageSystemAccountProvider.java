@@ -19,8 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.objectstorage.bootstrap;
 
-import java.util.Collections;
-import java.util.List;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.util.SystemAccountProvider;
 
@@ -37,10 +35,5 @@ public class ObjectStorageSystemAccountProvider implements SystemAccountProvider
   @Override
   public boolean isCreateAdminAccessKey( ) {
     return true;
-  }
-
-  @Override
-  public List<SystemAccountRole> getRoles( ) {
-    return Collections.emptyList( );
   }
 }

@@ -36,11 +36,6 @@ public class BlockStorageSystemAccountProvider implements SystemAccountProvider 
   }
 
   @Override
-  public boolean isCreateAdminAccessKey( ) {
-    return false;
-  }
-
-  @Override
   public List<SystemAccountRole> getRoles( ) {
     return ImmutableList.<SystemAccountRole>of(
         new BasicSystemAccountRole(

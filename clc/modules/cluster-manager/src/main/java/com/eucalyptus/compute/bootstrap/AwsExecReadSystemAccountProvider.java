@@ -19,8 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.compute.bootstrap;
 
-import java.util.Collections;
-import java.util.List;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.util.SystemAccountProvider;
 
@@ -32,15 +30,5 @@ public class AwsExecReadSystemAccountProvider implements SystemAccountProvider {
   @Override
   public String getAlias( ) {
     return AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT;
-  }
-
-  @Override
-  public boolean isCreateAdminAccessKey( ) {
-    return false;
-  }
-
-  @Override
-  public List<SystemAccountRole> getRoles( ) {
-    return Collections.emptyList();
   }
 }
