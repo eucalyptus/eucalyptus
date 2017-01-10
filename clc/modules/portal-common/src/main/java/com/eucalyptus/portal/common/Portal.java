@@ -15,12 +15,15 @@
  ************************************************************************/
 package com.eucalyptus.portal.common;
 
+import static com.eucalyptus.portal.common.Portal.SYSTEM_ACCOUNT_ALIAS;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
+import com.eucalyptus.component.annotation.PublicComponentAccounts;
 import com.eucalyptus.component.annotation.PublicService;
 import com.eucalyptus.portal.common.policy.PortalPolicySpec;
 
@@ -33,6 +36,9 @@ import com.eucalyptus.portal.common.policy.PortalPolicySpec;
 @Partition( value = Portal.class, manyToOne = true )
 @FaultLogPrefix( "services" )
 @Description( "Portal service" )
+@PublicComponentAccounts( SYSTEM_ACCOUNT_ALIAS )
 public class Portal extends ComponentId {
   private static final long serialVersionUID = 1L;
+
+  public static final String SYSTEM_ACCOUNT_ALIAS = AccountIdentifiers.SYSTEM_ACCOUNT_PREFIX + "billing";
 }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,18 +13,18 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  ************************************************************************/
-package com.eucalyptus.simplequeue.bootstrap;
+package com.eucalyptus.portal.provider;
 
-import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.util.SystemAccountProvider;
+import com.eucalyptus.portal.common.Portal;
 
 /**
  *
  */
-public class SimpleQueueSystemAccountProvider implements SystemAccountProvider {
+public class BillingSystemAccountProvider implements SystemAccountProvider {
 
   @Override
   public String getAlias( ) {
-    return AccountIdentifiers.SIMPLEQUEUE_SYSTEM_ACCOUNT;
+    return Portal.SYSTEM_ACCOUNT_ALIAS;
   }
 }
