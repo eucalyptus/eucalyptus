@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,46 +60,38 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.euare;
+package com.eucalyptus.auth.euare.policy;
 
-import net.sf.json.JSONException;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.euare.common.policy.IamPolicySpec;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.policy.key.KeyUtils;
-import com.eucalyptus.auth.policy.key.PolicyKey;
-import com.eucalyptus.auth.policy.key.QuotaKey;
-import com.eucalyptus.auth.principal.PolicyScope;
+import com.eucalyptus.auth.euare.Accounts;
 
-@PolicyKey( IamPolicySpec.IAM_QUOTA_USER_NUMBER )
-public class UserNumberQuotaKey extends QuotaKey {
-  
-  private static final String KEY = IamPolicySpec.IAM_QUOTA_USER_NUMBER;
-  
-  @Override
-  public void validateValueType( String value ) throws JSONException {
-    KeyUtils.validateIntegerValue( value, KEY );
+class EuareQuotaUtil {
+
+  static long countUserByAccount( String accountId ) throws AuthException {
+    return Accounts.lookupAccountById( accountId ).getUsers( ).size( );
   }
-  
-  @Override
-  public boolean canApply( String action ) {
-    if ( PolicySpec.qualifiedName( IamPolicySpec.VENDOR_IAM, IamPolicySpec.IAM_CREATEUSER ).equals( action ) ) {
-      return true;
-    }
-    return false;
+
+  static long countGroupByAccount( String accountId ) throws AuthException {
+    return Accounts.lookupAccountById( accountId ).getGroups( ).size( );
   }
-  
-  @Override
-  public String value( PolicyScope scope, String id, String resource, Long quantity ) throws AuthException {
-    switch ( scope ) {
-      case Account:
-        return Long.toString( EuareQuotaUtil.countUserByAccount( id ) + quantity );
-      case Group:
-        return NOT_SUPPORTED;
-      case User:
-        return NOT_SUPPORTED;
-    }
-    throw new AuthException( "Invalid scope" );
+
+  static long countRoleByAccount( String accountId ) throws AuthException {
+    return Accounts.lookupAccountById( accountId ).getRoles( ).size( );
   }
-  
+
+  static long countInstanceProfileByAccount( String accountId ) throws AuthException {
+    return Accounts.lookupAccountById( accountId ).getInstanceProfiles( ).size( );
+  }
+
+  static long countServerCertificatesByAccount( String accountId ) throws AuthException {
+    return Accounts.lookupAccountById( accountId ).listServerCertificates( "/" ).size( );
+  }
+
+  static long countOpenIdConnectProvidersByAccount( String accountId ) throws AuthException {
+    return Accounts.lookupAccountById( accountId ).listOpenIdConnectProviders( ).size( );
+  }
+
+  static long countPoliciesByAccount( String accountId ) throws AuthException {
+    return Accounts.lookupAccountById( accountId ).countPolicies( );
+  }
 }

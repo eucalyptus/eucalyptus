@@ -43,6 +43,11 @@ public class TestAuthenticationLimitProvider implements AuthenticationLimitProvi
   }
 
   @Override
+  public int getPolicyAttachmentLimitSpi( ) {
+    return 10;
+  }
+
+  @Override
   public int getPolicySizeLimitSpi( ) {
     return 16384;
   }

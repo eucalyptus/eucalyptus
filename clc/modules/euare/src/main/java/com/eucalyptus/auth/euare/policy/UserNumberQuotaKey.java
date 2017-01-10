@@ -60,23 +60,20 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.euare;
+package com.eucalyptus.auth.euare.policy;
 
-import static com.eucalyptus.auth.euare.common.policy.IamPolicySpec.IAM_CREATEGROUP;
-import static com.eucalyptus.auth.euare.common.policy.IamPolicySpec.VENDOR_IAM;
 import net.sf.json.JSONException;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.euare.common.policy.IamPolicySpec;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.key.KeyUtils;
 import com.eucalyptus.auth.policy.key.PolicyKey;
-import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.PolicyScope;
 
-@PolicyKey( IamPolicySpec.IAM_QUOTA_GROUP_NUMBER )
-public class GroupNumberQuotaKey extends QuotaKey {
+@PolicyKey( IamPolicySpec.IAM_QUOTA_USER_NUMBER )
+public class UserNumberQuotaKey extends EuareQuotaKey {
   
-  private static final String KEY = IamPolicySpec.IAM_QUOTA_GROUP_NUMBER;
+  private static final String KEY = IamPolicySpec.IAM_QUOTA_USER_NUMBER;
   
   @Override
   public void validateValueType( String value ) throws JSONException {
@@ -85,7 +82,7 @@ public class GroupNumberQuotaKey extends QuotaKey {
   
   @Override
   public boolean canApply( String action ) {
-    if ( PolicySpec.qualifiedName( VENDOR_IAM, IAM_CREATEGROUP ).equals( action ) ) {
+    if ( PolicySpec.qualifiedName( IamPolicySpec.VENDOR_IAM, IamPolicySpec.IAM_CREATEUSER ).equals( action ) ) {
       return true;
     }
     return false;
@@ -95,13 +92,9 @@ public class GroupNumberQuotaKey extends QuotaKey {
   public String value( PolicyScope scope, String id, String resource, Long quantity ) throws AuthException {
     switch ( scope ) {
       case Account:
-        return Long.toString( EuareQuotaUtil.countGroupByAccount( id ) + quantity );
-      case Group:
-        return NOT_SUPPORTED;
-      case User:
-        return NOT_SUPPORTED;
+        return Long.toString( EuareQuotaUtil.countUserByAccount( id ) + quantity );
     }
-    throw new AuthException( "Invalid scope" );
+    return unsupportedValue( scope );
   }
   
 }

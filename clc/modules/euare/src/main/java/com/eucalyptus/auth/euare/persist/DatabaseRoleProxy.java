@@ -302,7 +302,7 @@ public class DatabaseRoleProxy implements EuareRole {
         }
       } );
     } catch ( ExecutionException e ) {
-      Debugging.logError( LOG, e, "Failed to getAttachedPolicies for " + this.delegate );
+      Debugging.logError( LOG, e, "Failed to attachPolicy for " + this.delegate );
     }
   }
 
@@ -321,11 +321,14 @@ public class DatabaseRoleProxy implements EuareRole {
           }
           if ( policyEntity != null ) {
             roleEntity.getAttachedPolicies( ).remove( policyEntity );
+          } else {
+            throw Exceptions.toUndeclared( new AuthException( AuthException.NO_SUCH_POLICY ) );
           }
         }
       } );
     } catch ( ExecutionException e ) {
-      Debugging.logError( LOG, e, "Failed to getAttachedPolicies for " + this.delegate );
+      Exceptions.findAndRethrow( e, AuthException.class );
+      Debugging.logError( LOG, e, "Failed to detachPolicy for " + this.delegate );
     }
   }
 

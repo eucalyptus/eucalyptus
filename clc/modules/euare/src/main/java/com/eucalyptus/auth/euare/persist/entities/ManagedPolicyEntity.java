@@ -54,7 +54,7 @@ public class ManagedPolicyEntity extends AbstractPersistent {
   private String name;
 
   // The policy path
-  @Column( name = "auth_policy_path", nullable = false )
+  @Column( name = "auth_policy_path", nullable = false, length = 512  )
   private String path;
 
   // The policy description

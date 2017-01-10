@@ -58,6 +58,11 @@ public interface EuareAccount extends AccountIdentifiers, BasePrincipal, Restric
 
   List<EuareManagedPolicy> getPolicies( Boolean attached ) throws AuthException;
 
+  /**
+   * Get count for managed policies
+   */
+  long countPolicies( ) throws AuthException;
+
   EuareUser addUser( String userName, String path, boolean enabled, Map<String, String> info ) throws AuthException;
   void deleteUser( String userName, boolean forceDeleteAdmin, boolean recursive ) throws AuthException;
 

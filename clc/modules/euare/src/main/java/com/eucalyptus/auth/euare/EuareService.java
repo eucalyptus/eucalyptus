@@ -83,6 +83,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.springframework.web.util.UriUtils;
 
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.AuthenticationLimitProvider;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.ServerCertificate;
@@ -116,6 +117,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
@@ -1450,14 +1452,19 @@ public class EuareService {
     EuareAccount account = getRealAccount( ctx, request );
     try {
       account = Privileged.getAccountSummary( requestUser, account );
-      List<SummaryMapTypeEntryType> map = reply.getGetAccountSummaryResult( ).getSummaryMap( ).getEntryList( );
+      final int attachmentLimit = AuthenticationLimitProvider.Values.getPolicyAttachmentLimit( );
+      final List<SummaryMapTypeEntryType> map = reply.getGetAccountSummaryResult( ).getSummaryMap( ).getEntryList( );
       map.add( new SummaryMapTypeEntryType( "Groups", account.getGroups().size() ) );
       map.add( new SummaryMapTypeEntryType( "Users", account.getUsers().size() ) );
       map.add( new SummaryMapTypeEntryType( "Roles", account.getRoles().size( ) ) );
       map.add( new SummaryMapTypeEntryType( "InstanceProfiles", account.getInstanceProfiles().size( ) ) );
       map.add( new SummaryMapTypeEntryType( "ServerCertificates", account.listServerCertificates("/").size()));
       map.add( new SummaryMapTypeEntryType( "Providers", account.listOpenIdConnectProviders().size()));
-      map.add( new SummaryMapTypeEntryType( "Policies", account.getPolicies(false).size()));
+      map.add( new SummaryMapTypeEntryType( "AttachedPoliciesPerGroupQuota", attachmentLimit ));
+      map.add( new SummaryMapTypeEntryType( "AttachedPoliciesPerRoleQuota", attachmentLimit ));
+      map.add( new SummaryMapTypeEntryType( "AttachedPoliciesPerUserQuota", attachmentLimit ));
+      map.add( new SummaryMapTypeEntryType( "Policies", (int)account.countPolicies()));
+      map.add( new SummaryMapTypeEntryType( "PolicySizeQuota", AuthenticationLimitProvider.Values.getPolicySizeLimit( )));
       return reply;
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
@@ -2288,7 +2295,7 @@ public class EuareService {
           requestUser,
           account,
           request.getPolicyName( ),
-          sanitizePath( request.getPath( ) ),
+          MoreObjects.firstNonNull( request.getPath( ), "/"),
           request.getDescription( ),
           request.getPolicyDocument( )
       );
@@ -2308,6 +2315,10 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid policy name " + request.getPolicyName() );
         } else if ( AuthException.INVALID_PATH.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid policy path " + request.getPath( ) );
+        } else if ( AuthException.INVALID_DESCRIPTION.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid policy description " + request.getDescription( ) );
+        } else if ( MoreObjects.firstNonNull( e.getMessage( ), "" ).startsWith( "Invalid policy" ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, e.getMessage( ) );
         }
       }
       LOG.error( e, e );
@@ -2371,6 +2382,8 @@ public class EuareService {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to detach policy by " + ctx.getUser( ).getName( ) );
+        } else if ( AuthException.NO_SUCH_POLICY.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "No such attachment by " + ctx.getUser( ).getName( ) );
         }
       }
       LOG.error( e, e );
@@ -2397,6 +2410,8 @@ public class EuareService {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to detach policy by " + ctx.getUser( ).getName( ) );
+        } else if ( AuthException.NO_SUCH_POLICY.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "No such attachment by " + ctx.getUser( ).getName( ) );
         }
       }
       LOG.error( e, e );
@@ -2423,6 +2438,8 @@ public class EuareService {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to detach policy by " + ctx.getUser( ).getName( ) );
+        } else if ( AuthException.NO_SUCH_POLICY.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "No such attachment by " + ctx.getUser( ).getName( ) );
         }
       }
       LOG.error( e, e );

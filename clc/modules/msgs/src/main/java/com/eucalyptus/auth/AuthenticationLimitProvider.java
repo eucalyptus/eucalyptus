@@ -34,6 +34,8 @@ public interface AuthenticationLimitProvider {
 
   int getSigningCertificateLimitSpi( );
 
+  int getPolicyAttachmentLimitSpi( );
+
   int getPolicySizeLimitSpi( );
 
   boolean getUseValidatingPolicyParserSpi( );
@@ -56,7 +58,7 @@ public interface AuthenticationLimitProvider {
     }
 
     public static int getPolicyAttachmentLimit( ) {
-      return 10;
+      return getIntValue( AuthenticationLimit.POLICY_ATTACHMENT );
     }
 
     public static int getOpenIdConnectProviderClientIdLimit( ) { return 100; }
@@ -92,6 +94,13 @@ public interface AuthenticationLimitProvider {
       @Override
       public Integer apply( final AuthenticationLimitProvider authenticationLimitProvider ) {
         return authenticationLimitProvider.getAccessKeyLimitSpi( );
+      }
+    },
+    POLICY_ATTACHMENT {
+      @Nonnull
+      @Override
+      public Integer apply( final AuthenticationLimitProvider authenticationLimitProvider ) {
+        return authenticationLimitProvider.getPolicyAttachmentLimitSpi( );
       }
     },
     POLICY_SIZE {

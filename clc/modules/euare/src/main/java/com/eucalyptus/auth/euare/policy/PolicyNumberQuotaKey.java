@@ -1,5 +1,5 @@
 /*************************************************************************
- * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,45 +13,43 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  ************************************************************************/
-package com.eucalyptus.auth.euare;
+package com.eucalyptus.auth.euare.policy;
 
+import static com.eucalyptus.auth.euare.common.policy.IamPolicySpec.*;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.euare.common.policy.IamPolicySpec;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.key.KeyUtils;
 import com.eucalyptus.auth.policy.key.PolicyKey;
-import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.PolicyScope;
 import net.sf.json.JSONException;
 
 /**
  *
  */
-@PolicyKey( IamPolicySpec.IAM_QUOTA_OPENID_CONNECT_PROVIDER_NUMBER )
-public class OpenIdConnectProviderNumberQuotaKey extends QuotaKey {
-
-  private static final String KEY = IamPolicySpec.IAM_QUOTA_OPENID_CONNECT_PROVIDER_NUMBER;
+@PolicyKey( IAM_QUOTA_POLICY_NUMBER )
+public class PolicyNumberQuotaKey extends EuareQuotaKey {
 
   @Override
   public void validateValueType( String value ) throws JSONException {
-    KeyUtils.validateIntegerValue( value, KEY );
+    KeyUtils.validateIntegerValue( value, IAM_QUOTA_POLICY_NUMBER );
   }
 
   @Override
   public boolean canApply( String action ) {
-    return PolicySpec.qualifiedName( IamPolicySpec.VENDOR_IAM, IamPolicySpec.IAM_CREATEOPENIDCONNECTPROVIDER ).equals( action );
+    return PolicySpec.qualifiedName( VENDOR_IAM, IAM_CREATEPOLICY ).equals( action );
   }
 
   @Override
-  public String value( PolicyScope scope, String id, String resource, Long quantity ) throws AuthException {
+  public String value(
+      final PolicyScope scope,
+      final String id,
+      final String resource,
+      final Long quantity
+  ) throws AuthException {
     switch ( scope ) {
       case Account:
-        return Long.toString( EuareQuotaUtil.countOpenIdConnectProvidersByAccount( id ) + quantity );
-      case Group:
-        return NOT_SUPPORTED;
-      case User:
-        return NOT_SUPPORTED;
+        return Long.toString( EuareQuotaUtil.countPoliciesByAccount( id ) + quantity );
     }
-    throw new AuthException( "Invalid scope" );
+    return unsupportedValue( scope );
   }
 }

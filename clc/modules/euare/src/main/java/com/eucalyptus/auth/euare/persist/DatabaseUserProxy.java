@@ -103,6 +103,7 @@ import com.eucalyptus.entities.Entities;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Tx;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
@@ -733,14 +734,13 @@ public class DatabaseUserProxy implements EuareUser {
         }
       } );
     } catch ( ExecutionException e ) {
-      Debugging.logError( LOG, e, "Failed to getAttachedPolicies for " + this.delegate );
+      Debugging.logError( LOG, e, "Failed to attachPolicy for " + this.delegate );
     }
   }
 
   @Override
   public void detachPolicy( final EuareManagedPolicy policy ) throws AuthException {
     try {
-      final String accountNumber = policy.getAccountNumber( );
       DatabaseAuthUtils.invokeUnique( UserEntity.class, UserEntity_.userId, DatabaseUserProxy.this.delegate.getUserId( ), new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) {
           ManagedPolicyEntity policyEntity = null;
@@ -752,11 +752,14 @@ public class DatabaseUserProxy implements EuareUser {
           }
           if ( policyEntity != null ) {
             t.getAttachedPolicies( ).remove( policyEntity );
+          } else {
+            throw Exceptions.toUndeclared( new AuthException( AuthException.NO_SUCH_POLICY ) );
           }
         }
       } );
     } catch ( ExecutionException e ) {
-      Debugging.logError( LOG, e, "Failed to getAttachedPolicies for " + this.delegate );
+      Exceptions.findAndRethrow( e, AuthException.class );
+      Debugging.logError( LOG, e, "Failed to detachPolicy for " + this.delegate );
     }
   }
 
