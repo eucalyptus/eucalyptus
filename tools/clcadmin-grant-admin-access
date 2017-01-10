@@ -1,6 +1,6 @@
 #!/usr/bin/python -tt
 #
-# Copyright 2015 Eucalyptus Systems, Inc.
+# Copyright (c) 2015-2017 Hewlett Packard Enterprise Development LP
 #
 # Redistribution and use of this software in source and binary forms,
 # with or without modification, are permitted provided that the following
@@ -155,7 +155,13 @@ def main():
                            aws_secret_access_key=secret_key, is_secure=False,
                            port=PORT, host=HOST, path=SERVICE_PATH)
     try:
-        account = conn.resolve_account_name(args.account)
+        if args.account.isdigit():
+            # Pass numeric account IDs verbatim -- they may belong to
+            # other regions.  If the account ID is bad then we will fail
+            # upon trying to resolve the user's ARN.
+            account = args.account
+        else:
+            account = conn.resolve_account_name(args.account)
     except KeyError:
         sys.exit('error: no such account: {0}'.format(args.account))
     boto.log.debug('account ID is %s', account)
