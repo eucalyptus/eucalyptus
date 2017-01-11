@@ -159,11 +159,10 @@ public final class S3V4Authentication {
     if (path == null || path.isEmpty() || excludePath)
       return "/";
 
-    String encodedPath = S3Authentication.urlEncode(path, true);
-    if (encodedPath.startsWith("/"))
-      return encodedPath;
+    if (path.startsWith("/"))
+      return path;
     else
-      return "/".concat(encodedPath);
+      return "/".concat(path);
   }
 
   static void buildCanonicalQueryString(MappingHttpRequest request, StringBuilder sb) {
