@@ -1353,7 +1353,7 @@ int do_midonet_update_pass1(globalNetworkInfo *gni, globalNetworkInfo *appliedGn
                         appliedvpcsubnet = gni_get_vpcsubnet(appliedvpc, vpcsubnet->name, &vpcsubnetidx);
                     }
                 }
-                if (!vpcsubnet->population_failed && !cmp_gni_vpcsubnet(appliedvpcsubnet, gnivpcsubnet)) {
+                if (!vpcsubnet->population_failed && !cmp_gni_vpcsubnet(appliedvpcsubnet, gnivpcsubnet, &(vpcsubnet->nacl_changed))) {
                     LOGEXTREME("\t\t%s fully implemented \n", vpcsubnet->name);
                     vpcsubnet->midopresent = 1;
                 } else {
@@ -1879,6 +1879,7 @@ int do_midonet_update_pass3_vpcs(globalNetworkInfo *gni, mido_config *mido) {
                 snprintf(vpcsubnet->vpcname, 16, "%s", vpc->name);
                 vpcsubnet->gniSubnet = gnivpcsubnet;
                 gnivpcsubnet->mido_present = vpcsubnet;
+                vpcsubnet->nacl_changed = 1;
                 // Allocate space for interfaces
                 vpcsubnet->instances = EUCA_ZALLOC_C(gnivpcsubnet->max_interfaces, sizeof (mido_vpc_instance));
                 if (gnivpc->max_natGateways > 0) {
@@ -2912,7 +2913,7 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
             // Attach NACL chains to bridges
             for (int k = 0; k < vpc->max_subnets; k++) {
                 mido_vpc_subnet *subnet = &(vpc->subnets[k]);
-                if (!strcmp(subnet->gniSubnet->networkAcl_name, vpcnacl->name)) {
+                if (subnet->nacl_changed && !strcmp(subnet->gniSubnet->networkAcl_name, vpcnacl->name)) {
                     LOGINFO("11622: applying %s to %s\n", vpcnacl->name, subnet->name);
                     rc = mido_update_bridge(subnet->subnetbr->obj, "inboundFilterId", vpcnacl->ingress->obj->uuid,
                             "outboundFilterId", vpcnacl->egress->obj->uuid, 
@@ -5884,6 +5885,7 @@ int clear_mido_gnitags(mido_config *mido) {
                 subnet->natgateways[k].gnipresent = 0;
                 subnet->natgateways[k].midopresent = 0;
             }
+            subnet->nacl_changed = 0;
             subnet->gnipresent = 0;
             subnet->midopresent = 0;
             //subnet->gniSubnet = NULL;

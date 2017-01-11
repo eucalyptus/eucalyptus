@@ -498,7 +498,7 @@ int cmpipaddr(const void *p1, const void *p2);
 
 int cmp_gni_config(globalNetworkInfo *a, globalNetworkInfo *b);
 int cmp_gni_vpc(gni_vpc *a, gni_vpc *b);
-int cmp_gni_vpcsubnet(gni_vpcsubnet *a, gni_vpcsubnet *b);
+int cmp_gni_vpcsubnet(gni_vpcsubnet *a, gni_vpcsubnet *b, int *nacl_diff);
 int cmp_gni_nat_gateway(gni_nat_gateway *a, gni_nat_gateway *b);
 int cmp_gni_route_table(gni_route_table *a, gni_route_table *b);
 int cmp_gni_secgroup(gni_secgroup *a, gni_secgroup *b, int *ingress_diff, int *egress_diff, int *interfaces_diff);

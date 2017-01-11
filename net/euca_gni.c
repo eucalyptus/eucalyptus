@@ -6167,20 +6167,30 @@ int cmp_gni_vpc(gni_vpc *a, gni_vpc *b) {
  *
  * @param a [in] gni_vpcsubnet structure of interest.
  * @param b [in] gni_vpcsubnet structure of interest.
- * @return 0 if name, routeTable_name and networkAcl_name match. Non-zero otherwise.
+ * @param nacl_diff [out] set to 1 iff network acl association of a and b differs.
+ * @return 0 if name, routeTable_name match. Non-zero otherwise. Difference in
+ * network acl association is reflected in nacl_diff.
  */
-int cmp_gni_vpcsubnet(gni_vpcsubnet *a, gni_vpcsubnet *b) {
+int cmp_gni_vpcsubnet(gni_vpcsubnet *a, gni_vpcsubnet *b, int *nacl_diff) {
     if (a == b) {
+        if (nacl_diff) *nacl_diff = 0;
         return (0);
     }
     if ((a == NULL) || (b == NULL)) {
+        if (nacl_diff) *nacl_diff = 1;
         return (1);
     }
     if (strcmp(a->name, b->name)) {
+        if (nacl_diff) *nacl_diff = 1;
         return (1);
     }
+    if (nacl_diff) {
+        *nacl_diff = 0;
+        if (strcmp(a->networkAcl_name, b->networkAcl_name)) {
+            *nacl_diff = 1;
+        }
+    }
     if ((!strcmp(a->routeTable_name, b->routeTable_name)) &&
-            (!strcmp(a->networkAcl_name, b->networkAcl_name)) &&
             (!cmp_gni_route_table(a->routeTable, b->routeTable))) {
         return (0);
     }

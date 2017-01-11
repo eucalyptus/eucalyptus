@@ -277,6 +277,7 @@ struct mido_vpc_subnet_t {
     int max_natgateways;
     int max_routes;
     int population_failed;
+    int nacl_changed;
     int midopresent;
     int gnipresent;
 };
