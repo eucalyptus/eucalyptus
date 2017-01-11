@@ -1563,54 +1563,6 @@ void *monitoring_thread(void *arg)
             // query for current state, if any
             refresh_instance_info(nc, instance);
 
-            if (!strcmp(nc->pEucaNet->sMode, NETMODE_VPCMIDO)) {
-                bridge_instance_interfaces_remove(nc, instance);
-/*
-                char iface[16], cmd[EUCA_MAX_PATH], obuf[256], ebuf[256], sPath[EUCA_MAX_PATH];
-                int rc;
-                snprintf(iface, 16, "vn_%s", instance->instanceId);
-                LOGTRACE("checking if VM interface is attached to a bridge (%s/%s)\n", iface, instance->params.guestNicDeviceName);
-
-                // If this device does not have a 'brport' path, this isn't a bridge device
-                snprintf(sPath, EUCA_MAX_PATH, "/sys/class/net/%s/brport/", iface);
-                if (!check_directory(sPath)) {
-                    LOGTRACE("VM interface is attached to a bridge (%s/%s)\n", iface, instance->params.guestNicDeviceName);
-                    snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc_state.rootwrap_cmd_path, instance->params.guestNicDeviceName, iface);
-                    if (timeshell(cmd, obuf, ebuf, 256, 10)) {
-                        LOGERROR("unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n");
-                    } else {
-                        LOGTRACE("VM interface removed from bridge (%s/%s)\n", iface, instance->params.guestNicDeviceName);
-                    }
-                }
-
-                // Repeat process for secondary interfaces as well
-                for (int i=0; i < EUCA_MAX_NICS; i++) {
-                    if (strlen(instance->secNetCfgs[i].interfaceId) == 0)
-                        continue;
-
-                    snprintf(iface, 16, "vn_%s", instance->secNetCfgs[i].interfaceId);
-
-                    // If this device does not have a 'brport' path, this isn't a bridge device
-                    snprintf(sPath, EUCA_MAX_PATH, "/sys/class/net/%s/brport/", iface);
-                    if (!check_directory(sPath)) {
-                        LOGDEBUG("[%s] removing instance interface %s from host bridge\n", instance->instanceId, iface);
-                        snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc->rootwrap_cmd_path, instance->params.guestNicDeviceName, iface);
-                        rc = timeshell(cmd, obuf, ebuf, 256, 10);
-                        if (rc) {
-                            LOGERROR("unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n");
-                        }
-                    }
-                }
-*/
-            }
-
-            // Fix for EUCA-12608
-            if (!strcmp(nc->pEucaNet->sMode, NETMODE_EDGE)) {
-                char iface[16];
-                snprintf(iface, 16, "vn_%s", instance->instanceId);
-                bridge_interface_set_hairpin(nc, instance, iface);
-            } 
-
             // time out logic for migration-ready instances
             if (!strcmp(instance->stateName, "Extant") && ((instance->migration_state == MIGRATION_READY) || (instance->migration_state == MIGRATION_PREPARING))
                 && ((now - instance->migrationTime) > nc_state.migration_ready_threshold)) {
@@ -1954,40 +1906,6 @@ void *startup_thread(void *arg)
 
                     if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_VPCMIDO)) {
                         bridge_instance_interfaces_remove(&nc_state, instance);
-/*
-                        char iface[16], cmd[EUCA_MAX_PATH], obuf[256], ebuf[256], sPath[EUCA_MAX_PATH];
-                        snprintf(iface, 16, "vn_%s", instance->instanceId);
-
-                        // If this device does not have a 'brport' path, this isn't a bridge device
-                        snprintf(sPath, EUCA_MAX_PATH, "/sys/class/net/%s/brport/", iface);
-                        if (!check_directory(sPath)) {
-                            LOGDEBUG("[%s] removing instance interface %s from host bridge\n", instance->instanceId, iface);
-                            snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc_state.rootwrap_cmd_path, instance->params.guestNicDeviceName, iface);
-                            rc = timeshell(cmd, obuf, ebuf, 256, 10);
-                            if (rc) {
-                                LOGERROR("unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n");
-                            }
-                        }
-
-                        // Repeat process for secondary interfaces as well
-                        for (int i=0; i < EUCA_MAX_NICS; i++) {
-                            if (strlen(instance->secNetCfgs[i].interfaceId) == 0)
-                                continue;
-
-                            snprintf(iface, 16, "vn_%s", instance->secNetCfgs[i].interfaceId);
-
-                            // If this device does not have a 'brport' path, this isn't a bridge device
-                            snprintf(sPath, EUCA_MAX_PATH, "/sys/class/net/%s/brport/", iface);
-                            if (!check_directory(sPath)) {
-                                LOGDEBUG("[%s] removing instance interface %s from host bridge\n", instance->instanceId, iface);
-                                snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc_state.rootwrap_cmd_path, instance->params.guestNicDeviceName, iface);
-                                rc = timeshell(cmd, obuf, ebuf, 256, 10);
-                                if (rc) {
-                                    LOGERROR("unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n");
-                                }
-                            }
-                        }
-*/
                     }
                     // Fix for EUCA-12608
                     if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_EDGE)) {
