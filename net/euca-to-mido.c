@@ -2908,6 +2908,20 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
                         acl_entry->cidrNetaddr, acl_entry->cidrSlashnet, acl_entry->icmpType, acl_entry->icmpCode,
                         acl_entry->fromPort, acl_entry->toPort, (!acl_entry->allow ? "DENY" : "ALLOW"));
             }
+            
+            // Attach NACL chains to bridges
+            for (int k = 0; k < vpc->max_subnets; k++) {
+                mido_vpc_subnet *subnet = &(vpc->subnets[k]);
+                if (!strcmp(subnet->gniSubnet->networkAcl_name, vpcnacl->name)) {
+                    LOGINFO("11622: applying %s to %s\n", vpcnacl->name, subnet->name);
+                    rc = mido_update_bridge(subnet->subnetbr->obj, "inboundFilterId", vpcnacl->ingress->obj->uuid,
+                            "outboundFilterId", vpcnacl->egress->obj->uuid, 
+                            "name", subnet->subnetbr->obj->name, NULL);
+                    if (rc > 0) {
+                        LOGERROR("failed to attach %s to %s\n", vpcnacl->name, subnet->name);
+                    }
+                }
+            }
         }
     }
     return (ret);
