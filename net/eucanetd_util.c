@@ -183,11 +183,6 @@ int eucanetd_stop_dhcpd_server(eucanetdConfig *config) {
         char sPidFileName[EUCA_MAX_PATH] = "";
         struct stat mystat = {0};
 
-        // Do we have a valid path?
-        if (stat(config->dhcpDaemon, &mystat) != 0) {
-            LOGERROR("Unable to stop dhcpd without valid binary: '%s'\n", config->dhcpDaemon);
-            return (1);
-        }
         // Setup the path to the various files involved
         snprintf(sPidFileName, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.pid", config->eucahome);
 

@@ -4114,11 +4114,11 @@ void midonet_api_init(void) {
     mido_libcurl_init(&libcurl_handles);
     mido_initialize_apiuribase();
     
-    // Check MidoNet API version - only API version v1.9 and v5.0 are supported
-    if (strcmp(midonet_api_version, "v1.9") && strcmp(midonet_api_version, "v5.0")) {
+    // Check MidoNet API version - only API version v5.0 supported
+    if (strcmp(midonet_api_version, "v5.0")) {
         LOGWARN("Unsupported MidoNet API version (%s) detected.\n", midonet_api_version);
         LOGINFO("Note:\n"
-                "Eucalyptus (%s) has been validated with MEM v5.2, MEM v1.9 and open source v5.2.\n"
+                "Eucalyptus (%s) has been validated with MEM v5.2, and partially with open source v5.2.\n"
                 "Please update MidoNet to a compatible version (MEM v5.2 recommended).\n",
                 EUCA_VERSION);
     }
