@@ -1490,7 +1490,7 @@ void *monitoring_thread(void *arg)
     for (iteration = 0; TRUE; iteration++) {
         now = time(NULL);
 
-        // EUCA-10056 we need to check if EUCANETD is running when in EDGE of VPC mode
+        // EUCA-10056 we need to check if EUCANETD is running when in EDGE
         if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_EDGE)) {
             snprintf(sPidFile, EUCA_MAX_PATH, EUCANETD_PID_FILE, nc_state.home);
             if ((psPid = file2str(sPidFile)) != NULL) {
@@ -1562,24 +1562,6 @@ void *monitoring_thread(void *arg)
 
             // query for current state, if any
             refresh_instance_info(nc, instance);
-
-            if (!strcmp(nc->pEucaNet->sMode, NETMODE_VPCMIDO)) {
-                bridge_instance_interfaces_remove(nc, instance);
-            }
-
-            // Fix for EUCA-12608
-            if (!strcmp(nc->pEucaNet->sMode, NETMODE_EDGE)) {
-                char iface[IF_NAME_LEN];
-                char *ishort = euca_truncate_interfaceid(instance->instanceId);
-                if (ishort) {
-                    snprintf(iface, IF_NAME_LEN, "vn_%s", ishort);
-                } else {
-                    LOGWARN("Failed to get short id from %s\n", instance->instanceId);
-                    snprintf(iface, IF_NAME_LEN, "vn_%s", instance->instanceId);
-                }
-                EUCA_FREE(ishort);
-                bridge_interface_set_hairpin(nc, instance, iface);
-            } 
 
             // time out logic for migration-ready instances
             if (!strcmp(instance->stateName, "Extant") && ((instance->migration_state == MIGRATION_READY) || (instance->migration_state == MIGRATION_PREPARING))
