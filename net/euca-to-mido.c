@@ -509,7 +509,7 @@ int do_md_nginx_maintain(mido_config *mido, enum vpcmido_nginx_t mode) {
         return (ret);
     }
 
-    snprintf(cmd, EUCA_MAX_PATH, "%s %s status %s", mido->config->cmdprefix,
+    snprintf(cmd, EUCA_MAX_PATH, "%s %s is-active %s", mido->config->cmdprefix,
             mido->config->systemctl, EUCANETD_NGINX_UNIT);
     rc = timeshell_nb(cmd, 10, FALSE);
 
