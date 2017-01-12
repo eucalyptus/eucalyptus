@@ -2,7 +2,7 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * (c) Copyright 2009-2017 Hewlett Packard Enterprise Development Company LP 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -307,6 +307,16 @@ int stat_backing_store(const char *conf_instances_path, blobstore_meta * work_me
     }
 
     return (stat_blobstore(path, "work", work_meta) || stat_blobstore(path, "cache", cache_meta) ? EUCA_ERROR : EUCA_OK);
+}
+
+//!
+//! Set the default error logging function for the blobstore
+//! - helpful if calling stat_backing_store before init_backing_store() is called.
+//! - avoids error logging escaping to stdout, and thus the journal with systemd.
+//!
+void init_backing_errors() 
+{
+    blobstore_set_error_function(&bs_errors);
 }
 
 //!

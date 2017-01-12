@@ -2,7 +2,7 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * (c) Copyright 2009-2017 Hewlett Packard Enterprise Development Company LP 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2542,6 +2542,8 @@ static int init(void)
 
     {
         // backing store configuration
+        init_backing_errors(); // configure backingstore/blobstore errors to log using the backing::bs_errors() function
+
         char *instances_path = getConfString(nc_state.configFiles, 2, INSTANCE_PATH);
 
         if (instances_path == NULL) {
