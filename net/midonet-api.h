@@ -156,6 +156,7 @@
 \*----------------------------------------------------------------------------*/
 
 enum mido_chain_rule_elements_t {
+    MIDO_CRULE_TYPE,
     MIDO_CRULE_PROTO,
     MIDO_CRULE_NW,
     MIDO_CRULE_NWLEN,

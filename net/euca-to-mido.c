@@ -1820,9 +1820,13 @@ int do_midonet_update_pass3_vpcs(globalNetworkInfo *gni, mido_config *mido) {
             vpc->gniVpc = gnivpc;
             gnivpc->mido_present = vpc;
             get_next_router_id(mido, &(vpc->rtid));
-            // allocate space for subnets and natgateways
+            // allocate space for subnets
             if (gnivpc->max_subnets > 0) {
                 vpc->subnets = EUCA_ZALLOC_C(gnivpc->max_subnets, sizeof (mido_vpc_subnet));
+            }
+            // allocate space for network acls
+            if (gnivpc->max_networkAcls > 0) {
+                vpc->nacls = EUCA_ZALLOC_C(gnivpc->max_networkAcls, sizeof (mido_vpc_nacl));
             }
         }
 
@@ -1882,6 +1886,7 @@ int do_midonet_update_pass3_vpcs(globalNetworkInfo *gni, mido_config *mido) {
                 vpcsubnet->nacl_changed = 1;
                 // Allocate space for interfaces
                 vpcsubnet->instances = EUCA_ZALLOC_C(gnivpcsubnet->max_interfaces, sizeof (mido_vpc_instance));
+                // Allocate space for nat gateways
                 if (gnivpc->max_natGateways > 0) {
                     vpcsubnet->natgateways = EUCA_ZALLOC_C(gnivpc->max_natGateways, sizeof (mido_vpc_natgateway));
                 }
@@ -2856,6 +2861,8 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
 int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
     int rc = 0;
     int ret = 0;
+    mido_parsed_chain_rule crule;
+
     for (int i = 0; i < gni->max_vpcs; i++) {
         gni_vpc *gnivpc = &(gni->vpcs[i]);
         mido_vpc *vpc = (mido_vpc *) gnivpc->mido_present;
@@ -2905,11 +2912,14 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
                     vpcnacl->ingress_changed, vpcnacl->egress_changed);
             for (int k = 0; k < gninacl->max_ingress; k++) {
                 gni_acl_entry *acl_entry = &(gninacl->ingress[k]);
-                LOGINFO("11622: \t%d %d %s %x/%d %d:%d %d:%d %s\n", acl_entry->number, acl_entry->protocol, acl_entry->cidr,
-                        acl_entry->cidrNetaddr, acl_entry->cidrSlashnet, acl_entry->icmpType, acl_entry->icmpCode,
-                        acl_entry->fromPort, acl_entry->toPort, (!acl_entry->allow ? "DENY" : "ALLOW"));
+                rc = parse_mido_nacl_entry(mido, acl_entry, &crule);
+                LOGINFO("11622: \t%d %s %s %s/%s %s-%s %s:%s\n", acl_entry->number,
+                        crule.jsonel[MIDO_CRULE_TYPE], crule.jsonel[MIDO_CRULE_PROTO],
+                        crule.jsonel[MIDO_CRULE_NW], crule.jsonel[MIDO_CRULE_NWLEN],
+                        crule.jsonel[MIDO_CRULE_TPD_S], crule.jsonel[MIDO_CRULE_TPD_E],
+                        crule.jsonel[MIDO_CRULE_TPS_S], crule.jsonel[MIDO_CRULE_TPS_E]);
             }
-            
+
             // Attach NACL chains to bridges
             for (int k = 0; k < vpc->max_subnets; k++) {
                 mido_vpc_subnet *subnet = &(vpc->subnets[k]);
@@ -4424,24 +4434,6 @@ int free_mido_vpc_nacl(mido_vpc_nacl *vpcnacl) {
  * @return  0 if the parse is successful. 1 otherwise.
  */
 int parse_mido_secgroup_rule(mido_config *mido, gni_rule *rule, mido_parsed_chain_rule *parsed_rule) {
-    int ret = 0;
-
-    if (is_midonet_api_v1()) {
-        ret = parse_mido_secgroup_rule_v1(mido, rule, parsed_rule);
-    } else if (is_midonet_api_v5()) {
-        ret = parse_mido_secgroup_rule_v5(mido, rule, parsed_rule);
-    }
-    return (ret);
-}
-
-/**
- * Parses the given gni_rule to get its corresponding mido_parsed_chain_rule (MN1.9)
- * @param mido [in] mido current mido_config data structure.
- * @param rule [in] rule gni_rule of interest.
- * @param parsed_rule [out] parsed_rule data structure to store the parsed results.
- * @return  0 if the parse is successful. 1 otherwise.
- */
-int parse_mido_secgroup_rule_v1(mido_config *mido, gni_rule *rule, mido_parsed_chain_rule *parsed_rule) {
     char subnet_buf[24];
     char slashnet_buf[8];
     int rc = 0;
@@ -4481,119 +4473,65 @@ int parse_mido_secgroup_rule_v1(mido_config *mido, gni_rule *rule, mido_parsed_c
     }
 
     // protocol
-    snprintf(parsed_rule->jsonel[MIDO_CRULE_PROTO], 64, "%d", rule->protocol);
-    switch (rule->protocol) {
-        case 1: // ICMP
-            if (rule->icmpType != -1) {
-                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS], 64, "jsonjson");
-                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS_S], 64, "%d", rule->icmpType);
-                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS_E], 64, "%d", rule->icmpType);
-                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS_END], 64, "END");
-            }
-            if (rule->icmpCode != -1) {
-                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD], 64, "jsonjson");
-                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_S], 64, "%d", rule->icmpCode);
-                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_E], 64, "%d", rule->icmpCode);
-                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_END], 64, "END");
-            }
-            break;
-        case 6:  // TCP
-        case 17: // UDP
-            snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD], 64, "jsonjson");
-            snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_S], 64, "%d", rule->fromPort);
-            snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_E], 64, "%d", rule->toPort);
-            snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_END], 64, "END");
-            break;
-        case -1: // All protocols
-            snprintf(parsed_rule->jsonel[MIDO_CRULE_PROTO], 64, "0");
-            break;
-        default:
-            // Protocols accepted by EC2 are ICMP/TCP/UDP.
-            break;
-    }
+    parse_mido_chain_rule_protocol(rule->protocol, rule->icmpType, rule->icmpCode,
+            rule->fromPort, rule->toPort, parsed_rule);
 
     return (ret);
 }
 
 /**
- * Parses the given gni_rule to get its corresponding mido_parsed_chain_rule (MN5)
- * @param mido [in] mido current mido_config data structure.
- * @param rule [in] rule gni_rule of interest.
+ * Parses the protocol specified in the argument and gets its corresponding mido_parsed_chain_rule
+ * @param proto [in] protocol number of interest
+ * @param icmpType [in] if protocol is ICMP (1), specify its type (ignored if not ICMP)
+ * @param icmpCode [in] if protocol is ICMP (1), specify its code (ignored if not ICMP)
+ * @param fromPort [in] transport port range starting value (ignored if not TCP or UDP)
+ * @param toPort [in] transport port range end value (ignored if not TCP or UDP)
  * @param parsed_rule [out] parsed_rule data structure to store the parsed results.
  * @return  0 if the parse is successful. 1 otherwise.
  */
-int parse_mido_secgroup_rule_v5(mido_config *mido, gni_rule *rule, mido_parsed_chain_rule *parsed_rule) {
-    char subnet_buf[24];
-    char slashnet_buf[8];
-    int rc = 0;
-    int ret = 0;
-    mido_vpc_secgroup *rule_sg = NULL;
+int parse_mido_chain_rule_protocol(int proto, int icmpType, int icmpCode,
+        int fromPort, int toPort, mido_parsed_chain_rule *parsed_rule) {
 
-    if (!mido || !rule || !parsed_rule) {
-        LOGWARN("Invalid argument: cannot parse NULL secgroup.\n");
+    if (!parsed_rule) {
+        LOGWARN("Invalid argument: cannot parse protocol of NULL\n");
         return (1);
     }
-    LOGTRACE("Parsing secgroup rule\n");
 
-    clear_parsed_chain_rule(parsed_rule);
-
-    // determine if the source is a CIDR or another SG (default CIDR if it is either unset (implying 0.0.0.0) or set explicity)
-    if (strlen(rule->groupId)) {
-        rc = find_mido_vpc_secgroup(mido, rule->groupId, &rule_sg);
-        if (!rc && rule_sg && rule_sg->midos[VPCSG_IAGALL] && rule_sg->midos[VPCSG_IAGALL]->init) {
-            LOGTRACE("FOUND SRC IPADDRGROUP MATCH: %s/%s\n", rule_sg->midos[VPCSG_IAGALL]->name, rule_sg->midos[VPCSG_IAGALL]->uuid);
-            snprintf(parsed_rule->jsonel[MIDO_CRULE_GRPUUID], 64, "%s", rule_sg->midos[VPCSG_IAGALL]->uuid);
-        } else {
-            // source SG set, but is not present (no instances membership)
-            LOGWARN("%s referenced but not found\n", rule->groupId);
-            return (1);
-        }
-    } else {
-        // source SG is not set, default CIDR 0.0.0.0 or set explicitly
-        subnet_buf[0] = slashnet_buf[0] = '\0';
-        if (strlen(rule->cidr)) {
-            cidr_split(rule->cidr, subnet_buf, slashnet_buf, NULL, NULL, NULL);
-            snprintf(parsed_rule->jsonel[MIDO_CRULE_NW], 64, "%s", subnet_buf);
-            snprintf(parsed_rule->jsonel[MIDO_CRULE_NWLEN], 64, "%s", slashnet_buf);
-        } else {
-            snprintf(parsed_rule->jsonel[MIDO_CRULE_NW], 64, "%s", "0.0.0.0");
-            snprintf(parsed_rule->jsonel[MIDO_CRULE_NWLEN], 64, "%s", "0");
-        }
-    }
-
-    // protocol
-    snprintf(parsed_rule->jsonel[MIDO_CRULE_PROTO], 64, "%d", rule->protocol);
-    switch (rule->protocol) {
+    snprintf(parsed_rule->jsonel[MIDO_CRULE_PROTO], 64, "%d", proto);
+    switch (proto) {
         case 1: // ICMP
-            if (rule->icmpType != -1) {
+            if (icmpType != -1) {
                 snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS], 64, "jsonjson");
-                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS_S], 64, "%d", rule->icmpType);
-                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS_E], 64, "%d", rule->icmpType);
+                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS_S], 64, "%d", icmpType);
+                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS_E], 64, "%d", icmpType);
                 snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS_END], 64, "END");
             }
-            if (rule->icmpCode != -1) {
+            if (icmpCode != -1) {
                 snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD], 64, "jsonjson");
-                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_S], 64, "%d", rule->icmpCode);
-                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_E], 64, "%d", rule->icmpCode);
+                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_S], 64, "%d", icmpCode);
+                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_E], 64, "%d", icmpCode);
                 snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_END], 64, "END");
             }
             break;
         case 6:  // TCP
         case 17: // UDP
             snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD], 64, "jsonjson");
-            snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_S], 64, "%d", rule->fromPort);
-            snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_E], 64, "%d", rule->toPort);
+            snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_S], 64, "%d", fromPort);
+            snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_E], 64, "%d", toPort);
             snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_END], 64, "END");
             break;
         case -1: // All protocols
-            snprintf(parsed_rule->jsonel[MIDO_CRULE_PROTO], 64, "null");
+            if (is_midonet_api_v1()) {
+                snprintf(parsed_rule->jsonel[MIDO_CRULE_PROTO], 64, "0");
+            } else if (is_midonet_api_v5()) {
+                snprintf(parsed_rule->jsonel[MIDO_CRULE_PROTO], 64, "null");
+            }
             break;
         default:
             // Protocols accepted by EC2 are ICMP/TCP/UDP.
             break;
     }
-
-    return (ret);
+    return (0);
 }
 
 /**
@@ -4814,6 +4752,46 @@ int find_mido_vpc_nacl(mido_vpc *vpc, char *naclname, mido_vpc_nacl **outvpcnacl
         }
     }
     return (1);
+}
+
+/**
+ * Parses the given network acl entry to get its corresponding mido_parsed_chain_rule
+ * @param mido [in] mido current mido_config data structure.
+ * @param entry [in] gni_acl_entry structure of interest.
+ * @param parsed_rule [out] parsed_rule data structure to store the parsed results.
+ * @return  0 if the parse is successful. 1 otherwise.
+ */
+int parse_mido_nacl_entry(mido_config *mido, gni_acl_entry *entry, mido_parsed_chain_rule *parsed_rule) {
+    int ret = 0;
+
+    if (!mido || !entry || !parsed_rule) {
+        LOGWARN("Invalid argument: cannot parse NULL nacl entry.\n");
+        return (1);
+    }
+    LOGTRACE("Parsing nacl entry\n");
+
+    clear_parsed_chain_rule(parsed_rule);
+
+    // default CIDR 0.0.0.0 or set explicitly
+    if (strlen(entry->cidr)) {
+        snprintf(parsed_rule->jsonel[MIDO_CRULE_NW], 64, "%s", hex2dot_s(entry->cidrNetaddr));
+        snprintf(parsed_rule->jsonel[MIDO_CRULE_NWLEN], 64, "%d", entry->cidrSlashnet);
+    } else {
+        snprintf(parsed_rule->jsonel[MIDO_CRULE_NW], 64, "%s", "0.0.0.0");
+        snprintf(parsed_rule->jsonel[MIDO_CRULE_NWLEN], 64, "%d", 0);
+    }
+
+    // protocol
+    parse_mido_chain_rule_protocol(entry->protocol, entry->icmpType, entry->icmpCode,
+            entry->fromPort, entry->toPort, parsed_rule);
+
+    // type
+    if (entry->allow) {
+        snprintf(parsed_rule->jsonel[MIDO_CRULE_TYPE], 64, "%s", "accept");
+    } else {
+        snprintf(parsed_rule->jsonel[MIDO_CRULE_TYPE], 64, "%s", "drop");
+    }
+    return (ret);
 }
 
 /**
