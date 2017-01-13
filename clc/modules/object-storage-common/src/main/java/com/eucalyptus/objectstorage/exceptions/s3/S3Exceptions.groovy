@@ -712,6 +712,12 @@ class MaxMessageLengthExceededException extends S3Exception {
     this();
     this.resource = resource;
   }
+
+  def MaxMessageLengthExceededException(String resource, String message) {
+    this();
+    this.resource = resource;
+    this.message = message;
+  }
 }
 
 class MaxPostPreDataLengthExceededErrorException extends S3Exception {
