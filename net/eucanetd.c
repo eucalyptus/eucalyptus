@@ -123,7 +123,7 @@ configEntry configKeysRestartEUCANETD[] = {
     ,
     {"VNET_SYSTEMCTL", "/usr/bin/systemctl"}
     ,
-    {"VNET_USE_SYSTEMCTL", "N"}
+    {"VNET_USE_SYSTEMCTL", "Y"}
     ,
     {"VNET_DNS", NULL}
     ,
