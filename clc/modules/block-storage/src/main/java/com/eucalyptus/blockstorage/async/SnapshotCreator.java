@@ -253,12 +253,12 @@ public class SnapshotCreator implements Runnable {
           StorageResource snapshotResource = null;
 
           if (prevSnap != null) {
-            LOG.debug("Generate delta between penultimate snapshot " + prevSnap.getSnapshotId() + " and latest snapshot " + this.snapshotId);
+            LOG.info("Generate delta between penultimate snapshot " + prevSnap.getSnapshotId() + " and latest snapshot " + this.snapshotId);
             srwc =
                 blockManager.prepIncrementalSnapshotForUpload(volumeId, snapshotId, snapPointId, prevSnap.getSnapshotId(), prevSnap.getSnapPointId());
             snapshotResource = srwc.getSr();
           } else {
-            LOG.debug("Upload entire content of snapshot " + this.snapshotId);
+            LOG.info("Upload entire content of snapshot " + this.snapshotId);
             snapshotResource = blockManager.prepSnapshotForUpload(volumeId, snapshotId, snapPointId);
           }
 
@@ -399,7 +399,7 @@ public class SnapshotCreator implements Runnable {
       if (previousSnaps != null && previousSnaps.size() > 0 && (prevSnap = previousSnaps.get(0)) != null) {
         if (prevSnap.getSnapshotLocation() != null && prevSnap.getIsOrigin() != null) { // check origin to validate that snapshot was uploaded in its
                                                                                         // entirety at least once post 4.4
-          LOG.debug(this.volumeId + " has been snapshotted and uploaded before. Most recent such snapshot is " + prevSnap.getSnapshotId());
+          LOG.info(this.volumeId + " has been snapshotted and uploaded before. Most recent such snapshot is " + prevSnap.getSnapshotId());
 
           // count number of deltas that have been created after the last full check point
           int numDeltas;
@@ -410,17 +410,17 @@ public class SnapshotCreator implements Runnable {
               continue;
           }
 
-          LOG.debug(this.volumeId + " has " + numDeltas + " delta(s) since the last full checkpoint. Max limit is " + maxDeltas);
+          LOG.info(this.volumeId + " has " + numDeltas + " delta(s) since the last full checkpoint. Max limit is " + maxDeltas);
           if (numDeltas < maxDeltas) {
             return prevSnap;
           } else {
             // nothing to do here
           }
         } else {
-          LOG.debug(this.volumeId + " has not been snapshotted and or uploaded after the support for incremental snapshots was added");
+          LOG.info(this.volumeId + " has not been snapshotted and or uploaded after the support for incremental snapshots was added");
         }
       } else {
-        LOG.debug(this.volumeId + " has no prior active snapshots in the system");
+        LOG.info(this.volumeId + " has no prior active snapshots in the system");
       }
     } catch (Exception e) {
       LOG.warn("Failed to look up previous snapshots for " + this.volumeId, e); // return null on exception, forces entire snapshot to get uploaded
@@ -466,7 +466,7 @@ public class SnapshotCreator implements Runnable {
           currSnap.setSnapshotLocation(snapshotLocation);
           return currSnap;
         } catch (TransactionException | NoSuchElementException e) {
-          LOG.debug("Failed to update snapshot upload location for snapshot " + snapshotId, e);
+          LOG.warn("Failed to update snapshot upload location for snapshot " + snapshotId, e);
         }
         return null;
       }

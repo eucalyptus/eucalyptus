@@ -367,7 +367,7 @@ public class VolumeCreator implements Runnable {
   private void cleanFailedSnapshot(String snapshotId) {
     if (snapshotId == null)
       return;
-    LOG.debug("Disconnecting and cleaning local snapshot after failed snapshot transfer: " + snapshotId);
+    LOG.info("Disconnecting and cleaning local snapshot after failed snapshot transfer: " + snapshotId);
     try {
       blockManager.finishVolume(snapshotId);
     } catch (Exception e) {
@@ -553,7 +553,7 @@ public class VolumeCreator implements Runnable {
   }
 
   private void downloadAndRestoreBase(SnapshotInfo snap) throws Exception {
-    LOG.debug("Create base container for " + snapshotId + " and restore it with " + snap.getSnapshotId());
+    LOG.info("Create base container for " + snapshotId + " and restore it with " + snap.getSnapshotId());
 
     String bucket = null;
     String key = null;
@@ -579,7 +579,7 @@ public class VolumeCreator implements Runnable {
     try {
       actualSizeInBytes = snapshotTransfer.getSizeInBytes();
     } catch (Exception e) {
-      LOG.debug("Snapshot size not found", e);
+      LOG.warn("Snapshot size not found", e);
     }
 
     if (actualSizeInBytes != null) { // Prepare the snapshot holder and download the snapshot directly to it
@@ -604,7 +604,7 @@ public class VolumeCreator implements Runnable {
   }
 
   private void downloadAndRestoreDelta(SnapshotInfo snap, SnapshotInfo prevSnap) throws Exception {
-    LOG.debug("Download " + snap.getSnapshotId() + " (delta from " + prevSnap.getSnapshotId() + ") and restore it on " + snapshotId);
+    LOG.info("Download " + snap.getSnapshotId() + " (delta from " + prevSnap.getSnapshotId() + ") and restore it on " + snapshotId);
 
     String bucket = null;
     String key = null;

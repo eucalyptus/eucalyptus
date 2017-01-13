@@ -130,11 +130,11 @@ public class FailedSnapshotCleaner extends CheckerTask {
 
   private void cleanSnapshot(SnapshotInfo snapInfo) {
     String snapshotId = snapInfo.getSnapshotId();
-    LOG.debug("Cleaning up failed snapshot " + snapshotId);
+    LOG.info("Cleaning up failed snapshot " + snapshotId);
 
     // Disconnect snapshot from SC
     try {
-      LOG.trace("Disconnecting snapshot " + snapshotId + " from the Storage Controller");
+      LOG.info("Disconnecting snapshot " + snapshotId + " from the Storage Controller");
       blockManager.finishVolume(snapshotId);
     } catch (Exception e) {
       LOG.debug("Attempt to disconnect snapshot " + snapshotId + " from Storage Controller failed because: " + e.getMessage());
@@ -142,7 +142,7 @@ public class FailedSnapshotCleaner extends CheckerTask {
 
     // Delete snapshot from backend
     try {
-      LOG.trace("Cleaning snapshot " + snapshotId + " on storage backend");
+      LOG.info("Cleaning snapshot " + snapshotId + " on storage backend");
       blockManager.cleanSnapshot(snapshotId, snapInfo.getSnapPointId());
     } catch (Exception e) {
       LOG.debug("Attempt to clean snapshot " + snapshotId + " on storage backend failed because: " + e.getMessage());
@@ -151,7 +151,7 @@ public class FailedSnapshotCleaner extends CheckerTask {
     // Delete snapshot from OSG
     try {
       if (!Strings.isNullOrEmpty(snapInfo.getSnapshotLocation())) {
-        LOG.trace("Deleting snapshot " + snapshotId + " from objectsotrage");
+        LOG.info("Deleting snapshot " + snapshotId + " from objectsotrage");
         if (snapshotTransfer == null) {
           snapshotTransfer = new S3SnapshotTransfer();
         }
@@ -174,7 +174,7 @@ public class FailedSnapshotCleaner extends CheckerTask {
         }
         tr.commit();
       } catch (TransactionException | NoSuchElementException e) {
-        LOG.debug("Failed to update deletion time for " + snapshotId, e);
+        LOG.warn("Failed to update deletion time for " + snapshotId, e);
       }
     }
   }
