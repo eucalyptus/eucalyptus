@@ -1,22 +1,17 @@
-/*******************************************************************************
- *Copyright (c) 2009-2014  Eucalyptus Systems, Inc.
- * 
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, only version 3 of the License.
- * 
- * 
- *  This file is distributed in the hope that it will be useful, but WITHOUT
- *  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- *  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- *  for more details.
- * 
- *  You should have received a copy of the GNU General Public License along
- *  with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
- *  Please contact Eucalyptus Systems, Inc., 130 Castilian
- *  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
- *  if you need additional information or have any questions.
+/*************************************************************************
+ * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
  * 
  *  This file may incorporate work covered under the following copyright and
  *  permission notice:
@@ -819,7 +814,6 @@ public class DASManager implements LogicalStorageManager {
         ((ISCSIManager) exportManager).exportTarget(iscsiVolumeInfo.getVolumeId(), iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(),
             iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser());
       }
-
     }
 
     public String getConnectionString(String volumeId) {
@@ -932,26 +926,38 @@ public class DASManager implements LogicalStorageManager {
       ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
 
       String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-      int max_tries = 10;
-      int i = 0;
       EucalyptusCloudException ex = null;
+      
+      // 1st attempt's retry timeout is 10 ms, 2nd is 40ms etc., up to the configurable total timeout.
+      final int timeoutMultiplier = 4;
+      int attempt = 1;
+      Long retryTimeout = 10l; // ms
+      Long totalTimeoutSoFar = 0l;
+      Long totalTimeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
+
       do {
         exportManager.allocateTarget(iscsiVolumeInfo);
         try {
           ((ISCSIManager) exportManager).exportTarget(iscsiVolumeInfo.getVolumeId(), iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(),
               iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser());
           ex = null;
-          // it worked. break out. may be break is a better way of breaking out?
-          // i = max_tries;
+          if (attempt > 1) {
+            LOG.info("Exporting volume " + iscsiVolumeInfo.getVolumeId() + " as target " + iscsiVolumeInfo.getTid() + 
+                " succeeded on retry attempt " + attempt);
+          }
           break;
-        } catch (EucalyptusCloudException e) {
-          ex = e;
-          LOG.error(e);
+        } catch (EucalyptusCloudException ece) {
+          ex = ece;
+          LOG.warn("Failed to export volume " + iscsiVolumeInfo.getVolumeId() + " on attempt " + attempt);
+          totalTimeoutSoFar += retryTimeout;
+          retryTimeout *= timeoutMultiplier;
+          attempt++;
         }
-      } while (i++ < max_tries);
+      } while (totalTimeoutSoFar < totalTimeout);
 
       // EUCA-3597 After all retries, check if the process actually completed
       if (null != ex) {
+        LOG.error("Failed to export volume " + iscsiVolumeInfo.getVolumeId() + ", all retries exhausted.");
         throw ex;
       }
     }

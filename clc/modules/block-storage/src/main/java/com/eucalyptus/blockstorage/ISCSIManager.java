@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,11 +12,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
- *
+ * 
  * This file may incorporate work covered under the following copyright
  * and permission notice:
  *
@@ -119,30 +115,47 @@ public class ISCSIManager implements StorageExportManager {
     tgtService.deleteUser(username, timeout);
   }
 
-  // Modified logic for implementing EUCA-3597
+  // Modified logic for implementing EUCA-3597 and EUCA-13029
   public void exportTarget(String volumeId, int tid, String name, int lun, String path, String user) throws EucalyptusCloudException {
     LOG.debug("Exporting " + volumeId + " as target: " + tid + "," + name + "," + lun + "," + path + "," + user);
     checkAndAddUser();
 
     Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
 
-    if (tgtService.targetExists(volumeId, tid, path, timeout)) {
-      LOG.debug("Target " + tid + " already exists for " + volumeId + " with path " + path + " no need to export again");
-      return;
-    }
-
     try {
-      LOG.debug("Creating target " + tid + " for " + volumeId);
-      tgtService.createTarget(volumeId, tid, name, timeout);
+      // Does the target ID exist? 
+      if (!tgtService.targetExists(volumeId, tid, null /*Don't check if our LUN exists*/, timeout)) {
+        LOG.debug("Creating target " + tid + " for " + volumeId);
+        tgtService.createTarget(volumeId, tid, name, timeout);
+      } else {
+        LOG.debug("Target " + tid + " already exists");
+      }
 
-      LOG.debug("Creating lun " + lun + " for " + volumeId);
-      tgtService.createLun(volumeId, tid, lun, path, timeout);
+      // Does the LUN exist with our backing store path for our target ID?
+      if (!tgtService.targetExists(volumeId, tid, path, timeout)) {
+        LOG.debug("Creating lun " + lun + " for " + volumeId);
+        tgtService.createLun(volumeId, tid, lun, path, timeout);
+      } else {
+        LOG.debug("Target " + tid + " with LUN " + lun + " and backing store path " + path +
+            " already exists for " + volumeId);
+      }
 
-      LOG.debug("Binding user " + user + " for " + volumeId);
-      tgtService.bindUser(volumeId, user, tid, timeout);
-
-      LOG.debug("Binding target " + tid + " for " + volumeId);
-      tgtService.bindTarget(volumeId, tid, timeout);
+      // Is the target bound to our user?
+      if (!tgtService.targetConfigured(volumeId, tid, path, timeout, user, false /*don't check initiators list*/)) {
+        LOG.debug("Binding user " + user + " for " + volumeId);
+        tgtService.bindUser(volumeId, user, tid, timeout);
+      } else {
+        LOG.debug("Target " + tid + " already bound to user " + user + " for " + volumeId);
+      }
+      
+      // Is the target bound to the right initiators access list (ACL)?
+      if (!tgtService.targetConfigured(volumeId, tid, path, timeout, null /*don't check user*/, true /*check initiators list*/)) {
+        LOG.debug("Binding target " + tid + " initiators for " + volumeId);
+        tgtService.bindTarget(volumeId, tid, timeout);
+      } else {
+        LOG.debug("Target " + tid + " initiators already bound for " + volumeId);
+      }
+      
     } catch (Exception e) {
       LOG.error("Failed creating target " + tid + " for " + volumeId);
       throw new EucalyptusCloudException(e);
@@ -338,10 +351,7 @@ public class ISCSIManager implements StorageExportManager {
 
       Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
       do {
-        // CommandOutput output = execute(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid",
-        // String.valueOf(i) }, timeout);
         if (!tgtService.targetExists(volumeInfo.getVolumeId(), i, null, timeout)) {
-          // if(StringUtils.isNotBlank(output.error)) {
           tid = i;
           break;
         }
@@ -409,10 +419,13 @@ public class ISCSIManager implements StorageExportManager {
             volEntity.setTid(-1);
             volEntity.setLun(-1);
             volEntity.setStoreName(null);
+            volEntity.setStoreUser(null);
           } else {
             throw new EucalyptusCloudException("Unable to remove tid: " + volEntity.getTid());
           }
         } else {
+          LOG.debug("Target tid " + volEntity.getTid() + " is not exported for lun " + volEntity.getLun() + 
+              " for volume " + volEntity.getVolumeId());
           // Ensure that db indicates the vol is not exported
           volEntity.setTid(-1);
           volEntity.setLun(-1);

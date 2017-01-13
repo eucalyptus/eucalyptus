@@ -1168,8 +1168,8 @@ public class OverlayManager extends DASManager {
               LOG.error(error);
               throw new EucalyptusCloudException(ex);
             }
+            // export logical volume
             try {
-              // export logical volume
               volumeManager.exportVolume(lvmVolumeInfo, vgName, lvName);
               lvmVolumeInfo.setCleanup(false);
             } catch (EucalyptusCloudException ex) {
@@ -1197,37 +1197,43 @@ public class OverlayManager extends DASManager {
     EucalyptusCloudException ex = null;
     String result = null;
 
-    // 1st timeout is 10 ms, 2nd is 40. Last (9th) is 2.56 sec. Total 3.41 sec.
+    // 1st attempt's retry timeout is 10 ms, 2nd is 40ms etc., up to the configurable total timeout.
+    final int timeoutMultiplier = 4;
     int attempt = 1;
-    final int max_attempts = 9;
-    int timeout = 10; // ms
-    final int timeout_multiplier = 4;
+    Long retryTimeout = 10l; // ms
+    Long totalTimeoutSoFar = 0l;
+    Long totalTimeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
 
     do {
       try {
-        LOG.trace("Enabling logical volume " + lvName + ", attempt " + attempt);
+        LOG.debug("Enabling logical volume " + lvName + ", attempt " + attempt);
         result = LVMWrapper.enableLogicalVolume(lvName);
         ex = null;
         if (attempt > 1) {
           LOG.info("Enabling " + lvName + " succeeded on retry attempt " + attempt);
-          break;
         }
+        break;
       } catch (EucalyptusCloudException ece) {
         // If the enable fails, it might be because lvmetad hasn't scanned
         // the VG and LV into its metadata cache.
-        // Force a pvscan, wait a bit longer, then try again.
         ex = ece;
-        LOG.warn("Failed to enable logical volume " + lvName + " on attempt " + attempt, ece);
-        LVMWrapper.scanPhysicalVolume(lvName);
+        LOG.warn("Failed to enable logical volume " + lvName + " on attempt " + attempt);
+        // If this is the first attempt, force a pvscan.
+        if (attempt == 1) {
+          LVMWrapper.scanPhysicalVolume(lvName);
+        }
+        // Wait a bit longer, then try again.
         try {
-          Thread.sleep(timeout);
+          Thread.sleep(retryTimeout);
         } catch (InterruptedException ie) {
           LOG.error(ie);
           break;
         }
-        timeout *= timeout_multiplier;
+        totalTimeoutSoFar += retryTimeout;
+        retryTimeout *= timeoutMultiplier;
+        attempt++;
       }
-    } while (attempt++ < max_attempts);
+    } while (totalTimeoutSoFar < totalTimeout);
 
     if (ex != null) {
       LOG.error("Failed to enable logical volume " + lvName + ", all retries exhausted.");
@@ -1305,6 +1311,7 @@ public class OverlayManager extends DASManager {
                 if (loDevName != null) {
                   if (volume != null) {
                     if (!nestedVolumeManager.areSnapshotsPending(volume.getVolumeId())) {
+                      LOG.info("Disabling logical volume " + volume.getVolumeId());
                       LVMWrapper.disableLogicalVolume(path);
                       LOG.info("Detaching loop device: " + loDevName + " for volume " + volume.getVolumeId());
                       removeLoopback(loDevName);

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -11,12 +11,8 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * aLong with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
- *
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ * 
  * This file may incorporate work covered under the following copyright
  * and permission notice:
  *
@@ -104,6 +100,9 @@ public class TGTWrapper {
   private static ExecutorService service; // do not access directly, use getExecutor / getExecutorWithInit
   final private static int RESOURCE_NOT_FOUND = 22; // The tgt return code for resource not found.
 
+  // If you change the below INITIATOR_ACCESS_LIST, change the javadoc comments for bindTarget() and unbindTarget()
+  final private static String INITIATOR_ACCESS_LIST = "ALL"; // Any initiator can access this target
+
   // TODO define fault IDs in a enum
   private static final int TGT_HOSED = 2000;
   private static final int TGT_CORRUPTED = 2002;
@@ -112,9 +111,12 @@ public class TGTWrapper {
   private static final Pattern LUN_PATTERN = Pattern.compile("\\s*LUN:\\s*(\\d+)\\s*");
   private static final Pattern TARGET_PATTERN = Pattern.compile("\\s*Target\\s*(\\d+):\\s+(\\S+)\\s*");
   private static final Pattern RESOURCE_PATTERN = Pattern.compile("\\s*Backing store path:\\s*(\\S+)\\s*");
+  private static final Pattern USER_HEADER_PATTERN = Pattern.compile("\\s*Account information:\\s*");
+  private static final Pattern INITIATORS_HEADER_PATTERN = Pattern.compile("\\s*ACL information:\\s*");
+  private static final Pattern TRIMMED_ANYTHING_PATTERN = Pattern.compile("\\s*(\\S+)\\s*");
 
   public static class ResourceNotFoundException extends EucalyptusCloudException {
-    private static final Long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
     public ResourceNotFoundException() {
       super("Resource not found");
@@ -126,7 +128,7 @@ public class TGTWrapper {
   }
 
   public static class OperationFailedException extends EucalyptusCloudException {
-    private static final Long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
     private int errorCode = -1;
     private String outputContent = null;
@@ -542,7 +544,7 @@ public class TGTWrapper {
     try {
       CommandOutput output =
           executeTGT(
-              new String[] {ROOT_WRAP, TGTADM, "--lld", "iscsi", "--op", "bind", "--mode", "target", "--tid", String.valueOf(tid), "-I", "ALL"},
+              new String[] {ROOT_WRAP, TGTADM, "--lld", "iscsi", "--op", "bind", "--mode", "target", "--tid", String.valueOf(tid), "-I", INITIATOR_ACCESS_LIST},
               timeout);
     } catch (EucalyptusCloudException e) {
 
@@ -563,7 +565,7 @@ public class TGTWrapper {
     LOG.debug("Unbinding target " + tid + " for volume " + volumeId);
     CommandOutput output =
         executeTGT(
-            new String[] {ROOT_WRAP, TGTADM, "--lld", "iscsi", "--op", "unbind", "--mode", "target", "--tid", String.valueOf(tid), "-I", "ALL"},
+            new String[] {ROOT_WRAP, TGTADM, "--lld", "iscsi", "--op", "unbind", "--mode", "target", "--tid", String.valueOf(tid), "-I", INITIATOR_ACCESS_LIST},
             timeout);
     if (output.failed() || StringUtils.isNotBlank(output.error)) {
       if (output.returnValue == RESOURCE_NOT_FOUND && output.error.contains("can't find the target")) {
@@ -576,29 +578,63 @@ public class TGTWrapper {
   }
 
   /**
-   * Checks if the target exists. If resource is not null then returns true iff the target exists, and exports a lun backed by the specified resource.
-   * A LUN id check is not done, any LUN in the target will match.
+   * Checks if the target exists, and optionally checks the resource for that target too. 
    * 
-   * @param volumeId
-   * @param tid
-   * @param resource the backing resource. If null just the tid is checked, otherwise both the tid and resource are checked
-   * @param timeout
-   * @return
+   * @param volumeId the volume ID, e.g. "vol-de174154"
+   * @param tid the target ID, e.g. 32
+   * @param resource the backing resource, e.g. "/dev/euca-ebs-storage-vg-vol-de174154/euca-vol-de174154". May be null.
+   * @param timeout timeout in milliseconds for each tgtadm command to complete
+   * @return If a target with the given tid exists, and the given resource is null, returns true.
+   *         If the resource is not null, and that resource must be backing a LUN of that target, returns true.
+   *         A LUN ID check is not done, any LUN number in the target will match.
+   *         Otherwise returns false.
    */
   public static boolean targetExists(@Nonnull String volumeId, int tid, String resource, @Nonnull Long timeout) throws EucalyptusCloudException {
+    // Don't check for user nor initiator list
+    return targetConfigured(volumeId, tid, resource, timeout, null, false);
+  }
+  
+  /**
+   * Checks if the target exists, and optionally checks its configuration. 
+   * 
+   * @param volumeId the volume ID, e.g. "vol-de174154"
+   * @param tid the target ID, e.g. 32
+   * @param resource the backing resource, e.g. "/dev/euca-ebs-storage-vg-vol-de174154/euca-vol-de174154". May be null.
+   * @param timeout timeout in milliseconds for each tgtadm command to complete
+   * @param user the account user that must be bound to that target. May be null.
+   * @param checkInitiators if true, check that the access list (ACL) of initiators is correct. If false, don't check.
+   * @return If a target with the given tid exists, and the given resource is null, returns true.
+   *         If the resource is not null, and that resource must be backing a LUN of that target, returns true
+   *         if the supplied user is the user bound to that target and the initiators list is correct, skipping
+   *         either check if they are null/false.
+   *         A LUN ID check is not done, any LUN number in the target will match.
+   *         Otherwise returns false.
+   */
+  public static boolean targetConfigured(@Nonnull String volumeId, int tid, String resource, @Nonnull Long timeout, 
+      String user, boolean checkInitiators) throws EucalyptusCloudException {
     try {
       CommandOutput output =
           executeTGT(new String[] {ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid", String.valueOf(tid)}, timeout);
       if (StringUtils.isBlank(output.error)) {
         if (resource != null) {
           output = executeTGT(new String[] {ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target"}, timeout);
-          return hasResource(output.output, tid, resource);
+          if (hasResource(output.output, tid, resource, user, checkInitiators)) {
+            LOG.debug("Volume " + volumeId + " check for target " + tid + " and resource " + resource + " returning true. Target exists");
+            return true;
+          } else {
+            LOG.debug("Volume: " + volumeId + " Target: " + tid + " Resource: " + resource + 
+                (user == null ? "" : " User: " + user) +
+                (checkInitiators ? " Initiators: " + INITIATOR_ACCESS_LIST : "") +
+                " not found");
+            return false;
+          }
         } else {
           LOG.debug("Volume " + volumeId + " check for target " + tid + " returning true. Target exists");
           return true;
         }
       } else {
         LOG.debug("Volume: " + volumeId + " Target: " + tid + " not found");
+        return false;
       }
     } catch (ResourceNotFoundException e) {
       // Fall through, return false
@@ -643,30 +679,98 @@ public class TGTWrapper {
    * @param resource
    * @return
    */
-  private static boolean hasResource(@Nonnull String output, int tid, @Nonnull String resource) {
+  private static boolean hasResource(@Nonnull String output, int tid, @Nonnull String resource, String user, boolean checkInitiators) {
     Matcher targetMatcher = null;
     Matcher resourceMatcher = null;
+    Matcher userHeaderMatcher = null;
+    Matcher userMatcher = null;
+    Matcher initiatorsHeaderMatcher = null;
+    Matcher initiatorsMatcher = null;
     String target = null;
+    boolean resourceFound = false;
+    boolean userHeaderFound = false;
+    boolean userFound = false;
+    boolean initiatorsHeaderFound = false;
+    boolean initiatorsFound = false;
+    
     for (String line : LINE_SPLITTER.split(output)) {
+      // Look for a target ID line even after we find ours. This ensures that if we
+      // don't find what we're looking for before the next target ID line, we won't 
+      // find it in a later target because we'll reset the target ID to null.
       targetMatcher = TARGET_PATTERN.matcher(line);
       if (targetMatcher.matches()) {
         target = targetMatcher.group(1);
-        if (Integer.parseInt(targetMatcher.group(1)) != tid) {
+        if (Integer.parseInt(target) != tid) {
           target = null;
-          continue;
-        }
-      } else {
-        if (target != null) {
-          // Only try lun match if found the target we're looking for
-          resourceMatcher = RESOURCE_PATTERN.matcher(line);
-          if (resourceMatcher.matches() && resourceMatcher.group(1).equals(resource)) {
-            return true;
-          }
         }
       }
-    }
+      if (target == null) {
+        continue;
+      }
+      
+      // We've found the target, look for the other items in its configuration.
+      if (!resourceFound) {
+        // Looking for the resource (LUN)
+        resourceMatcher = RESOURCE_PATTERN.matcher(line);
+        if (resourceMatcher.matches() && resourceMatcher.group(1).equals(resource)) {
+          resourceFound = true;
+        }
+        continue;
+      }
+      
+      // We've already found the target and its LUN.
+
+      // Only check the target's user account if the user parameter is provided
+      if (user != null && !userFound) {
+        if (!userHeaderFound) {
+          // Looking for the account info header line
+          userHeaderMatcher = USER_HEADER_PATTERN.matcher(line);
+          if (userHeaderMatcher.matches()) {
+            userHeaderFound = true;
+            continue;
+          }
+        } else {
+          // We found the user account header already, so this line better be the user
+          userMatcher = TRIMMED_ANYTHING_PATTERN.matcher(line);
+          if (userMatcher.group(1).equals(user)) {
+            userFound = true;
+          } else {
+            // The user is not the right one, fail.
+            return false; 
+          }
+        }
+      }  // end if looking for user
+      
+      // Only try to match the target's initiator list if the parameter is provided
+      if (checkInitiators && !initiatorsFound) {
+        if (!initiatorsHeaderFound) {
+          // Looking for the initiators header line
+          initiatorsHeaderMatcher = INITIATORS_HEADER_PATTERN.matcher(line);
+          if (initiatorsHeaderMatcher.matches()) {
+            initiatorsHeaderFound = true;
+            continue;
+          }
+        } else {
+          // We found the initiators header already, so this line better be the initiator list
+          initiatorsMatcher = TRIMMED_ANYTHING_PATTERN.matcher(line);
+          if (initiatorsMatcher.group(1).equals(INITIATOR_ACCESS_LIST)) {
+            initiatorsFound = true;
+          } else {
+            // The initiators list is not right, fail.
+            return false; 
+          }
+        }
+      }  // end if looking for initiators
+
+      if ((user == null || userFound) &&
+          (!checkInitiators || initiatorsFound)) {
+        // Found what we needed, we're done
+        return true;
+      }
+    }  // end for each line in the tgtadm output
+    // Never found what we were looking for
     return false;
-  }
+  } // end hasResource()
 
   /**
    * Check the output for the given lun
