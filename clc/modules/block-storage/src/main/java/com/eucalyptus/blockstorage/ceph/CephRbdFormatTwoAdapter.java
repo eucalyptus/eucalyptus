@@ -110,7 +110,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
    */
   @Override
   public String createImage(final String imageName, final long imageSize) {
-    LOG.debug("Create ceph-rbd image imageName=" + imageName + ", imageSize=" + imageSize);
+    LOG.info("Create ceph-rbd image imageName=" + imageName + ", imageSize=" + imageSize);
     return executeRbdOpInRandomPool(new Function<CephRbdConnectionManager, String>() {
 
       @Override
@@ -132,7 +132,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
 
   @Override
   public void deleteImage(final String imageName, final String poolName) {
-    LOG.debug("Delete ceph-rbd image imageName=" + imageName + ", poolName=" + poolName);
+    LOG.info("Delete ceph-rbd image imageName=" + imageName + ", poolName=" + poolName);
     executeRbdOpInPool(new Function<CephRbdConnectionManager, String>() {
 
       @Override
@@ -202,7 +202,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
 
   @Override
   public void cleanUpImages(final String poolName, final String imagePrefix, final List<String> toBeDeleted) {
-    LOG.debug("Cleanup RBD images poolName=" + poolName + ", prefix=" + imagePrefix);
+    LOG.info("Cleanup RBD images poolName=" + poolName + ", prefix=" + imagePrefix);
     executeRbdOpInPool(new Function<CephRbdConnectionManager, String>() {
 
       @Override
@@ -295,7 +295,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
 
   @Override
   public SetMultimap<String, String> cleanUpSnapshots(final String poolName, final SetMultimap<String, String> toBeDeleted) {
-    LOG.debug("Cleanup RBD snapshots poolName=" + poolName);
+    LOG.info("Cleanup RBD snapshots poolName=" + poolName);
     return executeRbdOpInPool(new Function<CephRbdConnectionManager, SetMultimap<String, String>>() {
 
       @Override
@@ -369,7 +369,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
 
   @Override
   public void renameImage(final String imageName, final String newImageName, final String poolName) {
-    LOG.debug("Rename ceph-rbd image currentImageName=" + imageName + ", newImageName=" + newImageName + ", poolName=" + poolName);
+    LOG.info("Rename ceph-rbd image currentImageName=" + imageName + ", newImageName=" + newImageName + ", poolName=" + poolName);
     executeRbdOpInPool(new Function<CephRbdConnectionManager, String>() {
 
       @Override
@@ -388,7 +388,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
 
   @Override
   public String getImagePool(final String imageName) {
-    LOG.debug("Get ceph-rbd image pool imageName=" + imageName);
+    LOG.info("Get ceph-rbd image pool imageName=" + imageName);
     return findAndExecuteRbdOp(new Function<CephRbdConnectionManager, String>() {
 
       @Override
@@ -403,7 +403,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
    */
   @Override
   public String createSnapshot(final String parentName, final String snapName, final String parentPoolName) {
-    LOG.debug("Create ceph-rbd snapshot on image parentName=" + parentName + ", snapName=" + snapName + ", parentPoolName=" + parentPoolName);
+    LOG.info("Create ceph-rbd snapshot on image parentName=" + parentName + ", snapName=" + snapName + ", parentPoolName=" + parentPoolName);
     return executeRbdOpInPool(new Function<CephRbdConnectionManager, String>() {
 
       @Override
@@ -437,7 +437,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
 
   @Override
   public void deleteSnapshot(final String parentName, final String snapName, final String parentPoolName) {
-    LOG.debug("Delete ceph-rbd snapshot on image parentName=" + parentName + ", snapName=" + snapName + ", parentPoolName=" + parentPoolName);
+    LOG.info("Delete ceph-rbd snapshot on image parentName=" + parentName + ", snapName=" + snapName + ", parentPoolName=" + parentPoolName);
     executeRbdOpInPool(new Function<CephRbdConnectionManager, String>() {
 
       @Override
@@ -472,7 +472,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
 
   @Override
   public String deleteAllSnapshots(final String imageName, final String poolName, final String snapName) {
-    LOG.debug("Delete ceph-rbd snapshots on imageName=" + imageName + ", poolName=" + poolName);
+    LOG.info("Delete ceph-rbd snapshots on imageName=" + imageName + ", poolName=" + poolName);
     return executeRbdOpInPool(new Function<CephRbdConnectionManager, String>() {
 
       @Override
@@ -540,7 +540,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
   @Override
   public String cloneAndResizeImage(final String parentName, final String snapName, final String cloneName, final Long size,
       final String parentPoolName) {
-    LOG.debug("Clone (and resize) ceph-rbd image parentName=" + parentName + ", snapName=" + snapName + ", cloneName=" + cloneName + ", size=" + size
+    LOG.info("Clone (and resize) ceph-rbd image parentName=" + parentName + ", snapName=" + snapName + ", cloneName=" + cloneName + ", size=" + size
         + ", parentPoolName=" + parentPoolName);
     return executeRbdOpInPool(new Function<CephRbdConnectionManager, String>() {
 
@@ -601,7 +601,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
 
   @Override
   public List<String> listPool(final String poolName) {
-    LOG.debug("List ceph-rbd pool poolName=" + poolName);
+    LOG.info("List ceph-rbd pool poolName=" + poolName);
     return executeRbdOpInPool(new Function<CephRbdConnectionManager, List<String>>() {
 
       @Override
