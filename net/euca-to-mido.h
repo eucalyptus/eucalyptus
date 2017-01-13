@@ -176,7 +176,9 @@ enum vpc_route_entry_target_t {
 enum mido_rule_type_t {
     MIDO_RULE_INVALID,
     MIDO_RULE_SG_EGRESS,
-    MIDO_RULE_SG_INGRESS
+    MIDO_RULE_SG_INGRESS,
+    MIDO_RULE_ACLENTRY_EGRESS,
+    MIDO_RULE_ACLENTRY_INGRESS
 };
 
 /*----------------------------------------------------------------------------*\
@@ -536,6 +538,8 @@ int clear_parsed_chain_rule(mido_parsed_chain_rule *rule);
 
 int populate_mido_vpc_nacl(mido_config *mido, mido_vpc_nacl *vpcnacl);
 int create_mido_vpc_nacl(mido_config *mido, mido_vpc *vpc, mido_vpc_nacl *vpcnacl);
+int create_mido_vpc_nacl_entry(midonet_api_chain *chain, midoname **outname,
+        int pos, int ruletype, mido_parsed_chain_rule *rule);
 int delete_mido_vpc_nacl(mido_config *mido, mido_vpc_nacl *vpcnacl);
 int find_mido_vpc_nacl(mido_vpc *vpc, char *naclname, mido_vpc_nacl **outvpcnacl);
 

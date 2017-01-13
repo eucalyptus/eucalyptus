@@ -2435,7 +2435,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
             }
         }
 
-        // block any incoming IP traffic that isn't to the VM private IP
+        // block any outgoing IP traffic that isn't from the VM private IP
         // Check if the rule is already in place
         rc = mido_find_rule_from_list(vpcif->prechain->rules, vpcif->prechain->max_rules, &ptmpmn,
                 "type", "drop", "dlType", "2048", "nwSrcAddress", instIp, "nwSrcLength", "32", "invNwSrc", "true", NULL);
@@ -2461,7 +2461,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
             }
         }
 
-        // block any outgoing IP traffic that isn't from the VM private IP
+        // block any incoming IP traffic that isn't destined to the VM private IP
         // Check if the rule is already in place
         rc = mido_find_rule_from_list(vpcif->postchain->rules, vpcif->postchain->max_rules, &ptmpmn,
                 "type", "drop", "dlType", "2048", "nwDstAddress", instIp, "nwDstLength", "32", "invNwDst", "true", NULL);
@@ -2487,7 +2487,7 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
             }
         }
 
-        // Allow DHCP requests (this rule needs to be placed before dst check rule)
+        // Allow DHCP responses (this rule needs to be placed before dst check rule)
         // Check if the rule is already in place
         rc = mido_find_rule_from_list(vpcif->postchain->rules, vpcif->postchain->max_rules, &ptmpmn,
                 "type", "accept", "nwProto", "17", "tpDst", "jsonjson", "tpDst:start", "67", "tpDst:end", "68",
@@ -2908,16 +2908,54 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
                 }
             }
             vpcnacl->gnipresent = 1;
+
             LOGINFO("11622\t\t%s ingress %d egress %d\n", vpcnacl->name,
                     vpcnacl->ingress_changed, vpcnacl->egress_changed);
-            for (int k = 0; k < gninacl->max_ingress; k++) {
-                gni_acl_entry *acl_entry = &(gninacl->ingress[k]);
-                rc = parse_mido_nacl_entry(mido, acl_entry, &crule);
-                LOGINFO("11622: \t%d %s %s %s/%s %s-%s %s:%s\n", acl_entry->number,
-                        crule.jsonel[MIDO_CRULE_TYPE], crule.jsonel[MIDO_CRULE_PROTO],
-                        crule.jsonel[MIDO_CRULE_NW], crule.jsonel[MIDO_CRULE_NWLEN],
-                        crule.jsonel[MIDO_CRULE_TPD_S], crule.jsonel[MIDO_CRULE_TPD_E],
-                        crule.jsonel[MIDO_CRULE_TPS_S], crule.jsonel[MIDO_CRULE_TPS_E]);
+
+            // Process ingress rules
+            if (!vpcnacl->population_failed && !vpcnacl->ingress_changed) {
+                LOGTRACE("\t\tskipping pass3 for %s ingress\n", gninacl->name);
+                LOGINFO("11622: \t\tskipping pass3 for %s ingress\n", gninacl->name);
+            } else {
+                mido_clear_rules(vpcnacl->ingress);
+                for (int k = 0; k < gninacl->max_ingress; k++) {
+                    gni_acl_entry *acl_entry = &(gninacl->ingress[k]);
+                    parse_mido_nacl_entry(mido, acl_entry, &crule);
+                    rc = create_mido_vpc_nacl_entry(vpcnacl->ingress, NULL, -1,
+                            MIDO_RULE_ACLENTRY_INGRESS, &crule);
+                    if (rc) {
+                        LOGWARN("failed to create %s ingress rule at idx %d\n", gninacl->name, k);
+                        ret++;
+                    }
+                    LOGINFO("11622: \t%d %s %s %s/%s %s-%s %s:%s\n", acl_entry->number,
+                            crule.jsonel[MIDO_CRULE_TYPE], crule.jsonel[MIDO_CRULE_PROTO],
+                            crule.jsonel[MIDO_CRULE_NW], crule.jsonel[MIDO_CRULE_NWLEN],
+                            crule.jsonel[MIDO_CRULE_TPD_S], crule.jsonel[MIDO_CRULE_TPD_E],
+                            crule.jsonel[MIDO_CRULE_TPS_S], crule.jsonel[MIDO_CRULE_TPS_E]);
+                }
+            }
+
+            // Process egress rules
+            if (!vpcnacl->population_failed && !vpcnacl->egress_changed) {
+                LOGTRACE("\t\tskipping pass3 for %s egress\n", gninacl->name);
+                LOGINFO("11622: \t\tskipping pass3 for %s egress\n", gninacl->name);
+            } else {
+                mido_clear_rules(vpcnacl->egress);
+                for (int k = 0; k < gninacl->max_egress; k++) {
+                    gni_acl_entry *acl_entry = &(gninacl->egress[k]);
+                    parse_mido_nacl_entry(mido, acl_entry, &crule);
+                    rc = create_mido_vpc_nacl_entry(vpcnacl->egress, NULL, -1,
+                            MIDO_RULE_ACLENTRY_EGRESS, &crule);
+                    if (rc) {
+                        LOGWARN("failed to create %s ingress rule at idx %d\n", gninacl->name, k);
+                        ret++;
+                    }
+                    LOGINFO("11622: \t%d %s %s %s/%s %s-%s %s:%s\n", acl_entry->number,
+                            crule.jsonel[MIDO_CRULE_TYPE], crule.jsonel[MIDO_CRULE_PROTO],
+                            crule.jsonel[MIDO_CRULE_NW], crule.jsonel[MIDO_CRULE_NWLEN],
+                            crule.jsonel[MIDO_CRULE_TPD_S], crule.jsonel[MIDO_CRULE_TPD_E],
+                            crule.jsonel[MIDO_CRULE_TPS_S], crule.jsonel[MIDO_CRULE_TPS_E]);
+                }
             }
 
             // Attach NACL chains to bridges
@@ -4535,16 +4573,17 @@ int parse_mido_chain_rule_protocol(int proto, int icmpType, int icmpCode,
 }
 
 /**
- * Implements the given mido_parsed_chain_rule in the given chain.
+ * Implements the given mido_parsed_chain_rule (assumed to be a security group rule)
+ * in the given chain.
  *
  * @param chain [in] midoname structure of the chain of interest.
  * @param outname [i/o] pointer to an extant MidoNet rule (parameters will be checked
  * to avoid duplicate rule creation. If outname points to NULL, a newly allocated
- * midoname structure will be returned. If outname is NULL, the newly created port
+ * midoname structure will be returned. If outname is NULL, the newly created rule
  * will not be returned.
- * @param pos position in the chain for the newly created rule. -1 appends the rule.
- * @param ruletype gni_rule type (MIDO_RULE_EGRESS or MIDO_RULE_INGRESS)
- * @param rule mido_parsed_chain_rule to be created.
+ * @param pos [in] position in the chain for the newly created rule. -1 appends the rule.
+ * @param ruletype [in] gni_rule type (MIDO_RULE_SG_EGRESS or MIDO_RULE_SG_INGRESS)
+ * @param rule [in] mido_parsed_chain_rule to be created.
  *
  * @return 0 if the parse is successful. 1 otherwise.
  */
@@ -4559,7 +4598,7 @@ int create_mido_vpc_secgroup_rule(midonet_api_chain *chain, midoname **outname,
         return (1);
     }
     if ((strlen(rule->jsonel[MIDO_CRULE_PROTO]) == 0) || (!strcmp(rule->jsonel[MIDO_CRULE_PROTO], "UNSET"))) {
-        LOGWARN("Invalid argument: cannot create secgroup rule with invalid protocol or cidr\n");
+        LOGWARN("Invalid argument: cannot create secgroup rule with invalid protocol\n");
         return (1);
     }
 
@@ -4704,6 +4743,81 @@ int create_mido_vpc_nacl(mido_config *mido, mido_vpc *vpc, mido_vpc_nacl *vpcnac
         vpcnacl->egress = ch;
     }
 
+    return (ret);
+}
+
+/**
+ * Implements the given mido_parsed_chain_rule (assumed to be a network acl entry)
+ * in the given chain.
+ *
+ * @param chain [in] midoname structure of the chain of interest.
+ * @param outname [i/o] pointer to an extant MidoNet rule (parameters will be checked
+ * to avoid duplicate rule creation. If outname points to NULL, a newly allocated
+ * midoname structure will be returned. If outname is NULL, the newly created rule
+ * will not be returned.
+ * @param pos [in] position in the chain for the newly created rule. -1 appends the rule.
+ * @param ruletype [in] gni_rule type (MIDO_RULE_ACLENTRY_EGRESS or MIDO_RULE_ACLENTRY_INGRESS)
+ * @param entry [in] mido_parsed_chain_rule to be created.
+ *
+ * @return 0 if the parse is successful. 1 otherwise.
+ */
+int create_mido_vpc_nacl_entry(midonet_api_chain *chain, midoname **outname,
+        int pos, int ruletype, mido_parsed_chain_rule *entry) {
+    int rc = 0;
+    int ret = 0;
+    char spos[8];
+
+    if (!chain) {
+        LOGWARN("Invalid argument: cannot create nacl entry in a NULL chain.\n");
+        return (1);
+    }
+    if ((strlen(entry->jsonel[MIDO_CRULE_PROTO]) == 0) || (!strcmp(entry->jsonel[MIDO_CRULE_PROTO], "UNSET")) ||
+            (!strcmp(entry->jsonel[MIDO_CRULE_TYPE], "UNSET"))) {
+        LOGWARN("Invalid argument: cannot create nacl entry with invalid protocol or type\n");
+        return (1);
+    }
+
+    if (pos == -1) {
+        pos = chain->rules_count + 1;
+    }
+    snprintf(spos, 8, "%d", pos);
+
+    switch (ruletype) {
+        case MIDO_RULE_ACLENTRY_EGRESS:
+            rc = mido_create_rule(chain, chain->obj, outname, NULL,
+                    "position", spos, "type", entry->jsonel[MIDO_CRULE_TYPE],
+                    "tpDst", entry->jsonel[MIDO_CRULE_TPD],
+                    "tpDst:start", entry->jsonel[MIDO_CRULE_TPD_S], "tpDst:end", entry->jsonel[MIDO_CRULE_TPD_E],
+                    "tpDst:END", entry->jsonel[MIDO_CRULE_TPD_END],
+                    "tpSrc", entry->jsonel[MIDO_CRULE_TPS],
+                    "tpSrc:start", entry->jsonel[MIDO_CRULE_TPS_S], "tpSrc:end", entry->jsonel[MIDO_CRULE_TPS_E],
+                    "tpSrc:END", entry->jsonel[MIDO_CRULE_TPS_END],
+                    "nwProto", entry->jsonel[MIDO_CRULE_PROTO],
+                    "nwDstAddress", entry->jsonel[MIDO_CRULE_NW],
+                    "nwDstLength", entry->jsonel[MIDO_CRULE_NWLEN], NULL);
+            break;
+        case MIDO_RULE_ACLENTRY_INGRESS:
+            rc = mido_create_rule(chain, chain->obj, outname, NULL,
+                    "position", spos, "type", entry->jsonel[MIDO_CRULE_TYPE],
+                    "tpDst", entry->jsonel[MIDO_CRULE_TPD],
+                    "tpDst:start", entry->jsonel[MIDO_CRULE_TPD_S], "tpDst:end", entry->jsonel[MIDO_CRULE_TPD_E],
+                    "tpDst:END", entry->jsonel[MIDO_CRULE_TPD_END],
+                    "tpSrc", entry->jsonel[MIDO_CRULE_TPS],
+                    "tpSrc:start", entry->jsonel[MIDO_CRULE_TPS_S], "tpSrc:end", entry->jsonel[MIDO_CRULE_TPS_E],
+                    "tpSrc:END", entry->jsonel[MIDO_CRULE_TPS_END],
+                    "nwProto", entry->jsonel[MIDO_CRULE_PROTO],
+                    "nwSrcAddress", entry->jsonel[MIDO_CRULE_NW],
+                    "nwSrcLength", entry->jsonel[MIDO_CRULE_NWLEN], NULL);
+            break;
+        case MIDO_RULE_INVALID:
+        default:
+            LOGWARN("Invalid argument: cannot create invalid acl entry.\n");
+            rc = 1;
+    }
+    
+    if (rc) {
+        ret = 1;
+    }
     return (ret);
 }
 
