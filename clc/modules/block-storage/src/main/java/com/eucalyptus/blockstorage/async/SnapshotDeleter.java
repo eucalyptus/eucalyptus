@@ -187,12 +187,12 @@ public class SnapshotDeleter extends CheckerTask {
           try {
             String snapshotId = snap.getSnapshotId();
 
-            LOG.info("Snapshot " + snapshotId + " was marked for deletion from OSG. Evaluating prerequistes for cleanup...");
+            LOG.debug("Snapshot " + snapshotId + " was marked for deletion from OSG. Evaluating prerequistes for cleanup...");
             if (snap.getIsOrigin() == null) { // old snapshot prior to 4.4
-              LOG.info("Snapshot " + snapshotId + " may have been created prior to incremental snapshot support");
+              LOG.debug("Snapshot " + snapshotId + " may have been created prior to incremental snapshot support");
               deleteSnapFromOSG(snap); // delete snapshot
             } else if (snap.getIsOrigin()) { // snapshot originated in the same az
-              LOG.info("Snapshot " + snapshotId + " originates from this az, verifying if it's needed to restore other snapshots");
+              LOG.debug("Snapshot " + snapshotId + " originates from this az, verifying if it's needed to restore other snapshots");
               try (TransactionResource tr = Entities.transactionFor(SnapshotInfo.class)) {
 
                 SnapshotInfo nextSnapSearch = new SnapshotInfo();
@@ -212,7 +212,7 @@ public class SnapshotDeleter extends CheckerTask {
                   // Found deltas that might depend on this snapshot for reconstruction, don't delete
                   LOG.info("Snapshot " + snapshotId + " is required for restoring other snapshots in the system. Cannot delete from OSG");
                 } else {
-                  LOG.info("Snapshot " + snapshotId + " is not required for restoring other snapshots in the system");
+                  LOG.debug("Snapshot " + snapshotId + " is not required for restoring other snapshots in the system");
                   deleteSnapFromOSG(snap); // delete snapshot
                 }
               } catch (Exception e) {
@@ -259,7 +259,7 @@ public class SnapshotDeleter extends CheckerTask {
 
   private void deleteSnapFromOSG(SnapshotInfo snap) {
     if (StringUtils.isNotBlank(snap.getSnapshotLocation())) {
-      LOG.info("Deleting snapshot " + snap.getSnapshotId() + " from ObjectStorageGateway");
+      LOG.debug("Deleting snapshot " + snap.getSnapshotId() + " from ObjectStorageGateway");
       try {
         String[] names = SnapshotInfo.getSnapshotBucketKeyNames(snap.getSnapshotLocation());
         if (snapshotTransfer == null) {

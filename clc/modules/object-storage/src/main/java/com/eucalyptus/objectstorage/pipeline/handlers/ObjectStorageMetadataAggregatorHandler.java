@@ -62,27 +62,16 @@
 
 package com.eucalyptus.objectstorage.pipeline.handlers;
 
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.objectstorage.OSGChannelWriter;
+import com.eucalyptus.objectstorage.OSGMessageResponse;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
-import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.objectstorage.OSGChannelWriter;
-import com.eucalyptus.objectstorage.OSGMessageResponse;
-import com.eucalyptus.ws.StackConfiguration;
 
-/*
- *
- */
 public class ObjectStorageMetadataAggregatorHandler extends HttpChunkAggregator {
-
-  private static final int DEFAULT_MAX_CONTENT_LENGTH = StackConfiguration.CLIENT_HTTP_CHUNK_BUFFER_MAX;
-
-  public ObjectStorageMetadataAggregatorHandler() {
-    super(DEFAULT_MAX_CONTENT_LENGTH);
-  }
-
   public ObjectStorageMetadataAggregatorHandler(int maxContentLength) {
     super(maxContentLength);
   }
