@@ -150,6 +150,7 @@ public class SnapshotDeleter extends CheckerTask {
                 deleteSnapFromEBS(snap);
               } finally {
                 snapSemaphore.release();
+                EucaSemaphoreDirectory.removeSemaphore(snapshotId);
               }
             } else { // either pre 4.4 snapshot or snapshot does not originate in this az
               // no need to acquire semaphore, delete straight away
