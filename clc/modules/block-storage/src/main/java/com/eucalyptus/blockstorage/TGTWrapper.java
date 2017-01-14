@@ -696,21 +696,29 @@ public class TGTWrapper {
     for (String line : LINE_SPLITTER.split(output)) {
       // Look for a target ID line even after we find ours. This ensures that if we
       // don't find what we're looking for before the next target ID line, we won't 
-      // find it in a later target because we'll reset the target ID to null.
+      // find it in a later target because we'll break out at the next target ID.
       targetMatcher = TARGET_PATTERN.matcher(line);
       if (targetMatcher.matches()) {
-        target = targetMatcher.group(1);
-        if (Integer.parseInt(target) != tid) {
-          target = null;
+        if (target == null) {
+          if (Integer.parseInt(targetMatcher.group(1)) == tid) {
+            // Found the target
+            target = targetMatcher.group(1);
+          }
+        } else {
+          // We already found the target, so this is the next target. 
+          // So we never found what we were looking for in the target we wanted. Get out.
+          break;
         }
+        continue;
       }
+
       if (target == null) {
+        // No reason to keep looking at this line
         continue;
       }
       
-      // We've found the target, look for the other items in its configuration.
       if (!resourceFound) {
-        // Looking for the resource (LUN)
+        // Found the target already, looking for the resource (LUN)
         resourceMatcher = RESOURCE_PATTERN.matcher(line);
         if (resourceMatcher.matches() && resourceMatcher.group(1).equals(resource)) {
           resourceFound = true;
@@ -723,19 +731,26 @@ public class TGTWrapper {
       // Only check the target's user account if the user parameter is provided
       if (user != null && !userFound) {
         if (!userHeaderFound) {
-          // Looking for the account info header line
+          // Looking for the account user header line
           userHeaderMatcher = USER_HEADER_PATTERN.matcher(line);
           if (userHeaderMatcher.matches()) {
             userHeaderFound = true;
             continue;
           }
+          // Not the header line, fall through to look for initiators
         } else {
           // We found the user account header already, so this line better be the user
           userMatcher = TRIMMED_ANYTHING_PATTERN.matcher(line);
-          if (userMatcher.group(1).equals(user)) {
-            userFound = true;
+          if (userMatcher.matches()) {
+            if (userMatcher.group(1).equals(user)) {
+              userFound = true;
+              // Fall through to the final check
+            } else {
+              // The user is not the right one, fail.
+              return false;
+            }
           } else {
-            // The user is not the right one, fail.
+            // Couldn't match anything in the line, so no user.
             return false; 
           }
         }
@@ -750,13 +765,20 @@ public class TGTWrapper {
             initiatorsHeaderFound = true;
             continue;
           }
+          // Not the header line, fall through to the final check
         } else {
           // We found the initiators header already, so this line better be the initiator list
           initiatorsMatcher = TRIMMED_ANYTHING_PATTERN.matcher(line);
-          if (initiatorsMatcher.group(1).equals(INITIATOR_ACCESS_LIST)) {
-            initiatorsFound = true;
+          if (initiatorsMatcher.matches()) {
+            if (initiatorsMatcher.group(1).equals(INITIATOR_ACCESS_LIST)) {
+              initiatorsFound = true;
+              // Fall through to the final check
+            } else {
+              // The initiators list is not right, fail.
+              return false;
+            }
           } else {
-            // The initiators list is not right, fail.
+            // Couldn't match anything in the line, so no initiators list.
             return false; 
           }
         }
@@ -785,21 +807,32 @@ public class TGTWrapper {
     Matcher lunMatcher = null;
     String target = null;
     for (String line : LINE_SPLITTER.split(output)) {
+      // Look for a target ID line even after we find ours. This ensures that if we
+      // don't find what we're looking for before the next target ID line, we won't 
+      // find it in a later target because we'll break out at the next target ID.
       targetMatcher = TARGET_PATTERN.matcher(line);
       if (targetMatcher.matches()) {
-        target = targetMatcher.group(1);
-        if (Integer.parseInt(targetMatcher.group(1)) != tid) {
-          target = null;
-          continue;
-        }
-      } else {
-        if (target != null) {
-          // Only try lun match if found the target we're looking for
-          lunMatcher = LUN_PATTERN.matcher(line);
-          if (lunMatcher.matches() && lunMatcher.group(1).equals(String.valueOf(lun))) {
-            return true;
+        if (target == null) {
+          if (Integer.parseInt(targetMatcher.group(1)) == tid) {
+            // Found the target
+            target = targetMatcher.group(1);
           }
+        } else {
+          // We already found the target, so this is the next target. 
+          // So we never found what we were looking for in the target we wanted. Get out.
+          break;
         }
+        continue;
+      }
+
+      if (target == null) {
+        // No reason to keep looking at this line
+        continue;
+      }
+      // Only try lun match if found the target we're looking for
+      lunMatcher = LUN_PATTERN.matcher(line);
+      if (lunMatcher.matches() && lunMatcher.group(1).equals(String.valueOf(lun))) {
+        return true;
       }
     }
     return false;
