@@ -2962,6 +2962,7 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
             for (int k = 0; k < vpc->max_subnets; k++) {
                 mido_vpc_subnet *subnet = &(vpc->subnets[k]);
                 if (subnet->nacl_changed && !strcmp(subnet->gniSubnet->networkAcl_name, vpcnacl->name)) {
+/*
                     LOGINFO("11622: applying %s to %s\n", vpcnacl->name, subnet->name);
                     rc = mido_update_bridge(subnet->subnetbr->obj, "inboundFilterId", vpcnacl->ingress->obj->uuid,
                             "outboundFilterId", vpcnacl->egress->obj->uuid, 
@@ -2969,6 +2970,7 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
                     if (rc > 0) {
                         LOGERROR("failed to attach %s to %s\n", vpcnacl->name, subnet->name);
                     }
+*/
                 }
             }
         }
@@ -6689,6 +6691,7 @@ int create_mido_gws_bgp_v5(mido_config *mido, mido_core *midocore) {
  */
 int populate_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vpcsubnet) {
     int rc = 0, ret = 0, i = 0, j = 0, found = 0;
+    char tmp_name[32] = { 0 };
 
     if (mido->midocore->eucanetdhost) {
         vpcsubnet->midos[SUBN_BR_METAHOST] = mido->midocore->eucanetdhost->obj;
@@ -6735,6 +6738,22 @@ int populate_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *
         rc = find_mido_vpc_subnet_routes(mido, vpc, vpcsubnet);
         if (rc != 0) {
             LOGWARN("%s failed to populate route table.\n", vpcsubnet->name);
+        }
+
+        // populate vpcsubnet infilter and outfilter
+        snprintf(tmp_name, 32, "sc_%s_in", vpcsubnet->name);
+        midonet_api_chain *sc = mido_get_chain(tmp_name);
+        if (sc != NULL) {
+            LOGTRACE("Found chain %s\n", sc->obj->name);
+            vpcsubnet->inchain = sc;
+            vpcsubnet->midos[SUBN_BR_INFILTER] = sc->obj;
+        }
+        snprintf(tmp_name, 32, "sc_%s_out", vpcsubnet->name);
+        sc = mido_get_chain(tmp_name);
+        if (sc != NULL) {
+            LOGTRACE("Found chain %s\n", sc->obj->name);
+            vpcsubnet->outchain = sc;
+            vpcsubnet->midos[SUBN_BR_OUTFILTER] = sc->obj;
         }
     }
 
@@ -7817,6 +7836,8 @@ int delete_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vp
 
     rc += mido_delete_router_port(vpc->vpcrt, vpcsubnet->midos[SUBN_VPCRT_BRPORT]);
     rc += mido_delete_bridge(vpcsubnet->midos[SUBN_BR]);
+    rc += mido_delete_chain(vpcsubnet->midos[SUBN_BR_INFILTER]);
+    rc += mido_delete_chain(vpcsubnet->midos[SUBN_BR_OUTFILTER]);
     rc += delete_mido_meta_subnet_veth(mido, vpcsubnet->name);
 
     free_mido_vpc_subnet(vpcsubnet);
@@ -7883,7 +7904,7 @@ int delete_mido_vpc(mido_config *mido, mido_vpc *vpc) {
  */
 int create_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vpcsubnet,
         char *subnet, char *slashnet, char *gw, char *instanceDNSDomain,
-        u32 * instanceDNSServers, int max_instanceDNSServers) {
+        u32 *instanceDNSServers, int max_instanceDNSServers) {
     int rc = 0, ret = 0;
     char name_buf[32], *tapiface = NULL;
 
@@ -7922,6 +7943,31 @@ int create_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vp
     if (rc) {
         LOGERROR("cannot create midonet router <-> bridge link: check midonet health\n");
         return (1);
+    }
+
+    // Create bridge infilter
+    snprintf(name_buf, 32, "sc_%s_in", vpcsubnet->name);
+    midonet_api_chain *ch = mido_create_chain(VPCMIDO_TENANT, name_buf, &(vpcsubnet->midos[SUBN_BR_INFILTER]));
+    if (ch == NULL) {
+        LOGWARN("Failed to create chain %s.\n", name_buf);
+        return (1);
+    }
+    vpcsubnet->inchain = ch;
+    // Create bridge outfilter
+    snprintf(name_buf, 32, "sc_%s_out", vpcsubnet->name);
+    ch = NULL;
+    ch = mido_create_chain(VPCMIDO_TENANT, name_buf, &(vpcsubnet->midos[SUBN_BR_OUTFILTER]));
+    if (ch == NULL) {
+        LOGWARN("Failed to create chain %s.\n", name_buf);
+        return (1);
+    }
+    vpcsubnet->outchain = ch;
+    // Apply chains to bridge
+    rc = mido_update_bridge(vpcsubnet->subnetbr->obj, "inboundFilterId", vpcsubnet->inchain->obj->uuid,
+            "outboundFilterId", vpcsubnet->outchain->obj->uuid,
+            "name", vpcsubnet->subnetbr->obj->name, NULL);
+    if (rc > 0) {
+        LOGERROR("failed to attach infilter and/or outfilter to %s\n", vpcsubnet->name);
     }
 
     // setup DHCP on the bridge for this subnet

@@ -124,6 +124,8 @@ enum vpc_subnet_midos_t {
     SUBN_BR_DHCP,
     SUBN_BR_METAPORT,
     SUBN_BR_METAHOST,
+    SUBN_BR_INFILTER,
+    SUBN_BR_OUTFILTER,
     SUBN_END
 };
 
@@ -271,6 +273,8 @@ struct mido_vpc_subnet_t {
     char vpcname[VPC_ID_LEN];
     mido_vpc *vpc;
     midonet_api_bridge *subnetbr;
+    midonet_api_chain *inchain;
+    midonet_api_chain *outchain;
     midoname *midos[SUBN_END];
     midoname **routes;
     mido_vpc_instance *instances;
