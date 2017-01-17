@@ -37,7 +37,6 @@ import selinux
 CONF_PATH = 'etc/eucalyptus/eucalyptus.conf'
 CLC_EXE_PATH = 'usr/sbin/eucalyptus-cloud'
 CLC_SELINUX_CONTEXT = 'system_u:system_r:eucalyptus_cloud_t:s0'
-DB_SYSCTLS_EXE_PATH = 'etc/eucalyptus/cloud.d/init.d/01_pg_kernel_params'
 
 
 def get_cloud_opts():
@@ -55,21 +54,6 @@ def get_cloud_opts():
         sys.exit('{0}: cannot access {1}: {2}'.format(
             os.path.basename(sys.argv[0]), err.filename, err.strerror))
     return cloud_opts
-
-
-def set_db_sysctls():
-    """
-    Run the script that ensures the kernel has enough semaphores/shared
-    memory/etc for postgresql to work.
-    """
-    exepath = os.path.join(os.getenv('EUCALYPTUS') or '/', DB_SYSCTLS_EXE_PATH)
-    if not os.path.isfile(exepath):
-        sys.exit('{0}: {1} does not exist'.format(
-            os.path.basename(sys.argv[0]), exepath))
-    try:
-        subprocess.check_call(['sh', exepath, 'start'])
-    except subprocess.CalledProcessError:
-        sys.exit('{0}: sysctl verification failed'.format(sys.argv[0]))
 
 
 def initialize_cloud(opts):
@@ -110,7 +94,6 @@ def main():
         cloud_opts = []
     else:
         cloud_opts = get_cloud_opts()
-    set_db_sysctls()
     initialize_cloud(cloud_opts + forwarded_args)
 
 
