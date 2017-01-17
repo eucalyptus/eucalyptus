@@ -72,6 +72,7 @@ import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.util.SystemUtil;
+import edu.ucsb.eucalyptus.util.SystemUtil.CommandOutput;
 
 public class LVMWrapper {
   Logger LOG = Logger.getLogger(LVMWrapper.class);
@@ -135,8 +136,13 @@ public class LVMWrapper {
     return SystemUtil.run(new String[] {EUCA_ROOT_WRAPPER, "lvremove", "-f", lvName});
   }
 
-  public static String enableLogicalVolume(String lvName) throws EucalyptusCloudException {
-    return SystemUtil.run(new String[] {EUCA_ROOT_WRAPPER, "lvchange", "-ay", lvName});
+  public static CommandOutput enableLogicalVolume(String lvName) throws EucalyptusCloudException {
+    try {
+      return SystemUtil.runWithRawOutput(new String[] {EUCA_ROOT_WRAPPER, "lvchange", "-ay", lvName});
+    } catch (Exception ex) {
+      throw new EucalyptusCloudException(ex.toString(), ex);
+    }
+
   }
 
   public static String extendVolumeGroup(String pvName, String vgName) throws EucalyptusCloudException {
@@ -147,10 +153,10 @@ public class LVMWrapper {
     return SystemUtil.run(new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "vgscan"});
   }
 
-  public static String scanPhysicalVolume(String lvName) throws EucalyptusCloudException {
-    // Scan a PV and update lvmetad's cache. 
+  public static String scanForPhysicalVolumes() throws EucalyptusCloudException {
+    // Scan for PVs and update lvmetad's cache. 
     // OK to use --cache even if lvmetad daemon is not running.
-    return SystemUtil.run(new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "pvscan", "--cache", lvName});
+    return SystemUtil.run(new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "pvscan", "--cache"});
   }
 
   public static String createLogicalVolume(String volumeId, String vgName, String lvName) throws EucalyptusCloudException {

@@ -355,6 +355,7 @@ public class ISCSIManager implements StorageExportManager {
           tid = i;
           break;
         }
+        LOG.debug("Target TID " + i + " already exists, trying the next one");
         i = (i + 1) % Integer.MAX_VALUE;
       } while (i != tid);
 

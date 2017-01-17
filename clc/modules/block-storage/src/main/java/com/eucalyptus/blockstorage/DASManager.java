@@ -935,8 +935,13 @@ public class DASManager implements LogicalStorageManager {
       Long totalTimeoutSoFar = 0l;
       Long totalTimeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
 
-      do {
+      try {
         exportManager.allocateTarget(iscsiVolumeInfo);
+      } catch (EucalyptusCloudException ece) {
+        LOG.error("Failed to allocate target for volume " + iscsiVolumeInfo.getVolumeId(), ece);
+        throw ece;
+      }
+      do {
         try {
           ((ISCSIManager) exportManager).exportTarget(iscsiVolumeInfo.getVolumeId(), iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(),
               iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser());

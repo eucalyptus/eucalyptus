@@ -750,7 +750,19 @@ public class OverlayManager extends DASManager {
           synchronized (monitor) {
             if (!LVMWrapper.logicalVolumeExists(absoluteVolLVName)) {
               volLoDevName = createLoopback(DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId);
-              LVMWrapper.enableLogicalVolume(absoluteVolLVName);
+              // enable logical volume
+              int enablementReturnCode = 0;
+              try {
+                enablementReturnCode = enableLogicalVolume(absoluteLVName);
+              } catch (EucalyptusCloudException ex) {
+                String error = "Failed to enable logical volume " + absoluteLVName + " for snapshot:" + ex.getMessage();
+                LOG.error(error);
+                throw new EucalyptusCloudException(ex);
+              }
+              if (enablementReturnCode != 0) {
+                throw new EucalyptusCloudException("Failed to enable logical volume " + absoluteLVName + 
+                    "for snapshot, return code: " + enablementReturnCode);
+              }
               tearDown = true;
             }
 
@@ -1161,12 +1173,17 @@ public class OverlayManager extends DASManager {
             String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 
             // enable logical volume
+            int enablementReturnCode = 0;
             try {
-              enableLogicalVolume(absoluteLVName);
+              enablementReturnCode = enableLogicalVolume(absoluteLVName);
             } catch (EucalyptusCloudException ex) {
               String error = "Failed to enable logical volume " + absoluteLVName + ": " + ex.getMessage();
               LOG.error(error);
               throw new EucalyptusCloudException(ex);
+            }
+            if (enablementReturnCode != 0) {
+              throw new EucalyptusCloudException("Failed to enable logical volume " + absoluteLVName + 
+                  ", return code: " + enablementReturnCode);
             }
             // export logical volume
             try {
@@ -1192,11 +1209,10 @@ public class OverlayManager extends DASManager {
     return getVolumeConnectionString(volumeId);
   }
 
-  private String enableLogicalVolume(String lvName) throws EucalyptusCloudException {
+  private int enableLogicalVolume(String lvName) throws EucalyptusCloudException {
 
-    EucalyptusCloudException ex = null;
-    String result = null;
-
+    Exception exSaved = null;
+    CommandOutput commandOutput = null;    
     // 1st attempt's retry timeout is 10 ms, 2nd is 40ms etc., up to the configurable total timeout.
     final int timeoutMultiplier = 4;
     int attempt = 1;
@@ -1207,39 +1223,48 @@ public class OverlayManager extends DASManager {
     do {
       try {
         LOG.debug("Enabling logical volume " + lvName + ", attempt " + attempt);
-        result = LVMWrapper.enableLogicalVolume(lvName);
-        ex = null;
+        commandOutput = LVMWrapper.enableLogicalVolume(lvName);
+        exSaved = null;
+      } catch (EucalyptusCloudException exThis) {
+        exSaved = exThis;
+      }
+      if (exSaved == null && commandOutput.returnValue == 0) {
+        LOG.debug("Enable succeeded for volume " + lvName);
         if (attempt > 1) {
           LOG.info("Enabling " + lvName + " succeeded on retry attempt " + attempt);
         }
         break;
-      } catch (EucalyptusCloudException ece) {
-        // If the enable fails, it might be because lvmetad hasn't scanned
-        // the VG and LV into its metadata cache.
-        ex = ece;
-        LOG.warn("Failed to enable logical volume " + lvName + " on attempt " + attempt);
-        // If this is the first attempt, force a pvscan.
-        if (attempt == 1) {
-          LVMWrapper.scanPhysicalVolume(lvName);
-        }
-        // Wait a bit longer, then try again.
+      }
+      // It didn't work, and either returned empty output or threw an exception.
+      // It might be because lvmetad hasn't yet scanned the VG and LV into its metadata cache.
+      // This is very common as of el7 and Euca 4.3, so INFO level only.
+      LOG.info("Failed to enable logical volume " + lvName + " on attempt " + attempt);
+      LOG.debug("Enabling logical volume " + lvName + " output:\n return=" + commandOutput.returnValue + 
+          "\n stdout=" + commandOutput.output + "\n stderr=" + commandOutput.error, exSaved);
+      // If this is the first attempt, force a pvscan.
+      if (attempt == 1) {
+        LOG.debug("Initiating a physical volume scan before retrying to enable volume " + lvName);
+        LVMWrapper.scanForPhysicalVolumes();
+      }
+      // If it's not our last retry, wait a bit longer, then try again.
+      if (totalTimeoutSoFar + retryTimeout < totalTimeout) {
         try {
           Thread.sleep(retryTimeout);
         } catch (InterruptedException ie) {
           LOG.error(ie);
           break;
         }
-        totalTimeoutSoFar += retryTimeout;
-        retryTimeout *= timeoutMultiplier;
-        attempt++;
       }
+      totalTimeoutSoFar += retryTimeout;
+      retryTimeout *= timeoutMultiplier;
+      attempt++;
     } while (totalTimeoutSoFar < totalTimeout);
 
-    if (ex != null) {
-      LOG.error("Failed to enable logical volume " + lvName + ", all retries exhausted.");
-      throw ex;
+    if (exSaved != null) {
+      LOG.error("Failed to enable logical volume " + lvName + ", all retries exhausted.", exSaved);
+      throw new EucalyptusCloudException("Failed to enable logical volume " + lvName);
     }
-    return result;
+    return commandOutput.returnValue;
   }
 
   @Override
