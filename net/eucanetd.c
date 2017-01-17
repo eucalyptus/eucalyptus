@@ -2,7 +2,7 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -309,7 +309,7 @@ int main(int argc, char **argv) {
     time_t epoch_timer = 0;
     struct timeval tv = { 0 };
     struct timeval ttv = { 0 };
-    
+ 
     boolean config_changed = FALSE;
     boolean update_globalnet = FALSE;
     boolean update_globalnet_failed = FALSE;
@@ -493,6 +493,37 @@ int main(int argc, char **argv) {
                     config_mode_ok = TRUE;
                 }
             }
+
+            //
+            // Verify that the kernel configuration parameters are enabled
+            // only need to check in EDGE mode
+            //
+            if (IS_NETMODE_EDGE(pGni)) {
+                if (!sysctl_enabled(SYSCTL_IP_FORWARD)) {
+                    if ((i % 100) == 0) {
+                        LOGERROR("Kernel parameter: net.ipv4.ip_forward is not enabled\n");
+                        LOGERROR("This parameter is typically enabled by default in /usr/lib/sysctl.d/*-eucanetd.conf\n");
+                    }
+                    rc = 1;
+                }
+                if (!check_directory(SYSCTL_BRIDGE_PATH)) {
+                    if (!sysctl_enabled(SYSCTL_BRIDGE_CALLIPTABLES)) {
+                        if ((i % 100) == 0) {
+                            LOGERROR("Kernel parameter: net.bridge.bridge-nf-call-iptables is not enabled\n");
+                            LOGERROR("This parameter is typically enabled by default in /usr/lib/sysctl.d/*-eucanetd.conf\n");
+                        }
+                        rc = 1;
+                    }
+                } else { 
+                    // Proc directory is missing, which probably means that br_netfilter isn't loaded
+                    if ((i % 100) == 0) {                    
+                        LOGERROR("Unable to find bridge info in proc filesystem\n");
+                        LOGERROR("Ensure that br_netfilter has been properly loaded into the kernel\n");
+                    }
+                    rc = 1;
+                }
+            }
+            
             if (!IS_NETMODE_VPCMIDO(pGni)) {
                 eucanetdPeer = eucanetd_detect_peer(pGni);
                 if ((PEER_IS_NONE(eucanetdPeer)) || (!PEER_IS_NC(eucanetdPeer))) {

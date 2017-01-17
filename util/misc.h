@@ -192,6 +192,7 @@ int euca_execlp_log(int *pStatus, int (*custom_parser) (const char *line, void *
 char *get_username(void);
 int euca_nanosleep(unsigned long long nsec);
 void euca_srand(void);
+int sysctl_enabled(const char *proc_path);
 
 //! global variable and functions for setting correlation id
 //!

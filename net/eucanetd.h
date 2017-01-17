@@ -2,7 +2,7 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -92,6 +92,10 @@
 
 #define EUCANETD_DHCPD_UNIT                      "eucanetd-dhcpd@%s.service"
 #define EUCANETD_NGINX_UNIT                      "eucanetd-nginx.service"
+
+#define SYSCTL_BRIDGE_PATH                       "/proc/sys/net/bridge"
+#define SYSCTL_BRIDGE_CALLIPTABLES               "/proc/sys/net/bridge/bridge-nf-call-iptables"
+#define SYSCTL_IP_FORWARD                        "/proc/sys/net/ipv4/ip_forward"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
