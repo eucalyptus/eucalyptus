@@ -2,7 +2,7 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * (c) Copyright 2009-2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2617,6 +2617,34 @@ void euca_srand(void)
     unsigned int seed = tv.tv_sec * tv.tv_usec * pid;
     LOGDEBUG("seeding random number generator with %u\n", seed);
     srand(seed);
+}
+
+//!
+//! Utility function to see if a kernel parameter is enabled
+//! such as: net.ipv4.ip_forward, the caller would pass: /proc/sys/net/ipv4/ip_forward
+//! 
+//! @param[in] proc_path - path into proc 
+//! @return 1 if parameter is enabled, 0 otherwise
+//!
+//!
+int sysctl_enabled(const char *proc_path)
+{
+    int enabled = 0;
+    char *param_value = NULL;
+    char sProcPath[EUCA_MAX_PATH] = "";
+    FILE *fp = NULL;
+
+    snprintf(sProcPath, EUCA_MAX_PATH, "%s", proc_path);
+    if ((fp = fopen(sProcPath, "r")) != NULL) {
+       if ((param_value = fp2str(fp)) != NULL) {
+           enabled = (atoi(param_value) == 1);
+           EUCA_FREE(param_value);
+       }
+       fclose(fp);
+    } else {
+       LOGDEBUG("Unable to open file, check permissions: %s\n", sProcPath); 
+    }
+    return (enabled);
 }
 
 #ifdef _UNIT_TEST
