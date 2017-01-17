@@ -231,7 +231,7 @@ public class Accounts extends com.eucalyptus.auth.Accounts {
     }
   }
 
-  public static String getManagedPolicyArn( final EuareManagedPolicy policy ) throws AuthException {
+  public static String getManagedPolicyArn( final EuareManagedPolicy policy ) {
     return buildArn( policy.getAccountNumber( ), IamPolicySpec.IAM_RESOURCE_POLICY, policy.getPath(), policy.getName() );
   }
 

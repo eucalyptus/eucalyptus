@@ -22,14 +22,20 @@ package com.eucalyptus.auth.euare.principal;
 import java.util.Date;
 import java.util.List;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.euare.common.policy.IamPolicySpec;
+import com.eucalyptus.auth.policy.annotation.PolicyResourceType;
+import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.auth.principal.Policy;
+import com.eucalyptus.auth.type.RestrictedType;
 
 /**
  *
  */
-public interface EuareManagedPolicy extends Policy {
+@PolicyVendor( IamPolicySpec.VENDOR_IAM )
+@PolicyResourceType( IamPolicySpec.IAM_RESOURCE_POLICY )
+public interface EuareManagedPolicy extends Policy, RestrictedType {
 
-  String getAccountNumber( ) throws AuthException;
+  String getAccountNumber( );
 
   EuareAccount getAccount( ) throws AuthException;
 
