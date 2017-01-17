@@ -211,7 +211,7 @@ public class SnapshotDeleter extends CheckerTask {
 
                 if (nextSnaps != null && !nextSnaps.isEmpty()) {
                   // Found deltas that might depend on this snapshot for reconstruction, don't delete
-                  LOG.info("Snapshot " + snapshotId + " is required for restoring other snapshots in the system. Cannot delete from OSG");
+                  LOG.debug("Snapshot " + snapshotId + " is required for restoring other snapshots in the system. Cannot delete from OSG");
                 } else {
                   LOG.debug("Snapshot " + snapshotId + " is not required for restoring other snapshots in the system");
                   deleteSnapFromOSG(snap); // delete snapshot
