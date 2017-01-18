@@ -104,6 +104,8 @@ public class SnapshotCreator implements Runnable {
   private String snapshotId;
   private String snapPointId;
   private LogicalStorageManager blockManager;
+  private SnapshotTransfer snapshotTransfer;
+  private SnapshotProgressCallback progressCallback;
 
   /**
    * Initializes the Snapshotter task. snapPointId should be null if no snap point has been created yet.
@@ -120,14 +122,32 @@ public class SnapshotCreator implements Runnable {
     this.blockManager = blockManager;
   }
 
+  /**
+   * Strictly for use by unit tests only, SnapshotTransfer and ProgressCallback are mocked and instantiated which should never be the case for actual
+   * use
+   * 
+   * @param volumeId
+   * @param snapshotId
+   * @param snapPointId
+   * @param mockBlockManager
+   * @param mockSnapshotTransfer
+   * @param mockProgressCallback
+   */
+  protected SnapshotCreator(String volumeId, String snapshotId, String snapPointId, LogicalStorageManager mockBlockManager,
+      SnapshotTransfer mockSnapshotTransfer, SnapshotProgressCallback mockProgressCallback) {
+    this(volumeId, snapshotId, snapPointId, mockBlockManager);
+    this.snapshotTransfer = mockSnapshotTransfer;
+    this.progressCallback = mockProgressCallback;
+  }
+
   @Override
   public void run() {
     EucaSemaphore semaphore = EucaSemaphoreDirectory.getSolitarySemaphore(volumeId);
     try {
       Boolean shouldTransferSnapshots = true;
-      SnapshotTransfer snapshotTransfer = null;
+      // SnapshotTransfer snapshotTransfer = null;
       String bucket = null;
-      SnapshotProgressCallback progressCallback = null;
+      // SnapshotProgressCallback progressCallback = null;
 
       // Check whether the snapshot needs to be uploaded
       shouldTransferSnapshots = StorageInfo.getStorageInfo().getShouldTransferSnapshots();
@@ -135,7 +155,9 @@ public class SnapshotCreator implements Runnable {
       if (shouldTransferSnapshots) {
         // Prepare for the snapshot upload (fetch credentials for snapshot upload to osg, create the bucket). Error out if this fails without
         // creating the snapshot on the blockstorage backend
-        snapshotTransfer = new S3SnapshotTransfer(snapshotId, snapshotId);
+        if (null == snapshotTransfer) {
+          snapshotTransfer = new S3SnapshotTransfer(snapshotId, snapshotId);
+        }
         bucket = snapshotTransfer.prepareForUpload();
 
         if (snapshotTransfer == null || StringUtils.isBlank(bucket)) {
@@ -153,7 +175,9 @@ public class SnapshotCreator implements Runnable {
 
         // Check to ensure that a failed/cancellation has not be set
         if (!isSnapshotMarkedFailed(snapshotId)) {
-          progressCallback = new SnapshotProgressCallback(snapshotId); // Setup the progress callback, that should start the progress
+          if (null == progressCallback) {
+            progressCallback = new SnapshotProgressCallback(snapshotId); // Setup the progress callback, that should start the progress
+          }
           blockManager.createSnapshot(this.volumeId, this.snapshotId, this.snapPointId);
           progressCallback.updateBackendProgress(50); // to indicate that backend snapshot process is 50% done
         } else {
@@ -229,12 +253,12 @@ public class SnapshotCreator implements Runnable {
           StorageResource snapshotResource = null;
 
           if (prevSnap != null) {
-            LOG.debug("Generate delta between penultimate snapshot " + prevSnap.getSnapshotId() + " and latest snapshot " + this.snapshotId);
+            LOG.info("Generate delta between penultimate snapshot " + prevSnap.getSnapshotId() + " and latest snapshot " + this.snapshotId);
             srwc =
                 blockManager.prepIncrementalSnapshotForUpload(volumeId, snapshotId, snapPointId, prevSnap.getSnapshotId(), prevSnap.getSnapPointId());
             snapshotResource = srwc.getSr();
           } else {
-            LOG.debug("Upload entire content of snapshot " + this.snapshotId);
+            LOG.info("Upload entire content of snapshot " + this.snapshotId);
             snapshotResource = blockManager.prepSnapshotForUpload(volumeId, snapshotId, snapPointId);
           }
 
@@ -375,7 +399,7 @@ public class SnapshotCreator implements Runnable {
       if (previousSnaps != null && previousSnaps.size() > 0 && (prevSnap = previousSnaps.get(0)) != null) {
         if (prevSnap.getSnapshotLocation() != null && prevSnap.getIsOrigin() != null) { // check origin to validate that snapshot was uploaded in its
                                                                                         // entirety at least once post 4.4
-          LOG.debug(this.volumeId + " has been snapshotted and uploaded before. Most recent such snapshot is " + prevSnap.getSnapshotId());
+          LOG.info(this.volumeId + " has been snapshotted and uploaded before. Most recent such snapshot is " + prevSnap.getSnapshotId());
 
           // count number of deltas that have been created after the last full check point
           int numDeltas;
@@ -386,17 +410,17 @@ public class SnapshotCreator implements Runnable {
               continue;
           }
 
-          LOG.debug(this.volumeId + " has " + numDeltas + " delta(s) since the last full checkpoint. Max limit is " + maxDeltas);
+          LOG.info(this.volumeId + " has " + numDeltas + " delta(s) since the last full checkpoint. Max limit is " + maxDeltas);
           if (numDeltas < maxDeltas) {
             return prevSnap;
           } else {
             // nothing to do here
           }
         } else {
-          LOG.debug(this.volumeId + " has not been snapshotted and or uploaded after the support for incremental snapshots was added");
+          LOG.info(this.volumeId + " has not been snapshotted and or uploaded after the support for incremental snapshots was added");
         }
       } else {
-        LOG.debug(this.volumeId + " has no prior active snapshots in the system");
+        LOG.info(this.volumeId + " has no prior active snapshots in the system");
       }
     } catch (Exception e) {
       LOG.warn("Failed to look up previous snapshots for " + this.volumeId, e); // return null on exception, forces entire snapshot to get uploaded
@@ -442,7 +466,7 @@ public class SnapshotCreator implements Runnable {
           currSnap.setSnapshotLocation(snapshotLocation);
           return currSnap;
         } catch (TransactionException | NoSuchElementException e) {
-          LOG.debug("Failed to update snapshot upload location for snapshot " + snapshotId, e);
+          LOG.warn("Failed to update snapshot upload location for snapshot " + snapshotId, e);
         }
         return null;
       }

@@ -623,6 +623,64 @@ int mido_getarr_midoname(midoname *name, char *key, char ***values, int *max_val
 }
 
 /**
+ * Creates a tunnel-zone named name in MidoNet.
+ * @param name [in] name of the tunnel-zone to be created.
+ * @param type [in] type type of the tunnel-zone (gre|vxlan)
+ * @param outname [i/o] pointer to an extant MidoNet tunnel-zone (parameters will be checked
+ * to avoid duplicate resource creation. If outname points to NULL, a newly allocated
+ * midoname structure will be returned. If outname is NULL, the newly created resource
+ * will not be returned.
+ * @return 0 on success. 1 otherwise.
+ */
+midonet_api_tunnelzone *mido_create_tunnelzone(char *name, char *type, midoname **outname) {
+    int rc;
+    midoname myname;
+    midoname *out = NULL;
+    midonet_api_tunnelzone *tz = NULL;
+    
+    if (outname && *outname) {
+        out = *outname;
+    }
+    if (out && out->init) {
+        if (!strcmp(name, out->name)) {
+            LOGEXTREME("%s already in mido - abort create\n", name);
+            return (midonet_api_cache_lookup_tunnelzone(out));
+        }
+        out = NULL;
+    } else {
+        midoname tmp;
+        tmp.name = strdup(name);
+        tz = midonet_api_cache_lookup_tunnelzone(&tmp);
+        EUCA_FREE(tmp.name);
+        if (tz) {
+            LOGEXTREME("%s already in mido - abort create\n", name);
+            if (outname) {
+                *outname = tz->obj;
+            }
+            return (tz);
+        }
+    }
+
+    memset(&myname, 0, sizeof(midoname));
+    myname.tenant = strdup(VPCMIDO_TENANT);
+    myname.name = strdup(name);
+    myname.resource_type = strdup("tunnel_zones");
+    myname.media_type = strdup(midonet_api_mtypes[APPLICATION_TUNNEL_ZONE_JSON]);
+
+    tz = NULL;
+    rc = mido_create_resource(NULL, 0, &myname, &out, "name", myname.name, "type", type, NULL);
+    if (rc == 0) {
+        // cache newly created tunnelzone
+        tz = midonet_api_cache_add_tunnelzone(out);
+    }
+    if (outname) {
+        *outname = out;
+    }
+    mido_free_midoname(&myname);
+    return (tz);
+}
+
+/**
  * Retrieves an array of pointers to midonet object representing tunnel-zone.
  * @param tenant [in] name of the MidoNet tenant.
  * @param outnames [out] an array of pointers to midonet objects representing tunnel-zone, to be returned
@@ -677,6 +735,105 @@ int mido_get_tunnelzone_hosts(midoname *tzone, midoname ***outnames, int *outnam
             midonet_api_mtypes[APPLICATION_COLLECTION_TUNNEL_ZONE_HOST_JSON],
             midonet_api_mtypes[APPLICATION_TUNNEL_ZONE_HOST_JSON],
             outnames, outnames_max));
+}
+
+/**
+ * Creates a new tunnel-zone member as specified in the argument. 
+ *
+ * @param tz [in] midonet_api_tunnelzone structure of interest. This parameter
+ * has priority over tunnelzone. If tz is NULL, tzmn is used to search
+ * midocache.
+ * @param tzmn [in] tunnel-zone of interest.
+ * @param host [in] host that will be added to the tunnel-zone.
+ * @param ip [in] IP address of the host to be used in the tunnel-zone.
+ * @param outname [i/o] pointer to an extant MidoNet member host (parameters will be checked
+ * to avoid duplicate host creation. If outname points to NULL, a newly allocated
+ * midoname structure representing the newly created host will be returned.
+ * If outname is NULL, the newly created object will not be returned.
+ * @return 0 if the host is successfully created/found. 1 otherwise.
+ */
+int mido_create_tunnelzone_member(midonet_api_tunnelzone *tz, midoname *tzmn,
+        midoname *host, char *ip, midoname **outname) {
+    int rc = 0, ret = 0, max_hosts = 0, found = 0;
+    midoname **hosts = NULL;
+    midoname myname = { 0 };
+    midoname *out = NULL;
+    char *hostId = NULL;
+    char *ipAddress = NULL;
+
+    if (!tz && !tzmn) {
+        LOGWARN("Invalid argument: cannot create member in a NULL tunnelzone.\n");
+        return (1);
+    }
+
+    midonet_api_tunnelzone *ctz = NULL;
+    if (tz != NULL) {
+        ctz = tz;
+    } else {
+        ctz = midonet_api_cache_lookup_tunnelzone(tzmn);
+    }
+    if (ctz == NULL) {
+        LOGWARN("Unable to find %s in midocache.\n", tzmn->name);
+        return (1);
+    } else {
+        hosts = ctz->hosts;
+        max_hosts = ctz->max_hosts;
+    }
+    if (outname && *outname) {
+        out = *outname;
+    }
+
+    if (out && out->init) {
+        mido_getel_midoname(out, "hostId", &hostId);
+        mido_getel_midoname(out, "ipAddress", &ipAddress);
+        if (hostId && ipAddress) {
+            LOGEXTREME("found %s %s\n", hostId, ipAddress);
+            if (!strcmp(hostId, host->uuid) && !strcmp(ipAddress, ip)) {
+                found = 1;
+                LOGTRACE("tz member already in mido - abort create\n");
+            }
+        }
+        EUCA_FREE(hostId);
+        EUCA_FREE(ipAddress);
+    }
+    if (!found) {
+        for (int i = 0; i < max_hosts && !found; i++) {
+            mido_getel_midoname(hosts[i], "hostId", &hostId);
+            mido_getel_midoname(hosts[i], "ipAddress", &ipAddress);
+            if (hostId && ipAddress) {
+                if (!strcmp(hostId, host->uuid) && !strcmp(ipAddress, ip)) {
+                    found = 1;
+                    *outname = hosts[i];
+                    LOGTRACE("tz member already in mido - abort create\n");
+                }
+            }
+            EUCA_FREE(hostId);
+            EUCA_FREE(ipAddress);
+        }
+    }
+
+    if (!found) {
+        memset(&myname, 0, sizeof (midoname));
+        myname.tenant = strdup(ctz->obj->tenant);
+        myname.resource_type = strdup("hosts");
+        myname.media_type = strdup(midonet_api_mtypes[APPLICATION_TUNNEL_ZONE_HOST_JSON]);
+
+        LOGTRACE("\tadding %s/%s to %s\n", host->name, ip, ctz->obj->name);
+        rc = mido_create_resource(ctz->obj, 1, &myname, &out, "ipAddress", ip, "hostId", host->uuid, NULL);
+        if (rc == 0) {
+            if (outname) {
+                *outname = out;
+            }
+            midonet_api_cache_add_tunnelzone_host(ctz, out);
+            ret = 0;
+        } else if (rc < 0) {
+            ret = 0;
+        } else {
+            ret = 1;
+        }
+        mido_free_midoname(&myname);
+    }
+    return (ret);
 }
 
 /**
@@ -3957,11 +4114,11 @@ void midonet_api_init(void) {
     mido_libcurl_init(&libcurl_handles);
     mido_initialize_apiuribase();
     
-    // Check MidoNet API version - only API version v1.9 and v5.0 are supported
-    if (strcmp(midonet_api_version, "v1.9") && strcmp(midonet_api_version, "v5.0")) {
+    // Check MidoNet API version - only API version v5.0 supported
+    if (strcmp(midonet_api_version, "v5.0")) {
         LOGWARN("Unsupported MidoNet API version (%s) detected.\n", midonet_api_version);
         LOGINFO("Note:\n"
-                "Eucalyptus (%s) has been validated with MEM v5.2, MEM v1.9 and open source v5.2.\n"
+                "Eucalyptus (%s) has been validated with MEM v5.2, and partially with open source v5.2.\n"
                 "Please update MidoNet to a compatible version (MEM v5.2 recommended).\n",
                 EUCA_VERSION);
     }
@@ -6049,6 +6206,58 @@ int mido_get_interfaces(midoname *host, u32 iftype, u32 ifendpoint, midoname **o
 }
 
 /**
+ * Retrieves the interface dev of the specified host as detected by midolman.
+ *
+ * @param host [in] host of interest.
+ * @param dev [in] interface of interest.
+ * @param outname [out] information about the interface if found.
+ * @return 0 on success. 1 otherwise.
+ */
+int mido_get_interface(midoname *host, char *dev, midoname *outname) {
+    int rc = 0, ret = 0;
+    char *payload = NULL, url[EUCA_MAX_PATH];
+
+    if ((host == NULL) || (host->init == 0) || (host->uuid == NULL) || (!outname)) {
+        LOGWARN("Invalid argument: cannot get interface from NULL host.\n");
+        return (1);
+    }
+
+    memset(url, 0, EUCA_MAX_PATH);
+    memset(outname, 0, sizeof(midoname));
+    snprintf(url, EUCA_MAX_PATH, "%s/hosts/%s/interfaces/%s", midonet_api_uribase, host->uuid, dev);
+    rc = midonet_http_get(url, midonet_api_mtypes[APPLICATION_INTERFACE_JSON], &payload);
+    if (!rc) {
+        struct json_object *jobj = NULL, *el = NULL;
+
+        jobj = json_tokener_parse(payload);
+        if (!jobj) {
+            LOGWARN("cannot tokenize midonet response: check midonet health\n");
+        } else {
+            if (json_object_is_type(jobj, json_type_object)) {
+                outname->jsonbuf = strdup(payload);
+                json_object_object_get_ex(jobj, "uri", &el);
+                if (el) {
+                    outname->uuid = strdup(json_object_get_string(el));
+                }
+                json_object_object_get_ex(jobj, "name", &el);
+                if (el) {
+                    outname->name = strdup(json_object_get_string(el));
+                }
+                outname->resource_type = strdup("interfaces");
+                outname->media_type = strdup(midonet_api_mtypes[APPLICATION_INTERFACE_JSON]);
+                outname->init = 1;
+            }
+            json_object_put(jobj);
+        }
+        EUCA_FREE(payload);
+    } else {
+        ret++;
+    }
+
+    return (ret);
+}
+
+/**
  * Retrieves the IPv4 addresses of the specified host as detected by midolman.
  *
  * @param host [in] host of interest.
@@ -6115,6 +6324,54 @@ int mido_get_addresses(midoname *host, u32 **outnames, int *outnames_max) {
 }
 
 /**
+ * Retrieves the IPv4 address of device dev of the specified host as detected by midolman.
+ *
+ * @param host [in] host of interest.
+ * @param outnames [out] array of IPv4 addresses of the host.
+ * @param outnames_max [out] number of addresses.
+ *
+ * @return 0 on success. 1 otherwise.
+ *
+ * @note memory allocated for outnames must be released by the caller. The caller
+ *       is also required to release prior memory allocations to outnames before
+ *       calling this function.
+ */
+int mido_get_address(midoname *host, char *dev, u32 *outaddress) {
+    int rc = 0, ret = 0;
+    char **addrs;
+    int max_addrs = 0;
+    midoname devmn;
+
+    if ((host == NULL) || (host->init == 0) || (host->uuid == NULL)) {
+        LOGWARN("Invalid argument: unable to retrieve address from NULL host.\n");
+        return (1);
+    }
+    *outaddress = 0;
+    rc = mido_get_interface(host, dev, &devmn);
+    if (rc == 0) {
+        rc = mido_getarr_midoname(&devmn, "addresses", &addrs, &max_addrs);
+        LOGTRACE("%s %s - max_addrs: %d\n", host->name, devmn.name, max_addrs);
+        if ((rc == 0) && (max_addrs > 0)) {
+            for (int i = 0; i < max_addrs; i++) {
+                if (strlen(addrs[i]) > 16) {
+                    LOGTRACE("\tskipping %s - not an IPv4 address.\n", addrs[i]);
+                } else {
+                    *outaddress = dot2hex(addrs[i]);
+                }
+                EUCA_FREE(addrs[i]);
+            }
+        }
+        EUCA_FREE(addrs);
+    } else {
+        ret++;
+    }
+
+    mido_free_midoname(&devmn);
+
+    return (ret);
+}
+
+/**
  * Invokes the MidoNet system-state API to make sure that eucanetd can access MidoNet APIs.
  * @return 0 on success. 1 otherwise.
  */
@@ -6160,26 +6417,27 @@ int mido_initialize_apiuribase(void) {
     int rc = 1;
     char url[URI_LEN] = { 0 };
     char *outbuf = NULL;
+    int max_att = 100;
 
     if (strlen(midonet_api_uribase)) {
         snprintf(url, URI_LEN, "%s/", midonet_api_uribase);
         midonet_api_uribase[0] = '\0';
-        for (int i = 0; i < 30 && rc; i++) {
+        for (int i = 0; i < max_att && rc; i++) {
             rc = midonet_http_get(url, midonet_api_mtypes[APPLICATION_JSON], &outbuf);
             if (rc) {
-                sleep(1);
+                sleep(5);
             }
         }
     } else {
         midonet_api_uribase[0] = '\0';
-        for (int i = 0; i < 30 && rc; i++) {
+        for (int i = 0; i < max_att && rc; i++) {
             snprintf(url, URI_LEN, "%s/", MIDONET_API_BASE_URL_8080);
             rc = midonet_http_get(url, midonet_api_mtypes[APPLICATION_JSON], &outbuf);
             if (rc) {
                 snprintf(url, URI_LEN, "%s/", MIDONET_API_BASE_URL_8181);
                 rc = midonet_http_get(url, midonet_api_mtypes[APPLICATION_JSON], &outbuf);
                 if (rc) {
-                    sleep(1);
+                    sleep(5);
                 }
             }
         }
@@ -7414,6 +7672,30 @@ midonet_api_tunnelzone *midonet_api_cache_lookup_tunnelzone(midoname *tzone) {
         }
     }
     return (NULL);
+}
+
+/**
+ * Adds a tunnelzone entry in midocache.
+ * @param tunnelzone [in] tunnelzone (not checked) of interest
+ * @return Pointer to the newly created tunnelzone cache entry. NULL otherwise.
+ */
+midonet_api_tunnelzone *midonet_api_cache_add_tunnelzone(midoname *tunnelzone) {
+    midonet_api_tunnelzone *newtz = NULL;
+    newtz = EUCA_ZALLOC_C(1, sizeof (midonet_api_tunnelzone));
+    newtz->obj = tunnelzone;
+    midocache->tunnelzones = EUCA_APPEND_PTRARR(midocache->tunnelzones, &(midocache->max_tunnelzones), newtz);
+    return (newtz);
+}
+
+/**
+ * Adds a tunnel-zone host entry in midocache.
+ * @param tunnelzone [in] tunnelzone (not checked) of interest
+ * @param host [in] host (not checked) of interest
+ * @return 0 on success. 1 otherwise.
+ */
+int midonet_api_cache_add_tunnelzone_host(midonet_api_tunnelzone *tzone, midoname *host) {
+    tzone->hosts = EUCA_APPEND_PTRARR(tzone->hosts, &(tzone->max_hosts), host);
+    return (0);
 }
 
 /**

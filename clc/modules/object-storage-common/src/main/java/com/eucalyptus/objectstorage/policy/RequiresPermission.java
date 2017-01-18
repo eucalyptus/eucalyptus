@@ -36,6 +36,10 @@ public @interface RequiresPermission {
   /**
    * The set of IAM policies, from {@link PolicySpec} that
    */
-  String[] value();
+  String[] standard();
 
+  /**
+   * The set of IAM policies that apply to the request with a version ID
+   */
+  String[] version();
 }

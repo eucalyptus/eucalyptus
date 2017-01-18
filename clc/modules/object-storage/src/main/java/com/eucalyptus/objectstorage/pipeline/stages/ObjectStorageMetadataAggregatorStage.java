@@ -62,23 +62,24 @@
 
 package com.eucalyptus.objectstorage.pipeline.stages;
 
+import com.eucalyptus.objectstorage.entities.ObjectStorageGlobalConfiguration;
+import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageMetadataAggregatorHandler;
+import com.eucalyptus.storage.config.ConfigurationCache;
+import com.eucalyptus.ws.stages.UnrollableStage;
 import org.jboss.netty.channel.ChannelPipeline;
 
-import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageMetadataAggregatorHandler;
-import com.eucalyptus.ws.stages.UnrollableStage;
-
-/*
- *
- */
 public class ObjectStorageMetadataAggregatorStage implements UnrollableStage {
+  private final static String NAME = "objectstorage-aggregate-chunked-puts-of-lifecycle-and-acl";
+
   @Override
   public void unrollStage(ChannelPipeline pipeline) {
-    pipeline.addLast("objectstorage-aggregate-chunked-puts-of-lifecycle-and-acl", new ObjectStorageMetadataAggregatorHandler());
+    pipeline.addLast(NAME, new ObjectStorageMetadataAggregatorHandler(ConfigurationCache.getConfiguration
+        (ObjectStorageGlobalConfiguration.class).getMax_inbound_http_chunk_size()));
   }
 
   @Override
   public String getName() {
-    return "objectstorage-chunked-put-lifecycle-and-acl-aggregator";
+    return NAME;
   }
 
   @Override

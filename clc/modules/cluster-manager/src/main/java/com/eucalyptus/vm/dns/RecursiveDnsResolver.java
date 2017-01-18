@@ -158,7 +158,7 @@ public class RecursiveDnsResolver extends DnsResolver {
       .recursive( )
       .refused();
 
-    final Cache cache = new Cache( );
+    final Cache cache = new NonExpiringCache( );
     Lookup aLookup = new Lookup( name, type );
     aLookup.setCache( cache );
     Record[] found = aLookup.run( );

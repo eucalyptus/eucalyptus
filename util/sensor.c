@@ -1083,7 +1083,7 @@ static sensorResource *find_or_alloc_sr(const boolean do_alloc, const char *reso
             euca_strncpy(unused_sr->resourceUuid, resourceUuid, sizeof(unused_sr->resourceUuid));
         unused_sr->timestamp = time(NULL);
         sensor_state->used_resources++;
-        LOGINFO("allocated new sensor resource %s\n", resourceName);
+        LOGINFO("allocated new sensor resource %s UUID: %s\n", resourceName, (resourceUuid == NULL) ? "NULL" : resourceUuid);
     }
 
     return unused_sr;

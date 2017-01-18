@@ -62,6 +62,8 @@
 
 package com.eucalyptus.objectstorage.entities;
 
+import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import com.eucalyptus.upgrade.Upgrades.Version;
 import groovy.sql.GroovyRowResult;
 import groovy.sql.Sql;
 
@@ -70,11 +72,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 import javax.annotation.Nullable;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
-import javax.persistence.Transient;
+import javax.persistence.*;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
@@ -118,6 +116,8 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
   @Transient
   private static final int DEFAULT_MAX_BUCKETS_PER_ACCOUNT = 100;
   @Transient
+  private static final int DEFAULT_MAX_INBOUND_HTTP_CHUNK_SIZE = 1024 * 1024 * 10; // 10 MB
+  @Transient
   private static final int DEFAULT_PUT_TIMEOUT_HOURS = 168; // An upload not marked completed or deleted in 24 hours from record creation will be
                                                             // considered 'failed'
   @Transient
@@ -131,6 +131,10 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
   public ObjectStorageGlobalConfiguration getLatest() {
     return getConfiguration();
   }
+
+  @Column
+  @ConfigurableField(description = "Maximum allowed size of inbound http chunks", displayName = "Maximum inbound http chunk size")
+  protected Integer max_inbound_http_chunk_size;
 
   @Column
   @ConfigurableField(description = "Maximum number of buckets per account", displayName = "Maximum buckets per account")
@@ -182,6 +186,7 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
     this.setDoGetPutOnCopyFail(DEFAULT_COPY_UNSUPPORTED_STRATEGY);
     this.setFailed_put_timeout_hrs(DEFAULT_PUT_TIMEOUT_HOURS);
     this.setMax_buckets_per_account(DEFAULT_MAX_BUCKETS_PER_ACCOUNT);
+    this.setMax_inbound_http_chunk_size(DEFAULT_MAX_INBOUND_HTTP_CHUNK_SIZE);
     this.setMax_total_reporting_capacity_gb(Integer.MAX_VALUE);
     return this;
   }
@@ -199,6 +204,14 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
       }
     };
 
+  }
+
+  public Integer getMax_inbound_http_chunk_size() {
+    return max_inbound_http_chunk_size != null ? max_inbound_http_chunk_size : DEFAULT_MAX_INBOUND_HTTP_CHUNK_SIZE;
+  }
+
+  public void setMax_inbound_http_chunk_size(Integer max_inbound_http_chunk_size) {
+    this.max_inbound_http_chunk_size = max_inbound_http_chunk_size;
   }
 
   public Integer getMax_buckets_per_account() {
@@ -263,6 +276,14 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
 
   public void setProviderClient(String providerClient) {
     this.providerClient = providerClient;
+  }
+
+  @PrePersist
+  @PreUpdate
+  public void updateDefaults() {
+    if (max_inbound_http_chunk_size == null) {
+      max_inbound_http_chunk_size = DEFAULT_MAX_INBOUND_HTTP_CHUNK_SIZE;
+    }
   }
 
   /**
@@ -371,6 +392,36 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
         throw Exceptions.toUndeclared("Error upgrading global osg configuration", e);
       }
 
+    }
+
+    /**
+     * Upgrade OSG configuration for 4.4.
+     *
+     * @throws Exception
+     */
+    @Upgrades.EntityUpgrade(entities = {ObjectStorageGlobalConfiguration.class}, since = Upgrades.Version.v4_4_0, value = ObjectStorage.class)
+    public static enum OSG44ConfigUpgrade implements Predicate<Class> {
+      INSTANCE;
+
+      @Override
+      public boolean apply(@Nullable Class arg0) {
+        try (TransactionResource trans = Entities.transactionFor(arg0)) {
+          ObjectStorageGlobalConfiguration config;
+          try {
+            config = Entities.uniqueResult(new ObjectStorageGlobalConfiguration());
+          } catch (NoSuchElementException e) {
+            config = new ObjectStorageGlobalConfiguration().initializeDefaults();
+          }
+          config.updateDefaults();
+          Entities.persist(config);
+          trans.commit();
+          return true;
+        } catch (Exception e) {
+          String msg = "Error saving OSG 4.4 configuration upgrade";
+          LOG.error(msg, e);
+          throw Exceptions.toUndeclared(msg, e);
+        }
+      }
     }
 
     /*

@@ -33,7 +33,7 @@ public class S3V4AuthenticationTest {
       "X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIOSFODNN7EXAMPLE%2F20130524%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date" +
       "=20130524T000000Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host\n" + "host:examplebucket.s3.amazonaws.com\n" + "\n" + "host\n" +
       "UNSIGNED-PAYLOAD";
-  static String CANONICAL_HEADERS_REQUEST = "PUT\n" + "/test%24file.text\n" + "\n" + "date:Fri, 24 May 2013 00:00:00 GMT\n" +
+  static String CANONICAL_HEADERS_REQUEST = "PUT\n" + "/test$file.text\n" + "\n" + "date:Fri, 24 May 2013 00:00:00 GMT\n" +
       "host:examplebucket.s3.amazonaws.com\n" + "x-amz-content-sha256:44ce7dd67c959e0d3524ffac1771dfbba87d2b6b4b4e99e42034a8b803f8b072\n"
       + "x-amz-date:20130524T000000Z\n" + "x-amz-storage-class:REDUCED_REDUNDANCY\n\n" + "date;host;x-amz-content-sha256;x-amz-date;" +
       "x-amz-storage-class\n" + "44ce7dd67c959e0d3524ffac1771dfbba87d2b6b4b4e99e42034a8b803f8b072";
@@ -129,6 +129,6 @@ public class S3V4AuthenticationTest {
   public void testParseDateAndAssertNotExpired() throws Throwable {
     DateTime dt = DateTime.now();
     DateTimeFormatter fmt = ISODateTimeFormat.dateTime();
-    S3Authentication.parseDateAndAssertNotExpired(fmt.print(dt));
+    S3Authentication.parseDate(fmt.print(dt));
   }
 }

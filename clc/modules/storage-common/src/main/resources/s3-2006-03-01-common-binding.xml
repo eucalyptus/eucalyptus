@@ -307,15 +307,13 @@
         </collection>
     </mapping>
 
-    <mapping class="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntryVersioned"
-             extends="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntry" abstract="true">
+    <mapping class="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntryVersioned" abstract="true">
         <structure map-as="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntry"/>
         <value name="DeleteMarker" field="deleteMarker" usage="optional"/>
         <value name="DeleteMarkerVersionId" field="deleteMarkerVersionId" usage="optional"/>
     </mapping>
 
-    <mapping class="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsError"
-             extends="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntry" abstract="true">
+    <mapping class="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsError" abstract="true">
         <structure map-as="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsEntry"/>
         <value name="Code" field="code"/>
         <value name="Message" field="message"/>

@@ -134,11 +134,11 @@ public class SnapshotDeleter extends CheckerTask {
         for (SnapshotInfo snap : snapshotsToBeDeleted) {
           try {
             String snapshotId = snap.getSnapshotId();
-            LOG.debug("Snapshot " + snapshotId + " was marked for deletion from EBS backend. Evaluating prerequistes for cleanup...");
+            LOG.info("Snapshot " + snapshotId + " was marked for deletion from EBS backend. Evaluating prerequistes for cleanup...");
 
             if (snap.getIsOrigin() != null && snap.getIsOrigin()) { // check if snapshot originates in this az
               // acquire semaphore before deleting to avoid concurrent interaction with delta creation process
-              LOG.trace("Snapshot " + snapshotId + " originates from this az, acquire semaphore before deletion");
+              LOG.debug("Snapshot " + snapshotId + " originates from this az, acquire semaphore before deletion");
               EucaSemaphore snapSemaphore = EucaSemaphoreDirectory.getSolitarySemaphore(snapshotId);
               try {
                 try {
@@ -150,6 +150,7 @@ public class SnapshotDeleter extends CheckerTask {
                 deleteSnapFromEBS(snap);
               } finally {
                 snapSemaphore.release();
+                EucaSemaphoreDirectory.removeSemaphore(snapshotId);
               }
             } else { // either pre 4.4 snapshot or snapshot does not originate in this az
               // no need to acquire semaphore, delete straight away
@@ -189,10 +190,10 @@ public class SnapshotDeleter extends CheckerTask {
 
             LOG.debug("Snapshot " + snapshotId + " was marked for deletion from OSG. Evaluating prerequistes for cleanup...");
             if (snap.getIsOrigin() == null) { // old snapshot prior to 4.4
-              LOG.trace("Snapshot " + snapshotId + " may have been created prior to incremental snapshot support");
+              LOG.debug("Snapshot " + snapshotId + " may have been created prior to incremental snapshot support");
               deleteSnapFromOSG(snap); // delete snapshot
             } else if (snap.getIsOrigin()) { // snapshot originated in the same az
-              LOG.trace("Snapshot " + snapshotId + " originates from this az, verifying if it's needed to restore other snapshots");
+              LOG.debug("Snapshot " + snapshotId + " originates from this az, verifying if it's needed to restore other snapshots");
               try (TransactionResource tr = Entities.transactionFor(SnapshotInfo.class)) {
 
                 SnapshotInfo nextSnapSearch = new SnapshotInfo();
@@ -212,7 +213,7 @@ public class SnapshotDeleter extends CheckerTask {
                   // Found deltas that might depend on this snapshot for reconstruction, don't delete
                   LOG.debug("Snapshot " + snapshotId + " is required for restoring other snapshots in the system. Cannot delete from OSG");
                 } else {
-                  LOG.trace("Snapshot " + snapshotId + " is not required for restoring other snapshots in the system");
+                  LOG.debug("Snapshot " + snapshotId + " is not required for restoring other snapshots in the system");
                   deleteSnapFromOSG(snap); // delete snapshot
                 }
               } catch (Exception e) {
@@ -220,7 +221,7 @@ public class SnapshotDeleter extends CheckerTask {
               }
             } else { // snapshot originated in a different az
               // skip evaluation and just mark the snapshot deleted, let the source az deal with the osg remnants TODO fix this later
-              LOG.trace("Snapshot " + snapshotId + " orignated from a different az, let the source az deal with deletion from OSG");
+              LOG.debug("Snapshot " + snapshotId + " orignated from a different az, let the source az deal with deletion from OSG");
               markSnapDeleted(snapshotId);
             }
           } catch (Exception e) {
@@ -275,7 +276,7 @@ public class SnapshotDeleter extends CheckerTask {
         LOG.warn("Failed to delete snapshot " + snap.getSnapshotId() + " from ObjectStorageGateway", e);
       }
     } else {
-      LOG.debug("Snapshot location missing for " + snap.getSnapshotId() + ". Skipping deletion from ObjectStorageGateway");
+      LOG.info("Snapshot location missing for " + snap.getSnapshotId() + ". Skipping deletion from ObjectStorageGateway");
     }
   }
 

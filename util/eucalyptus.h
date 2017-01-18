@@ -2,7 +2,7 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2017 Hewlett Packard Enterprise Development Company LP 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -172,7 +172,7 @@
 #define EUCALYPTUS_VIRSH                         EUCALYPTUS_ROOTWRAP " virsh"
 #define EUCALYPTUS_DETACH                        EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/detach.pl"
 #define EUCALYPTUS_GENERATE_MIGRATION_KEYS       EUCALYPTUS_HELPER_DIR "/generate-migration-keys.sh"
-#define EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS      EUCALYPTUS_HELPER_DIR "/authorize-migration-keys.pl"
+#define EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS      EUCALYPTUS_HELPER_DIR "/authorize-migration-keys"
 
 #define EUCALYPTUS_CONNECT_ISCSI                 EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/connect_iscsitarget.pl"
 #define EUCALYPTUS_DISCONNECT_ISCSI              EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/disconnect_iscsitarget.pl"

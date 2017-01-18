@@ -109,7 +109,7 @@ public class ChannelBufferStreamingInputStream extends ChannelBufferInputStream 
           b.readBytes(bytes, off, toReadFromThisBuffer);
           len = len - toReadFromThisBuffer;
           readSoFar += toReadFromThisBuffer;
-          off += readSoFar;
+          off += toReadFromThisBuffer;
         } else {
           try {
             int retries = 0;

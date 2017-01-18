@@ -1,6 +1,6 @@
 # Makefile for eucalyptus/tools
 #
-# Copyright 2009-2015 Eucalyptus Systems, Inc.
+# Copyright 2009-2017 Hewlett Packard Enterprise Development Company LP
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -111,7 +111,7 @@ install: build
 	@$(INSTALL) -m 644 libvirt.xsl $(DESTDIR)$(etcdir)/eucalyptus
 	@$(INSTALL) -m 644 nc-hooks/example.sh $(DESTDIR)$(etcdir)/eucalyptus/nc-hooks/
 	@$(INSTALL) -m 755 generate-migration-keys.sh $(DESTDIR)$(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 authorize-migration-keys.pl $(DESTDIR)$(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 authorize-migration-keys $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 euca-upgrade $(DESTDIR)$(libexecdir)/eucalyptus
 	@$(INSTALL) -m 644 iptables-preload.template $(DESTDIR)$(datarootdir)/eucalyptus/doc/
 	@$(INSTALL) -m 644 nginx_proxy.conf $(DESTDIR)$(datarootdir)/eucalyptus
@@ -125,8 +125,6 @@ install: build
 	@$(INSTALL) -m 755 clusteradmin-register-nodes $(DESTDIR)$(sbindir)/clusteradmin-deregister-nodes
 	@$(INSTALL) -d $(DESTDIR)$(etcdir)/eucalyptus/cloud.d/elb-security-policy
 	@$(INSTALL) -m 755 elb-security-policy/*.json $(DESTDIR)$(etcdir)/eucalyptus/cloud.d/elb-security-policy/
-	@$(INSTALL) -m 755 nodeadmin-pack-instance $(DESTDIR)$(sbindir)/nodeadmin-pack-instance
-	@$(INSTALL) -m 755 nodeadmin-unpack-instance $(DESTDIR)$(sbindir)/nodeadmin-unpack-instance
 	@make -C status install
 	@make -C imaging install
 
@@ -151,7 +149,5 @@ uninstall:
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/doc/iptables-preload.template
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/nginx_proxy.conf
 	@$(RM) -f $(DESTDIR)$(etcdir)/eucalyptus/cloud.d/elb-security-policy/*.json
-	@$(RM) -f $(DESTDIR)$(sbindir)/nodeadmin-pack-instance
-	@$(RM) -f $(DESTDIR)$(sbindir)/nodeadmin-unpack-instance
 	@make -C status uninstall
 	@make -C imaging uninstall

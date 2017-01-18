@@ -66,11 +66,12 @@ import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.OSGChannelWriter;
 import com.eucalyptus.objectstorage.OSGMessageResponse;
-import com.eucalyptus.objectstorage.exceptions.s3.MissingContentLengthException;
+import com.eucalyptus.objectstorage.exceptions.s3.MaxMessageLengthExceededException;
 import com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication;
 import com.eucalyptus.objectstorage.pipeline.handlers.AwsChunkStream.StreamingHttpRequest;
 import com.google.common.base.Strings;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.UpstreamMessageEvent;
 import org.jboss.netty.handler.codec.http.HttpChunk;
@@ -83,7 +84,7 @@ import static com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication.AWS_
  * Aggregates streaming and chunked data for V4 signed request authentication.
  */
 public class ObjectStorageAuthenticationAggregator extends HttpChunkAggregator {
-
+  private final int maxContentLength;
 
   // Http chunking required
   private boolean httpChunked;
@@ -94,6 +95,7 @@ public class ObjectStorageAuthenticationAggregator extends HttpChunkAggregator {
 
   public ObjectStorageAuthenticationAggregator(int maxContentLength) {
     super(maxContentLength);
+    this.maxContentLength = maxContentLength;
   }
 
   @Override
@@ -115,6 +117,11 @@ public class ObjectStorageAuthenticationAggregator extends HttpChunkAggregator {
         if (!Strings.isNullOrEmpty(authHeader) && authHeader.startsWith(S3V4Authentication.AWS_V4_AUTH_TYPE) && HttpHeaders
             .is100ContinueExpected(request)) {
           httpChunked = true;
+          long contentLength = HttpHeaders.getContentLength(request);
+          if (contentLength > maxContentLength) {
+            Channels.fireExceptionCaught(ctx, new MaxMessageLengthExceededException(null, "Max request content length exceeded."));
+            return;
+          }
 
           // Clear expect header and send continue
           HttpHeaders.set100ContinueExpected(request, false);
@@ -141,9 +148,9 @@ public class ObjectStorageAuthenticationAggregator extends HttpChunkAggregator {
     }
 
     // Aggregate continuable requests
-    if (httpChunked)
+    if (httpChunked) {
       super.messageReceived(ctx, event);
-    else
+    } else
       ctx.sendUpstream(event);
   }
 }

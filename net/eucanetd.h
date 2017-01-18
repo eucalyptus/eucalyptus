@@ -2,7 +2,7 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -90,6 +90,13 @@
 
 #define EUCANETD_DUMMY_UDP_PORT                  63822
 
+#define EUCANETD_DHCPD_UNIT                      "eucanetd-dhcpd@%s.service"
+#define EUCANETD_NGINX_UNIT                      "eucanetd-nginx.service"
+
+#define SYSCTL_BRIDGE_PATH                       "/proc/sys/net/bridge"
+#define SYSCTL_BRIDGE_CALLIPTABLES               "/proc/sys/net/bridge/bridge-nf-call-iptables"
+#define SYSCTL_IP_FORWARD                        "/proc/sys/net/ipv4/ip_forward"
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  TYPEDEFS                                  |
@@ -111,6 +118,8 @@ enum {
     EUCANETD_CVAL_MODE,
     EUCANETD_CVAL_DHCPDAEMON,
     EUCANETD_CVAL_DHCPUSER,
+    EUCANETD_CVAL_SYSTEMCTL,
+    EUCANETD_CVAL_USE_SYSTEMCTL,
     EUCANETD_CVAL_POLLING_FREQUENCY,
     EUCANETD_CVAL_DISABLE_L2_ISOLATION,
     EUCANETD_CVAL_NC_PROXY,
@@ -151,6 +160,7 @@ enum {
     FLUSH_MIDO_CHECKUNCONNECTED,
     FLUSH_MIDO_UNCONNECTED,
     FLUSH_MIDO_VPC,
+    FLUSH_MIDO_TZONE,
     FLUSH_MIDO_LISTVPC,
     FLUSH_MIDO_LISTGATEWAYS,
     FLUSH_MIDO_TEST,
@@ -203,8 +213,9 @@ typedef struct eucanetdConfig_t {
     char privInterface[IF_NAME_LEN];   //!< The configured private interface device to use for networking (VNET_PRIVINTERFACE)
     char bridgeDev[IF_NAME_LEN];       //!< The configured bridge device to use for networking (VNET_BRIDGE)
 
-    char dhcpUser[32];                 //!< The user name as which the DHCP daemon runs on the distribution. (VNET_DHCPUSER)
     char dhcpDaemon[EUCA_MAX_PATH];    //!< The path to the ISC DHCP server executable to use. (VNET_DHCPDAEMON)
+    
+    char systemctl[EUCA_MAX_PATH];     //!< systemctl executable to use. (VNET_SYSTEMCTL)
 
     char mido_intrtcidr[NETWORK_ADDR_LEN];
     char mido_intmdcidr[NETWORK_ADDR_LEN];
@@ -235,6 +246,7 @@ typedef struct eucanetdConfig_t {
     boolean eucanetd_first_update;
     
     boolean nc_proxy;                //!< Set to TRUE to indicate we're using the NC proxy feature
+    boolean use_systemctl;
     boolean enable_mido_md;
     boolean mido_md_veth_use_netns;
     boolean mido_md_config_changed;

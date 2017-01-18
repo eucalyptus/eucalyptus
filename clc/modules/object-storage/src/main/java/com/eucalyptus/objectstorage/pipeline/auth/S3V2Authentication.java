@@ -24,7 +24,9 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.ObjectStorage;
+import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
 import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidSecurityException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
@@ -199,6 +201,28 @@ final class S3V2Authentication {
       result += entry.getKey() + ":" + entry.getValue() + "\n";
     }
     return result;
+  }
+
+  /**
+   * Gets and validates a date obtained from an Expires parameter.
+   */
+  static String getAndValidateExpiresFromParameters(Map<String, String> parameters) throws InvalidSecurityException, AccessDeniedException {
+    String expires = parameters.remove(SecurityParameter.Expires.toString().toLowerCase());
+    if (expires == null)
+      throw new InvalidSecurityException("Expires parameter must be specified.");
+
+    // Assert not expired
+    Long expireTime;
+    try {
+      expireTime = Long.parseLong(expires);
+    } catch (NumberFormatException e) {
+      throw new AccessDeniedException(null, "Invalid Expires parameter.");
+    }
+
+    Long currentTime = new Date().getTime() / 1000;
+    if (currentTime > expireTime)
+      throw new AccessDeniedException(null, "Cannot process request. Expired.");
+    return expires;
   }
 
   private static void processHeaderValue(String name, String value, Map<String, String> aggregatingMap) {

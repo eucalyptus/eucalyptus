@@ -142,6 +142,11 @@ class AccessDeniedException extends S3Exception {
     this();
     this.resource = resource;
   }
+
+  def AccessDeniedException(String resource, String message) {
+    super(S3ErrorCodeStrings.AccessDenied, message, HttpResponseStatus.FORBIDDEN);
+    this.resource = resource;
+  }
 }
 
 class AccountProblemException extends S3Exception {
@@ -706,6 +711,12 @@ class MaxMessageLengthExceededException extends S3Exception {
   def MaxMessageLengthExceededException(String resource) {
     this();
     this.resource = resource;
+  }
+
+  def MaxMessageLengthExceededException(String resource, String message) {
+    this();
+    this.resource = resource;
+    this.message = message;
   }
 }
 

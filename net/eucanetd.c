@@ -2,7 +2,7 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -120,6 +120,10 @@ configEntry configKeysRestartEUCANETD[] = {
     {"VNET_DHCPDAEMON", "/usr/sbin/dhcpd"}
     ,
     {"VNET_DHCPUSER", "root"}
+    ,
+    {"VNET_SYSTEMCTL", "/usr/bin/systemctl"}
+    ,
+    {"VNET_USE_SYSTEMCTL", "Y"}
     ,
     {"VNET_DNS", NULL}
     ,
@@ -305,7 +309,7 @@ int main(int argc, char **argv) {
     time_t epoch_timer = 0;
     struct timeval tv = { 0 };
     struct timeval ttv = { 0 };
-    
+ 
     boolean config_changed = FALSE;
     boolean update_globalnet = FALSE;
     boolean update_globalnet_failed = FALSE;
@@ -316,7 +320,7 @@ int main(int argc, char **argv) {
 
     // parse commandline arguments
     config->flushmode = FLUSH_NONE;
-    while ((opt = getopt(argc, argv, "dhHlgfFmMuUCZv:V:z:")) != -1) {
+    while ((opt = getopt(argc, argv, "dhHlgfFmMuUCZT:v:V:z:")) != -1) {
         switch (opt) {
         case 'd':
             config->debug = EUCANETD_DEBUG_TRACE;
@@ -376,6 +380,11 @@ int main(int argc, char **argv) {
             config->debug = EUCANETD_DEBUG_INFO;
             config->flushmodearg = optarg;
             break;
+        case 'T':
+            config->flushmode = FLUSH_MIDO_TZONE;
+            config->debug = EUCANETD_DEBUG_INFO;
+            config->flushmodearg = optarg;
+            break;
         case 'z':
             config->flushmode = FLUSH_MIDO_TEST;
             config->debug = EUCANETD_DEBUG_INFO;
@@ -391,9 +400,12 @@ int main(int argc, char **argv) {
                     "\t%-12s| detect and flush unconnected objects in MidoNet\n"
                     "\t%-12s| check a VPC model (i-x | eni-x | vpc-x | subnet-x | nat-x | sg-x)\n"
                     "\t%-12s| flush a VPC model (i-x | eni-x | vpc-x | subnet-x | nat-x | sg-x)\n"
+                    "\t%-12s| create tunnel-zone using IP on (dev)\n"
+                    "\t\t\tbefore using -T make sure that midolman is running on all hosts\n"
+                    "\t\t\tall hosts are assumed to have device (dev) with 1 IP address\n"
                     "\t\tlowercase options are read-only, and work with eucanetd service running\n"
                     "\t\tuppercase options can only be executed with eucanetd service stopped\n"
-                     , "-l", "-g", "-m", "-M", "-u", "-U", "-v (id)", "-V (id)");
+                     , "-l", "-g", "-m", "-M", "-u", "-U", "-v (id)", "-V (id)", "-T (dev)");
             exit (1);
             break;
         case 'h':
@@ -481,6 +493,37 @@ int main(int argc, char **argv) {
                     config_mode_ok = TRUE;
                 }
             }
+
+            //
+            // Verify that the kernel configuration parameters are enabled
+            // only need to check in EDGE mode
+            //
+            if (IS_NETMODE_EDGE(pGni)) {
+                if (!sysctl_enabled(SYSCTL_IP_FORWARD)) {
+                    if ((i % 100) == 0) {
+                        LOGERROR("Kernel parameter: net.ipv4.ip_forward is not enabled\n");
+                        LOGERROR("This parameter is typically enabled by default in /usr/lib/sysctl.d/*-eucanetd.conf\n");
+                    }
+                    rc = 1;
+                }
+                if (!check_directory(SYSCTL_BRIDGE_PATH)) {
+                    if (!sysctl_enabled(SYSCTL_BRIDGE_CALLIPTABLES)) {
+                        if ((i % 100) == 0) {
+                            LOGERROR("Kernel parameter: net.bridge.bridge-nf-call-iptables is not enabled\n");
+                            LOGERROR("This parameter is typically enabled by default in /usr/lib/sysctl.d/*-eucanetd.conf\n");
+                        }
+                        rc = 1;
+                    }
+                } else { 
+                    // Proc directory is missing, which probably means that br_netfilter isn't loaded
+                    if ((i % 100) == 0) {                    
+                        LOGERROR("Unable to find bridge info in proc filesystem\n");
+                        LOGERROR("Ensure that br_netfilter has been properly loaded into the kernel\n");
+                    }
+                    rc = 1;
+                }
+            }
+            
             if (!IS_NETMODE_VPCMIDO(pGni)) {
                 eucanetdPeer = eucanetd_detect_peer(pGni);
                 if ((PEER_IS_NONE(eucanetdPeer)) || (!PEER_IS_NC(eucanetdPeer))) {
@@ -1259,6 +1302,8 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
     cvals[EUCANETD_CVAL_EUCA_USER] = configFileValue("EUCA_USER");
     cvals[EUCANETD_CVAL_DHCPDAEMON] = configFileValue("VNET_DHCPDAEMON");
     cvals[EUCANETD_CVAL_DHCPUSER] = configFileValue("VNET_DHCPUSER");
+    cvals[EUCANETD_CVAL_SYSTEMCTL] = configFileValue("VNET_SYSTEMCTL");
+    cvals[EUCANETD_CVAL_USE_SYSTEMCTL] = configFileValue("VNET_USE_SYSTEMCTL");
     cvals[EUCANETD_CVAL_POLLING_FREQUENCY] = configFileValue("POLLING_FREQUENCY");
     cvals[EUCANETD_CVAL_DISABLE_L2_ISOLATION] = configFileValue("DISABLE_L2_ISOLATION");
     cvals[EUCANETD_CVAL_NC_PROXY] = configFileValue("NC_PROXY");
@@ -1371,6 +1416,22 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
     snprintf(config->privInterface, IF_NAME_LEN, "%s", cvals[EUCANETD_CVAL_PRIVINTERFACE]);
     snprintf(config->bridgeDev, IF_NAME_LEN, "%s", cvals[EUCANETD_CVAL_BRIDGE]);
     snprintf(config->dhcpDaemon, EUCA_MAX_PATH, "%s", cvals[EUCANETD_CVAL_DHCPDAEMON]);
+    snprintf(config->systemctl, EUCA_MAX_PATH, "%s", cvals[EUCANETD_CVAL_SYSTEMCTL]);
+    if (!strcmp(cvals[EUCANETD_CVAL_USE_SYSTEMCTL], "Y")) {
+        config->use_systemctl = TRUE;
+    } else {
+        config->use_systemctl = FALSE;
+    }
+
+    if (strlen(config->systemctl)) {
+        char cmd[EUCA_MAX_PATH] = "";
+        snprintf(cmd, EUCA_MAX_PATH, "%s %s --version", config->cmdprefix, config->systemctl);
+        rc = timeshell_nb(cmd, 10, TRUE);
+        if (rc != 0) {
+            LOGERROR("invalid VNET_SYSTEMCTL (%s) - reverting to \"systemctl\"\n", config->systemctl);
+            snprintf(config->systemctl, EUCA_MAX_PATH, "%s", "systemctl");
+        }
+    }
 
     // mido config opts
     if (IS_NETMODE_VPCMIDO(config)) {
@@ -1411,9 +1472,6 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
             config->validate_mido_config = FALSE;
         }
     }
-
-    if (strlen(cvals[EUCANETD_CVAL_DHCPUSER]) > 0)
-        snprintf(config->dhcpUser, 32, "%s", cvals[EUCANETD_CVAL_DHCPUSER]);
 
     LOGTRACE("required variables read from local config file: EUCALYPTUS=%s EUCA_USER=%s VNET_MODE=%s VNET_PUBINTERFACE=%s VNET_PRIVINTERFACE=%s VNET_BRIDGE=%s "
             "VNET_DHCPDAEMON=%s\n", SP(cvals[EUCANETD_CVAL_EUCAHOME]), SP(cvals[EUCANETD_CVAL_EUCA_USER]), SP(cvals[EUCANETD_CVAL_MODE]), SP(cvals[EUCANETD_CVAL_PUBINTERFACE]),

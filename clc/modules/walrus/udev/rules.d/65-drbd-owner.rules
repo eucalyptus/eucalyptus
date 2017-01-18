@@ -1,1 +1,0 @@
-KERNEL=="drbd*", OWNER="eucalyptus"

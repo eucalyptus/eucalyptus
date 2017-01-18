@@ -76,6 +76,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import javax.annotation.Nullable;
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.collect.*;
@@ -1215,6 +1216,7 @@ public class Hosts {
     return Coordinator.INSTANCE.isLocalhost( );
   }
 
+  @Nullable
   public static Host getCoordinator( ) {
     return Coordinator.INSTANCE.get( );
   }

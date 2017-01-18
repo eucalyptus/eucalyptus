@@ -175,6 +175,7 @@ long long time_ms(void);
 int get_blkid(const char *dev_path, char *uuid, unsigned int uuid_size);
 char parse_boolean(const char *s);
 int drop_privs(void);
+int timeshell_nb(char *command, int timeout, boolean logerr);
 int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, int timeout);
 int get_remoteDevForNC(const char *the_iqn, const char *remoteDev, char *remoteDevForNC, int remoteDevForNCLen);
 int check_for_string_in_list(char *string, char **list, int count);
@@ -191,6 +192,7 @@ int euca_execlp_log(int *pStatus, int (*custom_parser) (const char *line, void *
 char *get_username(void);
 int euca_nanosleep(unsigned long long nsec);
 void euca_srand(void);
+int sysctl_enabled(const char *proc_path);
 
 //! global variable and functions for setting correlation id
 //!

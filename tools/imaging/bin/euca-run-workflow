@@ -44,6 +44,9 @@ class WF_InsufficientDependencies(RuntimeError):
 class WF_ManifestError(IOError):
     pass
 
+class WF_InvalidInputPath(Exception):
+    pass
+
 # base workflow class
 
 class WF_base():
@@ -194,7 +197,8 @@ class WF_ReadRaw_UpBundle(WF_base):
         euca2ools = Euca2ools()
 
         try:
-            subprocess.call(["ls", "-l", args.input_path]) # sanity check, to ensure the disk exists
+            if not os.path.exists(args.input_path):
+                raise WF_InvalidInputPath(args.input_path)
             pipe_r, pipe_w = os.pipe()
             fd_r = os.fdopen(pipe_r, 'r')
             fd_w = os.fdopen(pipe_w, 'w')
@@ -360,6 +364,9 @@ except WF_InsufficientDependencies, e:
 except WF_ManifestError:
     print "failed to download components from object store"
     sys.exit(4)
+except WF_InvalidInputPath, e:
+    print "Invalid file or block device to read from: %s" % e.args[0]
+    sys.exit(6)
 except subprocess.CalledProcessError, e:
     print "workflow failed (error in subprocess)"
     sys.exit(5)

@@ -378,7 +378,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       throws EucalyptusCloudException {
     UpdateObjectStorageConfigurationResponseType reply = request.getReply();
     if (ComponentIds.lookup(Eucalyptus.class).name().equals(request.getEffectiveUserId()))
-      throw new AccessDeniedException("Only admin can change object storage properties.");
+      throw new AccessDeniedException(null, "Only admin can change object storage properties.");
     if (request.getProperties() != null) {
       for (ComponentProperty prop : request.getProperties()) {
         try {

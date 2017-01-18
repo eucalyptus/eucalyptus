@@ -107,6 +107,9 @@ public class SnapshotProgressCallback {
     Threads.enqueue(scConfig, SnapshotProgressCallback.class, 1, new ProgressSetter(this.snapshotId, this.lastProgress));
   }
 
+  // strictly to be used by mock only
+  protected SnapshotProgressCallback() {}
+
   // Set the size before calling update()
   public void setUploadSize(long uploadSize) {
     this.uploadSize = uploadSize;

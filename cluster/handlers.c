@@ -6397,16 +6397,6 @@ int init_config(void)
     }
     EUCA_FREE(tmpstr);
 
-    // Multi-cluster tunneling
-    use_tunnels = 1;
-    tmpstr = configFileValue("DISABLE_TUNNELING");
-    if (tmpstr) {
-        if (!strcmp(tmpstr, "Y")) {
-            use_tunnels = 0;
-        }
-    }
-    EUCA_FREE(tmpstr);
-
     // Config ccMaxInstances if defined, otherwise use default of DEFAULT_MAX_INSTANCES_PER_CC
     tmpstr = configFileValue("MAX_INSTANCES_PER_CC");
     if (tmpstr) {
@@ -6469,7 +6459,6 @@ int init_config(void)
     EUCA_FREE(proxyIp);
 
     config->use_wssec = use_wssec;
-    config->use_tunnels = use_tunnels;
     config->schedPolicy = schedPolicy;
     euca_strncpy(config->schedPath, schedPath, sizeof(config->schedPath));
     config->idleThresh = idleThresh;

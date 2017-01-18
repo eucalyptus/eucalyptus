@@ -2,7 +2,7 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * (c) Copyright 2009-2017 Hewlett Packard Enterprise Development Company LP 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -432,10 +432,46 @@ cleanup:
     return ret;
 }
 
+
 //!
-//! Authorize (or deauthorize) migration keys on destination host.
+//! Deauthorize all migration keys on destination host
+//! @param[in] lock_hyp_sem set to true to hold the 'lock_hyp_sem' semaphore
 //!
-//! @param[in] options command-line options to pass to the authorization script
+//! @return EUCA_OK, EUCA_SYSTEM_ERROR
+//!
+int deauthorize_migration_keys(boolean lock_hyp_sem) 
+{
+    int rc = 0;
+    char euca_rootwrap[EUCA_MAX_PATH] = "";
+    char command[EUCA_MAX_PATH] = "";
+    char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
+
+    snprintf(command, EUCA_MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS, NP(euca_base));
+    snprintf(euca_rootwrap, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, NP(euca_base));
+
+    LOGDEBUG("migration key de-authorization command: '%s %s %s %s'\n", euca_rootwrap, command, "-D", "-r");
+    if (lock_hyp_sem == TRUE) {
+        sem_p(hyp_sem);
+    }
+
+    rc = euca_execlp(NULL, euca_rootwrap, command, "-D", "-r", NULL);
+
+    if (lock_hyp_sem == TRUE) {
+        sem_v(hyp_sem);
+    }
+
+    if (rc != EUCA_OK) {
+        LOGERROR("'%s %s %s %s' failed. rc=%d\n", euca_rootwrap, command, "-D", "-r", rc);
+        return (EUCA_SYSTEM_ERROR);
+    } else {
+        LOGDEBUG("migration key deauthorization succeeded\n");
+    }
+    return (EUCA_OK);
+}
+
+//!
+//! Authorize migration keys on destination host.
+//!
 //! @param[in] host hostname (IP address) to authorize
 //! @param[in] credentials shared secret to authorize
 //! @param[in] instance pointer to instance struct for logging information (optional--can be NULL)
@@ -443,7 +479,7 @@ cleanup:
 //!
 //! @return EUCA_OK, EUCA_INVALID_ERROR, or EUCA_SYSTEM_ERROR
 //!
-int authorize_migration_keys(char *options, char *host, char *credentials, ncInstance * instance, boolean lock_hyp_sem)
+int authorize_migration_keys(char *host, char *credentials, ncInstance * instance, boolean lock_hyp_sem)
 {
     int rc = 0;
     char euca_rootwrap[EUCA_MAX_PATH] = "";
@@ -451,29 +487,29 @@ int authorize_migration_keys(char *options, char *host, char *credentials, ncIns
     char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
     char *instanceId = instance ? instance->instanceId : "UNSET";
 
-    if (!options && !host && !credentials) {
-        LOGERROR("[%s] called with invalid arguments: options=%s, host=%s, creds=%s\n", SP(instanceId), SP(options), SP(host), (credentials == NULL) ? "UNSET" : "present");
+    if (!host && !credentials) {
+        LOGERROR("[%s] called with invalid arguments: host=%s, creds=%s\n", SP(instanceId), SP(host), (credentials == NULL) ? "UNSET" : "present");
         return (EUCA_INVALID_ERROR);
     }
 
     snprintf(command, EUCA_MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS, NP(euca_base));
     snprintf(euca_rootwrap, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, NP(euca_base));
-    LOGDEBUG("[%s] migration key authorization command: '%s %s %s %s %s'\n", SP(instanceId), euca_rootwrap, command, NP(options), NP(host), NP(credentials));
+    LOGDEBUG("[%s] migration key authorization command: '%s %s %s %s %s'\n", SP(instanceId), euca_rootwrap, command, "-a", NP(host), NP(credentials));
     if (lock_hyp_sem == TRUE) {
         sem_p(hyp_sem);
     }
 
-    rc = euca_execlp(NULL, euca_rootwrap, command, NP(options), NP(host), NP(credentials), NULL);
+    rc = euca_execlp(NULL, euca_rootwrap, command, "-a", NP(host), NP(credentials), NULL);
 
     if (lock_hyp_sem == TRUE) {
         sem_v(hyp_sem);
     }
 
     if (rc != EUCA_OK) {
-        LOGERROR("[%s] '%s %s %s %s %s' failed. rc=%d\n", SP(instanceId), euca_rootwrap, command, NP(options), NP(host), NP(credentials), rc);
+        LOGERROR("[%s] '%s %s %s %s %s' failed. rc=%d\n", SP(instanceId), euca_rootwrap, command, "-a", NP(host), NP(credentials), rc);
         return (EUCA_SYSTEM_ERROR);
     } else {
-        LOGDEBUG("[%s] migration key authorization/deauthorization succeeded\n", SP(instanceId));
+        LOGDEBUG("[%s] migration key authorization succeeded\n", SP(instanceId));
     }
     return (EUCA_OK);
 }
@@ -1254,7 +1290,7 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                         }
                         if (!incoming_migrations_pending) {
                             LOGINFO("no remaining incoming or pending migrations -- deauthorizing all migration client keys\n");
-                            authorize_migration_keys("-D -r", NULL, NULL, NULL, FALSE);
+                            deauthorize_migration_keys(FALSE);
                         }
                     } else {
                         // Verify that our count of incoming_migrations_in_progress matches our version of reality.
@@ -1526,54 +1562,6 @@ void *monitoring_thread(void *arg)
 
             // query for current state, if any
             refresh_instance_info(nc, instance);
-
-            if (!strcmp(nc->pEucaNet->sMode, NETMODE_VPCMIDO)) {
-                bridge_instance_interfaces_remove(nc, instance);
-/*
-                char iface[16], cmd[EUCA_MAX_PATH], obuf[256], ebuf[256], sPath[EUCA_MAX_PATH];
-                int rc;
-                snprintf(iface, 16, "vn_%s", instance->instanceId);
-                LOGTRACE("checking if VM interface is attached to a bridge (%s/%s)\n", iface, instance->params.guestNicDeviceName);
-
-                // If this device does not have a 'brport' path, this isn't a bridge device
-                snprintf(sPath, EUCA_MAX_PATH, "/sys/class/net/%s/brport/", iface);
-                if (!check_directory(sPath)) {
-                    LOGTRACE("VM interface is attached to a bridge (%s/%s)\n", iface, instance->params.guestNicDeviceName);
-                    snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc_state.rootwrap_cmd_path, instance->params.guestNicDeviceName, iface);
-                    if (timeshell(cmd, obuf, ebuf, 256, 10)) {
-                        LOGERROR("unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n");
-                    } else {
-                        LOGTRACE("VM interface removed from bridge (%s/%s)\n", iface, instance->params.guestNicDeviceName);
-                    }
-                }
-
-                // Repeat process for secondary interfaces as well
-                for (int i=0; i < EUCA_MAX_NICS; i++) {
-                    if (strlen(instance->secNetCfgs[i].interfaceId) == 0)
-                        continue;
-
-                    snprintf(iface, 16, "vn_%s", instance->secNetCfgs[i].interfaceId);
-
-                    // If this device does not have a 'brport' path, this isn't a bridge device
-                    snprintf(sPath, EUCA_MAX_PATH, "/sys/class/net/%s/brport/", iface);
-                    if (!check_directory(sPath)) {
-                        LOGDEBUG("[%s] removing instance interface %s from host bridge\n", instance->instanceId, iface);
-                        snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc->rootwrap_cmd_path, instance->params.guestNicDeviceName, iface);
-                        rc = timeshell(cmd, obuf, ebuf, 256, 10);
-                        if (rc) {
-                            LOGERROR("unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n");
-                        }
-                    }
-                }
-*/
-            }
-
-            // Fix for EUCA-12608
-            if (!strcmp(nc->pEucaNet->sMode, NETMODE_EDGE)) {
-                char iface[16];
-                snprintf(iface, 16, "vn_%s", instance->instanceId);
-                bridge_interface_set_hairpin(nc, instance, iface);
-            } 
 
             // time out logic for migration-ready instances
             if (!strcmp(instance->stateName, "Extant") && ((instance->migration_state == MIGRATION_READY) || (instance->migration_state == MIGRATION_PREPARING))
@@ -1918,40 +1906,6 @@ void *startup_thread(void *arg)
 
                     if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_VPCMIDO)) {
                         bridge_instance_interfaces_remove(&nc_state, instance);
-/*
-                        char iface[16], cmd[EUCA_MAX_PATH], obuf[256], ebuf[256], sPath[EUCA_MAX_PATH];
-                        snprintf(iface, 16, "vn_%s", instance->instanceId);
-
-                        // If this device does not have a 'brport' path, this isn't a bridge device
-                        snprintf(sPath, EUCA_MAX_PATH, "/sys/class/net/%s/brport/", iface);
-                        if (!check_directory(sPath)) {
-                            LOGDEBUG("[%s] removing instance interface %s from host bridge\n", instance->instanceId, iface);
-                            snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc_state.rootwrap_cmd_path, instance->params.guestNicDeviceName, iface);
-                            rc = timeshell(cmd, obuf, ebuf, 256, 10);
-                            if (rc) {
-                                LOGERROR("unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n");
-                            }
-                        }
-
-                        // Repeat process for secondary interfaces as well
-                        for (int i=0; i < EUCA_MAX_NICS; i++) {
-                            if (strlen(instance->secNetCfgs[i].interfaceId) == 0)
-                                continue;
-
-                            snprintf(iface, 16, "vn_%s", instance->secNetCfgs[i].interfaceId);
-
-                            // If this device does not have a 'brport' path, this isn't a bridge device
-                            snprintf(sPath, EUCA_MAX_PATH, "/sys/class/net/%s/brport/", iface);
-                            if (!check_directory(sPath)) {
-                                LOGDEBUG("[%s] removing instance interface %s from host bridge\n", instance->instanceId, iface);
-                                snprintf(cmd, EUCA_MAX_PATH, "%s brctl delif %s %s", nc_state.rootwrap_cmd_path, instance->params.guestNicDeviceName, iface);
-                                rc = timeshell(cmd, obuf, ebuf, 256, 10);
-                                if (rc) {
-                                    LOGERROR("unable to remove instance interface from bridge after launch: instance will not be able to connect to midonet (will not connect to network): check bridge/libvirt/kvm health\n");
-                                }
-                            }
-                        }
-*/
                     }
                     // Fix for EUCA-12608
                     if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_EDGE)) {
@@ -2513,7 +2467,7 @@ static int init(void)
     // initialize the EBS subsystem
     update_ebs_params();
 
-    authorize_migration_keys("-D -r", NULL, NULL, NULL, TRUE);
+    deauthorize_migration_keys(TRUE);
 
     // NOTE: this is the only call which needs to be called on both
     // the default and the specific handler! All the others will be
@@ -2531,7 +2485,7 @@ static int init(void)
         // check on hypervisor and pull out capabilities
         virConnectPtr conn = lock_hypervisor_conn();
         if (conn == NULL) {
-            // libvirt could be unresponsive for some time if there are log of instances after previous restart via authorize_migration_keys call
+            // libvirt could be unresponsive for some time if there are log of instances after previous restart via deauthorize_migration_keys call
             // let's wait a bit and ask for a connection again
             sleep(LIBVIRT_TIMEOUT_SEC);
             conn = lock_hypervisor_conn();
@@ -2588,6 +2542,8 @@ static int init(void)
 
     {
         // backing store configuration
+        init_backing_errors(); // configure backingstore/blobstore errors to log using the backing::bs_errors() function
+
         char *instances_path = getConfString(nc_state.configFiles, 2, INSTANCE_PATH);
 
         if (instances_path == NULL) {

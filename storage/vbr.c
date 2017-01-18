@@ -587,7 +587,7 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
 
         // trim off "/dev/" prefix, if present, and verify the rest
         if (strstr(vbr->guestDeviceName, "/dev/") == vbr->guestDeviceName) {
-            LOGWARN("trimming off invalid prefix '/dev/' from guestDeviceName '%s'\n", vbr->guestDeviceName);
+            LOGDEBUG("trimming off invalid prefix '/dev/' from guestDeviceName '%s'\n", vbr->guestDeviceName);
             char buf[10];
             euca_strncpy(buf, vbr->guestDeviceName + 5, sizeof(buf));
             euca_strncpy(vbr->guestDeviceName, buf, sizeof(vbr->guestDeviceName));

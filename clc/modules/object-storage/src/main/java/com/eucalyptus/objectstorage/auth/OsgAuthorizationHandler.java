@@ -25,6 +25,7 @@ import java.util.Collections;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
@@ -110,7 +111,13 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
     String[] requiredActions = null;
     RequiresPermission perms = requestAuthzProperties.get(RequiresPermission.class);
     if (perms != null) {
-      requiredActions = perms.value();
+      // check for version specific IAM permissions and version Id in the request
+      if (perms.version() != null && perms.version().length > 0 && StringUtils.isNotBlank(request.getVersionId())
+          && !StringUtils.equalsIgnoreCase(request.getVersionId(), ObjectStorageProperties.NULL_VERSION_ID)) {
+        requiredActions = perms.version(); // Use version specific IAM perms
+      } else {
+        requiredActions = perms.standard(); // Use default/standard IAM perms
+      }
     }
 
     Boolean allowAdmin = (requestAuthzProperties.get(AdminOverrideAllowed.class) != null);

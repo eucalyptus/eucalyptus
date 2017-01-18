@@ -328,6 +328,21 @@ static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pG
         LOGERROR("Upgrade 4.3 '%s' network driver artifacts failed. Driver not initialized.\n", DRIVER_NAME());
         return (1);
     }
+    // dhcpd
+        // terminate pre-4.4 dhcpd
+    if (rc != 0) {
+        LOGDEBUG("Failed to terminate dhcpd\n");
+    }
+        // possible use_systemctl changes
+    if (!pConfig->use_systemctl) {
+        pConfig->use_systemctl = TRUE;
+        eucanetd_stop_dhcpd_server(pConfig);
+        pConfig->use_systemctl = FALSE;   
+    } else {
+        pConfig->use_systemctl = FALSE;
+        eucanetd_stop_dhcpd_server(pConfig);
+        pConfig->use_systemctl = TRUE;   
+    }
     // iptables
     ipt_handler_repopulate(pConfig->ipt);
     // delete legacy (pre 4.4) chains
@@ -413,6 +428,10 @@ static int network_driver_system_flush(eucanetdConfig *pConfig, globalNetworkInf
         LOGWARN("Invalid argument: cannot flush %s with NULL config\n", DRIVER_NAME());
         return (1);
     }
+    
+    // dhcpd
+    eucanetd_stop_dhcpd_server(pConfig);
+    
     // iptables
     ipt_handler_repopulate(pConfig->ipt);
     ipt_chain_flush(pConfig->ipt, "raw", "EUCA_COUNTERS_IN");
@@ -627,15 +646,18 @@ static u32 network_driver_system_scrub(eucanetdConfig *pConfig, globalNetworkInf
     int do_sgs = 1;
     int do_allprivate = 1;
     if (pGniApplied && (pGni != pGniApplied)) {
-        edgeConfigApplied->gni = pGniApplied;
-        edgeConfigApplied->config = pConfig;
+        int config_changed = cmp_gni_config(pGni, pGniApplied);
+        if ((config_changed & GNI_CONFIG_DIFF_SUBNETS) == 0) {
+            edgeConfigApplied->gni = pGniApplied;
+            edgeConfigApplied->config = pConfig;
 
-        rc = extract_edge_config_from_gni(edgeConfigApplied);
-        if (!rc) {
-            if (!cmp_edge_config(edgeConfig, edgeConfigApplied, &do_instances,
-                    &do_sgs, &do_allprivate)) {
-                do_edge_update = FALSE;
-                LOGINFO("\tSystem is already up-to-date\n");
+            rc = extract_edge_config_from_gni(edgeConfigApplied);
+            if (!rc) {
+                if (!cmp_edge_config(edgeConfig, edgeConfigApplied, &do_instances,
+                        &do_sgs, &do_allprivate)) {
+                    do_edge_update = FALSE;
+                    LOGINFO("\tSystem is already up-to-date\n");
+                }
             }
         }
     }
@@ -1635,6 +1657,8 @@ int generate_dhcpd_config(edge_config *edge) {
     char *router = NULL;
     char *strptra = NULL;
     char dhcpd_config_path[EUCA_MAX_PATH] = "";
+    char pid_file_path[EUCA_MAX_PATH] = "";
+    char lease_file_path[EUCA_MAX_PATH] = "";
     FILE *OFH = NULL;
     gni_instance *instances = NULL;
 
@@ -1652,12 +1676,21 @@ int generate_dhcpd_config(edge_config *edge) {
 
     // Open the DHCP configuration file
     snprintf(dhcpd_config_path, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.conf", edge->config->eucahome);
+    snprintf(pid_file_path, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.pid", edge->config->eucahome);
+    snprintf(lease_file_path, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.leases", edge->config->eucahome);
     OFH = fopen(dhcpd_config_path, "w");
     if (!OFH) {
         LOGERROR("cannot open dhcpd server config file for write '%s': check permissions\n", dhcpd_config_path);
         ret = 1;
     } else {
-        fprintf(OFH, "# automatically generated config file for DHCP server\ndefault-lease-time 86400;\nmax-lease-time 86400;\nddns-update-style none;\n\n");
+        fprintf(OFH, "# automatically generated config file for DHCP server\n"
+                "default-lease-time 86400;\n"
+                "max-lease-time 86400;\n"
+                "ddns-update-style none;\n");
+        fprintf(OFH, "\n"
+                "lease-file-name \"%s\";\n"
+                "pid-file-name  \"%s\";\n"
+                "\n", lease_file_path, pid_file_path);
         fprintf(OFH, "shared-network euca {\n");
 
         network = hex2dot(nw);

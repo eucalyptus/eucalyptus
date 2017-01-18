@@ -375,6 +375,17 @@ static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pG
         }
     }
 
+        // possible use_systemctl changes
+    if (!pConfig->use_systemctl) {
+        pConfig->use_systemctl = TRUE;
+        do_md_nginx_maintain(pMidoConfig, VPCMIDO_NGINX_STOP);
+        pConfig->use_systemctl = FALSE;   
+    } else {
+        pConfig->use_systemctl = FALSE;
+        do_md_nginx_maintain(pMidoConfig, VPCMIDO_NGINX_STOP);
+        pConfig->use_systemctl = TRUE;   
+    }
+    
     EUCA_FREE(mido_euca_version_str);
     return (ret);
 }
@@ -389,6 +400,10 @@ static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pG
 static int network_driver_system_flush(eucanetdConfig *pConfig, globalNetworkInfo *pGni) {
     int rc = 0;
     int ret = 0;
+    char *dev_tztype = NULL;
+    char *dev = NULL;
+    char *type = NULL;
+    char *slash = NULL;
 
     // Is our driver initialized?
     if (!IS_INITIALIZED()) {
@@ -429,14 +444,14 @@ static int network_driver_system_flush(eucanetdConfig *pConfig, globalNetworkInf
             case FLUSH_MIDO_CHECKUNCONNECTED:
                 LOGINFO("Check for unconnected objects in MidoNet\n");
                 rc = do_midonet_delete_vpc_object(pMidoConfig, "unconnected", TRUE);
-                if (rc) {
+                if (rc > 0) {
                     ret = 1;
                 }
                 break;
             case FLUSH_MIDO_UNCONNECTED:
                 LOGINFO("Flush unconnected objects in MidoNet\n");
                 rc = do_midonet_delete_vpc_object(pMidoConfig, "unconnected", FALSE);
-                if (rc) {
+                if (rc > 0) {
                     ret = 1;
                 }
                 break;
@@ -458,6 +473,21 @@ static int network_driver_system_flush(eucanetdConfig *pConfig, globalNetworkInf
                 if (rc) {
                     ret = 1;
                 }
+                break;
+            case FLUSH_MIDO_TZONE:
+                dev_tztype = strdup(pMidoConfig->config->flushmodearg);
+                dev = dev_tztype;
+                type = NULL;
+                slash = strchr(dev_tztype, '/');
+                if (slash) {
+                    *slash = '\0';
+                    type = ++slash;
+                }
+                rc = do_midonet_create_tzone(pMidoConfig, type, dev, TRUE);
+                if (rc) {
+                    ret = 1;
+                }
+                EUCA_FREE(dev_tztype);
                 break;
             case FLUSH_MIDO_LISTGATEWAYS:
                 rc = do_midonet_delete_vpc_object(pMidoConfig, "list_gateways", TRUE);
@@ -541,7 +571,7 @@ static u32 network_driver_system_scrub(eucanetdConfig *pConfig, globalNetworkInf
         return (ret);
     }
 
-    int config_changed = cmp_gni_vpcmido_config(pGni, pGniApplied);
+    int config_changed = cmp_gni_config(pGni, pGniApplied);
     if (!IS_INITIALIZED() || (pGni && pGniApplied && config_changed)) {
         LOGINFO("(re)initializing %s driver.\n", DRIVER_NAME());
         if (pMidoConfig) {
@@ -559,7 +589,7 @@ static u32 network_driver_system_scrub(eucanetdConfig *pConfig, globalNetworkInf
         pGniApplied = NULL;
     }
 
-    if (config_changed & GNI_VPCMIDO_CONFIG_DIFF_MIDONODES) {
+    if (config_changed & GNI_CONFIG_DIFF_MIDONODES) {
         pMidoConfig->midotz_ok = FALSE;
     }
 

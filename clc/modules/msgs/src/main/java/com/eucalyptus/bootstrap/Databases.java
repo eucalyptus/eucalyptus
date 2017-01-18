@@ -227,7 +227,7 @@ public class Databases {
   
   public static void setVolatile( boolean isVolatile ) {
     if ( volatileAtomic.compareAndSet( !isVolatile, isVolatile ) ) {
-      LOG.log( isVolatile ? Level.ERROR : Level.INFO, "Database availability changed to: " + !isVolatile );
+      LOG.debug( "Database availability changed to: " + !isVolatile );
     }
   }
 

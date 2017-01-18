@@ -169,7 +169,7 @@ public class CephRbdProvider implements SANProvider {
 
   @Override
   public String createVolume(String volumeId, String snapshotId, int snapSize, int size, String snapshotIqn) throws EucalyptusCloudException {
-    LOG.debug("Creating volume volumeId=" + volumeId + ", snapshotId=" + snapshotId + ", size=" + size + "GB, snapshotIqn=" + snapshotIqn);
+    LOG.info("Creating volume volumeId=" + volumeId + ", snapshotId=" + snapshotId + ", size=" + size + "GB, snapshotIqn=" + snapshotIqn);
 
     CanonicalRbdObject parent = CanonicalRbdObject.parse(snapshotIqn);
     if (parent != null && !Strings.isNullOrEmpty(parent.getPool())) {
@@ -191,7 +191,7 @@ public class CephRbdProvider implements SANProvider {
 
   @Override
   public String cloneVolume(String volumeId, String parentVolumeId, String parentVolumeIqn) throws EucalyptusCloudException {
-    LOG.debug("Cloning volume volumeId=" + volumeId + ", parentVolumeId=" + parentVolumeId + ", parentVolumeIqn=" + parentVolumeIqn);
+    LOG.info("Cloning volume volumeId=" + volumeId + ", parentVolumeId=" + parentVolumeId + ", parentVolumeIqn=" + parentVolumeIqn);
 
     CanonicalRbdObject parent = CanonicalRbdObject.parse(parentVolumeIqn);
     if (parent != null && !Strings.isNullOrEmpty(parent.getPool())) {
@@ -223,7 +223,7 @@ public class CephRbdProvider implements SANProvider {
 
   @Override
   public String createVolume(String volumeName, int size) throws EucalyptusCloudException {
-    LOG.debug("Creating volume volumeId=" + volumeName + ", size=" + size + "GB");
+    LOG.info("Creating volume volumeId=" + volumeName + ", size=" + size + "GB");
     long sizeInBytes = size * StorageProperties.GB; // need to go from gb to bytes
     String iqn = rbdService.createImage(volumeName, sizeInBytes);
     return iqn;
@@ -231,7 +231,7 @@ public class CephRbdProvider implements SANProvider {
 
   @Override
   public boolean deleteVolume(String volumeId, String volumeIqn) {
-    LOG.debug("Deleting volume volumeId=" + volumeId + ", volumeIqn=" + volumeIqn);
+    LOG.info("Deleting volume volumeId=" + volumeId + ", volumeIqn=" + volumeIqn);
 
     boolean result = false;
     try {
@@ -250,7 +250,7 @@ public class CephRbdProvider implements SANProvider {
 
   @Override
   public boolean deleteSnapshot(String snapshotId, String snapshotIqn, String snapshotPointId) {
-    LOG.debug("Deleting snapshot snapshotId=" + snapshotId + ", snapshotIqn=" + snapshotIqn + ", snapshotPointId=" + snapshotPointId);
+    LOG.info("Deleting snapshot snapshotId=" + snapshotId + ", snapshotIqn=" + snapshotIqn + ", snapshotPointId=" + snapshotPointId);
     try {
       // Deleting EBS snapshots involves
       // 1. Deleting RBD image mapped to the EBS snapshot
@@ -284,7 +284,7 @@ public class CephRbdProvider implements SANProvider {
 
   @Override
   public String createSnapshot(String volumeId, String snapshotId, String snapshotPointId) throws EucalyptusCloudException {
-    LOG.debug("Creating snapshot snapshotId=" + snapshotId + ", volumeId=" + volumeId + ", snapshotPointId=" + snapshotPointId);
+    LOG.info("Creating snapshot snapshotId=" + snapshotId + ", volumeId=" + volumeId + ", snapshotPointId=" + snapshotPointId);
 
     // snapshotPointId is of the form pool/image@snapshot
     CanonicalRbdObject parent = CanonicalRbdObject.parse(snapshotPointId);
@@ -384,7 +384,7 @@ public class CephRbdProvider implements SANProvider {
 
   @Override
   public String createSnapshotPoint(String parentVolumeId, String snapshotId, String parentVolumeIqn) throws EucalyptusCloudException {
-    LOG.debug("Creating snapshot point parentVolumeId=" + parentVolumeId + ", snapshotId=" + snapshotId + ", parentVolumeIqn=" + parentVolumeIqn);
+    LOG.info("Creating snapshot point parentVolumeId=" + parentVolumeId + ", snapshotId=" + snapshotId + ", parentVolumeIqn=" + parentVolumeIqn);
 
     // parentVolumeIqn is of the form pool/image, get the pool information
     CanonicalRbdObject parent = CanonicalRbdObject.parse(parentVolumeIqn);
@@ -400,7 +400,7 @@ public class CephRbdProvider implements SANProvider {
 
   @Override
   public void deleteSnapshotPoint(String parentVolumeId, String snapshotPointId, String parentVolumeIqn) throws EucalyptusCloudException {
-    LOG.debug("Deleting snapshot point  parentVolumeId=" + parentVolumeId + ", snapshotPointId=" + snapshotPointId + ", parentVolumeIqn="
+    LOG.info("Deleting snapshot point  parentVolumeId=" + parentVolumeId + ", snapshotPointId=" + snapshotPointId + ", parentVolumeIqn="
         + parentVolumeIqn);
     // snapshotPointId is of the form pool/image@snapshot, get the pool information
     CanonicalRbdObject parent = CanonicalRbdObject.parse(snapshotPointId);
@@ -583,7 +583,7 @@ public class CephRbdProvider implements SANProvider {
   @Override
   public StorageResource generateSnapshotDelta(String volumeId, String snapshotId, String snapPointId, String prevSnapshotId, String prevSnapPointId)
       throws EucalyptusCloudException {
-    LOG.debug("Generating snapshot delta volumeId=" + volumeId + ", snapshot=" + snapshotId + ", snapshotPointId=" + snapPointId + ", prevSnapshotId="
+    LOG.info("Generating snapshot delta volumeId=" + volumeId + ", snapshot=" + snapshotId + ", snapshotPointId=" + snapPointId + ", prevSnapshotId="
         + prevSnapshotId + ", prevSnapPointId=" + prevSnapPointId);
     String diffName = null;
     try {
@@ -634,7 +634,7 @@ public class CephRbdProvider implements SANProvider {
 
   @Override
   public void cleanupSnapshotDelta(String snapshotId, StorageResource sr) throws EucalyptusCloudException {
-    LOG.debug("Cleaning up snapshot delta for snapshotId=" + snapshotId);
+    LOG.info("Cleaning up snapshot delta for snapshotId=" + snapshotId);
     if (sr != null && !Strings.isNullOrEmpty(sr.getPath())) {
       try {
         // root wrap shell out to delete the file since its owned by root and sticky bits on /var/tmp don't let unprivileged users to delete
@@ -654,7 +654,7 @@ public class CephRbdProvider implements SANProvider {
 
   @Override
   public String completeSnapshotBaseRestoration(String snapshotId, String baseSnapPointId, String snapshotIqn) throws EucalyptusCloudException {
-    LOG.debug("Completing restoration of base snapshotId=" + snapshotId + ", snapshotPointId=" + baseSnapPointId + ", snapshotIqn=" + snapshotIqn);
+    LOG.info("Completing restoration of base snapshotId=" + snapshotId + ", snapshotPointId=" + baseSnapPointId + ", snapshotIqn=" + snapshotIqn);
     // parentVolumeIqn is of the form pool/image, get the pool information
     CanonicalRbdObject parent = CanonicalRbdObject.parse(snapshotIqn);
     if (parent != null && !Strings.isNullOrEmpty(parent.getPool())) {
@@ -677,7 +677,7 @@ public class CephRbdProvider implements SANProvider {
 
   @Override
   public void restoreSnapshotDelta(String baseIqn, StorageResource sr) throws EucalyptusCloudException {
-    LOG.debug("Restoring delta on base=" + baseIqn + ", snapshotId=" + sr.getId() + ", snapsDeltaFile=" + sr.getPath());
+    LOG.info("Restoring delta on base=" + baseIqn + ", snapshotId=" + sr.getId() + ", snapsDeltaFile=" + sr.getPath());
     try {
       // Apply diff
       String[] cmd = new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "rbd", "--id", cachedConfig.getCephUser(), "--keyring",
@@ -706,7 +706,7 @@ public class CephRbdProvider implements SANProvider {
 
   @Override
   public void completeSnapshotDeltaRestoration(String snapshotId, String snapshotIqn) throws EucalyptusCloudException {
-    LOG.debug("Cleaning up all existing rbd snapshots and creating a fresh new one, snapshotId=" + snapshotId + ", snapshotIqn=" + snapshotIqn);
+    LOG.info("Cleaning up all existing rbd snapshots and creating a fresh new one, snapshotId=" + snapshotId + ", snapshotIqn=" + snapshotIqn);
 
     // snapshotIqn is of the form pool/image, get the pool information
     CanonicalRbdObject parent = CanonicalRbdObject.parse(snapshotIqn);

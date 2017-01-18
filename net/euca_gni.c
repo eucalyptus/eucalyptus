@@ -6031,55 +6031,71 @@ int cmpipaddr(const void *p1, const void *p2) {
  * @param b [in] globalNetworkInfo structure of interest.
  * @return 0 if configuration parameters in a and b match. Non-zero otherwise. 
  */
-int cmp_gni_vpcmido_config(globalNetworkInfo *a, globalNetworkInfo *b) {
+int cmp_gni_config(globalNetworkInfo *a, globalNetworkInfo *b) {
     int ret = 0;
     if (a == b) {
         return (0);
     }
     if ((a == NULL) || (b == NULL)) {
-        return (GNI_VPCMIDO_CONFIG_DIFF_OTHER);
+        return (GNI_CONFIG_DIFF_OTHER);
     }
     if (a->enabledCLCIp != b->enabledCLCIp) {
-        ret |= GNI_VPCMIDO_CONFIG_DIFF_ENABLEDCLCIP;
+        ret |= GNI_CONFIG_DIFF_ENABLEDCLCIP;
     }
     if (strcmp(a->instanceDNSDomain, b->instanceDNSDomain)) {
-        ret |= GNI_VPCMIDO_CONFIG_DIFF_INSTANCEDNSDOMAIN;
+        ret |= GNI_CONFIG_DIFF_INSTANCEDNSDOMAIN;
     }
     if (a->max_instanceDNSServers != b->max_instanceDNSServers) {
-        ret |= GNI_VPCMIDO_CONFIG_DIFF_INSTANCEDNSSERVERS;
+        ret |= GNI_CONFIG_DIFF_INSTANCEDNSSERVERS;
     } else {
         for (int i = 0; i < a->max_instanceDNSServers; i++) {
             if (a->instanceDNSServers[i] != b->instanceDNSServers[i]) {
-                ret |= GNI_VPCMIDO_CONFIG_DIFF_INSTANCEDNSSERVERS;
+                ret |= GNI_CONFIG_DIFF_INSTANCEDNSSERVERS;
                 break;
             }
         }
     }
     if (IS_NETMODE_VPCMIDO(a) && IS_NETMODE_VPCMIDO(b)) {
         if (a->max_midogws != b->max_midogws) {
-            ret |= GNI_VPCMIDO_CONFIG_DIFF_MIDOGATEWAYS;
-            ret |= GNI_VPCMIDO_CONFIG_DIFF_MIDONODES;
+            ret |= GNI_CONFIG_DIFF_MIDOGATEWAYS;
+            ret |= GNI_CONFIG_DIFF_MIDONODES;
         } else {
             for (int i = 0; i < a->max_midogws; i++) {
                 if (cmp_gni_mido_gateway(&(a->midogws[i]), &(b->midogws[i]))) {
-                    ret |= GNI_VPCMIDO_CONFIG_DIFF_MIDOGATEWAYS;
+                    ret |= GNI_CONFIG_DIFF_MIDOGATEWAYS;
                     if (strcmp(a->midogws[i].host, b->midogws[i].host)) {
-                        ret |= GNI_VPCMIDO_CONFIG_DIFF_MIDONODES;
+                        ret |= GNI_CONFIG_DIFF_MIDONODES;
                     }
                 }
             }
         }
         if (a->max_clusters != b->max_clusters) {
-            ret |= GNI_VPCMIDO_CONFIG_DIFF_MIDONODES;
+            ret |= GNI_CONFIG_DIFF_MIDONODES;
         } else {
             for (int i = 0; i < a->max_clusters; i++) {
                 if (a->clusters[i].max_nodes != b->clusters[i].max_nodes) {
-                    ret |= GNI_VPCMIDO_CONFIG_DIFF_MIDONODES;
+                    ret |= GNI_CONFIG_DIFF_MIDONODES;
                 }
             }
         }
-    } else {
-        ret |= GNI_VPCMIDO_CONFIG_DIFF_OTHER;
+    }
+
+    if (IS_NETMODE_EDGE(a) && IS_NETMODE_EDGE(b)) {
+        if (a->max_subnets != b->max_subnets) {
+            ret |= GNI_CONFIG_DIFF_SUBNETS;
+        } else {
+            for (int i = 0; i < a->max_subnets; i++) {
+                if ((a->subnets[i].subnet != b->subnets[i].subnet) ||
+                        (a->subnets[i].netmask != b->subnets[i].netmask) ||
+                        (a->subnets[i].gateway != b->subnets[i].gateway)) {
+                    ret |= GNI_CONFIG_DIFF_SUBNETS;
+                }
+            }
+        }
+    }
+
+    if (a->nmCode != b->nmCode) {
+        ret |= GNI_CONFIG_DIFF_SUBNETS;
     }
     return (ret);
 }
