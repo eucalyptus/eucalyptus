@@ -126,6 +126,7 @@ public class DASManager implements LogicalStorageManager {
   public static final String EUCA_ROOT_WRAPPER = BaseDirectory.LIBEXEC.toString() + "/euca_rootwrap";
   public static final String EUCA_VAR_RUN_PATH = System.getProperty("euca.run.dir");
   public static final StorageExportManager exportManager = new ISCSIManager();
+  public static final StorageExportManager threadedExportManager = new ThreadPoolDispatchingStorageExportManager(new ISCSIManager());
   private static String volumeGroup;
   protected ConcurrentHashMap<String, VolumeOpMonitor> volumeOps;
 
@@ -931,7 +932,6 @@ public class DASManager implements LogicalStorageManager {
     protected void exportVolume(LVMVolumeInfo lvmVolumeInfo, String vgName, String lvName) throws EucalyptusCloudException {
       ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
 
-      StorageExportManager threadedExportManager = new ThreadPoolDispatchingStorageExportManager(new ISCSIManager());
       String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
       int max_tries = 10;
       int i = 0;
