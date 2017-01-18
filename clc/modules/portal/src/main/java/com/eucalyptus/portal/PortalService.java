@@ -186,11 +186,7 @@ public class PortalService {
   public ViewMonthlyUsageResponseType viewMonthlyUsage(final ViewMonthlyUsageType request) throws PortalServiceException {
     final Context context = checkAuthorized( );
     final ViewMonthlyUsageResponseType response = request.getReply();
-    final ViewMonthlyUsageResult result = new ViewMonthlyUsageResult();
-    result.setData("\"InvoiceID\",\"PayerAccountId\",\"LinkedAccountId\",\"RecordType\",\"RecordID\",\"BillingPeriodStartDate\"," +
-            "\"BillingPeriodEndDate\",\"InvoiceDate\",\"PayerAccountName\",\"LinkedAccountName\",\"TaxationAddress\",\"PayerPONumber\"," +
-            "\"ProductCode\",\"ProductName\",\"SellerOfRecord\",\"UsageType\",\"Operation\",\"RateId\",\"ItemDescription\",\"UsageStartDate\"," +
-            "\"UsageEndDate\",\"UsageQuantity\",\"BlendedRate\",\"CurrencyCode\",\"CostBeforeTax\",\"Credits\",\"TaxAmount\",\"TaxType\",\"TotalCost\"");
+    final ViewMonthlyUsageResult result =  MockReports.getInstance().generateMonthlyReport(request);
     response.setResult(result);
     return response;
   }
