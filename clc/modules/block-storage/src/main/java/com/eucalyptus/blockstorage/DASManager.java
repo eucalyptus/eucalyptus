@@ -121,6 +121,7 @@ public class DASManager implements LogicalStorageManager {
   public static final String EUCA_ROOT_WRAPPER = BaseDirectory.LIBEXEC.toString() + "/euca_rootwrap";
   public static final String EUCA_VAR_RUN_PATH = System.getProperty("euca.run.dir");
   public static final StorageExportManager exportManager = new ISCSIManager();
+  public static final StorageExportManager threadedExportManager = new ThreadPoolDispatchingStorageExportManager(new ISCSIManager());
   private static String volumeGroup;
   protected ConcurrentHashMap<String, VolumeOpMonitor> volumeOps;
 
@@ -936,7 +937,7 @@ public class DASManager implements LogicalStorageManager {
       Long totalTimeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
 
       try {
-        exportManager.allocateTarget(iscsiVolumeInfo);
+        threadedExportManager.allocateTarget(iscsiVolumeInfo);
       } catch (EucalyptusCloudException ece) {
         LOG.error("Failed to allocate target for volume " + iscsiVolumeInfo.getVolumeId(), ece);
         throw ece;
