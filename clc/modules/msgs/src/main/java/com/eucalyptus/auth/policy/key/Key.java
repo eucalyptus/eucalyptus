@@ -62,6 +62,8 @@
 
 package com.eucalyptus.auth.policy.key;
 
+import java.text.ParseException;
+import java.util.regex.Pattern;
 import net.sf.json.JSONException;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
@@ -87,5 +89,22 @@ public interface Key {
      */
     ReceivingHost
   }
-  
+
+  static class Validation {
+    private static final Pattern arnPattern = Pattern.compile( "[arn*?]{1,64}:[aws*?]{1,64}:[a-zA-Z0-9*?-]{1,64}(:[a-zA-Z0-9*?-]{0,64}(:(|amazon|[0-9*?]{1,12})(:.{1,2048})?)?)?" );
+
+    public static void assertArnValue( final String value ) throws JSONException {
+      if ( !arnPattern.matcher( value ).matches( ) ) {
+        throw new JSONException( "Invalid ARN: " + value );
+      }
+    }
+
+    public static void assertDateValue( final String value ) throws JSONException {
+      try {
+        Iso8601DateParser.parse( value );
+      } catch ( ParseException e ) {
+        throw new JSONException( "Invalid date: " + value );
+      }
+    }
+  }
 }

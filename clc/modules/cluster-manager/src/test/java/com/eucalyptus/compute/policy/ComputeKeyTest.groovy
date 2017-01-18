@@ -20,10 +20,14 @@
 
 package com.eucalyptus.compute.policy
 
+import com.eucalyptus.auth.policy.key.Key
+import groovy.transform.CompileStatic
+
 import static org.junit.Assert.*
 import org.junit.Test
 import net.sf.json.JSONException
 
+@CompileStatic
 class ComputeKeyTest {
 
   @Test
@@ -82,7 +86,7 @@ class ComputeKeyTest {
   private boolean isValidArn( String arn ) {
     boolean valid = true
     try {
-      ComputeKey.Validation.assertArnValue( arn )
+      Key.Validation.assertArnValue( arn )
     } catch ( JSONException e ) {
       valid = false
     }

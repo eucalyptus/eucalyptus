@@ -25,6 +25,7 @@ import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Debugging;
+import com.eucalyptus.auth.euare.Accounts;
 import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
 import com.eucalyptus.auth.euare.persist.entities.ManagedPolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.ManagedPolicyEntity_;
@@ -35,6 +36,8 @@ import com.eucalyptus.auth.euare.principal.EuareGroup;
 import com.eucalyptus.auth.euare.principal.EuareManagedPolicy;
 import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.euare.principal.EuareUser;
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
@@ -51,15 +54,14 @@ public class DatabaseManagedPolicyProxy implements EuareManagedPolicy {
   private static Logger LOG = Logger.getLogger( DatabaseManagedPolicyProxy.class );
 
   private ManagedPolicyEntity delegate;
-  private Supplier<String> accountNumberSupplier = getAccountNumberSupplier( this );
 
   public DatabaseManagedPolicyProxy( final ManagedPolicyEntity delegate ) {
     this.delegate = delegate;
   }
 
   @Override
-  public String getAccountNumber() throws AuthException {
-    return DatabaseAuthUtils.extract( accountNumberSupplier );
+  public String getAccountNumber( ) {
+    return delegate.accountNumber( );
   }
 
   @Override
@@ -116,6 +118,16 @@ public class DatabaseManagedPolicyProxy implements EuareManagedPolicy {
   @Override
   public Date getUpdateDate() {
     return delegate.getLastUpdateTimestamp();
+  }
+
+  @Override
+  public String getDisplayName( ) {
+    return Accounts.getManagedPolicyFullName( this );
+  }
+
+  @Override
+  public OwnerFullName getOwner( ) {
+    return AccountFullName.getInstance( getAccountNumber( ) );
   }
 
   @Override
@@ -191,18 +203,5 @@ public class DatabaseManagedPolicyProxy implements EuareManagedPolicy {
       Debugging.logError( LOG, e, "Failed to " + description + " for " + this.delegate );
       throw new AuthException( e );
     }
-  }
-
-  static Supplier<String> getAccountNumberSupplier( final DatabaseManagedPolicyProxy policy ){
-    return Suppliers.memoize( new Supplier<String>() {
-      @Override
-      public String get() {
-        try {
-          return policy.getAccount().getAccountNumber();
-        } catch ( final AuthException e ) {
-          throw Exceptions.toUndeclared( e );
-        }
-      }
-    } );
   }
 }

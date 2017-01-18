@@ -198,6 +198,10 @@ public class ManagedPolicyEntity extends AbstractPersistent {
     this.users = users;
   }
 
+  public String accountNumber( ) {
+    return uniqueName.substring( 0, uniqueName.lastIndexOf( ':' ) );
+  }
+
   @PrePersist
   @PreUpdate
   public void generateOnCommit() {
