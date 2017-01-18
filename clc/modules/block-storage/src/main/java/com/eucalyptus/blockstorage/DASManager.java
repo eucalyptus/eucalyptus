@@ -931,12 +931,13 @@ public class DASManager implements LogicalStorageManager {
     protected void exportVolume(LVMVolumeInfo lvmVolumeInfo, String vgName, String lvName) throws EucalyptusCloudException {
       ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) lvmVolumeInfo;
 
+      StorageExportManager threadedExportManager = new ThreadPoolDispatchingStorageExportManager(new ISCSIManager());
       String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
       int max_tries = 10;
       int i = 0;
       EucalyptusCloudException ex = null;
       do {
-        exportManager.allocateTarget(iscsiVolumeInfo);
+        threadedExportManager.allocateTarget(iscsiVolumeInfo);
         try {
           ((ISCSIManager) exportManager).exportTarget(iscsiVolumeInfo.getVolumeId(), iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(),
               iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser());
