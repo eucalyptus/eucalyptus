@@ -51,7 +51,7 @@ public class MockReports {
     return instance;
   }
 
-  private static final String dir = String.format("%s/billing-sample-reports", BaseDirectory.CONF);
+  private static final String dir = String.format("%s/doc/billing-sample-reports", BaseDirectory.LIB);
   private static final String MonthlyReportFile = String.format("%s/monthly_report.csv", dir);
 
   public ViewMonthlyUsageResult generateMonthlyReport(ViewMonthlyUsageType request) {
