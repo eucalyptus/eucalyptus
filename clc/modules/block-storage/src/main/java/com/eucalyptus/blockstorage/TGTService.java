@@ -53,6 +53,9 @@ public interface TGTService {
 
   public boolean targetExists(@Nonnull String volumeId, int tid, String resource, @Nonnull Long timeout) throws EucalyptusCloudException;
 
+  public boolean targetConfigured(@Nonnull String volumeId, int tid, String resource, @Nonnull Long timeout, 
+      String user, boolean checkInitiators) throws EucalyptusCloudException;
+
   public boolean targetHasLun(@Nonnull String volumeId, int tid, int lun, @Nonnull Long timeout) throws EucalyptusCloudException;
 
   public void addUser(@Nonnull String username, @Nonnull String password, @Nonnull Long timeout) throws EucalyptusCloudException;

@@ -90,6 +90,12 @@ public class TGTServiceUsingTGTWrapper implements TGTService {
   }
 
   @Override
+  public boolean targetConfigured(@Nonnull String volumeId, int tid, String resource, @Nonnull Long timeout, 
+      String user, boolean checkInitiators) throws EucalyptusCloudException {
+    return TGTWrapper.targetConfigured(volumeId, tid, resource, timeout, user, checkInitiators);
+  }
+
+  @Override
   public boolean targetHasLun(@Nonnull String volumeId, int tid, int lun, @Nonnull Long timeout) throws EucalyptusCloudException {
     return TGTWrapper.targetHasLun(volumeId, tid, lun, timeout);
   }
