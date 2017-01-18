@@ -1035,11 +1035,9 @@ int do_midonet_populate_vpcs(mido_config *mido) {
         sscanf(chains[i]->name, "acl_ingress_%12s_%12s", vpcname, aclname);
         if (strlen(vpcname) && strlen(aclname)) {
             LOGTRACE("discovered VPC network acl installed in midonet: %s/%s\n", vpcname, aclname);
-            LOGINFO("11622: discovered VPC network acl installed in midonet: %s/%s\n", vpcname, aclname);
             find_mido_vpc(mido, vpcname, &vpc);
             if (vpc) {
                 LOGTRACE("found VPC matching discovered network acl: %s/%s\n", vpc->name, aclname);
-                LOGTRACE("11622: found VPC matching discovered network acl: %s/%s\n", vpc->name, aclname);
                 vpc->nacls = EUCA_REALLOC_C(vpc->nacls, (vpc->max_nacls + 1), sizeof (mido_vpc_nacl));
                 vpcnacl = &(vpc->nacls[vpc->max_nacls]);
                 vpc->max_nacls++;
@@ -1301,10 +1299,8 @@ int do_midonet_update_pass1(globalNetworkInfo *gni, globalNetworkInfo *appliedGn
             rc = find_mido_vpc_nacl(vpc, gninacl->name, &vpcnacl);
             if (rc) {
                 LOGTRACE("pass1: global VPC Network ACL %s in mido: N\n", gninacl->name);
-                LOGINFO("11622: pass1: global VPC Network ACL %s in mido: N\n", gninacl->name);
             } else {
                 LOGTRACE("pass1: global VPC Network ACL %s in mido: Y\n", gninacl->name);
-                LOGINFO("11622: pass1: global VPC Network ACL %s in mido: Y\n", gninacl->name);
                 if (appliedGni) {
                     if (vpcnacl->gniNacl) {
                         appliednacl = vpcnacl->gniNacl;
@@ -1315,14 +1311,13 @@ int do_midonet_update_pass1(globalNetworkInfo *gni, globalNetworkInfo *appliedGn
                 if (!vpcnacl->population_failed && !cmp_gni_nacl(appliednacl, gninacl,
                         &(vpcnacl->ingress_changed), &(vpcnacl->egress_changed))) {
                     LOGEXTREME("\t\t%s fully implemented \n", vpcnacl->name);
-                    LOGINFO("11622\t\t%s fully implemented \n", vpcnacl->name);
                     vpcnacl->midopresent = 1;
                 } else {
                     vpcnacl->midopresent = 0;
                     // skip NACL egress and ingress chain flush on eucanetd restart (if number of rules matches)
                     if (appliednacl == NULL) {
-                        LOGINFO("11622: egress  gni %d rules mido %d rules\n", gninacl->max_egress, vpcnacl->egress->rules_count);
-                        LOGINFO("11622: ingress gni %d rules mido %d rules\n", gninacl->max_ingress, vpcnacl->ingress->rules_count);
+                        LOGTRACE("egress  gni %d rules mido %d rules\n", gninacl->max_egress, vpcnacl->egress->rules_count);
+                        LOGTRACE("ingress gni %d rules mido %d rules\n", gninacl->max_ingress, vpcnacl->ingress->rules_count);
                         if (vpcnacl->egress && (gninacl->max_egress == vpcnacl->egress->rules_count)) {
                             vpcnacl->egress_changed = 0;
                         }
@@ -1740,13 +1735,11 @@ int do_midonet_update_pass2(globalNetworkInfo *gni, mido_config *mido) {
             if (strlen(vpcnacl->name) == 0) {
                 continue;
             }
-            LOGINFO("11622: pass 2 %s %d %s %d\n", vpc->name, vpc->gnipresent, vpcnacl->name, vpcnacl->gnipresent);
             if (!vpc->gnipresent || !vpcnacl->gnipresent) {
                 LOGINFO("\tdeleting %s\n", vpcnacl->name);
                 ret += delete_mido_vpc_nacl(mido, vpcnacl);
             } else {
                 LOGTRACE("pass2: mido VPC Network ACL %s in global: Y\n", vpcnacl->name);
-                LOGINFO("11622: pass2: mido VPC Network ACL %s in global: Y\n", vpcnacl->name);
             }
         }
         if (!vpc->gnipresent) {
@@ -2874,9 +2867,9 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
             gni_network_acl *gninacl = &(gnivpc->networkAcls[j]);
             mido_vpc_nacl *vpcnacl = (mido_vpc_nacl *) gninacl->mido_present;
             if (vpcnacl != NULL) {
-                LOGINFO("11622 found gni %s already extant\n", gninacl->name);
+                LOGTRACE("found gni %s already extant\n", gninacl->name);
             } else {
-                LOGINFO("11622\tcreating %s\n", gninacl->name);
+                LOGINFO("\tcreating %s\n", gninacl->name);
                 // necessary memory should have been allocated in pass1
                 vpcnacl = &(vpc->nacls[vpc->max_nacls]);
                 memset(vpcnacl, 0, sizeof (mido_vpc_nacl));
@@ -2909,13 +2902,9 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
             }
             vpcnacl->gnipresent = 1;
 
-            LOGINFO("11622\t\t%s ingress %d egress %d\n", vpcnacl->name,
-                    vpcnacl->ingress_changed, vpcnacl->egress_changed);
-
             // Process ingress rules
             if (!vpcnacl->population_failed && !vpcnacl->ingress_changed) {
                 LOGTRACE("\t\tskipping pass3 for %s ingress\n", gninacl->name);
-                LOGINFO("11622: \t\tskipping pass3 for %s ingress\n", gninacl->name);
             } else {
                 mido_clear_rules(vpcnacl->ingress);
                 for (int k = 0; k < gninacl->max_ingress; k++) {
@@ -2927,18 +2916,12 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
                         LOGWARN("failed to create %s ingress rule at idx %d\n", gninacl->name, k);
                         ret++;
                     }
-                    LOGINFO("11622: \t%d %s %s %s/%s %s-%s %s:%s\n", acl_entry->number,
-                            crule.jsonel[MIDO_CRULE_TYPE], crule.jsonel[MIDO_CRULE_PROTO],
-                            crule.jsonel[MIDO_CRULE_NW], crule.jsonel[MIDO_CRULE_NWLEN],
-                            crule.jsonel[MIDO_CRULE_TPD_S], crule.jsonel[MIDO_CRULE_TPD_E],
-                            crule.jsonel[MIDO_CRULE_TPS_S], crule.jsonel[MIDO_CRULE_TPS_E]);
                 }
             }
 
             // Process egress rules
             if (!vpcnacl->population_failed && !vpcnacl->egress_changed) {
                 LOGTRACE("\t\tskipping pass3 for %s egress\n", gninacl->name);
-                LOGINFO("11622: \t\tskipping pass3 for %s egress\n", gninacl->name);
             } else {
                 mido_clear_rules(vpcnacl->egress);
                 for (int k = 0; k < gninacl->max_egress; k++) {
@@ -2950,11 +2933,6 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
                         LOGWARN("failed to create %s ingress rule at idx %d\n", gninacl->name, k);
                         ret++;
                     }
-                    LOGINFO("11622: \t%d %s %s %s/%s %s-%s %s:%s\n", acl_entry->number,
-                            crule.jsonel[MIDO_CRULE_TYPE], crule.jsonel[MIDO_CRULE_PROTO],
-                            crule.jsonel[MIDO_CRULE_NW], crule.jsonel[MIDO_CRULE_NWLEN],
-                            crule.jsonel[MIDO_CRULE_TPD_S], crule.jsonel[MIDO_CRULE_TPD_E],
-                            crule.jsonel[MIDO_CRULE_TPS_S], crule.jsonel[MIDO_CRULE_TPS_E]);
                 }
             }
 
@@ -3073,12 +3051,12 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
                     
                     // Check if jump rule to NACL (egress) is in place
                     if ((max_jprules_out == 1) && (!strcmp(jprules_tgt_out[0], vpcnacl->egress->obj->uuid))) {
-                        LOGINFO("11622: \t\tskipping %s->%s outfilter jump rule\n", subnet->name, vpcnacl->name);                            
+                        LOGTRACE("\t\tskipping %s->%s outfilter jump rule\n", subnet->name, vpcnacl->name);                            
                     } else {
                         if (max_jprules_out > 0) {
                             mido_delete_rule(subnet->outchain, jprules_out[0]);
                         }
-                        LOGINFO("11622: \t\tcreating %s->%s outfilter jump rule\n", subnet->name, vpcnacl->name);
+                        LOGTRACE("\t\tcreating %s->%s outfilter jump rule\n", subnet->name, vpcnacl->name);
                         snprintf(rulepos_str, 8, "4");
                         rc = mido_create_rule(subnet->outchain, NULL, NULL, &rulepos,
                                 "position", rulepos_str, "type", "jump", "jumpChainId",
@@ -3091,12 +3069,12 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
                     
                     // Check if jump rule to NACL (ingress) is in place
                     if ((max_jprules_in == 1) && (!strcmp(jprules_tgt_in[0], vpcnacl->ingress->obj->uuid))) {
-                        LOGINFO("11622: \t\tskipping %s->%s infilter jump rule\n", subnet->name, vpcnacl->name);                            
+                        LOGTRACE("\t\tskipping %s->%s infilter jump rule\n", subnet->name, vpcnacl->name);                            
                     } else {
                         if (max_jprules_in > 0) {
                             mido_delete_rule(subnet->inchain, jprules_in[0]);
                         }
-                        LOGINFO("11622: \t\tcreating %s->%s infilter jump rule\n", subnet->name, vpcnacl->name);
+                        LOGTRACE("\t\tcreating %s->%s infilter jump rule\n", subnet->name, vpcnacl->name);
                         snprintf(rulepos_str, 8, "4");
                         rc = mido_create_rule(subnet->inchain, NULL, NULL, &rulepos,
                                 "position", rulepos_str, "type", "jump", "jumpChainId",
@@ -3241,12 +3219,10 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
 
         // Check unconnected objects in MN if errors were detected
         if (mido->config->eucanetd_first_update || mido->config->eucanetd_err) {
-/* 11622
             LOGINFO("Checking unconnected objects:\n");
             if (do_midonet_delete_unconnected(mido, FALSE) < 0) {
                 return (1);
             }            
-*/
         }
 
         // Check mido_md config changes
@@ -4820,7 +4796,6 @@ int populate_mido_vpc_nacl(mido_config *mido, mido_vpc_nacl *vpcnacl) {
     midonet_api_chain *aclchain = mido_get_chain(name);
     if (aclchain != NULL) {
         LOGTRACE("Found NACL ingress chain %s\n", aclchain->obj->name);
-        LOGINFO("11622: Found NACL ingress chain %s\n", aclchain->obj->name);
         vpcnacl->ingress = aclchain;
         vpcnacl->midos[VPCNACL_INGRESS] = aclchain->obj;
     }
@@ -4829,7 +4804,6 @@ int populate_mido_vpc_nacl(mido_config *mido, mido_vpc_nacl *vpcnacl) {
     aclchain = mido_get_chain(name);
     if (aclchain != NULL) {
         LOGTRACE("Found NACL egress chain %s\n", aclchain->obj->name);
-        LOGINFO("11622: Found NACL egress chain %s\n", aclchain->obj->name);
         vpcnacl->egress = aclchain;
         vpcnacl->midos[VPCNACL_EGRESS] = aclchain->obj;
     }
@@ -4838,7 +4812,6 @@ int populate_mido_vpc_nacl(mido_config *mido, mido_vpc_nacl *vpcnacl) {
     for (i = 0; i < VPCNACL_END; i++) {
         if (vpcnacl->midos[i]) {
             LOGTRACE("\tmidos[%d]: %d\n", i, vpcnacl->midos[i]->init);
-            LOGINFO("11622: \tmidos[%d]: %d\n", i, vpcnacl->midos[i]->init);
         }
         if (!vpcnacl->midos[i] || !vpcnacl->midos[i]->init) {
             LOGWARN("failed to populate %s midos[%d]\n", vpcnacl->name, i);
@@ -8007,6 +7980,12 @@ int delete_mido_vpc(mido_config *mido, mido_vpc *vpc) {
         }
     }
     
+    for (i = 0; i < vpc->max_nacls; i++) {
+        if (strlen(vpc->nacls[i].name)) {
+            rc += delete_mido_vpc_nacl(mido, &(vpc->nacls[i]));
+        }
+    }
+
     rc += mido_delete_bridge_port(mido->midocore->eucabr, vpc->midos[VPC_EUCABR_DOWNLINK]);
     rc += mido_delete_router(vpc->midos[VPC_VPCRT]);
 
@@ -10120,7 +10099,13 @@ int do_midonet_tag_midonames(mido_config *mido) {
                     if (natg->midos[l]) natg->midos[l]->tag = 1;
                 }
             }
-        }   
+        }
+        for (int j = 0; j < vpc->max_nacls; j++) {
+            mido_vpc_nacl *nacl = &(vpc->nacls[j]);
+            for (int k= 0; k < VPCNACL_END; k++) {
+                if (nacl->midos[k]) nacl->midos[k]->tag = 1;
+            }
+        }
     }
     for (int i = 0; i < mido->max_vpcsecgroups; i++) {
         mido_vpc_secgroup *sg = &(mido->vpcsecgroups[i]);
