@@ -2961,16 +2961,156 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
             // Attach NACL chains to bridges
             for (int k = 0; k < vpc->max_subnets; k++) {
                 mido_vpc_subnet *subnet = &(vpc->subnets[k]);
+                int rulepos = 1;
+                char rulepos_str[8];
+                char subnet_buf[NETWORK_ADDR_LEN];
+                char slashnet_buf[NETWORK_ADDR_LEN];
+
+                subnet_buf[0] = slashnet_buf[0] = '\0';
+                cidr_split(subnet->gniSubnet->cidr, subnet_buf, slashnet_buf, NULL, NULL, NULL);
+
+                snprintf(rulepos_str, 8, "%d", rulepos);
+
+                if (!subnet->inchain || !subnet->outchain) {
+                    LOGWARN("%s is missing infilter or outfilter\n", subnet->name);
+                    continue;
+                }
+                
+                // subnet inbound default rules
+                
+                // allow traffic from reserved IP addresses (subnet/30) 
+                rc = mido_create_rule(subnet->inchain, NULL, NULL, &rulepos,
+                        "position", rulepos_str, "type", "accept", "nwSrcAddress",
+                        subnet_buf, "nwSrcLength", "30", NULL);
+                if (rc) {
+                    LOGWARN("Failed to create %s inbound reserved IPs rule\n", subnet->name);
+                    ret++;
+                }
+
+                // allow link-local traffic (169.254.0.0/16)
+                rc = mido_create_rule(subnet->inchain, NULL, NULL, &rulepos,
+                        "position", rulepos_str, "type", "accept", "nwSrcAddress",
+                        "169.254.0.0", "nwSrcLength", "16", NULL);
+                if (rc) {
+                    LOGWARN("Failed to create %s inbound link-local rule\n", subnet->name);
+                    ret++;
+                }
+
+                // allow incoming DHCP (UDP source port 67)
+                rc = mido_create_rule(subnet->inchain, NULL, NULL, &rulepos,
+                        "position", rulepos_str, "type", "accept", "nwProto", "17",
+                        "tpDst", "jsonjson", "tpDst:start", "67", "tpDst:end", "68",
+                        "tpDst:END", "END", NULL);
+                if (rc) {
+                    LOGWARN("Failed to create %s inbound DHCP rule\n", subnet->name);
+                    ret++;
+                }
+
+                // subnet outbound default rules
+                
+                // allow traffic to reserved IP addresses (subnet/30) 
+                rc = mido_create_rule(subnet->outchain, NULL, NULL, &rulepos,
+                        "position", rulepos_str, "type", "accept", "nwDstAddress",
+                        subnet_buf, "nwDstLength", "30", NULL);
+                if (rc) {
+                    LOGWARN("Failed to create %s outbound reserved IPs rule\n", subnet->name);
+                    ret++;
+                }
+
+                // allow link-local traffic (169.254.0.0/16)
+                rc = mido_create_rule(subnet->outchain, NULL, NULL, &rulepos,
+                        "position", rulepos_str, "type", "accept", "nwDstAddress",
+                        "169.254.0.0", "nwDstLength", "16", NULL);
+                if (rc) {
+                    LOGWARN("Failed to create %s outbound link-local rule\n", subnet->name);
+                    ret++;
+                }
+
+                // allow outgoing DHCP (UDP source port 67)
+                rc = mido_create_rule(subnet->outchain, NULL, NULL, &rulepos,
+                        "position", rulepos_str, "type", "accept", "nwProto", "17",
+                        "tpDst", "jsonjson", "tpDst:start", "67", "tpDst:end", "68",
+                        "tpDst:END", "END", NULL);
+                if (rc) {
+                    LOGWARN("Failed to create %s outbound DHCP rule\n", subnet->name);
+                    ret++;
+                }
+
+                // jump rules to NACL chains
                 if (subnet->nacl_changed && !strcmp(subnet->gniSubnet->networkAcl_name, vpcnacl->name)) {
-/*
-                    LOGINFO("11622: applying %s to %s\n", vpcnacl->name, subnet->name);
-                    rc = mido_update_bridge(subnet->subnetbr->obj, "inboundFilterId", vpcnacl->ingress->obj->uuid,
-                            "outboundFilterId", vpcnacl->egress->obj->uuid, 
-                            "name", subnet->subnetbr->obj->name, NULL);
-                    if (rc > 0) {
-                        LOGERROR("failed to attach %s to %s\n", vpcnacl->name, subnet->name);
+                    midoname **jprules_out = NULL;
+                    char **jprules_tgt_out = NULL;
+                    int max_jprules_out = 0;
+                    midoname **jprules_in = NULL;
+                    char **jprules_tgt_in = NULL;
+                    int max_jprules_in = 0;
+
+                    // Get all jump rules from subnet bridge chains
+                    rc = mido_get_jump_rules(subnet->outchain, &jprules_out, &max_jprules_out,
+                            &jprules_tgt_out, &max_jprules_out);
+                    rc = mido_get_jump_rules(subnet->inchain, &jprules_in, &max_jprules_in,
+                            &jprules_tgt_in, &max_jprules_in);
+
+                    // Only one jump rule is expected
+                    if (max_jprules_out > 1) {
+                        LOGWARN("%s inconsistent outfilter chain: %d jump rules found\n", subnet->name, max_jprules_out);
+                        for (int m = 0; m < max_jprules_out; m++) {
+                            rc = mido_delete_rule(subnet->outchain, jprules_out[m]);
+                            if (rc != 0) {
+                                LOGWARN("failed to delete %s outfilter jump rule\n", subnet->name);
+                            }
+                        }
                     }
-*/
+                    if (max_jprules_in > 1) {
+                        LOGWARN("%s inconsistent infilter chain: %d jump rules found\n", subnet->name, max_jprules_in);
+                        for (int m = 0; m < max_jprules_in; m++) {
+                            rc = mido_delete_rule(subnet->inchain, jprules_in[m]);
+                            if (rc != 0) {
+                                LOGWARN("failed to delete %s infilter jump rule\n", subnet->name);
+                            }
+                        }
+                    }
+                    
+                    // Check if jump rule to NACL (egress) is in place
+                    if ((max_jprules_out == 1) && (!strcmp(jprules_tgt_out[0], vpcnacl->egress->obj->uuid))) {
+                        LOGINFO("11622: \t\tskipping %s->%s outfilter jump rule\n", subnet->name, vpcnacl->name);                            
+                    } else {
+                        if (max_jprules_out > 0) {
+                            mido_delete_rule(subnet->outchain, jprules_out[0]);
+                        }
+                        LOGINFO("11622: \t\tcreating %s->%s outfilter jump rule\n", subnet->name, vpcnacl->name);
+                        snprintf(rulepos_str, 8, "4");
+                        rc = mido_create_rule(subnet->outchain, NULL, NULL, &rulepos,
+                                "position", rulepos_str, "type", "jump", "jumpChainId",
+                                vpcnacl->egress->obj->uuid, NULL);
+                        if (rc) {
+                            LOGWARN("Failed to create %s outfilter jump rule\n", subnet->name);
+                            ret++;
+                        }
+                    }
+                    
+                    // Check if jump rule to NACL (ingress) is in place
+                    if ((max_jprules_in == 1) && (!strcmp(jprules_tgt_in[0], vpcnacl->ingress->obj->uuid))) {
+                        LOGINFO("11622: \t\tskipping %s->%s infilter jump rule\n", subnet->name, vpcnacl->name);                            
+                    } else {
+                        if (max_jprules_in > 0) {
+                            mido_delete_rule(subnet->inchain, jprules_in[0]);
+                        }
+                        LOGINFO("11622: \t\tcreating %s->%s infilter jump rule\n", subnet->name, vpcnacl->name);
+                        snprintf(rulepos_str, 8, "4");
+                        rc = mido_create_rule(subnet->inchain, NULL, NULL, &rulepos,
+                                "position", rulepos_str, "type", "jump", "jumpChainId",
+                                vpcnacl->ingress->obj->uuid, NULL);
+                        if (rc) {
+                            LOGWARN("Failed to create %s infilter jump rule\n", subnet->name);
+                            ret++;
+                        }
+                    }
+
+                    EUCA_FREE(jprules_out);
+                    EUCA_FREE(jprules_tgt_out);
+                    EUCA_FREE(jprules_in);
+                    EUCA_FREE(jprules_tgt_in);
                 }
             }
         }
