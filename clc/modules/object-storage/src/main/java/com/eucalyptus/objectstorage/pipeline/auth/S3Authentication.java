@@ -100,7 +100,7 @@ public final class S3Authentication {
         String signedHeaders = authComponents.get(V4AuthComponent.SignedHeaders);
         String signature = authComponents.get(V4AuthComponent.Signature);
         String securityToken = request.getHeader(SecurityParameter.X_Amz_Security_Token.parameter());
-        String payloadHash = S3V4Authentication.buildAndVerifyPayloadHash(request);
+        String payloadHash = S3V4Authentication.getUnverifiedPayloadHash(request);
         Long decodedContentLength = S3V4Authentication.getAndVerifyDecodedContentLength(request, payloadHash);
         S3V4Authentication.login(request, date, credential, signedHeaders, signature, securityToken, payloadHash);
 

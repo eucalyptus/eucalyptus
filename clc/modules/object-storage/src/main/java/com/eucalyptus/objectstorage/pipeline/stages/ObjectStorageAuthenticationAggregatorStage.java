@@ -62,10 +62,7 @@
 
 package com.eucalyptus.objectstorage.pipeline.stages;
 
-import com.eucalyptus.objectstorage.entities.ObjectStorageGlobalConfiguration;
 import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageAuthenticationAggregator;
-import com.eucalyptus.storage.config.ConfigurationCache;
-import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.stages.UnrollableStage;
 import org.jboss.netty.channel.ChannelPipeline;
 
@@ -77,8 +74,7 @@ public class ObjectStorageAuthenticationAggregatorStage implements UnrollableSta
 
   @Override
   public void unrollStage(ChannelPipeline pipeline) {
-    pipeline.addLast(NAME, new ObjectStorageAuthenticationAggregator(ConfigurationCache.getConfiguration(
-        ObjectStorageGlobalConfiguration.class).getMax_inbound_http_chunk_size()));
+    pipeline.addLast(NAME, new ObjectStorageAuthenticationAggregator());
   }
 
   @Override
