@@ -74,7 +74,7 @@ public class ObjectStorageMetadataAggregatorStage implements UnrollableStage {
   @Override
   public void unrollStage(ChannelPipeline pipeline) {
     pipeline.addLast(NAME, new ObjectStorageMetadataAggregatorHandler(ConfigurationCache.getConfiguration
-        (ObjectStorageGlobalConfiguration.class).getMax_inbound_http_chunk_size()));
+        (ObjectStorageGlobalConfiguration.class).getMax_metadata_request_size()));
   }
 
   @Override
