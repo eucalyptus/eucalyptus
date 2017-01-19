@@ -61,7 +61,7 @@ public final class S3V4Authentication {
   public static final String AWS_DECODED_CONTENT_LEN = "x-amz-decoded-content-length";
   public static final String STREAMING_PAYLOAD = "STREAMING-AWS4-HMAC-SHA256-PAYLOAD";
   private static final String STREAMING_PAYLOAD_CHUNK_PREFIX = "AWS4-HMAC-SHA256-PAYLOAD";
-  static final String UNSIGNED_PAYLOAD = "UNSIGNED-PAYLOAD";
+  public static final String UNSIGNED_PAYLOAD = "UNSIGNED-PAYLOAD";
 
   enum V4AuthComponent {
     Credential, SignedHeaders, Signature
@@ -200,20 +200,19 @@ public final class S3V4Authentication {
     }
   }
 
-  static String buildAndVerifyPayloadHash(MappingHttpRequest request) throws AccessDeniedException {
-    String contentShaHeader = request.getHeader(S3V4Authentication.AWS_CONTENT_SHA_HEADER);
-    if (STREAMING_PAYLOAD.equals(contentShaHeader))
-      return STREAMING_PAYLOAD;
-    else if (UNSIGNED_PAYLOAD.equals(contentShaHeader))
-      return UNSIGNED_PAYLOAD;
-    else if (!Strings.isNullOrEmpty(contentShaHeader)) {
-      ByteBuffer payload = request.getContent().toByteBuffer();
-      String hashedPayload = BaseEncoding.base16().lowerCase().encode(Digest.SHA256.digestBinary(payload));
-      if (!contentShaHeader.equals(hashedPayload))
-        throw new AccessDeniedException(null, "x-amz-content-sha256 header is invalid.");
-      return hashedPayload;
-    } else
-      throw new AccessDeniedException(null, "x-amz-content-sha256 header is missing.");
+  static String getUnverifiedPayloadHash( final MappingHttpRequest request) throws AccessDeniedException {
+    final String contentShaHeader = request.getHeader(S3V4Authentication.AWS_CONTENT_SHA_HEADER);
+    if ( !Strings.isNullOrEmpty(contentShaHeader) ) {
+      if ( !STREAMING_PAYLOAD.equals(contentShaHeader) && !UNSIGNED_PAYLOAD.equals(contentShaHeader) ) {
+        final byte[] binSha256 = BaseEncoding.base16( ).lowerCase( ).decode( contentShaHeader );
+        if ( binSha256.length != 32 ) {
+          throw new AccessDeniedException(null, "x-amz-content-sha256 header is invalid.");
+        }
+      }
+    } else {
+      throw new AccessDeniedException( null, "x-amz-content-sha256 header is missing." );
+    }
+    return contentShaHeader;
   }
 
   static String getDateFromParams(Map<String, String> parameters) throws AccessDeniedException {

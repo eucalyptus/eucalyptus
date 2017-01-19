@@ -110,6 +110,7 @@ class S3ErrorCodeStrings {
   public static final String UnexpectedContent = "UnexpectedContent"
   public static final String UnresolvableGrantByEmailAddress = "UnresolvableGrantByEmailAddress"
   public static final String UserKeyMustBeSpecified = "UserKeyMustBeSpecified"
+  public static final String XAmzContentSHA256Mismatch = "XAmzContentSHA256Mismatch";
 }
 
 class S3Exception extends ObjectStorageException {
@@ -1142,90 +1143,8 @@ class UserKeyMustBeSpecifiedException extends S3Exception {
   }
 }
 
-// Currently not used. Would not work anyway with newly added CORS exceptions that are
-// many-to-one of string-to-exception.class.
-// TODO: Remove?
-public enum S3Exceptions {
-  INSTANCE;
-  public static final Map<String, Class<? extends S3Exception>> exceptionCodeToClassMap;
-
-  static {
-    exceptionCodeToClassMap = new HashMap<String, Class<? extends S3Exception>>();
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.AccessDenied, AccessDeniedException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.AccountProblem, AccountProblemException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.AmbiguousGrantByEmailAddress, AmbiguousGrantByEmailAddressException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.BadDigest, BadDigestException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.BucketAlreadyExists, BucketAlreadyExistsException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.BucketAlreadyOwnedByYou, BucketAlreadyOwnedByYouException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.CredentialsNotSupported, CredentialsNotSupportedException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.CrossLocationLoggingProhibited, CrossLocationLoggingProhibitedException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.EntityTooLarge, EntityTooLargeException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.EntityTooSmall, EntityTooSmallException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.ExpiredToken, ExpiredTokenException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.IllegalVersioningConfigurationException, IllegalVersioningConfigurationException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.IncompleteBody, IncompleteBodyException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.IncorrectNumberOfFilesInPostRequest, IncorrectNumberOfFilesInPostRequestException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.InlineDataTooLarge, InlineDataTooLargeException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.InternalError, InternalErrorException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidAccessKeyId, InvalidAccessKeyIdException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidArgument, InvalidArgumentException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidBucketName, InvalidBucketNameException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidBucketState, InvalidBucketStateException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidDigest, InvalidDigestException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidLocationConstraint, InvalidLocationConstraintException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidObjectState, InvalidObjectStateException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidPart, InvalidPartException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidPartOrder, InvalidPartOrderException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidPayer, InvalidPayerException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidPolicyDocument, InvalidPolicyDocumentException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidRange, InvalidRangeException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidRequest, InvalidRequestException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidSecurity, InvalidSecurityException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidSOAPRequest, InvalidSOAPRequestException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidStorageClass, InvalidStorageClassException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidTagError, InvalidTagErrorException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidTargetBucketForLogging, InvalidTargetBucketForLoggingException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidToken, InvalidTokenException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.InvalidURI, InvalidURIException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.KeyTooLong, KeyTooLongException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.MalformedACLError, MalformedACLErrorException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.MalformedPOSTRequest, MalformedPOSTRequestException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.MalformedXML, MalformedXMLException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.MaxMessageLengthExceeded, MaxMessageLengthExceededException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.MaxPostPreDataLengthExceededError, MaxPostPreDataLengthExceededErrorException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.MetadataTooLarge, MetadataTooLargeException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.MethodNotAllowed, MethodNotAllowedException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.MissingAttachment, MissingAttachmentException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.MissingContentLength, MissingContentLengthException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.MissingRequestBodyError, MissingRequestBodyErrorException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.MissingSecurityElement, MissingSecurityElementException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.NoLoggingStatusForKey, NoLoggingStatusForKeyException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.NoSuchBucket, NoSuchBucketException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.NoSuchKey, NoSuchKeyException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.NoSuchLifecycleConfiguration, NoSuchLifecycleConfigurationException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.NoSuchUpload, NoSuchUploadException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.NoSuchVersion, NoSuchVersionException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.NotImplemented, NotImplementedException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.NotSignedUp, NotSignedUpException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.NotSuchBucketPolicy, NotSuchBucketPolicyException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.NoSuchTagSet, NoSuchTagSetException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.OperationAborted, OperationAbortedException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.PermanentRedirect, PermanentRedirectException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.PreconditionFailed, PreconditionFailedException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.Redirect, RedirectException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.RequestIsNotMultiPartContent, RequestIsNotMultiPartContentException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.RequestTimeout, RequestTimeoutException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.RequestTimeTooSkewed, RequestTimeTooSkewedException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.RequestTorrentOfBucketError, RequestTorrentOfBucketErrorException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.RestoreAlreadyInProgress, RestoreAlreadyInProgressException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.ServiceUnavailable, ServiceUnavailableException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.SignatureDoesNotMatch, SignatureDoesNotMatchException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.SlowDown, SlowDownException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.TemporaryRedirect, TemporaryRedirectException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.TokenRefreshRequired, TokenRefreshRequiredException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.TooManyBuckets, TooManyBucketsException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.UnexpectedContent, UnexpectedContentException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.UnresolvableGrantByEmailAddress, UnresolvableGrantByEmailAddressException.class)
-    exceptionCodeToClassMap.put(S3ErrorCodeStrings.UserKeyMustBeSpecified, UserKeyMustBeSpecifiedException.class)
+class XAmzContentSHA256MismatchException extends S3Exception {
+  def XAmzContentSHA256MismatchException() {
+    super(S3ErrorCodeStrings.XAmzContentSHA256Mismatch, "The provided 'x-amz-content-sha256' header does not match what was computed", HttpResponseStatus.BAD_REQUEST);
   }
 }
