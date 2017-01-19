@@ -9236,6 +9236,9 @@ int midonet_api_delete_unconnected_ports(midoname **ports, int max_ports, boolea
     for (int i = 0; i < max_ports; i++) {
         char *peerId = NULL;
         char *interfaceName = NULL;
+        if (!ports[i]) {
+            continue;
+        }
         if (ports[i]->port) {
             peerId = ports[i]->port->peerid;
             interfaceName = ports[i]->port->ifname;
