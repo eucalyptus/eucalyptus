@@ -20,25 +20,29 @@
 
 package com.eucalyptus.objectstorage.pipeline.auth;
 
+import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
-import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
-import com.eucalyptus.objectstorage.exceptions.s3.InvalidSecurityException;
-import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
+import com.eucalyptus.objectstorage.exceptions.s3.*;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.google.common.base.Strings;
+import javaslang.control.Try.CheckedFunction;
+import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
+import javax.security.auth.login.LoginException;
 import java.util.*;
+
+import static com.eucalyptus.objectstorage.pipeline.auth.S3Authentication.credentialsFor;
 
 /**
  * S3 V2 specific authentication utilities.
  */
 final class S3V2Authentication {
+  private static final Logger LOG = Logger.getLogger(S3V4Authentication.class);
   static final String AWS_V2_AUTH_TYPE = "AWS";
 
   private S3V2Authentication() {
@@ -46,10 +50,47 @@ final class S3V2Authentication {
 
   static void login(MappingHttpRequest request, String date, String canonicalizedAmzHeaders, String accessKeyId, String signature, String
       securityToken) throws S3Exception {
-    S3Authentication.login(request, accessKeyId, excludePath -> {
+    login(request, accessKeyId, excludePath -> {
       String stringToSign = buildStringToSign(request, date, canonicalizedAmzHeaders, excludePath);
       return new ObjectStorageWrappedCredentials(request.getCorrelationId(), stringToSign, accessKeyId, signature, securityToken);
     });
+  }
+
+  /**
+   * Attempts a login and retries sign a signed string that does not contain a path if the initial attempt fails.
+   */
+  static void login(MappingHttpRequest request, String accessKeyId, CheckedFunction<Boolean, ObjectStorageWrappedCredentials> credsFn)
+      throws S3Exception {
+    // Build credentials that includes path
+    ObjectStorageWrappedCredentials creds = credentialsFor(credsFn, false);
+
+    try {
+      SecurityContext.getLoginContext(creds).login();
+    } catch (LoginException ex) {
+      if (ex.getMessage().contains("The AWS Access Key Id you provided does not exist in our records"))
+        throw new InvalidAccessKeyIdException(accessKeyId);
+
+      if (request.getUri().startsWith(ComponentIds.lookup(ObjectStorage.class).getServicePath()) || request.getUri().startsWith
+          (ObjectStorageProperties.LEGACY_WALRUS_SERVICE_PATH)) {
+        try {
+          // Build credentials for a string to sign that excludes the resource path
+          creds = credentialsFor(credsFn, true);
+          SecurityContext.getLoginContext(creds).login();
+        } catch (S3Exception ex2) {
+          LOG.debug("CorrelationId: " + request.getCorrelationId() + " Authentication failed due to signature match issue:", ex2);
+          throw ex2;
+        } catch (Exception ex2) {
+          LOG.debug("CorrelationId: " + request.getCorrelationId() + " Authentication failed due to signature match issue:", ex2);
+          throw new SignatureDoesNotMatchException(creds.getLoginData());
+        }
+      } else {
+        LOG.debug("CorrelationId: " + request.getCorrelationId() + " Authentication failed due to signature mismatch:", ex);
+        throw new SignatureDoesNotMatchException(creds.getLoginData());
+      }
+    } catch (Exception e) {
+      LOG.warn("CorrelationId: " + request.getCorrelationId() + " Unexpected failure trying to authenticate request", e);
+      throw new InternalErrorException(e);
+    }
   }
 
   private static String buildStringToSign(MappingHttpRequest request, String date, String canonicalizedAmzHeaders, boolean excludePath)
