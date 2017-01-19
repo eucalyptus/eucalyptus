@@ -84,7 +84,7 @@ public class BucketObjectNumberQuotaKey extends QuotaKey {
 
   @Override
   public boolean canApply( String action ) {
-    if (PolicySpec.qualifiedName(PolicySpec.VENDOR_S3, PolicySpec.S3_PUTOBJECT).equals(action)) {
+    if (PolicySpec.qualifiedName( S3PolicySpec.VENDOR_S3, S3PolicySpec.S3_PUTOBJECT).equals(action)) {
       return true;
     }
     return false;

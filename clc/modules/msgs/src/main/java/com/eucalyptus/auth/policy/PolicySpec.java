@@ -101,7 +101,6 @@ public class PolicySpec {
 	// Do not add vendors here (use modules)
   public static final String VENDOR_IAM = "iam";
   public static final String VENDOR_EC2 = "ec2";
-  public static final String VENDOR_S3 = "s3";
   public static final String VENDOR_STS = "sts";
   public static final String VENDOR_IMAGINGSERVICE = "eucaimaging";
 	// Do not add vendors here (use modules)
@@ -268,52 +267,6 @@ public class PolicySpec {
   public static final String EC2_DEACTIVATELICENSE = "deactivatelicense";
   public static final String EC2_DESCRIBELICENSES = "describelicenses";
 
-  // S3 actions
-  public static final String S3_ABORTMULTIPARTUPLOAD = "abortmultipartupload";
-  public static final String S3_CREATEBUCKET = "createbucket";
-  public static final String S3_DELETEBUCKET = "deletebucket";
-  public static final String S3_DELETEBUCKETPOLICY = "deletebucketpolicy";
-  public static final String S3_DELETEBUCKETWEBSITE = "deletebucketwebsite";
-  public static final String S3_DELETEOBJECT = "deleteobject";
-  public static final String S3_DELETEOBJECTVERSION = "deleteobjectversion";
-  public static final String S3_GETBUCKETACL = "getbucketacl";
-  public static final String S3_GETBUCKETCORS = "getbucketcors";
-  public static final String S3_GETBUCKETLOCATION = "getbucketlocation";
-  public static final String S3_GETBUCKETLOGGING = "getbucketlogging";
-  public static final String S3_GETBUCKETNOTIFICATION = "getbucketnotification";
-  public static final String S3_GETBUCKETPOLICY = "getbucketpolicy";
-  public static final String S3_GETBUCKETREQUESTPAYMENT = "getbucketrequestpayment";
-  public static final String S3_GETBUCKETVERSIONING = "getbucketversioning";
-  public static final String S3_GETBUCKETWEBSITE = "getbucketwebsite";
-  public static final String S3_GETBUCKETTAGGING = "getbuckettagging";
-  public static final String S3_GETLIFECYCLECONFIGURATION = "getlifecycleconfiguration";
-  public static final String S3_GETOBJECT = "getobject";
-  public static final String S3_GETOBJECTACL = "getobjectacl";
-  public static final String S3_GETOBJECTTORRENT = "getobjecttorrent";
-  public static final String S3_GETOBJECTVERSION = "getobjectversion";
-  public static final String S3_GETOBJECTVERSIONACL = "getobjectversionacl";
-  public static final String S3_GETOBJECTVERSIONTORRENT = "getobjectversiontorrent";
-  public static final String S3_HEADOBJECT = "headobject";
-  public static final String S3_LISTALLMYBUCKETS = "listallmybuckets";
-  public static final String S3_LISTBUCKET = "listbucket";
-  public static final String S3_LISTBUCKETMULTIPARTUPLOADS = "listbucketmultipartuploads";
-  public static final String S3_LISTBUCKETVERSIONS = "listbucketversions";
-  public static final String S3_LISTMULTIPARTUPLOADPARTS = "listmultipartuploadparts";
-  public static final String S3_PUTBUCKETACL = "putbucketacl";
-  public static final String S3_PUTBUCKETCORS = "putbucketcors";
-  public static final String S3_PUTBUCKETLOGGING = "putbucketlogging";
-  public static final String S3_PUTBUCKETNOTIFICATION = "putbucketnotification";
-  public static final String S3_PUTBUCKETPOLICY = "putbucketpolicy";
-  public static final String S3_PUTBUCKETREQUESTPAYMENT = "putbucketrequestpayment";
-  public static final String S3_PUTBUCKETVERSIONING = "putbucketversioning";
-  public static final String S3_PUTBUCKETWEBSITE = "putbucketwebsite";
-  public static final String S3_PUTBUCKETTAGGING = "putbuckettagging";
-  public static final String S3_PUTLIFECYCLECONFIGURATION = "putlifecycleconfiguration";
-  public static final String S3_PUTOBJECT = "putobject";
-  public static final String S3_PUTOBJECTACL = "putobjectacl";
-  public static final String S3_PUTOBJECTVERSIONACL = "putobjectversionacl";
-  public static final String S3_RESTOREOBJECT = "restoreobject";
-
   // STS actions, based on IAM Using Temporary Security Credentials version 2011-06-15
   public static final String STS_ASSUMEROLE = "assumerole";
   public static final String STS_ASSUMEROLEWITHWEBIDENTITY = "assumerolewithwebidentity";
@@ -406,10 +359,6 @@ public class PolicySpec {
     .build();
 
   public static final Pattern IPV4_ADDRESS_RANGE_PATTERN = Pattern.compile( "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})(?:-(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3}))?" );
-
-  // S3 resource types
-  public static final String S3_RESOURCE_BUCKET = "bucket";
-  public static final String S3_RESOURCE_OBJECT = "object";
 
   public static String qualifiedName( String vendor, String name ) {
     return name == null ? null : vendor + ":" + name;

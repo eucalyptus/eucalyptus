@@ -19,8 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.objectstorage.policy;
 
-import static com.eucalyptus.auth.policy.PolicySpec.S3_PUTOBJECT;
-import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_S3;
+import static com.eucalyptus.objectstorage.policy.S3PolicySpec.S3_PUTOBJECT;
+import static com.eucalyptus.objectstorage.policy.S3PolicySpec.VENDOR_S3;
 import static com.eucalyptus.auth.policy.PolicySpec.qualifiedName;
 import java.util.Set;
 import com.eucalyptus.auth.AuthException;

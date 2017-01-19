@@ -164,6 +164,42 @@ public class PolicyParserTest {
     assertEquals( "Authorization condition count", 0, authorization.getConditions().size() );
   }
 
+  @Test
+  public void testNormalizeSingleStatementPolicy( ) throws Exception {
+    String policyJson =
+        "{\n" +
+            "  \"Statement\": {\n" +
+            "    \"Effect\": \"Allow\",\n" +
+            "    \"Action\": \"*\",\n" +
+            "    \"Resource\": \"*\"\n" +
+            "  }\n" +
+            "}";
+
+    String normalizedPolicyJson = PolicyParser.getInstance().normalize( policyJson );
+    assertNotNull( "Policy null", normalizedPolicyJson );
+    assertEquals( "Normalized policy",
+        "{\"Version\":\"2008-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"*\",\"Resource\":\"*\"}]}",
+        normalizedPolicyJson );
+  }
+
+  @Test
+  public void testNormalizePolicy( ) throws Exception {
+    String policyJson =
+        "{\n" +
+            "  \"Statement\": [{\n" +
+            "    \"Effect\": \"Allow\",\n" +
+            "    \"Action\": \"*\",\n" +
+            "    \"Resource\": \"*\"\n" +
+            "  }]\n" +
+            "}";
+
+    String normalizedPolicyJson = PolicyParser.getInstance().normalize( policyJson );
+    assertNotNull( "Policy null", normalizedPolicyJson );
+    assertEquals( "Normalized policy",
+        "{\"Version\":\"2008-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"*\",\"Resource\":\"*\"}]}",
+        normalizedPolicyJson );
+  }
+
   @Test(expected = PolicyParseException.class )
   public void testParseUserPolicyMissingResource() throws Exception {
     String policyJson =

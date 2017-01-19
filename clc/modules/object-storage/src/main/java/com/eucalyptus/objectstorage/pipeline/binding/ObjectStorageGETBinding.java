@@ -64,68 +64,58 @@ package com.eucalyptus.objectstorage.pipeline.binding;
 
 import java.util.Map;
 
-import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
-import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-import com.google.common.collect.Maps;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties.BucketParameter;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties.ObjectParameter;
+import com.google.common.collect.ImmutableMap;
 
 public class ObjectStorageGETBinding extends ObjectStorageRESTBinding {
-  private static Logger LOG = Logger.getLogger(ObjectStorageGETBinding.class);
 
-  private static final Map<String, String> SUPPORTED_OPS = Maps.newHashMap();
-  static {
+  private static final ImmutableMap<String, String> SUPPORTED_OPS = ImmutableMap.<String,String>builder( )
     // Service operations
-    SUPPORTED_OPS.put(SERVICE + HttpMethod.GET.toString(), "ListAllMyBuckets");
+    .put(SERVICE + HttpMethod.GET, "ListAllMyBuckets")
 
     // Bucket operations
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.acl.toString(), "GetBucketAccessControlPolicy");
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString(), "ListBucket");
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.prefix.toString(), "ListBucket");
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.maxkeys.toString(), "ListBucket");
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.marker.toString(), "ListBucket");
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.delimiter.toString(), "ListBucket");
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.location.toString(), "GetBucketLocation");
-
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.logging.toString(), "GetBucketLoggingStatus");
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.versions.toString(), "ListVersions");
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.versioning.toString(),
-        "GetBucketVersioningStatus");
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "GetBucketLifecycle");
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "GetBucketTagging");
-    // Cross-Origin Resource Sharing (CORS)
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "GetBucketCors");
+    .put(BUCKET + HttpMethod.GET + BucketParameter.acl.toString(), "GetBucketAccessControlPolicy")
+    .put(BUCKET + HttpMethod.GET, "ListBucket")
+    .put(BUCKET + HttpMethod.GET + BucketParameter.prefix.toString(), "ListBucket")
+    .put(BUCKET + HttpMethod.GET + BucketParameter.maxkeys.toString(), "ListBucket")
+    .put(BUCKET + HttpMethod.GET + BucketParameter.marker.toString(), "ListBucket")
+    .put(BUCKET + HttpMethod.GET + BucketParameter.delimiter.toString(), "ListBucket")
+    .put(BUCKET + HttpMethod.GET + BucketParameter.location.toString(), "GetBucketLocation")
+    .put(BUCKET + HttpMethod.GET + BucketParameter.logging.toString(), "GetBucketLoggingStatus")
+    .put(BUCKET + HttpMethod.GET + BucketParameter.versions.toString(), "ListVersions")
+    .put(BUCKET + HttpMethod.GET + BucketParameter.versioning.toString(), "GetBucketVersioningStatus")
+    .put(BUCKET + HttpMethod.GET + BucketParameter.lifecycle.toString(), "GetBucketLifecycle")
+    .put(BUCKET + HttpMethod.GET + BucketParameter.tagging.toString(), "GetBucketTagging")
+    .put(BUCKET + HttpMethod.GET + BucketParameter.cors.toString(), "GetBucketCors")
+    .put(BUCKET + HttpMethod.GET + BucketParameter.policy.toString(), "GetBucketPolicy")
 
     // Multipart uploads
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.uploads.toString(), "ListMultipartUploads");
+    .put(BUCKET + HttpMethod.GET + BucketParameter.uploads.toString(), "ListMultipartUploads")
 
     // Object operations
-    SUPPORTED_OPS.put(OBJECT + HttpMethod.GET.toString() + ObjectStorageProperties.ObjectParameter.acl.toString(), "GetObjectAccessControlPolicy");
-    SUPPORTED_OPS.put(OBJECT + HttpMethod.GET.toString(), "GetObject");
-    SUPPORTED_OPS.put(OBJECT + HttpMethod.GET.toString() + ObjectStorageProperties.ObjectParameter.torrent.toString(), "GetObject");
-    SUPPORTED_OPS.put(OBJECT + HttpMethod.GET.toString() + "extended", "GetObjectExtended");
+    .put(OBJECT + HttpMethod.GET + ObjectParameter.acl.toString(), "GetObjectAccessControlPolicy")
+    .put(OBJECT + HttpMethod.GET, "GetObject")
+    .put(OBJECT + HttpMethod.GET + ObjectParameter.torrent.toString(), "GetObject")
+    .put(OBJECT + HttpMethod.GET + "extended", "GetObjectExtended")
 
     // Multipart Uploads
-    SUPPORTED_OPS.put(OBJECT + HttpMethod.GET.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "ListParts");
-  }
+    .put(OBJECT + HttpMethod.GET + ObjectParameter.uploadId.toString().toLowerCase(), "ListParts")
+    .build( );
 
-  private static final Map<String, String> UNSUPPORTED_OPS = Maps.newHashMap();
-  static {
+  private static final ImmutableMap<String, String> UNSUPPORTED_OPS = ImmutableMap.<String,String>builder( )
     // Bucket operations
-    // Policy
-    UNSUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "GET Bucket policy");
-
     // Notification
-    UNSUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.notification.toString(),
-        "GET Bucket notification");
+    .put(BUCKET + HttpMethod.GET + BucketParameter.notification.toString(), "GET Bucket notification")
 
     // Request Payments // TODO HACK! binding code converts parameters to lower case. Fix that issue!
-    UNSUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.requestPayment.toString().toLowerCase(),
-        "GET Bucket requestPayment");
+    .put(BUCKET + HttpMethod.GET + BucketParameter.requestPayment.toString().toLowerCase(), "GET Bucket requestPayment")
 
     // Website
-    UNSUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.website.toString(), "GET Bucket website");
-  }
+    .put(BUCKET + HttpMethod.GET + BucketParameter.website.toString(), "GET Bucket website")
+    .build( );
 
   @Override
   protected Map<String, String> populateOperationMap() {

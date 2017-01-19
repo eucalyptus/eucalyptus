@@ -94,6 +94,17 @@ import com.eucalyptus.auth.principal.Condition;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Json;
 import com.eucalyptus.util.Parameters;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonPointer;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.ObjectCodec;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeType;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
@@ -224,6 +235,58 @@ public class PolicyParser {
     }
   }
 
+  /**
+   * Normalize the given policy.
+   *
+   * Normalization requires a valid (JSON) policy so should NOT be performed for existing policies, only user input.
+   *
+   * The current implementation removes meaningless whitespace and adds a version.
+   *
+   * This should also add a version if not present, ensure statements are a list not
+   * a single value, etc.
+   */
+  public String normalize( final String policy ) throws PolicyParseException {
+    try {
+      final ObjectNode jsonPolicy = Json.parseObject( policy );
+      final ObjectNode normalizedPolicy = jsonPolicy.objectNode( );
+      property( normalizedPolicy, jsonPolicy, PolicySpec.VERSION, "2008-10-17" );
+      propertyArray( normalizedPolicy, jsonPolicy, PolicySpec.STATEMENT );
+      return Json.writeObjectAsString( normalizedPolicy );
+    } catch ( IOException e ) {
+      throw new PolicyParseException( e.getMessage( ), e );
+    }
+  }
+
+  private void property(
+      final ObjectNode target,
+      final ObjectNode source,
+      final String name,
+      final String defaultValue
+  ) {
+    JsonNode propertyNode = source.get( name );
+    if ( propertyNode == null && defaultValue != null ) {
+      propertyNode = target.textNode( defaultValue );
+    }
+    if ( propertyNode != null ) {
+      target.set( name, propertyNode );
+    }
+  }
+
+  private void propertyArray(
+      final ObjectNode target,
+      final ObjectNode source,
+      final String name
+  ) {
+    JsonNode propertyNode = source.get( name );
+    if ( propertyNode != null && !propertyNode.isArray( ) ) {
+      ArrayNode arrayPropertyNode = target.arrayNode( );
+      arrayPropertyNode.add( propertyNode );
+      propertyNode = arrayPropertyNode;
+    }
+    if ( propertyNode != null ) {
+      target.set( name, propertyNode );
+    }
+  }
   /**
    * Parse all statements.
    *
@@ -368,7 +431,7 @@ public class PolicyParser {
     // Group actions by vendor
     final SetMultimap<String, String> actionMap = HashMultimap.create( );
     for ( String action : actions ) {
-      action = normalize( action );
+      action = normalizeString( action );
       final String vendor = checkAction( action );
       actionMap.put( vendor, action );
     }
@@ -445,7 +508,7 @@ public class PolicyParser {
           String key = ( String ) k;
           Set<String> values = Sets.newHashSet( );
           values.addAll( JsonUtils.parseStringOrStringList( paramsObj, key ) );
-          key = normalize( key );
+          key = normalizeString( key );
           checkConditionKeyAndValues( key, values, typeClass, isQuota );
           results.add( new PolicyCondition( type, key, values ) );
         }
@@ -541,7 +604,7 @@ public class PolicyParser {
     }
   }
 
-  private String normalize( String value ) {
+  private String normalizeString( String value ) {
     return ( value != null ) ? value.trim( ).toLowerCase( ) : null;
   }
 

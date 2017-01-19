@@ -64,7 +64,6 @@ package com.eucalyptus.objectstorage.policy;
 
 import java.util.Collection;
 import javax.annotation.Nonnull;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.google.common.collect.ImmutableList;
 
@@ -74,7 +73,7 @@ public class S3ResourceName extends Ern {
   private final String object;
 
   public S3ResourceName( String account, String bucket, String object) {
-    super( PolicySpec.VENDOR_S3, null, account );
+    super( S3PolicySpec.VENDOR_S3, null, account );
     this.bucket = bucket;
     this.object = object;
   }
@@ -107,9 +106,9 @@ public class S3ResourceName extends Ern {
   @Override
   public String getResourceType() {
     if (this.isBucket()) {
-      return qualifiedName( PolicySpec.S3_RESOURCE_BUCKET );
+      return qualifiedName( S3PolicySpec.S3_RESOURCE_BUCKET );
     } else {
-      return qualifiedName( PolicySpec.S3_RESOURCE_OBJECT );
+      return qualifiedName( S3PolicySpec.S3_RESOURCE_OBJECT );
     }
   }
 

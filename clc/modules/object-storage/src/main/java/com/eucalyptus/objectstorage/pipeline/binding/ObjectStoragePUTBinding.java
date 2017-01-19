@@ -64,61 +64,51 @@ package com.eucalyptus.objectstorage.pipeline.binding;
 
 import java.util.Map;
 
-import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-import com.google.common.collect.Maps;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties.BucketParameter;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties.ObjectParameter;
+import com.google.common.collect.ImmutableMap;
 
 public class ObjectStoragePUTBinding extends ObjectStorageRESTBinding {
-  private static Logger LOG = Logger.getLogger(ObjectStoragePUTBinding.class);
 
-  private static final Map<String, String> SUPPORTED_OPS = Maps.newHashMap();
-  static {
+  private static final ImmutableMap<String, String> SUPPORTED_OPS = ImmutableMap.<String,String>builder( )
     // Bucket operations
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.acl.toString(), "SetBucketAccessControlPolicy");
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString(), "CreateBucket");
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.logging.toString(), "SetBucketLoggingStatus");
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.versioning.toString(),
-        "SetBucketVersioningStatus");
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "SetBucketLifecycle");
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "SetBucketTagging");
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.POST.toString() + ObjectStorageProperties.BucketParameter.delete, "DeleteMultipleObjects");
+    .put(BUCKET + HttpMethod.PUT, "CreateBucket")
+    .put(BUCKET + HttpMethod.PUT + BucketParameter.acl.toString(), "SetBucketAccessControlPolicy")
+    .put(BUCKET + HttpMethod.PUT + BucketParameter.logging.toString(), "SetBucketLoggingStatus")
+    .put(BUCKET + HttpMethod.PUT + BucketParameter.versioning.toString(), "SetBucketVersioningStatus")
+    .put(BUCKET + HttpMethod.PUT + BucketParameter.lifecycle.toString(), "SetBucketLifecycle")
+    .put(BUCKET + HttpMethod.PUT + BucketParameter.tagging.toString(), "SetBucketTagging")
+    .put(BUCKET + HttpMethod.PUT + BucketParameter.cors.toString(), "SetBucketCors")
+    .put(BUCKET + HttpMethod.PUT + BucketParameter.policy.toString(), "SetBucketPolicy")
 
-    // Cross-Origin Resource Sharing (cors)
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "SetBucketCors");
+    .put(BUCKET + HttpMethod.POST + BucketParameter.delete, "DeleteMultipleObjects")
 
     // Object operations
-    SUPPORTED_OPS.put(OBJECT + HttpMethod.PUT.toString() + ObjectStorageProperties.ObjectParameter.acl.toString(), "SetObjectAccessControlPolicy");
-    SUPPORTED_OPS.put(OBJECT + HttpMethod.PUT.toString(), "PutObject");
-    SUPPORTED_OPS.put(OBJECT + HttpMethod.PUT.toString() + ObjectStorageProperties.COPY_SOURCE, "CopyObject");
+    .put(OBJECT + HttpMethod.PUT, "PutObject")
+    .put(OBJECT + HttpMethod.PUT + ObjectParameter.acl.toString(), "SetObjectAccessControlPolicy")
+    .put(OBJECT + HttpMethod.PUT + ObjectStorageProperties.COPY_SOURCE, "CopyObject")
 
     // Multipart Uploads
-    SUPPORTED_OPS.put(OBJECT + HttpMethod.PUT.toString() + ObjectStorageProperties.ObjectParameter.partNumber.toString().toLowerCase()
-        + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "UploadPart");
-    SUPPORTED_OPS.put(OBJECT + HttpMethod.PUT.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase()
-        + ObjectStorageProperties.ObjectParameter.partNumber.toString().toLowerCase(), "UploadPart");
-    SUPPORTED_OPS.put(OBJECT + HttpMethod.POST.toString() + ObjectStorageProperties.ObjectParameter.uploads.toString(), "InitiateMultipartUpload");
-    SUPPORTED_OPS.put(OBJECT + HttpMethod.POST.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(),
-        "CompleteMultipartUpload");
-  }
+    .put(OBJECT + HttpMethod.PUT + ObjectParameter.partNumber.toString().toLowerCase()
+        + ObjectParameter.uploadId.toString().toLowerCase(), "UploadPart")
+    .put(OBJECT + HttpMethod.PUT + ObjectParameter.uploadId.toString().toLowerCase()
+        + ObjectParameter.partNumber.toString().toLowerCase(), "UploadPart")
 
-  private static final Map<String, String> UNSUPPORTED_OPS = Maps.newHashMap();
-  static {
+    .put(OBJECT + HttpMethod.POST + ObjectParameter.uploads.toString(), "InitiateMultipartUpload")
+    .put(OBJECT + HttpMethod.POST + ObjectParameter.uploadId.toString().toLowerCase(), "CompleteMultipartUpload")
+    .build( );
+
+  private static final ImmutableMap<String, String> UNSUPPORTED_OPS = ImmutableMap.<String,String>builder( )
     // Bucket operations
-
-    // Policy
-    UNSUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "PUT Bucket policy");
-
     // Notification
-    UNSUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.notification.toString(),
-        "PUT Bucket notification");
+    .put(BUCKET + HttpMethod.PUT + BucketParameter.notification.toString(), "PUT Bucket notification")
 
     // Website
-    UNSUPPORTED_OPS.put(BUCKET + HttpMethod.PUT.toString() + ObjectStorageProperties.BucketParameter.website.toString(), "PUT Bucket website");
-
-    // Object operations
-  }
+    .put(BUCKET + HttpMethod.PUT + BucketParameter.website.toString(), "PUT Bucket website")
+    .build( );
 
   @Override
   protected Map<String, String> populateOperationMap() {

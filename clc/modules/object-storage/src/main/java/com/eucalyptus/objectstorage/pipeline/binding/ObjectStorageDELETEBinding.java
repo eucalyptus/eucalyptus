@@ -64,45 +64,36 @@ package com.eucalyptus.objectstorage.pipeline.binding;
 
 import java.util.Map;
 
-import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-import com.google.common.collect.Maps;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties.BucketParameter;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties.ObjectParameter;
+import com.google.common.collect.ImmutableMap;
 
 public class ObjectStorageDELETEBinding extends ObjectStorageRESTBinding {
-  private static Logger LOG = Logger.getLogger(ObjectStorageDELETEBinding.class);
 
-  private static final Map<String, String> SUPPORTED_OPS = Maps.newHashMap();
-  static {
+  private static final ImmutableMap<String, String> SUPPORTED_OPS = ImmutableMap.<String,String>builder( )
     // Bucket operations
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.DELETE.toString(), "DeleteBucket");
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "DeleteBucketLifecycle");
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.tagging.toString(), "DeleteBucketTagging");
-
-    // Cross-Origin Resource Sharing (CORS)
-    SUPPORTED_OPS.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "DeleteBucketCors");
+    .put(BUCKET + HttpMethod.DELETE, "DeleteBucket")
+    .put(BUCKET + HttpMethod.DELETE + BucketParameter.lifecycle.toString(), "DeleteBucketLifecycle")
+    .put(BUCKET + HttpMethod.DELETE + BucketParameter.tagging.toString(), "DeleteBucketTagging")
+    .put(BUCKET + HttpMethod.DELETE + BucketParameter.cors.toString(), "DeleteBucketCors")
+    .put(BUCKET + HttpMethod.DELETE + BucketParameter.policy.toString(), "DeleteBucketPolicy")
 
     // Object operations
-    SUPPORTED_OPS.put(OBJECT + HttpMethod.DELETE.toString(), "DeleteObject");
-    SUPPORTED_OPS.put(OBJECT + HttpMethod.DELETE.toString() + ObjectStorageProperties.ObjectParameter.versionId.toString().toLowerCase(),
-        "DeleteVersion");
+    .put(OBJECT + HttpMethod.DELETE, "DeleteObject")
+    .put(OBJECT + HttpMethod.DELETE + ObjectParameter.versionId.toString().toLowerCase(), "DeleteVersion")
 
     // Multipart Uploads
-    SUPPORTED_OPS.put(OBJECT + HttpMethod.DELETE.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(),
-        "AbortMultipartUpload");
-  }
+    .put(OBJECT + HttpMethod.DELETE + ObjectParameter.uploadId.toString().toLowerCase(), "AbortMultipartUpload")
+    .build( );
 
-  private static final Map<String, String> UNSUPPORTED_OPS = Maps.newHashMap();
-  static {
+  private static final ImmutableMap<String, String> UNSUPPORTED_OPS = ImmutableMap.<String,String>builder( )
     // Bucket operations
-
-    // Policy
-    UNSUPPORTED_OPS.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "DELETE Bucket policy");
-
     // Website
-    UNSUPPORTED_OPS.put(BUCKET + HttpMethod.DELETE.toString() + ObjectStorageProperties.BucketParameter.website.toString(), "DELETE Bucket website");
-  }
+    .put(BUCKET + HttpMethod.DELETE + BucketParameter.website.toString(), "DELETE Bucket website")
+    .build( );
 
   @Override
   protected Map<String, String> populateOperationMap() {

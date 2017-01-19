@@ -18,6 +18,7 @@ package com.eucalyptus.util
 import org.hamcrest.CoreMatchers
 import org.junit.Test
 
+import static org.junit.Assert.assertEquals
 import static org.junit.Assert.assertThat
 
 
@@ -44,6 +45,13 @@ class JsonTest {
   @Test(expected = IOException)
   void testParseObjectWithText( ) {
     Json.parseObject( '"asfd"' )
+  }
+
+  @Test
+  void testParseAndWriteObject( ) {
+    String json = '{"foo":"bar baz"}'
+    String written = Json.writeObjectAsString( Json.parseObject( json  ) )
+    assertEquals( "Expected output matches input", json, written );
   }
 
   @Test(expected = IOException)

@@ -69,6 +69,7 @@ import com.eucalyptus.objectstorage.entities.ObjectStorageGlobalConfiguration;
 import com.eucalyptus.objectstorage.entities.PartEntity;
 import com.eucalyptus.objectstorage.entities.S3AccessControlledEntity;
 import com.eucalyptus.objectstorage.exceptions.IllegalResourceStateException;
+import com.eucalyptus.objectstorage.exceptions.InvalidMetadataException;
 import com.eucalyptus.objectstorage.exceptions.MetadataOperationFailureException;
 import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
@@ -97,6 +98,7 @@ import com.eucalyptus.objectstorage.exceptions.s3.NoSuchKeyException;
 import com.eucalyptus.objectstorage.exceptions.s3.NoSuchTagSetException;
 import com.eucalyptus.objectstorage.exceptions.s3.NoSuchUploadException;
 import com.eucalyptus.objectstorage.exceptions.s3.NotImplementedException;
+import com.eucalyptus.objectstorage.exceptions.s3.NoSuchBucketPolicyException;
 import com.eucalyptus.objectstorage.exceptions.s3.PreconditionFailedException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.exceptions.s3.TooManyBucketsException;
@@ -114,6 +116,8 @@ import com.eucalyptus.objectstorage.msgs.DeleteBucketCorsResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketCorsType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleType;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketPolicyResponseType;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketPolicyType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingType;
@@ -134,6 +138,8 @@ import com.eucalyptus.objectstorage.msgs.GetBucketLocationResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLocationType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLoggingStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLoggingStatusType;
+import com.eucalyptus.objectstorage.msgs.GetBucketPolicyResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketPolicyType;
 import com.eucalyptus.objectstorage.msgs.GetBucketTaggingResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketTaggingType;
 import com.eucalyptus.objectstorage.msgs.GetBucketVersioningStatusResponseType;
@@ -179,6 +185,8 @@ import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLoggingStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLoggingStatusType;
+import com.eucalyptus.objectstorage.msgs.SetBucketPolicyResponseType;
+import com.eucalyptus.objectstorage.msgs.SetBucketPolicyType;
 import com.eucalyptus.objectstorage.msgs.SetBucketTaggingResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketTaggingType;
 import com.eucalyptus.objectstorage.msgs.SetBucketVersioningStatusResponseType;
@@ -238,6 +246,7 @@ import com.google.common.net.HttpHeaders;
 
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.SystemUtil;
+import javaslang.control.Option;
 
 /**
  * Operation handler for the ObjectStorageGateway. Main point of entry This class handles user and system requests.
@@ -2420,7 +2429,58 @@ public class ObjectStorageGateway implements ObjectStorageService {
     return response;
   }
 
-  private Bucket getBucketAndCheckAuthorization(ObjectStorageRequestType request) throws S3Exception {
+  @Override
+  public GetBucketPolicyResponseType getBucketPolicy( final GetBucketPolicyType request ) throws S3Exception {
+    GetBucketPolicyResponseType reply = request.getReply();
+    Bucket bucket = getBucketAndCheckAuthorization(request);
+    if ( bucket.getPolicy( ) == null ) {
+      throw new NoSuchBucketPolicyException( bucket.getBucketName() + "?policy" );
+    }
+    reply.setPolicy( bucket.getPolicy( ) );
+    setCorsInfo(request, reply, bucket);
+    return reply;
+  }
+
+  @Override
+  public SetBucketPolicyResponseType setBucketPolicy( final SetBucketPolicyType request ) throws S3Exception {
+    SetBucketPolicyResponseType reply = request.getReply();
+    Bucket bucket = getBucketAndCheckAuthorization(request);
+
+    try {
+      BucketMetadataManagers.getInstance( ).setPolicy( bucket, Option.some( request.getPolicy( ) ) );
+    } catch ( final NoSuchEntityException e ) {
+      throw new NoSuchBucketException( bucket.getBucketName( ) );
+    } catch ( final InvalidMetadataException e ) {
+      throw new InvalidArgumentException( bucket.getBucketName( ) + "?policy", e.getMessage( ) );
+    } catch ( final Exception ex ) {
+      LOG.warn("Failed to set policy for bucket '" + bucket.getBucketName( ) + "' ", ex);
+      InternalErrorException e = new InternalErrorException(bucket.getBucketName() + "?policy", ex);
+      e.setMessage("Error setting policy for bucket - " + bucket.getBucketName());
+      throw e;
+    }
+
+    reply.setStatus(HttpResponseStatus.NO_CONTENT);
+    setCorsInfo(request, reply, bucket);
+    return reply;
+  }
+
+  @Override
+  public DeleteBucketPolicyResponseType deleteBucketPolicy( final DeleteBucketPolicyType request ) throws S3Exception {
+    DeleteBucketPolicyResponseType reply = request.getReply();
+    Bucket bucket = getBucketAndCheckAuthorization(request);
+    try {
+      BucketMetadataManagers.getInstance().setPolicy( bucket, Option.none( ) );
+    } catch ( final Exception ex ) {
+      LOG.warn("Failed to delete policy for bucket '" + bucket.getBucketName() + "' ", ex);
+      InternalErrorException e = new InternalErrorException(bucket.getBucketName() + "?policy");
+      e.setMessage("Error deleting policy for bucket - " + bucket.getBucketName());
+      throw e;
+    }
+    setCorsInfo(request, reply, bucket);
+    return reply;
+  }
+
+  private Bucket getBucketAndCheckAuthorization( ObjectStorageRequestType request) throws S3Exception {
     logRequest(request);
     Bucket bucket = ensureBucketExists(request.getBucket());
     if (!OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, null, 0)) {

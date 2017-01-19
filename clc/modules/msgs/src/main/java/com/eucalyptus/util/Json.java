@@ -31,6 +31,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import groovy.lang.GroovyObject;
 import groovy.lang.MetaClass;
@@ -55,14 +56,14 @@ public class Json {
     IgnoreGroovy {
       @Override
       ObjectMapper config( final ObjectMapper objectMapper ) {
-        objectMapper.addMixInAnnotations( GroovyObject.class, GroovyMixin.class );
+        objectMapper.addMixIn( GroovyObject.class, GroovyMixin.class );
         return objectMapper;
       }
     },
     IgnoreBaseMessage {
       @Override
       ObjectMapper config( final ObjectMapper objectMapper ) {
-        objectMapper.addMixInAnnotations( BaseMessage.class, BaseMessageMixin.class );
+        objectMapper.addMixIn( BaseMessage.class, BaseMessageMixin.class );
         return objectMapper;
       }
     },
@@ -81,13 +82,13 @@ public class Json {
 
   public static JsonNode parse( final InputStream jsonStream ) throws IOException {
     if ( jsonStream == null ) throw new IOException( "Null" );
-    final JsonParser parser = reader.getFactory( ).createJsonParser( jsonStream );
+    final JsonParser parser = reader.getFactory( ).createParser( jsonStream );
     return parse( parser );
   }
 
   public static JsonNode parse( final String jsonText ) throws IOException {
     if ( jsonText == null ) throw new IOException( "Null" );
-    final JsonParser parser = reader.getFactory( ).createJsonParser( new StringReader( jsonText ) {
+    final JsonParser parser = reader.getFactory( ).createParser( new StringReader( jsonText ) {
       @Override public String toString() { return "json"; } // overridden for better source in error message
     } );
     return parse( parser );
@@ -108,16 +109,20 @@ public class Json {
     return node;
   }
 
-  public static JsonNode parseObject( final String jsonText ) throws IOException {
+  public static ObjectNode parseObject( final String jsonText ) throws IOException {
     final JsonNode node = parse( jsonText );
     if ( !node.isObject( ) ) {
       throw new IOException( "Invalid object" );
     }
-    return node;
+    return (ObjectNode) node;
   }
 
   public static void writeObject( final OutputStream out, final Object object ) throws IOException {
     writer.writeValue( out, object );
+  }
+
+  public static String writeObjectAsString( final Object object ) throws IOException {
+    return writer.writeValueAsString( object );
   }
 
   /**

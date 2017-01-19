@@ -37,13 +37,17 @@ import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.exception.ConstraintViolationException;
 
+import com.eucalyptus.auth.PolicyParseException;
+import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.objectstorage.BucketState;
 import com.eucalyptus.objectstorage.entities.Bucket;
+import com.eucalyptus.objectstorage.entities.Bucket_;
 import com.eucalyptus.objectstorage.exceptions.IllegalResourceStateException;
+import com.eucalyptus.objectstorage.exceptions.InvalidMetadataException;
 import com.eucalyptus.objectstorage.exceptions.MetadataOperationFailureException;
 import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException;
 import com.eucalyptus.objectstorage.exceptions.s3.NoSuchBucketException;
@@ -52,6 +56,7 @@ import com.eucalyptus.objectstorage.util.ObjectStorageProperties.VersioningStatu
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
+import javaslang.control.Option;
 
 /**
  * Three types of failures on a metadata operation: IllegalResourceState - entity is not in a state where the update is a valid change (e.g.
@@ -347,6 +352,34 @@ public class DbBucketMetadataManagerImpl implements BucketMetadataManager {
     } catch (TransactionException e) {
       LOG.error("Transaction error updating versioning state for bucket " + bucketEntity.getBucketName(), e);
       throw new MetadataOperationFailureException(e);
+    }
+  }
+
+  @Override
+  public Bucket setPolicy(
+      @Nonnull Bucket bucketEntity,
+      @Nonnull Option<String> policy
+  ) throws NoSuchEntityException, InvalidMetadataException {
+    // validate policy
+    final String policyText;
+    if ( policy.isDefined( ) ) try {
+      PolicyParser.getResourceInstance( ).parse( policy.get( ) );
+      policyText = PolicyParser.getResourceInstance( ).normalize( policy.get( ) );
+    } catch ( final PolicyParseException e ) {
+      throw new InvalidMetadataException( e.getMessage( ), e );
+    } else {
+      policyText = null;
+    }
+
+    // update bucket
+    try ( final TransactionResource trans = Entities.transactionFor( Bucket.class ) ) {
+      final Bucket bucket = Entities.criteriaQuery( Bucket.class )
+          .whereEqual( Bucket_.bucketUuid, bucketEntity.getBucketUuid( ) ).uniqueResult( );
+      bucket.setPolicy( policyText );
+      trans.commit();
+      return bucket;
+    } catch ( final NoSuchElementException e ) {
+      throw new NoSuchEntityException(bucketEntity.getBucketName());
     }
   }
 

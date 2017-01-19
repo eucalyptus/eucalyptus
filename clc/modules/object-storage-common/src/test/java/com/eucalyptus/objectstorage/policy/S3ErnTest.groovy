@@ -26,9 +26,9 @@ import com.google.common.collect.Lists
 import org.junit.BeforeClass
 import org.junit.Test
 
-import static com.eucalyptus.auth.policy.PolicySpec.S3_RESOURCE_BUCKET
-import static com.eucalyptus.auth.policy.PolicySpec.S3_RESOURCE_OBJECT
-import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_S3
+import static com.eucalyptus.objectstorage.policy.S3PolicySpec.S3_RESOURCE_BUCKET
+import static com.eucalyptus.objectstorage.policy.S3PolicySpec.S3_RESOURCE_OBJECT
+import static com.eucalyptus.objectstorage.policy.S3PolicySpec.VENDOR_S3
 import static com.eucalyptus.auth.policy.PolicySpec.qualifiedName
 import static org.junit.Assert.assertEquals
 

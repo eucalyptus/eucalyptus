@@ -40,7 +40,7 @@ public class XAmzCopySourceKey implements ObjectStorageKey {
   static final String KEY_NAME = "s3:x-amz-copy-source";
 
   private static final Set<String> actions = ImmutableSet.<String>builder( )
-      .add( qualifiedName( VENDOR_S3, S3_PUTOBJECT ) )
+      .add( qualifiedName( S3PolicySpec.VENDOR_S3, S3PolicySpec.S3_PUTOBJECT ) )
       .build( );
 
   @Override

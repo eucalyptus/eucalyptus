@@ -22,13 +22,16 @@ package com.eucalyptus.objectstorage.metadata;
 
 import java.util.List;
 
+import javax.annotation.Nonnull;
 import com.eucalyptus.objectstorage.BucketState;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.exceptions.IllegalResourceStateException;
+import com.eucalyptus.objectstorage.exceptions.InvalidMetadataException;
 import com.eucalyptus.objectstorage.exceptions.MetadataOperationFailureException;
 import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.VersioningStatus;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
+import javaslang.control.Option;
 
 /**
  * Interface to operate on buckets This interface is an action mechanism, not a policy checker. Validation on input, beyond what is required for the
@@ -39,9 +42,9 @@ import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
  */
 public interface BucketMetadataManager {
 
-  public void start() throws Exception;
+  void start() throws Exception;
 
-  public void stop() throws Exception;
+  void stop() throws Exception;
 
   /**
    * Convenience function for initialization of the entity and transitioning it to the 'creating' state.
@@ -53,7 +56,7 @@ public interface BucketMetadataManager {
    * @return
    * @throws Exception
    */
-  public Bucket persistBucketInCreatingState(String bucketName, AccessControlPolicy acp, String iamUserId, String location) throws Exception;
+  Bucket persistBucketInCreatingState(String bucketName, AccessControlPolicy acp, String iamUserId, String location) throws Exception;
 
   /**
    * Transitions the bucket entity to the requested state subject to the state-machine transition of buckets. The bucket entity is re-loaded from the
@@ -67,7 +70,7 @@ public interface BucketMetadataManager {
    * @return
    * @throws Exception
    */
-  public Bucket transitionBucketToState(final Bucket bucket, final BucketState destState) throws IllegalResourceStateException,
+  Bucket transitionBucketToState(final Bucket bucket, final BucketState destState) throws IllegalResourceStateException,
       MetadataOperationFailureException;
 
   /**
@@ -75,7 +78,7 @@ public interface BucketMetadataManager {
    * 
    * @param bucket The bucket uuid to update
    */
-  public void deleteBucketMetadata(final Bucket bucket) throws Exception;
+  void deleteBucketMetadata(final Bucket bucket) throws Exception;
 
   /**
    * Returns a bucket's metadata object in any state
@@ -83,7 +86,7 @@ public interface BucketMetadataManager {
    * @param bucketName
    * @return
    */
-  public Bucket lookupBucket(String bucketName) throws Exception;
+  Bucket lookupBucket(String bucketName) throws Exception;
 
   /**
    * Returns a bucket's metadata object in any state
@@ -91,7 +94,7 @@ public interface BucketMetadataManager {
    * @param bucketUuid
    * @return
    */
-  public Bucket lookupBucketByUuid(String bucketUuid) throws Exception;
+  Bucket lookupBucketByUuid(String bucketUuid) throws Exception;
 
   /**
    * Lookup an extant bucket. This is the method to be used to lookup for subsequent modification or to verify existence of a bucket.
@@ -100,7 +103,7 @@ public interface BucketMetadataManager {
    * @return
    * @throws Exception
    */
-  public Bucket lookupExtantBucket(String bucketName) throws NoSuchEntityException, MetadataOperationFailureException;
+  Bucket lookupExtantBucket(String bucketName) throws NoSuchEntityException, MetadataOperationFailureException;
 
   /**
    * Returns a list of buckets in the 'deleting' state. This is intended for GC usage
@@ -108,7 +111,7 @@ public interface BucketMetadataManager {
    * @return
    * @throws Exception
    */
-  public List<Bucket> getBucketsForDeletion() throws Exception;
+  List<Bucket> getBucketsForDeletion() throws Exception;
 
   /**
    * Returns list of buckets owned by id. Buckets are detached from any persistence session.
@@ -116,35 +119,35 @@ public interface BucketMetadataManager {
    * @param ownerCanonicalId
    * @return
    */
-  public List<Bucket> lookupBucketsByOwner(String ownerCanonicalId) throws Exception;
+  List<Bucket> lookupBucketsByOwner(String ownerCanonicalId) throws Exception;
 
   /**
    * Returns list of buckets in the desired state.
    * 
    * @return
    */
-  public List<Bucket> lookupBucketsByState(BucketState state) throws Exception;
+  List<Bucket> lookupBucketsByState(BucketState state) throws Exception;
 
   /**
    * Returns list of buckets owned by user's iam id, in the given account. Buckets are detached from any persistence session.
    * 
    * @return
    */
-  public List<Bucket> lookupBucketsByUser(String userIamId) throws Exception;
+  List<Bucket> lookupBucketsByUser(String userIamId) throws Exception;
 
   /**
    * Returns count of buckets owned by user's iam id, in the given account. Buckets are detached from any persistence session.
    * 
    * @return
    */
-  public long countBucketsByUser(String userIamId) throws Exception;
+  long countBucketsByUser(String userIamId) throws Exception;
 
   /**
    * Returns count of buckets owned by account id, in the given account. Buckets are detached from any persistence session.
    * 
    * @return
    */
-  public long countBucketsByAccount(String canonicalId) throws Exception;
+  long countBucketsByAccount(String canonicalId) throws Exception;
 
   /**
    * Update the ACP
@@ -154,7 +157,7 @@ public interface BucketMetadataManager {
    * @return
    * @throws Exception
    */
-  public Bucket setAcp(Bucket bucketEntity, AccessControlPolicy acp) throws Exception;
+  Bucket setAcp(Bucket bucketEntity, AccessControlPolicy acp) throws Exception;
 
   /**
    * Update the logging status
@@ -166,7 +169,7 @@ public interface BucketMetadataManager {
    * @return
    * @throws Exception
    */
-  public Bucket setLoggingStatus(Bucket bucketEntity, Boolean loggingEnabled, String destBucket, String destPrefix) throws Exception;
+  Bucket setLoggingStatus(Bucket bucketEntity, Boolean loggingEnabled, String destBucket, String destPrefix) throws Exception;
 
   /**
    * Update versioning status
@@ -176,8 +179,17 @@ public interface BucketMetadataManager {
    * @return
    * @throws Exception
    */
-  public Bucket setVersioning(Bucket bucketEntity, VersioningStatus newState) throws IllegalResourceStateException,
+  Bucket setVersioning(Bucket bucketEntity, VersioningStatus newState) throws IllegalResourceStateException,
       MetadataOperationFailureException, NoSuchEntityException;
+
+
+  /**
+   * Update the iam policy for the bucket, pass Option#none() to delete.
+   */
+  Bucket setPolicy(
+      @Nonnull Bucket bucketEntity,
+      @Nonnull Option<String> policy
+  ) throws NoSuchEntityException, InvalidMetadataException;
 
   /**
    * Returns the approximate total size of all objects in all buckets in the system. This is not guaranteed to be consistent. An approximation at
@@ -185,5 +197,5 @@ public interface BucketMetadataManager {
    * 
    * @return
    */
-  public long totalSizeOfAllBuckets();
+  long totalSizeOfAllBuckets();
 }

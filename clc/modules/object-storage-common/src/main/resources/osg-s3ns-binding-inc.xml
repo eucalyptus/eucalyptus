@@ -804,6 +804,44 @@
                map-as="com.eucalyptus.storage.msgs.s3.PreflightResponse"/>
   </mapping>
 
+  <!-- BUCKET POLICY -->
+
+  <mapping name="SetBucketPolicy"
+           class="com.eucalyptus.objectstorage.msgs.SetBucketPolicyType"
+           extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
+    <value name="Policy" field="policy" usage="optional"/>
+  </mapping>
+
+  <mapping name="SetBucketPolicyResponse"
+           class="com.eucalyptus.objectstorage.msgs.SetBucketPolicyResponseType">
+  </mapping>
+
+  <mapping name="GetBucketPolicy"
+           class="com.eucalyptus.objectstorage.msgs.GetBucketPolicyType"
+           extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
+    <structure
+        map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
+        usage="optional"/>
+  </mapping>
+
+  <mapping
+      class="com.eucalyptus.objectstorage.msgs.GetBucketPolicyResponseType"
+      abstract="true">
+    <value name="Policy" field="policy" usage="optional"/>
+  </mapping>
+
+  <mapping name="DeleteBucketPolicy"
+           class="com.eucalyptus.objectstorage.msgs.DeleteBucketPolicyType"
+           extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
+    <structure
+        map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
+        usage="optional"/>
+  </mapping>
+
+  <mapping name="DeleteBucketPolicyResponse"
+           class="com.eucalyptus.objectstorage.msgs.DeleteBucketPolicyResponseType">
+  </mapping>
+
   <!-- multi-object-delete: POST bucket?delete -->
   <mapping class="com.eucalyptus.objectstorage.msgs.DeleteMultipleObjectsResponseType" abstract="true">
     <structure field="deleteResult" map-as="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessageReply" usage="optional"/>

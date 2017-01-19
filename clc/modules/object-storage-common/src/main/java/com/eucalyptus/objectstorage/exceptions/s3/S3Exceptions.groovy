@@ -90,7 +90,7 @@ class S3ErrorCodeStrings {
   public static final String NoSuchVersion = "NoSuchVersion"
   public static final String NotImplemented = "NotImplemented"
   public static final String NotSignedUp = "NotSignedUp"
-  public static final String NotSuchBucketPolicy = "NotSuchBucketPolicy"
+  public static final String NoSuchBucketPolicy = "NoSuchBucketPolicy"
   public static final String NoSuchTagSet = "NoSuchTagSet"
   public static final String OperationAborted = "OperationAborted"
   public static final String PermanentRedirect = "PermanentRedirect"
@@ -910,12 +910,12 @@ class NotSignedUpException extends S3Exception {
   }
 }
 
-class NotSuchBucketPolicyException extends S3Exception {
-  def NotSuchBucketPolicyException() {
-    super(S3ErrorCodeStrings.NotSuchBucketPolicy, "The specified bucket does not have a bucket policy.", HttpResponseStatus.NOT_FOUND);
+class NoSuchBucketPolicyException extends S3Exception {
+  def NoSuchBucketPolicyException() {
+    super(S3ErrorCodeStrings.NoSuchBucketPolicy, "The specified bucket does not have a bucket policy.", HttpResponseStatus.NOT_FOUND);
   }
 
-  def NotSuchBucketPolicyException(String resource) {
+  def NoSuchBucketPolicyException(String resource) {
     this();
     this.resource = resource;
   }

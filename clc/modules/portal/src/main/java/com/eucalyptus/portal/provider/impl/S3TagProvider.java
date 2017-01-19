@@ -21,10 +21,10 @@ import org.apache.log4j.Logger;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.BucketTaggingConfiguration;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
+import com.eucalyptus.objectstorage.policy.S3PolicySpec;
 import com.eucalyptus.portal.common.provider.TagProvider;
 import com.google.common.collect.Sets;
 
@@ -37,7 +37,7 @@ public class S3TagProvider implements TagProvider {
   @Nonnull
   @Override
   public String getVendor( ) {
-    return PolicySpec.VENDOR_S3;
+    return S3PolicySpec.VENDOR_S3;
   }
 
   @Nonnull

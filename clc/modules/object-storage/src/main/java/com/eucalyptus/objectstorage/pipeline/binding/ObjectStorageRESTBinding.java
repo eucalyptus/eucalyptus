@@ -120,7 +120,6 @@ import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
 import com.eucalyptus.objectstorage.pipeline.ObjectStorageRESTPipeline;
-import com.eucalyptus.objectstorage.pipeline.auth.S3Authentication;
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
@@ -166,6 +165,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import groovy.lang.GroovyObject;
+import javaslang.Tuple2;
 
 public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
   protected static Logger LOG = Logger.getLogger(ObjectStorageRESTBinding.class);
@@ -241,22 +241,31 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
       BaseMessage msg = (BaseMessage) httpResponse.getMessage();
       Binding binding;
 
+      String contentType;
       if (!(msg instanceof EucalyptusErrorMessageType) && !(msg instanceof ExceptionResponseType)) {
         binding = BindingManager.getBinding(super.getNamespace());
       } else {
         binding = BindingManager.getDefaultBinding();
       }
       if (msg != null) {
-        ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-        byteOut.write("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>".getBytes("UTF-8"));
-        binding.toStream(byteOut, msg);
+        final Tuple2<String,byte[]> encoded = S3ResponseEncoders.encode( msg );
+        ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
+        if ( encoded != null ) {
+          contentType = encoded._1( );
+          byteOut.write( encoded._2( ) );
+        } else {
+          contentType = "application/xml";
+          byteOut.write("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>".getBytes( StandardCharsets.UTF_8 ));
+          binding.toStream(byteOut, msg);
+        }
         byte[] req = byteOut.toByteArray();
         ChannelBuffer buffer = ChannelBuffers.wrappedBuffer(req);
         httpResponse.setHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buffer.readableBytes()));
-        httpResponse.setHeader(HttpHeaders.Names.CONTENT_TYPE, "application/xml");
+        httpResponse.setHeader(HttpHeaders.Names.CONTENT_TYPE, contentType);
         httpResponse.setHeader(HttpHeaders.Names.DATE, DateFormatter.dateToHeaderFormattedString(new Date()));
         httpResponse.setHeader("x-amz-request-id", msg.getCorrelationId());
         httpResponse.setContent(buffer);
+
       }
     }
   }
@@ -627,6 +636,11 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     if (verb.equals(ObjectStorageProperties.HTTPVerb.OPTIONS.toString())) {
         operationParams.put("preflightRequest", processPreflightRequest(httpRequest));
       }
+
+    if (verb.equals(ObjectStorageProperties.HTTPVerb.PUT.toString())
+        && params.containsKey(ObjectStorageProperties.BucketParameter.policy.toString())) {
+      operationParams.put("policy", getMessageString(httpRequest));
+    }
 
     ArrayList paramsToRemove = new ArrayList();
 

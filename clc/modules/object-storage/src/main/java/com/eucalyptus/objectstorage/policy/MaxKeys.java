@@ -65,7 +65,6 @@ package com.eucalyptus.objectstorage.policy;
 import org.apache.log4j.Logger;
 import net.sf.json.JSONException;
 import com.eucalyptus.auth.Contract;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.auth.policy.condition.NumericLessThanEquals;
 import com.eucalyptus.auth.policy.key.ContractKey;
@@ -80,8 +79,8 @@ public class MaxKeys extends ContractKey<Long> {
   
   private static final String KEY = Keys.S3_MAX_KEYS;
   
-  private static final String ACTION_LISTBUCKET = PolicySpec.VENDOR_S3 + ":" + PolicySpec.S3_LISTBUCKET;
-  private static final String ACTION_LISTBUCKETVERSIONS = PolicySpec.VENDOR_S3 + ":" + PolicySpec.S3_LISTBUCKETVERSIONS;
+  private static final String ACTION_LISTBUCKET = S3PolicySpec.VENDOR_S3 + ":" + S3PolicySpec.S3_LISTBUCKET;
+  private static final String ACTION_LISTBUCKETVERSIONS = S3PolicySpec.VENDOR_S3 + ":" + S3PolicySpec.S3_LISTBUCKETVERSIONS;
 
   private static final Long DEFAULT = 9999L;
   

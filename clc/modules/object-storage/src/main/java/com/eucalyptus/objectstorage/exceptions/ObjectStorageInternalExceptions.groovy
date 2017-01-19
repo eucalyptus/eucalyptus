@@ -98,3 +98,14 @@ class IllegalResourceStateException extends ObjectStorageInternalException {
     found = foundState;
   }
 }
+
+class InvalidMetadataException extends ObjectStorageInternalException {
+
+  public InvalidMetadataException(String msg) {
+    super(msg);
+  }
+
+  public InvalidMetadataException(String msg, Throwable cause) {
+    super(msg, cause);
+  }
+}

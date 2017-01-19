@@ -33,6 +33,8 @@ import com.eucalyptus.objectstorage.msgs.DeleteBucketCorsResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketCorsType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleType;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketPolicyResponseType;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketPolicyType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingType;
@@ -53,6 +55,8 @@ import com.eucalyptus.objectstorage.msgs.GetBucketLocationResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLocationType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLoggingStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLoggingStatusType;
+import com.eucalyptus.objectstorage.msgs.GetBucketPolicyResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketPolicyType;
 import com.eucalyptus.objectstorage.msgs.GetBucketTaggingResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketTaggingType;
 import com.eucalyptus.objectstorage.msgs.GetBucketVersioningStatusResponseType;
@@ -95,6 +99,8 @@ import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLoggingStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLoggingStatusType;
+import com.eucalyptus.objectstorage.msgs.SetBucketPolicyResponseType;
+import com.eucalyptus.objectstorage.msgs.SetBucketPolicyType;
 import com.eucalyptus.objectstorage.msgs.SetBucketTaggingResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketTaggingType;
 import com.eucalyptus.objectstorage.msgs.SetBucketVersioningStatusResponseType;
@@ -196,6 +202,12 @@ public interface ObjectStorageService {
   DeleteBucketCorsResponseType deleteBucketCors(DeleteBucketCorsType request) throws S3Exception;
 
   PreflightCheckCorsResponseType preflightCors(PreflightCheckCorsType request) throws S3Exception;
+
+  GetBucketPolicyResponseType getBucketPolicy(GetBucketPolicyType request) throws S3Exception;
+
+  SetBucketPolicyResponseType setBucketPolicy(SetBucketPolicyType request) throws S3Exception;
+
+  DeleteBucketPolicyResponseType deleteBucketPolicy(DeleteBucketPolicyType request) throws S3Exception;
 
   DeleteMultipleObjectsResponseType deleteMultipleObjects(DeleteMultipleObjectsType request) throws S3Exception;
 }

@@ -76,6 +76,9 @@ public class Bucket extends S3AccessControlledEntity<BucketState> implements Com
   @Column(name = "bucket_size")
   private Long bucketSize;
 
+  @Column(name = "policy")
+  private String policy;
+
   @PrePersist
   public void checkPrePersist() {
     if (this.getState() == null) {
@@ -298,6 +301,14 @@ public class Bucket extends S3AccessControlledEntity<BucketState> implements Com
 
   public void setVersioning(VersioningStatus versioning) {
     this.versioning = versioning;
+  }
+
+  public String getPolicy( ) {
+    return policy;
+  }
+
+  public void setPolicy( final String policy ) {
+    this.policy = policy;
   }
 
   @Override

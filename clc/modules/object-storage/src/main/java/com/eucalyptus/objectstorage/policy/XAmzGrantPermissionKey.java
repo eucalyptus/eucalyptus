@@ -41,11 +41,11 @@ import net.sf.json.JSONException;
 public abstract class XAmzGrantPermissionKey extends XAmzAclSupportKey {
 
   private static final Set<String> actions = ImmutableSet.<String>builder( )
-      .add( qualifiedName( VENDOR_S3, S3_CREATEBUCKET ) )
-      .add( qualifiedName( VENDOR_S3, S3_PUTBUCKETACL ) )
-      .add( qualifiedName( VENDOR_S3, S3_PUTOBJECT ) )
-      .add( qualifiedName( VENDOR_S3, S3_PUTOBJECTACL ) )
-      .add( qualifiedName( VENDOR_S3, S3_PUTOBJECTVERSIONACL ) )
+      .add( qualifiedName( S3PolicySpec.VENDOR_S3, S3PolicySpec.S3_CREATEBUCKET ) )
+      .add( qualifiedName( S3PolicySpec.VENDOR_S3, S3PolicySpec.S3_PUTBUCKETACL ) )
+      .add( qualifiedName( S3PolicySpec.VENDOR_S3, S3PolicySpec.S3_PUTOBJECT ) )
+      .add( qualifiedName( S3PolicySpec.VENDOR_S3, S3PolicySpec.S3_PUTOBJECTACL ) )
+      .add( qualifiedName( S3PolicySpec.VENDOR_S3, S3PolicySpec.S3_PUTOBJECTVERSIONACL ) )
       .build( );
 
   private final String keyName;
