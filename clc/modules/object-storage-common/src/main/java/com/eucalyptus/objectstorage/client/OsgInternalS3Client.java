@@ -26,9 +26,13 @@ import javax.annotation.Nonnull;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
+import com.amazonaws.Request;
+import com.amazonaws.Response;
 import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.S3ClientOptions;
+import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 
 /**
  * A convenience wrapper for an AWS Java SDK S3 Client that sets default timeouts etc, options, etc
@@ -94,6 +98,22 @@ public class OsgInternalS3Client {
     config.setProtocol(protocol);
     this.clientConfig = config;
     this.s3Client = new AmazonS3Client(credentials, config);
+    this.s3Client.addRequestHandler( new RequestHandler2( ) {
+      @Override
+      public void beforeRequest( final Request<?> request ) {
+        if ( request.getOriginalRequest( ) instanceof InitiateMultipartUploadRequest ) {
+          request.addHeader( "Content-Length", "0" );
+        }
+      }
+
+      @Override
+      public void afterResponse( final Request<?> request, final Response<?> response ) {
+      }
+
+      @Override
+      public void afterError( final Request<?> request, final Response<?> response, final Exception e ) {
+      }
+    } );
     this.ops = new S3ClientOptions().withPathStyleAccess(!useDns);
     this.s3Client.setS3ClientOptions(ops);
     this.instantiated = new Date();
