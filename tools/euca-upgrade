@@ -220,7 +220,6 @@ UP_LOG=${NEW_EUCA}/var/log/eucalyptus/upgrade.log
 # Set NEW_EUCA_VERSION if it is still unset
 if [ -z ${NEW_EUCA_VERSION+x} ]; then NEW_EUCA_VERSION=$(get_euca_version NEW_EUCA); fi
 if [ "${NEW_EUCA_VERSION}" == "${OLD_EUCA_VERSION}" ]; then SAME_VERSION="true"; fi
-if [ "${NEW_EUCA_VERSION}" == "eee-2.0.1" -a "${OLD_EUCA_VERSION}" == "eee-2.0.0" ]; then SAME_VERSION="true"; fi
 
 if [ ! -d "${NEW_EUCA}/var/lib/eucalyptus" ]; then echo "${NEW_EUCA} does not point to a valid Eucalyptus installation. Aborting." ; exit 1 ; fi
 ## NOTE: Add an externalized v.old -> v.new upgrade-path check.
