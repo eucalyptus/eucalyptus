@@ -1,22 +1,17 @@
-/*******************************************************************************
- *Copyright (c) 2014  Eucalyptus Systems, Inc.
+/*************************************************************************
+ * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
  *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, only version 3 of the License.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
  *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *  This file is distributed in the hope that it will be useful, but WITHOUT
- *  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- *  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- *  for more details.
- *
- *  You should have received a copy of the GNU General Public License along
- *  with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Please contact Eucalyptus Systems, Inc., 130 Castilian
- *  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
- *  if you need additional information or have any questions.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
  *
  *  This file may incorporate work covered under the following copyright and
  *  permission notice:
@@ -74,6 +69,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.ceph.rbd.Rbd;
+
 import com.eucalyptus.blockstorage.FileResource;
 import com.eucalyptus.blockstorage.StorageManagers.StorageManagerProperty;
 import com.eucalyptus.blockstorage.StorageResource;
@@ -86,6 +82,7 @@ import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.storage.common.CheckerTask;
 import com.eucalyptus.util.EucalyptusCloudException;
+
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -101,6 +98,8 @@ import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 import edu.ucsb.eucalyptus.util.SystemUtil.CommandOutput;
+import edu.ucsb.eucalyptus.util.EucaSemaphore;
+import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
 
 /**
  * CephProvider implements the Eucalyptus Storage Controller plug-in for interacting with a Ceph cluster
@@ -112,7 +111,7 @@ public class CephRbdProvider implements SANProvider {
   private static final Logger LOG = Logger.getLogger(CephRbdProvider.class);
   private static final Splitter COMMA_SPLITTER = Splitter.on(",").trimResults().omitEmptyStrings();
   private static Set<String> accessiblePools;
-
+  private static final String SEMAPHORE_PREFIX = "snapshot point volume ";
   private static final Function<CephRbdImageToBeDeleted, String> IMAGE_NAME_FUNCTION = new Function<CephRbdImageToBeDeleted, String>() {
     @Override
     public String apply(CephRbdImageToBeDeleted arg0) {
@@ -240,6 +239,7 @@ public class CephRbdProvider implements SANProvider {
 
       // Add images to be removed to the database, duty cycles will clean them up and update the database
       Transactions.save(new CephRbdImageToBeDeleted(volumeId, (can != null ? can.getPool() : null)));
+      EucaSemaphoreDirectory.removeSemaphore(SEMAPHORE_PREFIX + volumeId);
       result = true;
     } catch (Exception e) {
       LOG.warn("Failed to save metadata for asynchronous deletion of " + volumeId);
@@ -390,7 +390,22 @@ public class CephRbdProvider implements SANProvider {
     CanonicalRbdObject parent = CanonicalRbdObject.parse(parentVolumeIqn);
     if (parent != null && !Strings.isNullOrEmpty(parent.getPool())) {
       String snapshotPoint = CephRbdInfo.SNAPSHOT_FOR_PREFIX + snapshotId;
-      return rbdService.createSnapshot(parentVolumeId, snapshotPoint, parent.getPool());
+      String snapshotPointId = null;
+      // Don't allow >1 snapshot on the same volume, because Ceph sometimes has failures, EUCA-13114
+      EucaSemaphore semaphore = EucaSemaphoreDirectory.getSolitarySemaphore(SEMAPHORE_PREFIX + parentVolumeId);
+      try {
+        try {
+          semaphore.acquire();
+        } catch (InterruptedException ex) {
+          throw new EucalyptusCloudException("Failed to create snapshot point " + snapshotId + " on volume " + parentVolumeId +
+              "as the semaphore could not be acquired");
+        }
+        snapshotPointId = rbdService.createSnapshot(parentVolumeId, snapshotPoint, parent.getPool());
+      } finally {
+        semaphore.release();
+      }
+      LOG.info("Created snapshot point parentVolumeId=" + parentVolumeId + ", snapshotId=" + snapshotId + ", parentVolumeIqn=" + parentVolumeIqn);
+      return snapshotPointId;
     } else {
       LOG.warn("Expected parentVolumeIqn format: pool/image, actual parentVolumeIqn: " + parentVolumeIqn);
       throw new EucalyptusCloudException("Failed to create snapshot point for " + snapshotId
