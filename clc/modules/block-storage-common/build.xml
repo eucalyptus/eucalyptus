@@ -82,5 +82,6 @@
           </copy>
           <mkdir  dir="${DESTDIR}${euca.home}/usr/libexec/eucalyptus"/>
           <copy todir="${DESTDIR}${euca.home}/usr/libexec/eucalyptus" file="udev/check-iscsi-target-name"/>
+          <chmod file="${DESTDIR}${euca.home}/usr/libexec/eucalyptus/check-iscsi-target-name" perm="0755"/>
 	</target>
 </project>
