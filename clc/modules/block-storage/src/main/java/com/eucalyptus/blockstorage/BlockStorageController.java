@@ -155,6 +155,8 @@ import edu.ucsb.eucalyptus.cloud.VolumeAlreadyExistsException;
 import edu.ucsb.eucalyptus.cloud.VolumeNotReadyException;
 import edu.ucsb.eucalyptus.cloud.VolumeSizeExceededException;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
+import edu.ucsb.eucalyptus.util.EucaSemaphore;
+import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
 
 @ComponentNamed
 public class BlockStorageController implements BlockStorageService {
@@ -162,6 +164,10 @@ public class BlockStorageController implements BlockStorageService {
 
   static LogicalStorageManager blockManager;
 
+  static final int SNAPSHOT_POINT_DEFAULT_CONCURRENCY = 3;
+  static final String SNAPSHOT_POINT_SEMAPHORE_KEY = "snapshot point";
+  static EucaSemaphore snapshotPointSemaphore = null;
+  
   private static Function<String, SnapshotInfo> SNAPSHOT_FAILED = new Function<String, SnapshotInfo>() {
 
     @Override
@@ -811,8 +817,37 @@ public class BlockStorageController implements BlockStorageService {
            */
           String snapPointId = null;
           try {
-            // This will be a no-op if the backend doesn't support it. Will return null.
-            snapPointId = blockManager.createSnapshotPoint(volumeId, snapshotId);
+            // Only allow 'n' snapshot point creation operations concurrently, where 'n' is the
+            // eucalyptus property [ZONE].storage.maxconcurrentsnapshots. If 'n' are already running,
+            // block until one frees.
+
+            // If this property is changed during runtime, then eucalyptus-cloud must be restarted 
+            // for the change to take effect.
+            
+            // Note this is not the entire snapshot process, only taking the snapshot on the back end,
+            // which should normally be fast, so OK to block in this synchronous data path.
+            
+            if (snapshotPointSemaphore == null) {
+              Integer maxConcurrentSnapshots = StorageInfo.getStorageInfo().getMaxConcurrentSnapshots();
+              int snapshotPointSemaphorePermits = 
+                  (maxConcurrentSnapshots == null ? SNAPSHOT_POINT_DEFAULT_CONCURRENCY : maxConcurrentSnapshots);
+              snapshotPointSemaphore = EucaSemaphoreDirectory.getSemaphore(SNAPSHOT_POINT_SEMAPHORE_KEY, snapshotPointSemaphorePermits);
+              LOG.debug("Snapshot point semaphore created with " + snapshotPointSemaphorePermits + " permits.");
+            }
+            try {
+              try {
+                snapshotPointSemaphore.acquire();
+                LOG.debug("Acquired semaphore for createSnapshotPoint");
+              } catch (InterruptedException ex) {
+                throw new EucalyptusCloudException("Failed to create snapshot point " + snapshotId + " on volume " + volumeId +
+                    " as the semaphore could not be acquired");
+              }
+              // This will be a no-op if the backend doesn't support it. Will return null.
+              snapPointId = blockManager.createSnapshotPoint(volumeId, snapshotId);
+            } finally {
+              LOG.debug("Releasing semaphore for createSnapshotPoint");
+              snapshotPointSemaphore.release();
+            }
             // Start time is the time of snapshot point creation
             snapshotInfo.setStartTime(new Date());
             if (snapPointId == null) {

@@ -399,7 +399,7 @@ public class CephRbdProvider implements SANProvider {
           semaphore.acquire();
         } catch (InterruptedException ex) {
           throw new EucalyptusCloudException("Failed to create snapshot point " + snapshotId + " on volume " + parentVolumeId +
-              "as the semaphore could not be acquired");
+              " as the semaphore could not be acquired");
         }
         snapshotPointId = rbdService.createSnapshot(parentVolumeId, snapshotPoint, parent.getPool());
       } finally {
