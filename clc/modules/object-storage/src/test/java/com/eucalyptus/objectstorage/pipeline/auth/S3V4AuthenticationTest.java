@@ -62,8 +62,7 @@ public class S3V4AuthenticationTest {
   @Test
   public void testBuildCanonicalResourcePath() throws Throwable {
     URL url = new URL("http://eucalyptus:1234/services/objectstorage/test-bucket/test-object?foo=bar");
-    assertEquals("/services/objectstorage/test-bucket/test-object", S3V4Authentication.buildCanonicalResourcePath(url.getPath(), false));
-    assertEquals("/", S3V4Authentication.buildCanonicalResourcePath(url.getPath(), true));
+    assertEquals("/services/objectstorage/test-bucket/test-object", S3V4Authentication.buildCanonicalResourcePath(url.getPath()));
   }
 
   @Test
@@ -105,13 +104,13 @@ public class S3V4AuthenticationTest {
   @Test
   public void testBuildCanonicalRequestForHeaders() {
     StringBuilder canonicalRequest = S3V4Authentication.buildCanonicalRequest(headersRequest, SIGNED_HEADERS, headersRequest.getHeader
-        ("x-amz-content-sha256"), false);
+        ("x-amz-content-sha256"));
     assertEquals(CANONICAL_HEADERS_REQUEST, canonicalRequest.toString());
   }
 
   @Test
   public void testBuildCanonicalRequestForPresigned() {
-    StringBuilder canonicalRequest = S3V4Authentication.buildCanonicalRequest(paramsRequest, "host", "UNSIGNED-PAYLOAD", false);
+    StringBuilder canonicalRequest = S3V4Authentication.buildCanonicalRequest(paramsRequest, "host", "UNSIGNED-PAYLOAD");
     assertEquals(CANONICAL_PRESIGNED_REQUEST, canonicalRequest.toString());
   }
 
