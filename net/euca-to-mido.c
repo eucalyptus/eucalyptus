@@ -1208,7 +1208,7 @@ int do_midonet_update_pass1(globalNetworkInfo *gni, globalNetworkInfo *appliedGn
                     appliedvpc = gni_get_vpc(appliedGni, vpc->name, &vpcidx);
                 }
             }
-            if (!vpc->population_failed && !cmp_gni_vpc(appliedvpc, gnivpc)) {
+            if (!cmp_gni_vpc(appliedvpc, gnivpc) && !vpc->population_failed) {
                 LOGEXTREME("\t\t%s fully implemented \n", vpc->name);
                 vpc->midopresent = 1;
             } else {
@@ -1244,8 +1244,8 @@ int do_midonet_update_pass1(globalNetworkInfo *gni, globalNetworkInfo *appliedGn
                         appliednacl = gni_get_networkacl(appliedvpc, vpcnacl->name, &vpcnaclidx);
                     }
                 }
-                if (!vpcnacl->population_failed && !cmp_gni_nacl(appliednacl, gninacl,
-                        &(vpcnacl->ingress_changed), &(vpcnacl->egress_changed))) {
+                if (!cmp_gni_nacl(appliednacl, gninacl, &(vpcnacl->ingress_changed), &(vpcnacl->egress_changed))
+                        && !vpcnacl->population_failed) {
                     LOGEXTREME("\t\t%s fully implemented \n", vpcnacl->name);
                     vpcnacl->midopresent = 1;
                 } else {
@@ -1284,7 +1284,8 @@ int do_midonet_update_pass1(globalNetworkInfo *gni, globalNetworkInfo *appliedGn
                         appliedvpcsubnet = gni_get_vpcsubnet(appliedvpc, vpcsubnet->name, &vpcsubnetidx);
                     }
                 }
-                if (!vpcsubnet->population_failed && !cmp_gni_vpcsubnet(appliedvpcsubnet, gnivpcsubnet, &(vpcsubnet->nacl_changed))) {
+                if (!cmp_gni_vpcsubnet(appliedvpcsubnet, gnivpcsubnet, &(vpcsubnet->nacl_changed))
+                        && !vpcsubnet->population_failed) {
                     LOGEXTREME("\t\t%s fully implemented \n", vpcsubnet->name);
                     vpcsubnet->midopresent = 1;
                 } else {
@@ -1327,10 +1328,9 @@ int do_midonet_update_pass1(globalNetworkInfo *gni, globalNetworkInfo *appliedGn
                             appliedinstance = gni_get_interface(appliedvpcsubnet, vpcinstance->name, &vpcinstanceidx);
                         }
                     }
-                    if (!vpcinstance->population_failed && !cmp_gni_interface(
-                            appliedinstance, gniinstance, &(vpcinstance->pubip_changed),
+                    if (!cmp_gni_interface(appliedinstance, gniinstance, &(vpcinstance->pubip_changed),
                             &(vpcinstance->srcdst_changed), &(vpcinstance->host_changed),
-                            &(vpcinstance->sg_changed))) {
+                            &(vpcinstance->sg_changed)) && !vpcinstance->population_failed) {
                         LOGEXTREME("\t\t%s fully implemented \n", vpcinstance->name);
                         vpcinstance->midopresent = 1;
                     } else {
@@ -1365,7 +1365,7 @@ int do_midonet_update_pass1(globalNetworkInfo *gni, globalNetworkInfo *appliedGn
                         appliednatgateway = gni_get_natgateway(appliedvpc, vpcnatgateway->name, &vpcnatgidx);
                     }
                 }
-                if (!vpcnatgateway->population_failed && !cmp_gni_nat_gateway(appliednatgateway, gninatgateway)) {
+                if (!cmp_gni_nat_gateway(appliednatgateway, gninatgateway) && !vpcnatgateway->population_failed) {
                     LOGEXTREME("\t\t%s fully implemented \n", vpcnatgateway->name);
                     vpcnatgateway->midopresent = 1;
                 } else {
@@ -1426,9 +1426,9 @@ int do_midonet_update_pass1(globalNetworkInfo *gni, globalNetworkInfo *appliedGn
                     appliedsecgroup = gni_get_secgroup(appliedGni, vpcsecgroup->name, &vpcsgidx);
                 }
             }
-            if (!vpcsecgroup->population_failed && !cmp_gni_secgroup(appliedsecgroup,
-                    gnisecgroup, &(vpcsecgroup->ingress_changed), &(vpcsecgroup->egress_changed),
-                    &(vpcsecgroup->interfaces_changed))) {
+            if (!cmp_gni_secgroup(appliedsecgroup,gnisecgroup, &(vpcsecgroup->ingress_changed),
+                    &(vpcsecgroup->egress_changed), &(vpcsecgroup->interfaces_changed))
+                    && !vpcsecgroup->population_failed) {
                 LOGEXTREME("\t\t%s fully implemented \n", vpcsecgroup->name);
                 vpcsecgroup->midopresent = 1;
             } else {
@@ -2890,8 +2890,7 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
                     continue;
                 }
                 
-                // subnet inbound default rules
-                
+                // subnet inbound default rules                
                 // allow traffic from reserved IP addresses (subnet/30) 
                 rc = mido_create_rule(subnet->inchain, NULL, NULL, &rulepos,
                         "position", rulepos_str, "type", "accept", "nwSrcAddress",
@@ -2920,8 +2919,16 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
                     ret++;
                 }
 
-                // subnet outbound default rules
-                
+                // allow intra-subnet traffic
+                rc = mido_create_rule(subnet->inchain, NULL, NULL, &rulepos,
+                        "position", rulepos_str, "type", "accept", "nwSrcAddress",
+                        subnet_buf, "nwSrcLength", slashnet_buf, NULL);
+                if (rc) {
+                    LOGWARN("Failed to create %s inbound intra-subnet rule\n", subnet->name);
+                    ret++;
+                }
+
+                // subnet outbound default rules                
                 // allow traffic to reserved IP addresses (subnet/30) 
                 rc = mido_create_rule(subnet->outchain, NULL, NULL, &rulepos,
                         "position", rulepos_str, "type", "accept", "nwDstAddress",
@@ -2950,6 +2957,15 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
                     ret++;
                 }
 
+                // allow intra-subnet traffic
+                rc = mido_create_rule(subnet->outchain, NULL, NULL, &rulepos,
+                        "position", rulepos_str, "type", "accept", "nwDstAddress",
+                        subnet_buf, "nwDstLength", slashnet_buf, NULL);
+                if (rc) {
+                    LOGWARN("Failed to create %s outbound intra-subnet rule\n", subnet->name);
+                    ret++;
+                }
+
                 // jump rules to NACL chains
                 if (subnet->nacl_changed && !strcmp(subnet->gniSubnet->networkAcl_name, vpcnacl->name)) {
                     midoname **jprules_out = NULL;
@@ -2974,6 +2990,7 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
                                 LOGWARN("failed to delete %s outfilter jump rule\n", subnet->name);
                             }
                         }
+                        max_jprules_out = 0;
                     }
                     if (max_jprules_in > 1) {
                         LOGWARN("%s inconsistent infilter chain: %d jump rules found\n", subnet->name, max_jprules_in);
@@ -2983,6 +3000,7 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
                                 LOGWARN("failed to delete %s infilter jump rule\n", subnet->name);
                             }
                         }
+                        max_jprules_in = 0;
                     }
                     
                     // Check if jump rule to NACL (egress) is in place
@@ -2993,7 +3011,7 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
                             mido_delete_rule(subnet->outchain, jprules_out[0]);
                         }
                         LOGTRACE("\t\tcreating %s->%s outfilter jump rule\n", subnet->name, vpcnacl->name);
-                        snprintf(rulepos_str, 8, "4");
+                        snprintf(rulepos_str, 8, "%d", subnet->outchain->rules_count + 1);
                         rc = mido_create_rule(subnet->outchain, NULL, NULL, &rulepos,
                                 "position", rulepos_str, "type", "jump", "jumpChainId",
                                 vpcnacl->egress->obj->uuid, NULL);
@@ -3011,7 +3029,7 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
                             mido_delete_rule(subnet->inchain, jprules_in[0]);
                         }
                         LOGTRACE("\t\tcreating %s->%s infilter jump rule\n", subnet->name, vpcnacl->name);
-                        snprintf(rulepos_str, 8, "4");
+                        snprintf(rulepos_str, 8, "%d", subnet->inchain->rules_count + 1);
                         rc = mido_create_rule(subnet->inchain, NULL, NULL, &rulepos,
                                 "position", rulepos_str, "type", "jump", "jumpChainId",
                                 vpcnacl->ingress->obj->uuid, NULL);
