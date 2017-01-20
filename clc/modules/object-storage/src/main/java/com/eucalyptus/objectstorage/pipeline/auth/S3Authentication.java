@@ -194,44 +194,7 @@ public final class S3Authentication {
     }
   }
 
-  /**
-   * Attempts a login and retries sign a signed string that does not contain a path if the initial attempt fails.
-   */
-  static void login(MappingHttpRequest request, String accessKeyId, CheckedFunction<Boolean, ObjectStorageWrappedCredentials> credsFn)
-      throws S3Exception {
-    // Build credentials that excludes path
-    ObjectStorageWrappedCredentials creds = credentialsFor(credsFn, false);
-
-    try {
-      SecurityContext.getLoginContext(creds).login();
-    } catch (LoginException ex) {
-      if (ex.getMessage().contains("The AWS Access Key Id you provided does not exist in our records"))
-        throw new InvalidAccessKeyIdException(accessKeyId);
-
-      if (request.getUri().startsWith(ComponentIds.lookup(ObjectStorage.class).getServicePath()) || request.getUri().startsWith
-          (ObjectStorageProperties.LEGACY_WALRUS_SERVICE_PATH)) {
-        try {
-          // Build credentials for a string to sign that skips the resource path
-          creds = credentialsFor(credsFn, true);
-          SecurityContext.getLoginContext(creds).login();
-        } catch (S3Exception ex2) {
-          LOG.debug("CorrelationId: " + request.getCorrelationId() + " Authentication failed due to signature match issue:", ex2);
-          throw ex2;
-        } catch (Exception ex2) {
-          LOG.debug("CorrelationId: " + request.getCorrelationId() + " Authentication failed due to signature match issue:", ex2);
-          throw new SignatureDoesNotMatchException(creds.getLoginData());
-        }
-      } else {
-        LOG.debug("CorrelationId: " + request.getCorrelationId() + " Authentication failed due to signature mismatch:", ex);
-        throw new SignatureDoesNotMatchException(creds.getLoginData());
-      }
-    } catch (Exception e) {
-      LOG.warn("CorrelationId: " + request.getCorrelationId() + " Unexpected failure trying to authenticateVersion2 request", e);
-      throw new InternalErrorException(e);
-    }
-  }
-
-  private static ObjectStorageWrappedCredentials credentialsFor(CheckedFunction<Boolean, ObjectStorageWrappedCredentials> credsFn,
+  static ObjectStorageWrappedCredentials credentialsFor(CheckedFunction<Boolean, ObjectStorageWrappedCredentials> credsFn,
                                                                 boolean excludePath) throws S3Exception {
     try {
       return credsFn.apply(excludePath);
