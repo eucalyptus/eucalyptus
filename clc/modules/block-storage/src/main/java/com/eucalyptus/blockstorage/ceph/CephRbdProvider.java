@@ -391,7 +391,8 @@ public class CephRbdProvider implements SANProvider {
     if (parent != null && !Strings.isNullOrEmpty(parent.getPool())) {
       String snapshotPoint = CephRbdInfo.SNAPSHOT_FOR_PREFIX + snapshotId;
       String snapshotPointId = null;
-      // Don't allow >1 snapshot on the same volume, because Ceph sometimes has failures, EUCA-13114
+      // Don't allow >1 concurrent snapshot operation on the same volume, 
+      // because Ceph sometimes has failures, see EUCA-13114
       EucaSemaphore semaphore = EucaSemaphoreDirectory.getSolitarySemaphore(SEMAPHORE_PREFIX + parentVolumeId);
       try {
         try {
