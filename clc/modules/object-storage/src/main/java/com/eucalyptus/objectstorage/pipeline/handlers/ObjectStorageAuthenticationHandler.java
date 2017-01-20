@@ -89,6 +89,8 @@ import java.util.concurrent.Callable;
 public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
   private static final Logger LOG = Logger.getLogger(ObjectStorageAuthenticationHandler.class);
 
+  private boolean authenticatedInitialRequest;
+
   /**
    * Note: Overriding to ensure that the message is passed to the next stage in the pipeline only if it
    * passes authentication.
@@ -104,6 +106,14 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
         // Handle V4 streaming requests
         if (event.getMessage() instanceof StreamingHttpRequest) {
           StreamingHttpRequest request = (StreamingHttpRequest) event.getMessage();
+
+          // Authenticate initial request if necessary
+          if (!authenticatedInitialRequest) {
+            authenticate(request.initialRequest);
+            ctx.sendUpstream(new UpstreamMessageEvent(ctx.getChannel(), request.initialRequest, event.getRemoteAddress()));
+          }
+
+          // Authenticate chunks
           authenticate(request);
           for (AwsChunk chunk : request.awsChunks) {
             ctx.sendUpstream(new UpstreamMessageEvent(ctx.getChannel(), chunk.toHttpChunk(), event.getRemoteAddress()));
@@ -113,8 +123,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
             authenticate((MappingHttpRequest) event.getMessage());
           ctx.sendUpstream(channelEvent);
         }
-      } catch (AccessDeniedException | SignatureDoesNotMatchException
-          | InvalidAccessKeyIdException | MissingSecurityHeaderException ex) {
+      } catch (AccessDeniedException | SignatureDoesNotMatchException | InvalidAccessKeyIdException | MissingSecurityHeaderException ex) {
         LOG.debug(ex.getMessage());
         Channels.fireExceptionCaught(ctx, ex);
       } catch (Throwable e) {
@@ -143,6 +152,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
     joinDuplicateHeaders(request);
     Map<String, String> lowercaseParams = lowercaseKeys(request.getParameters());
     S3Authenticator.of(request, lowercaseParams).authenticate(request, lowercaseParams);
+    authenticatedInitialRequest = true;
   }
 
   /**

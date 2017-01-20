@@ -7,6 +7,7 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.buffer.CompositeChannelBuffer;
 import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
 import org.jboss.netty.handler.codec.http.HttpChunk;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -211,5 +212,19 @@ public class AwsChunkStream {
     } else {
       return null;
     }
+  }
+
+  /**
+   * Parses and appends an initial HttpRequest that contains content to the AwsChunkStream.
+   */
+  public StreamingHttpRequest append(MappingHttpRequest initialRequest) {
+    if (initialRequest.getContent().readableBytes() > 0) {
+      StreamingHttpRequest streamingRequest = append(new DefaultHttpChunk(initialRequest.getContent()));
+      if (streamingRequest != null)
+        streamingRequest.setInitialRequest(initialRequest);
+      initialRequest.setChunked(true);
+      return streamingRequest;
+    }
+    return null;
   }
 }
