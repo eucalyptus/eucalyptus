@@ -21,15 +21,16 @@
 package com.eucalyptus.objectstorage.pipeline.auth;
 
 import com.eucalyptus.auth.login.AuthenticationException;
+import com.eucalyptus.auth.login.SecurityContext;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.crypto.util.SecurityHeader;
 import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
-import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
-import com.eucalyptus.objectstorage.exceptions.s3.MissingContentLengthException;
-import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
+import com.eucalyptus.objectstorage.ObjectStorage;
+import com.eucalyptus.objectstorage.exceptions.s3.*;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.SubResource;
 import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.util.HmacUtils.SignatureCredential;
@@ -38,8 +39,11 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.io.BaseEncoding;
+import javaslang.control.Try.CheckedFunction;
+import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
 
+import javax.security.auth.login.LoginException;
 import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.HashMap;
@@ -47,11 +51,13 @@ import java.util.List;
 import java.util.Map;
 
 import static com.eucalyptus.auth.login.Hmacv4LoginModule.digestUTF8;
+import static com.eucalyptus.objectstorage.pipeline.auth.S3Authentication.credentialsFor;
 
 /**
  * S3 V4 specific authentication utilities.
  */
 public final class S3V4Authentication {
+  private static final Logger LOG = Logger.getLogger(S3V4Authentication.class);
   private static final Splitter CSV_SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
   private static final Splitter NVP_SPLITTER = Splitter.on('=').limit(2).trimResults().omitEmptyStrings();
   private static final String AWS_V4_TERMINATOR = "aws4_request";
@@ -61,7 +67,7 @@ public final class S3V4Authentication {
   public static final String AWS_DECODED_CONTENT_LEN = "x-amz-decoded-content-length";
   public static final String STREAMING_PAYLOAD = "STREAMING-AWS4-HMAC-SHA256-PAYLOAD";
   private static final String STREAMING_PAYLOAD_CHUNK_PREFIX = "AWS4-HMAC-SHA256-PAYLOAD";
-  static final String UNSIGNED_PAYLOAD = "UNSIGNED-PAYLOAD";
+  public static final String UNSIGNED_PAYLOAD = "UNSIGNED-PAYLOAD";
 
   enum V4AuthComponent {
     Credential, SignedHeaders, Signature
@@ -72,29 +78,44 @@ public final class S3V4Authentication {
 
   static void login(MappingHttpRequest request, Date date, SignatureCredential credential, String signedHeaders, String signature, String
       securityToken, String payloadHash) throws S3Exception {
-    S3Authentication.login(request, credential.getAccessKeyId(), excludePath -> {
-      String stringToSign = buildStringToSign(request, date, credential, signedHeaders, payloadHash, excludePath);
-      return new ObjectStorageWrappedCredentials(request.getCorrelationId(), stringToSign, credential, signedHeaders, signature,
-          securityToken);
-    });
+    String stringToSign = buildStringToSign(request, date, credential, signedHeaders, payloadHash);
+    ObjectStorageWrappedCredentials creds = new ObjectStorageWrappedCredentials(request.getCorrelationId(), stringToSign, credential,
+        signedHeaders, signature, securityToken);
+    login(request, credential.getAccessKeyId(), creds);
   }
 
   static void loginChunk(MappingHttpRequest request, Date date, SignatureCredential credential, String signedHeaders, String signature,
                          String securityToken, String previousSignature, ByteBuffer payload) throws S3Exception {
-    S3Authentication.login(request, credential.getAccessKeyId(), excludePath -> {
-      String stringToSign = buildChunkStringToSign(date, credential, previousSignature, payload);
-      return new ObjectStorageWrappedCredentials(request.getCorrelationId(), stringToSign, credential, signedHeaders, signature,
-          securityToken);
-    });
+    String stringToSign = buildChunkStringToSign(date, credential, previousSignature, payload);
+    ObjectStorageWrappedCredentials creds = new ObjectStorageWrappedCredentials(request.getCorrelationId(), stringToSign, credential,
+        signedHeaders, signature, securityToken);
+    login(request, credential.getAccessKeyId(), creds);
+  }
+
+  /**
+   * Attempts a login and retries sign a signed string that does not contain a path if the initial attempt fails.
+   */
+  static void login(MappingHttpRequest request, String accessKeyId, ObjectStorageWrappedCredentials creds) throws S3Exception {
+    try {
+      SecurityContext.getLoginContext(creds).login();
+    } catch (LoginException ex) {
+      if (ex.getMessage().contains("The AWS Access Key Id you provided does not exist in our records"))
+        throw new InvalidAccessKeyIdException(accessKeyId);
+      LOG.debug("CorrelationId: " + request.getCorrelationId() + " Authentication failed due to signature mismatch:", ex);
+      throw new SignatureDoesNotMatchException(creds.getLoginData());
+    } catch (Exception e) {
+      LOG.warn("CorrelationId: " + request.getCorrelationId() + " Unexpected failure trying to authenticate request", e);
+      throw new InternalErrorException(e);
+    }
   }
 
   /**
    * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html">Creating an S3 v4 string to sign</a>
    */
   private static String buildStringToSign(MappingHttpRequest request, Date date, SignatureCredential credential, String signedHeaders,
-                                          String payloadHash, boolean excludePath) throws S3Exception {
+                                          String payloadHash) throws S3Exception {
     try {
-      StringBuilder canonicalRequest = buildCanonicalRequest(request, signedHeaders, payloadHash, excludePath);
+      StringBuilder canonicalRequest = buildCanonicalRequest(request, signedHeaders, payloadHash);
       return buildStringToSign(date, credential, canonicalRequest);
     } catch (Exception e) {
       throw new InternalErrorException(e);
@@ -124,7 +145,7 @@ public final class S3V4Authentication {
   /**
    * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-based-auth.html">Creating a canonical S3 v4 request</a>
    */
-  static StringBuilder buildCanonicalRequest(MappingHttpRequest request, String signedHeaders, String payloadHash, boolean excludePath) {
+  static StringBuilder buildCanonicalRequest(MappingHttpRequest request, String signedHeaders, String payloadHash) {
     StringBuilder sb = new StringBuilder(512);
 
     // Request method
@@ -132,7 +153,7 @@ public final class S3V4Authentication {
     sb.append('\n');
 
     // Resource path
-    sb.append(buildCanonicalResourcePath(request.getServicePath(), excludePath));
+    sb.append(buildCanonicalResourcePath(request.getServicePath()));
     sb.append('\n');
 
     // Query parameters
@@ -155,8 +176,8 @@ public final class S3V4Authentication {
   /**
    * Returns the canonicalized resource path for the service endpoint.
    */
-  static String buildCanonicalResourcePath(String path, boolean excludePath) {
-    if (path == null || path.isEmpty() || excludePath)
+  static String buildCanonicalResourcePath(String path) {
+    if (path == null || path.isEmpty())
       return "/";
 
     if (path.startsWith("/"))
@@ -200,20 +221,19 @@ public final class S3V4Authentication {
     }
   }
 
-  static String buildAndVerifyPayloadHash(MappingHttpRequest request) throws AccessDeniedException {
-    String contentShaHeader = request.getHeader(S3V4Authentication.AWS_CONTENT_SHA_HEADER);
-    if (STREAMING_PAYLOAD.equals(contentShaHeader))
-      return STREAMING_PAYLOAD;
-    else if (UNSIGNED_PAYLOAD.equals(contentShaHeader))
-      return UNSIGNED_PAYLOAD;
-    else if (!Strings.isNullOrEmpty(contentShaHeader)) {
-      ByteBuffer payload = request.getContent().toByteBuffer();
-      String hashedPayload = BaseEncoding.base16().lowerCase().encode(Digest.SHA256.digestBinary(payload));
-      if (!contentShaHeader.equals(hashedPayload))
-        throw new AccessDeniedException(null, "x-amz-content-sha256 header is invalid.");
-      return hashedPayload;
-    } else
-      throw new AccessDeniedException(null, "x-amz-content-sha256 header is missing.");
+  static String getUnverifiedPayloadHash( final MappingHttpRequest request) throws AccessDeniedException {
+    final String contentShaHeader = request.getHeader(S3V4Authentication.AWS_CONTENT_SHA_HEADER);
+    if ( !Strings.isNullOrEmpty(contentShaHeader) ) {
+      if ( !STREAMING_PAYLOAD.equals(contentShaHeader) && !UNSIGNED_PAYLOAD.equals(contentShaHeader) ) {
+        final byte[] binSha256 = BaseEncoding.base16( ).lowerCase( ).decode( contentShaHeader );
+        if ( binSha256.length != 32 ) {
+          throw new AccessDeniedException(null, "x-amz-content-sha256 header is invalid.");
+        }
+      }
+    } else {
+      throw new AccessDeniedException( null, "x-amz-content-sha256 header is missing." );
+    }
+    return contentShaHeader;
   }
 
   static String getDateFromParams(Map<String, String> parameters) throws AccessDeniedException {

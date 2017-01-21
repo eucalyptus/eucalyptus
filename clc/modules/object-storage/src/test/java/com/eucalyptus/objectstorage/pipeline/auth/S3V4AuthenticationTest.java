@@ -62,8 +62,7 @@ public class S3V4AuthenticationTest {
   @Test
   public void testBuildCanonicalResourcePath() throws Throwable {
     URL url = new URL("http://eucalyptus:1234/services/objectstorage/test-bucket/test-object?foo=bar");
-    assertEquals("/services/objectstorage/test-bucket/test-object", S3V4Authentication.buildCanonicalResourcePath(url.getPath(), false));
-    assertEquals("/", S3V4Authentication.buildCanonicalResourcePath(url.getPath(), true));
+    assertEquals("/services/objectstorage/test-bucket/test-object", S3V4Authentication.buildCanonicalResourcePath(url.getPath()));
   }
 
   @Test
@@ -71,20 +70,20 @@ public class S3V4AuthenticationTest {
     // Unsigned
     MappingHttpRequest request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "/test$file.text");
     request.addHeader("x-amz-content-sha256", "UNSIGNED-PAYLOAD");
-    String result = S3V4Authentication.buildAndVerifyPayloadHash(request);
+    String result = S3V4Authentication.getUnverifiedPayloadHash(request);
     assertEquals("UNSIGNED-PAYLOAD", result);
 
     // Signed
     request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "/test$file.text");
     request.addHeader("x-amz-content-sha256", "44ce7dd67c959e0d3524ffac1771dfbba87d2b6b4b4e99e42034a8b803f8b072");
     request.setContent(ChannelBuffers.copiedBuffer("Welcome to Amazon S3.", Charset.defaultCharset()));
-    result = S3V4Authentication.buildAndVerifyPayloadHash(request);
+    result = S3V4Authentication.getUnverifiedPayloadHash(request);
     assertEquals("44ce7dd67c959e0d3524ffac1771dfbba87d2b6b4b4e99e42034a8b803f8b072", result);
 
     // Chunked
     request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "/test$file.text");
     request.addHeader("x-amz-content-sha256", "STREAMING-AWS4-HMAC-SHA256-PAYLOAD");
-    result = S3V4Authentication.buildAndVerifyPayloadHash(request);
+    result = S3V4Authentication.getUnverifiedPayloadHash(request);
     assertEquals("STREAMING-AWS4-HMAC-SHA256-PAYLOAD", result);
   }
 
@@ -105,13 +104,13 @@ public class S3V4AuthenticationTest {
   @Test
   public void testBuildCanonicalRequestForHeaders() {
     StringBuilder canonicalRequest = S3V4Authentication.buildCanonicalRequest(headersRequest, SIGNED_HEADERS, headersRequest.getHeader
-        ("x-amz-content-sha256"), false);
+        ("x-amz-content-sha256"));
     assertEquals(CANONICAL_HEADERS_REQUEST, canonicalRequest.toString());
   }
 
   @Test
   public void testBuildCanonicalRequestForPresigned() {
-    StringBuilder canonicalRequest = S3V4Authentication.buildCanonicalRequest(paramsRequest, "host", "UNSIGNED-PAYLOAD", false);
+    StringBuilder canonicalRequest = S3V4Authentication.buildCanonicalRequest(paramsRequest, "host", "UNSIGNED-PAYLOAD");
     assertEquals(CANONICAL_PRESIGNED_REQUEST, canonicalRequest.toString());
   }
 

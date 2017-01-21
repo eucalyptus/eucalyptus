@@ -116,7 +116,7 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
   @Transient
   private static final int DEFAULT_MAX_BUCKETS_PER_ACCOUNT = 100;
   @Transient
-  private static final int DEFAULT_MAX_INBOUND_HTTP_CHUNK_SIZE = 1024 * 1024 * 10; // 10 MB
+  private static final int DEFAULT_MAX_METADATA_REQUEST_SIZE = 1024 * 300; // 300 KB
   @Transient
   private static final int DEFAULT_PUT_TIMEOUT_HOURS = 168; // An upload not marked completed or deleted in 24 hours from record creation will be
                                                             // considered 'failed'
@@ -135,6 +135,10 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
   @Column
   @ConfigurableField(description = "Maximum allowed size of inbound http chunks", displayName = "Maximum inbound http chunk size")
   protected Integer max_inbound_http_chunk_size;
+
+  @Column
+  @ConfigurableField(description = "Maximum allowed size of metadata request bodies", displayName = "Maximum allowed size of metadata requests")
+  protected Integer max_metadata_request_size;
 
   @Column
   @ConfigurableField(description = "Maximum number of buckets per account", displayName = "Maximum buckets per account")
@@ -186,7 +190,7 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
     this.setDoGetPutOnCopyFail(DEFAULT_COPY_UNSUPPORTED_STRATEGY);
     this.setFailed_put_timeout_hrs(DEFAULT_PUT_TIMEOUT_HOURS);
     this.setMax_buckets_per_account(DEFAULT_MAX_BUCKETS_PER_ACCOUNT);
-    this.setMax_inbound_http_chunk_size(DEFAULT_MAX_INBOUND_HTTP_CHUNK_SIZE);
+    this.setMax_metadata_request_size(DEFAULT_MAX_METADATA_REQUEST_SIZE);
     this.setMax_total_reporting_capacity_gb(Integer.MAX_VALUE);
     return this;
   }
@@ -206,12 +210,12 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
 
   }
 
-  public Integer getMax_inbound_http_chunk_size() {
-    return max_inbound_http_chunk_size != null ? max_inbound_http_chunk_size : DEFAULT_MAX_INBOUND_HTTP_CHUNK_SIZE;
+  public Integer getMax_metadata_request_size() {
+    return max_metadata_request_size != null ? max_metadata_request_size : DEFAULT_MAX_METADATA_REQUEST_SIZE;
   }
 
-  public void setMax_inbound_http_chunk_size(Integer max_inbound_http_chunk_size) {
-    this.max_inbound_http_chunk_size = max_inbound_http_chunk_size;
+  public void setMax_metadata_request_size(Integer max_metadata_request_size) {
+    this.max_metadata_request_size = max_metadata_request_size;
   }
 
   public Integer getMax_buckets_per_account() {
@@ -281,8 +285,8 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
   @PrePersist
   @PreUpdate
   public void updateDefaults() {
-    if (max_inbound_http_chunk_size == null) {
-      max_inbound_http_chunk_size = DEFAULT_MAX_INBOUND_HTTP_CHUNK_SIZE;
+    if (max_metadata_request_size == null) {
+      max_metadata_request_size = DEFAULT_MAX_METADATA_REQUEST_SIZE;
     }
   }
 

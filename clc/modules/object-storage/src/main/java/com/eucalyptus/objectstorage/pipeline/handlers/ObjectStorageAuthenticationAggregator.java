@@ -62,79 +62,85 @@
 
 package com.eucalyptus.objectstorage.pipeline.handlers;
 
+import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.objectstorage.OSGChannelWriter;
-import com.eucalyptus.objectstorage.OSGMessageResponse;
-import com.eucalyptus.objectstorage.exceptions.s3.MaxMessageLengthExceededException;
-import com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication;
+import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
+import com.eucalyptus.objectstorage.exceptions.s3.XAmzContentSHA256MismatchException;
 import com.eucalyptus.objectstorage.pipeline.handlers.AwsChunkStream.StreamingHttpRequest;
 import com.google.common.base.Strings;
+import com.google.common.io.BaseEncoding;
+import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.UpstreamMessageEvent;
 import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import static com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication.AWS_CONTENT_SHA_HEADER;
+import static com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication.AWS_V4_AUTH_TYPE;
+import static com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication.STREAMING_PAYLOAD;
+import static com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication.UNSIGNED_PAYLOAD;
+
+import java.security.MessageDigest;
 
 /**
  * Aggregates streaming and chunked data for V4 signed request authentication.
  */
-public class ObjectStorageAuthenticationAggregator extends HttpChunkAggregator {
-  private final int maxContentLength;
-
-  // Http chunking required
-  private boolean httpChunked;
+public class ObjectStorageAuthenticationAggregator implements ChannelUpstreamHandler {
+  // Content validation
+  private MessageDigest contentDigest;
+  private byte[] expectedDigest;
 
   // Streaming request state
   private MappingHttpRequest initialRequest;
   private AwsChunkStream awsChunkStream;
 
-  public ObjectStorageAuthenticationAggregator(int maxContentLength) {
-    super(maxContentLength);
-    this.maxContentLength = maxContentLength;
+  @Override
+  public void handleUpstream(final ChannelHandlerContext ctx, final ChannelEvent channelEvent) throws Exception {
+    if (channelEvent instanceof MessageEvent) {
+      handleUpstreamMessage(ctx, (MessageEvent) channelEvent);
+    } else {
+      ctx.sendUpstream(channelEvent);
+    }
   }
 
-  @Override
-  public void messageReceived(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
-    Object msg = event.getMessage();
+  private void handleUpstreamMessage(final ChannelHandlerContext ctx, MessageEvent event) throws Exception {
+    final Object msg = event.getMessage();
+    boolean lastPart = false;
 
     if (initialRequest == null && msg instanceof MappingHttpRequest) {
-      MappingHttpRequest request = (MappingHttpRequest) msg;
-      String authHeader = request.getHeader(SecurityParameter.Authorization.toString());
+      final MappingHttpRequest request = (MappingHttpRequest) msg;
+      final String authHeader = request.getHeader(SecurityParameter.Authorization.toString());
+      final String shaHeader = request.getHeader(AWS_CONTENT_SHA_HEADER);
 
-      // Handle V4 streaming requests
-      if (S3V4Authentication.STREAMING_PAYLOAD.equals(request.getHeader(AWS_CONTENT_SHA_HEADER))) {
+      if (STREAMING_PAYLOAD.equals(shaHeader)) {
+        // Handle V4 streaming requests
         initialRequest = request;
         awsChunkStream = new AwsChunkStream();
+
+        // Handle initial request body, if any
+        StreamingHttpRequest streamingRequest = awsChunkStream.append(initialRequest);
+        if (streamingRequest != null)
+          event = new UpstreamMessageEvent(ctx.getChannel(), streamingRequest, event.getRemoteAddress());
         ctx.sendUpstream(event);
         return;
-      } else {
-        // Handle V4 continuable non-streaming requests
-        if (!Strings.isNullOrEmpty(authHeader) && authHeader.startsWith(S3V4Authentication.AWS_V4_AUTH_TYPE) && HttpHeaders
-            .is100ContinueExpected(request)) {
-          httpChunked = true;
-          long contentLength = HttpHeaders.getContentLength(request);
-          if (contentLength > maxContentLength) {
-            Channels.fireExceptionCaught(ctx, new MaxMessageLengthExceededException(null, "Max request content length exceeded."));
-            return;
-          }
-
-          // Clear expect header and send continue
-          HttpHeaders.set100ContinueExpected(request, false);
-          OSGChannelWriter.writeResponse(ctx.getChannel(), OSGMessageResponse.Continue);
-        }
+      } else if (!Strings.isNullOrEmpty(authHeader) && authHeader.startsWith(AWS_V4_AUTH_TYPE) && !UNSIGNED_PAYLOAD.equals(shaHeader)) {
+        // Handle content validation for V4 non-streaming requests
+        expectedDigest = BaseEncoding.base16().lowerCase().decode(shaHeader);
+        contentDigest = Digest.SHA256.get();
+        contentDigest.update(request.getContent().toByteBuffer());
+        lastPart = !request.isChunked();
       }
-    } else {
+    } else if (msg instanceof HttpChunk) {
+      final HttpChunk chunk = (HttpChunk) msg;
+
       // Handle V4 streaming chunks
-      if (initialRequest != null && msg instanceof HttpChunk) {
-        HttpChunk chunk = (HttpChunk) event.getMessage();
-        StreamingHttpRequest streamingRequest;
+      if (initialRequest != null) {
         if (!chunk.isLast()) {
-          streamingRequest = awsChunkStream.append(chunk);
+          StreamingHttpRequest streamingRequest = awsChunkStream.append(chunk);
           if (streamingRequest != null) {
             streamingRequest.setInitialRequest(initialRequest);
             ctx.sendUpstream(new UpstreamMessageEvent(ctx.getChannel(), streamingRequest, event.getRemoteAddress()));
@@ -144,13 +150,17 @@ public class ObjectStorageAuthenticationAggregator extends HttpChunkAggregator {
         }
 
         return;
+      } else if (expectedDigest != null) {
+        contentDigest.update(chunk.getContent().toByteBuffer());
+        lastPart = chunk.isLast();
       }
     }
 
-    // Aggregate continuable requests
-    if (httpChunked) {
-      super.messageReceived(ctx, event);
-    } else
-      ctx.sendUpstream(event);
+    if (lastPart && !MessageDigest.isEqual(expectedDigest, contentDigest.digest())) {
+      Channels.fireExceptionCaught(ctx, new XAmzContentSHA256MismatchException());
+      return;
+    }
+
+    ctx.sendUpstream(event);
   }
 }
