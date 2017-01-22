@@ -235,6 +235,8 @@ static void *startstop_thread(void *arg);
 static int doStartInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 static int doStopInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 
+static int get_instance_path(const char *instanceId, char *path, int path_len);
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                              CALLBACK STRUCTURE                            |
@@ -539,6 +541,22 @@ int shutdown_then_destroy_domain(const char *instanceId, boolean do_destroy)
 
         if (!done)
             sleep(2);                  // sleep outside the hypervisor lock
+    }
+
+    // we want to move console.log out of the way, but we don't want to lose it
+    {
+        char ipath[EUCA_MAX_PATH] = { 0 };
+        if (get_instance_path(instanceId, ipath, sizeof(ipath)) != EUCA_OK || strlen(ipath) <= 0) {
+            LOGERROR("Failed to find instance path for instance %s\n", instanceId);
+        } else {
+            char log_path_current[EUCA_MAX_PATH] = { 0 };
+            char log_path_new[EUCA_MAX_PATH] = { 0 };
+            snprintf(log_path_current, (sizeof(log_path_current) - 1), "%s/console.log", ipath);
+            snprintf(log_path_new,     (sizeof(log_path_new) - 1), "%s/console.log.old", ipath);
+            if (rename(log_path_current, log_path_new) == -1) {
+                LOGERROR("Failed to move console log file from %s to %s\n", log_path_current, log_path_new);
+            }
+        }
     }
 
     return error;
@@ -1302,7 +1320,7 @@ int disconnect_ebs(struct nc_state_t *nc, char *instanceId, char *volumeId, char
     return ret;
 }
 
-int get_instance_path(const char *instanceId, char *path, int path_len)
+static int get_instance_path(const char *instanceId, char *path, int path_len)
 {
     int ret = EUCA_OK;
 
