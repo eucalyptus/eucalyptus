@@ -395,14 +395,16 @@ public class CephRbdProvider implements SANProvider {
       // because Ceph sometimes has failures, see EUCA-13114
       EucaSemaphore semaphore = EucaSemaphoreDirectory.getSolitarySemaphore(SEMAPHORE_PREFIX + parentVolumeId);
       try {
-        try {
-          semaphore.acquire();
-        } catch (InterruptedException ex) {
-          throw new EucalyptusCloudException("Failed to create snapshot point " + snapshotId + " on volume " + parentVolumeId +
-              " as the semaphore could not be acquired");
-        }
+        semaphore.acquire();
+        LOG.trace("Acquired semaphore for Ceph createSnapshotPoint for volume " + parentVolumeId);
+      } catch (InterruptedException ex) {
+        throw new EucalyptusCloudException("Failed to create snapshot point " + snapshotId + " on volume " + parentVolumeId +
+            " as the semaphore could not be acquired");
+      }
+      try {
         snapshotPointId = rbdService.createSnapshot(parentVolumeId, snapshotPoint, parent.getPool());
       } finally {
+        LOG.trace("Releasing semaphore for Ceph createSnapshotPoint for volume " + parentVolumeId);
         semaphore.release();
       }
       LOG.info("Created snapshot point parentVolumeId=" + parentVolumeId + ", snapshotId=" + snapshotId + ", parentVolumeIqn=" + parentVolumeIqn);

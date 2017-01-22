@@ -63,6 +63,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.Semaphore;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.annotation.ComponentNamed;
@@ -145,6 +146,8 @@ import com.eucalyptus.util.metrics.MonitoredAction;
 import com.eucalyptus.util.metrics.ThruputMetrics;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
@@ -155,8 +158,6 @@ import edu.ucsb.eucalyptus.cloud.VolumeAlreadyExistsException;
 import edu.ucsb.eucalyptus.cloud.VolumeNotReadyException;
 import edu.ucsb.eucalyptus.cloud.VolumeSizeExceededException;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
-import edu.ucsb.eucalyptus.util.EucaSemaphore;
-import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
 
 @ComponentNamed
 public class BlockStorageController implements BlockStorageService {
@@ -165,8 +166,20 @@ public class BlockStorageController implements BlockStorageService {
   static LogicalStorageManager blockManager;
 
   static final int SNAPSHOT_POINT_DEFAULT_CONCURRENCY = 3;
-  static final String SNAPSHOT_POINT_SEMAPHORE_KEY = "snapshot point";
-  static EucaSemaphore snapshotPointSemaphore = null;
+
+  static Supplier<Semaphore> snapshotPointSemaphoreAllocator = new Supplier<Semaphore>() {
+    @Override
+    public Semaphore get( ) {
+      Integer maxConcurrentSnapshots = StorageInfo.getStorageInfo().getMaxConcurrentSnapshots();
+      int snapshotPointSemaphorePermits = 
+          (maxConcurrentSnapshots == null ? SNAPSHOT_POINT_DEFAULT_CONCURRENCY : maxConcurrentSnapshots);
+      LOG.debug("Snapshot point semaphore created with " + snapshotPointSemaphorePermits + " permits.");
+      return new Semaphore(snapshotPointSemaphorePermits);
+    }
+  };
+  
+  static Supplier<Semaphore> snapshotPointSemaphoreSupplier = Suppliers.memoize(snapshotPointSemaphoreAllocator);
+  
   
   private static Function<String, SnapshotInfo> SNAPSHOT_FAILED = new Function<String, SnapshotInfo>() {
 
@@ -826,27 +839,21 @@ public class BlockStorageController implements BlockStorageService {
             
             // Note this is not the entire snapshot process, only taking the snapshot on the back end,
             // which should normally be fast, so OK to block in this synchronous data path.
-            
-            if (snapshotPointSemaphore == null) {
-              Integer maxConcurrentSnapshots = StorageInfo.getStorageInfo().getMaxConcurrentSnapshots();
-              int snapshotPointSemaphorePermits = 
-                  (maxConcurrentSnapshots == null ? SNAPSHOT_POINT_DEFAULT_CONCURRENCY : maxConcurrentSnapshots);
-              snapshotPointSemaphore = EucaSemaphoreDirectory.getSemaphore(SNAPSHOT_POINT_SEMAPHORE_KEY, snapshotPointSemaphorePermits);
-              LOG.debug("Snapshot point semaphore created with " + snapshotPointSemaphorePermits + " permits.");
+
+            try {
+              snapshotPointSemaphoreSupplier.get().acquire();
+              LOG.trace("Acquired semaphore for BlockStorageController createSnapshotPoint. Remaining permits = " + 
+                  snapshotPointSemaphoreSupplier.get().availablePermits());
+            } catch (InterruptedException ex) {
+              throw new EucalyptusCloudException("Failed to create snapshot point " + snapshotId + " on volume " + volumeId +
+                  " as the semaphore could not be acquired");
             }
             try {
-              try {
-                snapshotPointSemaphore.acquire();
-                LOG.debug("Acquired semaphore for createSnapshotPoint");
-              } catch (InterruptedException ex) {
-                throw new EucalyptusCloudException("Failed to create snapshot point " + snapshotId + " on volume " + volumeId +
-                    " as the semaphore could not be acquired");
-              }
               // This will be a no-op if the backend doesn't support it. Will return null.
               snapPointId = blockManager.createSnapshotPoint(volumeId, snapshotId);
             } finally {
-              LOG.debug("Releasing semaphore for createSnapshotPoint");
-              snapshotPointSemaphore.release();
+              LOG.trace("Releasing semaphore for BlockStorageController createSnapshotPoint");
+              snapshotPointSemaphoreSupplier.get().release();
             }
             // Start time is the time of snapshot point creation
             snapshotInfo.setStartTime(new Date());
