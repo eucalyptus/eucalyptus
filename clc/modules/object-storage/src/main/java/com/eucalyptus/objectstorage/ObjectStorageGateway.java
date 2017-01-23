@@ -465,7 +465,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       }
       // Construct and set the ACP properly, post Auth check so no self-auth can occur even accidentally
       AccessControlPolicy acp = getFullAcp(request.getAccessControlList(), requestUser, bucket.getOwnerCanonicalId());
-      objectEntity.setAcl(acp);
+      objectEntity.setAcl(acp, true);
 
       final String fullObjectKey = objectEntity.getObjectUuid();
       request.setKey(fullObjectKey); // Ensure the backend uses the new full object name
