@@ -325,10 +325,21 @@ static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pG
             if (!strcmp(ipgs[i]->name, "euca_version")) {
                 rc = mido_get_ipaddrgroup_ips(ipgs[i], &ips, &max_ips);
                 if (!rc && ips && max_ips) {
+                    if (max_ips > 1) {
+                        LOGFATAL("Unable to detect eucanetd artifacts version - %d versions\n",
+                                max_ips);
+                        LOGINFO("eucanetd going down.\n");
+                        exit(1);
+                    }
                     mido_euca_version = euca_version_dot2hex(ips[0]->ipagip->ip);
                     mido_euca_version_str = hex2dot(mido_euca_version);
                     found = TRUE;
                     LOGTRACE("\tFound %s artifacts\n", mido_euca_version_str);
+                    if (mido_euca_version < dot2hex("4.4.0.0")) {
+                        LOGWARN("Unable to upgrade from version %s\n", mido_euca_version_str);
+                        LOGINFO("eucanetd going down.\n");
+                        exit(1);
+                    }
                     if (mido_euca_version < pConfig->euca_version) {
                         LOGINFO("Upgrading Eucalyptus %s to %s\n", mido_euca_version_str, pConfig->euca_version_str);
                         mido_delete_resource(ipgs[i], ips[0]);
@@ -347,6 +358,8 @@ static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pG
     EUCA_FREE(ipgs);
 
     if (do_upgrade) {
+        // No 4.4->5.0 upgrade action required
+/*
         // Retrieve all objects
         rc = midonet_api_cache_refresh_v_threads(MIDO_CACHE_REFRESH_ALL);
         if (rc) {
@@ -358,34 +371,10 @@ static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pG
             if (rc) {
                 LOGWARN("failed to populate VPC models prior to upgrade.\n");
             }
-
-            LOGINFO("\tremoving pre-4.4 meta taps\n");
-            for (int i = 0; i < mido->max_vpcs; i++) {
-                mido_vpc *vpc = &(mido->vpcs[i]);
-                for (int j = 0; j < vpc->max_subnets; j++) {
-                    mido_vpc_subnet *vpcsubnet = &(vpc->subnets[j]);
-                    mido_delete_bridge_port(vpcsubnet->subnetbr, vpcsubnet->midos[SUBN_BR_METAPORT]);
-                    vpcsubnet->midos[SUBN_BR_METAPORT] = NULL;
-                    delete_mido_meta_subnet_veth(mido, vpcsubnet->name);
-                }
-            }
-
-            LOGINFO("\tremoving pre-4.4 eni chains\n");
-            do_delete_vpceni_chains(mido);
         }
+*/
     }
 
-        // possible use_systemctl changes
-    if (!pConfig->use_systemctl) {
-        pConfig->use_systemctl = TRUE;
-        do_md_nginx_maintain(pMidoConfig, VPCMIDO_NGINX_STOP);
-        pConfig->use_systemctl = FALSE;   
-    } else {
-        pConfig->use_systemctl = FALSE;
-        do_md_nginx_maintain(pMidoConfig, VPCMIDO_NGINX_STOP);
-        pConfig->use_systemctl = TRUE;   
-    }
-    
     EUCA_FREE(mido_euca_version_str);
     return (ret);
 }

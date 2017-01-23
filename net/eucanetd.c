@@ -123,8 +123,6 @@ configEntry configKeysRestartEUCANETD[] = {
     ,
     {"VNET_SYSTEMCTL", "/usr/bin/systemctl"}
     ,
-    {"VNET_USE_SYSTEMCTL", "Y"}
-    ,
     {"VNET_DNS", NULL}
     ,
     {"VNET_DOMAINNAME", "eucalyptus.internal"}
@@ -1303,7 +1301,6 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
     cvals[EUCANETD_CVAL_DHCPDAEMON] = configFileValue("VNET_DHCPDAEMON");
     cvals[EUCANETD_CVAL_DHCPUSER] = configFileValue("VNET_DHCPUSER");
     cvals[EUCANETD_CVAL_SYSTEMCTL] = configFileValue("VNET_SYSTEMCTL");
-    cvals[EUCANETD_CVAL_USE_SYSTEMCTL] = configFileValue("VNET_USE_SYSTEMCTL");
     cvals[EUCANETD_CVAL_POLLING_FREQUENCY] = configFileValue("POLLING_FREQUENCY");
     cvals[EUCANETD_CVAL_DISABLE_L2_ISOLATION] = configFileValue("DISABLE_L2_ISOLATION");
     cvals[EUCANETD_CVAL_NC_PROXY] = configFileValue("NC_PROXY");
@@ -1417,11 +1414,6 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
     snprintf(config->bridgeDev, IF_NAME_LEN, "%s", cvals[EUCANETD_CVAL_BRIDGE]);
     snprintf(config->dhcpDaemon, EUCA_MAX_PATH, "%s", cvals[EUCANETD_CVAL_DHCPDAEMON]);
     snprintf(config->systemctl, EUCA_MAX_PATH, "%s", cvals[EUCANETD_CVAL_SYSTEMCTL]);
-    if (!strcmp(cvals[EUCANETD_CVAL_USE_SYSTEMCTL], "Y")) {
-        config->use_systemctl = TRUE;
-    } else {
-        config->use_systemctl = FALSE;
-    }
 
     if (strlen(config->systemctl)) {
         char cmd[EUCA_MAX_PATH] = "";

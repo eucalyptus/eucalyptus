@@ -293,26 +293,27 @@ static int network_driver_init(eucanetdConfig *pEucanetdConfig, globalNetworkInf
 }
 
 /**
- * Upgrades 4.3 EDGE constructs to 4.4 EDGE constructs.
- * iptables chain names and ipset names are changed from EU_hash to sg-xxxxxxxx
- * naming style. Pre 4.3 iptables chains and ipsets are cleared - necessary iptables
- * chains and ipsets are created in the first successful eucanetd iteration.
+ * Upgrades 4.4 EDGE constructs to 5.0 EDGE constructs.
  * 
  * @param pConfig [in] a pointer to eucanetd system-wide configuration
  * @param pGni [in] a pointer to the Global Network Information structure
  * 
  * @post
- *     - On success all EU_hash iptables chains and ipsets are flushed
  *     - On failure, the system is left in an undetermined state
  *
  * @TODO:
- *     This will not be needed for 4.4+ (if upgrade path from 4.3 is not supported)
+ *     This will not be needed for 5.0+
  */
 static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pGni) {
-    int rc = 0;
     int ret = 0;
 
-    LOGINFO("Upgrade 4.3 '%s' network driver artifacts.\n", DRIVER_NAME());
+    // Skip upgrade in flush mode
+    if (pConfig && pConfig->flushmode != FLUSH_NONE) {
+        LOGTRACE("\tflush mode selected. Skipping upgrade\n");
+        return (0);
+    }
+
+    LOGDEBUG("Upgrade 4.4 '%s' network driver artifacts.\n", DRIVER_NAME());
 
     if (!pConfig) {
         LOGWARN("Invalid argument: cannot upgrade with NULL config\n");
@@ -325,49 +326,61 @@ static int network_driver_upgrade(eucanetdConfig *pConfig, globalNetworkInfo *pG
     }
     // Is our driver initialized?
     if (!IS_INITIALIZED()) {
-        LOGERROR("Upgrade 4.3 '%s' network driver artifacts failed. Driver not initialized.\n", DRIVER_NAME());
+        LOGERROR("Upgrade 4.4 '%s' network driver artifacts failed. Driver not initialized.\n", DRIVER_NAME());
         return (1);
     }
-    // dhcpd
-        // terminate pre-4.4 dhcpd
-    if (rc != 0) {
-        LOGDEBUG("Failed to terminate dhcpd\n");
-    }
-        // possible use_systemctl changes
-    if (!pConfig->use_systemctl) {
-        pConfig->use_systemctl = TRUE;
-        eucanetd_stop_dhcpd_server(pConfig);
-        pConfig->use_systemctl = FALSE;   
-    } else {
-        pConfig->use_systemctl = FALSE;
-        eucanetd_stop_dhcpd_server(pConfig);
-        pConfig->use_systemctl = TRUE;   
-    }
-    // iptables
-    ipt_handler_repopulate(pConfig->ipt);
-    // delete legacy (pre 4.4) chains
-    ipt_table_deletechainmatch(pConfig->ipt, "filter", "EU_");
-    ipt_chain_flush(pConfig->ipt, "filter", "EUCA_FILTER_FWD");
-    ipt_table_add_chain(pConfig->ipt, "filter", "EUCA_FILTER_FWD_DROPPED", "-", "[0:0]");
-    ipt_chain_add_rule(pConfig->ipt, "filter", "EUCA_FILTER_FWD", "-A EUCA_FILTER_FWD -j EUCA_FILTER_FWD_DROPPED");
-    ipt_handler_print(pConfig->ipt);
-    rc = ipt_handler_deploy(pConfig->ipt);
-    if (rc) {
-        LOGERROR("Failed to upgrade 4.3 %s IP Tables artifacts.\n", DRIVER_NAME());
-        ret = 1;
-    }
-    // ipsets
+
     ips_handler_repopulate(pConfig->ips);
-    // delete legacy (pre 4.4) ipsets
-    ips_handler_deletesetmatch(pConfig->ips, "EU_");
-    ips_handler_print(pConfig->ips);
-    rc = ips_handler_deploy(pConfig->ips, 1);
-    if (rc) {
-        LOGERROR("Failed to upgrade 4.3 %s ipset artifacts.\n", DRIVER_NAME());
-        ret = 1;
+
+    boolean do_upgrade = FALSE;
+    u32 euca_version = euca_version_dot2hex(EUCA_VERSION);
+    u32 detected_euca_version = 0;
+    ips_set *euca_version_ips = ips_handler_find_set(pConfig->ips, "EUCA_VERSION");
+    if (euca_version_ips) {
+        if ((euca_version_ips->max_member_ips == 1) && (euca_version_ips->member_nms[0] == 32)) {
+            detected_euca_version = euca_version_ips->member_ips[0];
+        } else if (euca_version_ips->max_member_ips > 1) {
+            LOGFATAL("Unable to detect eucanetd artifacts version - %d versions\n",
+                    euca_version_ips->max_member_ips);
+            LOGINFO("eucanetd going down.\n");
+            exit (1);
+        }
     }
-    // ebtables
-    // no upgrade operation required
+    if (detected_euca_version) {
+        if (detected_euca_version < dot2hex("4.4.0.0")) {
+            LOGWARN("Unable to upgrade from version %s\n", hex2dot_s(detected_euca_version));
+            LOGINFO("eucanetd going down.\n");
+            exit (1);
+        }
+        if (detected_euca_version < euca_version) {
+            do_upgrade = TRUE;
+            char *euca_version_str = hex2dot(euca_version);
+            LOGINFO("Upgrading eucanetd %s to %s\n", hex2dot_s(detected_euca_version), euca_version_str);
+            EUCA_FREE(euca_version_str);
+        }
+        if (detected_euca_version > euca_version) {
+            LOGFATAL("Downgrading eucanetd from %s to %s not supported.\n", hex2dot_s(detected_euca_version), EUCA_VERSION);
+            LOGINFO("Cleanup eucanetd artifacts with 'eucanetd -F'\n");
+            LOGINFO("eucanetd going down.\n");
+            exit (1);
+        }
+    } else {
+        LOGTRACE("Did not detect eucanetd artifacts - no upgrade action taken\n");
+    }
+
+    if (do_upgrade) {
+        // dhcpd
+        // no upgrade operation required
+
+        // iptables
+        // no upgrade operation required
+
+        // ipsets
+        // no upgrade operation required
+
+        // ebtables
+        // no upgrade operation required
+    }
 
     return (ret);
 }

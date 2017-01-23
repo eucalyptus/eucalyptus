@@ -156,6 +156,7 @@
 \*----------------------------------------------------------------------------*/
 
 enum mido_chain_rule_elements_t {
+    MIDO_CRULE_TYPE,
     MIDO_CRULE_PROTO,
     MIDO_CRULE_NW,
     MIDO_CRULE_NWLEN,
@@ -584,6 +585,7 @@ int mido_update_chain(midoname *name, ...);
 int mido_print_chain(midoname *name);
 int mido_delete_chain(midoname *name);
 int mido_get_chains(char *tenant, midoname ***outnames, int *outnames_max);
+int mido_get_chains_with_prefix(char *tenant, char *prefix, midoname ***outnames, int *outnames_max);
 midonet_api_chain *mido_get_chain(char *name);
 
 int mido_create_rule(midonet_api_chain *ch, midoname *chain, midoname **outname, int *next_position, ...);

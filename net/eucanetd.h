@@ -71,6 +71,7 @@
 #define EUCANETD_ERR_VPCMIDO_VPCS                90
 #define EUCANETD_ERR_VPCMIDO_SGS                100
 #define EUCANETD_ERR_VPCMIDO_ENIS               110
+#define EUCANETD_ERR_VPCMIDO_NACLS              120
 #define EUCANETD_ERR_VPCMIDO_OTHER              255
 
 //! @{
@@ -119,7 +120,6 @@ enum {
     EUCANETD_CVAL_DHCPDAEMON,
     EUCANETD_CVAL_DHCPUSER,
     EUCANETD_CVAL_SYSTEMCTL,
-    EUCANETD_CVAL_USE_SYSTEMCTL,
     EUCANETD_CVAL_POLLING_FREQUENCY,
     EUCANETD_CVAL_DISABLE_L2_ISOLATION,
     EUCANETD_CVAL_NC_PROXY,
@@ -246,7 +246,6 @@ typedef struct eucanetdConfig_t {
     boolean eucanetd_first_update;
     
     boolean nc_proxy;                //!< Set to TRUE to indicate we're using the NC proxy feature
-    boolean use_systemctl;
     boolean enable_mido_md;
     boolean mido_md_veth_use_netns;
     boolean mido_md_config_changed;

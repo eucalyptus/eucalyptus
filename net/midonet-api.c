@@ -5776,6 +5776,56 @@ int mido_get_chains(char *tenant, midoname ***outnames, int *outnames_max) {
 }
 
 /**
+ * Retrieves an array of pointers to midonet object representing chains that have
+ * names with the prefix in the argument.
+ * @param tenant [in] name of the MidoNet tenant.
+ * @param prefix [in] prefix string to match chain names.
+ * @param outnames [out] an array of pointers to midonet objects representing chains, to be returned
+ * @param outnames_max [out] number of retrieved chains.
+ * @return 0 on success. 1 otherwise.
+ */
+int mido_get_chains_with_prefix(char *tenant, char *prefix, midoname ***outnames, int *outnames_max) {
+    if (!tenant || !prefix || !outnames || !outnames_max) {
+        return (1);
+    }
+    *outnames = NULL;
+    *outnames_max = 0;
+    if (midocache != NULL) {
+        midonet_api_chain **chains = midocache->chains;
+        if ((chains != NULL) && (midocache->max_chains > 0)) {
+            midoname **names = NULL;
+            for (int i = 0; i < midocache->max_chains; i++) {
+                if (chains[i] == NULL) {
+                    continue;
+                }
+                if (strstr(chains[i]->obj->name, prefix) == chains[i]->obj->name) {
+                    names = EUCA_APPEND_PTRARR(names, outnames_max, chains[i]->obj);
+                }
+            }
+            *outnames = names;
+        }
+    } else {
+        midoname **tmpnames = NULL;
+        int max_tmpnames = 0;
+        int rc = mido_get_resources(NULL, 0, tenant, "chains",
+            midonet_api_mtypes[APPLICATION_COLLECTION_CHAIN_JSON],
+            midonet_api_mtypes[APPLICATION_CHAIN_JSON],
+            &tmpnames, &max_tmpnames);
+        if (rc == 0) {
+            midoname **names = NULL;
+            for (int i = 0; i < max_tmpnames; i++) {
+                if (strstr(tmpnames[i]->name, prefix) == tmpnames[i]->name) {
+                    names = EUCA_APPEND_PTRARR(names, outnames_max, tmpnames[i]);
+                }
+            }
+            *outnames = names;
+        }
+        EUCA_FREE(tmpnames);
+    }
+    return (0);
+}
+
+/**
  * Retrieves a midonet object that represents the chain in the argument from midocache.
  * @param name [in] name of the MidoNet chain of interest.
  * @return pointer to the data structure that represents the chain, when found. NULL otherwise.
@@ -9186,6 +9236,9 @@ int midonet_api_delete_unconnected_ports(midoname **ports, int max_ports, boolea
     for (int i = 0; i < max_ports; i++) {
         char *peerId = NULL;
         char *interfaceName = NULL;
+        if (!ports[i]) {
+            continue;
+        }
         if (ports[i]->port) {
             peerId = ports[i]->port->peerid;
             interfaceName = ports[i]->port->ifname;
