@@ -150,6 +150,15 @@ public abstract class S3AccessControlledEntity<STATE extends Enum<STATE>> extend
    * @param msgAcl
    */
   public void setAcl(final AccessControlPolicy msgAcl) {
+    boolean isPutObject = false;
+    setAcl( msgAcl, isPutObject);
+  }
+  /**
+   * Set from the messaging type. The owner must be properly set in the message msgAcl.
+   *
+   * @param msgAcl
+   */
+  public void setAcl(final AccessControlPolicy msgAcl, boolean isPutObject) {
     AccessControlPolicy policy = msgAcl;
 
     // Check for the owner and add it if not already set
@@ -161,9 +170,13 @@ public abstract class S3AccessControlledEntity<STATE extends Enum<STATE>> extend
         policy.setOwner(new CanonicalUser(this.getOwnerCanonicalId(), this.getOwnerDisplayName()));
       }
     }
-
-    Map<String, Integer> resultMap = AccessControlPolicyToMap.INSTANCE.apply(policy);
-
+    Map<String, Integer> resultMap = null;
+    if(isPutObject){
+      // This is not a bucket and we no longer give the owner fullcontrol by default.
+      resultMap = PutObjectAccessControlPolicyToMap.INSTANCE.apply(policy);
+    } else {
+      resultMap = AccessControlPolicyToMap.INSTANCE.apply(policy);
+    }
     // Serialize into json
     setAcl(JSONObject.fromObject(resultMap).toString());
     setDecodedAcl(resultMap);
@@ -382,7 +395,45 @@ public abstract class S3AccessControlledEntity<STATE extends Enum<STATE>> extend
       return aclMap;
     }
   }
+  /**
+   * Convert the specified AccessControlPolicy type (a messaging type) into the persistence type
+   */
+  protected enum PutObjectAccessControlPolicyToMap implements Function<AccessControlPolicy, Map<String, Integer> >{
+    INSTANCE;
+    /**
+     * Returns a valid map of canonicalid -> grant. Returns null if an error occurred.
+     */
+    @Override
+    public Map<String, Integer> apply(AccessControlPolicy srcPolicy) {
+      if (srcPolicy == null) {
+        throw new RuntimeException("Null source policy. Cannot map");
+      }
 
+      Map<String, Integer> aclMap = AccessControlListToMap.INSTANCE.apply(srcPolicy.getAccessControlList());
+      if (aclMap == null) {
+        // shouldn't happen.
+        throw new RuntimeException("Null acl map. Cannot proceed with policy generation");
+      }
+
+      // Add owner
+      String ownerCanonicalId = srcPolicy.getOwner().getID();
+      if (ownerCanonicalId == null) {
+        // Owner is required.
+        throw new RuntimeException("Invalid ACP: OwnerCanonicalId required.");
+      }
+
+      // Check for valid owner
+      try {
+        AclUtils.lookupPrincipalByCanonicalId(ownerCanonicalId);
+      } catch (Exception e) {
+        // Invalid owner
+        LOG.warn("Got invalid owner in AccessControlPolicy during mapping to DB: " + ownerCanonicalId);
+        throw new RuntimeException("Could not find account by canonicalId " + ownerCanonicalId, e);
+      }
+
+      return aclMap;
+    }
+  }
   /**
    * Handles just the access control list itself without the additional owner info
    *
