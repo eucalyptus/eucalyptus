@@ -124,7 +124,14 @@ public class AsyncRequests {
     }
 
     if ( config.isVmLocal( ) ) {
-      return ServiceContext.<B>send( config.getComponentId( ), msg ).get( );
+      try {
+        return ServiceContext.<B>send( config.getComponentId( ), msg ).get( );
+      } catch ( ExecutionException e ) {
+        if ( e.getCause( ) instanceof Exception ) {
+          throw (Exception) e.getCause( );
+        }
+        throw e;
+      }
     } else {
       try {
         Request<A, B> req = newRequest( new MessageCallback<A, B>( ) {
