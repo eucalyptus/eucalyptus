@@ -98,11 +98,61 @@ class AwsUsageReportData extends UsageReportData {
     public Date startTime;
     public Date endTime;
     public String usageValue;
+
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder();
+        final DateFormat df = new SimpleDateFormat("MM/dd/yy HH:mm:ss");
+        //Service, Operation, UsageType, Resource, StartTime, EndTime, UsageValue
+        //AmazonEC2,Unknown,CW:AlarmMonitorUsage,,11/01/16 00:00:00,11/02/16 00:00:00,48
+        sb.append(this.service!=null ? this.service + "," : ",");
+        sb.append(this.operation!=null ? this.operation + "," : ",");
+        sb.append(this.usageType!=null ? this.usageType + "," : ",");
+        sb.append(this.resource!=null ? this.resource + "," : ",");
+        sb.append(this.startTime!=null ? df.format(this.startTime) + "," : ",");
+        sb.append(this.endTime!=null ? df.format(this.endTime) + "," : ",");
+        sb.append(this.usageValue!=null ? this.usageValue: "");
+        return sb.toString();
+    }
 }
 
+
+class InstanceUsageReport {
+    private String[] header;
+    private List<InstanceUsageReportData> data;
+
+    public void setHeader(final String[] header) {
+        this.header = header;
+    }
+
+    public void setData(final List<InstanceUsageReportData> data) {
+        this.data = data;
+    }
+    public String[] getHeader() {
+        return header;
+    }
+
+    public List<InstanceUsageReportData> getData() {
+        return data;
+    }
+}
 
 class InstanceUsageReportData extends UsageReportData {
     public String startTime;
     public String endTime;
-    public List<Integer> values = new ArrayList<Integer>();
+    public Integer[] values;/// value = instance hours
+
+    @Override
+    public String toString() {
+        // 2016-11-01 00:00:00
+        final StringBuilder sb = new StringBuilder();
+        sb.append(String.format("%s,%s", startTime, endTime));
+        for (final Integer v : values) {
+            if (v!=null && v > 0)
+                sb.append(String.format(",%d", v));
+            else
+                sb.append(",");
+        }
+        return sb.toString();
+    }
 }

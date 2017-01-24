@@ -1,0 +1,18 @@
+Service, Operation, UsageType, Resource, StartTime, EndTime, UsageValue
+AmazonCloudWatch,DescribeMetricFilters,USW2-Request-NoCharge,,11/11/16 23:00:00,11/12/16 00:00:00,1
+AmazonCloudWatch,DescribeMetricFilters,USW2-Request-NoCharge,,11/12/16 00:00:00,11/12/16 01:00:00,12
+AmazonCloudWatch,DescribeMetricFilters,USW2-Request-NoCharge,,11/12/16 01:00:00,11/12/16 02:00:00,11
+AmazonCloudWatch,DescribeMetricFilters,USW2-Request-NoCharge,,11/12/16 02:00:00,11/12/16 03:00:00,12
+AmazonCloudWatch,DescribeMetricFilters,USW2-Request-NoCharge,,11/12/16 03:00:00,11/12/16 04:00:00,12
+AmazonCloudWatch,DescribeMetricFilters,USW2-Request-NoCharge,,11/12/16 04:00:00,11/12/16 05:00:00,12
+AmazonCloudWatch,DescribeMetricFilters,USW2-Request-NoCharge,,11/12/16 05:00:00,11/12/16 06:00:00,12
+AmazonCloudWatch,DescribeMetricFilters,USW2-Request-NoCharge,,11/12/16 06:00:00,11/12/16 07:00:00,12
+AmazonCloudWatch,DescribeMetricFilters,USW2-Request-NoCharge,,11/12/16 07:00:00,11/12/16 08:00:00,12
+AmazonCloudWatch,DescribeMetricFilters,USW2-Request-NoCharge,,11/12/16 08:00:00,11/12/16 09:00:00,12
+AmazonCloudWatch,DescribeMetricFilters,USW2-Request-NoCharge,,11/12/16 09:00:00,11/12/16 10:00:00,7
+AmazonCloudWatch,DescribeMetricFilters,USW2-Request-NoCharge,,11/14/16 21:00:00,11/14/16 22:00:00,5
+AmazonCloudWatch,DescribeMetricFilters,USW2-Request-NoCharge,,11/14/16 22:00:00,11/14/16 23:00:00,6
+AmazonCloudWatch,DescribeMetricFilters,USW2-Request-NoCharge,,11/14/16 23:00:00,11/15/16 00:00:00,5
+AmazonCloudWatch,DescribeMetricFilters,USW2-Request-NoCharge,,11/15/16 20:00:00,11/15/16 21:00:00,1
+AmazonCloudWatch,DescribeMetricFilters,USW2-Request-NoCharge,,11/22/16 19:00:00,11/22/16 20:00:00,1
+

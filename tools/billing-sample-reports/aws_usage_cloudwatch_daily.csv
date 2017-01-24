@@ -1,0 +1,7 @@
+Service, Operation, UsageType, Resource, StartTime, EndTime, UsageValue
+AmazonCloudWatch,DescribeMetricFilters,USW2-Request-NoCharge,,11/11/16 00:00:00,11/12/16 00:00:00,1
+AmazonCloudWatch,DescribeMetricFilters,USW2-Request-NoCharge,,11/12/16 00:00:00,11/13/16 00:00:00,114
+AmazonCloudWatch,DescribeMetricFilters,USW2-Request-NoCharge,,11/14/16 00:00:00,11/15/16 00:00:00,16
+AmazonCloudWatch,DescribeMetricFilters,USW2-Request-NoCharge,,11/15/16 00:00:00,11/16/16 00:00:00,1
+AmazonCloudWatch,DescribeMetricFilters,USW2-Request-NoCharge,,11/22/16 00:00:00,11/23/16 00:00:00,1
+

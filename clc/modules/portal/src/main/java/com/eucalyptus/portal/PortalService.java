@@ -177,8 +177,7 @@ public class PortalService {
   public ViewUsageResponseType viewUsage(final ViewUsageType request) throws PortalServiceException {
     final Context context = checkAuthorized( );
     final ViewUsageResponseType response = request.getReply();
-    final ViewUsageResult result = new ViewUsageResult();
-    result.setData("Service, Operation, UsageType, Resource, StartTime, EndTime, UsageValue");
+    final ViewUsageResult result = MockReports.getInstance().generateAwsUsageReport(request);
     response.setResult(result);
     return response;
   }

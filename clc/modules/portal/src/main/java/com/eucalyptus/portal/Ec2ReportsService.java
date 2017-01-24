@@ -35,16 +35,19 @@ import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 @SuppressWarnings( "unused" )
 @ComponentNamed
 public class Ec2ReportsService {
-  private static final Logger logger = Logger.getLogger( Ec2ReportsService.class );
+  private static final Logger LOG = Logger.getLogger( Ec2ReportsService.class );
 
   public ViewInstanceUsageReportResponseType viewInstanceUsageReport(final ViewInstanceUsageReportType request)
           throws Ec2ReportsServiceException {
     final ViewInstanceUsageReportResponseType response = request.getReply();
     final Context context = checkAuthorized( );
 
-    final ViewInstanceUsageResult result = new ViewInstanceUsageResult();
-    result.setUsageReport("Start Time, End Time, TAG");
-    response.setResult(result);
+    try {
+      final ViewInstanceUsageResult result = MockReports.getInstance().generateInstanceUsageReport(request);
+      response.setResult(result);
+    } catch (final Exception ex) {
+      handleException(ex);
+    }
     return response;
   }
 
@@ -82,7 +85,7 @@ public class Ec2ReportsService {
   private static Ec2ReportsServiceException handleException( final Exception e  ) throws Ec2ReportsServiceException {
     Exceptions.findAndRethrow( e, Ec2ReportsServiceException.class );
 
-    logger.error( e, e );
+    LOG.error( e, e );
 
     final Ec2ReportsServiceException exception = new Ec2ReportsServiceException( "InternalError", String.valueOf(e.getMessage()) );
     if ( Contexts.lookup( ).hasAdministrativePrivileges() ) {
