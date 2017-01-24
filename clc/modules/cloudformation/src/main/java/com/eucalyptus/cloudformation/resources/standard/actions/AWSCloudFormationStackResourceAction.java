@@ -21,7 +21,6 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.cloudformation.CloudFormation;
 import com.eucalyptus.cloudformation.CloudFormationService;
 import com.eucalyptus.cloudformation.CreateStackResponseType;
@@ -255,8 +254,9 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
     DEAL_WITH_UPDATE_COMPLETE_CLEANUP_IN_PROGRESS_ON_DELETE {
     @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
-        AWSCloudFormationStackResourceAction action = (AWSCloudFormationStackResourceAction) resourceAction;
-        ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
+      AWSCloudFormationStackResourceAction action = (AWSCloudFormationStackResourceAction) resourceAction;
+      ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
+      if (alreadyDeletedOrNeverCreated(action, configuration)) return action;
         StatusAndReason statusAndReason = getStackStatusAndReason(action, configuration);
         String status = statusAndReason.getStatus();
         if (Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS.toString().equals(status) || Status.UPDATE_ROLLBACK_IN_PROGRESS.toString().equals(status)) {
@@ -274,11 +274,12 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSCloudFormationStackResourceAction action = (AWSCloudFormationStackResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
+        if (alreadyDeletedOrNeverCreated(action, configuration)) return action;
         if (action.info.getEucaAttributes().containsKey(AWSCloudFormationStackResourceInfo.EUCA_DELETE_STATUS_UPDATE_COMPLETE_CLEANUP_IN_PROGRESS)) {
           boolean deleteStatusUpdateCompleteCleanupInProgress = Boolean.valueOf(JsonHelper.getJsonNodeFromString(
             action.info.getEucaAttributes().get(AWSCloudFormationStackResourceInfo.EUCA_DELETE_STATUS_UPDATE_COMPLETE_CLEANUP_IN_PROGRESS)).asText());
           if (deleteStatusUpdateCompleteCleanupInProgress) {
-            ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
             StatusAndReason statusAndReason = getStackStatusAndReason(action, configuration);
             String status = statusAndReason.getStatus();
             if (Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS.toString().equals(status) || Status.UPDATE_ROLLBACK_IN_PROGRESS.toString().equals(status)) {
@@ -301,6 +302,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSCloudFormationStackResourceAction action = (AWSCloudFormationStackResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
+        if (alreadyDeletedOrNeverCreated(action, configuration)) return action;
         StatusAndReason statusAndReason = getStackStatusAndReason(action, configuration);
         String status = statusAndReason.getStatus();
         if (Status.UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS.toString().equals(status)) {
@@ -318,11 +320,12 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSCloudFormationStackResourceAction action = (AWSCloudFormationStackResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
+        if (alreadyDeletedOrNeverCreated(action, configuration)) return action;
         if (action.info.getEucaAttributes().containsKey(AWSCloudFormationStackResourceInfo.EUCA_DELETE_STATUS_UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS)) {
           boolean deleteStatusUpdateCompleteCleanupInProgress = Boolean.valueOf(JsonHelper.getJsonNodeFromString(
             action.info.getEucaAttributes().get(AWSCloudFormationStackResourceInfo.EUCA_DELETE_STATUS_UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS)).asText());
           if (deleteStatusUpdateCompleteCleanupInProgress) {
-            ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
             StatusAndReason statusAndReason = getStackStatusAndReason(action, configuration);
             String status = statusAndReason.getStatus();
             if (Status.UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS.toString().equals(status)) {
@@ -344,39 +347,20 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSCloudFormationStackResourceAction action = (AWSCloudFormationStackResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
-        if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
-        // First see if stack exists or has been deleted
-        DescribeStacksType describeStacksType = MessageHelper.createMessage(DescribeStacksType.class, action.info.getEffectiveUserId());
-        describeStacksType.setStackName(action.info.getPhysicalResourceId()); // actually the stack id...
-        DescribeStacksResponseType describeStacksResponseType = AsyncRequests.<DescribeStacksType, DescribeStacksResponseType>sendSync(configuration, describeStacksType);
-        if (describeStacksResponseType.getDescribeStacksResult() == null ||
-          describeStacksResponseType.getDescribeStacksResult().getStacks() == null ||
-          describeStacksResponseType.getDescribeStacksResult().getStacks().getMember() == null ||
-          describeStacksResponseType.getDescribeStacksResult().getStacks().getMember().isEmpty()) {
-          return action;
-        }
-        if (describeStacksResponseType.getDescribeStacksResult().getStacks().getMember().size() > 1) {
-          throw new ResourceFailureException("More than one stack returned for stack " + action.info.getPhysicalResourceId());
-        }
-        String status = describeStacksResponseType.getDescribeStacksResult().getStacks().getMember().get(0).getStackStatus();
-        if (status == null) {
-          throw new ResourceFailureException("Null status for stack " + action.info.getPhysicalResourceId());
-        }
-        if (status.equals(Status.DELETE_COMPLETE.toString())) {
-          return action;
-        }
+        if (alreadyDeletedOrNeverCreated(action, configuration)) return action;
         DeleteStackType deleteStackType = MessageHelper.createMessage(DeleteStackType.class, action.info.getEffectiveUserId());
         deleteStackType.setStackName(action.info.getPhysicalResourceId()); // actually stack id
         AsyncRequests.<DeleteStackType, DeleteStackResponseType>sendSync(configuration, deleteStackType);
         return action;
       }
+
     },
     WAIT_UNTIL_DELETE_COMPLETE {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSCloudFormationStackResourceAction action = (AWSCloudFormationStackResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(CloudFormation.class);
-        if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
+        if (alreadyDeletedOrNeverCreated(action, configuration)) return action;
         // First see if stack exists or has been deleted
         DescribeStacksType describeStacksType = MessageHelper.createMessage(DescribeStacksType.class, action.info.getEffectiveUserId());
         describeStacksType.setStackName(action.info.getPhysicalResourceId()); // actually the stack id...
@@ -421,6 +405,31 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
     @Override
     public Integer getTimeout() {
       return null;
+    }
+
+    private static boolean alreadyDeletedOrNeverCreated(AWSCloudFormationStackResourceAction action, ServiceConfiguration configuration) throws Exception {
+      if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return true;
+      // First see if stack exists or has been deleted
+      DescribeStacksType describeStacksType = MessageHelper.createMessage(DescribeStacksType.class, action.info.getEffectiveUserId());
+      describeStacksType.setStackName(action.info.getPhysicalResourceId()); // actually the stack id...
+      DescribeStacksResponseType describeStacksResponseType = AsyncRequests.<DescribeStacksType, DescribeStacksResponseType>sendSync(configuration, describeStacksType);
+      if (describeStacksResponseType.getDescribeStacksResult() == null ||
+        describeStacksResponseType.getDescribeStacksResult().getStacks() == null ||
+        describeStacksResponseType.getDescribeStacksResult().getStacks().getMember() == null ||
+        describeStacksResponseType.getDescribeStacksResult().getStacks().getMember().isEmpty()) {
+        return true;
+      }
+      if (describeStacksResponseType.getDescribeStacksResult().getStacks().getMember().size() > 1) {
+        throw new ResourceFailureException("More than one stack returned for stack " + action.info.getPhysicalResourceId());
+      }
+      String status = describeStacksResponseType.getDescribeStacksResult().getStacks().getMember().get(0).getStackStatus();
+      if (status == null) {
+        throw new ResourceFailureException("Null status for stack " + action.info.getPhysicalResourceId());
+      }
+      if (status.equals(Status.DELETE_COMPLETE.toString())) {
+        return true;
+      }
+      return false;
     }
   }
 
