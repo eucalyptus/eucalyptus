@@ -22,6 +22,8 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 import com.eucalyptus.auth.euare.AddUserToGroupResponseType;
 import com.eucalyptus.auth.euare.AddUserToGroupType;
+import com.eucalyptus.auth.euare.AttachUserPolicyType;
+import com.eucalyptus.auth.euare.AttachedPolicyType;
 import com.eucalyptus.auth.euare.CreateLoginProfileResponseType;
 import com.eucalyptus.auth.euare.CreateLoginProfileType;
 import com.eucalyptus.auth.euare.CreateUserResponseType;
@@ -32,7 +34,10 @@ import com.eucalyptus.auth.euare.DeleteUserPolicyResponseType;
 import com.eucalyptus.auth.euare.DeleteUserPolicyType;
 import com.eucalyptus.auth.euare.DeleteUserResponseType;
 import com.eucalyptus.auth.euare.DeleteUserType;
+import com.eucalyptus.auth.euare.DetachUserPolicyType;
 import com.eucalyptus.auth.euare.GroupType;
+import com.eucalyptus.auth.euare.ListAttachedUserPoliciesResponseType;
+import com.eucalyptus.auth.euare.ListAttachedUserPoliciesType;
 import com.eucalyptus.auth.euare.ListGroupsForUserResponseType;
 import com.eucalyptus.auth.euare.ListGroupsForUserType;
 import com.eucalyptus.auth.euare.PutUserPolicyResponseType;
@@ -110,6 +115,9 @@ public class AWSIAMUserResourceAction extends StepBasedResourceAction {
     if (!Objects.equals(properties.getLoginProfile(), otherAction.properties.getLoginProfile())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
+    if (!Objects.equals(properties.getManagedPolicyArns(), otherAction.properties.getManagedPolicyArns())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+    }
     if (!Objects.equals(properties.getPolicies(), otherAction.properties.getPolicies())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
@@ -164,6 +172,22 @@ public class AWSIAMUserResourceAction extends StepBasedResourceAction {
             putUserPolicyType.setPolicyName(policy.getPolicyName());
             putUserPolicyType.setPolicyDocument(policy.getPolicyDocument().toString());
             AsyncRequests.<PutUserPolicyType,PutUserPolicyResponseType> sendSync(configuration, putUserPolicyType);
+          }
+        }
+        return action;
+      }
+    },
+    ADD_MANAGED_POLICIES {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSIAMUserResourceAction action = (AWSIAMUserResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        if (action.properties.getPolicies() != null) {
+          for (String managedPolicyArn: action.properties.getManagedPolicyArns()) {
+            AttachUserPolicyType attachUserPolicyType = MessageHelper.createMessage(AttachUserPolicyType.class, action.info.getEffectiveUserId());
+            attachUserPolicyType.setUserName(action.info.getPhysicalResourceId());
+            attachUserPolicyType.setPolicyArn(managedPolicyArn);
+            AsyncRequests.sendSync(configuration, attachUserPolicyType);
           }
         }
         return action;
@@ -292,6 +316,29 @@ public class AWSIAMUserResourceAction extends StepBasedResourceAction {
     return policyNames;
   }
 
+  private static Set<String> getManagedPolicyArns(AWSIAMUserResourceAction action) {
+    Set<String> managedPolicyArns = Sets.newHashSet();
+    if (action != null && action.properties != null && action.properties.getManagedPolicyArns() != null) {
+      managedPolicyArns.addAll(action.properties.getManagedPolicyArns());
+    }
+    return managedPolicyArns;
+  }
+
+  private static Set<String> getExistingManagedPolicyArns(AWSIAMUserResourceAction newAction) throws Exception {
+    ServiceConfiguration configuration = Topology.lookup(Euare.class);
+    ListAttachedUserPoliciesType listAttachedUserPoliciesType = MessageHelper.createMessage(ListAttachedUserPoliciesType.class, newAction.info.getEffectiveUserId());
+    listAttachedUserPoliciesType.setUserName(newAction.info.getPhysicalResourceId());
+    ListAttachedUserPoliciesResponseType listAttachedUserPoliciesResponseType = AsyncRequests.sendSync(configuration, listAttachedUserPoliciesType);
+    Set<String> result = Sets.newHashSet();
+    if (listAttachedUserPoliciesResponseType != null && listAttachedUserPoliciesResponseType.getListAttachedUserPoliciesResult() != null &&
+      listAttachedUserPoliciesResponseType.getListAttachedUserPoliciesResult().getAttachedPolicies() != null) {
+      for (AttachedPolicyType attachedPolicyType : listAttachedUserPoliciesResponseType.getListAttachedUserPoliciesResult().getAttachedPolicies()) {
+        result.add(attachedPolicyType.getPolicyArn());
+      }
+    }
+    return result;
+  }
+
   private enum UpdateNoInterruptionSteps implements UpdateStep {
     UPDATE_USER {
       @Override
@@ -368,7 +415,41 @@ public class AWSIAMUserResourceAction extends StepBasedResourceAction {
         }
         return newAction;
       }
+    },
+    UPDATE_MANAGED_POLICIES {
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSIAMUserResourceAction oldAction = (AWSIAMUserResourceAction) oldResourceAction;
+        AWSIAMUserResourceAction newAction = (AWSIAMUserResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        Set<String> oldManagedPolicyArns = getManagedPolicyArns(oldAction);
+        Set<String> newManagedPolicyArns = getManagedPolicyArns(newAction);
+        Set<String> existingManagedPolicyArns = getExistingManagedPolicyArns(newAction);
+        // the policies to add are the new policies that are not old and not existing
+        Set<String> managedPolicyArnsToAdd = Sets.difference(newManagedPolicyArns, Sets.union(oldManagedPolicyArns, existingManagedPolicyArns));
+        for (String managedPolicyArn: managedPolicyArnsToAdd) {
+          AttachUserPolicyType attachUserPolicyType = MessageHelper.createMessage(AttachUserPolicyType.class, newAction.info.getEffectiveUserId());
+          attachUserPolicyType.setUserName(newAction.info.getPhysicalResourceId());
+          attachUserPolicyType.setPolicyArn(managedPolicyArn);
+          AsyncRequests.sendSync(configuration, attachUserPolicyType);
+        }
 
+        // the policies to remove from the resource are the old policies that are not new, but they must also exist.
+        Set<String> managedPolicyArnsToRemove = Sets.difference(Sets.intersection(existingManagedPolicyArns, oldManagedPolicyArns), newManagedPolicyArns);
+        for (String managedPolicyArn: managedPolicyArnsToRemove) {
+          DetachUserPolicyType detachUserPolicyType = MessageHelper.createMessage(DetachUserPolicyType.class, newAction.info.getEffectiveUserId());
+          detachUserPolicyType.setUserName(newAction.info.getPhysicalResourceId());
+          detachUserPolicyType.setPolicyArn(managedPolicyArn);
+          try {
+            AsyncRequests.sendSync(configuration, detachUserPolicyType);
+          } catch ( final Exception e ) {
+            final Optional<AsyncExceptions.AsyncWebServiceError> error = AsyncExceptions.asWebServiceError(e);
+            if (error.isPresent() && Strings.nullToEmpty(error.get().getCode()).equals("NoSuchEntity")) {
+              // we don't care.  (already deleted or never there)
+            } else throw e;
+          }
+        }
+        return newAction;
+      }
     },
     UPDATE_GROUPS {
       @Override

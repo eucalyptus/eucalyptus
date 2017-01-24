@@ -489,6 +489,19 @@ public class AWSIAMInstanceProfileResourceInfo extends ResourceInfo {
 
 
 @ToString(includeNames=true)
+public class AWSIAMManagedPolicyResourceInfo extends ResourceInfo {
+  public AWSIAMManagedPolicyResourceInfo() {
+    setType("AWS::IAM::ManagedPolicy");
+  }
+  @Override
+  public Collection<String> getRequiredCapabilities(JsonNode propertiesJson) {
+    ArrayList<String> capabilities = new ArrayList<String>();
+    capabilities.add(Capabilities.CAPABILITY_IAM.toString());
+    return capabilities;
+  }
+}
+
+@ToString(includeNames=true)
 public class AWSIAMPolicyResourceInfo extends ResourceInfo {
   public AWSIAMPolicyResourceInfo() {
     setType("AWS::IAM::Policy");

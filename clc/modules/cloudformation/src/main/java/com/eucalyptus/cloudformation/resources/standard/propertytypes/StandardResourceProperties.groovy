@@ -605,6 +605,8 @@ public class AWSIAMGroupProperties implements ResourceProperties {
   @Property
   String path;
   @Property
+  List<String> managedPolicyArns = Lists.newArrayList();
+  @Property
   List<EmbeddedIAMPolicy> policies = Lists.newArrayList();
 }
 
@@ -616,6 +618,23 @@ public class AWSIAMInstanceProfileProperties implements ResourceProperties {
   @Required
   @Property
   List<String> roles = Lists.newArrayList();
+}
+
+@ToString(includeNames=true)
+public class AWSIAMManagedPolicyProperties implements ResourceProperties {
+  @Property
+  String description;
+  @Property
+  List<String> groups = Lists.newArrayList();
+  @Property
+  String path;
+  @Required
+  @Property
+  JsonNode policyDocument;
+  @Property
+  List<String> roles = Lists.newArrayList();
+  @Property
+  List<String> users = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
@@ -642,6 +661,8 @@ public class AWSIAMRoleProperties implements ResourceProperties {
   @Property
   String path;
   @Property
+  List<String> managedPolicyArns = Lists.newArrayList();
+  @Property
   List<EmbeddedIAMPolicy> policies = Lists.newArrayList();
   @Property
   String roleName;
@@ -655,6 +676,8 @@ public class AWSIAMUserProperties implements ResourceProperties {
   List<String> groups = Lists.newArrayList();
   @Property
   LoginProfile loginProfile;
+  @Property
+  List<String> managedPolicyArns = Lists.newArrayList();
   @Property
   List<EmbeddedIAMPolicy> policies = Lists.newArrayList();
   @Property

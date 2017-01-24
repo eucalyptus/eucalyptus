@@ -20,16 +20,26 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
+import com.eucalyptus.auth.euare.AttachRolePolicyType;
+import com.eucalyptus.auth.euare.AttachUserPolicyType;
+import com.eucalyptus.auth.euare.AttachedPolicyType;
 import com.eucalyptus.auth.euare.CreateRoleResponseType;
 import com.eucalyptus.auth.euare.CreateRoleType;
 import com.eucalyptus.auth.euare.DeleteRolePolicyResponseType;
 import com.eucalyptus.auth.euare.DeleteRolePolicyType;
 import com.eucalyptus.auth.euare.DeleteRoleResponseType;
 import com.eucalyptus.auth.euare.DeleteRoleType;
+import com.eucalyptus.auth.euare.DetachRolePolicyType;
+import com.eucalyptus.auth.euare.ListAttachedGroupPoliciesResponseType;
+import com.eucalyptus.auth.euare.ListAttachedRolePoliciesResponseType;
+import com.eucalyptus.auth.euare.ListAttachedRolePoliciesType;
 import com.eucalyptus.auth.euare.PutRolePolicyResponseType;
 import com.eucalyptus.auth.euare.PutRolePolicyType;
+import com.eucalyptus.auth.euare.RemoveUserFromGroupResponseType;
+import com.eucalyptus.auth.euare.RemoveUserFromGroupType;
 import com.eucalyptus.auth.euare.UpdateAssumeRolePolicyResponseType;
 import com.eucalyptus.auth.euare.UpdateAssumeRolePolicyType;
+import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.IAMHelper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
@@ -48,8 +58,11 @@ import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Euare;
+import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
@@ -84,6 +97,9 @@ public class AWSIAMRoleResourceAction extends StepBasedResourceAction {
     }
     if (!Objects.equals(properties.getPath(), otherAction.properties.getPath())) {
       updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
+    if (!Objects.equals(properties.getManagedPolicyArns(), otherAction.properties.getManagedPolicyArns())) {
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
     if (!Objects.equals(properties.getPolicies(), otherAction.properties.getPolicies())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
@@ -126,6 +142,22 @@ public class AWSIAMRoleResourceAction extends StepBasedResourceAction {
             putRolePolicyType.setPolicyName(policy.getPolicyName());
             putRolePolicyType.setPolicyDocument(policy.getPolicyDocument().toString());
             AsyncRequests.<PutRolePolicyType,PutRolePolicyResponseType> sendSync(configuration, putRolePolicyType);
+          }
+        }
+        return action;
+      }
+    },
+    ADD_MANAGED_POLICIES {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) throws Exception {
+        AWSIAMRoleResourceAction action = (AWSIAMRoleResourceAction) resourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        if (action.properties.getPolicies() != null) {
+          for (String managedPolicyArn: action.properties.getManagedPolicyArns()) {
+            AttachRolePolicyType attachRolePolicyType = MessageHelper.createMessage(AttachRolePolicyType.class, action.info.getEffectiveUserId());
+            attachRolePolicyType.setRoleName(action.info.getPhysicalResourceId());
+            attachRolePolicyType.setPolicyArn(managedPolicyArn);
+            AsyncRequests.sendSync(configuration, attachRolePolicyType);
           }
         }
         return action;
@@ -204,6 +236,30 @@ public class AWSIAMRoleResourceAction extends StepBasedResourceAction {
     return policyNames;
   }
 
+  private static Set<String> getManagedPolicyArns(AWSIAMRoleResourceAction action) {
+    Set<String> managedPolicyArns = Sets.newHashSet();
+    if (action != null && action.properties != null && action.properties.getManagedPolicyArns() != null) {
+      managedPolicyArns.addAll(action.properties.getManagedPolicyArns());
+    }
+    return managedPolicyArns;
+  }
+
+  private static Set<String> getExistingManagedPolicyArns(AWSIAMRoleResourceAction newAction) throws Exception {
+    ServiceConfiguration configuration = Topology.lookup(Euare.class);
+    ListAttachedRolePoliciesType listAttachedRolePoliciesType = MessageHelper.createMessage(ListAttachedRolePoliciesType.class, newAction.info.getEffectiveUserId());
+    listAttachedRolePoliciesType.setRoleName(newAction.info.getPhysicalResourceId());
+    ListAttachedRolePoliciesResponseType listAttachedRolePoliciesResponseType = AsyncRequests.sendSync(configuration, listAttachedRolePoliciesType);
+    Set<String> result = Sets.newHashSet();
+    if (listAttachedRolePoliciesResponseType != null && listAttachedRolePoliciesResponseType.getListAttachedRolePoliciesResult() != null &&
+      listAttachedRolePoliciesResponseType.getListAttachedRolePoliciesResult().getAttachedPolicies() != null) {
+      for (AttachedPolicyType attachedPolicyType : listAttachedRolePoliciesResponseType.getListAttachedRolePoliciesResult().getAttachedPolicies()) {
+        result.add(attachedPolicyType.getPolicyArn());
+      }
+    }
+    return result;
+  }
+
+
   private enum UpdateNoInterruptionSteps implements UpdateStep {
     UPDATE_ASSUME_ROLE_DOCUMENT {
       @Override
@@ -241,6 +297,41 @@ public class AWSIAMRoleResourceAction extends StepBasedResourceAction {
           deleteRolePolicyType.setRoleName(newAction.info.getPhysicalResourceId());
           deleteRolePolicyType.setPolicyName(oldPolicyName);
           AsyncRequests.<DeleteRolePolicyType,DeleteRolePolicyResponseType> sendSync(configuration, deleteRolePolicyType);
+        }
+        return newAction;
+      }
+    },
+    UPDATE_MANAGED_POLICIES {
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSIAMRoleResourceAction oldAction = (AWSIAMRoleResourceAction) oldResourceAction;
+        AWSIAMRoleResourceAction newAction = (AWSIAMRoleResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        Set<String> oldManagedPolicyArns = getManagedPolicyArns(oldAction);
+        Set<String> newManagedPolicyArns = getManagedPolicyArns(newAction);
+        Set<String> existingManagedPolicyArns = getExistingManagedPolicyArns(newAction);
+        // the policies to add are the new policies that are not old and not existing
+        Set<String> managedPolicyArnsToAdd = Sets.difference(newManagedPolicyArns, Sets.union(oldManagedPolicyArns, existingManagedPolicyArns));
+        for (String managedPolicyArn: managedPolicyArnsToAdd) {
+          AttachRolePolicyType attachRolePolicyType = MessageHelper.createMessage(AttachRolePolicyType.class, newAction.info.getEffectiveUserId());
+          attachRolePolicyType.setRoleName(newAction.info.getPhysicalResourceId());
+          attachRolePolicyType.setPolicyArn(managedPolicyArn);
+          AsyncRequests.sendSync(configuration, attachRolePolicyType);
+        }
+
+        // the policies to remove from the resource are the old policies that are not new, but they must also exist.
+        Set<String> managedPolicyArnsToRemove = Sets.difference(Sets.intersection(existingManagedPolicyArns, oldManagedPolicyArns), newManagedPolicyArns);
+        for (String managedPolicyArn: managedPolicyArnsToRemove) {
+          DetachRolePolicyType detachRolePolicyType = MessageHelper.createMessage(DetachRolePolicyType.class, newAction.info.getEffectiveUserId());
+          detachRolePolicyType.setRoleName(newAction.info.getPhysicalResourceId());
+          detachRolePolicyType.setPolicyArn(managedPolicyArn);
+          try {
+            AsyncRequests.sendSync(configuration, detachRolePolicyType);
+          } catch ( final Exception e ) {
+            final Optional<AsyncExceptions.AsyncWebServiceError> error = AsyncExceptions.asWebServiceError(e);
+            if (error.isPresent() && Strings.nullToEmpty(error.get().getCode()).equals("NoSuchEntity")) {
+              // we don't care.  (already deleted or never there)
+            } else throw e;
+          }
         }
         return newAction;
       }
