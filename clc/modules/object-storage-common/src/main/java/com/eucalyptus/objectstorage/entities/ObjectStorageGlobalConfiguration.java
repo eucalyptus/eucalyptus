@@ -133,10 +133,6 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
   }
 
   @Column
-  @ConfigurableField(description = "Maximum allowed size of inbound http chunks", displayName = "Maximum inbound http chunk size")
-  protected Integer max_inbound_http_chunk_size;
-
-  @Column
   @ConfigurableField(description = "Maximum allowed size of metadata request bodies", displayName = "Maximum allowed size of metadata requests")
   protected Integer max_metadata_request_size;
 
