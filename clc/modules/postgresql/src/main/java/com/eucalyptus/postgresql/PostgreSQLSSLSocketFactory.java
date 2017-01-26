@@ -92,7 +92,7 @@ public class PostgreSQLSSLSocketFactory extends SSLSocketFactoryWrapper {
   private static final String PROP_POSTGRESQL_SSL_PROVIDER = "com.eucalyptus.postgresql.sslProvider";
   private static final String PROP_POSTGRESQL_SSL_PROTOCOL = "com.eucalyptus.postgresql.sslProtocol";
   private static final String PROP_POSTGRESQL_SSL_CIPHER_SUITES = "com.eucalyptus.postgresql.sslCipherSuites";
-  private static final String DEFAULT_CIPHER_STRINGS = "RSA+AES:+SHA:!EXPORT:!EXPORT1025:!MD5";
+  private static final String DEFAULT_CIPHER_STRINGS = "RSA+AES:+SHA:!EXPORT:!EXPORT1025:!MD5:!ECDHE";
   private static final String DEFAULT_PROTOCOL = "TLS";
   private static final Supplier<SSLSocketFactory> delegateSupplier = Suppliers.ofInstance( buildDelegate( ) );
   private final List<String> cipherSuites;
