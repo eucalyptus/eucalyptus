@@ -159,15 +159,11 @@ that describes a Eucalyptus instance to be launched.
 		<xsl:attribute name="mode">host-passthrough</xsl:attribute>
 	      </xsl:if>
               <topology>
-                <xsl:attribute name="sockets">
-		  <xsl:value-of select="/instance/cores"/>
-		</xsl:attribute>
+                <xsl:attribute name="sockets">1</xsl:attribute>
                 <xsl:attribute name="cores">
 		  <xsl:value-of select="/instance/cores"/>
 		</xsl:attribute>
-                <xsl:attribute name="threads">
-		  <xsl:value-of select="/instance/cores"/>
-		</xsl:attribute>
+                <xsl:attribute name="threads">1</xsl:attribute>
 	      </topology>
             </cpu>
             <memory>
