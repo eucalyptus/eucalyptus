@@ -85,7 +85,7 @@ class MonthlyUsageReportData extends UsageReportData {
         sb.append(credits!=null ? "\""+credits+"\"," : "\"\",");
         sb.append(taxAmount!=null ? "\""+taxAmount+"\"," : "\"\",");
         sb.append(taxType!=null ? "\""+taxType+"\"," : "\"\",");
-        sb.append(totalCost!=null ? "\""+totalCost+"\"," : "\"\",");
+        sb.append(totalCost!=null ? "\""+totalCost+"\"" : "\"\"");
         return sb.toString();
     }
 }
