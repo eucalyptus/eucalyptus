@@ -394,7 +394,7 @@
   <mapping name="ListStacks" class="com.eucalyptus.cloudformation.ListStacksType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
     <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
     <value name="NextToken" field="nextToken" usage="optional"/>
-    <structure name="StackStatusFilter" field="stackStatusFilter" usage="required" type="com.eucalyptus.cloudformation.ResourceList"/>
+    <structure name="StackStatusFilter" field="stackStatusFilter" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
   </mapping>
   <mapping name="ListStacksResponse" class="com.eucalyptus.cloudformation.ListStacksResponseType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
     <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>

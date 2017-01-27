@@ -59,7 +59,7 @@ class RegionConfigurations {
 
   private static final String REGION_DEFAULT_SSL_PROTOCOLS = "TLSv1.2";
 
-  private static final String REGION_DEFAULT_SSL_CIPHERS = "RSA:DSS:ECDSA:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES:!RC4";
+  private static final String REGION_DEFAULT_SSL_CIPHERS = "RSA:DSS:ECDSA:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES:!RC4:!ECDHE";
 
   @ConfigurableField(
       description = "Region configuration document.",

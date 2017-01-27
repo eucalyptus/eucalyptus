@@ -143,13 +143,13 @@ public class SslSetup {
                       changeListener = SslPasswordChangeListener.class )
   public static String        SERVER_PASSWORD = ComponentIds.lookup( Eucalyptus.class ).name( );
   @ConfigurableField( description = "SSL ciphers for webservices." )
-  public static String        SERVER_SSL_CIPHERS = "RSA:DSS:ECDSA:+3DES:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES:!RC4";
+  public static String        SERVER_SSL_CIPHERS = "RSA:DSS:ECDSA:+3DES:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES:!RC4:!ECDHE";
   @ConfigurableField( description = "SSL protocols for webservices." )
   public static String        SERVER_SSL_PROTOCOLS = "SSLv2Hello,TLSv1,TLSv1.1,TLSv1.2";
   @ConfigurableField( description = "Use default CAs with SSL for external use.", changeListener = PropertyChangeListeners.IsBoolean.class )
   public static Boolean       USER_SSL_DEFAULT_CAS = true;
   @ConfigurableField( description = "SSL ciphers for external use." )
-  public static String        USER_SSL_CIPHERS = "RSA:DSS:ECDSA:+3DES:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES:!RC4";
+  public static String        USER_SSL_CIPHERS = "RSA:DSS:ECDSA:+3DES:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES:!RC4:!ECDHE";
   @ConfigurableField( description = "SSL protocols for external use." )
   public static String        USER_SSL_PROTOCOLS = "SSLv2Hello,TLSv1,TLSv1.1,TLSv1.2";
   @ConfigurableField( description = "SSL hostname validation for external use.", changeListener = PropertyChangeListeners.IsBoolean.class )
