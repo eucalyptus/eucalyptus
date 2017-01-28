@@ -32,6 +32,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
@@ -52,7 +53,7 @@ public class ObjectStorageBucketResolver extends DnsResolver {
       return false;
     }
     final Record query = request.getQuery( );
-    return DomainNames.systemDomainFor( ObjectStorage.class, query.getName( ) ).isPresent( );
+    return OSGUtil.isBucketName( query.getName( ), false );
   }
 
   @Override

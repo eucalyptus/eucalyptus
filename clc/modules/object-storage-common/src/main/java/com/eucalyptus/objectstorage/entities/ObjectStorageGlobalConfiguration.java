@@ -63,7 +63,6 @@
 package com.eucalyptus.objectstorage.entities;
 
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
-import com.eucalyptus.upgrade.Upgrades.Version;
 import groovy.sql.GroovyRowResult;
 import groovy.sql.Sql;
 
@@ -97,6 +96,7 @@ import com.eucalyptus.upgrade.Upgrades.DatabaseFilters;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.walrus.entities.WalrusInfo;
 import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -178,6 +178,10 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
   @ConfigurableField(description = "Object Storage Provider client to use for backend", displayName = "Object Storage Provider Client",
       changeListener = ObjectStorageProviderChangeListener.class)
   protected String providerClient; // configured by user to specify which back-end client to use
+
+  @Column
+  @ConfigurableField(description = "List of host names that may not be used as bucket cnames")
+  protected String bucket_reserved_cnames;
 
   protected ObjectStorageGlobalConfiguration initializeDefaults() {
     this.setBucket_creation_wait_interval_seconds(DEFAULT_CLEANUP_INTERVAL_SEC);
@@ -278,6 +282,14 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
     this.providerClient = providerClient;
   }
 
+  public String getBucket_reserved_cnames( ) {
+    return bucket_reserved_cnames;
+  }
+
+  public void setBucket_reserved_cnames( final String bucket_reserved_cnames ) {
+    this.bucket_reserved_cnames = bucket_reserved_cnames;
+  }
+
   @PrePersist
   @PreUpdate
   public void updateDefaults() {
@@ -322,7 +334,7 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
    * 
    * @throws Exception
    */
-  @Upgrades.EntityUpgrade(entities = {ObjectStorageGlobalConfiguration.class}, since = Upgrades.Version.v4_0_0, value = ObjectStorage.class)
+  @EntityUpgrade(entities = {ObjectStorageGlobalConfiguration.class}, since = Upgrades.Version.v4_0_0, value = ObjectStorage.class)
   public static enum OSGConfigUpgrade implements Predicate<Class> {
     INSTANCE;
 
@@ -350,7 +362,7 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
    * Upgrade code to copy global provider client to osg config
    *
    */
-  @Upgrades.EntityUpgrade(entities = {ObjectStorageGlobalConfiguration.class}, since = Upgrades.Version.v4_1_0, value = ObjectStorage.class)
+  @EntityUpgrade(entities = {ObjectStorageGlobalConfiguration.class}, since = Upgrades.Version.v4_1_0, value = ObjectStorage.class)
   public static enum ProviderClientUpgrade implements Predicate<Class> {
     INSTANCE;
 
@@ -394,36 +406,6 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
 
     }
 
-    /**
-     * Upgrade OSG configuration for 4.4.
-     *
-     * @throws Exception
-     */
-    @Upgrades.EntityUpgrade(entities = {ObjectStorageGlobalConfiguration.class}, since = Upgrades.Version.v4_4_0, value = ObjectStorage.class)
-    public static enum OSG44ConfigUpgrade implements Predicate<Class> {
-      INSTANCE;
-
-      @Override
-      public boolean apply(@Nullable Class arg0) {
-        try (TransactionResource trans = Entities.transactionFor(arg0)) {
-          ObjectStorageGlobalConfiguration config;
-          try {
-            config = Entities.uniqueResult(new ObjectStorageGlobalConfiguration());
-          } catch (NoSuchElementException e) {
-            config = new ObjectStorageGlobalConfiguration().initializeDefaults();
-          }
-          config.updateDefaults();
-          Entities.persist(config);
-          trans.commit();
-          return true;
-        } catch (Exception e) {
-          String msg = "Error saving OSG 4.4 configuration upgrade";
-          LOG.error(msg, e);
-          throw Exceptions.toUndeclared(msg, e);
-        }
-      }
-    }
-
     /*
      * Get the value of objectstorage.providerclient stored in config_static_property table. Had to use sql directly as StaticDatabasePropertyEntry
      * has a private constructor that restricts its usage for lookup/delete operations
@@ -463,6 +445,51 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
       }
 
       return propertyValue;
+    }
+  }
+
+  @EntityUpgrade(entities = {ObjectStorageGlobalConfiguration.class}, since = Upgrades.Version.v4_4_0, value = ObjectStorage.class)
+  public enum OSG44ConfigUpgrade implements Predicate<Class> {
+    INSTANCE;
+
+    @Override
+    public boolean apply(@Nullable Class arg0) {
+      try (TransactionResource trans = Entities.transactionFor(arg0)) {
+        ObjectStorageGlobalConfiguration config;
+        try {
+          config = Entities.uniqueResult(new ObjectStorageGlobalConfiguration());
+        } catch (NoSuchElementException e) {
+          config = new ObjectStorageGlobalConfiguration().initializeDefaults();
+        }
+        config.updateDefaults();
+        Entities.persist(config);
+        trans.commit();
+        return true;
+      } catch (Exception e) {
+        String msg = "Error saving OSG 4.4 configuration upgrade";
+        LOG.error(msg, e);
+        throw Exceptions.toUndeclared(msg, e);
+      }
+    }
+  }
+
+  @EntityUpgrade(entities = ObjectStorageGlobalConfiguration.class, since = Upgrades.Version.v5_0_0, value = ObjectStorage.class)
+  public enum OSG50ConfigUpgrade implements Predicate<Class> {
+    INSTANCE;
+
+    @Override
+    public boolean apply( @Nullable Class arg0 ) {
+      try ( TransactionResource trans = Entities.transactionFor( ObjectStorageGlobalConfiguration.class ) ) {
+        final Optional<ObjectStorageGlobalConfiguration> config =
+            Entities.criteriaQuery( ObjectStorageGlobalConfiguration.class ).uniqueResultOption( );
+        config.transform( it -> { it.setBucket_reserved_cnames( "*" ); return it; } );
+        trans.commit( );
+        return true;
+      } catch (Exception e) {
+        String msg = "Error saving OSG 5.0 configuration upgrade";
+        LOG.error( msg, e );
+        throw Exceptions.toUndeclared(msg, e);
+      }
     }
   }
 

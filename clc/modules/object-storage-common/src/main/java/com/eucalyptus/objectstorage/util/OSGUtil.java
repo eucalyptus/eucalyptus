@@ -72,6 +72,8 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.crypto.Cipher;
 
 import org.apache.log4j.Logger;
@@ -91,6 +93,7 @@ import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.objectstorage.ObjectStorage;
+import com.eucalyptus.objectstorage.entities.ObjectStorageGlobalConfiguration;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidAddressingHeaderException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
@@ -98,17 +101,22 @@ import com.eucalyptus.objectstorage.msgs.HeadObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageCommonResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
+import com.eucalyptus.storage.config.ConfigurationCache;
 import com.eucalyptus.storage.msgs.s3.CorsMatchResult;
 import com.eucalyptus.storage.msgs.s3.CorsRule;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.dns.DomainNames;
+import com.google.common.base.CharMatcher;
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
+import com.google.common.net.InetAddresses;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
@@ -118,6 +126,30 @@ public class OSGUtil {
   private static Logger LOG = Logger.getLogger(OSGUtil.class);
 
   private static final Splitter hostSplitter = Splitter.on(':').limit(2);
+
+  private static final Function<String,Pattern> cnamePatternBuilder = new Function<String, Pattern>( ) {
+    @Override
+    public Pattern apply( @Nullable final String list ) {
+      return buildPatternFromWildcardList( Strings.nullToEmpty( list ) );
+    }
+
+    private Pattern buildPatternFromWildcardList( @Nonnull final String list )  {
+      final Splitter splitter =
+          Splitter.on( CharMatcher.WHITESPACE.or( CharMatcher.anyOf( ",;|" ) ) ).trimResults( ).omitEmptyStrings( );
+      final Splitter wildSplitter = Splitter.on( '*' );
+      final Joiner wildJoiner = Joiner.on( ".*");
+      final StringBuilder builder = new StringBuilder( );
+      builder.append( "(?i)(-|" );
+      for ( final String cnameWildcard : splitter.split( list ) ) {
+        builder.append( wildJoiner.join( Iterables.transform( wildSplitter.split( cnameWildcard ), Pattern::quote ) ) );
+        builder.append( '|' );
+      }
+      builder.append( "-)" );
+      return Pattern.compile( builder.toString( ) );
+    }
+  };
+
+  private static final Function<String,Pattern> memoizedCnamePatternBuilder = FUtils.memoizeLast( cnamePatternBuilder );
 
   public static BaseMessage convertErrorMessage(ExceptionResponseType errorMessage) {
     Throwable ex = errorMessage.getException();
@@ -505,22 +537,58 @@ public class OSGUtil {
     return false;
   }
 
-  public static String getBucketFromHostHeader(MappingHttpRequest httpRequest) throws InvalidAddressingHeaderException, TextParseException {
+  /**
+   * A name can be a bucket name if it is an object storage subdomain or if it
+   * is not a system subdomain (bucket cname)
+   */
+  public static boolean isBucketName( final Name name, final boolean allowCname ) {
+    final Optional<Name> systemDomain = DomainNames.systemDomainFor( ObjectStorage.class, name );
+    return systemDomain.isPresent( ) || (allowCname && isAllowedBucketHost( name ));
+  }
+
+  public static String getBucketFromHostHeader(
+      final MappingHttpRequest httpRequest
+  ) throws InvalidAddressingHeaderException, TextParseException {
     String hostBucket = null;
     String targetHost = httpRequest.getHeader(HttpHeaders.Names.HOST);
     if (!Strings.isNullOrEmpty(targetHost)) {
       final String host = Iterables.getFirst(hostSplitter.split(targetHost), targetHost);
-      final Name hostDnsName = DomainNames.absolute(Name.fromString(host));
-      final Optional<Name> systemDomain = DomainNames.systemDomainFor(ObjectStorage.class, hostDnsName);
-      if (systemDomain.isPresent()) {
-        // dns-style request
-        hostBucket = hostDnsName.relativize(systemDomain.get()).toString();
-        if (hostBucket.length() == 0) {
-          throw new InvalidAddressingHeaderException("Invalid Host header: " + targetHost);
+      if ( host != null ) {
+        final Name hostDnsName = DomainNames.absolute(Name.fromString(host));
+        final Optional<Name> systemDomain = DomainNames.systemDomainFor(ObjectStorage.class, hostDnsName);
+        if (systemDomain.isPresent()) {
+          // dns-style request
+          hostBucket = hostDnsName.relativize(systemDomain.get()).toString();
+          if (hostBucket.length() == 0) {
+            throw new InvalidAddressingHeaderException("Invalid Host header: " + targetHost);
+          }
+        } else if ( isAllowedBucketHost( hostDnsName, host ) ) {
+          hostBucket = host;
         }
       }
     }
-    return hostBucket;
+    return hostBucket == null ? null : hostBucket.toLowerCase( );
+  }
+
+  public static boolean isAllowedBucketHost(
+      @Nonnull final Name name
+  ) {
+    return isAllowedBucketHost( name, name.relativize( Name.root ).toString( ) );
+  }
+
+  public static boolean isAllowedBucketHost(
+      @Nonnull final Name name,
+      @Nonnull final String nameText
+  ) {
+    return !InetAddresses.isInetAddress( nameText ) &&
+        !DomainNames.isSystemSubdomain( name ) &&
+        !isReservedBucketCname( nameText );
+  }
+
+  public static boolean isReservedBucketCname( @Nonnull final String nameText ) {
+    final String reservedCnamePatternList =
+        ConfigurationCache.getConfiguration( ObjectStorageGlobalConfiguration.class ).getBucket_reserved_cnames( );
+    return memoizedCnamePatternBuilder.apply( reservedCnamePatternList ).matcher( nameText ).matches( );
   }
 
   public static boolean isBucketOp(MappingHttpRequest httpRequest, Set<String> servicePaths) {
