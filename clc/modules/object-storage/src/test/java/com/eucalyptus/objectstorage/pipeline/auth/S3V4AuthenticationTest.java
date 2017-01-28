@@ -1,7 +1,9 @@
 package com.eucalyptus.objectstorage.pipeline.auth;
 
 import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
 import com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication.V4AuthComponent;
+import com.google.common.collect.Maps;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpVersion;
@@ -14,8 +16,10 @@ import org.junit.Test;
 import java.net.URL;
 import java.nio.charset.Charset;
 
+import java.util.HashMap;
 import java.util.Map;
 
+import static com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication.AWS_EXPIRES_PARAM;
 import static org.junit.Assert.*;
 
 /**
@@ -129,5 +133,33 @@ public class S3V4AuthenticationTest {
     DateTime dt = DateTime.now();
     DateTimeFormatter fmt = ISODateTimeFormat.dateTime();
     S3Authentication.parseDate(fmt.print(dt));
+  }
+
+  @Test
+  public void testValidateExpiresFromParams() throws Throwable {
+    Map<String, String> params = new HashMap<>();
+    params.put(AWS_EXPIRES_PARAM, "10");
+
+    // Current date, future expires
+    S3V4Authentication.validateExpiresFromParams(params, DateTime.now().toDate());
+
+    // Future date
+    try {
+      S3V4Authentication.validateExpiresFromParams(params, DateTime.now().plusMinutes(20).toDate());
+      fail("Date should have been not yet valid");
+    } catch (AccessDeniedException expected) {
+      assertTrue(expected.getMessage().contains("not yet valid"));
+    }
+
+    // Past date, not expired
+    S3V4Authentication.validateExpiresFromParams(params, DateTime.now().minusSeconds(8).toDate());
+
+    // Past date, expired
+    try {
+      S3V4Authentication.validateExpiresFromParams(params, DateTime.now().minusSeconds(40).toDate());
+      fail("Date should have been expired");
+    } catch (AccessDeniedException expected) {
+      assertTrue(expected.getMessage().toLowerCase().contains("expired"));
+    }
   }
 }
