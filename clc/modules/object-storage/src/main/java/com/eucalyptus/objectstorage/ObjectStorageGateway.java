@@ -798,7 +798,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     Bucket bucket;
     try {
       bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(request.getBucket());
-    } catch (NoSuchElementException e) {
+    } catch (NoSuchEntityException e) {
       throw new NoSuchBucketException(request.getBucket());
     } catch (Exception e) {
       LOG.error("Error getting metadata for object " + request.getBucket() + " " + request.getKey());
@@ -2452,7 +2452,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     Bucket bucket = null;
     try {
       bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(bucketName);
-    } catch (NoSuchEntityException | NoSuchElementException e) {
+    } catch (NoSuchEntityException e) {
       throw new NoSuchBucketException(bucketName);
     } catch (Exception e) {
       LOG.warn("Error getting metadata for bucket " + bucketName);
@@ -2467,7 +2467,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     Bucket bucket = null;
     try {
       bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(request.getBucket());
-    } catch (NoSuchEntityException | NoSuchElementException e) {
+    } catch (NoSuchEntityException e) {
       throw new NoSuchBucketException(request.getBucket());
     } catch (Exception e) {
       throw new InternalErrorException();
@@ -2611,7 +2611,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     Bucket bucket;
     try {
       bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(request.getBucket());
-    } catch (NoSuchEntityException | NoSuchElementException e) {
+    } catch (NoSuchEntityException e) {
       throw new NoSuchBucketException(request.getBucket());
     } catch (Exception e) {
       throw new InternalErrorException("Error during bucket lookup: " + request.getBucket(), e);
@@ -2677,7 +2677,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     Bucket bucket;
     try {
       bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(request.getBucket());
-    } catch (NoSuchEntityException | NoSuchElementException e) {
+    } catch (NoSuchEntityException e) {
       throw new NoSuchBucketException(request.getBucket());
     } catch (Exception e) {
       throw new InternalErrorException(e.getMessage());
@@ -2747,7 +2747,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     Bucket bucket;
     try {
       bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(bucketName);
-    } catch (NoSuchElementException e) {
+    } catch (NoSuchEntityException e) {
       throw new NoSuchBucketException(request.getBucket());
     } catch (Exception e) {
       throw new InternalErrorException(e.getMessage());
