@@ -114,7 +114,6 @@ public final class S3Authentication {
       public void authenticate(MappingHttpRequest request, Map<String, String> lowercaseParams) throws S3Exception {
         String dateStr = S3V4Authentication.getDateFromParams(lowercaseParams);
         Date date = parseDate(dateStr);
-        assertNotExpired(date);
         S3V4Authentication.validateExpiresFromParams(lowercaseParams, date);
         String credentialStr = lowercaseParams.get(SecurityParameter.X_Amz_Credential.parameter().toLowerCase());
         SignatureCredential credential = S3V4Authentication.getAndVerifyCredential(date, credentialStr);

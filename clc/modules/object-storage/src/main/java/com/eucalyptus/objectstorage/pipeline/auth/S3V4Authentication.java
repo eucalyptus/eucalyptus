@@ -22,13 +22,11 @@ package com.eucalyptus.objectstorage.pipeline.auth;
 
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.login.SecurityContext;
-import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.crypto.util.SecurityHeader;
 import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.exceptions.s3.*;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.SubResource;
@@ -39,7 +37,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.io.BaseEncoding;
-import javaslang.control.Try.CheckedFunction;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
 
@@ -51,7 +48,6 @@ import java.util.List;
 import java.util.Map;
 
 import static com.eucalyptus.auth.login.Hmacv4LoginModule.digestUTF8;
-import static com.eucalyptus.objectstorage.pipeline.auth.S3Authentication.credentialsFor;
 
 /**
  * S3 V4 specific authentication utilities.
@@ -257,8 +253,11 @@ public final class S3V4Authentication {
     if (expireTime < 1 || expireTime > 604800)
       throw new AccessDeniedException(null, "Invalid Expires parameter.");
 
-    DateTime dt = new DateTime(date).plusSeconds(expireTime.intValue() + StackConfiguration.CLOCK_SKEW_SEC);
-    if (dt.isBeforeNow())
+    DateTime currentTime = DateTime.now();
+    DateTime dt = new DateTime(date);
+    if (currentTime.isBefore(dt.minusMillis((int) ObjectStorageProperties.EXPIRATION_LIMIT)))
+      throw new AccessDeniedException(null, "Cannot process request. X-Amz-Date is not yet valid.");
+    if (currentTime.isAfter(dt.plusSeconds(expireTime.intValue() + StackConfiguration.CLOCK_SKEW_SEC)))
       throw new AccessDeniedException(null, "Cannot process request. Expired.");
   }
 
