@@ -73,6 +73,7 @@ import org.xbill.DNS.Name;
 
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.objectstorage.ObjectStorage;
+import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.util.dns.DomainNames;
 import com.eucalyptus.ws.server.FilteredPipeline;
 import com.google.common.base.Predicate;
@@ -166,7 +167,7 @@ public abstract class ObjectStorageRESTPipeline extends FilteredPipeline {
     if ( !Strings.isNullOrEmpty( fullHostHeader ) ) try {
       final String host = Iterables.getFirst( hostSplitter.split( fullHostHeader ), fullHostHeader );
       final Name hostDnsName = Name.fromString( host, Name.root );
-      return DomainNames.systemDomainFor( ObjectStorage.class, hostDnsName ).isPresent( );
+      return OSGUtil.isBucketName( hostDnsName, true );
     } catch (Exception e) {
       LOG.error("Error parsing domain name from hostname: " + fullHostHeader, e);
     }
