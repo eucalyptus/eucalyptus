@@ -99,7 +99,6 @@ public class SnapshotInfo extends AbstractPersistent {
   private String progress;
   @Column(name = "should_transfer")
   private Boolean shouldTransfer;
-  // TODO: zhill, persist the snapshot consistency point id here for cleanup. Should be removed upon snapshot completion
   @Column(name = "snapshot_point_id")
   private String snapPointId;
   @Column(name = "snapshot_size_gb")
