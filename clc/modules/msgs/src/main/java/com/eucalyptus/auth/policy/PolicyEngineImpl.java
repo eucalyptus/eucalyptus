@@ -258,7 +258,9 @@ public class PolicyEngineImpl implements PolicyEngine {
 
   @Override
   public void evaluateAuthorization( @Nonnull  final AuthEvaluationContext context,
+                                               final boolean requestAccountDefaultAllow,
                                      @Nullable final PolicyVersion resourcePolicy,
+                                     @Nullable final String resourcePolicyAccountNumber,
                                      @Nullable final String resourceAccountNumber,
                                      @Nonnull  final String resourceName,
                                      @Nonnull  final Map<Contract.Type, Contract> contracts ) throws AuthException {
@@ -271,20 +273,21 @@ public class PolicyEngineImpl implements PolicyEngine {
       // System admin can do everything
       if ( !evaluationContext.isSystemAdmin() ) {
         final boolean sameAccount = context.getRequestUser( ).getAccountNumber( ).equals( resourceAccountNumber );
+        final boolean sameResourceAccount = resourceAccountNumber == null || resourceAccountNumber.equals( resourcePolicyAccountNumber );
         // Check resource authorizations, ignore authorizations for own account
         final Decision resourceDecision = resourcePolicy == null ?
                 Decision.DEFAULT :
-                processAuthorizations( AuthEvaluationContextImpl.authorizations( resourcePolicy, true ), AuthorizationMatch.All, action, null, null, null, evaluationContext.getPrincipals( excludeAccountPrincipal( resourceAccountNumber ) ), keyEval, contractEval );
+                processAuthorizations( AuthEvaluationContextImpl.authorizations( resourcePolicy, true ), AuthorizationMatch.All, action, resourceAccountNumber, evaluationContext.getResourceType( ), resourceName, evaluationContext.getPrincipals( excludeAccountPrincipal( resourceAccountNumber ) ), keyEval, contractEval );
         // Denied by explicit or default deny
         if ( ( resourceDecision == Decision.DENY ) ||
-            ( !sameAccount && resourceDecision != Decision.ALLOW ) ) {
+            ( !requestAccountDefaultAllow && !sameAccount && sameResourceAccount && resourceDecision != Decision.ALLOW ) ) {
           LOG.debug( "Request is rejected by resource authorization check, due to decision " + resourceDecision );
           throw new AuthException( AuthException.ACCESS_DENIED );
         } else {
-          final Decision decision = evaluateResourceAuthorization( evaluationContext, AuthorizationMatch.All, resourcePolicy == null, resourceAccountNumber, resourceName, contracts );
+          final Decision decision = evaluateResourceAuthorization( evaluationContext, AuthorizationMatch.All, !requestAccountDefaultAllow && (resourcePolicy == null || !sameResourceAccount), resourceAccountNumber, resourceName, contracts );
           if ( Decision.DENY == decision ||
               ( !sameAccount && decision != Decision.ALLOW ) ||
-              ( resourceDecision != Decision.ALLOW && decision != Decision.ALLOW ) ) {
+              ( (!(sameResourceAccount || requestAccountDefaultAllow) || resourceDecision != Decision.ALLOW) && decision != Decision.ALLOW ) ) {
             throw new AuthException( AuthException.ACCESS_DENIED );
           }
         }
@@ -488,19 +491,19 @@ public class PolicyEngineImpl implements PolicyEngine {
       return auth.isNotResource( );
     } else if ( auth.getAccount() != null && resourceAccountNumber != null && !resolveAccount(auth.getAccount()).equals( resourceAccountNumber ) ) {
       return auth.isNotResource( );
-    } else if ( !matchOne( Collections.singleton( auth.getType( ) ), resourceType, PATTERN_MATCHER ) ) {
+    } else if ( auth.getType( ) != null && !matchOne( Collections.singleton( auth.getType( ) ), resourceType, PATTERN_MATCHER ) ) {
       return auth.isNotResource( );
     } else  if ( PolicySpec.EC2_RESOURCE_ADDRESS.equals( auth.getType( ) ) ) {
       return evaluateElement( matchOne( auth.getResources( ), resource, ADDRESS_MATCHER ), auth.isNotResource( ) );
     } else if ( String.format("%s:%s", PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_SERVER_CERTIFICATE).equals ( auth.getType( ))){
       return evaluateElement( matchOne( auth.getResources( ), resource, SERVER_CERTIFICATE_MATCHER ), auth.isNotResource( ) );
     }else {
-      return evaluateElement( matchOne( auth.getPolicyVariables( ), auth.getResources( ), resource, PATTERN_MATCHER ), auth.isNotResource( ) );
+      return evaluateElement( matchOneOrEmpty( auth.getPolicyVariables( ), auth.getResources( ), resource, PATTERN_MATCHER ), auth.isNotResource( ) );
     }
   }
 
   private static boolean matchOne( Set<String> patterns, String instance, Matcher matcher ) throws AuthException {
-    return matchOne( Collections.<String>emptySet( ), patterns, instance, matcher );
+    return matchOne( Collections.emptySet( ), patterns, instance, matcher );
   }
 
   private static boolean matchOne( Set<String> variables, Set<String> patterns, String instance, Matcher matcher ) throws AuthException {
@@ -510,6 +513,11 @@ public class PolicyEngineImpl implements PolicyEngine {
       }
     }
     return false;
+  }
+
+  private static boolean matchOneOrEmpty( Set<String> variables, Set<String> patterns, String instance, Matcher matcher ) throws AuthException {
+    return patterns.isEmpty( ) ||
+        matchOne( variables, patterns, instance, matcher );
   }
 
   private static String variableExplode( Set<String> variables, String text ) throws AuthException {

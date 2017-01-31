@@ -20,8 +20,6 @@
 
 package com.eucalyptus.objectstorage.auth;
 
-import java.util.Collections;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -34,13 +32,19 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.PolicyResourceContext;
 import com.eucalyptus.auth.PolicyResourceContext.PolicyResourceInfo;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
+import com.eucalyptus.auth.principal.PolicyScope;
+import com.eucalyptus.auth.principal.PolicyVersion;
+import com.eucalyptus.auth.principal.PolicyVersions;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
+import com.eucalyptus.objectstorage.entities.Bucket;
+import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.objectstorage.entities.S3AccessControlledEntity;
 import com.eucalyptus.objectstorage.msgs.CreateBucketType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
@@ -51,32 +55,14 @@ import com.eucalyptus.objectstorage.policy.ResourceType;
 import com.eucalyptus.objectstorage.policy.S3PolicySpec;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.system.Ats;
-import com.google.common.base.Strings;
+import javaslang.Tuple;
+import javaslang.Tuple3;
+import javaslang.Tuple4;
+import javaslang.control.Option;
 
+@ComponentNamed
 public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
   private static final Logger LOG = Logger.getLogger(OsgAuthorizationHandler.class);
-  private static final RequestAuthorizationHandler authzHandler = new OsgAuthorizationHandler();
-  private static RequestAuthorizationHandler mocked = null;
-
-  public static RequestAuthorizationHandler getInstance() {
-    if (mocked != null) {
-      return mocked;
-    }
-    return authzHandler;
-  }
-
-  public static void setInstance(RequestAuthorizationHandler mock) {
-    mocked = mock;
-  }
-
-  /**
-   * Does the current request have an authenticated user? Or is it anonymous?
-   * 
-   * @return
-   */
-  protected static boolean isUserAnonymous(User usr) {
-    return Principals.nobodyUser().equals(usr);
-  }
 
   /**
    * Evaluates the authorization for the operation requested, evaluates IAM, ACL, and bucket policy (bucket policy not yet supported).
@@ -85,10 +71,10 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
    * @param bucketResourceEntity
    * @param objectResourceEntity
    * @param resourceAllocationSize the size for the quota check(s) if applicable
-   * @return
+   * @return true if authorized
    */
   public <T extends ObjectStorageRequestType> boolean operationAllowed(@Nonnull T request,
-      @Nullable final S3AccessControlledEntity bucketResourceEntity, @Nullable final S3AccessControlledEntity objectResourceEntity,
+      @Nullable final Bucket bucketResourceEntity, @Nullable final ObjectEntity objectResourceEntity,
       long resourceAllocationSize) throws IllegalArgumentException {
     /*
      * Process the operation's authz requirements based on the request type annotations
@@ -96,14 +82,14 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
     Ats requestAuthzProperties = Ats.from(request);
     ObjectStorageProperties.Permission[] requiredBucketACLPermissions = null;
     ObjectStorageProperties.Permission[] requiredObjectACLPermissions = null;
-    Boolean allowOwnerOnly = null;
+    boolean allowOwnerOnly = true;
     ObjectStorageProperties.Resource[] requiredOwnerOf = null;
     RequiresACLPermission requiredACLs = requestAuthzProperties.get(RequiresACLPermission.class);
     if (requiredACLs != null) {
       requiredBucketACLPermissions = requiredACLs.bucket();
       requiredObjectACLPermissions = requiredACLs.object();
-      allowOwnerOnly = requiredACLs.ownerOnly();
       requiredOwnerOf = requiredACLs.ownerOf();
+      allowOwnerOnly = requiredOwnerOf.length > 0;
     } else {
       // No ACL annotation is ok, maybe a admin only op
     }
@@ -112,7 +98,7 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
     RequiresPermission perms = requestAuthzProperties.get(RequiresPermission.class);
     if (perms != null) {
       // check for version specific IAM permissions and version Id in the request
-      if (perms.version() != null && perms.version().length > 0 && StringUtils.isNotBlank(request.getVersionId())
+      if (perms.version().length > 0 && StringUtils.isNotBlank(request.getVersionId())
           && !StringUtils.equalsIgnoreCase(request.getVersionId(), ObjectStorageProperties.NULL_VERSION_ID)) {
         requiredActions = perms.version(); // Use version specific IAM perms
       } else {
@@ -121,8 +107,6 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
     }
 
     Boolean allowAdmin = (requestAuthzProperties.get(AdminOverrideAllowed.class) != null);
-    Boolean allowOnlyAdmin =
-        (requestAuthzProperties.get(AdminOverrideAllowed.class) != null) && requestAuthzProperties.get(AdminOverrideAllowed.class).adminOnly();
 
     // Must have at least one of: admin-only, owner-only, ACL, or IAM.
     if (requiredBucketACLPermissions == null && requiredObjectACLPermissions == null && requiredActions == null && !allowAdmin) {
@@ -136,39 +120,19 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
       resourceType = requestAuthzProperties.get(ResourceType.class).value();
     }
 
-    // Use these variables to isolate where all the AuthExceptions can happen on account/user lookups
-    UserPrincipal requestUser = null;
-    String requestAccountNumber = null;
-    String requestCanonicalId = null;
-    AuthContextSupplier authContext = null;
+    // Get user from context
+    final UserPrincipal requestUser;
+    final String requestAccountNumber;
+    final String requestCanonicalId;
+    final AuthContextSupplier authContext;
     try {
-      // Use context if available as it saves a DB lookup
-      try {
-        Context ctx = Contexts.lookup(request.getCorrelationId());
-        requestUser = ctx.getUser();
-        requestAccountNumber = ctx.getAccountNumber();
-        authContext = ctx.getAuthContext();
-      } catch (NoSuchContextException e) {
-        requestUser = null;
-        requestAccountNumber = null;
-        authContext = null;
-      }
-
-      // This is not an expected path, but if no context found use the request credentials itself
-      if (requestUser == null && !Strings.isNullOrEmpty(request.getEffectiveUserId())) {
-        requestUser = Accounts.lookupPrincipalByUserId(request.getEffectiveUserId());
-        requestAccountNumber = requestUser.getAccountNumber();
-      }
-
-      if (requestUser == null) {
-        // Set to anonymous user since all else failed
-        requestUser = Principals.nobodyUser();
-        requestAccountNumber = requestUser.getAccountNumber();
-      }
-
+      final Context ctx = Contexts.lookup(request.getCorrelationId());
+      requestUser = ctx.getUser();
+      requestAccountNumber = ctx.getAccountNumber();
       requestCanonicalId = requestUser.getCanonicalId();
-    } catch (AuthException e) {
-      LOG.error("Failed to get user for request, cannot verify authorization: " + e.getMessage(), e);
+      authContext = ctx.getAuthContext();
+    } catch ( final NoSuchContextException e ) {
+      LOG.error( "Context not found, cannot evaluate authorization " + request.getCorrelationId( ) );
       return false;
     }
 
@@ -177,13 +141,10 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
       return true;
     }
 
-    if (authContext == null) {
-      authContext = Permissions.createAuthContextSupplier(requestUser, Collections.<String, String>emptyMap());
-    }
-
+    final Option<Tuple4<String,String,Integer,String>>  bucketPolicy;
     final String resourceOwnerAccountNumber;
     final String bucketOwnerAccountNumber;
-    final PolicyResourceInfo policyResourceInfo;
+    final PolicyResourceInfo<S3AccessControlledEntity> policyResourceInfo;
     if (resourceType == null) {
       LOG.error("No resource type found in request class annotations, cannot process.");
       return false;
@@ -200,6 +161,11 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
               bucketOwnerAccountNumber =
                   resourceOwnerAccountNumber = lookupAccountIdByCanonicalId(bucketResourceEntity.getOwnerCanonicalId());
               policyResourceInfo = PolicyResourceContext.resourceInfo(resourceOwnerAccountNumber, bucketResourceEntity);
+              bucketPolicy = Option.of( Tuple.of(
+                  bucketOwnerAccountNumber,
+                  bucketResourceEntity.getBucketName( ),
+                  bucketResourceEntity.getVersion( ),
+                  bucketResourceEntity.getPolicy( ) ) );
             }
             break;
           case S3PolicySpec.S3_RESOURCE_OBJECT:
@@ -217,6 +183,11 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
               return false;
             } else {
               bucketOwnerAccountNumber = lookupAccountIdByCanonicalId(bucketResourceEntity.getOwnerCanonicalId());
+              bucketPolicy = Option.of( Tuple.of(
+                  bucketOwnerAccountNumber,
+                  bucketResourceEntity.getBucketName( ),
+                  bucketResourceEntity.getVersion( ),
+                  bucketResourceEntity.getPolicy( ) ) );
             }
             break;
           default:
@@ -230,20 +201,20 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
     }
 
     // Get the resourceId based on IAM resource type
-    String resourceId = null;
-    if (resourceId == null) {
-      if ( S3PolicySpec.S3_RESOURCE_BUCKET.equals(resourceType)) {
-        resourceId = request.getBucket();
-      } else if ( S3PolicySpec.S3_RESOURCE_OBJECT.equals(resourceType)) {
-        resourceId = request.getFullResource();
-      }
+    final String resourceId;
+    if ( S3PolicySpec.S3_RESOURCE_BUCKET.equals(resourceType)) {
+      resourceId = request.getBucket();
+    } else if ( S3PolicySpec.S3_RESOURCE_OBJECT.equals(resourceType)) {
+      resourceId = request.getFullResource();
+    } else {
+      resourceId = null;
     }
 
-    // Override for 'eucalyptus' account and workaroud for EUCA-11346
+    // Override for 'eucalyptus' account and workaround for EUCA-11346
     // Skip ACL checks for 'eucalyptus' account only. ACL checks must be performed for all other accounts including system accounts
     // IAM checks must be performed for all accounts
-    if (allowAdmin && requestUser.getAccountAlias() != null && AccountIdentifiers.SYSTEM_ACCOUNT.equals(requestUser.getAccountAlias())) {
-      return iamPermissionsAllow(authContext, requiredActions, policyResourceInfo, resourceType, resourceId, resourceAllocationSize);
+    if (allowAdmin && AccountIdentifiers.SYSTEM_ACCOUNT.equals(requestUser.getAccountAlias())) {
+      return iamPermissionsAllow(true, authContext, requiredActions, policyResourceInfo, Option.none( ), resourceType, resourceId, resourceAllocationSize);
     }
 
     // Don't allow anonymous to create buckets. EUCA-12902
@@ -253,7 +224,7 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
       return false;
     }
 
-    if (requiredBucketACLPermissions == null && requiredObjectACLPermissions == null) {
+    if (requiredBucketACLPermissions == null) {
       throw new IllegalArgumentException("No requires-permission actions found in request class annotations, cannot process.");
     }
 
@@ -261,7 +232,7 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
      * Bucket or object owner only? It is expected that ownerOnly flag can be used solely or in combination with ACL checks. If owner checks are
      * required, evaluate them first before evaluating the ACLs
      */
-    if (allowOwnerOnly != null && allowOwnerOnly) { // owner checks are in effect
+    if ( allowOwnerOnly ) { // owner checks are in effect
       if (requiredOwnerOf == null || requiredOwnerOf.length == 0) {
         LOG.error("Owner only flag does not include resource (bucket, object) that ownership checks should be applied to");
         return false;
@@ -283,14 +254,19 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
     } else {
       // owner check does not apply
     }
+    final boolean requestAccountIsObjectAccount = // so request account iam policy is sufficient to grant access
+        S3PolicySpec.S3_RESOURCE_OBJECT.equals( resourceType ) &&
+            resourceOwnerAccountNumber.equals( requestAccountNumber );
+    final boolean bucketAccountIsObjectAccount = // so bucket policy is sufficient to grant access
+        S3PolicySpec.S3_RESOURCE_OBJECT.equals( resourceType ) &&
+        resourceOwnerAccountNumber.equals( bucketOwnerAccountNumber );
 
     /* ACL Checks: Is the user's account allowed? */
     Boolean aclAllow = false;
-    if ((requiredBucketACLPermissions != null && requiredBucketACLPermissions.length > 0)
-        || (requiredObjectACLPermissions != null && requiredObjectACLPermissions.length > 0)) { // check ACLs if any
+    if ( requiredBucketACLPermissions.length > 0 || requiredObjectACLPermissions.length > 0 ) { // check ACLs if any
 
       // Check bucket ACLs, if any
-      if (requiredBucketACLPermissions != null && requiredBucketACLPermissions.length > 0) {
+      if ( requiredBucketACLPermissions.length > 0 ) {
 
         // Evaluate the bucket ACL, any matching grant gives permission
         for (ObjectStorageProperties.Permission permission : requiredBucketACLPermissions) {
@@ -311,17 +287,13 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
         }
       }
     } else { // No ACLs, ownership would have been used to determine privilege
-      aclAllow = true;
+      aclAllow = allowOwnerOnly;
     }
 
-    if (isUserAnonymous(requestUser)) {
-      // Skip the IAM checks for anonymous access since they will always fail and aren't valid for anonymous users.
-      return aclAllow;
-    } else {
-      Boolean iamAllow = iamPermissionsAllow(authContext, requiredActions, policyResourceInfo, resourceType, resourceId, resourceAllocationSize);
-      // Must have both acl and iam allow (account & user)
-      return aclAllow && iamAllow;
-    }
+    final Boolean iamAllow = iamPermissionsAllow(aclAllow, authContext, requiredActions, policyResourceInfo, bucketPolicy, resourceType, resourceId, resourceAllocationSize);
+
+    // Must have both acl and iam allow (account & user)
+    return (aclAllow || bucketAccountIsObjectAccount || requestAccountIsObjectAccount) && iamAllow;
   }
 
   private String lookupAccountIdByCanonicalId( final String canonicalId ) throws AuthException {
@@ -332,22 +304,58 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
     }
   }
 
-  private static Boolean iamPermissionsAllow(final AuthContextSupplier authContext, final String[] requiredActions,
-      final PolicyResourceInfo policyResourceInfo, final String resourceType, final String resourceId, final long resourceAllocationSize) {
+  private static Boolean iamPermissionsAllow(
+      final boolean aclsAllow,
+      final AuthContextSupplier authContext,
+      final String[] requiredActions,
+      final PolicyResourceInfo<S3AccessControlledEntity> policyResourceInfo,
+      final Option<Tuple4<String,String,Integer,String>> bucketPolicyOption,
+      final String resourceType,
+      final String resourceId,
+      final long resourceAllocationSize
+  ) {
+    final PolicyVersion bucketPolicy =
+        getBucketPolicy( bucketPolicyOption.map( t -> Tuple.of( t._2( ), t._3( ), t._4( ) ) ) );
+    final AccountFullName bucketPolicyAccount = bucketPolicyOption.isDefined( ) ?
+        AccountFullName.getInstance( bucketPolicyOption.get( )._1( ) ) :
+        null;
+    final AccountFullName resourceAccount =
+        AccountFullName.getInstance( policyResourceInfo.getResourceAccountNumber( ) );
+
     /* IAM checks: Is the user allowed within the account? */
     // the Permissions.isAuthorized() handles the default deny for each action.
     boolean iamAllow = true; // Evaluate each iam action required, all must be allowed
     for (String action : requiredActions) {
-      try (final PolicyResourceContext context = PolicyResourceContext.of(policyResourceInfo, action)) {
+      try ( final PolicyResourceContext context = PolicyResourceContext.of( policyResourceInfo, action ) ) {
         // Any deny overrides an allow
         // Note: explicitly set resourceOwnerAccount to null here, otherwise iam will reject even if the ACL checks
         // were valid, let ACLs handle cross-account access.
         iamAllow &=
-            Permissions.isAuthorized( S3PolicySpec.VENDOR_S3, resourceType, resourceId, null, action, authContext)
+            Permissions.isAuthorized( S3PolicySpec.VENDOR_S3, resourceType, resourceId, resourceAccount, bucketPolicy, bucketPolicyAccount, action, authContext, aclsAllow )
                 && Permissions.canAllocate( S3PolicySpec.VENDOR_S3, resourceType, resourceId, action, authContext, resourceAllocationSize);
       }
     }
     return iamAllow;
   }
 
+  private static PolicyVersion getBucketPolicy( final Option<Tuple3<String,Integer,String>> bucketPolicyOption ) {
+    PolicyVersion policyVersion = null;
+    if ( bucketPolicyOption.isDefined( ) ) {
+      final String bucketName = bucketPolicyOption.get( )._1( );
+      final String policy = bucketPolicyOption.get( )._3( );
+      if ( policy != null ) {
+        final String policyVersionId = "arn:aws:s3:::" + bucketName + "/policy/bucket," + bucketPolicyOption.get( )._2( );
+        final String policyName = "Policy for bucket " + bucketName;
+        final String policyHash = PolicyVersions.hash( policy );
+        policyVersion = new PolicyVersion() {
+          @Override public String getPolicyName() { return policyName; }
+          @Override public PolicyScope getPolicyScope() { return PolicyScope.Resource; }
+          @Override public String getPolicyVersionId() { return policyVersionId; }
+          @Override public String getPolicyHash() { return policyHash; }
+          @Override public String getPolicy() { return policy; }
+        };
+      }
+    }
+    return policyVersion;
+  }
 }

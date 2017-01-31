@@ -21,11 +21,14 @@ package com.eucalyptus.auth;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.principal.PolicyVersion;
+import com.eucalyptus.auth.principal.TypedPrincipal;
 import com.eucalyptus.auth.principal.User;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 
 /**
@@ -38,12 +41,14 @@ public class AuthContext {
   private final boolean systemAdmin;
   private final boolean systemUser;
   private final User user; // NOTE, do not invoke any methods on this without caching the result
+  private final Set<TypedPrincipal> principals;
   private final Map<String,String> evaluatedKeys;
   private final Collection<PolicyVersion> policies;
   private Map<AuthEvaluationContextKey,AuthEvaluationContext> contexts = Maps.newHashMap();
 
   AuthContext(
       final User requestUser,
+      final Set<TypedPrincipal> principals,
       final Iterable<PolicyVersion> policies,
       final Map<String, String> evaluatedKeys
   ) throws AuthException {
@@ -53,6 +58,7 @@ public class AuthContext {
     this.accountAdmin = requestUser.isAccountAdmin( );
     this.accountNumber = requestUser.getAccountNumber( );
     this.user = requestUser;
+    this.principals = ImmutableSet.copyOf( principals );
     this.evaluatedKeys = evaluatedKeys;
     this.policies = ImmutableList.copyOf( policies );
   }
@@ -93,11 +99,11 @@ public class AuthContext {
       @Nonnull final String vendor,
       @Nullable final String resource,
       @Nonnull  final String action
-  ) {
+  ) throws AuthException {
     final AuthEvaluationContextKey key = new AuthEvaluationContextKey( vendor, resource, action );
     AuthEvaluationContext context = contexts.get( key );
     if ( context == null ) {
-      context = Permissions.createEvaluationContext( vendor, resource, action, user, policies, evaluatedKeys );
+      context = Permissions.createEvaluationContext( vendor, resource, action, user, policies, evaluatedKeys, principals );
       contexts.put( key, context );
     }
     return context;

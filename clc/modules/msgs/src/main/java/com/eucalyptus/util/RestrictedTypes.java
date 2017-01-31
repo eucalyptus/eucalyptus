@@ -559,17 +559,19 @@ public class RestrictedTypes {
         principals = Principals.typedSet( requestUser );
       }
 
+      final AccountFullName objectOwnerAccount =
+          AccountFullName.getInstance( requestedObject.getOwner( ).getAccountNumber( ) );
       AccountFullName owningAccount = null;
       if ( !ignoreOwningAccount ) {
         owningAccount = Principals.nobodyFullName( ).getAccountNumber( ).equals( requestedObject.getOwner( ).getAccountNumber( ) )
           ? null
-          : AccountFullName.getInstance( requestedObject.getOwner( ).getAccountNumber( ) );
+          : objectOwnerAccount;
       }
 
       final String qualifiedAction = PolicySpec.qualifiedName( actionVendor, action );
       //noinspection unused
       try ( final PolicyResourceContext policyResourceContext = PolicyResourceContext.of( requestedObject, qualifiedAction ) ) {
-        if ( !Permissions.isAuthorized( principals, findPolicy( requestedObject, actionVendor, action ),
+        if ( !Permissions.isAuthorized( principals, findPolicy( requestedObject, actionVendor, action ), objectOwnerAccount,
                                         PolicySpec.qualifiedName( vendor.value( ), type.value( ) ), identifier, owningAccount,
                                         qualifiedAction, requestUser, authContextSupplier.get( ).getPolicies( ), evaluatedKeys ) ) {
           throw new AuthException( "Not authorized to use " + type.value( ) + " identified by " + identifier + " as the user "

@@ -49,15 +49,15 @@ public class PolicyResourceContext implements AutoCloseable {
     return new PolicyResourceContext( );
   }
 
-  public static PolicyResourceInfo resourceInfo( @Nullable final String accountNumber,
-                                                 @Nonnull  final Object resourceObject ) {
-    return resourceInfo( accountNumber, resourceObject, resourceObject.getClass( ) );
+  public static <T> PolicyResourceInfo<T> resourceInfo( @Nullable final String accountNumber,
+                                                        @Nonnull  final T resourceObject ) {
+    return resourceInfo( accountNumber, resourceObject, (Class<? extends T>)resourceObject.getClass( ) );
   }
 
-  public static PolicyResourceInfo resourceInfo( @Nullable final String accountNumber,
-                                                 @Nonnull  final Object resourceObject,
-                                                 @Nonnull  final Class resourceClass  ) {
-    return new PolicyResourceInfo( ) {
+  public static <T> PolicyResourceInfo<T> resourceInfo( @Nullable final String accountNumber,
+                                                        @Nonnull  final T resourceObject,
+                                                        @Nonnull  final Class<? extends T> resourceClass  ) {
+    return new PolicyResourceInfo<T>( ) {
       @Nullable
       @Override
       public String getResourceAccountNumber( ) {
@@ -66,13 +66,13 @@ public class PolicyResourceContext implements AutoCloseable {
 
       @Nonnull
       @Override
-      public Class getResourceClass( ) {
+      public Class<? extends T> getResourceClass( ) {
         return resourceClass;
       }
 
       @Nonnull
       @Override
-      public Object getResourceObject( ) {
+      public T getResourceObject( ) {
         return resourceObject;
       }
     };
@@ -84,7 +84,7 @@ public class PolicyResourceContext implements AutoCloseable {
   }
 
   private static void notifyResourceInterceptors(
-      final PolicyResourceInfo policyResourceInfo,
+      final PolicyResourceInfo<?> policyResourceInfo,
       final String action
   ) {
     for ( final PolicyResourceContext.PolicyResourceInterceptor interceptor : resourceInterceptors ) {
@@ -92,26 +92,26 @@ public class PolicyResourceContext implements AutoCloseable {
     }
   }
 
-  public interface PolicyResourceInfo {
+  public interface PolicyResourceInfo<T> {
     @Nullable
     String getResourceAccountNumber( );
 
     @Nonnull
-    Class getResourceClass( );
+    Class<? extends T> getResourceClass( );
 
     @Nonnull
-    Object getResourceObject( );
+    T getResourceObject( );
   }
 
   public interface PolicyResourceInterceptor {
-    void onResource( @Nullable PolicyResourceInfo resource, @Nullable String action );
+    void onResource( @Nullable PolicyResourceInfo<?> resource, @Nullable String action );
   }
 
   public static class AccountNumberPolicyResourceInterceptor implements PolicyResourceInterceptor {
     private static final ThreadLocal<String> accountNumberThreadLocal = new ThreadLocal<>( );
 
     @Override
-    public void onResource( final PolicyResourceInfo resource, final String action ) {
+    public void onResource( final PolicyResourceInfo<?> resource, final String action ) {
       accountNumberThreadLocal.set( resource == null ? null : resource.getResourceAccountNumber( ) );
     }
 

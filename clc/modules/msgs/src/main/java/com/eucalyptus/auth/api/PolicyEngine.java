@@ -98,6 +98,7 @@ public interface PolicyEngine {
    * <p>This method is for resources that support attached policies.</p>
    *
    * @param context Context for evaluation
+   * @param requestAccountDefaultAllow If requesting account has permission via external mechanism
    * @param resourcePolicy The policy for the resource
    * @param resourceAccountNumber The account number for the resource
    * @param resourceName The name for the resource
@@ -105,7 +106,9 @@ public interface PolicyEngine {
    * @throws AuthException If not authorized
    */
   void evaluateAuthorization( AuthEvaluationContext context,
+                              boolean requestAccountDefaultAllow,
                               PolicyVersion resourcePolicy,
+                              String resourcePolicyAccountNumber,
                               String resourceAccountNumber,
                               String resourceName,
                               Map<Type, Contract> contracts ) throws AuthException;

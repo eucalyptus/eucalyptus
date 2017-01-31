@@ -76,6 +76,7 @@ import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.PolicyVersion;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.TypedPrincipal;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
@@ -99,21 +100,17 @@ public class Permissions {
 
 	public static AuthContext createAuthContext(
 			final UserPrincipal requestUser,
-			final Map<String, String> evaluatedKeys
+			final Map<String, String> evaluatedKeys,
+			final Set<TypedPrincipal> principals
 	) throws AuthException {
-		return new AuthContext( requestUser, requestUser.getPrincipalPolicies( ), evaluatedKeys );
+		return new AuthContext( requestUser, principals, requestUser.getPrincipalPolicies( ), evaluatedKeys );
 	}
 
 	public static AuthContextSupplier createAuthContextSupplier(
 			final UserPrincipal requestUser,
 			final Map<String, String> evaluatedKeys
 	) {
-		return new AuthContextSupplier( ) {
-			@Override
-			public AuthContext get( ) throws AuthException {
-				return createAuthContext( requestUser, evaluatedKeys );
-			}
-		};
+		return () -> createAuthContext( requestUser, evaluatedKeys, Principals.typedSet( requestUser ) );
 	}
 
 	public static AuthEvaluationContext createEvaluationContext(
@@ -122,9 +119,13 @@ public class Permissions {
 			final String action,
 			final User requestUser,
 			final Iterable<PolicyVersion> policies,
-			final Map<String,String> evaluatedKeys
+			final Map<String,String> evaluatedKeys,
+			final Set<TypedPrincipal> principals
 	) {
-		return policyEngine.createEvaluationContext( PolicySpec.qualifiedName( vendor, resourceType ), PolicySpec.qualifiedName( vendor, action ), requestUser, evaluatedKeys, policies );
+		return policyEngine.createEvaluationContext(
+				PolicySpec.qualifiedName( vendor, resourceType ),
+				PolicySpec.qualifiedName( vendor, action ),
+				requestUser, evaluatedKeys, policies, principals );
 	}
 
 
@@ -154,7 +155,12 @@ public class Permissions {
 		@Nonnull  final AuthContext requestUser
 	) {
 		final String resourceAccountNumber = resourceAccount==null ? null : resourceAccount.getAccountNumber( );
-		return isAuthorized( requestUser.evaluationContext( vendor, resourceType, action ), resourceAccountNumber, resourceName );
+		try {
+			return isAuthorized( requestUser.evaluationContext( vendor, resourceType, action ), resourceAccountNumber, resourceName );
+		} catch ( AuthException e ) {
+			LOG.error( "Exception in resource access to " + resourceType + ":" + resourceName, e );
+			return false;
+		}
 	}
 
 	public static boolean isAuthorized(
@@ -166,7 +172,12 @@ public class Permissions {
 		@Nonnull  final AuthContext requestUser
 	) {
 		final String resourceAccountNumber = resourceAccount==null ? null : resourceAccount.getAccountNumber( );
-		return isAuthorized( requestUser.evaluationContext( vendor, resourceType, action ), resourceAccountNumber, resourceName );
+		try {
+			return isAuthorized( requestUser.evaluationContext( vendor, resourceType, action ), resourceAccountNumber, resourceName );
+		} catch ( AuthException e ) {
+			LOG.error( "Exception in resource access to " + resourceType + ":" + resourceName, e );
+			return false;
+		}
 	}
 
 	public static boolean isAuthorized(
@@ -192,6 +203,7 @@ public class Permissions {
 	public static boolean isAuthorized(
 		final Set<TypedPrincipal> principals,
 		final PolicyVersion resourcePolicy,
+		final AccountFullName resourcePolicyAccount,
 		final String resourceType,
 		final String resourceName,
 		final AccountFullName resourceAccount,
@@ -200,11 +212,49 @@ public class Permissions {
 		final Iterable<PolicyVersion> policies,
 		final Map<String,String> evaluatedKeys
 	) {
-		final String resourceAccountNumber = resourceAccount==null ? null : resourceAccount.getAccountNumber( );
+		final String resourceAccountNumber =
+				resourceAccount==null ? null : resourceAccount.getAccountNumber( );
+		final String resourcePolicyAccountNumber =
+				resourcePolicyAccount==null ? null : resourcePolicyAccount.getAccountNumber( );
 		final AuthEvaluationContext context = policyEngine.createEvaluationContext( resourceType, action, requestUser, evaluatedKeys, policies, principals );
 		try {
 			final Map<Contract.Type, Contract> contracts = newHashMap();
-			policyEngine.evaluateAuthorization( context, resourcePolicy, resourceAccountNumber, resourceName, contracts );
+			policyEngine.evaluateAuthorization( context, false, resourcePolicy, resourcePolicyAccountNumber, resourceAccountNumber, resourceName, contracts );
+			pushToContext( contracts );
+			return true;
+		} catch ( AuthException e ) {
+			LOG.debug( "Denied resource access to " + context.describe( resourceAccountNumber, resourceName ) + ": " + e.getMessage() );
+		} catch ( Exception e ) {
+			LOG.error( "Exception in resource access to " + context.describe( resourceAccountNumber, resourceName ), e );
+		}
+		return false;
+	}
+
+	public static boolean isAuthorized(
+			@Nonnull  final String vendor,
+			@Nonnull  final String resourceType,
+			@Nonnull  final String resourceName,
+			@Nullable final AccountFullName resourceAccount,
+			@Nullable final PolicyVersion resourcePolicy,
+			@Nullable final AccountFullName resourcePolicyAccount,
+			@Nonnull  final String action,
+			@Nonnull  final AuthContextSupplier requestUser,
+			          final boolean requestAccountDefaultAllow // request account authorized via non-iam mechanism
+	) {
+		final String resourceAccountNumber =
+				resourceAccount==null ? null : resourceAccount.getAccountNumber( );
+		final String resourcePolicyAccountNumber =
+				resourcePolicyAccount==null ? null : resourcePolicyAccount.getAccountNumber( );
+		final AuthEvaluationContext context;
+		try {
+			context = requestUser.get( ).evaluationContext( vendor, resourceType, action );
+		} catch ( AuthException e ) {
+			LOG.error( "Exception in resource access to " + resourceType + ":" + resourceName, e );
+			return false;
+		}
+		try {
+			final Map<Contract.Type, Contract> contracts = newHashMap();
+			policyEngine.evaluateAuthorization( context, requestAccountDefaultAllow, resourcePolicy, resourcePolicyAccountNumber, resourceAccountNumber, resourceName, contracts );
 			pushToContext( contracts );
 			return true;
 		} catch ( AuthException e ) {
@@ -247,7 +297,12 @@ public class Permissions {
 	}
 
 	public static boolean canAllocate( String vendor, String resourceType, String resourceName, String action, AuthContext requestUser, Long quantity ) {
-		return canAllocate( requestUser.evaluationContext( vendor, resourceType, action ), resourceName, quantity );
+		try {
+			return canAllocate( requestUser.evaluationContext( vendor, resourceType, action ), resourceName, quantity );
+		} catch ( AuthException e ) {
+			LOG.error( "Exception in resource access to " + resourceType + ":" + resourceName, e );
+			return false;
+		}
 	}
 
 	public static boolean canAllocate( String vendor, String resourceType, String resourceName, String action, AuthContextSupplier requestUser, Long quantity ) {

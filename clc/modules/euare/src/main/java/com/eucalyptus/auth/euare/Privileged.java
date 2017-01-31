@@ -826,7 +826,7 @@ class Privileged {
         Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_GETUSERPOLICY, requestUser );
   }
 
-  public static boolean allowListAccessKeys( AuthContext requestUser, EuareAccount account, EuareUser user ) {
+  public static boolean allowListAccessKeys( AuthContext requestUser, EuareAccount account, EuareUser user ) throws AuthException {
     return Permissions.isAuthorized(
         requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_USER, IAM_LISTACCESSKEYS ),
         account.getAccountNumber( ),

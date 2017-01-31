@@ -94,7 +94,6 @@ public class ObjectStorageGatewayTest {
 
     BucketLifecycleManagers.setInstance(bucketLifecycleManagerMock);
     BucketMetadataManagers.setInstance(bucketManagerMock);
-    OsgAuthorizationHandler.setInstance(requestAuthorizationHandlerMock);
 
     final String bucketName = "my-test-bucket";
     final Bucket bucket = new Bucket();
@@ -116,7 +115,7 @@ public class ObjectStorageGatewayTest {
       }
     });
 
-    ObjectStorageGateway osg = new ObjectStorageGateway();
+    ObjectStorageGateway osg = new ObjectStorageGateway( requestAuthorizationHandlerMock );
     GetBucketLifecycleResponseType response = osg.getBucketLifecycle(request);
     assertTrue("expected a response", response != null);
     assertTrue("expected response to contain an empty set of lifecycle rules", response.getLifecycleConfiguration().getRules().size() == 0);
@@ -127,7 +126,6 @@ public class ObjectStorageGatewayTest {
   public static void tearDown() {
     BucketLifecycleManagers.setInstance(null);
     BucketMetadataManagers.setInstance(null);
-    OsgAuthorizationHandler.setInstance(null);
   }
 
   @Test

@@ -20,9 +20,11 @@
 
 package com.eucalyptus.objectstorage.pipeline.auth;
 
-import com.eucalyptus.auth.login.SecurityContext;
+import com.eucalyptus.auth.euare.DelegatingUserPrincipal;
+import com.eucalyptus.auth.principal.PolicyVersion;
+import com.eucalyptus.auth.principal.PolicyVersions;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
@@ -31,18 +33,19 @@ import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.crypto.util.Timestamps.Type;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.exceptions.s3.*;
 import com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication.V4AuthComponent;
 import com.eucalyptus.objectstorage.pipeline.handlers.AwsChunkStream.AwsChunk;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.ws.util.HmacUtils.SignatureCredential;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import javaslang.control.Try.CheckedFunction;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
-import javax.security.auth.login.LoginException;
+import javax.annotation.Nonnull;
+import javax.security.auth.Subject;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.*;
@@ -127,8 +130,18 @@ public final class S3Authentication {
     ANONYMOUS {
       public void authenticate(MappingHttpRequest request, Map<String, String> lowercaseParams) throws S3Exception {
         try {
-          Context ctx = Contexts.lookup(request.getCorrelationId());
-          ctx.setUser(Principals.nobodyUser());
+          final Context context = Contexts.lookup( request.getCorrelationId( ) );
+          final Subject subject = new Subject( );
+          final UserPrincipal principal = new DelegatingUserPrincipal( Principals.nobodyUser( ) ) {
+            @Nonnull
+            @Override
+            public List<PolicyVersion> getPrincipalPolicies( ) {
+              return ImmutableList.of( PolicyVersions.getAdministratorPolicy( ) );
+            }
+          };
+          subject.getPrincipals( ).add( principal );
+          context.setUser( principal );
+          context.setSubject( subject );
         } catch (NoSuchContextException e) {
           LOG.error(e, e);
           throw new AccessDeniedException();

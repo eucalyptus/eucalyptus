@@ -63,7 +63,6 @@
 package com.eucalyptus.context;
 
 import static java.util.Collections.unmodifiableMap;
-import com.eucalyptus.auth.AuthContext;
 import com.eucalyptus.auth.AuthContextSupplier;
 import static com.google.common.collect.Maps.newHashMap;
 
@@ -247,12 +246,7 @@ public class Context {
   }
 
   public AuthContextSupplier getAuthContext( ) {
-    return new AuthContextSupplier( ){
-      @Override
-      public AuthContext get( ) throws AuthException {
-        return Permissions.createAuthContext( getUser( ), Collections.<String,String>emptyMap() );
-      }
-    };
+    return () -> Permissions.createAuthContext( getUser( ), Collections.emptyMap( ), Principals.typedSet( getUser( ) ) );
   }
   
   @Nullable
@@ -434,12 +428,7 @@ public class Context {
 
       @Override
       public AuthContextSupplier getAuthContext( ) {
-        return new AuthContextSupplier( ){
-          @Override
-          public AuthContext get( ) throws AuthException {
-            return Permissions.createAuthContext( getUser( ), evaluateKeys( ) );
-          }
-        };
+        return () -> Permissions.createAuthContext( getUser( ), evaluateKeys( ), Principals.typedSet( getUser( ) ) );
       }
     };
   }

@@ -35,6 +35,7 @@ import java.util.concurrent.ExecutionException;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
@@ -60,7 +61,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.objectstorage.auth.OsgAuthorizationHandler;
+import com.eucalyptus.objectstorage.auth.RequestAuthorizationHandler;
 import com.eucalyptus.objectstorage.bittorrent.Tracker;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.BucketTags;
@@ -211,7 +212,6 @@ import com.eucalyptus.storage.config.ConfigurationCache;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.AllowedCorsMethods;
-import com.eucalyptus.storage.msgs.s3.BucketListEntry;
 import com.eucalyptus.storage.msgs.s3.BucketTag;
 import com.eucalyptus.storage.msgs.s3.BucketTagSet;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
@@ -225,12 +225,10 @@ import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsError;
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsErrorCode;
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessage;
 import com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessageReply;
-import com.eucalyptus.storage.msgs.s3.Grant;
 import com.eucalyptus.storage.msgs.s3.Initiator;
 import com.eucalyptus.storage.msgs.s3.LifecycleConfiguration;
 import com.eucalyptus.storage.msgs.s3.LifecycleRule;
 import com.eucalyptus.storage.msgs.s3.ListAllMyBucketsList;
-import com.eucalyptus.storage.msgs.s3.ListEntry;
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
 import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.storage.msgs.s3.PreflightRequest;
@@ -257,6 +255,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
   private static Logger LOG = Logger.getLogger(ObjectStorageGateway.class);
   private static ObjectStorageProviderClient ospClient = null;
   private static final DateTimeComparator DATE_TIME_COMPARATOR = DateTimeComparator.getInstance(DateTimeFieldType.secondOfMinute());
+
+  private final RequestAuthorizationHandler authorizationHandler;
 
   public static void checkPreconditions() throws EucalyptusCloudException, ExecutionException {
     LOG.debug("Checking ObjectStorageGateway preconditions");
@@ -376,6 +376,13 @@ public class ObjectStorageGateway implements ObjectStorageService {
     LOG.debug("Checking ObjectStorageGateway preconditions");
   }
 
+  @Inject
+  public ObjectStorageGateway(
+      final RequestAuthorizationHandler authorizationHandler
+  ) {
+    this.authorizationHandler = authorizationHandler;
+  }
+
   /*
    * (non-Javadoc)
    * 
@@ -464,7 +471,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
       ObjectEntity objectEntity = ObjectEntity.newInitializedForCreate(bucket, request.getKey(), objectSize, requestUser, request.getCopiedHeaders());
 
-      if (!OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, objectSize)) {
+      if (!authorizationHandler.operationAllowed(request, bucket, objectEntity, objectSize)) {
         throw new AccessDeniedException(request.getBucket());
       }
 
@@ -574,7 +581,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       canonicalLogEntry.append(" Bucket: " + request.getBucket());
       canonicalLogEntry.append(" Object: " + request.getKey());
       if (request instanceof GetObjectType) {
-        canonicalLogEntry.append(" VersionId: " + ((GetObjectType) request).getVersionId());
+        canonicalLogEntry.append(" VersionId: " + request.getVersionId());
       } else if (request instanceof PutObjectType) {
         canonicalLogEntry.append(" ContentMD5: " + ((PutObjectType) request).getContentMD5());
       }
@@ -642,7 +649,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       final AccessControlPolicy acPolicy = getFullAcp(request.getAccessControlList(), requestUser, null);
       Bucket bucket = Bucket.getInitializedBucket(request.getBucket(), requestUser.getUserId(), acPolicy, request.getLocationConstraint());
 
-      if (OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, null, 1)) {
+      if (authorizationHandler.operationAllowed(request, bucket, null, 1)) {
         /*
          * This is a secondary check, independent to the iam quota check, based on the configured max bucket count property.
          */
@@ -742,7 +749,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   protected static ListAllMyBucketsList generateBucketListing(List<Bucket> buckets) {
     ListAllMyBucketsList bucketList = new ListAllMyBucketsList();
-    bucketList.setBuckets(new ArrayList<BucketListEntry>());
+    bucketList.setBuckets( new ArrayList<>( ));
     for (Bucket b : buckets) {
       bucketList.getBuckets().add(b.toBucketListEntry());
     }
@@ -773,7 +780,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     fakeBucket.setOwnerCanonicalId(canonicalUser.getID()); // make requestor the owner of fake bucket
     request.setBucket(fakeBucket.getBucketName());
 
-    if (OsgAuthorizationHandler.getInstance().operationAllowed(request, fakeBucket, null, 0)) {
+    if (authorizationHandler.operationAllowed(request, fakeBucket, null, 0)) {
       ListAllMyBucketsResponseType response = request.getReply();
       /*
        * This is a strictly metadata operation, no backend is hit. The sync of metadata in OSG to backend is done elsewhere asynchronously.
@@ -814,7 +821,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       throw new InternalErrorException(request.getBucket() + "/?acl");
     }
 
-    if (OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, null, 0)) {
+    if (authorizationHandler.operationAllowed(request, bucket, null, 0)) {
       // Get the listing from the back-end and copy results in.
       GetBucketAccessControlPolicyResponseType reply = request.getReply();
       reply.setBucket(request.getBucket());
@@ -904,8 +911,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
    */
   @Override
   public DeleteObjectResponseType deleteObject(final DeleteObjectType request) throws S3Exception {
-    ObjectEntity objectEntity = null;
-    Bucket bucket = null;
+    ObjectEntity objectEntity;
+    Bucket bucket;
     try {
       //TODO This throws exception on anonymous access to an object, must be handled separately. TBD.
       objectEntity = getObjectEntityAndCheckPermissions(request, null);
@@ -1002,14 +1009,14 @@ public class ObjectStorageGateway implements ObjectStorageService {
     }
 
     if (result != null) {
-      reply.setContents(new ArrayList<ListEntry>());
+      reply.setContents( new ArrayList<>( ));
 
       for (ObjectEntity obj : result.getEntityList()) {
         reply.getContents().add(obj.toListEntry());
       }
 
       if (result.getCommonPrefixes() != null && result.getCommonPrefixes().size() > 0) {
-        reply.setCommonPrefixesList(new ArrayList<CommonPrefixesEntry>());
+        reply.setCommonPrefixesList( new ArrayList<>( ));
 
         for (String s : result.getCommonPrefixes()) {
           reply.getCommonPrefixesList().add(new CommonPrefixesEntry(s));
@@ -1143,7 +1150,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     final String bucketOwnerId = objectEntity.getBucket().getOwnerCanonicalId();
     final String objectOwnerId = objectEntity.getOwnerCanonicalId();
     try {
-      String aclString = null;
+      String aclString;
       if (request.getAccessControlPolicy() == null || request.getAccessControlPolicy().getAccessControlList() == null) {
         // Can't set to null
         throw new MalformedACLErrorException(request.getBucket() + "/" + request.getKey() + "?acl");
@@ -1206,8 +1213,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
     request.setKey(objectEntity.getObjectUuid());
     request.setBucket(objectEntity.getBucket().getBucketUuid());
     GetObjectResponseType reply;
-    //TODO: originalVersionId is never used, should it be?
-    final String originalVersionId = request.getVersionId();
     // Versioning not used on backend
     request.setVersionId(null);
     try {
@@ -1300,7 +1305,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       throw new PreconditionFailedException("If-Unmodified-Since");
     }
 
-    boolean shortReply = false;
+    boolean shortReply;
     // This if-else ladder is for evaluating If-No-Match and If-Modified-Since in conjunction
 
     if (ifNoneMatch != null) {
@@ -1472,7 +1477,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
     HeadObjectResponseType reply = request.getReply();
     request.setKey(objectEntity.getObjectUuid());
     request.setBucket(objectEntity.getBucket().getBucketUuid());
-    final String originalVersionId = request.getVersionId();
     try {
       // Unset the versionId because it isn't used on backend
       request.setVersionId(null);
@@ -1537,7 +1541,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     }
 
     // Check authorization for GET operation on source bucket and object
-    if (OsgAuthorizationHandler.getInstance().operationAllowed(request.getGetObjectRequest(), srcBucket, srcObject, 0)) {
+    if (authorizationHandler.operationAllowed(request.getGetObjectRequest(), srcBucket, srcObject, 0)) {
       CopyObjectResponseType reply = request.getReply();
       String destinationBucket = request.getDestinationBucket();
       String destinationKey = request.getDestinationObject();
@@ -1555,7 +1559,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       }
 
       // Check authorization for PUT operation on destination bucket and object
-      if (OsgAuthorizationHandler.getInstance().operationAllowed(request.getPutObjectRequest(), destBucket, destObject, srcObject.getSize())) {
+      if (authorizationHandler.operationAllowed(request.getPutObjectRequest(), destBucket, destObject, srcObject.getSize())) {
 
         String metadataDirective = request.getMetadataDirective();
         String copyIfMatch = request.getCopySourceIfMatch();
@@ -1587,7 +1591,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         }
 
         // Copy the headers either from request or from source object
-        Map<String, String> modded = null;
+        Map<String, String> modded;
         if (MetadataDirective.REPLACE.toString().equals(metadataDirective)) {
           if (request.getCopiedHeaders() != null && !request.getCopiedHeaders().isEmpty()) {
             modded = Maps.newHashMap(request.getCopiedHeaders());
@@ -1702,7 +1706,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         grants.setGrants(targetBucket.getAccessControlPolicy().getAccessControlList().getGrants());
       } catch (Exception e) {
         LOG.warn("Error populating target grants for bucket " + request.getBucket() + " for target " + bucket.getTargetBucket(), e);
-        grants.setGrants(new ArrayList<Grant>());
+        grants.setGrants( new ArrayList<>( ));
       }
 
       loggingConfig.setTargetBucket(bucket.getTargetBucket());
@@ -1892,7 +1896,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     Bucket bucket = getBucketAndCheckAuthorization(request);
 
     // Get the lifecycle from the back-end and copy results in.
-    GetBucketLifecycleResponseType reply = (GetBucketLifecycleResponseType) request.getReply();
+    GetBucketLifecycleResponseType reply = request.getReply();
     try {
       LifecycleConfiguration lifecycle = new LifecycleConfiguration();
       List<LifecycleRule> responseRules = BucketLifecycleManagers.getInstance().getLifecycleRules(bucket.getBucketUuid());
@@ -2010,7 +2014,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   @Override
   public GetBucketTaggingResponseType getBucketTagging(GetBucketTaggingType request) throws S3Exception {
-    GetBucketTaggingResponseType reply = (GetBucketTaggingResponseType) request.getReply();
+    GetBucketTaggingResponseType reply = request.getReply();
     Bucket bucket = getBucketAndCheckAuthorization(request);
 
     try {
@@ -2021,7 +2025,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       }
 
       TaggingConfiguration tagging = new TaggingConfiguration();
-      List<BucketTag> bucketTagList = new ArrayList<BucketTag>();
+      List<BucketTag> bucketTagList = new ArrayList<>( );
       for (BucketTags bucketTags : bucketTagsLookup) {
         BucketTag bucketTag = new BucketTag();
         bucketTag.setKey(bucketTags.getKey());
@@ -2068,8 +2072,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   @Override
   public GetBucketCorsResponseType getBucketCors(GetBucketCorsType request) throws S3Exception {
-    GetBucketCorsResponseType response = null;
-    Bucket bucket = null;
+    GetBucketCorsResponseType response;
+    Bucket bucket;
     
     if (request == null) {
       throw new InternalErrorException("Null request passed to getBucketCors()");
@@ -2085,7 +2089,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     if (bucket == null) {
       throw new InternalErrorException("Null bucket returned by getBucketAndCheckAuthorization()");
     }
-    response = (GetBucketCorsResponseType) request.getReply();
+    response = request.getReply();
 
     setCorsInfo(request, response, bucket);
 
@@ -2229,8 +2233,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   @Override
   public SetBucketCorsResponseType setBucketCors(SetBucketCorsType request) throws S3Exception {
-    SetBucketCorsResponseType response = null;
-    Bucket bucket = null;
+    SetBucketCorsResponseType response;
+    Bucket bucket;
     
     if (request == null) {
       throw new InternalErrorException("Null request passed to setBucketCors()");
@@ -2246,7 +2250,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     if (bucket == null) {
       throw new InternalErrorException("Null bucket returned by getBucketAndCheckAuthorization()");
     }
-    response = (SetBucketCorsResponseType) request.getReply();
+    response = request.getReply();
     // Set the CORS headers based on the CORS config *before* we change it!
     setCorsInfo(request, response, bucket);
 
@@ -2268,7 +2272,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     }
 
     // Make sure names are unique and <= 255 chars.
-    HashSet<String> uniqueRuleIds = new HashSet<String>();
+    HashSet<String> uniqueRuleIds = new HashSet<>( );
 
     for (CorsRule rule : corsConfig.getRules()) {
       if (rule == null) {
@@ -2308,8 +2312,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   @Override
   public DeleteBucketCorsResponseType deleteBucketCors(DeleteBucketCorsType request) throws S3Exception {
-    DeleteBucketCorsResponseType response = null;
-    Bucket bucket = null;
+    DeleteBucketCorsResponseType response;
+    Bucket bucket;
 
     if (request == null) {
       throw new InternalErrorException("Null request passed to getBucketCors()");
@@ -2325,7 +2329,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     if (bucket == null) {
       throw new InternalErrorException("Null bucket returned by getBucketAndCheckAuthorization()");
     }
-    response = (DeleteBucketCorsResponseType) request.getReply();
+    response = request.getReply();
     // Set the CORS headers based on the CORS config *before* we delete it!
     setCorsInfo(request, response, bucket);
     try {
@@ -2342,7 +2346,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
   @Override
   public PreflightCheckCorsResponseType preflightCors(PreflightCheckCorsType request) throws S3Exception {
     String bucketName = "nullBucket";
-    PreflightCheckCorsResponseType response = null;
+    PreflightCheckCorsResponseType response;
 
     try {
       // For a preflight request, we don't need to authenticate the client's 
@@ -2483,7 +2487,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
   private Bucket getBucketAndCheckAuthorization( ObjectStorageRequestType request) throws S3Exception {
     logRequest(request);
     Bucket bucket = ensureBucketExists(request.getBucket());
-    if (!OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, null, 0)) {
+    if (!authorizationHandler.operationAllowed(request, bucket, null, 0)) {
       throw new AccessDeniedException(request.getBucket());
     }
     return bucket;
@@ -2502,14 +2506,14 @@ public class ObjectStorageGateway implements ObjectStorageService {
       LOG.warn("Error getting metadata for " + keyFullName);
       throw new InternalErrorException(keyFullName);
     }
-    if (!OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, object, 0)) {
+    if (!authorizationHandler.operationAllowed(request, bucket, object, 0)) {
       throw new AccessDeniedException(keyFullName);
     }
     return object;
   }
 
   private Bucket ensureBucketExists(String bucketName) throws S3Exception {
-    Bucket bucket = null;
+    Bucket bucket;
     try {
       bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(bucketName);
     } catch (NoSuchEntityException e) {
@@ -2524,7 +2528,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
   @Override
   public InitiateMultipartUploadResponseType initiateMultipartUpload(InitiateMultipartUploadType request) throws S3Exception {
     logRequest(request);
-    Bucket bucket = null;
+    Bucket bucket;
     try {
       bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(request.getBucket());
     } catch (NoSuchEntityException e) {
@@ -2543,7 +2547,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
     }
 
-    if (OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
+    if (authorizationHandler.operationAllowed(request, bucket, objectEntity, 0)) {
       final String originalBucket = request.getBucket();
       final String originalKey = request.getKey();
       try {
@@ -2575,7 +2579,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
   @Override
   public UploadPartResponseType uploadPart(final UploadPartType request) throws S3Exception {
     logRequest(request);
-    Bucket bucket = null;
+    Bucket bucket;
     try {
       bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(request.getBucket());
     } catch (NoSuchEntityException e) {
@@ -2589,7 +2593,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       throw new MissingContentLengthException(request.getBucket() + "/" + request.getKey());
     }
 
-    int partNumber = 0;
+    int partNumber;
     if (!Strings.isNullOrEmpty(request.getPartNumber())) {
       try {
         partNumber = Integer.parseInt(request.getPartNumber());
@@ -2606,7 +2610,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
           + ObjectStorageProperties.MAX_PART_NUMBER + ", inclusive");
     }
 
-    long objectSize = 0;
+    long objectSize;
     try {
       objectSize = Long.parseLong(request.getContentLength());
     } catch (Exception e) {
@@ -2635,7 +2639,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     }
 
     // upload part hast to be authorize based on account that initiated upload
-    if (OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, objectSize)) {
+    if (authorizationHandler.operationAllowed(request, bucket, objectEntity, objectSize)) {
       // Auth worked, check if we need to send a 100-continue
       try {
         if (request.getExpectHeader()) {
@@ -2690,7 +2694,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
     long newBucketSize = bucket.getBucketSize() == null ? 0 : bucket.getBucketSize(); // No change, completion cannot increase the size of the bucket,
                                                                                       // only decrease it.
-    if (OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, newBucketSize)) {
+    if (authorizationHandler.operationAllowed(request, bucket, objectEntity, newBucketSize)) {
       if (request.getParts() == null || request.getParts().isEmpty()) {
         throw new InvalidRequestException(request.getBucket() + "/" + request.getKey() + "?uploadId=" + request.getUploadId(),
             "You must specify at least one part");
@@ -2752,7 +2756,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     } catch (Exception e) {
       throw new InternalErrorException(e.getMessage());
     }
-    if (OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
+    if (authorizationHandler.operationAllowed(request, bucket, objectEntity, 0)) {
       ObjectMetadataManagers.getInstance().transitionObjectToState(objectEntity, ObjectState.deleting);
       try {
         AbortMultipartUploadResponseType response = ospClient.abortMultipartUpload(request);
@@ -2820,7 +2824,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       throw new InternalErrorException(e.getMessage());
     }
 
-    if (OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
+    if (authorizationHandler.operationAllowed(request, bucket, objectEntity, 0)) {
       try {
         PaginatedResult<PartEntity> result =
             MpuPartMetadataManagers.getInstance().listPartsForUpload(bucket, objectKey, request.getUploadId(), partNumberMarker, maxParts);
@@ -2892,7 +2896,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
               request.getUploadIdMarker());
 
       if (result != null) {
-        reply.setUploads(new ArrayList<Upload>());
+        reply.setUploads( new ArrayList<>( ));
 
         for (ObjectEntity obj : result.getEntityList()) {
           reply.getUploads().add(
@@ -2902,7 +2906,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         }
 
         if (result.getCommonPrefixes() != null && result.getCommonPrefixes().size() > 0) {
-          reply.setCommonPrefixes(new ArrayList<CommonPrefixesEntry>());
+          reply.setCommonPrefixes( new ArrayList<>( ));
           for (String s : result.getCommonPrefixes()) {
             reply.getCommonPrefixes().add(new CommonPrefixesEntry(s));
           }
@@ -2973,8 +2977,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
     // prep the response
     DeleteMultipleObjectsResponseType reply = request.getReply();
     DeleteMultipleObjectsMessageReply deleted = new DeleteMultipleObjectsMessageReply();
-    deleted.setDeleted(Lists.<DeleteMultipleObjectsEntryVersioned>newArrayList());
-    deleted.setErrors(Lists.<DeleteMultipleObjectsError>newArrayList());
+    deleted.setDeleted(Lists.newArrayList());
+    deleted.setErrors(Lists.newArrayList());
     reply.setDeleteResult(deleted);
 
     if (message.getObjects() != null) {

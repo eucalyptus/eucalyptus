@@ -30,7 +30,7 @@ import com.eucalyptus.auth.policy.PolicySpec;
 /**
  * Declares the set of IAM actions that are required to perform the S3 operation
  */
-@Target({ElementType.TYPE})
+@Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface RequiresPermission {
   /**
@@ -41,5 +41,5 @@ public @interface RequiresPermission {
   /**
    * The set of IAM policies that apply to the request with a version ID
    */
-  String[] version();
+  String[] version() default {};
 }

@@ -31,6 +31,4 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface AdminOverrideAllowed {
-  // If set, indicates that the operation is allowed for Admin-ONLY. The Eucalyptus administrator context.
-  boolean adminOnly() default false;
 }

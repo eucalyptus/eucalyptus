@@ -213,6 +213,53 @@ public class PolicyParserTest {
     PolicyParser.getInstance().parse( policyJson );
   }
 
+  @Test(expected = PolicyParseException.class )
+  public void testParseAssumeRolePolicyWithEmptyResource() throws Exception {
+    String policyJson =
+        "{\n" +
+            "    \"Statement\": [ {\n" +
+            "      \"Effect\": \"Allow\",\n" +
+            "      \"Principal\": {\n" +
+            "         \"Service\": [ \"ec2.amazonaws.com\" ]\n" +
+            "      },\n" +
+            "      \"Resource\": []\n" +
+            "      \"Action\": [ \"sts:AssumeRole\" ]\n" +
+            "    } ]\n" +
+            "}";
+    PolicyParser.getResourceInstance().parse( policyJson );
+  }
+
+  @Test
+  public void testParseAssumeRolePolicyWithResource() throws Exception {
+    String policyJson =
+        "{\n" +
+            "    \"Statement\": [ {\n" +
+            "      \"Effect\": \"Allow\",\n" +
+            "      \"Principal\": {\n" +
+            "         \"Service\": [ \"ec2.amazonaws.com\" ]\n" +
+            "      },\n" +
+            "      \"Resource\": \"*\",\n" +
+            "      \"Action\": [ \"sts:AssumeRole\" ]\n" +
+            "    } ]\n" +
+            "}";
+    PolicyParser.getResourceInstance().parse( policyJson );
+  }
+
+  @Test
+  public void testParseAssumeRolePolicyWithResourceArray() throws Exception {
+    String policyJson =
+        "{\n" +
+            "    \"Statement\": [ {\n" +
+            "      \"Effect\": \"Allow\",\n" +
+            "      \"Principal\": {\n" +
+            "         \"Service\": [ \"ec2.amazonaws.com\" ]\n" +
+            "      },\n" +
+            "      \"Resource\": [\"*\"],\n" +
+            "      \"Action\": [ \"sts:AssumeRole\" ]\n" +
+            "    } ]\n" +
+            "}";
+    PolicyParser.getResourceInstance().parse( policyJson );
+  }
 
   @Test
   public void testParseAssumeRolePolicy() throws Exception {

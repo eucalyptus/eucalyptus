@@ -238,12 +238,11 @@ public class PolicyParser {
   /**
    * Normalize the given policy.
    *
-   * Normalization requires a valid (JSON) policy so should NOT be performed for existing policies, only user input.
+   * Normalization requires a valid (JSON) policy so should NOT be performed
+   * for existing policies, only user input.
    *
-   * The current implementation removes meaningless whitespace and adds a version.
-   *
-   * This should also add a version if not present, ensure statements are a list not
-   * a single value, etc.
+   * The current implementation removes meaningless whitespace, adds a version,
+   * and ensure statements are a list not a single value.
    */
   public String normalize( final String policy ) throws PolicyParseException {
     try {
@@ -403,7 +402,7 @@ public class PolicyParser {
     // resources
     String resourceElement = JsonUtils.checkBinaryOption( statement, PolicySpec.RESOURCE, PolicySpec.NOTRESOURCE, attachmentType.isResourceRequired() );
     List<String> resources = JsonUtils.parseStringOrStringList( statement, resourceElement );
-    if ( resources.size( ) < 1 && attachmentType.isResourceRequired() ) {
+    if ( resources.size( ) < 1 && ( attachmentType.isResourceRequired() || PolicySpec.RESOURCE.equals( resourceElement ) ) ) {
       throw new JSONException( "Empty resource values" );
     }
     // decompose actions and resources and re-combine them into a list of authorizations

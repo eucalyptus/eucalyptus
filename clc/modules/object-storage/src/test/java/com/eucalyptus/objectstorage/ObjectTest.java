@@ -70,6 +70,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.objectstorage.auth.OsgAuthorizationHandler;
 import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketResponseType;
@@ -164,6 +165,6 @@ public class ObjectTest {
 
   @BeforeClass
   public static void setUp() {
-    bukkit = new ObjectStorageGateway();
+    bukkit = new ObjectStorageGateway( new OsgAuthorizationHandler( ) );
   }
 }

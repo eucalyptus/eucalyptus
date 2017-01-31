@@ -42,7 +42,6 @@ public @interface RequiresACLPermission {
 
   ObjectStorageProperties.Permission[] object();
 
-  boolean ownerOnly() default false;
-
   ObjectStorageProperties.Resource[] ownerOf() default {};
+
 }

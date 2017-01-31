@@ -27,6 +27,7 @@ import com.eucalyptus.auth.principal.UserPrincipal;
  *
  */
 public class DelegatingUserPrincipal implements UserPrincipal {
+  private static final long serialVersionUID = 1L;
 
   private final UserPrincipal delegate;
 
