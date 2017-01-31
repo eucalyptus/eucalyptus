@@ -74,6 +74,7 @@
 		</copy>
 		<copy todir="${DESTDIR}${euca.lib.dir}" overwrite="true">
 			<fileset file="${jar.file}" />
+			<fileset file="src/main/java/com/eucalyptus/blockstorage/PopulateSnapPoints.groovy" />
 		</copy>
 	</target>
 </project>
