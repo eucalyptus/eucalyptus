@@ -71,6 +71,7 @@ import org.apache.log4j.Logger;
 import com.ceph.rbd.Rbd;
 
 import com.eucalyptus.blockstorage.FileResource;
+import com.eucalyptus.blockstorage.SnapPointsUpdater;
 import com.eucalyptus.blockstorage.StorageManagers.StorageManagerProperty;
 import com.eucalyptus.blockstorage.StorageResource;
 import com.eucalyptus.blockstorage.ceph.entities.CephRbdImageToBeDeleted;
@@ -153,6 +154,10 @@ public class CephRbdProvider implements SANProvider {
     accessiblePools = Sets.newHashSet();
     accessiblePools.addAll(COMMA_SPLITTER.splitToList(cachedConfig.getCephVolumePools()));
     accessiblePools.addAll(COMMA_SPLITTER.splitToList(cachedConfig.getCephSnapshotPools()));
+    
+    // For Euca v4.4.x only, check for missing snapshot points and attempt to fill them in.
+    //TODO To be removed in v5.0
+    SnapPointsUpdater.updateSnapPoints();
   }
 
   @Override
@@ -269,7 +274,7 @@ public class CephRbdProvider implements SANProvider {
         // Add it to database, duty cycles will clean them up and update the database
         Transactions.save(new CephRbdSnapshotToBeDeleted(snapParent.getPool(), snapParent.getImage(), snapParent.getSnapshot()));
       } else {
-        LOG.warn("Cannot delete RBD snapshot for " + snapshotId + " due to an invalid snapshot point ID " + snapshotPointId
+        LOG.debug("Cannot delete RBD snapshot for " + snapshotId + " due to an invalid snapshot point ID " + snapshotPointId
             + ". Either the EBS snapshot did not origniate in this az or was created pre Eucalyptus 4.4.0 "
             + " in which case the cleanup of the RBD snapshot has to be performed manually");
       }
