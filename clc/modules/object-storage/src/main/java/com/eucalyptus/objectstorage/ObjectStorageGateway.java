@@ -2063,7 +2063,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     Bucket bucket = null;
     
     if (request == null) {
-      throw new InternalErrorException("Null request passed to getBucketCors()");
+      throw new InternalErrorException(null, "Null request passed to getBucketCors()");
     }
     try {
       bucket = getBucketAndCheckAuthorization(request);
@@ -2074,7 +2074,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       throw s3e;
     }
     if (bucket == null) {
-      throw new InternalErrorException("Null bucket returned by getBucketAndCheckAuthorization()");
+      throw new InternalErrorException(null, "Null bucket returned by getBucketAndCheckAuthorization()");
     }
     response = (GetBucketCorsResponseType) request.getReply();
 
@@ -2105,11 +2105,11 @@ public class ObjectStorageGateway implements ObjectStorageService {
     // bucket entities in the DB.
     
     if (request == null) {
-      throw new InternalErrorException("setCorsInfo called with a null request, bucket " + bucketName);
+      throw new InternalErrorException(bucketName, "setCorsInfo called with a null request, bucket " + bucketName);
     }
     
     if (response == null) {
-      throw new InternalErrorException("setCorsInfo called with a null response, bucket " + bucketName);
+      throw new InternalErrorException(bucketName, "setCorsInfo called with a null response, bucket " + bucketName);
     }
     
     // If it stays null, tells addCorsResponseHeaders not to add any headers
@@ -2224,7 +2224,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     Bucket bucket = null;
     
     if (request == null) {
-      throw new InternalErrorException("Null request passed to setBucketCors()");
+      throw new InternalErrorException(null, "Null request passed to setBucketCors()");
     }
     try {
       bucket = getBucketAndCheckAuthorization(request);
@@ -2235,7 +2235,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       throw s3e;
     }
     if (bucket == null) {
-      throw new InternalErrorException("Null bucket returned by getBucketAndCheckAuthorization()");
+      throw new InternalErrorException(null, "Null bucket returned by getBucketAndCheckAuthorization()");
     }
     response = (SetBucketCorsResponseType) request.getReply();
     // Set the CORS headers based on the CORS config *before* we change it!
@@ -2243,11 +2243,11 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
     CorsConfiguration corsConfig = request.getCorsConfiguration();
     if (corsConfig == null) {
-      throw new MalformedXMLException("No CORS configuration found in request");
+      throw new MalformedXMLException(null, "No CORS configuration found in request");
     }
     List<CorsRule> corsRules = corsConfig.getRules();
     if (corsRules == null || corsRules.isEmpty()) {
-      throw new MalformedXMLException("No CORS rules found in CORS configuration in request");
+      throw new MalformedXMLException(null, "No CORS rules found in CORS configuration in request");
     }
     
     // Per AWS docs, max 100 CORS config rules.
@@ -2263,7 +2263,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
     for (CorsRule rule : corsConfig.getRules()) {
       if (rule == null) {
-        throw new InternalErrorException("Null rule found in CORS config set request");
+        throw new InternalErrorException(null, "Null rule found in CORS config set request");
       }
       String ruleId = (rule.getId() == null ? "" : rule.getId());
       if (rule.getAllowedOrigins() == null || rule.getAllowedOrigins().isEmpty()) {
@@ -2303,7 +2303,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     Bucket bucket = null;
 
     if (request == null) {
-      throw new InternalErrorException("Null request passed to getBucketCors()");
+      throw new InternalErrorException(null, "Null request passed to getBucketCors()");
     }
     try {
       bucket = getBucketAndCheckAuthorization(request);
@@ -2314,7 +2314,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       throw s3e;
     }
     if (bucket == null) {
-      throw new InternalErrorException("Null bucket returned by getBucketAndCheckAuthorization()");
+      throw new InternalErrorException(null, "Null bucket returned by getBucketAndCheckAuthorization()");
     }
     response = (DeleteBucketCorsResponseType) request.getReply();
     // Set the CORS headers based on the CORS config *before* we delete it!
@@ -2680,7 +2680,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     } catch (NoSuchEntityException | NoSuchElementException e) {
       throw new NoSuchBucketException(request.getBucket());
     } catch (Exception e) {
-      throw new InternalErrorException(e.getMessage());
+      throw new InternalErrorException(null, e.getMessage());
     }
     try {
       objectEntity = ObjectMetadataManagers.getInstance().lookupUpload(bucket, request.getKey(), request.getUploadId());
@@ -2690,7 +2690,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     } catch (NoSuchEntityException | NoSuchElementException e) {
       throw new NoSuchUploadException(request.getUploadId());
     } catch (Exception e) {
-      throw new InternalErrorException(e.getMessage());
+      throw new InternalErrorException(null, e.getMessage());
     }
     if (OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
       ObjectMetadataManagers.getInstance().transitionObjectToState(objectEntity, ObjectState.deleting);
@@ -2750,14 +2750,14 @@ public class ObjectStorageGateway implements ObjectStorageService {
     } catch (NoSuchElementException e) {
       throw new NoSuchBucketException(request.getBucket());
     } catch (Exception e) {
-      throw new InternalErrorException(e.getMessage());
+      throw new InternalErrorException(null, e.getMessage());
     }
     try {
       objectEntity = ObjectMetadataManagers.getInstance().lookupUpload(bucket, request.getKey(), request.getUploadId());
     } catch (NoSuchElementException e) {
       throw new NoSuchUploadException(request.getUploadId());
     } catch (Exception e) {
-      throw new InternalErrorException(e.getMessage());
+      throw new InternalErrorException(null, e.getMessage());
     }
 
     if (OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
@@ -2786,7 +2786,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
           replyParts.add(entity.toPartListEntry());
         }
       } catch (Exception e) {
-        throw new InternalErrorException(e.getMessage());
+        throw new InternalErrorException(null, e.getMessage());
       }
       setCorsInfo(request, reply, bucket);
       return reply;

@@ -213,7 +213,7 @@ public class HttpThresholdBufferingAggregator {
       long contentLength = Long.parseLong(httpRequest.getHeader(HttpHeaders.Names.CONTENT_LENGTH));
     } catch (NumberFormatException e) {
       LOG.error("Client specified content-length in invalid format, not a integer", e);
-      throw new MissingContentLengthException("Content-Length not valid integer");
+      throw new MissingContentLengthException(null, "Content-Length not valid integer");
     }
 
     // First chunk, or full message

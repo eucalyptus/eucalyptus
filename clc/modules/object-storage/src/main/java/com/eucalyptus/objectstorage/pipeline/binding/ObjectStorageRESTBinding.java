@@ -438,7 +438,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
             if (formFields.get(ObjectStorageProperties.FormField.x_ignore_filecontentlength.toString()) != null) {
               operationParams.put("ContentLength", (long) formFields.get(ObjectStorageProperties.FormField.x_ignore_filecontentlength.toString()));
             } else {
-              throw new MalformedPOSTRequestException("Could not calculate upload content length from request");
+              throw new MalformedPOSTRequestException(null, "Could not calculate upload content length from request");
               // if(contentLengthString != null) {
               // operationParams.put("ContentLength", (new Long(contentLength).toString()));
               // }
@@ -449,7 +449,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
             ChannelBuffer buffer = (ChannelBuffer) formFields.get(ObjectStorageProperties.FormField.x_ignore_firstdatachunk.toString());
             if (buffer == null) {
               // No content found.
-              throw new MalformedPOSTRequestException("No upload content found");
+              throw new MalformedPOSTRequestException(null, "No upload content found");
             }
           }
         } else if (ObjectStorageProperties.HTTPVerb.PUT.toString().equals(verb)) {

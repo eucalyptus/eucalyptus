@@ -40,7 +40,7 @@ public class OSGChannelWriter {
     Channel channel = ctx.getChannel();
 
     if (channel == null || (!channel.isConnected())) {
-      throw new InternalErrorException("Response: " + response + " requested, but no channel to write to.");
+      throw new InternalErrorException(null, "Response: " + response + " requested, but no channel to write to.");
     }
 
     final HttpResponseStatus status = response.getHttpResponseStatus();
@@ -66,7 +66,7 @@ public class OSGChannelWriter {
 
   public static void writeResponse(final Channel channel, final OSGMessageResponse response) throws InternalErrorException {
     if (channel == null || (!channel.isConnected())) {
-      throw new InternalErrorException("Response: " + response + " requested, but no channel to write to.");
+      throw new InternalErrorException(null, "Response: " + response + " requested, but no channel to write to.");
     }
 
     final HttpResponseStatus status = response.getHttpResponseStatus();

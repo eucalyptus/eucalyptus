@@ -96,9 +96,9 @@ public final class S3V4Authentication {
       SecurityContext.getLoginContext(creds).login();
     } catch (LoginException ex) {
       if (ex.getMessage().contains("The AWS Access Key Id you provided does not exist in our records"))
-        throw new InvalidAccessKeyIdException(accessKeyId);
+        throw new InvalidAccessKeyIdException();
       LOG.debug("CorrelationId: " + request.getCorrelationId() + " Authentication failed due to signature mismatch:", ex);
-      throw new SignatureDoesNotMatchException(creds.getLoginData());
+      throw new SignatureDoesNotMatchException();
     } catch (Exception e) {
       LOG.warn("CorrelationId: " + request.getCorrelationId() + " Unexpected failure trying to authenticate request", e);
       throw new InternalErrorException(e);
@@ -266,11 +266,11 @@ public final class S3V4Authentication {
       return null;
     String decodedContentLength = request.getHeader(AWS_DECODED_CONTENT_LEN);
     if (Strings.isNullOrEmpty(decodedContentLength))
-      throw new MissingContentLengthException("Missing x-amz-decoded-content-length header");
+      throw new MissingContentLengthException(null, "Missing x-amz-decoded-content-length header");
     try {
       return Long.valueOf(decodedContentLength);
     } catch (NumberFormatException e) {
-      throw new MissingContentLengthException("Invalid x-amz-decoded-content-length header");
+      throw new MissingContentLengthException(null, "Invalid x-amz-decoded-content-length header");
     }
   }
 

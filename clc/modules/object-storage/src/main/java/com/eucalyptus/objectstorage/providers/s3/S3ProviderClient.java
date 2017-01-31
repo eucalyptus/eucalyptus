@@ -635,7 +635,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 
       PutObjectResponseType reply = request.getReply();
       if (result == null) {
-        throw new InternalErrorException("Null result from backend");
+        throw new InternalErrorException(null, "Null result from backend");
       } else {
         reply.setEtag(result.getETag());
         reply.setVersionId(result.getVersionId());

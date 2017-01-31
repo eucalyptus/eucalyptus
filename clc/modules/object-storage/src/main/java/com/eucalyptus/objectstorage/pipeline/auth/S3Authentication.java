@@ -161,7 +161,7 @@ public final class S3Authentication {
         else if (authHeader.startsWith(S3V2Authentication.AWS_V2_AUTH_TYPE))
           return S3Authenticator.V2_HEADER;
         else
-          throw new MissingSecurityHeaderException("Malformed or unexpected format for Authentication header");
+          throw new MissingSecurityHeaderException(null, "Malformed or unexpected format for Authentication header");
       }
 
       // Handle param request

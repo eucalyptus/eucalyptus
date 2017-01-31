@@ -76,7 +76,7 @@ public class FormPOSTFilteringAggregator extends ObjectStoragePUTAggregator {
       if (boundary == null) {
         // Error
         LOG.error("No boundary found in the form. Cannot filter content. Failing POST form upload");
-        Channels.fireExceptionCaught(ctx, new InternalErrorException("Error processing POST form content"));
+        Channels.fireExceptionCaught(ctx, new InternalErrorException(null, "Error processing POST form content"));
         return;
       } else {
         setupBoundary(boundary);
@@ -129,7 +129,7 @@ public class FormPOSTFilteringAggregator extends ObjectStoragePUTAggregator {
             if (this.trailingBytesFound > this.boundaryBytes.length + 4) { // boundary + --\r\n
               // If more left in message than
               this.lastBufferedChunk = null;
-              throw new MalformedPOSTRequestException("Must not have any trailing form parts after file content");
+              throw new MalformedPOSTRequestException(null, "Must not have any trailing form parts after file content");
             }
           } else {
             // didn't find it. continue

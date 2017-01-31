@@ -516,7 +516,7 @@ public class OSGUtil {
         // dns-style request
         hostBucket = hostDnsName.relativize(systemDomain.get()).toString();
         if (hostBucket.length() == 0) {
-          throw new InvalidAddressingHeaderException("Invalid Host header: " + targetHost);
+          throw new InvalidAddressingHeaderException(null, "Invalid Host header: " + targetHost);
         }
       }
     }

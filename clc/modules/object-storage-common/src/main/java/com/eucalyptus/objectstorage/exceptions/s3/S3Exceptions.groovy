@@ -391,6 +391,12 @@ class InternalErrorException extends S3Exception {
     this.resource = resource;
   }
 
+  def InternalErrorException(String resource, String message) {
+    this();
+    this.resource = resource;
+    this.message = message;
+  }
+
   def InternalErrorException(Throwable cause) {
     this();
     super.initCause(cause);
@@ -419,9 +425,10 @@ class InvalidAddressingHeaderException extends S3Exception {
     super(S3ErrorCodeStrings.InvalidAddressingHeader, "You must specify the Anonymous role.", null);
   }
 
-  def InvalidAddressingHeaderException(String resource) {
+  def InvalidAddressingHeaderException(String resource, String message) {
     this();
     this.resource = resource;
+    this.message = message;
   }
 }
 
@@ -681,9 +688,10 @@ class MalformedPOSTRequestException extends S3Exception {
     super(S3ErrorCodeStrings.MalformedPOSTRequest, "The body of your POST request is not well-formed multipart/form-data.", HttpResponseStatus.BAD_REQUEST);
   }
 
-  def MalformedPOSTRequestException(String resource) {
+  def MalformedPOSTRequestException(String resource, String message) {
     this();
     this.resource = resource;
+    this.message = message;
   }
 }
 
@@ -774,6 +782,12 @@ class MissingContentLengthException extends S3Exception {
     this();
     this.resource = resource;
   }
+
+  def MissingContentLengthException(String resource, String message) {
+    this();
+    this.resource = resource;
+    this.message = message;
+  }
 }
 
 class MissingRequestBodyErrorException extends S3Exception {
@@ -803,9 +817,10 @@ class MissingSecurityHeaderException extends S3Exception {
     super(S3ErrorCodeStrings.MissingSecurityHeader, "Your request was missing a required header.", HttpResponseStatus.BAD_REQUEST);
   }
 
-  def MissingSecurityHeaderException(String resource) {
+  def MissingSecurityHeaderException(String resource, String message) {
     this();
     this.resource = resource;
+    this.message = message;
   }
 }
 
@@ -973,6 +988,12 @@ class PreconditionFailedException extends S3Exception {
   def PreconditionFailedException(String resource) {
     this();
     this.resource = resource;
+  }
+
+  def PreconditionFailedException(String resource, String message) {
+    this();
+    this.resource = resource;
+    this.message = message;
   }
 }
 
