@@ -40,18 +40,6 @@
 
 <binding force-classes="true" add-constructors="true">
 
-
-    <!-- Unused <mapping class="com.eucalyptus.storage.msgs.s3.S3Request" abstract="true">
-        <value name="AWSAccessKeyId" field="accessKeyID" usage="optional" /> <value
-        name="Timestamp" field="timeStamp" usage="optional" /> <value name="Signature"
-        field="signature" usage="optional" /> <value name="Credential" field="credential"
-        usage="optional" /> <value name="Bucket" field="bucket" usage="optional"
-        /> <value name="Key" field="key" usage="optional" /> </mapping> <mapping
-        class="com.eucalyptus.storage.msgs.s3.S3ErrorMessage" abstract="true"> <value
-        name="Code" field="code" /> <value name="Message" field="message" /> <value
-        name="Resource" field="resource" /> <value name="RequestId" field="requestId"
-        /> </mapping> -->
-
     <mapping class="com.eucalyptus.storage.msgs.s3.ListAllMyBucketsList"
              abstract="true">
         <collection factory="org.jibx.runtime.Utility.arrayListFactory"
@@ -228,6 +216,10 @@
     <mapping class="com.eucalyptus.storage.msgs.s3.Expiration" abstract="true" type-name="expiration-base">
         <value name="Days" field="creationDelayDays" usage="optional" />
         <value name="Date" field="effectiveDate" usage="optional" />
+    </mapping>
+
+    <mapping name="LocationConstraint" class="com.eucalyptus.storage.msgs.s3.LocationConstraint">
+        <value style="text" field="location" usage="optional"/>
     </mapping>
 
     <!-- bucket tagging -->

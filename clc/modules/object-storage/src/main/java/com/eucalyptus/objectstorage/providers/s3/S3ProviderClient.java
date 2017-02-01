@@ -835,7 +835,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
       internalS3Client = getS3Client(requestUser);
       AmazonS3Client s3Client = internalS3Client.getS3Client();
       String bucketLocation = s3Client.getBucketLocation(request.getBucket());
-      reply.setLocationConstraint(bucketLocation);
+      reply.getLocationConstraint().setLocation(bucketLocation);
     } catch (AmazonServiceException e) {
       LOG.debug("Error from backend", e);
       throw S3ExceptionMapper.fromAWSJavaSDK(e);

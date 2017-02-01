@@ -442,7 +442,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
     MemoryBucket b = getBucket(request.getBucket(), request.getEffectiveUserId());
     GetBucketLocationResponseType response = request.getReply();
     response.setBucket(request.getBucket());
-    response.setLocationConstraint(b.location);
+    response.getLocationConstraint().setLocation(b.location);
     return response;
   }
 

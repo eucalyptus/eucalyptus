@@ -1507,7 +1507,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     Bucket bucket = getBucketAndCheckAuthorization(request);
 
     GetBucketLocationResponseType reply = request.getReply();
-    reply.setLocationConstraint(bucket.getLocation() == null ? "" : bucket.getLocation());
+    reply.getLocationConstraint( ).setLocation(bucket.getLocation() == null ? "" : bucket.getLocation());
     reply.setBucket(request.getBucket());
     setCorsInfo(request, reply, bucket);
     return reply;

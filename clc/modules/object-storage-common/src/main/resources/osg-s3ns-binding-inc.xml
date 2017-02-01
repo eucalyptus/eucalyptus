@@ -489,10 +489,10 @@
         usage="optional"/>
   </mapping>
 
-  <mapping name="GetBucketLocationResponse"
-           class="com.eucalyptus.objectstorage.msgs.GetBucketLocationResponseType">
-    <value name="LocationConstraint" field="locationConstraint"
-           usage="optional"/>
+  <mapping class="com.eucalyptus.objectstorage.msgs.GetBucketLocationResponseType"
+           abstract="true">
+    <structure field="locationConstraint" usage="optional"
+               map-as="com.eucalyptus.storage.msgs.s3.LocationConstraint"/>
   </mapping>
 
   <mapping name="GetBucketLoggingStatus"

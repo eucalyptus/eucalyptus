@@ -47,6 +47,7 @@ import com.eucalyptus.storage.msgs.s3.KeyEntry
 import com.eucalyptus.storage.msgs.s3.LifecycleConfiguration
 import com.eucalyptus.storage.msgs.s3.ListAllMyBucketsList
 import com.eucalyptus.storage.msgs.s3.ListEntry
+import com.eucalyptus.storage.msgs.s3.LocationConstraint
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry
 import com.eucalyptus.storage.msgs.s3.Part
@@ -870,7 +871,7 @@ public class SetObjectAccessControlPolicyResponseType extends ObjectStorageRespo
 public class GetBucketLocationType extends ObjectStorageRequestType {}
 
 public class GetBucketLocationResponseType extends ObjectStorageResponseType {
-  String locationConstraint;
+  LocationConstraint locationConstraint = new LocationConstraint( )
 }
 
 /* GET /bucket?logging */
