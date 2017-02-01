@@ -273,7 +273,7 @@ public class PolicyEngineImpl implements PolicyEngine {
       // System admin can do everything
       if ( !evaluationContext.isSystemAdmin() ) {
         final boolean sameAccount = context.getRequestUser( ).getAccountNumber( ).equals( resourceAccountNumber );
-        final boolean sameResourceAccount = resourceAccountNumber == null || resourceAccountNumber.equals( resourcePolicyAccountNumber );
+        final boolean sameResourceAccount = resourceAccountNumber != null && resourceAccountNumber.equals( resourcePolicyAccountNumber );
         // Check resource authorizations, ignore authorizations for own account
         final Decision resourceDecision = resourcePolicy == null ?
                 Decision.DEFAULT :
