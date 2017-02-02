@@ -146,10 +146,10 @@ public class ObjectStorageFormPOSTAuthenticationHandler extends MessageStackHand
               new ObjectStorageWrappedCredentials(httpRequest.getCorrelationId(), policy, accessKey, signature, securityToken)).login();
         } catch (LoginException ex) {
           if (ex.getMessage().contains("The AWS Access Key Id you provided does not exist in our records")) {
-            throw new InvalidAccessKeyIdException(accessKey);
+            throw new InvalidAccessKeyIdException();
           } else {
             LOG.debug("CorrelationId: " + httpRequest.getCorrelationId() + " Authentication failed due to signature mismatch:", ex);
-            throw new SignatureDoesNotMatchException(signature);
+            throw new SignatureDoesNotMatchException();
           }
         } catch (Exception e) {
           LOG.warn("CorrelationId: " + httpRequest.getCorrelationId() + " Unexpected failure trying to authenticate request", e);

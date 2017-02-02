@@ -68,7 +68,7 @@ final class S3V2Authentication {
       SecurityContext.getLoginContext(creds).login();
     } catch (LoginException ex) {
       if (ex.getMessage().contains("The AWS Access Key Id you provided does not exist in our records"))
-        throw new InvalidAccessKeyIdException(accessKeyId);
+        throw new InvalidAccessKeyIdException();
 
       if (request.getUri().startsWith(ComponentIds.lookup(ObjectStorage.class).getServicePath()) || request.getUri().startsWith
           (ObjectStorageProperties.LEGACY_WALRUS_SERVICE_PATH)) {
@@ -81,11 +81,11 @@ final class S3V2Authentication {
           throw ex2;
         } catch (Exception ex2) {
           LOG.debug("CorrelationId: " + request.getCorrelationId() + " Authentication failed due to signature match issue:", ex2);
-          throw new SignatureDoesNotMatchException(creds.getLoginData());
+          throw new SignatureDoesNotMatchException();
         }
       } else {
         LOG.debug("CorrelationId: " + request.getCorrelationId() + " Authentication failed due to signature mismatch:", ex);
-        throw new SignatureDoesNotMatchException(creds.getLoginData());
+        throw new SignatureDoesNotMatchException();
       }
     } catch (Exception e) {
       LOG.warn("CorrelationId: " + request.getCorrelationId() + " Unexpected failure trying to authenticate request", e);

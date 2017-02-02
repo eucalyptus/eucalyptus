@@ -77,7 +77,7 @@ public class BucketFactoryImpl implements BucketFactory {
     if (bucket == null) {
       LOG.error("CorrelationId: " + correlationId
           + "Unexpected internal error. Got null bucket when not expected. Cannot continue bucket creation for " + bucket.getBucketName());
-      throw new InternalErrorException("Internal error.");
+      throw new InternalErrorException();
     }
 
     if (BucketState.creating.equals(bucket.getState())) {

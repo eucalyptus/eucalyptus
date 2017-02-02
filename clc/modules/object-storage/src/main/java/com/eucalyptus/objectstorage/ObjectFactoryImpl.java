@@ -231,7 +231,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
     } else if (metadataDirective == null || "".equals(metadataDirective) || "COPY".equals(metadataDirective)) {
       pot.setMetaData(gort.getMetaData());
     } else {
-      throw new InternalErrorException("Could not copy " + request.getSourceBucket() + "/" + request.getSourceObject() + " to "
+      throw new InternalErrorException(null, "Could not copy " + request.getSourceBucket() + "/" + request.getSourceObject() + " to "
           + request.getDestinationBucket() + "/" + request.getDestinationObject() + " on the backend because the metadata directive not recognized");
     }
     PutObjectResponseType port = null;

@@ -79,7 +79,7 @@ public class FormPOSTMultipartDecoder extends MessageStackHandler {
         // process the aggregated result
         aggregator.hardReset(); // ensure no further polls return this result.
         if (result.getMessageEvent() == null || result.getMessageEvent().getMessage() == null) {
-          throw new InternalErrorException("Unexpected state in message stack");
+          throw new InternalErrorException(null, "Unexpected state in message stack");
         }
         upstreamRequest = (MappingHttpRequest) (result.getMessageEvent().getMessage());
         content = result.getAggregatedContentBuffer();

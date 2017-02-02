@@ -338,27 +338,27 @@ public class WalrusProviderClient extends S3ProviderClient {
     if (HttpResponseStatus.NOT_ACCEPTABLE.equals(status)) {
       // Use the message
       if (exceptionType.contains(S3ErrorCodeStrings.BucketNotEmpty)) {
-        throw new BucketNotEmptyException(message);
+        throw new BucketNotEmptyException();
       } else if (exceptionType.contains(S3ErrorCodeStrings.NoSuchBucket)) {
-        throw new NoSuchBucketException(message);
+        throw new NoSuchBucketException();
       } else if (exceptionType.contains(S3ErrorCodeStrings.NoSuchKey)) {
-        throw new NoSuchKeyException(message);
+        throw new NoSuchKeyException();
       } else if (exceptionType.contains(S3ErrorCodeStrings.AccessDenied)) {
-        throw new AccessDeniedException(message);
+        throw new AccessDeniedException(null, message);
       } else {
-        throw new InternalErrorException(message);
+        throw new InternalErrorException(null, message);
       }
     } else if (HttpResponseStatus.CONFLICT.equals(status)) {
-      throw new BucketNotEmptyException(message);
+      throw new BucketNotEmptyException();
     } else if (HttpResponseStatus.PRECONDITION_FAILED.equals(status)) {
-      throw new PreconditionFailedException(message);
+      throw new PreconditionFailedException(null, message);
     } else if (HttpResponseStatus.FORBIDDEN.equals(status)) {
-      throw new AccessDeniedException(message);
+      throw new AccessDeniedException(null, message);
     } else if (HttpResponseStatus.NOT_FOUND.equals(status)) {
       if (exceptionType.contains("Bucket")) {
-        throw new NoSuchBucketException(message);
+        throw new NoSuchBucketException();
       } else if (exceptionType.contains("Key")) {
-        throw new NoSuchKeyException(message);
+        throw new NoSuchKeyException();
       }
     }
     throw new S3Exception(code, message, status);
@@ -435,42 +435,42 @@ public class WalrusProviderClient extends S3ProviderClient {
 
   @Override
   public SetBucketAccessControlPolicyResponseType setBucketAccessControlPolicy(SetBucketAccessControlPolicyType request) throws S3Exception {
-    throw new InternalErrorException("Operation not supported by walrusbackend");
+    throw new InternalErrorException(null, "Operation not supported by walrusbackend");
   }
 
   @Override
   public GetBucketLocationResponseType getBucketLocation(GetBucketLocationType request) throws S3Exception {
-    throw new InternalErrorException("Operation not supported by walrusbackend");
+    throw new InternalErrorException(null, "Operation not supported by walrusbackend");
   }
 
   @Override
   public SetBucketLoggingStatusResponseType setBucketLoggingStatus(SetBucketLoggingStatusType request) throws S3Exception {
-    throw new InternalErrorException("Operation not supported by walrusbackend");
+    throw new InternalErrorException(null, "Operation not supported by walrusbackend");
   }
 
   @Override
   public GetBucketLoggingStatusResponseType getBucketLoggingStatus(GetBucketLoggingStatusType request) throws S3Exception {
-    throw new InternalErrorException("Operation not supported by walrusbackend");
+    throw new InternalErrorException(null, "Operation not supported by walrusbackend");
   }
 
   @Override
   public GetBucketVersioningStatusResponseType getBucketVersioningStatus(GetBucketVersioningStatusType request) throws S3Exception {
-    throw new InternalErrorException("Operation not supported by walrusbackend");
+    throw new InternalErrorException(null, "Operation not supported by walrusbackend");
   }
 
   @Override
   public SetBucketVersioningStatusResponseType setBucketVersioningStatus(SetBucketVersioningStatusType request) throws S3Exception {
-    throw new InternalErrorException("Operation not supported by walrusbackend");
+    throw new InternalErrorException(null, "Operation not supported by walrusbackend");
   }
 
   @Override
   public ListVersionsResponseType listVersions(ListVersionsType request) throws S3Exception {
-    throw new InternalErrorException("Operation not supported by walrusbackend");
+    throw new InternalErrorException(null, "Operation not supported by walrusbackend");
   }
 
   @Override
   public DeleteVersionResponseType deleteVersion(DeleteVersionType request) throws S3Exception {
-    throw new InternalErrorException("Operation not supported by walrusbackend");
+    throw new InternalErrorException(null, "Operation not supported by walrusbackend");
   }
 
   /*
@@ -523,7 +523,7 @@ public class WalrusProviderClient extends S3ProviderClient {
 
   @Override
   public SetObjectAccessControlPolicyResponseType setObjectAccessControlPolicy(SetObjectAccessControlPolicyType request) throws S3Exception {
-    throw new InternalErrorException("Operation not supported by walrusbackend");
+    throw new InternalErrorException(null, "Operation not supported by walrusbackend");
   }
 
   @Override

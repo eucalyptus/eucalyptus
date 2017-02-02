@@ -69,7 +69,7 @@ public class MultipartFormPartParser {
       boundary = "--" + boundary;
       return boundary;
     } else {
-      throw new MalformedPOSTRequestException("Content-Type not multipart/form-data");
+      throw new MalformedPOSTRequestException(null, "Content-Type not multipart/form-data");
     }
   }
 
@@ -95,7 +95,7 @@ public class MultipartFormPartParser {
 
         int headerEnd = OSGUtil.findFirstMatchInBuffer(partSlice, 0, PART_HEADER_BOUNDARY_BYTES);
         if (headerEnd == -1) {
-          throw new MalformedPOSTRequestException("Invalid form part starting at byte offset: " + offset);
+          throw new MalformedPOSTRequestException(null, "Invalid form part starting at byte offset: " + offset);
         } else {
           // add the header boundary itself
           headerEnd += PART_HEADER_BOUNDARY_BYTES.length;
@@ -105,7 +105,7 @@ public class MultipartFormPartParser {
         Map<String, String> keyMap = parseFormPartHeaders(partHeader);
         String key = keyMap.get("name");
         if (Strings.isNullOrEmpty(key)) {
-          throw new MalformedPOSTRequestException("Invalid part name null: " + partHeader);
+          throw new MalformedPOSTRequestException(null, "Invalid part name null: " + partHeader);
         }
 
         if (ObjectStorageProperties.FormField.file.toString().equals(key)) {
@@ -274,7 +274,7 @@ public class MultipartFormPartParser {
    */
   protected static Map<String, String> parseFormPartHeaders(String fieldHeaderLine) throws MalformedPOSTRequestException {
     if (!fieldHeaderLine.startsWith("Content-Disposition")) {
-      throw new MalformedPOSTRequestException("Invalid form encoding on line: " + fieldHeaderLine);
+      throw new MalformedPOSTRequestException(null, "Invalid form encoding on line: " + fieldHeaderLine);
     }
 
     Map<String, String> headers = Maps.newHashMap();
@@ -297,7 +297,7 @@ public class MultipartFormPartParser {
               // Using header style.
               headers.put(params[0].trim(), params[1].trim());
             } else {
-              throw new MalformedPOSTRequestException("Unexpected form field content: " + value);
+              throw new MalformedPOSTRequestException(null, "Unexpected form field content: " + value);
             }
           }
         }
@@ -322,14 +322,14 @@ public class MultipartFormPartParser {
         String[] keyparts = parts[1].split("=", 2);
         if (keyparts.length < 2) {
           // error
-          throw new MalformedPOSTRequestException("Invalid form field entry: " + parts[1].substring(0, Math.min(128, parts[1].length())));
+          throw new MalformedPOSTRequestException(null, "Invalid form field entry: " + parts[1].substring(0, Math.min(128, parts[1].length())));
         }
         return keyparts[1].replaceAll("\"", "").trim();
       }
     }
 
     // Bad form content, only return a limited error message size
-    throw new MalformedPOSTRequestException("Invalid form field entry: " + message.substring(0, Math.min(128, message.length())));
+    throw new MalformedPOSTRequestException(null, "Invalid form field entry: " + message.substring(0, Math.min(128, message.length())));
   }
 
   protected static String getMessageString(ChannelBuffer buffer) throws UnsupportedEncodingException {
