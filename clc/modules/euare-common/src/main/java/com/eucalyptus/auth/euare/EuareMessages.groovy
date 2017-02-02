@@ -1595,7 +1595,7 @@ class CreatePolicyVersionType extends EuareMessage implements EuareMessageWithDe
 
 class CreatePolicyVersionResponseType extends EuareMessage {
   ResponseMetadataType responseMetadata = new ResponseMetadataType( )
-  CreatePolicyVersionResultType createPolicyVersionResult
+  CreatePolicyVersionResultType createPolicyVersionResult = new CreatePolicyVersionResultType( )
 }
 
 class DeletePolicyType extends EuareMessage implements EuareMessageWithDelegate {
@@ -1673,7 +1673,7 @@ class GetPolicyVersionType extends EuareMessage implements EuareMessageWithDeleg
 
 class GetPolicyVersionResponseType extends EuareMessage {
   ResponseMetadataType responseMetadata = new ResponseMetadataType( )
-  GetPolicyVersionResultType getPolicyVersionResult
+  GetPolicyVersionResultType getPolicyVersionResult = new GetPolicyVersionResultType( )
 }
 
 class AttachedPolicyType extends EucalyptusData {
@@ -1813,7 +1813,7 @@ class ListPoliciesResponseType extends EuareMessage {
 class ListPolicyVersionsResultType extends EucalyptusData {
   Boolean isTruncated
   String marker
-  ArrayList<PolicyVersionType> versions
+  ArrayList<PolicyVersionType> versions = Lists.newArrayList( )
 }
 
 class ListPolicyVersionsType extends EuareMessage implements EuareMessageWithDelegate {
@@ -1825,7 +1825,7 @@ class ListPolicyVersionsType extends EuareMessage implements EuareMessageWithDel
 
 class ListPolicyVersionsResponseType extends EuareMessage {
   ResponseMetadataType responseMetadata = new ResponseMetadataType( )
-  ListPolicyVersionsResultType listPolicyVersionsResult
+  ListPolicyVersionsResultType listPolicyVersionsResult = new ListPolicyVersionsResultType( )
 }
 
 class SetDefaultPolicyVersionType extends EuareMessage implements EuareMessageWithDelegate {

@@ -94,6 +94,7 @@ import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareGroup;
 import com.eucalyptus.auth.euare.principal.EuareManagedPolicy;
+import com.eucalyptus.auth.euare.principal.EuareManagedPolicyVersion;
 import com.eucalyptus.auth.euare.principal.EuareOpenIdConnectProvider;
 import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.euare.principal.EuareUser;
@@ -124,6 +125,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 @SuppressWarnings( { "UnusedDeclaration", "Guava" } )
 @ComponentNamed
@@ -2301,7 +2303,6 @@ public class EuareService {
       );
       reply.getCreatePolicyResult( ).setPolicy( fillManagedPolicyResult( new PolicyType(), newManagedPolicy ) );
     } catch ( PolicyParseException e ) {
-      LOG.error( e, e );
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in policy: " + e.getMessage(), e );
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
@@ -2309,7 +2310,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create policy by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.QUOTA_EXCEEDED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Policy quota exceeded" );
-        } else if ( AuthException.ROLE_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
+        } else if ( AuthException.POLICY_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Policy " + request.getPolicyName( ) + " already exists." );
         } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid policy name " + request.getPolicyName() );
@@ -2329,6 +2330,40 @@ public class EuareService {
 
   public CreatePolicyVersionResponseType createPolicyVersion( final CreatePolicyVersionType request ) throws EucalyptusCloudException {
     final CreatePolicyVersionResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    final Ern ern = Ern.parse( request.getPolicyArn( ) );
+    if ( !(ern instanceof EuareResourceName) ) {
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy arn" );
+    }
+    final boolean setAsDefault = MoreObjects.firstNonNull( request.getSetAsDefault( ), Boolean.FALSE );
+    final EuareManagedPolicy policyFound = lookupPolicyByName( account, ((EuareResourceName)ern).getName( ) );
+    try {
+      final EuareManagedPolicyVersion newManagedPolicyVersion = Privileged.createManagedPolicyVersion(
+          requestUser,
+          account,
+          policyFound,
+          request.getPolicyDocument( ),
+          setAsDefault
+      );
+      reply.getCreatePolicyVersionResult( ).setPolicyVersion( fillManagedPolicyVersionResult( new PolicyVersionType(), newManagedPolicyVersion ) );
+    } catch ( PolicyParseException e ) {
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in policy: " + e.getMessage(), e );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException ) {
+        if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create policy version by " + ctx.getUser( ).getName( ) );
+        } else if ( AuthException.QUOTA_EXCEEDED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Policy version limit exceeded" );
+        } else if ( MoreObjects.firstNonNull( e.getMessage( ), "" ).startsWith( "Invalid policy" ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, e.getMessage( ) );
+        }
+      }
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
@@ -2361,6 +2396,31 @@ public class EuareService {
 
   public DeletePolicyVersionResponseType deletePolicyVersion( final DeletePolicyVersionType request ) throws EucalyptusCloudException {
     final DeletePolicyVersionResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    final Ern ern = Ern.parse( request.getPolicyArn( ) );
+    if ( !(ern instanceof EuareResourceName) ) {
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy arn" );
+    }
+    final Integer policyVersionId = managedPolicyVersion( request.getVersionId( ) );
+    final EuareManagedPolicy policyFound = lookupPolicyByName( account, ((EuareResourceName)ern).getName( ) );
+    try {
+      Privileged.deleteManagedPolicyVersion( requestUser, account, policyFound, policyVersionId );
+    } catch ( Exception e ) {
+      if ( e instanceof AuthException ) {
+        if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete policy version by " + ctx.getUser( ).getName( ) );
+        } else if ( AuthException.INVALID_ID.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_ID, "Invalid version id" );
+        } else if ( AuthException.CONFLICT.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.DELETE_CONFLICT, "Not deleting default policy version" );
+        }
+      }
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
@@ -2463,7 +2523,7 @@ public class EuareService {
       if ( !Privileged.allowReadPolicy( requestUser, account, policyFound ) ) {
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get policy " + request.getPolicyArn() + " by " + ctx.getUser( ).getName( ) );
       }
-      reply.getGetPolicyResult( ).setPolicy( fillManagedPolicyResult( new PolicyType( ), policyFound ) );
+      reply.getGetPolicyResult( ).setPolicy( fillManagedPolicyResultFull( new PolicyType( ), policyFound ) );
     } catch ( EuareException e ) {
       throw e;
     } catch ( Exception e ) {
@@ -2475,6 +2535,27 @@ public class EuareService {
 
   public GetPolicyVersionResponseType getPolicyVersion( final GetPolicyVersionType request ) throws EucalyptusCloudException {
     final GetPolicyVersionResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    final Ern ern = Ern.parse( request.getPolicyArn( ) );
+    if ( !(ern instanceof EuareResourceName) ) {
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy arn" );
+    }
+    final Integer policyVersionId = managedPolicyVersion( request.getVersionId( ) );
+    final EuareManagedPolicy policyFound = lookupPolicyByName( account, ((EuareResourceName)ern).getName( ) );
+    try {
+      if ( !Privileged.allowReadPolicyVersion( requestUser, account, policyFound ) ) {
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get policy version for " + request.getPolicyArn() + " by " + ctx.getUser( ).getName( ) );
+      }
+      reply.getGetPolicyVersionResult( ).setPolicyVersion( fillManagedPolicyVersionResultFull( new PolicyVersionType( ), lookupPolicyVersion( policyFound, policyVersionId ) ) );
+    } catch ( EuareException e ) {
+      throw e;
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
@@ -2653,11 +2734,58 @@ public class EuareService {
 
   public ListPolicyVersionsResponseType listPolicyVersions( final ListPolicyVersionsType request ) throws EucalyptusCloudException {
     final ListPolicyVersionsResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    final Ern ern = Ern.parse( request.getPolicyArn( ) );
+    if ( !(ern instanceof EuareResourceName) ) {
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy arn" );
+    }
+    final EuareManagedPolicy policyFound = lookupPolicyByName( account, ((EuareResourceName)ern).getName( ) );
+    if ( !Permissions.perhapsAuthorized( IamPolicySpec.VENDOR_IAM, IamPolicySpec.IAM_LISTPOLICYVERSIONS, ctx.getAuthContext( ) ) ) {
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list policy versions" );
+    }
+    reply.getListPolicyVersionsResult( ).setIsTruncated( false );
+    final ArrayList<PolicyVersionType> policies = reply.getListPolicyVersionsResult( ).getVersions( );
+    try ( final AutoCloseable euareTx = readonlyTx( ) ) {
+      for ( final EuareManagedPolicyVersion version : policyFound.getVersions( ) ) {
+        if ( Privileged.allowListPolicyVersion( requestUser, account, policyFound ) ) {
+          policies.add( fillManagedPolicyVersionResult( new PolicyVersionType( ), version ) );
+        }
+      }
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
   public SetDefaultPolicyVersionResponseType setDefaultPolicyVersion( final SetDefaultPolicyVersionType request ) throws EucalyptusCloudException {
     final SetDefaultPolicyVersionResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup( );
+    final AuthContext requestUser = getAuthContext( ctx );
+    final EuareAccount account = getRealAccount( ctx, request );
+    final Ern ern = Ern.parse( request.getPolicyArn( ) );
+    if ( !(ern instanceof EuareResourceName) ) {
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy arn" );
+    }
+    final Integer policyVersionId = managedPolicyVersion( request.getVersionId( ) );
+    final EuareManagedPolicy policyFound = lookupPolicyByName( account, ((EuareResourceName)ern).getName( ) );
+    try {
+      Privileged.setDefaultPolicyVersion( requestUser, account, policyFound, policyVersionId );
+    } catch ( final Exception e ) {
+      if ( e instanceof AuthException ) {
+        if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to set default policy version by " + ctx.getUser( ).getName( ) );
+        } else if ( AuthException.INVALID_ID.equals( e.getMessage( ) ) ) {
+          throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_ID, "Invalid version id" );
+        }
+      }
+      LOG.error( e, e );
+      throw new EucalyptusCloudException( e );
+    }
     return reply;
   }
 
@@ -2712,14 +2840,33 @@ public class EuareService {
 
   private PolicyType fillManagedPolicyResult( final PolicyType policy, final EuareManagedPolicy managedPolicy ) throws AuthException {
     policy.setPolicyName( managedPolicy.getName( ) );
-    policy.setDefaultVersionId( "v1" );
+    policy.setDefaultVersionId( "v" + managedPolicy.getPolicyVersion( ) );
     policy.setPolicyId( managedPolicy.getPolicyId( ) );
     policy.setPath( managedPolicy.getPath( ) );
     policy.setArn( Accounts.getManagedPolicyArn( managedPolicy ) );
-    policy.setAttachmentCount( 0 ); //TODO:STEVE: managed policy attachment count
+    policy.setAttachmentCount( managedPolicy.getAttachmentCount( ) );
     policy.setCreateDate( managedPolicy.getCreateDate( ) );
     policy.setUpdateDate( managedPolicy.getUpdateDate( ) );
     return policy;
+  }
+
+  private PolicyType fillManagedPolicyResultFull( final PolicyType policy, final EuareManagedPolicy managedPolicy ) throws AuthException {
+    fillManagedPolicyResult( policy, managedPolicy );
+    policy.setDescription( managedPolicy.getDescription( ) );
+    return policy;
+  }
+
+  private PolicyVersionType fillManagedPolicyVersionResult( final PolicyVersionType version, final EuareManagedPolicyVersion policyVersion ) {
+    version.setCreateDate( policyVersion.getCreateDate( ) );
+    version.setIsDefaultVersion( policyVersion.isDefaultVersion( ) );
+    version.setVersionId( "v" + policyVersion.getPolicyVersion( ) );
+    return version;
+  }
+
+  private PolicyVersionType fillManagedPolicyVersionResultFull( final PolicyVersionType version, final EuareManagedPolicyVersion policyVersion ) throws AuthException {
+    fillManagedPolicyVersionResult( version, policyVersion );
+    version.setDocument( policyVersion.getText( ) );
+    return version;
   }
 
   private AttachedPolicyType fillAttachedPolicyResult(
@@ -2766,7 +2913,18 @@ public class EuareService {
     }
     return requestAccount;
   }
-  
+
+  private static Integer managedPolicyVersion( final String policyVersionIdStr ) throws EuareException {
+    if ( policyVersionIdStr == null || !policyVersionIdStr.startsWith("v") ) {
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_ID, "Invalid version id" );
+    }
+    try {
+      return Integer.parseUnsignedInt( policyVersionIdStr.substring( 1 ), 10 );
+    } catch ( NumberFormatException e ) {
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_ID, "Invalid version id" );
+    }
+  }
+
   private static String sanitizePath( String path ) {
     if ( path == null || "".equals( path ) ) {
       return "/";
@@ -2868,6 +3026,15 @@ public class EuareService {
       LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
+  }
+
+  private static EuareManagedPolicyVersion lookupPolicyVersion( EuareManagedPolicy policy, Integer versionId ) throws AuthException, EuareException {
+    for ( final EuareManagedPolicyVersion policyVersion : policy.getVersions( ) ) {
+      if ( versionId.equals( policyVersion.getPolicyVersion( ) ) ) {
+        return policyVersion;
+      }
+    }
+    throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_ID, "Invalid version id" );
   }
 
   private static EuareAccount lookupAccountByName( String accountName ) throws EucalyptusCloudException {

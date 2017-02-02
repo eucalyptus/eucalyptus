@@ -296,9 +296,12 @@ public class DatabaseRoleProxy implements EuareRole {
       DatabaseAuthUtils.invokeUnique( RoleEntity.class, RoleEntity_.roleId, getRoleId( ), new Tx<RoleEntity>( ) {
         @Override
         public void fire( final RoleEntity roleEntity ) {
-          roleEntity.getAttachedPolicies( ).add( Entities.criteriaQuery(
+          final ManagedPolicyEntity policyEntity =  Entities.criteriaQuery(
               ManagedPolicyEntity.exampleWithName( accountNumber, policy.getName( ) )
-          ).uniqueResult( ) );
+          ).uniqueResult( );
+          if ( roleEntity.getAttachedPolicies( ).add( policyEntity ) ) {
+            policyEntity.setAttachmentCount( DatabaseAuthUtils.countAttachments( policyEntity ) );
+          }
         }
       } );
     } catch ( ExecutionException e ) {
@@ -321,6 +324,7 @@ public class DatabaseRoleProxy implements EuareRole {
           }
           if ( policyEntity != null ) {
             roleEntity.getAttachedPolicies( ).remove( policyEntity );
+            policyEntity.setAttachmentCount( DatabaseAuthUtils.countAttachments( policyEntity ) );
           } else {
             throw Exceptions.toUndeclared( new AuthException( AuthException.NO_SUCH_POLICY ) );
           }

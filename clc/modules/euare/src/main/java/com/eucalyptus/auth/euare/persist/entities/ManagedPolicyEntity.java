@@ -19,32 +19,68 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare.persist.entities;
 
+import java.util.Date;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.AuxiliaryDatabaseObject;
+import com.eucalyptus.entities.AuxiliaryDatabaseObjects;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityRestriction;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.Lists;
 
 /**
  *
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_auth" )
-@Table( name = "auth_managed_policy" )
+@Table( name = "auth_managed_policy", indexes = {
+    @Index( name = "auth_policy_owning_account_idx", columnList = "auth_policy_owning_account" ),
+} )
+@AuxiliaryDatabaseObjects({
+    // Hibernate 4.3.11 does not support using the @ForeignKey annotation for delete cascade so
+    // defined via an ADO to allow bulk deletion of user/group entities on account delete
+    @AuxiliaryDatabaseObject(
+        dialect = "org.hibernate.dialect.PostgreSQLDialect",
+        create = "alter table ${schema}.auth_group_attached_policies drop constraint fk_i1wnqn77cvdspieke3j8qhy2g, " +
+            "add constraint fk_i1wnqn77cvdspieke3j8qhy2g foreign key (auth_group_id) references " +
+            "${schema}.auth_group(id) on delete cascade",
+        drop = "alter table ${schema}.auth_group_attached_policies drop constraint fk_i1wnqn77cvdspieke3j8qhy2g, " +
+            "add constraint fk_i1wnqn77cvdspieke3j8qhy2g foreign key (auth_group_id) references " +
+            "${schema}.auth_group(id)"
+    ),
+    @AuxiliaryDatabaseObject(
+        dialect = "org.hibernate.dialect.PostgreSQLDialect",
+        create = "alter table ${schema}.auth_user_attached_policies drop constraint fk_fqkuqu15p45o6ff6i5x9y7qy, " +
+            "add constraint fk_fqkuqu15p45o6ff6i5x9y7qy foreign key (auth_user_id) references " +
+            "${schema}.auth_user(id) on delete cascade",
+        drop = "alter table ${schema}.auth_user_attached_policies drop constraint fk_fqkuqu15p45o6ff6i5x9y7qy, " +
+            "add constraint fk_fqkuqu15p45o6ff6i5x9y7qy foreign key (auth_user_id) references " +
+            "${schema}.auth_user(id)"
+    ),
+    // no force delete for roles, so no cascade to role policy attachments
+})
 public class ManagedPolicyEntity extends AbstractPersistent {
 
   private static final long serialVersionUID = 1L;
@@ -65,18 +101,35 @@ public class ManagedPolicyEntity extends AbstractPersistent {
   @Column( name = "auth_policy_id_external", nullable = false, updatable = false, unique = true )
   private String policyId;
 
-  @Column( name = "auth_policy_version" )
-  private String policyVersion;
-
   // The original policy text in JSON
   @Column( name = "auth_policy_text", nullable = false )
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
   private String text;
 
+  @Column( name = "auth_policy_attachment_count" )
+  private Integer attachmentCount;
+
+  @Temporal( TemporalType.TIMESTAMP)
+  @Column(name = "auth_policy_update_timestamp")
+  private Date policyUpdated;
+
+  @Column( name = "auth_policy_version_counter" )
+  private Integer policyVersionCounter;
+
+  @Column( name = "auth_policy_default_version_number" )
+  private Integer defaultPolicyVersionNumber;
+
+  @OneToOne( fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true )
+  @JoinColumn( name = "auth_policy_default_version" )
+  private ManagedPolicyVersionEntity defaultPolicyVersion;
+
   @ManyToOne
   @JoinColumn( name = "auth_policy_owning_account", nullable = false )
   private AccountEntity account;
+
+  @OneToMany( mappedBy = "policy" )
+  private List<ManagedPolicyVersionEntity> versions;
 
   @ManyToMany( mappedBy = "attachedPolicies" )
   private List<GroupEntity> groups;
@@ -95,6 +148,9 @@ public class ManagedPolicyEntity extends AbstractPersistent {
 
   public ManagedPolicyEntity( final String policyName ) {
     setName( policyName );
+    setAttachmentCount( 0 );
+    setPolicyVersionCounter( 0 );
+    setVersions( Lists.newArrayList( ) );
   }
 
   public static EntityRestriction<ManagedPolicyEntity> exampleWithName(
@@ -116,6 +172,25 @@ public class ManagedPolicyEntity extends AbstractPersistent {
           Entities.restriction( ManagedPolicyEntity.class ).isNotEmpty( ManagedPolicyEntity_.users ).build( )
         ).build( ) :
         Entities.restriction( ManagedPolicyEntity.class ).build( );
+  }
+
+  public Integer nextPolicyVersion( ) {
+    policyVersionCounter = policyVersionCounter + 1;
+    setPolicyUpdated( new Date( ) );
+    return policyVersionCounter;
+  }
+
+  public void applyDefaultPolicyVersion( @Nonnull final ManagedPolicyVersionEntity policyVersion ) {
+    setDefaultPolicyVersion( policyVersion );
+    setDefaultPolicyVersionNumber( policyVersion.getPolicyVersion( ) );
+    setText( policyVersion.getText( ) );
+    setPolicyUpdated( new Date( ) );
+    getVersions( ).forEach( version -> version.setDefaultPolicy( false ) );
+    policyVersion.setDefaultPolicy( true );
+  }
+
+  public void decrementAttachmentCount( ) {
+    setAttachmentCount( Math.max( 0, MoreObjects.firstNonNull( getAttachmentCount( ), 0 ) - 1 ) );
   }
 
   public AccountEntity getAccount( ) {
@@ -158,20 +233,60 @@ public class ManagedPolicyEntity extends AbstractPersistent {
     this.policyId = policyId;
   }
 
-  public String getPolicyVersion( ) {
-    return policyVersion;
-  }
-
-  public void setPolicyVersion( final String policyVersion ) {
-    this.policyVersion = policyVersion;
-  }
-
   public String getText( ) {
     return text;
   }
 
   public void setText( final String text ) {
     this.text = text;
+  }
+
+  public Integer getAttachmentCount( ) {
+    return attachmentCount;
+  }
+
+  public void setAttachmentCount( final Integer attachmentCount ) {
+    this.attachmentCount = attachmentCount;
+  }
+
+  public Integer getPolicyVersionCounter() {
+    return policyVersionCounter;
+  }
+
+  public void setPolicyVersionCounter( final Integer policyVersionCounter ) {
+    this.policyVersionCounter = policyVersionCounter;
+  }
+
+  public Date getPolicyUpdated() {
+    return policyUpdated;
+  }
+
+  public void setPolicyUpdated( final Date policyUpdated ) {
+    this.policyUpdated = policyUpdated;
+  }
+
+  public Integer getDefaultPolicyVersionNumber( ) {
+    return defaultPolicyVersionNumber;
+  }
+
+  public void setDefaultPolicyVersionNumber( final Integer defaultPolicyVersionNumber ) {
+    this.defaultPolicyVersionNumber = defaultPolicyVersionNumber;
+  }
+
+  public ManagedPolicyVersionEntity getDefaultPolicyVersion( ) {
+    return defaultPolicyVersion;
+  }
+
+  public void setDefaultPolicyVersion( final ManagedPolicyVersionEntity defaultPolicyVersion ) {
+    this.defaultPolicyVersion = defaultPolicyVersion;
+  }
+
+  public List<ManagedPolicyVersionEntity> getVersions( ) {
+    return versions;
+  }
+
+  public void setVersions( final List<ManagedPolicyVersionEntity> versions ) {
+    this.versions = versions;
   }
 
   public List<GroupEntity> getGroups( ) {
@@ -207,6 +322,9 @@ public class ManagedPolicyEntity extends AbstractPersistent {
   public void generateOnCommit() {
     if( this.policyId == null ) {
       this.policyId = Identifiers.generateIdentifier( "ANP" );
+    }
+    if( this.policyUpdated == null ) {
+      this.policyUpdated = getCreationTimestamp( );
     }
     this.uniqueName = buildUniqueName( account.getAccountNumber( ), name );
   }

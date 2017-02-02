@@ -97,6 +97,8 @@ import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity_;
 import com.eucalyptus.auth.euare.persist.entities.ManagedPolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.ManagedPolicyEntity_;
+import com.eucalyptus.auth.euare.persist.entities.ManagedPolicyVersionEntity;
+import com.eucalyptus.auth.euare.persist.entities.ManagedPolicyVersionEntity_;
 import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity;
 import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity_;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
@@ -385,6 +387,7 @@ public class DatabaseAccountProxy implements EuareAccount {
       boolean result = ( user.getGroups( ).size( ) > 1
           || user.getKeys( ).size( ) > 0
           || user.getCertificates( ).size( ) > 0
+          || user.getAttachedPolicies( ).size( ) > 0
           || userGroup.getPolicies( ).size( ) > 0 );
       db.commit( );
       return result;
@@ -399,7 +402,8 @@ public class DatabaseAccountProxy implements EuareAccount {
       final RoleEntity roleEntity = DatabaseAuthUtils.getUniqueRole( roleName, accountName );
       return
           !roleEntity.getPolicies( ).isEmpty( ) ||
-          !roleEntity.getInstanceProfiles( ).isEmpty( );
+          !roleEntity.getInstanceProfiles( ).isEmpty( ) ||
+          !roleEntity.getAttachedPolicies( ).isEmpty( );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to check role " + roleName + " in " + accountName );
       throw new AuthException( AuthException.NO_SUCH_ROLE, e );
@@ -432,7 +436,13 @@ public class DatabaseAccountProxy implements EuareAccount {
       throw new AuthException( AuthException.USER_DELETE_CONFLICT );
     }
     try ( final TransactionResource db = Entities.transactionFor( UserEntity.class ) ) {
-      UserEntity user = DatabaseAuthUtils.getUniqueUser( userName, accountName );
+      final UserEntity user = DatabaseAuthUtils.getUniqueUser( userName, accountName );
+      // attachments will be removed, but we need to do the attachment accounting here when delete is recursive
+      Entities.criteriaQuery( ManagedPolicyEntity.class )
+          .join( ManagedPolicyEntity_.users ).whereEqual( UserEntity_.name, userName )
+          .join( UserEntity_.groups ).whereEqual( GroupEntity_.userGroup, true )
+          .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName )
+          .list( ).forEach( ManagedPolicyEntity::decrementAttachmentCount );
       for ( GroupEntity ge : user.getGroups( ) ) {
         if ( ge.isUserGroup( ) ) {
           Entities.delete( ge );
@@ -539,7 +549,8 @@ public class DatabaseAccountProxy implements EuareAccount {
     try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
       boolean hasResAttached =
           DatabaseAuthUtils.countUsersInGroup( groupName, accountName ) > 0 ||
-          DatabaseAuthUtils.countPoliciesInGroup( groupName, accountName ) > 0;
+          DatabaseAuthUtils.countPoliciesInGroup( groupName, accountName ) > 0 ||
+          DatabaseAuthUtils.countPoliciesAttachedToGroup( groupName, accountName ) > 0;
       db.commit( );
       return hasResAttached;
     } catch ( Exception e ) {
@@ -562,7 +573,12 @@ public class DatabaseAccountProxy implements EuareAccount {
     }
 
     try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
-      GroupEntity group = DatabaseAuthUtils.getUniqueGroup( groupName, accountName );
+      final GroupEntity group = DatabaseAuthUtils.getUniqueGroup( groupName, accountName );
+      // attachments will be removed, but we need to do the attachment accounting here when delete is recursive
+      Entities.criteriaQuery( ManagedPolicyEntity.class )
+          .join( ManagedPolicyEntity_.groups ).whereEqual( GroupEntity_.name, groupName )
+          .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName )
+          .list( ).forEach( ManagedPolicyEntity::decrementAttachmentCount );
       Entities.delete( group );
       db.commit( );
     } catch ( Exception e ) {
@@ -658,7 +674,11 @@ public class DatabaseAccountProxy implements EuareAccount {
       newManagedPolicyEntity.setDescription( description );
       newManagedPolicyEntity.setText( policy );
       newManagedPolicyEntity.setAccount( account );
+
       final ManagedPolicyEntity persistedManagedPolicyEntity = Entities.persist( newManagedPolicyEntity );
+      final ManagedPolicyVersionEntity newManagedPolicyVersionEntity = new ManagedPolicyVersionEntity( newManagedPolicyEntity );
+      Entities.persist( newManagedPolicyVersionEntity );
+      newManagedPolicyEntity.applyDefaultPolicyVersion( newManagedPolicyVersionEntity );
       db.commit( );
       return new DatabaseManagedPolicyProxy( persistedManagedPolicyEntity );
 
@@ -679,8 +699,11 @@ public class DatabaseAccountProxy implements EuareAccount {
     }
     try ( final TransactionResource db = Entities.transactionFor( RoleEntity.class ) ) {
       final ManagedPolicyEntity policy = DatabaseAuthUtils.getUniqueManagedPolicy( policyName, accountName );
+      Entities.delete( policy.getDefaultPolicyVersion( ) );
       Entities.delete( policy );
       db.commit( );
+    } catch ( NoSuchElementException e ) {
+      throw new AuthException( AuthException.NO_SUCH_POLICY, e );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to delete policy: " + policyName + " in " + accountName );
       throw new AuthException( AuthException.NO_SUCH_POLICY, e );
@@ -750,6 +773,8 @@ public class DatabaseAccountProxy implements EuareAccount {
     try ( final TransactionResource db = Entities.transactionFor( ManagedPolicyEntity.class ) ) {
       final ManagedPolicyEntity policyEntity = DatabaseAuthUtils.getUniqueManagedPolicy( policyName, accountName );
       return new DatabaseManagedPolicyProxy( policyEntity );
+    } catch ( NoSuchElementException e ) {
+      throw new AuthException( AuthException.NO_SUCH_POLICY, e );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to get policy " + policyName + " for " + accountName );
       throw new AuthException( AuthException.NO_SUCH_POLICY, e );

@@ -43,6 +43,8 @@ public interface EuareManagedPolicy extends Policy, RestrictedType {
 
   Integer getPolicyVersion( );
 
+  void setPolicyVersion( Integer version ) throws AuthException;
+
   String getName( );
 
   String getPath( );
@@ -54,6 +56,14 @@ public interface EuareManagedPolicy extends Policy, RestrictedType {
   Date getCreateDate( );
 
   Date getUpdateDate( );
+
+  Integer getAttachmentCount( );
+
+  EuareManagedPolicyVersion addPolicyVersion( String text, boolean setAsDefault ) throws AuthException;
+
+  void deletePolicyVersion( Integer versionId ) throws AuthException;
+
+  List<EuareManagedPolicyVersion> getVersions( ) throws AuthException;
 
   List<EuareGroup> getGroups( ) throws AuthException;
 

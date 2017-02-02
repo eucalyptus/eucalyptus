@@ -87,6 +87,7 @@ import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareCertificate;
 import com.eucalyptus.auth.euare.principal.EuareGroup;
 import com.eucalyptus.auth.euare.principal.EuareManagedPolicy;
+import com.eucalyptus.auth.euare.principal.EuareManagedPolicyVersion;
 import com.eucalyptus.auth.euare.principal.EuareOpenIdConnectProvider;
 import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.euare.principal.EuareUser;
@@ -466,10 +467,22 @@ class Privileged {
     return Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_POLICY, Accounts.getManagedPolicyFullName( policy ), account, IAM_GETPOLICY, requestUser );
   }
 
+  public static boolean allowReadPolicyVersion( AuthContext requestUser, EuareAccount account, EuareManagedPolicy policy ) throws AuthException {
+    return Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_POLICY, Accounts.getManagedPolicyFullName( policy ), account, IAM_GETPOLICYVERSION, requestUser );
+  }
+
   public static boolean allowListPolicy( AuthContext requestUser, EuareAccount account, EuareManagedPolicy policy ) throws AuthException {
     return
         Permissions.isAuthorized(
             requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_POLICY, IAM_LISTPOLICIES ),
+            account.getAccountNumber( ),
+            Accounts.getManagedPolicyFullName( policy ) );
+  }
+
+  public static boolean allowListPolicyVersion( AuthContext requestUser, EuareAccount account, EuareManagedPolicy policy ) throws AuthException {
+    return
+        Permissions.isAuthorized(
+            requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_POLICY, IAM_LISTPOLICYVERSIONS ),
             account.getAccountNumber( ),
             Accounts.getManagedPolicyFullName( policy ) );
   }
@@ -480,7 +493,8 @@ class Privileged {
       final String name,
       final String path,
       final String description,
-      final String policy  ) throws AuthException, PolicyParseException {
+      final String policy
+  ) throws AuthException, PolicyParseException {
     if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_POLICY, "", account, IAM_CREATEPOLICY, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
@@ -490,11 +504,52 @@ class Privileged {
     return account.addPolicy( name, path, description, policy );
   }
 
-  public static void deletePolicy( AuthContext requestUser, EuareAccount account, EuareManagedPolicy policy ) throws AuthException {
+  public static void deletePolicy(
+      final AuthContext requestUser,
+      final EuareAccount account,
+      final EuareManagedPolicy policy
+  ) throws AuthException {
     if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_POLICY, Accounts.getManagedPolicyFullName( policy ), account, IAM_DELETEPOLICY, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     account.deletePolicy( policy.getName( ) );
+  }
+
+  public static EuareManagedPolicyVersion createManagedPolicyVersion(
+      final AuthContext requestUser,
+      final EuareAccount account,
+      final EuareManagedPolicy managedPolicy,
+      final String policy,
+      final boolean setAsDefault
+  ) throws AuthException, PolicyParseException {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_POLICY, Accounts.getManagedPolicyFullName( managedPolicy ), account, IAM_CREATEPOLICYVERSION, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    return managedPolicy.addPolicyVersion( policy, setAsDefault );
+  }
+
+  public static void deleteManagedPolicyVersion(
+      final AuthContext requestUser,
+      final EuareAccount account,
+      final EuareManagedPolicy managedPolicy,
+      final Integer versionId
+  ) throws AuthException {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_POLICY, Accounts.getManagedPolicyFullName( managedPolicy ), account, IAM_DELETEPOLICYVERSION, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    managedPolicy.deletePolicyVersion( versionId );
+  }
+
+  public static void setDefaultPolicyVersion(
+      final AuthContext requestUser,
+      final EuareAccount account,
+      final EuareManagedPolicy policy,
+      final Integer versionId
+  ) throws AuthException {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_POLICY, Accounts.getManagedPolicyFullName( policy ), account, IAM_SETDEFAULTPOLICYVERSION, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    policy.setPolicyVersion( versionId );
   }
 
   private static void authWithPolicy( final EuareManagedPolicy policy, final Callable<Void> callable ) throws AuthException {
@@ -542,6 +597,9 @@ class Privileged {
   }
 
   public static void attachUserPolicy( AuthContext requestUser, EuareAccount account, EuareUser user, EuareManagedPolicy policy ) throws AuthException  {
+    if ( user.isAccountAdmin( ) ) { // policy attached to admin is reserved, could be used for account policy
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
     authWithPolicy( policy, () -> {
       if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_ATTACHUSERPOLICY, requestUser ) ) {
         throw new AuthException( AuthException.ACCESS_DENIED );

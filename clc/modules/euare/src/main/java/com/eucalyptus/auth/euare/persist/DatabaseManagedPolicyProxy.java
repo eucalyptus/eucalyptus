@@ -22,28 +22,32 @@ package com.eucalyptus.auth.euare.persist;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import javax.annotation.Nonnull;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.AuthenticationLimitProvider;
 import com.eucalyptus.auth.Debugging;
+import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.euare.Accounts;
 import com.eucalyptus.auth.euare.persist.entities.GroupEntity;
 import com.eucalyptus.auth.euare.persist.entities.ManagedPolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.ManagedPolicyEntity_;
+import com.eucalyptus.auth.euare.persist.entities.ManagedPolicyVersionEntity;
 import com.eucalyptus.auth.euare.persist.entities.RoleEntity;
 import com.eucalyptus.auth.euare.persist.entities.UserEntity;
 import com.eucalyptus.auth.euare.principal.EuareAccount;
 import com.eucalyptus.auth.euare.principal.EuareGroup;
 import com.eucalyptus.auth.euare.principal.EuareManagedPolicy;
+import com.eucalyptus.auth.euare.principal.EuareManagedPolicyVersion;
 import com.eucalyptus.auth.euare.principal.EuareRole;
 import com.eucalyptus.auth.euare.principal.EuareUser;
+import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Tx;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 
 /**
@@ -87,7 +91,20 @@ public class DatabaseManagedPolicyProxy implements EuareManagedPolicy {
 
   @Override
   public Integer getPolicyVersion( ) {
-    return delegate.getVersion( );
+    return delegate.getDefaultPolicyVersionNumber( );
+  }
+
+  @Override
+  public void setPolicyVersion( @Nonnull final Integer versionId ) throws AuthException {
+    dbCallback( "setPolicyVersion", policyEntity -> {
+      for ( final ManagedPolicyVersionEntity versionEntity : policyEntity.getVersions( ) ) {
+        if ( versionId.equals( versionEntity.getPolicyVersion( ) ) ) {
+          policyEntity.applyDefaultPolicyVersion( versionEntity );
+          return;
+        }
+      }
+      throw Exceptions.toUndeclared( new AuthException( AuthException.INVALID_ID ) );
+    } );
   }
 
   @Override
@@ -107,7 +124,7 @@ public class DatabaseManagedPolicyProxy implements EuareManagedPolicy {
 
   @Override
   public String getText() {
-    return delegate.getText();
+    return delegate.getText( );
   }
 
   @Override
@@ -117,7 +134,7 @@ public class DatabaseManagedPolicyProxy implements EuareManagedPolicy {
 
   @Override
   public Date getUpdateDate() {
-    return delegate.getLastUpdateTimestamp();
+    return delegate.getPolicyUpdated( );
   }
 
   @Override
@@ -128,6 +145,71 @@ public class DatabaseManagedPolicyProxy implements EuareManagedPolicy {
   @Override
   public OwnerFullName getOwner( ) {
     return AccountFullName.getInstance( getAccountNumber( ) );
+  }
+
+  @Override
+  public Integer getAttachmentCount( ) {
+    return delegate.getAttachmentCount( );
+  }
+
+  @Override
+  public EuareManagedPolicyVersion addPolicyVersion( final String policy, final boolean setAsDefault ) throws AuthException {
+    final EuareManagedPolicyVersion[] policyVersion = new EuareManagedPolicyVersion[1];
+    try {
+      PolicyParser.getInstance( ).parse( policy, "2012-10-17" );
+    } catch ( final PolicyParseException e ) {
+      throw new AuthException( "Invalid policy: " + e.getMessage( ) );
+    }
+    dbCallback( "addPolicyVersion", policyEntity -> {
+      if ( policyEntity.getVersions( ).size( ) >= 5 ) {
+        throw Exceptions.toUndeclared( new AuthException( AuthException.QUOTA_EXCEEDED ) );
+      }
+      final ManagedPolicyVersionEntity newManagedPolicyVersionEntity = new ManagedPolicyVersionEntity( policyEntity );
+      newManagedPolicyVersionEntity.setText( policy );
+      if ( setAsDefault ) {
+        policyEntity.applyDefaultPolicyVersion( newManagedPolicyVersionEntity );
+      }
+      policyVersion[0] = new DatabaseManagedPolicyVersionProxy( Entities.persist( newManagedPolicyVersionEntity ) );
+    } );
+    return policyVersion[0];
+  }
+
+  @Override
+  public void deletePolicyVersion( final Integer versionId ) throws AuthException {
+    dbCallback( "deletePolicyVersion", policyEntity -> {
+      for ( final ManagedPolicyVersionEntity versionEntity : policyEntity.getVersions( ) ) {
+        if ( versionId.equals( versionEntity.getPolicyVersion( ) ) ) {
+          if ( versionEntity.getDefaultPolicy( ) ) {
+            throw Exceptions.toUndeclared( new AuthException( AuthException.CONFLICT ) );
+          }
+          Entities.delete( versionEntity );
+          policyEntity.setPolicyUpdated( new Date( ) );
+          return;
+        }
+      }
+      throw Exceptions.toUndeclared( new AuthException( AuthException.INVALID_ID ) );
+
+    } );
+  }
+
+  @Override
+  public List<EuareManagedPolicyVersion> getVersions( ) throws AuthException {
+    final List<EuareManagedPolicyVersion> versions = Lists.newArrayList( );
+    if ( Entities.isReadable( delegate.getVersions( ) ) ) {
+      for ( final ManagedPolicyVersionEntity version : delegate.getVersions( ) ) {
+        versions.add( new DatabaseManagedPolicyVersionProxy( version ) );
+      }
+    } else {
+      dbCallback( "getVersions", new Callback<ManagedPolicyEntity>( ) {
+        @Override
+        public void fire( final ManagedPolicyEntity policyEntity ) {
+          for ( final ManagedPolicyVersionEntity version : policyEntity.getVersions( ) ) {
+            versions.add( new DatabaseManagedPolicyVersionProxy( version ) );
+          }
+        }
+      } );
+    }
+    return versions;
   }
 
   @Override
@@ -201,6 +283,7 @@ public class DatabaseManagedPolicyProxy implements EuareManagedPolicy {
       } );
     } catch ( ExecutionException e ) {
       Debugging.logError( LOG, e, "Failed to " + description + " for " + this.delegate );
+      Exceptions.findAndRethrow( e, AuthException.class );
       throw new AuthException( e );
     }
   }

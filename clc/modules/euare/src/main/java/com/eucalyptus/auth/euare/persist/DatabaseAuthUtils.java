@@ -154,6 +154,42 @@ public class DatabaseAuthUtils {
 
   /**
    * Must call within a transaction.
+   */
+  public static long countPoliciesAttachedToGroup( String groupName, String accountName ) throws Exception {
+    return Entities.count( ManagedPolicyEntity.class )
+        .join( ManagedPolicyEntity_.groups ).whereEqual( GroupEntity_.name, groupName )
+        .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName )
+        .uniqueResult( );
+  }
+
+  /**
+   * Must call within a transaction.
+   */
+  public static int countAttachments( ManagedPolicyEntity policyEntity ) {
+    return countAttachments( policyEntity.getName( ), policyEntity.accountNumber( ) );
+  }
+
+  /**
+   * Must call within a transaction.
+   */
+  public static int countAttachments( String policyName, String accountNumber ) {
+    return (int)(
+        Entities.count( UserEntity.class )
+            .join( UserEntity_.attachedPolicies ).whereEqual( ManagedPolicyEntity_.name, policyName )
+            .join( ManagedPolicyEntity_.account ).whereEqual( AccountEntity_.accountNumber, accountNumber )
+            .uniqueResult( ) +
+        Entities.count( GroupEntity.class ).whereEqual( GroupEntity_.userGroup, false )
+            .join( GroupEntity_.attachedPolicies ).whereEqual( ManagedPolicyEntity_.name, policyName )
+            .join( ManagedPolicyEntity_.account ).whereEqual( AccountEntity_.accountNumber, accountNumber )
+            .uniqueResult( ) +
+        Entities.count( RoleEntity.class )
+            .join( RoleEntity_.attachedPolicies ).whereEqual( ManagedPolicyEntity_.name, policyName )
+            .join( ManagedPolicyEntity_.account ).whereEqual( AccountEntity_.accountNumber, accountNumber )
+            .uniqueResult( ) );
+  }
+
+  /**
+   * Must call within a transaction.
    * 
    * @param groupName
    * @param accountName
