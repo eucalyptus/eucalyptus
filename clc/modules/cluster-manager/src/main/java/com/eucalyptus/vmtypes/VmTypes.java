@@ -130,7 +130,7 @@ public class VmTypes {
       changeListener = PropertyChangeListeners.IsBoolean.class)
   public static Boolean        FORMAT_EPHEMERAL_STORAGE = true;
 
-  @ConfigurableField( description = "Format swap disk by defaut. The properti will be depricated in next major release.",
+  @ConfigurableField( description = "Format swap disk by defaut. The property will be deprecated in next major release.",
       initial = "false", changeListener = PropertyChangeListeners.IsBoolean.class)
   public static Boolean        FORMAT_SWAP = false;
 
