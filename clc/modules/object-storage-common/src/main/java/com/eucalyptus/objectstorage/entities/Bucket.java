@@ -27,10 +27,12 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 
+import org.hibernate.annotations.Type;
 import com.eucalyptus.objectstorage.BucketState;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.VersioningStatus;
@@ -77,6 +79,8 @@ public class Bucket extends S3AccessControlledEntity<BucketState> implements Com
   private Long bucketSize;
 
   @Column(name = "policy")
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   private String policy;
 
   @PrePersist
