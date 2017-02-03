@@ -151,8 +151,9 @@ public class StorageProperties {
   public static final ImmutableSet<String> DELTA_GENERATION_STATE_EXCLUSION = ImmutableSet.of(StorageProperties.Status.failed.toString(),
       StorageProperties.Status.deleted.toString(), StorageProperties.Status.deletedfromebs.toString(), StorageProperties.Status.error.toString());
 
-  public static final ImmutableSet<String> DELTA_RESTORATION_STATE_EXCLUSION = ImmutableSet.of(StorageProperties.Status.failed.toString(),
-      StorageProperties.Status.deleted.toString(), StorageProperties.Status.error.toString());
+  public static final ImmutableSet<String> DELTA_RESTORATION_STATE_EXCLUSION = ImmutableSet.of(StorageProperties.Status.creating.toString(), 
+      StorageProperties.Status.pending.toString(), StorageProperties.Status.failed.toString(), StorageProperties.Status.error.toString(),
+      StorageProperties.Status.deleting.toString(), StorageProperties.Status.deletedfromebs.toString(), StorageProperties.Status.deleted.toString()); 
 
   public static final Criterion SNAPSHOT_DELTA_GENERATION_CRITERION =
       Restrictions.not(Restrictions.in("status", DELTA_GENERATION_STATE_EXCLUSION));
