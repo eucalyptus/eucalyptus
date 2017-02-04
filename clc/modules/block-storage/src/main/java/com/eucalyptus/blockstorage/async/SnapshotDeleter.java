@@ -115,6 +115,12 @@ public class SnapshotDeleter extends CheckerTask {
   public void run() {
     // Clean up on EBS backend
     deleteFromEBS();
+    try {
+      Thread.sleep(30000); //LPT 
+    } catch (InterruptedException e) {
+      LOG.error("SnapshotDelete interrupted sleeping between delete from EBS and OSG");
+      return;
+    }
     // Clean up on OSG
     deleteFromOSG();
   }
@@ -131,7 +137,11 @@ public class SnapshotDeleter extends CheckerTask {
         return;
       }
       if (snapshotsToBeDeleted != null && !snapshotsToBeDeleted.isEmpty()) {
-        for (SnapshotInfo snap : snapshotsToBeDeleted) {
+//LPT Only delete one this time
+//        for (SnapshotInfo snap : snapshotsToBeDeleted) {
+        for (int i=0; i<1; i++) {
+          SnapshotInfo snap = snapshotsToBeDeleted.get(0);
+//LPT end
           try {
             String snapshotId = snap.getSnapshotId();
             LOG.info("Snapshot " + snapshotId + " was marked for deletion from EBS backend. Evaluating prerequistes for cleanup...");
@@ -184,7 +194,11 @@ public class SnapshotDeleter extends CheckerTask {
         return;
       }
       if (snapshotsToBeDeleted != null && !snapshotsToBeDeleted.isEmpty()) {
-        for (SnapshotInfo snap : snapshotsToBeDeleted) {
+//LPT Only delete one this time
+//        for (SnapshotInfo snap : snapshotsToBeDeleted) {
+        for (int i=0; i<1; i++) {
+          SnapshotInfo snap = snapshotsToBeDeleted.get(0);
+//LPT end
           try {
             String snapshotId = snap.getSnapshotId();
 
@@ -251,9 +265,11 @@ public class SnapshotDeleter extends CheckerTask {
 
     if (StringUtils.isNotBlank(snap.getSnapshotLocation())) {
       // snapshot removal from s3 needs evaluation
+      LOG.debug("Setting snapshot " + snapshotId + " to 'deletedfromebs' state from EBS cleanup");
       markSnapDeletedFromEBS(snapshotId);
     } else {
       // no evidence of snapshot upload to OSG, mark the snapshot as deleted
+      LOG.debug("Setting snapshot " + snapshotId + " to 'deleted' state from EBS cleanup");
       markSnapDeleted(snapshotId);
     }
   }
@@ -271,6 +287,7 @@ public class SnapshotDeleter extends CheckerTask {
         snapshotTransfer.setKeyName(names[1]);
         snapshotTransfer.delete();
 
+        LOG.debug("Setting snapshot " + snap.getSnapshotId() + " to 'deleted' state from OSG cleanup");
         markSnapDeleted(snap.getSnapshotId());
       } catch (Exception e) {
         LOG.warn("Failed to delete snapshot " + snap.getSnapshotId() + " from ObjectStorageGateway", e);
