@@ -214,7 +214,7 @@ public class PolicyParser {
     }
     if ( validating && AuthenticationLimitProvider.Values.getUseValidatingPolicyParser( ) ) {
       try { // parser that ensures policy is valid json
-        Json.parse( policy );
+        Json.parseObject( policy );
       } catch ( IOException e ) {
         Debugging.logError( LOG, e, "Syntax error in input policy" );
         throw new PolicyParseException( e.getMessage( ), e );

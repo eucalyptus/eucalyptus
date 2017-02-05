@@ -61,6 +61,7 @@ public interface IamPolicySpec {
   String IAM_CREATELOGINPROFILE = "createloginprofile";
   String IAM_CREATEOPENIDCONNECTPROVIDER = "createopenidconnectprovider";
   String IAM_CREATEPOLICY = "createpolicy";
+  String IAM_CREATEPOLICYVERSION = "createpolicyversion";
   String IAM_CREATEROLE = "createrole";
   String IAM_CREATEUSER = "createuser";
   String IAM_CREATEVIRTUALMFADEVICE = "createvirtualmfadevice";
@@ -76,6 +77,7 @@ public interface IamPolicySpec {
   String IAM_DELETELOGINPROFILE = "deleteloginprofile";
   String IAM_DELETEOPENIDCONNECTPROVIDER = "deleteopenidconnectprovider";
   String IAM_DELETEPOLICY = "deletepolicy";
+  String IAM_DELETEPOLICYVERSION = "deletepolicyversion";
   String IAM_DELETEROLE = "deleterole";
   String IAM_DELETEROLEPOLICY = "deleterolepolicy";
   String IAM_DELETESERVERCERTIFICATE = "deleteservercertificate";
@@ -96,6 +98,7 @@ public interface IamPolicySpec {
   String IAM_GETLOGINPROFILE = "getloginprofile";
   String IAM_GETOPENIDCONNECTPROVIDER = "getopenidconnectprovider";
   String IAM_GETPOLICY = "getpolicy";
+  String IAM_GETPOLICYVERSION = "getpolicyversion";
   String IAM_GETROLE = "getrole";
   String IAM_GETROLEPOLICY = "getrolepolicy";
   String IAM_GETSERVERCERTIFICATE = "getservercertificate";
@@ -117,6 +120,7 @@ public interface IamPolicySpec {
   String IAM_LISTMFADEVICES = "listmfadevices";
   String IAM_LISTOPENIDCONNECTPROVIDERS = "listopenidconnectproviders";
   String IAM_LISTPOLICIES = "listpolicies";
+  String IAM_LISTPOLICYVERSIONS = "listpolicyversions";
   String IAM_LISTROLEPOLICIES = "listrolepolicies";
   String IAM_LISTROLES = "listroles";
   String IAM_LISTSERVERCERTIFICATES = "listservercertificates";
@@ -133,6 +137,7 @@ public interface IamPolicySpec {
   String IAM_REMOVEROLEFROMINSTANCEPROFILE = "removerolefrominstanceprofile";
   String IAM_REMOVEUSERFROMGROUP = "removeuserfromgroup";
   String IAM_RESYNCMFADEVICE = "resyncmfadevice";
+  String IAM_SETDEFAULTPOLICYVERSION = "setdefaultpolicyversion";
   String IAM_UPDATEACCESSKEY = "updateaccesskey";
   String IAM_UPDATEACCOUNTPASSWORDPOLICY = "updateaccountpasswordpolicy";
   String IAM_UPDATEASSUMEROLEPOLICY = "updateassumerolepolicy";

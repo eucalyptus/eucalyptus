@@ -120,6 +120,7 @@ public class AuthException extends Exception {
   public static final String ACCESS_DENIED = "Access to the resource is denied";
   public static final String QUOTA_EXCEEDED = "Resource quota is exceeded";
   public static final String SYSTEM_MODIFICATION = "It is not possible to modify the SYSTEM user or account.";
+  public static final String INVALID_ID = "Invalid id";
   public static final String INVALID_NAME = "Invalid name";
   public static final String INVALID_PATH = "Invalid path";
   public static final String INVALID_CERT = "Invalid cert";

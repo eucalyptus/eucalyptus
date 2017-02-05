@@ -359,9 +359,12 @@ public class DatabaseGroupProxy implements EuareGroup {
       final String accountNumber = policy.getAccountNumber( );
       DatabaseAuthUtils.invokeUnique( GroupEntity.class, GroupEntity_.groupId, this.delegate.getGroupId( ), new Tx<GroupEntity>( ) {
         public void fire( GroupEntity t ) {
-          t.getAttachedPolicies( ).add( Entities.criteriaQuery(
+          final ManagedPolicyEntity policyEntity = Entities.criteriaQuery(
               ManagedPolicyEntity.exampleWithName( accountNumber, policy.getName( ) )
-          ).uniqueResult( ) );
+          ).uniqueResult( );
+          if ( t.getAttachedPolicies( ).add( policyEntity ) ) {
+            policyEntity.setAttachmentCount( DatabaseAuthUtils.countAttachments( policyEntity ) );
+          }
         }
       } );
     } catch ( ExecutionException e ) {
@@ -383,6 +386,7 @@ public class DatabaseGroupProxy implements EuareGroup {
           }
           if ( policyEntity != null ) {
             t.getAttachedPolicies( ).remove( policyEntity );
+            policyEntity.setAttachmentCount( DatabaseAuthUtils.countAttachments( policyEntity ) );
           } else {
             throw Exceptions.toUndeclared( new AuthException( AuthException.NO_SUCH_POLICY ) );
           }

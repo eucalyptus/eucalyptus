@@ -78,6 +78,8 @@ import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.euare.persist.entities.InstanceProfileEntity_;
 import com.eucalyptus.auth.euare.persist.entities.ManagedPolicyEntity;
 import com.eucalyptus.auth.euare.persist.entities.ManagedPolicyEntity_;
+import com.eucalyptus.auth.euare.persist.entities.ManagedPolicyVersionEntity;
+import com.eucalyptus.auth.euare.persist.entities.ManagedPolicyVersionEntity_;
 import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity;
 import com.eucalyptus.auth.euare.persist.entities.OpenIdProviderEntity_;
 import com.eucalyptus.auth.euare.persist.entities.PolicyEntity;
@@ -316,8 +318,15 @@ public class DatabaseAuthProvider implements AccountProvider {
                 .join( GroupEntity_.account ).whereEqual( AccountEntity_.name, accountName ) )
             .delete( );
 
+        // Delete non-default policy versions, others deleted on cascade from managed policy entity
+        Entities.delete( ManagedPolicyVersionEntity.class )
+            .whereIn( ManagedPolicyVersionEntity_.id, ManagedPolicyVersionEntity.class, ManagedPolicyVersionEntity_.id, subquery -> subquery
+                .whereEqual( ManagedPolicyVersionEntity_.defaultPolicy, false )
+                .join( ManagedPolicyVersionEntity_.account ).whereEqual( AccountEntity_.name, accountName ) )
+            .delete( );
+
         Entities.delete( ManagedPolicyEntity.class )
-            .whereIn( ManagedPolicyEntity_.id, ManagedPolicyEntity.class,ManagedPolicyEntity_.id, subquery -> subquery
+            .whereIn( ManagedPolicyEntity_.id, ManagedPolicyEntity.class, ManagedPolicyEntity_.id, subquery -> subquery
                 .join( ManagedPolicyEntity_.account ).whereEqual( AccountEntity_.name, accountName ) )
             .delete( );
       }

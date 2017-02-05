@@ -1567,15 +1567,15 @@
     <value name="RoleId" field="roleId" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.auth.euare.PolicyType" abstract="true">
+    <value name="PolicyName" field="policyName" usage="optional"/>
+    <value name="Description" field="description" usage="optional"/>
+    <value name="DefaultVersionId" field="defaultVersionId" usage="optional"/>
+    <value name="PolicyId" field="policyId" usage="optional"/>
+    <value name="Path" field="path" usage="optional"/>
     <value name="Arn" field="arn" usage="optional"/>
+    <value name="IsAttachable" field="isAttachable" usage="optional"/>
     <value name="AttachmentCount" field="attachmentCount" usage="optional"/>
     <value name="CreateDate" field="createDate" usage="optional"/>
-    <value name="DefaultVersionId" field="defaultVersionId" usage="optional"/>
-    <value name="Description" field="description" usage="optional"/>
-    <value name="IsAttachable" field="isAttachable" usage="optional"/>
-    <value name="Path" field="path" usage="optional"/>
-    <value name="PolicyId" field="policyId" usage="optional"/>
-    <value name="PolicyName" field="policyName" usage="optional"/>
     <value name="UpdateDate" field="updateDate" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.auth.euare.PolicyUser" abstract="true">
@@ -1583,9 +1583,9 @@
     <value name="UserId" field="userId" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.auth.euare.PolicyVersionType" abstract="true">
-    <value name="CreateDate" field="createDate" usage="optional"/>
     <value name="Document" field="document" usage="optional"/>
     <value name="IsDefaultVersion" field="isDefaultVersion" usage="optional"/>
     <value name="VersionId" field="versionId" usage="optional"/>
+    <value name="CreateDate" field="createDate" usage="optional"/>
   </mapping>
 </binding>

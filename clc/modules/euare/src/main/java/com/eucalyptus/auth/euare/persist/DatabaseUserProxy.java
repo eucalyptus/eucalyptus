@@ -728,9 +728,12 @@ public class DatabaseUserProxy implements EuareUser {
       final String accountNumber = policy.getAccountNumber( );
       DatabaseAuthUtils.invokeUnique( UserEntity.class, UserEntity_.userId, DatabaseUserProxy.this.delegate.getUserId( ), new Tx<UserEntity>( ) {
         public void fire( UserEntity t ) {
-          t.getAttachedPolicies( ).add( Entities.criteriaQuery(
+          final ManagedPolicyEntity policyEntity = Entities.criteriaQuery(
               ManagedPolicyEntity.exampleWithName( accountNumber, policy.getName( ) )
-          ).uniqueResult( ) );
+          ).uniqueResult( );
+          if ( t.getAttachedPolicies( ).add( policyEntity ) ) {
+            policyEntity.setAttachmentCount( DatabaseAuthUtils.countAttachments( policyEntity ) );
+          }
         }
       } );
     } catch ( ExecutionException e ) {
@@ -752,6 +755,7 @@ public class DatabaseUserProxy implements EuareUser {
           }
           if ( policyEntity != null ) {
             t.getAttachedPolicies( ).remove( policyEntity );
+            policyEntity.setAttachmentCount( DatabaseAuthUtils.countAttachments( policyEntity ) );
           } else {
             throw Exceptions.toUndeclared( new AuthException( AuthException.NO_SUCH_POLICY ) );
           }
