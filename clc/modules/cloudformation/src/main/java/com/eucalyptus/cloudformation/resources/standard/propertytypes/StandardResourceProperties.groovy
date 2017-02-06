@@ -719,6 +719,16 @@ public class AWSS3BucketProperties implements ResourceProperties {
 }
 
 @ToString(includeNames=true)
+public class AWSS3BucketPolicyProperties implements ResourceProperties {
+  @Required
+  @Property
+  String bucket;
+  @Required
+  @Property
+  JsonNode policyDocument;
+}
+
+@ToString(includeNames=true)
 public class AWSSQSQueueProperties implements ResourceProperties {
   @Property
   Integer delaySeconds;

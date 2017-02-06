@@ -587,6 +587,13 @@ public class AWSS3BucketResourceInfo extends ResourceInfo {
 }
 
 @ToString(includeNames=true)
+public class AWSS3BucketPolicyResourceInfo extends ResourceInfo {
+  public AWSS3BucketPolicyResourceInfo() {
+    setType("AWS::S3::BucketPolicy");
+  }
+}
+
+@ToString(includeNames=true)
 public class AWSSQSQueueResourceInfo extends ResourceInfo {
   @AttributeJson
   String arn;
