@@ -28,9 +28,12 @@ import com.eucalyptus.auth.euare.AttachUserPolicyResponseType;
 import com.eucalyptus.auth.euare.AttachUserPolicyType;
 import com.eucalyptus.auth.euare.CreatePolicyResponseType;
 import com.eucalyptus.auth.euare.CreatePolicyType;
+import com.eucalyptus.auth.euare.CreatePolicyVersionType;
 import com.eucalyptus.auth.euare.DeleteGroupPolicyResponseType;
 import com.eucalyptus.auth.euare.DeleteGroupPolicyType;
 import com.eucalyptus.auth.euare.DeletePolicyType;
+import com.eucalyptus.auth.euare.DeletePolicyVersionResponseType;
+import com.eucalyptus.auth.euare.DeletePolicyVersionType;
 import com.eucalyptus.auth.euare.DeleteRolePolicyResponseType;
 import com.eucalyptus.auth.euare.DeleteRolePolicyType;
 import com.eucalyptus.auth.euare.DeleteUserPolicyResponseType;
@@ -38,6 +41,8 @@ import com.eucalyptus.auth.euare.DeleteUserPolicyType;
 import com.eucalyptus.auth.euare.DetachGroupPolicyType;
 import com.eucalyptus.auth.euare.DetachRolePolicyType;
 import com.eucalyptus.auth.euare.DetachUserPolicyType;
+import com.eucalyptus.auth.euare.GetPolicyResponseType;
+import com.eucalyptus.auth.euare.GetPolicyType;
 import com.eucalyptus.auth.euare.ListEntitiesForPolicyResponseType;
 import com.eucalyptus.auth.euare.ListEntitiesForPolicyType;
 import com.eucalyptus.auth.euare.PolicyGroup;
@@ -50,6 +55,7 @@ import com.eucalyptus.auth.euare.PutRolePolicyType;
 import com.eucalyptus.auth.euare.PutUserPolicyResponseType;
 import com.eucalyptus.auth.euare.PutUserPolicyType;
 import com.eucalyptus.cloudformation.CloudFormationException;
+import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.IAMHelper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -106,7 +112,7 @@ public class AWSIAMManagedPolicyResourceAction extends StepBasedResourceAction {
       updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
     }
     if (!Objects.equals(properties.getPolicyDocument(), otherAction.properties.getPolicyDocument())) {
-      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+      updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
     if (!Objects.equals(properties.getRoles(), otherAction.properties.getRoles())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
@@ -402,6 +408,41 @@ public class AWSIAMManagedPolicyResourceAction extends StepBasedResourceAction {
               // we don't care.  (already deleted or never there)
             } else throw e;
           }
+        }
+        return newAction;
+      }
+    },
+    UPDATE_POLICY_DOCUMENT {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSIAMManagedPolicyResourceAction oldAction = (AWSIAMManagedPolicyResourceAction) oldResourceAction;
+        AWSIAMManagedPolicyResourceAction newAction = (AWSIAMManagedPolicyResourceAction) newResourceAction;
+        ServiceConfiguration configuration = Topology.lookup(Euare.class);
+        if (!Objects.equals(oldAction.properties.getPolicyDocument(), newAction.properties.getPolicyDocument())) {
+          // get current version....
+          GetPolicyType getPolicyType = MessageHelper.createMessage(GetPolicyType.class, newAction.info.getEffectiveUserId());
+          getPolicyType.setPolicyArn(newAction.info.getPhysicalResourceId());
+          GetPolicyResponseType getPolicyResponseType = AsyncRequests.sendSync(configuration, getPolicyType);
+          String defaultPolicyVersionId = null;
+          if (getPolicyResponseType != null && getPolicyResponseType.getGetPolicyResult() != null &&
+            getPolicyResponseType.getGetPolicyResult().getPolicy() != null &&
+            getPolicyResponseType.getGetPolicyResult().getPolicy().getDefaultVersionId() != null) {
+            defaultPolicyVersionId = getPolicyResponseType.getGetPolicyResult().getPolicy().getDefaultVersionId();
+          }
+          if (defaultPolicyVersionId == null) {
+            throw new ValidationErrorException("Unable to get default policy version id for managed policy " + newAction.info.getPhysicalResourceId());
+          }
+          // create new version
+          CreatePolicyVersionType createPolicyVersionType = MessageHelper.createMessage(CreatePolicyVersionType.class, newAction.info.getEffectiveUserId());
+          createPolicyVersionType.setPolicyArn(newAction.info.getPhysicalResourceId());
+          createPolicyVersionType.setPolicyDocument(newAction.properties.getPolicyDocument().toString());
+          createPolicyVersionType.setSetAsDefault(true);
+          AsyncRequests.sendSync(configuration, createPolicyVersionType);
+          // delete old version
+          DeletePolicyVersionType deletePolicyVersionType = MessageHelper.createMessage(DeletePolicyVersionType.class, newAction.info.getEffectiveUserId());
+          deletePolicyVersionType.setPolicyArn(newAction.info.getPhysicalResourceId());
+          deletePolicyVersionType.setVersionId(defaultPolicyVersionId);
+          AsyncRequests.sendSync(configuration, deletePolicyVersionType);
         }
         return newAction;
       }
