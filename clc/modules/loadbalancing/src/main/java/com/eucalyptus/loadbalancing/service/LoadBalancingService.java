@@ -33,6 +33,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -2053,7 +2054,9 @@ public class LoadBalancingService {
 
       lb = lbEntity.getCoreView();
       vpcId = lb.getVpcId();
-      CollectionUtils.putAll( lbEntity.getZones(), zoneToSubnetIdMap, name(), subnetId() );
+      CollectionUtils.putAll( lbEntity.getZones().stream()
+              .filter(az -> LoadBalancerZone.STATE.InService.equals(az.getState()))
+              .collect(Collectors.toList()), zoneToSubnetIdMap, name(), subnetId() );
     } catch ( final LoadBalancingException e ) {
       throw e;
     } catch ( final Exception ex ){
