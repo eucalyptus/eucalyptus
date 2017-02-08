@@ -1252,6 +1252,14 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                     LOGDEBUG("[%s] incoming (%s < %s) migration_state set to '%s'\n", instance->instanceId,
                              instance->migration_dst, instance->migration_src, migration_state_names[instance->migration_state]);
 
+                    if (!strcmp(nc->pEucaNet->sMode, NETMODE_VPCMIDO)) {
+                        bridge_instance_interfaces_remove(nc, instance);
+                    }
+                    if (!strcmp(nc->pEucaNet->sMode, NETMODE_EDGE)) {
+                        char iface[16];
+                        snprintf(iface, 16, "vn_%s", instance->instanceId);
+                        bridge_interface_set_hairpin(nc, instance, iface);
+                    } 
                 } else if ((old_state == BOOTING || old_state == PAUSED)
                            && (new_state == RUNNING || new_state == BLOCKED)) {
                     LOGINFO("[%s] completing incoming (%s < %s) migration...\n", instance->instanceId, instance->migration_dst, instance->migration_src);
