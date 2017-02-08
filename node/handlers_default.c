@@ -755,20 +755,20 @@ int find_and_start_instance(char *psInstanceId)
 
             if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_VPCMIDO)) {
                 bridge_instance_interfaces_remove(&nc_state, pInstance);
+            }
 
-                // Fix for EUCA-12608
-                if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_EDGE)) {
-                    char iface[IF_NAME_LEN];
-                    char *ishort = euca_truncate_interfaceid(pInstance->instanceId);
-                    if (ishort) {
-                        snprintf(iface, IF_NAME_LEN, "vn_%s", ishort);
-                    } else {
-                        LOGWARN("Failed to get short id from %s\n", pInstance->instanceId);
-                        snprintf(iface, IF_NAME_LEN, "vn_%s", pInstance->instanceId);
-                    }
-                    EUCA_FREE(ishort);
-                    bridge_interface_set_hairpin(&nc_state, pInstance, iface);
-                } 
+            // Fix for EUCA-12608
+            if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_EDGE)) {
+                char iface[IF_NAME_LEN];
+                char *ishort = euca_truncate_interfaceid(pInstance->instanceId);
+                if (ishort) {
+                    snprintf(iface, IF_NAME_LEN, "vn_%s", ishort);
+                } else {
+                    LOGWARN("Failed to get short id from %s\n", pInstance->instanceId);
+                    snprintf(iface, IF_NAME_LEN, "vn_%s", pInstance->instanceId);
+                }
+                EUCA_FREE(ishort);
+                bridge_interface_set_hairpin(&nc_state, pInstance, iface);
             }
         }
         unlock_hypervisor_conn();

@@ -413,21 +413,19 @@ static void *rebooting_thread(void *arg)
 
         if (!strcmp(nc->pEucaNet->sMode, NETMODE_VPCMIDO)) {
             bridge_instance_interfaces_remove(nc, instance);
-
+        }
             // Fix for EUCA-12608
-            if (!strcmp(nc->pEucaNet->sMode, NETMODE_EDGE)) {
-                char iface[IF_NAME_LEN];
-                char *ishort = euca_truncate_interfaceid(instance->instanceId);
-                if (ishort) {
-                    snprintf(iface, IF_NAME_LEN, "vn_%s", ishort);
-                } else {
-                    LOGWARN("Failed to get short id from %s\n", instance->instanceId);
-                    snprintf(iface, IF_NAME_LEN, "vn_%s", instance->instanceId);
-                }
-                EUCA_FREE(ishort);
-                bridge_interface_set_hairpin(nc, instance, iface);
-            } 
-
+        if (!strcmp(nc->pEucaNet->sMode, NETMODE_EDGE)) {
+            char iface[IF_NAME_LEN];
+            char *ishort = euca_truncate_interfaceid(instance->instanceId);
+            if (ishort) {
+                snprintf(iface, IF_NAME_LEN, "vn_%s", ishort);
+            } else {
+                LOGWARN("Failed to get short id from %s\n", instance->instanceId);
+                snprintf(iface, IF_NAME_LEN, "vn_%s", instance->instanceId);
+            }
+            EUCA_FREE(ishort);
+            bridge_interface_set_hairpin(nc, instance, iface);
         }
 
     }
