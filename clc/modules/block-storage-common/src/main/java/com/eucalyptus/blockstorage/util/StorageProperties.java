@@ -148,9 +148,9 @@ public class StorageProperties {
    */
   public static final Pattern PARSE_BLOCK_DEVICE = Pattern.compile("source.* dev='([^']*)'");
 
-  public static final ImmutableSet<String> DELTA_GENERATION_STATE_EXCLUSION = ImmutableSet.of(StorageProperties.Status.creating.toString(),
-      StorageProperties.Status.pending.toString(), StorageProperties.Status.failed.toString(), StorageProperties.Status.error.toString(),
-      StorageProperties.Status.deleting.toString(), StorageProperties.Status.deletedfromebs.toString(), StorageProperties.Status.deleted.toString());
+  public static final ImmutableSet<String> DELTA_GENERATION_STATE_EXCLUSION = ImmutableSet.of(StorageProperties.Status.failed.toString(), 
+      StorageProperties.Status.deleting.toString(), StorageProperties.Status.deletedfromebs.toString(), StorageProperties.Status.deleted.toString(),
+      StorageProperties.Status.error.toString());
 
   public static final ImmutableSet<String> DELTA_RESTORATION_STATE_EXCLUSION = ImmutableSet.of(StorageProperties.Status.failed.toString(),
       StorageProperties.Status.deleted.toString(), StorageProperties.Status.error.toString());
