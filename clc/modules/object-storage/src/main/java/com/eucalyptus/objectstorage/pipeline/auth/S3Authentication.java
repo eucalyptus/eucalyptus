@@ -20,9 +20,7 @@
 
 package com.eucalyptus.objectstorage.pipeline.auth;
 
-import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
@@ -31,7 +29,6 @@ import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.crypto.util.Timestamps.Type;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.exceptions.s3.*;
 import com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication.V4AuthComponent;
 import com.eucalyptus.objectstorage.pipeline.handlers.AwsChunkStream.AwsChunk;
@@ -41,8 +38,8 @@ import com.google.common.base.Strings;
 import javaslang.control.Try.CheckedFunction;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.joda.time.DateTime;
 
-import javax.security.auth.login.LoginException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.*;
@@ -69,7 +66,8 @@ public final class S3Authentication {
         String accessKeyId = signatureElements[0];
         String signature = signatureElements[1];
         String dateStr = getDateFromHeaders(request);
-        parseDate(dateStr);
+        Date date = parseDate(dateStr);
+        assertDateNotSkewed(date);
         if (request.getHeader(SecurityHeader.X_Amz_Date.header()) != null)
           dateStr = "";
         String canonicalizedAmzHeaders = S3V2Authentication.buildCanonicalHeaders(request, false);
@@ -95,7 +93,7 @@ public final class S3Authentication {
             .AUTHORIZATION));
         String dateStr = getDateFromHeaders(request);
         Date date = parseDate(dateStr);
-        assertNotExpired(date);
+        assertDateNotSkewed(date);
         SignatureCredential credential = S3V4Authentication.getAndVerifyCredential(date, authComponents.get(V4AuthComponent.Credential));
         String signedHeaders = authComponents.get(V4AuthComponent.SignedHeaders);
         String signature = authComponents.get(V4AuthComponent.Signature);
@@ -194,7 +192,7 @@ public final class S3Authentication {
   }
 
   static ObjectStorageWrappedCredentials credentialsFor(CheckedFunction<Boolean, ObjectStorageWrappedCredentials> credsFn,
-                                                                boolean excludePath) throws S3Exception {
+                                                        boolean excludePath) throws S3Exception {
     try {
       return credsFn.apply(excludePath);
     } catch (Throwable t) {
@@ -232,9 +230,13 @@ public final class S3Authentication {
     return date;
   }
 
-  private static void assertNotExpired(final Date date) throws AccessDeniedException {
-    if (Math.abs(System.currentTimeMillis() - date.getTime()) > ObjectStorageProperties.EXPIRATION_LIMIT)
-      throw new AccessDeniedException(null, "Cannot process request. Expired.");
+  static void assertDateNotSkewed(final Date date) throws RequestTimeTooSkewedException {
+    DateTime currentTime = DateTime.now();
+    DateTime dt = new DateTime(date);
+    if (dt.isBefore(currentTime.minusMillis((int) ObjectStorageProperties.EXPIRATION_LIMIT)))
+      throw new RequestTimeTooSkewedException();
+    if (dt.isAfter(currentTime.plusMillis((int) ObjectStorageProperties.EXPIRATION_LIMIT)))
+      throw new RequestTimeTooSkewedException();
   }
 
   private static String getSignatureFromParameters(Map<String, String> parameters) throws InvalidSecurityException {
