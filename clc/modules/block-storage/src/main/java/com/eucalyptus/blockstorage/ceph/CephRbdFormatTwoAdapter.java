@@ -497,9 +497,9 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
           }
 
           if (snapName != null && !snapName.isEmpty()) {
-            LOG.debug("Creating snapshot=" + snapName + ", image=" + poolName + ", pool=" + arg0.getPool());
+            LOG.debug("Creating snapshot=" + snapName + ", image=" + imageName + ", pool=" + arg0.getPool());
             image.snapCreate(snapName);
-            LOG.debug("Protecting snapshot=" + snapName + ", image=" + poolName + ", pool=" + arg0.getPool());
+            LOG.debug("Protecting snapshot=" + snapName + ", image=" + imageName + ", pool=" + arg0.getPool());
             image.snapProtect(snapName);
 
             return arg0.getPool() + CephRbdInfo.POOL_IMAGE_DELIMITER + imageName + CephRbdInfo.IMAGE_SNAPSHOT_DELIMITER + snapName;

@@ -210,8 +210,16 @@ public class SnapshotDeleter extends CheckerTask {
                 tr.commit();
 
                 if (nextSnaps != null && !nextSnaps.isEmpty()) {
-                  // Found deltas that might depend on this snapshot for reconstruction, don't delete
-                  LOG.debug("Snapshot " + snapshotId + " is required for restoring other snapshots in the system. Cannot delete from OSG");
+                  // Found deltas that might depend on this snapshot for reconstruction, don't delete.
+                  // Normally there will be only 1 next snap, optimize for that case.
+                  String nextSnapIds = nextSnaps.get(0).getSnapshotId();
+                  if (nextSnaps.size() > 1) {
+                    for (int nextSnapIdNum = 1; nextSnapIdNum < nextSnaps.size(); nextSnapIdNum++) {
+                      nextSnapIds = nextSnapIds + ", " + nextSnaps.get(nextSnapIdNum).getSnapshotId();
+                    }
+                  }
+                  LOG.debug("Snapshot " + snapshotId + " is required for restoring other snapshots in the system." +
+                      " Cannot delete from OSG. Direct children of this snapshot: " + nextSnapIds);
                 } else {
                   LOG.debug("Snapshot " + snapshotId + " is not required for restoring other snapshots in the system");
                   deleteSnapFromOSG(snap); // delete snapshot
@@ -251,9 +259,11 @@ public class SnapshotDeleter extends CheckerTask {
 
     if (StringUtils.isNotBlank(snap.getSnapshotLocation())) {
       // snapshot removal from s3 needs evaluation
+      LOG.debug("Setting snapshot " + snapshotId + " to 'deletedfromebs' state from EBS cleanup");
       markSnapDeletedFromEBS(snapshotId);
     } else {
       // no evidence of snapshot upload to OSG, mark the snapshot as deleted
+      LOG.debug("Setting snapshot " + snapshotId + " to 'deleted' state from EBS cleanup");
       markSnapDeleted(snapshotId);
     }
   }
@@ -271,6 +281,7 @@ public class SnapshotDeleter extends CheckerTask {
         snapshotTransfer.setKeyName(names[1]);
         snapshotTransfer.delete();
 
+        LOG.debug("Setting snapshot " + snap.getSnapshotId() + " to 'deleted' state from OSG cleanup");
         markSnapDeleted(snap.getSnapshotId());
       } catch (Exception e) {
         LOG.warn("Failed to delete snapshot " + snap.getSnapshotId() + " from ObjectStorageGateway", e);

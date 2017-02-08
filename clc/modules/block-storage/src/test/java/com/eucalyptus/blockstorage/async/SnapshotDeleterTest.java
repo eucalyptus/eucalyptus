@@ -153,7 +153,7 @@ public class SnapshotDeleterTest {
     }
 
     assertTrue("expected to have a result set querying the eucalyptus_storage persistence context", remaining != null);
-    assertTrue("expected all 4 SnapshotInfos to still exist but found ", remaining.size() == 4);
+    assertTrue("expected all " + remaining.size() + " SnapshotInfos to still exist but found ", remaining.size() == 4);
 
     try (TransactionResource tran = Entities.transactionFor(SnapshotInfo.class)) {
       SnapshotInfo example = new SnapshotInfo();
@@ -163,7 +163,7 @@ public class SnapshotDeleterTest {
     }
 
     assertTrue("expected to have a result set querying the eucalyptus_storage persistence context for deleted snapshotinfos", remaining != null);
-    assertTrue("expected two SnapshotInfos with deleted status to exist but found " + remaining.size(), remaining.size() == 3);
+    assertTrue("expected " + remaining.size() + " SnapshotInfos with deleted status to exist but found " + remaining.size(), remaining.size() == 3);
 
     // Test ExpiredSnapshotCleaner
     ExpiredSnapshotCleaner esc = new ExpiredSnapshotCleaner();

@@ -1006,6 +1006,7 @@ public class BlockStorageController implements BlockStorageService {
       SnapshotInfo snapshotInfo = Entities.uniqueResult(new SnapshotInfo(snapshotId));
       String status = snapshotInfo.getStatus();
       if (status.equals(StorageProperties.Status.available.toString())) {
+        LOG.debug("Setting snapshot " + snapshotId + " to 'deleting' state");
         snapshotInfo.setStatus(StorageProperties.Status.deleting.toString());
         ThruputMetrics.startOperation(MonitoredAction.DELETE_SNAPSHOT, snapshotId, startTime);
       } else if (status.equals(StorageProperties.Status.deleting.toString()) || status.equals(StorageProperties.Status.deleted.toString())
