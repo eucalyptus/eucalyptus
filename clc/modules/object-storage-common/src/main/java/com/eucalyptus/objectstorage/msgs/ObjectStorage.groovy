@@ -1145,7 +1145,7 @@ public class InitiateMultipartUploadResponseType extends ObjectStorageDataRespon
 @AdminOverrideAllowed
 @RequiresPermission(standard = S3PolicySpec.S3_PUTOBJECT)
 @ResourceType(S3PolicySpec.S3_RESOURCE_OBJECT)
-@RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.WRITE], ownerOf = [ObjectStorageProperties.Resource.object])
+@RequiresACLPermission(object = [], bucket = [], ownerOf = [ObjectStorageProperties.Resource.object])
 //Account must have write access to the bucket and must be the initiator of mpu
 public class UploadPartType extends ObjectStorageDataRequestType {
   String contentLength;
@@ -1163,7 +1163,7 @@ public class UploadPartResponseType extends ObjectStorageDataResponseType {
 @AdminOverrideAllowed
 @RequiresPermission(standard = S3PolicySpec.S3_PUTOBJECT)
 @ResourceType(S3PolicySpec.S3_RESOURCE_OBJECT)
-@RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.WRITE], ownerOf = [ObjectStorageProperties.Resource.object])
+@RequiresACLPermission(object = [], bucket = [], ownerOf = [ObjectStorageProperties.Resource.object])
 //Account must have write access to the bucket and must be the initiator of mpu
 public class CompleteMultipartUploadType extends ObjectStorageDataRequestType {
   ArrayList<Part> parts = new ArrayList<Part>();
@@ -1180,7 +1180,7 @@ public class CompleteMultipartUploadResponseType extends ObjectStorageDataRespon
 @AdminOverrideAllowed
 @RequiresPermission(standard = S3PolicySpec.S3_ABORTMULTIPARTUPLOAD)
 @ResourceType(S3PolicySpec.S3_RESOURCE_OBJECT)
-@RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.WRITE], ownerOf = [ObjectStorageProperties.Resource.bucket, ObjectStorageProperties.Resource.object])
+@RequiresACLPermission(object = [], bucket = [], ownerOf = [ObjectStorageProperties.Resource.bucket, ObjectStorageProperties.Resource.object])
 //Account must have write access to the bucket and must be either the bucket owning account or the initiator of mpu
 public class AbortMultipartUploadType extends ObjectStorageDataRequestType {
   String uploadId;
@@ -1192,7 +1192,7 @@ public class AbortMultipartUploadResponseType extends ObjectStorageDataResponseT
 @AdminOverrideAllowed
 @RequiresPermission(standard = S3PolicySpec.S3_LISTMULTIPARTUPLOADPARTS)
 @ResourceType(S3PolicySpec.S3_RESOURCE_OBJECT)
-@RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.READ], ownerOf = [ObjectStorageProperties.Resource.bucket, ObjectStorageProperties.Resource.object])
+@RequiresACLPermission(object = [], bucket = [], ownerOf = [ObjectStorageProperties.Resource.bucket, ObjectStorageProperties.Resource.object])
 //Account must have read access to the bucket and must be either the bucket owning account or the initiator of mpu
 public class ListPartsType extends ObjectStorageDataRequestType {
   String uploadId;
