@@ -43,6 +43,8 @@ import com.google.common.collect.ImmutableList;
 import javaslang.control.Try.CheckedFunction;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.joda.time.DateTime;
+
 
 import javax.annotation.Nonnull;
 import javax.security.auth.Subject;
@@ -72,7 +74,8 @@ public final class S3Authentication {
         String accessKeyId = signatureElements[0];
         String signature = signatureElements[1];
         String dateStr = getDateFromHeaders(request);
-        parseDate(dateStr);
+        Date date = parseDate(dateStr);
+        assertDateNotSkewed(date);
         if (request.getHeader(SecurityHeader.X_Amz_Date.header()) != null)
           dateStr = "";
         String canonicalizedAmzHeaders = S3V2Authentication.buildCanonicalHeaders(request, false);
@@ -98,7 +101,7 @@ public final class S3Authentication {
             .AUTHORIZATION));
         String dateStr = getDateFromHeaders(request);
         Date date = parseDate(dateStr);
-        assertNotExpired(date);
+        assertDateNotSkewed(date);
         SignatureCredential credential = S3V4Authentication.getAndVerifyCredential(date, authComponents.get(V4AuthComponent.Credential));
         String signedHeaders = authComponents.get(V4AuthComponent.SignedHeaders);
         String signature = authComponents.get(V4AuthComponent.Signature);
@@ -207,7 +210,7 @@ public final class S3Authentication {
   }
 
   static ObjectStorageWrappedCredentials credentialsFor(CheckedFunction<Boolean, ObjectStorageWrappedCredentials> credsFn,
-                                                                boolean excludePath) throws S3Exception {
+                                                        boolean excludePath) throws S3Exception {
     try {
       return credsFn.apply(excludePath);
     } catch (Throwable t) {
@@ -245,9 +248,13 @@ public final class S3Authentication {
     return date;
   }
 
-  private static void assertNotExpired(final Date date) throws AccessDeniedException {
-    if (Math.abs(System.currentTimeMillis() - date.getTime()) > ObjectStorageProperties.EXPIRATION_LIMIT)
-      throw new AccessDeniedException(null, "Cannot process request. Expired.");
+  static void assertDateNotSkewed(final Date date) throws RequestTimeTooSkewedException {
+    DateTime currentTime = DateTime.now();
+    DateTime dt = new DateTime(date);
+    if (dt.isBefore(currentTime.minusMillis((int) ObjectStorageProperties.EXPIRATION_LIMIT)))
+      throw new RequestTimeTooSkewedException();
+    if (dt.isAfter(currentTime.plusMillis((int) ObjectStorageProperties.EXPIRATION_LIMIT)))
+      throw new RequestTimeTooSkewedException();
   }
 
   private static String getSignatureFromParameters(Map<String, String> parameters) throws InvalidSecurityException {
