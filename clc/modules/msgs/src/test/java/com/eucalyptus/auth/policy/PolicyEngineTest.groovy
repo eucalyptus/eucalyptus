@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.auth.policy
 
+import com.eucalyptus.auth.Accounts
 import com.eucalyptus.auth.AuthException
 import com.eucalyptus.auth.api.PolicyEngine
 import com.eucalyptus.auth.policy.ern.Ern
@@ -27,23 +28,21 @@ import com.eucalyptus.auth.policy.ern.ResourceNameSupport
 import com.eucalyptus.auth.policy.ern.ServiceErnBuilder
 import com.eucalyptus.auth.principal.PolicyScope
 import com.eucalyptus.auth.principal.PolicyVersion
+import com.eucalyptus.auth.principal.Principal
+import com.eucalyptus.auth.principal.TypedPrincipal
 import com.eucalyptus.crypto.Digest
 import com.eucalyptus.crypto.util.B64
 import com.eucalyptus.util.Strings
 import com.google.common.base.Suppliers
 import com.google.common.base.Supplier
+import com.google.common.collect.ImmutableSet
 import net.sf.json.JSONException
-import org.junit.Before
 import org.junit.BeforeClass
 
 import java.nio.charset.StandardCharsets
 
 import static com.eucalyptus.auth.api.PolicyEngine.AuthorizationMatch.All
 
-import com.eucalyptus.auth.principal.Authorization
-import com.eucalyptus.auth.principal.Condition
-import com.eucalyptus.auth.principal.Principal
-import groovy.transform.TupleConstructor
 import groovy.transform.TypeChecked
 import org.junit.Test
 import com.eucalyptus.auth.principal.User
@@ -292,6 +291,391 @@ class PolicyEngineTest {
     """.stripIndent(), "iam:user", "iam:ListUsers", "123456789012", "/admin" )
   }
 
+  /**
+   * Verify that a resource policy can grant access to all users (wildcard principal)
+   */
+  @Test
+  void testResourcePolicyWildcardAuth( ) {
+    evaluateAuthorization(
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "foo:*",
+              "Resource": "*"
+            } ]
+          }
+        """.stripIndent(),
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "ec2:*",
+              "Principal": "*"
+            } ]
+          }
+        """.stripIndent(),
+        '111111111111', false, "ec2:image", "ec2:DescribeImages", "111111111111", "emi-00000000" )
+  }
+
+  /**
+   * Verify that a resource policy by itself is sufficient to grant access to users (user arn) in the same account
+   */
+  @Test
+  void testResourcePolicyUserArnOnlyAuth( ) {
+    evaluateAuthorization(
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "foo:*",
+              "Resource": "*"
+            } ]
+          }
+        """.stripIndent(),
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "ec2:DescribeImages",
+              "Principal": { "AWS": "arn:aws:iam::111111111111:user/test" }
+            } ]
+          }
+        """.stripIndent(),
+        '111111111111', false, "ec2:image", "ec2:DescribeImages", "111111111111", "emi-00000000" )
+  }
+
+  /**
+   * Verify that a resource policy by itself is not sufficient to grant access to users (account arn) in the same account
+   */
+  @Test( expected = AuthException.class )
+  void testResourcePolicyAccountNumberOnlyAuthDenied( ) {
+    evaluateAuthorization(
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "foo:*",
+              "Resource": "*"
+            } ]
+          }
+        """.stripIndent(),
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "ec2:DescribeImages",
+              "Principal": { "AWS": "111111111111" }
+            } ]
+          }
+        """.stripIndent(),
+        '111111111111', false, "ec2:image", "ec2:DescribeImages", "111111111111", "emi-00000000" )
+  }
+
+  /**
+   * Verify that a resource policy does not authorize when principal does not match
+   */
+  @Test( expected = AuthException.class )
+  void testResourcePolicyOnlyPrincipalMismatchAuthDenied( ) {
+    evaluateAuthorization(
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "foo:*",
+              "Resource": "*"
+            } ]
+          }
+        """.stripIndent(),
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "ec2:DescribeImages",
+              "Principal": { "AWS": "arn:aws:iam::111111111111:user/testsomeotheruser" }
+            } ]
+          }
+        """.stripIndent(),
+        '111111111111', false, "ec2:image", "ec2:DescribeImages", "111111111111", "emi-00000000" )
+  }
+
+  /**
+   * Verify that a resource policy by itself is not sufficient to grant access to users in another account
+   */
+  @Test( expected = AuthException.class )
+  void testResourcePolicyOnlyAuthDenied( ) {
+    evaluateAuthorization(
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "foo:*",
+              "Resource": "*"
+            } ]
+          }
+        """.stripIndent(),
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "ec2:DescribeImages",
+              "Principal": { "AWS": "arn:aws:iam::111111111111:user/test" }
+            } ]
+          }
+        """.stripIndent(),
+        '010101010101', false, "ec2:image", "ec2:DescribeImages", "010101010101", "emi-00000000" )
+  }
+
+  /**
+   * Verify that a resource policy and account iam policy (user principal) is sufficient to grant access to users in another account
+   */
+  @Test
+  void testResourcePolicyAndUserPolicyAuth( ) {
+    evaluateAuthorization(
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "ec2:DescribeImages",
+              "Resource": "*"
+            } ]
+          }
+        """.stripIndent(),
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "ec2:DescribeImages",
+              "Principal": { "AWS": "arn:aws:iam::111111111111:user/test" }
+            } ]
+          }
+        """.stripIndent(),
+        '010101010101', false, "ec2:image", "ec2:DescribeImages", "010101010101", "emi-00000000" )
+  }
+
+  /**
+   * Verify that a resource policy and account iam policy (account principal arn) is sufficient to grant access to users in another account
+   */
+  @Test
+  void testResourcePolicyAndAccountArnPolicyAuth( ) {
+    evaluateAuthorization(
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "ec2:DescribeImages",
+              "Resource": "*"
+            } ]
+          }
+        """.stripIndent(),
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "ec2:DescribeImages",
+              "Principal": { "AWS": "arn:aws:iam::111111111111:root" }
+            } ]
+          }
+        """.stripIndent(),
+        '010101010101', false, "ec2:image", "ec2:DescribeImages", "010101010101", "emi-00000000" )
+  }
+
+  /**
+   * Verify that a resource policy and account iam policy (account principal arn) is sufficient to grant access to users in another account
+   */
+  @Test
+  void testResourcePolicyAndAccountNumberPolicyAuth( ) {
+    evaluateAuthorization(
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "ec2:DescribeImages",
+              "Resource": "*"
+            } ]
+          }
+        """.stripIndent(),
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "ec2:DescribeImages",
+              "Principal": { "AWS": "111111111111" }
+            } ]
+          }
+        """.stripIndent(),
+        '010101010101', false, "ec2:image", "ec2:DescribeImages", "010101010101", "emi-00000000" )
+  }
+
+  /**
+   * Verify that a user policy is sufficient to grant access when a resource policy is present
+   */
+  @Test
+  void testResourcePolicyDefaultAndUserPolicyAuth( ) {
+    evaluateAuthorization(
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "ec2:DescribeImages",
+              "Resource": "*"
+            } ]
+          }
+        """.stripIndent(),
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "s3:*",
+              "Principal": { "AWS": "111111111111" }
+            } ]
+          }
+        """.stripIndent(),
+        '111111111111', false, "ec2:image", "ec2:DescribeImages", "111111111111", "emi-00000000" )
+  }
+
+  /**
+   * Verify that a user policy does not grant access when denied by a resource policy (user principal)
+   */
+  @Test( expected = AuthException.class )
+  void testResourcePolicyUserArnDenyAndUserPolicyAuthDenied( ) {
+    evaluateAuthorization(
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "ec2:DescribeImages",
+              "Resource": "*"
+            } ]
+          }
+        """.stripIndent(),
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Deny",
+              "Action": "ec2:*",
+              "Principal": { "AWS": "arn:aws:iam::111111111111:user/test" }
+            } ]
+          }
+        """.stripIndent(),
+        '111111111111', false, "ec2:image", "ec2:DescribeImages", "111111111111", "emi-00000000" )
+  }
+
+  /**
+   * Verify that a user policy does not grant access when denied by a resource policy (account principal)
+   */
+  @Test( expected = AuthException.class )
+  void testResourcePolicyAccountNumberDenyAndUserPolicyAuthDenied( ) {
+    evaluateAuthorization(
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "ec2:DescribeImages",
+              "Resource": "*"
+            } ]
+          }
+        """.stripIndent(),
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Deny",
+              "Action": "ec2:*",
+              "Principal": { "AWS": "111111111111" }
+            } ]
+          }
+        """.stripIndent(),
+        '111111111111', false, "ec2:image", "ec2:DescribeImages", "111111111111", "emi-00000000" )
+  }
+
+  /**
+   * Verify access is denied when there is a resource policy but also an external auth mechanism such as an s3 acl which does not permit
+   */
+  @Test( expected = AuthException.class )
+  void testExternalResourcePermissionDenied( ) {
+    evaluateAuthorization(
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "ec2:DescribeImages",
+              "Resource": "*"
+            } ]
+          }
+        """.stripIndent(),
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "s3:*",
+              "Principal": { "AWS": "111111111111" }
+            } ]
+          }
+        """.stripIndent(),
+        '010101010101', false, "ec2:image", "ec2:DescribeImages", "010101010101", "emi-00000000" )
+  }
+
+  /**
+   * Verify access is allowed when there is a resource policy but also an external auth mechanism such as an s3 acl
+   */
+  @Test
+  void testExternalResourcePermission( ) {
+    evaluateAuthorization(
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "ec2:DescribeImages",
+              "Resource": "*"
+            } ]
+          }
+        """.stripIndent(),
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "s3:*",
+              "Principal": { "AWS": "111111111111" }
+            } ]
+          }
+        """.stripIndent(),
+        '010101010101', true, "ec2:image", "ec2:DescribeImages", "010101010101", "emi-00000000" )
+  }
+
+  /**
+   * Verify that a resource policy with ownership other than the resource or caller cannot authorize
+   */
+  @Test( expected = AuthException.class )
+  void testResourcePolicyDistinctOwnerAuthDenied( ) {
+    evaluateAuthorization(
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "ec2:DescribeImages",
+              "Resource": "*"
+            } ]
+          }
+        """.stripIndent(),
+        """\
+          {
+            "Statement":[ {
+              "Effect": "Allow",
+              "Action": "ec2:DescribeImages",
+              "Principal": { "AWS": "111111111111" }
+            } ]
+          }
+        """.stripIndent(),
+        '000000111111', false, "ec2:image", "ec2:DescribeImages", "010101010101", "emi-00000000" )
+  }
+
+  /**
+   * Verify that a resource policy with ownership other than the resource or caller can deny access
+   */
+  @Test
+  void testResourcePolicyDistinctOwnerAuthDeny( ) {
+  }
+
   private void evaluateAuthorization( String policy,
                                       String resourceType,
                                       String requestAction,
@@ -310,8 +694,41 @@ class PolicyEngineTest {
     engine.evaluateAuthorization( context, All, resourceAccountNumber, resourceName, [:] )
   }
 
+  private void evaluateAuthorization( String policy,
+                                      String resourcePolicy,
+                                      String resourcePolicyAccountNumber,
+                                      boolean requestAccountDefaultAllow,
+                                      String resourceType,
+                                      String requestAction,
+                                      String resourceAccountNumber,
+                                      String resourceName ) {
+    PolicyEngine engine = new PolicyEngineImpl( accountResolver( ), Suppliers.ofInstance( Boolean.FALSE ), { 'region-1' } as Supplier<String> )
+    User user = user( )
+    PolicyEngineImpl.AuthEvaluationContextImpl context = new PolicyEngineImpl.AuthEvaluationContextImpl( resourceType, requestAction, user, [:] as Map<String,String>, [ new PolicyVersion(){
+      @Override String getPolicyVersionId( ) { '1234567890' }
+      @Override String getPolicyName( ) { 'test' }
+      @Override PolicyScope getPolicyScope() { PolicyScope.User }
+      @Override String getPolicy( ) { policy }
+      @Override String getPolicyHash() { B64.standard.encString( Digest.SHA256.digestBinary( getPolicy( ).getBytes( StandardCharsets.UTF_8 ) ) ) }
+    } ] as List<PolicyVersion>,
+        ImmutableSet.of(
+            TypedPrincipal.of( Principal.PrincipalType.AWS, Accounts.getUserArn( user ) ),
+            TypedPrincipal.of( Principal.PrincipalType.AWS, Accounts.getAccountArn( user.getAccountNumber( ) ) )
+        )
+    ){
+      @Override boolean isSystemUser() { true }
+    }
+    PolicyVersion resourcePolicyVersion = new PolicyVersion(){
+      @Override String getPolicyVersionId( ) { 'res1234567890' }
+      @Override String getPolicyName( ) { 'resource policy' }
+      @Override PolicyScope getPolicyScope() { PolicyScope.Resource }
+      @Override String getPolicy( ) { resourcePolicy }
+      @Override String getPolicyHash() { B64.standard.encString( Digest.SHA256.digestBinary( getPolicy( ).getBytes( StandardCharsets.UTF_8 ) ) ) }
+    }
+    engine.evaluateAuthorization( context, requestAccountDefaultAllow, resourcePolicyVersion, resourcePolicyAccountNumber, resourceAccountNumber, resourceName, [:] )
+  }
   private User user() {
-    new TestUser( name: "test", accountNumber: "111111111111" ).activate( )
+    new TestUser( name: 'test', accountNumber: '111111111111', path: '/' ).activate( )
   }
 
   private Function<String, String> accountResolver( ) {

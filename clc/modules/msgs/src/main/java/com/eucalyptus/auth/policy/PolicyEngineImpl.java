@@ -277,7 +277,7 @@ public class PolicyEngineImpl implements PolicyEngine {
         // Check resource authorizations, ignore authorizations for own account
         final Decision resourceDecision = resourcePolicy == null ?
                 Decision.DEFAULT :
-                processAuthorizations( AuthEvaluationContextImpl.authorizations( resourcePolicy, true ), AuthorizationMatch.All, action, resourceAccountNumber, evaluationContext.getResourceType( ), resourceName, evaluationContext.getPrincipals( excludeAccountPrincipal( resourceAccountNumber ) ), keyEval, contractEval );
+                processAuthorizations( AuthEvaluationContextImpl.authorizations( resourcePolicy, true ), AuthorizationMatch.All, action, resourceAccountNumber, evaluationContext.getResourceType( ), resourceName, evaluationContext.getPrincipals( ), isAccountPrincipal( resourceAccountNumber ), keyEval, contractEval );
         // Denied by explicit or default deny
         if ( ( resourceDecision == Decision.DENY ) ||
             ( !requestAccountDefaultAllow && !sameAccount && sameResourceAccount && resourceDecision != Decision.ALLOW ) ) {
@@ -392,6 +392,7 @@ public class PolicyEngineImpl implements PolicyEngine {
         resourceType,
         resourceName,
         evaluationContext.getPrincipals( ),
+        Predicates.alwaysFalse( ),
         keyEval,
         contractEval );
     if ( decision == Decision.DENY || decision == Decision.DEFAULT ) {
@@ -418,18 +419,24 @@ public class PolicyEngineImpl implements PolicyEngine {
                                           @Nullable final String resourceType,
                                           @Nullable final String resource,
                                           @Nullable final Set<TypedPrincipal> principals,
+                                          @Nullable final Predicate<TypedPrincipal> denyOnlyPrincipal,
                                           @Nonnull  final CachedKeyEvaluator keyEval,
                                           @Nonnull  final ContractKeyEvaluator contractEval ) throws AuthException {
     Decision result = Decision.DEFAULT;
     final String region = PolicyEngineImpl.this.region.get( );
     for ( Authorization auth : authorizations ) {
+      boolean denyOnly = false;
       if ( auth.getEffect( ) == EffectType.Limit ) continue;
 
       if ( !matchActions( auth, action ) ) {
         continue;
       }
-      if ( !matchPrincipal( auth.getPrincipal(), principals ) ) {
-        continue;
+      if ( !matchPrincipal( auth.getPrincipal(), filter( principals, Predicates.not( denyOnlyPrincipal ) ) ) ) {
+        if ( !matchPrincipal( auth.getPrincipal(), filter( principals, denyOnlyPrincipal ) ) ) {
+          continue;
+        } else {
+          denyOnly = true;
+        }
       }
       if ( authorizationMatch == AuthorizationMatch.Unconditional && auth.getEffect( ) == EffectType.Allow ) {
         return Decision.ALLOW; // Cannot deny reliably with unconditional matching
@@ -443,7 +450,7 @@ public class PolicyEngineImpl implements PolicyEngine {
       if ( auth.getEffect( ) == EffectType.Deny ) {
         // Explicit deny
         return Decision.DENY;
-      } else {
+      } else if ( !denyOnly ) {
         result = Decision.ALLOW;
       }
     }
@@ -532,6 +539,13 @@ public class PolicyEngineImpl implements PolicyEngine {
     }
 
     return result;
+  }
+
+  private <T> Set<T> filter( final Iterable<T> iterable, final Predicate<? super T> matching ) {
+    if ( iterable == null ) {
+      return null;
+    }
+    return ImmutableSet.copyOf( Iterables.filter( iterable, matching ) );
   }
 
   private String resolveAccount( final String accountNumberOrAlias ) {
@@ -650,12 +664,12 @@ public class PolicyEngineImpl implements PolicyEngine {
   }
 
   @SuppressWarnings( "Guava" )
-  private Predicate<TypedPrincipal> excludeAccountPrincipal( final String accountNumber ) throws AuthException {
+  private Predicate<TypedPrincipal> isAccountPrincipal( final String accountNumber ) throws AuthException {
     if ( accountNumber == null ) {
-      return Predicates.alwaysTrue( );
+      return Predicates.alwaysFalse( );
     } else {
       final TypedPrincipal match = TypedPrincipal.of( Principal.PrincipalType.AWS, Accounts.getAccountArn( accountNumber ) );
-      return Predicates.not( Predicates.equalTo( match ) );
+      return Predicates.equalTo( match );
     }
   }
 
