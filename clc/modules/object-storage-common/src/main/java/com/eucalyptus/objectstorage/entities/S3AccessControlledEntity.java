@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.Nonnull;
 import javax.persistence.Column;
 import javax.persistence.Lob;
 import javax.persistence.MappedSuperclass;
@@ -40,7 +41,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Type;
 
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.entities.AbstractStatefulStacklessPersistent;
 import com.eucalyptus.objectstorage.util.AclUtils;
@@ -344,40 +344,35 @@ public abstract class S3AccessControlledEntity<STATE extends Enum<STATE>> extend
     INSTANCE;
 
     /**
-     * Returns a valid map of canonicalid -> grant. Returns null if an error occurred.
+     * Returns a valid map of canonicalid -> grant.
+     *
+     * @return The canonicalid -> grant map
+     * @throws RuntimeException if an error occurred.
      */
+    @Nonnull
     @Override
-    public Map<String, Integer> apply(AccessControlPolicy srcPolicy) {
+    public Map<String, Integer> apply( final AccessControlPolicy srcPolicy ) {
       if (srcPolicy == null) {
         throw new RuntimeException("Null source policy. Cannot map");
       }
 
-      Map<String, Integer> aclMap = AccessControlListToMap.INSTANCE.apply(srcPolicy.getAccessControlList());
-      if (aclMap == null) {
-        // shouldn't happen.
+      final Map<String, Integer> aclMap = AccessControlListToMap.INSTANCE.apply( srcPolicy.getAccessControlList( ) );
+      if ( aclMap == null ) {
         throw new RuntimeException("Null acl map. Cannot proceed with policy generation");
       }
 
-      // Add owner
-      String ownerCanonicalId = srcPolicy.getOwner().getID();
-      if (ownerCanonicalId == null) {
-        // Owner is required.
-        throw new RuntimeException("Invalid ACP: OwnerCanonicalId required.");
-      }
-
       // Check for valid owner
-      try {
-        AclUtils.lookupPrincipalByCanonicalId(ownerCanonicalId);
-      } catch (Exception e) {
-        // Invalid owner
-        LOG.warn("Got invalid owner in AccessControlPolicy during mapping to DB: " + ownerCanonicalId);
-        throw new RuntimeException("Could not find account by canonicalId " + ownerCanonicalId, e);
+      final String ownerCanonicalId = srcPolicy.getOwner().getID();
+      if ( ownerCanonicalId == null ) {
+        throw new RuntimeException("Invalid ACP: OwnerCanonicalId required.");
+      } else {
+        try {
+          AclUtils.lookupPrincipalByCanonicalId(ownerCanonicalId);
+        } catch ( Exception e ) {
+          LOG.warn("Got invalid owner in AccessControlPolicy during mapping to DB: " + ownerCanonicalId);
+          throw new RuntimeException("Could not find account by canonicalId " + ownerCanonicalId, e);
+        }
       }
-
-      // Owner always has full control
-      aclMap.remove(ownerCanonicalId); // remove any previous entry, only one, FULL_CONTROL even if policy was redundant
-      Integer ownerGrant = BitmapGrant.translateToBitmap(ObjectStorageProperties.Permission.FULL_CONTROL);
-      aclMap.put(ownerCanonicalId, ownerGrant);
 
       return aclMap;
     }

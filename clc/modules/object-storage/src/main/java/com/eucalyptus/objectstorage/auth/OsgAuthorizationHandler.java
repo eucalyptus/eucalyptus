@@ -232,13 +232,13 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
      * Bucket or object owner only? It is expected that ownerOnly flag can be used solely or in combination with ACL checks. If owner checks are
      * required, evaluate them first before evaluating the ACLs
      */
+    Boolean isRequestByOwner = false;
     if ( allowOwnerOnly ) { // owner checks are in effect
       if (requiredOwnerOf == null || requiredOwnerOf.length == 0) {
         LOG.error("Owner only flag does not include resource (bucket, object) that ownership checks should be applied to");
         return false;
       }
 
-      Boolean isRequestByOwner = false;
       for (ObjectStorageProperties.Resource resource : requiredOwnerOf) {
         if (ObjectStorageProperties.Resource.bucket.equals(resource)) {
           isRequestByOwner = isRequestByOwner || bucketOwnerAccountNumber.equals(requestAccountNumber);
@@ -254,9 +254,10 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
     } else {
       // owner check does not apply
     }
-    final boolean requestAccountIsObjectAccount = // so request account iam policy is sufficient to grant access
-        S3PolicySpec.S3_RESOURCE_OBJECT.equals( resourceType ) &&
-            resourceOwnerAccountNumber.equals( requestAccountNumber );
+    final boolean requestAccountIsResourceAccount = // so request account iam policy is sufficient to grant access
+        isRequestByOwner ||
+            ( (S3PolicySpec.S3_RESOURCE_OBJECT.equals( resourceType ) || S3PolicySpec.S3_RESOURCE_BUCKET.equals( resourceType )) &&
+                resourceOwnerAccountNumber.equals( requestAccountNumber ) );
     final boolean bucketAccountIsObjectAccount = // so bucket policy is sufficient to grant access
         S3PolicySpec.S3_RESOURCE_OBJECT.equals( resourceType ) &&
         resourceOwnerAccountNumber.equals( bucketOwnerAccountNumber );
@@ -287,13 +288,13 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
         }
       }
     } else { // No ACLs, ownership would have been used to determine privilege
-      aclAllow = allowOwnerOnly;
+      aclAllow = isRequestByOwner;
     }
 
     final Boolean iamAllow = iamPermissionsAllow(aclAllow, authContext, requiredActions, policyResourceInfo, bucketPolicy, resourceType, resourceId, resourceAllocationSize);
 
     // Must have both acl and iam allow (account & user)
-    return (aclAllow || bucketAccountIsObjectAccount || requestAccountIsObjectAccount) && iamAllow;
+    return (aclAllow || bucketAccountIsObjectAccount || requestAccountIsResourceAccount) && iamAllow;
   }
 
   private String lookupAccountIdByCanonicalId( final String canonicalId ) throws AuthException {
