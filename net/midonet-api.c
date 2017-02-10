@@ -803,7 +803,9 @@ int mido_create_tunnelzone_member(midonet_api_tunnelzone *tz, midoname *tzmn,
             if (hostId && ipAddress) {
                 if (!strcmp(hostId, host->uuid) && !strcmp(ipAddress, ip)) {
                     found = 1;
-                    *outname = hosts[i];
+                    if (outname) {
+                        *outname = hosts[i];
+                    }
                     LOGTRACE("tz member already in mido - abort create\n");
                 }
             }
