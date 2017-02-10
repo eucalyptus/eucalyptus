@@ -1623,6 +1623,25 @@ int timeshell_nb(char *command, int timeout, boolean logerr) {
     return (rc);
 }
 
+//!
+//! Set FD_CLOEXEC flag to all (exept stdin, stdout, and stderr) file descriptors
+//! for the current process.
+//!
+static void prepare_fds_for_exec()
+{
+    int fd = 0;
+    struct dirent *dp;
+    DIR *dir = opendir("/proc/self/fd/");
+    if (dir == NULL)
+      return;
+    while ((dp = readdir(dir)) != NULL) {
+       fd = atoi(dp->d_name);
+       if (fd > 2 && fcntl(fd, F_GETFL) != -1) // skip stdin, stdout, and stderr
+           fcntl(fd, F_SETFD, FD_CLOEXEC);
+    }
+    closedir(dir);
+}
+
 /**
  * run shell command with timeout. STDOUT and STDERR are copied to strings stdout_str
  * and stderr_str respectively (at most max_size chars)
@@ -1686,7 +1705,7 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
         };
 
         close(stderrfds[1]);
-
+        prepare_fds_for_exec();
         execl("/bin/sh", "sh", "-c", command, (char *)0);
 
         exit(127);
