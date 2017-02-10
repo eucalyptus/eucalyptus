@@ -442,7 +442,7 @@ int do_md_nginx_maintain(mido_config *mido, enum vpcmido_nginx_t mode) {
     char cmd[EUCA_MAX_PATH], *pidstr = NULL, pidfile[EUCA_MAX_PATH];
     sequence_executor cmds;
 
-    if (!mido || mode < VPCMIDO_NGINX_START || mode > VPCMIDO_NGINX_STOP) {
+    if (!mido || !mido->config || mode < VPCMIDO_NGINX_START || mode > VPCMIDO_NGINX_STOP) {
         LOGERROR("invalid argument: unable to maintain md nginx\n");
         return (1);
     }
@@ -9380,7 +9380,6 @@ int do_midonet_create_tzone(mido_config *mido, char *type, char *dev, boolean re
     midonet_api_tunnelzone *tz = NULL;
     if (midotz) {
         tzname = strdup(midotz->name);
-        tz = midonet_api_cache_lookup_tunnelzone(midotz);
     } else {
         tzname = strdup(VPCMIDO_DEFAULT_TZ);
     }
