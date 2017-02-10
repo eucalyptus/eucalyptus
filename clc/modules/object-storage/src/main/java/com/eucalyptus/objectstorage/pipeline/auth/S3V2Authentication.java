@@ -95,13 +95,15 @@ final class S3V2Authentication {
 
   private static String buildStringToSign(MappingHttpRequest request, String date, String canonicalizedAmzHeaders, boolean excludePath)
       throws S3Exception {
-    String verb = request.getMethod().getName();
     String contentMd5 = request.getHeader(HttpHeaders.Names.CONTENT_MD5);
     contentMd5 = contentMd5 == null ? "" : contentMd5;
     String contentType = request.getHeader(HttpHeaders.Names.CONTENT_TYPE);
     contentType = contentType == null ? "" : contentType;
     String address = buildCanonicalResource(request, excludePath);
-    return verb + "\n" + contentMd5 + "\n" + contentType + "\n" + date + "\n" + canonicalizedAmzHeaders + address;
+    StringBuilder sb = new StringBuilder(request.getMethod().getName());
+    sb.append("\n").append(contentMd5).append("\n").append(contentType).append("\n")
+      .append(date).append("\n").append(canonicalizedAmzHeaders).append(address);
+    return sb.toString();
   }
 
   /**
