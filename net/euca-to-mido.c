@@ -3585,7 +3585,10 @@ char *find_mido_vpc_instance_id(const char *id) {
     snprintf(iagname, 64, "elip_post_%s", id);
     midonet_api_ipaddrgroup *iag = mido_get_ipaddrgroup(iagname);
     if (iag) {
-        return(strdup(strstr(iag->obj->name, id)));
+        char *foundid = strstr(iag->obj->name, id);
+        if (foundid) {
+            return (strdup(foundid));
+        }
     }
     return NULL;
 }
