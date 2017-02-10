@@ -56,21 +56,23 @@
 #define EUCANETD_RUN_ADDRESSING_API              0x00000004 //!< If set, this will trigger the core to run the implement_addressing() driver API
 #define EUCANETD_RUN_ALL_API                     (EUCANETD_RUN_NETWORK_API | EUCANETD_RUN_SECURITY_GROUP_API | EUCANETD_RUN_ADDRESSING_API)
 #define EUCANETD_RUN_ERROR_API                   0x80000000 //!< This is to indicate an error case
-#define EUCANETD_VPCMIDO_IFERROR                 0xC0000000 //!< Error implementing interface(s) in VPCMIDO
+#define EUCANETD_VPCMIDO_IFERROR                 0x40000000 //!< Error implementing interface(s) in VPCMIDO
+#define EUCANETD_VPCMIDO_GWERROR                 0x20000000 //!< Error implementing gateway(s) in VPCMIDO
 
 //! @}
 
 // eucanetd error codes
 #define EUCANETD_ERR_VPCMIDO_API                 20
 #define EUCANETD_ERR_VPCMIDO_CORE                30
-#define EUCANETD_ERR_VPCMIDO_MD                  40
-#define EUCANETD_ERR_VPCMIDO_TZ                  50
-#define EUCANETD_ERR_VPCMIDO_POPULATE            60
-#define EUCANETD_ERR_VPCMIDO_PASS1               70
-#define EUCANETD_ERR_VPCMIDO_PASS2               80
-#define EUCANETD_ERR_VPCMIDO_VPCS                90
-#define EUCANETD_ERR_VPCMIDO_SGS                100
-#define EUCANETD_ERR_VPCMIDO_ENIS               110
+#define EUCANETD_ERR_VPCMIDO_CORE_GW             40
+#define EUCANETD_ERR_VPCMIDO_MD                  50
+#define EUCANETD_ERR_VPCMIDO_TZ                  60
+#define EUCANETD_ERR_VPCMIDO_POPULATE            70
+#define EUCANETD_ERR_VPCMIDO_PASS1               80
+#define EUCANETD_ERR_VPCMIDO_PASS2               90
+#define EUCANETD_ERR_VPCMIDO_VPCS               100
+#define EUCANETD_ERR_VPCMIDO_SGS                110
+#define EUCANETD_ERR_VPCMIDO_ENIS               120
 #define EUCANETD_ERR_VPCMIDO_OTHER              255
 
 //! @{

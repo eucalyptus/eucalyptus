@@ -741,7 +741,8 @@ int main(int argc, char **argv) {
         if (update_globalnet) {
             if (update_globalnet_failed == TRUE) {
                 epoch_failed_updates++;
-                if (scrubResult == EUCANETD_VPCMIDO_IFERROR) {
+                if ((scrubResult == EUCANETD_VPCMIDO_IFERROR) ||
+                        (scrubResult == EUCANETD_VPCMIDO_GWERROR)) {
                     update_version_file = TRUE;
                 }
             } else {

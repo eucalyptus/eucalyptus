@@ -2793,8 +2793,9 @@ int do_midonet_maint(mido_config *mido) {
  * @param gni [in] current global network state.
  * @param appliedGni [in] most recently applied global network state.
  * @param mido [in] data structure that holds MidoNet configuration
- * @return 0 on success. Positive integer when failures are detected. Negative
- * integer if failures are detected on instances/interfaces creation.
+ * @return 0 on success. Positive integer when failures are detected. -2 if
+ * failures are detected on instances/interfaces creation. -1 if failures are
+ * detected on gateway(s) processing.
  */
 int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mido_config *mido) {
     int rc = 0, ret = 0;
@@ -2901,9 +2902,14 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
         midonet_api_system_changed = 0;
         rc = create_mido_core(mido, mido->midocore);
         if (rc) {
-            LOGERROR("failed to setup midonet core: check midonet health\n");
-            mido->config->eucanetd_err = EUCANETD_ERR_VPCMIDO_CORE;
-            return (1);
+            if (rc == -1) {
+                LOGWARN("failures detected when setting up gateway(s).\n");
+                LOGINFO("Check gateway and midonet health. Instances access to public network may not work.\n");
+            } else {
+                LOGERROR("failed to setup midonet core: check midonet health\n");
+                mido->config->eucanetd_err = EUCANETD_ERR_VPCMIDO_CORE;
+                return (1);
+            }
         }
         if (midonet_api_system_changed == 1) {
             LOGINFO("\tvpcmido core created in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
@@ -2982,7 +2988,7 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
     if (rc) {
         LOGERROR("pass3_insts: failed update - check midonet health\n");
         mido->config->eucanetd_err = EUCANETD_ERR_VPCMIDO_ENIS;
-        return (-rc);
+        return (-2);
     }
     LOGINFO("\tinstances processed in %.2f ms.\n", eucanetd_timer_usec(&tv) / 1000.0);
 
@@ -8107,10 +8113,12 @@ int disable_mido_md(mido_config *mido) {
  * Creates MidoNet objects that are needed to implement euca VPC core.
  * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
  * @param midocore [in] data structure that holds euca VPC core resources (eucart, eucabr, gateways)
- * @return 0 on success. 1 otherwise.
+ * @return 0 on success. -1 if failures are detected during gateway(s) processing.
+ * 1 on all other errors.
  */
 int create_mido_core(mido_config *mido, mido_core *midocore) {
     int ret = 0, rc = 0, i = 0;
+    int gw_failed = 0;
     char nw[32], sn[32], gw[32], *tmpstr = NULL;
 
     tmpstr = hex2dot(mido->int_rtnw);
@@ -8191,11 +8199,14 @@ int create_mido_core(mido_config *mido, mido_core *midocore) {
         rc = create_mido_gw(mido, gw, gni_gw);
         if (rc) {
             LOGERROR("failed to create gateway %s\n", hex2dot_s(euca_getaddr(gni_gw->host, NULL)));
-            ret++;
+            gw_failed++;
             delete_mido_gw(mido, midocore, midocore->max_gws - 1);
         } else {
             gw->gni_gw = gni_gw;
         }
+    }
+    if (mido->max_gni_gws && (mido->max_gni_gws == gw_failed)) {
+        ret++;
     }
 
     // Configure BGP
@@ -8266,6 +8277,10 @@ int create_mido_core(mido_config *mido, mido_core *midocore) {
             LOGERROR("cannot create metadata tap core bridge/devices: check above log for details\n");
             ret++;
         }
+    }
+    
+    if (!ret && gw_failed) {
+        return (-1);
     }
     return (ret);
 }
