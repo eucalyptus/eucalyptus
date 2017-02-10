@@ -65,8 +65,10 @@ package com.eucalyptus.blockstorage.util;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+
 
 import javax.crypto.Cipher;
 
@@ -80,6 +82,7 @@ import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.BaseRole;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.blockstorage.Storage;
+import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Partition;
@@ -228,8 +231,59 @@ public class BlockStorageUtil {
     return Restrictions.and(Restrictions.like("status", StorageProperties.Status.failed.toString()), Restrictions.isNull("deletionTime"));
   }
 
-  public static final Criterion getExpriedCriterion(Integer deletedResourceExpiration) {
+  public static final Criterion getExpiredCriterion(Integer deletedResourceExpiration) {
     return Restrictions.lt("deletionTime",
         new Date(System.currentTimeMillis() - TimeUnit.MILLISECONDS.convert(deletedResourceExpiration, TimeUnit.MINUTES)));
   }
+
+  /**
+   * From a given list of snapshots and a given snapshot ID, return a new list of 
+   * snapshots containing the given snapshot and each parent (previous) 
+   * snapshot.
+   *  
+   * @param  snapshotList   the list of snapshots to search for members of the chain.
+   *                         The list must be in descending date order, so a 
+   *                         parent snapshot must never appear earlier in the 
+   *                         list than any of its children.
+   * @param  lastSnapshotId the snapshot that ends the chain we will construct
+   * @return null, or a new list of existing SnapshotInfo objects. The last
+   *          element will be the SnapshotInfo object for the lastSnapshotId.
+   *          Each subsequent parent (previous) snapshot found in the 
+   *          snapshotList will be inserted at the beginning of the list. 
+   *          List processing ends when either the parent of the current 
+   *          snapshot does not exist in the given snapshotList, or the parent 
+   *          snapshot ID stored in the current snapshot is null.
+   *          The returned linked list of snapshots can be applied in order
+   *          to create a volume from the given snapshot ID, if the first 
+   *          element of the returned list is a full snapshot. Note the 
+   *          returned list does not guarantee that the first element is a 
+   *          full snapshot.
+   *          If the new list is empty, 'null' will be returned.
+   */
+  public static final List<SnapshotInfo> getSnapshotChain(List<SnapshotInfo> snapshotList, String lastSnapshotId) {
+    if (snapshotList == null || lastSnapshotId == null) {
+      return null;
+    }
+    LinkedList<SnapshotInfo> snapshotChain = new LinkedList<SnapshotInfo>();
+    String currentSnapshotId = lastSnapshotId;
+
+    for (SnapshotInfo currentSnapshot : snapshotList) {
+      if (currentSnapshot != null) {
+        if (currentSnapshot.getSnapshotId() != null &&
+            currentSnapshot.getSnapshotId().equals(currentSnapshotId)) {
+          snapshotChain.add(0, currentSnapshot);
+          currentSnapshotId = currentSnapshot.getPreviousSnapshotId();
+          if (currentSnapshotId == null) {
+            break;
+          }
+        }
+      }
+    }
+    if (snapshotChain.isEmpty()) {
+      return null;
+    } else {
+      return snapshotChain;
+    }
+  }  // end getSnapshotChain
+
 }

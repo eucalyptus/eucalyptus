@@ -79,6 +79,8 @@ import com.eucalyptus.blockstorage.StorageResourceWithCallback;
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.blockstorage.entities.SnapshotTransferConfiguration;
 import com.eucalyptus.blockstorage.entities.StorageInfo;
+import com.eucalyptus.blockstorage.util.BlockStorageUtilSvc;
+import com.eucalyptus.blockstorage.util.BlockStorageUtilSvcImpl;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
@@ -102,6 +104,7 @@ public class SnapshotCreator implements Runnable {
   private LogicalStorageManager blockManager;
   private SnapshotTransfer snapshotTransfer;
   private SnapshotProgressCallback progressCallback;
+  private BlockStorageUtilSvc blockStorageUtilSvc;
 
   /**
    * Initializes the Snapshotter task. snapPointId should be null if no snap point has been created yet.
@@ -116,6 +119,7 @@ public class SnapshotCreator implements Runnable {
     this.snapshotId = snapshotId;
     this.snapPointId = snapPointId;
     this.blockManager = blockManager;
+    this.blockStorageUtilSvc = new BlockStorageUtilSvcImpl();
   }
 
   /**
@@ -288,7 +292,7 @@ public class SnapshotCreator implements Runnable {
         LOG.debug("Finishing up " + snapshotId + " on block storage backend");
         blockManager.finishVolume(snapshotId);
         LOG.info("Finished creating " + snapshotId + " on block storage backend");
-        progressCallback.updateBackendProgress(50); // to indicate that backend snapshot process is 100% done
+        progressCallback.updateBackendProgress(50); // to indicate that backend snapshot process is 50% done
       } catch (EucalyptusCloudException ex) {
         LOG.warn("Failed to complete snapshot " + snapshotId + " on backend", ex);
         throw ex;
@@ -379,51 +383,79 @@ public class SnapshotCreator implements Runnable {
 
   private SnapshotInfo fetchPreviousSnapshot(int maxDeltas) throws Exception {
 
-    SnapshotInfo prevSnap = null;
+    SnapshotInfo prevSnapToAssign = null;
     SnapshotInfo currSnap = Transactions.find(new SnapshotInfo(snapshotId));
 
     try (TransactionResource tr = Entities.transactionFor(SnapshotInfo.class)) {
-      SnapshotInfo previousSnapSearch = new SnapshotInfo();
-      previousSnapSearch.setVolumeId(currSnap.getVolumeId());
+      
+      // Find the most recent snapshot that is not in one of the states that
+      // is ineligible to use for creating a snap delta.  
+      SnapshotInfo prevEligibleSnapSearch = new SnapshotInfo();
+      prevEligibleSnapSearch.setVolumeId(currSnap.getVolumeId());
       Criteria search = Entities.createCriteria(SnapshotInfo.class);
-      search.add(Example.create(previousSnapSearch).enableLike(MatchMode.EXACT));
+      search.add(Example.create(prevEligibleSnapSearch).enableLike(MatchMode.EXACT));
       search.add(Restrictions.and(StorageProperties.SNAPSHOT_DELTA_GENERATION_CRITERION, Restrictions.lt("startTime", currSnap.getStartTime())));
       search.addOrder(Order.desc("startTime"));
       search.setReadOnly(true);
+      search.setMaxResults(1);  // only return the latest one
 
-      List<SnapshotInfo> previousSnaps = (List<SnapshotInfo>) search.list();
-      tr.commit();
+      List<SnapshotInfo> prevEligibleSnapList = (List<SnapshotInfo>) search.list();
 
-      if (previousSnaps != null && previousSnaps.size() > 0 && (prevSnap = previousSnaps.get(0)) != null) {
-        if (prevSnap.getSnapshotLocation() != null && prevSnap.getIsOrigin() != null) { // check origin to validate that snapshot was uploaded in its
-                                                                                        // entirety at least once post 4.4
-          LOG.info(this.volumeId + " has been snapshotted and uploaded before. Most recent such snapshot is " + prevSnap.getSnapshotId());
+      boolean committed = false;
+      
+      if (prevEligibleSnapList != null && prevEligibleSnapList.size() > 0 && 
+          (prevSnapToAssign = prevEligibleSnapList.get(0)) != null) {
+        // Found an eligible previous snapshot to use as a parent for this 
+        // snapshot, if we make it a delta.
+        if (prevSnapToAssign.getSnapshotLocation() != null && prevSnapToAssign.getIsOrigin() != null) { 
+          LOG.info(this.volumeId + " has been snapshotted and uploaded before. Most recent such snapshot is " + prevSnapToAssign.getSnapshotId());
 
-          // count number of deltas that have been created after the last full check point
-          int numDeltas;
-          for (numDeltas = 0; numDeltas < previousSnaps.size(); numDeltas++) {
-            if (Strings.isNullOrEmpty(previousSnaps.get(numDeltas).getPreviousSnapshotId()))
-              break;
-            else
-              continue;
+          
+          // Get all the restorable snapshots from this volume earlier than (and including) the current snapshot
+          SnapshotInfo prevRestorableSnapsSearch = new SnapshotInfo();
+          prevRestorableSnapsSearch.setVolumeId(currSnap.getVolumeId());
+          search = Entities.createCriteria(SnapshotInfo.class);
+          search.add(Example.create(prevRestorableSnapsSearch).enableLike(MatchMode.EXACT));
+          search.add(Restrictions.and(StorageProperties.SNAPSHOT_DELTA_RESTORATION_CRITERION, Restrictions.le("startTime", currSnap.getStartTime())));
+          search.addOrder(Order.desc("startTime"));
+          search.setReadOnly(true);
+          List<SnapshotInfo> prevRestorableSnapsList = (List<SnapshotInfo>) search.list();
+          tr.commit();
+          committed = true;
+
+          List<SnapshotInfo> snapChain = blockStorageUtilSvc.getSnapshotChain(prevRestorableSnapsList, this.snapshotId);
+          int numDeltas = 0;
+          if (snapChain == null || snapChain.size() == 0) {
+            // This should never happen. The chain should always include the current snapshot 
+            // and the parent (previous) snapshot we already found.
+            LOG.error("Did not find current snapshot " + this.snapshotId + " in restorable snapshots list");
+          } else if (snapChain.size() == 1) {
+            // This should never happen. The chain should always include the current snapshot 
+            // and the parent (previous) snapshot we already found.
+            LOG.error("Did not find current snapshot " + this.snapshotId + " and its previous snapshot " +
+                prevSnapToAssign.getSnapshotId() + " in restorable snapshots list. Found only " +
+                (snapChain.get(0) == null ? "null" : snapChain.get(0)));
+          } else {
+            numDeltas = snapChain.size() - 2;
           }
-
           LOG.info(this.volumeId + " has " + numDeltas + " delta(s) since the last full checkpoint. Max limit is " + maxDeltas);
           if (numDeltas < maxDeltas) {
-            return prevSnap;
+            return prevSnapToAssign;
           } else {
-            // nothing to do here
+            // nothing to do here, will return null
           }
         } else {
-          LOG.info(this.volumeId + " has not been snapshotted and or uploaded after the support for incremental snapshots was added");
+          LOG.info(this.volumeId + " has not been snapshotted and/or uploaded after the support for incremental snapshots was added");
         }
       } else {
         LOG.info(this.volumeId + " has no prior active snapshots in the system");
       }
+      if (!committed) {
+        tr.commit();
+      }
     } catch (Exception e) {
       LOG.warn("Failed to look up previous snapshots for " + this.volumeId, e); // return null on exception, forces entire snapshot to get uploaded
     }
-
     return null;
   }
 

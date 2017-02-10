@@ -22,10 +22,12 @@ package com.eucalyptus.blockstorage.util;
 import org.hibernate.criterion.Criterion;
 
 import com.eucalyptus.auth.principal.BaseRole;
+import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.util.EucalyptusCloudException;
 
+import java.util.List;
 /**
  * Created by wesw on 6/18/14.
  */
@@ -49,5 +51,8 @@ public interface BlockStorageUtilSvc {
 
   public Criterion getFailedCriterion();
 
-  public Criterion getExpriedCriterion(Integer deletedResourceExpiration);
+  public Criterion getExpiredCriterion(Integer deletedResourceExpiration);
+  
+  public List<SnapshotInfo> getSnapshotChain(List<SnapshotInfo> snapshotList, String lastSnapshotId);
+  
 }

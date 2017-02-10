@@ -94,7 +94,7 @@ public class ExpiredSnapshotCleaner extends CheckerTask {
     try (TransactionResource tr = Entities.transactionFor(SnapshotInfo.class)) {
       List<SnapshotInfo> snapshotInfos =
           Entities.query(new SnapshotInfo(), Boolean.FALSE,
-              BlockStorageUtil.getExpriedCriterion(StorageInfo.getStorageInfo().getSnapExpiration()), Collections.EMPTY_MAP);
+              BlockStorageUtil.getExpiredCriterion(StorageInfo.getStorageInfo().getSnapExpiration()), Collections.EMPTY_MAP);
       if (snapshotInfos != null && !snapshotInfos.isEmpty()) {
         for (SnapshotInfo snapshotInfo : snapshotInfos) {
           LOG.debug("Deleting metadata for expired snapshot " + snapshotInfo.getSnapshotId());
