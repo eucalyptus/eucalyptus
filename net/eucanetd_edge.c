@@ -540,6 +540,9 @@ static int network_driver_system_flush(eucanetdConfig *pConfig, globalNetworkInf
         ret = 1;
         LOGERROR("Failed to flush public IP address(es) in '%s' networking mode.\n", DRIVER_NAME());
     } else {
+        if (pGni->max_public_ips_str && !pGni->max_public_ips) {
+            gni_serialize_iprange_list(pGni->public_ips_str, pGni->max_public_ips_str, &(pGni->public_ips), &(pGni->max_public_ips));
+        }
         for (i = 0; i < pGni->max_public_ips; i++) {
             for (j = 0; j < max_nets; j++) {
                 if (ips[j] == pGni->public_ips[i]) {
@@ -1238,6 +1241,10 @@ int do_edge_update_eips(edge_config *edge) {
             nms = NULL;
         }
 
+        if (edge->gni->max_public_ips_str && !edge->gni->max_public_ips) {
+            gni_serialize_iprange_list(edge->gni->public_ips_str, edge->gni->max_public_ips_str,
+                    &(edge->gni->public_ips), &(edge->gni->max_public_ips));
+        }
         for (i = 0; i < edge->gni->max_public_ips; i++) {
             found = 0;
             // only clear IPs that are not assigned to instances running on this node

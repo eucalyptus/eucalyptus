@@ -561,7 +561,7 @@ static u32 network_driver_system_scrub(eucanetdConfig *pConfig, globalNetworkInf
     }
 
     int config_changed = cmp_gni_config(pGni, pGniApplied);
-    if (!IS_INITIALIZED() || (pGni && pGniApplied && config_changed)) {
+    if (!IS_INITIALIZED() || (pGni && config_changed)) {
         LOGINFO("(re)initializing %s driver.\n", DRIVER_NAME());
         if (pMidoConfig) {
             free_mido_config(pMidoConfig);
@@ -587,11 +587,17 @@ static u32 network_driver_system_scrub(eucanetdConfig *pConfig, globalNetworkInf
 
     if (rc != 0) {
         LOGERROR("failed to update midonet: check log for details\n");
-        if (rc < 0) {
-            // Accept errors in instances/interface implementation.
-            ret = EUCANETD_VPCMIDO_IFERROR;
-        } else {
-            ret = EUCANETD_RUN_ERROR_API;
+        switch (rc) {
+            case -2:
+                // Accept errors in instances/interface implementation.
+                ret = EUCANETD_VPCMIDO_IFERROR;
+                break;
+            case -1:
+                // Accept errors in gateway(s) implementation.
+                ret = EUCANETD_VPCMIDO_GWERROR;
+                break;
+            default:
+                ret = EUCANETD_RUN_ERROR_API;                
         }
     } else {
         LOGTRACE("Networking state sync: updated successfully in %.2f ms\n", eucanetd_timer_usec(&tv) / 1000.0);

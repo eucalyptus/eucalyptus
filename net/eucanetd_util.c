@@ -234,16 +234,29 @@ int eucanetd_kick_dhcpd_server(eucanetdConfig *config) {
         // Do we have any "node-" statement
         if (strstr(psConfig, "node-")) {
             // Run the DHCP command
-            char dhcpdunit[EUCA_MAX_PATH] = "";
-            snprintf(dhcpdunit, EUCA_MAX_PATH, EUCANETD_DHCPD_UNIT, config->bridgeDev);
-            char cmd[EUCA_MAX_PATH] = "";
-            snprintf(cmd, EUCA_MAX_PATH, "%s %s start %s", config->cmdprefix,
-                    config->systemctl, dhcpdunit);
-            rc = timeshell_nb(cmd, 10, FALSE);
+            if (!config->use_systemctl) {
+                int status = 0;
+                rc = euca_execlp(&status, config->cmdprefix, config->dhcpDaemon,
+                        "-cf", sConfigFileName, config->bridgeDev, NULL);
+                if (rc != EUCA_OK) {
+                    LOGERROR("Failed to restart DHCP server. exitcode='%d'\n", status);
+                    LOGDEBUG("dhcpd command='%s %s %s %s %s'\n",
+                            config->cmdprefix, config->dhcpDaemon, "-cf", sConfigFileName,
+                            config->bridgeDev)
+                            ret = 1;
+                }
+            } else {
+                char dhcpdunit[EUCA_MAX_PATH] = "";
+                snprintf(dhcpdunit, EUCA_MAX_PATH, EUCANETD_DHCPD_UNIT, config->bridgeDev);
+                char cmd[EUCA_MAX_PATH] = "";
+                snprintf(cmd, EUCA_MAX_PATH, "%s %s start %s", config->cmdprefix,
+                        config->systemctl, dhcpdunit);
+                rc = timeshell_nb(cmd, 10, FALSE);
 
-            if (rc != 0) {
-                LOGERROR("failed to start eucanetd-dhcpd\n");
-                ret = 1;
+                if (rc != 0) {
+                    LOGERROR("failed to start eucanetd-dhcpd\n");
+                    ret = 1;
+                }
             }
         }
         EUCA_FREE(psConfig);
