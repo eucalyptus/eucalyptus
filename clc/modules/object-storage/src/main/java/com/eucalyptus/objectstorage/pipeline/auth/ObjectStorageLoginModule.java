@@ -129,10 +129,10 @@ public class ObjectStorageLoginModule extends BaseLoginModule<ObjectStorageWrapp
     try {
       AccessKey key = AccessKeys.lookupAccessKey(accessKeyId, securityToken);
       if (!key.isActive())
-        throw new InvalidAccessKeyIdException();
+        throw new InvalidAccessKeyIdException(accessKeyId);
       return key;
     } catch (AuthException e) {
-      throw new InvalidAccessKeyIdException();
+      throw new InvalidAccessKeyIdException(accessKeyId);
     }
   }
 
