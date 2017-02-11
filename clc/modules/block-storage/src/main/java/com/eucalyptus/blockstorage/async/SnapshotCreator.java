@@ -311,11 +311,13 @@ public class SnapshotCreator implements Runnable {
 
       // Mark snapshot as available
       markSnapshotAvailable();
+      LOG.debug("Snapshot " + snapshotId + " set to 'available' state");
     } catch (Exception ex) {
       LOG.error("Failed to create snapshot " + snapshotId, ex);
 
       try {
         markSnapshotFailed();
+        LOG.debug("Snapshot " + snapshotId + " set to 'failed' state");
       } catch (TransactionException | NoSuchElementException e) {
         LOG.warn("Cannot update " + snapshotId + " status to failed on SC", e);
       }
@@ -411,32 +413,28 @@ public class SnapshotCreator implements Runnable {
           LOG.info(this.volumeId + " has been snapshotted and uploaded before. Most recent such snapshot is " + prevSnapToAssign.getSnapshotId());
 
           
-          // Get all the restorable snapshots from this volume earlier than (and including) the current snapshot
+          // Get all the restorable snapshots for this volume, earlier than the current snapshot
           SnapshotInfo prevRestorableSnapsSearch = new SnapshotInfo();
           prevRestorableSnapsSearch.setVolumeId(currSnap.getVolumeId());
           search = Entities.createCriteria(SnapshotInfo.class);
           search.add(Example.create(prevRestorableSnapsSearch).enableLike(MatchMode.EXACT));
-          search.add(Restrictions.and(StorageProperties.SNAPSHOT_DELTA_RESTORATION_CRITERION, Restrictions.le("startTime", currSnap.getStartTime())));
+          search.add(Restrictions.and(StorageProperties.SNAPSHOT_DELTA_RESTORATION_CRITERION, Restrictions.lt("startTime", currSnap.getStartTime())));
           search.addOrder(Order.desc("startTime"));
           search.setReadOnly(true);
           List<SnapshotInfo> prevRestorableSnapsList = (List<SnapshotInfo>) search.list();
           tr.commit();
           committed = true;
 
-          List<SnapshotInfo> snapChain = blockStorageUtilSvc.getSnapshotChain(prevRestorableSnapsList, this.snapshotId);
+          // Get the snap chain ending with the previous snapshot (not the current)
+          List<SnapshotInfo> snapChain = blockStorageUtilSvc.getSnapshotChain(prevRestorableSnapsList, prevSnapToAssign.getSnapshotId());
           int numDeltas = 0;
           if (snapChain == null || snapChain.size() == 0) {
-            // This should never happen. The chain should always include the current snapshot 
-            // and the parent (previous) snapshot we already found.
-            LOG.error("Did not find current snapshot " + this.snapshotId + " in restorable snapshots list");
-          } else if (snapChain.size() == 1) {
-            // This should never happen. The chain should always include the current snapshot 
-            // and the parent (previous) snapshot we already found.
-            LOG.error("Did not find current snapshot " + this.snapshotId + " and its previous snapshot " +
-                prevSnapToAssign.getSnapshotId() + " in restorable snapshots list. Found only " +
-                (snapChain.get(0) == null ? "null" : snapChain.get(0)));
+            // This should never happen. The chain should always include the 
+            // parent (previous) snapshot we already found.
+            LOG.error("Did not find the current snapshot's previous snapshot " + prevSnapToAssign.getSnapshotId() +
+                " in restorable snapshots list");
           } else {
-            numDeltas = snapChain.size() - 2;
+            numDeltas = snapChain.size() - 1;
           }
           LOG.info(this.volumeId + " has " + numDeltas + " delta(s) since the last full checkpoint. Max limit is " + maxDeltas);
           if (numDeltas < maxDeltas) {

@@ -266,7 +266,6 @@ public class BlockStorageUtil {
     }
     LinkedList<SnapshotInfo> snapshotChain = new LinkedList<SnapshotInfo>();
     String currentSnapshotId = lastSnapshotId;
-
     for (SnapshotInfo currentSnapshot : snapshotList) {
       if (currentSnapshot != null) {
         if (currentSnapshot.getSnapshotId() != null &&

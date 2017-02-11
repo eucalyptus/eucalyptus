@@ -167,7 +167,7 @@ public class VolumeCreator implements Runnable {
                   snapCriteria.setCacheable(true);
                   snapCriteria.add(Example.create(searchFor).enableLike(MatchMode.EXACT));
                   snapCriteria.addOrder(Order.asc("creationTimestamp"));
-                  searchCriteria.setMaxResults(1);
+                  snapCriteria.setMaxResults(1);
 
                   foundSnapshotInfos = (List<SnapshotInfo>) snapCriteria.list();
                 }
@@ -206,17 +206,22 @@ public class VolumeCreator implements Runnable {
 
                     List<SnapshotInfo> prevRestorableSnapsList = null;
                     try (TransactionResource tr = Entities.transactionFor(SnapshotInfo.class)) {
-                      // Get all the restorable snapshots from this volume earlier than (and including) the current snapshot
+                      // Get all the restorable snapshots for this volume earlier than (and including) the current snapshot
                       SnapshotInfo prevRestorableSnapsSearch = new SnapshotInfo();
-                      prevRestorableSnapsSearch.setVolumeId(volumeId);
-                      Criteria search = Entities.createCriteria(SnapshotInfo.class);
-                      search.add(Example.create(prevRestorableSnapsSearch).enableLike(MatchMode.EXACT));
-                      search.add(Restrictions.and(StorageProperties.SNAPSHOT_DELTA_RESTORATION_CRITERION, Restrictions.le("startTime", sourceSnap.getStartTime())));
-                      search.addOrder(Order.desc("startTime"));
-                      search.setReadOnly(true);
-                      prevRestorableSnapsList = (List<SnapshotInfo>) search.list();
+                      prevRestorableSnapsSearch.setScName(sourceSnap.getScName());
+                      prevRestorableSnapsSearch.setIsOrigin(Boolean.TRUE);
+                      prevRestorableSnapsSearch.setVolumeId(sourceSnap.getVolumeId());
+                      Criteria prevRestorableSnapsCriteria = Entities.createCriteria(SnapshotInfo.class);
+                      prevRestorableSnapsCriteria.add(Example.create(prevRestorableSnapsSearch).enableLike(MatchMode.EXACT));
+                      prevRestorableSnapsCriteria.setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY);
+                      prevRestorableSnapsCriteria.add(Restrictions.and(StorageProperties.SNAPSHOT_DELTA_RESTORATION_CRITERION, Restrictions.le("startTime", sourceSnap.getStartTime())));
+                      prevRestorableSnapsCriteria.addOrder(Order.desc("startTime"));
+                      prevRestorableSnapsCriteria.setReadOnly(true);
+                      prevRestorableSnapsList = (List<SnapshotInfo>) prevRestorableSnapsCriteria.list();
                       tr.commit();
                     }
+                    
+                    // Get the snap chain ending with the current snapshot
                     List<SnapshotInfo> snapChain = blockStorageUtilSvc.getSnapshotChain(prevRestorableSnapsList, snapshotId);
                     int numDeltas = 0;
                     if (snapChain == null || snapChain.size() == 0) {
@@ -335,10 +340,12 @@ public class VolumeCreator implements Runnable {
       if (foundVolumeInfo != null) {
         if (success) {
           foundVolumeInfo.setStatus(StorageProperties.Status.available.toString());
+          LOG.debug("Volume " + volumeId + " set to 'available' state");
           ThruputMetrics.endOperation(snapshotId != null ? MonitoredAction.CREATE_VOLUME_FROM_SNAPSHOT : MonitoredAction.CREATE_VOLUME, volumeId,
               System.currentTimeMillis());
         } else {
           foundVolumeInfo.setStatus(StorageProperties.Status.failed.toString());
+          LOG.debug("Volume " + volumeId + " set to 'failed' state");
         }
         if (snapshotId != null) {
           foundVolumeInfo.setSize(size);
