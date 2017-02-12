@@ -190,6 +190,7 @@ public class BlockStorageController implements BlockStorageService {
         snap = Entities.uniqueResult(new SnapshotInfo(arg0));
         snap.setStatus(StorageProperties.Status.failed.toString());
         snap.setProgress("0");
+        LOG.debug("Snapshot " + arg0 + " set to 'failed' state");
         return snap;
       } catch (TransactionException | NoSuchElementException e) {
         LOG.warn("Failed to retrieve snapshot entity from DB for " + arg0, e);
@@ -819,6 +820,7 @@ public class BlockStorageController implements BlockStorageService {
           snapshotInfo.setProgress("0");
           snapshotInfo.setSizeGb(sourceVolumeInfo.getSize());
           snapshotInfo.setStatus(StorageProperties.Status.creating.toString());
+          LOG.debug("Snapshot " + snapshotId + " set to 'creating' state");
           snapshotInfo.setIsOrigin(Boolean.TRUE);
 
           /* Change to support sync snap consistency point set on CLC round-trip */
@@ -1006,8 +1008,8 @@ public class BlockStorageController implements BlockStorageService {
       SnapshotInfo snapshotInfo = Entities.uniqueResult(new SnapshotInfo(snapshotId));
       String status = snapshotInfo.getStatus();
       if (status.equals(StorageProperties.Status.available.toString())) {
-        LOG.debug("Setting snapshot " + snapshotId + " to 'deleting' state");
         snapshotInfo.setStatus(StorageProperties.Status.deleting.toString());
+        LOG.debug("Snapshot " + snapshotId + " set to 'deleting' state");
         ThruputMetrics.startOperation(MonitoredAction.DELETE_SNAPSHOT, snapshotId, startTime);
       } else if (status.equals(StorageProperties.Status.deleting.toString()) || status.equals(StorageProperties.Status.deleted.toString())
           || status.equals(StorageProperties.Status.deletedfromebs.toString()) || status.equals(StorageProperties.Status.failed.toString())) {
@@ -1111,6 +1113,7 @@ public class BlockStorageController implements BlockStorageService {
       volumeInfo.setUserName(userId);
       volumeInfo.setSize(sizeAsInt);
       volumeInfo.setStatus(StorageProperties.Status.creating.toString());
+      LOG.debug("Volume " + volumeId + " set to 'creating' state");
       Date creationDate = new Date();
       volumeInfo.setCreateTime(creationDate);
       Entities.persist(volumeInfo);
@@ -1139,6 +1142,7 @@ public class BlockStorageController implements BlockStorageService {
             try {
               vol = Entities.uniqueResult(new VolumeInfo(arg0));
               vol.setStatus(StorageProperties.Status.failed.toString());
+              LOG.debug("Volume " + arg0 + " set to 'failed' state");
               return vol;
             } catch (TransactionException | NoSuchElementException e) {
               LOG.warn("Failed to retrieve DB entity for " + arg0, e);
