@@ -1452,7 +1452,62 @@ public class ComputeService {
       response.markFailed( );
     }
     return response;
+  }
 
+  public AllocateHostsResponseType allocateHosts(
+      final AllocateHostsType request
+  ) throws EucalyptusCloudException {
+    final AllocateHostsResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DescribeHostReservationOfferingsResponseType describeHostReservationOfferings(
+      final DescribeHostReservationOfferingsType request
+  ) throws EucalyptusCloudException {
+    final DescribeHostReservationOfferingsResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DescribeHostReservationsResponseType describeHostReservations(
+      final DescribeHostReservationsType request
+  ) throws EucalyptusCloudException {
+    final DescribeHostReservationsResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DescribeHostsResponseType describeHosts(
+      final DescribeHostsType request
+  ) throws EucalyptusCloudException {
+    final DescribeHostsResponseType response = request.getReply( );
+    return response;
+  }
+
+  public GetHostReservationPurchasePreviewResponseType getHostReservationPurchasePreview(
+      final GetHostReservationPurchasePreviewType request
+  ) throws EucalyptusCloudException {
+    final GetHostReservationPurchasePreviewResponseType response = request.getReply( );
+    return response;
+  }
+
+  public ModifyHostsResponseType modifyHosts(
+      final ModifyHostsType request
+  ) throws EucalyptusCloudException {
+    final ModifyHostsResponseType response = request.getReply( );
+    return response;
+  }
+
+  public PurchaseHostReservationResponseType purchaseHostReservation(
+      final PurchaseHostReservationType request
+  ) throws EucalyptusCloudException {
+    final PurchaseHostReservationResponseType response = request.getReply( );
+    return response;
+  }
+
+  public ReleaseHostsResponseType releaseHosts(
+      final ReleaseHostsType request
+  ) throws EucalyptusCloudException {
+    final ReleaseHostsResponseType response = request.getReply( );
+    return response;
   }
 
   public ComputeMessage proxy( final ComputeMessage request ) throws EucalyptusCloudException {

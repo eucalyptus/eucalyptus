@@ -384,6 +384,8 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     AssociateDhcpOptions
 
+    AssociateIamInstanceProfile
+
     AssociateRouteTable
 
     AssociateSubnetCidrBlock
@@ -562,6 +564,8 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     DescribeHosts
 
+    DescribeIamInstanceProfileAssociations
+
     DescribeIdentityIdFormat
 
     DescribeIdFormat
@@ -682,6 +686,8 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     DisassociateAddress
 
+    DisassociateIamInstanceProfile
+
     DisassociateRouteTable
 
     DisassociateSubnetCidrBlock
@@ -766,6 +772,8 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     ReleaseHosts
 
+    ReplaceIamInstanceProfileAssociation
+
     ReplaceNetworkAclAssociation
 
     ReplaceNetworkAclEntry
@@ -812,25 +820,21 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
     '''
 
       List<String> whitelist = [
-          'AllocateHosts',
           'AssignIpv6Addresses',
+          'AssociateIamInstanceProfile',
           'AssociateSubnetCidrBlock',
           'AssociateVpcCidrBlock',
           'CreateEgressOnlyInternetGateway',
           'DeleteEgressOnlyInternetGateway',
           'DescribeEgressOnlyInternetGateways',
-          'DescribeHostReservationOfferings',
-          'DescribeHostReservations',
-          'DescribeHosts',
+          'DescribeIamInstanceProfileAssociations',
           'DescribeScheduledInstanceAvailability',
           'DescribeScheduledInstances',
+          'DisassociateIamInstanceProfile',
           'DisassociateSubnetCidrBlock',
           'DisassociateVpcCidrBlock',
-          'GetHostReservationPurchasePreview',
-          'ModifyHosts',
-          'PurchaseHostReservation',
           'PurchaseScheduledInstances',
-          'ReleaseHosts',
+          'ReplaceIamInstanceProfileAssociation',
           'RunScheduledInstances',
           'UnassignIpv6Addresses',
       ]

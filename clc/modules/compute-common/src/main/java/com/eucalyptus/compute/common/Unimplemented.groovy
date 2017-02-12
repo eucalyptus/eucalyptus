@@ -423,3 +423,90 @@ class DescribeFlowLogsType extends FlowLogMessage {
 class DescribeFlowLogsResponseType extends FlowLogMessage {
 }
 
+/****** hosts ******/
+
+class HostComputeMessage extends ComputeMessage {
+}
+
+class AllocateHostsType extends HostComputeMessage {
+  String autoPlacement
+  String availabilityZone
+  String clientToken
+  String instanceType
+  Integer quantity
+}
+
+class AllocateHostsResponseType extends HostComputeMessage {
+}
+
+class DescribeHostReservationOfferingsType extends HostComputeMessage {
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
+  ArrayList<Filter> filterSet = Lists.newArrayList( )
+  Integer maxDuration
+  Integer maxResults
+  Integer minDuration
+  String nextToken
+  String offeringId
+}
+
+class DescribeHostReservationOfferingsResponseType extends HostComputeMessage {
+}
+
+class DescribeHostReservationsType extends HostComputeMessage {
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
+  ArrayList<Filter> filterSet = Lists.newArrayList( )
+  Integer maxResults
+  String nextToken
+  ArrayList<String> hostReservationIdSet = Lists.newArrayList( )
+}
+
+class DescribeHostReservationsResponseType extends HostComputeMessage {
+}
+
+class DescribeHostsType extends HostComputeMessage {
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
+  ArrayList<Filter> filterSet = Lists.newArrayList( )
+  Integer maxResults
+  String nextToken
+  ArrayList<String> hostId = Lists.newArrayList( )
+}
+
+class DescribeHostsResponseType extends HostComputeMessage {
+}
+
+class GetHostReservationPurchasePreviewType extends HostComputeMessage {
+  ArrayList<String> hostIdSet = Lists.newArrayList( )
+  String offeringId
+}
+
+class GetHostReservationPurchasePreviewResponseType extends HostComputeMessage {
+}
+
+class ModifyHostsType extends HostComputeMessage {
+  String autoPlacement
+  ArrayList<String> hostId = Lists.newArrayList( )
+}
+
+class ModifyHostsResponseType extends HostComputeMessage {
+}
+
+class PurchaseHostReservationType extends HostComputeMessage {
+  String clientToken
+  String currencyCode
+  ArrayList<String> hostIdSet = Lists.newArrayList( )
+  String limitPrice
+  String offeringId
+}
+
+class PurchaseHostReservationResponseType extends HostComputeMessage {
+}
+
+class ReleaseHostsType extends HostComputeMessage {
+  ArrayList<String> hostId = Lists.newArrayList( )
+}
+
+class ReleaseHostsResponseType extends HostComputeMessage {
+}

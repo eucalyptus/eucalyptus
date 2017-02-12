@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+  -->
+<binding force-classes="true" add-constructors="true">
+
+  <mapping name="AllocateHostsResponse" class="com.eucalyptus.compute.common.AllocateHostsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+  </mapping>
+  <mapping name="AllocateHosts" class="com.eucalyptus.compute.common.AllocateHostsType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="AutoPlacement" field="autoPlacement" usage="optional"/>
+    <value name="AvailabilityZone" field="availabilityZone" usage="optional"/>
+    <value name="ClientToken" field="clientToken" usage="optional"/>
+    <value name="InstanceType" field="instanceType" usage="optional"/>
+    <value name="Quantity" field="quantity" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeHostReservationOfferingsResponse" class="com.eucalyptus.compute.common.DescribeHostReservationOfferingsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="offeringSet" usage="required"/>
+  </mapping>
+  <mapping name="DescribeHostReservationOfferings" class="com.eucalyptus.compute.common.DescribeHostReservationOfferingsType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <collection name="FilterSet" field="filterSet" usage="optional">>
+      <structure name="member" type="com.eucalyptus.compute.common.Filter"/>
+    </collection>
+    <value name="MaxDuration" field="maxDuration" usage="optional"/>
+    <value name="MaxResults" field="maxResults" usage="optional"/>
+    <value name="MinDuration" field="minDuration" usage="optional"/>
+    <value name="NextToken" field="nextToken" usage="optional"/>
+    <value name="OfferingId" field="offeringId" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeHostReservationsResponse" class="com.eucalyptus.compute.common.DescribeHostReservationsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="hostReservationSet" usage="required"/>
+  </mapping>
+  <mapping name="DescribeHostReservations" class="com.eucalyptus.compute.common.DescribeHostReservationsType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <collection name="FilterSet" field="filterSet" usage="optional">>
+      <structure name="member" type="com.eucalyptus.compute.common.Filter"/>
+    </collection>
+    <value name="MaxResults" field="maxResults" usage="optional"/>
+    <value name="NextToken" field="nextToken" usage="optional"/>
+    <collection name="HostReservationIdSet" field="hostReservationIdSet" usage="optional">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping name="DescribeHostsResponse" class="com.eucalyptus.compute.common.DescribeHostsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="hostSet" usage="required"/>
+  </mapping>
+  <mapping name="DescribeHosts" class="com.eucalyptus.compute.common.DescribeHostsType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <collection name="FilterSet" field="filterSet" usage="optional">>
+      <structure name="member" type="com.eucalyptus.compute.common.Filter"/>
+    </collection>
+    <value name="MaxResults" field="maxResults" usage="optional"/>
+    <value name="NextToken" field="nextToken" usage="optional"/>
+    <collection name="HostId" field="hostId" usage="optional">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping name="GetHostReservationPurchasePreviewResponse" class="com.eucalyptus.compute.common.GetHostReservationPurchasePreviewResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+  </mapping>
+  <mapping name="GetHostReservationPurchasePreview" class="com.eucalyptus.compute.common.GetHostReservationPurchasePreviewType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <collection name="HostIdSet" field="hostIdSet" usage="optional">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+    <value name="OfferingId" field="offeringId" usage="optional"/>
+  </mapping>
+  <mapping name="ModifyHostsResponse" class="com.eucalyptus.compute.common.ModifyHostsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+  </mapping>
+  <mapping name="ModifyHosts" class="com.eucalyptus.compute.common.ModifyHostsType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="AutoPlacement" field="autoPlacement" usage="optional"/>
+    <collection name="HostId" field="hostId" usage="optional">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping name="PurchaseHostReservationResponse" class="com.eucalyptus.compute.common.PurchaseHostReservationResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+  </mapping>
+  <mapping name="PurchaseHostReservation" class="com.eucalyptus.compute.common.PurchaseHostReservationType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="ClientToken" field="clientToken" usage="optional"/>
+    <value name="CurrencyCode" field="currencyCode" usage="optional"/>
+    <collection name="HostIdSet" field="hostIdSet" usage="optional">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+    <value name="LimitPrice" field="limitPrice" usage="optional"/>
+    <value name="OfferingId" field="offeringId" usage="optional"/>
+  </mapping>
+  <mapping name="ReleaseHostsResponse" class="com.eucalyptus.compute.common.ReleaseHostsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+  </mapping>
+  <mapping name="ReleaseHosts" class="com.eucalyptus.compute.common.ReleaseHostsType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <collection name="HostId" field="hostId" usage="optional">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+
+</binding>
