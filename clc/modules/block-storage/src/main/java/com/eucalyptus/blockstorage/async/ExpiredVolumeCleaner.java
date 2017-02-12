@@ -94,7 +94,7 @@ public class ExpiredVolumeCleaner extends CheckerTask {
     try (TransactionResource tr = Entities.transactionFor(VolumeInfo.class)) {
       List<VolumeInfo> volumeInfos =
           Entities.query(new VolumeInfo(), Boolean.FALSE,
-              BlockStorageUtil.getExpriedCriterion(StorageInfo.getStorageInfo().getVolExpiration()), Collections.EMPTY_MAP);
+              BlockStorageUtil.getExpiredCriterion(StorageInfo.getStorageInfo().getVolExpiration()), Collections.EMPTY_MAP);
       if (volumeInfos != null && !volumeInfos.isEmpty()) {
         for (VolumeInfo volumeInfo : volumeInfos) {
           LOG.debug("Deleting metadata for expired volume " + volumeInfo.getVolumeId());
