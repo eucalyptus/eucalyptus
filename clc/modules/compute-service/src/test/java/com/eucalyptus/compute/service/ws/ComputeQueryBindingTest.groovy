@@ -820,10 +820,6 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
     '''
 
       List<String> whitelist = [
-          'AssociateIamInstanceProfile',
-          'DescribeIamInstanceProfileAssociations',
-          'DisassociateIamInstanceProfile',
-          'ReplaceIamInstanceProfileAssociation',
       ]
       Splitter.on(' ').trimResults( ).omitEmptyStrings( ).split( actionsCopiedAndPastedFromAWSEC2Docs ).each { String action ->
         try {

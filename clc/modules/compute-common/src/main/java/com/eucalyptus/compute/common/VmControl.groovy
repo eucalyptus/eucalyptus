@@ -925,3 +925,48 @@ public class UnmonitorInstancesType extends VmControlMessage {
   ArrayList<String> instancesSet = new ArrayList<String>();
   public MonitorInstancesType() {  }
 }
+
+class IamInstanceProfileComputeMessage extends VmControlMessage { } // subclass useful for binding generation
+
+class  IamInstanceProfileSpecification extends EucalyptusData {
+  String arn
+  String name
+}
+
+class AssociateIamInstanceProfileType extends IamInstanceProfileComputeMessage {
+  IamInstanceProfileSpecification iamInstanceProfile
+  String instanceId
+}
+
+class AssociateIamInstanceProfileResponseType extends IamInstanceProfileComputeMessage {
+}
+
+class DescribeIamInstanceProfileAssociationsType extends IamInstanceProfileComputeMessage {
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
+  ArrayList<Filter> filterSet = new ArrayList<Filter>();
+  ArrayList<String> associationId = Lists.newArrayList( )
+  Integer maxResults
+  String nextToken
+}
+
+class DescribeIamInstanceProfileAssociationsResponseType extends IamInstanceProfileComputeMessage {
+}
+
+class DisassociateIamInstanceProfileType extends IamInstanceProfileComputeMessage {
+  String associationId
+}
+
+class DisassociateIamInstanceProfileResponseType extends IamInstanceProfileComputeMessage {
+}
+
+class ReplaceIamInstanceProfileAssociationType extends IamInstanceProfileComputeMessage {
+  String associationId
+  IamInstanceProfileSpecification iamInstanceProfile
+}
+
+class ReplaceIamInstanceProfileAssociationResponseType extends IamInstanceProfileComputeMessage {
+}
+
+
+

@@ -1601,6 +1601,34 @@ public class ComputeService {
     return response;
   }
 
+  public AssociateIamInstanceProfileResponseType associateIamInstanceProfile(
+      final AssociateIamInstanceProfileType request
+  ) throws EucalyptusCloudException {
+    final AssociateIamInstanceProfileResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DescribeIamInstanceProfileAssociationsResponseType describeIamInstanceProfileAssociations(
+      final DescribeIamInstanceProfileAssociationsType request
+  ) throws EucalyptusCloudException {
+    final DescribeIamInstanceProfileAssociationsResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DisassociateIamInstanceProfileResponseType disassociateIamInstanceProfile(
+      final DisassociateIamInstanceProfileType request
+  ) throws EucalyptusCloudException {
+    final DisassociateIamInstanceProfileResponseType response = request.getReply( );
+    return response;
+  }
+
+  public ReplaceIamInstanceProfileAssociationResponseType replaceIamInstanceProfileAssociation(
+      final ReplaceIamInstanceProfileAssociationType request
+  ) throws EucalyptusCloudException {
+    final ReplaceIamInstanceProfileAssociationResponseType response = request.getReply( );
+    return response;
+  }
+
   public ComputeMessage proxy( final ComputeMessage request ) throws EucalyptusCloudException {
     // Dispatch
     try {
