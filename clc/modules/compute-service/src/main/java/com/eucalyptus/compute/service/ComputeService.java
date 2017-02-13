@@ -1538,6 +1538,69 @@ public class ComputeService {
     return response;
   }
 
+  public AssignIpv6AddressesResponseType assignIpv6AddressesType(
+      final AssignIpv6AddressesType request
+  ) throws EucalyptusCloudException {
+    final AssignIpv6AddressesResponseType response = request.getReply( );
+    return response;
+  }
+
+  public AssociateSubnetCidrBlockResponseType associateSubnetCidrBlock(
+      final AssociateSubnetCidrBlockType request
+  ) throws EucalyptusCloudException {
+    final AssociateSubnetCidrBlockResponseType response = request.getReply( );
+    return response;
+  }
+
+  public AssociateVpcCidrBlockResponseType associateVpcCidrBlock(
+      final AssociateVpcCidrBlockType request
+  ) throws EucalyptusCloudException {
+    final AssociateVpcCidrBlockResponseType response = request.getReply( );
+    return response;
+  }
+
+  public CreateEgressOnlyInternetGatewayResponseType createEgressOnlyInternetGateway(
+      final CreateEgressOnlyInternetGatewayType request
+  ) throws EucalyptusCloudException {
+    final CreateEgressOnlyInternetGatewayResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DeleteEgressOnlyInternetGatewayResponseType deleteEgressOnlyInternetGateway(
+      final DeleteEgressOnlyInternetGatewayType request
+  ) throws EucalyptusCloudException {
+    final DeleteEgressOnlyInternetGatewayResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DescribeEgressOnlyInternetGatewaysResponseType describeEgressOnlyInternetGateways(
+      final DescribeEgressOnlyInternetGatewaysType request
+  ) throws EucalyptusCloudException {
+    final DescribeEgressOnlyInternetGatewaysResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DisassociateSubnetCidrBlockResponseType disassociateSubnetCidrBlock(
+      final DisassociateSubnetCidrBlockType request
+  ) throws EucalyptusCloudException {
+    final DisassociateSubnetCidrBlockResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DisassociateVpcCidrBlockResponseType disassociateVpcCidrBlock(
+      final DisassociateVpcCidrBlockType request
+  ) throws EucalyptusCloudException {
+    final DisassociateVpcCidrBlockResponseType response = request.getReply( );
+    return response;
+  }
+
+  public UnassignIpv6AddressesResponseType unassignIpv6Addresses(
+      final UnassignIpv6AddressesType request
+  ) throws EucalyptusCloudException {
+    final UnassignIpv6AddressesResponseType response = request.getReply( );
+    return response;
+  }
+
   public ComputeMessage proxy( final ComputeMessage request ) throws EucalyptusCloudException {
     // Dispatch
     try {

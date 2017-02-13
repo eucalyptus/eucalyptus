@@ -1935,3 +1935,77 @@ class DescribeStaleSecurityGroupsType extends VpcMessage {
 }
 class DescribeStaleSecurityGroupsResponseType extends VpcMessage {
 }
+
+class VpcIpv6ComputeMessage extends VpcMessage { // subclass useful for binding generation
+}
+
+class AssignIpv6AddressesType extends VpcIpv6ComputeMessage {
+  Integer ipv6AddressCount
+  ArrayList<String> Ipv6Addresses = Lists.newArrayList( )
+  String networkInterfaceId
+}
+
+class AssignIpv6AddressesResponseType extends VpcIpv6ComputeMessage {
+}
+
+class AssociateSubnetCidrBlockType extends VpcIpv6ComputeMessage {
+  String ipv6CidrBlock
+  String subnetId
+}
+
+class AssociateSubnetCidrBlockResponseType extends VpcIpv6ComputeMessage {
+}
+
+class AssociateVpcCidrBlockType extends VpcIpv6ComputeMessage {
+  Boolean amazonProvidedIpv6CidrBlock
+  String vpcId
+}
+
+class AssociateVpcCidrBlockResponseType extends VpcIpv6ComputeMessage {
+}
+
+class CreateEgressOnlyInternetGatewayType extends VpcIpv6ComputeMessage {
+  String clientToken
+  String vpcId
+}
+
+class CreateEgressOnlyInternetGatewayResponseType extends VpcIpv6ComputeMessage {
+}
+
+class DeleteEgressOnlyInternetGatewayType extends VpcIpv6ComputeMessage {
+  String egressOnlyInternetGatewayId
+}
+
+class DeleteEgressOnlyInternetGatewayResponseType extends VpcIpv6ComputeMessage {
+}
+
+class DescribeEgressOnlyInternetGatewaysType extends VpcIpv6ComputeMessage {
+  ArrayList<String> egressOnlyInternetGatewayId = Lists.newArrayList( )
+  Integer maxResults
+  String nextToken
+}
+
+class DescribeEgressOnlyInternetGatewaysResponseType extends VpcIpv6ComputeMessage {
+}
+
+class DisassociateSubnetCidrBlockType extends VpcIpv6ComputeMessage {
+  String associationId
+}
+
+class DisassociateSubnetCidrBlockResponseType extends VpcIpv6ComputeMessage {
+}
+
+class DisassociateVpcCidrBlockType extends VpcIpv6ComputeMessage {
+  String associationId
+}
+
+class DisassociateVpcCidrBlockResponseType extends VpcIpv6ComputeMessage {
+}
+
+class UnassignIpv6AddressesType extends VpcIpv6ComputeMessage {
+  ArrayList<String> ipv6Addresses = Lists.newArrayList( )
+  String networkInterfaceId
+}
+
+class UnassignIpv6AddressesResponseType extends VpcIpv6ComputeMessage {
+}

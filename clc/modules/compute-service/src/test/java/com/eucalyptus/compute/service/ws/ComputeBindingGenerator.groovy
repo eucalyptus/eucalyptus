@@ -16,7 +16,7 @@
 package com.eucalyptus.compute.service.ws
 
 import com.eucalyptus.compute.common.ComputeMessage
-import com.eucalyptus.compute.common.ScheduledInstanceComputeMessage
+import com.eucalyptus.compute.common.VpcIpv6ComputeMessage
 import com.google.common.collect.Lists
 import com.google.common.collect.Sets
 import org.junit.Ignore
@@ -36,9 +36,9 @@ class ComputeBindingGenerator {
   @Test
   void generate() {
     ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider( false )
-    scanner.addIncludeFilter( new AssignableTypeFilter( ScheduledInstanceComputeMessage ) );
+    scanner.addIncludeFilter( new AssignableTypeFilter( VpcIpv6ComputeMessage ) );
     Set<String> messageClasses = Sets.newTreeSet( scanner.findCandidateComponents( ComputeMessage.package.name )*.beanClassName )
-    messageClasses.removeAll( [ 'com.eucalyptus.compute.common.ScheduledInstanceComputeMessage' ] )
+    messageClasses.removeAll( [ 'com.eucalyptus.compute.common.VpcIpv6ComputeMessage' ] )
 
     Set<String> beanClasses = Sets.newTreeSet( )
     Set<String> printedBeanClasses = Sets.newHashSet( )

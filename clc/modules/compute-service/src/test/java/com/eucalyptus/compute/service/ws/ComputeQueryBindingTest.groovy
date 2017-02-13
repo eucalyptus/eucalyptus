@@ -820,19 +820,10 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
     '''
 
       List<String> whitelist = [
-          'AssignIpv6Addresses',
           'AssociateIamInstanceProfile',
-          'AssociateSubnetCidrBlock',
-          'AssociateVpcCidrBlock',
-          'CreateEgressOnlyInternetGateway',
-          'DeleteEgressOnlyInternetGateway',
-          'DescribeEgressOnlyInternetGateways',
           'DescribeIamInstanceProfileAssociations',
           'DisassociateIamInstanceProfile',
-          'DisassociateSubnetCidrBlock',
-          'DisassociateVpcCidrBlock',
           'ReplaceIamInstanceProfileAssociation',
-          'UnassignIpv6Addresses',
       ]
       Splitter.on(' ').trimResults( ).omitEmptyStrings( ).split( actionsCopiedAndPastedFromAWSEC2Docs ).each { String action ->
         try {
