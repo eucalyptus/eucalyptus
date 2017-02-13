@@ -510,3 +510,146 @@ class ReleaseHostsType extends HostComputeMessage {
 
 class ReleaseHostsResponseType extends HostComputeMessage {
 }
+
+/****** scheduled instances ******/
+
+class ScheduledInstanceComputeMessage extends ComputeMessage {
+}
+
+class SlotDateTimeRangeRequest extends EucalyptusData {
+  Date earliestTime
+  Date latestTime
+}
+
+class ScheduledInstanceRecurrenceRequest extends EucalyptusData {
+  String frequency
+  Integer interval
+  ArrayList<Integer> occurrenceDay
+  Boolean occurrenceRelativeToEnd
+  String occurrenceUnit
+}
+
+class PurchaseRequest extends EucalyptusData {
+  Integer instanceCount
+  String purchaseToken
+}
+
+class ScheduledInstancesEbs extends EucalyptusData {
+  Boolean deleteOnTermination
+  Boolean encrypted
+  Integer iops
+  String snapshotId
+  Integer volumeSize
+}
+
+class ScheduledInstancesBlockDeviceMapping extends EucalyptusData {
+  String deviceName
+  ScheduledInstancesEbs ebs
+  String noDevice
+  String virtualName
+}
+
+class ScheduledInstancesIamInstanceProfile extends EucalyptusData {
+  String arn
+  String name
+}
+
+class ScheduledInstancesMonitoring extends EucalyptusData {
+  Boolean enabled
+}
+
+class ScheduledInstancesIpv6Address extends EucalyptusData {
+  String ipv6Address
+}
+
+class ScheduledInstancesPrivateIpAddressConfig extends EucalyptusData {
+  Boolean primary
+  String privateIpAddress
+}
+
+class ScheduledInstancesNetworkInterface extends EucalyptusData {
+  Boolean associatePublicIpAddress
+  Boolean deleteOnTermination
+  String description
+  Integer deviceIndex
+  ArrayList<String> groups
+  @HttpEmbedded( multiple = true )
+  ArrayList<ScheduledInstancesIpv6Address> ipv6Addresses
+  Integer ipv6AddressCount
+  String networkInterfaceId
+  String privateIpAddress
+  @HttpEmbedded( multiple = true )
+  ArrayList<ScheduledInstancesPrivateIpAddressConfig> privateIpAddressConfigs
+  Integer secondaryPrivateIpAddressCount
+  String subnetId
+}
+
+class ScheduledInstancesPlacement extends EucalyptusData {
+  String availabilityZone
+  String groupName
+}
+
+class ScheduledInstancesLaunchSpecification extends EucalyptusData {
+  ArrayList<ScheduledInstancesBlockDeviceMapping> blockDeviceMappings
+  Boolean ebsOptimized
+  ScheduledInstancesIamInstanceProfile iamInstanceProfile
+  String imageId
+  String instanceType
+  String kernelId
+  String keyName
+  ScheduledInstancesMonitoring monitoring
+  @HttpEmbedded( multiple = true )
+  ArrayList<ScheduledInstancesNetworkInterface> networkInterfaces
+  ScheduledInstancesPlacement placement
+  String ramdiskId
+  ArrayList<String> securityGroupId
+  String subnetId
+  String userData
+}
+
+class DescribeScheduledInstanceAvailabilityType extends ScheduledInstanceComputeMessage {
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
+  ArrayList<Filter> filterSet = Lists.newArrayList( )
+  SlotDateTimeRangeRequest firstSlotStartTimeRange
+  Integer minSlotDurationInHours
+  Integer maxSlotDurationInHours
+  ScheduledInstanceRecurrenceRequest recurrence
+  Integer maxResults
+  String nextToken
+}
+
+class DescribeScheduledInstanceAvailabilityResponseType extends ScheduledInstanceComputeMessage {
+}
+
+class DescribeScheduledInstancesType extends ScheduledInstanceComputeMessage {
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
+  ArrayList<Filter> filterSet = Lists.newArrayList( )
+  ArrayList<String> scheduledInstanceId = Lists.newArrayList( )
+  SlotDateTimeRangeRequest slotStartTimeRange
+  Integer maxResults
+  String nextToken
+}
+
+class DescribeScheduledInstancesResponseType extends ScheduledInstanceComputeMessage {
+}
+
+class PurchaseScheduledInstancesType extends ScheduledInstanceComputeMessage {
+  String clientToken
+  @HttpEmbedded( multiple = true )
+  ArrayList<PurchaseRequest> purchaseRequest = Lists.newArrayList( )
+}
+
+class PurchaseScheduledInstancesResponseType extends ScheduledInstanceComputeMessage {
+}
+
+class RunScheduledInstancesType extends ScheduledInstanceComputeMessage {
+  String clientToken
+  Integer instanceCount
+  ScheduledInstancesLaunchSpecification launchSpecification
+  String scheduledInstanceId
+}
+
+class RunScheduledInstancesResponseType extends ScheduledInstanceComputeMessage {
+}

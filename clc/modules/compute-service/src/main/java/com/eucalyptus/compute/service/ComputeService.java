@@ -1510,6 +1510,34 @@ public class ComputeService {
     return response;
   }
 
+  public DescribeScheduledInstanceAvailabilityResponseType describeScheduledInstanceAvailability(
+      final DescribeScheduledInstanceAvailabilityType request
+  ) throws EucalyptusCloudException {
+    final DescribeScheduledInstanceAvailabilityResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DescribeScheduledInstancesResponseType describeScheduledInstances(
+      final DescribeScheduledInstancesType request
+  ) throws EucalyptusCloudException {
+    final DescribeScheduledInstancesResponseType response = request.getReply( );
+    return response;
+  }
+
+  public PurchaseScheduledInstancesResponseType purchaseScheduledInstances(
+      final PurchaseScheduledInstancesType request
+  ) throws EucalyptusCloudException {
+    final PurchaseScheduledInstancesResponseType response = request.getReply( );
+    return response;
+  }
+
+  public RunScheduledInstancesResponseType runScheduledInstances(
+      final RunScheduledInstancesType request
+  ) throws EucalyptusCloudException {
+    final RunScheduledInstancesResponseType response = request.getReply( );
+    return response;
+  }
+
   public ComputeMessage proxy( final ComputeMessage request ) throws EucalyptusCloudException {
     // Dispatch
     try {

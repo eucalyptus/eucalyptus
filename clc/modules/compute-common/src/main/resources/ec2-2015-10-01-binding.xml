@@ -51,4 +51,5 @@
   <include path="classpath:ec2-flow-logs.xml" />
   <include path="classpath:ec2-id-format.xml" />
   <include path="classpath:ec2-hosts-15-10-01.xml" />
+  <include path="classpath:ec2-scheduled-instances-15-10-01.xml" />
 </binding>

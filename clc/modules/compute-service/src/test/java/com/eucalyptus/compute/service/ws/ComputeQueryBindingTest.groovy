@@ -828,14 +828,10 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
           'DeleteEgressOnlyInternetGateway',
           'DescribeEgressOnlyInternetGateways',
           'DescribeIamInstanceProfileAssociations',
-          'DescribeScheduledInstanceAvailability',
-          'DescribeScheduledInstances',
           'DisassociateIamInstanceProfile',
           'DisassociateSubnetCidrBlock',
           'DisassociateVpcCidrBlock',
-          'PurchaseScheduledInstances',
           'ReplaceIamInstanceProfileAssociation',
-          'RunScheduledInstances',
           'UnassignIpv6Addresses',
       ]
       Splitter.on(' ').trimResults( ).omitEmptyStrings( ).split( actionsCopiedAndPastedFromAWSEC2Docs ).each { String action ->
