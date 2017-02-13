@@ -1465,4 +1465,82 @@
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
   </mapping>
 
+  <mapping name="AssignIpv6AddressesResponse" class="com.eucalyptus.compute.common.AssignIpv6AddressesResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+  </mapping>
+  <mapping name="AssignIpv6Addresses" class="com.eucalyptus.compute.common.AssignIpv6AddressesType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="Ipv6AddressCount" field="ipv6AddressCount" usage="optional"/>
+    <collection name="Ipv6Addresses" field="Ipv6Addresses" usage="optional">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+    <value name="NetworkInterfaceId" field="networkInterfaceId" usage="optional"/>
+  </mapping>
+  <mapping name="AssociateSubnetCidrBlockResponse" class="com.eucalyptus.compute.common.AssociateSubnetCidrBlockResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+  </mapping>
+  <mapping name="AssociateSubnetCidrBlock" class="com.eucalyptus.compute.common.AssociateSubnetCidrBlockType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="Ipv6CidrBlock" field="ipv6CidrBlock" usage="optional"/>
+    <value name="SubnetId" field="subnetId" usage="optional"/>
+  </mapping>
+  <mapping name="AssociateVpcCidrBlockResponse" class="com.eucalyptus.compute.common.AssociateVpcCidrBlockResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+  </mapping>
+  <mapping name="AssociateVpcCidrBlock" class="com.eucalyptus.compute.common.AssociateVpcCidrBlockType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="AmazonProvidedIpv6CidrBlock" field="amazonProvidedIpv6CidrBlock" usage="optional"/>
+    <value name="VpcId" field="vpcId" usage="optional"/>
+  </mapping>
+  <mapping name="CreateEgressOnlyInternetGatewayResponse" class="com.eucalyptus.compute.common.CreateEgressOnlyInternetGatewayResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+  </mapping>
+  <mapping name="CreateEgressOnlyInternetGateway" class="com.eucalyptus.compute.common.CreateEgressOnlyInternetGatewayType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="ClientToken" field="clientToken" usage="optional"/>
+    <value name="VpcId" field="vpcId" usage="optional"/>
+  </mapping>
+  <mapping name="DeleteEgressOnlyInternetGatewayResponse" class="com.eucalyptus.compute.common.DeleteEgressOnlyInternetGatewayResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+  </mapping>
+  <mapping name="DeleteEgressOnlyInternetGateway" class="com.eucalyptus.compute.common.DeleteEgressOnlyInternetGatewayType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="EgressOnlyInternetGatewayId" field="egressOnlyInternetGatewayId" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeEgressOnlyInternetGatewaysResponse" class="com.eucalyptus.compute.common.DescribeEgressOnlyInternetGatewaysResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+  </mapping>
+  <mapping name="DescribeEgressOnlyInternetGateways" class="com.eucalyptus.compute.common.DescribeEgressOnlyInternetGatewaysType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <collection name="EgressOnlyInternetGatewayId" field="egressOnlyInternetGatewayId" usage="optional">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+    <value name="MaxResults" field="maxResults" usage="optional"/>
+    <value name="NextToken" field="nextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DisassociateSubnetCidrBlockResponse" class="com.eucalyptus.compute.common.DisassociateSubnetCidrBlockResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+  </mapping>
+  <mapping name="DisassociateSubnetCidrBlock" class="com.eucalyptus.compute.common.DisassociateSubnetCidrBlockType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="AssociationId" field="associationId" usage="optional"/>
+  </mapping>
+  <mapping name="DisassociateVpcCidrBlockResponse" class="com.eucalyptus.compute.common.DisassociateVpcCidrBlockResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+  </mapping>
+  <mapping name="DisassociateVpcCidrBlock" class="com.eucalyptus.compute.common.DisassociateVpcCidrBlockType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="AssociationId" field="associationId" usage="optional"/>
+  </mapping>
+  <mapping name="UnassignIpv6AddressesResponse" class="com.eucalyptus.compute.common.UnassignIpv6AddressesResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+  </mapping>
+  <mapping name="UnassignIpv6Addresses" class="com.eucalyptus.compute.common.UnassignIpv6AddressesType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <collection name="Ipv6Addresses" field="ipv6Addresses" usage="optional">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+    <value name="NetworkInterfaceId" field="networkInterfaceId" usage="optional"/>
+  </mapping>
+
 </binding>

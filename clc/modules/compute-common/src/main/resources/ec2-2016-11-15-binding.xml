@@ -33,7 +33,7 @@
   <include path="classpath:ec2-ebs-snapshot-attr.xml" />
   <include path="classpath:ec2-filters-tags-10-06-15.xml" />
   <include path="classpath:ec2-placement-10-06-15.xml" />
-  <include path="classpath:ec2-vpc-15-10-01.xml" />
+  <include path="classpath:ec2-vpc-16-11-15.xml" />
   <include path="classpath:ec2-unimplemented.xml" />
   <include path="classpath:euca-instance-types.xml" />
   <include path="classpath:euca-migration.xml" />
