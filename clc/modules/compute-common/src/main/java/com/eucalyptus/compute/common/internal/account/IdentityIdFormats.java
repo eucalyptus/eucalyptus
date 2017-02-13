@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -36,10 +37,7 @@ import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.compute.common.IdFormatItemType;
 import com.eucalyptus.compute.common.internal.account.IdentityIdFormat.IdResource;
 import com.eucalyptus.compute.common.internal.account.IdentityIdFormat.IdType;
-import com.eucalyptus.compute.common.internal.blockstorage.Snapshot;
-import com.eucalyptus.compute.common.internal.blockstorage.Volume;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
-import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityRestriction;
 import com.eucalyptus.entities.TransactionResource;
@@ -52,7 +50,6 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 /**
@@ -61,23 +58,16 @@ import com.google.common.collect.Lists;
 @SuppressWarnings( { "Guava", "StaticPseudoFunctionalStyleMethod", "OptionalUsedAsFieldOrParameterType" } )
 public class IdentityIdFormats {
 
-  private static final Set<Pair<String,String>> LONG_ID_RESOURCE_PREFIX_PAIRS = ImmutableSet.of(
-      Pair.pair( IdResource.instance.name( ), VmInstance.ID_PREFIX ),
-      Pair.pair( IdResource.reservation.name( ), "r" ),
-      Pair.pair( IdResource.snapshot.name( ), Snapshot.ID_PREFIX ),
-      Pair.pair( IdResource.volume.name( ), Volume.ID_PREFIX )
+  private static final Set<String> LONG_ID_RESOURCES = ImmutableSet.copyOf(
+      Stream.of( IdResource.values( ) ).map( IdResource::name ).iterator( )
   );
 
-  private static final Set<String> LONG_ID_RESOURCES = ImmutableSet.copyOf( Iterables.transform(
-      LONG_ID_RESOURCE_PREFIX_PAIRS, Pair.left( )
-  ) );
-
   private static final Map<String,String> LONG_ID_PREFIX_TO_RESOURCE = ImmutableMap.copyOf(
-      LONG_ID_RESOURCE_PREFIX_PAIRS.stream( ).collect( Collectors.toMap( Pair::getRight, Pair::getLeft ) )
+      Stream.of( IdResource.values( ) ).collect( Collectors.toMap( IdResource::prefix, IdResource::name ) )
   );
 
   private static final Map<String,String> LONG_ID_RESOURCE_TO_PREFIX = ImmutableMap.copyOf(
-      LONG_ID_RESOURCE_PREFIX_PAIRS.stream( ).collect( Collectors.toMap( Pair::getLeft, Pair::getRight ) )
+      Stream.of( IdResource.values( ) ).collect( Collectors.toMap( IdResource::name, IdResource::prefix ) )
   );
 
   private static final LoadingCache<Pair<String,String>,Optional<Boolean>> LONG_ID_CONFIG_CACHE =
@@ -114,7 +104,7 @@ public class IdentityIdFormats {
       @Nonnull final String prefix
   ) {
     final String resource = LONG_ID_PREFIX_TO_RESOURCE.get( prefix );
-    if ( resource != null ) {
+    if ( resource != null && ResourceIdentifiers.useAccountLongIdentifierSettings( ) ) {
       final Optional<Boolean> configuredLongIds =
           LONG_ID_CONFIG_CACHE.getUnchecked( Pair.pair( identityArn, resource ) );
       if ( configuredLongIds.isPresent( ) ) {

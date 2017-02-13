@@ -91,13 +91,16 @@ public interface CloudMetadata extends RestrictedType {
   interface AddressMetadata extends CloudMetadata {}
   
   @PolicyResourceType( "volume" )
+  @CloudMetadataLongIdentifierConfigurable( prefix = "vol" )
   interface VolumeMetadata extends CloudMetadata {}
   
   @PolicyResourceType( "snapshot" )
+  @CloudMetadataLongIdentifierConfigurable( prefix = "snap" )
   interface SnapshotMetadata extends CloudMetadata {
   }
   
   @PolicyResourceType( VmInstanceMetadata.POLICY_RESOURCE_TYPE )
+  @CloudMetadataLongIdentifierConfigurable( prefix = "i", relatedPrefixes = "r" )
   interface VmInstanceMetadata extends CloudMetadata {
     String POLICY_RESOURCE_TYPE = "instance";
   }
