@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,11 +12,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
- *
+ * 
  * This file may incorporate work covered under the following copyright
  * and permission notice:
  *
@@ -253,11 +249,15 @@ public class BlockStorageUtil {
    *          List processing ends when either the parent of the current 
    *          snapshot does not exist in the given snapshotList, or the parent 
    *          snapshot ID stored in the current snapshot is null.
-   *          The returned linked list of snapshots can be applied in order
-   *          to create a volume from the given snapshot ID, if the first 
-   *          element of the returned list is a full snapshot. Note the 
-   *          returned list does not guarantee that the first element is a 
-   *          full snapshot.
+   *          If the first snapshot of the returned list is a full snapshot,
+   *          then the returned list of snapshots can be applied in sequential
+   *          order, to create a volume from the given snapshot ID. 
+   *          <p>
+   *          NOTE: The returned list does not guarantee that the first
+   *          element is a full snapshot. The caller should check this.
+   *          A snapshot is a full snapshot if the element's
+   *          previousSnapshotId is null.
+   *          <p>
    *          If the new list is empty, 'null' will be returned.
    */
   public static final List<SnapshotInfo> getSnapshotChain(List<SnapshotInfo> snapshotList, String lastSnapshotId) {

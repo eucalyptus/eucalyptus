@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,10 +12,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
  *
  * This file may incorporate work covered under the following copyright
  * and permission notice:
@@ -361,8 +357,9 @@ public class VolumeCreator implements Runnable {
 
   // DO NOT throw any exceptions from cleaning routines. Log the errors and move on
   private void cleanFailedSnapshot(String snapshotId) {
-    if (snapshotId == null)
+    if (snapshotId == null) {
       return;
+    }
     LOG.info("Disconnecting and cleaning local snapshot after failed snapshot transfer: " + snapshotId);
     try {
       blockManager.finishVolume(snapshotId);
@@ -624,7 +621,12 @@ public class VolumeCreator implements Runnable {
     snapshotTransfer.download(sr);
 
     // Apply the snapshot delta
-    blockManager.restoreSnapshotDelta(snap.getSnapshotId(), prevSnap.getSnapshotId(), snapshotId, sr);
+    try {
+      blockManager.restoreSnapshotDelta(snap.getSnapshotId(), prevSnap.getSnapshotId(), snapshotId, sr);
+    } catch (EucalyptusCloudException ece) {
+      cleanFailedSnapshot(snapshotId);
+      throw ece;
+    }
   }
 
 }
