@@ -562,7 +562,6 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       final User user = ctx.getUser();
-      final String userId;
       final String accountId = ctx.getAccountNumber();
       final String accountAlias = ctx.getAccountAlias();
       final String stackName = request.getStackName();
@@ -577,10 +576,10 @@ public class CloudFormationService {
         }
         final String stackAccountId = stackEntity.getAccountId( );
 
-        // If this is the eucalyptus admin get the stack userId so we can delete all resources.
-        if(user.isSystemAdmin())
-          userId = Accounts.lookupPrincipalByAccountNumber(stackAccountId).getUserId();
-        else  userId = user.getUserId();
+        // eucalyptus administrators act as account admin to delete resources
+        final String userId = ctx.isAdministrator( ) ?
+          Accounts.lookupCachedPrincipalByAccountNumber( stackAccountId ).getUserId( ) :
+          user.getUserId( );
 
         if (stackEntity.getStackStatus() == Status.UPDATE_IN_PROGRESS || stackEntity.getStackStatus() == Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS ||
           stackEntity.getStackStatus() == Status.UPDATE_ROLLBACK_IN_PROGRESS || stackEntity.getStackStatus() == Status.UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS) {
