@@ -255,10 +255,12 @@ public class SnapshotDeleter extends CheckerTask {
 
     if (StringUtils.isNotBlank(snap.getSnapshotLocation())) {
       // snapshot removal from s3 needs evaluation
+      LOG.debug("Setting snapshot " + snapshotId + " to 'deletedfromebs' state from EBS cleanup");
       markSnapDeletedFromEBS(snapshotId);
       LOG.debug("Snapshot " + snapshotId + " set to 'deletedfromebs' state from EBS cleanup");
     } else {
       // no evidence of snapshot upload to OSG, mark the snapshot as deleted
+      LOG.debug("Setting snapshot " + snapshotId + " to 'deleted' state from EBS cleanup");
       markSnapDeleted(snapshotId);
       LOG.debug("Snapshot " + snapshotId + " set to 'deleted' state from EBS cleanup");
     }
