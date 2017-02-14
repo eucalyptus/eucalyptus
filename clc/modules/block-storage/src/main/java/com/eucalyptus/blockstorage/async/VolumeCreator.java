@@ -588,6 +588,7 @@ public class VolumeCreator implements Runnable {
         // Callback with snapshot ID
         String snapshotPoint = blockManager.executeCallback(srwc.getCallback(), srwc.getSr());
       } else {
+        LOG.warn("Failed to download base " + snap.getSnapshotId() + " for restoring " + snapshotId);
         throw new EucalyptusCloudException("Failed to download base " + snap.getSnapshotId() + " for restoring " + snapshotId);
       }
     } else {
