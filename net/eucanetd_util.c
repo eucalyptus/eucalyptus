@@ -269,8 +269,6 @@ int eucanetd_kick_dhcpd_server(eucanetdConfig *config) {
         // Do we have any "node-" statement
         if (strstr(psConfig, "node-")) {
             // Run the DHCP command
-            // Due to complexity in Eucalyptus packaging (EUCA-12424) do not use systemctl
-            LOGINFO("use_systemctl %d\n", config->use_systemctl);
             if (!config->use_systemctl) {
                 int status = 0;
                 rc = euca_execlp(&status, config->cmdprefix, config->dhcpDaemon,

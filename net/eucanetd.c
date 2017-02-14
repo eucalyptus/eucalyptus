@@ -741,7 +741,8 @@ int main(int argc, char **argv) {
         if (update_globalnet) {
             if (update_globalnet_failed == TRUE) {
                 epoch_failed_updates++;
-                if (scrubResult == EUCANETD_VPCMIDO_IFERROR) {
+                if ((scrubResult == EUCANETD_VPCMIDO_IFERROR) ||
+                        (scrubResult == EUCANETD_VPCMIDO_GWERROR)) {
                     update_version_file = TRUE;
                 }
             } else {
@@ -1120,6 +1121,9 @@ static int eucanetd_cleanup(void) {
         ipt_handler_close(config->ipt);
         ips_handler_close(config->ips);
         ebt_handler_close(config->ebt);
+        EUCA_FREE(config->ipt);
+        EUCA_FREE(config->ips);
+        EUCA_FREE(config->ebt);
         config->polling_frequency = 5;
         config->init = 1;
         atomic_file_free(&(config->global_network_info_file));
