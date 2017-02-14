@@ -48,6 +48,7 @@
     <value name="Code" field="code" usage="optional"/>
     <value name="Message" field="message" usage="optional"/>
     <value name="Resource" field="resource" usage="optional"/>
+    <value name="AWSAccessKeyId" field="accessKeyId" usage="optional"/>
     <value name="RequestId" field="requestId" usage="optional"/>
   </mapping>
 

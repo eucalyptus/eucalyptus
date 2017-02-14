@@ -410,13 +410,15 @@ class InternalErrorException extends S3Exception {
 }
 
 class InvalidAccessKeyIdException extends S3Exception {
+  String accessKeyId
+
   def InvalidAccessKeyIdException() {
     super(S3ErrorCodeStrings.InvalidAccessKeyId, "The AWS Access Key Id you provided does not exist in our records.", HttpResponseStatus.FORBIDDEN);
   }
 
-  def InvalidAccessKeyIdException(String resource) {
+  def InvalidAccessKeyIdException(String accessKeyId) {
     this();
-    this.resource = resource;
+    setAccessKeyId( accessKeyId )
   }
 }
 

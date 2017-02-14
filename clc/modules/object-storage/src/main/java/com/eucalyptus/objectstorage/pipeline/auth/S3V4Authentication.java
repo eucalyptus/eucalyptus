@@ -96,7 +96,7 @@ public final class S3V4Authentication {
       SecurityContext.getLoginContext(creds).login();
     } catch (LoginException ex) {
       if (ex.getMessage().contains("The AWS Access Key Id you provided does not exist in our records"))
-        throw new InvalidAccessKeyIdException();
+        throw new InvalidAccessKeyIdException(accessKeyId);
       LOG.debug("CorrelationId: " + request.getCorrelationId() + " Authentication failed due to signature mismatch:", ex);
       throw new SignatureDoesNotMatchException();
     } catch (Exception e) {

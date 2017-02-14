@@ -379,19 +379,20 @@ public class ObjectStorageDataGetResponseType extends ObjectStorageDataResponseT
 
 @ComponentMessage(ObjectStorage.class)
 public class ObjectStorageErrorMessageType extends BaseMessage {
-  protected String message;
-  protected String code;
-  protected HttpResponseStatus status;
-  protected String resourceType;
-  protected String resource;
-  protected String requestId;
-  protected String hostId;
+  String message;
+  String code;
+  HttpResponseStatus status;
+  String resourceType;
+  String resource;
+  String accessKeyId
+  String requestId;
+  String hostId;
   BucketLogData logData;
-  protected String method;
+  String method;
 
-  def ObjectStorageErrorMessageType() {}
+  ObjectStorageErrorMessageType() {}
 
-  def ObjectStorageErrorMessageType(String message,
+  ObjectStorageErrorMessageType(String message,
   String code,
   HttpResponseStatus status,
   String resourceType,
@@ -409,7 +410,7 @@ public class ObjectStorageErrorMessageType extends BaseMessage {
     this.logData = logData;
   }
 
-  def ObjectStorageErrorMessageType(String message,
+  ObjectStorageErrorMessageType(String message,
   String code,
   HttpResponseStatus status,
   String resourceType,
@@ -427,30 +428,6 @@ public class ObjectStorageErrorMessageType extends BaseMessage {
     this.hostId = hostId;
     this.logData = logData;
     this.method = method;
-  }
-
-  protected void setCode(final String code) {
-    this.code = code
-  }
-
-  public HttpResponseStatus getStatus() {
-    return status;
-  }
-
-  public String getCode() {
-    return code;
-  }
-
-  public String getMessage() {
-    return message;
-  }
-
-  public String getResourceType() {
-    return resourceType;
-  }
-
-  public String getResource() {
-    return resource;
   }
 }
 

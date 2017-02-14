@@ -20,11 +20,7 @@
 
 package com.eucalyptus.objectstorage.pipeline;
 
-import java.nio.charset.Charset;
-
 import org.apache.log4j.Logger;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -32,20 +28,24 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidAccessKeyIdException;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
 import com.eucalyptus.ws.WebServicesException;
+import com.google.common.base.Strings;
+import com.google.common.util.concurrent.Runnables;
 
 public class ObjectStorageRESTExceptionHandler extends SimpleChannelUpstreamHandler {
-  private static Logger LOG = Logger.getLogger(ObjectStorageRESTExceptionHandler.class);
-  private static String CODE_UNKNOWN = "UNKNOWN";
+  private static final Logger LOG = Logger.getLogger(ObjectStorageRESTExceptionHandler.class);
+  private static final String CODE_UNKNOWN = "UNKNOWN";
 
   @Override
   public void exceptionCaught(final ChannelHandlerContext ctx, final ExceptionEvent e) throws Exception {
@@ -55,24 +55,28 @@ public class ObjectStorageRESTExceptionHandler extends SimpleChannelUpstreamHand
       // wrapped exception
       cause = cause.getCause();
     }
-    HttpResponseStatus status = null;
-    String code = null;
-    String resource = null;
-    String message = null;
-    String requestId = null;
 
     // Get the request ID from the context and clear the context. If you cant log an exception and move on
+    String requestId = null;
+    HttpVersion httpVersion = HttpVersion.HTTP_1_0;
+    Runnable cleanup = Runnables.doNothing( );
     try {
       if (ch != null) {
         Context context = Contexts.lookup(ch);
         requestId = context.getCorrelationId();
-        Contexts.clear(context);
+        MappingHttpRequest request = context.getHttpRequest( );
+        httpVersion = request != null ? request.getProtocolVersion( ) : httpVersion;
+        cleanup = () -> Contexts.clear( context );
       }
     } catch (Exception ex) {
       LOG.trace("Error getting request ID or clearing context", ex);
     }
 
     // Populate the error response fields
+    final HttpResponseStatus status;
+    final String code;
+    final String resource;
+    final String message;
     if (cause instanceof ObjectStorageException) {
       ObjectStorageException walrusEx = (ObjectStorageException) cause;
       status = walrusEx.getStatus();
@@ -82,30 +86,39 @@ public class ObjectStorageRESTExceptionHandler extends SimpleChannelUpstreamHand
       WebServicesException webEx = (WebServicesException) cause;
       status = webEx.getStatus();
       code = CODE_UNKNOWN;
+      resource = null;
     } else {
       status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
       code = CODE_UNKNOWN;
+      resource = null;
     }
     message = cause.getMessage();
 
-    StringBuilder error =
-        new StringBuilder().append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><Error><Code>").append(code != null ? code : new String())
-            .append("</Code><Message>").append(message != null ? message : new String()).append("</Message><Resource>")
-            .append(resource != null ? resource : new String()).append("</Resource><RequestId>").append(requestId != null ? requestId : new String())
-            .append("</RequestId></Error>");
+    final ObjectStorageErrorMessageType errorResponse = new ObjectStorageErrorMessageType( );
+    errorResponse.setResource( Strings.nullToEmpty( resource ) );
+    errorResponse.setMessage( Strings.nullToEmpty( message ) );
+    errorResponse.setCode( Strings.nullToEmpty( code ) );
+    errorResponse.setRequestId( Strings.nullToEmpty( requestId ) );
+    errorResponse.setStatus( status );
 
-    ChannelBuffer buffer = ChannelBuffers.copiedBuffer(error, Charset.forName("UTF-8"));
-    final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
-    response.addHeader(HttpHeaders.Names.CONTENT_TYPE, "text/xml; charset=UTF-8");
-    response.addHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buffer.readableBytes()));
-    response.setContent(buffer);
-
-    ChannelFuture writeFuture = Channels.future(ctx.getChannel());
-    writeFuture.addListener(ChannelFutureListener.CLOSE);
-    response.addHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
-    if (ctx.getChannel().isConnected()) {
-      Channels.write(ctx, writeFuture, response);
+    if ( cause instanceof InvalidAccessKeyIdException ) {
+      errorResponse.setAccessKeyId( ( (InvalidAccessKeyIdException) cause ).getAccessKeyId( ) );
+      errorResponse.setResource( null );
     }
-    ctx.sendDownstream(e);
+
+    if ( ctx.getChannel( ).isConnected( ) ) {
+      final MappingHttpResponse response = new MappingHttpResponse( httpVersion );
+      response.setStatus( status );
+      response.setMessage( errorResponse );
+      response.setCorrelationId( requestId );
+      errorResponse.setCorrelationId( requestId );
+      final ChannelFuture writeFuture = Channels.future(ctx.getChannel());
+      writeFuture.addListener(ChannelFutureListener.CLOSE);
+      response.addHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
+      Channels.write( ctx, writeFuture, response );
+      cleanup.run( );
+    } else {
+      ctx.sendDownstream( e );
+    }
   }
 }

@@ -68,7 +68,7 @@ final class S3V2Authentication {
       SecurityContext.getLoginContext(creds).login();
     } catch (LoginException ex) {
       if (ex.getMessage().contains("The AWS Access Key Id you provided does not exist in our records"))
-        throw new InvalidAccessKeyIdException();
+        throw new InvalidAccessKeyIdException(accessKeyId);
 
       if (request.getUri().startsWith(ComponentIds.lookup(ObjectStorage.class).getServicePath()) || request.getUri().startsWith
           (ObjectStorageProperties.LEGACY_WALRUS_SERVICE_PATH)) {
