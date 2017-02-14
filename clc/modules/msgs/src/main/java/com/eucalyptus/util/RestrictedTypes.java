@@ -758,7 +758,7 @@ public class RestrictedTypes {
       } else if ( restrictedType instanceof AccountRestrictedType ) {
         accountNumber = ( (AccountRestrictedType) restrictedType ).getOwnerAccountNumber( );
       } else {
-        accountNumber = null;
+        accountNumber = restrictedType.getOwner( ).getAccountNumber( );
       }
       return PolicyResourceContext.resourceInfo( accountNumber, restrictedType );
     }
