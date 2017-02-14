@@ -23,6 +23,9 @@ import javax.persistence.Enumerated;
 import javax.persistence.Index;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+import com.eucalyptus.compute.common.internal.blockstorage.Snapshot;
+import com.eucalyptus.compute.common.internal.blockstorage.Volume;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.util.Parameters;
 
@@ -39,7 +42,23 @@ public class IdentityIdFormat extends AbstractPersistent {
 
   public enum IdType{ account, user, role }
 
-  public enum IdResource{ instance, reservation, snapshot, volume }
+  public enum IdResource{
+    instance( VmInstance.ID_PREFIX ),
+    reservation( "r" ),
+    snapshot( Snapshot.ID_PREFIX ),
+    volume( Volume.ID_PREFIX ),
+    ;
+
+    private final String prefix;
+
+    IdResource( final String prefix ) {
+      this.prefix = prefix;
+    }
+
+    public String prefix( ) {
+      return prefix;
+    }
+  }
 
   @Column( name = "metadata_account_number", nullable = false, updatable = false )
   private String accountNumber;

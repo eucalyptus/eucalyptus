@@ -19,23 +19,30 @@
  ************************************************************************/
 package com.eucalyptus.compute.common.internal.identifier;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import com.eucalyptus.bootstrap.ServiceJarDiscovery;
+import com.eucalyptus.compute.common.CloudMetadata;
+import com.eucalyptus.compute.common.CloudMetadataLongIdentifierConfigurable;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.FUtils;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
@@ -56,7 +63,7 @@ public class ResourceIdentifiers {
 
   private static final Pattern resourcePattern = Pattern.compile( "[0-9a-fA-F]{8}|[0-9a-fA-F]{17}" );
   private static final Set<String> configurableLongIdentifierResourcePrefixes =
-      ImmutableSet.of( "i", "r", "snap", "vol" );
+      new CopyOnWriteArraySet<>( );
   private static final Function<String,Set<String>> shortIdentifierPrefixes =
       FUtils.memoizeLast( ResourceIdentifiers::prefixes );
   private static final Function<String,Set<String>> longIdentifierPrefixes =
@@ -75,7 +82,7 @@ public class ResourceIdentifiers {
 
   @SuppressWarnings( "WeakerAccess" )
   @ConfigurableField(
-      description = "List of resource identifier prefixes for short identifiers (i|r|snap|vol|*)",
+      description = "List of resource identifier prefixes for short identifiers or * for all",
       displayName = "short_identifier_prefixes",
       changeListener = ResourceIdentifierPrefixListChangeListener.class
   )
@@ -83,11 +90,18 @@ public class ResourceIdentifiers {
 
   @SuppressWarnings( "WeakerAccess" )
   @ConfigurableField(
-      description = "List of resource identifier prefixes for long identifiers (i|r|snap|vol|*)",
+      description = "List of resource identifier prefixes for long identifiers or * for all",
       displayName = "long_identifier_prefixes",
       changeListener = ResourceIdentifierPrefixListChangeListener.class
   )
   public static volatile String LONG_IDENTIFIER_PREFIXES = "";
+
+  @SuppressWarnings( "WeakerAccess" )
+  @ConfigurableField(
+      initial = "true",
+      description = "Allow account settings to specify long identifier usage"
+  )
+  public static volatile Boolean LONG_IDENTIFIER_ACCOUNT_SETTINGS_USED = true;
 
   static void register( final ResourceIdentifierCanonicalizer canonicalizer ) {
     canonicalizers.put( canonicalizer.getName( ).toLowerCase( ), canonicalizer );
@@ -96,6 +110,10 @@ public class ResourceIdentifiers {
   @SuppressWarnings( "unused" )
   public static Optional<ResourceIdentifierCanonicalizer> getCanonicalizer( final String name ) {
     return Optional.fromNullable( canonicalizers.get( name.toLowerCase( ) ) );
+  }
+
+  public static boolean useAccountLongIdentifierSettings() {
+    return MoreObjects.firstNonNull( LONG_IDENTIFIER_ACCOUNT_SETTINGS_USED, Boolean.TRUE );
   }
 
   /**
@@ -270,4 +288,28 @@ public class ResourceIdentifiers {
       return canonicalizer==null ? null : canonicalizer.getName( );
     }
   }
+
+  public static final class ConfigurableLongResourceIdentifierDiscovery extends ServiceJarDiscovery {
+    @Override
+    public boolean processClass( Class candidate ) throws Exception {
+      if ( CloudMetadata.class.isAssignableFrom( candidate ) ) {
+        final Ats ats = Ats.from( candidate );
+        final CloudMetadataLongIdentifierConfigurable configurable =
+            ats.get( CloudMetadataLongIdentifierConfigurable.class );
+        if ( configurable != null ) {
+          configurableLongIdentifierResourcePrefixes.add( configurable.prefix( ) );
+          configurableLongIdentifierResourcePrefixes.addAll( Arrays.asList( configurable.relatedPrefixes( ) ) );
+          return true;
+        }
+      }
+      return false;
+    }
+
+    @Override
+    public Double getPriority( ) {
+      return 1.0d;
+    }
+  }
+
+
 }
