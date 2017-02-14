@@ -444,6 +444,7 @@ public class OSGUtil {
     if (request.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.PUT.toString()) && request instanceof MappingHttpRequest
         && !isBucketOp((mappingRequest = (MappingHttpRequest) request), servicePaths)
         && (mappingRequest.getParameters() == null || mappingRequest.getParameters().isEmpty()
+            || mappingRequest.getParameters().containsKey("progressbar_label") // See EUCA-13210
             || mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.uploadId.toString())
             || mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.partNumber.toString())
             || mappingRequest.getParameters().containsKey(ObjectStorageProperties.SubResource.uploadId.toString().toLowerCase())
