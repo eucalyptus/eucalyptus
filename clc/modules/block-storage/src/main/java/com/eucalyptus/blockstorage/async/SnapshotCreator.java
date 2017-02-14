@@ -1,5 +1,5 @@
 /*************************************************************************
- * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -430,13 +430,25 @@ public class SnapshotCreator implements Runnable {
           int numDeltas = 0;
           if (snapChain == null || snapChain.size() == 0) {
             // This should never happen. The chain should always include the 
-            // parent (previous) snapshot we already found.
-            LOG.error("Did not find the current snapshot's previous snapshot " + prevSnapToAssign.getSnapshotId() +
-                " in restorable snapshots list");
+            // parent (previous) snapshot we already found. But create it as a 
+            // full snapshot instead of failing, to account for the unknown case
+            // that might not prevent an OK full snapshot.
+            LOG.error("Did not find the current snapshot's previous snapshot " + 
+                prevSnapToAssign.getSnapshotId() + " in the restorable snapshots list. " +
+                "The current snapshot " + currSnap.getSnapshotId() + 
+                " will be created as a full snapshot.");
+          } else if (snapChain.get(0).getPreviousSnapshotId() == null) {
+            // This should never happen. The first snapshot in the chain
+            // should always be a full snapshot. But create it as a 
+            // full snapshot instead of failing, to account for the unknown case
+            // that might not prevent an OK full snapshot.
+            LOG.error("First snapshot " + snapChain.get(0).getSnapshotId() +
+                " in the chain of " + snapChain.size() + " snapshots is not a full snapshot. The current snapshot " +
+                currSnap.getSnapshotId() + " will be created as a full snapshot.");
           } else {
             numDeltas = snapChain.size() - 1;
+            LOG.info(this.volumeId + " has " + numDeltas + " delta(s) since the last full checkpoint. Max limit is " + maxDeltas);
           }
-          LOG.info(this.volumeId + " has " + numDeltas + " delta(s) since the last full checkpoint. Max limit is " + maxDeltas);
           if (numDeltas < maxDeltas) {
             return prevSnapToAssign;
           } else {
