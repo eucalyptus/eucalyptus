@@ -437,7 +437,7 @@ public class SnapshotCreator implements Runnable {
                 prevSnapToAssign.getSnapshotId() + " in the restorable snapshots list. " +
                 "The current snapshot " + currSnap.getSnapshotId() + 
                 " will be created as a full snapshot.");
-          } else if (snapChain.get(0).getPreviousSnapshotId() == null) {
+          } else if (snapChain.get(0).getPreviousSnapshotId() != null) {
             // This should never happen. The first snapshot in the chain
             // should always be a full snapshot. But create it as a 
             // full snapshot instead of failing, to account for the unknown case
