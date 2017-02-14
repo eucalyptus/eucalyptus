@@ -13,18 +13,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  ************************************************************************/
-package com.eucalyptus.portal.provider;
+package com.eucalyptus.portal.awsusage;
 
-import com.eucalyptus.auth.principal.AccountIdentifiers;
-import com.eucalyptus.auth.util.SystemAccountProvider;
+import java.util.List;
 
-/**
- *
- */
-public class BillingSystemAccountProvider implements SystemAccountProvider {
-
-  @Override
-  public String getAlias( ) {
-    return AccountIdentifiers.BILLING_SYSTEM_ACCOUNT;
-  }
+public interface AwsUsageRecordTypeReader {
+  List<AwsUsageRecord> read(final String accountId, final List<QueuedEvent> events);
 }

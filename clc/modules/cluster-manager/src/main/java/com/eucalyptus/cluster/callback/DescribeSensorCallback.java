@@ -153,9 +153,6 @@ public class DescribeSensorCallback extends
     }
   }  
 
-  
-  
-
   private void fireUsageEvent(Supplier<InstanceUsageEvent> instanceUsageEventSupplier) {
     InstanceUsageEvent event = instanceUsageEventSupplier.get();
     try {

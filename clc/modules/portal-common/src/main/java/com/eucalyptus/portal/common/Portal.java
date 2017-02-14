@@ -15,7 +15,6 @@
  ************************************************************************/
 package com.eucalyptus.portal.common;
 
-import static com.eucalyptus.portal.common.Portal.SYSTEM_ACCOUNT_ALIAS;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.component.ComponentId;
@@ -36,9 +35,7 @@ import com.eucalyptus.portal.common.policy.PortalPolicySpec;
 @Partition( value = Portal.class, manyToOne = true )
 @FaultLogPrefix( "services" )
 @Description( "Portal service" )
-@PublicComponentAccounts( SYSTEM_ACCOUNT_ALIAS )
+@PublicComponentAccounts( AccountIdentifiers.BILLING_SYSTEM_ACCOUNT )
 public class Portal extends ComponentId {
   private static final long serialVersionUID = 1L;
-
-  public static final String SYSTEM_ACCOUNT_ALIAS = AccountIdentifiers.SYSTEM_ACCOUNT_PREFIX + "billing";
 }

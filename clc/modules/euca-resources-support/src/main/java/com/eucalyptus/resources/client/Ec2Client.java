@@ -26,10 +26,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import com.eucalyptus.compute.common.*;
-import com.eucalyptus.compute.common.internal.vpc.Vpcs;
-
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.principal.AccountFullName;
@@ -74,7 +73,7 @@ public class Ec2Client {
   private class ComputeDescribeInstanceTask extends
       EucalyptusClientTask<ComputeMessage, Compute> {
     private final List<String> instanceIds;
-    private final AtomicReference<List<RunningInstancesItemType>> result = new AtomicReference<List<RunningInstancesItemType>>();
+    private final AtomicReference<List<ReservationInfoType>> result = new AtomicReference<List<ReservationInfoType>>();
 
     private ComputeDescribeInstanceTask(final List<String> instanceId) {
       this.instanceIds = instanceId;
@@ -82,7 +81,17 @@ public class Ec2Client {
 
     private DescribeInstancesType describeInstances() {
       final DescribeInstancesType req = new DescribeInstancesType();
-      req.getFilterSet().add(Filter.filter("instance-id", this.instanceIds));
+      if ( this.instanceIds!= null && this.instanceIds.contains("verbose") ) {
+        req.setInstancesSet(Lists.newArrayList("verbose"));
+      }
+
+      if ( this.instanceIds != null ) {
+        req.getFilterSet().add(Filter.filter("instance-id",
+                this.instanceIds.stream()
+                        .filter( s -> !"verbose".equals(s))
+                        .collect(Collectors.toList())
+        ));
+      }
       return req;
     }
 
@@ -98,15 +107,16 @@ public class Ec2Client {
     void dispatchSuccess(ClientContext<ComputeMessage, Compute> context,
         ComputeMessage response) {
       final DescribeInstancesResponseType resp = (DescribeInstancesResponseType) response;
-      final List<RunningInstancesItemType> resultInstances = Lists
-          .newArrayList();
-      for (final ReservationInfoType res : resp.getReservationSet()) {
-        resultInstances.addAll(res.getInstancesSet());
-      }
-      this.result.set(resultInstances);
+      this.result.set(resp.getReservationSet());
     }
 
-    public List<RunningInstancesItemType> getResult() {
+    public List<RunningInstancesItemType> getInstances() {
+      return this.result.get().stream()
+              .flatMap( s -> s.getInstancesSet().stream() )
+              .collect(Collectors.toList());
+    }
+
+    public List<ReservationInfoType> getResult() {
       return this.result.get();
     }
   }
@@ -1217,12 +1227,31 @@ public class Ec2Client {
         .dispatch(new Ec2Context(userId));
     try {
       if (result.get()) {
-        final List<RunningInstancesItemType> describe = task.getResult();
+        final List<RunningInstancesItemType> describe = task.getInstances();
         return describe;
       } else
         throw new EucalyptusActivityException(
             task.getErrorMessage() != null ? task.getErrorMessage()
                 : "failed to describe the instances");
+    } catch (Exception ex) {
+      throw Exceptions.toUndeclared(ex);
+    }
+  }
+
+  public List<ReservationInfoType> describeInstanceReservations(final String userId, final List<String> instances) {
+    if (userId == null) // run in verbose mode for system user
+      instances.add("verbose");
+    final ComputeDescribeInstanceTask task = new ComputeDescribeInstanceTask(
+            instances);
+    final CheckedListenableFuture<Boolean> result = task
+            .dispatch(new Ec2Context(userId));
+    try {
+      if (result.get()) {
+        return task.getResult();
+      } else
+        throw new EucalyptusActivityException(
+                task.getErrorMessage() != null ? task.getErrorMessage()
+                        : "failed to describe the instances");
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }

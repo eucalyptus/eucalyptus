@@ -1,5 +1,5 @@
 /*************************************************************************
- * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
+ * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,18 +13,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  ************************************************************************/
-package com.eucalyptus.portal.provider;
+package com.eucalyptus.portal.awsusage;
 
-import com.eucalyptus.auth.principal.AccountIdentifiers;
-import com.eucalyptus.auth.util.SystemAccountProvider;
-
-/**
- *
- */
-public class BillingSystemAccountProvider implements SystemAccountProvider {
-
-  @Override
-  public String getAlias( ) {
-    return AccountIdentifiers.BILLING_SYSTEM_ACCOUNT;
+public class BillingActivityException extends Exception {
+  private static final long serialVersionUID = 1L;
+  public BillingActivityException() {  }
+  public BillingActivityException(String message){
+    super(message);
+  }
+  public BillingActivityException(String message, Throwable cause){
+    super(message, cause);
   }
 }

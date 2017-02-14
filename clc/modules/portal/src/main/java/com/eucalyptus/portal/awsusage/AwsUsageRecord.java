@@ -13,18 +13,32 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  ************************************************************************/
-package com.eucalyptus.portal.provider;
+package com.eucalyptus.portal.awsusage;
+import java.util.Date;
 
-import com.eucalyptus.auth.principal.AccountIdentifiers;
-import com.eucalyptus.auth.util.SystemAccountProvider;
+public interface AwsUsageRecord {
+  void setOwnerAccountNumber(final String accountNumber);
+  String getOwnerAccountNumber();
 
-/**
- *
- */
-public class BillingSystemAccountProvider implements SystemAccountProvider {
+  void setService(final String service);
+  String getService();
 
-  @Override
-  public String getAlias( ) {
-    return AccountIdentifiers.BILLING_SYSTEM_ACCOUNT;
-  }
+  void setOperation(final String operation);
+  String getOperation();
+
+  void setUsageType(final String usageType);
+  String getUsageType();
+
+  void setResource(final String resource);
+  String getResource();
+
+  void setStartTime(final Date startTime);
+  Date getStartTime();
+
+  void setEndTime(final Date endTime);
+  Date getEndTime();
+
+  void setUsageValue(final String usageValue);
+  String getUsageValue();
 }
+

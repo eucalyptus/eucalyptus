@@ -99,6 +99,18 @@ class AwsUsageReportData extends UsageReportData {
     public Date endTime;
     public String usageValue;
 
+    AwsUsageReportData() { }
+    AwsUsageReportData(final String service, final String operation, final String usageType,
+                              final String resource, final Date startTime, final Date endTime, final String usageValue) {
+        this.service = service;
+        this.operation = operation;
+        this.usageType = usageType;
+        this.resource = resource;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.usageValue = usageValue;
+    }
+
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder();
@@ -115,7 +127,6 @@ class AwsUsageReportData extends UsageReportData {
         return sb.toString();
     }
 }
-
 
 class InstanceUsageReport {
     private String[] header;
