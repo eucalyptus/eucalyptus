@@ -80,7 +80,7 @@ public final class S3Authentication {
           dateStr = "";
         String canonicalizedAmzHeaders = S3V2Authentication.buildCanonicalHeaders(request, false);
         String securityToken = request.getHeader(SecurityParameter.X_Amz_Security_Token.parameter());
-        S3V2Authentication.login(request, dateStr, canonicalizedAmzHeaders, accessKeyId, signature, securityToken);
+        S3V2Authentication.login(request, date, dateStr, canonicalizedAmzHeaders, accessKeyId, signature, securityToken);
       }
     },
 
@@ -91,7 +91,7 @@ public final class S3Authentication {
         String accessKeyId = request.getParameters().remove(SecurityParameter.AWSAccessKeyId.toString());
         String signature = getSignatureFromParameters(lowercaseParams);
         String securityToken = lowercaseParams.get(SecurityParameter.X_Amz_Security_Token.parameter().toLowerCase());
-        S3V2Authentication.login(request, expiresStr, canonicalizedAmzHeaders, accessKeyId, signature, securityToken);
+        S3V2Authentication.login(request, null, expiresStr, canonicalizedAmzHeaders, accessKeyId, signature, securityToken);
       }
     },
 

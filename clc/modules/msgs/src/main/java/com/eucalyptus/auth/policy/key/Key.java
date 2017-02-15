@@ -79,7 +79,7 @@ public interface Key {
   
   void validateConditionType( Class<? extends ConditionOp> conditionClass ) throws JSONException;
   
-  void validateValueType( String value ) throws JSONException;
+  default void validateValueType( String value ) throws JSONException { };
   
   boolean canApply( String action );
 

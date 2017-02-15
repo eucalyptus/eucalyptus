@@ -47,10 +47,6 @@ public class SystemAccountKey implements EuareKey {
   }
 
   @Override
-  public void validateValueType( final String value ) {
-  }
-
-  @Override
   public boolean canApply( final String action ) {
     return true;
   }

@@ -30,6 +30,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import javaslang.control.Option;
 
 /**
  *
@@ -79,10 +80,10 @@ public class AccessKeys {
    * @return The optional key type
    */
   @Nonnull
-  public static Optional<TemporaryKeyType> getKeyType( @Nonnull final AccessKey key ) {
-    Optional<TemporaryKeyType> type = Optional.absent();
+  public static Option<TemporaryKeyType> getKeyType( @Nonnull final AccessKey key ) {
+    Option<TemporaryKeyType> type = Option.none( );
     if ( key instanceof TemporaryAccessKey) {
-      type = Optional.of( ((TemporaryAccessKey) key ).getType( ) );
+      type = Option.some( ((TemporaryAccessKey) key ).getType( ) );
     }
     return type;
   }

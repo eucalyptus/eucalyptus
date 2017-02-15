@@ -65,7 +65,6 @@ package com.eucalyptus.auth.login;
 import java.io.UnsupportedEncodingException;
 import java.util.List;
 import java.util.Map;
-import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.log4j.Logger;
 import org.apache.xml.security.utils.Base64;
@@ -117,7 +116,7 @@ public class Hmacv2LoginModule extends HmacLoginModuleSupport {
         }
       }
     }
-    super.setCredential( credentials.getQueryIdCredential( AccessKeys.getKeyType( accessKey ) ) );
+    super.setCredential( credentials.getCredential( AccessKeys.getKeyType( accessKey ) ) );
     super.setPrincipal( user );
     return true;
   }

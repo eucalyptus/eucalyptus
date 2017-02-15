@@ -62,23 +62,24 @@
 
 package com.eucalyptus.auth.login;
 
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
+import static com.eucalyptus.auth.principal.AccessKeyCredential.SignatureVersion.v2;
+import static com.eucalyptus.auth.principal.AccessKeyCredential.SignatureVersion.v4;
 import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
 import static com.eucalyptus.ws.util.HmacUtils.headerLookup;
 import static com.eucalyptus.ws.util.HmacUtils.parameterLookup;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import javax.annotation.Nonnull;
+import com.eucalyptus.auth.principal.AccessKeyCredential;
 import com.eucalyptus.crypto.Hmac;
-import com.eucalyptus.util.Parameters;
 import com.eucalyptus.ws.util.HmacUtils;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
-import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
+import javaslang.control.Option;
 
 public class HmacCredentials extends WrappedCredentials<String> {
   private final HmacUtils.SignatureVariant variant;    
@@ -92,6 +93,7 @@ public class HmacCredentials extends WrappedCredentials<String> {
   private final String queryId;
   private final String securityToken;
   private Hmac signatureMethod;
+  private final Long signatureTimestamp;
 
   public HmacCredentials( final String correlationId,
                           final HmacUtils.SignatureVariant variant,
@@ -121,6 +123,8 @@ public class HmacCredentials extends WrappedCredentials<String> {
     this.queryId = variant.getAccessKeyId( headerLookup, parameterLookup );
     this.securityToken = variant.getSecurityToken( headerLookup, parameterLookup );
     this.signatureMethod = variant.getSignatureMethod( headerLookup, parameterLookup );
+    this.signatureTimestamp =
+        Optional.ofNullable( variant.getTimestamp( headerLookup, parameterLookup ) ).map( Date::getTime ).orElse( null );
   }
 
   public HmacUtils.SignatureVariant getVariant() {
@@ -135,8 +139,8 @@ public class HmacCredentials extends WrappedCredentials<String> {
     return this.queryId;
   }
 
-  public QueryIdCredential getQueryIdCredential( @Nonnull final Optional<TemporaryKeyType> type ) {
-    return new QueryIdCredential( getQueryId( ), type );
+  public AccessKeyCredential getCredential( @Nonnull final Option<TemporaryKeyType> type ) {
+    return AccessKeyCredential.of( getQueryId( ), getSignatureVersion( )==4 ? v4 : v2, signatureTimestamp, type );
   }
 
   public String getSecurityToken( ) {
@@ -183,46 +187,4 @@ public class HmacCredentials extends WrappedCredentials<String> {
     return headers;
   }
 
-  public static final class QueryIdCredential {
-    private final String queryId;
-    private final Optional<TemporaryKeyType> type;
-
-    private QueryIdCredential( @Nonnull final String queryId,
-                               @Nonnull final Optional<TemporaryKeyType> type ) {
-      this.queryId = Parameters.checkParam( "queryId", queryId, not( isEmptyOrNullString() ) );
-      this.type = Parameters.checkParam( "type", type, notNullValue( ) );
-    }
-
-    @Nonnull
-    public String getQueryId() {
-      return queryId;
-    }
-
-    @Nonnull
-    public Optional<TemporaryKeyType> getType( ) {
-      return type;
-    }
-
-    public String toString() {
-      return getQueryId();
-    }
-
-    @SuppressWarnings("RedundantIfStatement")
-    @Override
-    public boolean equals(final Object o) {
-      if (this == o) return true;
-      if (o == null || getClass() != o.getClass()) return false;
-
-      final QueryIdCredential that = (QueryIdCredential) o;
-
-      if (!queryId.equals(that.queryId)) return false;
-
-      return true;
-    }
-
-    @Override
-    public int hashCode() {
-      return queryId.hashCode();
-    }
-  }
 }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,42 +12,33 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
  ************************************************************************/
 package com.eucalyptus.objectstorage.policy;
 
-import static com.eucalyptus.objectstorage.policy.S3PolicySpec.S3_CREATEBUCKET;
-import static com.eucalyptus.objectstorage.policy.S3PolicySpec.VENDOR_S3;
-import static com.eucalyptus.auth.policy.PolicySpec.qualifiedName;
 import java.util.Set;
+import javax.annotation.Nullable;
+import javax.security.auth.Subject;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.AccessKeyCredential;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.auth.policy.condition.StringConditionOp;
 import com.eucalyptus.auth.policy.key.PolicyKey;
+import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.objectstorage.msgs.CreateBucketType;
 import com.eucalyptus.util.Exceptions;
-import com.google.common.collect.ImmutableSet;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import com.google.common.collect.Iterables;
 import net.sf.json.JSONException;
 
 /**
  *
  */
-@PolicyKey( LocationConstraintKey.KEY_NAME )
-public class LocationConstraintKey implements ObjectStorageKey {
-  static final String KEY_NAME = "s3:locationconstraint";
-
-  private static final Set<String> actions = ImmutableSet.<String>builder( )
-      .add( qualifiedName( VENDOR_S3, S3_CREATEBUCKET ) )
-      .build( );
+@PolicyKey( SignatureVersionKey.KEY_NAME )
+public class SignatureVersionKey implements ObjectStorageKey {
+  static final String KEY_NAME = "s3:signatureversion";
 
   @Override
   public String value( ) throws AuthException {
-    return getLocationConstraint( );
+    return getSignatureVersion( );
   }
 
   @Override
@@ -59,22 +50,37 @@ public class LocationConstraintKey implements ObjectStorageKey {
 
   @Override
   public boolean canApply( final String action ) {
-    return actions.contains( action );
+    return action != null && action.startsWith( "s3:" );
   }
 
-  private String getLocationConstraint( ) throws AuthException {
-    try {
-      final BaseMessage request = Contexts.lookup( ).getRequest( );
-      final String locationConstraint;
-      if ( request instanceof CreateBucketType ) {
-        locationConstraint = ( (CreateBucketType) request ).getLocationConstraint( );
-      } else {
-        throw new AuthException( "Error getting value for s3 location constraint condition" );
+  private String getSignatureVersion( ) throws AuthException {
+    final AccessKeyCredential credential = getAccessKeyCredential( );
+    if ( credential != null ) {
+      switch ( credential.getSignatureVersion( ) ) {
+        case v2:
+          return "AWS";
+        case v4:
+          return "AWS4-HMAC-SHA256";
       }
-      return locationConstraint;
-    } catch ( Exception e ) {
+    }
+    return null;
+  }
+
+  @Nullable
+  static AccessKeyCredential getAccessKeyCredential( ) throws AuthException {
+    try {
+      final Context context = Contexts.lookup( );
+      final Subject subject = context.getSubject( );
+      if ( subject != null ) {
+        final Set<AccessKeyCredential> credentialSet = subject.getPublicCredentials( AccessKeyCredential.class );
+        if ( credentialSet.size( ) == 1 ) {
+          return Iterables.getOnlyElement( credentialSet );
+        }
+      }
+      return null;
+    } catch ( final Exception e ) {
       Exceptions.findAndRethrow( e, AuthException.class );
-      throw new AuthException( "Error getting value for s3 location constraint condition", e );
+      throw new AuthException( "Error getting s3 signature value", e );
     }
   }
 }

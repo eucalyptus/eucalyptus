@@ -82,10 +82,6 @@ abstract class OpenIDConnectProviderKeySupport implements Key {
   }
 
   @Override
-  public void validateValueType( final String value ) throws JSONException {
-  }
-
-  @Override
   public boolean canApply( final String action ) {
     return true;
   }

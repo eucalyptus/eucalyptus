@@ -44,8 +44,4 @@ public class VolumeIopsKey extends VolumeComputeKey {
       throw new JSONException( KEY_NAME + " is not allowed in condition " + conditionClass.getName( ) + ". Numeric conditions are required." );
     }
   }
-
-  @Override
-  public void validateValueType( final String value ) throws JSONException {
-  }
 }

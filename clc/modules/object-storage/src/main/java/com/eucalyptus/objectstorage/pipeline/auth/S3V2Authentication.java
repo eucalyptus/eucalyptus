@@ -48,11 +48,12 @@ final class S3V2Authentication {
   private S3V2Authentication() {
   }
 
-  static void login(MappingHttpRequest request, String date, String canonicalizedAmzHeaders, String accessKeyId, String signature, String
-      securityToken) throws S3Exception {
+  static void login(MappingHttpRequest request, Date signatureDate, String date, String canonicalizedAmzHeaders,
+                    String accessKeyId, String signature, String securityToken) throws S3Exception {
     login(request, accessKeyId, excludePath -> {
       String stringToSign = buildStringToSign(request, date, canonicalizedAmzHeaders, excludePath);
-      return new ObjectStorageWrappedCredentials(request.getCorrelationId(), stringToSign, accessKeyId, signature, securityToken);
+      return new ObjectStorageWrappedCredentials(request.getCorrelationId(),
+          signatureDate==null?null:signatureDate.getTime(), stringToSign, accessKeyId, signature, securityToken);
     });
   }
 

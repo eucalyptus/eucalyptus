@@ -48,10 +48,6 @@ public class SecureTransport implements AwsKey {
   }
 
   @Override
-  public void validateValueType( final String value ) throws JSONException {
-  }
-
-  @Override
   public boolean canApply( String action ) {
     return true;
   }

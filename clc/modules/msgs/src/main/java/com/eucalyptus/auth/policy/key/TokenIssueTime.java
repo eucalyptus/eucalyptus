@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Set;
 import javax.security.auth.Subject;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.login.HmacCredentials.QueryIdCredential;
+import com.eucalyptus.auth.principal.AccessKeyCredential;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.auth.policy.condition.DateConditionOp;
 import com.eucalyptus.auth.principal.AccessKey;
@@ -46,11 +46,11 @@ public class TokenIssueTime implements AwsKey {
       final Context context = Contexts.lookup( );
       final Subject subject = context.getSubject( );
       final List<AccessKey> keys = context.getUser( ).getKeys( );
-      final Set<QueryIdCredential> queryIdCreds = subject == null ?
+      final Set<AccessKeyCredential> accessKeyCredentials = subject == null ?
           Collections.emptySet( ) :
-          subject.getPublicCredentials( QueryIdCredential.class );
-      if ( queryIdCreds.size( ) == 1 &&
-          Iterables.get( queryIdCreds, 0 ).getType( ).isPresent( ) &&
+          subject.getPublicCredentials( AccessKeyCredential.class );
+      if ( accessKeyCredentials.size( ) == 1 &&
+          Iterables.get( accessKeyCredentials, 0 ).getType( ).isDefined( ) &&
           keys.size( ) == 1 ) {
         return Iso8601DateParser.toString( keys.get( 0 ).getCreateDate( ) );
       }

@@ -62,7 +62,7 @@
 
 package com.eucalyptus.ws.handlers;
 
-import static com.eucalyptus.auth.login.HmacCredentials.QueryIdCredential;
+import com.eucalyptus.auth.principal.AccessKeyCredential;
 import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
 import java.util.EnumSet;
 import java.util.List;
@@ -139,10 +139,10 @@ public class HmacHandler extends MessageStackHandler {
       SecurityContext.getLoginContext( credentials ).login( );
 
       final Subject subject = Contexts.lookup( httpRequest.getCorrelationId( ) ).getSubject( );
-      final QueryIdCredential credential =
-          Iterables.getFirst( subject.getPublicCredentials( QueryIdCredential.class ), null );
+      final AccessKeyCredential credential =
+          Iterables.getFirst( subject.getPublicCredentials( AccessKeyCredential.class ), null );
       if ( credential == null ||
-          ( credential.getType( ).isPresent( ) && !allowedTemporaryKeyTypes.contains( credential.getType( ).get( ) )) ) {
+          ( credential.getType( ).isDefined( ) && !allowedTemporaryKeyTypes.contains( credential.getType( ).get( ) )) ) {
         throw new AuthenticationException( "Temporary credentials forbidden for service" );
       }
 

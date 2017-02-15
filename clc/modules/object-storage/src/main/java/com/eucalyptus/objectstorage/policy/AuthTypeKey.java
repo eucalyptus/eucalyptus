@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,42 +12,34 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
  ************************************************************************/
 package com.eucalyptus.objectstorage.policy;
 
-import static com.eucalyptus.objectstorage.policy.S3PolicySpec.S3_CREATEBUCKET;
-import static com.eucalyptus.objectstorage.policy.S3PolicySpec.VENDOR_S3;
-import static com.eucalyptus.auth.policy.PolicySpec.qualifiedName;
-import java.util.Set;
+import static com.eucalyptus.objectstorage.policy.SignatureVersionKey.getAccessKeyCredential;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.auth.policy.condition.StringConditionOp;
 import com.eucalyptus.auth.policy.key.PolicyKey;
+import com.eucalyptus.auth.principal.AccessKeyCredential;
+import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.objectstorage.msgs.CreateBucketType;
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageAuthenticationHandler;
+import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageFormPOSTAuthenticationHandler;
 import com.eucalyptus.util.Exceptions;
-import com.google.common.collect.ImmutableSet;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import com.google.common.net.HttpHeaders;
 import net.sf.json.JSONException;
 
 /**
  *
  */
-@PolicyKey( LocationConstraintKey.KEY_NAME )
-public class LocationConstraintKey implements ObjectStorageKey {
-  static final String KEY_NAME = "s3:locationconstraint";
-
-  private static final Set<String> actions = ImmutableSet.<String>builder( )
-      .add( qualifiedName( VENDOR_S3, S3_CREATEBUCKET ) )
-      .build( );
+@PolicyKey( AuthTypeKey.KEY_NAME )
+public class AuthTypeKey implements ObjectStorageKey {
+  static final String KEY_NAME = "s3:authtype";
 
   @Override
   public String value( ) throws AuthException {
-    return getLocationConstraint( );
+    return getAuthType( );
   }
 
   @Override
@@ -59,22 +51,27 @@ public class LocationConstraintKey implements ObjectStorageKey {
 
   @Override
   public boolean canApply( final String action ) {
-    return actions.contains( action );
+    return action != null && action.startsWith( "s3:" );
   }
 
-  private String getLocationConstraint( ) throws AuthException {
-    try {
-      final BaseMessage request = Contexts.lookup( ).getRequest( );
-      final String locationConstraint;
-      if ( request instanceof CreateBucketType ) {
-        locationConstraint = ( (CreateBucketType) request ).getLocationConstraint( );
-      } else {
-        throw new AuthException( "Error getting value for s3 location constraint condition" );
+  private String getAuthType( ) throws AuthException {
+    final AccessKeyCredential credential = getAccessKeyCredential( );
+    if ( credential != null ) try { // ensure access key credential was used to authenticate
+      final Context context = Contexts.lookup( );
+      final MappingHttpRequest request = context.getHttpRequest( );
+      if ( context.getChannel( ).getPipeline( ).get( ObjectStorageFormPOSTAuthenticationHandler.class ) != null ) {
+        return "POST";
+      } else if ( context.getChannel( ).getPipeline( ).get( ObjectStorageAuthenticationHandler.class ) != null ) {
+        if ( request.containsHeader( HttpHeaders.AUTHORIZATION ) ) {
+          return "REST-HEADER";
+        } else {
+          return "REST-QUERY-STRING";
+        }
       }
-      return locationConstraint;
-    } catch ( Exception e ) {
+    } catch ( final Exception e ) {
       Exceptions.findAndRethrow( e, AuthException.class );
-      throw new AuthException( "Error getting value for s3 location constraint condition", e );
+      throw new AuthException( "Error getting value for s3 authType condition", e );
     }
+    return null;
   }
 }

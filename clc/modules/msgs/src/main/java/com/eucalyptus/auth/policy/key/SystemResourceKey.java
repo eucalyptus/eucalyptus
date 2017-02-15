@@ -67,10 +67,6 @@ public class SystemResourceKey implements Key {
   }
 
   @Override
-  public void validateValueType( String value ) throws JSONException {
-  }
-
-  @Override
   public boolean canApply( String action ) {
     return true;
   }

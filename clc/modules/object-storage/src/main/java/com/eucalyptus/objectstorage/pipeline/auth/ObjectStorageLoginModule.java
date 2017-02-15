@@ -105,7 +105,7 @@ public class ObjectStorageLoginModule extends BaseLoginModule<ObjectStorageWrapp
     if (!computedSig.equals(providedSig))
       return false;
 
-    super.setCredential(credentials.accessKeyId);
+    super.setCredential(credentials.getCredential( AccessKeys.getKeyType( accessKey ) ));
     super.setPrincipal(accessKey.getPrincipal());
     return true;
   }
@@ -120,7 +120,7 @@ public class ObjectStorageLoginModule extends BaseLoginModule<ObjectStorageWrapp
     if (!MessageDigest.isEqual(computedSig, providedSig))
       return false;
 
-    super.setCredential(credentials.accessKeyId);
+    super.setCredential(credentials.getCredential( AccessKeys.getKeyType( accessKey ) ));
     super.setPrincipal(accessKey.getPrincipal());
     return true;
   }

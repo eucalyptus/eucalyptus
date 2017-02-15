@@ -44,8 +44,4 @@ public class EbsOptimizedKey extends InstanceComputeKey {
       throw new JSONException( KEY_NAME + " is not allowed in condition " + conditionClass.getName( ) + ". Boolean conditions are required." );
     }
   }
-
-  @Override
-  public void validateValueType( final String value ) throws JSONException {
-  }
 }

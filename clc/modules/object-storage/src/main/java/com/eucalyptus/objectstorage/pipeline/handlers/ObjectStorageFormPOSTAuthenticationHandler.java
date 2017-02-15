@@ -143,7 +143,7 @@ public class ObjectStorageFormPOSTAuthenticationHandler extends MessageStackHand
       } else {
         try {
           SecurityContext.getLoginContext(
-              new ObjectStorageWrappedCredentials(httpRequest.getCorrelationId(), policy, accessKey, signature, securityToken)).login();
+              new ObjectStorageWrappedCredentials(httpRequest.getCorrelationId(), null, policy, accessKey, signature, securityToken)).login();
         } catch (LoginException ex) {
           if (ex.getMessage().contains("The AWS Access Key Id you provided does not exist in our records")) {
             throw new InvalidAccessKeyIdException(accessKey);

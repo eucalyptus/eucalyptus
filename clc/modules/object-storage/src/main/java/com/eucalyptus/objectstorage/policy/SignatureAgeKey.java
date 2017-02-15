@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,30 +12,27 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.compute.policy;
+package com.eucalyptus.objectstorage.policy;
 
+import static com.eucalyptus.objectstorage.policy.SignatureVersionKey.getAccessKeyCredential;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.auth.policy.condition.NumericConditionOp;
 import com.eucalyptus.auth.policy.key.PolicyKey;
+import com.eucalyptus.auth.principal.AccessKeyCredential;
 import net.sf.json.JSONException;
 
 /**
  *
  */
-@PolicyKey( VolumeSizeKey.KEY_NAME )
-public class VolumeSizeKey extends VolumeComputeKey {
-  static final String KEY_NAME = "ec2:volumesize";
+@PolicyKey( SignatureAgeKey.KEY_NAME )
+public class SignatureAgeKey implements ObjectStorageKey {
+  static final String KEY_NAME = "s3:signatureage";
 
   @Override
-  public String value( ) throws AuthException {
-    final Integer volumeSize = ComputePolicyContext.getVolumeSize( );
-    return volumeSize == null ? null : String.valueOf( volumeSize );
+  public String value() throws AuthException {
+    return getSignatureAge( );
   }
 
   @Override
@@ -43,5 +40,25 @@ public class VolumeSizeKey extends VolumeComputeKey {
     if ( !NumericConditionOp.class.isAssignableFrom( conditionClass ) ) {
       throw new JSONException( KEY_NAME + " is not allowed in condition " + conditionClass.getName( ) + ". Numeric conditions are required." );
     }
+  }
+
+  @Override
+  public void validateValueType( final String value ) {
+  }
+
+  @Override
+  public boolean canApply( final String action ) {
+    return action != null && action.startsWith( "s3:" );
+  }
+
+  private String getSignatureAge( ) throws AuthException {
+    final AccessKeyCredential credential = getAccessKeyCredential( );
+    if ( credential != null ) {
+      final Long timestamp = credential.getSignatureTimestamp( );
+      if ( timestamp != null ) {
+        return String.valueOf( Math.max( 0L, System.currentTimeMillis( ) - timestamp ) );
+      }
+    }
+    return null;
   }
 }

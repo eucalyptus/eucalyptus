@@ -44,8 +44,4 @@ public class PublicKey extends ImageComputeKey {
       throw new JSONException( KEY_NAME + " is not allowed in condition " + conditionClass.getName( ) + ". Boolean conditions are required." );
     }
   }
-
-  @Override
-  public void validateValueType( final String value ) throws JSONException {
-  }
 }

@@ -79,10 +79,6 @@ public class FederatedProvider implements AwsKey {
   }
 
   @Override
-  public void validateValueType( final String value ) {
-  }
-
-  @Override
   public boolean canApply( final String action ) {
     return true;
   }

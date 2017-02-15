@@ -59,10 +59,6 @@ public class XAmzMetadataDirectiveKey implements ObjectStorageKey {
   }
 
   @Override
-  public void validateValueType( final String value ) {
-  }
-
-  @Override
   public boolean canApply( final String action ) {
     return actions.contains( action );
   }

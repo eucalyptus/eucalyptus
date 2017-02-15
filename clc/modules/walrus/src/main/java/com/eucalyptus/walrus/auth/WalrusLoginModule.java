@@ -107,7 +107,7 @@ public class WalrusLoginModule extends BaseLoginModule<WalrusWrappedCredentials>
       } catch (AuthException e) {
         throw new AccessDeniedException(e.getMessage());
       }
-      super.setCredential(credentials.getQueryIdCredential());
+      super.setCredential(credentials.getQueryId());
       super.setPrincipal(user);
       return true;
     }

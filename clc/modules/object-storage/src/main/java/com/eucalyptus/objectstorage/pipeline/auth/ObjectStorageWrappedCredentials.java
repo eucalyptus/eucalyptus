@@ -62,15 +62,22 @@
 
 package com.eucalyptus.objectstorage.pipeline.auth;
 
+import static com.eucalyptus.auth.principal.AccessKeyCredential.SignatureVersion.v2;
+import static com.eucalyptus.auth.principal.AccessKeyCredential.SignatureVersion.v4;
 import com.eucalyptus.auth.login.WrappedCredentials;
+import com.eucalyptus.auth.principal.AccessKeyCredential;
+import com.eucalyptus.auth.principal.TemporaryAccessKey;
 import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication.V4AuthComponent;
 import com.eucalyptus.util.Assert;
 import com.eucalyptus.ws.util.HmacUtils.SignatureCredential;
+import javaslang.control.Option;
 import javaslang.control.Try.CheckedFunction;
 
+import java.util.Date;
 import java.util.Map;
+import javax.annotation.Nonnull;
 
 public class ObjectStorageWrappedCredentials extends WrappedCredentials<String> {
   enum AuthVersion {
@@ -81,6 +88,7 @@ public class ObjectStorageWrappedCredentials extends WrappedCredentials<String> 
   public final AuthVersion authVersion;
   public final String signature;
   public final String securityToken;
+  public final Long date; // optional signature date
 
   // V2
   public final String accessKeyId;
@@ -94,7 +102,7 @@ public class ObjectStorageWrappedCredentials extends WrappedCredentials<String> 
    *
    * @throws NullPointerException if any arg is null
    */
-  public ObjectStorageWrappedCredentials(String correlationId, String signableString, String accessKeyId, String signature, String
+  public ObjectStorageWrappedCredentials(String correlationId, Long date, String signableString, String accessKeyId, String signature, String
       securityToken) {
     super(correlationId, signableString);
     this.authVersion = AuthVersion.V2;
@@ -103,6 +111,7 @@ public class ObjectStorageWrappedCredentials extends WrappedCredentials<String> 
     this.securityToken = securityToken;
     this.credential = null;
     this.signedHeaders = null;
+    this.date = date;
   }
 
   /**
@@ -110,14 +119,21 @@ public class ObjectStorageWrappedCredentials extends WrappedCredentials<String> 
    *
    * @throws NullPointerException if any arg is null
    */
-  public ObjectStorageWrappedCredentials(String correlationId, String stringToSign, SignatureCredential credential, String signedHeaders,
+  public ObjectStorageWrappedCredentials(String correlationId, Long date, String stringToSign, SignatureCredential credential, String signedHeaders,
                                          String signature, String securityToken) {
     super(correlationId, stringToSign);
+    this.date = date;
     this.authVersion = AuthVersion.V4;
     this.credential = Assert.notNull(credential, "credential");
     this.signedHeaders = Assert.notNull(signedHeaders, "signedHeaders");
     this.signature = Assert.notNull(signature, "signature");
     this.securityToken = securityToken;
     this.accessKeyId = null;
+  }
+
+  public AccessKeyCredential getCredential( @Nonnull final Option<TemporaryAccessKey.TemporaryKeyType> type ) {
+    return authVersion==AuthVersion.V4 ?
+        AccessKeyCredential.of( credential.getAccessKeyId( ), v4, date, type ) :
+        AccessKeyCredential.of( accessKeyId, v2, date, type )  ;
   }
 }

@@ -75,16 +75,16 @@ public final class S3V4Authentication {
   static void login(MappingHttpRequest request, Date date, SignatureCredential credential, String signedHeaders, String signature, String
       securityToken, String payloadHash) throws S3Exception {
     String stringToSign = buildStringToSign(request, date, credential, signedHeaders, payloadHash);
-    ObjectStorageWrappedCredentials creds = new ObjectStorageWrappedCredentials(request.getCorrelationId(), stringToSign, credential,
-        signedHeaders, signature, securityToken);
+    ObjectStorageWrappedCredentials creds = new ObjectStorageWrappedCredentials(request.getCorrelationId(),
+        date==null?null:date.getTime( ), stringToSign, credential, signedHeaders, signature, securityToken);
     login(request, credential.getAccessKeyId(), creds);
   }
 
   static void loginChunk(MappingHttpRequest request, Date date, SignatureCredential credential, String signedHeaders, String signature,
                          String securityToken, String previousSignature, ByteBuffer payload) throws S3Exception {
     String stringToSign = buildChunkStringToSign(date, credential, previousSignature, payload);
-    ObjectStorageWrappedCredentials creds = new ObjectStorageWrappedCredentials(request.getCorrelationId(), stringToSign, credential,
-        signedHeaders, signature, securityToken);
+    ObjectStorageWrappedCredentials creds = new ObjectStorageWrappedCredentials(request.getCorrelationId(),
+        date==null?null:date.getTime( ), stringToSign, credential, signedHeaders, signature, securityToken);
     login(request, credential.getAccessKeyId(), creds);
   }
 

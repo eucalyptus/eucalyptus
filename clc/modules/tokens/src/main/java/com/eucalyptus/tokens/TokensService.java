@@ -21,7 +21,7 @@ package com.eucalyptus.tokens;
 
 import static com.eucalyptus.auth.AccessKeys.accessKeyIdentifier;
 import static com.eucalyptus.auth.login.AccountUsernamePasswordCredentials.AccountUsername;
-import static com.eucalyptus.auth.login.HmacCredentials.QueryIdCredential;
+import com.eucalyptus.auth.principal.AccessKeyCredential;
 import static com.eucalyptus.auth.policy.PolicySpec.IAM_RESOURCE_USER;
 import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_STS;
 import static com.eucalyptus.util.CollectionUtils.propertyPredicate;
@@ -92,7 +92,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.io.BaseEncoding;
 import javaslang.collection.Stream;
 import javaslang.control.Option;
-import net.sf.json.JSONException;
 import org.apache.log4j.Logger;
 
 /**
@@ -137,19 +136,19 @@ public class TokensService {
     final Subject subject = ctx.getSubject();
     final User requestUser = ctx.getUser( );
 
-    final Set<QueryIdCredential> queryIdCreds = subject == null ?
+    final Set<AccessKeyCredential> accessKeyCredentials = subject == null ?
         Collections.emptySet( ) :
-        subject.getPublicCredentials( QueryIdCredential.class );
-    if ( queryIdCreds.isEmpty( ) ) {
+        subject.getPublicCredentials( AccessKeyCredential.class );
+    if ( accessKeyCredentials.isEmpty( ) ) {
       throw new TokensException( Code.MissingAuthenticationToken, "Missing credential." );
     }
 
-    final String queryId = Iterables.getOnlyElement( queryIdCreds ).getQueryId( );
+    final String accessKeyId = Iterables.getOnlyElement( accessKeyCredentials ).getAccessKeyId( );
     final AccessKey accessKey;
     try {
-      accessKey = Iterables.find( requestUser.getKeys( ), propertyPredicate( queryId, accessKeyIdentifier( ) ) );
+      accessKey = Iterables.find( requestUser.getKeys( ), propertyPredicate( accessKeyId, accessKeyIdentifier( ) ) );
     } catch ( final AuthException | NoSuchElementException e ) {
-      throw new TokensException( Code.MissingAuthenticationToken, "Invalid credential: " + queryId );
+      throw new TokensException( Code.MissingAuthenticationToken, "Invalid credential: " + accessKeyId );
     }
 
     try {
@@ -187,13 +186,13 @@ public class TokensService {
     // the time of authentication.
     final Context ctx = Contexts.lookup( );
     final Subject subject = ctx.getSubject( );
-    final Set<QueryIdCredential> queryIdCreds = subject == null ?
+    final Set<AccessKeyCredential> accessKeyCredentials = subject == null ?
         Collections.emptySet( ) :
-        subject.getPublicCredentials( QueryIdCredential.class );
+        subject.getPublicCredentials( AccessKeyCredential.class );
     //noinspection OptionalGetWithoutIsPresent
-    if ( queryIdCreds.size( ) == 1 &&
-        Iterables.get( queryIdCreds, 0 ).getType( ).isPresent( ) &&
-        Iterables.get( queryIdCreds, 0 ).getType( ).get( ) != TemporaryAccessKey.TemporaryKeyType.Access ) {
+    if ( accessKeyCredentials.size( ) == 1 &&
+        Iterables.get( accessKeyCredentials, 0 ).getType( ).isDefined( ) &&
+        Iterables.get( accessKeyCredentials, 0 ).getType( ).get( ) != TemporaryAccessKey.TemporaryKeyType.Access ) {
       throw new TokensException( Code.MissingAuthenticationToken, "Temporary credential not permitted." );
     }
     rejectPasswordCredentials( );

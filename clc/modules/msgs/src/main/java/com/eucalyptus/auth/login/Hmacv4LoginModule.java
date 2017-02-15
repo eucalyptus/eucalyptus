@@ -22,7 +22,6 @@ package com.eucalyptus.auth.login;
 import static com.eucalyptus.ws.util.HmacUtils.headerLookup;
 import static com.eucalyptus.ws.util.HmacUtils.parameterLookup;
 import static com.eucalyptus.ws.util.HmacUtils.SignatureCredential;
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
@@ -87,7 +86,7 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
         throw new InvalidSignatureAuthException( "Signature validation failed" );
       }
     }
-    super.setCredential( credentials.getQueryIdCredential( AccessKeys.getKeyType( accessKey ) ) );
+    super.setCredential( credentials.getCredential( AccessKeys.getKeyType( accessKey ) ) );
     super.setPrincipal( user );
 
     return true;

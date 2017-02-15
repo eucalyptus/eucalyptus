@@ -83,10 +83,6 @@ public class WalrusWrappedCredentials extends WrappedCredentials<String> {
     return this.queryId;
   }
 
-  public QueryIdCredential getQueryIdCredential() {
-    return new QueryIdCredential(getQueryId());
-  }
-
   public String getSignature() {
     return this.signature;
   }
@@ -94,42 +90,5 @@ public class WalrusWrappedCredentials extends WrappedCredentials<String> {
   @Nullable
   public String getSecurityToken() {
     return securityToken;
-  }
-
-  public static final class QueryIdCredential {
-    private final String queryId;
-
-    private QueryIdCredential(final String queryId) {
-      this.queryId = queryId;
-    }
-
-    public String getQueryId() {
-      return queryId;
-    }
-
-    public String toString() {
-      return getQueryId();
-    }
-
-    @SuppressWarnings("RedundantIfStatement")
-    @Override
-    public boolean equals(final Object o) {
-      if (this == o)
-        return true;
-      if (o == null || getClass() != o.getClass())
-        return false;
-
-      final QueryIdCredential that = (QueryIdCredential) o;
-
-      if (!queryId.equals(that.queryId))
-        return false;
-
-      return true;
-    }
-
-    @Override
-    public int hashCode() {
-      return queryId.hashCode();
-    }
   }
 }

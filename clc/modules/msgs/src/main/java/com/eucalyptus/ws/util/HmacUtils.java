@@ -118,8 +118,8 @@ public class HmacUtils {
   public enum SignatureVariant {
     SignatureV1Standard( SignatureVersion.SignatureV1 ) {
       @Override
-      protected Date getTimestamp( @Nonnull final Function<String, List<String>> headerLookup, 
-                                   @Nonnull final Function<String, List<String>> parameterLookup ) throws AuthenticationException {
+      public Date getTimestamp( @Nonnull final Function<String, List<String>> headerLookup,
+                                @Nonnull final Function<String, List<String>> parameterLookup ) throws AuthenticationException {
         return getSignatureDateFrom( "parameter", parameterLookup, SecurityParameter.Timestamp.parameter(), Type.ISO_8601 );
       }
 
@@ -165,8 +165,8 @@ public class HmacUtils {
     },
     SignatureV2Standard( SignatureVersion.SignatureV2 ) {
       @Override
-      protected Date getTimestamp( @Nonnull final Function<String, List<String>> headerLookup,
-                                   @Nonnull final Function<String, List<String>> parameterLookup ) throws AuthenticationException {
+      public Date getTimestamp( @Nonnull final Function<String, List<String>> headerLookup,
+                                @Nonnull final Function<String, List<String>> parameterLookup ) throws AuthenticationException {
         return SignatureV1Standard.getTimestamp( headerLookup, parameterLookup );
       }
 
@@ -221,9 +221,8 @@ public class HmacUtils {
       private final Splitter NVP_SPLITTER = Splitter.on('=').limit(2).trimResults().omitEmptyStrings();
 
       @Override
-      protected Date getTimestamp( @Nonnull final Function<String, List<String>> headerLookup,
-                                   @Nonnull final Function<String, List<String>> parameterLookup ) throws AuthenticationException {
-        
+      public Date getTimestamp( @Nonnull final Function<String, List<String>> headerLookup,
+                                @Nonnull final Function<String, List<String>> parameterLookup ) throws AuthenticationException {
         Date timestamp = getSignatureDateFrom( "header", headerLookup, SecurityHeader.X_Amz_Date.header(), Type.ISO_8601 );
         if ( timestamp == null ) {
           timestamp = getSignatureDateFrom( "header", headerLookup, SecurityHeader.Date.header(), Type.RFC_2616 );
@@ -295,9 +294,8 @@ public class HmacUtils {
     },
     SignatureV4Query( SignatureVersion.SignatureV4 ) {
       @Override
-      protected Date getTimestamp( @Nonnull final Function<String, List<String>> headerLookup,
-                                   @Nonnull final Function<String, List<String>> parameterLookup ) throws AuthenticationException {
-
+      public Date getTimestamp( @Nonnull final Function<String, List<String>> headerLookup,
+                                @Nonnull final Function<String, List<String>> parameterLookup ) throws AuthenticationException {
         Date timestamp = getSignatureDateFrom( "parameter", parameterLookup, SecurityParameter.X_Amz_Date.parameter(), Type.ISO_8601 );
         if ( timestamp == null ) {
           timestamp = getSignatureDateFrom( "header", headerLookup, SecurityHeader.Date.header(), Type.RFC_2616 );
@@ -361,8 +359,9 @@ public class HmacUtils {
       return version;
     }
 
-    protected abstract Date getTimestamp( @Nonnull final Function<String,List<String>> headerLookup,
-                                          @Nonnull final Function<String,List<String>> parameterLookup ) throws AuthenticationException;
+    @Nullable
+    public abstract Date getTimestamp( @Nonnull final Function<String,List<String>> headerLookup,
+                                       @Nonnull final Function<String,List<String>> parameterLookup ) throws AuthenticationException;
 
 
     @Nullable
