@@ -64,19 +64,20 @@ package com.eucalyptus.objectstorage.pipeline.auth;
 
 import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.InvalidSignatureAuthException;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.login.Hmacv4LoginModule;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.crypto.Hmac;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidAccessKeyIdException;
-import com.eucalyptus.objectstorage.pipeline.auth.ObjectStorageWrappedCredentials.AuthVersion;
 import com.google.common.io.BaseEncoding;
 import org.apache.log4j.Logger;
 import org.apache.xml.security.utils.Base64;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import javax.security.auth.login.LoginException;
 import java.security.MessageDigest;
 
 public class ObjectStorageLoginModule extends BaseLoginModule<ObjectStorageWrappedCredentials> {
@@ -89,11 +90,14 @@ public class ObjectStorageLoginModule extends BaseLoginModule<ObjectStorageWrapp
 
   @Override
   public boolean authenticate(ObjectStorageWrappedCredentials credentials) throws Exception {
-    if (credentials.authVersion.equals(AuthVersion.V2))
-      return authV2(credentials);
-    else if (credentials.authVersion.equals(AuthVersion.V4))
-      return authV4(credentials);
-    return false;
+    switch ( credentials.authVersion ) {
+      case V2:
+        return authV2(credentials);
+      case V4:
+        return authV4(credentials);
+      default:
+        throw new LoginException( "Unknown auth version " + credentials.authVersion );
+    }
   }
 
   private boolean authV2(ObjectStorageWrappedCredentials credentials) throws Exception {
@@ -102,8 +106,9 @@ public class ObjectStorageLoginModule extends BaseLoginModule<ObjectStorageWrapp
     String providedSig = credentials.signature.replaceAll("=", "");
 
     // Compare signatures
-    if (!computedSig.equals(providedSig))
-      return false;
+    if (!computedSig.equals(providedSig)) {
+      throw new InvalidSignatureAuthException( "Signature validation failed" );
+    }
 
     super.setCredential(credentials.getCredential( AccessKeys.getKeyType( accessKey ) ));
     super.setPrincipal(accessKey.getPrincipal());
@@ -117,8 +122,9 @@ public class ObjectStorageLoginModule extends BaseLoginModule<ObjectStorageWrapp
     byte[] providedSig = BaseEncoding.base16().lowerCase().decode(credentials.signature);
 
     // Compare signatures
-    if (!MessageDigest.isEqual(computedSig, providedSig))
-      return false;
+    if (!MessageDigest.isEqual(computedSig, providedSig)) {
+      throw new InvalidSignatureAuthException( "Signature validation failed" );
+    }
 
     super.setCredential(credentials.getCredential( AccessKeys.getKeyType( accessKey ) ));
     super.setPrincipal(accessKey.getPrincipal());
