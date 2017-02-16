@@ -2865,7 +2865,7 @@ public class EuareService {
 
   private PolicyVersionType fillManagedPolicyVersionResultFull( final PolicyVersionType version, final EuareManagedPolicyVersion policyVersion ) throws AuthException {
     fillManagedPolicyVersionResult( version, policyVersion );
-    version.setDocument( policyVersion.getText( ) );
+    version.setDocument( encodePolicy( policyVersion.getText( ) ) );
     return version;
   }
 
