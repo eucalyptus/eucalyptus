@@ -357,8 +357,9 @@ public class VolumeCreator implements Runnable {
 
   // DO NOT throw any exceptions from cleaning routines. Log the errors and move on
   private void cleanFailedSnapshot(String snapshotId) {
-    if (snapshotId == null)
+    if (snapshotId == null) {
       return;
+    }
     LOG.info("Disconnecting and cleaning local snapshot after failed snapshot transfer: " + snapshotId);
     try {
       blockManager.finishVolume(snapshotId);
@@ -620,7 +621,12 @@ public class VolumeCreator implements Runnable {
     snapshotTransfer.download(sr);
 
     // Apply the snapshot delta
-    blockManager.restoreSnapshotDelta(snap.getSnapshotId(), prevSnap.getSnapshotId(), snapshotId, sr);
+    try {
+      blockManager.restoreSnapshotDelta(snap.getSnapshotId(), prevSnap.getSnapshotId(), snapshotId, sr);
+    } catch (EucalyptusCloudException ece) {
+      cleanFailedSnapshot(snapshotId);
+      throw ece;
+    }
   }
 
 }
