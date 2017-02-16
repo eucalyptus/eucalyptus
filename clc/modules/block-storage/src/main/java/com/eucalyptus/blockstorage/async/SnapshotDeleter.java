@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,11 +12,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
- *
+ * 
  * This file may incorporate work covered under the following copyright
  * and permission notice:
  *
@@ -134,7 +130,7 @@ public class SnapshotDeleter extends CheckerTask {
         for (SnapshotInfo snap : snapshotsToBeDeleted) {
           try {
             String snapshotId = snap.getSnapshotId();
-            LOG.info("Snapshot " + snapshotId + " was marked for deletion from EBS backend. Evaluating prerequistes for cleanup...");
+            LOG.debug("Snapshot " + snapshotId + " was marked for deletion from EBS backend. Evaluating prerequistes for cleanup...");
 
             if (snap.getIsOrigin() != null && snap.getIsOrigin()) { // check if snapshot originates in this az
               // acquire semaphore before deleting to avoid concurrent interaction with delta creation process
@@ -287,7 +283,7 @@ public class SnapshotDeleter extends CheckerTask {
         LOG.warn("Failed to delete snapshot " + snap.getSnapshotId() + " from ObjectStorageGateway", e);
       }
     } else {
-      LOG.info("Snapshot location missing for " + snap.getSnapshotId() + ". Skipping deletion from ObjectStorageGateway");
+      LOG.debug("Snapshot location missing for " + snap.getSnapshotId() + ". Skipping deletion from ObjectStorageGateway");
     }
   }
 

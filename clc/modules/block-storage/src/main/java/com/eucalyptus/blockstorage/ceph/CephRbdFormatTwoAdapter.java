@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,11 +12,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
- *
+ * 
  * This file may incorporate work covered under the following copyright
  * and permission notice:
  *
@@ -132,7 +128,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
 
   @Override
   public void deleteImage(final String imageName, final String poolName) {
-    LOG.info("Delete ceph-rbd image imageName=" + imageName + ", poolName=" + poolName);
+    LOG.debug("Delete ceph-rbd image imageName=" + imageName + ", poolName=" + poolName);
     executeRbdOpInPool(new Function<CephRbdConnectionManager, String>() {
 
       @Override
@@ -161,7 +157,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
                   LOG.trace("Unprotecting snapshot=" + snap.name + ", image=" + imageName + ", pool=" + arg0.getPool());
                   image.snapUnprotect(snap.name);
                 }
-                LOG.debug("Removing snapshot=" + snap.name + ", image=" + imageName + ", pool=" + arg0.getPool());
+                LOG.info("Removing snapshot=" + snap.name + ", image=" + imageName + ", pool=" + arg0.getPool());
                 image.snapRemove(snap.name);
                 continue;
               }
@@ -173,7 +169,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
           if (canBeDeleted) {
             arg0.getRbd().close(image);
             image = null;
-            LOG.debug("Deleting image=" + imageName + ", pool=" + arg0.getPool());
+            LOG.info("Deleting image=" + imageName + ", pool=" + arg0.getPool());
             arg0.getRbd().remove(imageName);
           } else {
             LOG.debug("Cannot delete image " + imageName + " in pool " + poolName
@@ -202,7 +198,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
 
   @Override
   public void cleanUpImages(final String poolName, final String imagePrefix, final List<String> toBeDeleted) {
-    LOG.info("Cleanup RBD images poolName=" + poolName + ", prefix=" + imagePrefix);
+    LOG.debug("Cleanup RBD images poolName=" + poolName + ", prefix=" + imagePrefix);
     executeRbdOpInPool(new Function<CephRbdConnectionManager, String>() {
 
       @Override
@@ -241,7 +237,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
                         LOG.trace("Unprotecting snapshot=" + snap.name + ", image=" + imageName + ", pool=" + arg0.getPool());
                         image.snapUnprotect(snap.name);
                       }
-                      LOG.debug("Removing snapshot=" + snap.name + ", image=" + imageName + ", pool=" + arg0.getPool());
+                      LOG.info("Removing snapshot=" + snap.name + ", image=" + imageName + ", pool=" + arg0.getPool());
                       image.snapRemove(snap.name);
                       continue;
                     }
@@ -253,7 +249,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
                 if (canBeDeleted) {
                   arg0.getRbd().close(image);
                   image = null;
-                  LOG.debug("Deleting image=" + imageName + ", pool=" + arg0.getPool());
+                  LOG.info("Deleting image=" + imageName + ", pool=" + arg0.getPool());
                   arg0.getRbd().remove(imageName);
                 } else {
                   if (!imageName.startsWith(imagePrefix)) {
@@ -295,7 +291,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
 
   @Override
   public SetMultimap<String, String> cleanUpSnapshots(final String poolName, final SetMultimap<String, String> toBeDeleted) {
-    LOG.info("Cleanup RBD snapshots poolName=" + poolName);
+    LOG.debug("Cleanup RBD snapshots poolName=" + poolName);
     return executeRbdOpInPool(new Function<CephRbdConnectionManager, SetMultimap<String, String>>() {
 
       @Override
@@ -332,7 +328,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
                       LOG.trace("Unprotecting RBD snapshot=" + snapName + ", image=" + imageName + ", pool=" + arg0.getPool());
                       image.snapUnprotect(snapName);
                     }
-                    LOG.debug("Removing RBD snapshot=" + snapName + ", image=" + imageName + ", pool=" + arg0.getPool());
+                    LOG.info("Removing RBD snapshot=" + snapName + ", image=" + imageName + ", pool=" + arg0.getPool());
                     image.snapRemove(snapName);
                   } else {
                     LOG.debug("Cannot delete RBD snapshot=" + snapName + ", image=" + imageName + ", pool=" + poolName
@@ -388,7 +384,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
 
   @Override
   public String getImagePool(final String imageName) {
-    LOG.info("Get ceph-rbd image pool imageName=" + imageName);
+    LOG.debug("Get ceph-rbd image pool imageName=" + imageName);
     return findAndExecuteRbdOp(new Function<CephRbdConnectionManager, String>() {
 
       @Override
@@ -472,7 +468,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
 
   @Override
   public String deleteAllSnapshots(final String imageName, final String poolName, final String snapName) {
-    LOG.info("Delete ceph-rbd snapshots on imageName=" + imageName + ", poolName=" + poolName);
+    LOG.debug("Delete ceph-rbd snapshots on imageName=" + imageName + ", poolName=" + poolName);
     return executeRbdOpInPool(new Function<CephRbdConnectionManager, String>() {
 
       @Override
@@ -491,7 +487,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
                 LOG.trace("Unprotecting snapshot=" + snap.name + ", image=" + imageName + ", pool=" + arg0.getPool());
                 image.snapUnprotect(snap.name);
               }
-              LOG.debug("Removing snapshot=" + snap.name + ", image=" + imageName + ", pool=" + arg0.getPool());
+              LOG.info("Removing snapshot=" + snap.name + ", image=" + imageName + ", pool=" + arg0.getPool());
               image.snapRemove(snap.name);
             }
           }
@@ -540,7 +536,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
   @Override
   public String cloneAndResizeImage(final String parentName, final String snapName, final String cloneName, final Long size,
       final String parentPoolName) {
-    LOG.info("Clone (and resize) ceph-rbd image parentName=" + parentName + ", snapName=" + snapName + ", cloneName=" + cloneName + ", size=" + size
+    LOG.debug("Clone (and resize) ceph-rbd image parentName=" + parentName + ", snapName=" + snapName + ", cloneName=" + cloneName + ", size=" + size
         + ", parentPoolName=" + parentPoolName);
     return executeRbdOpInPool(new Function<CephRbdConnectionManager, String>() {
 
@@ -558,7 +554,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
                 // We only want layering and format 2
                 int features = (1 << 0);
 
-                LOG.debug("Cloning snapshot=" + snapName + ", image=" + parentName + ", pool=" + parentConn.getPool() + " to image=" + cloneName
+                LOG.info("Cloning snapshot=" + snapName + ", image=" + parentName + ", pool=" + parentConn.getPool() + " to image=" + cloneName
                     + ", pool=" + cloneConn.getPool());
                 parentConn.getRbd().clone(parentName, snapName, cloneConn.getIoContext(), cloneName, features, 0);
 
@@ -567,7 +563,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
                   LOG.trace("Opening image=" + cloneName + ", pool=" + cloneConn.getPool() + ", mode=read-write");
                   clone = cloneConn.getRbd().open(cloneName);
 
-                  LOG.debug("Resizing image=" + cloneName + ", pool=" + cloneConn.getPool() + " to " + size + " bytes");
+                  LOG.info("Resizing image=" + cloneName + ", pool=" + cloneConn.getPool() + " to " + size + " bytes");
                   clone.resize(size.longValue());
                 } else {
                   // nothing to do here
@@ -601,7 +597,7 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
 
   @Override
   public List<String> listPool(final String poolName) {
-    LOG.info("List ceph-rbd pool poolName=" + poolName);
+    LOG.debug("List ceph-rbd pool poolName=" + poolName);
     return executeRbdOpInPool(new Function<CephRbdConnectionManager, List<String>>() {
 
       @Override

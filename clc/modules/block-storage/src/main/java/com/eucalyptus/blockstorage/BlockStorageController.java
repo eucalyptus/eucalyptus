@@ -734,8 +734,8 @@ public class BlockStorageController implements BlockStorageService {
       Criteria query = Entities.createCriteria(SnapshotInfo.class);
       query.setReadOnly(true);
 
-      // Only look for snaps that are not failed and not error
-      ImmutableSet<String> excludedStates = ImmutableSet.of(StorageProperties.Status.failed.toString(), StorageProperties.Status.error.toString(),
+      // Only look for snaps that are not failed nor deleted
+      ImmutableSet<String> excludedStates = ImmutableSet.of(StorageProperties.Status.failed.toString(), 
           StorageProperties.Status.deleted.toString(), StorageProperties.Status.deletedfromebs.toString());
 
       query.add(Restrictions.not(Restrictions.in("status", excludedStates)));
@@ -1023,7 +1023,8 @@ public class BlockStorageController implements BlockStorageService {
     } catch (NoSuchElementException e) {
       // the SC knows nothing about this snapshot, either never existed or was deleted
       // For idempotent behavior, tell backend to delete and return true
-      LOG.warn("Got delete request, but unable to find snapshot in SC database: " + snapshotId);
+      LOG.info("Got delete request, but unable to find snapshot in database: " + snapshotId +
+          ". May have already been deleted in another zone.");
       reply.set_return(Boolean.TRUE);
     } catch (TransactionException e) {
       LOG.error("Exception looking up snapshot: " + snapshotId, e);
@@ -1077,7 +1078,6 @@ public class BlockStorageController implements BlockStorageService {
           List<VolumeInfo> volInfos = Entities.query(volInfo);
           for (VolumeInfo vInfo : volInfos) {
             if (!vInfo.getStatus().equals(StorageProperties.Status.failed.toString())
-                && !vInfo.getStatus().equals(StorageProperties.Status.error.toString())
                 && !vInfo.getStatus().equals(StorageProperties.Status.deleted.toString())) {
               totalVolumeSize += vInfo.getSize();
             }

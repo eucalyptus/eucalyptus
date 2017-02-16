@@ -758,7 +758,7 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
 
   private S3Object download() throws SnapshotTransferException {
     try {
-      LOG.debug("Dowloading snapshot from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
+      LOG.debug("Downloading snapshot from objectstorage: snapshotId=" + snapshotId + ", bucket=" + bucketName + ", key=" + keyName);
       return retryAfterRefresh(new Function<GetObjectRequest, S3Object>() {
 
         @Override

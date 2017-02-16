@@ -124,7 +124,7 @@ public class VolumeDeleter extends CheckerTask {
           try (TransactionResource tran = Entities.transactionFor(VolumeInfo.class)) {
             vol = Entities.uniqueResult(vol);
             final String volumeId = vol.getVolumeId();
-            LOG.info("Volume: " + volumeId + " marked for deletion. Checking export status");
+            LOG.debug("Volume: " + volumeId + " marked for deletion. Checking export status");
             if (Iterables.any(vol.getAttachmentTokens(), new Predicate<VolumeToken>() {
               @Override
               public boolean apply(VolumeToken token) {

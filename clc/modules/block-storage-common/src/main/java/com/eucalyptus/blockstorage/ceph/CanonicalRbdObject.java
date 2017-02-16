@@ -98,7 +98,9 @@ public class CanonicalRbdObject {
           return null;
         }
       } else {
-        LOG.warn("Invalid canonical ID " + canonicalId);
+        // Caller may pass in a null ID which may be OK.
+        // If not, errors will be handled at a higher level.
+        LOG.debug("Invalid canonical ID " + canonicalId);
         return null;
       }
     } catch (Exception e) {
