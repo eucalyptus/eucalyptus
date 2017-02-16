@@ -81,6 +81,7 @@ package com.eucalyptus.util.concurrent;
 
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -89,7 +90,6 @@ import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.records.Logs;
 import com.google.common.base.Predicate;
 import org.apache.log4j.Logger;
-import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Threads;
@@ -256,18 +256,24 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
             try {
               long elapsed = System.currentTimeMillis() - startTime;
               long seconds = TimeUnit.MILLISECONDS.toSeconds( elapsed );
-              String details = ExecPair.this.callable.toString() + " [" + Threads.filteredStack( filter ).iterator().next() + "]";
+              Supplier<String> details = () -> ExecPair.this.callable.toString() + " [" + Threads.filteredStack( filter ).iterator().next() + "]";
               if ( seconds > FUTURE_LISTENER_DEBUG_LIMIT_SECS ) {
-                LOG.debug( String.format( message, FUTURE_LISTENER_DEBUG_LIMIT_SECS, details, executor.toString() ) );
+                if ( LOG.isDebugEnabled( ) ) {
+                  LOG.debug( String.format( message, FUTURE_LISTENER_DEBUG_LIMIT_SECS, details.get(), executor.toString() ) );
+                }
                 return true;
               } else if ( seconds > FUTURE_LISTENER_INFO_LIMIT_SECS ) {
-                LOG.info( String.format( message, FUTURE_LISTENER_INFO_LIMIT_SECS, details, executor.toString() ) );
+                if ( LOG.isInfoEnabled( ) ) {
+                  LOG.info( String.format( message, FUTURE_LISTENER_INFO_LIMIT_SECS, details.get( ), executor.toString( ) ) );
+                }
                 return true;
               } else if ( seconds > FUTURE_LISTENER_ERROR_LIMIT_SECS ) {
-                LOG.error( String.format( message, FUTURE_LISTENER_ERROR_LIMIT_SECS, details, executor.toString() ) );
+                LOG.error( String.format( message, FUTURE_LISTENER_ERROR_LIMIT_SECS, details.get(), executor.toString() ) );
                 return true;
               }
-              LOG.trace( String.format( "Listener still within time limit (%d): %s using executor %s", FUTURE_LISTENER_ERROR_LIMIT_SECS, details, executor.toString() ) );
+              if ( LOG.isTraceEnabled( ) ) {
+                LOG.trace( String.format( "Listener still within time limit (%d): %s using executor %s", FUTURE_LISTENER_ERROR_LIMIT_SECS, details.get(), executor.toString() ) );
+              }
             } catch ( Exception e ) {
               LOG.error( e );
             }

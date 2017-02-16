@@ -325,7 +325,8 @@ public class Logs {
   public static boolean isTrace( ) {
     return LogLevel.TRACE.call( );
   }
-  
+
+  @Deprecated
   public static String dump( final Object o ) {
     String ret = null;
     if ( ( ret = groovyDump( o ) ) != null ) {

@@ -72,8 +72,6 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 public class EventRecord extends BaseMessage {
 
   private static Record create( final Class component, final EventClass eventClass, final EventType eventName, final String other, int dist ) {
-    StackTraceElement[] stack = Thread.currentThread( ).getStackTrace( );
-    StackTraceElement ste = stack[dist+3<stack.length?dist+3:stack.length-1];
     String userFn = Bootstrap.isFinished( ) ? "" : "bootstrap";
     String correlationId = null;
     try {
@@ -83,7 +81,7 @@ public class EventRecord extends BaseMessage {
     } catch ( Exception ex ) {
     }
     
-    return new LogFileRecord( eventClass, eventName, component, ste, userFn, correlationId, other );
+    return new LogFileRecord( eventClass, eventName, component, null, userFn, correlationId, other );
   }
 
   public static Record here( final Class component, final EventClass eventClass, final EventType eventName, final String... other ) {
