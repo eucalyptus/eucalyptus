@@ -120,6 +120,7 @@ install: build
 	@$(INSTALL) -m 755 clcadmin-assume-system-credentials $(DESTDIR)$(sbindir)/clcadmin-assume-system-credentials
 	@$(INSTALL) -m 755 clcadmin-copy-keys $(DESTDIR)$(sbindir)/clcadmin-copy-keys
 	@$(INSTALL) -m 755 clcadmin-copy-keys $(DESTDIR)$(sbindir)/clusteradmin-copy-keys
+	@$(INSTALL) -m 755 clcadmin-impersonate-user $(DESTDIR)$(sbindir)/clcadmin-impersonate-user
 	@$(INSTALL) -m 755 clcadmin-initialize-cloud $(DESTDIR)$(sbindir)/clcadmin-initialize-cloud
 	@$(INSTALL) -m 755 clusteradmin-register-nodes $(DESTDIR)$(sbindir)/clusteradmin-register-nodes
 	@$(INSTALL) -m 755 clusteradmin-register-nodes $(DESTDIR)$(sbindir)/clusteradmin-deregister-nodes
