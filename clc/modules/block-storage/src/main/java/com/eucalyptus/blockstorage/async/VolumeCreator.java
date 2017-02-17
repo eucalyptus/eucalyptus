@@ -12,7 +12,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
+ * 
  * This file may incorporate work covered under the following copyright
  * and permission notice:
  *
@@ -122,16 +122,16 @@ public class VolumeCreator implements Runnable {
   @Override
   public void run() {
     boolean success = true;
-    if (snapshotId != null) {
+    if (this.snapshotId != null) {
       try {
-        SnapshotInfo searchFor = new SnapshotInfo(snapshotId);
+        SnapshotInfo searchFor = new SnapshotInfo(this.snapshotId);
         searchFor.setStatus(StorageProperties.Status.available.toString()); // search only for available snapshot in the az
 
         List<SnapshotInfo> foundSnapshotInfos = Transactions.findAll(searchFor);
 
         if (foundSnapshotInfos == null || foundSnapshotInfos.isEmpty()) {
           // SC *may not* have a database record for the snapshot and or the actual snapshot
-          EucaSemaphore semaphore = EucaSemaphoreDirectory.getSolitarySemaphore(snapshotId);
+          EucaSemaphore semaphore = EucaSemaphoreDirectory.getSolitarySemaphore(this.snapshotId);
           try {
             semaphore.acquire(); // Get the semaphore to avoid concurrent access by multiple threads
             foundSnapshotInfos = Transactions.findAll(searchFor); // Check if another thread setup the snapshot
@@ -174,14 +174,14 @@ public class VolumeCreator implements Runnable {
               if (foundSnapshotInfos != null && foundSnapshotInfos.size() > 0) {
                 sourceSnap = foundSnapshotInfos.get(0);
               } else {
-                throw new EucalyptusCloudException("No record of snapshot " + snapshotId + " in any availability zone");
+                throw new EucalyptusCloudException("No record of snapshot " + this.snapshotId + " in any availability zone");
               }
 
               // TODO this might be unnecessary
               // If size was not found in database, bail out. Can't create a snapshot without the size
               if (sourceSnap.getSizeGb() == null || sourceSnap.getSizeGb() <= 0) {
                 throw new EucalyptusCloudException(
-                    "Snapshot size for " + snapshotId + " is unknown. Cannot prep snapshot holder on the storage backend");
+                    "Snapshot size for " + this.snapshotId + " is unknown. Cannot prep snapshot holder on the storage backend");
               }
 
               // Copy base snapshot info to this snapshot
@@ -189,13 +189,13 @@ public class VolumeCreator implements Runnable {
 
               // Check for the snapshot on the storage backend. Clusters/zones/partitions may be connected to the same storage backend in
               // which case snapshot does not have to be downloaded from ObjectStorage.
-              if (!blockManager.getFromBackend(snapshotId, sourceSnap.getSizeGb())) {
+              if (!blockManager.getFromBackend(this.snapshotId, sourceSnap.getSizeGb())) {
                 // Storage backend does not contain snapshot. Download snapshot from OSG
-                LOG.debug(snapshotId + " not found on storage backend. Will attempt to download from objectstorage gateway");
+                LOG.debug(this.snapshotId + " not found on storage backend. Will attempt to download from objectstorage gateway");
 
                 // check whether upload is incremental snapshot
                 if (!Strings.isNullOrEmpty(sourceSnap.getPreviousSnapshotId())) {
-                  LOG.info(snapshotId + " is an incremental snapshot orignating from az " + sourceSnap.getScName());
+                  LOG.info(this.snapshotId + " is an incremental snapshot originating from az " + sourceSnap.getScName());
 
                   // check if backend supports incremental snapshot
                   if (blockManager.supportsIncrementalSnapshots()) {
@@ -218,11 +218,11 @@ public class VolumeCreator implements Runnable {
                     }
                     
                     // Get the snap chain ending with the current snapshot
-                    List<SnapshotInfo> snapChain = blockStorageUtilSvc.getSnapshotChain(prevRestorableSnapsList, snapshotId);
+                    List<SnapshotInfo> snapChain = blockStorageUtilSvc.getSnapshotChain(prevRestorableSnapsList, this.snapshotId);
                     int numDeltas = 0;
                     if (snapChain == null || snapChain.size() == 0) {
                       // This should never happen. The chain should always include at least the current snapshot.
-                      throw new EucalyptusCloudException("Could not find current snapshot " + snapshotId + 
+                      throw new EucalyptusCloudException("Could not find current snapshot " + this.snapshotId + 
                           " in restorable snapshots list");
                     }
                     
@@ -248,7 +248,7 @@ public class VolumeCreator implements Runnable {
                       }
                     }
                     // Cleanup snapshot state and set it up for volume creation
-                    blockManager.completeSnapshotRestorationFromDeltas(snapshotId);
+                    blockManager.completeSnapshotRestorationFromDeltas(this.snapshotId);
                   } else {
                     LOG.warn("Snapshot " + this.snapshotId
                         + " cannot be restored in this availability zone since it does not support incremental snapshots. Failing volume "
@@ -266,7 +266,7 @@ public class VolumeCreator implements Runnable {
 
               } else { // Storage backend contains snapshot
                 // Just create a record of it for this partition in the DB and get going!
-                LOG.debug(snapshotId + " found on storage backend");
+                LOG.debug(this.snapshotId + " found on storage backend");
                 // update the metadata as necessary
                 azSnap.setPreviousSnapshotId(sourceSnap.getPreviousSnapshotId());
                 azSnap.setSnapPointId(sourceSnap.getSnapPointId());
@@ -292,13 +292,13 @@ public class VolumeCreator implements Runnable {
             try {
               semaphore.release();
             } finally {
-              EucaSemaphoreDirectory.removeSemaphore(snapshotId);
+              EucaSemaphoreDirectory.removeSemaphore(this.snapshotId);
             }
           }
 
           // Create the volume from the snapshot, this can happen in parallel.
           if (success) {
-            size = blockManager.createVolume(volumeId, snapshotId, size);
+            this.size = blockManager.createVolume(this.volumeId, this.snapshotId, this.size);
           }
         } else { // SC has a database record for the snapshot
           // Repeated logic, fix it!
@@ -307,51 +307,51 @@ public class VolumeCreator implements Runnable {
             success = false;
             LOG.warn("snapshot " + foundSnapshotInfo.getSnapshotId() + " not available.");
           } else {
-            size = blockManager.createVolume(volumeId, snapshotId, size);
+            this.size = blockManager.createVolume(this.volumeId, this.snapshotId, this.size);
           }
         }
       } catch (Exception ex) {
         success = false;
-        LOG.error("Failed to create volume " + volumeId, ex);
+        LOG.error("Failed to create volume " + this.volumeId, ex);
       }
     } else { // Not a snapshot-based volume create.
       try {
-        if (parentVolumeId != null) {
+        if (this.parentVolumeId != null) {
           // Clone the parent volume.
-          blockManager.cloneVolume(volumeId, parentVolumeId);
+          blockManager.cloneVolume(this.volumeId, this.parentVolumeId);
         } else {
           // Create a regular empty volume
-          blockManager.createVolume(volumeId, size);
+          blockManager.createVolume(this.volumeId, this.size);
         }
       } catch (Exception ex) {
         success = false;
-        LOG.error("Failed to create volume " + volumeId, ex);
+        LOG.error("Failed to create volume " + this.volumeId, ex);
       }
     }
 
     // Update database record for the volume.
-    VolumeInfo volumeInfo = new VolumeInfo(volumeId);
+    VolumeInfo volumeInfo = new VolumeInfo(this.volumeId);
     try (TransactionResource tr = Entities.transactionFor(VolumeInfo.class)) {
       VolumeInfo foundVolumeInfo = Entities.uniqueResult(volumeInfo);
       if (foundVolumeInfo != null) {
         if (success) {
           foundVolumeInfo.setStatus(StorageProperties.Status.available.toString());
-          LOG.debug("Volume " + volumeId + " set to 'available' state");
-          ThruputMetrics.endOperation(snapshotId != null ? MonitoredAction.CREATE_VOLUME_FROM_SNAPSHOT : MonitoredAction.CREATE_VOLUME, volumeId,
+          LOG.debug("Volume " + this.volumeId + " set to 'available' state");
+          ThruputMetrics.endOperation(this.snapshotId != null ? MonitoredAction.CREATE_VOLUME_FROM_SNAPSHOT : MonitoredAction.CREATE_VOLUME, this.volumeId,
               System.currentTimeMillis());
         } else {
           foundVolumeInfo.setStatus(StorageProperties.Status.failed.toString());
-          LOG.debug("Volume " + volumeId + " set to 'failed' state");
+          LOG.debug("Volume " + this.volumeId + " set to 'failed' state");
         }
-        if (snapshotId != null) {
-          foundVolumeInfo.setSize(size);
+        if (this.snapshotId != null) {
+          foundVolumeInfo.setSize(this.size);
         }
       } else {
-        LOG.error("VolumeInfo entity for volume id " + volumeId + " was not found in the database");
+        LOG.error("VolumeInfo entity for volume id " + this.volumeId + " was not found in the database");
       }
       tr.commit();
     } catch (Exception e) {
-      LOG.error("Failed to update VolumeInfo entity for volume id " + volumeId + " in the database", e);
+      LOG.error("Failed to update VolumeInfo entity for volume id " + this.volumeId + " in the database", e);
     }
   }
 

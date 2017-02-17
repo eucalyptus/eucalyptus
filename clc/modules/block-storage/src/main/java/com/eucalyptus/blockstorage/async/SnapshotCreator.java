@@ -143,7 +143,7 @@ public class SnapshotCreator implements Runnable {
   @Override
   public void run() {
     LOG.trace("Starting SnapshotCreator task");
-    EucaSemaphore semaphore = EucaSemaphoreDirectory.getSolitarySemaphore(volumeId);
+    EucaSemaphore semaphore = EucaSemaphoreDirectory.getSolitarySemaphore(this.volumeId);
     try {
       Boolean shouldTransferSnapshots = true;
       // SnapshotTransfer snapshotTransfer = null;
@@ -157,12 +157,12 @@ public class SnapshotCreator implements Runnable {
         // Prepare for the snapshot upload (fetch credentials for snapshot upload to osg, create the bucket). Error out if this fails without
         // creating the snapshot on the blockstorage backend
         if (null == snapshotTransfer) {
-          snapshotTransfer = new S3SnapshotTransfer(snapshotId, snapshotId);
+          snapshotTransfer = new S3SnapshotTransfer(this.snapshotId, this.snapshotId);
         }
         bucket = snapshotTransfer.prepareForUpload();
 
         if (snapshotTransfer == null || StringUtils.isBlank(bucket)) {
-          throw new EucalyptusCloudException("Failed to initialize snapshot transfer mechanism for uploading " + snapshotId);
+          throw new EucalyptusCloudException("Failed to initialize snapshot transfer mechanism for uploading " + this.snapshotId);
         }
       }
 
@@ -171,13 +171,13 @@ public class SnapshotCreator implements Runnable {
         try {
           semaphore.acquire();
         } catch (InterruptedException ex) {
-          throw new EucalyptusCloudException("Failed to create snapshot " + snapshotId + " as the semaphore could not be acquired");
+          throw new EucalyptusCloudException("Failed to create snapshot " + this.snapshotId + " as the semaphore could not be acquired");
         }
 
         // Check to ensure that a failed/cancellation has not be set
-        if (!isSnapshotMarkedFailed(snapshotId)) {
+        if (!isSnapshotMarkedFailed(this.snapshotId)) {
           if (null == progressCallback) {
-            progressCallback = new SnapshotProgressCallback(snapshotId); // Setup the progress callback, that should start the progress
+            progressCallback = new SnapshotProgressCallback(this.snapshotId); // Setup the progress callback, that should start the progress
           }
           blockManager.createSnapshot(this.volumeId, this.snapshotId, this.snapPointId);
           progressCallback.updateBackendProgress(50); // to indicate that backend snapshot process is 50% done
@@ -188,16 +188,17 @@ public class SnapshotCreator implements Runnable {
         semaphore.release();
       }
 
+      SnapshotInfo prevSnap = null;
+      SnapshotInfo currSnap = null;
+
       Future<String> uploadFuture = null;
-      if (!isSnapshotMarkedFailed(snapshotId)) {
+      if (!isSnapshotMarkedFailed(this.snapshotId)) {
+
         if (shouldTransferSnapshots) {
           // TODO move this check down further
 
           // generate snapshot location
-          String snapshotLocation = SnapshotInfo.generateSnapshotLocationURI(SnapshotTransferConfiguration.OSG, bucket, snapshotId);
-
-          SnapshotInfo prevSnap = null;
-          SnapshotInfo currSnap = null;
+          String snapshotLocation = SnapshotInfo.generateSnapshotLocationURI(SnapshotTransferConfiguration.OSG, bucket, this.snapshotId);
 
           // gather what needs to be uploaded
           try {
@@ -220,7 +221,7 @@ public class SnapshotCreator implements Runnable {
                     try {
                       prevSnapSemaphore.acquire();
                     } catch (InterruptedException ex) {
-                      LOG.warn("Cannot update metadata for snapshot " + snapshotId + " due to an error acquiring semaphore for a previous snapshot "
+                      LOG.warn("Cannot update metadata for snapshot " + this.snapshotId + " due to an error acquiring semaphore for a previous snapshot "
                           + prevSnap.getSnapshotId() + ". May retry again later");
                       continue;
                     }
@@ -256,11 +257,11 @@ public class SnapshotCreator implements Runnable {
           if (prevSnap != null) {
             LOG.info("Generate delta between penultimate snapshot " + prevSnap.getSnapshotId() + " and latest snapshot " + this.snapshotId);
             srwc =
-                blockManager.prepIncrementalSnapshotForUpload(volumeId, snapshotId, snapPointId, prevSnap.getSnapshotId(), prevSnap.getSnapPointId());
+                blockManager.prepIncrementalSnapshotForUpload(this.volumeId, this.snapshotId, this.snapPointId, prevSnap.getSnapshotId(), prevSnap.getSnapPointId());
             snapshotResource = srwc.getSr();
           } else {
             LOG.info("Upload entire content of snapshot " + this.snapshotId);
-            snapshotResource = blockManager.prepSnapshotForUpload(volumeId, snapshotId, snapPointId);
+            snapshotResource = blockManager.prepSnapshotForUpload(this.volumeId, this.snapshotId, this.snapPointId);
           }
 
           if (snapshotResource == null) {
@@ -271,7 +272,7 @@ public class SnapshotCreator implements Runnable {
           try {
             uploadFuture = snapshotTransfer.upload(snapshotResource, progressCallback);
           } catch (Exception e) {
-            throw new EucalyptusCloudException("Failed to upload snapshot " + snapshotId + " to objectstorage", e);
+            throw new EucalyptusCloudException("Failed to upload snapshot " + this.snapshotId + " to objectstorage", e);
           }
 
           if (srwc != null && srwc.getCallback() != null) {
@@ -289,56 +290,153 @@ public class SnapshotCreator implements Runnable {
 
       // finish the snapshot on backend - sever iscsi connection, disconnect and wait for it to complete
       try {
-        LOG.debug("Finishing up " + snapshotId + " on block storage backend");
-        blockManager.finishVolume(snapshotId);
-        LOG.info("Finished creating " + snapshotId + " on block storage backend");
+        LOG.debug("Finishing up " + this.snapshotId + " on block storage backend");
+        blockManager.finishVolume(this.snapshotId);
+        LOG.info("Finished creating " + this.snapshotId + " on block storage backend");
         progressCallback.updateBackendProgress(50); // to indicate that backend snapshot process is 50% done
       } catch (EucalyptusCloudException ex) {
-        LOG.warn("Failed to complete snapshot " + snapshotId + " on backend", ex);
+        LOG.warn("Failed to complete snapshot " + this.snapshotId + " on backend", ex);
         throw ex;
       }
 
       // If uploading, wait for upload to complete
       if (uploadFuture != null) {
-        LOG.debug("Waiting for upload of " + snapshotId + " to complete");
+        LOG.debug("Waiting for upload of " + this.snapshotId + " to complete");
         if (uploadFuture.get() != null) {
-          LOG.info("Uploaded " + snapshotId + " to object storage gateway, etag result - " + uploadFuture.get());
+          LOG.info("Uploaded " + this.snapshotId + " to object storage gateway, etag result - " + uploadFuture.get());
         } else {
-          LOG.warn("Failed to upload " + snapshotId + " to object storage gateway failed. Check prior logs for exact errors");
-          throw new EucalyptusCloudException("Failed to upload " + snapshotId + " to object storage gateway");
+          LOG.warn("Failed to upload " + this.snapshotId + " to object storage gateway failed. Check prior logs for exact errors");
+          throw new EucalyptusCloudException("Failed to upload " + this.snapshotId + " to object storage gateway");
         }
       }
 
-      // Mark snapshot as available
-      markSnapshotAvailable();
-      LOG.debug("Snapshot " + snapshotId + " set to 'available' state");
+      // Now that the snapshot is complete, if it's a delta, wait until the
+      // snapshot transfer timeout for the parent to go into a final state 
+      // (good or bad). If good, declare this snapshot available.
+      // If bad, of if it never competes, declare this snapshot failed. 
+      // (Artifacts will be cleaned up by periodic cleanup tasks.)
+      
+      if (prevSnap != null) {
+        final int MILLIS_PER_HOUR = 60 * 60 * 1000;
+        final int timeoutMillis = StorageInfo.getStorageInfo().getSnapshotTransferTimeoutInHours()
+            * MILLIS_PER_HOUR;
+        final int pollPeriodMillis = 10000; // 10 sec
+        int waitTimeSoFar = 0;
+        
+        while (waitTimeSoFar < timeoutMillis) {
+          try {
+            if (isSnapshotMarkedFinalized(prevSnap.getSnapshotId())) {
+              break;
+            }
+          } catch (NoSuchElementException nsee) {
+            LOG.error("Previous snapshot " + prevSnap.getSnapshotId() + 
+                " no longer recorded in the database. " +
+                "Setting this snapshot delta " + this.snapshotId + 
+                " to 'failed' state because it requires an intact previous snapshot.");
+            throw nsee; // will be caught later in this method
+          } catch (TransactionException te) {
+            LOG.error("General database error. " +
+                "Setting this snapshot delta " + this.snapshotId + 
+                " to 'failed' state because it requires an intact previous snapshot.");
+            throw te; // will be caught later in this method
+          }
+          try {
+            Thread.sleep(pollPeriodMillis);
+          } catch (InterruptedException e) {
+            throw new RuntimeException("Interrupted while waiting for previous snapshot to complete", e);
+          }
+          waitTimeSoFar += pollPeriodMillis;
+        }
+        if (isSnapshotMarkedFinalized(prevSnap.getSnapshotId())) {
+          if (isSnapshotMarkedAvailable(prevSnap.getSnapshotId())) {
+            markSnapshotAvailable();
+          } else {
+            markSnapshotFailed();
+            LOG.error("Previous snapshot " + prevSnap.getSnapshotId() + " finalized into the " +
+                prevSnap.getStatus() + " state. This snapshot delta " + this.snapshotId + 
+                " set to 'failed' state because it requires an intact previous snapshot.");
+          }
+        } else {
+          markSnapshotFailed();
+          LOG.error("Previous snapshot " + prevSnap.getSnapshotId() + " never finalized after " + 
+              "waiting " + (timeoutMillis / MILLIS_PER_HOUR) + " hours. " + 
+              "This snapshot delta " + this.snapshotId + " set to 'failed' state because " +
+              "it requires an intact previous snapshot.");
+        }
+      } else {
+        // No previous snapshot, therefore we're done
+        markSnapshotAvailable();
+        LOG.debug("Snapshot " + this.snapshotId + " set to 'available' state");
+      }
     } catch (Exception ex) {
-      LOG.error("Failed to create snapshot " + snapshotId, ex);
+      LOG.error("Failed to create snapshot " + this.snapshotId, ex);
 
       try {
         markSnapshotFailed();
-        LOG.debug("Snapshot " + snapshotId + " set to 'failed' state");
+        LOG.debug("Snapshot " + this.snapshotId + " set to 'failed' state");
       } catch (TransactionException | NoSuchElementException e) {
-        LOG.warn("Cannot update " + snapshotId + " status to failed on SC", e);
+        LOG.warn("Cannot update snapshot " + this.snapshotId + " status to 'failed' in DB", e);
       }
     }
     LOG.trace("Finished SnapshotCreator task");
   }
 
-  /*
-   * Does a check of the snapshot's status as reflected in the DB.
+  /* @return the given snapshot's info from the DB, or
+   *         null if DB entry not found
    */
-  private boolean isSnapshotMarkedFailed(String snapshotId) {
+  private SnapshotInfo getSnapshotInfo(String snapshotId) throws TransactionException, NoSuchElementException {
     try (TransactionResource tran = Entities.transactionFor(SnapshotInfo.class)) {
       tran.setRollbackOnly();
-      SnapshotInfo snap = Entities.uniqueResult(new SnapshotInfo(snapshotId));
-      if (snap != null && StorageProperties.Status.failed.toString().equals(snap.getStatus())) {
-        return true;
-      }
-    } catch (Exception e) {
-      LOG.error("Error determining status of snapshot " + snapshotId);
+      return Entities.uniqueResult(new SnapshotInfo(snapshotId));
+    } catch (TransactionException | NoSuchElementException dbe) {
+      // Database exception, toss it upstairs
+      LOG.error("Database error checking for status of snapshot " + snapshotId + ": " + dbe);
+      throw dbe;
     }
-    return false;
+  }
+  
+  /*
+   * Does a check of the snapshot's status as reflected in the DB.
+   * @return true if snapshot is in the 'failed' state,
+   *         false otherwise
+   */
+  private boolean isSnapshotMarkedFailed(String snapshotId) throws TransactionException, NoSuchElementException {
+    SnapshotInfo snapshotInfo = getSnapshotInfo(snapshotId);
+    if (snapshotInfo != null) {
+      return StorageProperties.Status.failed.toString().equals(snapshotInfo.getStatus());
+    } else {
+      return false;
+    }
+  }
+
+  /*
+   * Does a check of the snapshot's status as reflected in the DB.
+   * @return false if snapshot is not (yet) recorded in database
+   *         or it's in the 'creating' or 'pending' state,
+   *         true otherwise
+   */
+  private boolean isSnapshotMarkedFinalized(String snapshotId) throws TransactionException, NoSuchElementException {
+    SnapshotInfo snapshotInfo = getSnapshotInfo(snapshotId);
+    if (snapshotInfo != null) {
+      return !(StorageProperties.Status.creating.toString().equals(snapshotInfo.getStatus()) ||
+          StorageProperties.Status.pending.toString().equals(snapshotInfo.getStatus()));
+    } else {
+      return false;
+    }
+  }
+
+  /*
+   * Does a check of the snapshot's status as reflected in the DB.
+   * @return true if snapshot is in the 'available' state,
+   *         false otherwise
+   */
+  private boolean isSnapshotMarkedAvailable(String snapshotId) throws TransactionException, NoSuchElementException {
+    SnapshotInfo snapshotInfo = getSnapshotInfo(snapshotId);
+    if (snapshotInfo != null) {
+      return StorageProperties.Status.available.toString().equals(snapshotInfo.getStatus());
+    } else {
+      return false;
+    }
   }
 
   private void markSnapshotAvailable() throws TransactionException, NoSuchElementException {
@@ -448,11 +546,9 @@ public class SnapshotCreator implements Runnable {
           } else {
             numDeltas = snapChain.size() - 1;
             LOG.info(this.volumeId + " has " + numDeltas + " delta(s) since the last full checkpoint. Max limit is " + maxDeltas);
-          }
-          if (numDeltas < maxDeltas) {
-            return prevSnapToAssign;
-          } else {
-            // nothing to do here, will return null
+            if (numDeltas < maxDeltas) {
+              return prevSnapToAssign;
+            }
           }
         } else {
           LOG.info(this.volumeId + " has not been snapshotted and/or uploaded after the support for incremental snapshots was added");

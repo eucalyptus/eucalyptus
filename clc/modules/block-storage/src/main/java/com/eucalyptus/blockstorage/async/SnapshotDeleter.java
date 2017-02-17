@@ -130,7 +130,7 @@ public class SnapshotDeleter extends CheckerTask {
         for (SnapshotInfo snap : snapshotsToBeDeleted) {
           try {
             String snapshotId = snap.getSnapshotId();
-            LOG.info("Snapshot " + snapshotId + " was marked for deletion from EBS backend. Evaluating prerequistes for cleanup...");
+            LOG.debug("Snapshot " + snapshotId + " was marked for deletion from EBS backend. Evaluating prerequistes for cleanup...");
 
             if (snap.getIsOrigin() != null && snap.getIsOrigin()) { // check if snapshot originates in this az
               // acquire semaphore before deleting to avoid concurrent interaction with delta creation process
@@ -283,7 +283,7 @@ public class SnapshotDeleter extends CheckerTask {
         LOG.warn("Failed to delete snapshot " + snap.getSnapshotId() + " from ObjectStorageGateway", e);
       }
     } else {
-      LOG.info("Snapshot location missing for " + snap.getSnapshotId() + ". Skipping deletion from ObjectStorageGateway");
+      LOG.debug("Snapshot location missing for " + snap.getSnapshotId() + ". Skipping deletion from ObjectStorageGateway");
     }
   }
 
