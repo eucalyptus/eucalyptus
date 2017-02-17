@@ -23,7 +23,6 @@ import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PublicService;
-import com.eucalyptus.util.techpreview.TechPreview;
 
 /**
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
@@ -34,7 +33,6 @@ import com.eucalyptus.util.techpreview.TechPreview;
 @Partition( value = SimpleQueue.class, manyToOne = true )
 @FaultLogPrefix( "services" )
 @Description( "Simple Queue API service" )
-@TechPreview(enableByDefaultProperty = "enable.sqs.tech.preview")
 public class SimpleQueue extends ComponentId {
   private static final long serialVersionUID = 1L;
 }
