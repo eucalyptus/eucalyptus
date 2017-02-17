@@ -20,8 +20,6 @@
 package com.eucalyptus.cloudformation.entity;
 
 import com.eucalyptus.entities.AbstractPersistent;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -36,7 +34,6 @@ import javax.persistence.Table;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloudformation" )
 @Table( name = "stack_resource_signals" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class SignalEntity extends AbstractPersistent {
 
   @Column(name = "stack_id", nullable = false, length = 400)

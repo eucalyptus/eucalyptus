@@ -31,8 +31,6 @@
 package com.eucalyptus.simplequeue.persistence.postgresql;
 
 import com.eucalyptus.entities.AbstractPersistent;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
 import javax.persistence.Column;
@@ -49,7 +47,6 @@ import javax.persistence.UniqueConstraint;
 @PersistenceContext( name = "eucalyptus_simplequeue" )
 @Table( name = "messages", uniqueConstraints = @UniqueConstraint(columnNames = {"account_id", "queue_name", "message_id"},
   name = "queues_composite_key") )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class MessageEntity extends AbstractPersistent {
   @Column(name = "account_id", nullable = false)
   String accountId;

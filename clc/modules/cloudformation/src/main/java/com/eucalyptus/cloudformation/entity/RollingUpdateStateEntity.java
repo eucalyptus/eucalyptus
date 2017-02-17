@@ -26,8 +26,6 @@ import com.eucalyptus.entities.AbstractPersistent;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Lists;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
 import javax.persistence.Column;
@@ -48,7 +46,6 @@ import java.util.Date;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloudformation" )
 @Table( name = "rolling_update_state" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class RollingUpdateStateEntity extends AbstractPersistent {
 
   @Column(name = "account_id", nullable = false)

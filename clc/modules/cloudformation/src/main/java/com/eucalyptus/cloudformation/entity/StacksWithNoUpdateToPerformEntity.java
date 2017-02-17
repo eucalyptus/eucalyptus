@@ -20,15 +20,9 @@
 package com.eucalyptus.cloudformation.entity;
 
 import com.eucalyptus.entities.AbstractPersistent;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Type;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
@@ -38,7 +32,6 @@ import javax.persistence.Table;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloudformation" )
 @Table( name = "stacks_with_no_update_to_perform" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class StacksWithNoUpdateToPerformEntity extends AbstractPersistent {
 
   @Column(name = "stack_id", nullable = false, length = 400)

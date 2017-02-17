@@ -67,16 +67,12 @@ import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity
 @PersistenceContext(name = "eucalyptus_storage")
 @Table(name = "ceph_rbd_image_to_be_deleted")
-@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class CephRbdImageToBeDeleted extends AbstractPersistent {
 
   private static final long serialVersionUID = 1L;

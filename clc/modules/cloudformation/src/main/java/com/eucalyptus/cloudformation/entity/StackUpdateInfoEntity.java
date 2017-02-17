@@ -20,8 +20,6 @@
 package com.eucalyptus.cloudformation.entity;
 
 import com.eucalyptus.entities.AbstractPersistent;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
 import javax.persistence.Column;
@@ -38,7 +36,6 @@ import javax.persistence.Table;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloudformation" )
 @Table( name = "stack_update_info" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class StackUpdateInfoEntity extends AbstractPersistent {
 
 
@@ -82,7 +79,6 @@ public class StackUpdateInfoEntity extends AbstractPersistent {
   @Entity
   @PersistenceContext( name = "eucalyptus_cloudformation" )
   @Table( name = "stack_update_info_rolledback_resources" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   public static class RolledBackResource extends AbstractPersistent {
 
     @Column(name = "stack_id", nullable = false, length = 400)

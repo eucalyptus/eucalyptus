@@ -30,12 +30,7 @@
  ************************************************************************/
 package com.eucalyptus.simplequeue.persistence.postgresql;
 
-import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.simplequeue.SimpleQueueMetadata;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
 import javax.persistence.Column;
@@ -44,7 +39,6 @@ import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
-import java.util.Date;
 
 /**
  * Created by ethomas on 9/7/16.
@@ -53,7 +47,6 @@ import java.util.Date;
 @PersistenceContext( name = "eucalyptus_simplequeue" )
 @Table( name = "queues", uniqueConstraints = @UniqueConstraint(columnNames = {"account_id", "queue_name"},
   name = "queues_composite_key") )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class QueueEntity extends AbstractPersistent {
   @Column(name = "account_id", nullable = false)
   String accountId;

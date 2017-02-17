@@ -18,8 +18,6 @@ package com.eucalyptus.simplequeue.config;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.simplequeue.SimpleQueue;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
@@ -30,7 +28,6 @@ import java.io.Serializable;
  */
 @Entity
 @PersistenceContext( name="eucalyptus_config" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ComponentPart( SimpleQueue.class )
 public class SimpleQueueConfiguration extends ComponentConfiguration implements Serializable {
   private static final long serialVersionUID = 1L;
