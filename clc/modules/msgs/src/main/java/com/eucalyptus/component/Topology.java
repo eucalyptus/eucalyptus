@@ -179,8 +179,10 @@ public class Topology {
     
     @Override
     public Future apply( final Callable call ) {
-      Logs.extreme( ).debug( Topology.class.getSimpleName( ) + ": queueing " + call.toString( ) );
-      Logs.extreme( ).debug( Threads.currentStackRange( 3, 9 ) );
+      if ( Logs.extreme( ).isDebugEnabled( ) ) {
+        Logs.extreme( ).debug( Topology.class.getSimpleName( ) + ": queueing " + call.toString( ) );
+        Logs.extreme( ).debug( Threads.currentStackRange( 3, 9 ) );
+      }
       return Threads.enqueue( this.queue( ), this.numWorkers, call );
     }
     

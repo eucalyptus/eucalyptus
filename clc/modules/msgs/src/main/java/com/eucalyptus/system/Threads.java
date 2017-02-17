@@ -638,7 +638,7 @@ public class Threads {
     final int len = stack.length;
     return stack[Ints.min(len-1, 2 + offset)];
   }
-  
+
   public static StackTraceElement currentStackFrame( ) {
     return Thread.currentThread( ).getStackTrace( )[2];
   }
