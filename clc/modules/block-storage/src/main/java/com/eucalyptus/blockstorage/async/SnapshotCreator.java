@@ -323,8 +323,23 @@ public class SnapshotCreator implements Runnable {
         final int pollPeriodMillis = 10000; // 10 sec
         int waitTimeSoFar = 0;
         
-        while (!isSnapshotMarkedFinalized(prevSnap.getSnapshotId()) &&
-            waitTimeSoFar < timeoutMillis) {
+        while (waitTimeSoFar < timeoutMillis) {
+          try {
+            if (isSnapshotMarkedFinalized(prevSnap.getSnapshotId())) {
+              break;
+            }
+          } catch (NoSuchElementException nsee) {
+            LOG.error("Previous snapshot " + prevSnap.getSnapshotId() + 
+                " no longer recorded in the database. " +
+                "Setting this snapshot delta " + this.snapshotId + 
+                " to 'failed' state because it requires an intact previous snapshot.");
+            throw nsee; // will be caught later in this method
+          } catch (TransactionException te) {
+            LOG.error("General database error. " +
+                "Setting this snapshot delta " + this.snapshotId + 
+                " to 'failed' state because it requires an intact previous snapshot.");
+            throw te; // will be caught later in this method
+          }
           try {
             Thread.sleep(pollPeriodMillis);
           } catch (InterruptedException e) {
@@ -369,13 +384,14 @@ public class SnapshotCreator implements Runnable {
   /* @return the given snapshot's info from the DB, or
    *         null if DB entry not found
    */
-  private SnapshotInfo getSnapshotInfo(String snapshotId) {
+  private SnapshotInfo getSnapshotInfo(String snapshotId) throws TransactionException, NoSuchElementException {
     try (TransactionResource tran = Entities.transactionFor(SnapshotInfo.class)) {
       tran.setRollbackOnly();
       return Entities.uniqueResult(new SnapshotInfo(snapshotId));
-    } catch (Exception e) {
-      LOG.error("Error checking for status of snapshot " + snapshotId);
-      return null;
+    } catch (TransactionException | NoSuchElementException dbe) {
+      // Database exception, toss it upstairs
+      LOG.error("Database error checking for status of snapshot " + snapshotId + ": " + dbe);
+      throw dbe;
     }
   }
   
@@ -384,7 +400,7 @@ public class SnapshotCreator implements Runnable {
    * @return true if snapshot is in the 'failed' state,
    *         false otherwise
    */
-  private boolean isSnapshotMarkedFailed(String snapshotId) {
+  private boolean isSnapshotMarkedFailed(String snapshotId) throws TransactionException, NoSuchElementException {
     SnapshotInfo snapshotInfo = getSnapshotInfo(snapshotId);
     if (snapshotInfo != null) {
       return StorageProperties.Status.failed.toString().equals(snapshotInfo.getStatus());
@@ -399,7 +415,7 @@ public class SnapshotCreator implements Runnable {
    *         or it's in the 'creating' or 'pending' state,
    *         true otherwise
    */
-  private boolean isSnapshotMarkedFinalized(String snapshotId) {
+  private boolean isSnapshotMarkedFinalized(String snapshotId) throws TransactionException, NoSuchElementException {
     SnapshotInfo snapshotInfo = getSnapshotInfo(snapshotId);
     if (snapshotInfo != null) {
       return !(StorageProperties.Status.creating.toString().equals(snapshotInfo.getStatus()) ||
@@ -414,7 +430,7 @@ public class SnapshotCreator implements Runnable {
    * @return true if snapshot is in the 'available' state,
    *         false otherwise
    */
-  private boolean isSnapshotMarkedAvailable(String snapshotId) {
+  private boolean isSnapshotMarkedAvailable(String snapshotId) throws TransactionException, NoSuchElementException {
     SnapshotInfo snapshotInfo = getSnapshotInfo(snapshotId);
     if (snapshotInfo != null) {
       return StorageProperties.Status.available.toString().equals(snapshotInfo.getStatus());
@@ -530,11 +546,9 @@ public class SnapshotCreator implements Runnable {
           } else {
             numDeltas = snapChain.size() - 1;
             LOG.info(this.volumeId + " has " + numDeltas + " delta(s) since the last full checkpoint. Max limit is " + maxDeltas);
-          }
-          if (numDeltas < maxDeltas) {
-            return prevSnapToAssign;
-          } else {
-            // nothing to do here, will return null
+            if (numDeltas < maxDeltas) {
+              return prevSnapToAssign;
+            }
           }
         } else {
           LOG.info(this.volumeId + " has not been snapshotted and/or uploaded after the support for incremental snapshots was added");
