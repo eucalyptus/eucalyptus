@@ -39,8 +39,6 @@ public class AwsUsageHoulyAggregateWorkflowImpl implements AwsUsageHoulyAggregat
   private BillingWorkflowState state =
           BillingWorkflowState.WORKFLOW_RUNNING;
   TryCatchFinally task = null;
-  private DecisionContextProvider contextProvider =
-          new DecisionContextProviderImpl();
 
   @Override
   public void aggregate() {
@@ -87,20 +85,14 @@ public class AwsUsageHoulyAggregateWorkflowImpl implements AwsUsageHoulyAggregat
     final List<Promise<Void>> written = Lists.newArrayList();
     for (final String accountId : queueForAccounts.get().keySet()) {
       final String queueName = queueForAccounts.get().get(accountId);
-      for (final AwsUsageRecordType type : AwsUsageRecordType.values()) {
-        if (!AwsUsageRecordType.UNKNOWN.equals(type)) {
-          written.add(
-                  client.writeAwsReportHourlyUsage(
-                          Promise.asPromise(accountId),
-                          client.getAwsReportUsageRecord(
-                                  Promise.asPromise(accountId),
-                                  Promise.asPromise(queueName),
-                                  Promise.asPromise(type.toString())
-                          )
-                  )
-          );
-        }
-      }
+      written.add(
+              client.writeAwsReportHourlyUsage(
+                      Promise.asPromise(accountId),
+                      client.getAwsReportUsageRecord(
+                              Promise.asPromise(accountId),
+                              Promise.asPromise(queueName))
+              )
+      );
     }
     return Promises.listOfPromisesToPromise(written);
   }

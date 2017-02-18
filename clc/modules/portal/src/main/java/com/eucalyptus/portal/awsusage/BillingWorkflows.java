@@ -15,6 +15,7 @@
  ************************************************************************/
 package com.eucalyptus.portal.awsusage;
 
+import com.amazonaws.services.simpleworkflow.flow.StartWorkflowOptions;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionAlreadyStartedException;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
@@ -31,7 +32,8 @@ public class BillingWorkflows implements EventListener<Hertz> {
   private static Logger LOG  = Logger.getLogger( BillingWorkflows.class );
   private static final String BILLING_AWS_USAGE_AGGREGATE_WORKFLOW_ID =
           "billing-aws-usage-aggregate-workflow-01";
-
+  public static final String BILLING_RESOURCE_USAGE_EVENT_WORKFLOW_ID =
+          "billing-resource-usage-event-workflow-01";
   public static void register() {
     Listeners.register( Hertz.class, new BillingWorkflows() );
   }
@@ -46,6 +48,21 @@ public class BillingWorkflows implements EventListener<Hertz> {
       ;
     }catch(final Exception ex) {
       throw Exceptions.toUndeclared("Failed to start the workflow for aggregating AWS usage report", ex);
+    }
+  }
+
+  public static void runResourceUsageEventWorkflow(final String workflowId) {
+    try{
+      final ResourceUsageEventWorkflowClientExternal workflow =
+              WorkflowClients.getResourceUsageEventWorkflow(workflowId);
+      final StartWorkflowOptions options = new StartWorkflowOptions();
+      options.setExecutionStartToCloseTimeoutSeconds(7200L);
+      options.setTaskStartToCloseTimeoutSeconds(60L);
+      workflow.fireEvents(options);
+    }catch(final WorkflowExecutionAlreadyStartedException ex) {
+      ;
+    }catch(final Exception ex) {
+      throw Exceptions.toUndeclared("Failed to start the workflow that fires resource usage events");
     }
   }
 

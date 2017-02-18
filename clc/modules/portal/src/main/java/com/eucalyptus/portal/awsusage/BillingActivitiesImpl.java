@@ -15,12 +15,27 @@
  ************************************************************************/
 package com.eucalyptus.portal.awsusage;
 
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.component.annotation.ComponentPart;
 
 import com.eucalyptus.compute.common.ReservationInfoType;
+import com.eucalyptus.compute.common.internal.address.AddressState;
+import com.eucalyptus.compute.common.internal.address.AllocatedAddressEntity;
+import com.eucalyptus.compute.common.internal.blockstorage.Snapshot;
+import com.eucalyptus.compute.common.internal.blockstorage.State;
+import com.eucalyptus.compute.common.internal.blockstorage.Volume;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.event.EventFailedException;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.portal.AwsUsageReportData;
 import com.eucalyptus.portal.common.Portal;
+import com.eucalyptus.reporting.event.AddressEvent;
+import com.eucalyptus.reporting.event.SnapShotEvent;
+import com.eucalyptus.reporting.event.VolumeEvent;
 import com.eucalyptus.resources.client.Ec2Client;
+
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -30,6 +45,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -84,9 +100,11 @@ public class BillingActivitiesImpl implements BillingActivities {
         if (accountId!=null) {
           resourceOwnerMap.put( resourceId, accountId );
           return accountId;
+        } else {
+          resourceOwnerMap.put( resourceId, "000000000000");
+          return "000000000000";
         }
       }
-      return null;
     };
 
     final List<String> uniqueAccounts = events.stream()
@@ -130,23 +148,26 @@ public class BillingActivitiesImpl implements BillingActivities {
   }
 
   @Override
-  public List<AwsUsageRecord> getAwsReportUsageRecord(final String accountId, final String queue, final String recordType) throws BillingActivityException{
-    final List<AwsUsageReportData> records = Lists.newArrayList();
+  public List<AwsUsageRecord> getAwsReportUsageRecord(final String accountId, final String queue) throws BillingActivityException {
     final SimpleQueueClientManager sqClient = SimpleQueueClientManager.getInstance();
     final List<QueuedEvent> events = Lists.newArrayList();
     try {
       events.addAll(sqClient.receiveAllMessages(queue, false).stream()
-              .map( m -> QueuedEvents.MessageToEvent.apply(m.getBody()) )
-              .filter( e -> e != null )
+              .map(m -> QueuedEvents.MessageToEvent.apply(m.getBody()))
+              .filter(e -> e != null)
               .collect(Collectors.toList())
       );
-    }catch (final Exception ex) {
+    } catch (final Exception ex) {
       throw new BillingActivityException("Failed to receive queue messages", ex);
     }
 
-    final AwsUsageRecordType type =
-            AwsUsageRecordType.forValue(recordType);
-    return type.read(accountId, events);
+    final List<AwsUsageRecord> result = Lists.newArrayList();
+    for (final AwsUsageRecordType type : AwsUsageRecordType.values()) {
+      if (!AwsUsageRecordType.UNKNOWN.equals(type)) {
+        result.addAll(type.read(accountId, events));
+      }
+    }
+    return result;
   }
 
   @Override
@@ -167,5 +188,123 @@ public class BillingActivitiesImpl implements BillingActivities {
         LOG.error("Failed to delete the temporary queue (" + queue +")", ex);
       }
     }
+  }
+
+  @Override
+  public void fireVolumeUsage() throws BillingActivityException {
+    final List<Volume> volumes = Lists.newArrayList();
+    try ( final TransactionResource db = Entities.transactionFor( Volume.class ) ) {
+      final Volume sample = Volume.named(null, null);
+      volumes.addAll(Entities.query(sample));
+    }
+
+    final Function<Volume, VolumeEvent> toEvent = (volume) -> VolumeEvent.with(
+            VolumeEvent.forVolumeUsage(),
+            volume.getNaturalId(),
+            volume.getDisplayName(),
+            volume.getSize(),
+            volume.getOwner(),
+            volume.getPartition());
+
+    final Consumer<VolumeEvent> fire = (event) -> {
+      try {
+        ListenerRegistry.getInstance().fireEvent(event);
+      } catch (final EventFailedException ex) {
+        ;
+      }
+    };
+
+    try {
+      volumes.stream()
+              .filter (v -> State.EXTANT.equals(v.getState()))
+              .map( toEvent )
+              .forEach( fire );
+    } catch ( final Exception ex) {
+      throw new BillingActivityException("Failed to fire volume usage events", ex);
+    }
+  }
+
+  @Override
+  public void fireSnapshotUsage() throws BillingActivityException {
+    final List<Snapshot> snapshots = Lists.newArrayList();
+    try ( final TransactionResource db = Entities.transactionFor( Snapshot.class ) ) {
+      final Snapshot sample = Snapshot.named(null, null);
+      snapshots.addAll(Entities.query(sample));
+    }
+
+    final Function<Snapshot, SnapShotEvent> toEvent = (snapshot) -> SnapShotEvent.with(
+            SnapShotEvent.forSnapShotUsage(),
+            snapshot.getNaturalId(),
+            snapshot.getDisplayName(),
+            snapshot.getOwnerUserId(),
+            snapshot.getOwnerUserName(),
+            snapshot.getOwnerAccountNumber(),
+            snapshot.getVolumeSize()
+    );
+
+    final Consumer<SnapShotEvent> fire = (event) -> {
+      try {
+        ListenerRegistry.getInstance().fireEvent(event);
+      } catch (final EventFailedException ex) {
+        ;
+      }
+    };
+
+    try {
+      snapshots.stream()
+              .filter (snap -> State.EXTANT.equals(snap.getState()))
+              .map( toEvent )
+              .forEach( fire );
+    } catch ( final Exception ex) {
+      throw new BillingActivityException("Failed to fire snapshot usage events", ex);
+    }
+  }
+
+  @Override
+  public void fireAddressUsage() throws BillingActivityException {
+    final List<AllocatedAddressEntity> addresses = Lists.newArrayList();
+    try ( final TransactionResource db = Entities.transactionFor( AllocatedAddressEntity.class ) ) {
+      final AllocatedAddressEntity sample = AllocatedAddressEntity.example();
+      addresses.addAll(Entities.query(sample));
+    }
+
+    final Function< AllocatedAddressEntity, String > accountName = (addr) -> {
+      try {
+        return Accounts.lookupAccountAliasById( addr.getOwner().getAccountNumber( ) );
+      } catch (final AuthException ex) {
+        return "eucalyptus";
+      }
+    };
+
+    final Function<AllocatedAddressEntity, AddressEvent> toEvent = (addr) -> AddressEvent.with(
+            addr.getAddress(),
+            addr.getOwner(),
+            accountName.apply(addr),
+            AddressState.assigned.equals(addr.getState()) ? AddressEvent.forUsageAssociate()
+                    : AddressEvent.forUsageAllocate()
+    );
+
+    final Consumer<AddressEvent> fire = (event) -> {
+      try {
+        ListenerRegistry.getInstance().fireEvent(event);
+      } catch (final EventFailedException ex) {
+        ;
+      }
+    };
+
+    try {
+      addresses.stream()
+              .filter (addr -> AddressState.allocated.equals(addr.getState())
+                      || AddressState.assigned.equals(addr.getState()))
+              .map( toEvent )
+              .forEach( fire );
+    } catch ( final Exception ex) {
+      throw new BillingActivityException("Failed to fire address usage events", ex);
+    }
+  }
+
+  @Override
+  public void fireS3ObjectUsage() throws BillingActivityException {
+
   }
 }

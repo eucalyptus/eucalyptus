@@ -15,7 +15,10 @@
  ************************************************************************/
 package com.eucalyptus.portal.awsusage;
 
+import com.eucalyptus.reporting.event.AddressEvent;
 import com.eucalyptus.reporting.event.InstanceUsageEvent;
+import com.eucalyptus.reporting.event.SnapShotEvent;
+import com.eucalyptus.reporting.event.VolumeEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.log4j.Logger;
 
@@ -58,6 +61,41 @@ public class QueuedEvents {
     q.setAccountId( null );
     q.setUserId( null );
     q.setTimestamp( new Date(System.currentTimeMillis()));
+    return q;
+  };
+
+  private static final long GigaByte = 1073741824;
+  public static Function<VolumeEvent, QueuedEvent> FromVolumeUsageEvent = (event) -> {
+    final QueuedEvent q = new QueuedEvent();
+    q.setEventType("VolumeUsage");
+    q.setResourceId(event.getVolumeId());
+    q.setAccountId(event.getAccountNumber());
+    q.setUserId(event.getUserId());
+    q.setAvailabilityZone(event.getAvailabilityZone());
+    q.setUsageValue(String.format("%d", event.getSizeGB() * GigaByte));
+    q.setTimestamp( new Date(System.currentTimeMillis()));
+    return q;
+  };
+
+  public static Function<SnapShotEvent, QueuedEvent> FromSnapshotUsageEvent = (event) -> {
+    final QueuedEvent q = new QueuedEvent();
+    q.setEventType("SnapshotUsage");
+    q.setResourceId(event.getSnapshotId());
+    q.setAccountId(event.getAccountNumber());
+    q.setUserId(event.getUserId());
+    q.setUsageValue(String.format("%d", event.getVolumeSizeGB() * GigaByte));
+    q.setTimestamp(new Date(System.currentTimeMillis()));
+    return q;
+  };
+
+  public static Function<AddressEvent, QueuedEvent> FromAddressUsageEvent = (event) -> {
+    final QueuedEvent q = new QueuedEvent();
+    q.setEventType("AddressUsage");
+    q.setResourceId(event.getAddress());
+    q.setAccountId(event.getAccountId());
+    q.setUserId(event.getUserId());
+    q.setUsageValue(event.getActionInfo().getAction().toString()); // ALLOCATE or ASSOCIATE
+    q.setTimestamp(new Date(System.currentTimeMillis()));
     return q;
   };
 }

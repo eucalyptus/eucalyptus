@@ -78,4 +78,11 @@ public class WorkflowClients {
     return (AwsUsageHoulyAggregateWorkflowClientExternal)
             new WorkflowOptionsBuilder(factory.getClient(workflowId)).build();
   }
+
+  public static ResourceUsageEventWorkflowClientExternal getResourceUsageEventWorkflow(final String workflowId) {
+    final ResourceUsageEventWorkflowClientExternalFactory factory =
+            new ResourceUsageEventWorkflowClientExternalFactoryImpl( getSimpleWorkflow(), DOMAIN);
+    return (ResourceUsageEventWorkflowClientExternal)
+            new WorkflowOptionsBuilder(factory.getClient(workflowId)).build();
+  }
 }

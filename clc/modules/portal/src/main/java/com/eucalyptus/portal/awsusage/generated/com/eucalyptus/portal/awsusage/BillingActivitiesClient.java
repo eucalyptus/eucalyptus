@@ -51,32 +51,32 @@ public interface BillingActivitiesClient extends ActivitiesClient
     /**
      * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#getAwsReportUsageRecord}
      */
-    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(String accountId, String queueName, String recordType);
+    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(String accountId, String queueName);
 
     /**
      * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#getAwsReportUsageRecord}
      */
-    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(String accountId, String queueName, String recordType, Promise<?>... waitFor);
+    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(String accountId, String queueName, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#getAwsReportUsageRecord}
      */
-    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(String accountId, String queueName, String recordType, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(String accountId, String queueName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#getAwsReportUsageRecord}
      */
-    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(Promise<String> accountId, Promise<String> queueName, Promise<String> recordType);
+    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(Promise<String> accountId, Promise<String> queueName);
 
     /**
      * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#getAwsReportUsageRecord}
      */
-    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(Promise<String> accountId, Promise<String> queueName, Promise<String> recordType, Promise<?>... waitFor);
+    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(Promise<String> accountId, Promise<String> queueName, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#getAwsReportUsageRecord}
      */
-    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(Promise<String> accountId, Promise<String> queueName, Promise<String> recordType, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(Promise<String> accountId, Promise<String> queueName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#writeAwsReportHourlyUsage}
@@ -137,5 +137,65 @@ public interface BillingActivitiesClient extends ActivitiesClient
      * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#deleteAccountQueues}
      */
     Promise<Void> deleteAccountQueues(Promise<java.util.List<java.lang.String>> queues, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#fireVolumeUsage}
+     */
+    Promise<Void> fireVolumeUsage();
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#fireVolumeUsage}
+     */
+    Promise<Void> fireVolumeUsage(Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#fireVolumeUsage}
+     */
+    Promise<Void> fireVolumeUsage(ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#fireSnapshotUsage}
+     */
+    Promise<Void> fireSnapshotUsage();
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#fireSnapshotUsage}
+     */
+    Promise<Void> fireSnapshotUsage(Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#fireSnapshotUsage}
+     */
+    Promise<Void> fireSnapshotUsage(ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#fireAddressUsage}
+     */
+    Promise<Void> fireAddressUsage();
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#fireAddressUsage}
+     */
+    Promise<Void> fireAddressUsage(Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#fireAddressUsage}
+     */
+    Promise<Void> fireAddressUsage(ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#fireS3ObjectUsage}
+     */
+    Promise<Void> fireS3ObjectUsage();
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#fireS3ObjectUsage}
+     */
+    Promise<Void> fireS3ObjectUsage(Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#fireS3ObjectUsage}
+     */
+    Promise<Void> fireS3ObjectUsage(ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
 }

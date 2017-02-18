@@ -162,6 +162,10 @@ public class AllocatedAddressEntity extends UserMetadata<AddressState> implement
     return example;
   }
 
+  public static AllocatedAddressEntity example() {
+    return new AllocatedAddressEntity(null, null);
+  }
+
   public String getAddress( ) {
     return getDisplayName( );
   }

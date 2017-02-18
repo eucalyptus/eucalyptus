@@ -39,11 +39,14 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
     @Override
     public List<AwsUsageRecord> read(final String accountId, final List<QueuedEvent> events) {
       // generate BoxUsage per instance types
-      if (events.size() <= 0)
+      final List<QueuedEvent> instanceEvents = events.stream()
+              .filter(e -> "InstanceUsage".equals(e.getEventType()))
+              .collect(Collectors.toList());
+      if (instanceEvents.size() <= 0)
         return Lists.newArrayList();
 
       final Map<String, String> instanceTypeMap = Maps.newHashMap();
-      for (final String instanceId : events.stream()
+      for (final String instanceId : instanceEvents.stream()
               .map(e -> e.getResourceId() )
               .distinct()
               .collect(Collectors.toList())) {
@@ -60,7 +63,7 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
       }
 
       final Map<String, Integer> usagePerInstanceType = Maps.newHashMap();
-      for (final String instanceId : events.stream()
+      for (final String instanceId : instanceEvents.stream()
               .map(e -> e.getResourceId() )
               .distinct()
               .collect(Collectors.toList())) {
@@ -74,13 +77,10 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
         }
       }
 
-      final Date latestRecord = events.stream()
-              .map(e -> e.getTimestamp())
-              .max((a, b) -> a.before(b) ? -1 : 1)
-              .get();
+      final Date earliestRecord = AwsUsageRecordType.getEarliest(instanceEvents);
       final List<AwsUsageRecord> records = Lists.newArrayList();
 
-      final Date endTime = getNextHour(latestRecord);
+      final Date endTime = getNextHour(earliestRecord);
       final Date startTime = getPreviousHour(endTime);
       for (final String instanceType : usagePerInstanceType.keySet()) {
         final Integer usageValue = usagePerInstanceType.get(instanceType);
@@ -92,6 +92,107 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
                 .withStartTime(startTime)
                 .withEndTime(endTime)
                 .withUsageValue(usageValue.toString())
+                .build();
+        records.add(data);
+      }
+      return records;
+    }
+  },
+  EC2_CREATEVOLUME_VOLUME_USAGE("AmazonEC2", "CreateVolume", "VolumeUsage") {
+    @Override
+    public List<AwsUsageRecord> read ( final String accountId, final List<QueuedEvent> events){
+      List<QueuedEvent> volumeEvents = events.stream()
+              .filter(e -> "VolumeUsage".equals(e.getEventType()))
+              .collect(Collectors.toList());
+      if (volumeEvents.size() <= 0)
+        return Lists.newArrayList();
+
+      volumeEvents = AwsUsageRecordType.distinctByResourceIds(volumeEvents);
+      // AmazonEC2,CreateVolume,USW2-EBS:VolumeUsage,,11/01/16 04:00:00,11/01/16 05:00:00,8589934592
+      final List<AwsUsageRecord> records = Lists.newArrayList();
+      final Date earliestRecord = AwsUsageRecordType.getEarliest(volumeEvents);
+      final Date endTime = getNextHour(earliestRecord);
+      final Date startTime = getPreviousHour(endTime);
+
+      final Optional<Long> value = volumeEvents.stream()
+              .map( e -> Long.parseLong(e.getUsageValue()) )
+              .reduce( (l1, l2) -> l1+l2 );
+      if (value.isPresent()) {
+        final AwsUsageRecord data = AwsUsageRecords.getInstance().newRecord(accountId)
+                .withService("AmazonEC2")
+                .withOperation("CreateVolume")
+                .withResource(null)
+                .withUsageType("EBS:VolumeUsage")
+                .withStartTime(startTime)
+                .withEndTime(endTime)
+                .withUsageValue(value.get().toString())
+                .build();
+        records.add(data);
+      }
+      return records;
+    }
+  },
+  EC2_CREATESNAPSHOT_SNAPSHOT_USAGE("AmazonEC2", "CreateSnapshot", "SnapshotUsage") {
+    @Override
+    public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
+      List<QueuedEvent> snapshotEvents = events.stream()
+              .filter(e -> "SnapshotUsage".equals(e.getEventType()))
+              .collect(Collectors.toList());
+      if (snapshotEvents.size() <= 0)
+        return Lists.newArrayList();
+
+      snapshotEvents = AwsUsageRecordType.distinctByResourceIds(snapshotEvents);
+     // AmazonEC2,CreateSnapshot,EBS:SnapshotUsage,,11/04/16 22:00:00,11/04/16 23:00:00,9423844728
+      final List<AwsUsageRecord> records = Lists.newArrayList();
+      final Date earliestRecord = AwsUsageRecordType.getEarliest(snapshotEvents);
+      final Date endTime = getNextHour(earliestRecord);
+      final Date startTime = getPreviousHour(endTime);
+
+      final Optional<Long> value = snapshotEvents.stream()
+              .map( e -> Long.parseLong(e.getUsageValue()) )
+              .reduce( (l1, l2) -> l1+l2 );
+      if (value.isPresent()) {
+        final AwsUsageRecord data = AwsUsageRecords.getInstance().newRecord(accountId)
+                .withService("AmazonEC2")
+                .withOperation("CreateSnapshot")
+                .withResource(null)
+                .withUsageType("EBS:SnapshotUsage")
+                .withStartTime(startTime)
+                .withEndTime(endTime)
+                .withUsageValue(value.get().toString())
+                .build();
+        records.add(data);
+      }
+      return records;
+    }
+  },
+  EC2_ASSOCIATEADDRESS_ELASTIC_IP("AmazonEC2", "AssociateAddress", "ElasticIP") {
+    @Override
+    public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
+      // AmazonEC2,AssociateAddress,USW2-ElasticIP:IdleAddress,,11/15/16 14:00:00,11/15/16 15:00:00,1
+      List<QueuedEvent> addressEvents = events.stream()
+              .filter(e -> "AddressUsage".equals(e.getEventType()))
+              .collect(Collectors.toList());
+      if (addressEvents.size() <= 0)
+        return Lists.newArrayList();
+
+      addressEvents = AwsUsageRecordType.distinctByResourceIds(addressEvents);
+      final List<AwsUsageRecord> records = Lists.newArrayList();
+      final Date earliestRecord = AwsUsageRecordType.getEarliest(addressEvents);
+      final Date endTime = getNextHour(earliestRecord);
+      final Date startTime = getPreviousHour(endTime);
+      final long countAddresses = addressEvents.stream()
+              .count();
+      if (countAddresses > 0) {
+        /// TODO: Group by IdleAddress and AssociateAddress?
+        final AwsUsageRecord data = AwsUsageRecords.getInstance().newRecord(accountId)
+                .withService("AmazonEC2")
+                .withOperation("AssociateAddress")
+                .withResource(null)
+                .withUsageType("ElasticIP:IdleAddress")
+                .withStartTime(startTime)
+                .withEndTime(endTime)
+                .withUsageValue(String.format("%d", countAddresses))
                 .build();
         records.add(data);
       }
@@ -160,6 +261,19 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
     return UNKNOWN;
   }
 
+  private static List<QueuedEvent> distinctByResourceIds(final List<QueuedEvent> events) {
+    final Map<String, QueuedEvent> uniqueEvents = Maps.newHashMap();
+    events.stream().forEach( evt -> uniqueEvents.put(evt.getResourceId(), evt) );
+    return Lists.newArrayList(uniqueEvents.values());
+  }
+
+  private static Date getEarliest(final  List<QueuedEvent> events) {
+    final Date earliestRecord = events.stream()
+            .map( e -> e.getTimestamp())
+            .min((a, b) -> a.before(b) ? -1 : 1)
+            .get();
+    return earliestRecord;
+  }
   private static Date getNextHour(final Date time) {
     final Calendar c = Calendar.getInstance();
     c.setTime(time);

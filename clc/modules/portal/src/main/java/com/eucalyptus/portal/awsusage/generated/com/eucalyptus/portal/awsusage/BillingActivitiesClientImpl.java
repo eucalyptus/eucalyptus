@@ -75,47 +75,46 @@ public class BillingActivitiesClientImpl extends ActivitiesClientBase implements
     }
 
     @Override
-    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(String accountId, String queueName, String recordType) {
-        return getAwsReportUsageRecordImpl(Promise.asPromise(accountId), Promise.asPromise(queueName), Promise.asPromise(recordType), (ActivitySchedulingOptions)null);
+    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(String accountId, String queueName) {
+        return getAwsReportUsageRecordImpl(Promise.asPromise(accountId), Promise.asPromise(queueName), (ActivitySchedulingOptions)null);
     }
 
     @Override
-    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(String accountId, String queueName, String recordType, Promise<?>... waitFor) {
-        return getAwsReportUsageRecordImpl(Promise.asPromise(accountId), Promise.asPromise(queueName), Promise.asPromise(recordType), (ActivitySchedulingOptions)null, waitFor);
+    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(String accountId, String queueName, Promise<?>... waitFor) {
+        return getAwsReportUsageRecordImpl(Promise.asPromise(accountId), Promise.asPromise(queueName), (ActivitySchedulingOptions)null, waitFor);
     }
 
     @Override
-    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(String accountId, String queueName, String recordType, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
-        return getAwsReportUsageRecordImpl(Promise.asPromise(accountId), Promise.asPromise(queueName), Promise.asPromise(recordType), optionsOverride, waitFor);
+    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(String accountId, String queueName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return getAwsReportUsageRecordImpl(Promise.asPromise(accountId), Promise.asPromise(queueName), optionsOverride, waitFor);
     }
 
     @Override
-    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(Promise<String> accountId, Promise<String> queueName, Promise<String> recordType) {
-        return getAwsReportUsageRecordImpl(accountId, queueName, recordType, (ActivitySchedulingOptions)null);
+    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(Promise<String> accountId, Promise<String> queueName) {
+        return getAwsReportUsageRecordImpl(accountId, queueName, (ActivitySchedulingOptions)null);
     }
 
     @Override
-    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(Promise<String> accountId, Promise<String> queueName, Promise<String> recordType, Promise<?>... waitFor) {
-        return getAwsReportUsageRecordImpl(accountId, queueName, recordType, (ActivitySchedulingOptions)null, waitFor);
+    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(Promise<String> accountId, Promise<String> queueName, Promise<?>... waitFor) {
+        return getAwsReportUsageRecordImpl(accountId, queueName, (ActivitySchedulingOptions)null, waitFor);
     }
 
     @Override
-    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(Promise<String> accountId, Promise<String> queueName, Promise<String> recordType, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
-        return getAwsReportUsageRecordImpl(accountId, queueName, recordType, optionsOverride, waitFor);
+    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(Promise<String> accountId, Promise<String> queueName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return getAwsReportUsageRecordImpl(accountId, queueName, optionsOverride, waitFor);
     }
     
     
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    protected Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecordImpl(final Promise<String> accountId, final Promise<String> queueName, final Promise<String> recordType, final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+    protected Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecordImpl(final Promise<String> accountId, final Promise<String> queueName, final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
 
         ActivityType _activityType = new ActivityType();
 		_activityType.setName("BillingActivities.getAwsReportUsageRecord");
 		_activityType.setVersion("1.0");
 
-        Promise[] _input_ = new Promise[3];
+        Promise[] _input_ = new Promise[2];
         _input_[0] = accountId;
         _input_[1] = queueName;
-        _input_[2] = recordType;
 
         return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, java.util.List.class, waitFor);
     }
@@ -205,6 +204,118 @@ public class BillingActivitiesClientImpl extends ActivitiesClientBase implements
 
         Promise[] _input_ = new Promise[1];
         _input_[0] = queues;
+
+        return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, Void.class, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> fireVolumeUsage() {
+        return fireVolumeUsageImpl((ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<Void> fireVolumeUsage(Promise<?>... waitFor) {
+        return fireVolumeUsageImpl((ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> fireVolumeUsage(ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return fireVolumeUsageImpl(optionsOverride, waitFor);
+    }
+    
+    
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    protected Promise<Void> fireVolumeUsageImpl(final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+
+        ActivityType _activityType = new ActivityType();
+		_activityType.setName("BillingActivities.fireVolumeUsage");
+		_activityType.setVersion("1.0");
+
+        Promise[] _input_ = new Promise[0];
+
+        return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, Void.class, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> fireSnapshotUsage() {
+        return fireSnapshotUsageImpl((ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<Void> fireSnapshotUsage(Promise<?>... waitFor) {
+        return fireSnapshotUsageImpl((ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> fireSnapshotUsage(ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return fireSnapshotUsageImpl(optionsOverride, waitFor);
+    }
+    
+    
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    protected Promise<Void> fireSnapshotUsageImpl(final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+
+        ActivityType _activityType = new ActivityType();
+		_activityType.setName("BillingActivities.fireSnapshotUsage");
+		_activityType.setVersion("1.0");
+
+        Promise[] _input_ = new Promise[0];
+
+        return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, Void.class, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> fireAddressUsage() {
+        return fireAddressUsageImpl((ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<Void> fireAddressUsage(Promise<?>... waitFor) {
+        return fireAddressUsageImpl((ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> fireAddressUsage(ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return fireAddressUsageImpl(optionsOverride, waitFor);
+    }
+    
+    
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    protected Promise<Void> fireAddressUsageImpl(final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+
+        ActivityType _activityType = new ActivityType();
+		_activityType.setName("BillingActivities.fireAddressUsage");
+		_activityType.setVersion("1.0");
+
+        Promise[] _input_ = new Promise[0];
+
+        return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, Void.class, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> fireS3ObjectUsage() {
+        return fireS3ObjectUsageImpl((ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<Void> fireS3ObjectUsage(Promise<?>... waitFor) {
+        return fireS3ObjectUsageImpl((ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> fireS3ObjectUsage(ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return fireS3ObjectUsageImpl(optionsOverride, waitFor);
+    }
+    
+    
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    protected Promise<Void> fireS3ObjectUsageImpl(final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+
+        ActivityType _activityType = new ActivityType();
+		_activityType.setName("BillingActivities.fireS3ObjectUsage");
+		_activityType.setVersion("1.0");
+
+        Promise[] _input_ = new Promise[0];
 
         return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, Void.class, waitFor);
     }

@@ -34,7 +34,7 @@ public class VolumeEvent implements Event {
   private static final long serialVersionUID = 1L;
 
   public enum VolumeAction {
-    VOLUMECREATE, VOLUMEDELETE, VOLUMEATTACH, VOLUMEDETACH
+    VOLUMECREATE, VOLUMEDELETE, VOLUMEATTACH, VOLUMEDETACH, VOLUMEUSAGE
   }
 
   private final EventActionInfo<VolumeAction> actionInfo;
@@ -62,6 +62,10 @@ public class VolumeEvent implements Event {
   public static InstanceEventActionInfo<VolumeAction> forVolumeDetach( final String instanceUuid,
                                                                        final String instanceId ) {
     return new InstanceEventActionInfo<VolumeAction>( VolumeAction.VOLUMEDETACH, instanceUuid, instanceId );
+  }
+
+  public static EventActionInfo<VolumeAction> forVolumeUsage() {
+    return new EventActionInfo<>( VolumeAction.VOLUMEUSAGE );
   }
 
   public static VolumeEvent with( final EventActionInfo<VolumeAction> actionInfo,

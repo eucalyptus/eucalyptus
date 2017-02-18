@@ -41,7 +41,7 @@ import com.eucalyptus.auth.principal.OwnerFullName;
 public class AddressEvent implements Event {
   private static final long serialVersionUID = 1L;
 
-  public enum AddressAction { ALLOCATE, RELEASE, ASSOCIATE, DISASSOCIATE }
+  public enum AddressAction { ALLOCATE, RELEASE, ASSOCIATE, DISASSOCIATE, USAGE_ALLOCATE, USAGE_ASSOCIATE }
 
   private final String address;
   private final String userId;
@@ -58,6 +58,14 @@ public class AddressEvent implements Event {
     return new EventActionInfo<AddressAction>( AddressAction.RELEASE );
   }
 
+  public static EventActionInfo<AddressAction> forUsageAllocate() {
+    return new EventActionInfo<AddressAction>( AddressAction.USAGE_ALLOCATE );
+  }
+
+  public static EventActionInfo<AddressAction> forUsageAssociate() {
+    return new EventActionInfo<AddressAction>( AddressAction.USAGE_ASSOCIATE );
+  }
+
   public static InstanceEventActionInfo<AddressAction> forAssociate( final String instanceUuid,
                                                                      final String instanceId ) {
     return new InstanceEventActionInfo<AddressAction>( AddressAction.ASSOCIATE, instanceUuid, instanceId );
@@ -67,6 +75,8 @@ public class AddressEvent implements Event {
                                                                         final String instanceId ) {
     return new InstanceEventActionInfo<AddressAction>( AddressAction.DISASSOCIATE, instanceUuid, instanceId );
   }
+
+
 
   public static AddressEvent with( final String address,
                                    final OwnerFullName owner,

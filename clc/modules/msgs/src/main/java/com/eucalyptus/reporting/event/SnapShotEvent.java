@@ -33,7 +33,8 @@ public class SnapShotEvent implements Event {
 
   public enum SnapShotAction {
     SNAPSHOTCREATE,
-    SNAPSHOTDELETE
+    SNAPSHOTDELETE,
+    SNAPSHOTUSAGE
   }
 
   public static class CreateActionInfo extends EventActionInfo<SnapShotAction> {
@@ -83,6 +84,7 @@ public class SnapShotEvent implements Event {
   private final String accountNumber;
   private final String snapshotId;
   private final String uuid;
+  private final int volumeSizeGB;;
 
   /**
    * Action for snapshot creation.
@@ -104,6 +106,10 @@ public class SnapShotEvent implements Event {
     return new EventActionInfo<SnapShotAction>(SnapShotAction.SNAPSHOTDELETE);
   }
 
+  public static EventActionInfo<SnapShotAction> forSnapShotUsage() {
+    return new EventActionInfo<>(SnapShotAction.SNAPSHOTUSAGE);
+  }
+
   public static SnapShotEvent with( final EventActionInfo<SnapShotAction> actionInfo,
                                     final String snapShotUUID,
                                     final String snapshotId,
@@ -111,7 +117,17 @@ public class SnapShotEvent implements Event {
                                     final String userName,
                                     final String accountNumber ) {
 
-    return new SnapShotEvent( actionInfo, snapShotUUID, snapshotId, userId, userName, accountNumber );
+    return new SnapShotEvent( actionInfo, snapShotUUID, snapshotId, userId, userName, accountNumber, -1);
+  }
+
+  public static SnapShotEvent with( final EventActionInfo<SnapShotAction> actionInfo,
+                                    final String snapShotUUID,
+                                    final String snapshotId,
+                                    final String userId,
+                                    final String userName,
+                                    final String accountNumber,
+                                    final int volumeSizeGb) {
+    return new SnapShotEvent( actionInfo, snapShotUUID, snapshotId, userId, userName, accountNumber, volumeSizeGb);
   }
 
   private SnapShotEvent( final EventActionInfo<SnapShotAction> actionInfo,
@@ -119,7 +135,8 @@ public class SnapShotEvent implements Event {
                          final String snapshotId,
                          final String userId,
                          final String userName,
-                         final String accountNumber ) {
+                         final String accountNumber,
+                         final int volumeSizeGb) {
     checkParam( actionInfo, notNullValue() );
     checkParam( uuid, not( isEmptyOrNullString() ) );
     checkParam( userId, not( isEmptyOrNullString() ) );
@@ -132,7 +149,10 @@ public class SnapShotEvent implements Event {
     this.accountNumber = accountNumber;
     this.snapshotId = snapshotId;
     this.uuid = uuid;
+    this.volumeSizeGB = volumeSizeGb;
   }
+
+
 
   public String getSnapshotId() {
     return snapshotId;
@@ -155,6 +175,8 @@ public class SnapShotEvent implements Event {
   public String getUuid() {
     return uuid;
   }
+
+  public int getVolumeSizeGB() { return this.volumeSizeGB; }
 
   @Override
   public String toString() {

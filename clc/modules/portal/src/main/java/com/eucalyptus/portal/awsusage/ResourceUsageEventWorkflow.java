@@ -1,5 +1,5 @@
 /*************************************************************************
- * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,20 +13,20 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  ************************************************************************/
-package com.eucalyptus.portal.awsusage
+package com.eucalyptus.portal.awsusage;
 
-class QueuedEvent {
-    String eventType = null;
-    String resourceId = null;
-    String accountId = null;
-    String userId = null;
-    String availabilityZone = null;
-    String usageValue = null;
-    Date timestamp = null;
+import com.amazonaws.services.simpleworkflow.flow.annotations.Execute;
+import com.amazonaws.services.simpleworkflow.flow.annotations.GetState;
+import com.amazonaws.services.simpleworkflow.flow.annotations.Workflow;
+import com.amazonaws.services.simpleworkflow.flow.annotations.WorkflowRegistrationOptions;
 
-    @Override
-    public String toString() {
-        return String.format("%s:%s:%s:%s:%s:%s:%s",
-        eventType, resourceId, accountId, userId, availabilityZone, usageValue, timestamp);
-    }
+@Workflow
+@WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 7200,
+        defaultTaskStartToCloseTimeoutSeconds = 60)
+public interface ResourceUsageEventWorkflow {
+  @Execute(name = "fireEvents", version = "1.0")
+  void fireEvents();
+
+  @GetState
+  BillingWorkflowState getState();
 }

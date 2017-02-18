@@ -32,7 +32,12 @@ import java.util.Map;
 public interface BillingActivities {
   // key: accountId, value: queue name
   Map<String, String> createAccountQueues(final String globalQueue) throws BillingActivityException;
-  List<AwsUsageRecord> getAwsReportUsageRecord(final String accountId, final String queueName, final String recordType) throws BillingActivityException;
+  List<AwsUsageRecord> getAwsReportUsageRecord(final String accountId, final String queueName) throws BillingActivityException;
   void writeAwsReportHourlyUsage(final String accountId, final List<AwsUsageRecord> records) throws BillingActivityException;
   void deleteAccountQueues(final List<String> queues) throws BillingActivityException;
+
+  void fireVolumeUsage() throws BillingActivityException;
+  void fireSnapshotUsage() throws BillingActivityException;
+  void fireAddressUsage() throws BillingActivityException;
+  void fireS3ObjectUsage() throws BillingActivityException;
 }

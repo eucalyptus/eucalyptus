@@ -22,6 +22,7 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.portal.awsusage.BillingWorkflows;
 import com.eucalyptus.portal.awsusage.SimpleQueueClientManager;
 import com.eucalyptus.portal.awsusage.WorkflowClientManager;
 import com.eucalyptus.portal.common.Portal;
@@ -71,6 +72,9 @@ public class PortalServiceBootstrapper extends Bootstrapper.Simple {
       return false;
     }
 
+    if (!runResourceUsageEventWorkflow())
+      return false;
+
     return true;
   }
 
@@ -93,5 +97,15 @@ public class PortalServiceBootstrapper extends Bootstrapper.Simple {
       client.setQueueAttributes(BillingProperties.SENSOR_QUEUE_NAME,
               BillingProperties.getQueueAttributes());
     }
+  }
+
+  private boolean runResourceUsageEventWorkflow() {
+    try{
+      BillingWorkflows.runResourceUsageEventWorkflow(BillingWorkflows.BILLING_RESOURCE_USAGE_EVENT_WORKFLOW_ID);
+    }catch(final Exception ex) {
+      LOG.error("Failed to run billing workflow", ex);
+      return false;
+    }
+    return true;
   }
 }
