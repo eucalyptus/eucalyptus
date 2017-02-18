@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -154,6 +155,7 @@ import com.google.common.collect.TreeMultimap;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.BaseMessages;
+import javaslang.control.Option;
 
 
 /**
@@ -783,10 +785,9 @@ public class ComputeService {
         .byPrivileges()
         .buildPredicate();
 
-    final Function<Set<String>, Pair<Set<String>,ArrayList<com.eucalyptus.compute.common.Volume>>> populateVolumeSet
-        = new Function<Set<String>, Pair<Set<String>,ArrayList<com.eucalyptus.compute.common.Volume>>>( ) {
-      public Pair<Set<String>,ArrayList<com.eucalyptus.compute.common.Volume>> apply( final Set<String> input ) {
-        final Set<String> allowedVolumeIds = Sets.newHashSet();
+    final Function<Set<String>, ArrayList<com.eucalyptus.compute.common.Volume>> populateVolumeSet
+        = new Function<Set<String>, ArrayList<com.eucalyptus.compute.common.Volume>>( ) {
+      public ArrayList<com.eucalyptus.compute.common.Volume> apply( final Set<String> input ) {
         final ArrayList<com.eucalyptus.compute.common.Volume> replyVolumes = Lists.newArrayList();
         final List<Volume> volumes = Entities.query(
             Volume.named( ownerFullName, null ),
@@ -825,38 +826,39 @@ public class ComputeService {
 
         // build response volumes
         for ( final Volume foundVol : filteredVolumes ) {
-          allowedVolumeIds.add( foundVol.getDisplayName( ) );
           if ( State.ANNIHILATED.equals( foundVol.getState( ) ) ) {
             Entities.delete( foundVol );
             replyVolumes.add( foundVol.morph( new com.eucalyptus.compute.common.Volume() ) );
-          } else {
-            VmVolumeAttachment attachment = attachmentMap.get( foundVol.getDisplayName( ) );
-            AttachedVolume attachedVolume = null;
+          } else if ( State.BUSY.equals( foundVol.getState( ) ) ) {
+            final VmVolumeAttachment attachment = attachmentMap.get( foundVol.getDisplayName( ) );
+            Option<AttachedVolume> attachedVolume = Option.none( );
             if ( attachment != null ) {
-              attachedVolume = VmVolumeAttachment.asAttachedVolume( attachment.getVmInstance( ) ).apply( attachment );
+              attachedVolume =
+                  Option.some( VmVolumeAttachment.asAttachedVolume( attachment.getVmInstance( ) ).apply( attachment ) );
             } else {
-              if ( State.BUSY.equals( foundVol.getState( ) ) ) {
-                foundVol.setState( State.EXTANT );
-              }
+              foundVol.setState( State.EXTANT );
             }
-            com.eucalyptus.compute.common.Volume msgTypeVolume = foundVol.morph( new com.eucalyptus.compute.common.Volume( ) );
-            if ( attachedVolume != null ) {
-              msgTypeVolume.setStatus( "in-use" );
-              msgTypeVolume.getAttachmentSet( ).add( attachedVolume );
+            if ( requestedAndAccessible.apply( foundVol ) ) { // state change may impact filtering so check again
+              final com.eucalyptus.compute.common.Volume msgTypeVolume =
+                  foundVol.morph( new com.eucalyptus.compute.common.Volume( ) );
+              msgTypeVolume.getAttachmentSet( ).addAll( attachedVolume.toJavaList( ) );
+              replyVolumes.add( msgTypeVolume );
             }
-            replyVolumes.add( msgTypeVolume );
+          } else {
+            replyVolumes.add( foundVol.morph( new com.eucalyptus.compute.common.Volume() ) );
           }
         }
-        return Pair.pair( allowedVolumeIds, replyVolumes );
+        return replyVolumes;
       }
     };
 
-    final Pair<Set<String>,ArrayList<com.eucalyptus.compute.common.Volume>> volumeIdsAndVolumes =
+    final ArrayList<com.eucalyptus.compute.common.Volume> volumes =
         Entities.asTransaction( Volume.class, populateVolumeSet ).apply( volumeIds );
     errorIfNotFound( "InvalidVolume.NotFound", "volume", volumeIds );
     @SuppressWarnings( "ConstantConditions" )
-    final Set<String> allowedVolumeIds = volumeIdsAndVolumes.getLeft();
-    reply.setVolumeSet( volumeIdsAndVolumes.getRight() );
+    final Set<String> allowedVolumeIds =
+        volumes.stream( ).map( com.eucalyptus.compute.common.Volume::getVolumeId ).collect( Collectors.toSet( ) );
+    reply.setVolumeSet( volumes );
 
     Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( Volume.class )
         .getResourceTagMap( AccountFullName.getInstance( ctx.getAccountNumber( ) ), allowedVolumeIds );
