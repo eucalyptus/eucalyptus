@@ -70,33 +70,26 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
 
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.ws.Handlers;
+import com.eucalyptus.ws.IoHandlers;
 import com.eucalyptus.ws.StackConfiguration;
+import com.eucalyptus.ws.client.MonitoredSocketChannelInitializer;
 import com.eucalyptus.ws.handlers.ClusterWsSecHandler;
-import com.google.common.base.Joiner;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.socket.SocketChannel;
 
 @ComponentPart( ClusterController.class )
-public final class ClusterClientPipelineFactory implements ChannelPipelineFactory {
-  private static Logger LOG = Logger.getLogger( ClusterClientPipelineFactory.class );
+public final class ClusterClientChannelInitializer extends MonitoredSocketChannelInitializer {
+  private static Logger LOG = Logger.getLogger( ClusterClientChannelInitializer.class );
   private enum ClusterWsSec implements Supplier<ChannelHandler> {
     INSTANCE;
     
@@ -124,86 +117,85 @@ public final class ClusterClientPipelineFactory implements ChannelPipelineFactor
   private static final LoadingCache<InetAddress, Semaphore> counters               = CacheBuilder.newBuilder( ).build( loader );
 
   @Override
-  public ChannelPipeline getPipeline( ) throws Exception {
-    final ChannelHandler limitSockets = new SimpleChannelHandler( ) {
-      private final String uuid = UUID.randomUUID( ).toString( );
-
-      @Override
-      public void writeRequested( ChannelHandlerContext ctx, MessageEvent e ) throws Exception {
-        try {
-          final MappingHttpRequest message = ( ( MappingHttpRequest ) e.getMessage() );
-          final String logMessage = message.getMessage( ) != null
-            ? message.getMessage( ).getClass( ).toString( ).replaceAll( "^.*\\.", "" ) : message.toString( );
-          LOG.debug( Joiner.on( " " ).join( uuid,
-                                            "writeRequested", ctx.getChannel( ),
-                                            "message", logMessage ) );
-        } catch ( Exception e1 ) {
-          LOG.debug( e1 );
-        }
-        super.writeRequested( ctx, e );
-      }
-      
-      /**
-       * @see org.jboss.netty.channel.ChannelEvent()
-       */
-      @Override
-      public void connectRequested( final ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-        try {
-          /**
-           * Get the semaphore for this remote address
-           */
-          final InetSocketAddress remoteAddress = ( ( InetSocketAddress ) e.getValue( ) );
-          final Semaphore sem = counters.getUnchecked( remoteAddress.getAddress() );
-          final int semAvailable = sem.availablePermits();
-          final int semQueued = sem.getQueueLength();
-          /**
-           * Aquire permits from the semaphore for this remote address
-           */
-          final long start = System.nanoTime( );
-          sem.acquire( );
-          final long waitTime = System.nanoTime();
-          e.getChannel( ).getCloseFuture( ).addListener( new ChannelFutureListener() {
-            @Override
-            public void operationComplete( ChannelFuture future ) throws Exception {
-              try {
-                final long end = System.nanoTime();
-                LOG.trace( Joiner.on( " " ).join( uuid, remoteAddress,
-                                                  String.format( "%d/%d+%d-queue", semAvailable, CLUSTER_CLIENT_PERMITS.get(), semQueued ),
-                                                  String.format( "%d+%d=%d-msec",
-                                                                 TimeUnit.NANOSECONDS.toMillis( waitTime - start ),
-                                                                 TimeUnit.NANOSECONDS.toMillis( end - waitTime ),
-                                                                 TimeUnit.NANOSECONDS.toMillis( end - start ) )
-                ) );
-              } catch ( Exception e1 ) {
-                LOG.trace( e1 );
-              } finally {
-                /**
-                 * Ensure we release the permits for the semaphore for this remote address
-                 */
-                sem.release();
-              }
-            }
-          } );
-        } catch ( Exception e1 ) {
-          LOG.trace( e1 );
-        }
-        super.connectRequested( ctx, e );
-      }
-      
-    };
-    final ChannelPipeline pipeline = Channels.pipeline( );
-    for ( final Map.Entry<String, ChannelHandler> e : Handlers.channelMonitors( TimeUnit.SECONDS, StackConfiguration.CLIENT_INTERNAL_TIMEOUT_SECS ).entrySet( ) ) {
-      pipeline.addLast( e.getKey( ), e.getValue( ) );
-    }
-    pipeline.addLast( "decoder", Handlers.newHttpResponseDecoder( ) );
-    pipeline.addLast( "aggregator", Handlers.newHttpChunkAggregator( ) );
-    pipeline.addLast( "encoder", Handlers.httpRequestEncoder( ) );
-    pipeline.addLast( "serializer", Handlers.soapMarshalling( ) );
+  protected void initChannel( final SocketChannel socketChannel ) throws Exception {
+    super.initChannel( socketChannel );
+    final ChannelPipeline pipeline = socketChannel.pipeline( );
+    pipeline.addLast( "decoder", IoHandlers.httpResponseDecoder( ) );
+    pipeline.addLast( "aggregator", IoHandlers.newHttpChunkAggregator( ) );
+    pipeline.addLast( "encoder", IoHandlers.httpRequestEncoder( ) );
+    pipeline.addLast( "wrapper", IoHandlers.ioMessageWrappingHandler( ) );
+    pipeline.addLast( "serializer", IoHandlers.soapMarshalling( ) );
     pipeline.addLast( "wssec", wsSecHandler.get( ) );
-    pipeline.addLast( "addressing", Handlers.newAddressingHandler( "EucalyptusCC#" ) );
-    pipeline.addLast( "soap", Handlers.soapHandler( ) );
-    pipeline.addLast( "binding", Handlers.bindingHandler( "eucalyptus_ucsb_edu" ) );
-    pipeline.addLast( "gating", limitSockets );
-    return pipeline;
+    pipeline.addLast( "addressing", IoHandlers.addressingHandler( "EucalyptusCC#" ) );
+    pipeline.addLast( "soap", IoHandlers.soapHandler( ) );
+    pipeline.addLast( "binding", IoHandlers.bindingHandler( "eucalyptus_ucsb_edu" ) );
+//TODO:STEVE: use fixed size pool instead?
+//    final ChannelHandler limitSockets = new SimpleChannelHandler( ) {
+//      private final String uuid = UUID.randomUUID( ).toString( );
+//
+//      @Override
+//      public void writeRequested( ChannelHandlerContext ctx, MessageEvent e ) throws Exception {
+//        try {
+//          final MappingHttpRequest message = ( ( MappingHttpRequest ) e.getMessage() );
+//          final String logMessage = message.getMessage( ) != null
+//            ? message.getMessage( ).getClass( ).toString( ).replaceAll( "^.*\\.", "" ) : message.toString( );
+//          LOG.debug( Joiner.on( " " ).join( uuid,
+//                                            "writeRequested", ctx.getChannel( ),
+//                                            "message", logMessage ) );
+//        } catch ( Exception e1 ) {
+//          LOG.debug( e1 );
+//        }
+//        super.writeRequested( ctx, e );
+//      }
+//
+//      /**
+//       * @see org.jboss.netty.channel.ChannelEvent()
+//       */
+//      @Override
+//      public void connectRequested( final ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
+//        try {
+//          /**
+//           * Get the semaphore for this remote address
+//           */
+//          final InetSocketAddress remoteAddress = ( ( InetSocketAddress ) e.getValue( ) );
+//          final Semaphore sem = counters.getUnchecked( remoteAddress.getAddress() );
+//          final int semAvailable = sem.availablePermits();
+//          final int semQueued = sem.getQueueLength();
+//          /**
+//           * Aquire permits from the semaphore for this remote address
+//           */
+//          final long start = System.nanoTime( );
+//          sem.acquire( );
+//          final long waitTime = System.nanoTime();
+//          e.getChannel( ).getCloseFuture( ).addListener( new ChannelFutureListener() {
+//            @Override
+//            public void operationComplete( ChannelFuture future ) throws Exception {
+//              try {
+//                final long end = System.nanoTime();
+//                LOG.trace( Joiner.on( " " ).join( uuid, remoteAddress,
+//                                                  String.format( "%d/%d+%d-queue", semAvailable, CLUSTER_CLIENT_PERMITS.get(), semQueued ),
+//                                                  String.format( "%d+%d=%d-msec",
+//                                                                 TimeUnit.NANOSECONDS.toMillis( waitTime - start ),
+//                                                                 TimeUnit.NANOSECONDS.toMillis( end - waitTime ),
+//                                                                 TimeUnit.NANOSECONDS.toMillis( end - start ) )
+//                ) );
+//              } catch ( Exception e1 ) {
+//                LOG.trace( e1 );
+//              } finally {
+//                /**
+//                 * Ensure we release the permits for the semaphore for this remote address
+//                 */
+//                sem.release();
+//              }
+//            }
+//          } );
+//        } catch ( Exception e1 ) {
+//          LOG.trace( e1 );
+//        }
+//        super.connectRequested( ctx, e );
+//      }
+//
+//    };
+//    pipeline.addLast( "gating", limitSockets );
   }
 }

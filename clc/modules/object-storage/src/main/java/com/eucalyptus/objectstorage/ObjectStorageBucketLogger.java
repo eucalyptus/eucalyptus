@@ -73,11 +73,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Dispatcher;
 import com.eucalyptus.storage.msgs.BucketLogData;
 import com.eucalyptus.system.Threads;
-import com.eucalyptus.ws.client.ServiceDispatcher;
 
 /**
  * Handles bucket logging feature by writing log entries to the destination bucket
@@ -104,7 +101,6 @@ public class ObjectStorageBucketLogger {
 
         if (logData.size() > LOG_THRESHOLD) {
           // dispatch
-          Dispatcher dispatcher = ServiceDispatcher.lookupSingle(Components.lookup(ObjectStorage.class));
           List<BucketLogData> data = new ArrayList<BucketLogData>();
 
           /*

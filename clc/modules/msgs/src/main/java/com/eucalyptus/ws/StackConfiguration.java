@@ -181,13 +181,13 @@ public class StackConfiguration extends AbstractPersistent {
   @ConfigurableField( description = "Server http chunk max." )
   public static Integer       CLIENT_HTTP_CHUNK_BUFFER_MAX      = 1048576000;
   
-  @ConfigurableField( description = "Server worker thread pool max." )
+  @ConfigurableField( description = "Client worker thread pool max." )
   public static Integer       CLIENT_POOL_MAX_THREADS           = 32;
   
-  @ConfigurableField( description = "Server worker thread pool max." )
+  @ConfigurableField( description = "Client worker thread pool max." )
   public static Long          CLIENT_POOL_MAX_MEM_PER_CONN      = 0L;
   
-  @ConfigurableField( description = "Server worker thread pool max." )
+  @ConfigurableField( description = "Client worker thread pool max." )
   public static Long          CLIENT_POOL_TOTAL_MEM             = 0L;
   
   @ConfigurableField( description = "Client socket select timeout (ms)." )

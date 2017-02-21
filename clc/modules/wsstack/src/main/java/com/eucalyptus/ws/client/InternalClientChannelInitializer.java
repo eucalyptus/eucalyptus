@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,23 +60,29 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.component;
+package com.eucalyptus.ws.client;
 
-import java.net.URI;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.google.common.base.Function;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import com.eucalyptus.component.annotation.ComponentPart;
+import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.ws.IoHandlers;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.socket.SocketChannel;
 
-public interface Dispatcher {
-  
-  public abstract void dispatch( BaseMessage msg );
-  
-  public abstract <R extends BaseMessage> R send( BaseMessage msg ) throws EucalyptusCloudException;
-  
-  public abstract String getName( );
-  
-  public abstract boolean isLocal( );
-  
-  public abstract String toString( );
-  
+@ComponentPart( Empyrean.class )
+public class InternalClientChannelInitializer extends MonitoredSocketChannelInitializer {
+
+  @Override
+  protected void initChannel( final SocketChannel channel ) throws Exception {
+    super.initChannel( channel );
+    final ChannelPipeline pipeline = channel.pipeline( );
+    pipeline.addLast( "decoder", IoHandlers.httpResponseDecoder( ) );
+    pipeline.addLast( "aggregator", IoHandlers.newHttpChunkAggregator( ) );
+    pipeline.addLast( "encoder", IoHandlers.httpRequestEncoder( ) );
+    pipeline.addLast( "wrapper", IoHandlers.ioMessageWrappingHandler( ) );
+    pipeline.addLast( "serializer", IoHandlers.soapMarshalling( ) );
+    pipeline.addLast( "wssec", IoHandlers.internalWsSecHandler( ) );
+    pipeline.addLast( "addressing", IoHandlers.addressingHandler( ) );
+    pipeline.addLast( "soap", IoHandlers.soapHandler( ) );
+    pipeline.addLast( "binding", IoHandlers.bindingHandler( ) );
+  }
 }

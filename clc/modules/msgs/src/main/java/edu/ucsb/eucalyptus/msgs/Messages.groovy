@@ -213,6 +213,9 @@ public class ExceptionResponseType extends BaseMessage {
     }
     this.set_return(false);
   }
+  public int getHttpStatusCode( ) {
+    httpStatus.code
+  }
 }
 
 public class EucalyptusErrorMessageType extends EucalyptusMessage {

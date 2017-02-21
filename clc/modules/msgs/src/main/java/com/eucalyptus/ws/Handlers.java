@@ -73,7 +73,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.annotation.Nullable;
-import javax.net.ssl.SSLEngine;
 
 import com.google.common.base.*;
 import com.google.common.base.Objects;
@@ -107,7 +106,6 @@ import com.eucalyptus.crypto.util.SslSetup;
 import com.eucalyptus.empyrean.ServiceTransitionType;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.Threads;
@@ -117,11 +115,10 @@ import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.InternalWsSecHandler;
 import com.eucalyptus.ws.handlers.QueryTimestampHandler;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
-import com.eucalyptus.ws.handlers.http.HttpUtils;
 import com.eucalyptus.ws.handlers.http.NioHttpDecoder;
 import com.eucalyptus.ws.handlers.http.HttpResponseHeaderHandler;
-import com.eucalyptus.ws.protocol.AddressingHandler;
-import com.eucalyptus.ws.protocol.SoapHandler;
+import com.eucalyptus.ws.handlers.AddressingHandler;
+import com.eucalyptus.ws.handlers.SoapHandler;
 import com.eucalyptus.ws.server.NioServerHandler;
 import com.eucalyptus.ws.server.ServiceAccessLoggingHandler;
 import com.eucalyptus.ws.server.ServiceContextHandler;
@@ -139,7 +136,6 @@ public class Handlers {
   private static final ExecutionHandler                      serviceExecutionHandler  = new ExecutionHandler( new OrderedMemoryAwareThreadPoolExecutor( StackConfiguration.SERVER_POOL_MAX_THREADS, 0, 0, 30L, TimeUnit.SECONDS, Threads.threadFactory( "web-services-exec-%d" ) ) );
   private static final ChannelHandler                        queryTimestampHandler    = new QueryTimestampHandler( );
   private static final ChannelHandler                        soapMarshallingHandler   = new SoapMarshallingHandler( );
-  private static final ChannelHandler                        httpRequestEncoder       = new NioHttpRequestEncoder( );
   private static final ChannelHandler                        internalWsSecHandler     = new InternalWsSecHandler( );
   private static final ChannelHandler                        soapHandler              = new SoapHandler( );
   private static final ChannelHandler                        addressingHandler        = new AddressingHandler( );
@@ -190,33 +186,6 @@ public class Handlers {
     return ServerPipelineFactory.INSTANCE;
   }
 
-  public static class NioHttpResponseDecoder extends HttpResponseDecoder {
-
-    @Override
-    protected HttpMessage createMessage( final String[] strings ) {
-      return new MappingHttpResponse( strings );//HttpVersion.valueOf(strings[2]), HttpMethod.valueOf(strings[0]), strings[1] );
-    }
-  }
-
-  @ChannelHandler.Sharable
-  public static class NioHttpRequestEncoder extends HttpMessageEncoder {
-
-    public NioHttpRequestEncoder( ) {
-      super( );
-    }
-
-    @Override
-    protected void encodeInitialLine( final ChannelBuffer buf, final HttpMessage message ) throws Exception {
-      final MappingHttpRequest request = ( MappingHttpRequest ) message;
-      buf.writeBytes( request.getMethod( ).toString( ).getBytes( "ASCII" ) );
-      buf.writeByte( HttpUtils.SP );
-      buf.writeBytes( request.getServicePath( ).getBytes( "ASCII" ) );
-      buf.writeByte( HttpUtils.SP );
-      buf.writeBytes( request.getProtocolVersion( ).toString( ).getBytes( "ASCII" ) );
-      buf.writeBytes( HttpUtils.CRLF );
-    }
-  }
-
   @ChannelHandler.Sharable
   enum BootstrapStateCheck implements ChannelUpstreamHandler {
     INSTANCE;
@@ -262,10 +231,6 @@ public class Handlers {
     return new NioSslHandler( );
   }
 
-  public static ChannelHandler newHttpResponseDecoder( ) {
-    return new NioHttpResponseDecoder( );
-  }
-
   public static ChannelHandler newHttpChunkAggregator( ) {
     return new HttpChunkAggregator( StackConfiguration.CLIENT_HTTP_CHUNK_BUFFER_MAX );
   }
@@ -305,10 +270,6 @@ public class Handlers {
 
   public static ChannelHandler bindingHandler( final String bindingName ) {
     return bindingHandlers.getUnchecked( bindingName );
-  }
-
-  public static ChannelHandler httpRequestEncoder( ) {
-    return httpRequestEncoder;
   }
 
   public static ChannelHandler soapMarshalling( ) {
@@ -357,37 +318,6 @@ public class Handlers {
       } else {
         super.handleUpstream( ctx, e );
       }
-    }
-  }
-
-  public abstract static class ClientSslHandler extends SimpleChannelDownstreamHandler {
-    private final String sslHandlerName;
-
-    public ClientSslHandler( final String sslHandlerName ) {
-      this.sslHandlerName = sslHandlerName;
-    }
-
-    protected abstract SSLEngine createSSLEngine( final String peerHost, final int peerPort );
-
-    @Override
-    public void writeRequested( final ChannelHandlerContext ctx, final MessageEvent messageEvent ) throws Exception {
-      if ( messageEvent.getMessage( ) instanceof MappingHttpRequest ) {
-        ctx.getPipeline( ).remove( this );
-        if ( isHttps( (MappingHttpRequest) messageEvent.getMessage( ) ) ) {
-          final URI uri = URI.create( ( (MappingHttpRequest) messageEvent.getMessage( ) ).getUri( ) );
-          final SslHandler sslHandler =
-              new SslHandler( createSSLEngine( uri.getHost( ), uri.getPort( )==-1?443:uri.getPort( ) ) );
-          sslHandler.setIssueHandshake( true );
-          ctx.getPipeline( ).addFirst( sslHandlerName, sslHandler );
-        }
-        Channels.write( ctx, messageEvent.getFuture( ), messageEvent.getMessage( ), messageEvent.getRemoteAddress( ) );
-      } else {
-        super.writeRequested( ctx, messageEvent );
-      }
-    }
-
-    private boolean isHttps( final MappingHttpRequest o ) {
-      return !o.getUri( ).startsWith( "http://" );
     }
   }
 

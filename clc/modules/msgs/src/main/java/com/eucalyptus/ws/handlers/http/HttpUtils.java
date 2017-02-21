@@ -71,7 +71,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import com.google.common.collect.Lists;
 
 
-public class HttpUtils {
+class HttpUtils {
 
   public static String readLine( ChannelBuffer buffer, int maxLineLength ) throws HttpException {
     StringBuilder sb = new StringBuilder( 64 );

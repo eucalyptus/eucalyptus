@@ -72,10 +72,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
-import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.Channels;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.UserPrincipal;
@@ -102,7 +98,7 @@ import com.eucalyptus.util.HasName;
 import com.eucalyptus.ws.StackConfiguration.BasicTransport;
 import com.eucalyptus.ws.TransportDefinition;
 import com.eucalyptus.ws.WebServices;
-import com.eucalyptus.ws.server.Pipelines;
+import com.eucalyptus.ws.client.ClientChannelInitializers;
 
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
@@ -112,6 +108,9 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelInitializer;
 
 public abstract class ComponentId implements HasName<ComponentId>, HasFullName<ComponentId>, Serializable {
   private static final long  serialVersionUID = 1L;
@@ -271,50 +270,42 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     return this.ats.has( GenerateKeys.class );
   }
 
-  private static final ConcurrentMap<String, Class<ChannelPipelineFactory>> clientPipelines = Maps.newConcurrentMap( );
+  private static final ConcurrentMap<String, Class<ChannelInitializer<?>>> clientChannelInitializers = Maps.newConcurrentMap( );
 
-  public ClientBootstrap getClientBootstrap( final ChannelPipelineFactory factory ) {
-    return WebServices.clientBootstrap( factory );
+  public Bootstrap getClientBootstrap( ) {
+    return WebServices.clientBootstrap( );
   }
 
-  public ChannelPipelineFactory getClientPipeline( ) {
-    ChannelPipelineFactory factory = null;
+  public ChannelInitializer<?> getClientChannelInitializer( ) {
+    ChannelInitializer<?> channelInitializer;
     for ( final Class c : Classes.ancestors( this ) ) {
-      if ( ( factory = Pipelines.lookup( this.getClass( ) ) ) != null ) {
-        return factory;
+      if ( ( channelInitializer = ClientChannelInitializers.lookup( this.getClass( ) ) ) != null ) {
+        return channelInitializer;
       }
     }
-    return helpGetClientPipeline( defaultClientPipelineClass );//TODO:GRZE:URGENT: fix handling of internal pipeline
+    return helpGetClientChannelInitializer( defaultClientPipelineClass );
   }
 
-  private static final String defaultClientPipelineClass = "com.eucalyptus.ws.client.pipeline.InternalClientPipeline";
+  private static final String defaultClientPipelineClass = "com.eucalyptus.ws.client.InternalClientChannelInitializer";
 
-  protected static ChannelPipelineFactory helpGetClientPipeline( final String fqName ) {
-    if ( clientPipelines.containsKey( fqName ) ) {
+  protected static ChannelInitializer<?> helpGetClientChannelInitializer( final String fqName ) {
+    if ( clientChannelInitializers.containsKey( fqName ) ) {
       try {
-        return clientPipelines.get( fqName ).newInstance( );
-      } catch ( final InstantiationException ex ) {
-        LOG.error( ex, ex );
-      } catch ( final IllegalAccessException ex ) {
+        return clientChannelInitializers.get( fqName ).newInstance( );
+      } catch ( final IllegalAccessException | InstantiationException ex ) {
         LOG.error( ex, ex );
       }
     } else {
       try {
-        clientPipelines.putIfAbsent( fqName, ( Class<ChannelPipelineFactory> ) ClassLoader.getSystemClassLoader( ).loadClass( fqName ) );
-        return clientPipelines.get( fqName ).newInstance( );
-      } catch ( final InstantiationException ex ) {
-        LOG.error( ex, ex );
-      } catch ( final IllegalAccessException ex ) {
-        LOG.error( ex, ex );
-      } catch ( final ClassNotFoundException ex ) {
+        clientChannelInitializers.putIfAbsent( fqName, ( Class<ChannelInitializer<?>> ) ClassLoader.getSystemClassLoader( ).loadClass( fqName ) );
+        return clientChannelInitializers.get( fqName ).newInstance( );
+      } catch ( final ClassNotFoundException | IllegalAccessException | InstantiationException ex ) {
         LOG.error( ex, ex );
       }
     }
-    return new ChannelPipelineFactory( ) {
-
+    return new ChannelInitializer<Channel>( ) {
       @Override
-      public ChannelPipeline getPipeline( ) throws Exception {
-        return Channels.pipeline( );
+      protected void initChannel( final Channel channel ) throws Exception {
       }
     };
   }

@@ -148,7 +148,7 @@ import com.eucalyptus.walrus.msgs.WalrusDataResponseType;
 import com.eucalyptus.walrus.msgs.WalrusRequestType;
 import com.eucalyptus.walrus.msgs.WalrusResponseType;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 /**
  * The provider client that is used by the OSG to communicate with the Walrus backend. Because Walrus is IAM-aware, this provider does *not* perform
@@ -330,7 +330,7 @@ public class WalrusProviderClient extends S3ProviderClient {
   }
 
   protected static void handleRemoteFault(EucalyptusRemoteFault remoteFault) throws S3Exception {
-    final HttpResponseStatus status = Objects.firstNonNull(remoteFault.getStatus(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
+    final HttpResponseStatus status = HttpResponseStatus.valueOf( MoreObjects.firstNonNull(remoteFault.getStatus(), HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode( ) ) );
     final String code = remoteFault.getFaultCode();
     final String message = remoteFault.getFaultDetail();
     final String exceptionType = remoteFault.getFaultString();

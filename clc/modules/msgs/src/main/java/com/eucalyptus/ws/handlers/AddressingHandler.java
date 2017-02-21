@@ -60,61 +60,65 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.ws.util;
+package com.eucalyptus.ws.handlers;
 
-import java.util.concurrent.ThreadFactory;
+import java.util.UUID;
+import org.apache.axiom.om.OMNamespace;
+import org.apache.axiom.soap.SOAPHeader;
+import org.apache.axiom.soap.SOAPHeaderBlock;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import com.eucalyptus.system.Threads;
+import org.jboss.netty.channel.ChannelHandler;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.MessageEvent;
+import com.eucalyptus.binding.HoldMe;
+import com.eucalyptus.http.MappingHttpRequest;
 
-public class ChannelUtil {
-  private static Logger LOG = Logger.getLogger( ChannelUtil.class );
+@ChannelHandler.Sharable
+public class AddressingHandler extends MessageStackHandler {
   
-  static class SystemThreadFactory implements ThreadFactory {
-    @Override
-    public Thread newThread( final Runnable r ) {
-      return Threads.newThread( r, "channels" );
-    }
+  private static Logger LOG                              = Logger.getLogger( AddressingHandler.class );
+  
+  static final String   WSA_NAMESPACE                    = "http://www.w3.org/2005/08/addressing";
+  static final String   WSA_NAMESPACE_PREFIX             = "wsa";
+  static final String   WSA_MESSAGE_ID                   = "MessageID";
+  static final String   WSA_RELATES_TO                   = "RelatesTo";
+  static final String   WSA_RELATES_TO_RELATIONSHIP_TYPE = "RelationshipType";
+  static final String   WSA_TO                           = "To";
+  static final String   WSA_REPLY_TO                     = "ReplyTo";
+  static final String   WSA_FROM                         = "From";
+  static final String   WSA_FAULT_TO                     = "FaultTo";
+  static final String   WSA_ACTION                       = "Action";
+  
+  private String        prefix;
+  
+  public AddressingHandler( ) {
+    this.prefix = "";
   }
   
-  public static ChannelFutureListener DISPATCH( Object o ) {
-    return new DeferedWriter( o, ChannelFutureListener.CLOSE );
+  public AddressingHandler( String prefix ) {
+    this.prefix = prefix;
   }
   
-  public static ChannelFutureListener WRITE_AND_CALLBACK( Object o, ChannelFutureListener callback ) {
-    return new DeferedWriter( o, callback );
-  }
-  
-  public static ChannelFutureListener WRITE( Object o ) {
-    return new DeferedWriter( o, new ChannelFutureListener( ) {
-      public void operationComplete( ChannelFuture future ) throws Exception {}
-    } );
-  }
-  
-  private static class DeferedWriter implements ChannelFutureListener {
-    private Object                request;
-    private ChannelFutureListener callback;
-    
-    DeferedWriter( final Object request, final ChannelFutureListener callback ) {
-      this.callback = callback;
-      this.request = request;
-    }
-    
-    @Override
-    public void operationComplete( ChannelFuture channelFuture ) {
-      if ( channelFuture.isSuccess( ) ) {
-        channelFuture.getChannel( ).write( request ).addListener( callback );
-      } else {
-        LOG.debug( channelFuture.getCause( ), channelFuture.getCause( ) );
-        try {
-          callback.operationComplete( channelFuture );
-        } catch ( Exception e ) {
-          LOG.debug( e, e );
-        }
+  @Override
+  public void outgoingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
+    if ( event.getMessage( ) instanceof MappingHttpRequest ) {
+      final MappingHttpRequest httpMessage = ( MappingHttpRequest ) event.getMessage( );
+      
+      // :: set action :://
+      final String action = prefix + httpMessage.getOmMessage( ).getLocalName( );
+      httpMessage.addHeader( "SOAPAction", action );
+      final SOAPHeader header = httpMessage.getSoapEnvelope( ).getHeader( );
+      
+      // :: set soap addressing info :://
+      final OMNamespace wsaNs = HoldMe.getOMFactory( ).createOMNamespace( WSA_NAMESPACE, WSA_NAMESPACE_PREFIX );
+      if ( header != null ) {
+        final SOAPHeaderBlock wsaToHeader = header.addHeaderBlock( WSA_TO, wsaNs );
+        wsaToHeader.setText( httpMessage.getUri( ) );
+        final SOAPHeaderBlock wsaActionHeader = header.addHeaderBlock( WSA_ACTION, wsaNs );
+        wsaActionHeader.setText( action );
+        final SOAPHeaderBlock wsaMsgId = header.addHeaderBlock( WSA_MESSAGE_ID, wsaNs );
+        wsaMsgId.setText( "urn:uuid:" + UUID.randomUUID( ).toString( ).replaceAll( "-", "" ).toUpperCase( ) );
       }
     }
-    
   }
-  
 }

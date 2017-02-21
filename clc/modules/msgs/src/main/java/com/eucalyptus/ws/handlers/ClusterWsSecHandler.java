@@ -70,8 +70,10 @@ import org.apache.ws.security.WSEncryptionPart;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.ws.util.CredentialProxy;
 import com.google.common.collect.Lists;
+import io.netty.channel.ChannelHandler;
 
-public class ClusterWsSecHandler extends WsSecHandler {
+@ChannelHandler.Sharable
+public class ClusterWsSecHandler extends IoWsSecHandler {
   private static final String WSA_NAMESPACE = "http://www.w3.org/2005/08/addressing";
   
   public ClusterWsSecHandler( ) {

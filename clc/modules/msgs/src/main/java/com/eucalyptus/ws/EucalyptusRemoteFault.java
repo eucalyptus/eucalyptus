@@ -63,7 +63,6 @@
 package com.eucalyptus.ws;
 
 import javax.annotation.Nullable;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 public class EucalyptusRemoteFault extends Exception {
   String relatesTo;
@@ -71,7 +70,7 @@ public class EucalyptusRemoteFault extends Exception {
   String faultDetail;
   String faultCode;
   String faultString;
-  HttpResponseStatus status;
+  Integer httpStatus;
 
   public EucalyptusRemoteFault( final String action,
                                 final String relatesTo,
@@ -89,10 +88,10 @@ public class EucalyptusRemoteFault extends Exception {
                                 final String faultCode,
                                 final String faultString,
                                 final String faultDetail,
-                                final HttpResponseStatus status ) {
+                                final Integer httpStatus ) {
     this(  action, relatesTo, faultCode, faultString );
     this.faultDetail = faultDetail;
-    this.status = status;
+    this.httpStatus = httpStatus;
   }
 
   public String getRelatesTo( ) {
@@ -116,7 +115,7 @@ public class EucalyptusRemoteFault extends Exception {
   }
 
   @Nullable
-  public HttpResponseStatus getStatus( ) {
-    return status;
+  public Integer getStatus( ) {
+    return httpStatus;
   }
 }

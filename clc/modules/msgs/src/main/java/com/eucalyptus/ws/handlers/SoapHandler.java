@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,66 +60,73 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.ws.protocol;
+package com.eucalyptus.ws.handlers;
 
-import java.util.UUID;
-import org.apache.axiom.om.OMNamespace;
-import org.apache.axiom.soap.SOAPHeader;
-import org.apache.axiom.soap.SOAPHeaderBlock;
+import java.util.function.Supplier;
+import javax.annotation.Nullable;
+import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
-import com.eucalyptus.binding.HoldMe;
-import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.ws.handlers.MessageStackHandler;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import com.eucalyptus.binding.Binding;
+import com.eucalyptus.http.MappingHttpMessage;
+import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Exceptions;
+import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
+import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
 @ChannelHandler.Sharable
-public class AddressingHandler extends MessageStackHandler {
+public class SoapHandler extends MessageStackHandler {
+  private static Logger LOG = Logger.getLogger( SoapHandler.class );
   
-  private static Logger LOG                              = Logger.getLogger( AddressingHandler.class );
-  
-  static final String   WSA_NAMESPACE                    = "http://www.w3.org/2005/08/addressing";
-  static final String   WSA_NAMESPACE_PREFIX             = "wsa";
-  static final String   WSA_MESSAGE_ID                   = "MessageID";
-  static final String   WSA_RELATES_TO                   = "RelatesTo";
-  static final String   WSA_RELATES_TO_RELATIONSHIP_TYPE = "RelationshipType";
-  static final String   WSA_TO                           = "To";
-  static final String   WSA_REPLY_TO                     = "ReplyTo";
-  static final String   WSA_FROM                         = "From";
-  static final String   WSA_FAULT_TO                     = "FaultTo";
-  static final String   WSA_ACTION                       = "Action";
-  
-  private String        prefix;
-  
-  public AddressingHandler( ) {
-    this.prefix = "";
-  }
-  
-  public AddressingHandler( String prefix ) {
-    this.prefix = prefix;
+  @Override
+  public void incomingMessage( final MessageEvent event ) throws Exception {
+    if ( event.getMessage( ) instanceof MappingHttpMessage ) {
+      final MappingHttpMessage message = ( MappingHttpMessage ) event.getMessage( );
+      final SOAPEnvelope env = message.getSoapEnvelope( );
+      if ( !env.hasFault( ) ) {
+        message.setOmMessage( env.getBody( ).getFirstElement( ) );
+      } else {
+        final Supplier<Integer> statusCodeSupplier = () -> getStatus( message );
+        IoSoapHandler.perhapsFault( env, statusCodeSupplier );
+      }
+    }
   }
   
   @Override
   public void outgoingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
-    if ( event.getMessage( ) instanceof MappingHttpRequest ) {
-      final MappingHttpRequest httpMessage = ( MappingHttpRequest ) event.getMessage( );
-      
-      // :: set action :://
-      final String action = prefix + httpMessage.getOmMessage( ).getLocalName( );
-      httpMessage.addHeader( "SOAPAction", action );
-      final SOAPHeader header = httpMessage.getSoapEnvelope( ).getHeader( );
-      
-      // :: set soap addressing info :://
-      final OMNamespace wsaNs = HoldMe.getOMFactory( ).createOMNamespace( WSA_NAMESPACE, WSA_NAMESPACE_PREFIX );
-      if ( header != null ) {
-        final SOAPHeaderBlock wsaToHeader = header.addHeaderBlock( WSA_TO, wsaNs );
-        wsaToHeader.setText( httpMessage.getUri( ) );
-        final SOAPHeaderBlock wsaActionHeader = header.addHeaderBlock( WSA_ACTION, wsaNs );
-        wsaActionHeader.setText( action );
-        final SOAPHeaderBlock wsaMsgId = header.addHeaderBlock( WSA_MESSAGE_ID, wsaNs );
-        wsaMsgId.setText( "urn:uuid:" + UUID.randomUUID( ).toString( ).replaceAll( "-", "" ).toUpperCase( ) );
+    if ( event.getMessage( ) instanceof MappingHttpMessage ) { //TODO:STEVE: cleanup here
+      final MappingHttpMessage httpMessage = ( MappingHttpMessage ) event.getMessage( );
+      if ( httpMessage.getMessage( ) instanceof EucalyptusErrorMessageType ) {
+        EucalyptusErrorMessageType errMsg = ( EucalyptusErrorMessageType ) httpMessage.getMessage( );
+        httpMessage.setSoapEnvelope( Binding.createFault( errMsg.getSource( ), errMsg.getMessage( ), errMsg.getStatusMessage( ) ) );
+        if ( httpMessage instanceof MappingHttpResponse ) {
+          ( ( MappingHttpResponse ) httpMessage ).setStatus( HttpResponseStatus.BAD_REQUEST );
+        }
+      } else if ( httpMessage.getMessage( ) instanceof ExceptionResponseType ) {
+        ExceptionResponseType errMsg = ( ExceptionResponseType ) httpMessage.getMessage( );
+        String createFaultDetails = Logs.isExtrrreeeme( )
+          ? Exceptions.string( errMsg.getException( ) )
+          : errMsg.getException( ).getMessage( );
+        httpMessage.setSoapEnvelope( Binding.createFault( errMsg.getRequestType( ), 
+                                                          errMsg.getMessage( ),
+                                                          createFaultDetails ) );
+        if ( httpMessage instanceof MappingHttpResponse ) {
+          ( ( MappingHttpResponse ) httpMessage ).setStatus( errMsg.getHttpStatus( ) );
+        }
+      } else {
+        httpMessage.setSoapEnvelope( IoSoapHandler.buildSoapEnvelope( httpMessage.getOmMessage() ) );
       }
     }
+  }
+
+  @Nullable
+  private static Integer getStatus( final MappingHttpMessage message ) {
+    return message instanceof MappingHttpResponse ?
+        ((MappingHttpResponse) message).getStatus( ).getCode( ) :
+        null;
   }
 }

@@ -73,7 +73,6 @@ import org.apache.commons.codec.net.URLCodec;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -100,9 +99,8 @@ import com.eucalyptus.ws.Handlers;
 import com.eucalyptus.ws.handlers.HmacHandler;
 import com.eucalyptus.ws.protocol.BaseQueryBinding;
 import com.eucalyptus.ws.protocol.OperationParameter;
-import com.eucalyptus.ws.protocol.SoapHandler;
+import com.eucalyptus.ws.handlers.SoapHandler;
 import com.google.common.base.Supplier;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
@@ -113,16 +111,10 @@ public class Pipelines {
   private static final Logger                                                    LOG               = Logger.getLogger( Pipelines.class );
   private static final Set<FilteredPipeline>                                     internalPipelines = Sets.newHashSet( );
   private static final Set<FilteredPipeline>                                     pipelines         = Sets.newHashSet( );
-  private static final Map<Class<? extends ComponentId>, ChannelPipelineFactory> clientPipelines   = Maps.newHashMap( );
   //GRZE:TODO: this is not happy ==> {@link DomainNames}
   private static final Supplier<String> subDomain = () -> SystemConfiguration.getSystemConfiguration( ).getDnsDomain( );
 
-  /**
-   * Returns the ChannelPipelineFactory for the {@code compId} else {@code null} if none was discovered.
-   */
-  public static ChannelPipelineFactory lookup( Class<? extends ComponentId> compId ) {
-    return clientPipelines.get( compId );
-  }
+
 
   /**
    * Finds and returns a pipeline that accepts the {@code request} by checking registered pipelines.
@@ -217,7 +209,7 @@ public class Pipelines {
   }
 
   /**
-   * Discovers and registers FilteredPipeline and ChannelPipelineFactory instances for discovered components.
+   * Discovers and registers FilteredPipeline instances for discovered components.
    */
   public static class PipelineDiscovery extends ServiceJarDiscovery {
 
@@ -236,19 +228,6 @@ public class Pipelines {
           LOG.trace( ex, ex );
           return false;
         }
-      } else if ( ChannelPipelineFactory.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) )
-                  && !Modifier.isInterface( candidate.getModifiers( ) ) && Ats.from( candidate ).has( ComponentPart.class ) ) {
-        try {
-          final ComponentId compId = Ats.from( candidate ).get( ComponentPart.class ).value( ).newInstance( );
-          final Class<? extends ChannelPipelineFactory> pipelineClass = candidate;
-          final ChannelPipelineFactory pipeline = Classes.newInstance( pipelineClass );
-          Pipelines.clientPipelines.put( compId.getClass( ), pipeline );
-          return true;
-        } catch ( final Exception ex ) {
-          LOG.trace( ex, ex );
-          return false;
-        }
-
       } else {
         return false;
       }
