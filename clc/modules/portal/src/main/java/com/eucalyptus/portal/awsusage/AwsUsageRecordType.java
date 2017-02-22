@@ -16,6 +16,9 @@
 package com.eucalyptus.portal.awsusage;
 
 import com.eucalyptus.compute.common.RunningInstancesItemType;
+import com.eucalyptus.event.Event;
+import com.eucalyptus.event.EventFailedException;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.resources.client.Ec2Client;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -25,7 +28,13 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.counting;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.summingLong;
 
 public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
   UNKNOWN(null, null, null) {
@@ -193,6 +202,80 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
                 .withStartTime(startTime)
                 .withEndTime(endTime)
                 .withUsageValue(String.format("%d", countAddresses))
+                .build();
+        records.add(data);
+      }
+      return records;
+    }
+  },
+
+  S3_STORAGE_OBJECT_COUNT("AmazonS3", "StandardStorage", "StorageObjectCount") {
+    @Override
+    public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
+// AmazonS3,StandardStorage,StorageObjectCount,spark-billing-test01,11/26/16 08:00:00,11/26/16 09:00:00,86
+      List<QueuedEvent> objectEvents = events.stream()
+              .filter(e -> "S3ObjectUsage".equals(e.getEventType()))
+              .filter(e -> e.getResourceId()!=null && e.getResourceId().contains("/"))
+              .collect(Collectors.toList());
+      if (objectEvents.size() <= 0)
+        return Lists.newArrayList();
+
+      final Date earliestRecord = AwsUsageRecordType.getEarliest(objectEvents);
+      final Date endTime = getNextHour(earliestRecord);
+      final Date startTime = getPreviousHour(endTime);
+      final List<AwsUsageRecord> records = Lists.newArrayList();
+
+      final Map<String, Long> objectCounter =
+              AwsUsageRecordType.distinctByResourceIds(objectEvents).stream()
+              .map(e -> e.getResourceId().split("/")[0]) // bucket name
+              .collect( groupingBy(Function.identity(), counting() ));
+
+      for (final String bucket : objectCounter.keySet()) {
+        final AwsUsageRecord data = AwsUsageRecords.getInstance().newRecord(accountId)
+                .withService("AmazonS3")
+                .withOperation("StandardStorage")
+                .withResource(bucket)
+                .withUsageType("StorageObjectCount")
+                .withStartTime(startTime)
+                .withEndTime(endTime)
+                .withUsageValue(String.format("%d", objectCounter.get(bucket)))
+                .build();
+        records.add(data);
+      }
+      return records;
+    }
+  },
+
+  S3_STORAGE_OBJECT_BYTEHRS("AmazonS3", "StandardStorage", "TimedStorage-ByteHrs") {
+    @Override
+    public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
+     // AmazonS3,StandardStorage,USW2-TimedStorage-ByteHrs,billing-test-bucket-tmp,11/26/16 08:00:00,11/26/16 09:00:00,4964856
+      List<QueuedEvent> objectEvents = events.stream()
+              .filter(e -> "S3ObjectUsage".equals(e.getEventType()))
+              .filter(e -> e.getResourceId()!=null && e.getResourceId().contains("/"))
+              .collect(Collectors.toList());
+      if (objectEvents.size() <= 0)
+        return Lists.newArrayList();
+
+      final Date earliestRecord = AwsUsageRecordType.getEarliest(objectEvents);
+      final Date endTime = getNextHour(earliestRecord);
+      final Date startTime = getPreviousHour(endTime);
+      final List<AwsUsageRecord> records = Lists.newArrayList();
+
+      final Map<String, Long> usageBytes =
+              AwsUsageRecordType.distinctByResourceIds(objectEvents).stream()
+              .collect( groupingBy( e -> e.getResourceId().split("/")[0] ,
+                      summingLong( e -> Long.parseLong(e.getUsageValue()))));
+
+      for (final String bucket : usageBytes.keySet()) {
+        final AwsUsageRecord data = AwsUsageRecords.getInstance().newRecord(accountId)
+                .withService("AmazonS3")
+                .withOperation("StandardStorage")
+                .withResource(bucket)
+                .withUsageType("TimedStorage-ByteHrs")
+                .withStartTime(startTime)
+                .withEndTime(endTime)
+                .withUsageValue(String.format("%d", usageBytes.get(bucket)))
                 .build();
         records.add(data);
       }

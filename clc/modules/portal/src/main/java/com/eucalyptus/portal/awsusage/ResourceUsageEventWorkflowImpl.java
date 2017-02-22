@@ -76,7 +76,9 @@ public class ResourceUsageEventWorkflowImpl implements ResourceUsageEventWorkflo
             startDaemonTimer( rand.nextInt(FIRING_DELAY_SEC)));
     final Promise<Void> address = client.fireAddressUsage(
                     startDaemonTimer(rand.nextInt(FIRING_DELAY_SEC)));
-    fireEventsPeriodic(count+1, volume, snapshot, address);
+    final Promise<Void> s3object = client.fireS3ObjectUsage(
+            startDaemonTimer(rand.nextInt(FIRING_DELAY_SEC)));
+    fireEventsPeriodic(count+1, volume, snapshot, address, s3object);
   }
 
 

@@ -34,7 +34,7 @@ public class S3ObjectEvent extends S3EventSupport<S3ObjectEvent.S3ObjectAction> 
    * @see #forS3ObjectDelete
    */
   public enum S3ObjectAction {
-    OBJECTCREATE, OBJECTDELETE
+    OBJECTCREATE, OBJECTDELETE, OBJECTUSAGE
   }
 
   private final String objectKey;

@@ -27,11 +27,14 @@ import com.eucalyptus.compute.common.internal.blockstorage.State;
 import com.eucalyptus.compute.common.internal.blockstorage.Volume;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.portal.AwsUsageReportData;
+import com.eucalyptus.objectstorage.ObjectState;
+import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.portal.common.Portal;
 import com.eucalyptus.reporting.event.AddressEvent;
+import com.eucalyptus.reporting.event.S3ObjectEvent;
 import com.eucalyptus.reporting.event.SnapShotEvent;
 import com.eucalyptus.reporting.event.VolumeEvent;
 import com.eucalyptus.resources.client.Ec2Client;
@@ -206,14 +209,6 @@ public class BillingActivitiesImpl implements BillingActivities {
             volume.getOwner(),
             volume.getPartition());
 
-    final Consumer<VolumeEvent> fire = (event) -> {
-      try {
-        ListenerRegistry.getInstance().fireEvent(event);
-      } catch (final EventFailedException ex) {
-        ;
-      }
-    };
-
     try {
       volumes.stream()
               .filter (v -> State.EXTANT.equals(v.getState()))
@@ -241,14 +236,6 @@ public class BillingActivitiesImpl implements BillingActivities {
             snapshot.getOwnerAccountNumber(),
             snapshot.getVolumeSize()
     );
-
-    final Consumer<SnapShotEvent> fire = (event) -> {
-      try {
-        ListenerRegistry.getInstance().fireEvent(event);
-      } catch (final EventFailedException ex) {
-        ;
-      }
-    };
 
     try {
       snapshots.stream()
@@ -284,14 +271,6 @@ public class BillingActivitiesImpl implements BillingActivities {
                     : AddressEvent.forUsageAllocate()
     );
 
-    final Consumer<AddressEvent> fire = (event) -> {
-      try {
-        ListenerRegistry.getInstance().fireEvent(event);
-      } catch (final EventFailedException ex) {
-        ;
-      }
-    };
-
     try {
       addresses.stream()
               .filter (addr -> AddressState.allocated.equals(addr.getState())
@@ -305,6 +284,52 @@ public class BillingActivitiesImpl implements BillingActivities {
 
   @Override
   public void fireS3ObjectUsage() throws BillingActivityException {
+    final List<ObjectEntity> objects = Lists.newArrayList();
+    try ( final TransactionResource db = Entities.transactionFor( ObjectEntity.class ) ) {
+      final ObjectEntity sample = new ObjectEntity();
+      objects.addAll(Entities.query(sample));
+    }
 
+    final Map<String, String> accountNumberCache = Maps.newHashMap();
+    final Function<String, String> lookupAccountNumber = (alias) -> {
+      if(accountNumberCache.keySet().contains(alias))
+        return accountNumberCache.get(alias);
+
+      try {
+        final String accountNumber = Accounts.lookupAccountIdByAlias(alias);
+        accountNumberCache.put(alias, accountNumber);
+        return accountNumber;
+      }catch(final AuthException ex) {
+        ;
+      }
+      return "000000000000";
+    };
+
+    final Function<ObjectEntity, S3ObjectEvent> toEvent = (obj) -> S3ObjectEvent.with(
+            S3ObjectEvent.S3ObjectAction.OBJECTUSAGE,
+            obj.getBucket().getBucketName(),
+            obj.getObjectKey(),
+            obj.getVersionId(),
+            obj.getOwnerIamUserId(),
+            obj.getOwnerIamUserDisplayName(),
+            lookupAccountNumber.apply(obj.getOwnerDisplayName()),
+            obj.getSize());
+
+    try{
+      objects.stream()
+              .filter( o -> ObjectState.extant.equals(o.getState()) )
+              .map ( toEvent )
+              .forEach ( fire );
+    } catch( final Exception ex) {
+      throw new BillingActivityException("Failed to fire s3 object usage events", ex);
+    }
   }
+
+  private static Consumer<Event> fire = (event) -> {
+    try {
+      ListenerRegistry.getInstance().fireEvent(event);
+    } catch (final EventFailedException ex) {
+      ;
+    }
+  };
 }

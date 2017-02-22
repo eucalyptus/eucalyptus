@@ -17,6 +17,7 @@ package com.eucalyptus.portal.awsusage;
 
 import com.eucalyptus.reporting.event.AddressEvent;
 import com.eucalyptus.reporting.event.InstanceUsageEvent;
+import com.eucalyptus.reporting.event.S3ObjectEvent;
 import com.eucalyptus.reporting.event.SnapShotEvent;
 import com.eucalyptus.reporting.event.VolumeEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -95,6 +96,17 @@ public class QueuedEvents {
     q.setAccountId(event.getAccountId());
     q.setUserId(event.getUserId());
     q.setUsageValue(event.getActionInfo().getAction().toString()); // ALLOCATE or ASSOCIATE
+    q.setTimestamp(new Date(System.currentTimeMillis()));
+    return q;
+  };
+
+  public static Function<S3ObjectEvent, QueuedEvent> FromS3ObjectUsageEvent = (event) -> {
+    final QueuedEvent q = new QueuedEvent();
+    q.setEventType("S3ObjectUsage");
+    q.setResourceId(String.format("%s/%s", event.getBucketName(), event.getObjectKey()));
+    q.setAccountId(event.getAccountNumber());
+    q.setUserId(event.getUserId());
+    q.setUsageValue(String.format("%d", event.getSize()));
     q.setTimestamp(new Date(System.currentTimeMillis()));
     return q;
   };
