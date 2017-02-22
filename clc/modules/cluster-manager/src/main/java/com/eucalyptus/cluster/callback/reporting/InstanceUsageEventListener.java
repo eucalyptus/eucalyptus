@@ -58,7 +58,5 @@ public class InstanceUsageEventListener implements
   }
 
   @Override
-  public void fireEvent(@Nonnull final InstanceUsageEvent event) {
-    LOG.info("[spark] Received instance usage event:" + event);
-  }
+  public void fireEvent(@Nonnull final InstanceUsageEvent event) { }
 }
