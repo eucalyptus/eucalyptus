@@ -276,38 +276,14 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     return WebServices.clientBootstrap( );
   }
 
-  public ChannelInitializer<?> getClientChannelInitializer( ) {
+  public final ChannelInitializer<?> getClientChannelInitializer( ) {
     ChannelInitializer<?> channelInitializer;
     for ( final Class c : Classes.ancestors( this ) ) {
-      if ( ( channelInitializer = ClientChannelInitializers.lookup( this.getClass( ) ) ) != null ) {
+      if ( ( channelInitializer = ClientChannelInitializers.lookup( c ) ) != null ) {
         return channelInitializer;
       }
     }
-    return helpGetClientChannelInitializer( defaultClientPipelineClass );
-  }
-
-  private static final String defaultClientPipelineClass = "com.eucalyptus.ws.client.InternalClientChannelInitializer";
-
-  protected static ChannelInitializer<?> helpGetClientChannelInitializer( final String fqName ) {
-    if ( clientChannelInitializers.containsKey( fqName ) ) {
-      try {
-        return clientChannelInitializers.get( fqName ).newInstance( );
-      } catch ( final IllegalAccessException | InstantiationException ex ) {
-        LOG.error( ex, ex );
-      }
-    } else {
-      try {
-        clientChannelInitializers.putIfAbsent( fqName, ( Class<ChannelInitializer<?>> ) ClassLoader.getSystemClassLoader( ).loadClass( fqName ) );
-        return clientChannelInitializers.get( fqName ).newInstance( );
-      } catch ( final ClassNotFoundException | IllegalAccessException | InstantiationException ex ) {
-        LOG.error( ex, ex );
-      }
-    }
-    return new ChannelInitializer<Channel>( ) {
-      @Override
-      protected void initChannel( final Channel channel ) throws Exception {
-      }
-    };
+    throw new IllegalStateException( "No channel initializer" );
   }
 
   public final String getCapitalizedName( ) {

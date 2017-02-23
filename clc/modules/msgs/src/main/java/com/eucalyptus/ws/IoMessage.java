@@ -21,12 +21,14 @@ import javax.annotation.Nullable;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.soap.SOAPEnvelope;
 import com.eucalyptus.util.Parameters;
+import com.google.common.base.MoreObjects;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 
 /**
@@ -126,5 +128,16 @@ public class IoMessage<HT extends FullHttpMessage> {
 
   public void setOmMessage( final OMElement omMessage ) {
     this.omMessage = omMessage;
+  }
+
+  public boolean isRequest( ) {
+    return getHttpMessage( ) instanceof HttpRequest;
+  }
+
+  @Override
+  public String toString( ) {
+    return MoreObjects.toStringHelper( this )
+        .add( "correlationId", getCorrelationId( ) )
+        .toString( );
   }
 }

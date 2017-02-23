@@ -30,6 +30,7 @@ import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Pair;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.IoMessage;
 import com.google.common.collect.Lists;
@@ -42,10 +43,12 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import javaslang.control.Option;
 
 /**
  * SOAP object model handler
  */
+@SuppressWarnings( "ThrowableResultOfMethodCallIgnored" )
 @ChannelHandler.Sharable
 public class IoSoapHandler extends ChannelDuplexHandler {
 
@@ -58,7 +61,7 @@ public class IoSoapHandler extends ChannelDuplexHandler {
     if ( msg instanceof IoMessage ) {
       final IoMessage ioMessage = IoMessage.class.cast( msg );
       final SOAPEnvelope env = ioMessage.getSoapEnvelope( );
-      if ( !env.hasFault( ) ) {
+      if ( env != null && !env.hasFault( ) ) {
         ioMessage.setOmMessage( env.getBody( ).getFirstElement( ) );
       } else {
         final Supplier<Integer> statusCodeSupplier = () -> getStatus( ioMessage );
@@ -76,22 +79,14 @@ public class IoSoapHandler extends ChannelDuplexHandler {
     if ( msg instanceof IoMessage ) {
       final IoMessage ioMessage = IoMessage.class.cast( msg );
       final HttpMessage httpMessage = ioMessage.getHttpMessage( );
-      if ( ioMessage.getMessage( ) instanceof EucalyptusErrorMessageType ) {
-        final EucalyptusErrorMessageType errMsg = ( EucalyptusErrorMessageType ) ioMessage.getMessage( );
-        ioMessage.setSoapEnvelope( Binding.createFault( errMsg.getSource( ), errMsg.getMessage( ), errMsg.getStatusMessage( ) ) );
+      final Option<Pair<SOAPEnvelope,Integer>> soapEnvelopeOption =
+          IoSoapHandler.perhapsBuildFault( ioMessage.getMessage( ) );
+
+
+      if ( soapEnvelopeOption.isDefined( ) ) {
+        ioMessage.setSoapEnvelope( soapEnvelopeOption.get( ).getLeft( ) );
         if ( httpMessage instanceof HttpResponse ) {
-          ( ( HttpResponse ) httpMessage ).setStatus( HttpResponseStatus.BAD_REQUEST );
-        }
-      } else if ( ioMessage.getMessage( ) instanceof ExceptionResponseType ) {
-        final ExceptionResponseType errMsg = ( ExceptionResponseType ) ioMessage.getMessage( );
-        final String createFaultDetails = Logs.isExtrrreeeme( )
-            ? Exceptions.string( errMsg.getException( ) )
-            : errMsg.getException( ).getMessage( );
-        ioMessage.setSoapEnvelope( Binding.createFault( errMsg.getRequestType( ),
-            errMsg.getMessage( ),
-            createFaultDetails ) );
-        if ( httpMessage instanceof HttpResponse ) {
-          ( ( HttpResponse ) httpMessage ).setStatus( HttpResponseStatus.BAD_REQUEST );
+          ( ( HttpResponse ) httpMessage ).setStatus( HttpResponseStatus.valueOf( soapEnvelopeOption.get( ).getRight( ) ) );
         }
       } else {
         ioMessage.setSoapEnvelope( buildSoapEnvelope( ioMessage.getOmMessage() ) );
@@ -113,6 +108,27 @@ public class IoSoapHandler extends ChannelDuplexHandler {
     factory.createSOAPHeader( soapEnvelope );
     factory.createSOAPBody( soapEnvelope ).addChild( body );
     return soapEnvelope;
+  }
+
+  static Option<Pair<SOAPEnvelope,Integer>> perhapsBuildFault( final Object msg ) {
+    Option<Pair<SOAPEnvelope,Integer>> soapEnvelopeOption = Option.none( );
+    if ( msg instanceof EucalyptusErrorMessageType ) {
+      EucalyptusErrorMessageType errMsg = ( EucalyptusErrorMessageType ) msg;
+      soapEnvelopeOption = Option.some( Pair.of(
+          Binding.createFault( errMsg.getSource( ), errMsg.getMessage( ), errMsg.getStatusMessage( ) ),
+          org.jboss.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST.getCode( )
+      ) );
+    } else if ( msg instanceof ExceptionResponseType ) {
+      ExceptionResponseType errMsg = ( ExceptionResponseType ) msg;
+      String createFaultDetails = Logs.isExtrrreeeme( )
+          ? Exceptions.string( errMsg.getException( ) )
+          : errMsg.getException( ).getMessage( );
+      soapEnvelopeOption = Option.some( Pair.of(
+          Binding.createFault( errMsg.getRequestType( ), errMsg.getMessage( ), createFaultDetails ),
+          errMsg.getHttpStatus( ).getCode( )
+      ) );
+    }
+    return soapEnvelopeOption;
   }
 
   static void perhapsFault( final SOAPEnvelope env, final Supplier<Integer> statusCodeSupplier ) throws EucalyptusRemoteFault {

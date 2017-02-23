@@ -85,7 +85,6 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.Listeners;
 import org.apache.log4j.Logger;
-import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelException;
@@ -98,7 +97,6 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 import org.jboss.netty.logging.InternalLoggerFactory;
@@ -305,7 +303,7 @@ public class WebServices {
         .option( ChannelOption.TCP_NODELAY, true )
         .option( ChannelOption.SO_KEEPALIVE, true )
         .option( ChannelOption.SO_REUSEADDR, true )
-        .option( ChannelOption.CONNECT_TIMEOUT_MILLIS, 3000 );
+        .option( ChannelOption.CONNECT_TIMEOUT_MILLIS, StackConfiguration.CLIENT_INTERNAL_CONNECT_TIMEOUT_MILLIS );
   }
   
   private static EventLoopGroup clientEventLoopGroup( ) {
@@ -315,20 +313,24 @@ public class WebServices {
       if ( clientEventLoopGroup != null ) {
         return clientEventLoopGroup;
       } else {
-        return clientEventLoopGroup = new NioEventLoopGroup(
+        final NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(
             StackConfiguration.CLIENT_POOL_MAX_THREADS,
             Threads.threadFactory( "web-services-client-pool-%d" )
         );
+        OrderedShutdown.registerPreShutdownHook( ( ) -> {
+          LOG.info( "Client shutdown requested" );
+          try {
+            clientEventLoopGroup.shutdownGracefully( 0, 10, TimeUnit.SECONDS ).await( );
+            LOG.info( "Client shutdown complete" );
+          } catch ( final InterruptedException e ) {
+            LOG.info( "Client shutdown interrupted" );
+          }
+        } );
+        return clientEventLoopGroup = eventLoopGroup;
       }
     }
   }
   
-//TODO:STEVE: where to configure these?
-//        return clientWorkerThreadPool = new OrderedMemoryAwareThreadPoolExecutor( StackConfiguration.CLIENT_POOL_MAX_THREADS,
-//                                                                                  StackConfiguration.CLIENT_POOL_MAX_MEM_PER_CONN,
-//                                                                                  StackConfiguration.CLIENT_POOL_TOTAL_MEM,
-//                                                                                  StackConfiguration.CLIENT_POOL_TIMEOUT_MILLIS,
-
   public static synchronized void restart( ) {
     if ( serverShutdown != null ) {
       serverShutdown.run( );

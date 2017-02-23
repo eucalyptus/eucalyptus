@@ -75,8 +75,10 @@ import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Pair;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
+import javaslang.control.Option;
 
 @ChannelHandler.Sharable
 public class SoapHandler extends MessageStackHandler {
@@ -98,24 +100,14 @@ public class SoapHandler extends MessageStackHandler {
   
   @Override
   public void outgoingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
-    if ( event.getMessage( ) instanceof MappingHttpMessage ) { //TODO:STEVE: cleanup here
+    if ( event.getMessage( ) instanceof MappingHttpMessage ) {
       final MappingHttpMessage httpMessage = ( MappingHttpMessage ) event.getMessage( );
-      if ( httpMessage.getMessage( ) instanceof EucalyptusErrorMessageType ) {
-        EucalyptusErrorMessageType errMsg = ( EucalyptusErrorMessageType ) httpMessage.getMessage( );
-        httpMessage.setSoapEnvelope( Binding.createFault( errMsg.getSource( ), errMsg.getMessage( ), errMsg.getStatusMessage( ) ) );
+      final Option<Pair<SOAPEnvelope,Integer>> soapEnvelopeOption =
+          IoSoapHandler.perhapsBuildFault( httpMessage.getMessage( ) );
+      if ( soapEnvelopeOption.isDefined( ) ) {
+        httpMessage.setSoapEnvelope( soapEnvelopeOption.get( ).getLeft( ) );
         if ( httpMessage instanceof MappingHttpResponse ) {
-          ( ( MappingHttpResponse ) httpMessage ).setStatus( HttpResponseStatus.BAD_REQUEST );
-        }
-      } else if ( httpMessage.getMessage( ) instanceof ExceptionResponseType ) {
-        ExceptionResponseType errMsg = ( ExceptionResponseType ) httpMessage.getMessage( );
-        String createFaultDetails = Logs.isExtrrreeeme( )
-          ? Exceptions.string( errMsg.getException( ) )
-          : errMsg.getException( ).getMessage( );
-        httpMessage.setSoapEnvelope( Binding.createFault( errMsg.getRequestType( ), 
-                                                          errMsg.getMessage( ),
-                                                          createFaultDetails ) );
-        if ( httpMessage instanceof MappingHttpResponse ) {
-          ( ( MappingHttpResponse ) httpMessage ).setStatus( errMsg.getHttpStatus( ) );
+          ( ( MappingHttpResponse ) httpMessage ).setStatus( HttpResponseStatus.valueOf( soapEnvelopeOption.get( ).getRight( ) ) );
         }
       } else {
         httpMessage.setSoapEnvelope( IoSoapHandler.buildSoapEnvelope( httpMessage.getOmMessage() ) );

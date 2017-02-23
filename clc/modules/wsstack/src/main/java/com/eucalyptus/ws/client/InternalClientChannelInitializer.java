@@ -62,13 +62,13 @@
 
 package com.eucalyptus.ws.client;
 
+import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.ComponentPart;
-import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.ws.IoHandlers;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 
-@ComponentPart( Empyrean.class )
+@ComponentPart( ComponentId.class )
 public class InternalClientChannelInitializer extends MonitoredSocketChannelInitializer {
 
   @Override

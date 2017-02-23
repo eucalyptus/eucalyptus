@@ -31,13 +31,13 @@ import io.netty.channel.ChannelInitializer;
  */
 public class ClientChannelInitializers {
   private static final Logger LOG = Logger.getLogger( ClientChannelInitializers.class );
-  private static final Map<Class<? extends ComponentId>, ChannelInitializer> CHANNEL_INITIALIZERS = Maps.newHashMap( );
+  private static final Map<Class<?>, ChannelInitializer> CHANNEL_INITIALIZERS = Maps.newHashMap( );
 
 
   /**
    * Returns the ChannelPipelineFactory for the {@code compId} else {@code null} if none was discovered.
    */
-  public static ChannelInitializer lookup( Class<? extends ComponentId> compId ) {
+  public static ChannelInitializer lookup( Class<?> compId ) {
     return CHANNEL_INITIALIZERS.get( compId );
   }
 
@@ -54,10 +54,10 @@ public class ClientChannelInitializers {
           Modifier.isPublic( candidate.getModifiers( ) ) &&
           Ats.from( candidate ).has( ComponentPart.class ) ) {
         try {
-          final ComponentId compId = Ats.from( candidate ).get( ComponentPart.class ).value( ).newInstance( );
+          final Class<? extends ComponentId> compIdClass = Ats.from( candidate ).get( ComponentPart.class ).value( );
           final ChannelInitializer channelInitializer =
               ChannelInitializer.class.cast( Classes.newInstance( candidate ) );
-          CHANNEL_INITIALIZERS.put( compId.getClass( ), channelInitializer );
+          CHANNEL_INITIALIZERS.put( compIdClass, channelInitializer );
           return true;
         } catch ( final Exception ex ) {
           LOG.error( "Error in client channel initializer discovery for " + candidate, ex );

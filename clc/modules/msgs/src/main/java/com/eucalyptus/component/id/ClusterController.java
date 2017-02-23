@@ -67,7 +67,11 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.InternalService;
 import com.eucalyptus.component.annotation.Partition;
+import com.eucalyptus.ws.StackConfiguration;
+import com.google.common.base.MoreObjects;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 
 @Partition( value = { Eucalyptus.class } )
 @FaultLogPrefix( "cloud" ) // stub for cc, but in clc
@@ -86,19 +90,6 @@ public class ClusterController extends ComponentId {
     return 8774;
   }
   
-  private static ChannelInitializer<?> clusterChannelInitializer;
-  
-  @Override
-  public ChannelInitializer<?> getClientChannelInitializer( ) {//TODO:GRZE:fixme to use discovery
-    ChannelInitializer<?> initializer = null;
-    if ( ( initializer = super.getClientChannelInitializer( ) ) == null ) {
-      initializer = ( clusterChannelInitializer = ( clusterChannelInitializer != null
-        ? clusterChannelInitializer
-          : helpGetClientChannelInitializer( "com.eucalyptus.ws.client.pipeline.ClusterClientChannelInitializer" ) ) );
-    }
-    return initializer;
-  }
-  
   @Override
   public String getServicePath( final String... pathParts ) {
     return "/axis2/services/EucalyptusCC";
@@ -107,6 +98,12 @@ public class ClusterController extends ComponentId {
   @Override
   public String getInternalServicePath( final String... pathParts ) {
     return this.getServicePath( pathParts );
+  }
+
+  @Override
+  public Bootstrap getClientBootstrap() {
+    return super.getClientBootstrap( )
+        .option( ChannelOption.CONNECT_TIMEOUT_MILLIS, MoreObjects.firstNonNull( StackConfiguration.CLUSTER_CONNECT_TIMEOUT_MILLIS, 3000 ) );
   }
 
   @Partition( ClusterController.class )
@@ -135,23 +132,10 @@ public class ClusterController extends ComponentId {
       return this.getServicePath( pathParts );
     }
 
-    private static ChannelInitializer<?> channelInitializer;
-
-    /**
-     * This was born under a bad sign. No touching.
-     *
-     * @return
-     */
     @Override
-    public ChannelInitializer<?> getClientChannelInitializer( ) {
-      ChannelInitializer<?> factory = null;
-      if ( ( factory = super.getClientChannelInitializer( ) ) == null ) {
-        factory = ( channelInitializer = ( channelInitializer != null
-          ? channelInitializer
-          : helpGetClientChannelInitializer( "com.eucalyptus.cluster.GatherLogClientChannelInitializer" ) ) );
-      }
-      return factory;
+    public Bootstrap getClientBootstrap() {
+      return super.getClientBootstrap( )
+          .option( ChannelOption.CONNECT_TIMEOUT_MILLIS, MoreObjects.firstNonNull( StackConfiguration.CLUSTER_CONNECT_TIMEOUT_MILLIS, 3000 ) );
     }
-
   }
 }

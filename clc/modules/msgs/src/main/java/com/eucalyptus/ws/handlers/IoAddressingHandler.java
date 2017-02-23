@@ -16,7 +16,9 @@
 package com.eucalyptus.ws.handlers;
 
 import java.util.UUID;
+import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMNamespace;
+import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.axiom.soap.SOAPHeader;
 import org.apache.axiom.soap.SOAPHeaderBlock;
 import com.eucalyptus.binding.HoldMe;
@@ -25,7 +27,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpRequest;
 
 /**
@@ -52,26 +53,41 @@ public class IoAddressingHandler extends ChannelOutboundHandlerAdapter {
 
   @Override
   public void write( final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise ) throws Exception {
-    if ( msg instanceof IoMessage && ((IoMessage)msg).getHttpMessage( ) instanceof HttpRequest ) {
+    if ( msg instanceof IoMessage && ((IoMessage)msg).isRequest( ) ) {
       final IoMessage ioMessage = ( IoMessage ) msg;
-
-      // :: set action :://
-      final String action = prefix + ioMessage.getOmMessage( ).getLocalName( );
-      final HttpRequest httpRequest = (FullHttpRequest) ioMessage.getHttpMessage( );
-      ioMessage.getHttpMessage( ).headers( ).add( "SOAPAction", action );
-      final SOAPHeader header = ioMessage.getSoapEnvelope( ).getHeader( );
-
-      // :: set soap addressing info :://
-      final OMNamespace wsaNs = HoldMe.getOMFactory( ).createOMNamespace( WSA_NAMESPACE, WSA_NAMESPACE_PREFIX );
-      if ( header != null ) {
-        final SOAPHeaderBlock wsaToHeader = header.addHeaderBlock( WSA_TO, wsaNs );
-        wsaToHeader.setText( httpRequest.getUri( ) );
-        final SOAPHeaderBlock wsaActionHeader = header.addHeaderBlock( WSA_ACTION, wsaNs );
-        wsaActionHeader.setText( action );
-        final SOAPHeaderBlock wsaMsgId = header.addHeaderBlock( WSA_MESSAGE_ID, wsaNs );
-        wsaMsgId.setText( "urn:uuid:" + UUID.randomUUID( ).toString( ).replaceAll( "-", "" ).toUpperCase( ) );
-      }
+      final HttpRequest httpRequest = (HttpRequest) ioMessage.getHttpMessage( );
+      final String action = addAddressing(
+          prefix,
+          ioMessage.getSoapEnvelope( ),
+          ioMessage.getOmMessage( ),
+          httpRequest.getUri( )
+      );
+      httpRequest.headers( ).add( "SOAPAction", action );
     }
     super.write( ctx, msg, promise );
+  }
+
+  static String addAddressing(
+      final String prefix,
+      final SOAPEnvelope soapEnvelope,
+      final OMElement omMessage,
+      final String uri
+  ) {
+    // :: set action :://
+    final String action = prefix + omMessage.getLocalName( );
+    final SOAPHeader header = soapEnvelope.getHeader( );
+
+    // :: set soap addressing info :://
+    final OMNamespace wsaNs = HoldMe.getOMFactory( ).createOMNamespace( WSA_NAMESPACE, WSA_NAMESPACE_PREFIX );
+    if ( header != null ) {
+      final SOAPHeaderBlock wsaToHeader = header.addHeaderBlock( WSA_TO, wsaNs );
+      wsaToHeader.setText( uri );
+      final SOAPHeaderBlock wsaActionHeader = header.addHeaderBlock( WSA_ACTION, wsaNs );
+      wsaActionHeader.setText( action );
+      final SOAPHeaderBlock wsaMsgId = header.addHeaderBlock( WSA_MESSAGE_ID, wsaNs );
+      wsaMsgId.setText( "urn:uuid:" + UUID.randomUUID( ).toString( ).replaceAll( "-", "" ).toUpperCase( ) );
+    }
+
+    return action;
   }
 }

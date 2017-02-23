@@ -260,6 +260,33 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
         throw Exceptions.toUndeclared( ex );
       }
     }
+
+    private static void updatePropertyValues(
+        final Logger logger,
+        final Iterable<Tuple3<String,String,String>> updatedProperties
+    ) {
+      try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
+        for ( final Tuple3<String,String,String> updatedProperty : updatedProperties ) {
+          final String propName = updatedProperty._1( );
+          final String oldValue = updatedProperty._2( );
+          final String newValue = updatedProperty._3( );
+          Entities.criteriaQuery( StaticDatabasePropertyEntry.class )
+              .whereEqual( StaticDatabasePropertyEntry_.propName, propName )
+              .uniqueResultOption( ).transform( property -> {
+            if ( oldValue.equals( property.getValue( ) ) ) {
+              logger.info( "Updating value for "+propName+" property to " + newValue );
+              property.setValue( newValue );
+            }
+            return property;
+          } );
+        }
+        db.commit( );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+
+
   }
 
   @EntityUpgrade( entities = StaticDatabasePropertyEntry.class, since = Version.v3_2_0, value = Empyrean.class )
@@ -776,28 +803,6 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     INSTANCE;
     private static Logger LOG = Logger.getLogger( StaticPropertyEntryUpgrade440.class );
 
-    private void updatePropertyValues( final Iterable<Tuple3<String,String,String>> updatedProperties ) {
-      try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
-        for ( final Tuple3<String,String,String> updatedProperty : updatedProperties ) {
-          final String propName = updatedProperty._1( );
-          final String oldValue = updatedProperty._2( );
-          final String newValue = updatedProperty._3( );
-          Entities.criteriaQuery( StaticDatabasePropertyEntry.class )
-              .whereEqual( StaticDatabasePropertyEntry_.propName, propName )
-              .uniqueResultOption( ).transform( property -> {
-            if ( oldValue.equals( property.getValue( ) ) ) {
-              LOG.info( "Updating value for "+propName+" property to " + newValue );
-              property.setValue( newValue );
-            }
-            return property;
-          } );
-        }
-        db.commit( );
-      } catch ( Exception ex ) {
-        throw Exceptions.toUndeclared( ex );
-      }
-    }
-
     private void configureCloudformationStrictResourcePropertyEnforcement( ) {
       try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
         try {
@@ -842,7 +847,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
               "com.eucalyptus.vm.dns.RecursiveDnsResolver.enabled" )
       ) );
 
-      updatePropertyValues( ImmutableList.of(
+      UpgradeUtils.updatePropertyValues( LOG, ImmutableList.of(
           Tuple.of( "cloudformation.swf_activity_worker_config",
               "{\"PollThreadCount\": 8, \"TaskExecutorThreadPoolSize\": 16, \"MaximumPollRateIntervalMilliseconds\": 50 }",
               "{\"PollThreadCount\": 8, \"TaskExecutorThreadPoolSize\": 16, \"MaximumPollRateIntervalMilliseconds\": 50, \"MaximumPollRatePerSecond\": 20 }" ),
@@ -879,6 +884,10 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     @Override
     public boolean apply( final Class arg0 ) {
       UpgradeUtils.deleteRemovedProperties( LOG, ImmutableList.of(
+          "bootstrap.webservices.client_idle_timeout_secs",
+          "bootstrap.webservices.client_pool_max_mem_per_conn",
+          "bootstrap.webservices.client_pool_timeout_millis",
+          "bootstrap.webservices.client_pool_total_mem",
           "reporting.data_collection_enabled",
           "reporting.default_size_time_size_unit",
           "reporting.default_size_time_time_unit",
@@ -894,6 +903,10 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
           Tuple.of( "cloud.monitor.history_size",
               "com.eucalyptus.reporting.modules.backend.DescribeSensorsListener.history_size",
               "com.eucalyptus.cluster.callback.reporting.DescribeSensorsListener.history_size" )
+      ) );
+
+      UpgradeUtils.updatePropertyValues( LOG, ImmutableList.of(
+          Tuple.of( "bootstrap.webservices.cluster_connect_timeout_millis", "2000", "3000" )
       ) );
 
       return true;

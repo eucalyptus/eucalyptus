@@ -37,7 +37,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.FullHttpMessage;
-import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 
@@ -146,10 +145,10 @@ public class IoBindingHandler extends ChannelDuplexHandler {
    * <p>A BindingHandler created with such a context should only be used once
    * and should not be cached.</p>
    */
-  public static BindingHandler.BindingHandlerContext context( final Binding binding,
+  public static IoBindingHandler.BindingHandlerContext context( final Binding binding,
                                                               final Pattern namespacePattern,
                                                               final Class<? extends ComponentId> component ) {
-    return new BindingHandler.DynamicBindingHandlerContext( binding, namespacePattern, component );
+    return new IoBindingHandler.DynamicBindingHandlerContext( binding, namespacePattern, component );
 
   }
 
@@ -195,7 +194,7 @@ public class IoBindingHandler extends ChannelDuplexHandler {
         }
       }
       try {
-        if ( ioMessage.getHttpMessage( ) instanceof HttpRequest ) {
+        if ( ioMessage.isRequest( ) ) {
           if ( msgType != null ) {
             msg = ( BaseMessage ) this.context.getBinding( ).fromOM( ioMessage.getOmMessage( ), msgType );
           } else {
@@ -208,7 +207,6 @@ public class IoBindingHandler extends ChannelDuplexHandler {
         try {
           msg = ( BaseMessage ) this.context.getBinding( ).fromOM( ioMessage.getOmMessage( ), this.context.getNamespace( ) );
         } catch ( Exception ex ) {
-          //LOG.warn( "FAILED TO PARSE:\n" + ioMessage.getMessageString( ) ); //TODO:STEVE: messageString for IoMessage?
           throw new WebServicesException( e1 );
         }
       }

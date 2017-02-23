@@ -126,7 +126,6 @@ public class IoHandlers {
 
   public static Map<String, ChannelHandler> channelMonitors( final TimeUnit unit, final long timeout ) {
     final Map<String, ChannelHandler> monitors = Maps.newHashMap( );
-
     monitors.put( "idlehandler", new IdleStateHandler( 0L, 0L, timeout, unit ) );
     monitors.put( "idlecloser", new ChannelInboundHandlerAdapter() {
       @Override

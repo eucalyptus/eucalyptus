@@ -13,10 +13,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  ************************************************************************/
-package com.eucalyptus.ws;
+package com.eucalyptus.util.async;
 
 /**
- * TODO:STEVE: remove for now?
+ *
  */
-public enum IoHttpStatus {
+public interface AsyncRequestPoolable {
+  default int fixedSize( ) { return -1; }
 }

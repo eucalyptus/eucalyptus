@@ -62,59 +62,28 @@
 
 package com.eucalyptus.cluster;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.log4j.Logger;
-
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.util.async.AsyncRequestPoolable;
 import com.eucalyptus.ws.IoHandlers;
-import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.client.MonitoredSocketChannelInitializer;
 import com.eucalyptus.ws.handlers.ClusterWsSecHandler;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 
 @ComponentPart( ClusterController.class )
-public final class ClusterClientChannelInitializer extends MonitoredSocketChannelInitializer {
-  private static Logger LOG = Logger.getLogger( ClusterClientChannelInitializer.class );
-  private enum ClusterWsSec implements Supplier<ChannelHandler> {
-    INSTANCE;
-    
-    @Override
-    public ChannelHandler get( ) {
-      return new ClusterWsSecHandler( );
+public final class ClusterClientChannelInitializer extends MonitoredSocketChannelInitializer implements AsyncRequestPoolable {
 
-    }
-  };
-
-  private static final Supplier<ChannelHandler> wsSecHandler = Suppliers.memoize( ClusterWsSec.INSTANCE );
-  public static final Supplier<Integer>                     CLUSTER_CLIENT_PERMITS = Suppliers.memoizeWithExpiration( new Supplier<Integer>( ) {
-                                                                                     @Override
-                                                                                     public Integer get( ) {
-                                                                                       return Clusters.getConfiguration( )
-                                                                                                      .getRequestWorkers( );
-                                                                                     }
-                                                                                   }, 5, TimeUnit.SECONDS );
-  private static final CacheLoader<InetAddress, Semaphore>  loader                 = new CacheLoader<InetAddress, Semaphore>( ) {
-                                                                                     @Override
-                                                                                     public Semaphore load( InetAddress key ) throws Exception {
-                                                                                       return new Semaphore( CLUSTER_CLIENT_PERMITS.get(), true );
-                                                                                     }
-                                                                                   };
-  private static final LoadingCache<InetAddress, Semaphore> counters               = CacheBuilder.newBuilder( ).build( loader );
+  private static final Supplier<ChannelHandler> wsSecHandler = Suppliers.memoize( ClusterWsSecHandler::new );
+  private static final Supplier<Integer> poolSize = Suppliers.memoizeWithExpiration(
+      ClusterClientChannelInitializer::getRequestWorkers,
+      30,
+      TimeUnit.SECONDS
+  );
 
   @Override
   protected void initChannel( final SocketChannel socketChannel ) throws Exception {
@@ -129,73 +98,18 @@ public final class ClusterClientChannelInitializer extends MonitoredSocketChanne
     pipeline.addLast( "addressing", IoHandlers.addressingHandler( "EucalyptusCC#" ) );
     pipeline.addLast( "soap", IoHandlers.soapHandler( ) );
     pipeline.addLast( "binding", IoHandlers.bindingHandler( "eucalyptus_ucsb_edu" ) );
-//TODO:STEVE: use fixed size pool instead?
-//    final ChannelHandler limitSockets = new SimpleChannelHandler( ) {
-//      private final String uuid = UUID.randomUUID( ).toString( );
-//
-//      @Override
-//      public void writeRequested( ChannelHandlerContext ctx, MessageEvent e ) throws Exception {
-//        try {
-//          final MappingHttpRequest message = ( ( MappingHttpRequest ) e.getMessage() );
-//          final String logMessage = message.getMessage( ) != null
-//            ? message.getMessage( ).getClass( ).toString( ).replaceAll( "^.*\\.", "" ) : message.toString( );
-//          LOG.debug( Joiner.on( " " ).join( uuid,
-//                                            "writeRequested", ctx.getChannel( ),
-//                                            "message", logMessage ) );
-//        } catch ( Exception e1 ) {
-//          LOG.debug( e1 );
-//        }
-//        super.writeRequested( ctx, e );
-//      }
-//
-//      /**
-//       * @see org.jboss.netty.channel.ChannelEvent()
-//       */
-//      @Override
-//      public void connectRequested( final ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-//        try {
-//          /**
-//           * Get the semaphore for this remote address
-//           */
-//          final InetSocketAddress remoteAddress = ( ( InetSocketAddress ) e.getValue( ) );
-//          final Semaphore sem = counters.getUnchecked( remoteAddress.getAddress() );
-//          final int semAvailable = sem.availablePermits();
-//          final int semQueued = sem.getQueueLength();
-//          /**
-//           * Aquire permits from the semaphore for this remote address
-//           */
-//          final long start = System.nanoTime( );
-//          sem.acquire( );
-//          final long waitTime = System.nanoTime();
-//          e.getChannel( ).getCloseFuture( ).addListener( new ChannelFutureListener() {
-//            @Override
-//            public void operationComplete( ChannelFuture future ) throws Exception {
-//              try {
-//                final long end = System.nanoTime();
-//                LOG.trace( Joiner.on( " " ).join( uuid, remoteAddress,
-//                                                  String.format( "%d/%d+%d-queue", semAvailable, CLUSTER_CLIENT_PERMITS.get(), semQueued ),
-//                                                  String.format( "%d+%d=%d-msec",
-//                                                                 TimeUnit.NANOSECONDS.toMillis( waitTime - start ),
-//                                                                 TimeUnit.NANOSECONDS.toMillis( end - waitTime ),
-//                                                                 TimeUnit.NANOSECONDS.toMillis( end - start ) )
-//                ) );
-//              } catch ( Exception e1 ) {
-//                LOG.trace( e1 );
-//              } finally {
-//                /**
-//                 * Ensure we release the permits for the semaphore for this remote address
-//                 */
-//                sem.release();
-//              }
-//            }
-//          } );
-//        } catch ( Exception e1 ) {
-//          LOG.trace( e1 );
-//        }
-//        super.connectRequested( ctx, e );
-//      }
-//
-//    };
-//    pipeline.addLast( "gating", limitSockets );
+  }
+
+  @Override
+  public int fixedSize( ) {
+    return poolSize.get( );
+  }
+
+  private static int getRequestWorkers( ) {
+    try {
+      return Clusters.getConfiguration( ).getRequestWorkers( );
+    } catch ( Exception e ) {
+      return -1;
+    }
   }
 }

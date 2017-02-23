@@ -35,7 +35,6 @@ import com.google.common.collect.Lists;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.HttpRequest;
 
 /**
  *
@@ -62,7 +61,7 @@ public class IoInternalWsSecHandler extends IoWsSecHandler {
   @Override
   public void channelRead( final ChannelHandlerContext ctx, final Object msg ) throws Exception {
     final Object o = msg;
-    if ( o instanceof IoMessage && ((IoMessage)o).getHttpMessage() instanceof HttpRequest ) {
+    if ( o instanceof IoMessage && ((IoMessage)o).isRequest( )) {
       final IoMessage ioMessage = ( IoMessage ) o;
       final SOAPEnvelope envelope = ioMessage.getSoapEnvelope( );
 
@@ -79,7 +78,7 @@ public class IoInternalWsSecHandler extends IoWsSecHandler {
   @Override
   public void write( final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise ) throws Exception {
     final Object o = msg;
-    if ( o instanceof IoMessage && ((IoMessage)o).getHttpMessage( ) instanceof HttpRequest ) {
+    if ( o instanceof IoMessage && ((IoMessage)o).isRequest( ) ) {
       super.write( ctx, msg, promise );
     } else {
       ctx.write( msg, promise );

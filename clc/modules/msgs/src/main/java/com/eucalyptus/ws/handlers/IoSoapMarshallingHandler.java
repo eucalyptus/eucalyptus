@@ -53,7 +53,6 @@ public class IoSoapMarshallingHandler extends ChannelDuplexHandler {
         request = false;
         if ( content.isEmpty( ) ) {
           final FullHttpResponse httpResponse = (FullHttpResponse) httpMessage;
-//          ioMessage.setMessageString( "" );  //TODO:STEVE: set message string here?
           ioMessage.setSoapEnvelope( Binding.createFault(
               httpResponse.getStatus( ).code( ) < 500 ? "soapenv:Client" : "soapenv:Server",
               "No content",
@@ -61,7 +60,6 @@ public class IoSoapMarshallingHandler extends ChannelDuplexHandler {
           return;
         }
       }
-//      ioMessage.setMessageString( content );   //TODO:STEVE: set message string here?
       HoldMe.canHas.lock( );
       SOAPEnvelope env = null;
       try {
