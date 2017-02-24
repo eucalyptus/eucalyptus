@@ -159,7 +159,8 @@ Link to the RPM spec file:
 # ln -fs $EUCAGIT/eucalyptus-rpmspec/eucalyptus.spec $EUCARPM/SPECS
 
 Create the tarballs of eucalyptus and the eucalyptus-cloud-libs that
-rpmbuild will un-tar and build:
+rpmbuild will un-tar and build. We also need the cloud libs installed
+at /usr/share/eucalyptus for rpmbuild to find.
 
 >>>>> Commands 4c: 
 # cd $EUCAGIT && \
@@ -168,7 +169,10 @@ tar -cvJf $EUCARPM/SOURCES/eucalyptus.tar.xz --exclude .git --exclude eucalyptus
 
 >>>>> Commands 4d: 
 # cd $EUCAGIT/eucalyptus-cloud-libs && \
-tar -cvJf $EUCARPM/SOURCES/eucalyptus-cloud-libs.tar.xz *.jar licenses
+tar -cvJf $EUCARPM/SOURCES/eucalyptus-cloud-libs.tar.xz *.jar licenses && \
+autoconf && \
+./configure --prefix=/usr && \
+make clean && make && make install
 >>>>> (end of commands)
 
 Now rpmbuild will do all of the build and packaging, in one command:
@@ -318,15 +322,20 @@ Run the "configure" scripts to prepare the system to build:
 
 Run the "make" commands below. The "make clean" deletes the artifacts from
 any previous build. The "make" builds the artifacts, in the
-$EUCAGIT/eucalyptus tree.
+$EUCAGIT/eucalyptus tree. The "make install" of eucalyptus-cloud-libs
+is required for the eucalyptus "make" to find the cloud libraries at 
+/usr/share/eucalyptus, because --disable-bundled-jars was supplied to
+the configure command. Without it, the "make" of eucalyptus will download
+the "master" branch of the cloud libs from github, regardless of the branch
+you're building, which would be incorrect if you're not building "master".
 
 >>>>> Command 8b: 
 # cd $EUCAGIT/eucalyptus-cloud-libs
-# make clean && make
+# make clean && make && make install
 # cd $EUCAGIT/eucalyptus
 # make clean && make
 
-The next "make install" commands copy the built artifacts into their runtime
+The next "make install" command copies the built artifacts into their runtime
 destination directories on this build system, overwriting any files already
 installed by package-based installs.
 
@@ -341,12 +350,9 @@ $EUCAGIT/eucalyptus trees to their proper destination directories on the
 installed systems.
 
 >>>>> Commands 8c: (optional)
-If any files in your local eucalyptus-cloud-libs repo have changed:
-# cd $EUCAGIT/eucalyptus-cloud-libs
-# make install
-Always:
 # cd $EUCAGIT/eucalyptus
 # make install
+>>>>> (end of commands)
 
 NOTE: If you do a non-rpmbuild (option 2), and later wish to do an rpmbuild
 (option 1), remove all make artifacts from the non-rpmbuild before doing the
