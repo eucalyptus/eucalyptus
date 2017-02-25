@@ -98,7 +98,7 @@ public class WalrusRESTExceptionHandler extends SimpleChannelUpstreamHandler {
 
     ChannelFuture writeFuture = Channels.future(ctx.getChannel());
     writeFuture.addListener(ChannelFutureListener.CLOSE);
-    response.addHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
+    response.setHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
     if (ctx.getChannel().isConnected()) {
       Channels.write(ctx, writeFuture, response);
     }

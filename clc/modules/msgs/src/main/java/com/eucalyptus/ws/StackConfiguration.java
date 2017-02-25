@@ -204,6 +204,9 @@ public class StackConfiguration extends AbstractPersistent {
   @ConfigurableField( description = "Maximum HTTP headers size (bytes)." )
   public static Integer       HTTP_MAX_HEADER_BYTES             = 8 * 1024;
 
+  @ConfigurableField( description = "Maximum HTTP requests per persistent connection." )
+  public static Integer       HTTP_MAX_REQUESTS_PER_CONNECTION  = 100;
+
   @ConfigurableField( description = "HTTP server header for responses (use 'default' for standard)", initial = "default" )
   public static String        HTTP_SERVER_HEADER                = "default";
 

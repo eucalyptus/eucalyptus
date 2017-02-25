@@ -140,7 +140,6 @@ public class Handlers {
   private static final ChannelHandler                        soapHandler              = new SoapHandler( );
   private static final ChannelHandler                        addressingHandler        = new AddressingHandler( );
   private static final ChannelHandler                        bindingHandler           = new BindingHandler( BindingHandler.context( BindingManager.getDefaultBinding( ) ) );
-  private static final ChannelHandler                        httpResponseHeaderHandler= new HttpResponseHeaderHandler( );
   private static final HashedWheelTimer                      timer                    = new HashedWheelTimer( )  { { this.start( ); } };   //TODO:GRZE: configurable
 
   enum ServerPipelineFactory implements ChannelPipelineFactory {
@@ -155,12 +154,12 @@ public class Handlers {
       pipeline.addLast( "decoder", Handlers.newHttpDecoder( ) );
       pipeline.addLast( "encoder", Handlers.newHttpResponseEncoder( ) );
       pipeline.addLast( "chunkedWriter", Handlers.newChunkedWriteHandler( ) );
+      pipeline.addLast( "http-response-headers", Handlers.newHttpResponseHeaderHandler( ) );
       pipeline.addLast( "fence", Handlers.bootstrapFence( ) );
       pipeline.addLast( "pipeline-filter", Handlers.newNioServerHandler( ) );
       if ( StackConfiguration.ASYNC_PIPELINE ) {
         pipeline.addLast( "async-pipeline-execution-handler", Handlers.pipelineExecutionHandler( ) );
       }
-      pipeline.addLast( "http-response-headers", Handlers.httpResponseHeaderhandler());
       return pipeline;
     }
 
@@ -169,6 +168,8 @@ public class Handlers {
   private static NioServerHandler newNioServerHandler( ) {
     return new NioServerHandler( );
   }
+
+  public static ChannelHandler newHttpResponseHeaderHandler( ) { return new HttpResponseHeaderHandler( ); }
 
   private static ChannelHandler newChunkedWriteHandler( ) {
     return new ChunkedWriteHandler( );
@@ -678,7 +679,6 @@ public class Handlers {
   public static ChannelHandler queryTimestamphandler( ) {
     return queryTimestampHandler;
   }
-  public static ChannelHandler httpResponseHeaderhandler( ) { return httpResponseHeaderHandler; }
 
   public static ChannelHandler internalWsSecHandler( ) {
     return internalWsSecHandler;
