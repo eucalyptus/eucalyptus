@@ -43,7 +43,7 @@ class WalrusProviderClientTest {
           'NoSuchBucket',
           'NoSuchBucketException',
           'Bucket not found',
-          HttpResponseStatus.NOT_ACCEPTABLE)
+          HttpResponseStatus.NOT_ACCEPTABLE.getCode())
       WalrusProviderClient.handleRemoteFault(testFault)
     } catch(S3Exception e) {
       assert(e instanceof NoSuchBucketException)
@@ -58,7 +58,7 @@ class WalrusProviderClientTest {
           'NoSuchBucket',
           'NoSuchBucketException',
           'Bucket not found',
-          HttpResponseStatus.NOT_FOUND)
+          HttpResponseStatus.NOT_FOUND.getCode())
       WalrusProviderClient.handleRemoteFault(testFault)
     } catch(S3Exception e) {
       assert(e instanceof NoSuchBucketException)
@@ -73,7 +73,7 @@ class WalrusProviderClientTest {
           'NoSuchBucket',
           'NoSuchBucketException',
           'Bucket not found',
-          HttpResponseStatus.NOT_ACCEPTABLE)
+          HttpResponseStatus.NOT_ACCEPTABLE.getCode())
       WalrusProviderClient.handleRemoteFault(testFault)
     } catch(S3Exception e) {
       assert(e instanceof NoSuchBucketException)
@@ -88,7 +88,7 @@ class WalrusProviderClientTest {
           'NoSuchBucket',
           'NoSuchBucketException',
           'Bucket not found',
-          HttpResponseStatus.NOT_FOUND)
+          HttpResponseStatus.NOT_FOUND.getCode())
       WalrusProviderClient.handleRemoteFault(testFault)
     } catch(S3Exception e) {
       assert(e instanceof NoSuchBucketException)
@@ -103,7 +103,7 @@ class WalrusProviderClientTest {
           'BucketNotEmpty',
           'BucketNotEmptyException',
           'Bucket is not empty',
-          HttpResponseStatus.NOT_ACCEPTABLE);
+          HttpResponseStatus.NOT_ACCEPTABLE.getCode());
       WalrusProviderClient.handleRemoteFault(testFault)
     } catch(S3Exception e) {
       assert(e instanceof BucketNotEmptyException)
@@ -118,7 +118,7 @@ class WalrusProviderClientTest {
           'BucketNotEmpty',
           'BucketNotEmptyException',
           'Bucket is not empty',
-          HttpResponseStatus.CONFLICT)
+          HttpResponseStatus.CONFLICT.getCode())
       WalrusProviderClient.handleRemoteFault(testFault)
     } catch(S3Exception e) {
       assert(e instanceof BucketNotEmptyException)
@@ -133,7 +133,7 @@ class WalrusProviderClientTest {
           'AccessDenied',
           'AccessDeniedException',
           'Access to resource is denied',
-          HttpResponseStatus.NOT_ACCEPTABLE);
+          HttpResponseStatus.NOT_ACCEPTABLE.getCode());
       WalrusProviderClient.handleRemoteFault(testFault)
     } catch(S3Exception e) {
       assert(e instanceof AccessDeniedException)
@@ -148,7 +148,7 @@ class WalrusProviderClientTest {
           'AccessDenied',
           'AccessDeniedException',
           'Access to resource is denied',
-          HttpResponseStatus.FORBIDDEN);
+          HttpResponseStatus.FORBIDDEN.getCode());
       WalrusProviderClient.handleRemoteFault(testFault)
     } catch(S3Exception e) {
       assert(e instanceof AccessDeniedException)
