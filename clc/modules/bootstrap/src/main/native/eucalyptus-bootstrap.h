@@ -214,7 +214,6 @@ static char *jvm_default_opts[] = {
     "-Deuca.conf.dir=" EUCALYPTUS_CONF_DIR "/cloud.d",
     "-Deuca.log.dir=" EUCALYPTUS_LOG_DIR,
     "-Deuca.jni.dir=" EUCALYPTUS_LIB_DIR,
-    "-Djava.util.prefs.PreferencesFactory=com.eucalyptus.util.NoopPreferencesFactory",
     NULL,
 };
 
