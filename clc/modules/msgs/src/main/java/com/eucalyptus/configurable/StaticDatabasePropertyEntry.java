@@ -888,12 +888,14 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
           "bootstrap.webservices.client_pool_max_mem_per_conn",
           "bootstrap.webservices.client_pool_timeout_millis",
           "bootstrap.webservices.client_pool_total_mem",
+          "cloudformation.swf_client_config",
           "reporting.data_collection_enabled",
           "reporting.default_size_time_size_unit",
           "reporting.default_size_time_time_unit",
           "reporting.default_size_unit",
           "reporting.default_time_unit",
-          "reporting.default_write_interval_mins"
+          "reporting.default_write_interval_mins",
+          "services.loadbalancing.swf_client_config"
       ) );
 
       UpgradeUtils.updateMovedProperties( LOG, ImmutableList.of(

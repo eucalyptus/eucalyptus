@@ -39,9 +39,6 @@ public class BillingProperties {
                   "\"MessageRetentionPeriod\": \"10800\", \"ReceiveMessageWaitTimeSeconds\": \"0\", " +
                   "\"VisibilityTimeout\": \"120\"}";
 
-  private static final String DEFAULT_SWF_CLIENT_CONFIG =
-          "{\"ConnectionTimeout\": 10000, \"MaxConnections\": 100}";
-
   private static final String DEFAULT_SWF_ACTIVITY_WORKER_CONFIG =
           "{\"PollThreadCount\": 4, \"TaskExecutorThreadPoolSize\": 32, \"MaximumPollRateIntervalMilliseconds\": 50, \"MaximumPollRatePerSecond\": 20 }";
 
@@ -75,12 +72,6 @@ public class BillingProperties {
           description = "The simple workflow service task list for billing",
           changeListener = Config.NameValidatingChangeListener.class )
   public static volatile String SWF_TASKLIST = "BillingTasks";
-
-  @ConfigurableField(
-          initial = DEFAULT_SWF_CLIENT_CONFIG,
-          description = "JSON configuration for the billing simple workflow client",
-          changeListener = Config.ClientConfigurationValidatingChangeListener.class )
-  public static volatile String SWF_CLIENT_CONFIG = DEFAULT_SWF_CLIENT_CONFIG;
 
   @ConfigurableField(
           initial = DEFAULT_SWF_ACTIVITY_WORKER_CONFIG,

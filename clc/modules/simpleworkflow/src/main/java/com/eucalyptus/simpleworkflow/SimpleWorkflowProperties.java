@@ -29,6 +29,7 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.simpleworkflow.common.client.Config;
 import com.eucalyptus.util.Intervals;
 
 /**
@@ -89,6 +90,12 @@ public class SimpleWorkflowProperties {
       description = "Deprecated domain minimum retention time.",
       changeListener = SimpleWorkflowIntervalPropertyChangeListener.class )
   public static volatile String deprecatedDomainRetentionDuration = "1d";
+
+  @ConfigurableField(
+      initial = "",
+      description = "Configuration for simple workflow clients",
+      changeListener = Config.ClientConfigurationValidatingChangeListener.class )
+  public static volatile String CLIENT_CONFIG = "";
 
   private static AtomicLong workflowExecutionDurationMillis =
       new AtomicLong( Intervals.parse( workflowExecutionDuration, TimeUnit.DAYS.toMillis( 365 ) ) );

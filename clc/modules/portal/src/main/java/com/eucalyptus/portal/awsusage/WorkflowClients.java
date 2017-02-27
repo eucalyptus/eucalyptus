@@ -32,11 +32,10 @@ public class WorkflowClients {
 
   private static AmazonSimpleWorkflow getSimpleWorkflow() {
     AmazonSimpleWorkflow swfService = null;
-    /// TODO: the connection options should be configurable
     try{
       swfService = Config.buildClient(
-              BillingAWSCredentialsProvider.BillingUserSupplier.INSTANCE,
-              BillingProperties.SWF_CLIENT_CONFIG );
+              BillingAWSCredentialsProvider.BillingUserSupplier.INSTANCE
+      );
       return swfService;
     }catch(final AuthException ex) {
       throw Exceptions.toUndeclared(ex);

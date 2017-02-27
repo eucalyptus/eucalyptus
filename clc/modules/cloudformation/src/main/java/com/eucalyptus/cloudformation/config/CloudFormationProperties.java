@@ -30,9 +30,6 @@ import com.eucalyptus.simpleworkflow.common.client.Config;
 @ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
 public class CloudFormationProperties {
 
-  private static final String DEFAULT_SWF_CLIENT_CONFIG =
-      "{\"ConnectionTimeout\": 10000, \"MaxConnections\": 100}";
-
   private static final String DEFAULT_SWF_ACTIVITY_WORKER_CONFIG =
       "{\"PollThreadCount\": 8, \"TaskExecutorThreadPoolSize\": 16, \"MaximumPollRateIntervalMilliseconds\": 50, \"MaximumPollRatePerSecond\": 20 }";
 
@@ -56,12 +53,6 @@ public class CloudFormationProperties {
       description = "The simple workflow service task list for cloudformation",
       changeListener = Config.NameValidatingChangeListener.class )
   public static volatile String SWF_TASKLIST = "CloudFormationTaskList";
-
-  @ConfigurableField(
-      initial = DEFAULT_SWF_CLIENT_CONFIG,
-      description = "JSON configuration for the cloudformation simple workflow client",
-      changeListener = Config.ClientConfigurationValidatingChangeListener.class )
-  public static volatile String SWF_CLIENT_CONFIG = DEFAULT_SWF_CLIENT_CONFIG;
 
   @ConfigurableField(
       initial = DEFAULT_SWF_ACTIVITY_WORKER_CONFIG,

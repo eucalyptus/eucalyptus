@@ -17,11 +17,6 @@
 package com.eucalyptus.simplequeue.workflow;
 
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow;
-import com.amazonaws.services.simpleworkflow.model.DomainInfo;
-import com.amazonaws.services.simpleworkflow.model.DomainInfos;
-import com.amazonaws.services.simpleworkflow.model.ListDomainsRequest;
-import com.amazonaws.services.simpleworkflow.model.RegisterDomainRequest;
-import com.amazonaws.services.simpleworkflow.model.RegistrationStatus;
 import com.eucalyptus.simplequeue.SimpleQueue;
 import com.eucalyptus.simplequeue.bootstrap.SimpleQueueAWSCredentialsProvider;
 import com.eucalyptus.simplequeue.config.SimpleQueueProperties;
@@ -46,8 +41,8 @@ public class WorkflowClientManager {
 
   public static void start( ) throws Exception {
     final AmazonSimpleWorkflow simpleWorkflowClient = Config.buildClient(
-      SimpleQueueAWSCredentialsProvider.SimpleQueueUserSupplier.INSTANCE,
-      SimpleQueueProperties.SWF_CLIENT_CONFIG );
+      SimpleQueueAWSCredentialsProvider.SimpleQueueUserSupplier.INSTANCE
+    );
 
   workflowClient = new WorkflowClient(
     SimpleQueue.class,
