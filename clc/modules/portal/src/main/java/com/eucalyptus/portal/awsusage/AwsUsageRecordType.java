@@ -16,9 +16,7 @@
 package com.eucalyptus.portal.awsusage;
 
 import com.eucalyptus.compute.common.RunningInstancesItemType;
-import com.eucalyptus.event.Event;
-import com.eucalyptus.event.EventFailedException;
-import com.eucalyptus.event.ListenerRegistry;
+
 import com.eucalyptus.resources.client.Ec2Client;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -28,7 +26,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -110,69 +107,13 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
   EC2_CREATEVOLUME_VOLUME_USAGE("AmazonEC2", "CreateVolume", "VolumeUsage") {
     @Override
     public List<AwsUsageRecord> read ( final String accountId, final List<QueuedEvent> events){
-      List<QueuedEvent> volumeEvents = events.stream()
-              .filter(e -> "VolumeUsage".equals(e.getEventType()))
-              .collect(Collectors.toList());
-      if (volumeEvents.size() <= 0)
-        return Lists.newArrayList();
-
-      volumeEvents = AwsUsageRecordType.distinctByResourceIds(volumeEvents);
-      // AmazonEC2,CreateVolume,USW2-EBS:VolumeUsage,,11/01/16 04:00:00,11/01/16 05:00:00,8589934592
-      final List<AwsUsageRecord> records = Lists.newArrayList();
-      final Date earliestRecord = AwsUsageRecordType.getEarliest(volumeEvents);
-      final Date endTime = getNextHour(earliestRecord);
-      final Date startTime = getPreviousHour(endTime);
-
-      final Optional<Long> value = volumeEvents.stream()
-              .map( e -> Long.parseLong(e.getUsageValue()) )
-              .reduce( (l1, l2) -> l1+l2 );
-      if (value.isPresent()) {
-        final AwsUsageRecord data = AwsUsageRecords.getInstance().newRecord(accountId)
-                .withService("AmazonEC2")
-                .withOperation("CreateVolume")
-                .withResource(null)
-                .withUsageType("EBS:VolumeUsage")
-                .withStartTime(startTime)
-                .withEndTime(endTime)
-                .withUsageValue(value.get().toString())
-                .build();
-        records.add(data);
-      }
-      return records;
+      return sumDistinctResource(accountId, events, "VolumeUsage", "AmazonEC2", "CreateVolume", "EBS:VolumeUsage");
     }
   },
   EC2_CREATESNAPSHOT_SNAPSHOT_USAGE("AmazonEC2", "CreateSnapshot", "SnapshotUsage") {
     @Override
     public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
-      List<QueuedEvent> snapshotEvents = events.stream()
-              .filter(e -> "SnapshotUsage".equals(e.getEventType()))
-              .collect(Collectors.toList());
-      if (snapshotEvents.size() <= 0)
-        return Lists.newArrayList();
-
-      snapshotEvents = AwsUsageRecordType.distinctByResourceIds(snapshotEvents);
-     // AmazonEC2,CreateSnapshot,EBS:SnapshotUsage,,11/04/16 22:00:00,11/04/16 23:00:00,9423844728
-      final List<AwsUsageRecord> records = Lists.newArrayList();
-      final Date earliestRecord = AwsUsageRecordType.getEarliest(snapshotEvents);
-      final Date endTime = getNextHour(earliestRecord);
-      final Date startTime = getPreviousHour(endTime);
-
-      final Optional<Long> value = snapshotEvents.stream()
-              .map( e -> Long.parseLong(e.getUsageValue()) )
-              .reduce( (l1, l2) -> l1+l2 );
-      if (value.isPresent()) {
-        final AwsUsageRecord data = AwsUsageRecords.getInstance().newRecord(accountId)
-                .withService("AmazonEC2")
-                .withOperation("CreateSnapshot")
-                .withResource(null)
-                .withUsageType("EBS:SnapshotUsage")
-                .withStartTime(startTime)
-                .withEndTime(endTime)
-                .withUsageValue(value.get().toString())
-                .build();
-        records.add(data);
-      }
-      return records;
+      return sumDistinctResource(accountId, events, "SnapshotUsage", "AmazonEC2", "CreateSnapshot", "EBS:SnapshotUsage");
     }
   },
   EC2_ASSOCIATEADDRESS_ELASTIC_IP("AmazonEC2", "AssociateAddress", "ElasticIP") {
@@ -281,6 +222,88 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
       }
       return records;
     }
+  },
+  EC2_EBS_VolumeIORead("AmazonEC2", "EBS:IO-Read", "EBS:VolumeIOUsage") {
+    @Override
+    public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
+      // AmazonEC2,EBS:Gp2-IO-Read,USW2-EBS:VolumeIOUsage.gp2,,11/10/16 00:00:00,11/11/16 00:00:00,4
+      return sum(accountId, events, "EBS:VolumeIOUsage-Read", "AmazonEC2", "EBS:IO-Read", "EBS:VolumeIOUsage");
+    }
+  },
+  EC2_EBS_VolumeIOWrite("AmazonEC2", "EBS:IO-Write", "EBS:VolumeIOUsage") {
+    @Override
+    public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
+      // AmazonEC2,EBS:Gp2-IO-Write,USW2-EBS:VolumeIOUsage.gp2,,11/10/16 00:00:00,11/11/16 00:00:00,514
+      return sum(accountId, events, "EBS:VolumeIOUsage-Write", "AmazonEC2", "EBS:IO-Write", "EBS:VolumeIOUsage");
+    }
+  },
+  EC2_INSTANCE_DATATRANSFER_IN("AmazonEC2", "RunInstances", "DataTransfer-In-Bytes") {
+    @Override
+    public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
+      // AmazonEC2,RunInstances,USW2-DataTransfer-In-Bytes,,11/10/16 00:00:00,11/11/16 00:00:00,13971
+      return sum(accountId, events, "InstanceDataTransfer-In", "AmazonEC2", "RunInstances", "DataTransfer-In-Bytes");
+    }
+  },
+  EC2_INSTANCE_DATATRANSFER_OUT("AmazonEC2", "RunInstances", "DataTransfer-Out-Bytes") {
+    @Override
+    public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
+      // AmazonEC2,RunInstances,USW2-DataTransfer-Out-Bytes,,11/10/16 00:00:00,11/11/16 00:00:00,13395
+      return sum(accountId, events, "InstanceDataTransfer-Out", "AmazonEC2", "RunInstances", "DataTransfer-Out-Bytes");
+    }
+  },
+  EC2_PUBLICIP_IN("AmazonEC2", "PublicIP-In", "AWS-In-Bytes") {
+    @Override
+    public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
+      // AmazonEC2,PublicIP-In,USW2-USE2-AWS-In-Bytes,,11/22/16 00:00:00,11/23/16 00:00:00,80
+      return sum( accountId, events, "InstancePublicIpTransfer-In", "AmazonEC2", "PublicIP-In", "AWS-In-Bytes");
+    }
+  },
+  EC2_PUBLICIP_OUT("AmazonEC2", "PublicIP-Out", "AWS-Out-Bytes") {
+    @Override
+    public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
+      // AmazonEC2,PublicIP-Out,USW2-USE1-AWS-Out-Bytes,,11/19/16 00:00:00,11/20/16 00:00:00,40
+      return sum(accountId, events, "InstancePublicIpTransfer-Out", "AmazonEC2", "PublicIP-Out", "AWS-Out-Bytes");
+    }
+  },
+  EC2_LOADBALANCER_DATATRANSFER_IN("AmazonEC2", "LoadBalancing", "DataTransfer-In-Bytes") {
+    @Override
+    public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
+      // AmazonEC2,LoadBalancing,USW2-DataTransfer-ELB-In-Bytes,,11/18/16 00:00:00,11/19/16 00:00:00,11879589
+     return sum(accountId, events, "LoadBalancing-DataTransfer-In", "AmazonEC2", "LoadBalancing", "DataTransfer-In-Bytes");
+    }
+  },
+  EC2_LOADBALANCER_DATATRANSFER_OUT("AmazonEC2", "LoadBalancing", "DataTransfer-Out-Bytes") {
+    @Override
+    public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
+      // AmazonEC2,LoadBalancing,USW2-DataTransfer-ELB-Out-Bytes,,11/18/16 00:00:00,11/19/16 00:00:00,3144252
+      return sum(accountId, events, "LoadBalancing-DataTransfer-Out", "AmazonEC2", "LoadBalancing", "DataTransfer-Out-Bytes");
+    }
+  },
+  EC2_LOADBALANCER_USAGE("AmazonEC2", "LoadBalancing", "LoadBalancerUsage") {
+    @Override
+    public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
+      // AmazonEC2,LoadBalancing,USW2-LoadBalancerUsage,,11/22/16 00:00:00,11/22/16 01:00:00,1
+      List<QueuedEvent> filteredEvents = events.stream()
+              .filter(e -> "LoadBalancerUsage".equals(e.getEventType()))
+              .collect(Collectors.toList());
+      if (filteredEvents.size() <= 0)
+        return Lists.newArrayList();
+      filteredEvents = AwsUsageRecordType.distinctByResourceIds(filteredEvents);
+      final Date earliestRecord = AwsUsageRecordType.getEarliest(filteredEvents);
+      final Date endTime = getNextHour(earliestRecord);
+      final Date startTime = getPreviousHour(endTime);
+
+      final AwsUsageRecord data = AwsUsageRecords.getInstance().newRecord(accountId)
+              .withService("AmazonEC2")
+              .withOperation("LoadBalancing")
+              .withResource(null)
+              .withUsageType("LoadBalancerUsage")
+              .withStartTime(startTime)
+              .withEndTime(endTime)
+              .withUsageValue(String.format("%d", filteredEvents.size()))
+              .build();
+      return Lists.newArrayList(data);
+    }
   };
 
   private String service = null;
@@ -342,6 +365,72 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
     }
 
     return UNKNOWN;
+  }
+
+  private static List<AwsUsageRecord> sumDistinctResource( final String accountId, final List<QueuedEvent> events,
+                                                         final String eventType, final String service, final String operation,
+                                                         final String usageType) {
+    List<QueuedEvent> filteredEvents = events.stream()
+            .filter(e -> eventType.equals(e.getEventType()))
+            .collect(Collectors.toList());
+    if (filteredEvents.size() <= 0)
+      return Lists.newArrayList();
+
+    filteredEvents = AwsUsageRecordType.distinctByResourceIds(filteredEvents);
+    final List<AwsUsageRecord> records = Lists.newArrayList();
+    final Date earliestRecord = AwsUsageRecordType.getEarliest(filteredEvents);
+    final Date endTime = getNextHour(earliestRecord);
+    final Date startTime = getPreviousHour(endTime);
+
+    final Optional<Long> value = filteredEvents.stream()
+            .map( e -> Long.parseLong(e.getUsageValue()) )
+            .reduce( (l1, l2) -> l1+l2 );
+    if (value.isPresent()) {
+      final AwsUsageRecord data = AwsUsageRecords.getInstance().newRecord(accountId)
+              .withService(service)
+              .withOperation(operation)
+              .withResource(null)
+              .withUsageType(usageType)
+              .withStartTime(startTime)
+              .withEndTime(endTime)
+              .withUsageValue(value.get().toString())
+              .build();
+      records.add(data);
+    }
+    return records;
+  }
+
+  private static List<AwsUsageRecord> sum(final String accountId, final List<QueuedEvent> events,
+                                            final String eventType, final String service, final String operation,
+                                           final String usageType) {
+    final List<QueuedEvent> filteredEvents = events.stream()
+            .filter(e -> eventType.equals(e.getEventType()))
+            .collect(Collectors.toList());
+    if (filteredEvents.size() <= 0)
+      return Lists.newArrayList();
+
+    final Date earliestRecord = AwsUsageRecordType.getEarliest(filteredEvents);
+    final Date endTime = getNextHour(earliestRecord);
+    final Date startTime = getPreviousHour(endTime);
+
+    /// sum over all transfer-out bytes
+    final Optional<Long> usageSum = filteredEvents.stream()
+            .map(e -> Long.parseLong(e.getUsageValue()))
+            .reduce( (l1, l2) -> l1+l2 );
+
+    if (usageSum.isPresent()) {
+      final AwsUsageRecord data = AwsUsageRecords.getInstance().newRecord(accountId)
+              .withService(service)
+              .withOperation(operation)
+              .withResource(null)
+              .withUsageType(usageType)
+              .withStartTime(startTime)
+              .withEndTime(endTime)
+              .withUsageValue(String.format("%d", usageSum.get()))
+              .build();
+      return Lists.newArrayList(data);
+    }
+    return Lists.newArrayList();
   }
 
   private static List<QueuedEvent> distinctByResourceIds(final List<QueuedEvent> events) {

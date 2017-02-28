@@ -320,4 +320,32 @@ public class BillingActivitiesClientImpl extends ActivitiesClientBase implements
         return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, Void.class, waitFor);
     }
 
+    @Override
+    public final Promise<Void> fireLoadBalancerUsage() {
+        return fireLoadBalancerUsageImpl((ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<Void> fireLoadBalancerUsage(Promise<?>... waitFor) {
+        return fireLoadBalancerUsageImpl((ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> fireLoadBalancerUsage(ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return fireLoadBalancerUsageImpl(optionsOverride, waitFor);
+    }
+    
+    
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    protected Promise<Void> fireLoadBalancerUsageImpl(final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+
+        ActivityType _activityType = new ActivityType();
+		_activityType.setName("BillingActivities.fireLoadBalancerUsage");
+		_activityType.setVersion("1.0");
+
+        Promise[] _input_ = new Promise[0];
+
+        return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, Void.class, waitFor);
+    }
+
 }

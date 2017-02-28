@@ -25,6 +25,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.reporting.event.InstanceUsageEvent;
+import java.util.Optional;
 
 public class InstanceUsageEventListener implements
         EventListener<InstanceUsageEvent> {
@@ -44,10 +45,45 @@ public class InstanceUsageEventListener implements
     }
 
     try {
-      final QueuedEvent qevt = QueuedEvents.FromInstanceUsageEvent.apply(event);
-      final String msg = QueuedEvents.EventToMessage.apply(qevt);
-      SimpleQueueClientManager.getInstance().sendMessage(BillingProperties.SENSOR_QUEUE_NAME,
-              msg);
+      String msg = null;
+      final Optional<QueuedEvent> instanceUsageEvent = QueuedEvents.FromInstanceUsageEvent.apply(event);
+      if (instanceUsageEvent.isPresent()) {
+        msg = QueuedEvents.EventToMessage.apply(instanceUsageEvent.get());
+        SimpleQueueClientManager.getInstance().sendMessage(BillingProperties.SENSOR_QUEUE_NAME,
+                msg);
+
+      }
+      // pick up VolumeIOUsage
+      final Optional<QueuedEvent> volIoEvent = QueuedEvents.FromVolumeIoUsage.apply(event);
+      if (volIoEvent.isPresent()) {
+        msg = QueuedEvents.EventToMessage.apply(volIoEvent.get());
+        SimpleQueueClientManager.getInstance().sendMessage(BillingProperties.SENSOR_QUEUE_NAME,
+                msg);
+      }
+
+      // pick up InstanceDataTransfer
+      final Optional<QueuedEvent> instanceDataTransferEvent = QueuedEvents.FromInstanceDataTransfer.apply(event);
+      if (instanceDataTransferEvent.isPresent()) {
+        msg = QueuedEvents.EventToMessage.apply(instanceDataTransferEvent.get());
+        SimpleQueueClientManager.getInstance().sendMessage(BillingProperties.SENSOR_QUEUE_NAME,
+                msg);
+      }
+
+      // pick up PublicIp transfer
+      final Optional<QueuedEvent> publicIpTransferEvent = QueuedEvents.FromPublicIpTransfer.apply(event);
+      if (publicIpTransferEvent.isPresent()) {
+        msg = QueuedEvents.EventToMessage.apply(publicIpTransferEvent.get());
+        SimpleQueueClientManager.getInstance().sendMessage(BillingProperties.SENSOR_QUEUE_NAME,
+                msg);
+      }
+
+      // pick up ELB data transfer event
+      final Optional<QueuedEvent> elbTransferEvent = QueuedEvents.FromLoadBalancerDataTransfer.apply(event);
+      if (elbTransferEvent.isPresent()) {
+        msg = QueuedEvents.EventToMessage.apply(elbTransferEvent.get());
+        SimpleQueueClientManager.getInstance().sendMessage(BillingProperties.SENSOR_QUEUE_NAME,
+                msg);
+      }
     } catch (final Exception ex) {
       LOG.error("Failed to send instance event message to queue", ex);
     }

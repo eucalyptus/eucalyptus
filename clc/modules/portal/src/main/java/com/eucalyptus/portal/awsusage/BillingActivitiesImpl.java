@@ -14,7 +14,6 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  ************************************************************************/
 package com.eucalyptus.portal.awsusage;
-
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.component.annotation.ComponentPart;
@@ -30,10 +29,13 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.loadbalancing.LoadBalancer;
+import com.eucalyptus.loadbalancing.LoadBalancers;
 import com.eucalyptus.objectstorage.ObjectState;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.portal.common.Portal;
 import com.eucalyptus.reporting.event.AddressEvent;
+import com.eucalyptus.reporting.event.LoadBalancerEvent;
 import com.eucalyptus.reporting.event.S3ObjectEvent;
 import com.eucalyptus.reporting.event.SnapShotEvent;
 import com.eucalyptus.reporting.event.VolumeEvent;
@@ -322,6 +324,22 @@ public class BillingActivitiesImpl implements BillingActivities {
               .forEach ( fire );
     } catch( final Exception ex) {
       throw new BillingActivityException("Failed to fire s3 object usage events", ex);
+    }
+  }
+
+  @Override
+  public void fireLoadBalancerUsage() throws BillingActivityException {
+    final List<LoadBalancer> loadbalancers = LoadBalancers.listLoadbalancers();
+    final Function<LoadBalancer, LoadBalancerEvent> toEvent = (lb) -> LoadBalancerEvent.with(
+            LoadBalancerEvent.forLoadBalancerUsage(),
+            lb.getOwner(),
+            lb.getDisplayName());
+    try{
+      loadbalancers.stream()
+              .map ( toEvent )
+              .forEach( fire );
+    } catch( final Exception ex) {
+      throw new BillingActivityException("Failed to fire loadbalancer usage events", ex);
     }
   }
 

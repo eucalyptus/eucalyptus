@@ -40,4 +40,5 @@ public interface BillingActivities {
   void fireSnapshotUsage() throws BillingActivityException;
   void fireAddressUsage() throws BillingActivityException;
   void fireS3ObjectUsage() throws BillingActivityException;
+  void fireLoadBalancerUsage() throws BillingActivityException;
 }

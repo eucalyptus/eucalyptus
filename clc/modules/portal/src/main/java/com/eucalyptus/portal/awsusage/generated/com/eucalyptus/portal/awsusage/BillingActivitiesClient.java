@@ -198,4 +198,19 @@ public interface BillingActivitiesClient extends ActivitiesClient
      */
     Promise<Void> fireS3ObjectUsage(ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
+    /**
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#fireLoadBalancerUsage}
+     */
+    Promise<Void> fireLoadBalancerUsage();
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#fireLoadBalancerUsage}
+     */
+    Promise<Void> fireLoadBalancerUsage(Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#fireLoadBalancerUsage}
+     */
+    Promise<Void> fireLoadBalancerUsage(ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+
 }
