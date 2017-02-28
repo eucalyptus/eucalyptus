@@ -126,6 +126,7 @@ enum vpc_subnet_midos_t {
     SUBN_BR_METAHOST,
     SUBN_BR_INFILTER,
     SUBN_BR_OUTFILTER,
+    SUBN_BR_DOT2ARP,
     SUBN_END
 };
 
@@ -444,6 +445,7 @@ int get_next_eni_id(mido_config *mido, int *nextid);
 int set_eni_id(mido_config *mido, int id);
 int clear_eni_id(mido_config *mido, int id);
 
+char *replace_char(char *str, char f, char r);
 int cidr_split(char *cidr, char *outnet, char *outslashnet, char *outgw, char *outplustwo, char *outplusthree);
 int is_mido_vpc_plustwo(mido_config *mido, char *iptocheck);
 

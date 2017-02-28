@@ -6794,6 +6794,21 @@ int populate_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *
                     vpcsubnet->midos[SUBN_BR_RTPORT] = brports[i];
                     vpcsubnet->midos[SUBN_VPCRT_BRPORT] = rtports[j];
                     found = 1;
+                    
+                    // populate the dot2 arp entry
+                    if (vpcsubnet->midos[SUBN_BR_DHCP] && vpcsubnet->midos[SUBN_BR_DHCP]->init) {
+                        for (int k = 0; k < vpcsubnet->subnetbr->max_ip4mac_pairs; k++) {
+                            if (vpcsubnet->subnetbr->ip4mac_pairs[k]) {
+                                char *macstr = replace_char(vpcsubnet->midos[SUBN_VPCRT_BRPORT]->port->portmac, ':', '-');
+                                if (strstr(vpcsubnet->subnetbr->ip4mac_pairs[k]->uuid, macstr)) {
+                                    vpcsubnet->midos[SUBN_BR_DOT2ARP] = vpcsubnet->subnetbr->ip4mac_pairs[k];
+                                    LOGTRACE("Found dot2 arp %s_%s\n", vpcsubnet->midos[SUBN_BR_DOT2ARP]->ip4mac->ip, vpcsubnet->midos[SUBN_BR_DOT2ARP]->ip4mac->mac);
+                                }
+                                EUCA_FREE(macstr);
+                            }
+                        }
+                    }
+                    
                 }
             }
         }
@@ -8058,6 +8073,15 @@ int create_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vp
     if (rc) {
         LOGERROR("cannot create midonet dhcp server: check midonet health\n");
         return (1);
+    }
+
+    // setup dot2 address arp-proxy
+    if (vpcsubnet->midos[SUBN_VPCRT_BRPORT] && vpcsubnet->midos[SUBN_VPCRT_BRPORT]->port &&
+            vpcsubnet->midos[SUBN_VPCRT_BRPORT]->port->portmac) {
+        u32 dot2address = dot2hex(subnet);
+        dot2address += 2;
+        rc = mido_create_ip4mac(vpcsubnet->subnetbr, NULL, hex2dot_s(dot2address),
+                vpcsubnet->midos[SUBN_VPCRT_BRPORT]->port->portmac, &(vpcsubnet->midos[SUBN_BR_DOT2ARP]));
     }
 
     // meta tap
@@ -10097,6 +10121,31 @@ int do_midonet_tag_midonames(mido_config *mido) {
         if (mido->midomd->midos[i]) mido->midomd->midos[i]->tag = 1;
     }
     return (0);
+}
+
+/**
+ * Replaces all occurrences of character f in string str with the character r.
+ * @param str [in] the string of interest
+ * @param f [in] character to find in the string str
+ * @param r [in] character to be used as a replacement
+ * @return a newly allocated string with character replacements. Caller is responsible
+ * for releasing the allocated memory.
+ */
+char *replace_char(char *str, char f, char r) {
+    if (!str) {
+        return NULL;
+    }
+    char *res = strdup(str);
+    if (f == r) {
+        return (res);
+    }
+    int l = strlen(res);
+    for (int i = 0; i < l; i++) {
+        if (res[i] == f) {
+            res[i] = r;
+        }
+    }
+    return(res);
 }
 
 /**
