@@ -97,6 +97,8 @@
 #define APPLICATION_BGP_NETWORK_JSON_V1                   "application/vnd.org.midonet.BgpNetwork-v1+json"
 #define APPLICATION_BRIDGE_JSON_V2                        "application/vnd.org.midonet.Bridge-v2+json"
 #define APPLICATION_BRIDGE_JSON_V4                        "application/vnd.org.midonet.Bridge-v4+json"
+#define APPLICATION_IP4MAC_JSON_V1                        "application/vnd.org.midonet.IP4Mac-v1+json"
+#define APPLICATION_MACPORT_JSON_V2                       "application/vnd.org.midonet.MacPort-v2+json"
 #define APPLICATION_DHCP_SUBNET_JSON_V2                   "application/vnd.org.midonet.DhcpSubnet-v2+json"
 #define APPLICATION_DHCP_HOST_JSON_V2                     "application/vnd.org.midonet.DhcpHost-v2+json"
 #define APPLICATION_PORT_JSON_V2                          "application/vnd.org.midonet.Port-v2+json"
@@ -122,6 +124,8 @@
 #define APPLICATION_COLLECTION_BGP_NETWORK_JSON_V1        "application/vnd.org.midonet.collection.BgpNetwork-v1+json"
 #define APPLICATION_COLLECTION_BRIDGE_JSON_V2             "application/vnd.org.midonet.collection.Bridge-v2+json"
 #define APPLICATION_COLLECTION_BRIDGE_JSON_V4             "application/vnd.org.midonet.collection.Bridge-v4+json"
+#define APPLICATION_COLLECTION_IP4MAC_JSON_V1             "application/vnd.org.midonet.collection.IP4Mac-v1+json"
+#define APPLICATION_COLLECTION_MACPORT_JSON_V2            "application/vnd.org.midonet.collection.MacPort-v2+json"
 #define APPLICATION_COLLECTION_DHCP_SUBNET_JSON_V2        "application/vnd.org.midonet.collection.DhcpSubnet-v2+json"
 #define APPLICATION_COLLECTION_DHCP_HOST_JSON_V2          "application/vnd.org.midonet.collection.DhcpHost-v2+json"
 #define APPLICATION_COLLECTION_PORT_JSON_V2               "application/vnd.org.midonet.collection.Port-v2+json"
@@ -195,6 +199,8 @@ enum mido_mtype_index_t {
     APPLICATION_AD_ROUTE_JSON,
     APPLICATION_BGP_NETWORK_JSON,
     APPLICATION_BRIDGE_JSON,
+    APPLICATION_IP4MAC_JSON,
+    APPLICATION_MACPORT_JSON,
     APPLICATION_DHCP_SUBNET_JSON,
     APPLICATION_DHCP_HOST_JSON,
     APPLICATION_PORT_JSON,
@@ -216,6 +222,8 @@ enum mido_mtype_index_t {
     APPLICATION_COLLECTION_AD_ROUTE_JSON,
     APPLICATION_COLLECTION_BGP_NETWORK_JSON,
     APPLICATION_COLLECTION_BRIDGE_JSON,
+    APPLICATION_COLLECTION_IP4MAC_JSON,
+    APPLICATION_COLLECTION_MACPORT_JSON,
     APPLICATION_COLLECTION_DHCP_SUBNET_JSON,
     APPLICATION_COLLECTION_DHCP_HOST_JSON,
     APPLICATION_COLLECTION_PORT_JSON,
@@ -276,6 +284,16 @@ typedef struct midoname_route_extras_t {
     char *weight;
 } midoname_route_extras;
 
+typedef struct midoname_ip4mac_extras_t {
+    char *ip;
+    char *mac;
+} midoname_ip4mac_extras;
+
+typedef struct midoname_macport_extras_t {
+    char *macAddr;
+    char *portId;
+} midoname_macport_extras;
+
 typedef struct midoname_t {
     char *tenant;
     char *name;
@@ -288,6 +306,8 @@ typedef struct midoname_t {
     midoname_rule_extras *rule;
     midoname_port_extras *port;
     midoname_route_extras *route;
+    midoname_ip4mac_extras *ip4mac;
+    midoname_macport_extras *macport;
     int tag;
     int init;
 } midoname;
@@ -318,6 +338,10 @@ typedef struct midonet_api_bridge_t {
     midoname *obj;
     midoname **ports;
     int max_ports;
+    midoname **ip4mac_pairs;
+    int max_ip4mac_pairs;
+    midoname **macport_pairs;
+    int max_macport_pairs;
     midonet_api_dhcp **dhcps;
     int max_dhcps;
 } midonet_api_bridge;
@@ -526,6 +550,10 @@ int mido_get_bgp_routes(midoname *dev, midoname ***outnames, int *outnames_max);
 int mido_get_bgp_routes_v1(midoname *bgp, midoname ***outnames, int *outnames_max);
 int mido_get_bgp_routes_v5(midoname *router, midoname ***outnames, int *outnames_max);
 
+int mido_get_ip4mac_pairs(midoname *bridgename, midoname ***outnames, int *outnames_max);
+
+int mido_get_macport_pairs(midoname *bridgename, midoname ***outnames, int *outnames_max);
+
 int mido_find_dhcp_from_list(midoname **dhcps, int max_dhcps, char *subnet, char *slashnet,
         char *gw, u32 *dnsServers, int max_dnsServers, int *foundidx);
 int mido_create_dhcp(midonet_api_bridge *br, midoname *devname, char *subnet, char *slashnet, char *gw, u32 *dnsServers, int max_dnsServers, midoname **outname);
@@ -664,7 +692,7 @@ int midonet_api_cache_refresh_v(enum mido_cache_refresh_mode_t refreshmode);
 int midonet_api_cache_refresh_v_threads(enum mido_cache_refresh_mode_t refreshmode);
 
 int midonet_api_cache_refresh_routerroutes(midonet_api_cache *cache, int start, int end);
-int midonet_api_cache_refresh_bridgedhcps(midonet_api_cache *cache, int start, int end);
+int midonet_api_cache_refresh_bridgeobjects(midonet_api_cache *cache, int start, int end);
 int midonet_api_cache_refresh_chainrules(midonet_api_cache *cache, int start, int end);
 int midonet_api_cache_refresh_ipagips(midonet_api_cache *cache, int start, int end);
 
