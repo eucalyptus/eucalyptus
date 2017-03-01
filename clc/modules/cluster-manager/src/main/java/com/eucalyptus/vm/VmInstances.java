@@ -563,10 +563,6 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
                       initial = "60" )
   public static Integer   BURIED_TIME                   = 60;
 
-  @ConfigurableField( description = "Maximum amount of time (in seconds) that the network topology service takes to propagate state changes.",
-                      initial = "" + 60 * 60 * 1000 )
-  public static Long      NETWORK_METADATA_REFRESH_TIME = 15l;
-
   @ConfigurableField( description = "Maximum amount of time (in seconds) that migration state will take to propagate state changes (e.g., to tags).",
                       initial = "" + 60 )
   public static Long      MIGRATION_REFRESH_TIME        = 60l;
@@ -581,7 +577,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
   public static String    INSTANCE_SUBDOMAIN            = ".eucalyptus";
 
   @ConfigurableField( description = "Period (in seconds) between state updates for actively changing state.",
-                      initial = "3" )
+                      initial = "9223372036854775807" )
   public static Long      VOLATILE_STATE_INTERVAL_SEC   = Long.MAX_VALUE;
 
   @ConfigurableField( description = "Timeout (in seconds) before a requested instance terminate will be repeated.",
@@ -614,7 +610,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
   public static Integer INSTANCE_REACHABILITY_TIMEOUT   = 5;
 
   @ConfigurableField( description = "Comma separated list of handlers to use for unknown instances ('restore', 'restore-failed', 'terminate', 'terminate-done')",
-      initial = "restore-failed", changeListener = UnknownInstanceHandlerChangeListener.class )
+      initial = "terminate-done, restore-failed", changeListener = UnknownInstanceHandlerChangeListener.class )
   public static String UNKNOWN_INSTANCE_HANDLERS        = "terminate-done, restore-failed";
 
   @ConfigurableField( description = "Instance metadata user data cache configuration.",

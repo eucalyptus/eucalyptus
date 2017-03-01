@@ -889,6 +889,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
           "bootstrap.webservices.client_pool_timeout_millis",
           "bootstrap.webservices.client_pool_total_mem",
           "cloudformation.swf_client_config",
+          "cloud.vmstate.network_metadata_refresh_time",
           "reporting.data_collection_enabled",
           "reporting.default_size_time_size_unit",
           "reporting.default_size_time_time_unit",
