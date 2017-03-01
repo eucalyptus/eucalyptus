@@ -15,27 +15,27 @@ import com.amazonaws.services.simpleworkflow.flow.generic.GenericWorkflowClient;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution;
 import com.amazonaws.services.simpleworkflow.model.WorkflowType;
 
-class AwsUsageHoulyAggregateWorkflowClientImpl extends WorkflowClientBase implements AwsUsageHoulyAggregateWorkflowClient {
+class AwsUsageDailyAggregateWorkflowClientImpl extends WorkflowClientBase implements AwsUsageDailyAggregateWorkflowClient {
 
-    public AwsUsageHoulyAggregateWorkflowClientImpl(WorkflowExecution workflowExecution, WorkflowType workflowType,  
+    public AwsUsageDailyAggregateWorkflowClientImpl(WorkflowExecution workflowExecution, WorkflowType workflowType,  
             StartWorkflowOptions options, DataConverter dataConverter, GenericWorkflowClient genericClient) {
         super(workflowExecution, workflowType, options, dataConverter, genericClient);
     }
     
     @Override
-    public final Promise<Void> aggregate() {
-        return aggregate((StartWorkflowOptions)null);
+    public final Promise<Void> aggregateDaily() {
+        return aggregateDaily((StartWorkflowOptions)null);
     }
 
     @Override
-    public final Promise<Void> aggregate(Promise<?>... waitFor) {
-        return aggregate((StartWorkflowOptions)null, waitFor);
+    public final Promise<Void> aggregateDaily(Promise<?>... waitFor) {
+        return aggregateDaily((StartWorkflowOptions)null, waitFor);
     }
     
     @Override
     
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public final Promise<Void> aggregate(StartWorkflowOptions optionsOverride, Promise<?>... waitFor) {
+    public final Promise<Void> aggregateDaily(StartWorkflowOptions optionsOverride, Promise<?>... waitFor) {
         return (Promise) startWorkflowExecution(new Object[0], optionsOverride, Void.class, waitFor);
     }
     	

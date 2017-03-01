@@ -75,41 +75,41 @@ public class BillingActivitiesClientImpl extends ActivitiesClientBase implements
     }
 
     @Override
-    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(String accountId, String queueName) {
-        return getAwsReportUsageRecordImpl(Promise.asPromise(accountId), Promise.asPromise(queueName), (ActivitySchedulingOptions)null);
+    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportHourlyUsageRecord(String accountId, String queueName) {
+        return getAwsReportHourlyUsageRecordImpl(Promise.asPromise(accountId), Promise.asPromise(queueName), (ActivitySchedulingOptions)null);
     }
 
     @Override
-    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(String accountId, String queueName, Promise<?>... waitFor) {
-        return getAwsReportUsageRecordImpl(Promise.asPromise(accountId), Promise.asPromise(queueName), (ActivitySchedulingOptions)null, waitFor);
+    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportHourlyUsageRecord(String accountId, String queueName, Promise<?>... waitFor) {
+        return getAwsReportHourlyUsageRecordImpl(Promise.asPromise(accountId), Promise.asPromise(queueName), (ActivitySchedulingOptions)null, waitFor);
     }
 
     @Override
-    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(String accountId, String queueName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
-        return getAwsReportUsageRecordImpl(Promise.asPromise(accountId), Promise.asPromise(queueName), optionsOverride, waitFor);
+    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportHourlyUsageRecord(String accountId, String queueName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return getAwsReportHourlyUsageRecordImpl(Promise.asPromise(accountId), Promise.asPromise(queueName), optionsOverride, waitFor);
     }
 
     @Override
-    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(Promise<String> accountId, Promise<String> queueName) {
-        return getAwsReportUsageRecordImpl(accountId, queueName, (ActivitySchedulingOptions)null);
+    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportHourlyUsageRecord(Promise<String> accountId, Promise<String> queueName) {
+        return getAwsReportHourlyUsageRecordImpl(accountId, queueName, (ActivitySchedulingOptions)null);
     }
 
     @Override
-    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(Promise<String> accountId, Promise<String> queueName, Promise<?>... waitFor) {
-        return getAwsReportUsageRecordImpl(accountId, queueName, (ActivitySchedulingOptions)null, waitFor);
+    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportHourlyUsageRecord(Promise<String> accountId, Promise<String> queueName, Promise<?>... waitFor) {
+        return getAwsReportHourlyUsageRecordImpl(accountId, queueName, (ActivitySchedulingOptions)null, waitFor);
     }
 
     @Override
-    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(Promise<String> accountId, Promise<String> queueName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
-        return getAwsReportUsageRecordImpl(accountId, queueName, optionsOverride, waitFor);
+    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportHourlyUsageRecord(Promise<String> accountId, Promise<String> queueName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return getAwsReportHourlyUsageRecordImpl(accountId, queueName, optionsOverride, waitFor);
     }
     
     
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    protected Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecordImpl(final Promise<String> accountId, final Promise<String> queueName, final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+    protected Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportHourlyUsageRecordImpl(final Promise<String> accountId, final Promise<String> queueName, final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
 
         ActivityType _activityType = new ActivityType();
-		_activityType.setName("BillingActivities.getAwsReportUsageRecord");
+		_activityType.setName("BillingActivities.getAwsReportHourlyUsageRecord");
 		_activityType.setVersion("1.0");
 
         Promise[] _input_ = new Promise[2];
@@ -120,41 +120,86 @@ public class BillingActivitiesClientImpl extends ActivitiesClientBase implements
     }
 
     @Override
-    public final Promise<Void> writeAwsReportHourlyUsage(String accountId, java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord> records) {
-        return writeAwsReportHourlyUsageImpl(Promise.asPromise(accountId), Promise.asPromise(records), (ActivitySchedulingOptions)null);
+    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportDailyUsageRecord(String accountId, String queueName) {
+        return getAwsReportDailyUsageRecordImpl(Promise.asPromise(accountId), Promise.asPromise(queueName), (ActivitySchedulingOptions)null);
     }
 
     @Override
-    public final Promise<Void> writeAwsReportHourlyUsage(String accountId, java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord> records, Promise<?>... waitFor) {
-        return writeAwsReportHourlyUsageImpl(Promise.asPromise(accountId), Promise.asPromise(records), (ActivitySchedulingOptions)null, waitFor);
+    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportDailyUsageRecord(String accountId, String queueName, Promise<?>... waitFor) {
+        return getAwsReportDailyUsageRecordImpl(Promise.asPromise(accountId), Promise.asPromise(queueName), (ActivitySchedulingOptions)null, waitFor);
     }
 
     @Override
-    public final Promise<Void> writeAwsReportHourlyUsage(String accountId, java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord> records, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
-        return writeAwsReportHourlyUsageImpl(Promise.asPromise(accountId), Promise.asPromise(records), optionsOverride, waitFor);
+    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportDailyUsageRecord(String accountId, String queueName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return getAwsReportDailyUsageRecordImpl(Promise.asPromise(accountId), Promise.asPromise(queueName), optionsOverride, waitFor);
     }
 
     @Override
-    public final Promise<Void> writeAwsReportHourlyUsage(Promise<String> accountId, Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> records) {
-        return writeAwsReportHourlyUsageImpl(accountId, records, (ActivitySchedulingOptions)null);
+    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportDailyUsageRecord(Promise<String> accountId, Promise<String> queueName) {
+        return getAwsReportDailyUsageRecordImpl(accountId, queueName, (ActivitySchedulingOptions)null);
     }
 
     @Override
-    public final Promise<Void> writeAwsReportHourlyUsage(Promise<String> accountId, Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> records, Promise<?>... waitFor) {
-        return writeAwsReportHourlyUsageImpl(accountId, records, (ActivitySchedulingOptions)null, waitFor);
+    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportDailyUsageRecord(Promise<String> accountId, Promise<String> queueName, Promise<?>... waitFor) {
+        return getAwsReportDailyUsageRecordImpl(accountId, queueName, (ActivitySchedulingOptions)null, waitFor);
     }
 
     @Override
-    public final Promise<Void> writeAwsReportHourlyUsage(Promise<String> accountId, Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> records, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
-        return writeAwsReportHourlyUsageImpl(accountId, records, optionsOverride, waitFor);
+    public final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportDailyUsageRecord(Promise<String> accountId, Promise<String> queueName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return getAwsReportDailyUsageRecordImpl(accountId, queueName, optionsOverride, waitFor);
     }
     
     
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    protected Promise<Void> writeAwsReportHourlyUsageImpl(final Promise<String> accountId, final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> records, final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+    protected Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportDailyUsageRecordImpl(final Promise<String> accountId, final Promise<String> queueName, final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
 
         ActivityType _activityType = new ActivityType();
-		_activityType.setName("BillingActivities.writeAwsReportHourlyUsage");
+		_activityType.setName("BillingActivities.getAwsReportDailyUsageRecord");
+		_activityType.setVersion("1.0");
+
+        Promise[] _input_ = new Promise[2];
+        _input_[0] = accountId;
+        _input_[1] = queueName;
+
+        return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, java.util.List.class, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> writeAwsReportUsage(String accountId, java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord> records) {
+        return writeAwsReportUsageImpl(Promise.asPromise(accountId), Promise.asPromise(records), (ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<Void> writeAwsReportUsage(String accountId, java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord> records, Promise<?>... waitFor) {
+        return writeAwsReportUsageImpl(Promise.asPromise(accountId), Promise.asPromise(records), (ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> writeAwsReportUsage(String accountId, java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord> records, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return writeAwsReportUsageImpl(Promise.asPromise(accountId), Promise.asPromise(records), optionsOverride, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> writeAwsReportUsage(Promise<String> accountId, Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> records) {
+        return writeAwsReportUsageImpl(accountId, records, (ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<Void> writeAwsReportUsage(Promise<String> accountId, Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> records, Promise<?>... waitFor) {
+        return writeAwsReportUsageImpl(accountId, records, (ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> writeAwsReportUsage(Promise<String> accountId, Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> records, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return writeAwsReportUsageImpl(accountId, records, optionsOverride, waitFor);
+    }
+    
+    
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    protected Promise<Void> writeAwsReportUsageImpl(final Promise<String> accountId, final Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> records, final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+
+        ActivityType _activityType = new ActivityType();
+		_activityType.setName("BillingActivities.writeAwsReportUsage");
 		_activityType.setVersion("1.0");
 
         Promise[] _input_ = new Promise[2];

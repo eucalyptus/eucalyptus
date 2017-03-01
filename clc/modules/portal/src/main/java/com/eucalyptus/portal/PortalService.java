@@ -16,10 +16,15 @@
 package com.eucalyptus.portal;
 
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
+
+import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import javax.inject.Inject;
 
+import com.eucalyptus.portal.awsusage.AwsUsageRecord;
+import com.eucalyptus.portal.awsusage.AwsUsageRecords;
 import com.eucalyptus.portal.common.model.*;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthContextSupplier;
@@ -177,8 +182,60 @@ public class PortalService {
   public ViewUsageResponseType viewUsage(final ViewUsageType request) throws PortalServiceException {
     final Context context = checkAuthorized( );
     final ViewUsageResponseType response = request.getReply();
-    final ViewUsageResult result = MockReports.getInstance().generateAwsUsageReport(request);
-    response.setResult(result);
+
+    final String granularity =  request.getReportGranularity() != null ?
+            request.getReportGranularity().toLowerCase() : null;
+    String service = request.getServices();
+    if (service != null ) {
+      if ("ec2".equals(service.toLowerCase()))
+        service = "AmazonEC2";
+      else if ("s3".equals(service.toLowerCase()))
+        service = "AmazonS3";
+      else if ("cloudwatch".equals(service.toLowerCase()))
+        service = "AmazonCloudWatch";
+      else if ("all".equals(service.toLowerCase()))
+        service = null;
+    }
+
+    String operation = request.getOperations();
+    if (operation != null) {
+      if ("all".equals(operation.toLowerCase()))
+        operation = null;
+    }
+
+    String usageType = request.getUsageTypes();
+    if (usageType != null) {
+      if ("all".equals(usageType.toLowerCase()))
+        usageType = null;
+    }
+
+    final List<AwsUsageRecord> records = Lists.newArrayList();
+    if (granularity != null && granularity.startsWith("hour")) {
+      records.addAll(AwsUsageRecords.getInstance().queryHourly( context.getAccountNumber(), service,
+              operation, usageType, request.getTimePeriodFrom(), request.getTimePeriodTo()));
+    } else if (granularity != null && (granularity.startsWith("day") || granularity.startsWith("dai"))) {
+      records.addAll(AwsUsageRecords.getInstance().queryDaily( context.getAccountNumber(), service,
+              operation, usageType, request.getTimePeriodFrom(), request.getTimePeriodTo()));
+    } else if (granularity != null && granularity.startsWith("month")) {
+      records.addAll(AwsUsageRecords.getInstance().queryMonthly( context.getAccountNumber(), service,
+              operation, usageType, request.getTimePeriodFrom(), request.getTimePeriodTo()));
+    } else {
+      throw new InvalidParameterException("Valid report granularity are hourly, daily or monthly");
+    }
+
+    response.setResult( new ViewUsageResult() );
+    final StringBuilder sb = new StringBuilder();
+    sb.append("Service, Operation, UsageType, Resource, StartTime, EndTime, UsageValue");
+    final Optional<String> data = records.stream()
+            .map ( rr -> new AwsUsageReportData( rr.getService(), rr.getOperation(), rr.getUsageType(),
+                    rr.getResource(), rr.getStartTime(), rr.getEndTime(), rr.getUsageValue()))
+            .map ( re -> re.toString() )
+            .reduce( (l1, l2) -> String.format("%s\n%s", l1, l2));
+    if (data.isPresent()) {
+      sb.append("\n");
+      sb.append(data.get());
+    }
+    response.getResult().setData(sb.toString());
     return response;
   }
 

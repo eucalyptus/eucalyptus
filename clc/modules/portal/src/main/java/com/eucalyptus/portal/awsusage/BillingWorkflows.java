@@ -30,24 +30,37 @@ import java.util.Date;
 
 public class BillingWorkflows implements EventListener<Hertz> {
   private static Logger LOG  = Logger.getLogger( BillingWorkflows.class );
-  private static final String BILLING_AWS_USAGE_AGGREGATE_WORKFLOW_ID =
-          "billing-aws-usage-aggregate-workflow-01";
+  private static final String BILLING_AWS_USAGE_HOURLY_AGGREGATE_WORKFLOW_ID =
+          "billing-aws-usage-hourly-aggregate-workflow-01";
+  private static final String BILLING_AWS_USAGE_DAILY_AGGREGATE_WORKFLOW_ID =
+          "billing-aws-usage-daily-aggregate-workflow-01";
   public static final String BILLING_RESOURCE_USAGE_EVENT_WORKFLOW_ID =
           "billing-resource-usage-event-workflow-01";
   public static void register() {
     Listeners.register( Hertz.class, new BillingWorkflows() );
   }
 
-  public static void runAwsUsageAggregateWorkflow(final String workflowId) {
-
+  public static void runAwsUsageHourlyAggregateWorkflow(final String workflowId) {
     try{
-      final AwsUsageHoulyAggregateWorkflowClientExternal workflow =
+      final AwsUsageHourlyAggregateWorkflowClientExternal workflow =
               WorkflowClients.getAwsUsageHourlyAggregateWorkflow(workflowId);
-      workflow.aggregate();
+      workflow.aggregateHourly();
     }catch(final WorkflowExecutionAlreadyStartedException ex ) {
       ;
     }catch(final Exception ex) {
-      throw Exceptions.toUndeclared("Failed to start the workflow for aggregating AWS usage report", ex);
+      throw Exceptions.toUndeclared("Failed to start the workflow for aggregating hourly AWS usage report", ex);
+    }
+  }
+
+  public static void runAwsUsageDailyAggregateWorkflow(final String workflowId) {
+    try{
+      final AwsUsageDailyAggregateWorkflowClientExternal workflow =
+              WorkflowClients.getAwsUsageDailyAggregateWorkflow(workflowId);
+      workflow.aggregateDaily();
+    }catch(final WorkflowExecutionAlreadyStartedException ex ) {
+      ;
+    }catch(final Exception ex) {
+      throw Exceptions.toUndeclared("Failed to start the workflow for aggregating daily AWS usage report", ex);
     }
   }
 
@@ -80,9 +93,15 @@ public class BillingWorkflows implements EventListener<Hertz> {
     prev.setTime(new Date(lastRecordedTime));
     cur.setTime(new Date(currentTime));
     lastRecordedTime = currentTime;
-    if( cur.get(Calendar.HOUR_OF_DAY) != prev.get(Calendar.HOUR_OF_DAY) ) {
+    if ( cur.get(Calendar.DAY_OF_MONTH) != prev.get(Calendar.DAY_OF_MONTH) ) {
       try {
-        runAwsUsageAggregateWorkflow( BILLING_AWS_USAGE_AGGREGATE_WORKFLOW_ID );
+        runAwsUsageDailyAggregateWorkflow( BILLING_AWS_USAGE_DAILY_AGGREGATE_WORKFLOW_ID );
+      } catch ( final Exception ex) {
+        LOG.error(ex, ex);
+      }
+    } else if (cur.get(Calendar.HOUR_OF_DAY) != prev.get(Calendar.HOUR_OF_DAY) ) {
+      try {
+        runAwsUsageHourlyAggregateWorkflow( BILLING_AWS_USAGE_HOURLY_AGGREGATE_WORKFLOW_ID );
       } catch( final Exception ex) {
         LOG.error(ex, ex);
       }

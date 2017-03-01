@@ -153,7 +153,7 @@ public class BillingActivitiesImpl implements BillingActivities {
   }
 
   @Override
-  public List<AwsUsageRecord> getAwsReportUsageRecord(final String accountId, final String queue) throws BillingActivityException {
+  public List<AwsUsageRecord> getAwsReportHourlyUsageRecord(final String accountId, final String queue) throws BillingActivityException {
     final SimpleQueueClientManager sqClient = SimpleQueueClientManager.getInstance();
     final List<QueuedEvent> events = Lists.newArrayList();
     try {
@@ -168,15 +168,40 @@ public class BillingActivitiesImpl implements BillingActivities {
 
     final List<AwsUsageRecord> result = Lists.newArrayList();
     for (final AwsUsageRecordType type : AwsUsageRecordType.values()) {
-      if (!AwsUsageRecordType.UNKNOWN.equals(type)) {
-        result.addAll(type.read(accountId, events));
-      }
+      if (AwsUsageRecordType.UNKNOWN.equals(type) || !AggregateGranularity.HOURLY.equals(type.getGranularity()))
+        continue;
+
+      result.addAll(type.read(accountId, events));
     }
     return result;
   }
 
   @Override
-  public void writeAwsReportHourlyUsage(final String accountId, final List<AwsUsageRecord> records) throws BillingActivityException{
+  public List<AwsUsageRecord> getAwsReportDailyUsageRecord(final String accountId, final String queue) throws BillingActivityException {
+    final SimpleQueueClientManager sqClient = SimpleQueueClientManager.getInstance();
+    final List<QueuedEvent> events = Lists.newArrayList();
+    try {
+      events.addAll(sqClient.receiveAllMessages(queue, false).stream()
+              .map(m -> QueuedEvents.MessageToEvent.apply(m.getBody()))
+              .filter(e -> e != null)
+              .collect(Collectors.toList())
+      );
+    } catch (final Exception ex) {
+      throw new BillingActivityException("Failed to receive queue messages", ex);
+    }
+
+    final List<AwsUsageRecord> result = Lists.newArrayList();
+    for (final AwsUsageRecordType type : AwsUsageRecordType.values()) {
+      if (AwsUsageRecordType.UNKNOWN.equals(type)) // daily aggregate processes both hourly and daily type records
+        continue;
+
+      result.addAll(type.read(accountId, events));
+    }
+    return result;
+  }
+
+  @Override
+  public void writeAwsReportUsage(final String accountId, final List<AwsUsageRecord> records) throws BillingActivityException{
     try {
       AwsUsageRecords.getInstance().append(records);
     } catch (final Exception ex) {

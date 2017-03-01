@@ -15,30 +15,30 @@ import com.amazonaws.services.simpleworkflow.flow.generic.GenericWorkflowClientE
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution;
 import com.amazonaws.services.simpleworkflow.model.WorkflowType;
 
-public class AwsUsageHoulyAggregateWorkflowClientExternalFactoryImpl extends WorkflowClientFactoryExternalBase<AwsUsageHoulyAggregateWorkflowClientExternal>  implements AwsUsageHoulyAggregateWorkflowClientExternalFactory {
+public class AwsUsageHourlyAggregateWorkflowClientExternalFactoryImpl extends WorkflowClientFactoryExternalBase<AwsUsageHourlyAggregateWorkflowClientExternal>  implements AwsUsageHourlyAggregateWorkflowClientExternalFactory {
 
-    public AwsUsageHoulyAggregateWorkflowClientExternalFactoryImpl(AmazonSimpleWorkflow service, String domain) {
+    public AwsUsageHourlyAggregateWorkflowClientExternalFactoryImpl(AmazonSimpleWorkflow service, String domain) {
 		super(service, domain);
 		setDataConverter(new com.amazonaws.services.simpleworkflow.flow.JsonDataConverter());
 	}
 	
-	public AwsUsageHoulyAggregateWorkflowClientExternalFactoryImpl() {
+	public AwsUsageHourlyAggregateWorkflowClientExternalFactoryImpl() {
         super(null);
 		setDataConverter(new com.amazonaws.services.simpleworkflow.flow.JsonDataConverter());
     }
     
-    public AwsUsageHoulyAggregateWorkflowClientExternalFactoryImpl(GenericWorkflowClientExternal genericClient) {
+    public AwsUsageHourlyAggregateWorkflowClientExternalFactoryImpl(GenericWorkflowClientExternal genericClient) {
         super(genericClient);
 		setDataConverter(new com.amazonaws.services.simpleworkflow.flow.JsonDataConverter());
     }
 	
     @Override
-    protected AwsUsageHoulyAggregateWorkflowClientExternal createClientInstance(WorkflowExecution workflowExecution,
+    protected AwsUsageHourlyAggregateWorkflowClientExternal createClientInstance(WorkflowExecution workflowExecution,
             StartWorkflowOptions options, DataConverter dataConverter, GenericWorkflowClientExternal genericClient) {
         WorkflowType workflowType = new WorkflowType();
-        workflowType.setName("Aggregate");
+        workflowType.setName("AggregateHourly");
         workflowType.setVersion("1.0");
-        return new AwsUsageHoulyAggregateWorkflowClientExternalImpl(workflowExecution, workflowType, options, dataConverter, genericClient);
+        return new AwsUsageHourlyAggregateWorkflowClientExternalImpl(workflowExecution, workflowType, options, dataConverter, genericClient);
     }
     
 }

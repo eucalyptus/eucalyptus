@@ -71,12 +71,20 @@ public class WorkflowClients {
     }
   }
 
-  public static AwsUsageHoulyAggregateWorkflowClientExternal getAwsUsageHourlyAggregateWorkflow(final String workflowId) {
-    final AwsUsageHoulyAggregateWorkflowClientExternalFactory factory =
-            new AwsUsageHoulyAggregateWorkflowClientExternalFactoryImpl(getSimpleWorkflow(),  DOMAIN);
-    return (AwsUsageHoulyAggregateWorkflowClientExternal)
+  public static AwsUsageHourlyAggregateWorkflowClientExternal getAwsUsageHourlyAggregateWorkflow(final String workflowId) {
+    final AwsUsageHourlyAggregateWorkflowClientExternalFactory factory =
+            new AwsUsageHourlyAggregateWorkflowClientExternalFactoryImpl(getSimpleWorkflow(),  DOMAIN);
+    return (AwsUsageHourlyAggregateWorkflowClientExternal)
             new WorkflowOptionsBuilder(factory.getClient(workflowId)).build();
   }
+
+  public static AwsUsageDailyAggregateWorkflowClientExternal getAwsUsageDailyAggregateWorkflow(final String workflowId) {
+    final AwsUsageDailyAggregateWorkflowClientExternalFactory factory =
+            new AwsUsageDailyAggregateWorkflowClientExternalFactoryImpl(getSimpleWorkflow(),  DOMAIN);
+    return (AwsUsageDailyAggregateWorkflowClientExternal)
+            new WorkflowOptionsBuilder(factory.getClient(workflowId)).build();
+  }
+
 
   public static ResourceUsageEventWorkflowClientExternal getResourceUsageEventWorkflow(final String workflowId) {
     final ResourceUsageEventWorkflowClientExternalFactory factory =

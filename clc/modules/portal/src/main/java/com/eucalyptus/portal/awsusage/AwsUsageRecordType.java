@@ -34,14 +34,14 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.summingLong;
 
 public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
-  UNKNOWN(null, null, null) {
+  UNKNOWN(null, null, null, AggregateGranularity.HOURLY) {
     @Override
     public List<AwsUsageRecord> read(final String accountId, final List<QueuedEvent> events) {
       return Lists.newArrayList();
     }
   },
 
-  EC2_RUNINSTANCE_BOX_USAGE("AmazonEC2", "RunInstances", "BoxUsage") {
+  EC2_RUNINSTANCE_BOX_USAGE("AmazonEC2", "RunInstances", "BoxUsage", AggregateGranularity.HOURLY) {
     @Override
     public List<AwsUsageRecord> read(final String accountId, final List<QueuedEvent> events) {
       // generate BoxUsage per instance types
@@ -104,19 +104,19 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
       return records;
     }
   },
-  EC2_CREATEVOLUME_VOLUME_USAGE("AmazonEC2", "CreateVolume", "VolumeUsage") {
+  EC2_CREATEVOLUME_VOLUME_USAGE("AmazonEC2", "CreateVolume", "VolumeUsage", AggregateGranularity.HOURLY) {
     @Override
     public List<AwsUsageRecord> read ( final String accountId, final List<QueuedEvent> events){
       return sumDistinctResource(accountId, events, "VolumeUsage", "AmazonEC2", "CreateVolume", "EBS:VolumeUsage");
     }
   },
-  EC2_CREATESNAPSHOT_SNAPSHOT_USAGE("AmazonEC2", "CreateSnapshot", "SnapshotUsage") {
+  EC2_CREATESNAPSHOT_SNAPSHOT_USAGE("AmazonEC2", "CreateSnapshot", "SnapshotUsage", AggregateGranularity.DAILY) {
     @Override
     public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
       return sumDistinctResource(accountId, events, "SnapshotUsage", "AmazonEC2", "CreateSnapshot", "EBS:SnapshotUsage");
     }
   },
-  EC2_ASSOCIATEADDRESS_ELASTIC_IP("AmazonEC2", "AssociateAddress", "ElasticIP") {
+  EC2_ASSOCIATEADDRESS_ELASTIC_IP("AmazonEC2", "AssociateAddress", "ElasticIP", AggregateGranularity.HOURLY) {
     @Override
     public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
       // AmazonEC2,AssociateAddress,USW2-ElasticIP:IdleAddress,,11/15/16 14:00:00,11/15/16 15:00:00,1
@@ -150,7 +150,7 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
     }
   },
 
-  S3_STORAGE_OBJECT_COUNT("AmazonS3", "StandardStorage", "StorageObjectCount") {
+  S3_STORAGE_OBJECT_COUNT("AmazonS3", "StandardStorage", "StorageObjectCount", AggregateGranularity.DAILY) {
     @Override
     public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
 // AmazonS3,StandardStorage,StorageObjectCount,spark-billing-test01,11/26/16 08:00:00,11/26/16 09:00:00,86
@@ -187,7 +187,7 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
     }
   },
 
-  S3_STORAGE_OBJECT_BYTEHRS("AmazonS3", "StandardStorage", "TimedStorage-ByteHrs") {
+  S3_STORAGE_OBJECT_BYTEHRS("AmazonS3", "StandardStorage", "TimedStorage-ByteHrs", AggregateGranularity.DAILY) {
     @Override
     public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
      // AmazonS3,StandardStorage,USW2-TimedStorage-ByteHrs,billing-test-bucket-tmp,11/26/16 08:00:00,11/26/16 09:00:00,4964856
@@ -223,63 +223,63 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
       return records;
     }
   },
-  EC2_EBS_VolumeIORead("AmazonEC2", "EBS:IO-Read", "EBS:VolumeIOUsage") {
+  EC2_EBS_VolumeIORead("AmazonEC2", "EBS:IO-Read", "EBS:VolumeIOUsage", AggregateGranularity.HOURLY) {
     @Override
     public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
       // AmazonEC2,EBS:Gp2-IO-Read,USW2-EBS:VolumeIOUsage.gp2,,11/10/16 00:00:00,11/11/16 00:00:00,4
       return sum(accountId, events, "EBS:VolumeIOUsage-Read", "AmazonEC2", "EBS:IO-Read", "EBS:VolumeIOUsage");
     }
   },
-  EC2_EBS_VolumeIOWrite("AmazonEC2", "EBS:IO-Write", "EBS:VolumeIOUsage") {
+  EC2_EBS_VolumeIOWrite("AmazonEC2", "EBS:IO-Write", "EBS:VolumeIOUsage", AggregateGranularity.HOURLY) {
     @Override
     public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
       // AmazonEC2,EBS:Gp2-IO-Write,USW2-EBS:VolumeIOUsage.gp2,,11/10/16 00:00:00,11/11/16 00:00:00,514
       return sum(accountId, events, "EBS:VolumeIOUsage-Write", "AmazonEC2", "EBS:IO-Write", "EBS:VolumeIOUsage");
     }
   },
-  EC2_INSTANCE_DATATRANSFER_IN("AmazonEC2", "RunInstances", "DataTransfer-In-Bytes") {
+  EC2_INSTANCE_DATATRANSFER_IN("AmazonEC2", "RunInstances", "DataTransfer-In-Bytes", AggregateGranularity.HOURLY) {
     @Override
     public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
       // AmazonEC2,RunInstances,USW2-DataTransfer-In-Bytes,,11/10/16 00:00:00,11/11/16 00:00:00,13971
       return sum(accountId, events, "InstanceDataTransfer-In", "AmazonEC2", "RunInstances", "DataTransfer-In-Bytes");
     }
   },
-  EC2_INSTANCE_DATATRANSFER_OUT("AmazonEC2", "RunInstances", "DataTransfer-Out-Bytes") {
+  EC2_INSTANCE_DATATRANSFER_OUT("AmazonEC2", "RunInstances", "DataTransfer-Out-Bytes", AggregateGranularity.HOURLY) {
     @Override
     public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
       // AmazonEC2,RunInstances,USW2-DataTransfer-Out-Bytes,,11/10/16 00:00:00,11/11/16 00:00:00,13395
       return sum(accountId, events, "InstanceDataTransfer-Out", "AmazonEC2", "RunInstances", "DataTransfer-Out-Bytes");
     }
   },
-  EC2_PUBLICIP_IN("AmazonEC2", "PublicIP-In", "AWS-In-Bytes") {
+  EC2_PUBLICIP_IN("AmazonEC2", "PublicIP-In", "AWS-In-Bytes", AggregateGranularity.HOURLY) {
     @Override
     public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
       // AmazonEC2,PublicIP-In,USW2-USE2-AWS-In-Bytes,,11/22/16 00:00:00,11/23/16 00:00:00,80
       return sum( accountId, events, "InstancePublicIpTransfer-In", "AmazonEC2", "PublicIP-In", "AWS-In-Bytes");
     }
   },
-  EC2_PUBLICIP_OUT("AmazonEC2", "PublicIP-Out", "AWS-Out-Bytes") {
+  EC2_PUBLICIP_OUT("AmazonEC2", "PublicIP-Out", "AWS-Out-Bytes", AggregateGranularity.HOURLY) {
     @Override
     public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
       // AmazonEC2,PublicIP-Out,USW2-USE1-AWS-Out-Bytes,,11/19/16 00:00:00,11/20/16 00:00:00,40
       return sum(accountId, events, "InstancePublicIpTransfer-Out", "AmazonEC2", "PublicIP-Out", "AWS-Out-Bytes");
     }
   },
-  EC2_LOADBALANCER_DATATRANSFER_IN("AmazonEC2", "LoadBalancing", "DataTransfer-In-Bytes") {
+  EC2_LOADBALANCER_DATATRANSFER_IN("AmazonEC2", "LoadBalancing", "DataTransfer-In-Bytes", AggregateGranularity.HOURLY) {
     @Override
     public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
       // AmazonEC2,LoadBalancing,USW2-DataTransfer-ELB-In-Bytes,,11/18/16 00:00:00,11/19/16 00:00:00,11879589
      return sum(accountId, events, "LoadBalancing-DataTransfer-In", "AmazonEC2", "LoadBalancing", "DataTransfer-In-Bytes");
     }
   },
-  EC2_LOADBALANCER_DATATRANSFER_OUT("AmazonEC2", "LoadBalancing", "DataTransfer-Out-Bytes") {
+  EC2_LOADBALANCER_DATATRANSFER_OUT("AmazonEC2", "LoadBalancing", "DataTransfer-Out-Bytes", AggregateGranularity.HOURLY) {
     @Override
     public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
       // AmazonEC2,LoadBalancing,USW2-DataTransfer-ELB-Out-Bytes,,11/18/16 00:00:00,11/19/16 00:00:00,3144252
       return sum(accountId, events, "LoadBalancing-DataTransfer-Out", "AmazonEC2", "LoadBalancing", "DataTransfer-Out-Bytes");
     }
   },
-  EC2_LOADBALANCER_USAGE("AmazonEC2", "LoadBalancing", "LoadBalancerUsage") {
+  EC2_LOADBALANCER_USAGE("AmazonEC2", "LoadBalancing", "LoadBalancerUsage", AggregateGranularity.HOURLY) {
     @Override
     public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
       // AmazonEC2,LoadBalancing,USW2-LoadBalancerUsage,,11/22/16 00:00:00,11/22/16 01:00:00,1
@@ -309,10 +309,16 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
   private String service = null;
   private String operation = null;
   private String usageType = null;
-  AwsUsageRecordType(final String service, final String operation, final String usageType) {
+  private AggregateGranularity granularity = AggregateGranularity.HOURLY;
+  AwsUsageRecordType(final String service, final String operation, final String usageType, final AggregateGranularity granularity) {
     this.service = service;
     this.operation = operation;
     this.usageType = usageType;
+    this.granularity = granularity;
+  }
+
+  public AggregateGranularity getGranularity() {
+    return this.granularity;
   }
 
   @Override

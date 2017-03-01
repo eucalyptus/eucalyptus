@@ -15,8 +15,6 @@
  ************************************************************************/
 package com.eucalyptus.portal.awsusage;
 
-import com.amazonaws.services.simpleworkflow.flow.DecisionContextProvider;
-import com.amazonaws.services.simpleworkflow.flow.DecisionContextProviderImpl;
 import com.amazonaws.services.simpleworkflow.flow.annotations.Asynchronous;
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.amazonaws.services.simpleworkflow.flow.core.Promises;
@@ -31,9 +29,9 @@ import java.util.List;
 import java.util.Map;
 
 @ComponentPart(Portal.class)
-public class AwsUsageHoulyAggregateWorkflowImpl implements AwsUsageHoulyAggregateWorkflow {
+public class AwsUsageHourlyAggregateWorkflowImpl implements AwsUsageHourlyAggregateWorkflow {
   private static Logger LOG     =
-          Logger.getLogger(  AwsUsageHoulyAggregateWorkflowImpl.class );
+          Logger.getLogger(  AwsUsageHourlyAggregateWorkflowImpl.class );
   final BillingActivitiesClient client =
           new BillingActivitiesClientImpl();
   private BillingWorkflowState state =
@@ -41,7 +39,7 @@ public class AwsUsageHoulyAggregateWorkflowImpl implements AwsUsageHoulyAggregat
   TryCatchFinally task = null;
 
   @Override
-  public void aggregate() {
+  public void aggregateHourly() {
     task = new TryCatchFinally() {
       @Override
       protected void doTry() throws Throwable {
@@ -86,9 +84,9 @@ public class AwsUsageHoulyAggregateWorkflowImpl implements AwsUsageHoulyAggregat
     for (final String accountId : queueForAccounts.get().keySet()) {
       final String queueName = queueForAccounts.get().get(accountId);
       written.add(
-              client.writeAwsReportHourlyUsage(
+              client.writeAwsReportUsage(
                       Promise.asPromise(accountId),
-                      client.getAwsReportUsageRecord(
+                      client.getAwsReportHourlyUsageRecord(
                               Promise.asPromise(accountId),
                               Promise.asPromise(queueName))
               )

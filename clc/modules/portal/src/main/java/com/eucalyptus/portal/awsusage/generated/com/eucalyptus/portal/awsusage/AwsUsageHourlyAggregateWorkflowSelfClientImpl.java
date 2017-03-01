@@ -15,33 +15,33 @@ import com.amazonaws.services.simpleworkflow.flow.WorkflowSelfClientBase;
 import com.amazonaws.services.simpleworkflow.flow.generic.ContinueAsNewWorkflowExecutionParameters;
 import com.amazonaws.services.simpleworkflow.flow.generic.GenericWorkflowClient;
 
-public class AwsUsageHoulyAggregateWorkflowSelfClientImpl extends WorkflowSelfClientBase implements AwsUsageHoulyAggregateWorkflowSelfClient {
+public class AwsUsageHourlyAggregateWorkflowSelfClientImpl extends WorkflowSelfClientBase implements AwsUsageHourlyAggregateWorkflowSelfClient {
 
-    public AwsUsageHoulyAggregateWorkflowSelfClientImpl() {
+    public AwsUsageHourlyAggregateWorkflowSelfClientImpl() {
         this(null, new com.amazonaws.services.simpleworkflow.flow.JsonDataConverter(), null);
     }
 
-    public AwsUsageHoulyAggregateWorkflowSelfClientImpl(GenericWorkflowClient genericClient) {
+    public AwsUsageHourlyAggregateWorkflowSelfClientImpl(GenericWorkflowClient genericClient) {
         this(genericClient, new com.amazonaws.services.simpleworkflow.flow.JsonDataConverter(), null);
     }
 
-    public AwsUsageHoulyAggregateWorkflowSelfClientImpl(GenericWorkflowClient genericClient, 
+    public AwsUsageHourlyAggregateWorkflowSelfClientImpl(GenericWorkflowClient genericClient, 
             DataConverter dataConverter, StartWorkflowOptions schedulingOptions) {
             
         super(genericClient, dataConverter, schedulingOptions);
     }
 
     @Override
-    public final void aggregate() { 
-        aggregateImpl(null);
+    public final void aggregateHourly() { 
+        aggregateHourlyImpl(null);
     }
     
     @Override
-    public final void aggregate(StartWorkflowOptions optionsOverride, Promise<?>... waitFor) {
-        aggregateImpl(optionsOverride, waitFor);
+    public final void aggregateHourly(StartWorkflowOptions optionsOverride, Promise<?>... waitFor) {
+        aggregateHourlyImpl(optionsOverride, waitFor);
     }
     
-    protected void aggregateImpl(final StartWorkflowOptions schedulingOptionsOverride, Promise<?>... waitFor) {
+    protected void aggregateHourlyImpl(final StartWorkflowOptions schedulingOptionsOverride, Promise<?>... waitFor) {
     	new Task(waitFor) {
     		@Override
 			protected void doExecute() throws Throwable {

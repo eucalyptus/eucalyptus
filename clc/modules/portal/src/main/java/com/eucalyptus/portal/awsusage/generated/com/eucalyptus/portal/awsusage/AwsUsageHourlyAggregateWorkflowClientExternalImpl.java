@@ -14,20 +14,20 @@ import com.amazonaws.services.simpleworkflow.flow.generic.GenericWorkflowClientE
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution;
 import com.amazonaws.services.simpleworkflow.model.WorkflowType;
 
-class AwsUsageHoulyAggregateWorkflowClientExternalImpl extends WorkflowClientExternalBase implements AwsUsageHoulyAggregateWorkflowClientExternal {
+class AwsUsageHourlyAggregateWorkflowClientExternalImpl extends WorkflowClientExternalBase implements AwsUsageHourlyAggregateWorkflowClientExternal {
 
-    public AwsUsageHoulyAggregateWorkflowClientExternalImpl(WorkflowExecution workflowExecution, WorkflowType workflowType, 
+    public AwsUsageHourlyAggregateWorkflowClientExternalImpl(WorkflowExecution workflowExecution, WorkflowType workflowType, 
             StartWorkflowOptions options, DataConverter dataConverter, GenericWorkflowClientExternal genericClient) {
         super(workflowExecution, workflowType, options, dataConverter, genericClient);
     }
 
     @Override
-    public void aggregate() { 
-        aggregate(null);
+    public void aggregateHourly() { 
+        aggregateHourly(null);
     }
 
     @Override
-    public void aggregate(StartWorkflowOptions startOptionsOverride) {
+    public void aggregateHourly(StartWorkflowOptions startOptionsOverride) {
     
         Object[] _arguments_ = new Object[0]; 
         dynamicWorkflowClient.startWorkflowExecution(_arguments_, startOptionsOverride);

@@ -12,20 +12,20 @@ import com.amazonaws.services.simpleworkflow.flow.StartWorkflowOptions;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowSelfClient;
 
 /**
- * Generated from {@link com.eucalyptus.portal.awsusage.AwsUsageHoulyAggregateWorkflow}. 
+ * Generated from {@link com.eucalyptus.portal.awsusage.AwsUsageDailyAggregateWorkflow}. 
  * Used to continue a workflow execution as a new run.
  * Must be used from a worklfow scope. 
  */
-public interface AwsUsageHoulyAggregateWorkflowSelfClient extends WorkflowSelfClient
+public interface AwsUsageDailyAggregateWorkflowSelfClient extends WorkflowSelfClient
 {
 
     /**
-     * Generated from {@link com.eucalyptus.portal.awsusage.AwsUsageHoulyAggregateWorkflow#aggregate}
+     * Generated from {@link com.eucalyptus.portal.awsusage.AwsUsageDailyAggregateWorkflow#aggregateDaily}
      */
-    void aggregate();
+    void aggregateDaily();
 
     /**
-     * Generated from {@link com.eucalyptus.portal.awsusage.AwsUsageHoulyAggregateWorkflow#aggregate}
+     * Generated from {@link com.eucalyptus.portal.awsusage.AwsUsageDailyAggregateWorkflow#aggregateDaily}
      */
-    void aggregate(StartWorkflowOptions optionsOverride, Promise<?>... waitFor);
+    void aggregateDaily(StartWorkflowOptions optionsOverride, Promise<?>... waitFor);
 }

@@ -49,64 +49,94 @@ public interface BillingActivitiesClient extends ActivitiesClient
     Promise<java.util.Map<java.lang.String,java.lang.String>> createAccountQueues(Promise<String> globalQueue, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
     /**
-     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#getAwsReportUsageRecord}
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#getAwsReportHourlyUsageRecord}
      */
-    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(String accountId, String queueName);
+    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportHourlyUsageRecord(String accountId, String queueName);
 
     /**
-     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#getAwsReportUsageRecord}
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#getAwsReportHourlyUsageRecord}
      */
-    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(String accountId, String queueName, Promise<?>... waitFor);
+    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportHourlyUsageRecord(String accountId, String queueName, Promise<?>... waitFor);
 
     /**
-     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#getAwsReportUsageRecord}
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#getAwsReportHourlyUsageRecord}
      */
-    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(String accountId, String queueName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportHourlyUsageRecord(String accountId, String queueName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
     /**
-     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#getAwsReportUsageRecord}
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#getAwsReportHourlyUsageRecord}
      */
-    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(Promise<String> accountId, Promise<String> queueName);
+    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportHourlyUsageRecord(Promise<String> accountId, Promise<String> queueName);
 
     /**
-     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#getAwsReportUsageRecord}
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#getAwsReportHourlyUsageRecord}
      */
-    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(Promise<String> accountId, Promise<String> queueName, Promise<?>... waitFor);
+    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportHourlyUsageRecord(Promise<String> accountId, Promise<String> queueName, Promise<?>... waitFor);
 
     /**
-     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#getAwsReportUsageRecord}
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#getAwsReportHourlyUsageRecord}
      */
-    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportUsageRecord(Promise<String> accountId, Promise<String> queueName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportHourlyUsageRecord(Promise<String> accountId, Promise<String> queueName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
     /**
-     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#writeAwsReportHourlyUsage}
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#getAwsReportDailyUsageRecord}
      */
-    Promise<Void> writeAwsReportHourlyUsage(String accountId, java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord> records);
+    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportDailyUsageRecord(String accountId, String queueName);
 
     /**
-     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#writeAwsReportHourlyUsage}
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#getAwsReportDailyUsageRecord}
      */
-    Promise<Void> writeAwsReportHourlyUsage(String accountId, java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord> records, Promise<?>... waitFor);
+    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportDailyUsageRecord(String accountId, String queueName, Promise<?>... waitFor);
 
     /**
-     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#writeAwsReportHourlyUsage}
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#getAwsReportDailyUsageRecord}
      */
-    Promise<Void> writeAwsReportHourlyUsage(String accountId, java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord> records, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportDailyUsageRecord(String accountId, String queueName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
     /**
-     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#writeAwsReportHourlyUsage}
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#getAwsReportDailyUsageRecord}
      */
-    Promise<Void> writeAwsReportHourlyUsage(Promise<String> accountId, Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> records);
+    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportDailyUsageRecord(Promise<String> accountId, Promise<String> queueName);
 
     /**
-     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#writeAwsReportHourlyUsage}
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#getAwsReportDailyUsageRecord}
      */
-    Promise<Void> writeAwsReportHourlyUsage(Promise<String> accountId, Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> records, Promise<?>... waitFor);
+    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportDailyUsageRecord(Promise<String> accountId, Promise<String> queueName, Promise<?>... waitFor);
 
     /**
-     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#writeAwsReportHourlyUsage}
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#getAwsReportDailyUsageRecord}
      */
-    Promise<Void> writeAwsReportHourlyUsage(Promise<String> accountId, Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> records, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+    Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> getAwsReportDailyUsageRecord(Promise<String> accountId, Promise<String> queueName, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#writeAwsReportUsage}
+     */
+    Promise<Void> writeAwsReportUsage(String accountId, java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord> records);
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#writeAwsReportUsage}
+     */
+    Promise<Void> writeAwsReportUsage(String accountId, java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord> records, Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#writeAwsReportUsage}
+     */
+    Promise<Void> writeAwsReportUsage(String accountId, java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord> records, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#writeAwsReportUsage}
+     */
+    Promise<Void> writeAwsReportUsage(Promise<String> accountId, Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> records);
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#writeAwsReportUsage}
+     */
+    Promise<Void> writeAwsReportUsage(Promise<String> accountId, Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> records, Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#writeAwsReportUsage}
+     */
+    Promise<Void> writeAwsReportUsage(Promise<String> accountId, Promise<java.util.List<com.eucalyptus.portal.awsusage.AwsUsageRecord>> records, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.portal.awsusage.BillingActivities#deleteAccountQueues}

@@ -10,11 +10,11 @@
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientFactory;
 
 /**
- * Generated from {@link com.eucalyptus.portal.awsusage.AwsUsageHoulyAggregateWorkflow}. 
+ * Generated from {@link com.eucalyptus.portal.awsusage.AwsUsageHourlyAggregateWorkflow}. 
  * Used to create workflow clients for use within the scope of a parent workflow.
  * <p>
- * When running outside of the scope of a workflow use {@link AwsUsageHoulyAggregateWorkflowClientExternalFactory} instead.
+ * When running outside of the scope of a workflow use {@link AwsUsageHourlyAggregateWorkflowClientExternalFactory} instead.
  */
-public interface AwsUsageHoulyAggregateWorkflowClientFactory extends WorkflowClientFactory<AwsUsageHoulyAggregateWorkflowClient> {
+public interface AwsUsageHourlyAggregateWorkflowClientFactory extends WorkflowClientFactory<AwsUsageHourlyAggregateWorkflowClient> {
     
 }
