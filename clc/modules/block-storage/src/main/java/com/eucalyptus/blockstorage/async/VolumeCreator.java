@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,11 +12,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
- *
+ * 
  * This file may incorporate work covered under the following copyright
  * and permission notice:
  *
@@ -66,6 +62,7 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
@@ -85,6 +82,8 @@ import com.eucalyptus.blockstorage.StorageResource;
 import com.eucalyptus.blockstorage.StorageResourceWithCallback;
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.blockstorage.entities.VolumeInfo;
+import com.eucalyptus.blockstorage.util.BlockStorageUtilSvc;
+import com.eucalyptus.blockstorage.util.BlockStorageUtilSvcImpl;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
@@ -108,6 +107,7 @@ public class VolumeCreator implements Runnable {
   private String parentVolumeId;
   private int size;
   private LogicalStorageManager blockManager;
+  private BlockStorageUtilSvc blockStorageUtilSvc;
 
   public VolumeCreator(String volumeId, String snapshotSetName, String snapshotId, String parentVolumeId, int size,
       LogicalStorageManager blockManager) {
@@ -116,21 +116,22 @@ public class VolumeCreator implements Runnable {
     this.parentVolumeId = parentVolumeId;
     this.size = size;
     this.blockManager = blockManager;
+    this.blockStorageUtilSvc = new BlockStorageUtilSvcImpl();
   }
 
   @Override
   public void run() {
     boolean success = true;
-    if (snapshotId != null) {
+    if (this.snapshotId != null) {
       try {
-        SnapshotInfo searchFor = new SnapshotInfo(snapshotId);
+        SnapshotInfo searchFor = new SnapshotInfo(this.snapshotId);
         searchFor.setStatus(StorageProperties.Status.available.toString()); // search only for available snapshot in the az
 
         List<SnapshotInfo> foundSnapshotInfos = Transactions.findAll(searchFor);
 
         if (foundSnapshotInfos == null || foundSnapshotInfos.isEmpty()) {
           // SC *may not* have a database record for the snapshot and or the actual snapshot
-          EucaSemaphore semaphore = EucaSemaphoreDirectory.getSolitarySemaphore(snapshotId);
+          EucaSemaphore semaphore = EucaSemaphoreDirectory.getSolitarySemaphore(this.snapshotId);
           try {
             semaphore.acquire(); // Get the semaphore to avoid concurrent access by multiple threads
             foundSnapshotInfos = Transactions.findAll(searchFor); // Check if another thread setup the snapshot
@@ -152,13 +153,17 @@ public class VolumeCreator implements Runnable {
 
                 foundSnapshotInfos = (List<SnapshotInfo>) searchCriteria.list();
 
-                if (foundSnapshotInfos == null || foundSnapshotInfos.isEmpty()) { // pre 4.4.0 scneario
+                if (foundSnapshotInfos == null || foundSnapshotInfos.isEmpty()) { // pre 4.4.0 scenario
 
                   // Search for the snapshots on other clusters in the ascending order of creation time stamp and get the first one
                   searchFor.setIsOrigin(null);
-                  Criteria snapCriteria =
-                      Entities.createCriteria(SnapshotInfo.class).setReadOnly(true).setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY)
-                          .setCacheable(true).add(Example.create(searchFor).enableLike(MatchMode.EXACT)).addOrder(Order.asc("creationTimestamp"));
+                  Criteria snapCriteria = Entities.createCriteria(SnapshotInfo.class);
+                  snapCriteria.setReadOnly(true);
+                  snapCriteria.setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY);
+                  snapCriteria.setCacheable(true);
+                  snapCriteria.add(Example.create(searchFor).enableLike(MatchMode.EXACT));
+                  snapCriteria.addOrder(Order.asc("creationTimestamp"));
+                  snapCriteria.setMaxResults(1);
 
                   foundSnapshotInfos = (List<SnapshotInfo>) snapCriteria.list();
                 }
@@ -169,96 +174,81 @@ public class VolumeCreator implements Runnable {
               if (foundSnapshotInfos != null && foundSnapshotInfos.size() > 0) {
                 sourceSnap = foundSnapshotInfos.get(0);
               } else {
-                throw new EucalyptusCloudException("No record of snapshot " + snapshotId + " in any availability zone");
+                throw new EucalyptusCloudException("No record of snapshot " + this.snapshotId + " in any availability zone");
               }
 
               // TODO this might be unnecessary
               // If size was not found in database, bail out. Can't create a snapshot without the size
               if (sourceSnap.getSizeGb() == null || sourceSnap.getSizeGb() <= 0) {
                 throw new EucalyptusCloudException(
-                    "Snapshot size for " + snapshotId + " is unknown. Cannot prep snapshot holder on the storage backend");
+                    "Snapshot size for " + this.snapshotId + " is unknown. Cannot prep snapshot holder on the storage backend");
               }
 
               // Copy base snapshot info to this snapshot
               azSnap = copySnapshotInfo(sourceSnap);
 
-              // Check for the snpahsot on the storage backend. Clusters/zones/partitions may be connected to the same storage backend in
+              // Check for the snapshot on the storage backend. Clusters/zones/partitions may be connected to the same storage backend in
               // which case snapshot does not have to be downloaded from ObjectStorage.
-              if (!blockManager.getFromBackend(snapshotId, sourceSnap.getSizeGb())) {
+              if (!blockManager.getFromBackend(this.snapshotId, sourceSnap.getSizeGb())) {
                 // Storage backend does not contain snapshot. Download snapshot from OSG
-                LOG.debug(snapshotId + " not found on storage backend. Will attempt to download from objectstorage gateway");
+                LOG.debug(this.snapshotId + " not found on storage backend. Will attempt to download from objectstorage gateway");
 
                 // check whether upload is incremental snapshot
                 if (!Strings.isNullOrEmpty(sourceSnap.getPreviousSnapshotId())) {
-
-                  LOG.info(snapshotId + " is an incremental snapshot orignating from az " + sourceSnap.getScName());
+                  LOG.info(this.snapshotId + " is an incremental snapshot originating from az " + sourceSnap.getScName());
 
                   // check if backend supports incremental snapshot
                   if (blockManager.supportsIncrementalSnapshots()) {
 
-                    List<SnapshotInfo> allDeltas = null;
-                    List<SnapshotInfo> nonDeltas = null;
-                    SnapshotInfo firstNonDelta = null;
-
-                    // Gather the checkpoint and all deltas required to restore the snapshot
+                    List<SnapshotInfo> prevRestorableSnapsList = null;
                     try (TransactionResource tr = Entities.transactionFor(SnapshotInfo.class)) {
-                      SnapshotInfo searcher = new SnapshotInfo(null);
-                      searcher.setVolumeId(sourceSnap.getVolumeId());
-                      searcher.setScName(sourceSnap.getScName());
-                      searcher.setIsOrigin(Boolean.TRUE);
-
-                      // Query for the latest full checkpoint
-                      Criteria nonDeltaCriteria = Entities.createCriteria(SnapshotInfo.class);
-                      nonDeltaCriteria.add(Example.create(searcher).enableLike(MatchMode.EXACT));
-                      nonDeltaCriteria.add(Restrictions.and(StorageProperties.SNAPSHOT_DELTA_RESTORATION_CRITERION,
-                          Restrictions.lt("startTime", sourceSnap.getStartTime()), Restrictions.isNull("previousSnapshotId")));
-                      nonDeltaCriteria.addOrder(Order.desc("startTime"));
-                      nonDeltaCriteria.setReadOnly(true);
-                      nonDeltaCriteria.setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY);
-                      nonDeltaCriteria.setMaxResults(1);
-                      nonDeltas = (List<SnapshotInfo>) nonDeltaCriteria.list();
-
-                      if (nonDeltas != null && !nonDeltas.isEmpty()) {
-                        firstNonDelta = nonDeltas.get(0);
-                      } else {
-                        tr.commit();
-                        LOG.warn("Unable to lookup metadata for last full/non-delta snapshot taken on volume " + sourceSnap.getVolumeId());
-                        throw new EucalyptusCloudException(
-                            "Unable to lookup metadata for last full/non-delta snapshot taken on volume " + sourceSnap.getVolumeId());
-                      }
-
-                      // Query for all deltas between the latest checkpoint and the current snap
-                      Criteria deltaCriteria = Entities.createCriteria(SnapshotInfo.class);
-                      deltaCriteria.add(Example.create(searcher).enableLike(MatchMode.EXACT));
-                      deltaCriteria.add(Restrictions.and(StorageProperties.SNAPSHOT_DELTA_RESTORATION_CRITERION,
-                          Restrictions.gt("startTime", firstNonDelta.getStartTime()), Restrictions.le("startTime", sourceSnap.getStartTime()),
-                          Restrictions.isNotNull("previousSnapshotId")));
-                      deltaCriteria.addOrder(Order.asc("startTime"));
-                      deltaCriteria.setReadOnly(true);
-                      deltaCriteria.setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY);
-                      allDeltas = (List<SnapshotInfo>) deltaCriteria.list();
-
+                      // Get all the restorable snapshots for this volume earlier than (and including) the current snapshot
+                      SnapshotInfo prevRestorableSnapsSearch = new SnapshotInfo();
+                      prevRestorableSnapsSearch.setScName(sourceSnap.getScName());
+                      prevRestorableSnapsSearch.setIsOrigin(Boolean.TRUE);
+                      prevRestorableSnapsSearch.setVolumeId(sourceSnap.getVolumeId());
+                      Criteria prevRestorableSnapsCriteria = Entities.createCriteria(SnapshotInfo.class);
+                      prevRestorableSnapsCriteria.add(Example.create(prevRestorableSnapsSearch).enableLike(MatchMode.EXACT));
+                      prevRestorableSnapsCriteria.setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY);
+                      prevRestorableSnapsCriteria.add(Restrictions.and(StorageProperties.SNAPSHOT_DELTA_RESTORATION_CRITERION, Restrictions.le("startTime", sourceSnap.getStartTime())));
+                      prevRestorableSnapsCriteria.addOrder(Order.desc("startTime"));
+                      prevRestorableSnapsCriteria.setReadOnly(true);
+                      prevRestorableSnapsList = (List<SnapshotInfo>) prevRestorableSnapsCriteria.list();
                       tr.commit();
                     }
-
-                    if (allDeltas == null || allDeltas.isEmpty()) {
-                      LOG.warn("Unable to lookup metadata for snapshot deltas taken on volume " + sourceSnap.getVolumeId());
-                      throw new EucalyptusCloudException("Unable to lookup metadata for snapshot deltas taken on volume " + sourceSnap.getVolumeId());
+                    
+                    // Get the snap chain ending with the current snapshot
+                    List<SnapshotInfo> snapChain = blockStorageUtilSvc.getSnapshotChain(prevRestorableSnapsList, this.snapshotId);
+                    int numDeltas = 0;
+                    if (snapChain == null || snapChain.size() == 0) {
+                      // This should never happen. The chain should always include at least the current snapshot.
+                      throw new EucalyptusCloudException("Could not find current snapshot " + this.snapshotId + 
+                          " in restorable snapshots list");
                     }
-
-                    // restore base snapshot with first snap
-                    downloadAndRestoreBase(firstNonDelta);
-
-                    SnapshotInfo prevSnap = firstNonDelta;
-
-                    // apply deltas
-                    for (SnapshotInfo currentSnap : allDeltas) {
-                      downloadAndRestoreDelta(currentSnap, prevSnap);
-                      prevSnap = currentSnap;
+                    
+                    SnapshotInfo baseFullSnapshot = snapChain.get(0);
+                    if (!Strings.isNullOrEmpty(baseFullSnapshot.getPreviousSnapshotId())) {
+                      throw new EucalyptusCloudException("The beginning of this snapshot chain, snapshot " + 
+                          baseFullSnapshot.getSnapshotId() + ", is not a full snapshot. Cannot create volume " +
+                          "without a full snapshot to start snapshot delta reconstruction.");
                     }
+                    // Restore the base full snapshot
+                    downloadAndRestoreBase(baseFullSnapshot);
 
+                    if (snapChain.size() > 1) {
+                      // Apply the list of snapshot deltas
+                      SnapshotInfo prevSnap = baseFullSnapshot;
+                      Iterator<SnapshotInfo> iterator = snapChain.iterator();
+                      // Skip the first element in the list (the full snapshot)
+                      iterator.next();
+                      while (iterator.hasNext()) {
+                        SnapshotInfo currentSnap = iterator.next();
+                        downloadAndRestoreDelta(currentSnap, prevSnap);
+                        prevSnap = currentSnap;
+                      }
+                    }
                     // Cleanup snapshot state and set it up for volume creation
-                    blockManager.completeSnapshotRestorationFromDeltas(snapshotId);
+                    blockManager.completeSnapshotRestorationFromDeltas(this.snapshotId);
                   } else {
                     LOG.warn("Snapshot " + this.snapshotId
                         + " cannot be restored in this availability zone since it does not support incremental snapshots. Failing volume "
@@ -276,7 +266,7 @@ public class VolumeCreator implements Runnable {
 
               } else { // Storage backend contains snapshot
                 // Just create a record of it for this partition in the DB and get going!
-                LOG.debug(snapshotId + " found on storage backend");
+                LOG.debug(this.snapshotId + " found on storage backend");
                 // update the metadata as necessary
                 azSnap.setPreviousSnapshotId(sourceSnap.getPreviousSnapshotId());
                 azSnap.setSnapPointId(sourceSnap.getSnapPointId());
@@ -302,13 +292,13 @@ public class VolumeCreator implements Runnable {
             try {
               semaphore.release();
             } finally {
-              EucaSemaphoreDirectory.removeSemaphore(snapshotId);
+              EucaSemaphoreDirectory.removeSemaphore(this.snapshotId);
             }
           }
 
           // Create the volume from the snapshot, this can happen in parallel.
           if (success) {
-            size = blockManager.createVolume(volumeId, snapshotId, size);
+            this.size = blockManager.createVolume(this.volumeId, this.snapshotId, this.size);
           }
         } else { // SC has a database record for the snapshot
           // Repeated logic, fix it!
@@ -317,56 +307,59 @@ public class VolumeCreator implements Runnable {
             success = false;
             LOG.warn("snapshot " + foundSnapshotInfo.getSnapshotId() + " not available.");
           } else {
-            size = blockManager.createVolume(volumeId, snapshotId, size);
+            this.size = blockManager.createVolume(this.volumeId, this.snapshotId, this.size);
           }
         }
       } catch (Exception ex) {
         success = false;
-        LOG.error("Failed to create volume " + volumeId, ex);
+        LOG.error("Failed to create volume " + this.volumeId, ex);
       }
     } else { // Not a snapshot-based volume create.
       try {
-        if (parentVolumeId != null) {
+        if (this.parentVolumeId != null) {
           // Clone the parent volume.
-          blockManager.cloneVolume(volumeId, parentVolumeId);
+          blockManager.cloneVolume(this.volumeId, this.parentVolumeId);
         } else {
           // Create a regular empty volume
-          blockManager.createVolume(volumeId, size);
+          blockManager.createVolume(this.volumeId, this.size);
         }
       } catch (Exception ex) {
         success = false;
-        LOG.error("Failed to create volume " + volumeId, ex);
+        LOG.error("Failed to create volume " + this.volumeId, ex);
       }
     }
 
     // Update database record for the volume.
-    VolumeInfo volumeInfo = new VolumeInfo(volumeId);
+    VolumeInfo volumeInfo = new VolumeInfo(this.volumeId);
     try (TransactionResource tr = Entities.transactionFor(VolumeInfo.class)) {
       VolumeInfo foundVolumeInfo = Entities.uniqueResult(volumeInfo);
       if (foundVolumeInfo != null) {
         if (success) {
           foundVolumeInfo.setStatus(StorageProperties.Status.available.toString());
-          ThruputMetrics.endOperation(snapshotId != null ? MonitoredAction.CREATE_VOLUME_FROM_SNAPSHOT : MonitoredAction.CREATE_VOLUME, volumeId,
+          LOG.debug("Volume " + this.volumeId + " set to 'available' state");
+          ThruputMetrics.endOperation(this.snapshotId != null ? MonitoredAction.CREATE_VOLUME_FROM_SNAPSHOT : MonitoredAction.CREATE_VOLUME, this.volumeId,
               System.currentTimeMillis());
         } else {
           foundVolumeInfo.setStatus(StorageProperties.Status.failed.toString());
+          LOG.debug("Volume " + this.volumeId + " set to 'failed' state");
         }
-        if (snapshotId != null) {
-          foundVolumeInfo.setSize(size);
+        if (this.snapshotId != null) {
+          foundVolumeInfo.setSize(this.size);
         }
       } else {
-        LOG.error("VolumeInfo entity for volume id " + volumeId + " was not found in the database");
+        LOG.error("VolumeInfo entity for volume id " + this.volumeId + " was not found in the database");
       }
       tr.commit();
     } catch (Exception e) {
-      LOG.error("Failed to update VolumeInfo entity for volume id " + volumeId + " in the database", e);
+      LOG.error("Failed to update VolumeInfo entity for volume id " + this.volumeId + " in the database", e);
     }
   }
 
   // DO NOT throw any exceptions from cleaning routines. Log the errors and move on
   private void cleanFailedSnapshot(String snapshotId) {
-    if (snapshotId == null)
+    if (snapshotId == null) {
       return;
+    }
     LOG.info("Disconnecting and cleaning local snapshot after failed snapshot transfer: " + snapshotId);
     try {
       blockManager.finishVolume(snapshotId);
@@ -628,7 +621,12 @@ public class VolumeCreator implements Runnable {
     snapshotTransfer.download(sr);
 
     // Apply the snapshot delta
-    blockManager.restoreSnapshotDelta(snap.getSnapshotId(), prevSnap.getSnapshotId(), snapshotId, sr);
+    try {
+      blockManager.restoreSnapshotDelta(snap.getSnapshotId(), prevSnap.getSnapshotId(), snapshotId, sr);
+    } catch (EucalyptusCloudException ece) {
+      cleanFailedSnapshot(snapshotId);
+      throw ece;
+    }
   }
 
 }

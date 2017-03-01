@@ -130,7 +130,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 typedef struct rebooting_thread_params_t {
-    ncInstance instance;
+    char instanceId[CHAR_BUFFER_SIZE];
     struct nc_state_t nc;
 } rebooting_thread_params;
 
@@ -342,14 +342,24 @@ static void *rebooting_thread(void *arg)
     char *xml = NULL;
     char resourceName[1][MAX_SENSOR_NAME_LEN] = { "" };
     char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { "" };
-    //    ncInstance *instance = ((ncInstance *) arg);
     ncInstance *instance = NULL;
     struct nc_state_t *nc = NULL;
     virDomainPtr dom = NULL;
     virConnectPtr conn = NULL;
     rebooting_thread_params *params = ((rebooting_thread_params *) arg);
-    instance = &(params->instance);
     nc = &(params->nc);
+
+    sem_p(inst_sem);
+    {
+        instance = find_instance(&global_instances, params->instanceId);
+    }
+    sem_v(inst_sem);
+
+    if (instance == NULL) {
+        LOGERROR("[%s] cannot find instance\n", params->instanceId);
+        EUCA_FREE(params)
+        return NULL;
+    }
 
     LOGDEBUG("[%s] spawning rebooting thread\n", instance->instanceId);
 
@@ -376,6 +386,9 @@ static void *rebooting_thread(void *arg)
     }
     virDomainFree(dom);                // release libvirt resource
     unlock_hypervisor_conn();
+
+    instance->bootTime = time(NULL);    // otherwise nc_state.booting_cleanup_threshold will kick in
+    change_state(instance, BOOTING);    // not STAGING, since in that mode we don't poll hypervisor for info
 
     // try shutdown first, then kill it if uncooperative
     if (shutdown_then_destroy_domain(instance->instanceId, TRUE) != EUCA_OK) {
@@ -459,7 +472,7 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     }
 
     params = EUCA_ZALLOC(1, sizeof(rebooting_thread_params));
-    memcpy(&(params->instance), instance, sizeof(ncInstance));
+    memcpy(&(params->instanceId), instanceId, CHAR_BUFFER_SIZE);
     memcpy(&(params->nc), nc, sizeof(struct nc_state_t));
     // since shutdown/restart may take a while, we do them in a thread
     if (pthread_create(&tcb, NULL, rebooting_thread, params)) {

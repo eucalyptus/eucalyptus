@@ -274,9 +274,13 @@ public class CephRbdProvider implements SANProvider {
         // Add it to database, duty cycles will clean them up and update the database
         Transactions.save(new CephRbdSnapshotToBeDeleted(snapParent.getPool(), snapParent.getImage(), snapParent.getSnapshot()));
       } else {
-        LOG.debug("Cannot delete RBD snapshot for " + snapshotId + " due to an invalid snapshot point ID " + snapshotPointId
-            + ". Either the EBS snapshot did not origniate in this az or was created pre Eucalyptus 4.4.0 "
-            + " in which case the cleanup of the RBD snapshot has to be performed manually");
+        // If the snapshot was created before Euca v4.4.0, then there would be
+        // no snapshot point ID, but the PopulateSnapPoints groovy script 
+        // (existing only in v4.4.x) should have found it and filled in the
+        // snapshot point ID during Ceph provider initialization.
+        LOG.debug("Cannot delete RBD snapshot for " + snapshotId + " due to an invalid snapshot point ID " + 
+            snapshotPointId + ". If this EBS snapshot originated in another AZ, then this is normal. " +
+            "Otherwise, you may have to delete the Ceph RBD snapshot manually.");
       }
 
       return true;
@@ -346,7 +350,7 @@ public class CephRbdProvider implements SANProvider {
 
   @Override
   public void unexportResource(String volumeId, String nodeIqn) throws EucalyptusCloudException {
-    LOG.debug("Unnexporting volumeId=" + volumeId + ", nodeIqn=" + nodeIqn + ". This is a no-op");
+    LOG.debug("Unexporting volumeId=" + volumeId + ", nodeIqn=" + nodeIqn + ". This is a no-op");
   }
 
   @Override
@@ -423,7 +427,7 @@ public class CephRbdProvider implements SANProvider {
 
   @Override
   public void deleteSnapshotPoint(String parentVolumeId, String snapshotPointId, String parentVolumeIqn) throws EucalyptusCloudException {
-    LOG.info("Deleting snapshot point  parentVolumeId=" + parentVolumeId + ", snapshotPointId=" + snapshotPointId + ", parentVolumeIqn="
+    LOG.info("Deleting snapshot point parentVolumeId=" + parentVolumeId + ", snapshotPointId=" + snapshotPointId + ", parentVolumeIqn="
         + parentVolumeIqn);
     // snapshotPointId is of the form pool/image@snapshot, get the pool information
     CanonicalRbdObject parent = CanonicalRbdObject.parse(snapshotPointId);

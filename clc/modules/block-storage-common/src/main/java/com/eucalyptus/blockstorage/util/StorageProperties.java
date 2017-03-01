@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,11 +12,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
- *
+ * 
  * This file may incorporate work covered under the following copyright
  * and permission notice:
  *
@@ -149,11 +145,10 @@ public class StorageProperties {
   public static final Pattern PARSE_BLOCK_DEVICE = Pattern.compile("source.* dev='([^']*)'");
 
   public static final ImmutableSet<String> DELTA_GENERATION_STATE_EXCLUSION = ImmutableSet.of(StorageProperties.Status.failed.toString(), 
-      StorageProperties.Status.deleting.toString(), StorageProperties.Status.deletedfromebs.toString(), StorageProperties.Status.deleted.toString(),
-      StorageProperties.Status.error.toString());
+      StorageProperties.Status.deleting.toString(), StorageProperties.Status.deletedfromebs.toString(), StorageProperties.Status.deleted.toString());
 
   public static final ImmutableSet<String> DELTA_RESTORATION_STATE_EXCLUSION = ImmutableSet.of(StorageProperties.Status.failed.toString(),
-      StorageProperties.Status.deleted.toString(), StorageProperties.Status.error.toString());
+      StorageProperties.Status.deleted.toString());
 
   public static final Criterion SNAPSHOT_DELTA_GENERATION_CRITERION =
       Restrictions.not(Restrictions.in("status", DELTA_GENERATION_STATE_EXCLUSION));
@@ -221,15 +216,33 @@ public class StorageProperties {
       ServiceConfiguration walrusConfig = Topology.lookup(ObjectStorage.class);
       WALRUS_URL = ServiceUris.remote(walrusConfig).toASCIIString();
       StorageProperties.enableSnapshots = true;
-      LOG.info("Setting WALRUS_URL to: " + WALRUS_URL);
+      LOG.debug("Setting WALRUS_URL to: " + WALRUS_URL);
     } catch (Exception e) {
       LOG.warn("Could not obtain walrus information. Snapshot functionality may be unavailable. Have you registered ObjectStorage?");
       StorageProperties.enableSnapshots = false;
     }
   }
 
+  //TODO: Split this enum which is overloaded, used by snapshots and volumes, and
+  // use AWS's states for compatibility where possible. see:
+  // http://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/services/ec2/model/SnapshotState.html
+  // http://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/services/ec2/model/VolumeState.html
+  // Snapshots: 
+  //   "pending"   == AWS "Pending" \_ Are these two any different in Euca?
+  //   "creating"  == AWS "Pending" /
+  //   "available" == AWS "Completed"
+  //   "failed"    == AWS "Error"
+  //   "delet*" are Euca-specific
+  // Volumes:
+  //   "creating"  == AWS "Creating"
+  //   "available" == AWS "Available"
+  //   "failed"    == AWS "Error"
+  //   "deleting"  == AWS "Deleting"
+  //   "deleted"   == AWS "Deleted"
+  //   "pending" and "deletedfromebs" not used for volumes
+
   public enum Status {
-    creating, available, pending, completed, failed, error, deleting, deleted, deletedfromebs
+    creating, available, pending, failed, deleting, deleted, deletedfromebs
   }
 
   public enum StorageParameters {

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,11 +12,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
- *
+ * 
  * This file may incorporate work covered under the following copyright
  * and permission notice:
  *
@@ -134,7 +130,7 @@ public class FailedSnapshotCleaner extends CheckerTask {
 
     // Disconnect snapshot from SC
     try {
-      LOG.info("Disconnecting snapshot " + snapshotId + " from the Storage Controller");
+      LOG.debug("Disconnecting snapshot " + snapshotId + " from the Storage Controller");
       blockManager.finishVolume(snapshotId);
     } catch (Exception e) {
       LOG.debug("Attempt to disconnect snapshot " + snapshotId + " from Storage Controller failed because: " + e.getMessage());
@@ -142,7 +138,7 @@ public class FailedSnapshotCleaner extends CheckerTask {
 
     // Delete snapshot from backend
     try {
-      LOG.info("Cleaning snapshot " + snapshotId + " on storage backend");
+      LOG.debug("Cleaning snapshot " + snapshotId + " on storage backend");
       blockManager.cleanSnapshot(snapshotId, snapInfo.getSnapPointId());
     } catch (Exception e) {
       LOG.debug("Attempt to clean snapshot " + snapshotId + " on storage backend failed because: " + e.getMessage());
@@ -151,7 +147,7 @@ public class FailedSnapshotCleaner extends CheckerTask {
     // Delete snapshot from OSG
     try {
       if (!Strings.isNullOrEmpty(snapInfo.getSnapshotLocation())) {
-        LOG.info("Deleting snapshot " + snapshotId + " from objectsotrage");
+        LOG.debug("Deleting snapshot " + snapshotId + " from objectsotrage");
         if (snapshotTransfer == null) {
           snapshotTransfer = new S3SnapshotTransfer();
         }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,11 +12,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
- *
+ * 
  * This file may incorporate work covered under the following copyright
  * and permission notice:
  *
@@ -94,7 +90,7 @@ public class ExpiredVolumeCleaner extends CheckerTask {
     try (TransactionResource tr = Entities.transactionFor(VolumeInfo.class)) {
       List<VolumeInfo> volumeInfos =
           Entities.query(new VolumeInfo(), Boolean.FALSE,
-              BlockStorageUtil.getExpriedCriterion(StorageInfo.getStorageInfo().getVolExpiration()), Collections.EMPTY_MAP);
+              BlockStorageUtil.getExpiredCriterion(StorageInfo.getStorageInfo().getVolExpiration()), Collections.EMPTY_MAP);
       if (volumeInfos != null && !volumeInfos.isEmpty()) {
         for (VolumeInfo volumeInfo : volumeInfos) {
           LOG.debug("Deleting metadata for expired volume " + volumeInfo.getVolumeId());
