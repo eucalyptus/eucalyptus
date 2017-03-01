@@ -66,6 +66,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.NoSuchElementException;
+import java.util.concurrent.Callable;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorColumn;
 import javax.persistence.Entity;
@@ -90,11 +91,18 @@ import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.auth.principal.FullName;
+import com.eucalyptus.upgrade.Upgrades;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.fsm.StateMachine;
+import com.google.common.base.Predicate;
+import groovy.sql.Sql;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_config" )
@@ -336,6 +344,50 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
       return this.lookupStateMachine( ).getState( );
     } catch ( NoSuchElementException ex ) {
       return Component.State.PRIMORDIAL;
+    }
+  }
+
+  @Upgrades.PreUpgrade(  since = Upgrades.Version.v5_0_0, value = Empyrean.class )
+  public static class ComponentConfigurationPreUpgrade500 implements Callable<Boolean> {
+    private static final Logger logger = Logger.getLogger( ComponentConfigurationPreUpgrade500.class );
+
+    @Override
+    public Boolean call( ) throws Exception {
+      Sql sql = null;
+      try {
+        sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection( "eucalyptus_config" );
+        sql.execute( "alter table config_component_base drop column if exists arbitrator_gateway_host" );
+        return true;
+      } catch ( Exception ex ) {
+        logger.error( "Error deleting column arbitrator_gateway_host for config_component_base", ex );
+        return false;
+      } finally {
+        if ( sql != null ) {
+          sql.close( );
+        }
+      }
+    }
+  }
+
+  @Upgrades.EntityUpgrade( entities = ComponentConfiguration.class, since = Upgrades.Version.v5_0_0, value = Empyrean.class )
+  public enum ComponentConfigurationUpgrade500 implements Predicate<Class> {
+    INSTANCE;
+    private static Logger logger = Logger.getLogger( ComponentConfigurationUpgrade500.class );
+
+    @Override
+    public boolean apply( final Class arg0 ) {
+      try ( final TransactionResource db = Entities.transactionFor( ComponentConfiguration.class ) ) {
+        final int count = Entities.delete(
+            Entities.restriction( ComponentConfiguration.class )
+                .equal( ComponentConfiguration_.servicePath, "/services/Arbitrator" )
+                .build( ) )
+            .delete();
+        logger.info( "Deleted arbitrator service configurations: " + count );
+        db.commit( );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+      return true;
     }
   }
 }
