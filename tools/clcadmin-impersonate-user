@@ -1,0 +1,148 @@
+#!/usr/bin/python -tt
+#
+# Copyright (c) 2017 Hewlett Packard Enterprise Development LP
+#
+# Redistribution and use of this software in source and binary forms,
+# with or without modification, are permitted provided that the following
+# conditions are met:
+#
+#   Redistributions of source code must retain the above copyright notice,
+#   this list of conditions and the following disclaimer.
+#
+#   Redistributions in binary form must reproduce the above copyright
+#   notice, this list of conditions and the following disclaimer in the
+#   documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+"""
+%(prog)s generates temporary credentials for administrative impersonation
+of accounts (users). Credentials are output in a form suitable for
+running inside an `eval' command.  It must be run by the superuser on an
+active cloud controller.
+"""
+
+from __future__ import unicode_literals
+
+import argparse
+import json
+import logging
+import os
+import pipes
+import subprocess
+import sys
+import urlparse
+
+import boto.sts
+from boto.sts.credentials import Credentials
+from boto.regioninfo import RegionInfo
+
+
+CREDENTIAL_EXE = 'clcadmin-assume-system-credentials'
+REGION_NAME = 'localhost'
+REGION_HOST = '127.0.0.1'
+PORT = 8773
+SERVICE_PATH = '/services/Tokens'
+DURATION_SECS = 900
+
+
+class TokensConnection(boto.sts.STSConnection):
+    def get_impersonation_token(self, account_name, user_name):
+        params = {
+            'AccountAlias': account_name,
+            'UserName': user_name,
+            'DurationSeconds': DURATION_SECS,
+        }
+        if params['UserName'] is None:
+            params['UserName'] = 'admin'
+        return self.get_object('GetImpersonationToken', params,
+                               Credentials, verb='POST')
+
+
+def parse_cli_args():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        '-a', dest='account', required=True,
+        help='the account containing the user (required)')
+    parser.add_argument(
+        '-u', dest='user',
+        help='user to impersonate (optional)')
+    parser.add_argument('-v', dest='verbose', action='count',
+                        help='show more verbose output')
+    return parser.parse_args()
+
+
+def get_creds():
+    proc = subprocess.Popen([CREDENTIAL_EXE], stdout=subprocess.PIPE)
+    for line in proc.stdout:
+        if 'AWS_ACCESS_KEY_ID=' in line:
+            key_id = line.strip().split('=')[1].strip('";')
+        if 'AWS_SECRET_ACCESS_KEY=' in line:
+            secret_key = line.strip().split('=')[1].strip('";')
+    if proc.wait() != 0:
+        raise subprocess.CalledProcessError(proc.returncode, CREDENTIAL_EXE)
+    return key_id, secret_key
+
+
+def print_result(creds):
+    print_var('AWS_ACCESS_KEY_ID', creds.access_key)
+    print_var('AWS_ACCESS_KEY', creds.access_key)
+    print_var('EC2_ACCESS_KEY', creds.access_key)
+    print_var('AWS_SECRET_ACCESS_KEY', creds.secret_key)
+    print_var('AWS_SECRET_KEY', creds.secret_key)
+    print_var('EC2_SECRET_KEY', creds.secret_key)
+    print_var('AWS_SESSION_TOKEN', creds.session_token)
+    print_var('AWS_SECURITY_TOKEN', creds.session_token)
+    print_var('AWS_CREDENTIAL_EXPIRATION', creds.expiration)
+    # Unset other environment to avoid accidental use
+    print_var('AWS_CREDENTIAL_FILE', None)
+    print_var('EC2_USER_ID', None)
+    print
+    print '# These are temporary user credentials'
+    print '#'
+    print '# If you can read this, rerun this program with eval:'
+    print '#     eval `{0}`'.format(
+        ' '.join(pipes.quote(arg) for arg in sys.argv))
+
+
+def print_var(key, val):
+    if val:
+        fmt = '{key}={val}; export {key};'
+    else:
+        fmt = 'unset {key};'
+    print fmt.format(key=key, val=val)
+
+
+def main():
+    args = parse_cli_args()
+    if args.verbose == 1:
+        boto.set_stream_logger('main', logging.INFO)
+    elif args.verbose >= 2:
+        boto.set_stream_logger('main', logging.DEBUG)
+    try:
+        key_id, secret_key = get_creds()
+    except subprocess.CalledProcessError as err:
+        sys.exit('error: obtaining credentials failed ({0})'.format(err))
+    region_info = RegionInfo(name=REGION_NAME, endpoint=REGION_HOST)
+    conn = TokensConnection(aws_access_key_id=key_id,
+                            aws_secret_access_key=secret_key, is_secure=False,
+                            port=PORT, path=SERVICE_PATH, region=region_info)
+    try:
+        imp_creds = conn.get_impersonation_token(args.account, args.user)
+        print_result(imp_creds)
+    except boto.exception.BotoServerError as err:
+        sys.exit('error: {0}'.format(err.message))
+
+
+if __name__ == '__main__':
+    main()
