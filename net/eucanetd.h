@@ -140,6 +140,7 @@ enum {
     EUCANETD_CVAL_MIDO_MDCIDR,
     EUCANETD_CVAL_MIDO_MAX_RTID,
     EUCANETD_CVAL_MIDO_MAX_ENIID,
+    EUCANETD_CVAL_MIDO_ENABLE_ARPTABLE,
     EUCANETD_CVAL_MIDO_ENABLE_MIDOMD,
     EUCANETD_CVAL_MIDO_API_URIBASE,
     EUCANETD_CVAL_MIDO_MD_VETH_USE_NETNS,
@@ -248,6 +249,8 @@ typedef struct eucanetdConfig_t {
     boolean eucanetd_first_update;
     
     boolean nc_proxy;                //!< Set to TRUE to indicate we're using the NC proxy feature
+    boolean enable_mido_arptable;
+    boolean mido_arptable_config_changed;
     boolean enable_mido_md;
     boolean mido_md_veth_use_netns;
     boolean mido_md_config_changed;

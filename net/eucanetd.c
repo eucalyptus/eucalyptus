@@ -175,6 +175,8 @@ configEntry configKeysNoRestartEUCANETD[] = {
     ,
     {"DISABLE_L2_ISOLATION", "N"}
     ,
+    {"MIDO_ENABLE_ARPTABLE", "Y"}
+    ,
     {"MIDO_ENABLE_MIDOMD", "Y"}
     ,
     {"MIDO_MD_254_EGRESS", "tcp:80"}
@@ -927,6 +929,20 @@ static int eucanetd_fetch_latest_local_config(void) {
             eucanetd_initialize_logs();
 
             if (IS_NETMODE_VPCMIDO(config)) {
+                cval = configFileValue("MIDO_ENABLE_ARPTABLE");
+                if (!strcmp(cval, "Y")) {
+                    if (!config->enable_mido_arptable) {
+                        config->mido_arptable_config_changed = TRUE;
+                    }
+                    config->enable_mido_arptable = TRUE;
+                } else {
+                    if (config->enable_mido_arptable) {
+                        config->mido_arptable_config_changed = TRUE;
+                    }
+                    config->enable_mido_arptable = FALSE;
+                }
+                EUCA_FREE(cval);
+
                 cval = configFileValue("MIDO_ENABLE_MIDOMD");
                 if (!strcmp(cval, "Y")) {
                     if (!config->enable_mido_md) {
@@ -1318,6 +1334,7 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
     cvals[EUCANETD_CVAL_MIDO_MDCIDR] = configFileValue("MIDO_MD_CIDR");
     cvals[EUCANETD_CVAL_MIDO_MAX_RTID] = configFileValue("MIDO_MAX_RTID");
     cvals[EUCANETD_CVAL_MIDO_MAX_ENIID] = configFileValue("MIDO_MAX_ENIID");
+    cvals[EUCANETD_CVAL_MIDO_ENABLE_ARPTABLE] = configFileValue("MIDO_ENABLE_ARPTABLE");
     cvals[EUCANETD_CVAL_MIDO_ENABLE_MIDOMD] = configFileValue("MIDO_ENABLE_MIDOMD");
     cvals[EUCANETD_CVAL_MIDO_API_URIBASE] = configFileValue("MIDO_API_URIBASE");
     cvals[EUCANETD_CVAL_MIDO_MD_VETH_USE_NETNS] = configFileValue("MIDO_MD_VETH_USE_NETNS");
@@ -1445,6 +1462,11 @@ static int eucanetd_read_config(globalNetworkInfo *pGni) {
             snprintf(config->mido_md_254_egress, 256, "%s", cvals[EUCANETD_CVAL_MIDO_MD_254_EGRESS]);
         if (cvals[EUCANETD_CVAL_MIDO_MD_253_EGRESS])
             snprintf(config->mido_md_253_egress, 256, "%s", cvals[EUCANETD_CVAL_MIDO_MD_253_EGRESS]);
+        if (!strcmp(cvals[EUCANETD_CVAL_MIDO_ENABLE_ARPTABLE], "Y")) {
+            config->enable_mido_arptable = TRUE;
+        } else {
+            config->enable_mido_arptable = FALSE;
+        }
         if (!strcmp(cvals[EUCANETD_CVAL_MIDO_ENABLE_MIDOMD], "Y")) {
             config->enable_mido_md = TRUE;
         } else {

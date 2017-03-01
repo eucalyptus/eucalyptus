@@ -1541,6 +1541,28 @@ int mido_create_ip4mac(midonet_api_bridge *br, midoname *devname, char *ip, char
         }
         out = NULL;
     }
+    for (int i = 0; i < max_ip4mac_pairs; i++) {
+        if (ip4mac_pairs[i] == NULL) {
+            continue;
+        }
+        int ip_cmp = strcmp(ip4mac_pairs[i]->ip4mac->ip, ip);
+        int mac_cmp = strcmp(ip4mac_pairs[i]->ip4mac->mac, mac);
+        if (!ip_cmp && !mac_cmp) {
+            LOGEXTREME("ip4mac %s_%s already in mido - abort create.\n", ip, mac);
+            if (outname) {
+                *outname = ip4mac_pairs[i];
+            }
+            return (0);
+        }
+        if (!ip_cmp) {
+            LOGEXTREME("conflicting ip4mac for %s in mido - abort create.\n", ip);
+            return (2);
+        }
+        if (!mac_cmp) {
+            LOGEXTREME("conflicting ip4mac for %s in mido - abort create.\n", mac);
+            return (3);
+        }
+    }
 
     bzero(&myname, sizeof (midoname));
     myname.tenant = strdup(br->obj->tenant);
@@ -1665,6 +1687,28 @@ int mido_create_macport(midonet_api_bridge *br, midoname *devname, char *macAddr
             }
         }
         out = NULL;
+    }
+    for (int i = 0; i < max_macport_pairs; i++) {
+        if (macport_pairs[i] == NULL) {
+            continue;
+        }
+        int mac_cmp = strcmp(macport_pairs[i]->macport->macAddr, macAddr);
+        int port_cmp = strcmp(macport_pairs[i]->macport->portId, portId);
+        if (!mac_cmp && !port_cmp) {
+            LOGEXTREME("macport %s_%s already in mido - abort create.\n", macAddr, portId);
+            if (outname) {
+                *outname = macport_pairs[i];
+            }
+            return (0);
+        }
+        if (!mac_cmp) {
+            LOGEXTREME("conflicting macport for %s in mido - abort create.\n", macAddr);
+            return (2);
+        }
+        if (!port_cmp) {
+            LOGEXTREME("conflicting macport for %s in mido - abort create.\n", portId);
+            return (3);
+        }
     }
 
     bzero(&myname, sizeof (midoname));

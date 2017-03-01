@@ -2242,10 +2242,10 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
         }
 
         // do instance/interface-host connection
-        if (vpcif->host_changed || vpcif->population_failed) {
+        if (vpcif->host_changed || vpcif->population_failed || mido->config->eucanetd_first_update) {
             LOGTRACE("\tconnecting mido host %s with interface %s\n",
                     vpcif->midos[INST_VMHOST]->name, gniif->name);
-            rc = connect_mido_vpc_instance(vpcsubnet, vpcif, gni->instanceDNSDomain);
+            rc = connect_mido_vpc_instance(mido, vpcsubnet, vpcif, gni->instanceDNSDomain);
             if (rc) {
                 LOGERROR("failed to connect %s to %s: check midolman\n", gniif->name, vpcif->midos[INST_VMHOST]->name);
             }
@@ -3180,6 +3180,14 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
             }            
         }
 
+        // Check mido_arptable config changes
+        if (mido->config->mido_arptable_config_changed || mido->config->eucanetd_first_update) {
+            // Clear arp_table and mac_table
+            if (!mido->config->enable_mido_arptable) {
+            }
+            // arp_table and mac_table will be populated during eucanetd iteration
+        }
+        
         // Check mido_md config changes
         if (mido->config->mido_md_config_changed || mido->config->eucanetd_first_update) {
             mido->config->mido_md_config_changed = FALSE;
@@ -7598,16 +7606,18 @@ int connect_mido_vpc_instance_md(mido_config *mido, mido_vpc *vpc, mido_vpc_subn
 
 /**
  * Connects an instance/interface to mido host - link of the interface to the
- * VPC bridge port is created; the corresponding bridge port is created; and
- * the corresponding VPC bridge dhcp entry is created.
+ * VPC bridge port is created; the corresponding bridge port is created;
+ * the corresponding VPC bridge dhcp entry is created; and the corresponding
+ * arp_table and mac_table entries are created.
  *
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
  * @param subnet [in] the subnet where the interface of interst is linked.
  * @param vpcinstance [in] the interface of interest
  * @param instanceDNSDomain [in] DNS domain to be used in the DHCP entry
  *
  * @return 0 on success. non-zero number otherwise.
  */
-int connect_mido_vpc_instance(mido_vpc_subnet *vpcsubnet, mido_vpc_instance *vpcinstance, char *instanceDNSDomain) {
+int connect_mido_vpc_instance(mido_config *mido, mido_vpc_subnet *vpcsubnet, mido_vpc_instance *vpcinstance, char *instanceDNSDomain) {
     int ret = 0, rc = 0;
     char *macAddr = NULL, *ipAddr = NULL;
     char ifacename[IF_NAME_LEN];
@@ -7649,6 +7659,23 @@ int connect_mido_vpc_instance(mido_vpc_subnet *vpcsubnet, mido_vpc_instance *vpc
     if (rc) {
         LOGERROR("failed to create midonet dhcp host entry: check midonet health\n");
         ret = 1;
+    }
+    
+    // setup arp_table and mac_table entries
+    if (mido->config->enable_mido_arptable) {
+        if (vpcinstance->midos[INST_VPCBR_VMPORT] && vpcinstance->midos[INST_VPCBR_VMPORT]->uuid &&
+                ipAddr && macAddr && strlen(ipAddr) && strlen(macAddr)) {
+            LOGEXTREME("setting arp_entry for %s\n", vpcinstance->name);
+            rc = mido_create_ip4mac(vpcsubnet->subnetbr, NULL, ipAddr, macAddr, NULL);
+            if (rc) {
+                LOGWARN("failed to create arp_table entry for %s\n", vpcinstance->name);
+            }
+            LOGEXTREME("setting mac_entry for %s\n", vpcinstance->name);
+            rc = mido_create_macport(vpcsubnet->subnetbr, NULL, macAddr, vpcinstance->midos[INST_VPCBR_VMPORT]->uuid, NULL);
+            if (rc) {
+                LOGWARN("failed to create mac_table entry for %s\n", vpcinstance->name);
+            }
+        }
     }
     EUCA_FREE(ipAddr);
     EUCA_FREE(macAddr);
