@@ -167,32 +167,29 @@ public class StackConfiguration extends AbstractPersistent {
   public static Boolean       OOB_INTERNAL_OPERATIONS           = Boolean.TRUE;
   
   @ConfigurableField( description = "Client idle timeout (secs)." )
-  public static Long          CLIENT_IDLE_TIMEOUT_SECS          = 30L;
-  
-  @ConfigurableField( description = "Client idle timeout (secs)." )
   public static Integer       CLIENT_INTERNAL_TIMEOUT_SECS      = 60;
-  
+
+  @ConfigurableField( description = "Client connection timeout (ms)." )
+  public static Integer       CLIENT_INTERNAL_CONNECT_TIMEOUT_MILLIS = 3000;
+
   @ConfigurableField( description = "Cluster connect timeout (ms)." )
-  public static Long          CLUSTER_CONNECT_TIMEOUT_MILLIS    = 2000L;
+  public static Integer       CLUSTER_CONNECT_TIMEOUT_MILLIS    = 3000;
 
   @ConfigurableField( description = "Server socket idle time-out." )
   public static Integer       PIPELINE_IDLE_TIMEOUT_SECONDS     = 60;
   
   @ConfigurableField( description = "Server http chunk max." )
   public static Integer       CLIENT_HTTP_CHUNK_BUFFER_MAX      = 1048576000;
-  
-  @ConfigurableField( description = "Server worker thread pool max." )
+
+  @ConfigurableField( description = "Client http pool acquire timeout." )
+  public static Long          CLIENT_HTTP_POOL_ACQUIRE_TIMEOUT  = 60_000L;
+
+  @ConfigurableField( description = "Client worker thread pool max." )
   public static Integer       CLIENT_POOL_MAX_THREADS           = 32;
   
-  @ConfigurableField( description = "Server worker thread pool max." )
-  public static Long          CLIENT_POOL_MAX_MEM_PER_CONN      = 0L;
-  
-  @ConfigurableField( description = "Server worker thread pool max." )
-  public static Long          CLIENT_POOL_TOTAL_MEM             = 0L;
-  
-  @ConfigurableField( description = "Client socket select timeout (ms)." )
-  public static Long          CLIENT_POOL_TIMEOUT_MILLIS        = 500L;
-  
+  @ConfigurableField( description = "Client message patterns to match for logging" )
+  public static String        CLIENT_MESSAGE_LOG_WHITELIST = "";
+
   @ConfigurableField( description = "Maximum HTTP chunk size (bytes).",
                       initial = "102400")
   public static Integer       HTTP_MAX_CHUNK_BYTES              = 10 * 10 * 1024;
@@ -206,6 +203,9 @@ public class StackConfiguration extends AbstractPersistent {
   
   @ConfigurableField( description = "Maximum HTTP headers size (bytes)." )
   public static Integer       HTTP_MAX_HEADER_BYTES             = 8 * 1024;
+
+  @ConfigurableField( description = "Maximum HTTP requests per persistent connection." )
+  public static Integer       HTTP_MAX_REQUESTS_PER_CONNECTION  = 100;
 
   @ConfigurableField( description = "HTTP server header for responses (use 'default' for standard)", initial = "default" )
   public static String        HTTP_SERVER_HEADER                = "default";

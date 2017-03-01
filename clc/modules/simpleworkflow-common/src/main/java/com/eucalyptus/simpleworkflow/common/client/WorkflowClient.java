@@ -43,7 +43,6 @@ public class WorkflowClient {
 
   public WorkflowClient( final Class<? extends ComponentId> componentIdClass,
                          final Supplier<User> user,
-                         final String clientConfig,
                          final String domain,
                          final String taskList,
                          final String workflowWorkerConfig,
@@ -52,7 +51,7 @@ public class WorkflowClient {
     this(
         componentIdClass,
         true,
-        Config.buildClient( user, clientConfig ),
+        Config.buildClient( user ),
         domain,
         taskList,
         workflowWorkerConfig,

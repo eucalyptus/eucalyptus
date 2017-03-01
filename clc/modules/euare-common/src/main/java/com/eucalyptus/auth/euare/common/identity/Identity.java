@@ -19,15 +19,14 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare.common.identity;
 
-import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
-import com.eucalyptus.component.annotation.GenerateKeys;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.component.annotation.PublicService;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelOption;
 
 /**
  *
@@ -46,9 +45,9 @@ public class Identity extends ComponentId {
   }
 
   @Override
-  public ClientBootstrap getClientBootstrap( final ChannelPipelineFactory factory ) {
-    final ClientBootstrap clientBootstrap = super.getClientBootstrap( factory );
-    clientBootstrap.setOption( "connectTimeoutMillis", 6000 );
-    return clientBootstrap;
+  public Bootstrap getClientBootstrap( ) {
+    final Bootstrap clientBootstrap = super.getClientBootstrap( );
+    return clientBootstrap
+        .option( ChannelOption.CONNECT_TIMEOUT_MILLIS, 6000 );
   }
 }

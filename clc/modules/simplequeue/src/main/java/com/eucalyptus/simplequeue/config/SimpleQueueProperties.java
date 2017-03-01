@@ -65,11 +65,6 @@ public class SimpleQueueProperties {
     changeListener = Config.NameValidatingChangeListener.class )
   public static volatile String SWF_TASKLIST = "SimpleQueueTaskList";
   @ConfigurableField(
-    initial = "{\"ConnectionTimeout\": 10000}",
-    description = "JSON configuration for the simplequeue simple workflow client",
-    changeListener = Config.ClientConfigurationValidatingChangeListener.class )
-  public static volatile String SWF_CLIENT_CONFIG = "{\"ConnectionTimeout\": 10000}";
-  @ConfigurableField(
     initial = DEFAULT_SWF_ACTIVITY_WORKER_CONFIG,
     description = "JSON configuration for the simplequeue simple workflow activity worker",
     changeListener = Config.ActivityWorkerConfigurationValidatingChangeListener.class )

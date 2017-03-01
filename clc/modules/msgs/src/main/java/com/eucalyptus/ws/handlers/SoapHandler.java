@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,23 +60,65 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.component;
+package com.eucalyptus.ws.handlers;
 
-import java.net.URI;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.google.common.base.Function;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import java.util.function.Supplier;
+import javax.annotation.Nullable;
+import org.apache.axiom.soap.SOAPEnvelope;
+import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelHandler;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import com.eucalyptus.binding.Binding;
+import com.eucalyptus.http.MappingHttpMessage;
+import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Pair;
+import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
+import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
+import javaslang.control.Option;
 
-public interface Dispatcher {
+@ChannelHandler.Sharable
+public class SoapHandler extends MessageStackHandler {
+  private static Logger LOG = Logger.getLogger( SoapHandler.class );
   
-  public abstract void dispatch( BaseMessage msg );
+  @Override
+  public void incomingMessage( final MessageEvent event ) throws Exception {
+    if ( event.getMessage( ) instanceof MappingHttpMessage ) {
+      final MappingHttpMessage message = ( MappingHttpMessage ) event.getMessage( );
+      final SOAPEnvelope env = message.getSoapEnvelope( );
+      if ( !env.hasFault( ) ) {
+        message.setOmMessage( env.getBody( ).getFirstElement( ) );
+      } else {
+        final Supplier<Integer> statusCodeSupplier = () -> getStatus( message );
+        IoSoapHandler.perhapsFault( env, statusCodeSupplier );
+      }
+    }
+  }
   
-  public abstract <R extends BaseMessage> R send( BaseMessage msg ) throws EucalyptusCloudException;
-  
-  public abstract String getName( );
-  
-  public abstract boolean isLocal( );
-  
-  public abstract String toString( );
-  
+  @Override
+  public void outgoingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
+    if ( event.getMessage( ) instanceof MappingHttpMessage ) {
+      final MappingHttpMessage httpMessage = ( MappingHttpMessage ) event.getMessage( );
+      final Option<Pair<SOAPEnvelope,Integer>> soapEnvelopeOption =
+          IoSoapHandler.perhapsBuildFault( httpMessage.getMessage( ) );
+      if ( soapEnvelopeOption.isDefined( ) ) {
+        httpMessage.setSoapEnvelope( soapEnvelopeOption.get( ).getLeft( ) );
+        if ( httpMessage instanceof MappingHttpResponse ) {
+          ( ( MappingHttpResponse ) httpMessage ).setStatus( HttpResponseStatus.valueOf( soapEnvelopeOption.get( ).getRight( ) ) );
+        }
+      } else {
+        httpMessage.setSoapEnvelope( IoSoapHandler.buildSoapEnvelope( httpMessage.getOmMessage() ) );
+      }
+    }
+  }
+
+  @Nullable
+  private static Integer getStatus( final MappingHttpMessage message ) {
+    return message instanceof MappingHttpResponse ?
+        ((MappingHttpResponse) message).getStatus( ).getCode( ) :
+        null;
+  }
 }

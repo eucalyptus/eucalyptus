@@ -105,7 +105,6 @@ import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.WebServicesException;
 import com.eucalyptus.ws.handlers.ExceptionMarshallerHandler;
 import com.eucalyptus.ws.server.FilteredPipeline.InternalPipeline;
-import com.google.common.base.Optional;
 
 public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE: this needs to move up dependency tree.
   private static Logger                     LOG      = Logger.getLogger( NioServerHandler.class );
@@ -257,7 +256,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
 
     ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );
     writeFuture.addListener( ChannelFutureListener.CLOSE );
-    response.addHeader( HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE );
+    response.setHeader( HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE );
     if ( ctx.getChannel( ).isConnected( ) ) {
       Channels.write( ctx, writeFuture, response );
     }

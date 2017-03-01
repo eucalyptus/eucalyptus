@@ -42,12 +42,6 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 import org.apache.http.conn.ssl.BrowserCompatHostnameVerifier;
-import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.MessageEvent;
 import com.eucalyptus.auth.euare.common.identity.Identity;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurationManager;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
@@ -62,19 +56,27 @@ import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.IO;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.ws.Handlers;
+import com.eucalyptus.ws.IoHandlers;
 import com.eucalyptus.ws.StackConfiguration;
-import com.eucalyptus.ws.handlers.MessageStackHandler;
+import com.eucalyptus.ws.client.MonitoredSocketChannelInitializer;
+import com.eucalyptus.ws.handlers.IoMessageWrapperHandler;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.socket.SocketChannel;
 
 /**
  *
  */
 @ComponentPart( Identity.class )
-public class IdentityClientPipeline implements ChannelPipelineFactory {
+public class IdentityClientChannelInitializer extends MonitoredSocketChannelInitializer {
   private static final String PROTOCOL = "TLS";
   private static final String PROP_SSL_TRUSTSTORE_PASSWORD = "com.eucalyptus.auth.euare.identity.regionSslTrustStorePassword";
   private static final String PROP_SSL_TRUSTSTORE_TYPE = "com.eucalyptus.auth.euare.identity.regionSslTrustStoreType";
@@ -132,34 +134,32 @@ public class IdentityClientPipeline implements ChannelPipelineFactory {
   }
 
   @Override
-  public ChannelPipeline getPipeline( ) throws Exception {
-    final ChannelPipeline pipeline = Channels.pipeline( );
-    for ( Map.Entry<String, ChannelHandler> e : Handlers.channelMonitors( TimeUnit.SECONDS, StackConfiguration.CLIENT_INTERNAL_TIMEOUT_SECS ).entrySet( ) ) {
-      pipeline.addLast( e.getKey( ), e.getValue( ) );
-    }
-    pipeline.addLast( "decoder", Handlers.newHttpResponseDecoder( ) );
-    pipeline.addLast( "aggregator", Handlers.newHttpChunkAggregator() );
-    pipeline.addLast( "encoder", Handlers.httpRequestEncoder() );
-    pipeline.addLast( "serializer", Handlers.soapMarshalling() );
-    pipeline.addLast( "wssec", Handlers.internalWsSecHandler() );
-    pipeline.addLast( "addressing", Handlers.addressingHandler() );
-    pipeline.addLast( "soap", Handlers.soapHandler() );
-    pipeline.addLast( "binding", Handlers.bindingHandler( "www_eucalyptus_com_ns_identity_2016_10_01" ) );
-    pipeline.addLast( "ssl-detection-handler", new Handlers.ClientSslHandler( "ssl-handler" ) {
+  protected void initChannel( final SocketChannel socketChannel ) throws Exception {
+    super.initChannel( socketChannel );
+    final ChannelPipeline pipeline = socketChannel.pipeline( );
+    pipeline.addLast( "decoder", IoHandlers.httpResponseDecoder( ) );
+    pipeline.addLast( "aggregator", IoHandlers.newHttpChunkAggregator() );
+    pipeline.addLast( "encoder", IoHandlers.httpRequestEncoder() );
+    pipeline.addLast( "wrapper", IoHandlers.ioMessageWrappingHandler( ) );
+    pipeline.addLast( "serializer", IoHandlers.soapMarshalling() );
+    pipeline.addLast( "wssec", IoHandlers.internalWsSecHandler() );
+    pipeline.addLast( "addressing", IoHandlers.addressingHandler() );
+    pipeline.addLast( "soap", IoHandlers.soapHandler() );
+    pipeline.addLast( "binding", IoHandlers.bindingHandler( "www_eucalyptus_com_ns_identity_2016_10_01" ) );
+    pipeline.addLast( "ssl-detection-handler", new IoHandlers.ClientSslHandler( "ssl-handler" ) {
       @Override
       protected SSLEngine createSSLEngine( final String peerHost, final int peerPort ) {
         return getSSLEngine( peerHost, peerPort );
       }
     } );
     pipeline.addLast( "remote", new RemotePathHandler( ) );
-    return pipeline;
   }
 
-  public static final class RemotePathHandler extends MessageStackHandler {
+  public static final class RemotePathHandler extends ChannelOutboundHandlerAdapter {
     @Override
-    public void outgoingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
-      if ( event.getMessage( ) instanceof MappingHttpRequest ) {
-        final MappingHttpRequest httpMessage = (MappingHttpRequest) event.getMessage();
+    public void write( final io.netty.channel.ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise ) throws Exception {
+      if ( msg instanceof MappingHttpRequest ) {
+        final MappingHttpRequest httpMessage = (MappingHttpRequest) msg;
         httpMessage.setServicePath( ComponentIds.lookup( Identity.class ).getServicePath() );
         String uri = URI.create( httpMessage.getUri( ) ).resolve( httpMessage.getServicePath( ) ).toString( );
         if ( RegionConfigurations.isUseSsl() ) {
@@ -169,6 +169,7 @@ public class IdentityClientPipeline implements ChannelPipelineFactory {
         }
         httpMessage.setUri( uri );
       }
+      super.write( ctx, msg, promise );
     }
   }
 

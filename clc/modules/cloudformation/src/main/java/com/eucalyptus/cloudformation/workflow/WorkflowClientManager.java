@@ -52,8 +52,8 @@ public class WorkflowClientManager {
 
     } else {
       simpleWorkflowClient = Config.buildClient(
-          CloudFormationAWSCredentialsProvider.CloudFormationUserSupplier.INSTANCE,
-          SWF_CLIENT_CONFIG );
+          CloudFormationAWSCredentialsProvider.CloudFormationUserSupplier.INSTANCE
+      );
     }
 
     workflowClient = new WorkflowClient(

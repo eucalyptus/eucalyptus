@@ -60,27 +60,56 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.ws;
+package com.eucalyptus.cluster;
 
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import java.util.concurrent.TimeUnit;
+import com.eucalyptus.component.annotation.ComponentPart;
+import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.util.async.AsyncRequestPoolable;
+import com.eucalyptus.ws.IoHandlers;
+import com.eucalyptus.ws.client.MonitoredSocketChannelInitializer;
+import com.eucalyptus.ws.handlers.ClusterWsSecHandler;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.socket.SocketChannel;
 
-@SuppressWarnings( "serial" )
-public class InvalidOperationException extends WebServicesException {
-  
-  public InvalidOperationException( ) {
-    super( HttpResponseStatus.BAD_REQUEST );
+@ComponentPart( ClusterController.class )
+public final class ClusterClientChannelInitializer extends MonitoredSocketChannelInitializer implements AsyncRequestPoolable {
+
+  private static final Supplier<ChannelHandler> wsSecHandler = Suppliers.memoize( ClusterWsSecHandler::new );
+  private static final Supplier<Integer> poolSize = Suppliers.memoizeWithExpiration(
+      ClusterClientChannelInitializer::getRequestWorkers,
+      30,
+      TimeUnit.SECONDS
+  );
+
+  @Override
+  protected void initChannel( final SocketChannel socketChannel ) throws Exception {
+    super.initChannel( socketChannel );
+    final ChannelPipeline pipeline = socketChannel.pipeline( );
+    pipeline.addLast( "decoder", IoHandlers.httpResponseDecoder( ) );
+    pipeline.addLast( "aggregator", IoHandlers.newHttpChunkAggregator( ) );
+    pipeline.addLast( "encoder", IoHandlers.httpRequestEncoder( ) );
+    pipeline.addLast( "wrapper", IoHandlers.ioMessageWrappingHandler( ) );
+    pipeline.addLast( "serializer", IoHandlers.soapMarshalling( ) );
+    pipeline.addLast( "wssec", wsSecHandler.get( ) );
+    pipeline.addLast( "addressing", IoHandlers.addressingHandler( "EucalyptusCC#" ) );
+    pipeline.addLast( "soap", IoHandlers.soapHandler( ) );
+    pipeline.addLast( "binding", IoHandlers.bindingHandler( "eucalyptus_ucsb_edu" ) );
   }
-  
-  public InvalidOperationException( String message, Throwable cause ) {
-    super( message, cause, HttpResponseStatus.BAD_REQUEST );
+
+  @Override
+  public int fixedSize( ) {
+    return poolSize.get( );
   }
-  
-  public InvalidOperationException( String message ) {
-    super( message, HttpResponseStatus.BAD_REQUEST );
+
+  private static int getRequestWorkers( ) {
+    try {
+      return Clusters.getConfiguration( ).getRequestWorkers( );
+    } catch ( Exception e ) {
+      return -1;
+    }
   }
-  
-  public InvalidOperationException( Throwable cause ) {
-    super( cause, HttpResponseStatus.BAD_REQUEST );
-  }
-  
 }

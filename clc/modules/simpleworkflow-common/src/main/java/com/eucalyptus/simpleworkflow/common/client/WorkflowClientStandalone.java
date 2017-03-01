@@ -39,11 +39,13 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
 
+import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow;
+import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflowClient;
 import com.amazonaws.services.simpleworkflow.flow.annotations.Activities;
 import com.amazonaws.services.simpleworkflow.flow.annotations.Workflow;
 import com.eucalyptus.records.Logs;
@@ -341,9 +343,11 @@ public class WorkflowClientStandalone {
     return provider;
   }
   
-  private String buildClientConfig() {
-    return String.format("{\"ConnectionTimeout\": %d, \"MaxConnections\": %d}",
-        this.clientConnectionTimeout, this.clientMaxConnections);
+  private ClientConfiguration buildClientConfig() {
+    final ClientConfiguration configuration = new ClientConfiguration( );
+    configuration.setConnectionTimeout( this.clientConnectionTimeout );
+    configuration.setMaxConnections( this.clientMaxConnections );
+    return configuration;
   }
   
   private String buildWorkflowWorkerConfig() {
@@ -358,8 +362,9 @@ public class WorkflowClientStandalone {
   
   private AmazonSimpleWorkflow getAWSClient() {
     final AWSCredentialsProvider provider = this.getCredentialsProvider();
-    final String clientConfig = this.buildClientConfig();
-    final AmazonSimpleWorkflow client = Config.buildClient(provider, this.swfEndpoint, clientConfig);
+    final ClientConfiguration configuration = this.buildClientConfig();
+    final AmazonSimpleWorkflow client = new AmazonSimpleWorkflowClient( provider, configuration );
+    client.setEndpoint(this.swfEndpoint);
     return client;
   }
   

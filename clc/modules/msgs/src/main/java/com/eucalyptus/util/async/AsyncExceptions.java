@@ -85,11 +85,11 @@ public class AsyncExceptions {
       final EucalyptusRemoteFault remoteFault =
           Exceptions.findCause( throwable, EucalyptusRemoteFault.class );
       if ( remoteFault != null ) {
-        final HttpResponseStatus status =
-            Objects.firstNonNull( remoteFault.getStatus(), HttpResponseStatus.INTERNAL_SERVER_ERROR );
+        final Integer status =
+            Objects.firstNonNull( remoteFault.getStatus(), HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode( ) );
         final String code = remoteFault.getFaultCode();
         final String message = remoteFault.getFaultDetail();
-        error = Optional.of( new AsyncWebServiceError( status.getCode( ), code, message ) );
+        error = Optional.of( new AsyncWebServiceError( status, code, message ) );
       }
     }
 
@@ -98,7 +98,7 @@ public class AsyncExceptions {
       final FailedRequestException failedRequestException =
           Exceptions.findCause( throwable, FailedRequestException.class );
       if ( failedRequestException != null && failedRequestException.getRequest( ) instanceof WebServiceError ) {
-        final WebServiceError webServiceError = (WebServiceError)failedRequestException.getRequest( );
+        final WebServiceError webServiceError = failedRequestException.getRequest( );
         final String code = webServiceError.getWebServiceErrorCode( );
         final String message = webServiceError.getWebServiceErrorMessage( );
         if ( code != null && message != null ) {

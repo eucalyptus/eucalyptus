@@ -23,7 +23,11 @@ package com.eucalyptus.objectstorage.client;
 import java.net.URI;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.Nullable;
 
@@ -34,7 +38,9 @@ import com.amazonaws.Protocol;
 import com.amazonaws.SDKGlobalConfiguration;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.http.AmazonHttpClient;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.S3ClientOptions;
 import com.eucalyptus.auth.AuthException;
@@ -43,7 +49,10 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.objectstorage.ObjectStorage;
+import com.eucalyptus.util.Pair;
+import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -127,18 +136,17 @@ public class GenericS3ClientFactory {
     }
   }
 
-  protected static ClientConfiguration getDefaultConfiguration(boolean withHttps) {
+  protected static EucaHttpClientKey buildHttpClientKey( boolean withHttps ) {
     final GenericS3ClientFactoryConfiguration s3ClientFactoryConfiguration =
         GenericS3ClientFactoryConfiguration.getInstance( );
-    ClientConfiguration config = new ClientConfiguration();
-    config.setConnectionTimeout(s3ClientFactoryConfiguration.getConnection_timeout_ms());
-    config.setMaxConnections(s3ClientFactoryConfiguration.getMax_connections());
-    config.setMaxErrorRetry(s3ClientFactoryConfiguration.getMax_error_retries());
-    config.setUseReaper(true);
-    config.setSocketTimeout(s3ClientFactoryConfiguration.getSocket_read_timeout_ms());
-    config.setProtocol(withHttps ? Protocol.HTTPS : Protocol.HTTP);
-    config.setSignerOverride(s3ClientFactoryConfiguration.getSigner_type());
-    return config;
+    return new EucaHttpClientKey(
+        s3ClientFactoryConfiguration.getConnection_timeout_ms(),
+        s3ClientFactoryConfiguration.getSocket_read_timeout_ms(),
+        withHttps,
+        s3ClientFactoryConfiguration.getSigner_type(),
+        s3ClientFactoryConfiguration.getMax_connections(),
+        s3ClientFactoryConfiguration.getMax_error_retries()
+    );
   }
 
   public static S3ClientOptions getDefaultClientOptions() {
@@ -148,8 +156,8 @@ public class GenericS3ClientFactory {
   }
 
   public static AmazonS3Client getS3Client(AWSCredentialsProvider provider, boolean https) throws NoSuchElementException {
-    ClientConfiguration config = getDefaultConfiguration(https);
-    AmazonS3Client s3Client = new AmazonS3Client(provider, config);
+    EucaHttpClientKey config = buildHttpClientKey(https);
+    AmazonS3Client s3Client = new EucaS3Client(provider, config);
     s3Client.setS3ClientOptions(getDefaultClientOptions());
     s3Client.setEndpoint(getRandomOSGUri().toString());
     return s3Client;
@@ -164,11 +172,7 @@ public class GenericS3ClientFactory {
    * @throws NoSuchElementException if no ENABLED OSG found
    */
   public static AmazonS3Client getS3Client(AWSCredentials credentials, boolean https) throws NoSuchElementException {
-    ClientConfiguration config = getDefaultConfiguration(https);
-    AmazonS3Client s3Client = new AmazonS3Client(credentials, config);
-    s3Client.setS3ClientOptions(getDefaultClientOptions());
-    s3Client.setEndpoint(getRandomOSGUri().toString());
-    return s3Client;
+    return getS3Client( new AWSStaticCredentialsProvider( credentials ), https );
   }
 
   protected static URI getRandomOSGUri(boolean usePublicDns) throws NoSuchElementException {
@@ -189,5 +193,132 @@ public class GenericS3ClientFactory {
 
   protected static URI getRandomOSGUri() throws NoSuchElementException {
     return getRandomOSGUri(false);
+  }
+
+  /**
+   * Extension of AmazonS3Client to use a shared HTTP client.
+   */
+  private static final class EucaS3Client extends AmazonS3Client {
+    private static final AtomicReference<Pair<EucaHttpClientKey,EucaHttpClient>> clientPairRef = new AtomicReference<>( );
+
+    EucaS3Client(
+        final AWSCredentialsProvider credentialsProvider,
+        final EucaHttpClientKey key
+    ) {
+      super( credentialsProvider, key.toClientConfiguration( ) );
+      this.client.shutdown( );
+      final Pair<EucaHttpClientKey,EucaHttpClient> clientPair = clientPairRef.get( );
+      if ( clientPair != null && clientPair.getLeft( ).equals( key ) ) {
+        this.client = clientPair.getRight( ).ref( );
+      } else {
+        final EucaHttpClient eucaClient = new EucaHttpClient( clientConfiguration ).ref( );
+        if ( clientPairRef.compareAndSet( clientPair, Pair.of( key, eucaClient ) ) ) {
+          // unref/ref for atomic reference
+          eucaClient.ref( );
+          if ( clientPair != null ) {
+            clientPair.getRight( ).unref( );
+          }
+        }
+        this.client = eucaClient;
+      }
+    }
+  }
+
+  private static final class EucaHttpClientKey {
+    private final int connectionTimeout;
+    private final int socketTimeout;
+    private final boolean https;
+    private final String signerOverride;
+    private final int maxConnections;
+    private final int maxErrorRetries;
+    private final long periodId; // so key identity changes periodically triggering replacement
+
+    EucaHttpClientKey(
+        final int connectionTimeout,
+        final int socketTimeout,
+        final boolean https,
+        final String signerOverride,
+        final int maxConnections,
+        final int maxErrorRetries
+    ) {
+      this.connectionTimeout = connectionTimeout;
+      this.socketTimeout = socketTimeout;
+      this.https = https;
+      this.signerOverride = signerOverride;
+      this.maxConnections = maxConnections;
+      this.maxErrorRetries = maxErrorRetries;
+      this.periodId = System.currentTimeMillis( ) / TimeUnit.HOURS.toMillis( 1 );
+    }
+
+    /**
+     * Convert key to client configuration.
+     *
+     * Values must be constant or come from the key and be part of identity
+     */
+    ClientConfiguration toClientConfiguration( ) {
+      final ClientConfiguration config = new ClientConfiguration( );
+      config.setConnectionTimeout( connectionTimeout );
+      config.setSocketTimeout( socketTimeout );
+      config.setProtocol( https ? Protocol.HTTPS : Protocol.HTTP );
+      config.setSignerOverride( signerOverride );
+      config.setMaxConnections( maxConnections );
+      config.setMaxErrorRetry( maxErrorRetries );
+      config.setUseReaper( true );
+      config.setUseThrottleRetries( false );
+      config.setCacheResponseMetadata( false );
+      config.setConnectionMaxIdleMillis( 45_000 );
+      config.setSecureRandom( Crypto.getSecureRandomSupplier( ).get( ) );
+      return config;
+    }
+
+    @Override
+    public boolean equals( final Object o ) {
+      if ( this == o ) return true;
+      if ( o == null || getClass( ) != o.getClass( ) ) return false;
+      final EucaHttpClientKey that = (EucaHttpClientKey) o;
+      return connectionTimeout == that.connectionTimeout &&
+          socketTimeout == that.socketTimeout &&
+          https == that.https &&
+          maxConnections == that.maxConnections &&
+          maxErrorRetries == that.maxErrorRetries &&
+          Objects.equals( signerOverride, that.signerOverride ) &&
+          periodId == that.periodId;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(
+          connectionTimeout, socketTimeout, https, signerOverride, maxConnections, maxErrorRetries, periodId );
+    }
+  }
+
+  /**
+   * Extension of AmazonHttpClient with reference tracking
+   */
+  private static final class EucaHttpClient extends AmazonHttpClient {
+    private final AtomicInteger refs = new AtomicInteger( 0 );
+
+    EucaHttpClient(
+        final ClientConfiguration configuration
+    ) {
+      super( configuration, null, true, false );
+    }
+
+    public EucaHttpClient ref( ) {
+      refs.incrementAndGet( );
+      return this;
+    }
+
+    public EucaHttpClient unref( ) {
+      if ( refs.decrementAndGet( ) <= 0 ) {
+        super.shutdown( );
+      }
+      return this;
+    }
+
+    @Override
+    public void shutdown( ) {
+      unref( );
+    }
   }
 }

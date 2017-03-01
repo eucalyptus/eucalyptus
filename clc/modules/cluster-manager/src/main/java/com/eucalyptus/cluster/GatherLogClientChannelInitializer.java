@@ -62,31 +62,27 @@
 
 package com.eucalyptus.cluster;
 
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.Channels;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.ClusterController.GatherLogService;
-import com.eucalyptus.ws.Handlers;
+import com.eucalyptus.ws.IoHandlers;
+import com.eucalyptus.ws.client.MonitoredSocketChannelInitializer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.socket.SocketChannel;
 
 @ComponentPart( GatherLogService.class )
-public final class GatherLogClientPipeline implements ChannelPipelineFactory {
+public final class GatherLogClientChannelInitializer extends MonitoredSocketChannelInitializer {
+
   @Override
-  public ChannelPipeline getPipeline( ) throws Exception {
-    final ChannelPipeline pipeline = Channels.pipeline( );
-    for ( Map.Entry<String, ChannelHandler> e : Handlers.channelMonitors( TimeUnit.SECONDS, 120 ).entrySet( ) ) { // TODO:GRZE: configurable
-      pipeline.addLast( e.getKey( ), e.getValue( ) );
-    }
-    pipeline.addLast( "decoder", Handlers.newHttpResponseDecoder( ) );
-    pipeline.addLast( "aggregator", Handlers.newHttpChunkAggregator( ) ); // TODO:GRZE: configurable
-    pipeline.addLast( "encoder", Handlers.httpRequestEncoder( ) );
-    pipeline.addLast( "serializer", Handlers.soapMarshalling( ) );
-    pipeline.addLast( "addressing", Handlers.newAddressingHandler( "EucalyptusGL#" ) );
-    pipeline.addLast( "soap", Handlers.soapHandler( ) );
-    pipeline.addLast( "binding", Handlers.bindingHandler( "eucalyptus_ucsb_edu" ) );
-    return pipeline;
+  protected void initChannel( final SocketChannel socketChannel ) throws Exception {
+    final ChannelPipeline pipeline = socketChannel.pipeline( );
+    addMonitoringHandlers( pipeline, 120 );
+    pipeline.addLast( "decoder", IoHandlers.httpResponseDecoder( ) );
+    pipeline.addLast( "aggregator", IoHandlers.newHttpChunkAggregator( ) );
+    pipeline.addLast( "encoder", IoHandlers.httpRequestEncoder( ) );
+    pipeline.addLast( "wrapper", IoHandlers.ioMessageWrappingHandler( ) );
+    pipeline.addLast( "serializer", IoHandlers.soapMarshalling( ) );
+    pipeline.addLast( "addressing", IoHandlers.addressingHandler( "EucalyptusGL#" ) );
+    pipeline.addLast( "soap", IoHandlers.soapHandler( ) );
+    pipeline.addLast( "binding", IoHandlers.bindingHandler( "eucalyptus_ucsb_edu" ) );
   }
 }

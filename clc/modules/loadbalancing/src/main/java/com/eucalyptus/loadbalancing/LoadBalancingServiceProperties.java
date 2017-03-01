@@ -31,9 +31,6 @@ import com.eucalyptus.util.Exceptions;
 @ConfigurableClass(root = "services.loadbalancing", description = "Parameters controlling loadbalancing")
 public class LoadBalancingServiceProperties {
 
-  private static final String DEFAULT_SWF_CLIENT_CONFIG =
-      "{\"ConnectionTimeout\": 10000, \"MaxConnections\": 100}";
-
   private static final String DEFAULT_SWF_ACTIVITY_WORKER_CONFIG =
       "{\"PollThreadCount\": 4, \"TaskExecutorThreadPoolSize\": 32, \"MaximumPollRateIntervalMilliseconds\": 50, \"MaximumPollRatePerSecond\": 20 }";
 
@@ -60,12 +57,6 @@ public class LoadBalancingServiceProperties {
       description = "The simple workflow service task list for ELB",
       changeListener = Config.NameValidatingChangeListener.class )
   public static volatile String SWF_TASKLIST = "LoadBalancerTasks";
-
-  @ConfigurableField(
-      initial = DEFAULT_SWF_CLIENT_CONFIG,
-      description = "JSON configuration for the ELB simple workflow client",
-      changeListener = Config.ClientConfigurationValidatingChangeListener.class )
-  public static volatile String SWF_CLIENT_CONFIG = DEFAULT_SWF_CLIENT_CONFIG;
 
   @ConfigurableField(
       initial = DEFAULT_SWF_ACTIVITY_WORKER_CONFIG,

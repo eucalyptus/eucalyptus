@@ -41,11 +41,10 @@ public class WorkflowClients {
   
   private static AmazonSimpleWorkflow getSimpleWorkflow() {
     AmazonSimpleWorkflow swfService = null;
-    /// TODO: the connection options should be configurable
     try{
       swfService = Config.buildClient(
-          LoadBalancingAWSCredentialsProvider.LoadBalancingUserSupplier.INSTANCE,
-          LoadBalancingServiceProperties.SWF_CLIENT_CONFIG );
+          LoadBalancingAWSCredentialsProvider.LoadBalancingUserSupplier.INSTANCE
+      );
       return swfService;
     }catch(final AuthException ex) {
       throw Exceptions.toUndeclared(ex);

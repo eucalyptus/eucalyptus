@@ -26,9 +26,6 @@ public class WorkflowClientManager {
   private static Logger LOG  = Logger.getLogger( WorkflowClientManager.class );
 
   private static volatile WorkflowClient workflowClient;
-  public static synchronized AmazonSimpleWorkflow getSimpleWorkflowClient( ) {
-    return workflowClient.getAmazonSimpleWorkflow( );
-  }
 
   private static final String TASK_LIST = BillingProperties.SWF_TASKLIST;
   private static final String DOMAIN = BillingProperties.SWF_DOMAIN;
@@ -40,8 +37,8 @@ public class WorkflowClientManager {
   public static void start( ) throws Exception {
     final AmazonSimpleWorkflow simpleWorkflowClient;
     simpleWorkflowClient = Config.buildClient(
-            BillingAWSCredentialsProvider.BillingUserSupplier.INSTANCE,
-            BillingProperties.SWF_CLIENT_CONFIG );
+            BillingAWSCredentialsProvider.BillingUserSupplier.INSTANCE
+    );
 
     workflowClient = new WorkflowClient(
             Portal.class,

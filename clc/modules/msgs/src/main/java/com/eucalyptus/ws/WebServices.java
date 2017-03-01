@@ -85,7 +85,6 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.Listeners;
 import org.apache.log4j.Logger;
-import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelException;
@@ -98,7 +97,6 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 import org.jboss.netty.logging.InternalLoggerFactory;
@@ -138,6 +136,10 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioSocketChannel;
 
 public class WebServices {
 
@@ -159,12 +161,17 @@ public class WebServices {
           @Override
           public void run( ) {
             LOG.debug( "Releasing resources on shutdown" );
+            final EventLoopGroup clientGroup = clientEventLoopGroup;
+            if ( clientGroup != null ) try {
+              clientGroup.shutdownGracefully( );
+            } catch ( Throwable t ) {
+              LOG.error( "Error releasing resources", t );
+            }
             try {
               final List<ExternalResourceReleasable> resources = Lists.<ExternalResourceReleasable>newArrayList(
                   Handlers.pipelineExecutionHandler( ),
                   Handlers.serviceExecutionHandler( )
               );
-              resources.addAll( Optional.fromNullable( nioClientSocketChannelFactory ).asSet( ) );
               ExternalResourceUtil.release( resources.toArray( new ExternalResourceReleasable[ resources.size( ) ] ) );
             } catch ( Throwable t ) {
               LOG.error( "Error releasing resources", t );
@@ -280,63 +287,46 @@ public class WebServices {
 
   private static Logger   LOG = Logger.getLogger( WebServices.class );
   private static Lock clientResourceLock = new ReentrantLock( );
-  private static Executor clientWorkerThreadPool;
-  private static NioClientSocketChannelFactory nioClientSocketChannelFactory;
+  private static EventLoopGroup clientEventLoopGroup;
   private static Runnable serverShutdown;
   
-  public static ClientBootstrap clientBootstrap( final ChannelPipelineFactory factory ) {
-    final ChannelFactory clientChannelFactory = clientChannelFactory( );
-    final ClientBootstrap bootstrap = clientBootstrap( factory, clientChannelFactory );
-    return bootstrap;
-    
-  }
-  
-  private static ClientBootstrap clientBootstrap( final ChannelPipelineFactory factory, final ChannelFactory clientChannelFactory ) {
-    final ClientBootstrap bootstrap = new ClientBootstrap( clientChannelFactory );
-    bootstrap.setPipelineFactory( factory );
-    bootstrap.setOption( "tcpNoDelay", true );
-    bootstrap.setOption( "keepAlive", true );
-    bootstrap.setOption( "reuseAddress", true );
-    bootstrap.setOption( "connectTimeoutMillis", 3000 );
+  public static io.netty.bootstrap.Bootstrap clientBootstrap( ) {
+    final EventLoopGroup clientEventLoopGroup = clientEventLoopGroup( );
+    final io.netty.bootstrap.Bootstrap bootstrap = clientBootstrap( clientEventLoopGroup );
     return bootstrap;
   }
   
-  private static NioClientSocketChannelFactory clientChannelFactory( ) {
-    if ( nioClientSocketChannelFactory != null ) {
-      return nioClientSocketChannelFactory;
-    } else try ( final LockResource resourceLock = LockResource.lock( clientResourceLock ) ) {
-      if ( nioClientSocketChannelFactory != null ) {
-        return nioClientSocketChannelFactory;
-      } else {
-        return nioClientSocketChannelFactory =
-            new NioClientSocketChannelFactory( Threads.lookup( Empyrean.class, WebServices.class ),
-                WebServices.clientWorkerPool( ),
-                StackConfiguration.CLIENT_POOL_MAX_THREADS );
-      }
-    }
+  private static io.netty.bootstrap.Bootstrap clientBootstrap( final EventLoopGroup group ) {
+    return new io.netty.bootstrap.Bootstrap( )
+        .group( group )
+        .channel( NioSocketChannel.class )
+        .option( ChannelOption.TCP_NODELAY, true )
+        .option( ChannelOption.SO_KEEPALIVE, true )
+        .option( ChannelOption.SO_REUSEADDR, true )
+        .option( ChannelOption.CONNECT_TIMEOUT_MILLIS, StackConfiguration.CLIENT_INTERNAL_CONNECT_TIMEOUT_MILLIS );
   }
   
-  public static Executor clientWorkerPool( ) {
-    if ( clientWorkerThreadPool != null ) {
-      return clientWorkerThreadPool;
+  private static EventLoopGroup clientEventLoopGroup( ) {
+    if ( clientEventLoopGroup != null ) {
+      return clientEventLoopGroup;
     } else try ( final LockResource resourceLock = LockResource.lock( clientResourceLock ) ) {
-      if ( clientWorkerThreadPool != null ) {
-        return clientWorkerThreadPool;
+      if ( clientEventLoopGroup != null ) {
+        return clientEventLoopGroup;
       } else {
-        LOG.trace( LogUtil.subheader( "Creating client worker thread pool." ) );
-        LOG.trace( String.format( "-> Pool threads:              %8d", StackConfiguration.CLIENT_POOL_MAX_THREADS ) );
-        LOG.trace( String.format( "-> Pool timeout:              %8d ms", StackConfiguration.CLIENT_POOL_TIMEOUT_MILLIS ) );
-        LOG.trace( String.format( "-> Max memory per connection: %8.2f MB", StackConfiguration.CLIENT_POOL_MAX_MEM_PER_CONN / ( 1024f * 1024f ) ) );
-        LOG.trace( String.format( "-> Max total memory:          %8.2f MB", StackConfiguration.CLIENT_POOL_TOTAL_MEM / ( 1024f * 1024f ) ) );
-
-        LOG.info( String.format( "Creating client worker thread pool (%d). (log level EXTREME for details)",
-                StackConfiguration.CLIENT_POOL_MAX_THREADS ));
-        return clientWorkerThreadPool = new OrderedMemoryAwareThreadPoolExecutor( StackConfiguration.CLIENT_POOL_MAX_THREADS,
-                                                                                  StackConfiguration.CLIENT_POOL_MAX_MEM_PER_CONN,
-                                                                                  StackConfiguration.CLIENT_POOL_TOTAL_MEM,
-                                                                                  StackConfiguration.CLIENT_POOL_TIMEOUT_MILLIS,
-                                                                                  TimeUnit.MILLISECONDS,
-                                                                                  Threads.threadFactory( "web-services-client-pool-%d" ) );
+        final NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(
+            StackConfiguration.CLIENT_POOL_MAX_THREADS,
+            Threads.threadFactory( "web-services-client-pool-%d" )
+        );
+        OrderedShutdown.registerPreShutdownHook( ( ) -> {
+          LOG.info( "Client shutdown requested" );
+          try {
+            clientEventLoopGroup.shutdownGracefully( 0, 10, TimeUnit.SECONDS ).await( );
+            LOG.info( "Client shutdown complete" );
+          } catch ( final InterruptedException e ) {
+            LOG.info( "Client shutdown interrupted" );
+          }
+        } );
+        return clientEventLoopGroup = eventLoopGroup;
       }
     }
   }

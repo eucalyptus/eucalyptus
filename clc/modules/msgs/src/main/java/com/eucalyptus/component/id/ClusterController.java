@@ -62,17 +62,16 @@
 
 package com.eucalyptus.component.id;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.eucalyptus.component.annotation.Description;
-import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.InternalService;
 import com.eucalyptus.component.annotation.Partition;
-import com.eucalyptus.component.ServiceUris;
-import com.eucalyptus.util.Internets;
+import com.eucalyptus.ws.StackConfiguration;
+import com.google.common.base.MoreObjects;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 
 @Partition( value = { Eucalyptus.class } )
 @FaultLogPrefix( "cloud" ) // stub for cc, but in clc
@@ -91,19 +90,6 @@ public class ClusterController extends ComponentId {
     return 8774;
   }
   
-  private static ChannelPipelineFactory clusterPipeline;
-  
-  @Override
-  public ChannelPipelineFactory getClientPipeline( ) {//TODO:GRZE:fixme to use discovery
-    ChannelPipelineFactory factory = null;
-    if ( ( factory = super.getClientPipeline( ) ) == null ) {
-      factory = ( clusterPipeline = ( clusterPipeline != null
-        ? clusterPipeline
-          : helpGetClientPipeline( "com.eucalyptus.ws.client.pipeline.ClusterClientPipelineFactory" ) ) );
-    }
-    return factory;
-  }
-  
   @Override
   public String getServicePath( final String... pathParts ) {
     return "/axis2/services/EucalyptusCC";
@@ -113,50 +99,43 @@ public class ClusterController extends ComponentId {
   public String getInternalServicePath( final String... pathParts ) {
     return this.getServicePath( pathParts );
   }
-  
+
+  @Override
+  public Bootstrap getClientBootstrap() {
+    return super.getClientBootstrap( )
+        .option( ChannelOption.CONNECT_TIMEOUT_MILLIS, MoreObjects.firstNonNull( StackConfiguration.CLUSTER_CONNECT_TIMEOUT_MILLIS, 3000 ) );
+  }
+
   @Partition( ClusterController.class )
   @InternalService
   @FaultLogPrefix( "cloud" )
   public static class GatherLogService extends ComponentId {
-    
+
     private static final long serialVersionUID = 1L;
-    
+
     public GatherLogService( ) {
       super( "gatherlog" );
     }
-    
+
     @Override
     public Integer getPort( ) {
       return 8774;
     }
-    
+
     @Override
     public String getServicePath( final String... pathParts ) {
       return "/axis2/services/EucalyptusGL";
     }
-    
+
     @Override
     public String getInternalServicePath( final String... pathParts ) {
       return this.getServicePath( pathParts );
     }
-    
-    private static ChannelPipelineFactory logPipeline;
-    
-    /**
-     * This was born under a bad sign. No touching.
-     * 
-     * @return
-     */
+
     @Override
-    public ChannelPipelineFactory getClientPipeline( ) {
-      ChannelPipelineFactory factory = null;
-      if ( ( factory = super.getClientPipeline( ) ) == null ) {
-        factory = ( logPipeline = ( logPipeline != null
-          ? logPipeline
-          : helpGetClientPipeline( "com.eucalyptus.ws.client.pipeline.GatherLogClientPipeline" ) ) );
-      }
-      return factory;
+    public Bootstrap getClientBootstrap() {
+      return super.getClientBootstrap( )
+          .option( ChannelOption.CONNECT_TIMEOUT_MILLIS, MoreObjects.firstNonNull( StackConfiguration.CLUSTER_CONNECT_TIMEOUT_MILLIS, 3000 ) );
     }
-    
   }
 }

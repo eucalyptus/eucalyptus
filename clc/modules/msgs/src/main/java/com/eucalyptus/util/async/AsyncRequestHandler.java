@@ -63,46 +63,61 @@
 package com.eucalyptus.util.async;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.annotation.Nonnull;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.channel.*;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.WildcardNameMatcher;
+import com.eucalyptus.util.async.AsyncRequestChannelPoolMap.ChannelPoolKey;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
-import com.eucalyptus.ws.WebServices;
+import com.eucalyptus.ws.IoMessage;
+import com.eucalyptus.ws.StackConfiguration;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.pool.ChannelPool;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 
 /**
  * @author decker
  * @param <Q>
  * @param <R>
  */
-public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> implements RequestHandler<Q, R> {
-  private static Logger                LOG           = Logger.getLogger( AsyncRequestHandler.class );
-  private final AsyncRequest<Q, R> parent;
+public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> extends ChannelInboundHandlerAdapter implements RequestHandler<Q, R> {
+  private static final Logger                LOG           = Logger.getLogger( AsyncRequestHandler.class );
+  private static final Logger                MESSAGE_LOG   = Logger.getLogger( "com.eucalyptus.client.MessageLogger" );
+  private static final WildcardNameMatcher   MATCHER       = new WildcardNameMatcher( );
+  private static final AsyncRequestChannelPoolMap POOL_MAP = new AsyncRequestChannelPoolMap( );
 
-  private ClientBootstrap              clientBootstrap;
-  private ChannelFuture                connectFuture;
-  
-  private final AtomicBoolean          writeComplete = new AtomicBoolean( false );
-  private final CheckedListenableFuture<R>   response;
-  private transient AtomicReference<Q> request       = new AtomicReference<Q>( null );
-  
+  private final AsyncRequest<Q, R>         parent;
+  private final AtomicBoolean              writeComplete   = new AtomicBoolean( false );
+  private final AtomicBoolean              channelReleased = new AtomicBoolean( false );
+  private final AtomicReference<Q>         request         = new AtomicReference<>( null );
+  private final CheckedListenableFuture<R> response;
+
+  private volatile ChannelPool     channelPool;
+  private volatile Future<Channel> acquireFuture;
+
   AsyncRequestHandler( final AsyncRequest<Q, R> parent, final CheckedListenableFuture<R> response ) {
     super( );
     this.parent = parent;
@@ -110,9 +125,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
   }
   
   /**
-   * @see RequestHandler#fire(com.eucalyptus.component.ServiceEndpoint)
-   * @param serviceEndpoint
-   * @return
+   *
    */
   @Override
   public boolean fire( final ServiceConfiguration config, final Q request ) {
@@ -120,48 +133,36 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
       LOG.warn( "Duplicate write attempt for request: " + this.request.get( ).getClass( ).getSimpleName( ) );
       return false;
     } else {
-      final SocketAddress serviceSocketAddress = config.getSocketAddress( );
-      final ChannelPipelineFactory factory = config.getComponentId( ).getClientPipeline( );
       try {
-        this.clientBootstrap = config.getComponentId( ).getClientBootstrap( new ChannelPipelineFactory( ) {
+        final InetSocketAddress serviceSocketAddress = config.getSocketAddress( );
+        final Bootstrap clientBootstrap = config.getComponentId( ).getClientBootstrap( );
+        final ChannelInitializer<?> initializer = config.getComponentId( ).getClientChannelInitializer( );
+        final int poolSizeLimit = initializer instanceof AsyncRequestPoolable ?
+            ((AsyncRequestPoolable)initializer).fixedSize() :
+            -1;
+        final IoMessage<FullHttpRequest> ioMessage =
+            IoMessage.httpRequest( ServiceUris.internal( config ), this.request.get( ) );
+        final ChannelPoolKey poolKey =
+            new ChannelPoolKey( clientBootstrap, initializer, serviceSocketAddress, poolSizeLimit );
+        final long before = System.currentTimeMillis( );
+        this.channelPool = POOL_MAP.get( poolKey );
+        this.acquireFuture = channelPool.acquire( );
+        this.acquireFuture.addListener( new GenericFutureListener<Future<Channel>>( ) {
           @Override
-          public ChannelPipeline getPipeline( ) throws Exception {
-            final ChannelPipeline pipeline = factory.getPipeline( );
-            pipeline.addLast( "request-handler", AsyncRequestHandler.this );
-            return pipeline;
-          }
-        } );
-//TODO:GRZE: better logging here        LOG.debug( request.getClass( ).getSimpleName( ) + ":" + request.getCorrelationId( ) + " connecting to " + serviceSocketAddress );
-        Logs.extreme( ).debug( EventRecord.here( request.getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_OPENING, request.getClass( ).getSimpleName( ),
-                          request.getCorrelationId( ), serviceSocketAddress.toString( ) ) );
-        this.connectFuture = this.clientBootstrap.connect( serviceSocketAddress );
-        final HttpRequest httpRequest = new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.POST, config, this.request.get( ) );
-        
-        this.connectFuture.addListener( new ChannelFutureListener( ) {
-          @Override
-          public void operationComplete( final ChannelFuture future ) throws Exception {
+          public void operationComplete( final Future<Channel> future ) throws Exception {
             try {
               if ( future.isSuccess( ) ) {
-                Logs.extreme( ).debug( "Connected as: " + future.getChannel( ).getLocalAddress( ) );
-                
-                final InetAddress localAddr = ( ( InetSocketAddress ) future.getChannel( ).getLocalAddress( ) ).getAddress( );
-                if ( !factory.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
+                final Channel channel = future.get( );
+                logAcquired( channel, before );
+                channel.pipeline( ).addLast( "request-handler", AsyncRequestHandler.this );
+
+                if ( !initializer.getClass( ).getSimpleName( ).startsWith( "GatherLog" ) ) {
                   Topology.populateServices( config, AsyncRequestHandler.this.request.get( ) );
                 }
 
-                Logs.extreme( ).debug(
-                  EventRecord.here(
-                    request.getClass( ),
-                    EventClass.SYSTEM_REQUEST,
-                    EventType.CHANNEL_OPEN,
-                    request.getClass( ).getSimpleName( ),
-                    request.getCorrelationId( ),
-                    serviceSocketAddress.toString( ),
-                    "" + future.getChannel( ).getLocalAddress( ),
-                    "" + future.getChannel( ).getRemoteAddress( ) ) );
-                Logs.extreme( ).debug( httpRequest );
-                
-                future.getChannel( ).write( httpRequest ).addListener( new ChannelFutureListener( ) {
+                logMessage( ioMessage );
+
+                channel.writeAndFlush( ioMessage ).addListener( new ChannelFutureListener( ) {
                   @Override
                   public void operationComplete( final ChannelFuture future ) throws Exception {
                     AsyncRequestHandler.this.writeComplete.set( true );
@@ -174,12 +175,12 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
                         request.getClass( ).getSimpleName( ),
                         request.getCorrelationId( ),
                         serviceSocketAddress.toString( ),
-                        "" + future.getChannel( ).getLocalAddress( ),
-                        "" + future.getChannel( ).getRemoteAddress( ) ) );
+                        "" + future.channel( ).localAddress( ),
+                        "" + future.channel( ).remoteAddress( ) ) );
                   }
                 } );
               } else {
-                AsyncRequestHandler.this.teardown( future.getCause( ) );
+                AsyncRequestHandler.this.teardown( future.cause( ) );
               }
             } catch ( final Exception ex ) {
               LOG.error( ex, ex );
@@ -195,42 +196,75 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
       }
     }
   }
-  
+
+  private void logAcquired( final Channel channel, final long before ) {
+    final long acquireTime = System.currentTimeMillis( ) - before;
+    final Level level;
+    if ( acquireTime > 45_000L ) {
+      level = Level.WARN;
+    } else if ( acquireTime > 30_000L ) {
+      level = Level.INFO;
+    } else if ( acquireTime > 10_000L ) {
+      level = Level.DEBUG;
+    } else {
+      level = Level.TRACE;
+    }
+    if ( LOG.isEnabledFor( level ) ) {
+      LOG.log( level, "Acquire took " + acquireTime + "ms for " + channel.remoteAddress( ) );
+    }
+    Logs.extreme( ).debug( "Acquired as: " + channel.localAddress( ) );
+  }
+
+  private void logMessage( final IoMessage ioMessage ) {
+    Logs.extreme( ).debug( ioMessage );
+    final Object payload = ioMessage.getMessage( );
+    final String patternList = Objects.toString( StackConfiguration.CLIENT_MESSAGE_LOG_WHITELIST, "" );
+    if ( payload != null && (
+        MATCHER.matches( patternList, payload.getClass( ).getSimpleName( ) ) ||
+        MATCHER.matches( patternList, payload.getClass( ).getName( ) ) ) ) {
+      MESSAGE_LOG.info( payload );
+    }
+  }
+
   private void teardown( Throwable t ) {
     if ( t == null ) {
       t = new NullPointerException( "teardown() called with null argument." );
     }
     this.logRequestFailure( t );
     this.response.setException( t );
-    if ( this.connectFuture != null ) {
+    if ( this.acquireFuture != null ) {
       this.maybeCloseChannel( );
     }
   }
 
   private void maybeCloseChannel( ) {
-    if ( this.connectFuture.isDone( ) && this.connectFuture.isSuccess( ) ) {
-      final Channel channel = this.connectFuture.getChannel( );
-      if ( ( channel != null ) && channel.isOpen( ) ) {
-        channel.close( ).addListener( new ChannelFutureListener( ) {
-          @Override
-          public void operationComplete( final ChannelFuture future ) throws Exception {
-            EventRecord.here( AsyncRequestHandler.this.request.get( ).getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_CLOSED ).trace( );
-          }
-        } );
-      } else {
-        EventRecord.here( AsyncRequestHandler.this.request.get( ).getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_CLOSED, "ALREADY_CLOSED" ).trace( );
-      }
-    } else if ( !this.connectFuture.isDone( ) && !this.connectFuture.cancel( ) ) {
-      LOG.error( "Failed to cancel in-flight connection request: " + this.connectFuture.toString( ) );
-      final Channel channel = this.connectFuture.getChannel( );
-      if ( channel != null ) {
-        channel.close( );
-      }
-    } else if ( !this.connectFuture.isSuccess( ) ) {
-      final Channel channel = this.connectFuture.getChannel( );
-      if ( channel != null ) {
-        channel.close( );
-      }
+    if ( !this.acquireFuture.isDone( ) &&  !this.acquireFuture.cancel(true) ) {
+      LOG.error( "Failed to cancel in-flight connection request: " + this.acquireFuture.getNow( ).toString( ) );
+    }
+    final Channel channel = this.acquireFuture.getNow( );
+    if ( channel != null ) {
+      closeAndReleaseChannel( channel );
+    }
+  }
+
+  private void closeAndReleaseChannel( @Nonnull final Channel channel ) {
+    if ( channel.isOpen( ) ) {
+      channel.close( ).addListener( new ChannelFutureListener( ) {
+        @Override
+        public void operationComplete( final ChannelFuture future ) throws Exception {
+          EventRecord.here( AsyncRequestHandler.this.request.get( ).getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_CLOSED ).trace( );
+          releaseChannel( channel );
+        }
+      } );
+    } else {
+      EventRecord.here( AsyncRequestHandler.this.request.get( ).getClass( ), EventClass.SYSTEM_REQUEST, EventType.CHANNEL_CLOSED, "ALREADY_CLOSED" ).trace( );
+      releaseChannel( channel );
+    }
+  }
+
+  private void releaseChannel( @Nonnull final Channel channel ) {
+    if ( this.channelPool != null && channelReleased.compareAndSet( false, true )) {
+      this.channelPool.release( channel );
     }
   }
 
@@ -250,55 +284,61 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
       Logs.extreme( ).error( ex , ex );
     }
   }
-  
+
   @Override
-  public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
-    if ( e instanceof MessageEvent ) {
-      this.messageReceived( ctx, ( MessageEvent ) e );
-    } else if ( e instanceof ChannelStateEvent ) {
-      final ChannelStateEvent evt = ( ChannelStateEvent ) e;
-      switch ( evt.getState( ) ) {
-        case OPEN:
-          if ( Boolean.FALSE.equals( evt.getValue( ) ) ) {
-            this.checkFinished( ctx, evt );
-          }
-          break;
-        case CONNECTED:
-          if ( evt.getValue( ) == null ) {
-            this.checkFinished( ctx, evt );
-          }
-          break;
-      }
-    } else if ( e instanceof ExceptionEvent ) {
-      this.exceptionCaught( ctx, ( ExceptionEvent ) e );
-    }
-    ctx.sendUpstream( e );
+  public void channelInactive( final ChannelHandlerContext ctx ) throws Exception {
+    this.checkFinished( ctx, true );
+    super.channelInactive( ctx );
   }
-  
-  private void messageReceived( final ChannelHandlerContext ctx, final MessageEvent e ) {
+
+  @Override
+  public void channelRead( final ChannelHandlerContext ctx, final Object msg ) throws Exception {
+    this.messageReceived( ctx, msg );
+  }
+
+  @Override
+  public void exceptionCaught( final ChannelHandlerContext ctx, final Throwable cause ) throws Exception {
+    Logs.extreme( ).error( cause, cause );
+    if ( cause instanceof EucalyptusRemoteFault ) {//GRZE: treat this like a normal response, set the response and close the channel.
+      this.response.setException( cause );
+      if ( this.acquireFuture != null ) {
+        this.maybeCloseChannel( );
+      }
+    } else {
+      this.teardown( cause );
+    }
+    super.exceptionCaught( ctx, cause );
+  }
+
+  private void messageReceived( final ChannelHandlerContext ctx, final Object message ) {
     try {
-      if ( e.getMessage( ) instanceof MappingHttpResponse ) {
-        final MappingHttpResponse response = ( MappingHttpResponse ) e.getMessage( );
+      if ( message instanceof IoMessage ) {
+        final IoMessage response = ( IoMessage ) message;
         try {
           final R msg = ( R ) response.getMessage( );
           if ( !msg.get_return( true ) ) {
             this.teardown( new FailedRequestException( "Cluster response includes _return=false", msg ) );
           } else {
+            logMessage( response );
             this.response.set( msg );
+            if ( HttpHeaders.isKeepAlive( ((IoMessage) message).getHttpMessage( ) ) ) {
+              releaseChannel( ctx.channel( ) );
+            } else {
+              closeAndReleaseChannel( ctx.channel( ) );
+            }
           }
-          e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
         } catch ( final Exception e1 ) {
           LOG.error( e1, e1 );
           this.teardown( e1 );
         }
-      } else if ( e.getMessage( ) == null ) {
+      } else if ( message == null ) {
         final NoResponseException ex = new NoResponseException( "Channel received a null response.", this.request.get( ) );
         LOG.error( ex, ex );
         this.teardown( ex );
       } else {
-        final UnknownMessageTypeException ex = new UnknownMessageTypeException( "Channel received a unknown response type: "
-                                                                          + e.getMessage( ).getClass( ).getCanonicalName( ), this.request.get( ),
-                                                                          e.getMessage( ) );
+        final UnknownMessageTypeException ex =
+            new UnknownMessageTypeException( "Channel received a unknown response type: " +
+                message.getClass( ).getCanonicalName( ), this.request.get( ), message );
         LOG.error( ex, ex );
         this.teardown( ex );
       }
@@ -308,10 +348,10 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
     }
   }
   
-  private void checkFinished( final ChannelHandlerContext ctx, final ChannelStateEvent evt ) {
-    if ( ( this.connectFuture != null ) && !this.connectFuture.isSuccess( )
-         && ( this.connectFuture.getCause( ) instanceof IOException ) ) {
-      final Throwable ioError = this.connectFuture.getCause( );
+  private void checkFinished( final ChannelHandlerContext ctx, final boolean inactive ) {
+    if ( ( this.acquireFuture != null ) && !this.acquireFuture.isSuccess( )
+         && ( this.acquireFuture.cause( ) instanceof IOException ) ) {
+      final Throwable ioError = this.acquireFuture.cause( );
       if ( !this.writeComplete.get( ) ) {
         this.teardown( new RetryableConnectionException( "Channel was closed before the write operation could be completed: " + ioError.getMessage( ), ioError,
                                                          this.request.get( ) ) );
@@ -330,35 +370,12 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
     }
   }
   
-  private void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) {
-    Throwable cause = e.getCause( );
-    Logs.extreme( ).error( e, cause );
-    if ( cause instanceof EucalyptusRemoteFault ) {//GRZE: treat this like a normal response, set the response and close the channel.
-      this.response.setException( cause );
-      e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
-    } else {
-      this.teardown( cause );
-    }
-  }
-
   public AtomicReference<Q> getRequest() {
     return request;
   }
 
   public CheckedListenableFuture<R> getResponse() {
     return response;
-  }
-
-  public AtomicBoolean getWriteComplete() {
-    return writeComplete;
-  }
-
-  public ChannelFuture getConnectFuture() {
-    return connectFuture;
-  }
-
-  public ClientBootstrap getClientBootstrap() {
-    return clientBootstrap;
   }
 
 }

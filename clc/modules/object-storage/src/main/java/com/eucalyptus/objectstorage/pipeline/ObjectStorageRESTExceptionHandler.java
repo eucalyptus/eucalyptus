@@ -114,7 +114,7 @@ public class ObjectStorageRESTExceptionHandler extends SimpleChannelUpstreamHand
       errorResponse.setCorrelationId( requestId );
       final ChannelFuture writeFuture = Channels.future(ctx.getChannel());
       writeFuture.addListener(ChannelFutureListener.CLOSE);
-      response.addHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
+      response.setHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
       Channels.write( ctx, writeFuture, response );
       cleanup.run( );
     } else {

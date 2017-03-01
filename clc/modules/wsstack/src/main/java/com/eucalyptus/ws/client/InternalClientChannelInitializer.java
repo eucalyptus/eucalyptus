@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,61 +60,29 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.ws.util;
+package com.eucalyptus.ws.client;
 
-import java.util.concurrent.ThreadFactory;
-import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import com.eucalyptus.system.Threads;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.ComponentPart;
+import com.eucalyptus.ws.IoHandlers;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.socket.SocketChannel;
 
-public class ChannelUtil {
-  private static Logger LOG = Logger.getLogger( ChannelUtil.class );
-  
-  static class SystemThreadFactory implements ThreadFactory {
-    @Override
-    public Thread newThread( final Runnable r ) {
-      return Threads.newThread( r, "channels" );
-    }
+@ComponentPart( ComponentId.class )
+public class InternalClientChannelInitializer extends MonitoredSocketChannelInitializer {
+
+  @Override
+  protected void initChannel( final SocketChannel channel ) throws Exception {
+    super.initChannel( channel );
+    final ChannelPipeline pipeline = channel.pipeline( );
+    pipeline.addLast( "decoder", IoHandlers.httpResponseDecoder( ) );
+    pipeline.addLast( "aggregator", IoHandlers.newHttpChunkAggregator( ) );
+    pipeline.addLast( "encoder", IoHandlers.httpRequestEncoder( ) );
+    pipeline.addLast( "wrapper", IoHandlers.ioMessageWrappingHandler( ) );
+    pipeline.addLast( "serializer", IoHandlers.soapMarshalling( ) );
+    pipeline.addLast( "wssec", IoHandlers.internalWsSecHandler( ) );
+    pipeline.addLast( "addressing", IoHandlers.addressingHandler( ) );
+    pipeline.addLast( "soap", IoHandlers.soapHandler( ) );
+    pipeline.addLast( "binding", IoHandlers.bindingHandler( ) );
   }
-  
-  public static ChannelFutureListener DISPATCH( Object o ) {
-    return new DeferedWriter( o, ChannelFutureListener.CLOSE );
-  }
-  
-  public static ChannelFutureListener WRITE_AND_CALLBACK( Object o, ChannelFutureListener callback ) {
-    return new DeferedWriter( o, callback );
-  }
-  
-  public static ChannelFutureListener WRITE( Object o ) {
-    return new DeferedWriter( o, new ChannelFutureListener( ) {
-      public void operationComplete( ChannelFuture future ) throws Exception {}
-    } );
-  }
-  
-  private static class DeferedWriter implements ChannelFutureListener {
-    private Object                request;
-    private ChannelFutureListener callback;
-    
-    DeferedWriter( final Object request, final ChannelFutureListener callback ) {
-      this.callback = callback;
-      this.request = request;
-    }
-    
-    @Override
-    public void operationComplete( ChannelFuture channelFuture ) {
-      if ( channelFuture.isSuccess( ) ) {
-        channelFuture.getChannel( ).write( request ).addListener( callback );
-      } else {
-        LOG.debug( channelFuture.getCause( ), channelFuture.getCause( ) );
-        try {
-          callback.operationComplete( channelFuture );
-        } catch ( Exception e ) {
-          LOG.debug( e, e );
-        }
-      }
-    }
-    
-  }
-  
 }

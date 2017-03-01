@@ -27,35 +27,56 @@ import java.util.Optional;
 
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.ws.StackConfiguration;
-import com.eucalyptus.ws.handlers.MessageStackHandler;
+import com.google.common.base.MoreObjects;
+import org.jboss.netty.channel.ChannelDownstreamHandler;
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 
-public class HttpResponseHeaderHandler extends MessageStackHandler {
+public class HttpResponseHeaderHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
+  private volatile int requestCount = 0;
+
+  @Override
+  public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
+    if ( e instanceof MessageEvent && ((MessageEvent)e).getMessage( ) instanceof HttpRequest ) {
+      requestCount++;
+    }
+    ctx.sendUpstream( e );
+  }
 
   /**
    * This is for adding default/standard headers to *outbound* HTTP Responses.
    */
   @Override
-  public void outgoingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
-    if (event.getMessage() instanceof HttpResponse) {
-      HttpResponse resp = (HttpResponse) event.getMessage();
+  public void handleDownstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
+    if ( e instanceof MessageEvent && ((MessageEvent)e).getMessage() instanceof HttpResponse ) {
+      final HttpResponse response = (HttpResponse) ( (MessageEvent) e ).getMessage( );
 
-      // Add headers
+      // Persistent connection close
+      if ( requestCount >= MoreObjects.firstNonNull( StackConfiguration.HTTP_MAX_REQUESTS_PER_CONNECTION, 100 ) ) {
+        response.setHeader( HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE );
+        if ( ctx.getChannel( ).isOpen( ) ) {
+          e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
+        }
+      }
 
       // If previous handler has already set the Date header, leave it as is.
-      if (!resp.containsHeader(HttpHeaders.Names.DATE)) {
-        resp.setHeader(HttpHeaders.Names.DATE, Timestamps.formatRfc822Timestamp(new Date()));
+      if (!response.containsHeader(HttpHeaders.Names.DATE)) {
+        response.setHeader(HttpHeaders.Names.DATE, Timestamps.formatRfc822Timestamp(new Date()));
       }
 
       // If server already set then do not overwrite
       final Optional<String> header = StackConfiguration.getServerHeader( );
-      if ( !resp.containsHeader(HttpHeaders.Names.SERVER) && header.isPresent( ) ) {
-        resp.setHeader( HttpHeaders.Names.SERVER, header.get( ) );
+      if ( !response.containsHeader(HttpHeaders.Names.SERVER) && header.isPresent( ) ) {
+        response.setHeader( HttpHeaders.Names.SERVER, header.get( ) );
       }
     }
+    ctx.sendDownstream( e );
   }
 }

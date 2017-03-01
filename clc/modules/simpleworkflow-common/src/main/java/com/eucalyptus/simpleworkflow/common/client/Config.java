@@ -29,8 +29,10 @@ import java.lang.reflect.Proxy;
 import java.net.ConnectException;
 import java.security.SecureRandom;
 import java.util.List;
-import java.util.UUID;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nonnull;
 import org.apache.http.NoHttpResponseException;
 import org.apache.http.conn.ConnectTimeoutException;
@@ -41,6 +43,7 @@ import com.amazonaws.Request;
 import com.amazonaws.Response;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.handlers.RequestHandler2;
+import com.amazonaws.http.AmazonHttpClient;
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow;
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflowClient;
 import com.amazonaws.services.simpleworkflow.flow.ActivityWorker;
@@ -56,10 +59,12 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
 import com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.Pair;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -82,9 +87,10 @@ public class Config {
   private static final ObjectMapper mapper = new ObjectMapper( )
       .setPropertyNamingStrategy( PropertyNamingStrategy.PASCAL_CASE_TO_CAMEL_CASE );
   static {
-    mapper.addMixInAnnotations( ClientConfiguration.class, ClientConfigurationMixin.class );
+    mapper.addMixIn( ClientConfiguration.class, ClientConfigurationMixin.class );
   }
   private static final ObjectMapper workerObjectMapper = buildWorkerObjectMapper();
+  private static final AtomicReference<String> clientConfig = new AtomicReference<>( "" );
 
   /**
    * Parse a JSON format string for AWS SDK for Java ClientConfiguration.
@@ -94,43 +100,27 @@ public class Config {
    */
   public static ClientConfiguration buildConfiguration( final String text ) {
     try {
+      // create configuration with default values that can be overwritten by given config string
+      final ClientConfiguration config = new ClientConfiguration(  );
+      config.setCacheResponseMetadata( false );
+      config.setConnectionMaxIdleMillis( 45_000 );
+      config.setConnectionTimeout( 10_000 );
+      config.setMaxConnections( 100 );
+      config.setSecureRandom( Crypto.getSecureRandomSupplier( ).get( ) );
+      config.setUseThrottleRetries( false );
       return Strings.isNullOrEmpty( text ) ?
-          new ClientConfiguration( ) :
-          mapper.readValue( source( text ), ClientConfiguration.class );
+          config :
+          mapper.readerForUpdating( config ).readValue( source( text ) );
     } catch ( final IOException e ) {
       throw new IllegalArgumentException( "Invalid configuration: " + e.getMessage( ), e );
     }
   }
 
-  public static AmazonSimpleWorkflow buildClient( final AWSCredentialsProvider credentialsProvider, final String endpoint, final String text ) {
-    final AmazonSimpleWorkflowClient client = new AmazonSimpleWorkflowClient(
-        credentialsProvider,
-        buildConfiguration( text )
-    );
-    client.setEndpoint(endpoint);
-    client.addRequestHandler( new RequestHandler2( ) {
-      @Override
-      public void beforeRequest( final Request<?> request ) {
-        // Add nonce to ensure unique request signature
-        request.addHeader( "Euca-Nonce", UUID.randomUUID( ).toString( ) );
-      }
-
-      @Override
-      public void afterError(Request<?> arg0, Response<?> arg1,
-          Exception arg2) {          }
-
-      @Override
-      public void afterResponse(Request<?> arg0, Response<?> arg1) {
-      }} );
-
-    return client;
-  }
-
-  public static AmazonSimpleWorkflow buildClient( final Supplier<User> user, final String text ) throws AuthException {
+  public static AmazonSimpleWorkflow buildClient( final Supplier<User> user ) throws AuthException {
     final AWSCredentialsProvider credentialsProvider = new SecurityTokenAWSCredentialsProvider( user );
-    final AmazonSimpleWorkflowClient client = new AmazonSimpleWorkflowClient(
+    final AmazonSimpleWorkflowClient client = new EucaSimpleWorkflowClient(
         credentialsProvider,
-        buildConfiguration( text )
+        clientConfig.get( )
     );
     client.setEndpoint( ServiceUris.remote( Topology.lookup( SimpleWorkflow.class ) ).toString( ) );
     client.addRequestHandler( new RequestHandler2( ) {
@@ -144,12 +134,6 @@ public class Config {
         }
         return true;
       }, 15, TimeUnit.SECONDS );
-
-      @Override
-      public void beforeRequest( final Request<?> request ) {
-        // Add nonce to ensure unique request signature
-        request.addHeader( "Euca-Nonce", UUID.randomUUID( ).toString( ) );
-      }
 
       @Override
       public void afterResponse( final Request<?> request, final Response<?> response ) {
@@ -334,6 +318,7 @@ public class Config {
       } catch ( final IllegalArgumentException e ) {
         throw new ConfigurablePropertyException( e.getMessage( ) );
       }
+      clientConfig.set( Objects.toString( newValue, "" ).trim( ) );
     }
   }
 
@@ -358,6 +343,65 @@ public class Config {
       } catch ( final IllegalArgumentException e ) {
         throw new ConfigurablePropertyException( e.getMessage( ) );
       }
+    }
+  }
+
+  /**
+   * Extension of AmazonSimpleWorkflowClient to use a shared HTTP client.
+   */
+  private static final class EucaSimpleWorkflowClient extends AmazonSimpleWorkflowClient {
+    private static final AtomicReference<Pair<String,EucaHttpClient>> clientPairRef = new AtomicReference<>( );
+
+    EucaSimpleWorkflowClient(
+        final AWSCredentialsProvider credentialsProvider,
+        final String config
+    ) {
+      super( credentialsProvider, buildConfiguration( config ) );
+      this.client.shutdown( );
+      final Pair<String,EucaHttpClient> clientPair = clientPairRef.get( );
+      if ( clientPair != null && clientPair.getLeft( ).equals( config ) ) {
+        this.client = clientPair.getRight( ).ref( );
+      } else {
+        final EucaHttpClient eucaClient = new EucaHttpClient( clientConfiguration ).ref( );
+        if ( clientPairRef.compareAndSet( clientPair, Pair.of( config, eucaClient ) ) ) {
+          // unref/ref for atomic reference
+          eucaClient.ref( );
+          if ( clientPair != null ) {
+            clientPair.getRight( ).unref( );
+          }
+        }
+        this.client = eucaClient;
+      }
+    }
+  }
+
+  /**
+   * Extension of AmazonHttpClient with reference tracking
+   */
+  private static final class EucaHttpClient extends AmazonHttpClient {
+    private final AtomicInteger refs = new AtomicInteger( 0 );
+
+    EucaHttpClient(
+        final ClientConfiguration configuration
+    ) {
+      super( configuration, null, true, false );
+    }
+
+    public EucaHttpClient ref( ) {
+      refs.incrementAndGet( );
+      return this;
+    }
+
+    public EucaHttpClient unref( ) {
+      if ( refs.decrementAndGet( ) <= 0 ) {
+        super.shutdown( );
+      }
+      return this;
+    }
+
+    @Override
+    public void shutdown( ) {
+      unref( );
     }
   }
 

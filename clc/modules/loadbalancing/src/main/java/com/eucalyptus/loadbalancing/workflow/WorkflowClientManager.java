@@ -20,11 +20,6 @@
 package com.eucalyptus.loadbalancing.workflow;
 
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow;
-import com.amazonaws.services.simpleworkflow.model.DomainInfo;
-import com.amazonaws.services.simpleworkflow.model.DomainInfos;
-import com.amazonaws.services.simpleworkflow.model.ListDomainsRequest;
-import com.amazonaws.services.simpleworkflow.model.RegisterDomainRequest;
-import com.amazonaws.services.simpleworkflow.model.RegistrationStatus;
 
 import com.eucalyptus.loadbalancing.LoadBalancingServiceProperties;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
@@ -39,9 +34,6 @@ public class WorkflowClientManager {
   private static Logger LOG  = Logger.getLogger( WorkflowClientManager.class );
 
   private static volatile WorkflowClient workflowClient;
-  public static synchronized AmazonSimpleWorkflow getSimpleWorkflowClient( ) {
-    return workflowClient.getAmazonSimpleWorkflow( );
-  }
 
   private static final String TASK_LIST = LoadBalancingServiceProperties.SWF_TASKLIST;
   private static final String DOMAIN = LoadBalancingServiceProperties.SWF_DOMAIN;
@@ -51,11 +43,10 @@ public class WorkflowClientManager {
   }
 
   public static void start( ) throws Exception {
-    //// FIXME: temporary config for only testing
-     final AmazonSimpleWorkflow simpleWorkflowClient;
-      simpleWorkflowClient = Config.buildClient(
-          LoadBalancingAWSCredentialsProvider.LoadBalancingUserSupplier.INSTANCE,
-          LoadBalancingServiceProperties.SWF_CLIENT_CONFIG );
+    final AmazonSimpleWorkflow simpleWorkflowClient;
+    simpleWorkflowClient = Config.buildClient(
+        LoadBalancingAWSCredentialsProvider.LoadBalancingUserSupplier.INSTANCE
+    );
 
     workflowClient = new WorkflowClient(
         LoadBalancing.class,
@@ -72,28 +63,5 @@ public class WorkflowClientManager {
     if ( workflowClient != null ) {
       workflowClient.stop( );
     }
-  }
-
-  private static boolean isDomainRegistered(final AmazonSimpleWorkflow client) {
-    final ListDomainsRequest req = new ListDomainsRequest();
-    req.setRegistrationStatus(RegistrationStatus.REGISTERED);
-    final DomainInfos domains = client.listDomains(req);
-    if (domains == null || domains.getDomainInfos() == null) {
-      return false;
-    }
-    for (final DomainInfo dom : domains.getDomainInfos()) {
-      if (DOMAIN.equals(dom.getName()) && "REGISTERED".equals(dom.getStatus())) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private static void registerDomain(final AmazonSimpleWorkflow client) {
-    final RegisterDomainRequest req = new RegisterDomainRequest();
-    req.setName(DOMAIN);
-    req.setDescription("SWF Domain for Loadbalancing service");
-    req.setWorkflowExecutionRetentionPeriodInDays("1");
-    client.registerDomain(req);
   }
 }
