@@ -139,6 +139,7 @@ that describes a Eucalyptus instance to be launched.
                         <xsl:message terminate="yes">ERROR: invalid or unset /instance/os/@platform or /instance/backing/root/@type parameter</xsl:message>
                     </xsl:otherwise>
                 </xsl:choose>
+               <boot dev='hd'/>
             </os>
             <features>
                 <acpi/>
