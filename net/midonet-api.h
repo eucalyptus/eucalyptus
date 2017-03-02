@@ -551,9 +551,14 @@ int mido_get_bgp_routes_v1(midoname *bgp, midoname ***outnames, int *outnames_ma
 int mido_get_bgp_routes_v5(midoname *router, midoname ***outnames, int *outnames_max);
 
 int mido_create_ip4mac(midonet_api_bridge *br, midoname *devname, char *ip, char *mac, midoname **outname);
+int mido_delete_ip4mac(midonet_api_bridge *bridge, midoname *ip4mac);
+int mido_delete_ip4mac_byip(midonet_api_bridge *bridge, char *ip);
 int mido_get_ip4mac_pairs(midoname *bridgename, midoname ***outnames, int *outnames_max);
 
 int mido_create_macport(midonet_api_bridge *br, midoname *devname, char *macAddr, char *portId, midoname **outname);
+int mido_delete_macport(midonet_api_bridge *bridge, midoname *macport);
+int mido_delete_macport_bymac(midonet_api_bridge *bridge, char *mac);
+int mido_delete_macport_byport(midonet_api_bridge *bridge, char *portId);
 int mido_get_macport_pairs(midoname *bridgename, midoname ***outnames, int *outnames_max);
 
 int mido_find_dhcp_from_list(midoname **dhcps, int max_dhcps, char *subnet, char *slashnet,
@@ -727,8 +732,16 @@ int midonet_api_cache_del_bridge(midoname *bridge);
 midonet_api_bridge *midonet_api_cache_lookup_bridge(midoname *bridge, int *idx);
 
 int midonet_api_cache_add_ip4mac(midonet_api_bridge *bridge, midoname *ip4mac);
+int midonet_api_cache_del_ip4mac(midonet_api_bridge *bridge, midoname *ip4mac);
+midoname *midonet_api_cache_lookup_ip4mac(midonet_api_bridge *bridge, midoname *ip4mac, int *idx);
+midoname *midonet_api_cache_lookup_ip4mac_byip(midonet_api_bridge *bridge, char *ip, int *idx);
+midoname *midonet_api_cache_lookup_ip4mac_bymac(midonet_api_bridge *bridge, char *mac, int *idx);
 
 int midonet_api_cache_add_macport(midonet_api_bridge *bridge, midoname *macport);
+int midonet_api_cache_del_macport(midonet_api_bridge *bridge, midoname *macport);
+midoname *midonet_api_cache_lookup_macport(midonet_api_bridge *bridge, midoname *macport, int *idx);
+midoname *midonet_api_cache_lookup_macport_bymac(midonet_api_bridge *bridge, char *mac, int *idx);
+midoname *midonet_api_cache_lookup_macport_byport(midonet_api_bridge *bridge, char *portId, int *idx);
 
 int midonet_api_cache_add_dhcp(midonet_api_bridge *bridge, midoname *dhcp);
 int midonet_api_cache_del_dhcp(midonet_api_bridge *bridge, midoname *dhcp);

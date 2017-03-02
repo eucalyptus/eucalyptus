@@ -254,7 +254,6 @@ typedef struct gni_dhcp_os_t {
 typedef struct gni_route_entry_t {
     char destCidr[NETWORK_ADDR_LEN];
     char target[LID_LEN];
-    int applied;
 } gni_route_entry;
 
 typedef struct gni_route_table_t {
@@ -291,6 +290,7 @@ typedef struct gni_vpcsubnet_t {
     gni_instance **interfaces;
     gni_route_table *routeTable;
     gni_network_acl *networkAcl;
+    int *rt_entry_applied;
     int max_interfaces;
     void *mido_present;
 } gni_vpcsubnet;

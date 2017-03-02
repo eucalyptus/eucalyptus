@@ -3610,6 +3610,8 @@ int gni_populate_vpcsubnet(gni_vpc *vpc, gni_vpcsubnet *vpcsubnet, xmlNodePtr xm
         vpcsubnet->routeTable = gni_vpc_get_routeTable(vpc, results[i]);
         if (vpcsubnet->routeTable == NULL) {
             LOGWARN("Failed to find GNI %s for %s\n", results[i], vpcsubnet->name)
+        } else {
+            vpcsubnet->rt_entry_applied = EUCA_ZALLOC_C(vpcsubnet->routeTable->max_entries, sizeof (int));
         }
         EUCA_FREE(results[i]);
     }
@@ -4660,6 +4662,7 @@ int gni_vpc_clear(gni_vpc *vpc) {
 
     for (i = 0; i < vpc->max_subnets; i++) {
         EUCA_FREE(vpc->subnets[i].interfaces);
+        EUCA_FREE(vpc->subnets[i].rt_entry_applied);
     }
     EUCA_FREE(vpc->subnets);
     for (i = 0; i < vpc->max_networkAcls; i++) {
@@ -6190,6 +6193,13 @@ int cmp_gni_vpcsubnet(gni_vpcsubnet *a, gni_vpcsubnet *b, int *nacl_diff) {
             *nacl_diff = 1;
         }
     }
+    if (a->rt_entry_applied && a->routeTable) {
+        for (int i = 0; i < a->routeTable->max_entries; i++) {
+            if (!a->rt_entry_applied[i]) {
+                return (1);
+            }
+        }
+    }
     if ((!strcmp(a->routeTable_name, b->routeTable_name)) &&
             (!cmp_gni_route_table(a->routeTable, b->routeTable))) {
         return (0);
@@ -6239,9 +6249,6 @@ int cmp_gni_route_table(gni_route_table *a, gni_route_table *b) {
         return (1);
     }
     for (int i = 0; i < a->max_entries; i++) {
-        if (a->entries[i].applied == 0) {
-            return (1);
-        }
         if ((strcmp(a->entries[i].destCidr, b->entries[i].destCidr)) ||
                 (strcmp(a->entries[i].target, b->entries[i].target))) {
             return (1);

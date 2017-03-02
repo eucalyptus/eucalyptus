@@ -1288,6 +1288,12 @@ int do_midonet_update_pass1(globalNetworkInfo *gni, globalNetworkInfo *appliedGn
                         && !vpcsubnet->population_failed) {
                     LOGEXTREME("\t\t%s fully implemented \n", vpcsubnet->name);
                     vpcsubnet->midopresent = 1;
+                    // tag route table entries
+                    if (gnivpcsubnet->rt_entry_applied && gnivpcsubnet->routeTable) {
+                        for (k = 0; k < gnivpcsubnet->routeTable->max_entries; k++) {
+                            gnivpcsubnet->rt_entry_applied[k] = 1;
+                        }
+                    }
                 } else {
                     vpcsubnet->midopresent = 0;
                 }
@@ -2889,81 +2895,85 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
                     LOGWARN("%s is missing infilter or outfilter\n", subnet->name);
                     continue;
                 }
-                
-                // subnet inbound default rules                
-                // allow traffic from reserved IP addresses (subnet/30) 
-                rc = mido_create_rule(subnet->inchain, NULL, NULL, &rulepos,
-                        "position", rulepos_str, "type", "accept", "nwSrcAddress",
-                        subnet_buf, "nwSrcLength", "30", NULL);
-                if (rc) {
-                    LOGWARN("Failed to create %s inbound reserved IPs rule\n", subnet->name);
-                    ret++;
+
+                // subnet inbound default rules
+                if (subnet->inchain->rules_count < 4) {
+                    // allow traffic from reserved IP addresses (subnet/30) 
+                    rc = mido_create_rule(subnet->inchain, NULL, NULL, &rulepos,
+                            "position", rulepos_str, "type", "accept", "nwSrcAddress",
+                            subnet_buf, "nwSrcLength", "30", NULL);
+                    if (rc) {
+                        LOGWARN("Failed to create %s inbound reserved IPs rule\n", subnet->name);
+                        ret++;
+                    }
+
+                    // allow link-local traffic (169.254.0.0/16)
+                    rc = mido_create_rule(subnet->inchain, NULL, NULL, &rulepos,
+                            "position", rulepos_str, "type", "accept", "nwSrcAddress",
+                            "169.254.0.0", "nwSrcLength", "16", NULL);
+                    if (rc) {
+                        LOGWARN("Failed to create %s inbound link-local rule\n", subnet->name);
+                        ret++;
+                    }
+
+                    // allow incoming DHCP (UDP source port 67)
+                    rc = mido_create_rule(subnet->inchain, NULL, NULL, &rulepos,
+                            "position", rulepos_str, "type", "accept", "nwProto", "17",
+                            "tpDst", "jsonjson", "tpDst:start", "67", "tpDst:end", "68",
+                            "tpDst:END", "END", NULL);
+                    if (rc) {
+                        LOGWARN("Failed to create %s inbound DHCP rule\n", subnet->name);
+                        ret++;
+                    }
+
+                    // allow intra-subnet traffic
+                    rc = mido_create_rule(subnet->inchain, NULL, NULL, &rulepos,
+                            "position", rulepos_str, "type", "accept", "nwSrcAddress",
+                            subnet_buf, "nwSrcLength", slashnet_buf, NULL);
+                    if (rc) {
+                        LOGWARN("Failed to create %s inbound intra-subnet rule\n", subnet->name);
+                        ret++;
+                    }
                 }
 
-                // allow link-local traffic (169.254.0.0/16)
-                rc = mido_create_rule(subnet->inchain, NULL, NULL, &rulepos,
-                        "position", rulepos_str, "type", "accept", "nwSrcAddress",
-                        "169.254.0.0", "nwSrcLength", "16", NULL);
-                if (rc) {
-                    LOGWARN("Failed to create %s inbound link-local rule\n", subnet->name);
-                    ret++;
-                }
+                // subnet outbound default rules
+                if (subnet->outchain->rules_count < 4) {
+                    // allow traffic to reserved IP addresses (subnet/30) 
+                    rc = mido_create_rule(subnet->outchain, NULL, NULL, &rulepos,
+                            "position", rulepos_str, "type", "accept", "nwDstAddress",
+                            subnet_buf, "nwDstLength", "30", NULL);
+                    if (rc) {
+                        LOGWARN("Failed to create %s outbound reserved IPs rule\n", subnet->name);
+                        ret++;
+                    }
 
-                // allow incoming DHCP (UDP source port 67)
-                rc = mido_create_rule(subnet->inchain, NULL, NULL, &rulepos,
-                        "position", rulepos_str, "type", "accept", "nwProto", "17",
-                        "tpDst", "jsonjson", "tpDst:start", "67", "tpDst:end", "68",
-                        "tpDst:END", "END", NULL);
-                if (rc) {
-                    LOGWARN("Failed to create %s inbound DHCP rule\n", subnet->name);
-                    ret++;
-                }
+                    // allow link-local traffic (169.254.0.0/16)
+                    rc = mido_create_rule(subnet->outchain, NULL, NULL, &rulepos,
+                            "position", rulepos_str, "type", "accept", "nwDstAddress",
+                            "169.254.0.0", "nwDstLength", "16", NULL);
+                    if (rc) {
+                        LOGWARN("Failed to create %s outbound link-local rule\n", subnet->name);
+                        ret++;
+                    }
 
-                // allow intra-subnet traffic
-                rc = mido_create_rule(subnet->inchain, NULL, NULL, &rulepos,
-                        "position", rulepos_str, "type", "accept", "nwSrcAddress",
-                        subnet_buf, "nwSrcLength", slashnet_buf, NULL);
-                if (rc) {
-                    LOGWARN("Failed to create %s inbound intra-subnet rule\n", subnet->name);
-                    ret++;
-                }
+                    // allow outgoing DHCP (UDP source port 67)
+                    rc = mido_create_rule(subnet->outchain, NULL, NULL, &rulepos,
+                            "position", rulepos_str, "type", "accept", "nwProto", "17",
+                            "tpDst", "jsonjson", "tpDst:start", "67", "tpDst:end", "68",
+                            "tpDst:END", "END", NULL);
+                    if (rc) {
+                        LOGWARN("Failed to create %s outbound DHCP rule\n", subnet->name);
+                        ret++;
+                    }
 
-                // subnet outbound default rules                
-                // allow traffic to reserved IP addresses (subnet/30) 
-                rc = mido_create_rule(subnet->outchain, NULL, NULL, &rulepos,
-                        "position", rulepos_str, "type", "accept", "nwDstAddress",
-                        subnet_buf, "nwDstLength", "30", NULL);
-                if (rc) {
-                    LOGWARN("Failed to create %s outbound reserved IPs rule\n", subnet->name);
-                    ret++;
-                }
-
-                // allow link-local traffic (169.254.0.0/16)
-                rc = mido_create_rule(subnet->outchain, NULL, NULL, &rulepos,
-                        "position", rulepos_str, "type", "accept", "nwDstAddress",
-                        "169.254.0.0", "nwDstLength", "16", NULL);
-                if (rc) {
-                    LOGWARN("Failed to create %s outbound link-local rule\n", subnet->name);
-                    ret++;
-                }
-
-                // allow outgoing DHCP (UDP source port 67)
-                rc = mido_create_rule(subnet->outchain, NULL, NULL, &rulepos,
-                        "position", rulepos_str, "type", "accept", "nwProto", "17",
-                        "tpDst", "jsonjson", "tpDst:start", "67", "tpDst:end", "68",
-                        "tpDst:END", "END", NULL);
-                if (rc) {
-                    LOGWARN("Failed to create %s outbound DHCP rule\n", subnet->name);
-                    ret++;
-                }
-
-                // allow intra-subnet traffic
-                rc = mido_create_rule(subnet->outchain, NULL, NULL, &rulepos,
-                        "position", rulepos_str, "type", "accept", "nwDstAddress",
-                        subnet_buf, "nwDstLength", slashnet_buf, NULL);
-                if (rc) {
-                    LOGWARN("Failed to create %s outbound intra-subnet rule\n", subnet->name);
-                    ret++;
+                    // allow intra-subnet traffic
+                    rc = mido_create_rule(subnet->outchain, NULL, NULL, &rulepos,
+                            "position", rulepos_str, "type", "accept", "nwDstAddress",
+                            subnet_buf, "nwDstLength", slashnet_buf, NULL);
+                    if (rc) {
+                        LOGWARN("Failed to create %s outbound intra-subnet rule\n", subnet->name);
+                        ret++;
+                    }
                 }
 
                 // jump rules to NACL chains
@@ -3840,6 +3850,8 @@ int parse_mido_vpc_subnet_route_table(mido_config *mido, mido_vpc *vpc, mido_vpc
     tmpstr = hex2dot(mido->int_rtaddr);
     snprintf(eucartgw, 32, "%s", tmpstr);
     EUCA_FREE(tmpstr);
+    
+    gni_vpcsubnet *gnisn = vpcsubnet->gniSubnet;
 
     for (i = 0; i < rtable->max_entries; i++) {
         cidr_split(rtable->entries[i].destCidr, dstNetaddr, dstSlashnet, NULL, NULL, NULL);
@@ -3848,7 +3860,9 @@ int parse_mido_vpc_subnet_route_table(mido_config *mido, mido_vpc *vpc, mido_vpc
             case VPC_TARGET_LOCAL:
                 // Local route cannot be removed. It is implemented on VPC subnet creation.
                 LOGTRACE("local route added on subnet creation. Nothing to do.\n");
-                rtable->entries[i].applied = 1;
+                if (gnisn && gnisn->rt_entry_applied) {
+                    gnisn->rt_entry_applied[i] = 1;
+                }
                 break;
             case VPC_TARGET_INTERNET_GATEWAY:
                 valid = FALSE;
@@ -3873,7 +3887,9 @@ int parse_mido_vpc_subnet_route_table(mido_config *mido, mido_vpc *vpc, mido_vpc
                     retroutes[max_retroutes].next_hop_ip = strdup(eucartgw);
                     retroutes[max_retroutes].weight = strdup("10");
                     max_retroutes++;
-                    rtable->entries[i].applied = 1;
+                    if (gnisn && gnisn->rt_entry_applied) {
+                        gnisn->rt_entry_applied[i] = 1;
+                    }
                 } else {
                     LOGWARN("Invalid igw route target %s\n", rtable->entries[i].target);
                 }
@@ -3917,7 +3933,9 @@ int parse_mido_vpc_subnet_route_table(mido_config *mido, mido_vpc *vpc, mido_vpc
                     retroutes[max_retroutes].next_hop_ip = hex2dot(interface->privateIp);
                     retroutes[max_retroutes].weight = strdup("30");
                     max_retroutes++;
-                    rtable->entries[i].applied = 1;
+                    if (gnisn && gnisn->rt_entry_applied) {
+                        gnisn->rt_entry_applied[i] = 1;
+                    }
                 } else {
                     LOGWARN("Invalid eni route target %s\n", rtable->entries[i].target);
                 }
@@ -3966,8 +3984,10 @@ int parse_mido_vpc_subnet_route_table(mido_config *mido, mido_vpc *vpc, mido_vpc
                     retroutes[max_retroutes].next_hop_ip = strdup(natgw);
                     retroutes[max_retroutes].weight = strdup("20");
                     max_retroutes++;
-                    rtable->entries[i].applied = 1;
-                } else {
+                    if (gnisn && gnisn->rt_entry_applied) {
+                        gnisn->rt_entry_applied[i] = 1;
+                    }
+               } else {
                     LOGWARN("Invalid nat gateway route target %s\n", rtable->entries[i].target);
                 }
                 break;
@@ -6804,16 +6824,12 @@ int populate_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *
                     found = 1;
                     
                     // populate the dot2 arp entry
-                    if (vpcsubnet->midos[SUBN_BR_DHCP] && vpcsubnet->midos[SUBN_BR_DHCP]->init) {
-                        for (int k = 0; k < vpcsubnet->subnetbr->max_ip4mac_pairs; k++) {
-                            if (vpcsubnet->subnetbr->ip4mac_pairs[k]) {
-                                char *macstr = replace_char(vpcsubnet->midos[SUBN_VPCRT_BRPORT]->port->portmac, ':', '-');
-                                if (strstr(vpcsubnet->subnetbr->ip4mac_pairs[k]->uuid, macstr)) {
-                                    vpcsubnet->midos[SUBN_BR_DOT2ARP] = vpcsubnet->subnetbr->ip4mac_pairs[k];
-                                    LOGTRACE("Found dot2 arp %s_%s\n", vpcsubnet->midos[SUBN_BR_DOT2ARP]->ip4mac->ip, vpcsubnet->midos[SUBN_BR_DOT2ARP]->ip4mac->mac);
-                                }
-                                EUCA_FREE(macstr);
-                            }
+                    if (vpcsubnet->midos[SUBN_VPCRT_BRPORT] && vpcsubnet->midos[SUBN_VPCRT_BRPORT]->port) {
+                        midoname *dot2ip4mac = midonet_api_cache_lookup_ip4mac_bymac(
+                                vpcsubnet->subnetbr, vpcsubnet->midos[SUBN_VPCRT_BRPORT]->port->portmac, NULL);
+                        if (dot2ip4mac) {
+                            vpcsubnet->midos[SUBN_BR_DOT2ARP] = dot2ip4mac;
+                            LOGTRACE("Found dot2 arp %s_%s\n", vpcsubnet->midos[SUBN_BR_DOT2ARP]->ip4mac->ip, vpcsubnet->midos[SUBN_BR_DOT2ARP]->ip4mac->mac);
                         }
                     }
                     
@@ -7312,6 +7328,19 @@ int disconnect_mido_vpc_instance(mido_vpc_subnet *subnet, mido_vpc_instance *vpc
         LOGINFO("\tdisconnecting %s from %s\n", vpcinstance->name, vpcinstance->midos[INST_VMHOST]->name);
     } else {
         LOGERROR("cannot disconnect %s from NULL host\n", vpcinstance->name);
+    }
+
+    // Remove arp_table and mac_table entries
+    if (vpcinstance->privip) {
+        char *privip = hex2dot(vpcinstance->privip);
+        rc = mido_delete_ip4mac_byip(subnet->subnetbr, privip);
+        ret += rc;
+        EUCA_FREE(privip);
+    }
+    if (vpcinstance->midos[INST_VPCBR_VMPORT] && vpcinstance->midos[INST_VPCBR_VMPORT]->init &&
+            vpcinstance->midos[INST_VPCBR_VMPORT]->uuid) {
+        rc = mido_delete_macport_byport(subnet->subnetbr, vpcinstance->midos[INST_VPCBR_VMPORT]->uuid);
+        ret += rc;
     }
 
     // unlink port, delete port, delete dhcp entry
@@ -8107,6 +8136,7 @@ int create_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vp
             vpcsubnet->midos[SUBN_VPCRT_BRPORT]->port->portmac) {
         u32 dot2address = dot2hex(subnet);
         dot2address += 2;
+        LOGEXTREME("creating dot2 arp_table entry for %s\n", vpcsubnet->name);
         rc = mido_create_ip4mac(vpcsubnet->subnetbr, NULL, hex2dot_s(dot2address),
                 vpcsubnet->midos[SUBN_VPCRT_BRPORT]->port->portmac, &(vpcsubnet->midos[SUBN_BR_DOT2ARP]));
     }
