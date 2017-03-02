@@ -128,6 +128,9 @@ install: build
 	@$(INSTALL) -m 755 elb-security-policy/*.json $(DESTDIR)$(etcdir)/eucalyptus/cloud.d/elb-security-policy/
 	@$(INSTALL) -d $(DESTDIR)$(datarootdir)/eucalyptus/doc/billing-sample-reports/
 	@$(INSTALL) -m 755 billing-sample-reports/*.csv $(DESTDIR)$(datarootdir)/eucalyptus/doc/billing-sample-reports/
+	@$(INSTALL) -d $(DESTDIR)$(datarootdir)/eucalyptus/cassandra/
+	@$(INSTALL) -m 755 cassandra/euca-cassandra $(DESTDIR)$(libexecdir)/eucalyptus/
+	@$(INSTALL) -m 644 cassandra/logback.xml $(DESTDIR)$(datarootdir)/eucalyptus/cassandra/
 	@make -C status install
 	@make -C imaging install
 

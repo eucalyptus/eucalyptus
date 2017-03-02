@@ -127,8 +127,8 @@ public class FUtils {
    * @param <T> The result type
    * @return A function that memoizes the last result
    */
-  public static <F,T> Function<F,T> memoizeLast( @Nonnull final Function<F,T> function ) {
-    return new Function<F, T>( ) {
+  public static <F,T> CompatFunction<F,T> memoizeLast( @Nonnull final Function<F,T> function ) {
+    return new CompatFunction<F, T>( ) {
       private final AtomicReference<Pair<F,T>> cached = new AtomicReference<>( );
 
       @Nullable

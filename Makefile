@@ -126,7 +126,7 @@ install: deploy
 	$(INSTALL) -d -m 0700 $(DESTDIR)$(vardir)/lib/eucalyptus/ldap
 	$(INSTALL) -d -m 0700 $(DESTDIR)$(vardir)/lib/eucalyptus/upgrade
 	$(INSTALL) -d -m 0700 $(DESTDIR)$(vardir)/lib/eucalyptus/volumes
-	$(INSTALL) -d -m 0700 $(DESTDIR)$(vardir)/lib/eucalyptus/webapps
+	$(INSTALL) -d -m 0700 $(DESTDIR)$(vardir)/lib/eucalyptus/cassandra
 	touch $(DESTDIR)$(vardir)/lib/eucalyptus/services
 	$(INSTALL) -d -m 0755 $(DESTDIR)$(vardir)/run/eucalyptus/net
 	$(INSTALL) -d -m 0750 $(DESTDIR)$(vardir)/run/eucalyptus/status
