@@ -45,10 +45,10 @@ public class SimpleQueueProperties {
       "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 2, \"MaximumPollRateIntervalMilliseconds\": 50, \"MaximumPollRatePerSecond\": 20 }";
 
   @ConfigurableField(
-    initial = "postgres",
-    description = "The db to use"
+    initial = "auto",
+    description = "The db to use (postgres|cassandra|euca-cassandra|auto)"
   )
-  public static volatile String DB_TO_USE = "postgres";
+  public static volatile String DB_TO_USE = "auto";
   @ConfigurableField(
     initial = "127.0.0.1",
     description = "The host for cassandra",

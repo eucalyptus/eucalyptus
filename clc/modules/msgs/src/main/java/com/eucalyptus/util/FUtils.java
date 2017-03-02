@@ -21,6 +21,8 @@ package com.eucalyptus.util;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.google.common.base.Enums;
@@ -143,6 +145,43 @@ public class FUtils {
             cached.compareAndSet( cachedResult, Pair.pair( f, result ) );
           }
           return result;
+        }
+      }
+    };
+  }
+
+  /**
+   * Memoize the last successful invocation with non-null parameter/result.
+   *
+   * Will only call function with one thread at a time.
+   *
+   * @param function The function to memoize
+   * @param <F> The parameter type
+   * @param <T> The result type
+   * @return A function that memoizes the last result
+   */
+  public static <F,T> CompatFunction<F,T> memoizeLastSync( @Nonnull final Function<F,T> function ) {
+    return new CompatFunction<F, T>( ) {
+      private final Lock lock = new ReentrantLock( );
+      private final AtomicReference<Pair<F,T>> cached = new AtomicReference<>( );
+
+      @Nullable
+      @Override
+      public T apply( @Nullable final F f ) {
+        final Pair<F,T> cachedResult = cached.get( );
+        if ( cachedResult != null && cachedResult.getLeft( ).equals( f ) ) {
+          return cachedResult.getRight( );
+        } else try ( final LockResource lockResource = LockResource.lock( lock ) ) {
+          final Pair<F,T> syncCachedResult = cached.get( );
+          if ( syncCachedResult != null && syncCachedResult.getLeft( ).equals( f ) ) {
+            return syncCachedResult.getRight( );
+          } else {
+            final T result = function.apply( f );
+            if ( f != null && result != null ) {
+              cached.compareAndSet( cachedResult, Pair.pair( f, result ) );
+            }
+            return result;
+          }
         }
       }
     };
