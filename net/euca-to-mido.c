@@ -5032,15 +5032,16 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc 
     char *privip = NULL;
     char mdip[NETWORK_ADDR_LEN] = { 0 };
     char matchStr[64];
+    midoname *instanceport = NULL;
+    midonet_api_host *instancehost = NULL;
 
     LOGTRACE("populating VPC instance %s\n", vpcinstance->name);
     midonet_api_bridge *subnetbr = vpcsubnet->subnetbr;
     if (subnetbr != NULL) {
         LOGTRACE("Found subnet bridge %s\n", subnetbr->obj->name);
-        midoname *instanceport = vpcinstance->midos[INST_VPCBR_VMPORT];
+        instanceport = vpcinstance->midos[INST_VPCBR_VMPORT];
         if (instanceport != NULL) {
             LOGTRACE("Found instance port %s\n", instanceport->name);
-            midonet_api_host *instancehost = NULL;
             if (instanceport->port && instanceport->port->hostid && strlen(instanceport->port->hostid)) {
                 instancehost = mido_get_host(NULL, instanceport->port->hostid);
             }
@@ -5049,22 +5050,19 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc 
                 vpcinstance->midos[INST_VMHOST] = instancehost->obj;
             }
         }
-    }
-    if (!vpcinstance->midos[INST_VPCBR_VMPORT] || !vpcinstance->midos[INST_VMHOST]) {
-        LOGWARN("Unable to populate vpcinstance %s VPCBR_VMPORT and/or VMHOST.\n", vpcinstance->name);
-    }
-
-    if (vpcsubnet->subnetbr) {
         found = 0;
         midonet_api_dhcp *dhcp = NULL;
-        if (vpcsubnet->subnetbr->max_dhcps) {
-            dhcp = vpcsubnet->subnetbr->dhcps[0];
+        if (subnetbr->max_dhcps) {
+            dhcp = subnetbr->dhcps[0];
             midoname *tmpmn = mido_get_dhcphost(dhcp, vpcinstance->name);
             if (tmpmn) {
                 LOGTRACE("Found dhcp host %s\n", tmpmn->name);
                 vpcinstance->midos[INST_VPCBR_DHCPHOST] = tmpmn;
             }
         }
+    }
+    if (!vpcinstance->midos[INST_VPCBR_VMPORT] || !vpcinstance->midos[INST_VMHOST]) {
+        LOGWARN("Unable to populate vpcinstance %s VPCBR_VMPORT and/or VMHOST.\n", vpcinstance->name);
     }
 
     // process public IP
@@ -5270,6 +5268,26 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc 
 
     }
 
+    if (mido->config->enable_mido_arptable) {
+        if (subnetbr) {
+            // populate the dot2 arp entry
+            if (privip) {
+                midoname *ip4mac = midonet_api_cache_lookup_ip4mac_byip(subnetbr, privip, NULL);
+                if (ip4mac) {
+                    vpcinstance->midos[INST_IP4MAC] = ip4mac;
+                    LOGEXTREME("Found arp_table entry %s_%s\n", ip4mac->ip4mac->ip, ip4mac->ip4mac->mac);
+                }
+                if (instanceport) {
+                    midoname *macport = midonet_api_cache_lookup_macport_byport(subnetbr, instanceport->uuid, NULL);
+                    if (macport) {
+                        vpcinstance->midos[INST_MACPORT] = macport;
+                        LOGEXTREME("Found mac_table entry %s_%s\n", macport->macport->macAddr, macport->macport->portId);
+                    }
+                }
+            }
+        }
+    }
+
     LOGTRACE("vpc instance (%s): AFTER POPULATE\n", vpcinstance->name);
     for (i = 0; i < INST_ELIP_PRE_IPADDRGROUP_IP; i++) {
         if (vpcinstance->midos[i] == NULL) {
@@ -5286,7 +5304,15 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc 
         }
     }
     if (mido->config->enable_mido_md) {
-        for (i = INST_MD_DNAT; i < INST_END; i++) {
+        for (i = INST_MD_DNAT; i < INST_IP4MAC; i++) {
+            if (vpcinstance->midos[i] == NULL) {
+                LOGWARN("VPC instance %s population failed to populate resource at idx %d\n", vpcinstance->name, i);
+                vpcinstance->population_failed = 1;
+            }
+        }
+    }
+    if (mido->config->enable_mido_arptable) {
+        for (i = INST_IP4MAC; i < INST_END; i++) {
             if (vpcinstance->midos[i] == NULL) {
                 LOGWARN("VPC instance %s population failed to populate resource at idx %d\n", vpcinstance->name, i);
                 vpcinstance->population_failed = 1;
@@ -6832,7 +6858,6 @@ int populate_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *
                             LOGTRACE("Found dot2 arp %s_%s\n", vpcsubnet->midos[SUBN_BR_DOT2ARP]->ip4mac->ip, vpcsubnet->midos[SUBN_BR_DOT2ARP]->ip4mac->mac);
                         }
                     }
-                    
                 }
             }
         }
@@ -7331,15 +7356,12 @@ int disconnect_mido_vpc_instance(mido_vpc_subnet *subnet, mido_vpc_instance *vpc
     }
 
     // Remove arp_table and mac_table entries
-    if (vpcinstance->privip) {
-        char *privip = hex2dot(vpcinstance->privip);
-        rc = mido_delete_ip4mac_byip(subnet->subnetbr, privip);
+    if (vpcinstance->midos[INST_IP4MAC]) {
+        rc = mido_delete_ip4mac(subnet->subnetbr, vpcinstance->midos[INST_IP4MAC]);
         ret += rc;
-        EUCA_FREE(privip);
     }
-    if (vpcinstance->midos[INST_VPCBR_VMPORT] && vpcinstance->midos[INST_VPCBR_VMPORT]->init &&
-            vpcinstance->midos[INST_VPCBR_VMPORT]->uuid) {
-        rc = mido_delete_macport_byport(subnet->subnetbr, vpcinstance->midos[INST_VPCBR_VMPORT]->uuid);
+    if (vpcinstance->midos[INST_MACPORT]) {
+        rc = mido_delete_macport(subnet->subnetbr, vpcinstance->midos[INST_MACPORT]);
         ret += rc;
     }
 
@@ -7695,12 +7717,12 @@ int connect_mido_vpc_instance(mido_config *mido, mido_vpc_subnet *vpcsubnet, mid
         if (vpcinstance->midos[INST_VPCBR_VMPORT] && vpcinstance->midos[INST_VPCBR_VMPORT]->uuid &&
                 ipAddr && macAddr && strlen(ipAddr) && strlen(macAddr)) {
             LOGEXTREME("setting arp_entry for %s\n", vpcinstance->name);
-            rc = mido_create_ip4mac(vpcsubnet->subnetbr, NULL, ipAddr, macAddr, NULL);
+            rc = mido_create_ip4mac(vpcsubnet->subnetbr, NULL, ipAddr, macAddr, &(vpcinstance->midos[INST_IP4MAC]));
             if (rc) {
                 LOGWARN("failed to create arp_table entry for %s\n", vpcinstance->name);
             }
             LOGEXTREME("setting mac_entry for %s\n", vpcinstance->name);
-            rc = mido_create_macport(vpcsubnet->subnetbr, NULL, macAddr, vpcinstance->midos[INST_VPCBR_VMPORT]->uuid, NULL);
+            rc = mido_create_macport(vpcsubnet->subnetbr, NULL, macAddr, vpcinstance->midos[INST_VPCBR_VMPORT]->uuid, &(vpcinstance->midos[INST_MACPORT]));
             if (rc) {
                 LOGWARN("failed to create mac_table entry for %s\n", vpcinstance->name);
             }
@@ -10021,6 +10043,39 @@ int do_midonet_delete_unconnected(mido_config *mido, boolean checkonly) {
             gDetected = TRUE;
             if (!checkonly) {
                 mido_delete_resource(NULL, cache->ipaddrgroups[i]->obj);
+            }
+        }
+    }
+    LOGINFO("\tchecking arp_table and mac_table entries\n");
+    for (int i = 0; i < cache->max_bridges; i++) {
+        midonet_api_bridge *br = cache->bridges[i];
+        if (!br) {
+            continue;
+        }
+        for (int j = 0; j < br->max_ip4mac_pairs; j++) {
+            midoname *ip4mac = br->ip4mac_pairs[j];
+            if (!ip4mac) {
+                continue;
+            }
+            if (!ip4mac->tag) {
+                LOGINFO("\t\t%s_%s\n", ip4mac->ip4mac->ip, ip4mac->ip4mac->mac);
+                gDetected = TRUE;
+                if (!checkonly) {
+                    mido_delete_resource(NULL, ip4mac);
+                }
+            }
+        }
+        for (int j = 0; j < br->max_macport_pairs; j++) {
+            midoname *macport = br->macport_pairs[j];
+            if (!macport) {
+                continue;
+            }
+            if (!macport->tag) {
+                LOGINFO("\t\t%s_%s\n", macport->macport->macAddr, macport->macport->portId);
+                gDetected = TRUE;
+                if (!checkonly) {
+                    mido_delete_resource(NULL, macport);
+                }
             }
         }
     }

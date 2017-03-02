@@ -114,6 +114,8 @@ enum vpc_instance_midos_t {
     INST_MD_DNAT,
     INST_MD_SNAT,
     INST_MD_ROUTE,
+    INST_IP4MAC,
+    INST_MACPORT,
     INST_END
 };
 
