@@ -1,6 +1,6 @@
 # Makefile wrapper around ant
 #
-# Copyright (c) 2009-2016 Hewlett Packard Enterprise Development LP
+# Copyright (c) 2009-2017 Hewlett Packard Enterprise Development LP
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -68,7 +68,7 @@ include ../Makedefs
 #
 # $ make CLOUD_LIBS_BRANCH=mylibsbranch
 #
-CLOUD_LIBS_BRANCH ?= master
+CLOUD_LIBS_BRANCH ?= maint-4.4
 ifeq ($(USE_BUNDLED_JARS), no)
     CLOUD_LIBS_DIR ?= ${datarootdir}/eucalyptus
 else
