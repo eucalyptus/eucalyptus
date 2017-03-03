@@ -105,9 +105,18 @@ public class ObjectStoragePUTBinding extends ObjectStorageRESTBinding {
     // Bucket operations
     // Notification
     .put(BUCKET + HttpMethod.PUT + BucketParameter.notification.toString(), "PUT Bucket notification")
-
     // Website
     .put(BUCKET + HttpMethod.PUT + BucketParameter.website.toString(), "PUT Bucket website")
+    // Accelerate
+    .put(BUCKET + HttpMethod.PUT + BucketParameter.accelerate.toString(), "PUT Bucket accelerate")
+    // Metrics
+    .put(BUCKET + HttpMethod.PUT + BucketParameter.metrics.toString(), "PUT Bucket metrics")
+    // Analytics
+    .put(BUCKET + HttpMethod.PUT + BucketParameter.analytics.toString(), "PUT Bucket analytics")
+    // Inventory
+    .put(BUCKET + HttpMethod.PUT + BucketParameter.inventory.toString(), "PUT Bucket inventory")
+    // Replication
+    .put(BUCKET + HttpMethod.PUT + BucketParameter.replication.toString(), "PUT Bucket replication")
     .build( );
 
   @Override

@@ -109,12 +109,20 @@ public class ObjectStorageGETBinding extends ObjectStorageRESTBinding {
     // Bucket operations
     // Notification
     .put(BUCKET + HttpMethod.GET + BucketParameter.notification.toString(), "GET Bucket notification")
-
     // Request Payments // TODO HACK! binding code converts parameters to lower case. Fix that issue!
     .put(BUCKET + HttpMethod.GET + BucketParameter.requestPayment.toString().toLowerCase(), "GET Bucket requestPayment")
-
     // Website
     .put(BUCKET + HttpMethod.GET + BucketParameter.website.toString(), "GET Bucket website")
+    // Accelerate
+    .put(BUCKET + HttpMethod.GET + BucketParameter.accelerate.toString(), "GET Bucket accelerate")
+    // Metrics
+    .put(BUCKET + HttpMethod.GET + BucketParameter.metrics.toString(), "GET Bucket metrics")
+    // Analytics
+    .put(BUCKET + HttpMethod.GET + BucketParameter.analytics.toString(), "GET Bucket analytics")
+    // Inventory
+    .put(BUCKET + HttpMethod.GET + BucketParameter.inventory.toString(), "GET Bucket inventory")
+    // Replication
+    .put(BUCKET + HttpMethod.GET + BucketParameter.replication.toString(), "GET Bucket replication")
     .build( );
 
   @Override

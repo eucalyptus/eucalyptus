@@ -93,6 +93,14 @@ public class ObjectStorageDELETEBinding extends ObjectStorageRESTBinding {
     // Bucket operations
     // Website
     .put(BUCKET + HttpMethod.DELETE + BucketParameter.website.toString(), "DELETE Bucket website")
+    // Metrics
+    .put(BUCKET + HttpMethod.DELETE + BucketParameter.metrics.toString(), "DELETE Bucket metrics")
+    // Analytics
+    .put(BUCKET + HttpMethod.DELETE + BucketParameter.analytics.toString(), "DELETE Bucket analytics")
+    // Inventory
+    .put(BUCKET + HttpMethod.DELETE + BucketParameter.inventory.toString(), "DELETE Bucket inventory")
+    // Replication
+    .put(BUCKET + HttpMethod.DELETE + BucketParameter.replication.toString(), "DELETE Bucket replication")
     .build( );
 
   @Override
