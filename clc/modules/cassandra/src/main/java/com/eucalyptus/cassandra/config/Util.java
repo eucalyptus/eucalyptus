@@ -20,10 +20,12 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.SystemIds;
+import com.eucalyptus.cassandra.CassandraKeyspaces;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Templates;
+import com.google.common.base.Optional;
 import com.google.common.io.Files;
 import com.google.common.io.Resources;
 import edu.ucsb.eucalyptus.util.SystemUtil;
@@ -80,6 +82,18 @@ class Util {
     if ( code != 0 ) {
       throw new EucalyptusCloudException( "Error stopping cassandra, status code: " + code );
     }
+  }
+
+  static void createKeyspaces( ) {
+    CassandraKeyspaces.all( ).forEach( t -> {
+      final String keyspace = t._1( );
+      final Optional<Throwable> throwableOptional = t._2( );
+      if ( throwableOptional.isPresent( ) ) {
+        logger.error( "Error processing keyspace " + keyspace, throwableOptional.get( ) );
+      } else {
+        logger.info( "Processed keyspace " + keyspace );
+      }
+    } );
   }
 
   static void createDirectories( ) {

@@ -126,7 +126,7 @@ public class CassandraMessagePersistence implements MessagePersistence {
         long nowSecs = SimpleQueueService.currentTimeSeconds( );
         Statement statement1 = new SimpleStatement(
             "SELECT message_id, message_json, send_time_secs, receive_count, total_receive_count, expiration_timestamp, " +
-                "is_delayed, is_invisible FROM messages WHERE account_id = ? " +
+                "is_delayed, is_invisible FROM eucalyptus_simplequeue.messages WHERE account_id = ? " +
                 "AND queue_name = ? AND partition_token = ?",
             queue.getAccountId( ),
             queue.getQueueName( ),
@@ -145,7 +145,7 @@ public class CassandraMessagePersistence implements MessagePersistence {
           if ( deadLetterQueue && receiveCount >= maxReceiveCount ) {
             BatchStatement batchStatement1 = new BatchStatement( );
             Statement statement2 = new SimpleStatement(
-                "DELETE FROM messages WHERE account_id = ? AND queue_name = ? AND partition_token = ? AND message_id = ?",
+                "DELETE FROM eucalyptus_simplequeue.messages WHERE account_id = ? AND queue_name = ? AND partition_token = ? AND message_id = ?",
                 queue.getAccountId( ),
                 queue.getQueueName( ),
                 partitionToken,
@@ -154,7 +154,7 @@ public class CassandraMessagePersistence implements MessagePersistence {
             batchStatement1.add( statement2 );
             Date deadLetterExpirationTimestamp = new Date( ( nowSecs + deadLetterQueueMessageRetentionPeriod ) * 1000L );
             Statement statement3 = new SimpleStatement(
-                "INSERT INTO messages (account_id, queue_name, partition_token, message_id, message_json, send_time_secs," +
+                "INSERT INTO eucalyptus_simplequeue.messages (account_id, queue_name, partition_token, message_id, message_json, send_time_secs," +
                     "receive_count, total_receive_count, expiration_timestamp) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) USING TTL ?",
                 deadLetterQueueAccountId,
@@ -181,7 +181,7 @@ public class CassandraMessagePersistence implements MessagePersistence {
             message.getAttribute( ).add( new Attribute( Constants.APPROXIMATE_FIRST_RECEIVE_TIMESTAMP, "" + nowSecs ) );
             messageJson = MessageJsonHelper.messageToJson( message );
             Statement statement4 = new SimpleStatement(
-                "UPDATE messages USING TTL ? SET message_json = ? WHERE account_id = ? " +
+                "UPDATE eucalyptus_simplequeue.messages USING TTL ? SET message_json = ? WHERE account_id = ? " +
                     "AND queue_name = ? AND partition_token = ? AND message_id = ?",
                 visibleTtl,
                 messageJson,
@@ -200,7 +200,7 @@ public class CassandraMessagePersistence implements MessagePersistence {
           receiveCount++;
           totalReceiveCount++;
           Statement statement5 = new SimpleStatement(
-              "UPDATE messages USING TTL ? SET receive_count = ?, total_receive_count = ? " +
+              "UPDATE eucalyptus_simplequeue.messages USING TTL ? SET receive_count = ?, total_receive_count = ? " +
                   "WHERE account_id = ? AND queue_name = ? AND partition_token = ? AND message_id = ?",
               visibleTtl,
               receiveCount,
@@ -219,7 +219,7 @@ public class CassandraMessagePersistence implements MessagePersistence {
 
           if ( visibilityTimeout > 0 ) {
             Statement statement6 = new SimpleStatement(
-                "UPDATE messages USING TTL ? SET is_invisible = ? " +
+                "UPDATE eucalyptus_simplequeue.messages USING TTL ? SET is_invisible = ? " +
                     "WHERE account_id = ? AND queue_name = ? AND partition_token = ? AND message_id = ?",
                 visibilityTimeout,
                 true,
@@ -269,7 +269,7 @@ public class CassandraMessagePersistence implements MessagePersistence {
       Date expirationTimestamp = new Date( ( nowSecs + queue.getMessageRetentionPeriod( ) ) * 1000L );
 
       Statement statement1 = new SimpleStatement(
-          "INSERT INTO messages (account_id, queue_name, partition_token, message_id, message_json, send_time_secs," +
+          "INSERT INTO eucalyptus_simplequeue.messages (account_id, queue_name, partition_token, message_id, message_json, send_time_secs," +
               "receive_count, total_receive_count, expiration_timestamp) " +
               "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) USING TTL ?",
           queue.getAccountId( ),
@@ -287,7 +287,7 @@ public class CassandraMessagePersistence implements MessagePersistence {
 
       if ( delaySeconds > 0 ) {
         Statement statement2 = new SimpleStatement(
-            "UPDATE messages USING TTL ? SET is_delayed = ? " +
+            "UPDATE eucalyptus_simplequeue.messages USING TTL ? SET is_delayed = ? " +
                 "WHERE account_id = ? AND queue_name = ? AND partition_token = ? AND message_id = ?",
             delaySeconds,
             true,
@@ -329,7 +329,7 @@ public class CassandraMessagePersistence implements MessagePersistence {
         throw new ReceiptHandleIsInvalidException("The input receipt handle \""+receiptHandle+"\" is not a valid for this queue.");
       }
       Statement statement1 = new SimpleStatement(
-          "SELECT receive_count FROM messages WHERE account_id = ? AND queue_name = ? AND " +
+          "SELECT receive_count FROM eucalyptus_simplequeue.messages WHERE account_id = ? AND queue_name = ? AND " +
               "partition_token = ? AND message_id = ?",
           queueKey.getAccountId( ),
           queueKey.getQueueName( ),
@@ -344,7 +344,7 @@ public class CassandraMessagePersistence implements MessagePersistence {
       }
       if ( found ) {
         Statement statement2 = new SimpleStatement(
-            "DELETE FROM messages WHERE account_id = ? AND queue_name = ? AND partition_token = ? AND message_id = ?",
+            "DELETE FROM eucalyptus_simplequeue.messages WHERE account_id = ? AND queue_name = ? AND partition_token = ? AND message_id = ?",
             queueKey.getAccountId( ),
             queueKey.getQueueName( ),
             partitionToken,
@@ -361,7 +361,7 @@ public class CassandraMessagePersistence implements MessagePersistence {
     doWithSession( session -> {
       for ( String partitionToken : partitionTokens ) {
         Statement statement1 = new SimpleStatement(
-            "DELETE FROM messages WHERE account_id = ? AND queue_name = ? AND partition_token = ?",
+            "DELETE FROM eucalyptus_simplequeue.messages WHERE account_id = ? AND queue_name = ? AND partition_token = ?",
             queueKey.getAccountId( ),
             queueKey.getQueueName( ),
             partitionToken
@@ -381,7 +381,7 @@ public class CassandraMessagePersistence implements MessagePersistence {
       long totalMessages = 0;
       for ( String partitionToken : partitionTokens ) {
         Statement statement = new SimpleStatement(
-            "SELECT COUNT(message_id), COUNT(is_delayed), COUNT(is_invisible) FROM messages WHERE account_id = ? AND queue_name = ? " +
+            "SELECT COUNT(message_id), COUNT(is_delayed), COUNT(is_invisible) FROM eucalyptus_simplequeue.messages WHERE account_id = ? AND queue_name = ? " +
                 "AND partition_token = ?",
             queueKey.getAccountId( ),
             queueKey.getQueueName( ),
@@ -429,7 +429,7 @@ public class CassandraMessagePersistence implements MessagePersistence {
         throw new ReceiptHandleIsInvalidException( "The input receipt handle \"" + receiptHandle + "\" is not a valid for this queue." );
       }
       Statement statement1 = new SimpleStatement(
-          "SELECT receive_count, expiration_timestamp FROM messages WHERE account_id = ? " +
+          "SELECT receive_count, expiration_timestamp FROM eucalyptus_simplequeue.messages WHERE account_id = ? " +
               "AND queue_name = ? AND partition_token = ? AND message_id = ?",
           queueKey.getAccountId( ),
           queueKey.getQueueName( ),
@@ -455,7 +455,7 @@ public class CassandraMessagePersistence implements MessagePersistence {
       int ttl = visibilityTimeout > 0 ? visibilityTimeout : 1;
       Boolean isInvisible = ( visibilityTimeout > 0 ) ? true : null;
       Statement statement2 = new SimpleStatement(
-          "UPDATE messages USING TTL ? SET is_invisible = ? " +
+          "UPDATE eucalyptus_simplequeue.messages USING TTL ? SET is_invisible = ? " +
               "WHERE account_id = ? AND queue_name = ? AND partition_token = ? AND message_id = ?",
           ttl,
           isInvisible,
@@ -475,7 +475,7 @@ public class CassandraMessagePersistence implements MessagePersistence {
       Long oldestTimestamp = null;
       for ( String partitionToken : partitionTokens ) {
         Statement statement = new SimpleStatement(
-            "SELECT MIN(send_time_secs) FROM messages WHERE account_id = ? AND queue_name = ? " +
+            "SELECT MIN(send_time_secs) FROM eucalyptus_simplequeue.messages WHERE account_id = ? AND queue_name = ? " +
                 "AND partition_token = ?",
             queueKey.getAccountId( ),
             queueKey.getQueueName( ),

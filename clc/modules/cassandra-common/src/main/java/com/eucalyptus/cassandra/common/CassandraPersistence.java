@@ -32,8 +32,10 @@ import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.NettyOptions;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.ThreadingOptions;
+import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.datastax.driver.core.policies.DefaultRetryPolicy;
 import com.datastax.driver.core.policies.ExponentialReconnectionPolicy;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.util.LockResource;
@@ -50,29 +52,48 @@ public class CassandraPersistence {
   private static final Lock sessionLock = new ReentrantLock( );
   private static final RetryTemplate template =
       buildRetryTemplate( NoSuchElementException.class, 15_000L, TimeUnit.MINUTES.toMillis( 5 ) );
+  private static final RetryTemplate startupRetryTemplate =
+      buildRetryTemplate( NoHostAvailableException.class, 15_000L, TimeUnit.MINUTES.toMillis( 1 ) );
   private static final boolean cassandraInstalled = new File( "/usr/sbin/cassandra" ).exists( );
 
   public static <R> R doWithSession(
       final String sessionKey, // currently unused
       final Function<? super Session,? extends R> callbackFunction
   ) {
-    return callbackFunction.apply( getSession( ) );
+    return doWithSession( SessionUsage.Service, sessionKey, callbackFunction );
   };
 
-  public static <R,E extends Throwable> R doWithSession(
+  public static <R,E extends Throwable> R doThrowsWithSession(
       final String sessionKey, // currently unused
       final ThrowingFunction<? super Session,? extends R, E> callbackFunction
   ) throws E {
-    return callbackFunction.apply( getSession( ) );
+    return doThrowsWithSession( SessionUsage.Service, sessionKey, callbackFunction );
   };
 
-  private static Session getSession( ) {
+  public static <R> R doWithSession(
+      final SessionUsage usage,
+      final String sessionKey, // currently unused
+      final Function<? super Session,? extends R> callbackFunction
+  ) {
+    return callbackFunction.apply( getSession( usage ) );
+  };
+
+  public static <R,E extends Throwable> R doThrowsWithSession(
+      final SessionUsage usage,
+      final String sessionKey, // currently unused
+      final ThrowingFunction<? super Session,? extends R, E> callbackFunction
+  ) throws E {
+    return callbackFunction.apply( getSession( usage ) );
+  };
+
+  private static Session getSession( final SessionUsage usage ) {
     Session session = sessionRef.get( );
     if ( session == null ) {
+      final ServiceConfiguration configuration = usage.getCassandraServiceConfiguration( );
       try ( final LockResource lockResource = LockResource.lock( sessionLock ) ) {
         session = sessionRef.get( );
         if ( session == null ) {
-          session = buildSession( getCassandraServiceConfiguration( ) );
+          session = usage.buildSession( configuration );
           sessionRef.set( session );
         }
       }
@@ -90,10 +111,6 @@ public class CassandraPersistence {
   @Deprecated
   public static boolean isAvailable( ) {
     return cassandraInstalled;
-  }
-
-  private static ServiceConfiguration getCassandraServiceConfiguration( ) {
-    return template.execute( retryContext -> Topology.lookup( Cassandra.class ) );
   }
 
   private static Session buildSession( final ServiceConfiguration configuration ) {
@@ -140,5 +157,32 @@ public class CassandraPersistence {
     template.setRetryPolicy( exceptionRetryPolicy );
     template.setBackOffPolicy( backOffPolicy );
     return template;
+  }
+
+
+  public enum SessionUsage {
+    Admin {
+      @Override
+      ServiceConfiguration getCassandraServiceConfiguration( ) {
+        return Components.lookup( Cassandra.class ).getLocalServiceConfiguration( );
+      }
+
+      @Override
+      Session buildSession( final ServiceConfiguration configuration ) {
+        return startupRetryTemplate.execute( retryContext -> CassandraPersistence.buildSession( configuration ) );
+      }
+    },
+    Service {
+      @Override
+      ServiceConfiguration getCassandraServiceConfiguration( ) {
+        return template.execute( retryContext -> Topology.lookup( Cassandra.class ) );
+      }
+    },
+    ;
+
+    abstract ServiceConfiguration getCassandraServiceConfiguration( );
+    Session buildSession( final ServiceConfiguration configuration ) {
+      return CassandraPersistence.buildSession( configuration );
+    }
   }
 }

@@ -28,7 +28,9 @@ import javax.annotation.Nullable;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import javaslang.Tuple2;
 import javaslang.collection.Stream;
+import javaslang.Tuple;
 
 /**
  * Functional utility methods
@@ -119,6 +121,42 @@ public class FUtils {
         return t;
       }
     };
+  }
+
+  /**
+   * Catch any exception thrown by the function and return an either.
+   *
+   * @param <T> The function parameter type
+   * @param <R> The function return type
+   * @param function The function to call
+   *
+   * @return The exception handling function
+   */
+  public static <T,R> CompatFunction<T,Either<Throwable,R>> eitherThrowable(
+      final java.util.function.Function<T,R> function
+  ) {
+    return t -> {
+      try {
+        return Either.right( function.apply( t ) );
+      } catch ( final Throwable thrown ) {
+        return Either.left( thrown );
+      }
+    };
+  }
+
+  /**
+   * Tuplize the result of a function with its parameter
+   *
+   * @param <T> The function parameter type
+   * @param <R> The function return type
+   * @param function The function to tuplize
+   *
+   * @return The exception handling function
+   */
+  public static <T,R> CompatFunction<T, Tuple2<T,R>> tuple(
+      final java.util.function.Function<T,R> function
+  ) {
+    return t -> Tuple.of( t, function.apply( t ) );
   }
 
   /**

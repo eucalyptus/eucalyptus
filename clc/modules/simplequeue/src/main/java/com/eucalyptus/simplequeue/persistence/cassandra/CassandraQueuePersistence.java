@@ -88,7 +88,7 @@ public class CassandraQueuePersistence implements QueuePersistence {
   public Queue lookupQueue(String accountId, String queueName) {
     return doWithSession( session -> {
       Statement statement1 = new SimpleStatement(
-          "SELECT unique_id_per_version, attributes, partition_token FROM queues WHERE account_id=? AND queue_name = ?",
+          "SELECT unique_id_per_version, attributes, partition_token FROM eucalyptus_simplequeue.queues WHERE account_id=? AND queue_name = ?",
           accountId,
           queueName
       );
@@ -104,7 +104,7 @@ public class CassandraQueuePersistence implements QueuePersistence {
       queue.setUniqueIdPerVersion( row.getUUID( "unique_id_per_version" ).toString( ) );
       queue.setAttributes( row.getMap( "attributes", String.class, String.class ) );
       Statement statement2 = new SimpleStatement(
-          "UPDATE queues_by_partition SET last_lookup = ? WHERE partition_token = ? AND account_id=? AND queue_name = ?",
+          "UPDATE eucalyptus_simplequeue.queues_by_partition SET last_lookup = ? WHERE partition_token = ? AND account_id=? AND queue_name = ?",
           new Date( ),
           partitionToken,
           accountId,
@@ -125,7 +125,7 @@ public class CassandraQueuePersistence implements QueuePersistence {
       UUID uniqueIdPerVersion = UUIDs.timeBased( );
       BatchStatement batchStatement = new BatchStatement( );
       Statement statement1 = new SimpleStatement(
-          "INSERT INTO queues (account_id, queue_name, unique_id_per_version, attributes, partition_token) VALUES (?, ?, ?, ?, ?)",
+          "INSERT INTO eucalyptus_simplequeue.queues (account_id, queue_name, unique_id_per_version, attributes, partition_token) VALUES (?, ?, ?, ?, ?)",
           accountId,
           queueName,
           uniqueIdPerVersion,
@@ -134,7 +134,7 @@ public class CassandraQueuePersistence implements QueuePersistence {
       );
       batchStatement.add( statement1 );
       Statement statement2 = new SimpleStatement(
-          "INSERT INTO queues_by_partition (partition_token, account_id, queue_name, last_lookup) VALUES (?, ?, ?, ?)",
+          "INSERT INTO eucalyptus_simplequeue.queues_by_partition (partition_token, account_id, queue_name, last_lookup) VALUES (?, ?, ?, ?)",
           partitionToken,
           accountId,
           queueName,
@@ -150,7 +150,7 @@ public class CassandraQueuePersistence implements QueuePersistence {
       String deadLetterTargetArn = queue.getDeadLetterTargetArn( );
       if ( deadLetterTargetArn != null ) {
         Statement statement3 = new SimpleStatement(
-            "INSERT INTO queues_by_source_queue (source_queue_arn, account_id, queue_name) VALUES (?, ?, ?)",
+            "INSERT INTO eucalyptus_simplequeue.queues_by_source_queue (source_queue_arn, account_id, queue_name) VALUES (?, ?, ?)",
             deadLetterTargetArn,
             accountId,
             queueName
@@ -169,16 +169,16 @@ public class CassandraQueuePersistence implements QueuePersistence {
       Statement statement;
       if ( queueNamePrefix == null && accountId == null ) {
         statement = new SimpleStatement(
-            "SELECT queue_name FROM queues"
+            "SELECT queue_name FROM eucalyptus_simplequeue.queues"
         );
       } else if ( queueNamePrefix == null ) {
         statement = new SimpleStatement(
-            "SELECT queue_name FROM queues WHERE account_id = ?",
+            "SELECT queue_name FROM eucalyptus_simplequeue.queues WHERE account_id = ?",
             accountId
         );
       } else {
         statement = new SimpleStatement(
-            "SELECT queue_name FROM queues WHERE account_id = ? AND queue_name >= ? AND queue_name < ?",
+            "SELECT queue_name FROM eucalyptus_simplequeue.queues WHERE account_id = ? AND queue_name >= ? AND queue_name < ?",
             accountId,
             queueNamePrefix,
             incrementString( queueNamePrefix )
@@ -203,7 +203,7 @@ public class CassandraQueuePersistence implements QueuePersistence {
   public Collection<Queue.Key> listDeadLetterSourceQueues(String accountId, String deadLetterTargetArn) {
     return doWithSession( session -> {
       Statement statement = new SimpleStatement(
-          "SELECT queue_name, attributes FROM queues WHERE account_id = ?",
+          "SELECT queue_name, attributes FROM eucalyptus_simplequeue.queues WHERE account_id = ?",
           accountId
       );
       List<Queue.Key> queueKeys = Lists.newArrayList( );
@@ -237,7 +237,7 @@ public class CassandraQueuePersistence implements QueuePersistence {
       UUID uniqueIdPerVersion = UUIDs.timeBased( );
       BatchStatement batchStatement = new BatchStatement( );
       Statement statement1 = new SimpleStatement(
-          "UPDATE queues SET unique_id_per_version = ?, attributes = ? WHERE account_id = ? AND queue_name = ?",
+          "UPDATE eucalyptus_simplequeue.queues SET unique_id_per_version = ?, attributes = ? WHERE account_id = ? AND queue_name = ?",
           uniqueIdPerVersion,
           attributes,
           accountId,
@@ -251,7 +251,7 @@ public class CassandraQueuePersistence implements QueuePersistence {
       if ( !Objects.equals( oldDeadLetterTargetArn, newDeadLetterTargetArn ) ) {
         if ( oldDeadLetterTargetArn != null ) {
           Statement statement2 = new SimpleStatement(
-              "DELETE FROM  queues_by_source_queue WHERE source_queue_arn = ? AND account_id = ? AND queue_name = ?",
+              "DELETE FROM eucalyptus_simplequeue.queues_by_source_queue WHERE source_queue_arn = ? AND account_id = ? AND queue_name = ?",
               oldDeadLetterTargetArn,
               accountId,
               queueName
@@ -260,7 +260,7 @@ public class CassandraQueuePersistence implements QueuePersistence {
         }
         if ( newDeadLetterTargetArn != null ) {
           Statement statement3 = new SimpleStatement(
-              "INSERT INTO queues_by_source_queue (source_queue_arn, account_id, queue_name) VALUES (?, ?, ?)",
+              "INSERT INTO eucalyptus_simplequeue.queues_by_source_queue (source_queue_arn, account_id, queue_name) VALUES (?, ?, ?)",
               newDeadLetterTargetArn,
               accountId,
               queueName
@@ -277,7 +277,7 @@ public class CassandraQueuePersistence implements QueuePersistence {
   public void deleteQueue(String accountId, String queueName) throws QueueDoesNotExistException {
     doThrowsWithSession( session -> {
       Statement statement1 = new SimpleStatement(
-          "SELECT partition_token, attributes FROM queues WHERE account_id=? AND queue_name = ?",
+          "SELECT partition_token, attributes FROM eucalyptus_simplequeue.queues WHERE account_id=? AND queue_name = ?",
           accountId,
           queueName
       );
@@ -296,13 +296,13 @@ public class CassandraQueuePersistence implements QueuePersistence {
 
       BatchStatement batchStatement = new BatchStatement( );
       Statement statement2 = new SimpleStatement(
-          "DELETE FROM QUEUES WHERE account_id = ? AND queue_name = ?",
+          "DELETE FROM eucalyptus_simplequeue.queues WHERE account_id = ? AND queue_name = ?",
           accountId,
           queueName
       );
       batchStatement.add( statement2 );
       Statement statement3 = new SimpleStatement(
-          "DELETE FROM queues_by_partition WHERE partition_token = ? AND account_id = ? AND queue_name = ?",
+          "DELETE FROM eucalyptus_simplequeue.queues_by_partition WHERE partition_token = ? AND account_id = ? AND queue_name = ?",
           partitionToken,
           accountId,
           queueName
@@ -310,7 +310,7 @@ public class CassandraQueuePersistence implements QueuePersistence {
       batchStatement.add( statement3 );
       if ( deadLetterTargetArn != null ) {
         Statement statement4 = new SimpleStatement(
-            "DELETE FROM  queues_by_source_queue WHERE source_queue_arn = ? AND account_id = ? AND queue_name = ?",
+            "DELETE FROM eucalyptus_simplequeue.queues_by_source_queue WHERE source_queue_arn = ? AND account_id = ? AND queue_name = ?",
             deadLetterTargetArn,
             accountId,
             queueName
@@ -326,7 +326,7 @@ public class CassandraQueuePersistence implements QueuePersistence {
   public Collection<Queue.Key> listActiveQueues(String partitionToken) {
     return doWithSession( session -> {
       Statement statement = new SimpleStatement(
-          "SELECT account_id, queue_name, last_lookup FROM queues_by_partition WHERE partition_token = ?",
+          "SELECT account_id, queue_name, last_lookup FROM eucalyptus_simplequeue.queues_by_partition WHERE partition_token = ?",
           partitionToken
       );
       List<Queue.Key> queueKeys = Lists.newArrayList( );
@@ -346,7 +346,7 @@ public class CassandraQueuePersistence implements QueuePersistence {
     if (SimpleQueueProperties.ENABLE_METRICS_COLLECTION) {
       return partitionTokens;
     } else {
-      return Collections.EMPTY_LIST;
+      return Collections.emptyList( );
     }
   }
 
@@ -354,7 +354,7 @@ public class CassandraQueuePersistence implements QueuePersistence {
   public long countQueues(String accountNumber) {
     return doWithSession( session -> {
       Statement statement = new SimpleStatement(
-          "SELECT COUNT(*) FROM queues WHERE account_id = ?",
+          "SELECT COUNT(*) FROM eucalyptus_simplequeue.queues WHERE account_id = ?",
           accountNumber
       );
       Iterator<Row> rowIter = session.execute( statement ).iterator( );

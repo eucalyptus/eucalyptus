@@ -32,25 +32,33 @@ package com.eucalyptus.simplequeue.persistence.cassandra;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Session;
+import com.eucalyptus.cassandra.common.CassandraComponent;
+import com.eucalyptus.cassandra.common.CassandraKeyspace;
 import com.eucalyptus.cassandra.common.CassandraPersistence;
+import com.eucalyptus.cassandra.common.util.CqlUtil;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.simplequeue.config.SimpleQueueProperties;
 import com.eucalyptus.simplequeue.exceptions.SimpleQueueException;
-import com.eucalyptus.util.FUtils;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.ThrowingFunction;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
+import com.google.common.io.Resources;
 import org.apache.log4j.Logger;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
 import java.util.List;
 import java.util.function.Function;
 
 /**
  * Created by ethomas on 11/22/16.
  */
-public class CassandraSessionManager {
+@CassandraKeyspace( "eucalyptus_simplequeue" )
+public class CassandraSessionManager implements CassandraComponent {
   private static final Logger LOG = Logger.getLogger(CassandraSessionManager.class);
 
   private static final CassandraSessionManager external = new CassandraSessionManager();
@@ -91,48 +99,14 @@ public class CassandraSessionManager {
 
     session.execute("USE eucalyptus_simplequeue;");
 
-    session.execute("CREATE TABLE IF NOT EXISTS queues (" +
-      "account_id TEXT, " +
-      "queue_name TEXT, " +
-      "unique_id_per_version TIMEUUID, " +
-      "attributes MAP<TEXT, TEXT>, " +
-      "partition_token text," +
-      "PRIMARY KEY ((account_id), queue_name)" +
-      ") WITH CLUSTERING ORDER BY (queue_name ASC);");
-
-    session.execute("CREATE TABLE IF NOT EXISTS queues_by_source_queue (" +
-      "source_queue_arn TEXT," +
-      "account_id TEXT, " +
-      "queue_name TEXT, " +
-      "last_lookup TIMESTAMP, " +
-      "PRIMARY KEY ((source_queue_arn), account_id, queue_name)" +
-      ");");
-
-    session.execute("CREATE TABLE IF NOT EXISTS queues_by_partition (" +
-      "partition_token TEXT," +
-      "account_id TEXT, " +
-      "queue_name TEXT, " +
-      "last_lookup TIMESTAMP, " +
-      "PRIMARY KEY ((partition_token), account_id, queue_name)" +
-      ");");
-
-    session.execute("CREATE TABLE IF NOT EXISTS messages (" +
-      "account_id TEXT," +
-      "queue_name TEXT," +
-      "partition_token TEXT," +
-      "message_id TIMEUUID," +
-      "message_json TEXT," +
-      "send_time_secs BIGINT," +
-      "receive_count INT," +
-      "total_receive_count INT," +
-      "expiration_timestamp TIMESTAMP," +
-      "is_delayed BOOLEAN," +
-      "is_invisible BOOLEAN," +
-      "PRIMARY KEY ((account_id, queue_name, partition_token), message_id)" +
-      ");");
-
-    session.execute("CREATE INDEX IF NOT EXISTS ON messages (is_delayed);");
-    session.execute("CREATE INDEX IF NOT EXISTS ON messages (is_invisible);");
+    try {
+      final String cql = Resources.toString(
+          Resources.getResource("2017-03-03-eucalyptus-simplequeue-base.cql"),
+          StandardCharsets.UTF_8 );
+      CqlUtil.splitCql( cql ).forEach( session::execute );
+    } catch ( final IOException | ParseException e ) {
+      throw Exceptions.toUndeclared( e );
+    }
   }
 
   public synchronized Session getSession() {
@@ -177,23 +151,12 @@ public class CassandraSessionManager {
   }
 
   private static class InternalSessionProvider implements SessionProvider {
-    private static final Function<Session,Session> initializer =
-        FUtils.memoizeLastSync( session -> { createSchema( session ); return session; } );
-
     public <R,E extends SimpleQueueException> R doThrowsWithSession( final ThrowingFunction<Session,R,E> callbackFunction ) throws E {
-      return CassandraPersistence.doWithSession(
-          "eucalyptus_simplequeue",
-          this.<E>initFunction( ).andThen(callbackFunction) );
+      return CassandraPersistence.doThrowsWithSession( "eucalyptus_simplequeue", callbackFunction );
     }
 
     public <R> R doWithSession( final Function<Session,R> callbackFunction ) {
-      return CassandraPersistence.doWithSession(
-          "eucalyptus_simplequeue",
-          this.initFunction( ).asUndeclaredFunction( ).andThen(callbackFunction) );
-    }
-
-    public <E extends SimpleQueueException> ThrowingFunction<Session,Session,E> initFunction( ) {
-      return initializer::apply;
+      return CassandraPersistence.doWithSession( "eucalyptus_simplequeue", callbackFunction );
     }
   }
 }
