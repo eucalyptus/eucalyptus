@@ -971,8 +971,8 @@ static int eucanetd_fetch_latest_local_config(void) {
                 EUCA_FREE(cval);
 
                 cval = configFileValue("MIDO_API_URIBASE");
-                LOGINFO("config MIDO_API_URIBASE = %s\n", cval);
                 if (strcmp(cval, config->mido_api_uribase)) {
+                    LOGINFO("config MIDO_API_URIBASE = %s\n", cval);
                     snprintf(config->mido_api_uribase, URI_LEN, "%s", cval);
                     int uribaselen = strlen(config->mido_api_uribase);
                     if (uribaselen && config->mido_api_uribase[uribaselen - 1] == '/') {

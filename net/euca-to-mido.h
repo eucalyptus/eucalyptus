@@ -612,6 +612,8 @@ int do_midonet_create_tzone(mido_config *mido, char *type, char *dev, boolean re
 void do_midonet_test(mido_config *mido);
 int do_midonet_tag_midonames(mido_config *mido);
 
+int do_midonet_clean_arpmactables(mido_config *mido);
+
 int do_delete_meta_nslinks(mido_config *mido);
 int do_delete_vpceni_chains(mido_config *mido);
 int do_metaproxy_disable(mido_config *mido);

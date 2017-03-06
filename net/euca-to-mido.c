@@ -3194,8 +3194,9 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
         if (mido->config->mido_arptable_config_changed || mido->config->eucanetd_first_update) {
             // Clear arp_table and mac_table
             if (!mido->config->enable_mido_arptable) {
+                do_midonet_clean_arpmactables(mido);
             }
-            // arp_table and mac_table will be populated during eucanetd iteration
+            // arp_table and mac_table will be populated during eucanetd iteration if enabled
         }
         
         // Check mido_md config changes
@@ -10072,7 +10073,8 @@ int do_midonet_delete_unconnected(mido_config *mido, boolean checkonly) {
             }
             if (!macport->tag) {
                 LOGINFO("\t\t%s_%s\n", macport->macport->macAddr, macport->macport->portId);
-                gDetected = TRUE;
+                // macport pair entries are also automatically created
+                // gDetected = TRUE;
                 if (!checkonly) {
                     mido_delete_resource(NULL, macport);
                 }
@@ -10231,6 +10233,71 @@ int do_midonet_tag_midonames(mido_config *mido) {
     }
     for (int i = 0; mido->midomd && i < MD_END; i++) {
         if (mido->midomd->midos[i]) mido->midomd->midos[i]->tag = 1;
+    }
+    return (0);
+}
+
+/**
+ * Clean VPC subnets' arp_table and mac_table entries.
+ * @param mido [in] data structure that holds MidoNet configuration
+ * @return 0 on success. Positive integer on any error.
+ */
+int do_midonet_clean_arpmactables(mido_config *mido) {
+    if (!mido) {
+        LOGWARN("cannot clean arp_ and mac_table of NULL mido config\n");
+        return (1);
+    }
+    
+    for (int i = 0; i < mido->max_vpcs; i++) {
+        mido_vpc *vpc = &(mido->vpcs[i]);
+        if (!vpc) {
+            continue;
+        }
+        for (int j = 0; j < vpc->max_subnets; j++) {
+            mido_vpc_subnet *vpcsubnet = &(vpc->subnets[j]);
+            if (!vpcsubnet) {
+                continue;
+            }
+            midonet_api_bridge *br = vpcsubnet->subnetbr;
+            if (!br) {
+                continue;
+            }
+            int max_macport_pairs = br->max_macport_pairs;
+            for (int k = 0; k < max_macport_pairs; k++) {
+                midoname *macport = br->macport_pairs[k];
+                if (!macport) {
+                    continue;
+                }
+                mido_delete_macport(br, macport);
+            }
+            int max_ip4mac_pairs = br->max_ip4mac_pairs;
+            midonet_api_dhcp *dhcp = NULL;
+            if (br->dhcps) {
+                dhcp = br->dhcps[0];
+            }
+            if (!dhcp) {
+                continue;
+            }
+            char *netaddrstr = strdup(dhcp->obj->uuid);
+            char *tmpchar = strchr(netaddrstr, '_');
+            if (!tmpchar) {
+                continue;
+            }
+            *tmpchar = '\0';
+            u32 netaddr = dot2hex(netaddrstr);
+            EUCA_FREE(netaddrstr);
+            char *dot2 = hex2dot(netaddr + 2);
+            for (int k = 0; k < max_ip4mac_pairs; k++) {
+                midoname *ip4mac = br->ip4mac_pairs[k];
+                if (!ip4mac) {
+                    continue;
+                }
+                if (strcmp(dot2, ip4mac->ip4mac->ip)) {
+                    mido_delete_ip4mac(br, ip4mac);
+                }
+            }
+            EUCA_FREE(dot2);
+        }
     }
     return (0);
 }
