@@ -215,7 +215,6 @@
 #define CONFIG_NC_CACHE_SIZE                    "NC_CACHE_SIZE"
 #define CONFIG_NC_WORK_SIZE                     "NC_WORK_SIZE"
 #define CONFIG_NC_OVERHEAD_SIZE                 "NC_WORK_OVERHEAD_SIZE"
-#define CONFIG_NC_SWAP_SIZE                     "SWAP_SIZE"
 #define CONFIG_SAVE_INSTANCES                   "MANUAL_INSTANCES_CLEANUP"
 #define CONFIG_CONCURRENT_DISK_OPS              "CONCURRENT_DISK_OPS"
 #define CONFIG_SC_REQUEST_TIMEOUT               "SC_REQUEST_TIMEOUT"

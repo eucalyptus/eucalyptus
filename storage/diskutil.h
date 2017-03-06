@@ -145,7 +145,6 @@ sem *diskutil_get_loop_sem(void);
 int diskutil_loop_check(const char *path, const char *lodev);
 int diskutil_loop(const char *path, const long long offset, char *lodev, int lodev_size);
 int diskutil_unloop(const char *lodev);
-int diskutil_mkswap(const char *lodev, const long long size_bytes);
 int diskutil_mkfs(const char *lodev, const long long size_bytes);
 int diskutil_tune(const char *lodev);
 int diskutil_sectors(const char *path, const int part, long long *first, long long *last);

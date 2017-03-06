@@ -130,10 +130,6 @@ public class VmTypes {
       changeListener = PropertyChangeListeners.IsBoolean.class)
   public static Boolean        FORMAT_EPHEMERAL_STORAGE = true;
 
-  @ConfigurableField( description = "Format swap disk by defaut. The property will be deprecated in next major release.",
-      initial = "false", changeListener = PropertyChangeListeners.IsBoolean.class)
-  public static Boolean        FORMAT_SWAP = false;
-
   @Deprecated
   //GRZE: this and all its references must be removed to complete the vm type support
   protected static final Long  SWAP_SIZE_BYTES          = 512 * 1024l * 1024l; // swap is hardcoded at 512MB for now
@@ -617,7 +613,7 @@ public class VmTypes {
     public VmTypeInfo apply( VmType arg0 ) {
       return new VmTypeInfo( arg0.getName( ), arg0.getMemory( ), arg0.getDisk( ), arg0.getCpu( ), "sda1" ) {
         {
-          this.setSwap( "sda3", VmTypes.SWAP_SIZE_BYTES, VmTypes.FORMAT_SWAP ? "swap" : "none" );
+          this.setSwap( "sda3", VmTypes.SWAP_SIZE_BYTES, "none" );
         }
       };
     }
