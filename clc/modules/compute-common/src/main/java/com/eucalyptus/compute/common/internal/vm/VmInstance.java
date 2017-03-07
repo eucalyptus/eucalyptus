@@ -74,6 +74,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
@@ -106,6 +107,7 @@ import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.BaseInstanceProfile;
 import com.eucalyptus.compute.common.CloudMetadata.VmInstanceMetadata;
+import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.GroupItemType;
 import com.eucalyptus.compute.common.GroupSetType;
 import com.eucalyptus.compute.common.IamInstanceProfile;
@@ -144,7 +146,9 @@ import com.eucalyptus.compute.common.internal.keys.SshKeyPair;
 import com.eucalyptus.compute.common.internal.network.NetworkGroup;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.InstanceCreationEvent;
+import com.eucalyptus.upgrade.Upgrades;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import com.eucalyptus.upgrade.Upgrades.PreUpgrade;
 import com.eucalyptus.upgrade.Upgrades.Version;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
@@ -168,6 +172,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import groovy.sql.Sql;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
@@ -1568,6 +1573,31 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     	LOG.error("Error upgrading VmInstance: ", ex);
     	db.rollback();
         throw Exceptions.toUndeclared( ex );
+      }
+    }
+  }
+
+  @PreUpgrade( value = Compute.class, since = Version.v5_0_0 )
+  public static class VmInstance500PreUpgrade implements Callable<Boolean> {
+    private static final Logger logger = Logger.getLogger( VmInstance500PreUpgrade.class );
+
+    @Override
+    public Boolean call( ) throws Exception {
+      Sql sql = null;
+      try {
+        logger.info( "Updating instance unique names" );
+        sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection( "eucalyptus_cloud" );
+        sql.execute(
+            "update metadata_instances set metadata_unique_name=substr(metadata_unique_name,14,10) " +
+            "where length(metadata_unique_name) = 23" );
+        return true;
+      } catch ( Exception ex ) {
+        logger.error( "Error updating instance unique names (check for duplicates)", ex );
+        return true;
+      } finally {
+        if ( sql != null ) {
+          sql.close( );
+        }
       }
     }
   }
