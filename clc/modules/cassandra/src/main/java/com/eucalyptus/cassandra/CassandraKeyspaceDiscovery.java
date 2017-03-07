@@ -18,7 +18,7 @@ package com.eucalyptus.cassandra;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.cassandra.common.CassandraComponent;
-import com.eucalyptus.cassandra.common.CassandraKeyspace;
+import com.eucalyptus.cassandra.common.CassandraKeyspaceSpecification;
 import com.eucalyptus.system.Ats;
 
 /**
@@ -30,9 +30,10 @@ public class CassandraKeyspaceDiscovery  extends ServiceJarDiscovery {
   @Override
   public boolean processClass( final Class candidate ) throws Exception {
     if ( CassandraComponent.class.isAssignableFrom( candidate ) &&
-        Ats.from( candidate ).has( CassandraKeyspace.class ) ) {
+        Ats.from( candidate ).has( CassandraKeyspaceSpecification.class ) ) {
       try {
-        final CassandraKeyspace keyspace = Ats.from( candidate ).get( CassandraKeyspace.class );
+        final CassandraKeyspaceSpecification keyspace =
+            Ats.from( candidate ).get( CassandraKeyspaceSpecification.class );
         logger.info( "Registering keyspace : " + keyspace.value( ) );
         CassandraKeyspaces.register( keyspace.value( ), keyspace.replicas( ) );
         return true;

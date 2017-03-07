@@ -15,16 +15,22 @@
  ************************************************************************/
 package com.eucalyptus.cassandra.common;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import org.springframework.data.cassandra.core.CassandraTemplate;
+import com.datastax.driver.core.Session;
 
 /**
- * Annotation for keyspace usage
+ * Extension of spring data CassandraTemplate with eucalyptus specific functionality.
  */
-@Target( ElementType.TYPE )
-@Retention( RetentionPolicy.RUNTIME )
-public @interface CassandraKeyspace {
-  String value( );
+public class CassandraPersistenceTemplate extends CassandraTemplate {
+
+  private final String keyspace;
+
+  public CassandraPersistenceTemplate( final Session session, final String keyspace ) {
+    super( session );
+    this.keyspace = keyspace;
+  }
+
+  public String keyspace( ) {
+    return keyspace;
+  }
 }

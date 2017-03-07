@@ -1,5 +1,5 @@
 /*************************************************************************
- * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
+ * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,16 +15,29 @@
  ************************************************************************/
 package com.eucalyptus.cassandra.common;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.io.Serializable;
+import org.springframework.data.cassandra.repository.CassandraRepository;
+import org.springframework.data.cassandra.repository.MapId;
+import org.springframework.data.repository.NoRepositoryBean;
 
 /**
- * Annotation for keyspace usage
+ * Extension of spring data CassandraRepository with eucalyptus specific functionality.
  */
-@Target( ElementType.TYPE )
-@Retention( RetentionPolicy.RUNTIME )
-public @interface CassandraKeyspace {
-  String value( );
+@NoRepositoryBean
+public interface CassandraPersistenceRepository<E> extends CassandraRepository<E> {
+
+  /**
+   * Create a new MapId that checks for null values.
+   *
+   * @return The new MapId instance.
+   * @see MapId#with(String, Serializable)
+   */
+  MapId id( );
+
+  /**
+   * Access underlying CassandraPersistenceTemplate.
+   *
+   * @return The template
+   */
+  CassandraPersistenceTemplate template( );
 }

@@ -21,10 +21,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotation for keyspace usage
+ * Annotation for keyspace declaration / specification
  */
 @Target( ElementType.TYPE )
 @Retention( RetentionPolicy.RUNTIME )
-public @interface CassandraKeyspace {
+public @interface CassandraKeyspaceSpecification {
   String value( );
+  CassandraReplicas replicas( ) default CassandraReplicas.ALL;
 }

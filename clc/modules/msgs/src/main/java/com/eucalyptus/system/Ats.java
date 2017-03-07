@@ -67,6 +67,7 @@ import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.AnnotatedElement;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import com.eucalyptus.util.Classes;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
@@ -75,6 +76,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
+import javaslang.control.Option;
 
 /**
  * A builder-like utility for interrogating the {@link Annotation}s that may be present on instances
@@ -113,7 +115,11 @@ public class Ats implements Predicate<Class> {
                        ? null
                        : decl.getAnnotation( annotation );
   }
-  
+
+  public <A extends Annotation> Option<A> getOption( Class<A> annotation ) {
+    return Option.of( get( annotation ) );
+  }
+
   /**
    * Find the nearest conformant Class to the root of the Ats hierarcy that has the argument annotation.
    * @param annotation

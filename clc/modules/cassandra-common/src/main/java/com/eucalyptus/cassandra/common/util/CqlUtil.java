@@ -23,7 +23,7 @@ import java.util.List;
 import com.google.common.collect.Lists;
 
 /**
- *
+ * Utility class for working with CQL
  */
 public class CqlUtil {
 

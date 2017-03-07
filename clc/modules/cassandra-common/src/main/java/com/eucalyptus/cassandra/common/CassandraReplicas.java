@@ -19,13 +19,32 @@ import static com.eucalyptus.cassandra.common.CassandraReplicas.ReplicaOperation
 import java.util.function.BinaryOperator;
 
 /**
- *
+ * Replica calculation strategies
  */
 public enum CassandraReplicas {
+  /**
+   * One replica
+   */
   ONE( 1, LIMIT ),
+
+  /**
+   * Two replicas or as close to two as possible
+   */
   TWO( 2, LIMIT ),
+
+  /**
+   * Three replicas or as close to three as possible
+   */
   THREE( 3, LIMIT ),
+
+  /**
+   * Replicas on the majority of nodes
+   */
   MAJORITY( 50, PERCENT ),
+
+  /**
+   * Replicas on all available nodes
+   */
   ALL( -1, THEIRS ),
   ;
 

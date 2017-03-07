@@ -21,7 +21,7 @@ import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.id.Eucalyptus;
 
 /**
- *
+ * Component identifier class for Cassandra
  */
 @Partition( Eucalyptus.class )
 @FaultLogPrefix( "cloud" )
