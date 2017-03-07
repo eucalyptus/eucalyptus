@@ -90,7 +90,6 @@
 #include <eucalyptus.h>
 #include <misc.h>                      // logprintfl, ensure_...
 #include <data.h>                      // ncInstance
-#include "instance33.h"                // ncInstance as of 3.3.*, for upgrade
 #include <handlers.h>                  // nc_state
 #include <ipc.h>                       // sem
 #include <euca_string.h>
@@ -630,7 +629,6 @@ ncInstance *load_instance_struct(const char *instanceId)
     DIR *insts_dir = NULL;
     char tmp_path[EUCA_MAX_PATH] = "";
     char user_paths[EUCA_MAX_PATH] = "";
-    char checkpoint_path[EUCA_MAX_PATH] = "";
     ncInstance *instance = NULL;
     struct dirent *dir_entry = NULL;
     struct stat mystat = { 0 };
@@ -672,56 +670,19 @@ ncInstance *load_instance_struct(const char *instanceId)
     // set various instance-directory-relative paths in the instance struct
     set_instance_paths(instance);
 
-    // Check if there is a binary checkpoint file, used by versions up to 3.3,
-    // and load metadata from it (as part of a "warm" upgrade from 3.3.0 and 3.3.1).
-    set_path(checkpoint_path, sizeof(checkpoint_path), instance, "instance.checkpoint");
     set_path(instance->xmlFilePath, sizeof(instance->xmlFilePath), instance, INSTANCE_FILE_NAME);
-    if (check_file(checkpoint_path) == 0) {
-        ncInstance33 instance33;
-        {                              // read in the checkpoint
-            int fd = open(checkpoint_path, O_RDONLY);
-            if (fd < 0) {
-                LOGERROR("failed to load metadata for %s from %s: %s\n", instance->instanceId, checkpoint_path, strerror(errno));
-                goto free;
-            }
-
-            size_t meta_size = (size_t) sizeof(ncInstance33);
-            assert(meta_size <= SSIZE_MAX); // beyond that read() behavior is unspecified
-            ssize_t bytes_read = read(fd, &instance33, meta_size);
-            close(fd);
-            if (bytes_read < meta_size) {
-                LOGERROR("metadata checkpoint for %s (%ld bytes) in %s is too small (< %ld)\n", instance->instanceId, bytes_read, checkpoint_path, meta_size);
-                goto free;
-            }
-        }
-        // Convert the 3.3 struct into the current struct.
-        // Currently, a copy is sufficient, but if ncInstance
-        // ever changes so that its beginning differs from ncInstanc33,
-        // we may have to write something more elaborate or to break
-        // the ability to upgrade from 3.3. We attempt to detect such a
-        // change with the following if-statement, which compares offsets
-        // in the structs of the last member in the 3.3 version.
-        if (((unsigned long)&(instance->last_stat) - (unsigned long)instance)
-            != ((unsigned long)&(instance33.last_stat) - (unsigned long)&instance33)) {
-            LOGERROR("BUG: upgrade from v3.3 is not possible due to changes to instance struct\n");
-            goto free;
-        }
-        memcpy(instance, &instance33, sizeof(ncInstance33));
-        LOGINFO("[%s] upgraded instance checkpoint from v3.3\n", instance->instanceId);
-    } else {                           // no binary checkpoint, so we expect an XML-formatted checkpoint
-        char *xmlFP;
-        if ((xmlFP = EUCA_ALLOC(sizeof(instance->xmlFilePath), sizeof(char))) == NULL) {
-            LOGERROR("out of memory (for temporary string allocation)\n");
-            goto free;
-        }
-        euca_strncpy(xmlFP, instance->xmlFilePath, sizeof(instance->xmlFilePath));
-        if (read_instance_xml(xmlFP, instance) != EUCA_OK) {
-            LOGERROR("failed to read instance XML\n");
-            EUCA_FREE(xmlFP);
-            goto free;
-        }
-        EUCA_FREE(xmlFP);
+    char *xmlFP;
+    if ((xmlFP = EUCA_ALLOC(sizeof(instance->xmlFilePath), sizeof(char))) == NULL) {
+        LOGERROR("out of memory (for temporary string allocation)\n");
+        goto free;
     }
+    euca_strncpy(xmlFP, instance->xmlFilePath, sizeof(instance->xmlFilePath));
+    if (read_instance_xml(xmlFP, instance) != EUCA_OK) {
+        LOGERROR("failed to read instance XML\n");
+        EUCA_FREE(xmlFP);
+        goto free;
+    }
+    EUCA_FREE(xmlFP);
 
     // Reset some fields for safety since they would now be wrong
     instance->stateCode = NO_STATE;
@@ -739,8 +700,6 @@ ncInstance *load_instance_struct(const char *instanceId)
         LOGERROR("failed to create instance XML in %s\n", instance->xmlFilePath);
         goto free;
     }
-    // remove the binary checkpoint because it is no longer needed and not used past 3.3
-    unlink(checkpoint_path);
 
     return (instance);
 
