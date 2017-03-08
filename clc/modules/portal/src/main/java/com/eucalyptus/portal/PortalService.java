@@ -23,7 +23,7 @@ import java.util.Set;
 import java.util.function.Function;
 import javax.inject.Inject;
 
-import com.eucalyptus.portal.awsusage.AwsUsageRecord;
+import com.eucalyptus.portal.workflow.AwsUsageRecord;
 import com.eucalyptus.portal.awsusage.AwsUsageRecords;
 import com.eucalyptus.portal.common.model.*;
 import org.apache.log4j.Logger;

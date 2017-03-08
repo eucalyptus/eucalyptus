@@ -25,11 +25,13 @@ import com.eucalyptus.portal.common.policy.PortalPolicySpec;
  */
 @PolicyVendor( PortalPolicySpec.VENDOR_PORTAL )
 public interface PortalMetadata extends RestrictedType {
-
   @PolicyResourceType( "account-settings" )
   interface BillingAccountMetadata extends PortalMetadata { }
 
 
   @PolicyResourceType( "billing-settings" )
   interface BillingInfoMetadata extends PortalMetadata { }
+
+  @PolicyResourceType( "billing-reports" )
+  interface  BillingReportMetadata extends PortalMetadata{ }
 }

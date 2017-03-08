@@ -8,6 +8,7 @@
 
    <weaver options="-warn:none">
      <include within="com.eucalyptus.portal.awsusage..*"/>
+     <include within="com.eucalyptus.portal.monthlyreport..*"/>
    </weaver>
 
  </aspectj>

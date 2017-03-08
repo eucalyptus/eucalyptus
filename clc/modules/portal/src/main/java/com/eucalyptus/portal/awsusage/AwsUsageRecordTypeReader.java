@@ -15,6 +15,8 @@
  ************************************************************************/
 package com.eucalyptus.portal.awsusage;
 
+import com.eucalyptus.portal.workflow.AwsUsageRecord;
+
 import java.util.List;
 
 public interface AwsUsageRecordTypeReader {

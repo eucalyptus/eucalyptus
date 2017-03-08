@@ -21,6 +21,7 @@ import javax.annotation.Nonnull;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.portal.BillingProperties;
+import com.eucalyptus.portal.SimpleQueueClientManager;
 import org.apache.log4j.Logger;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;

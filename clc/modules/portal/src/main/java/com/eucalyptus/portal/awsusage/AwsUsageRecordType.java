@@ -17,6 +17,7 @@ package com.eucalyptus.portal.awsusage;
 
 import com.eucalyptus.compute.common.RunningInstancesItemType;
 
+import com.eucalyptus.portal.workflow.AwsUsageRecord;
 import com.eucalyptus.resources.client.Ec2Client;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;

@@ -23,6 +23,10 @@ import com.eucalyptus.component.annotation.ComponentPart;
 
 import com.eucalyptus.portal.BillingProperties;
 import com.eucalyptus.portal.common.Portal;
+import com.eucalyptus.portal.workflow.AwsUsageActivitiesClient;
+import com.eucalyptus.portal.workflow.AwsUsageActivitiesClientImpl;
+import com.eucalyptus.portal.workflow.AwsUsageHourlyAggregateWorkflow;
+import com.eucalyptus.portal.workflow.BillingWorkflowState;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 import java.util.List;
@@ -32,8 +36,8 @@ import java.util.Map;
 public class AwsUsageHourlyAggregateWorkflowImpl implements AwsUsageHourlyAggregateWorkflow {
   private static Logger LOG     =
           Logger.getLogger(  AwsUsageHourlyAggregateWorkflowImpl.class );
-  final BillingActivitiesClient client =
-          new BillingActivitiesClientImpl();
+  final AwsUsageActivitiesClient client =
+          new AwsUsageActivitiesClientImpl();
   private BillingWorkflowState state =
           BillingWorkflowState.WORKFLOW_RUNNING;
   TryCatchFinally task = null;

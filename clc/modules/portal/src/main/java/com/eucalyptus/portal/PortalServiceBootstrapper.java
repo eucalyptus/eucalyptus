@@ -22,9 +22,6 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.portal.awsusage.BillingWorkflows;
-import com.eucalyptus.portal.awsusage.SimpleQueueClientManager;
-import com.eucalyptus.portal.awsusage.WorkflowClientManager;
 import com.eucalyptus.portal.common.Portal;
 import com.eucalyptus.simplequeue.SimpleQueue;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;

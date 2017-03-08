@@ -16,6 +16,7 @@
 package com.eucalyptus.portal.awsusage;
 
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.portal.workflow.AwsUsageRecord;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;

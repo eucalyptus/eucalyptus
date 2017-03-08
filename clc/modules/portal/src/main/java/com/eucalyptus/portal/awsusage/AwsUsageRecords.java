@@ -17,6 +17,7 @@ package com.eucalyptus.portal.awsusage;
 
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.portal.workflow.AwsUsageRecord;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;

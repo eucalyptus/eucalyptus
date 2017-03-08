@@ -19,6 +19,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.portal.BillingProperties;
+import com.eucalyptus.portal.SimpleQueueClientManager;
 import com.eucalyptus.reporting.event.VolumeEvent;
 import org.apache.log4j.Logger;
 
