@@ -50,8 +50,14 @@ public class MonthlyReport  extends AbstractOwnedPersistent implements PortalMet
   @Column( name = "year" )
   private String year;
 
+  public void setYear(final String year) { this.year = year; }
+  public String getYear() { return this.year; }
+
   @Column( name = "month" )
   private String month;
+
+  public void setMonth(final String month) { this.month = month; }
+  public String getMonth() { return this.month; }
 
   @ElementCollection (fetch = FetchType.EAGER)
   @CollectionTable( name = "billing_monthly_report_entry" )

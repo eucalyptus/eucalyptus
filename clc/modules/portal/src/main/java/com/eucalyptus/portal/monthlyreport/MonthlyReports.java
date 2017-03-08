@@ -84,7 +84,10 @@ public class MonthlyReports extends AbstractPersistentSupport<PortalMetadata.Bil
   }
 
   public MonthlyReport exampleWithYearMonth(OwnerFullName ownerFullName, String year, String month) {
-    return exampleWithName(ownerFullName, String.format("%s-%s", year, month));
+    final MonthlyReport example = exampleWithName(ownerFullName, String.format("%s-%s", year, month));
+    example.setYear(year);
+    example.setMonth(month);
+    return example;
   }
 
   public void createOrUpdate(final OwnerFullName owner, final String year, final String month, List<MonthlyReportEntry> entries) {
