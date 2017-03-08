@@ -44,7 +44,11 @@ public class PolicyVariables {
           new PredefinedPolicyVariable( cleanQName ) :  
           new InvalidPolicyVariable( cleanQName ); 
   }
-  
+
+  public static boolean isValid( final String qname ) {
+    return !(getPolicyVariable( qname ) instanceof InvalidPolicyVariable);
+  }
+
   private static final class PredefinedPolicyVariable implements PolicyVariable {
     private final String name;
 
