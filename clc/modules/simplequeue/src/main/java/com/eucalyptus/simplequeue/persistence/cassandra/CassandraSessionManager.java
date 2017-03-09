@@ -34,6 +34,7 @@ import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Session;
 import com.eucalyptus.cassandra.common.CassandraComponent;
 import com.eucalyptus.cassandra.common.CassandraKeyspace;
+import com.eucalyptus.cassandra.common.CassandraKeyspaceSpecification;
 import com.eucalyptus.cassandra.common.CassandraPersistence;
 import com.eucalyptus.cassandra.common.util.CqlUtil;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -57,7 +58,7 @@ import java.util.function.Function;
 /**
  * Created by ethomas on 11/22/16.
  */
-@CassandraKeyspace( "eucalyptus_simplequeue" )
+@CassandraKeyspaceSpecification( "eucalyptus_simplequeue" )
 public class CassandraSessionManager implements CassandraComponent {
   private static final Logger LOG = Logger.getLogger(CassandraSessionManager.class);
 
