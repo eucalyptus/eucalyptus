@@ -24,6 +24,7 @@ import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import java.util.Collection;
@@ -59,8 +60,9 @@ public class MonthlyReport  extends AbstractOwnedPersistent implements PortalMet
   public void setMonth(final String month) { this.month = month; }
   public String getMonth() { return this.month; }
 
-  @ElementCollection (fetch = FetchType.EAGER)
-  @CollectionTable( name = "billing_monthly_report_entry" )
+  @ElementCollection (fetch = FetchType.LAZY)
+  @CollectionTable( name = "billing_monthly_report_entry",
+          joinColumns = @JoinColumn( name = "monthlyreport_id", referencedColumnName = "id"))
   private Collection<MonthlyReportEntry> entries = null;
 
   public List<MonthlyReportEntry> getEntries() {

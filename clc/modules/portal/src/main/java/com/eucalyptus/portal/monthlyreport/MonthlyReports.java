@@ -29,6 +29,7 @@ import com.eucalyptus.portal.workflow.AwsUsageRecord;
 import com.eucalyptus.portal.common.PortalMetadata;
 import com.eucalyptus.portal.workflow.MonthlyUsageRecord;
 import com.eucalyptus.util.Exceptions;
+import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 
 import java.util.Date;
@@ -36,6 +37,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @ComponentNamed
 public class MonthlyReports extends AbstractPersistentSupport<PortalMetadata.BillingReportMetadata, MonthlyReport, PortalMetadataException> {
@@ -124,6 +126,24 @@ public class MonthlyReports extends AbstractPersistentSupport<PortalMetadata.Bil
     }catch (final Exception ex) {
       LOG.error("Failed to create or update monthly report record", ex);
     }
+  }
+
+  public List<String> lookupReport(final OwnerFullName owner, final String year, final String month)
+          throws NoSuchElementException {
+    final MonthlyReport example = exampleWithYearMonth(owner, year, month);
+    try (final TransactionResource db = Entities.transactionFor(MonthlyReport.class)) {
+      try {
+        final MonthlyReport report = Entities.uniqueResult(example);
+        return report.getEntries().stream()
+                .map(r -> r.toString())
+                .collect(Collectors.toList());
+      } catch (final NoSuchElementException ex) {
+        throw ex;
+      } catch (final Exception ex) {
+        LOG.debug("Failed to query monthly usage report", ex);
+      }
+    }
+    return Lists.newArrayList();
   }
 
   public static Function<AwsUsageRecord, Optional<MonthlyReportEntry>> transform = (record) -> {

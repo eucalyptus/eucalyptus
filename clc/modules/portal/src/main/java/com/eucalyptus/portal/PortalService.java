@@ -18,11 +18,16 @@ package com.eucalyptus.portal;
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import javax.inject.Inject;
 
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.portal.monthlyreport.MonthlyReports;
 import com.eucalyptus.portal.workflow.AwsUsageRecord;
 import com.eucalyptus.portal.awsusage.AwsUsageRecords;
 import com.eucalyptus.portal.common.model.*;
@@ -223,27 +228,87 @@ public class PortalService {
       throw new InvalidParameterException("Valid report granularity are hourly, daily or monthly");
     }
 
-    response.setResult( new ViewUsageResult() );
-    final StringBuilder sb = new StringBuilder();
-    sb.append("Service, Operation, UsageType, Resource, StartTime, EndTime, UsageValue");
-    final Optional<String> data = records.stream()
-            .map ( rr -> new AwsUsageReportData( rr.getService(), rr.getOperation(), rr.getUsageType(),
-                    rr.getResource(), rr.getStartTime(), rr.getEndTime(), rr.getUsageValue()))
-            .map ( re -> re.toString() )
-            .reduce( (l1, l2) -> String.format("%s\n%s", l1, l2));
-    if (data.isPresent()) {
-      sb.append("\n");
-      sb.append(data.get());
+    if (BillingProperties.USE_MOCK) {
+      response.setResult (
+              MockReports.getInstance().generateAwsUsageReport(request)
+      );
+    } else {
+      response.setResult(new ViewUsageResult());
+      final StringBuilder sb = new StringBuilder();
+      sb.append("Service, Operation, UsageType, Resource, StartTime, EndTime, UsageValue");
+      final Optional<String> data = records.stream()
+              .map(rr -> new AwsUsageReportData(rr.getService(), rr.getOperation(), rr.getUsageType(),
+                      rr.getResource(), rr.getStartTime(), rr.getEndTime(), rr.getUsageValue()))
+              .map(re -> re.toString())
+              .reduce((l1, l2) -> String.format("%s\n%s", l1, l2));
+      if (data.isPresent()) {
+        sb.append("\n");
+        sb.append(data.get());
+      }
+      response.getResult().setData(sb.toString());
     }
-    response.getResult().setData(sb.toString());
     return response;
   }
 
   public ViewMonthlyUsageResponseType viewMonthlyUsage(final ViewMonthlyUsageType request) throws PortalServiceException {
     final Context context = checkAuthorized( );
     final ViewMonthlyUsageResponseType response = request.getReply();
-    final ViewMonthlyUsageResult result =  MockReports.getInstance().generateMonthlyReport(request);
-    response.setResult(result);
+
+    final Predicate<ViewMonthlyUsageType> requestVerifier = (req) -> {
+      final String year = req.getYear();
+      final String month = req.getMonth();
+      if (! Pattern.matches("2[0-9][0-9][0-9]", year)) // Do EUCA exists in year 3000?
+        return false;
+      if (! Pattern.matches("[0-1]?[0-9]", month)) {
+        return false;
+      }
+      try {
+        final int nMonth = Integer.parseInt(month);
+        if (! (nMonth >= 1 && nMonth <= 12))
+          return false;
+      } catch (final NumberFormatException ex) {
+        return false;
+      }
+      return true;
+    };
+
+    if (!requestVerifier.test(request))
+      throw new InvalidParameterException("Invalid year and month requested");
+
+    final String year;
+    final String month;
+    try {
+      year = String.format("%d", Integer.parseInt(request.getYear()));
+      month = String.format("%d", Integer.parseInt(request.getMonth()));
+    } catch (final NumberFormatException ex) {
+      throw new InvalidParameterException("Invalid year and month requested");
+    }
+
+    if (BillingProperties.USE_MOCK) {
+      response.setResult(
+              MockReports.getInstance().generateMonthlyReport(request)
+      );
+    } else {
+      response.setResult( new ViewMonthlyUsageResult());
+      final StringBuilder sb = new StringBuilder();
+      sb.append("\"InvoiceID\",\"PayerAccountId\",\"LinkedAccountId\",\"RecordType\",\"RecordID\",\"BillingPeriodStartDate\"," +
+              "\"BillingPeriodEndDate\",\"InvoiceDate\",\"PayerAccountName\",\"LinkedAccountName    \",\"TaxationAddress\"," +
+              "\"PayerPONumber\",\"ProductCode\",\"ProductName\",\"SellerOfRecord\",\"UsageType\",\"Operation\",\"RateId\"," +
+              "\"ItemDescription\",\"UsageStartDate\",\"UsageEndDate\",\"Usage    Quantity\",\"BlendedRate\",\"CurrencyCode\"," +
+              "\"CostBeforeTax\",\"Credits\",\"TaxAmount\",\"TaxType\",\"TotalCost\"");
+      try {
+        final Optional<String> data = MonthlyReports.getInstance()
+                .lookupReport(AccountFullName.getInstance(context.getAccountNumber()), year, month).stream()
+                .reduce((l1, l2) -> String.format("%s\n%s", l1, l2));
+        if (data.isPresent()) {
+          sb.append("\n");
+          sb.append(data.get());
+        }
+      } catch (final NoSuchElementException ex) {
+        ;
+      }
+      response.getResult().setData(sb.toString());
+    }
     return response;
   }
 

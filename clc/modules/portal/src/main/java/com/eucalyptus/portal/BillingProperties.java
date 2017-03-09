@@ -84,6 +84,8 @@ public class BillingProperties {
           changeListener = Config.WorkflowWorkerConfigurationValidatingChangeListener.class )
   public static volatile String SWF_WORKFLOW_WORKER_CONFIG = DEFAULT_SWF_WORKFLOW_WORKER_CONFIG;
 
+  @ConfigurableField( description = "Enable usage of mock billing data" )
+  public static Boolean USE_MOCK = Boolean.TRUE;
 
   public static String SENSOR_QUEUE_NAME = "BillingSensorQueue";
 

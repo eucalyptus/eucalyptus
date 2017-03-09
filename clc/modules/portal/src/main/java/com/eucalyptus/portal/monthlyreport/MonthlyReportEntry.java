@@ -24,6 +24,8 @@ import javax.persistence.Embeddable;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Transient;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.UUID;
 
@@ -231,5 +233,43 @@ public class MonthlyReportEntry implements MonthlyUsageRecord {
     int result = 1;
     result = prime * result + ( ( recordId == null ) ? 0 : recordId.hashCode( ) );
     return result;
+  }
+
+  @Override
+  public String toString() {
+    final DateFormat df = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+    return String.format("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"," +
+                    "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"," +
+                    "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"",
+            this.invoiceId != null ? this.invoiceId : "",
+            this.payerAccountId != null ? this.payerAccountId : "",
+            this.linkedAccountId != null ? this.linkedAccountId : "",
+            this.recordType != null ? this.recordType : "",
+            this.recordId != null? this.recordId : "",
+            this.billingPeriodStartDate != null ? df.format(this.billingPeriodStartDate) : "",
+            this.billingPeriodEndDate != null ? df.format(this.billingPeriodEndDate) : "",
+            this.invoiceDate != null ? df.format(this.invoiceDate) : "",
+            this.payerAccountName != null ? this.payerAccountName : "",
+            this.linkedAccountName != null ? this.linkedAccountName : "",
+            this.taxationAddress != null ? this.taxationAddress : "",
+            this.payerPONumber != null ? this.payerPONumber : "",
+            this.productCode != null ? this.productCode : "",
+            this.productName != null ? this.productName : "",
+            this.sellerOfRecord != null ? this.sellerOfRecord : "",
+            this.usageType != null ? this.usageType : "",
+            this.operation != null ? this.operation : "",
+            this.rateId != null ? this.rateId : "",
+            this.itemDescription != null ? this.itemDescription : "",
+            this.usageStartDate != null ? df.format(this.usageStartDate) : "",
+            this.usageEndDate != null ? df.format(this.usageEndDate) : "",
+            this.usageQuantity != null ? this.usageQuantity : "",
+            this.blendedRate != null ? this.blendedRate : "",
+            this.currencyCode != null ? this.currencyCode : "",
+            this.costBeforeTax != null ? this.costBeforeTax : "",
+            this.credits != null ? this.credits : "",
+            this.taxAmount != null ? this.taxAmount : "",
+            this.taxType != null ? this.taxType : "",
+            this.totalCost != null ? this.totalCost : ""
+            );
   }
 }
