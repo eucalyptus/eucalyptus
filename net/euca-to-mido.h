@@ -114,6 +114,8 @@ enum vpc_instance_midos_t {
     INST_MD_DNAT,
     INST_MD_SNAT,
     INST_MD_ROUTE,
+    INST_IP4MAC,
+    INST_MACPORT,
     INST_END
 };
 
@@ -126,6 +128,7 @@ enum vpc_subnet_midos_t {
     SUBN_BR_METAHOST,
     SUBN_BR_INFILTER,
     SUBN_BR_OUTFILTER,
+    SUBN_BR_DOT2ARP,
     SUBN_END
 };
 
@@ -444,6 +447,7 @@ int get_next_eni_id(mido_config *mido, int *nextid);
 int set_eni_id(mido_config *mido, int id);
 int clear_eni_id(mido_config *mido, int id);
 
+char *replace_char(char *str, char f, char r);
 int cidr_split(char *cidr, char *outnet, char *outslashnet, char *outgw, char *outplustwo, char *outplusthree);
 int is_mido_vpc_plustwo(mido_config *mido, char *iptocheck);
 
@@ -549,7 +553,7 @@ int find_mido_vpc_nacl(mido_vpc *vpc, char *naclname, mido_vpc_nacl **outvpcnacl
 
 int parse_mido_nacl_entry(mido_config *mido, gni_acl_entry *entry, mido_parsed_chain_rule *parsed_entry);
 
-int connect_mido_vpc_instance(mido_vpc_subnet *vpcsubnet, mido_vpc_instance *inst, char *instanceDNSDomain);
+int connect_mido_vpc_instance(mido_config *mido, mido_vpc_subnet *vpcsubnet, mido_vpc_instance *inst, char *instanceDNSDomain);
 int disconnect_mido_vpc_instance(mido_vpc_subnet *subnet, mido_vpc_instance *vpcinstance);
 
 int connect_mido_vpc_instance_elip(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vpcsubnet, mido_vpc_instance *vpcinstance);
@@ -607,6 +611,8 @@ int do_midonet_delete_unconnected(mido_config *mido, boolean checkonly);
 int do_midonet_create_tzone(mido_config *mido, char *type, char *dev, boolean refreshmido);
 void do_midonet_test(mido_config *mido);
 int do_midonet_tag_midonames(mido_config *mido);
+
+int do_midonet_clean_arpmactables(mido_config *mido);
 
 int do_delete_meta_nslinks(mido_config *mido);
 int do_delete_vpceni_chains(mido_config *mido);

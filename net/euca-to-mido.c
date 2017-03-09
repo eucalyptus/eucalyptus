@@ -1288,6 +1288,12 @@ int do_midonet_update_pass1(globalNetworkInfo *gni, globalNetworkInfo *appliedGn
                         && !vpcsubnet->population_failed) {
                     LOGEXTREME("\t\t%s fully implemented \n", vpcsubnet->name);
                     vpcsubnet->midopresent = 1;
+                    // tag route table entries
+                    if (gnivpcsubnet->rt_entry_applied && gnivpcsubnet->routeTable) {
+                        for (k = 0; k < gnivpcsubnet->routeTable->max_entries; k++) {
+                            gnivpcsubnet->rt_entry_applied[k] = 1;
+                        }
+                    }
                 } else {
                     vpcsubnet->midopresent = 0;
                 }
@@ -2242,10 +2248,10 @@ int do_midonet_update_pass3_insts(globalNetworkInfo *gni, mido_config *mido) {
         }
 
         // do instance/interface-host connection
-        if (vpcif->host_changed || vpcif->population_failed) {
+        if (vpcif->host_changed || vpcif->population_failed || mido->config->eucanetd_first_update) {
             LOGTRACE("\tconnecting mido host %s with interface %s\n",
                     vpcif->midos[INST_VMHOST]->name, gniif->name);
-            rc = connect_mido_vpc_instance(vpcsubnet, vpcif, gni->instanceDNSDomain);
+            rc = connect_mido_vpc_instance(mido, vpcsubnet, vpcif, gni->instanceDNSDomain);
             if (rc) {
                 LOGERROR("failed to connect %s to %s: check midolman\n", gniif->name, vpcif->midos[INST_VMHOST]->name);
             }
@@ -2889,81 +2895,85 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
                     LOGWARN("%s is missing infilter or outfilter\n", subnet->name);
                     continue;
                 }
-                
-                // subnet inbound default rules                
-                // allow traffic from reserved IP addresses (subnet/30) 
-                rc = mido_create_rule(subnet->inchain, NULL, NULL, &rulepos,
-                        "position", rulepos_str, "type", "accept", "nwSrcAddress",
-                        subnet_buf, "nwSrcLength", "30", NULL);
-                if (rc) {
-                    LOGWARN("Failed to create %s inbound reserved IPs rule\n", subnet->name);
-                    ret++;
+
+                // subnet inbound default rules
+                if (subnet->inchain->rules_count < 4) {
+                    // allow traffic from reserved IP addresses (subnet/30) 
+                    rc = mido_create_rule(subnet->inchain, NULL, NULL, &rulepos,
+                            "position", rulepos_str, "type", "accept", "nwSrcAddress",
+                            subnet_buf, "nwSrcLength", "30", NULL);
+                    if (rc) {
+                        LOGWARN("Failed to create %s inbound reserved IPs rule\n", subnet->name);
+                        ret++;
+                    }
+
+                    // allow link-local traffic (169.254.0.0/16)
+                    rc = mido_create_rule(subnet->inchain, NULL, NULL, &rulepos,
+                            "position", rulepos_str, "type", "accept", "nwSrcAddress",
+                            "169.254.0.0", "nwSrcLength", "16", NULL);
+                    if (rc) {
+                        LOGWARN("Failed to create %s inbound link-local rule\n", subnet->name);
+                        ret++;
+                    }
+
+                    // allow incoming DHCP (UDP source port 67)
+                    rc = mido_create_rule(subnet->inchain, NULL, NULL, &rulepos,
+                            "position", rulepos_str, "type", "accept", "nwProto", "17",
+                            "tpDst", "jsonjson", "tpDst:start", "67", "tpDst:end", "68",
+                            "tpDst:END", "END", NULL);
+                    if (rc) {
+                        LOGWARN("Failed to create %s inbound DHCP rule\n", subnet->name);
+                        ret++;
+                    }
+
+                    // allow intra-subnet traffic
+                    rc = mido_create_rule(subnet->inchain, NULL, NULL, &rulepos,
+                            "position", rulepos_str, "type", "accept", "nwSrcAddress",
+                            subnet_buf, "nwSrcLength", slashnet_buf, NULL);
+                    if (rc) {
+                        LOGWARN("Failed to create %s inbound intra-subnet rule\n", subnet->name);
+                        ret++;
+                    }
                 }
 
-                // allow link-local traffic (169.254.0.0/16)
-                rc = mido_create_rule(subnet->inchain, NULL, NULL, &rulepos,
-                        "position", rulepos_str, "type", "accept", "nwSrcAddress",
-                        "169.254.0.0", "nwSrcLength", "16", NULL);
-                if (rc) {
-                    LOGWARN("Failed to create %s inbound link-local rule\n", subnet->name);
-                    ret++;
-                }
+                // subnet outbound default rules
+                if (subnet->outchain->rules_count < 4) {
+                    // allow traffic to reserved IP addresses (subnet/30) 
+                    rc = mido_create_rule(subnet->outchain, NULL, NULL, &rulepos,
+                            "position", rulepos_str, "type", "accept", "nwDstAddress",
+                            subnet_buf, "nwDstLength", "30", NULL);
+                    if (rc) {
+                        LOGWARN("Failed to create %s outbound reserved IPs rule\n", subnet->name);
+                        ret++;
+                    }
 
-                // allow incoming DHCP (UDP source port 67)
-                rc = mido_create_rule(subnet->inchain, NULL, NULL, &rulepos,
-                        "position", rulepos_str, "type", "accept", "nwProto", "17",
-                        "tpDst", "jsonjson", "tpDst:start", "67", "tpDst:end", "68",
-                        "tpDst:END", "END", NULL);
-                if (rc) {
-                    LOGWARN("Failed to create %s inbound DHCP rule\n", subnet->name);
-                    ret++;
-                }
+                    // allow link-local traffic (169.254.0.0/16)
+                    rc = mido_create_rule(subnet->outchain, NULL, NULL, &rulepos,
+                            "position", rulepos_str, "type", "accept", "nwDstAddress",
+                            "169.254.0.0", "nwDstLength", "16", NULL);
+                    if (rc) {
+                        LOGWARN("Failed to create %s outbound link-local rule\n", subnet->name);
+                        ret++;
+                    }
 
-                // allow intra-subnet traffic
-                rc = mido_create_rule(subnet->inchain, NULL, NULL, &rulepos,
-                        "position", rulepos_str, "type", "accept", "nwSrcAddress",
-                        subnet_buf, "nwSrcLength", slashnet_buf, NULL);
-                if (rc) {
-                    LOGWARN("Failed to create %s inbound intra-subnet rule\n", subnet->name);
-                    ret++;
-                }
+                    // allow outgoing DHCP (UDP source port 67)
+                    rc = mido_create_rule(subnet->outchain, NULL, NULL, &rulepos,
+                            "position", rulepos_str, "type", "accept", "nwProto", "17",
+                            "tpDst", "jsonjson", "tpDst:start", "67", "tpDst:end", "68",
+                            "tpDst:END", "END", NULL);
+                    if (rc) {
+                        LOGWARN("Failed to create %s outbound DHCP rule\n", subnet->name);
+                        ret++;
+                    }
 
-                // subnet outbound default rules                
-                // allow traffic to reserved IP addresses (subnet/30) 
-                rc = mido_create_rule(subnet->outchain, NULL, NULL, &rulepos,
-                        "position", rulepos_str, "type", "accept", "nwDstAddress",
-                        subnet_buf, "nwDstLength", "30", NULL);
-                if (rc) {
-                    LOGWARN("Failed to create %s outbound reserved IPs rule\n", subnet->name);
-                    ret++;
-                }
-
-                // allow link-local traffic (169.254.0.0/16)
-                rc = mido_create_rule(subnet->outchain, NULL, NULL, &rulepos,
-                        "position", rulepos_str, "type", "accept", "nwDstAddress",
-                        "169.254.0.0", "nwDstLength", "16", NULL);
-                if (rc) {
-                    LOGWARN("Failed to create %s outbound link-local rule\n", subnet->name);
-                    ret++;
-                }
-
-                // allow outgoing DHCP (UDP source port 67)
-                rc = mido_create_rule(subnet->outchain, NULL, NULL, &rulepos,
-                        "position", rulepos_str, "type", "accept", "nwProto", "17",
-                        "tpDst", "jsonjson", "tpDst:start", "67", "tpDst:end", "68",
-                        "tpDst:END", "END", NULL);
-                if (rc) {
-                    LOGWARN("Failed to create %s outbound DHCP rule\n", subnet->name);
-                    ret++;
-                }
-
-                // allow intra-subnet traffic
-                rc = mido_create_rule(subnet->outchain, NULL, NULL, &rulepos,
-                        "position", rulepos_str, "type", "accept", "nwDstAddress",
-                        subnet_buf, "nwDstLength", slashnet_buf, NULL);
-                if (rc) {
-                    LOGWARN("Failed to create %s outbound intra-subnet rule\n", subnet->name);
-                    ret++;
+                    // allow intra-subnet traffic
+                    rc = mido_create_rule(subnet->outchain, NULL, NULL, &rulepos,
+                            "position", rulepos_str, "type", "accept", "nwDstAddress",
+                            subnet_buf, "nwDstLength", slashnet_buf, NULL);
+                    if (rc) {
+                        LOGWARN("Failed to create %s outbound intra-subnet rule\n", subnet->name);
+                        ret++;
+                    }
                 }
 
                 // jump rules to NACL chains
@@ -3180,6 +3190,15 @@ int do_midonet_update(globalNetworkInfo *gni, globalNetworkInfo *appliedGni, mid
             }            
         }
 
+        // Check mido_arptable config changes
+        if (mido->config->mido_arptable_config_changed || mido->config->eucanetd_first_update) {
+            // Clear arp_table and mac_table
+            if (!mido->config->enable_mido_arptable) {
+                do_midonet_clean_arpmactables(mido);
+            }
+            // arp_table and mac_table will be populated during eucanetd iteration if enabled
+        }
+        
         // Check mido_md config changes
         if (mido->config->mido_md_config_changed || mido->config->eucanetd_first_update) {
             mido->config->mido_md_config_changed = FALSE;
@@ -3832,6 +3851,8 @@ int parse_mido_vpc_subnet_route_table(mido_config *mido, mido_vpc *vpc, mido_vpc
     tmpstr = hex2dot(mido->int_rtaddr);
     snprintf(eucartgw, 32, "%s", tmpstr);
     EUCA_FREE(tmpstr);
+    
+    gni_vpcsubnet *gnisn = vpcsubnet->gniSubnet;
 
     for (i = 0; i < rtable->max_entries; i++) {
         cidr_split(rtable->entries[i].destCidr, dstNetaddr, dstSlashnet, NULL, NULL, NULL);
@@ -3840,7 +3861,9 @@ int parse_mido_vpc_subnet_route_table(mido_config *mido, mido_vpc *vpc, mido_vpc
             case VPC_TARGET_LOCAL:
                 // Local route cannot be removed. It is implemented on VPC subnet creation.
                 LOGTRACE("local route added on subnet creation. Nothing to do.\n");
-                rtable->entries[i].applied = 1;
+                if (gnisn && gnisn->rt_entry_applied) {
+                    gnisn->rt_entry_applied[i] = 1;
+                }
                 break;
             case VPC_TARGET_INTERNET_GATEWAY:
                 valid = FALSE;
@@ -3865,7 +3888,9 @@ int parse_mido_vpc_subnet_route_table(mido_config *mido, mido_vpc *vpc, mido_vpc
                     retroutes[max_retroutes].next_hop_ip = strdup(eucartgw);
                     retroutes[max_retroutes].weight = strdup("10");
                     max_retroutes++;
-                    rtable->entries[i].applied = 1;
+                    if (gnisn && gnisn->rt_entry_applied) {
+                        gnisn->rt_entry_applied[i] = 1;
+                    }
                 } else {
                     LOGWARN("Invalid igw route target %s\n", rtable->entries[i].target);
                 }
@@ -3909,7 +3934,9 @@ int parse_mido_vpc_subnet_route_table(mido_config *mido, mido_vpc *vpc, mido_vpc
                     retroutes[max_retroutes].next_hop_ip = hex2dot(interface->privateIp);
                     retroutes[max_retroutes].weight = strdup("30");
                     max_retroutes++;
-                    rtable->entries[i].applied = 1;
+                    if (gnisn && gnisn->rt_entry_applied) {
+                        gnisn->rt_entry_applied[i] = 1;
+                    }
                 } else {
                     LOGWARN("Invalid eni route target %s\n", rtable->entries[i].target);
                 }
@@ -3958,8 +3985,10 @@ int parse_mido_vpc_subnet_route_table(mido_config *mido, mido_vpc *vpc, mido_vpc
                     retroutes[max_retroutes].next_hop_ip = strdup(natgw);
                     retroutes[max_retroutes].weight = strdup("20");
                     max_retroutes++;
-                    rtable->entries[i].applied = 1;
-                } else {
+                    if (gnisn && gnisn->rt_entry_applied) {
+                        gnisn->rt_entry_applied[i] = 1;
+                    }
+               } else {
                     LOGWARN("Invalid nat gateway route target %s\n", rtable->entries[i].target);
                 }
                 break;
@@ -5004,15 +5033,16 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc 
     char *privip = NULL;
     char mdip[NETWORK_ADDR_LEN] = { 0 };
     char matchStr[64];
+    midoname *instanceport = NULL;
+    midonet_api_host *instancehost = NULL;
 
     LOGTRACE("populating VPC instance %s\n", vpcinstance->name);
     midonet_api_bridge *subnetbr = vpcsubnet->subnetbr;
     if (subnetbr != NULL) {
         LOGTRACE("Found subnet bridge %s\n", subnetbr->obj->name);
-        midoname *instanceport = vpcinstance->midos[INST_VPCBR_VMPORT];
+        instanceport = vpcinstance->midos[INST_VPCBR_VMPORT];
         if (instanceport != NULL) {
             LOGTRACE("Found instance port %s\n", instanceport->name);
-            midonet_api_host *instancehost = NULL;
             if (instanceport->port && instanceport->port->hostid && strlen(instanceport->port->hostid)) {
                 instancehost = mido_get_host(NULL, instanceport->port->hostid);
             }
@@ -5021,22 +5051,19 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc 
                 vpcinstance->midos[INST_VMHOST] = instancehost->obj;
             }
         }
-    }
-    if (!vpcinstance->midos[INST_VPCBR_VMPORT] || !vpcinstance->midos[INST_VMHOST]) {
-        LOGWARN("Unable to populate vpcinstance %s VPCBR_VMPORT and/or VMHOST.\n", vpcinstance->name);
-    }
-
-    if (vpcsubnet->subnetbr) {
         found = 0;
         midonet_api_dhcp *dhcp = NULL;
-        if (vpcsubnet->subnetbr->max_dhcps) {
-            dhcp = vpcsubnet->subnetbr->dhcps[0];
+        if (subnetbr->max_dhcps) {
+            dhcp = subnetbr->dhcps[0];
             midoname *tmpmn = mido_get_dhcphost(dhcp, vpcinstance->name);
             if (tmpmn) {
                 LOGTRACE("Found dhcp host %s\n", tmpmn->name);
                 vpcinstance->midos[INST_VPCBR_DHCPHOST] = tmpmn;
             }
         }
+    }
+    if (!vpcinstance->midos[INST_VPCBR_VMPORT] || !vpcinstance->midos[INST_VMHOST]) {
+        LOGWARN("Unable to populate vpcinstance %s VPCBR_VMPORT and/or VMHOST.\n", vpcinstance->name);
     }
 
     // process public IP
@@ -5242,6 +5269,26 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc 
 
     }
 
+    if (mido->config->enable_mido_arptable) {
+        if (subnetbr) {
+            // populate the dot2 arp entry
+            if (privip) {
+                midoname *ip4mac = midonet_api_cache_lookup_ip4mac_byip(subnetbr, privip, NULL);
+                if (ip4mac) {
+                    vpcinstance->midos[INST_IP4MAC] = ip4mac;
+                    LOGEXTREME("Found arp_table entry %s_%s\n", ip4mac->ip4mac->ip, ip4mac->ip4mac->mac);
+                }
+                if (instanceport) {
+                    midoname *macport = midonet_api_cache_lookup_macport_byport(subnetbr, instanceport->uuid, NULL);
+                    if (macport) {
+                        vpcinstance->midos[INST_MACPORT] = macport;
+                        LOGEXTREME("Found mac_table entry %s_%s\n", macport->macport->macAddr, macport->macport->portId);
+                    }
+                }
+            }
+        }
+    }
+
     LOGTRACE("vpc instance (%s): AFTER POPULATE\n", vpcinstance->name);
     for (i = 0; i < INST_ELIP_PRE_IPADDRGROUP_IP; i++) {
         if (vpcinstance->midos[i] == NULL) {
@@ -5258,7 +5305,15 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc 
         }
     }
     if (mido->config->enable_mido_md) {
-        for (i = INST_MD_DNAT; i < INST_END; i++) {
+        for (i = INST_MD_DNAT; i < INST_IP4MAC; i++) {
+            if (vpcinstance->midos[i] == NULL) {
+                LOGWARN("VPC instance %s population failed to populate resource at idx %d\n", vpcinstance->name, i);
+                vpcinstance->population_failed = 1;
+            }
+        }
+    }
+    if (mido->config->enable_mido_arptable) {
+        for (i = INST_IP4MAC; i < INST_END; i++) {
             if (vpcinstance->midos[i] == NULL) {
                 LOGWARN("VPC instance %s population failed to populate resource at idx %d\n", vpcinstance->name, i);
                 vpcinstance->population_failed = 1;
@@ -6794,6 +6849,16 @@ int populate_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *
                     vpcsubnet->midos[SUBN_BR_RTPORT] = brports[i];
                     vpcsubnet->midos[SUBN_VPCRT_BRPORT] = rtports[j];
                     found = 1;
+                    
+                    // populate the dot2 arp entry
+                    if (vpcsubnet->midos[SUBN_VPCRT_BRPORT] && vpcsubnet->midos[SUBN_VPCRT_BRPORT]->port) {
+                        midoname *dot2ip4mac = midonet_api_cache_lookup_ip4mac_bymac(
+                                vpcsubnet->subnetbr, vpcsubnet->midos[SUBN_VPCRT_BRPORT]->port->portmac, NULL);
+                        if (dot2ip4mac) {
+                            vpcsubnet->midos[SUBN_BR_DOT2ARP] = dot2ip4mac;
+                            LOGTRACE("Found dot2 arp %s_%s\n", vpcsubnet->midos[SUBN_BR_DOT2ARP]->ip4mac->ip, vpcsubnet->midos[SUBN_BR_DOT2ARP]->ip4mac->mac);
+                        }
+                    }
                 }
             }
         }
@@ -7291,6 +7356,16 @@ int disconnect_mido_vpc_instance(mido_vpc_subnet *subnet, mido_vpc_instance *vpc
         LOGERROR("cannot disconnect %s from NULL host\n", vpcinstance->name);
     }
 
+    // Remove arp_table and mac_table entries
+    if (vpcinstance->midos[INST_IP4MAC]) {
+        rc = mido_delete_ip4mac(subnet->subnetbr, vpcinstance->midos[INST_IP4MAC]);
+        ret += rc;
+    }
+    if (vpcinstance->midos[INST_MACPORT]) {
+        rc = mido_delete_macport(subnet->subnetbr, vpcinstance->midos[INST_MACPORT]);
+        ret += rc;
+    }
+
     // unlink port, delete port, delete dhcp entry
     rc = mido_unlink_host_port(vpcinstance->midos[INST_VMHOST], vpcinstance->midos[INST_VPCBR_VMPORT]);
     ret += rc;
@@ -7583,16 +7658,18 @@ int connect_mido_vpc_instance_md(mido_config *mido, mido_vpc *vpc, mido_vpc_subn
 
 /**
  * Connects an instance/interface to mido host - link of the interface to the
- * VPC bridge port is created; the corresponding bridge port is created; and
- * the corresponding VPC bridge dhcp entry is created.
+ * VPC bridge port is created; the corresponding bridge port is created;
+ * the corresponding VPC bridge dhcp entry is created; and the corresponding
+ * arp_table and mac_table entries are created.
  *
+ * @param mido [in] data structure that holds all discovered MidoNet configuration/resources.
  * @param subnet [in] the subnet where the interface of interst is linked.
  * @param vpcinstance [in] the interface of interest
  * @param instanceDNSDomain [in] DNS domain to be used in the DHCP entry
  *
  * @return 0 on success. non-zero number otherwise.
  */
-int connect_mido_vpc_instance(mido_vpc_subnet *vpcsubnet, mido_vpc_instance *vpcinstance, char *instanceDNSDomain) {
+int connect_mido_vpc_instance(mido_config *mido, mido_vpc_subnet *vpcsubnet, mido_vpc_instance *vpcinstance, char *instanceDNSDomain) {
     int ret = 0, rc = 0;
     char *macAddr = NULL, *ipAddr = NULL;
     char ifacename[IF_NAME_LEN];
@@ -7634,6 +7711,23 @@ int connect_mido_vpc_instance(mido_vpc_subnet *vpcsubnet, mido_vpc_instance *vpc
     if (rc) {
         LOGERROR("failed to create midonet dhcp host entry: check midonet health\n");
         ret = 1;
+    }
+    
+    // setup arp_table and mac_table entries
+    if (mido->config->enable_mido_arptable) {
+        if (vpcinstance->midos[INST_VPCBR_VMPORT] && vpcinstance->midos[INST_VPCBR_VMPORT]->uuid &&
+                ipAddr && macAddr && strlen(ipAddr) && strlen(macAddr)) {
+            LOGEXTREME("setting arp_entry for %s\n", vpcinstance->name);
+            rc = mido_create_ip4mac(vpcsubnet->subnetbr, NULL, ipAddr, macAddr, &(vpcinstance->midos[INST_IP4MAC]));
+            if (rc) {
+                LOGWARN("failed to create arp_table entry for %s\n", vpcinstance->name);
+            }
+            LOGEXTREME("setting mac_entry for %s\n", vpcinstance->name);
+            rc = mido_create_macport(vpcsubnet->subnetbr, NULL, macAddr, vpcinstance->midos[INST_VPCBR_VMPORT]->uuid, &(vpcinstance->midos[INST_MACPORT]));
+            if (rc) {
+                LOGWARN("failed to create mac_table entry for %s\n", vpcinstance->name);
+            }
+        }
     }
     EUCA_FREE(ipAddr);
     EUCA_FREE(macAddr);
@@ -8058,6 +8152,16 @@ int create_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vp
     if (rc) {
         LOGERROR("cannot create midonet dhcp server: check midonet health\n");
         return (1);
+    }
+
+    // setup dot2 address arp-proxy
+    if (vpcsubnet->midos[SUBN_VPCRT_BRPORT] && vpcsubnet->midos[SUBN_VPCRT_BRPORT]->port &&
+            vpcsubnet->midos[SUBN_VPCRT_BRPORT]->port->portmac) {
+        u32 dot2address = dot2hex(subnet);
+        dot2address += 2;
+        LOGEXTREME("creating dot2 arp_table entry for %s\n", vpcsubnet->name);
+        rc = mido_create_ip4mac(vpcsubnet->subnetbr, NULL, hex2dot_s(dot2address),
+                vpcsubnet->midos[SUBN_VPCRT_BRPORT]->port->portmac, &(vpcsubnet->midos[SUBN_BR_DOT2ARP]));
     }
 
     // meta tap
@@ -9943,6 +10047,40 @@ int do_midonet_delete_unconnected(mido_config *mido, boolean checkonly) {
             }
         }
     }
+    LOGINFO("\tchecking arp_table and mac_table entries\n");
+    for (int i = 0; i < cache->max_bridges; i++) {
+        midonet_api_bridge *br = cache->bridges[i];
+        if (!br) {
+            continue;
+        }
+        for (int j = 0; j < br->max_ip4mac_pairs; j++) {
+            midoname *ip4mac = br->ip4mac_pairs[j];
+            if (!ip4mac) {
+                continue;
+            }
+            if (!ip4mac->tag) {
+                LOGINFO("\t\t%s_%s\n", ip4mac->ip4mac->ip, ip4mac->ip4mac->mac);
+                gDetected = TRUE;
+                if (!checkonly) {
+                    mido_delete_resource(NULL, ip4mac);
+                }
+            }
+        }
+        for (int j = 0; j < br->max_macport_pairs; j++) {
+            midoname *macport = br->macport_pairs[j];
+            if (!macport) {
+                continue;
+            }
+            if (!macport->tag) {
+                LOGINFO("\t\t%s_%s\n", macport->macport->macAddr, macport->macport->portId);
+                // macport pair entries are also automatically created
+                // gDetected = TRUE;
+                if (!checkonly) {
+                    mido_delete_resource(NULL, macport);
+                }
+            }
+        }
+    }
 
     if (!gDetected) {
         LOGINFO("\t=== ok ===\n");
@@ -10097,6 +10235,96 @@ int do_midonet_tag_midonames(mido_config *mido) {
         if (mido->midomd->midos[i]) mido->midomd->midos[i]->tag = 1;
     }
     return (0);
+}
+
+/**
+ * Clean VPC subnets' arp_table and mac_table entries.
+ * @param mido [in] data structure that holds MidoNet configuration
+ * @return 0 on success. Positive integer on any error.
+ */
+int do_midonet_clean_arpmactables(mido_config *mido) {
+    if (!mido) {
+        LOGWARN("cannot clean arp_ and mac_table of NULL mido config\n");
+        return (1);
+    }
+    
+    for (int i = 0; i < mido->max_vpcs; i++) {
+        mido_vpc *vpc = &(mido->vpcs[i]);
+        if (!vpc) {
+            continue;
+        }
+        for (int j = 0; j < vpc->max_subnets; j++) {
+            mido_vpc_subnet *vpcsubnet = &(vpc->subnets[j]);
+            if (!vpcsubnet) {
+                continue;
+            }
+            midonet_api_bridge *br = vpcsubnet->subnetbr;
+            if (!br) {
+                continue;
+            }
+            int max_macport_pairs = br->max_macport_pairs;
+            for (int k = 0; k < max_macport_pairs; k++) {
+                midoname *macport = br->macport_pairs[k];
+                if (!macport) {
+                    continue;
+                }
+                mido_delete_macport(br, macport);
+            }
+            int max_ip4mac_pairs = br->max_ip4mac_pairs;
+            midonet_api_dhcp *dhcp = NULL;
+            if (br->dhcps) {
+                dhcp = br->dhcps[0];
+            }
+            if (!dhcp) {
+                continue;
+            }
+            char *netaddrstr = strdup(dhcp->obj->uuid);
+            char *tmpchar = strchr(netaddrstr, '_');
+            if (!tmpchar) {
+                continue;
+            }
+            *tmpchar = '\0';
+            u32 netaddr = dot2hex(netaddrstr);
+            EUCA_FREE(netaddrstr);
+            char *dot2 = hex2dot(netaddr + 2);
+            for (int k = 0; k < max_ip4mac_pairs; k++) {
+                midoname *ip4mac = br->ip4mac_pairs[k];
+                if (!ip4mac) {
+                    continue;
+                }
+                if (strcmp(dot2, ip4mac->ip4mac->ip)) {
+                    mido_delete_ip4mac(br, ip4mac);
+                }
+            }
+            EUCA_FREE(dot2);
+        }
+    }
+    return (0);
+}
+
+/**
+ * Replaces all occurrences of character f in string str with the character r.
+ * @param str [in] the string of interest
+ * @param f [in] character to find in the string str
+ * @param r [in] character to be used as a replacement
+ * @return a newly allocated string with character replacements. Caller is responsible
+ * for releasing the allocated memory.
+ */
+char *replace_char(char *str, char f, char r) {
+    if (!str) {
+        return NULL;
+    }
+    char *res = strdup(str);
+    if (f == r) {
+        return (res);
+    }
+    int l = strlen(res);
+    for (int i = 0; i < l; i++) {
+        if (res[i] == f) {
+            res[i] = r;
+        }
+    }
+    return(res);
 }
 
 /**

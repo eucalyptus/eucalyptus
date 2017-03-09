@@ -601,6 +601,7 @@ static u32 network_driver_system_scrub(eucanetdConfig *pConfig, globalNetworkInf
         }
     } else {
         LOGTRACE("Networking state sync: updated successfully in %.2f ms\n", eucanetd_timer_usec(&tv) / 1000.0);
+        pMidoConfig->config->mido_arptable_config_changed = FALSE;
     }
 
     return (ret);

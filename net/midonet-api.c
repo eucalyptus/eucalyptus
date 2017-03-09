@@ -528,6 +528,16 @@ void mido_free_midoname(midoname *name) {
         EUCA_FREE(name->route->weight);
         EUCA_FREE(name->route);
     }
+    if (name->ip4mac) {
+        EUCA_FREE(name->ip4mac->ip);
+        EUCA_FREE(name->ip4mac->mac);
+        EUCA_FREE(name->ip4mac);
+    }
+    if (name->macport) {
+        EUCA_FREE(name->macport->macAddr);
+        EUCA_FREE(name->macport->portId);
+        EUCA_FREE(name->macport);
+    }
     bzero(name, sizeof(midoname));
 }
 
@@ -1473,6 +1483,389 @@ midonet_api_ipaddrgroup *mido_get_ipaddrgroup(char *name) {
         }
     }
     return (NULL);
+}
+
+/**
+ * Creates an arp_table entry (IPv4-MAC pair) on the specified bridge in MidoNet.
+ * @param br [in] bridge of interest. br has priority over devname. If br is NULL,
+ * midocache lookup is performed based on devname.
+ * @param devname [in] bridge of interest.
+ * @param ip [in] IPv4 address of interest.
+ * @param mac [in] MAC address of interest.
+ * @param outname [i/o] pointer to an extant MidoNet bridge ip4mac pair (parameters will be checked
+ * to avoid duplicate creation. If outname points to NULL, a newly allocated
+ * midoname structure will be returned. If outname is NULL, the newly created bridge ip4mac pair
+ * will not be returned.
+ * @return 0 on success. 1 otherwise.
+ */
+int mido_create_ip4mac(midonet_api_bridge *br, midoname *devname, char *ip, char *mac, midoname **outname) {
+    int rc = 0;
+    int ret = 0;
+    int max_ip4mac_pairs;
+    midoname **ip4mac_pairs;
+    midoname myname;
+
+    midoname *out = NULL;
+    
+    if (!br && !devname && !ip && !mac) {
+        LOGWARN("Invalid argument: cannot create ip4mac for NULL\n");
+        return (1);
+    }
+    if (outname && *outname) {
+        out = *outname;
+    }
+
+    if (br == NULL) {
+        br = midonet_api_cache_lookup_bridge(devname, NULL);
+    }
+    if (br == NULL) {
+        LOGWARN("Unable to find %s in midocache.\n", devname->name);
+        return (1);
+    } else {
+        ip4mac_pairs = br->ip4mac_pairs;
+        max_ip4mac_pairs = br->max_ip4mac_pairs;
+    }
+    if (out && out->init) {
+        for (int i = 0; i < max_ip4mac_pairs; i++) {
+            if (ip4mac_pairs[i] == NULL) {
+                continue;
+            }
+            if (ip4mac_pairs[i] == out) {
+                LOGEXTREME("ip4mac %s already in mido - abort create\n", out->name);
+                return (0);
+            }
+            if (!strcmp(ip4mac_pairs[i]->uuid, out->uuid)) {
+                LOGEXTREME("ip4mac %s already in mido - abort create.\n", out->name);
+                return (0);
+            }
+        }
+        out = NULL;
+    }
+    for (int i = 0; i < max_ip4mac_pairs; i++) {
+        if (ip4mac_pairs[i] == NULL) {
+            continue;
+        }
+        int ip_cmp = strcmp(ip4mac_pairs[i]->ip4mac->ip, ip);
+        int mac_cmp = strcmp(ip4mac_pairs[i]->ip4mac->mac, mac);
+        if (!ip_cmp && !mac_cmp) {
+            LOGEXTREME("ip4mac %s_%s already in mido - abort create.\n", ip, mac);
+            if (outname) {
+                *outname = ip4mac_pairs[i];
+            }
+            return (0);
+        }
+        if (!ip_cmp) {
+            LOGEXTREME("conflicting ip4mac for %s in mido - abort create.\n", ip);
+            return (2);
+        }
+        if (!mac_cmp) {
+            LOGEXTREME("conflicting ip4mac for %s in mido - abort create.\n", mac);
+            return (3);
+        }
+    }
+
+    bzero(&myname, sizeof (midoname));
+    myname.tenant = strdup(br->obj->tenant);
+    myname.resource_type = strdup("arp_table");
+    myname.media_type = strdup(midonet_api_mtypes[APPLICATION_IP4MAC_JSON]);
+
+    rc = mido_create_resource(br->obj, 1, &myname, &out, "ip", ip, "mac", mac, NULL);
+    if (rc == 0) {
+        if (outname) {
+            *outname = out;
+        }
+        midonet_api_cache_add_ip4mac(br, out);
+        ret = 0;
+    } else if (rc < 0) {
+        ret = 0;
+    } else {
+        ret = 1;
+    }
+    mido_free_midoname(&myname);
+    return (ret);
+}
+
+/**
+ * Deletes the given bridge ip4mac pair from MidoNet.
+ * @param bridge [in] bridge of interest (no check is performed - caller responsible to
+ * make sure it is a bridge).
+ * @param ip4mac [in] bridge ip4mac pair of interest (no check is performed - caller responsible
+ * to make sure that the ip4mac is associated with the bridge.
+ * @return 0 on success. 1 otherwise.
+ */
+int mido_delete_ip4mac(midonet_api_bridge *bridge, midoname *ip4mac) {
+    if (!bridge || !bridge->obj || !ip4mac || !ip4mac->uuid || !ip4mac->uri) {
+        return (1);
+    }
+    midonet_api_cache_del_ip4mac(bridge, ip4mac);
+    return (mido_delete_resource(NULL, ip4mac));
+}
+
+/**
+ * Deletes all ip4mac pairs that matches the given IPv4 address. 
+ * @param bridge [in] bridge of interest (no check is performed - caller responsible to
+ * make sure it is a bridge).
+ * @param ip [in] IPv4 address of interest.
+ * @return 0 on success. 1 otherwise.
+ */
+int mido_delete_ip4mac_byip(midonet_api_bridge *bridge, char *ip) {
+    if (!ip || !bridge || !bridge->obj) {
+        return (1);
+    }
+    int ret = 0;
+    midoname *found = NULL;
+    while ((found = midonet_api_cache_lookup_ip4mac_byip(bridge, ip, NULL))) {
+        ret += mido_delete_ip4mac(bridge, found);
+    }
+    return (ret);
+}
+
+/**
+ * Retrieves an array of pointers to midonet objects representing ip4mac pairs associated
+ * to the bridge bridgename.
+ * @param bridgename [in] midoname structure representing the bride of interest
+ * @param outnames [out] an array of pointers to midonet objects representing ip4mac pairs,
+ * to be returned
+ * @param outnames_max [out] number of elements in the outnames array
+ * @return 0 on success. 1 otherwise.
+ */
+int mido_get_ip4mac_pairs(midoname *bridgename, midoname ***outnames, int *outnames_max) {
+    int count = 0;
+    if (midocache != NULL) {
+        *outnames = NULL;
+        *outnames_max = 0;
+
+        if (bridgename) {
+            midonet_api_bridge *br = mido_get_bridge(bridgename->name);
+            if (br) {
+                *outnames = EUCA_ZALLOC_C(br->max_ip4mac_pairs, sizeof (midoname *));
+                midoname **names = *outnames;
+                for (int i = 0; i < br->max_ip4mac_pairs; i++) {
+                    if (br->ip4mac_pairs[i] == NULL) {
+                        continue;
+                    }
+                    names[count] = br->ip4mac_pairs[i];
+                    count++;
+                }
+                *outnames_max = count;
+            }
+            return (0);
+        } else {
+            LOGWARN("Unable to retrieve arp_table from NULL bridge\n");
+            return (1);
+        }
+    }
+
+    if (bridgename) {
+        return (mido_get_resources(bridgename, 1, bridgename->tenant, "arp_table",
+                midonet_api_mtypes[APPLICATION_COLLECTION_IP4MAC_JSON],
+                midonet_api_mtypes[APPLICATION_IP4MAC_JSON],
+                outnames, outnames_max));
+    } else {
+        LOGWARN("Unable to retrieve arp_table from NULL bridge\n");
+        return (1);
+    }
+}
+
+/**
+ * Creates an mac_table entry (MAC-port pair) on the specified bridge in MidoNet.
+ * @param br [in] bridge of interest. br has priority over devname. If br is NULL,
+ * midocache lookup is performed based on devname.
+ * @param devname [in] bridge of interest.
+ * @param macAddr [in] MAC address of interest.
+ * @param portId [in] UUID of the port of interest.
+ * @param outname [i/o] pointer to an extant MidoNet bridge macport pair (parameters will be checked
+ * to avoid duplicate creation. If outname points to NULL, a newly allocated
+ * midoname structure will be returned. If outname is NULL, the newly created bridge ip4mac pair
+ * will not be returned.
+ * @return 0 on success. 1 otherwise.
+ */
+int mido_create_macport(midonet_api_bridge *br, midoname *devname, char *macAddr, char *portId, midoname **outname) {
+    int rc = 0;
+    int ret = 0;
+    int max_macport_pairs;
+    midoname **macport_pairs;
+    midoname myname;
+
+    midoname *out = NULL;
+    
+    if (!br && !devname && !macAddr && !portId) {
+        LOGWARN("Invalid argument: cannot create macport for NULL\n");
+        return (1);
+    }
+    if (outname && *outname) {
+        out = *outname;
+    }
+
+    if (br == NULL) {
+        br = midonet_api_cache_lookup_bridge(devname, NULL);
+    }
+    if (br == NULL) {
+        LOGWARN("Unable to find %s in midocache.\n", devname->name);
+        return (1);
+    } else {
+        macport_pairs = br->macport_pairs;
+        max_macport_pairs = br->max_macport_pairs;
+    }
+    if (out && out->init) {
+        for (int i = 0; i < max_macport_pairs; i++) {
+            if (macport_pairs[i] == NULL) {
+                continue;
+            }
+            if (macport_pairs[i] == out) {
+                LOGEXTREME("macport %s already in mido - abort create\n", out->name);
+                return (0);
+            }
+            if (!strcmp(macport_pairs[i]->uuid, out->uuid)) {
+                LOGEXTREME("macport %s already in mido - abort create.\n", out->name);
+                return (0);
+            }
+        }
+        out = NULL;
+    }
+    for (int i = 0; i < max_macport_pairs; i++) {
+        if (macport_pairs[i] == NULL) {
+            continue;
+        }
+        int mac_cmp = strcmp(macport_pairs[i]->macport->macAddr, macAddr);
+        int port_cmp = strcmp(macport_pairs[i]->macport->portId, portId);
+        if (!mac_cmp && !port_cmp) {
+            LOGEXTREME("macport %s_%s already in mido - abort create.\n", macAddr, portId);
+            if (outname) {
+                *outname = macport_pairs[i];
+            }
+            return (0);
+        }
+        if (!mac_cmp) {
+            LOGEXTREME("conflicting macport for %s in mido - abort create.\n", macAddr);
+            return (2);
+        }
+        if (!port_cmp) {
+            LOGEXTREME("conflicting macport for %s in mido - abort create.\n", portId);
+            return (3);
+        }
+    }
+
+    bzero(&myname, sizeof (midoname));
+    myname.tenant = strdup(br->obj->tenant);
+    myname.resource_type = strdup("mac_table");
+    myname.media_type = strdup(midonet_api_mtypes[APPLICATION_MACPORT_JSON]);
+
+    rc = mido_create_resource(br->obj, 1, &myname, &out, "macAddr", macAddr, "portId", portId, NULL);
+    if (rc == 0) {
+        if (outname) {
+            *outname = out;
+        }
+        midonet_api_cache_add_macport(br, out);
+        ret = 0;
+    } else if (rc < 0) {
+        ret = 0;
+    } else {
+        ret = 1;
+    }
+    mido_free_midoname(&myname);
+    return (ret);
+}
+
+/**
+ * Deletes the given bridge macport pair from MidoNet.
+ * @param bridge [in] bridge of interest (no check is performed - caller responsible to
+ * make sure it is a bridge).
+ * @param macport [in] bridge macport pair of interest (no check is performed - caller responsible
+ * to make sure that the macport is associated with the bridge.
+ * @return 0 on success. 1 otherwise.
+ */
+int mido_delete_macport(midonet_api_bridge *bridge, midoname *macport) {
+    if (!bridge || !bridge->obj || !macport || !macport->uuid || !macport->uri) {
+        return (1);
+    }
+    midonet_api_cache_del_macport(bridge, macport);
+    return (mido_delete_resource(NULL, macport));
+}
+
+/**
+ * Deletes all macport pairs that matches the given MAC address. 
+ * @param bridge [in] bridge of interest (no check is performed - caller responsible to
+ * make sure it is a bridge).
+ * @param mac [in] MAC address of interest.
+ * @return 0 on success. 1 otherwise.
+ */
+int mido_delete_macport_bymac(midonet_api_bridge *bridge, char *mac) {
+    if (!mac || !bridge || !bridge->obj) {
+        return (1);
+    }
+    int ret = 0;
+    midoname *found = NULL;
+    while ((found = midonet_api_cache_lookup_macport_bymac(bridge, mac, NULL))) {
+        ret += mido_delete_macport(bridge, found);
+    }
+    return (ret);
+}
+
+/**
+ * Deletes all macport pairs that matches the given port UUID. 
+ * @param bridge [in] bridge of interest (no check is performed - caller responsible to
+ * make sure it is a bridge).
+ * @param portId [in] UUID of the port of interest.
+ * @return 0 on success. 1 otherwise.
+ */
+int mido_delete_macport_byport(midonet_api_bridge *bridge, char *portId) {
+    if (!portId || !bridge || !bridge->obj) {
+        return (1);
+    }
+    int ret = 0;
+    midoname *found = NULL;
+    while ((found = midonet_api_cache_lookup_macport_byport(bridge, portId, NULL))) {
+        ret += mido_delete_macport(bridge, found);
+    }
+    return (ret);
+}
+
+/**
+ * Retrieves an array of pointers to midonet objects representing portmac pairs associated
+ * to the bridge bridgename.
+ * @param bridgename [in] midoname structure representing the bride of interest
+ * @param outnames [out] an array of pointers to midonet objects representing portmac
+ * pairs, to be returned
+ * @param outnames_max [out] number of elements in the outnames array
+ * @return 0 on success. 1 otherwise.
+ */
+int mido_get_macport_pairs(midoname *bridgename, midoname ***outnames, int *outnames_max) {
+    int count = 0;
+    if (midocache != NULL) {
+        *outnames = NULL;
+        *outnames_max = 0;
+
+        if (bridgename) {
+            midonet_api_bridge *br = mido_get_bridge(bridgename->name);
+            if (br) {
+                *outnames = EUCA_ZALLOC_C(br->max_macport_pairs, sizeof (midoname *));
+                midoname **names = *outnames;
+                for (int i = 0; i < br->max_macport_pairs; i++) {
+                    if (br->macport_pairs[i] == NULL) {
+                        continue;
+                    }
+                    names[count] = br->macport_pairs[i];
+                    count++;
+                }
+                *outnames_max = count;
+            }
+            return (0);
+        } else {
+            LOGWARN("Unable to retrieve mac_table from NULL bridge\n");
+            return (1);
+        }
+    }
+
+    if (bridgename) {
+        return (mido_get_resources(bridgename, 1, bridgename->tenant, "mac_table",
+                midonet_api_mtypes[APPLICATION_COLLECTION_MACPORT_JSON],
+                midonet_api_mtypes[APPLICATION_MACPORT_JSON],
+                outnames, outnames_max));
+    } else {
+        LOGWARN("Unable to retrieve mac_table from NULL bridge\n");
+        return (1);
+    }
 }
 
 /**
@@ -2809,7 +3202,7 @@ int mido_delete_router_port(midonet_api_router *router, midoname *port) {
 }
 
 /**
- * Retrieves an array of pointers to midonet object representing bridge and router ports.
+ * Retrieves an array of pointers to midonet objects representing bridge and router ports.
  * @param devname [in] optional device (router or bridge)
  * @param outnames [out] an array of pointers to midonet objects representing ports, to be returned
  * @param outnames_max [out] number of elements in the outnames array
@@ -3945,8 +4338,38 @@ int mido_update_midoname(midoname *name) {
             if (el) {
                 name->route->weight = strdup(json_object_get_string(el));
             }
+        } else if (!strcmp(name->resource_type, "arp_table")) {
+            if (name->ip4mac) {
+                EUCA_FREE(name->ip4mac->ip);
+                EUCA_FREE(name->ip4mac->mac);
+            } else {
+                name->ip4mac = EUCA_ZALLOC_C(1, sizeof (midoname_ip4mac_extras));
+            }
+            json_object_object_get_ex(jobj, "ip", &el);
+            if (el) {
+                name->ip4mac->ip = strdup(json_object_get_string(el));
+            }
+            json_object_object_get_ex(jobj, "mac", &el);
+            if (el) {
+                name->ip4mac->mac = strdup(json_object_get_string(el));
+            }
+        } else if (!strcmp(name->resource_type, "mac_table")) {
+            if (name->macport) {
+                EUCA_FREE(name->macport->macAddr);
+                EUCA_FREE(name->macport->portId);
+            } else {
+                name->macport = EUCA_ZALLOC_C(1, sizeof (midoname_macport_extras));
+            }
+            json_object_object_get_ex(jobj, "macAddr", &el);
+            if (el) {
+                name->macport->macAddr = strdup(json_object_get_string(el));
+            }
+            json_object_object_get_ex(jobj, "portId", &el);
+            if (el) {
+                name->macport->portId = strdup(json_object_get_string(el));
+            }
         }
-    
+        
         if (!name->uuid || !strlen(name->uuid)) {
             if (name->uri && strlen(name->uri)) {
                 name->uuid = strdup(name->uri);
@@ -4076,6 +4499,8 @@ void midonet_api_init(void) {
     snprintf(midonet_api_mtypes[APPLICATION_AD_ROUTE_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_AD_ROUTE_JSON_V1);
     snprintf(midonet_api_mtypes[APPLICATION_BGP_NETWORK_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_BGP_NETWORK_JSON_V1);
     snprintf(midonet_api_mtypes[APPLICATION_BRIDGE_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_BRIDGE_JSON_V2);
+    snprintf(midonet_api_mtypes[APPLICATION_IP4MAC_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_IP4MAC_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_MACPORT_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_MACPORT_JSON_V2);
     snprintf(midonet_api_mtypes[APPLICATION_DHCP_SUBNET_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_DHCP_SUBNET_JSON_V2);
     snprintf(midonet_api_mtypes[APPLICATION_DHCP_HOST_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_DHCP_HOST_JSON_V2);
     snprintf(midonet_api_mtypes[APPLICATION_PORT_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_PORT_JSON_V2);
@@ -4097,6 +4522,8 @@ void midonet_api_init(void) {
     snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_AD_ROUTE_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_AD_ROUTE_JSON_V1);
     snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_BGP_NETWORK_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_BGP_NETWORK_JSON_V1);
     snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_BRIDGE_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_BRIDGE_JSON_V2);
+    snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_IP4MAC_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_IP4MAC_JSON_V1);
+    snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_MACPORT_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_MACPORT_JSON_V2);
     snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_DHCP_SUBNET_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_DHCP_SUBNET_JSON_V2);
     snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_DHCP_HOST_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_DHCP_HOST_JSON_V2);
     snprintf(midonet_api_mtypes[APPLICATION_COLLECTION_PORT_JSON], MIDO_MTYPE_MAX_LEN, APPLICATION_COLLECTION_PORT_JSON_V2);
@@ -7073,13 +7500,13 @@ int midonet_api_cache_refresh_routerroutes(midonet_api_cache *cache, int start, 
 }
 
 /**
- * Reloads bridge dhcps from MidoNet.
+ * Reloads bridge objects (dhcps, ip4mac pairs, and macport pairs) from MidoNet.
  * @param cache [in] midonet_api_cache of interest
  * @param start [in] start index of interest.
  * @param end [in] end index of interest.
  * @return 0 on success. Positive integer otherwise.
  */
-int midonet_api_cache_refresh_bridgedhcps(midonet_api_cache *cache, int start, int end) {
+int midonet_api_cache_refresh_bridgeobjects(midonet_api_cache *cache, int start, int end) {
     int rc = 0;
     if (cache == NULL) {
         return (1);
@@ -7107,6 +7534,24 @@ int midonet_api_cache_refresh_bridgedhcps(midonet_api_cache *cache, int start, i
             }
         } else {
             LOGWARN("\tFailed to retrieve %s ports\n", bridge->obj->name);
+        }
+
+        rc = mido_get_ip4mac_pairs(bridge->obj, &(bridge->ip4mac_pairs), &(bridge->max_ip4mac_pairs));
+        if (!rc) {
+            for (int j = 0; j < bridge->max_ip4mac_pairs; j++) {
+                LOGEXTREME("\tCached bridge %s ip4mac pair %s_%s\n", bridge->obj->name, bridge->ip4mac_pairs[j]->ip4mac->ip, bridge->ip4mac_pairs[j]->ip4mac->mac);
+            }
+        } else {
+            LOGWARN("\tFailed to retrieve %s arp_table\n", bridge->obj->name);
+        }
+
+        rc = mido_get_macport_pairs(bridge->obj, &(bridge->macport_pairs), &(bridge->max_macport_pairs));
+        if (!rc) {
+            for (int j = 0; j < bridge->max_macport_pairs; j++) {
+                LOGEXTREME("\tCached bridge %s macport pair %s_%s\n", bridge->obj->name, bridge->macport_pairs[j]->macport->macAddr, bridge->macport_pairs[j]->macport->portId);
+            }
+        } else {
+            LOGWARN("\tFailed to retrieve %s mac_table\n", bridge->obj->name);
         }
 
         midoname **l2names = NULL;
@@ -7502,7 +7947,7 @@ int midonet_api_cache_refresh_v_threads(enum mido_cache_refresh_mode_t refreshmo
 
     snprintf(param[MIDO_CACHE_THREAD_BRIDGE].name, MIDO_CACHE_THREAD_NAME_LEN, "bridge");
     param[MIDO_CACHE_THREAD_BRIDGE].n = cache->max_bridges;
-    param[MIDO_CACHE_THREAD_BRIDGE].get_from_mido = midonet_api_cache_refresh_bridgedhcps;
+    param[MIDO_CACHE_THREAD_BRIDGE].get_from_mido = midonet_api_cache_refresh_bridgeobjects;
     param[MIDO_CACHE_THREAD_BRIDGE].cache = cache;
     rc = pthread_create(&pt[MIDO_CACHE_THREAD_BRIDGE], &ptattr, midonet_api_cache_refresh_objects_main_thread,
             (void *) &param[MIDO_CACHE_THREAD_BRIDGE]);
@@ -8020,6 +8465,242 @@ midonet_api_bridge *midonet_api_cache_lookup_bridge(midoname *bridge, int *idx) 
                     *idx = i;
                 }
                 return bridges[i];
+            }
+        }
+    }
+    return (NULL);
+}
+
+/**
+ * Adds an ip4mac entry in midocache.
+ * @param bridge [in] bridge (not checked) of interest
+ * @param ip4mac [in] IPv4-MAC pair (not checked) of interest
+ * @return 0 on success. 1 otherwise.
+ */
+int midonet_api_cache_add_ip4mac(midonet_api_bridge *bridge, midoname *ip4mac) {
+    bridge->ip4mac_pairs = EUCA_APPEND_PTRARR(bridge->ip4mac_pairs, &(bridge->max_ip4mac_pairs), ip4mac);
+    return (0);
+}
+
+/**
+ * Deletes a bridge ip4mac entry from midocache.
+ * @param bridge [in] bridge (not checked) of interest
+ * @param ip4mac [in] IPv4-MAC pair (not checked) of interest
+ * @return 0 on success. 1 otherwise.
+ */
+int midonet_api_cache_del_ip4mac(midonet_api_bridge *bridge, midoname *ip4mac) {
+    int idx = 0;
+    midoname *todel = NULL;
+    todel = midonet_api_cache_lookup_ip4mac(bridge, ip4mac, &idx);
+    if (todel) {
+        bridge->ip4mac_pairs[idx] = NULL;
+        (midocache_midos->released)++;
+        return (0);
+    }
+    return (1);
+}
+
+/**
+ * Searches midocache for the ip4mac pair in the argument.
+ * @param bridge [in] bridge (not checked) of interest
+ * @param ip4mac [in] IPv4-MAC pair (not checked) of interest
+ * @param idx [out] index of the ip4mac pair in midocache, if found.
+ * @return pointer to the midoname data structure if found. NULL otherwise.
+ */
+midoname *midonet_api_cache_lookup_ip4mac(midonet_api_bridge *bridge, midoname *ip4mac, int *idx) {
+    if (midocache != NULL) {
+        midoname **ip4mac_pairs = bridge->ip4mac_pairs;
+        for (int i = 0; i < bridge->max_ip4mac_pairs; i++) {
+            if (ip4mac_pairs[i] == NULL) {
+                continue;
+            }
+            if (ip4mac_pairs[i] == ip4mac) {
+                if (idx) {
+                    *idx = i;
+                }
+                return ip4mac_pairs[i];
+            }
+        }
+        for (int i = 0; i < bridge->max_ip4mac_pairs; i++) {
+            if (ip4mac_pairs[i] == NULL) {
+                continue;
+            }
+            if (!strcmp(ip4mac->uuid, ip4mac_pairs[i]->uuid)) {
+                LOGEXTREME("%s found with uuid cmp.\n", ip4mac->name);
+                if (idx) {
+                    *idx = i;
+                }
+                return ip4mac_pairs[i];
+            }
+        }
+    }
+    return (NULL);
+}
+
+/**
+ * Searches midocache for the ip4mac pair with the IPv4 address in the argument.
+ * @param bridge [in] bridge (not checked) of interest
+ * @param ip4 [in] IPv4 address of interest
+ * @param idx [out] index of the ip4mac pair in midocache, if found.
+ * @return pointer to the midoname data structure if found (will return the first
+ * matching ip4mac pair). NULL otherwise.
+ */
+midoname *midonet_api_cache_lookup_ip4mac_byip(midonet_api_bridge *bridge, char *ip, int *idx) {
+    if (midocache != NULL) {
+        midoname **ip4mac_pairs = bridge->ip4mac_pairs;
+        for (int i = 0; i < bridge->max_ip4mac_pairs; i++) {
+            if (ip4mac_pairs[i] == NULL) {
+                continue;
+            }
+            if (!strcmp(ip, ip4mac_pairs[i]->ip4mac->ip)) {
+                if (idx) {
+                    *idx = i;
+                }
+                return (ip4mac_pairs[i]);
+            }
+        }
+    }
+    return (NULL);
+}
+
+/**
+ * Searches midocache for the ip4mac pair with the MAC address in the argument.
+ * @param bridge [in] bridge (not checked) of interest
+ * @param mac [in] MAC address of interest
+ * @param idx [out] index of the ip4mac pair in midocache, if found.
+ * @return pointer to the midoname data structure if found (will return the first
+ * matching ip4mac pair). NULL otherwise.
+ */
+midoname *midonet_api_cache_lookup_ip4mac_bymac(midonet_api_bridge *bridge, char *mac, int *idx) {
+    if (midocache != NULL) {
+        midoname **ip4mac_pairs = bridge->ip4mac_pairs;
+        for (int i = 0; i < bridge->max_ip4mac_pairs; i++) {
+            if (ip4mac_pairs[i] == NULL) {
+                continue;
+            }
+            if (!strcmp(mac, ip4mac_pairs[i]->ip4mac->mac)) {
+                if (idx) {
+                    *idx = i;
+                }
+                return (ip4mac_pairs[i]);
+            }
+        }
+    }
+    return (NULL);
+}
+
+/**
+ * Adds an macport entry in midocache.
+ * @param bridge [in] bridge (not checked) of interest
+ * @param macport [in] MAC-port pair (not checked) of interest
+ * @return 0 on success. 1 otherwise.
+ */
+int midonet_api_cache_add_macport(midonet_api_bridge *bridge, midoname *macport) {
+    bridge->macport_pairs = EUCA_APPEND_PTRARR(bridge->macport_pairs, &(bridge->max_macport_pairs), macport);
+    return (0);
+}
+
+/**
+ * Deletes a bridge macport entry from midocache.
+ * @param bridge [in] bridge (not checked) of interest
+ * @param macport [in] IPv4-MAC pair (not checked) of interest
+ * @return 0 on success. 1 otherwise.
+ */
+int midonet_api_cache_del_macport(midonet_api_bridge *bridge, midoname *macport) {
+    int idx = 0;
+    midoname *todel = NULL;
+    todel = midonet_api_cache_lookup_macport(bridge, macport, &idx);
+    if (todel) {
+        bridge->macport_pairs[idx] = NULL;
+        (midocache_midos->released)++;
+        return (0);
+    }
+    return (1);
+}
+
+/**
+ * Searches midocache for the macport pair in the argument.
+ * @param bridge [in] bridge (not checked) of interest
+ * @param macport [in] IPv4-MAC pair (not checked) of interest
+ * @param idx [out] index of the macport pair in midocache, if found.
+ * @return pointer to the midoname data structure if found. NULL otherwise.
+ */
+midoname *midonet_api_cache_lookup_macport(midonet_api_bridge *bridge, midoname *macport, int *idx) {
+    if (midocache != NULL) {
+        midoname **macport_pairs = bridge->macport_pairs;
+        for (int i = 0; i < bridge->max_macport_pairs; i++) {
+            if (macport_pairs[i] == NULL) {
+                continue;
+            }
+            if (macport_pairs[i] == macport) {
+                if (idx) {
+                    *idx = i;
+                }
+                return macport_pairs[i];
+            }
+        }
+        for (int i = 0; i < bridge->max_macport_pairs; i++) {
+            if (macport_pairs[i] == NULL) {
+                continue;
+            }
+            if (!strcmp(macport->uuid, macport_pairs[i]->uuid)) {
+                LOGEXTREME("%s found with uuid cmp.\n", macport->name);
+                if (idx) {
+                    *idx = i;
+                }
+                return macport_pairs[i];
+            }
+        }
+    }
+    return (NULL);
+}
+
+/**
+ * Searches midocache for the macport pair with the MAC address in the argument.
+ * @param bridge [in] bridge (not checked) of interest
+ * @param mac [in] MAC address of interest
+ * @param idx [out] index of the macport pair in midocache, if found.
+ * @return pointer to the midoname data structure if found (will return the first
+ * matching macport pair). NULL otherwise.
+ */
+midoname *midonet_api_cache_lookup_macport_bymac(midonet_api_bridge *bridge, char *mac, int *idx) {
+    if (midocache != NULL) {
+        midoname **macport_pairs = bridge->macport_pairs;
+        for (int i = 0; i < bridge->max_macport_pairs; i++) {
+            if (macport_pairs[i] == NULL) {
+                continue;
+            }
+            if (!strcmp(mac, macport_pairs[i]->macport->macAddr)) {
+                if (idx) {
+                    *idx = i;
+                }
+                return (macport_pairs[i]);
+            }
+        }
+    }
+    return (NULL);
+}
+
+/**
+ * Searches midocache for the macport pair with the port UUID in the argument.
+ * @param bridge [in] bridge (not checked) of interest
+ * @param portId [in] port UUID of interest
+ * @param idx [out] index of the macport pair in midocache, if found.
+ * @return pointer to the midoname data structure if found (will return the first
+ * matching portId). NULL otherwise.
+ */
+midoname *midonet_api_cache_lookup_macport_byport(midonet_api_bridge *bridge, char *portId, int *idx) {
+    if (midocache != NULL) {
+        midoname **macport_pairs = bridge->macport_pairs;
+        for (int i = 0; i < bridge->max_macport_pairs; i++) {
+            if (macport_pairs[i] == NULL) {
+                continue;
+            }
+            if (!strcmp(portId, macport_pairs[i]->macport->portId)) {
+                if (idx) {
+                    *idx = i;
+                }
+                return (macport_pairs[i]);
             }
         }
     }
@@ -8813,6 +9494,8 @@ int midonet_api_bridge_free(midonet_api_bridge *bridge) {
         midonet_api_dhcp_free(bridge->dhcps[i]);
     }
     EUCA_FREE(bridge->dhcps);
+    EUCA_FREE(bridge->macport_pairs);
+    EUCA_FREE(bridge->ip4mac_pairs);
     EUCA_FREE(bridge->ports);
     bzero(bridge, sizeof (midonet_api_bridge));
     EUCA_FREE(bridge);
