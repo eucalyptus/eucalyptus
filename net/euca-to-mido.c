@@ -2881,6 +2881,11 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
             // Attach NACL chains to bridges
             for (int k = 0; k < vpc->max_subnets; k++) {
                 mido_vpc_subnet *subnet = &(vpc->subnets[k]);
+                
+                if (strlen(subnet->name) == 0) {
+                    continue;
+                }
+
                 int rulepos = 1;
                 char rulepos_str[8];
                 char subnet_buf[NETWORK_ADDR_LEN];
@@ -3018,7 +3023,10 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
                         LOGTRACE("\t\tskipping %s->%s outfilter jump rule\n", subnet->name, vpcnacl->name);                            
                     } else {
                         if (max_jprules_out > 0) {
-                            mido_delete_rule(subnet->outchain, jprules_out[0]);
+                            rc = mido_delete_rule(subnet->outchain, jprules_out[0]);
+                            if (rc == 0) {
+                                LOGWARN("failed to delete %s outfilter jump rule\n", vpcnacl->name);
+                            }
                         }
                         LOGTRACE("\t\tcreating %s->%s outfilter jump rule\n", subnet->name, vpcnacl->name);
                         snprintf(rulepos_str, 8, "%d", subnet->outchain->rules_count + 1);
@@ -3036,7 +3044,10 @@ int do_midonet_update_pass3_nacls(globalNetworkInfo *gni, mido_config *mido) {
                         LOGTRACE("\t\tskipping %s->%s infilter jump rule\n", subnet->name, vpcnacl->name);                            
                     } else {
                         if (max_jprules_in > 0) {
-                            mido_delete_rule(subnet->inchain, jprules_in[0]);
+                            rc = mido_delete_rule(subnet->inchain, jprules_in[0]);
+                            if (rc == 0) {
+                                LOGWARN("failed to delete %s infilter jump rule\n", vpcnacl->name);
+                            }
                         }
                         LOGTRACE("\t\tcreating %s->%s infilter jump rule\n", subnet->name, vpcnacl->name);
                         snprintf(rulepos_str, 8, "%d", subnet->inchain->rules_count + 1);
@@ -7716,7 +7727,7 @@ int connect_mido_vpc_instance(mido_config *mido, mido_vpc_subnet *vpcsubnet, mid
     // setup arp_table and mac_table entries
     if (mido->config->enable_mido_arptable) {
         if (vpcinstance->midos[INST_VPCBR_VMPORT] && vpcinstance->midos[INST_VPCBR_VMPORT]->uuid &&
-                ipAddr && macAddr && strlen(ipAddr) && strlen(macAddr)) {
+                strlen(ipAddr) && strlen(macAddr)) {
             LOGEXTREME("setting arp_entry for %s\n", vpcinstance->name);
             rc = mido_create_ip4mac(vpcsubnet->subnetbr, NULL, ipAddr, macAddr, &(vpcinstance->midos[INST_IP4MAC]));
             if (rc) {
@@ -10250,12 +10261,12 @@ int do_midonet_clean_arpmactables(mido_config *mido) {
     
     for (int i = 0; i < mido->max_vpcs; i++) {
         mido_vpc *vpc = &(mido->vpcs[i]);
-        if (!vpc) {
+        if (strlen(vpc->name) == 0) {
             continue;
         }
         for (int j = 0; j < vpc->max_subnets; j++) {
             mido_vpc_subnet *vpcsubnet = &(vpc->subnets[j]);
-            if (!vpcsubnet) {
+            if (strlen(vpcsubnet->name) == 0) {
                 continue;
             }
             midonet_api_bridge *br = vpcsubnet->subnetbr;
@@ -10281,6 +10292,7 @@ int do_midonet_clean_arpmactables(mido_config *mido) {
             char *netaddrstr = strdup(dhcp->obj->uuid);
             char *tmpchar = strchr(netaddrstr, '_');
             if (!tmpchar) {
+                EUCA_FREE(netaddrstr);
                 continue;
             }
             *tmpchar = '\0';
