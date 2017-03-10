@@ -1507,7 +1507,7 @@ int mido_create_ip4mac(midonet_api_bridge *br, midoname *devname, char *ip, char
 
     midoname *out = NULL;
     
-    if (!br && !devname && !ip && !mac) {
+    if ((!br && !devname) || !ip || !mac) {
         LOGWARN("Invalid argument: cannot create ip4mac for NULL\n");
         return (1);
     }
@@ -1689,7 +1689,7 @@ int mido_create_macport(midonet_api_bridge *br, midoname *devname, char *macAddr
 
     midoname *out = NULL;
     
-    if (!br && !devname && !macAddr && !portId) {
+    if ((!br && !devname) || !macAddr || !portId) {
         LOGWARN("Invalid argument: cannot create macport for NULL\n");
         return (1);
     }
