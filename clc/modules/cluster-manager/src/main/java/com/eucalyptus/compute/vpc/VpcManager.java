@@ -221,7 +221,7 @@ public class VpcManager {
     final String routeTableId = Identifier.rtb.normalize( request.getRouteTableId() );
     final String subnetId = Identifier.subnet.normalize( request.getSubnetId() );
     try {
-      final RouteTable routeTable = routeTables.updateByExample(
+      final RouteTable routeTable = routeTables.withRetries( ).updateByExample(
           RouteTable.exampleWithName( accountFullName, routeTableId ),
           accountFullName,
           request.getRouteTableId(),
@@ -1885,7 +1885,7 @@ public class VpcManager {
       throw new ClientComputeException( "InvalidParameterCombination", "Route target required" );
     }
     try {
-      routeTables.updateByExample(
+      routeTables.withRetries( ).updateByExample(
           RouteTable.exampleWithName( accountFullName, routeTableId ),
           accountFullName,
           request.getRouteTableId( ),
