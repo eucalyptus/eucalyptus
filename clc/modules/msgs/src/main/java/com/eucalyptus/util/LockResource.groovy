@@ -56,6 +56,18 @@ class LockResource implements AutoCloseable {
     new LockResource( lock, locked );
   }
 
+  /**
+   * Try to acquire lock.
+   *
+   * <p>WARNING: Caller must check if lock was acquired</p>
+   *
+   * @see #isLocked()
+   */
+  static LockResource tryLock( Lock lock ) {
+    boolean locked = lock.tryLock( )
+    new LockResource( lock, locked );
+  }
+
   static <V> V withLock( Lock lock, Closure<V> closure ) {
     lock.lock( )
     try {

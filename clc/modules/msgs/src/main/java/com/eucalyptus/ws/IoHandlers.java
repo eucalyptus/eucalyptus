@@ -24,6 +24,7 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.handlers.IoAddressingHandler;
 import com.eucalyptus.ws.handlers.IoBindingHandler;
+import com.eucalyptus.ws.handlers.IoInternalHmacHandler;
 import com.eucalyptus.ws.handlers.IoInternalWsSecHandler;
 import com.eucalyptus.ws.handlers.IoMessageWrapperHandler;
 import com.eucalyptus.ws.handlers.IoSoapMarshallingHandler;
@@ -55,6 +56,7 @@ public class IoHandlers {
   private static final ChannelHandler soapHandler = new IoSoapHandler( );
   private static final ChannelHandler soapMarshallingHandler = new IoSoapMarshallingHandler( );
   private static final ChannelHandler internalWsSecHandler = new IoInternalWsSecHandler( );
+  private static final ChannelHandler internalHmacHandler = new IoInternalHmacHandler( );
   private static final ChannelHandler addressingHandler = new IoAddressingHandler( );
   private static final ChannelHandler ioMessageHandler = new IoMessageWrapperHandler( );
   private static final ChannelHandler bindingHandler = new IoBindingHandler( IoBindingHandler.context( BindingManager.getDefaultBinding( ) ) );
@@ -85,6 +87,10 @@ public class IoHandlers {
 
   public static ChannelHandler internalWsSecHandler( ) {
     return internalWsSecHandler;
+  }
+
+  public static ChannelHandler getInternalHmacHandler( ) {
+    return internalHmacHandler;
   }
 
   public static ChannelHandler addressingHandler( ) {
