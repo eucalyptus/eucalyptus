@@ -410,7 +410,7 @@ class MidonetGatewayValidator extends TypedValidator<MidonetGateway> {
     validateAll( midonetGateway.&getBgpAdRoutes, new CidrValidator(errors) )
 
     if ( midonetGateway.externalCidr ) {
-      IPRange range = IPRange.fromCidr( Cidr.parse( midonetGateway.externalCidr ) ).perhapsShrink( )
+      IPRange range = IPRange.fromCidr( Cidr.parse( midonetGateway.externalCidr ) )
       [
           [ midonetGateway.externalIp, 'ExternalIp' ],
           [ midonetGateway.externalRouterIp, 'ExternalRouterIp' ],
