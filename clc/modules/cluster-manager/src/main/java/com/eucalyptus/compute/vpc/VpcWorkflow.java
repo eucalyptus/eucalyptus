@@ -134,6 +134,7 @@ public class VpcWorkflow {
    */
   private void natGatewaySetupNetworkInterface( ) {
     for ( final String natGatewayId : listNatGatewayIds( NatGateway.State.pending ) ) {
+      boolean cleanup = false;
       try ( final TransactionResource tx = Entities.transactionFor( NatGateway.class ) ) {
         final NatGateway natGateway = natGateways.lookupByName( null, natGatewayId, Functions.<NatGateway>identity( ) );
         final Vpc vpc = natGateway.getVpc( );
@@ -152,6 +153,7 @@ public class VpcWorkflow {
 
           networkInterfaces.save( NatGatewayHelper.createNetworkInterface( natGateway, subnet ) );
         } catch ( final ComputeException e ) { // NAT gateway creation failure
+          cleanup = true;
           natGateway.markDeletion( );
           natGateway.setState( NatGateway.State.failed );
           natGateway.setFailureCode( e.getCode( ) );
@@ -165,6 +167,9 @@ public class VpcWorkflow {
           logger.error( "Error processing pending NAT gateway " + natGatewayId, e );
         }
       }
+      if ( cleanup ) {
+        natGatewayFailureCleanup( natGatewayId );
+      }
     }
   }
 
@@ -174,6 +179,7 @@ public class VpcWorkflow {
   private void natGatewaySetupElasticIp( ) {
     for ( final String natGatewayId : listNatGatewayIds( NatGateway.State.pending ) ) {
       boolean invalidate = false;
+      boolean cleanup = false;
       try ( final TransactionResource tx = Entities.transactionFor( NatGateway.class ) ) {
         final NatGateway natGateway = natGateways.lookupByName( null, natGatewayId, Functions.<NatGateway>identity( ) );
         if ( natGateway.getNetworkInterface( ) != null &&
@@ -183,6 +189,7 @@ public class VpcWorkflow {
           natGateway.setState( NatGateway.State.available );
           invalidate = true;
         } catch ( final ComputeException e ) { // NAT gateway creation failure
+          cleanup = true;
           natGateway.markDeletion( );
           natGateway.setState( NatGateway.State.failed );
           natGateway.setFailureCode( e.getCode( ) );
@@ -199,6 +206,9 @@ public class VpcWorkflow {
       }
       if ( invalidate ) {
         vpcInvalidator.invalidate( natGatewayId );
+      }
+      if ( cleanup ) {
+        natGatewayFailureCleanup( natGatewayId );
       }
     }
   }
@@ -223,17 +233,22 @@ public class VpcWorkflow {
       logger.error( "Error listing failed NAT gateways for cleanup", e );
     }
 
-    for ( final String natGatewayId : failedNatGatewayIds ) {
-      try ( final TransactionResource tx = Entities.transactionFor( NatGateway.class ) ) {
-        final NatGateway natGateway = natGateways.lookupByName( null, natGatewayId, Functions.<NatGateway>identity( ) );
-        releaseNatGatewayResources( natGateway );
-        tx.commit( );
-      } catch ( Exception e ) {
-        if ( PersistenceExceptions.isStaleUpdate( e ) ) {
-          logger.debug( "Conflict updating NAT gateway " + natGatewayId + " for cleanup (will retry)" );
-        } else {
-          logger.error( "Error cleaning up failed NAT gateway " + natGatewayId, e );
-        }
+    failedNatGatewayIds.forEach( this::natGatewayFailureCleanup );
+  }
+
+  /**
+   * Release resources for a failed NAT gateway
+   */
+  private void natGatewayFailureCleanup( final String natGatewayId ) {
+    try ( final TransactionResource tx = Entities.transactionFor( NatGateway.class ) ) {
+      final NatGateway natGateway = natGateways.lookupByName( null, natGatewayId, Functions.<NatGateway>identity( ) );
+      releaseNatGatewayResources( natGateway );
+      tx.commit( );
+    } catch ( Exception e ) {
+      if ( PersistenceExceptions.isStaleUpdate( e ) ) {
+        logger.debug( "Conflict updating NAT gateway " + natGatewayId + " for cleanup (will retry)" );
+      } else {
+        logger.error( "Error cleaning up failed NAT gateway " + natGatewayId, e );
       }
     }
   }

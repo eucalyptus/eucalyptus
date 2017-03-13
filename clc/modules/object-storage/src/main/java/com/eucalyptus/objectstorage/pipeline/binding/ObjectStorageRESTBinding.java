@@ -644,11 +644,11 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
 
     ArrayList paramsToRemove = new ArrayList();
 
-    boolean addMore = true;
-    Iterator iterator = params.keySet().iterator();
-    while (iterator.hasNext()) {
-      Object key = iterator.next();
-      String keyString = key.toString();
+    params:
+    for ( final Map.Entry<String,String> parameterEntry : params.entrySet( ) ) {
+      final String key = parameterEntry.getKey( );
+      final String value = parameterEntry.getValue( );
+      String keyString = key;
       boolean dontIncludeParam = false;
       for (SecurityParameter securityParam : SecurityParameter.values()) {
         if (keyString.equals(securityParam.toString().toLowerCase())) {
@@ -657,7 +657,6 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         }
       }
       if (!dontIncludeParam) {
-        String value = params.get(key);
         if (value != null) {
           String[] keyStringParts = keyString.split("-");
           if (keyStringParts.length > 1) {
@@ -698,16 +697,19 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
       }
       if (dontIncludeParam)
         continue;
-      String value = params.get(key);
-      if (value != null) {
-        operationParams.put(keyString, value);
-      }
-
       // Add subresource params to the operationKey
       for (ObjectStorageProperties.SubResource subResource : ObjectStorageProperties.SubResource.values()) {
         if (keyString.toLowerCase().equals(subResource.toString().toLowerCase())) {
           operationKey += keyString.toLowerCase();
+          if ( Strings.isNullOrEmpty( value ) ) {
+            paramsToRemove.add(key);
+            continue params;
+          }
         }
+      }
+
+      if (value != null) {
+        operationParams.put(keyString, value);
       }
 
       /*

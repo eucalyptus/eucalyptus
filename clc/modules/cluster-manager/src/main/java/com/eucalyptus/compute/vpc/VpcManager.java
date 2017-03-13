@@ -1146,6 +1146,8 @@ public class VpcManager {
                       natGateway.getState( ) == NatGateway.State.pending ) {
                     natGateway.setState( NatGateway.State.deleting );
                     natGateway.markDeletion( );
+                  } else if ( natGateway.getState( ) == NatGateway.State.failed ) {
+                    natGateway.setState( NatGateway.State.deleted );
                   } else { // failed, deleted or deleting
                     if ( ctx.isAdministrator( ) ) {
                       // allow administrator to force immediate deletion of NAT gateway
