@@ -31,7 +31,7 @@ import java.util.concurrent.locks.Lock
 class LockResource implements AutoCloseable {
 
   private final Lock lock
-  private final boolean locked
+  private boolean locked
 
   private LockResource( final Lock lock,
                         final boolean locked ) {
@@ -73,6 +73,7 @@ class LockResource implements AutoCloseable {
   void close( ) {
     if ( isLocked( ) ) {
       lock.unlock( )
+      locked = false
     }
   }
 }

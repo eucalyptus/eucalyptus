@@ -21,6 +21,7 @@
 package com.eucalyptus.objectstorage.entities;
 
 import java.util.NoSuchElementException;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -48,6 +49,7 @@ import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.upgrade.Upgrades.Version;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.LockResource;
 
 import com.google.common.base.Predicate;
 
@@ -82,6 +84,11 @@ public class S3ProviderConfiguration extends AbstractPersistent implements Cache
   @Type(type = "org.hibernate.type.StringClobType")
   protected String S3SecretKey;
 
+  @Transient
+  private String decryptedS3SecretKey = null;
+  @Transient
+  private ReentrantReadWriteLock S3SecretKeyLock = new ReentrantReadWriteLock();
+
   @ConfigurableField(description = "Use HTTPS for communication to service backend.", displayName = "use_https", initial = "false",
       type = ConfigurableFieldType.BOOLEAN)
   @Column(name = "use_https")
@@ -113,23 +120,34 @@ public class S3ProviderConfiguration extends AbstractPersistent implements Cache
     S3AccessKey = s3AccessKey;
   }
 
+  /* Returns decrypted S3SecretKey */
   public String getS3SecretKey() throws Exception {
     if (this.S3SecretKey != null) {
-      try {
-        return OSGUtil.decryptWithComponentPrivateKey(ObjectStorage.class, this.S3SecretKey);
-      } catch (EucalyptusCloudException ex) {
-        LOG.error(ex);
-        throw ex;
+      try(final LockResource rlock = LockResource.lock(S3SecretKeyLock.readLock())) {
+        if (decryptedS3SecretKey == null) {
+          rlock.close();
+          LOG.trace("There is no stored decrypted S3 Secret Key. Decrypting...");
+          try(final LockResource lock = LockResource.lock(S3SecretKeyLock.writeLock())) {
+            decryptedS3SecretKey = OSGUtil.decryptWithComponentPrivateKey(ObjectStorage.class, this.S3SecretKey);
+            return decryptedS3SecretKey;
+          } catch (EucalyptusCloudException ex) {
+            LOG.error(ex);
+            throw ex;
+          }
+        }
+        return decryptedS3SecretKey;
       }
     } else {
-      return this.S3SecretKey;
+      return null;
     }
   }
 
   public void setS3SecretKey(String s3SecretKey) throws Exception {
     if (s3SecretKey != null) {
-      try {
+      try(final LockResource lock = LockResource.lock(S3SecretKeyLock.writeLock())) {
+        String val = s3SecretKey;
         s3SecretKey = OSGUtil.encryptWithComponentPublicKey(ObjectStorage.class, s3SecretKey);
+        decryptedS3SecretKey = val;
       } catch (EucalyptusCloudException ex) {
         LOG.error(ex);
         throw ex;
