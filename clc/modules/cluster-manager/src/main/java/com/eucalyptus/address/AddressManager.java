@@ -76,6 +76,7 @@ import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.internal.address.AddressDomain;
 import com.eucalyptus.compute.common.internal.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.common.internal.util.NotEnoughResourcesException;
 import com.eucalyptus.compute.common.internal.vpc.InternetGateways;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
 import com.eucalyptus.compute.vpc.NetworkInterfaceHelper;
@@ -282,7 +283,7 @@ public class AddressManager {
             }
             networkInterface = RestrictedTypes.doPrivileged( networkInterfaceId, NetworkInterface.class );
             if ( networkInterface.isAttached( ) ) {
-              final VmInstance attachedVm = networkInterface.getAttachment( ).getInstance( );
+              final VmInstance attachedVm = networkInterface.getInstance( );
               if ( VmStateSet.EXPECTING_TEARDOWN.apply( attachedVm ) ) { // STOPPED is OK
                 throw new ClientComputeException( "IncorrectInstanceState", "The instance to which '" + networkInterfaceId + "' is attached is not in a valid state for this operation" );
               }
@@ -300,14 +301,9 @@ public class AddressManager {
             final NetworkInterface oldNetworkInterface = RestrictedTypes.doPrivileged( address.getNetworkInterfaceId( ), NetworkInterface.class );
             try ( final TransactionResource tx = Entities.transactionFor( NetworkInterface.class ) ) {
               final NetworkInterface eni = Entities.merge( oldNetworkInterface );
-              if ( eni.isAssociated( ) ) {
-                PublicAddresses.markDirty( eni.getAssociation( ).getPublicIp( ), eni.getPartition( ) );
-              }
               addresses.unassign( address, null );
               eni.disassociate( );
-              if ( eni.isAttached( ) && eni.getAttachment( ).getDeviceIndex( ) == 0 ) {
-                VmInstances.updatePublicAddress( eni.getAttachment( ).getInstance( ), VmNetworkConfig.DEFAULT_IP );
-              }
+              handleEniAddressUnassigned( addresses, address, eni );
               tx.commit( );
             }
           }
@@ -324,7 +320,7 @@ public class AddressManager {
               NetworkInterfaceHelper.releasePublic( eni );
               eni.disassociate( );
               if ( eni.isAttached( ) && eni.getAttachment( ).getDeviceIndex( ) == 0 ) {
-                final VmInstance instance = eni.getAttachment( ).getInstance( );
+                final VmInstance instance = eni.getInstance( );
                 VmInstances.updatePublicAddress( instance, VmNetworkConfig.DEFAULT_IP );
               }
             }
@@ -398,17 +394,7 @@ public class AddressManager {
             final NetworkInterface eni = Entities.merge( networkInterface );
             if ( addresses.unassign( address, associationId ) ) {
               eni.disassociate( );
-              if ( eni.isAttached( ) ) {
-                final VmInstance vm = eni.getAttachment( ).getInstance( );
-                PublicAddresses.markDirty( address.getAddress( ), vm.getPartition( ) );
-                if ( eni.getAttachment( ).getDeviceIndex( ) == 0 ) {
-                  VmInstances.updatePublicAddress( vm, VmNetworkConfig.DEFAULT_IP );
-                  if ( !vm.isUsePrivateAddressing( ) &&
-                      ( VmInstance.VmState.PENDING.equals( vm.getState( ) ) || VmInstance.VmState.RUNNING.equals( vm.getState( ) ) ) ) {
-                    NetworkInterfaceHelper.associate( addresses.allocateSystemAddress( ), eni );
-                  }
-                }
-              }
+              handleEniAddressUnassigned( addresses, address, eni );
               tx.commit( );
             }
           }
@@ -452,6 +438,32 @@ public class AddressManager {
           Entities.query( Vpc.exampleDefault( accountFullName ) ),
           Predicates.alwaysTrue()
       ).transform( CloudMetadatas.toDisplayName() ).orNull( );
+    }
+  }
+
+  /**
+   * Caller must have open transaction for eni
+   */
+  private static void handleEniAddressUnassigned( final Addresses addresses,
+                                                  final Address address,
+                                                  final NetworkInterface eni ) {
+
+    if ( eni.isAttached( ) ) {
+      PublicAddresses.markDirty( address.getAddress( ), eni.getPartition( ) );
+
+      if ( eni.getAttachment( ).getDeviceIndex( ) == 0 ) {
+        final VmInstance vm = eni.getInstance( );
+        VmInstances.updatePublicAddress( vm, VmNetworkConfig.DEFAULT_IP );
+        if ( !vm.isUsePrivateAddressing( ) &&
+            ( VmInstance.VmState.PENDING.equals( vm.getState( ) ) || VmInstance.VmState.RUNNING.equals( vm.getState( ) ) ) ) {
+          try {
+            NetworkInterfaceHelper.associate( addresses.allocateSystemAddress( ), eni );
+          } catch ( final NotEnoughResourcesException e ) {
+            LOG.warn( "No addresses available, not assigning system address for: " + vm.getDisplayName( )
+                + " : " + e.getMessage( ) );
+          }
+        }
+      }
     }
   }
 
