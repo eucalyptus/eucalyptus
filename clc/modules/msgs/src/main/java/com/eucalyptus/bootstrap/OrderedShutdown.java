@@ -136,7 +136,12 @@ public class OrderedShutdown {
 				  Exceptions.maybeInterrupted(e);
 				}
 			}
-		}		 
+			LOG.info("Executed Post-Shutdown Hooks.");
+			try { // sleep to allow log output
+				Thread.sleep( 50 );
+			} catch ( InterruptedException e ) {
+			}
+		}
 	  });
   }
 }

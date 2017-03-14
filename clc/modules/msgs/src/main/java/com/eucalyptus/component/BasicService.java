@@ -75,9 +75,7 @@ public class BasicService {
   private static Logger                                                                   LOG            = Logger.getLogger( BasicService.class );
   private final ServiceConfiguration                                                      serviceConfiguration;
   private final StateMachine<ServiceConfiguration, Component.State, Component.Transition> stateMachine;
-  private final State                                                                     goal           = Component.State.ENABLED;
-  public static String                                                                    LOCAL_HOSTNAME = "@localhost";
-  
+
   BasicService( final ServiceConfiguration serviceConfiguration ) {
     super( );
     this.serviceConfiguration = serviceConfiguration;

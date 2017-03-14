@@ -22,7 +22,7 @@ package com.eucalyptus.util;
 /**
  * Consumer interface, remove when Java 8 available.
  */
-public interface Consumer<T> {
+public interface Consumer<T> extends java.util.function.Consumer<T> {
 
   void accept( T t );
 }

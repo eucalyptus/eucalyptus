@@ -140,6 +140,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.util.concurrent.Future;
 
 public class WebServices {
 
@@ -157,16 +158,10 @@ public class WebServices {
     private static final Consumer<Void> registerShutdownConsumer = Consumers.once( new Consumer<Void>() {
       @Override
       public void accept( final Void aVoid ) {
-        OrderedShutdown.registerShutdownHook( Empyrean.class, new Runnable( ){
+        OrderedShutdown.registerPostShutdownHook( new Runnable( ){
           @Override
           public void run( ) {
-            LOG.debug( "Releasing resources on shutdown" );
-            final EventLoopGroup clientGroup = clientEventLoopGroup;
-            if ( clientGroup != null ) try {
-              clientGroup.shutdownGracefully( );
-            } catch ( Throwable t ) {
-              LOG.error( "Error releasing resources", t );
-            }
+            LOG.info( "Releasing resources on shutdown" );
             try {
               final List<ExternalResourceReleasable> resources = Lists.<ExternalResourceReleasable>newArrayList(
                   Handlers.pipelineExecutionHandler( ),
@@ -176,6 +171,11 @@ public class WebServices {
             } catch ( Throwable t ) {
               LOG.error( "Error releasing resources", t );
             }
+          }
+
+          @Override
+          public String toString( ) {
+            return "Web services resources";
           }
         } );
       }
@@ -317,11 +317,16 @@ public class WebServices {
             StackConfiguration.CLIENT_POOL_MAX_THREADS,
             Threads.threadFactory( "web-services-client-pool-%d" )
         );
-        OrderedShutdown.registerPreShutdownHook( ( ) -> {
+        OrderedShutdown.registerPostShutdownHook( ( ) -> {
           LOG.info( "Client shutdown requested" );
           try {
-            clientEventLoopGroup.shutdownGracefully( 0, 10, TimeUnit.SECONDS ).await( );
-            LOG.info( "Client shutdown complete" );
+            final Future<?> terminationFuture = clientEventLoopGroup.shutdownGracefully( 0, 5, TimeUnit.SECONDS );
+            terminationFuture.await( 10, TimeUnit.SECONDS );
+            if ( terminationFuture.isDone( ) ) {
+              LOG.info( "Client shutdown complete" );
+            } else {
+              LOG.warn( "Client shutdown timed out" );
+            }
           } catch ( final InterruptedException e ) {
             LOG.info( "Client shutdown interrupted" );
           }
@@ -387,12 +392,20 @@ public class WebServices {
         @Override
         public void run( ) {
           if ( this.ranned.compareAndSet( false, true ) ) {
+            LOG.info( "Server shutdown requested" );
             serverChannelGroup.close( ).awaitUninterruptibly();
             serverChannelFactory.releaseExternalResources( );
+          } else {
+            LOG.info( "Server shutdown skipped" );
           }
         }
+
+        @Override
+        public String toString( ) {
+          return "Web services server shutdown";
+        }
       };
-      OrderedShutdown.registerPreShutdownHook( serverShutdown );
+      OrderedShutdown.registerPostShutdownHook( serverShutdown );
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
     }

@@ -136,7 +136,7 @@ public class ServiceContextManager {
     ReentrantReadWriteLock canHas = new ReentrantReadWriteLock();
     this.canHasRead = canHas.readLock( );
     this.canHasWrite = canHas.writeLock( );
-    OrderedShutdown.registerPreShutdownHook(ServiceContextManager::shutdown);
+    OrderedShutdown.registerPostShutdownHook(ServiceContextManager::shutdown);
   }
   
   public static void restartSync( ) {
