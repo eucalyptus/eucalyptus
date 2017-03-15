@@ -117,6 +117,7 @@ import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.IO;
 import com.eucalyptus.util.Pair;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -146,6 +147,14 @@ public class SslSetup {
   public static String        SERVER_SSL_CIPHERS = "RSA:DSS:ECDSA:+3DES:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES:!RC4:!ECDHE";
   @ConfigurableField( description = "SSL protocols for webservices." )
   public static String        SERVER_SSL_PROTOCOLS = "SSLv2Hello,TLSv1,TLSv1.1,TLSv1.2";
+  @ConfigurableField( description = "Client HTTPS enabled", initial = "true" )
+  public static Boolean       CLIENT_HTTPS_ENABLED = true;
+  @ConfigurableField( description = "Client HTTPS verify server certificate enabled", initial = "true" )
+  public static Boolean       CLIENT_HTTPS_SERVER_CERT_VERIFY = true;
+  @ConfigurableField( description = "Client HTTPS ciphers for internal use", initial = "RSA+AES:+SHA:!EXPORT:!EXPORT1025:!MD5:!ECDHE" )
+  public static String        CLIENT_SSL_CIPHERS = "RSA+AES:+SHA:!EXPORT:!EXPORT1025:!MD5:!ECDHE";
+  @ConfigurableField( description = "Client HTTPS protocols for internal use", initial = "TLSv1.2" )
+  public static String        CLIENT_SSL_PROTOCOLS = "TLSv1.2";
   @ConfigurableField( description = "Use default CAs with SSL for external use.", changeListener = PropertyChangeListeners.IsBoolean.class )
   public static Boolean       USER_SSL_DEFAULT_CAS = true;
   @ConfigurableField( description = "SSL ciphers for external use." )
@@ -236,7 +245,7 @@ public class SslSetup {
   }
   
   public static SSLEngine getServerEngine( ) {//TODO:GRZE: @Configurability
-    final SSLEngine engine = SERVER_CONTEXT.createSSLEngine( );
+    final SSLEngine engine = getServerContext( ).createSSLEngine( );
     engine.setUseClientMode( false );
     engine.setWantClientAuth( false );
     engine.setNeedClientAuth( false );
@@ -262,6 +271,14 @@ public class SslSetup {
   
   public static SSLContext getClientContext( ) {
     return CLIENT_CONTEXT;
+  }
+
+  public static SSLEngine getClientEngine( ) {
+    final SSLEngine engine = getClientContext( ).createSSLEngine( );
+    engine.setUseClientMode( true );
+    engine.setEnabledProtocols( SslUtils.getEnabledProtocols( CLIENT_SSL_PROTOCOLS, engine.getSupportedProtocols( ) ) );
+    engine.setEnabledCipherSuites( SslUtils.getEnabledCipherSuites( CLIENT_SSL_CIPHERS, SERVER_SUPPORTED_CIPHERS ) );
+    return engine;
   }
 
   static class ClientKeyManager extends KeyManagerFactorySpi {
@@ -491,25 +508,39 @@ public class SslSetup {
     protected void engineInit( ManagerFactoryParameters managerFactoryParameters ) throws InvalidAlgorithmParameterException {}
     
     public static class SimpleX509TrustManager extends X509ExtendedTrustManager {
-      
+      private static void verifyServerCert( final X509Certificate[] chain ) throws CertificateException {
+        final X509Certificate[ ] expected = memoizedServerCertSupplier.get( );
+        if ( MoreObjects.firstNonNull( CLIENT_HTTPS_SERVER_CERT_VERIFY, true ) &&
+            ( chain.length < 1 || expected.length < 1 || !expected[0].equals( chain[0] ) ) ) {
+          throw new CertificateException( "Server certificate not trusted" );
+        }
+      }
+
       @Override
-      public void checkClientTrusted( X509Certificate[] arg0, String arg1 ) throws CertificateException {}
-      
-      @Override
-      public void checkServerTrusted( X509Certificate[] chain, String authType ) throws CertificateException {}
-      
-      @Override
-      public X509Certificate[] getAcceptedIssuers( ) {
-        return trustedCerts;
+      public void checkClientTrusted( X509Certificate[] arg0, String arg1 ) throws CertificateException {
+        throw new CertificateException("Client certificate not trusted");
       }
       
       @Override
-      public void checkClientTrusted( X509Certificate[] arg0, String arg1, String arg2, String arg3 ) throws CertificateException {}
+      public void checkServerTrusted( X509Certificate[] chain, String authType ) throws CertificateException {
+        verifyServerCert( chain );
+      }
       
       @Override
-      public void checkServerTrusted( X509Certificate[] arg0, String arg1, String arg2, String arg3 ) throws CertificateException {}
+      public X509Certificate[] getAcceptedIssuers( ) {
+        return new X509Certificate[0];
+      }
+      
+      @Override
+      public void checkClientTrusted( X509Certificate[] arg0, String arg1, String arg2, String arg3 ) throws CertificateException {
+        throw new CertificateException("Client certificate not trusted");
+      }
+      
+      @Override
+      public void checkServerTrusted( X509Certificate[] chain, String arg1, String arg2, String arg3 ) throws CertificateException {
+        verifyServerCert( chain );
+      }
     }
-    
   }
   
   static class ServerTrustManager extends TrustManagerFactorySpi {

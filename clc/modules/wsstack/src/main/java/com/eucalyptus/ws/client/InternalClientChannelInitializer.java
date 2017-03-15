@@ -64,6 +64,7 @@ package com.eucalyptus.ws.client;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.ComponentPart;
+import com.eucalyptus.crypto.util.SslSetup;
 import com.eucalyptus.ws.IoHandlers;
 import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.MoreObjects;
@@ -77,6 +78,9 @@ public class InternalClientChannelInitializer extends MonitoredSocketChannelInit
   protected void initChannel( final SocketChannel channel ) throws Exception {
     super.initChannel( channel );
     final ChannelPipeline pipeline = channel.pipeline( );
+    if ( MoreObjects.firstNonNull( SslSetup.CLIENT_HTTPS_ENABLED, true ) ) {
+      pipeline.addLast( "https", IoHandlers.internalHttpsHandler( ) );
+    }
     pipeline.addLast( "decoder", IoHandlers.httpResponseDecoder( ) );
     pipeline.addLast( "aggregator", IoHandlers.newHttpChunkAggregator( ) );
     pipeline.addLast( "encoder", IoHandlers.httpRequestEncoder( ) );

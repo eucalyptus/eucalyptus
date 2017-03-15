@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SSLEngine;
 import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.crypto.util.SslSetup;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.handlers.IoAddressingHandler;
@@ -60,6 +61,8 @@ public class IoHandlers {
   private static final ChannelHandler addressingHandler = new IoAddressingHandler( );
   private static final ChannelHandler ioMessageHandler = new IoMessageWrapperHandler( );
   private static final ChannelHandler bindingHandler = new IoBindingHandler( IoBindingHandler.context( BindingManager.getDefaultBinding( ) ) );
+
+  public static ChannelHandler internalHttpsHandler( ) { return new SslHandler( SslSetup.getClientEngine( ) ); };
 
   public static ChannelHandler httpRequestEncoder( ) {
     return new HttpRequestEncoder( );
