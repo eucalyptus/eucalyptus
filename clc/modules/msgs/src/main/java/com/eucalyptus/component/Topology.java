@@ -205,6 +205,8 @@ public class Topology {
     private static final AtomicReference<Set<String>> enabledClassNames =
         new AtomicReference<>( Collections.<String>emptySet( ) );
 
+    private static long lastCheck = System.currentTimeMillis();
+
     @Override
     public void fireEvent( final ClockTick event ) {
       final int backoff = Hosts.isCoordinator( ) ? COORDINATOR_CHECK_BACKOFF_SECS : LOCAL_CHECK_BACKOFF_SECS;
@@ -212,15 +214,13 @@ public class Topology {
       Callable<Object> call = new Callable<Object>( ) {
         @Override
         public Object call( ) {
-          try {
-            TimeUnit.SECONDS.sleep( backoff );
-          } catch ( InterruptedException ex ) {
-            busy.set( false );
+          if (lastCheck + backoff > System.currentTimeMillis()) {
             return Collections.EMPTY_LIST;
           }
           try {
             return RunChecks.INSTANCE.call( );
           } finally {
+            lastCheck = System.currentTimeMillis();
             busy.set( false );
           }
         }
