@@ -43,6 +43,7 @@ JAVA="$JAVA_HOME/bin/java"
 MAX_HEAP_SIZE="1g"
 HEAP_NEWSIZE="768m"
 MALLOC_ARENA_MAX=4
+JMX_PORT=8786
 
 if [ -n "JVM_OPTS" ]; then
     JVM_OPTS=""
@@ -85,6 +86,7 @@ JVM_OPTS="$JVM_OPTS -XX:GCLogFileSize=10M"
 JVM_OPTS="$JVM_OPTS -Djava.net.preferIPv4Stack=true"
 JVM_OPTS="$JVM_OPTS -Djava.library.path=$CASSANDRA_HOME/lib/sigar-bin"
 JVM_OPTS="$JVM_OPTS -Deuca.log.dir=/var/log/eucalyptus"
+JVM_OPTS="$JVM_OPTS -Dcassandra.jmx.local.port=$JMX_PORT -XX:+DisableExplicitGC"
 
 if [ -n "$CLASSPATH" ]; then
     CLASSPATH=$CLASSPATH:$CASSANDRA_CONF

@@ -19,7 +19,6 @@ import static com.eucalyptus.bootstrap.Bootstrap.Stage.DatabaseInit;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.cassandra.CassandraKeyspaces;
 import com.eucalyptus.cassandra.common.Cassandra;
 
 /**
@@ -31,7 +30,7 @@ public class CassandraBootstrapper extends Bootstrapper {
 
   @Override
   public boolean check( ) throws Exception {
-    return Util.checkCassandra( );
+    return CassandraSysUtil.checkCassandra( );
   }
 
   @Override
@@ -50,21 +49,21 @@ public class CassandraBootstrapper extends Bootstrapper {
 
   @Override
   public boolean load( ) throws Exception {
-    Util.createDirectories( );
-    Util.writeConfiguration( );
+    CassandraSysUtil.createDirectories( );
+    CassandraSysUtil.writeConfiguration( );
     return true;
   }
 
   @Override
   public boolean start( ) throws Exception {
-    Util.startCassandra( );
-    Util.createKeyspaces( );
+    CassandraSysUtil.startCassandra( );
+    CassandraSysUtil.createKeyspaces( );
     return true;
   }
 
   @Override
   public boolean stop( ) throws Exception {
-    Util.stopCassandra( );
+    CassandraSysUtil.stopCassandra( );
     return true;
   }
 }

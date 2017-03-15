@@ -22,14 +22,14 @@ import org.junit.Test
 /**
  *
  */
-class UtilTest {
+class CassandraSysUtilTest {
 
   @Test
   void testTemplate( ) {
     String name = 'test-name'
     String bindAddr = '1.2.3.4'
     String dir = '/var/lib/eucalyptus/cassandra'
-    String generated = Util.generateCassandraYaml( name, bindAddr, dir )
+    String generated = CassandraSysUtil.generateCassandraYaml( name, bindAddr, dir )
     println generated
     Assert.assertThat( 'All placeholders replaced', generated, Matchers.not( Matchers.containsString('$') ) )
   }

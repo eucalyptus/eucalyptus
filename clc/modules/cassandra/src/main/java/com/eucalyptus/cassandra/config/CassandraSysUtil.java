@@ -33,14 +33,12 @@ import edu.ucsb.eucalyptus.util.SystemUtil;
 /**
  *
  */
-class Util {
-  private static final Logger logger = Logger.getLogger( Util.class );
+class CassandraSysUtil {
+  private static final Logger logger = Logger.getLogger( CassandraSysUtil.class );
 
   private static final String PATH_CASSANDRA = "/usr/sbin/cassandra";
   private static final String PATH_ROOTWRAP = "/usr/lib/eucalyptus/euca_rootwrap";
-  private static final String PATH_EUCACASS = "/usr/libexec/eucalyptus/euca-cassandra";
-  private static final String PATH_CASSPID = "/var/run/eucalyptus/cassandra.pid";
-  private static final String PATH_CASSLOCK = "/var/run/eucalyptus/cassandra.lock";
+  private static final String PATH_EUCACASS = "/usr/libexec/eucalyptus/euca-cassandra-ctl";
   private static final String YAML_RESOURCE_NAME = "cassandra.yaml";
 
   static boolean checkCassandra( ) {
@@ -53,11 +51,8 @@ class Util {
         logger.trace( "Cassandra running" );
         break;
       case 1:
-        logger.warn( "Cassandra dead but pid file exists" );
-        cleanup( );
-        return false;
       case 2:
-        logger.warn( "Cassandra dead but lock file exists" );
+        logger.warn( "Cassandra dead, performing cleanup" );
         cleanup( );
         return false;
       case 3:
@@ -104,20 +99,9 @@ class Util {
   }
 
   private static void cleanup( ) {
-    final File pid = new File( PATH_CASSPID );
-    if ( pid.exists( ) ) {
-      logger.info( "Deleting pid file: " + pid );
-      if ( !pid.delete( ) ) {
-        logger.warn( "Error removing pid file: " + pid );
-      }
-    }
-
-    final File lock = new File( PATH_CASSLOCK );
-    if ( lock.exists( ) ) {
-      logger.info( "Deleting lock file: " + lock );
-      if ( !lock.delete( ) ) {
-        logger.warn( "Error removing lock file: " + lock );
-      }
+    final int code = SystemUtil.runAndGetCode( new String[]{ PATH_ROOTWRAP, PATH_EUCACASS, "clean" } );
+    if ( code != 0 ) {
+      logger.error( "Error running cassandra clean up, status code: " + code );
     }
   }
 
