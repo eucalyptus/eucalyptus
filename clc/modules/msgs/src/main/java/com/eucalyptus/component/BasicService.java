@@ -63,15 +63,13 @@
 package com.eucalyptus.component;
 
 import java.net.URI;
-import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.OrderedShutdown;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.fsm.StateMachine;
+import com.google.common.base.MoreObjects;
 
 public class BasicService {
   private static Logger                                                                   LOG            = Logger.getLogger( BasicService.class );
@@ -105,6 +103,13 @@ public class BasicService {
             LOG.error( ex );
             Logs.extreme( ).error( ex, ex );
           }
+        }
+
+        @Override
+        public String toString( ) {
+          return MoreObjects.toStringHelper( "BasicService.Runnable" )
+              .add( "serviceConfiguration", BasicService.this.serviceConfiguration.getFullName( ) )
+              .toString( );
         }
       } );
     }

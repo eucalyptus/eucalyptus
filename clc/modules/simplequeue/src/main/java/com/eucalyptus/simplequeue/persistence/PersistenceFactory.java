@@ -15,6 +15,9 @@
  ************************************************************************/
 package com.eucalyptus.simplequeue.persistence;
 
+import java.util.Map;
+import java.util.function.Function;
+import com.eucalyptus.cassandra.common.CassandraPersistence;
 import com.eucalyptus.simplequeue.Constants;
 import com.eucalyptus.simplequeue.common.policy.SimpleQueueResourceName;
 import com.eucalyptus.simplequeue.config.SimpleQueueProperties;
@@ -22,28 +25,51 @@ import com.eucalyptus.simplequeue.persistence.cassandra.CassandraMessagePersiste
 import com.eucalyptus.simplequeue.persistence.cassandra.CassandraQueuePersistence;
 import com.eucalyptus.simplequeue.persistence.postgresql.PostgresqlMessagePersistence;
 import com.eucalyptus.simplequeue.persistence.postgresql.PostgresqlQueuePersistence;
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableMap;
+import javaslang.Tuple;
+import javaslang.Tuple2;
 
 /**
  * Created by ethomas on 9/7/16.
  */
 public class PersistenceFactory {
-  private static QueuePersistence postgresqlQueuePersistence = new PostgresqlQueuePersistence();
-  private static QueuePersistence cassandraQueuePersistence = new CassandraQueuePersistence();
-  private static MessagePersistence postgresqlMessagePersistence = new PostgresqlMessagePersistence();
-  private static MessagePersistence cassandraMessagePersistence = new CassandraMessagePersistence();
-  public static QueuePersistence getQueuePersistence() {
-    return "cassandra".equalsIgnoreCase(SimpleQueueProperties.DB_TO_USE) ? cassandraQueuePersistence: postgresqlQueuePersistence;
+  private static final String defaultPersistence = "postgres";
+  private static final Map<String, Tuple2<QueuePersistence,MessagePersistence>> persistenceMap =
+      ImmutableMap.<String,Tuple2<QueuePersistence,MessagePersistence>>builder( )
+      .put( "cassandra", Tuple.of( CassandraQueuePersistence.external( ), CassandraMessagePersistence.external( ) ) )
+      .put( "euca-cassandra", Tuple.of( CassandraQueuePersistence.internal( ), CassandraMessagePersistence.internal( ) ) )
+      .put( defaultPersistence, Tuple.of( new PostgresqlQueuePersistence( ), new PostgresqlMessagePersistence( ) ) )
+      .build( );
+
+  public static QueuePersistence getQueuePersistence( ) {
+    return persistence( Tuple2::_1 );
   }
-  public static MessagePersistence getMessagePersistence() {
-    return "cassandra".equalsIgnoreCase(SimpleQueueProperties.DB_TO_USE) ? cassandraMessagePersistence: postgresqlMessagePersistence;
+  public static MessagePersistence getMessagePersistence( ) {
+    return persistence( Tuple2::_2 );
   }
 
   public static boolean queueHasMessages(SimpleQueueResourceName ern) {
     // TODO: make a new persistence method somewhere
-    Queue queue = PersistenceFactory.getQueuePersistence().lookupQueue(ern.getAccount(), ern.getResourceName());
+    Queue queue = getQueuePersistence().lookupQueue(ern.getAccount(), ern.getResourceName());
     if (queue == null) {
       return false;
     }
-    return Long.parseLong(PersistenceFactory.getMessagePersistence().getApproximateMessageCounts(queue.getKey()).get(Constants.APPROXIMATE_NUMBER_OF_MESSAGES)) > 0;
+    return Long.parseLong(getMessagePersistence().getApproximateMessageCounts(queue.getKey()).get(Constants.APPROXIMATE_NUMBER_OF_MESSAGES)) > 0;
+  }
+
+  private static <P> P persistence( Function<Tuple2<QueuePersistence,MessagePersistence>,P> extractor ) {
+    return extractor.apply( persistenceMap.getOrDefault(
+        resolveAuto( MoreObjects.firstNonNull( SimpleQueueProperties.DB_TO_USE, defaultPersistence ) ),
+        persistenceMap.get( defaultPersistence ) ) );
+  }
+
+  private static String resolveAuto( final String dbToUse ) {
+    if ( "auto".equals( dbToUse ) ) {
+      return CassandraPersistence.isAvailable( ) ?
+          "euca-cassandra" :
+          defaultPersistence;
+    }
+    return dbToUse;
   }
 }

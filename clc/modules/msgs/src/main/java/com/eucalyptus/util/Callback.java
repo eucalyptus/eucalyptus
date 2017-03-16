@@ -64,6 +64,7 @@ package com.eucalyptus.util;
 
 import com.google.common.base.Predicate;
 
+@FunctionalInterface
 public interface Callback<R> {
   /**
    * The operation completed. Guaranteed to be called only once per corresponding dispatch.

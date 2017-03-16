@@ -21,12 +21,16 @@ package com.eucalyptus.util;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
+import javaslang.Tuple2;
 import javaslang.collection.Stream;
+import javaslang.Tuple;
 
 /**
  * Functional utility methods
@@ -120,6 +124,42 @@ public class FUtils {
   }
 
   /**
+   * Catch any exception thrown by the function and return an either.
+   *
+   * @param <T> The function parameter type
+   * @param <R> The function return type
+   * @param function The function to call
+   *
+   * @return The exception handling function
+   */
+  public static <T,R> CompatFunction<T,Either<Throwable,R>> eitherThrowable(
+      final java.util.function.Function<T,R> function
+  ) {
+    return t -> {
+      try {
+        return Either.right( function.apply( t ) );
+      } catch ( final Throwable thrown ) {
+        return Either.left( thrown );
+      }
+    };
+  }
+
+  /**
+   * Tuplize the result of a function with its parameter
+   *
+   * @param <T> The function parameter type
+   * @param <R> The function return type
+   * @param function The function to tuplize
+   *
+   * @return The exception handling function
+   */
+  public static <T,R> CompatFunction<T, Tuple2<T,R>> tuple(
+      final java.util.function.Function<T,R> function
+  ) {
+    return t -> Tuple.of( t, function.apply( t ) );
+  }
+
+  /**
    * Memoize the last successful invocation with non-null parameter/result.
    *
    * @param function The function to memoize
@@ -127,8 +167,8 @@ public class FUtils {
    * @param <T> The result type
    * @return A function that memoizes the last result
    */
-  public static <F,T> Function<F,T> memoizeLast( @Nonnull final Function<F,T> function ) {
-    return new Function<F, T>( ) {
+  public static <F,T> CompatFunction<F,T> memoizeLast( @Nonnull final Function<F,T> function ) {
+    return new CompatFunction<F, T>( ) {
       private final AtomicReference<Pair<F,T>> cached = new AtomicReference<>( );
 
       @Nullable
@@ -143,6 +183,43 @@ public class FUtils {
             cached.compareAndSet( cachedResult, Pair.pair( f, result ) );
           }
           return result;
+        }
+      }
+    };
+  }
+
+  /**
+   * Memoize the last successful invocation with non-null parameter/result.
+   *
+   * Will only call function with one thread at a time.
+   *
+   * @param function The function to memoize
+   * @param <F> The parameter type
+   * @param <T> The result type
+   * @return A function that memoizes the last result
+   */
+  public static <F,T> CompatFunction<F,T> memoizeLastSync( @Nonnull final Function<F,T> function ) {
+    return new CompatFunction<F, T>( ) {
+      private final Lock lock = new ReentrantLock( );
+      private final AtomicReference<Pair<F,T>> cached = new AtomicReference<>( );
+
+      @Nullable
+      @Override
+      public T apply( @Nullable final F f ) {
+        final Pair<F,T> cachedResult = cached.get( );
+        if ( cachedResult != null && cachedResult.getLeft( ).equals( f ) ) {
+          return cachedResult.getRight( );
+        } else try ( final LockResource lockResource = LockResource.lock( lock ) ) {
+          final Pair<F,T> syncCachedResult = cached.get( );
+          if ( syncCachedResult != null && syncCachedResult.getLeft( ).equals( f ) ) {
+            return syncCachedResult.getRight( );
+          } else {
+            final T result = function.apply( f );
+            if ( f != null && result != null ) {
+              cached.compareAndSet( cachedResult, Pair.pair( f, result ) );
+            }
+            return result;
+          }
         }
       }
     };

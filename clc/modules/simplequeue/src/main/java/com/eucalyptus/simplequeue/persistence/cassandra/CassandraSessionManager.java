@@ -32,28 +32,49 @@ package com.eucalyptus.simplequeue.persistence.cassandra;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Session;
+import com.eucalyptus.cassandra.common.CassandraComponent;
+import com.eucalyptus.cassandra.common.CassandraKeyspace;
+import com.eucalyptus.cassandra.common.CassandraKeyspaceSpecification;
+import com.eucalyptus.cassandra.common.CassandraPersistence;
+import com.eucalyptus.cassandra.common.util.CqlUtil;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.simplequeue.config.SimpleQueueProperties;
+import com.eucalyptus.simplequeue.exceptions.SimpleQueueException;
+import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.ThrowingFunction;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
+import com.google.common.io.Resources;
 import org.apache.log4j.Logger;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * Created by ethomas on 11/22/16.
  */
-public class CassandraSessionManager {
+@CassandraKeyspaceSpecification( "eucalyptus_simplequeue" )
+public class CassandraSessionManager implements CassandraComponent {
   private static final Logger LOG = Logger.getLogger(CassandraSessionManager.class);
-  private static Cluster cluster = null;
-  private static Session session = null;
 
-  private static synchronized void initCluster() {
+  private static final CassandraSessionManager external = new CassandraSessionManager();
+
+  private Cluster cluster = null;
+  private Session session = null;
+
+  public static CassandraSessionManager external( ) {
+    return external;
+  }
+
+  private synchronized void initCluster() {
     initCluster(SimpleQueueProperties.CASSANDRA_HOST);
   }
-  private static synchronized void initCluster(String contactPoint) {
+  private synchronized void initCluster(String contactPoint) {
     if (session != null) {
       session.close();
       session = null;
@@ -69,72 +90,74 @@ public class CassandraSessionManager {
     }
     cluster = Cluster.builder().addContactPoints(contactPoints.toArray(new String[0])).build();
     session = cluster.connect();
+    createSchema( session );
+  }
 
+  private static void createSchema( final Session session ) {
     // create new keyspace/tables (should not do here)  TODO: move
     session.execute("CREATE KEYSPACE IF NOT EXISTS eucalyptus_simplequeue " +
       "WITH replication = {'class':'SimpleStrategy', 'replication_factor':1}; ");
 
     session.execute("USE eucalyptus_simplequeue;");
 
-    session.execute("CREATE TABLE IF NOT EXISTS queues (" +
-      "account_id TEXT, " +
-      "queue_name TEXT, " +
-      "unique_id_per_version TIMEUUID, " +
-      "attributes MAP<TEXT, TEXT>, " +
-      "partition_token text," +
-      "PRIMARY KEY ((account_id), queue_name)" +
-      ") WITH CLUSTERING ORDER BY (queue_name ASC);");
-
-    session.execute("CREATE TABLE IF NOT EXISTS queues_by_source_queue (" +
-      "source_queue_arn TEXT," +
-      "account_id TEXT, " +
-      "queue_name TEXT, " +
-      "last_lookup TIMESTAMP, " +
-      "PRIMARY KEY ((source_queue_arn), account_id, queue_name)" +
-      ");");
-
-    session.execute("CREATE TABLE IF NOT EXISTS queues_by_partition (" +
-      "partition_token TEXT," +
-      "account_id TEXT, " +
-      "queue_name TEXT, " +
-      "last_lookup TIMESTAMP, " +
-      "PRIMARY KEY ((partition_token), account_id, queue_name)" +
-      ");");
-
-    session.execute("CREATE TABLE IF NOT EXISTS messages (" +
-      "account_id TEXT," +
-      "queue_name TEXT," +
-      "partition_token TEXT," +
-      "message_id TIMEUUID," +
-      "message_json TEXT," +
-      "send_time_secs BIGINT," +
-      "receive_count INT," +
-      "total_receive_count INT," +
-      "expiration_timestamp TIMESTAMP," +
-      "is_delayed BOOLEAN," +
-      "is_invisible BOOLEAN," +
-      "PRIMARY KEY ((account_id, queue_name, partition_token), message_id)" +
-      ");");
-
-    session.execute("CREATE INDEX IF NOT EXISTS ON messages (is_delayed);");
-    session.execute("CREATE INDEX IF NOT EXISTS ON messages (is_invisible);");
+    try {
+      final String cql = Resources.toString(
+          Resources.getResource("2017-03-03-eucalyptus-simplequeue-base.cql"),
+          StandardCharsets.UTF_8 );
+      CqlUtil.splitCql( cql ).forEach( session::execute );
+    } catch ( final IOException | ParseException e ) {
+      throw Exceptions.toUndeclared( e );
+    }
   }
 
-  public static synchronized Session getSession() {
+  public synchronized Session getSession() {
     if (session == null) {
       initCluster();
     }
     return session;
   }
 
+  public static SessionProvider externalProvider( ) {
+    return new ExternalSessionProvider( );
+  }
+
+  public static SessionProvider internalProvider( ) {
+    return new InternalSessionProvider( );
+  }
+
   public static class ChangeListener implements PropertyChangeListener {
     @Override
     public void fireChange(ConfigurableProperty t, Object newValue) throws ConfigurablePropertyException {
       try {
-        initCluster((String) newValue);
+        external( ).initCluster((String) newValue);
       } catch (Exception e) {
         throw new ConfigurablePropertyException(e.getMessage());
       }
+    }
+  }
+
+  static interface SessionProvider {
+    <R,E extends SimpleQueueException> R doThrowsWithSession( final ThrowingFunction<Session,R,E> callbackFunction ) throws E;
+    <R> R doWithSession( final Function<Session,R> callbackFunction );
+  }
+
+  static class ExternalSessionProvider implements SessionProvider {
+    public <R,E extends SimpleQueueException> R doThrowsWithSession( final ThrowingFunction<Session,R,E> callbackFunction ) throws E {
+      return callbackFunction.apply( CassandraSessionManager.external( ).getSession( ) );
+    }
+
+    public <R> R doWithSession( final Function<Session,R> callbackFunction ) {
+      return callbackFunction.apply( CassandraSessionManager.external( ).getSession( ) );
+    }
+  }
+
+  private static class InternalSessionProvider implements SessionProvider {
+    public <R,E extends SimpleQueueException> R doThrowsWithSession( final ThrowingFunction<Session,R,E> callbackFunction ) throws E {
+      return CassandraPersistence.doThrowsWithSession( "eucalyptus_simplequeue", callbackFunction );
+    }
+
+    public <R> R doWithSession( final Function<Session,R> callbackFunction ) {
+      return CassandraPersistence.doWithSession( "eucalyptus_simplequeue", callbackFunction );
     }
   }
 }
