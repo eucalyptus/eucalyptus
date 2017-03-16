@@ -42,7 +42,8 @@ class CassandraSysUtil {
   private static final String YAML_RESOURCE_NAME = "cassandra.yaml";
 
   static boolean checkCassandra( ) {
-    if ( !new File( PATH_CASSANDRA ).isFile( ) ) {
+    if ( !new File( PATH_CASSANDRA ).isFile( ) ||
+        !new File( PATH_EUCACASS ).isFile( ) ) {
       return false;
     }
     final int code = SystemUtil.runAndGetCode( new String[]{ PATH_ROOTWRAP, PATH_EUCACASS, "status" } );

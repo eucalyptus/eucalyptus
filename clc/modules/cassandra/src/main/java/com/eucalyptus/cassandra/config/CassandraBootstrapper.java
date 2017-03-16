@@ -56,6 +56,7 @@ public class CassandraBootstrapper extends Bootstrapper {
 
   @Override
   public boolean start( ) throws Exception {
+    if ( !check( ) ) return false;
     CassandraSysUtil.startCassandra( );
     CassandraSysUtil.createKeyspaces( );
     return true;
