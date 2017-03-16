@@ -96,13 +96,13 @@ public class DirectStorageInfo extends AbstractPersistent {
   @ConfigurableIdentifier
   @Column(name = "storage_name", unique = true)
   private String name;
-  @ConfigurableField(description = "Storage volumes directory.", displayName = "Volumes path")
+  @ConfigurableField(description = "DAS/Overlay only. Storage volumes directory.", displayName = "Volumes path")
   @Column(name = "system_storage_volumes_dir")
   private String volumesDir;
-  @ConfigurableField(description = "Should volumes be zero filled.", displayName = "Zero-fill volumes", type = ConfigurableFieldType.BOOLEAN)
+  @ConfigurableField(description = "DAS/Overlay only. Should volumes be zero filled.", displayName = "Zero-fill volumes", type = ConfigurableFieldType.BOOLEAN)
   @Column(name = "zero_fill_volumes")
   private Boolean zeroFillVolumes;
-  @ConfigurableField(description = "Timeout value in milli seconds for storage operations", displayName = "Timeout in milli seconds")
+  @ConfigurableField(description = "DAS/Overlay only. Timeout value in milli seconds for storage operations.", displayName = "Timeout in milli seconds")
   @Column(name = "timeout_in_millis")
   private Long timeoutInMillis;
 

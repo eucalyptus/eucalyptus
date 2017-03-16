@@ -72,10 +72,12 @@ import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 
 public abstract class AbstractConfigurableProperty implements ConfigurableProperty {
@@ -185,7 +187,7 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
   public String getDefaultValue( ) {
     return this.defaultValue;
   }
-  
+
   public String getValue( ) {	  
     try ( final TransactionResource trans = Entities.transactionFor( this.getDefiningClass( ) ) ) {
     	//Unique result gets first found value if multiple exist, should work if all are kept in sync
@@ -209,7 +211,8 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
       Object prop = this.getTypeParser( ).apply( s );
 
       if(resultList == null || resultList.size() == 0) {
-        throw new NoSuchElementException("no entities found for property");
+        throw new EucalyptusCloudException( "Property '" + getQualifiedName() +
+            "' is not ready to be changed. Make sure that you have all needed modules loaded.");
       }
 
       this.fireChange( prop ); //Fire change only once
