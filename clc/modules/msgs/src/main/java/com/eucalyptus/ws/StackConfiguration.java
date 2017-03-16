@@ -172,6 +172,9 @@ public class StackConfiguration extends AbstractPersistent {
   @ConfigurableField( description = "Client connection timeout (ms)." )
   public static Integer       CLIENT_INTERNAL_CONNECT_TIMEOUT_MILLIS = 3000;
 
+  @ConfigurableField( description = "Client HMAC signature version 4 enabled", initial = "true" )
+  public static Boolean       CLIENT_INTERNAL_HMAC_SIGNATURE_ENABLED = true;
+
   @ConfigurableField( description = "Cluster connect timeout (ms)." )
   public static Integer       CLUSTER_CONNECT_TIMEOUT_MILLIS    = 3000;
 

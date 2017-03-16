@@ -72,8 +72,10 @@ import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.net.URLCodec;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandler;
+import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
@@ -97,9 +99,11 @@ import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.ws.Handlers;
 import com.eucalyptus.ws.handlers.HmacHandler;
+import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.eucalyptus.ws.protocol.BaseQueryBinding;
 import com.eucalyptus.ws.protocol.OperationParameter;
 import com.eucalyptus.ws.handlers.SoapHandler;
+import com.eucalyptus.ws.util.HmacUtils.SignatureVersion;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
@@ -266,7 +270,30 @@ public class Pipelines {
     @Override
     public ChannelPipeline addHandlers( final ChannelPipeline pipeline ) {
       pipeline.addLast( "deserialize", Handlers.soapMarshalling( ) );
-      pipeline.addLast( "ws-security", Handlers.internalWsSecHandler() );
+      pipeline.addLast( "security-detection-handler", new MessageStackHandler( ) {
+        @Override
+        public void incomingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
+          boolean addWsSecurity = true;
+          if ( event.getMessage( ) instanceof MappingHttpRequest ) {
+            final MappingHttpRequest request = (MappingHttpRequest) event.getMessage( );
+            addWsSecurity = !request.containsHeader( HttpHeaders.Names.AUTHORIZATION );
+          }
+          if ( addWsSecurity ) {
+            ctx.getPipeline( ).addAfter( ctx.getName( ), "ws-security", Handlers.internalWsSecHandler( ) );
+          } else {
+            ctx.getPipeline( ).addAfter( ctx.getName( ), "timestamp-verify", Handlers.queryTimestamphandler() );
+            ctx.getPipeline( ).addAfter( ctx.getName( ), "hmac-verify",
+                new HmacHandler( EnumSet.of(TemporaryKeyType.Session,TemporaryKeyType.Access), EnumSet.of(SignatureVersion.SignatureV4) ) );
+          }
+          ctx.getPipeline( ).remove( this );
+        }
+
+        @Override
+        public void outgoingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
+          ctx.getPipeline( ).addBefore( ctx.getName( ), "ws-security", Handlers.internalWsSecHandler( ) );
+          ctx.getPipeline( ).remove( this );
+        }
+      } );
       pipeline.addLast( "ws-addressing", Handlers.addressingHandler( ) );
       pipeline.addLast( "build-soap-envelope", Handlers.soapHandler( ) );
       pipeline.addLast( "binding", Handlers.bindingHandler( ) );
@@ -350,7 +377,7 @@ public class Pipelines {
 
     @Override
     public ChannelPipeline addHandlers( final ChannelPipeline pipeline ) {
-      pipeline.addLast( "hmac-v2-verify",  new HmacHandler( EnumSet.of(TemporaryKeyType.Role, TemporaryKeyType.Access, TemporaryKeyType.Session) ) );
+      pipeline.addLast( "hmac-verify",  new HmacHandler( EnumSet.of(TemporaryKeyType.Role, TemporaryKeyType.Access, TemporaryKeyType.Session) ) );
       pipeline.addLast( "timestamp-verify", Handlers.queryTimestamphandler() );
       pipeline.addLast( "restful-binding", new InternalQueryBinding( ) );
       return pipeline;

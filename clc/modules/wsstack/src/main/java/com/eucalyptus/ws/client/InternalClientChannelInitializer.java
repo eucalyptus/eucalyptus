@@ -64,7 +64,10 @@ package com.eucalyptus.ws.client;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.ComponentPart;
+import com.eucalyptus.crypto.util.SslSetup;
 import com.eucalyptus.ws.IoHandlers;
+import com.eucalyptus.ws.StackConfiguration;
+import com.google.common.base.MoreObjects;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 
@@ -75,12 +78,20 @@ public class InternalClientChannelInitializer extends MonitoredSocketChannelInit
   protected void initChannel( final SocketChannel channel ) throws Exception {
     super.initChannel( channel );
     final ChannelPipeline pipeline = channel.pipeline( );
+    if ( MoreObjects.firstNonNull( SslSetup.CLIENT_HTTPS_ENABLED, true ) ) {
+      pipeline.addLast( "https", IoHandlers.internalHttpsHandler( ) );
+    }
     pipeline.addLast( "decoder", IoHandlers.httpResponseDecoder( ) );
     pipeline.addLast( "aggregator", IoHandlers.newHttpChunkAggregator( ) );
     pipeline.addLast( "encoder", IoHandlers.httpRequestEncoder( ) );
     pipeline.addLast( "wrapper", IoHandlers.ioMessageWrappingHandler( ) );
-    pipeline.addLast( "serializer", IoHandlers.soapMarshalling( ) );
-    pipeline.addLast( "wssec", IoHandlers.internalWsSecHandler( ) );
+    if ( MoreObjects.firstNonNull( StackConfiguration.CLIENT_INTERNAL_HMAC_SIGNATURE_ENABLED, false ) ) {
+      pipeline.addLast( "hmac", IoHandlers.getInternalHmacHandler( ) );
+      pipeline.addLast( "serializer", IoHandlers.soapMarshalling( ) );
+    } else {
+      pipeline.addLast( "serializer", IoHandlers.soapMarshalling( ) );
+      pipeline.addLast( "wssec", IoHandlers.internalWsSecHandler( ) );
+    }
     pipeline.addLast( "addressing", IoHandlers.addressingHandler( ) );
     pipeline.addLast( "soap", IoHandlers.soapHandler( ) );
     pipeline.addLast( "binding", IoHandlers.bindingHandler( ) );
