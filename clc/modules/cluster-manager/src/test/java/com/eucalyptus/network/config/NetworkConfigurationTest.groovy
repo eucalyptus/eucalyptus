@@ -737,6 +737,110 @@ class NetworkConfigurationTest {
   }
 
   @Test
+  void testVpcMidoBgpPeerIpFirstInExternalCidrParse() {
+    String config = """
+    {
+        "Mode": "VPCMIDO",
+        "InstanceDnsDomain": "eucalyptus.internal",
+        "InstanceDnsServers": [
+            "10.39.12.252",
+            "10.39.39.252"
+        ],
+        "PublicIps": [
+            "10.39.16.1-10.39.16.255",
+            "10.39.17.1-10.39.17.255",
+            "10.39.18.1-10.39.18.255",
+            "10.39.19.1-10.39.19.255"
+        ],
+        "Mido": {
+            "BgpAsn": "66100",
+            "Gateways": [
+                {
+                    "Ip": "10.39.12.15",
+                    "ExternalDevice": "eno2.319",
+                    "ExternalCidr": "10.39.14.0/28",
+                    "ExternalIp": "10.39.14.6",
+                    "BgpPeerIp": "10.39.14.1",
+                    "BgpPeerAsn": "66821",
+                    "BgpAdRoutes": [
+                        "10.39.16.0/21"
+                    ]
+                },
+                {
+                    "Ip": "10.39.12.16",
+                    "ExternalDevice": "eno2.318",
+                    "ExternalCidr": "10.39.15.0/28",
+                    "ExternalIp": "10.39.15.6",
+                    "BgpPeerIp": "10.39.15.1",
+                    "BgpPeerAsn": "66821",
+                    "BgpAdRoutes": [
+                        "10.39.16.0/21"
+                    ]
+                }
+            ]
+        }
+    }
+    """.stripIndent()
+
+    NetworkConfigurations.parse( config )
+  }
+
+  @Test
+  void testVpcMidoInvalidBgpPeerIpFirstInExternalCidrParse() {
+    String config = """
+    {
+        "Mode": "VPCMIDO",
+        "InstanceDnsDomain": "eucalyptus.internal",
+        "InstanceDnsServers": [
+            "10.39.12.252",
+            "10.39.39.252"
+        ],
+        "PublicIps": [
+            "10.39.16.1-10.39.16.255",
+            "10.39.17.1-10.39.17.255",
+            "10.39.18.1-10.39.18.255",
+            "10.39.19.1-10.39.19.255"
+        ],
+        "Mido": {
+            "BgpAsn": "66100",
+            "Gateways": [
+                {
+                    "Ip": "10.39.12.15",
+                    "ExternalDevice": "eno2.319",
+                    "ExternalCidr": "10.39.14.0/28",
+                    "ExternalIp": "10.39.14.6",
+                    "BgpPeerIp": "10.39.14.0",
+                    "BgpPeerAsn": "66821",
+                    "BgpAdRoutes": [
+                        "10.39.16.0/21"
+                    ]
+                },
+                {
+                    "Ip": "10.39.12.16",
+                    "ExternalDevice": "eno2.318",
+                    "ExternalCidr": "10.39.15.0/28",
+                    "ExternalIp": "10.39.15.6",
+                    "BgpPeerIp": "10.39.15.1",
+                    "BgpPeerAsn": "66821",
+                    "BgpAdRoutes": [
+                        "10.39.16.0/21"
+                    ]
+                }
+            ]
+        }
+    }
+    """.stripIndent()
+
+    try {
+      NetworkConfigurations.parse( config )
+      fail( "Expected error due to BgpPeerIp not within ExternalCidr" )
+    } catch ( NetworkConfigurationException nce ) {
+      assertEquals( 'Parsing error',
+          'BgpPeerIp must be within ExternalCidr "Mido.Gateways[0].BgpPeerIp"', nce.message )
+    }
+  }
+
+  @Test
   void testVpcMidoInvalidParse() {
     String config = """
     {
