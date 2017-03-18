@@ -116,7 +116,7 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
   private final int              maxInitialLineLength;
   private final int              maxHeaderSize;
   private final int              maxChunkSize;
-  protected volatile HttpMessage message;
+  protected volatile MappingHttpRequest message;
   private volatile ChannelBuffer content;
   private volatile long          chunkSize;
   private int                    headerSize;
@@ -380,7 +380,7 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
   }
 
   private Object reset( ) {
-    HttpMessage message = this.message;
+    MappingHttpRequest message = this.message;
     ChannelBuffer content = this.content;
     if ( content != null ) {
       message.setContent( content );
@@ -388,7 +388,7 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
     }
     this.message = null;
     checkpoint( State.SKIP_CONTROL_CHARS );
-    return message;
+    return message.validate( );
   }
 
   private void skipControlCharacters( ChannelBuffer buffer ) {

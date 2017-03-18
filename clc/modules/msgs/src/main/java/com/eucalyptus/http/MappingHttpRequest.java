@@ -77,15 +77,20 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceUris;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.net.HostAndPort;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class MappingHttpRequest extends MappingHttpMessage implements HttpRequest {
   private static Logger LOG = Logger.getLogger( MappingHttpRequest.class );
-  
+
+  private static final Set<String> HTTP_SCHEMES = ImmutableSet.of( "http", "https" );
+
   private HttpMethod                method;
   private String                    uri;
+  private String                    uriHost;
   private String                    servicePath;
   private String                    query;
   private final Map<String, String> parameters; //Parameters are URLDecoded when populated
@@ -100,15 +105,21 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     this.method = method;
     this.uri = uri;
     try {
-      URL url = new URL( "http://eucalyptus" + uri );
+      final URL url = new URL( new URL( "http://eucalyptus/" ), uri );
       this.servicePath = url.getPath( );
-        this.parameters = Maps.newHashMap( );
-        this.rawParameters = Maps.newHashMap( );
+      this.query = url.getQuery( );
+      this.parameters = Maps.newHashMap( );
+      this.rawParameters = Maps.newHashMap( );
       this.nonQueryParameterKeys = Sets.newHashSet( );
-      this.query = this.query == url.getQuery( ) ? this.query : url.getQuery( );// new URLCodec().decode(url.toURI( ).getQuery( ) ).replaceAll( " ", "+" );
       this.formFields = Maps.newHashMap( );
       this.populateParameters( );
-    } catch ( MalformedURLException e ) {
+      if ( url.getProtocol( ) != null && !"eucalyptus".equals( url.getAuthority( ) ) ) { // check scheme and use host info
+        if ( !HTTP_SCHEMES.contains( url.getProtocol( ).toLowerCase( ) ) ) {
+          throw new IllegalArgumentException( "Invalid scheme: " + url.getProtocol( ) );
+        }
+        uriHost = HostAndPort.fromString( url.getAuthority( ) ).toString( );
+      }
+    } catch ( MalformedURLException | IllegalArgumentException e ) {
       throw new RuntimeException( e );
     }
   }
@@ -284,5 +295,14 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     buf.append( this.getContent( ).toString( "UTF-8" ) ).append( "\n" );
     buf.append( "============================================\n" );
     return buf.toString( );
+  }
+
+  public MappingHttpRequest validate( ) {
+    if ( uriHost != null &&
+        getHeader( HttpHeaders.Names.HOST ) != null &&
+        !getHeader( HttpHeaders.Names.HOST ).equals( uriHost )  ) {
+        throw new IllegalArgumentException( "Host header does not match uri host" );
+    }
+    return this;
   }
 }

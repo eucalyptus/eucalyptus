@@ -70,6 +70,19 @@ public class S3V4AuthenticationTest {
   }
 
   @Test
+  public void testBuildCanonicalResourcePathFromMessage() throws Throwable {
+    MappingHttpRequest request = new MappingHttpRequest(
+        HttpVersion.HTTP_1_1,
+        HttpMethod.PUT,
+        "http://eucalyptus:1234/services/objectstorage/test-bucket/test-object?foo=bar"
+    );
+    assertEquals(
+        "Uri from http request with absolute url",
+        "/services/objectstorage/test-bucket/test-object",
+        S3V4Authentication.buildCanonicalResourcePath( request.getServicePath( ) ));
+  }
+
+  @Test
   public void testBuildAndVerifyPayloadHash() throws Throwable {
     // Unsigned
     MappingHttpRequest request = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.PUT, "/test$file.text");
