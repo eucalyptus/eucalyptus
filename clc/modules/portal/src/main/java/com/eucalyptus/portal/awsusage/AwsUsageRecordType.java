@@ -30,9 +30,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.counting;
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.summingLong;
+import static java.util.stream.Collectors.*;
 
 public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
   UNKNOWN(null, null, null, AggregateGranularity.HOURLY) {
@@ -52,43 +50,31 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
       if (instanceEvents.size() <= 0)
         return Lists.newArrayList();
 
-      final Map<String, String> instanceTypeMap = Maps.newHashMap();
-      for (final String instanceId : instanceEvents.stream()
+      final List<String> instanceIds = instanceEvents.stream()
               .map(e -> e.getResourceId() )
               .distinct()
-              .collect(Collectors.toList())) {
+              .collect(Collectors.toList());
+      final List<RunningInstancesItemType> instances = Lists.newArrayList();
+      for (final String instanceId : instanceIds ) {
         try {
           final Optional<RunningInstancesItemType> instance =
                   Ec2Client.getInstance().describeInstances(null, Lists.newArrayList(instanceId)).stream()
                   .findFirst();
           if (instance.isPresent()) {
-            instanceTypeMap.put(instance.get().getInstanceId(), instance.get().getInstanceType());
+            instances.add(instance.get());
           }
         } catch (final Exception ex) {
-          ;
+          ; // it is possible that the instance no longer exists
         }
       }
 
-      final Map<String, Integer> usagePerInstanceType = Maps.newHashMap();
-      for (final String instanceId : instanceEvents.stream()
-              .map(e -> e.getResourceId() )
-              .distinct()
-              .collect(Collectors.toList())) {
-        if (instanceTypeMap.containsKey(instanceId)) {
-          final String instanceType = instanceTypeMap.get(instanceId);
-          if (!usagePerInstanceType.containsKey(instanceType)) {
-            usagePerInstanceType.put(instanceType, 0);
-          }
-          usagePerInstanceType.put(instanceType,
-                  usagePerInstanceType.get(instanceType) + 1);
-        }
-      }
-
-      final Date earliestRecord = AwsUsageRecordType.getEarliest(instanceEvents);
       final List<AwsUsageRecord> records = Lists.newArrayList();
-
+      final Date earliestRecord = AwsUsageRecordType.getEarliest(instanceEvents);
       final Date endTime = getNextHour(earliestRecord);
       final Date startTime = getPreviousHour(endTime);
+      final Map<String, Integer> usagePerInstanceType =
+              instances.stream()
+              .collect( groupingBy( i -> i.getInstanceType() , summingInt(e -> 1)));
       for (final String instanceType : usagePerInstanceType.keySet()) {
         final Integer usageValue = usagePerInstanceType.get(instanceType);
         final AwsUsageRecord data = AwsUsageRecords.getInstance().newRecord(accountId)

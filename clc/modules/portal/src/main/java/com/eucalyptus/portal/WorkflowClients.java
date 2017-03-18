@@ -18,19 +18,7 @@ package com.eucalyptus.portal;
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.portal.workflow.AwsUsageDailyAggregateWorkflowClientExternal;
-import com.eucalyptus.portal.workflow.AwsUsageDailyAggregateWorkflowClientExternalFactory;
-import com.eucalyptus.portal.workflow.AwsUsageDailyAggregateWorkflowClientExternalFactoryImpl;
-import com.eucalyptus.portal.workflow.AwsUsageHourlyAggregateWorkflowClientExternal;
-import com.eucalyptus.portal.workflow.AwsUsageHourlyAggregateWorkflowClientExternalFactory;
-import com.eucalyptus.portal.workflow.AwsUsageHourlyAggregateWorkflowClientExternalFactoryImpl;
-import com.eucalyptus.portal.workflow.MonthlyReportGeneratorWorkflow;
-import com.eucalyptus.portal.workflow.MonthlyReportGeneratorWorkflowClientExternal;
-import com.eucalyptus.portal.workflow.MonthlyReportGeneratorWorkflowClientExternalFactory;
-import com.eucalyptus.portal.workflow.MonthlyReportGeneratorWorkflowClientExternalFactoryImpl;
-import com.eucalyptus.portal.workflow.ResourceUsageEventWorkflowClientExternal;
-import com.eucalyptus.portal.workflow.ResourceUsageEventWorkflowClientExternalFactory;
-import com.eucalyptus.portal.workflow.ResourceUsageEventWorkflowClientExternalFactoryImpl;
+import com.eucalyptus.portal.workflow.*;
 import com.eucalyptus.simpleworkflow.common.client.Config;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
@@ -109,6 +97,13 @@ public class WorkflowClients {
     final MonthlyReportGeneratorWorkflowClientExternalFactory factory =
             new MonthlyReportGeneratorWorkflowClientExternalFactoryImpl( getSimpleWorkflow(), DOMAIN);
     return (MonthlyReportGeneratorWorkflowClientExternal)
+            new WorkflowOptionsBuilder(factory.getClient(workflowId)).build();
+  }
+
+  public static InstanceLogWorkflowClientExternal getInstanceLogWorkflow(final String workflowId) {
+    final InstanceLogWorkflowClientExternalFactory factory =
+            new InstanceLogWorkflowClientExternalFactoryImpl( getSimpleWorkflow(), DOMAIN);
+    return (InstanceLogWorkflowClientExternal)
             new WorkflowOptionsBuilder(factory.getClient(workflowId)).build();
   }
 }

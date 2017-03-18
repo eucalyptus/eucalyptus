@@ -467,7 +467,7 @@ public class ComputeService {
           Predicates.and( new TrackingPredicate<VmInstance>( identifiers ), requestedAndAccessible ) );
       errorIfNotFound( "InvalidInstanceID.NotFound", "instance ID", identifiers );
       final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( VmInstance.class )
-          .getResourceTagMap( AccountFullName.getInstance( ctx.getAccountNumber() ),
+          .getResourceTagMap(  AccountFullName.getInstance( ctx.getAccountNumber() ),
               Iterables.transform( instances, CloudMetadatas.toDisplayName() ) );
 
       for ( final VmInstance vm : instances ) {

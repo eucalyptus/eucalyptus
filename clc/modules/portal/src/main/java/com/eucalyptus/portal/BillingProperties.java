@@ -88,6 +88,7 @@ public class BillingProperties {
   public static Boolean USE_MOCK = Boolean.TRUE;
 
   public static String SENSOR_QUEUE_NAME = "BillingSensorQueue";
+  public static String INSTANCE_HOUR_SENSOR_QUEUE_NAME = "BillingInstanceHourSensorQueue";
 
   public static final class ClientConfigurationValidatingChangeListener implements PropertyChangeListener {
     @Override

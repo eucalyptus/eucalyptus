@@ -225,7 +225,7 @@ public class PortalService {
       records.addAll(AwsUsageRecords.getInstance().queryMonthly( context.getAccountNumber(), service,
               operation, usageType, request.getTimePeriodFrom(), request.getTimePeriodTo()));
     } else {
-      throw new InvalidParameterException("Valid report granularity are hourly, daily or monthly");
+      throw new PortalInvalidParameterException("Valid report granularity are hourly, daily or monthly");
     }
 
     if (BillingProperties.USE_MOCK) {
@@ -273,7 +273,7 @@ public class PortalService {
     };
 
     if (!requestVerifier.test(request))
-      throw new InvalidParameterException("Invalid year and month requested");
+      throw new PortalInvalidParameterException("Invalid year and month requested");
 
     final String year;
     final String month;
@@ -281,7 +281,7 @@ public class PortalService {
       year = String.format("%d", Integer.parseInt(request.getYear()));
       month = String.format("%d", Integer.parseInt(request.getMonth()));
     } catch (final NumberFormatException ex) {
-      throw new InvalidParameterException("Invalid year and month requested");
+      throw new PortalInvalidParameterException("Invalid year and month requested");
     }
 
     if (BillingProperties.USE_MOCK) {
@@ -292,9 +292,9 @@ public class PortalService {
       response.setResult( new ViewMonthlyUsageResult());
       final StringBuilder sb = new StringBuilder();
       sb.append("\"InvoiceID\",\"PayerAccountId\",\"LinkedAccountId\",\"RecordType\",\"RecordID\",\"BillingPeriodStartDate\"," +
-              "\"BillingPeriodEndDate\",\"InvoiceDate\",\"PayerAccountName\",\"LinkedAccountName    \",\"TaxationAddress\"," +
+              "\"BillingPeriodEndDate\",\"InvoiceDate\",\"PayerAccountName\",\"LinkedAccountName\",\"TaxationAddress\"," +
               "\"PayerPONumber\",\"ProductCode\",\"ProductName\",\"SellerOfRecord\",\"UsageType\",\"Operation\",\"RateId\"," +
-              "\"ItemDescription\",\"UsageStartDate\",\"UsageEndDate\",\"Usage    Quantity\",\"BlendedRate\",\"CurrencyCode\"," +
+              "\"ItemDescription\",\"UsageStartDate\",\"UsageEndDate\",\"Usage Quantity\",\"BlendedRate\",\"CurrencyCode\"," +
               "\"CostBeforeTax\",\"Credits\",\"TaxAmount\",\"TaxType\",\"TotalCost\"");
       try {
         final Optional<String> data = MonthlyReports.getInstance()

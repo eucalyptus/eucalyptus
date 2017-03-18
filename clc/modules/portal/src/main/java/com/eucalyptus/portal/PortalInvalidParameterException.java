@@ -18,12 +18,12 @@ package com.eucalyptus.portal;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 @QueryBindingInfo( statusCode = 400 )
-public class InvalidParameterException extends PortalServiceException {
+public class PortalInvalidParameterException extends PortalServiceException {
   private static final long serialVersionUID = 1L;
-  public InvalidParameterException(){
+  public PortalInvalidParameterException(){
     super("InvalidParameterValue", "The supplied parameters are not valid");
   }
-  public InvalidParameterException(final String msg){
+  public PortalInvalidParameterException(final String msg){
     super("InvalidParameterValue", msg);
   }
 }

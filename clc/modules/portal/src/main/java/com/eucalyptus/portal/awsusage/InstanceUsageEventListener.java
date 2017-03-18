@@ -52,7 +52,7 @@ public class InstanceUsageEventListener implements
         msg = QueuedEvents.EventToMessage.apply(instanceUsageEvent.get());
         SimpleQueueClientManager.getInstance().sendMessage(BillingProperties.SENSOR_QUEUE_NAME,
                 msg);
-
+        SimpleQueueClientManager.getInstance().sendMessage(BillingProperties.INSTANCE_HOUR_SENSOR_QUEUE_NAME, msg);
       }
       // pick up VolumeIOUsage
       final Optional<QueuedEvent> volIoEvent = QueuedEvents.FromVolumeIoUsage.apply(event);

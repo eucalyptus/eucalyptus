@@ -26,6 +26,7 @@ import com.eucalyptus.portal.common.Portal;
 import com.eucalyptus.portal.workflow.AwsUsageDailyAggregateWorkflowClientExternal;
 import com.eucalyptus.portal.workflow.AwsUsageHourlyAggregateWorkflowClientExternal;
 import com.eucalyptus.portal.workflow.BillingWorkflowState;
+import com.eucalyptus.portal.workflow.InstanceLogWorkflowClientExternal;
 import com.eucalyptus.portal.workflow.MonthlyReportGeneratorWorkflowClientExternal;
 import com.eucalyptus.portal.workflow.ResourceUsageEventWorkflowClientExternal;
 import com.eucalyptus.system.Threads;
@@ -48,6 +49,8 @@ public class BillingWorkflows implements EventListener<Hertz> {
           "billing-resource-usage-event-workflow-01";
   public static final String BILLING_MONTHLY_REPORT_GENERATOR_WORKFLOW_ID =
           "billing-monthly-report-generator-workflow-01";
+  public static final String BILLING_INSTANCE_LOG_HOURLY_WORKFLOW_ID =
+          "billing-instance-log-hourly-workflow-01";
   public static void register() {
     Listeners.register( Hertz.class, new BillingWorkflows() );
   }
@@ -155,13 +158,29 @@ public class BillingWorkflows implements EventListener<Hertz> {
       workflow.generateMonthlyReport(year, month, reportUntil, options);
     } catch(final WorkflowExecutionAlreadyStartedException ex) {
       ;
-    }catch(final Exception ex) {
+    } catch(final Exception ex) {
       throw Exceptions.toUndeclared("Failed to start the workflow that generates monthly usage reports");
+    }
+  }
+
+  public static void runInstanceLogWorkflow(final String workflowId) {
+    try {
+      final InstanceLogWorkflowClientExternal workflow =
+              WorkflowClients.getInstanceLogWorkflow(workflowId);
+      final StartWorkflowOptions options = new StartWorkflowOptions();
+      options.setExecutionStartToCloseTimeoutSeconds(720L);
+      options.setTaskStartToCloseTimeoutSeconds(60L);
+      workflow.logInstanceHourly(options);
+    } catch (final WorkflowExecutionAlreadyStartedException ex) {
+      ;
+    } catch (final Exception ex) {
+      throw Exceptions.toUndeclared("Failed to start the workflow that aggregates instance hour reports");
     }
   }
 
   private static long lastRecordedTime = System.currentTimeMillis();
 
+  // TODO: firing periodic workflow should be in WorkflowSupport module
   @Override
   public void fireEvent(Hertz event) {
     if (!Bootstrap.isOperational() || !BootstrapArgs.isCloudController()) {
@@ -175,7 +194,7 @@ public class BillingWorkflows implements EventListener<Hertz> {
     cur.setTime(new Date(currentTime));
     lastRecordedTime = currentTime;
 
-    // IT'S A NEW DAY!
+    // IT'S A NEW DAY (which also means a new hour)!
     if ( cur.get(Calendar.DAY_OF_MONTH) != prev.get(Calendar.DAY_OF_MONTH) ) {
       try {
         // Aws usage reports must be generated before monthly report is generated (hence sync)
@@ -192,11 +211,23 @@ public class BillingWorkflows implements EventListener<Hertz> {
       } catch ( final Exception ex) {
         LOG.error(ex, ex);
       }
-    } else if (cur.get(Calendar.HOUR_OF_DAY) != prev.get(Calendar.HOUR_OF_DAY) ) {
-      // IT'S A NEW HOUR!
+
+      try {
+        runInstanceLogWorkflow( BILLING_INSTANCE_LOG_HOURLY_WORKFLOW_ID );
+      } catch ( final Exception ex ) {
+        LOG.error(ex, ex);
+      }
+    } else if ( cur.get(Calendar.HOUR_OF_DAY) != prev.get(Calendar.HOUR_OF_DAY) ) {
+      // OR IT'S A NEW HOUR!
       try {
         runAwsUsageHourlyAggregateWorkflow( BILLING_AWS_USAGE_HOURLY_AGGREGATE_WORKFLOW_ID );
-      } catch( final Exception ex) {
+      } catch( final Exception ex ) {
+        LOG.error(ex, ex);
+      }
+
+      try {
+        runInstanceLogWorkflow( BILLING_INSTANCE_LOG_HOURLY_WORKFLOW_ID );
+      } catch ( final Exception ex ) {
         LOG.error(ex, ex);
       }
     }

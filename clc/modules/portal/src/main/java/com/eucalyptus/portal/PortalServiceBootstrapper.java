@@ -47,6 +47,7 @@ public class PortalServiceBootstrapper extends Bootstrapper.Simple {
   public boolean check() throws Exception {
     if (!super.check())
       return false;
+
     try {
       if (!Topology.isEnabled(SimpleQueue.class)) {
         return false;
@@ -56,6 +57,7 @@ public class PortalServiceBootstrapper extends Bootstrapper.Simple {
       LOG.error("Failed to create SQS queues for billing", ex);
       return false;
     }
+
     try {
       if (Topology.isEnabled( SimpleWorkflow.class ))  {
         if(!WorkflowClientManager.isRunning()) {
@@ -88,11 +90,13 @@ public class PortalServiceBootstrapper extends Bootstrapper.Simple {
 
   private void createQueueIfNotExist() throws Exception {
     final SimpleQueueClientManager client = SimpleQueueClientManager.getInstance();
-    if (!client.queueExists(BillingProperties.SENSOR_QUEUE_NAME)) {
-      client.createQueue(BillingProperties.SENSOR_QUEUE_NAME, BillingProperties.getQueueAttributes());
-    } else {
-      client.setQueueAttributes(BillingProperties.SENSOR_QUEUE_NAME,
-              BillingProperties.getQueueAttributes());
+    for (final String queue : new String[]{BillingProperties.SENSOR_QUEUE_NAME, BillingProperties.INSTANCE_HOUR_SENSOR_QUEUE_NAME}) {
+      if (!client.queueExists(queue)) {
+        client.createQueue(queue, BillingProperties.getQueueAttributes());
+      } else {
+        client.setQueueAttributes(queue,
+                BillingProperties.getQueueAttributes());
+      }
     }
   }
 
