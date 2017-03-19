@@ -115,7 +115,12 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
     }
     return queryObject;
   }
-  
+
+  @Override
+  protected Object getInitialObject( ) throws Exception {
+    return getInitialObjectByAnnotation( );
+  }
+
   public static class DatabasePropertyBuilder implements ConfigurablePropertyBuilder {
     
     @Override

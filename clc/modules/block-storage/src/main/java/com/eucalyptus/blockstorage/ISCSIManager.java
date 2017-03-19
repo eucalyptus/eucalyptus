@@ -248,11 +248,7 @@ public class ISCSIManager implements StorageExportManager {
     try (TransactionResource tran = Entities.transactionFor(ISCSIMetaInfo.class)) {
       List<ISCSIMetaInfo> metaInfoList = Entities.query(metaInfo);
       if (metaInfoList.size() <= 0) {
-        metaInfo.setStorePrefix(StorageProperties.STORE_PREFIX);
-        metaInfo.setStoreNumber(0);
-        metaInfo.setStoreUser("eucalyptus");
-        metaInfo.setTid(1);
-        Entities.persist(metaInfo);
+        Entities.persist(metaInfo.init());
         tran.commit();
       }
     } catch (Exception e) {

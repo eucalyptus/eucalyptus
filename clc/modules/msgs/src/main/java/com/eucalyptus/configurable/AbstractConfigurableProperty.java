@@ -66,10 +66,12 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
@@ -78,6 +80,7 @@ import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 
@@ -164,7 +167,9 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
   }
   
   protected abstract Object getQueryObject( ) throws Exception;
-  
+
+  protected Object getInitialObject( ) throws Exception { return null; };
+
   public String getFieldName( ) {
     return this.fieldName;
   }
@@ -212,8 +217,13 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
       Object prop = this.getTypeParser( ).apply( s );
 
       if(resultList == null || resultList.size() == 0) {
-        throw new EucalyptusCloudException( "Property '" + getQualifiedName() +
-            "' is not ready to be changed. Make sure that you have all needed modules loaded.");
+        Object initial = this.getInitialObject( );
+        if ( initial != null ) {
+          resultList = Collections.singletonList( Entities.persist( initial ) );
+        } else {
+          throw new EucalyptusCloudException( "Property '" + getQualifiedName( ) +
+              "' is not ready to be changed. Make sure that you have all needed modules loaded." );
+        }
       }
 
       this.fireChange( prop ); //Fire change only once
@@ -272,6 +282,30 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
 
   public boolean isDeferred( ) {
     return this.deferred;
+  }
+
+  @Nullable
+  protected Object getInitialObjectByAnnotation( ) throws Exception {
+    final Method init = findInitMethod( getDefiningClass( ) );
+    if ( init == null ) {
+      return null;
+    }
+    init.setAccessible( true );
+    final Object initial = getQueryObject( );
+    init.invoke( initial );
+    return initial;
+  }
+
+  @Nullable
+  protected static Method findInitMethod( @Nonnull final Class definingClass ) throws SecurityException {
+    for ( final Class ancestor : Classes.classAncestors( definingClass ) ) {
+      for ( final Method method : ancestor.getDeclaredMethods( ) ) {
+        if ( method.isAnnotationPresent( ConfigurableInit.class ) ) {
+          return method;
+        }
+      }
+    }
+    return null;
   }
 
   @Nonnull

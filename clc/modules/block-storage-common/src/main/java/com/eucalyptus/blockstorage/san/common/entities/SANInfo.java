@@ -84,6 +84,7 @@ import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
+import com.eucalyptus.configurable.ConfigurableInit;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
@@ -262,16 +263,19 @@ public class SANInfo extends AbstractPersistent {
   }
 
   private static SANInfo newDefault() {
-    SANInfo sanInfo = new SANInfo();
-    sanInfo.setName(StorageProperties.NAME);
-    sanInfo.setSanHost(SANProperties.SAN_HOST);
-    sanInfo.setSanUser(SANProperties.SAN_USERNAME);
-    sanInfo.setSanPassword(SANProperties.SAN_PASSWORD);
-    sanInfo.setChapUser(DEFAULT_CHAP_USER);
-    sanInfo.setNcPaths(SANInfo.DEFAULT_PATHS);
-    sanInfo.setScPaths(SANInfo.DEFAULT_PATHS);
-    sanInfo.setTaskTimeout(TASK_TIMEOUT);
-    return sanInfo;
+    return new SANInfo( ).init( );
+  }
+
+  @ConfigurableInit
+  public SANInfo init( ) {
+    setSanHost(SANProperties.SAN_HOST);
+    setSanUser(SANProperties.SAN_USERNAME);
+    setSanPassword(SANProperties.SAN_PASSWORD);
+    setChapUser(DEFAULT_CHAP_USER);
+    setNcPaths(SANInfo.DEFAULT_PATHS);
+    setScPaths(SANInfo.DEFAULT_PATHS);
+    setTaskTimeout(TASK_TIMEOUT);
+    return this;
   }
 
   @Override

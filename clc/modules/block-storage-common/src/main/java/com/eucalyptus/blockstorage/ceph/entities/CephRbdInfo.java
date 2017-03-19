@@ -77,6 +77,7 @@ import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
+import com.eucalyptus.configurable.ConfigurableInit;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Transactions;
@@ -285,14 +286,19 @@ public class CephRbdInfo extends AbstractPersistent {
     return true;
   }
 
+
+  @ConfigurableInit
+  public CephRbdInfo init( ) {
+    setCephUser(DEFAULT_CEPH_USER);
+    setCephKeyringFile(DEFAULT_CEPH_KEYRING_FILE);
+    setCephConfigFile(DEFAULT_CEPH_CONFIG_FILE);
+    setCephVolumePools(DEFAULT_POOL);
+    setCephSnapshotPools(DEFAULT_POOL);
+    return this;
+  }
+
   private static CephRbdInfo generateDefault() {
-    CephRbdInfo info = new CephRbdInfo();
-    info.setCephUser(DEFAULT_CEPH_USER);
-    info.setCephKeyringFile(DEFAULT_CEPH_KEYRING_FILE);
-    info.setCephConfigFile(DEFAULT_CEPH_CONFIG_FILE);
-    info.setCephVolumePools(DEFAULT_POOL);
-    info.setCephSnapshotPools(DEFAULT_POOL);
-    return info;
+    return new CephRbdInfo( ).init( );
   }
 
   public static CephRbdInfo getStorageInfo() {
