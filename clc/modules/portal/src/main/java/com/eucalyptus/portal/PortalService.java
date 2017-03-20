@@ -17,6 +17,9 @@ package com.eucalyptus.portal;
 
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -61,9 +64,9 @@ public class PortalService {
 
   @Inject
   public PortalService(
-      final BillingAccounts billingAccounts,
-      final BillingInfos billingInfos,
-      final TagClient tagClient
+          final BillingAccounts billingAccounts,
+          final BillingInfos billingInfos,
+          final TagClient tagClient
   ) {
     this.billingAccounts = billingAccounts;
     this.billingInfos = billingInfos;
@@ -81,19 +84,19 @@ public class PortalService {
       try {
         try {
           response.getResult( ).setAccountSettings( billingAccounts.updateByAccount(
-              context.getAccountNumber( ),
-              context.getAccount( ),
-              account -> TypeMappers.transform( updater.apply( account ), AccountSettings.class )
+                  context.getAccountNumber( ),
+                  context.getAccount( ),
+                  account -> TypeMappers.transform( updater.apply( account ), AccountSettings.class )
           ) );
         } catch ( PortalMetadataNotFoundException e ) {
           final BillingAccount billingAccount = updater.apply( billingAccounts.defaults( ) );
           billingAccount.setOwner( context.getUserFullName( ) );
           billingAccount.setDisplayName( context.getAccountNumber( ) );
           response.getResult( ).setAccountSettings(
-              billingAccounts.save(
-                  billingAccount,
-                  TypeMappers.lookupF( BillingAccount.class, AccountSettings.class )
-          ) );
+                  billingAccounts.save(
+                          billingAccount,
+                          TypeMappers.lookupF( BillingAccount.class, AccountSettings.class )
+                  ) );
         }
       } catch ( Exception e ) {
         throw handleException( e );
@@ -107,13 +110,13 @@ public class PortalService {
     final ViewAccountResponseType response = request.getReply( );
     try {
       response.getResult( ).setAccountSettings( billingAccounts.lookupByAccount(
-          context.getAccountNumber( ),
-          context.getAccount( ),
-          TypeMappers.lookupF( BillingAccount.class, AccountSettings.class )
+              context.getAccountNumber( ),
+              context.getAccount( ),
+              TypeMappers.lookupF( BillingAccount.class, AccountSettings.class )
       ) );
     } catch ( PortalMetadataNotFoundException e ) {
       response.getResult( ).setAccountSettings(
-          TypeMappers.transform( billingAccounts.defaults( ), AccountSettings.class )
+              TypeMappers.transform( billingAccounts.defaults( ), AccountSettings.class )
       );
     } catch ( Exception e ) {
       throw handleException( e );
@@ -135,19 +138,19 @@ public class PortalService {
     try {
       try {
         response.getResult( ).setBillingSettings( billingInfos.updateByAccount(
-            context.getAccountNumber( ),
-            context.getAccount( ),
-            info -> TypeMappers.transform( updater.apply( info ), BillingSettings.class )
+                context.getAccountNumber( ),
+                context.getAccount( ),
+                info -> TypeMappers.transform( updater.apply( info ), BillingSettings.class )
         ) );
       } catch ( PortalMetadataNotFoundException e ) {
         final BillingInfo billingInfo = updater.apply( billingInfos.defaults( ) );
         billingInfo.setOwner( context.getUserFullName( ) );
         billingInfo.setDisplayName( context.getAccountNumber( ) );
         response.getResult( ).setBillingSettings(
-            billingInfos.save(
-                billingInfo,
-                TypeMappers.lookupF( BillingInfo.class, BillingSettings.class )
-            ) );
+                billingInfos.save(
+                        billingInfo,
+                        TypeMappers.lookupF( BillingInfo.class, BillingSettings.class )
+                ) );
       }
     } catch ( Exception e ) {
       throw handleException( e );
@@ -160,13 +163,13 @@ public class PortalService {
     final ViewBillingResponseType response = request.getReply( );
     try {
       response.getResult( ).setBillingSettings( billingInfos.lookupByAccount(
-          context.getAccountNumber( ),
-          context.getAccount( ),
-          TypeMappers.lookupF( BillingInfo.class, BillingSettings.class )
+              context.getAccountNumber( ),
+              context.getAccount( ),
+              TypeMappers.lookupF( BillingInfo.class, BillingSettings.class )
       ) );
     } catch ( PortalMetadataNotFoundException e ) {
       response.getResult( ).setBillingSettings(
-          TypeMappers.transform( billingInfos.defaults( ), BillingSettings.class )
+              TypeMappers.transform( billingInfos.defaults( ), BillingSettings.class )
       );
     } catch ( Exception e ) {
       throw handleException( e );
@@ -176,7 +179,7 @@ public class PortalService {
       inactiveTagKeys.addAll( tagClient.getTagKeys( new GetTagKeysType( ).markPrivileged( ) ).getResult( ).getKeys( ) );
       inactiveTagKeys.removeAll( response.getResult( ).getBillingSettings( ).getActiveCostAllocationTags( ) );
       response.getResult( ).getBillingMetadata( ).setInactiveCostAllocationTags(
-          Lists.newArrayList( Ordering.from( String.CASE_INSENSITIVE_ORDER ).sortedCopy( inactiveTagKeys ) )
+              Lists.newArrayList( Ordering.from( String.CASE_INSENSITIVE_ORDER ).sortedCopy( inactiveTagKeys ) )
       );
     } catch ( Exception e ) {
       logger.error( "Error loading tag keys", e );
@@ -188,65 +191,105 @@ public class PortalService {
     final Context context = checkAuthorized( );
     final ViewUsageResponseType response = request.getReply();
 
-    final String granularity =  request.getReportGranularity() != null ?
-            request.getReportGranularity().toLowerCase() : null;
-    String service = request.getServices();
-    if (service != null ) {
+    final Function<ViewUsageType, Optional<PortalServiceException>> requestVerifier = (req) -> {
+      final String granularity = req.getReportGranularity() != null ?
+              req.getReportGranularity().toLowerCase() : null;
+      if (granularity==null) {
+        return Optional.of(new PortalInvalidParameterException("Granularity must be specified"));
+      }
+      if (!Sets.newHashSet("hourly", "hour", "daily", "day", "monthly", "month").contains(granularity)) {
+        return Optional.of(new PortalInvalidParameterException("Can't recognize granularity. Valid values are hourly, daily, and monthly"));
+      }
+
+      final String service = req.getServices() != null ? req.getServices().toLowerCase() : null;
+      if (service == null) {
+        return Optional.of(new PortalInvalidParameterException("Service name must be specified"));
+      } else if (!Sets.newHashSet("ec2", "s3", "cloudwatch").contains(service)) {
+        return Optional.of(new PortalInvalidParameterException("Can't recognize service name. Supported services are ec2, s3, and cloudwatch"));
+      }
+
+      if (req.getTimePeriodFrom() == null) {
+        return Optional.of(new PortalInvalidParameterException("Beginning time period must be specified"));
+      }
+      if (req.getTimePeriodTo() == null) {
+        return Optional.of(new PortalInvalidParameterException("Ending time period must be specified"));
+      }
+
+      return Optional.empty();
+    };
+
+    final Function<ViewUsageType, ViewUsageType> requestFormatter = (req) -> {
+      final String service = req.getServices().toLowerCase();
       if ("ec2".equals(service.toLowerCase()))
-        service = "AmazonEC2";
+        req.setServices("AmazonEC2");
       else if ("s3".equals(service.toLowerCase()))
-        service = "AmazonS3";
+        req.setServices("AmazonS3");
       else if ("cloudwatch".equals(service.toLowerCase()))
-        service = "AmazonCloudWatch";
-      else if ("all".equals(service.toLowerCase()))
-        service = null;
-    }
+        req.setServices("AmazonCloudWatch");
 
-    String operation = request.getOperations();
-    if (operation != null) {
-      if ("all".equals(operation.toLowerCase()))
-        operation = null;
-    }
+      final String operation = req.getOperations();
+      if (operation != null && "all".equals(operation.toLowerCase())) {
+        req.setOperations(null);
+      }
 
-    String usageType = request.getUsageTypes();
-    if (usageType != null) {
-      if ("all".equals(usageType.toLowerCase()))
-        usageType = null;
-    }
+      String usageType = req.getUsageTypes();
+      if (usageType != null && "all".equals(usageType.toLowerCase())) {
+          req.setUsageTypes(null);
+      }
+      return req;
+    };
 
+    final Optional<PortalServiceException> error = requestVerifier.apply(request);
+    if (error.isPresent()) {
+      throw error.get();
+    }
+    final ViewUsageType req = requestFormatter.apply(request);
+    final String service = req.getServices();
+    final String operation = req.getOperations();
+    final String usageType = req.getUsageTypes();
+    final String granularity = req.getReportGranularity();
+    final Date periodBegin = req.getTimePeriodFrom();
+    final Date periodEnd = req.getTimePeriodTo();
     final List<AwsUsageRecord> records = Lists.newArrayList();
     if (granularity != null && granularity.startsWith("hour")) {
       records.addAll(AwsUsageRecords.getInstance().queryHourly( context.getAccountNumber(), service,
-              operation, usageType, request.getTimePeriodFrom(), request.getTimePeriodTo()));
+              operation, usageType, periodBegin, periodEnd));
     } else if (granularity != null && (granularity.startsWith("day") || granularity.startsWith("dai"))) {
       records.addAll(AwsUsageRecords.getInstance().queryDaily( context.getAccountNumber(), service,
-              operation, usageType, request.getTimePeriodFrom(), request.getTimePeriodTo()));
+              operation, usageType, periodBegin, periodEnd));
     } else if (granularity != null && granularity.startsWith("month")) {
       records.addAll(AwsUsageRecords.getInstance().queryMonthly( context.getAccountNumber(), service,
-              operation, usageType, request.getTimePeriodFrom(), request.getTimePeriodTo()));
+              operation, usageType, periodBegin, periodEnd));
     } else {
       throw new PortalInvalidParameterException("Valid report granularity are hourly, daily or monthly");
     }
-
-    if (BillingProperties.USE_MOCK) {
-      response.setResult (
-              MockReports.getInstance().generateAwsUsageReport(request)
-      );
-    } else {
-      response.setResult(new ViewUsageResult());
+    
+    final Function<AwsUsageRecord, String> formatter = (r) -> {
       final StringBuilder sb = new StringBuilder();
-      sb.append("Service, Operation, UsageType, Resource, StartTime, EndTime, UsageValue");
-      final Optional<String> data = records.stream()
-              .map(rr -> new AwsUsageReportData(rr.getService(), rr.getOperation(), rr.getUsageType(),
-                      rr.getResource(), rr.getStartTime(), rr.getEndTime(), rr.getUsageValue()))
-              .map(re -> re.toString())
-              .reduce((l1, l2) -> String.format("%s\n%s", l1, l2));
-      if (data.isPresent()) {
-        sb.append("\n");
-        sb.append(data.get());
-      }
-      response.getResult().setData(sb.toString());
+      final DateFormat df = new SimpleDateFormat("MM/dd/yy HH:mm:ss");
+      //Service, Operation, UsageType, Resource, StartTime, EndTime, UsageValue
+      //AmazonEC2,Unknown,CW:AlarmMonitorUsage,,11/01/16 00:00:00,11/02/16 00:00:00,48
+      sb.append(r.getService()!=null ? r.getService() + "," : ",");
+      sb.append(r.getOperation()!=null ? r.getOperation() + "," : ",");
+      sb.append(r.getUsageType()!=null ? r.getUsageType() + "," : ",");
+      sb.append(r.getResource()!=null ? r.getResource() + "," : ",");
+      sb.append(r.getStartTime()!=null ? df.format(r.getStartTime()) + "," : ",");
+      sb.append(r.getEndTime()!=null ? df.format(r.getEndTime()) + "," : ",");
+      sb.append(r.getUsageValue()!=null ? r.getUsageValue(): "");
+      return sb.toString();
+    };
+
+    response.setResult(new ViewUsageResult());
+    final StringBuilder sb = new StringBuilder();
+    sb.append("Service, Operation, UsageType, Resource, StartTime, EndTime, UsageValue");
+    final Optional<String> data = records.stream()
+            .map (formatter)
+            .reduce((l1, l2) -> String.format("%s\n%s", l1, l2));
+    if (data.isPresent()) {
+      sb.append("\n");
+      sb.append(data.get());
     }
+    response.getResult().setData(sb.toString());
     return response;
   }
 
@@ -283,32 +326,25 @@ public class PortalService {
     } catch (final NumberFormatException ex) {
       throw new PortalInvalidParameterException("Invalid year and month requested");
     }
-
-    if (BillingProperties.USE_MOCK) {
-      response.setResult(
-              MockReports.getInstance().generateMonthlyReport(request)
-      );
-    } else {
-      response.setResult( new ViewMonthlyUsageResult());
-      final StringBuilder sb = new StringBuilder();
-      sb.append("\"InvoiceID\",\"PayerAccountId\",\"LinkedAccountId\",\"RecordType\",\"RecordID\",\"BillingPeriodStartDate\"," +
-              "\"BillingPeriodEndDate\",\"InvoiceDate\",\"PayerAccountName\",\"LinkedAccountName\",\"TaxationAddress\"," +
-              "\"PayerPONumber\",\"ProductCode\",\"ProductName\",\"SellerOfRecord\",\"UsageType\",\"Operation\",\"RateId\"," +
-              "\"ItemDescription\",\"UsageStartDate\",\"UsageEndDate\",\"Usage Quantity\",\"BlendedRate\",\"CurrencyCode\"," +
-              "\"CostBeforeTax\",\"Credits\",\"TaxAmount\",\"TaxType\",\"TotalCost\"");
-      try {
-        final Optional<String> data = MonthlyReports.getInstance()
-                .lookupReport(AccountFullName.getInstance(context.getAccountNumber()), year, month).stream()
-                .reduce((l1, l2) -> String.format("%s\n%s", l1, l2));
-        if (data.isPresent()) {
-          sb.append("\n");
-          sb.append(data.get());
-        }
-      } catch (final NoSuchElementException ex) {
-        ;
+    response.setResult( new ViewMonthlyUsageResult());
+    final StringBuilder sb = new StringBuilder();
+    sb.append("\"InvoiceID\",\"PayerAccountId\",\"LinkedAccountId\",\"RecordType\",\"RecordID\",\"BillingPeriodStartDate\"," +
+            "\"BillingPeriodEndDate\",\"InvoiceDate\",\"PayerAccountName\",\"LinkedAccountName\",\"TaxationAddress\"," +
+            "\"PayerPONumber\",\"ProductCode\",\"ProductName\",\"SellerOfRecord\",\"UsageType\",\"Operation\",\"RateId\"," +
+            "\"ItemDescription\",\"UsageStartDate\",\"UsageEndDate\",\"Usage Quantity\",\"BlendedRate\",\"CurrencyCode\"," +
+            "\"CostBeforeTax\",\"Credits\",\"TaxAmount\",\"TaxType\",\"TotalCost\"");
+    try {
+      final Optional<String> data = MonthlyReports.getInstance()
+              .lookupReport(AccountFullName.getInstance(context.getAccountNumber()), year, month).stream()
+              .reduce((l1, l2) -> String.format("%s\n%s", l1, l2));
+      if (data.isPresent()) {
+        sb.append("\n");
+        sb.append(data.get());
       }
-      response.getResult().setData(sb.toString());
+    } catch (final NoSuchElementException ex) {
+      ;
     }
+    response.getResult().setData(sb.toString());
     return response;
   }
 
@@ -316,15 +352,15 @@ public class PortalService {
     final Context ctx = Contexts.lookup( );
     final AuthContextSupplier requestUserSupplier = ctx.getAuthContext( );
     if ( !Permissions.isAuthorized(
-        PortalPolicySpec.VENDOR_PORTAL,
-        "",
-        "",
-        null,
-        getIamActionByMessageType( ),
-        requestUserSupplier ) ) {
+            PortalPolicySpec.VENDOR_PORTAL,
+            "",
+            "",
+            null,
+            getIamActionByMessageType( ),
+            requestUserSupplier ) ) {
       throw new PortalServiceUnauthorizedException(
-          "UnauthorizedOperation",
-          "You are not authorized to perform this operation." );
+              "UnauthorizedOperation",
+              "You are not authorized to perform this operation." );
     }
     return ctx;
   }

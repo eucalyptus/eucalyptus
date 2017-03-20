@@ -289,7 +289,7 @@ public abstract class AwsUsageRecords {
         }
 
         if (usageType != null) {
-          criteria = criteria.add(Restrictions.eq("usageType", operation));
+          criteria = criteria.add(Restrictions.eq("usageType", usageType));
         }
 
         if (startDate != null) {

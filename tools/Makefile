@@ -126,8 +126,6 @@ install: build
 	@$(INSTALL) -m 755 clusteradmin-register-nodes $(DESTDIR)$(sbindir)/clusteradmin-deregister-nodes
 	@$(INSTALL) -d $(DESTDIR)$(etcdir)/eucalyptus/cloud.d/elb-security-policy
 	@$(INSTALL) -m 755 elb-security-policy/*.json $(DESTDIR)$(etcdir)/eucalyptus/cloud.d/elb-security-policy/
-	@$(INSTALL) -d $(DESTDIR)$(datarootdir)/eucalyptus/doc/billing-sample-reports/
-	@$(INSTALL) -m 755 billing-sample-reports/*.csv $(DESTDIR)$(datarootdir)/eucalyptus/doc/billing-sample-reports/
 	@make -C status install
 	@make -C imaging install
 
@@ -152,6 +150,5 @@ uninstall:
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/doc/iptables-preload.template
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/nginx_proxy.conf
 	@$(RM) -f $(DESTDIR)$(etcdir)/eucalyptus/cloud.d/elb-security-policy/*.json
-	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/doc/billing-sample-reports/*.csv
 	@make -C status uninstall
 	@make -C imaging uninstall
