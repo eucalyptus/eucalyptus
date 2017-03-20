@@ -158,7 +158,7 @@ static boolean config_use_virtio_net = 0;   //!< Set to TRUE if we are using VIR
 static boolean config_cpu_passthrough = 0;  //!< Set to TRUE if host CPU should be passed through to the instance
 static char xslt_path[EUCA_MAX_PATH] = "";  //!< Destination path for the XSLT files
 static pthread_mutex_t xml_mutex = PTHREAD_MUTEX_INITIALIZER;   //!< process-global mutex
-static char VERSION = 1; // XML version. Please up it if new element/attribute is added
+static char VERSION = 2; // Instance XML version. Please, bump it up it if a new element/attribute is added
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                              STATIC PROTOTYPES                             |
@@ -1057,7 +1057,18 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
             XGET_STR_FREE(vbrxpath, vbr->typeName);
 
             MKVBRPATH("type");
-            XGET_ENUM_FREE(vbrxpath, vbr->type, ncResourceType_from_string);
+            if (xml_ver < 2) {
+                char sBuf[32] = "";
+                XGET_STR(vbrxpath, sBuf);
+                // an empty record is old way to store full disk
+                if (strlen(sBuf) == 0) {
+                    vbr->type = NC_RESOURCE_FULLDISK;
+                } else {
+                    vbr->type = ncResourceType_from_string(sBuf);
+                }
+            } else {
+                XGET_ENUM_FREE(vbrxpath, vbr->type, ncResourceType_from_string);
+            }
             MKVBRPATH("locationType");
             XGET_ENUM_FREE(vbrxpath, vbr->locationType, ncResourceLocationType_from_string);
             MKVBRPATH("format");

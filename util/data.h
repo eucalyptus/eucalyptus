@@ -205,7 +205,7 @@ typedef enum _ncResourceType {
     NC_RESOURCE_SWAP,                  //!< SWAP
     NC_RESOURCE_EBS,                   //!< EBS
     NC_RESOURCE_BOOT,                  //!< BOOTABLE
-    NC_RESOURCE_TOTAL,
+    NC_RESOURCE_FULLDISK,              //!< Full disk created from partitions
 } ncResourceType;
 
 //! NC Resource Location Type Enumeration

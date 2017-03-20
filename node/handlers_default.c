@@ -904,6 +904,7 @@ static long long get_disk_use_gb(virtualMachine * vm)
         if (vbr->type != NC_RESOURCE_EBS && // EBS volumes do not count
             vbr->type != NC_RESOURCE_KERNEL &&  // EKI doesn't count, though it maybe should
             vbr->type != NC_RESOURCE_RAMDISK && // ERI doesn't count, though it maybe should
+            vbr->type != NC_RESOURCE_FULLDISK && // full pass through hollow disk created from partitions
             vbr->type != NC_RESOURCE_BOOT) {    // boot sector is too small to be worth counting
             disk_use_bytes += vbr->sizeBytes;
         }

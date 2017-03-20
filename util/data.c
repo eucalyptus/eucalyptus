@@ -172,6 +172,7 @@ const char *ncResourceTypeNames[] = {
     "swap",
     "ebs",
     "boot",
+    "fulldisk",
     NULL,
 };
 
