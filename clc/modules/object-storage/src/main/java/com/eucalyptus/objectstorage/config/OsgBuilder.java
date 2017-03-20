@@ -113,7 +113,7 @@ public class OsgBuilder extends AbstractServiceBuilder<ObjectStorageConfiguratio
         EntityTransaction tx = Entities.get(parent);
         try {
           parent = Entities.merge(parent);
-          // Load the available backends from this SC into the DB entry
+          // Load the available backends from this OSG into the DB entry
           ((ObjectStorageConfiguration) parent).setAvailableClients(Joiner.on(",").join(ObjectStorageProviders.list()));
           tx.commit();
         } catch (Exception ex) {

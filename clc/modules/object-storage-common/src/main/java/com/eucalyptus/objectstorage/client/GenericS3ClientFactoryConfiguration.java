@@ -71,6 +71,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableInit;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Transactions;
 
@@ -113,8 +114,9 @@ public class GenericS3ClientFactoryConfiguration extends AbstractPersistent {
   //TODO: make configurable?
   private String signer_type = "S3SignerType";
 
+  @ConfigurableInit
   @PrePersist
-  private void initialize() {
+  protected void initialize() {
     if (connection_timeout_ms == null) {
       connection_timeout_ms = DEFAULT_TIMEOUT_MS;
     }

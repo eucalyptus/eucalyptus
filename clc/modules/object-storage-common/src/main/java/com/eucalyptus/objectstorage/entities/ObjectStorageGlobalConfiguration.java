@@ -62,6 +62,8 @@
 
 package com.eucalyptus.objectstorage.entities;
 
+import com.eucalyptus.bootstrap.Hosts;
+import com.eucalyptus.configurable.ConfigurableInit;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import groovy.sql.GroovyRowResult;
 import groovy.sql.Sql;
@@ -190,6 +192,7 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
   @ConfigurableField(description = "List of host names that may not be used as bucket cnames")
   protected String bucket_reserved_cnames;
 
+  @ConfigurableInit
   protected ObjectStorageGlobalConfiguration initializeDefaults() {
     this.setBucket_creation_wait_interval_seconds(DEFAULT_CLEANUP_INTERVAL_SEC);
     this.setBucket_naming_restrictions(DEFAULT_BUCKET_NAMING_SCHEME);
@@ -529,24 +532,24 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
       try (TransactionResource tr = Entities.transactionFor(ObjectStorageConfiguration.class)) {
         boolean match = Iterables.any(Components.lookup(ObjectStorage.class).services(), new Predicate<ServiceConfiguration>() {
           @Override
-          public boolean apply(ServiceConfiguration config) {
-            if (config.isVmLocal()) {
-              // Service is local, so add entries to the valid list (in case of HA configs)
-              // and then check the local memory state
+          public boolean apply(final ServiceConfiguration config) {
+            if ( config.isVmLocal( ) || Hosts.isCoordinator( ) ) {
+              // Add locally discovered entries to the valid list
               validEntries.addAll(ObjectStorageProviders.list());
-              return ObjectStorageProviders.contains(proposedValue);
-            } else {
+            }
+            if ( !config.isVmLocal( ) ) {
+              // Remote OSG, so check the db for the list of valid entries.
               try {
-                // Remote OSG, so check the db for the list of valid entries.
-                ObjectStorageConfiguration objConfig = Entities.uniqueResult((ObjectStorageConfiguration) config);
-                for (String entry : Splitter.on(",").split(objConfig.getAvailableClients())) {
-                  validEntries.add(entry);
+                final ObjectStorageConfiguration objConfig = Entities.uniqueResult((ObjectStorageConfiguration) config);
+                if ( objConfig.getAvailableClients() != null ) {
+                  for ( final String entry : Splitter.on(",").split(objConfig.getAvailableClients()) ) {
+                    validEntries.add(entry);
+                  }
                 }
-                return validEntries.contains(proposedValue);
-              } catch (Exception e) {
-                return false;
+              } catch (Exception ignore) {
               }
             }
+            return validEntries.contains(proposedValue);
           }
         });
         tr.commit();
