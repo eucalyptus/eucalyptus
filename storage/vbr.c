@@ -2489,6 +2489,9 @@ artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_work_copy, boolean
                         arts_free(disk_arts, EUCA_MAX_PARTITIONS);
                         goto free;
                     }
+                    // set correct type to the newrly added vbr EUCA-13187
+                    virtualBootRecord * vbr = &(vm->virtualBootRecord[vm->virtualBootRecordLen]);
+                    vbr->type = NC_RESOURCE_FULLDISK;
                     vm->virtualBootRecordLen++;
                 } else {
                     if (disk_arts[1] != NULL) {
