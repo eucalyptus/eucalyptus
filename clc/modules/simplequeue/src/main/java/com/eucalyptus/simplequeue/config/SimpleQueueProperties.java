@@ -75,7 +75,7 @@ public class SimpleQueueProperties {
     changeListener = Config.WorkflowWorkerConfigurationValidatingChangeListener.class )
   public static volatile String SWF_WORKFLOW_WORKER_CONFIG = DEFAULT_SWF_WORKFLOW_WORKER_CONFIG;
   @ConfigurableField( description = "How long a queue is considered 'active' in seconds after it has been accessed.",
-    initial = "80", changeListener = MinValuePropertyChangeListener.class )   
+    initial = "21600", changeListener = MinValuePropertyChangeListener.class )
   @MinValue(min = 1)
   public volatile static int ACTIVE_QUEUE_TIME_SECS = 21600;
   @ConfigurableField( description = "Maximum number of characters in a queue name.",

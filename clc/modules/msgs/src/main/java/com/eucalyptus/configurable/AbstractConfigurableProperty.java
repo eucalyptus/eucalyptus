@@ -69,6 +69,7 @@ import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import javax.annotation.Nonnull;
 import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
@@ -271,5 +272,13 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
 
   public boolean isDeferred( ) {
     return this.deferred;
+  }
+
+  @Nonnull
+  protected static String configurableFieldInitial( @Nonnull ConfigurableField configurableField ) {
+    return
+        configurableField.initialInt( ) == Integer.MIN_VALUE ?
+            configurableField.initial( ) :
+            String.valueOf( configurableField.initialInt( ) );
   }
 }

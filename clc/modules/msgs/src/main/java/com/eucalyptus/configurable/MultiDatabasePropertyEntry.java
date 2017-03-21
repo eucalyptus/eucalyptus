@@ -133,7 +133,7 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
           String fqPrefix = classAnnote.root( );
           String alias = classAnnote.alias( );
           String description = annote.description( );
-          String defaultValue = annote.initial( );
+          String defaultValue = configurableFieldInitial( annote );
           PropertyTypeParser p = PropertyTypeParser.get( f.getType( ) );
           PropertyChangeListener listener = PropertyChangeListeners.getListenerFromClass( annote.changeListener( ) );
           try {
