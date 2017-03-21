@@ -67,6 +67,7 @@ import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
+import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
@@ -80,7 +81,8 @@ public class ISCSIMetaInfo extends LVMMetaInfo {
   @ConfigurableIdentifier
   @Column(name = "hostname")
   private String hostName;
-  @ConfigurableField(description = "Prefix for ISCSI device", displayName = "ISCSI Prefix", type = ConfigurableFieldType.PRIVATE)
+  @ConfigurableField(description = "Prefix for ISCSI device", displayName = "ISCSI Prefix",
+      type = ConfigurableFieldType.PRIVATE, initial = StorageProperties.DEFAULT_STORE_PREFIX )
   @Column(name = "store_prefix")
   private String storePrefix;
   @Column(name = "store_number")

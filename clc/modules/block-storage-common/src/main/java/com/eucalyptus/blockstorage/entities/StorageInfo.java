@@ -105,7 +105,8 @@ import com.google.common.base.Predicate;
 @Table(name = "storage_info")
 @ConfigurableClass(root = "storage", alias = "basic", description = "Basic storage controller configuration.", singleton = false, deferred = true)
 public class StorageInfo extends AbstractPersistent {
-  private static final Boolean DEFAULT_SHOULD_TRANSFER_SNAPSHOTS = Boolean.TRUE;
+  private static final String DEFAULT_SHOULD_TRANSFER_SNAPSHOTS_TXT = "true";
+  private static final Boolean DEFAULT_SHOULD_TRANSFER_SNAPSHOTS = Boolean.valueOf( DEFAULT_SHOULD_TRANSFER_SNAPSHOTS_TXT );
   private static final Integer DEFAULT_SNAPSHOT_PART_SIZE_IN_MB = 100;
   private static final Integer DEFAULT_MAX_SNAPSHOT_PARTS_QUEUE_SIZE = 5;
   private static final Integer DEFAULT_MAX_SNAPSHOT_CONCURRENT_TRANSFERS = 3;
@@ -126,16 +127,19 @@ public class StorageInfo extends AbstractPersistent {
   @Column(name = "storage_name", unique = true)
   private String name;
 
-  @ConfigurableField(description = "Total disk space reserved for volumes", displayName = "Disk space reserved for volumes")
+  @ConfigurableField(description = "Total disk space reserved for volumes",
+      displayName = "Disk space reserved for volumes",
+      initialInt = StorageProperties.MAX_TOTAL_VOLUME_SIZE )
   @Column(name = "system_storage_volume_size_gb")
   private Integer maxTotalVolumeSizeInGb;
 
-  @ConfigurableField(description = "Max volume size", displayName = "Max volume size")
+  @ConfigurableField(description = "Max volume size", displayName = "Max volume size",
+      initialInt = StorageProperties.MAX_VOLUME_SIZE )
   @Column(name = "system_storage_max_volume_size_gb")
   private Integer maxVolumeSizeInGB;
 
   @ConfigurableField(description = "Should transfer snapshots", displayName = "Transfer snapshots to ObjectStorage",
-      type = ConfigurableFieldType.BOOLEAN)
+      type = ConfigurableFieldType.BOOLEAN, initial = DEFAULT_SHOULD_TRANSFER_SNAPSHOTS_TXT )
   @Column(name = "system_storage_transfer_snapshots")
   private Boolean shouldTransferSnapshots;
 
