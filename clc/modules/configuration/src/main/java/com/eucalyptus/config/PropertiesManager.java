@@ -74,6 +74,7 @@ import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
@@ -169,10 +170,8 @@ public class PropertiesManager {
         }
         reply.setOldValue( oldValue );
         Boolean reset = request.getReset( );
-        if (reset != null) {
-          if (Boolean.TRUE.equals( reset )) {
-            entry.setValue(entry.getDefaultValue());
-          }
+        if ( MoreObjects.firstNonNull( request.getReset( ), Boolean.FALSE ) ) {
+          entry.setValue(entry.getDefaultValue());
         } else {
           // if property is ReadOnly it should not be set by user
           if ( !entry.getReadOnly() ) {
