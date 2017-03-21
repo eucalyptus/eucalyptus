@@ -135,23 +135,34 @@ import com.google.common.collect.Maps;
                     description = "Parameters controlling the handling of service state notifications." )
 public class Faults {
   private static Logger      LOG                    = Logger.getLogger( Faults.class );
+
+  private static final String DEFAULT_EMAIL_SUBJECT_PREFIX = "[eucalyptus-notifications] ";
+  private static final String DEFAULT_EMAIL_FROM = "notification@eucalyptus";
+  private static final String DEFAULT_EMAIL_FROM_NAME = "Eucalyptus Notifications";
+
   @ConfigurableField( description = "Email address where notifications are to be delivered." )
   public static String       EMAIL_TO;
-  @ConfigurableField( description = "From email address used for notification delivery." )
-  public static String       EMAIL_FROM             = "notification@eucalyptus";
-  @ConfigurableField( description = "From email name used for notification delivery." )
-  public static String       EMAIL_FROM_NAME        = "Eucalyptus Notifications";
-  @ConfigurableField( description = "Email subject used for notification delivery." )
-  public static final String EMAIL_SUBJECT_PREFIX   = "[eucalyptus-notifications] ";
-  @ConfigurableField( description = "Interval (in seconds) during which a notification will be delayed to allow for batching events for delivery." )
+  @ConfigurableField( description = "From email address used for notification delivery.", initial = DEFAULT_EMAIL_FROM )
+  public static String       EMAIL_FROM             = DEFAULT_EMAIL_FROM;
+  @ConfigurableField( description = "From email name used for notification delivery.",
+                      initial = DEFAULT_EMAIL_FROM_NAME )
+  public static String       EMAIL_FROM_NAME        = DEFAULT_EMAIL_FROM_NAME;
+  @ConfigurableField( description = "Email subject used for notification delivery.",
+                      initial = DEFAULT_EMAIL_SUBJECT_PREFIX )
+  public static final String EMAIL_SUBJECT_PREFIX   = DEFAULT_EMAIL_SUBJECT_PREFIX;
+  @ConfigurableField( description = "Interval (in seconds) during which a notification will be delayed to allow for batching events for delivery.",
+                      initial = "60" )
   public static Integer      BATCH_DELAY_SECONDS    = 60;
-  @ConfigurableField( description = "Send a system state digest periodically." )
+  @ConfigurableField( description = "Send a system state digest periodically.", initial = "false" )
   public static Boolean      DIGEST                 = Boolean.FALSE;
-  @ConfigurableField( description = "If sending system state digests is set to true, then only send the digest when the system has failures to report." )
+  @ConfigurableField( description = "If sending system state digests is set to true, then only send the digest when the system has failures to report.",
+                      initial = "true" )
   public static Boolean      DIGEST_ONLY_ON_ERRORS  = Boolean.TRUE;
-  @ConfigurableField( description = "Period (in hours) with which a system state digest will be delivered." )
+  @ConfigurableField( description = "Period (in hours) with which a system state digest will be delivered.",
+                      initial = "24" )
   public static Integer      DIGEST_FREQUENCY_HOURS = 24;
-  @ConfigurableField( description = "Period (in hours) with which a system state digest will be delivered." )
+  @ConfigurableField( description = "Period (in hours) with which a system state digest will be delivered.",
+                      initial = "false" )
   public static Boolean      INCLUDE_FAULT_STACK    = Boolean.FALSE;
   
   enum NoopErrorFilter implements Predicate<Throwable> {

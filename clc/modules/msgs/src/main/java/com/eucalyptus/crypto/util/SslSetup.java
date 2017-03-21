@@ -133,20 +133,26 @@ import com.sun.net.ssl.internal.ssl.X509ExtendedTrustManager;
 public class SslSetup {
   private static final Logger LOG             = Logger.getLogger( SslSetup.class );
   private static final String PROTOCOL        = "TLS";
+  private static final String DEFAULT_SERVER_CIPHERS =
+      "RSA:DSS:ECDSA:+3DES:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES:!RC4:!ECDHE";
+  private static final String DEFAULT_SERVER_PROTOCOLS = "SSLv2Hello,TLSv1,TLSv1.1,TLSv1.2";
+  private static final String DEFAULT_USER_CIPHERS = DEFAULT_SERVER_CIPHERS;
+  private static final String DEFAULT_USER_PROTOCOLS = DEFAULT_SERVER_PROTOCOLS;
   private static SSLContext   SERVER_CONTEXT  = null;
   private static String[]     SERVER_SUPPORTED_CIPHERS = null;
   private static SSLContext   CLIENT_CONTEXT  = null;
   @ConfigurableField( description = "Alias of the certificate entry in euca.p12 to use for SSL for webservices.",
-                      changeListener = SslCertChangeListener.class )
+                      changeListener = SslCertChangeListener.class,
+                      initial = "eucalyptus" )
   public static String        SERVER_ALIAS    = ComponentIds.lookup( Eucalyptus.class ).name( );
   @ConfigurableField( description = "Password of the private key corresponding to the specified certificate for SSL for webservices.",
                       type = ConfigurableFieldType.KEYVALUEHIDDEN,
                       changeListener = SslPasswordChangeListener.class )
   public static String        SERVER_PASSWORD = ComponentIds.lookup( Eucalyptus.class ).name( );
-  @ConfigurableField( description = "SSL ciphers for webservices." )
-  public static String        SERVER_SSL_CIPHERS = "RSA:DSS:ECDSA:+3DES:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES:!RC4:!ECDHE";
-  @ConfigurableField( description = "SSL protocols for webservices." )
-  public static String        SERVER_SSL_PROTOCOLS = "SSLv2Hello,TLSv1,TLSv1.1,TLSv1.2";
+  @ConfigurableField( description = "SSL ciphers for webservices.", initial = DEFAULT_SERVER_CIPHERS )
+  public static String        SERVER_SSL_CIPHERS = DEFAULT_SERVER_CIPHERS;
+  @ConfigurableField( description = "SSL protocols for webservices.", initial = DEFAULT_SERVER_PROTOCOLS )
+  public static String        SERVER_SSL_PROTOCOLS = DEFAULT_SERVER_PROTOCOLS;
   @ConfigurableField( description = "Client HTTPS enabled", initial = "true" )
   public static Boolean       CLIENT_HTTPS_ENABLED = true;
   @ConfigurableField( description = "Client HTTPS verify server certificate enabled", initial = "true" )
@@ -155,13 +161,17 @@ public class SslSetup {
   public static String        CLIENT_SSL_CIPHERS = "RSA+AES:+SHA:!EXPORT:!EXPORT1025:!MD5:!ECDHE";
   @ConfigurableField( description = "Client HTTPS protocols for internal use", initial = "TLSv1.2" )
   public static String        CLIENT_SSL_PROTOCOLS = "TLSv1.2";
-  @ConfigurableField( description = "Use default CAs with SSL for external use.", changeListener = PropertyChangeListeners.IsBoolean.class )
+  @ConfigurableField( description = "Use default CAs with SSL for external use.",
+                      changeListener = PropertyChangeListeners.IsBoolean.class,
+                      initial = "true" )
   public static Boolean       USER_SSL_DEFAULT_CAS = true;
-  @ConfigurableField( description = "SSL ciphers for external use." )
-  public static String        USER_SSL_CIPHERS = "RSA:DSS:ECDSA:+3DES:TLS_EMPTY_RENEGOTIATION_INFO_SCSV:!NULL:!EXPORT:!EXPORT1024:!MD5:!DES:!RC4:!ECDHE";
-  @ConfigurableField( description = "SSL protocols for external use." )
-  public static String        USER_SSL_PROTOCOLS = "SSLv2Hello,TLSv1,TLSv1.1,TLSv1.2";
-  @ConfigurableField( description = "SSL hostname validation for external use.", changeListener = PropertyChangeListeners.IsBoolean.class )
+  @ConfigurableField( description = "SSL ciphers for external use.", initial = DEFAULT_USER_CIPHERS )
+  public static String        USER_SSL_CIPHERS = DEFAULT_USER_CIPHERS;
+  @ConfigurableField( description = "SSL protocols for external use.", initial = DEFAULT_USER_PROTOCOLS )
+  public static String        USER_SSL_PROTOCOLS = DEFAULT_USER_PROTOCOLS;
+  @ConfigurableField( description = "SSL hostname validation for external use.",
+                      changeListener = PropertyChangeListeners.IsBoolean.class,
+                      initial = "true" )
   public static Boolean       USER_SSL_ENABLE_HOSTNAME_VERIFICATION = true;
 
   public static class SslCertChangeListener implements PropertyChangeListener<String> {

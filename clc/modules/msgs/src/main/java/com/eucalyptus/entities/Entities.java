@@ -158,7 +158,7 @@ import groovy.lang.Closure;
                     description = "Parameters controlling transaction behaviour." )
 public class Entities {
   @ConfigurableField( description = "Maximum number of times a transaction may be retried before giving up.",
-                      initial = "5" )
+                      initial = "10" )
   public static Integer                                          CONCURRENT_UPDATE_RETRIES = 10;
   private static final boolean                                   CLEANUP_TX_SESSION        = Boolean.valueOf( System.getProperty( "com.eucalyptus.entities.cleanupTxSession", "true" ) );
   private static Cache<String, String>                           txLog                     = CacheBuilder.newBuilder().weakKeys().softValues().build(); // No softKeys available for CacheBuilder

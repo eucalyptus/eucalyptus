@@ -130,19 +130,24 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
   private static final Predicate<StackTraceElement>  filter   = Threads.filterStackByQualifiedName( "com.eucalyptus.*" );
 
   @ConfigurableField( description = "Number of seconds a future listener can execute before a debug message is logged.",
-                      type = ConfigurableFieldType.PRIVATE )
+                      type = ConfigurableFieldType.PRIVATE,
+                      initial = "30" )
   public static Long                                FUTURE_LISTENER_DEBUG_LIMIT_SECS = 30L;
   @ConfigurableField( description = "Number of seconds a future listener can execute before an info message is logged.",
-                      type = ConfigurableFieldType.PRIVATE )
+                      type = ConfigurableFieldType.PRIVATE,
+                      initial = "60" )
   public static Long                                FUTURE_LISTENER_INFO_LIMIT_SECS  = 60L;
   @ConfigurableField( description = "Number of seconds a future listener can execute before an error message is logged.",
-                      type = ConfigurableFieldType.PRIVATE )
+                      type = ConfigurableFieldType.PRIVATE,
+                      initial = "120" )
   public static Long                                FUTURE_LISTENER_ERROR_LIMIT_SECS = 120L;
   @ConfigurableField( description = "Number of seconds a future listener's executor waits to get() per call.",
-                      type = ConfigurableFieldType.PRIVATE )
+                      type = ConfigurableFieldType.PRIVATE,
+                      initial = "30" )
   public static Long                                FUTURE_LISTENER_GET_TIMEOUT      = 30L;
   @ConfigurableField( description = "Total number of seconds a future listener's executor waits to get().",
-                      type = ConfigurableFieldType.PRIVATE )
+                      type = ConfigurableFieldType.PRIVATE,
+                      initial = "8" )
   public static Integer                             FUTURE_LISTENER_GET_RETRIES      = 8;
 
 

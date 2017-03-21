@@ -85,7 +85,7 @@ public class SystemClock extends TimerTask implements UncaughtExceptionHandler {
   private static Logger      LOG   = Logger.getLogger( SystemClock.class );
   
   @ConfigurableField( description = "Amount of time (in milliseconds) before a previously running instance which is not reported will be marked as terminated.",
-                      initial = "60", changeListener=ClockRateChangeListener.class )
+                      initial = "10000", changeListener=ClockRateChangeListener.class )
   public static Long         RATE  = 10000L;
   
   private static SystemClock clock;

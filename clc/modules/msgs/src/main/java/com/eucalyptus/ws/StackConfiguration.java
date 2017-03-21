@@ -88,13 +88,16 @@ import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 public class StackConfiguration extends AbstractPersistent {
   
   @ConfigurableField( description = "Channel connect timeout (ms).",
-                      changeListener = WebServices.CheckNonNegativeIntegerPropertyChangeListener.class )
+                      changeListener = WebServices.CheckNonNegativeIntegerPropertyChangeListener.class,
+                      initial = "500" )
   public static Integer       CHANNEL_CONNECT_TIMEOUT           = 500;
   @ConfigurableField( changeListener = TimeChangeListener.class,
-                      description = "Time interval duration (in seconds) during which duplicate signatures will be accepted to accommodate collisions." )
+                      description = "Time interval duration (in seconds) during which duplicate signatures will be accepted to accommodate collisions.",
+                      initial = "0" )
   public static Integer       REPLAY_SKEW_WINDOW_SEC            = 0;
   @ConfigurableField( description = "A max clock skew value (in seconds) between client and server accepted when validating timestamps in Query/REST protocol.",
-                      changeListener = TimeChangeListener.class )
+                      changeListener = TimeChangeListener.class,
+                      initial = "20" )
   public static Integer       CLOCK_SKEW_SEC                    = 20;
   @ConfigurableField( description = "Server socket reuse address.",
                       changeListener = WebServices.CheckBooleanPropertyChangeListener.class )
@@ -112,37 +115,46 @@ public class StackConfiguration extends AbstractPersistent {
                       changeListener = WebServices.CheckBooleanPropertyChangeListener.class )
   public static final Boolean CHANNEL_NODELAY                   = true;
   @ConfigurableField( description = "Server worker thread pool max.",
-                      changeListener = WebServices.CheckNonNegativeIntegerPropertyChangeListener.class )
+                      changeListener = WebServices.CheckNonNegativeIntegerPropertyChangeListener.class,
+                      initial = "32" )
   public static Integer       SERVER_POOL_MAX_THREADS           = 32;
   @ConfigurableField( description = "Server max worker memory per connection.",
-                      changeListener = WebServices.CheckNonNegativeLongPropertyChangeListener.class )
+                      changeListener = WebServices.CheckNonNegativeLongPropertyChangeListener.class,
+                      initial = "0" )
   public static Long          SERVER_POOL_MAX_MEM_PER_CONN      = 0L;
   @ConfigurableField( description = "Server max worker memory total.",
-                      changeListener = WebServices.CheckNonNegativeIntegerPropertyChangeListener.class )
+                      changeListener = WebServices.CheckNonNegativeIntegerPropertyChangeListener.class,
+                      initial = "0" )
   public static Long          SERVER_POOL_TOTAL_MEM             = 0L;
   
   @ConfigurableField( description = "Service socket select timeout (ms).",
-                      changeListener = WebServices.CheckNonNegativeLongPropertyChangeListener.class )
+                      changeListener = WebServices.CheckNonNegativeLongPropertyChangeListener.class,
+                      initial = "500" )
   public static Long          SERVER_POOL_TIMEOUT_MILLIS        = 500L;
   
   @ConfigurableField( description = "Server selector thread pool max.",
-                      changeListener = WebServices.CheckNonNegativeIntegerPropertyChangeListener.class )
+                      changeListener = WebServices.CheckNonNegativeIntegerPropertyChangeListener.class,
+                      initial = "128" )
   public static Integer       SERVER_BOSS_POOL_MAX_THREADS      = 128;
   
   @ConfigurableField( description = "Server max selector memory per connection.",
-                      changeListener = WebServices.CheckNonNegativeLongPropertyChangeListener.class )
+                      changeListener = WebServices.CheckNonNegativeLongPropertyChangeListener.class,
+                      initial = "0" )
   public static Long          SERVER_BOSS_POOL_MAX_MEM_PER_CONN = 0L;
   
   @ConfigurableField( description = "Server worker thread pool max.",
-                      changeListener = WebServices.CheckNonNegativeLongPropertyChangeListener.class )
+                      changeListener = WebServices.CheckNonNegativeLongPropertyChangeListener.class,
+                      initial = "0" )
   public static Long          SERVER_BOSS_POOL_TOTAL_MEM        = 0L;
   
   @ConfigurableField( description = "Service socket select timeout (ms).",
-                      changeListener = WebServices.CheckNonNegativeLongPropertyChangeListener.class )
+                      changeListener = WebServices.CheckNonNegativeLongPropertyChangeListener.class,
+                      initial = "500" )
   public static Long          SERVER_BOSS_POOL_TIMEOUT_MILLIS   = 500L;
   
   @ConfigurableField( description = "Port to bind (note: port 8773 is always bound regardless).",
-                      changeListener = WebServices.CheckNonNegativeIntegerPropertyChangeListener.class )
+                      changeListener = WebServices.CheckNonNegativeIntegerPropertyChangeListener.class,
+                      initial = "8773" )
   public static Integer       PORT                              = 8773;
   public static final Integer INTERNAL_PORT                     = 8773;
 
@@ -151,43 +163,47 @@ public class StackConfiguration extends AbstractPersistent {
       changeListener = WebServices.CheckCidrListPropertyChangeListener.class )
   public static volatile String LISTENER_ADDRESS_MATCH          = "0.0.0.0";
 
-  @ConfigurableField( description = "Record and report service times." )
+  @ConfigurableField( description = "Record and report service times.", initial = "false" )
   public static Boolean       STATISTICS                        = Boolean.FALSE;
   
-  @ConfigurableField( description = "Execute service specific pipeline handlers from a separate thread pool (with respect to I/O)." )
+  @ConfigurableField( description = "Execute service specific pipeline handlers from a separate thread pool (with respect to I/O).",
+                      initial = "false" )
   public static Boolean       ASYNC_PIPELINE                    = Boolean.FALSE;
   
-  @ConfigurableField( description = "Execute service operations from a separate thread pool (with respect to I/O)." )
+  @ConfigurableField( description = "Execute service operations from a separate thread pool (with respect to I/O).",
+                      initial = "false" )
   public static Boolean       ASYNC_OPERATIONS                  = Boolean.FALSE;
   
-  @ConfigurableField( description = "Execute internal service operations from a separate thread pool (with respect to I/O)." )
+  @ConfigurableField( description = "Execute internal service operations from a separate thread pool (with respect to I/O).",
+                      initial = "false" )
   public static Boolean       ASYNC_INTERNAL_OPERATIONS         = Boolean.FALSE;
   
-  @ConfigurableField( description = "Execute internal service operations out of band from the normal service bus." )
+  @ConfigurableField( description = "Execute internal service operations out of band from the normal service bus.",
+                      initial = "true" )
   public static Boolean       OOB_INTERNAL_OPERATIONS           = Boolean.TRUE;
   
-  @ConfigurableField( description = "Client idle timeout (secs)." )
+  @ConfigurableField( description = "Client idle timeout (secs).", initial = "60" )
   public static Integer       CLIENT_INTERNAL_TIMEOUT_SECS      = 60;
 
-  @ConfigurableField( description = "Client connection timeout (ms)." )
+  @ConfigurableField( description = "Client connection timeout (ms).", initial = "3000" )
   public static Integer       CLIENT_INTERNAL_CONNECT_TIMEOUT_MILLIS = 3000;
 
   @ConfigurableField( description = "Client HMAC signature version 4 enabled", initial = "true" )
   public static Boolean       CLIENT_INTERNAL_HMAC_SIGNATURE_ENABLED = true;
 
-  @ConfigurableField( description = "Cluster connect timeout (ms)." )
+  @ConfigurableField( description = "Cluster connect timeout (ms).", initial = "3000" )
   public static Integer       CLUSTER_CONNECT_TIMEOUT_MILLIS    = 3000;
 
-  @ConfigurableField( description = "Server socket idle time-out." )
+  @ConfigurableField( description = "Server socket idle time-out.", initial = "60" )
   public static Integer       PIPELINE_IDLE_TIMEOUT_SECONDS     = 60;
   
-  @ConfigurableField( description = "Server http chunk max." )
+  @ConfigurableField( description = "Server http chunk max.", initial = "1048576000" )
   public static Integer       CLIENT_HTTP_CHUNK_BUFFER_MAX      = 1048576000;
 
-  @ConfigurableField( description = "Client http pool acquire timeout." )
+  @ConfigurableField( description = "Client http pool acquire timeout.", initial = "60000" )
   public static Long          CLIENT_HTTP_POOL_ACQUIRE_TIMEOUT  = 60_000L;
 
-  @ConfigurableField( description = "Client worker thread pool max." )
+  @ConfigurableField( description = "Client worker thread pool max.", initial = "32" )
   public static Integer       CLIENT_POOL_MAX_THREADS           = 32;
   
   @ConfigurableField( description = "Client message patterns to match for logging" )
@@ -201,13 +217,13 @@ public class StackConfiguration extends AbstractPersistent {
                       initial = "307200")
   public static Integer       PIPELINE_MAX_QUERY_REQUEST_SIZE    = 30 * 10 * 1024;
   
-  @ConfigurableField( description = "Maximum HTTP initial line size (bytes)." )
+  @ConfigurableField( description = "Maximum HTTP initial line size (bytes).", initial = "4096" )
   public static Integer       HTTP_MAX_INITIAL_LINE_BYTES       = 4 * 1024;
   
-  @ConfigurableField( description = "Maximum HTTP headers size (bytes)." )
+  @ConfigurableField( description = "Maximum HTTP headers size (bytes).", initial = "8192" )
   public static Integer       HTTP_MAX_HEADER_BYTES             = 8 * 1024;
 
-  @ConfigurableField( description = "Maximum HTTP requests per persistent connection." )
+  @ConfigurableField( description = "Maximum HTTP requests per persistent connection.", initial = "100" )
   public static Integer       HTTP_MAX_REQUESTS_PER_CONNECTION  = 100;
 
   @ConfigurableField( description = "HTTP server header for responses (use 'default' for standard)", initial = "default" )
@@ -221,36 +237,42 @@ public class StackConfiguration extends AbstractPersistent {
   public static Boolean       USE_INSTANCE_DNS                = Boolean.FALSE;
 
   @ConfigurableField( description = "Default scheme prefix in eucarc.",
-                      changeListener = TemporarySchemeUpdater.class )
+                      changeListener = TemporarySchemeUpdater.class,
+                      initial = "false" )
   @Deprecated  //GRZE: this field will be superceded by new eucarc support in 3.4: DO NOT USE IT!
   public static Boolean       DEFAULT_HTTPS_ENABLED             = Boolean.FALSE;
   
   @ConfigurableField( description = "Default scheme for EC2_URL in eucarc.",
-                      changeListener = UriChangeListener.class )
+                      changeListener = UriChangeListener.class,
+                      initial = "http" )
   @Deprecated  //GRZE: this field will be superceded by new eucarc support in 3.4: DO NOT USE IT!
   public static String        DEFAULT_EC2_URI_SCHEME            = "http";                                      //GRZE: there references to specific services are not in the right scope here. 
                                                                                                                 
   @ConfigurableField( description = "Default scheme for S3_URL in eucarc.",
-                      changeListener = UriChangeListener.class )
+                      changeListener = UriChangeListener.class,
+                      initial = "http" )
   @Deprecated  //GRZE: this field will be superceded by new eucarc support in 3.4: DO NOT USE IT!
   public static String        DEFAULT_S3_URI_SCHEME             = "http";                                      //GRZE: there references to specific services are not in the right scope here.
                                                                                                                 
   @ConfigurableField( description = "Default scheme for AWS_SNS_URL in eucarc.",
-                      changeListener = UriChangeListener.class )
+                      changeListener = UriChangeListener.class,
+                      initial = "http" )
   @Deprecated  //GRZE: this field will be superceded by new eucarc support in 3.4: DO NOT USE IT!
   public static String        DEFAULT_AWS_SNS_URI_SCHEME        = "http";                                      //GRZE: there references to specific services are not in the right scope here.
                                                                                                                 
   @ConfigurableField( description = "Default scheme for EUARE_URL in eucarc.",
-                      changeListener = UriChangeListener.class )
+                      changeListener = UriChangeListener.class,
+                      initial = "http" )
   @Deprecated  //GRZE: this field will be superceded by new eucarc support in 3.4: DO NOT USE IT!
   public static String        DEFAULT_EUARE_URI_SCHEME          = "http";                                      //GRZE: there references to specific services are not in the right scope here.
 
   @ConfigurableField( description = "Default EUSTORE_URL in eucarc.",
-                      changeListener = UriChangeListener.class )
+                      changeListener = UriChangeListener.class,
+                      initial = "http://emis.eucalyptus.com/" )
   @Deprecated  //GRZE: this field will be superceded by new eucarc support in 3.4: DO NOT USE IT!
   public static String        DEFAULT_EUSTORE_URL               = "http://emis.eucalyptus.com/";               //GRZE: there references to specific services are not in the right scope here.
 
-  @ConfigurableField( description = "Request unknown parameter handling (default|ignore|error)." )
+  @ConfigurableField( description = "Request unknown parameter handling (default|ignore|error).", initial = "default" )
   public static String        UNKNOWN_PARAMETER_HANDLING        = "default";
 
   @ConfigurableField( description = "Enable request logging.", initial = "true",
