@@ -128,22 +128,22 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
   @ConfigurableClass( root = "cloud.cluster", description = "Configuration options controlling interactions with Cluster Controllers." )
   static class Configuration extends AbstractPersistent {
     private static final long serialVersionUID = 1L;
-    @ConfigurableField( description = "The number of concurrent requests which will be sent to a single Cluster Controller." )
+    @ConfigurableField( description = "The number of concurrent requests which will be sent to a single Cluster Controller.", initial = "8" )
     @Column( name = "config_cluster_workers", nullable = false )
     private Integer requestWorkers     = 8;
-    @ConfigurableField( description = "The time period between service state checks for a Cluster Controller which is PENDING." )
+    @ConfigurableField( description = "The time period between service state checks for a Cluster Controller which is PENDING.", initial = "3" )
     @Column( name = "config_cluster_interval_pending", nullable = false )
     private Long    pendingInterval    = 3l;
-    @ConfigurableField( description = "The time period between service state checks for a Cluster Controller which is NOTREADY." )
+    @ConfigurableField( description = "The time period between service state checks for a Cluster Controller which is NOTREADY.", initial = "10" )
     @Column( name = "config_cluster_interval_notready", nullable = false )
     private Long    notreadyInterval   = 10l;
-    @ConfigurableField( description = "The time period between service state checks for a Cluster Controller which is DISABLED." )
+    @ConfigurableField( description = "The time period between service state checks for a Cluster Controller which is DISABLED.", initial = "15" )
     @Column( name = "config_cluster_interval_disabled", nullable = false )
     private Long    disabledInterval   = 15l;
-    @ConfigurableField( description = "The time period between service state checks for a Cluster Controller which is ENABLED." )
+    @ConfigurableField( description = "The time period between service state checks for a Cluster Controller which is ENABLED.", initial = "15" )
     @Column( name = "config_cluster_interval_enabled", nullable = false )
     private Long    enabledInterval    = 15l;
-    @ConfigurableField( description = "The number of times a request will be retried while bootstrapping a Cluster Controller." )
+    @ConfigurableField( description = "The number of times a request will be retried while bootstrapping a Cluster Controller.", initial = "10" )
     @Column( name = "config_cluster_startup_sync_retries", nullable = false )
     private Integer startupSyncRetries = 10;
     
