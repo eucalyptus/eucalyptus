@@ -145,6 +145,29 @@ public class FUtils {
   }
 
   /**
+   * Catch any exception thrown by the function and return an option.
+   *
+   * The returned option is absent in case of exceptions or null return.
+   *
+   * @param <T> The function parameter type
+   * @param <R> The function return type
+   * @param function The function to call
+   *
+   * @return The exception and null handling function
+   */
+  public static <T,R> CompatFunction<T,Optional<R>> optional(
+      final java.util.function.Function<T,R> function
+  ) {
+    return t -> {
+      try {
+        return Optional.fromNullable( function.apply( t ) );
+      } catch ( final Throwable thrown ) {
+        return Optional.absent( );
+      }
+    };
+  }
+
+  /**
    * Tuplize the result of a function with its parameter
    *
    * @param <T> The function parameter type

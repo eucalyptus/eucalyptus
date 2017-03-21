@@ -95,22 +95,6 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   @Transient
   @ConfigurableIdentifier
   private String                propertyPrefix;
-  
-  @Column( name = "cluster_network_mode" )
-  @ConfigurableField( description = "Currently configured network mode", displayName = "Network mode", readonly = true )
-  private/*NetworkMode*/String networkMode;
-
-  @ConfigurableField( description = "IP subnet used by the cluster's virtual private networking.", displayName = "Virtual network subnet (VNET_SUBNET)", readonly = true )
-  @Column( name = "cluster_vnet_subnet" )
-  private String                vnetSubnet;
-
-  @ConfigurableField( description = "Netmask used by the cluster's virtual private networking.", displayName = "Virtual network netmask (VNET_NETMASK)", readonly = true )
-  @Column( name = "cluster_vnet_netmask" )
-  private String                vnetNetmask;
-
-  @ConfigurableField( description = "IP version used by the cluster's virtual private networking.", displayName = "Virtual network IP version", readonly = true )
-  @Column( name = "cluster_vnet_type" )
-  private String                vnetType              = "ipv4";
 
   @ConfigurableField( description = "Alternative address which is the source address for requests made by the component to the cloud controller.", displayName = "Source host name" )
   @Column( name = "cluster_alt_source_hostname" )
@@ -153,38 +137,6 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
     return BootstrapArgs.isCloudController( );
   }
   
-  public String getNetworkMode( ) {
-    return this.networkMode;
-  }
-  
-  public void setNetworkMode( String networkMode ) {
-    this.networkMode = networkMode;
-  }
-
-  public String getVnetSubnet( ) {
-    return this.vnetSubnet;
-  }
-
-  public void setVnetSubnet( String vnetSubnet ) {
-    this.vnetSubnet = vnetSubnet;
-  }
-
-  public String getVnetNetmask( ) {
-    return this.vnetNetmask;
-  }
-
-  public void setVnetNetmask( String vnetNetmask ) {
-    this.vnetNetmask = vnetNetmask;
-  }
-
-  public String getVnetType( ) {
-    return this.vnetType;
-  }
-  
-  public void setVnetType( String vnetType ) {
-    this.vnetType = vnetType;
-  }
-  
   public String getPropertyPrefix( ) {
   	return this.getPartition();
   }
@@ -219,6 +171,33 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
             "drop column if exists cluster_use_network_tags"
         );
 
+        return true;
+      } catch ( Exception ex ) {
+        logger.error( "Error updating cloud schema", ex );
+        return false;
+      } finally {
+        if ( sql != null ) {
+          sql.close( );
+        }
+      }
+    }
+  }
+
+  @PreUpgrade( value = Empyrean.class, since = Upgrades.Version.v5_0_0 )
+  public static class ClusterConfiguration500PreUpgrade implements Callable<Boolean> {
+    private static final Logger logger = Logger.getLogger( ClusterConfiguration500PreUpgrade.class );
+
+    @Override
+    public Boolean call( ) throws Exception {
+      Sql sql = null;
+      try {
+        sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection( "eucalyptus_config" );
+        sql.execute( "alter table config_component_base " +
+            "drop column if exists cluster_network_mode, " +
+            "drop column if exists cluster_vnet_subnet, " +
+            "drop column if exists cluster_vnet_netmask, " +
+            "drop column if exists cluster_vnet_type"
+        );
         return true;
       } catch ( Exception ex ) {
         logger.error( "Error updating cloud schema", ex );

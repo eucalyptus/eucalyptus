@@ -115,31 +115,6 @@ class NetworkConfigurations {
   @PackageScope
   static void process( final NetworkConfiguration networkConfiguration ) {
     Addresses.getInstance( ).update( iterateRangesAsString( networkConfiguration.publicIps ) )
-    Entities.transaction( ClusterConfiguration.class ) { EntityTransaction db ->
-      Components.lookup(ClusterController.class).services( ).each { ServiceConfiguration config ->
-        (networkConfiguration?.clusters?.find{ Cluster cluster -> cluster.name == config.partition }?:new Cluster()).with {
-          ClusterConfiguration clusterConfiguration = Entities.uniqueResult((ClusterConfiguration)config)
-          clusterConfiguration.networkMode = MoreObjects.firstNonNull( networkConfiguration.mode, NetworkMode.EDGE.toString( ) )
-
-          if ( networkConfiguration?.managedSubnet ) {
-            clusterConfiguration.vnetSubnet = networkConfiguration?.managedSubnet?.subnet
-            clusterConfiguration.vnetNetmask = networkConfiguration?.managedSubnet?.netmask
-          } else {
-            Subnet defaultSubnet = null
-            if (subnet && subnet.name) {
-              defaultSubnet = networkConfiguration.subnets?.find { EdgeSubnet s -> s.name ?: s.subnet == subnet.name }
-            } else if (!subnet) {
-              defaultSubnet = networkConfiguration.subnets?.getAt(0) // must be only one
-            }
-            clusterConfiguration.vnetSubnet = subnet?.subnet ?: defaultSubnet?.subnet
-            clusterConfiguration.vnetNetmask = subnet?.netmask ?: defaultSubnet?.netmask
-          }
-
-          void
-        }
-      }
-      db.commit( );
-    }
   }
 
   @Nullable
