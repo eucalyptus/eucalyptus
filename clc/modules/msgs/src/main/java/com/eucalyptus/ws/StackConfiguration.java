@@ -213,10 +213,10 @@ public class StackConfiguration extends AbstractPersistent {
   @ConfigurableField( description = "HTTP server header for responses (use 'default' for standard)", initial = "default" )
   public static String        HTTP_SERVER_HEADER                = "default";
 
-  @ConfigurableField( description = "Use DNS delegation for eucarc." )
+  @ConfigurableField( description = "Use DNS delegation for eucarc.", initial = "false" )
   @Deprecated  //GRZE: this field will be superceded by new DNS and eucarc support in 3.4: DO NOT USE IT!
   public static Boolean       USE_DNS_DELEGATION                = Boolean.FALSE;
-  @ConfigurableField( description = "Use DNS names for instances." )
+  @ConfigurableField( description = "Use DNS names for instances.", initial = "false" )
   @Deprecated  //GRZE: this field will be superceded by new DNS support in 3.4: DO NOT USE IT!
   public static Boolean       USE_INSTANCE_DNS                = Boolean.FALSE;
 

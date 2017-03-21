@@ -142,6 +142,7 @@ public class DNSControl {
   public static volatile String dns_listener_address_match = ""; 
 	
   @ConfigurableField( description = "Server worker thread pool max.",
+      initial = "512",
       changeListener = WebServices.CheckNonNegativeIntegerPropertyChangeListener.class )
   public static Integer       SERVER_POOL_MAX_THREADS           = 512;
 

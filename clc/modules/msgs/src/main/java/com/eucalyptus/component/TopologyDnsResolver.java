@@ -122,7 +122,8 @@ import com.google.common.collect.Lists;
 public class TopologyDnsResolver extends DnsResolver {
   private static Logger LOG = Logger.getLogger( TopologyDnsResolver.class );
 
-  @ConfigurableField( description = "Enable the service topology resolver.  Note: dns.enable must also be 'true'" )
+  @ConfigurableField( description = "Enable the service topology resolver.  Note: dns.enable must also be 'true'",
+      initial = "true" )
   public static Boolean enabled = Boolean.TRUE;
   enum ResolverSupport implements Predicate<Name> {
     COMPONENT {

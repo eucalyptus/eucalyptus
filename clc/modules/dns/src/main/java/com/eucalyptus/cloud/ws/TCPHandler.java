@@ -84,7 +84,7 @@ import java.util.concurrent.TimeUnit;
 @ConfigurableClass( root = "dns.tcp",
         description = "Handles dns TCP requests." )
 public class TCPHandler extends ConnectionHandler {
-  @ConfigurableField( description = "Parameter controlling tcp handler timeout in seconds." )
+  @ConfigurableField( description = "Parameter controlling tcp handler timeout in seconds.", initial = "30" )
   public static Integer timeout_seconds = 30;
   private static Logger LOG = Logger.getLogger( TCPHandler.class );
 

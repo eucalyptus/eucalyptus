@@ -116,7 +116,8 @@ import com.google.common.net.InetAddresses;
                     description = "Options controlling recursive DNS resolution and caching." )
 public class RecursiveDnsResolver extends DnsResolver {
   private static Logger LOG = Logger.getLogger( RecursiveDnsResolver.class );
-  @ConfigurableField( description = "Enable the recursive DNS resolver.  Note: dns.enable must also be 'true'" )
+  @ConfigurableField( description = "Enable the recursive DNS resolver.  Note: dns.enable must also be 'true'",
+      initial = "true" )
   public static Boolean enabled = Boolean.TRUE;
 
   private static List<Name> subdomainsForName( Name name ) {

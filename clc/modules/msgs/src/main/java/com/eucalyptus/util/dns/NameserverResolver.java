@@ -102,7 +102,7 @@ import com.google.common.primitives.Ints;
 @ConfigurableClass( root = "dns.ns",
                     description = "Options controlling DNS name resolution for the system's nameservers." )
 public class NameserverResolver extends DnsResolver {
-  @ConfigurableField( description = "Enable the NS resolver.  Note: dns.enable must also be 'true'" )
+  @ConfigurableField( description = "Enable the NS resolver.  Note: dns.enable must also be 'true'", initial = "true" )
   public static Boolean enabled = Boolean.TRUE;
 
   private static final Function<InetAddress,Cidr> cidrLookup = CacheBuilder.newBuilder( )

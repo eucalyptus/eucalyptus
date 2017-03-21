@@ -85,11 +85,11 @@ import com.google.common.collect.Lists;
 @ConfigurableClass( root = "dns.spoof_regions",
                     description = "Options controlling DNS domain spoofing for AWS regions." )
 public class RegionSpoofingResolver extends DnsResolver {
-  @ConfigurableField( description = "Enable the spoofing resolver which allows for AWS DNS name emulation for instances." )
+  @ConfigurableField( description = "Enable the spoofing resolver which allows for AWS DNS name emulation for instances.", initial = "false" )
   public static Boolean             enabled                   = Boolean.FALSE;
-  @ConfigurableField( description = "Enable spoofing of the default AWS DNS names, e.g., ec2.amazonaws.com would resolve to the ENABLED cloud controller." )
+  @ConfigurableField( description = "Enable spoofing of the default AWS DNS names, e.g., ec2.amazonaws.com would resolve to the ENABLED cloud controller.", initial = "false" )
   public static Boolean             SPOOF_AWS_DEFAULT_REGIONS = Boolean.FALSE;
-  @ConfigurableField( description = "Enable spoofing for the normal AWS regions, too. e.g., ec2.us-east-1.amazonaws.com would resolve to the ENABLED cloud controller." )
+  @ConfigurableField( description = "Enable spoofing for the normal AWS regions, too. e.g., ec2.us-east-1.amazonaws.com would resolve to the ENABLED cloud controller.", initial = "false" )
   public static Boolean             SPOOF_AWS_REGIONS         = Boolean.FALSE;
   @ConfigurableField( description = "Internal region name. If set, the region name to expect as the second label in the DNS name. For example, to treat your Eucalyptus install like a region named 'eucalyptus', set this value to 'eucalyptus'.  Then, e.g., autoscaling.eucalyptus.amazonaws.com will resolve to the service address when using this DNS server." )
   public static String              REGION_NAME               = null;
