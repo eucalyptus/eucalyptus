@@ -149,7 +149,7 @@ public class Faults {
   public static String       EMAIL_FROM_NAME        = DEFAULT_EMAIL_FROM_NAME;
   @ConfigurableField( description = "Email subject used for notification delivery.",
                       initial = DEFAULT_EMAIL_SUBJECT_PREFIX )
-  public static final String EMAIL_SUBJECT_PREFIX   = DEFAULT_EMAIL_SUBJECT_PREFIX;
+  public static String       EMAIL_SUBJECT_PREFIX   = DEFAULT_EMAIL_SUBJECT_PREFIX;
   @ConfigurableField( description = "Interval (in seconds) during which a notification will be delayed to allow for batching events for delivery.",
                       initial = "60" )
   public static Integer      BATCH_DELAY_SECONDS    = 60;
