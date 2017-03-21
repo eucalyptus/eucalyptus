@@ -70,7 +70,7 @@ public class S3ProviderConfiguration extends AbstractPersistent implements Cache
   @Transient
   private static final String DEFAULT_S3_HEAD_RESPONSE = "405";
 
-  @ConfigurableField(description = "External S3 endpoint.", displayName = "s3_endpoint", initial = "s3.amazonaws.com")
+  @ConfigurableField(description = "External S3 endpoint.", displayName = "s3_endpoint", initial = DEFAULT_S3_ENDPOINT)
   @Column(name = "endpoint")
   protected String S3Endpoint;
 

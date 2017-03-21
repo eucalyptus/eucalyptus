@@ -133,45 +133,52 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
   }
 
   @Column
-  @ConfigurableField(description = "Maximum allowed size of metadata request bodies", displayName = "Maximum allowed size of metadata requests")
+  @ConfigurableField(description = "Maximum allowed size of metadata request bodies",
+      displayName = "Maximum allowed size of metadata requests",
+      initialInt = DEFAULT_MAX_METADATA_REQUEST_SIZE )
   protected Integer max_metadata_request_size;
 
   @Column
-  @ConfigurableField(description = "Maximum number of buckets per account", displayName = "Maximum buckets per account")
+  @ConfigurableField(description = "Maximum number of buckets per account",
+      displayName = "Maximum buckets per account",
+      initialInt = DEFAULT_MAX_BUCKETS_PER_ACCOUNT )
   protected Integer max_buckets_per_account;
 
   @Column
   @ConfigurableField(
       description = "Total ObjectStorage storage capacity for Objects soley for reporting usage percentage. Not a size restriction. No enforcement of this value",
-      displayName = "ObjectStorage object capacity (GB)")
+      displayName = "ObjectStorage object capacity (GB)", initialInt = Integer.MAX_VALUE )
   protected Integer max_total_reporting_capacity_gb;
 
   @Column
   @ConfigurableField(description = "Number of hours to wait for object PUT operations to be allowed to complete before cleanup.",
-      displayName = "Object PUT failure cleanup (Hours)")
+      displayName = "Object PUT failure cleanup (Hours)", initialInt = DEFAULT_PUT_TIMEOUT_HOURS )
   protected Integer failed_put_timeout_hrs;
 
   @Column
   @ConfigurableField(description = "Interval, in seconds, at which cleanup tasks are initiated for removing old/stale objects.",
-      displayName = "Cleanup interval (seconds)")
+      displayName = "Cleanup interval (seconds)",
+      initialInt = DEFAULT_CLEANUP_INTERVAL_SEC )
   protected Integer cleanup_task_interval_seconds;
 
   @Column
   @ConfigurableField(
       description = "Interval, in seconds, during which buckets in creating-state are valid. After this interval, the operation is assumed failed.",
-      displayName = "Operation wait interval (seconds)")
+      displayName = "Operation wait interval (seconds)",
+      initialInt = DEFAULT_CLEANUP_INTERVAL_SEC )
   protected Integer bucket_creation_wait_interval_seconds;
 
   @Column
   @ConfigurableField(description = "The S3 bucket naming restrictions to enforce. Values are 'dns-compliant' or 'extended'. "
       + "Default is 'extended'. dns_compliant is non-US region S3 names, extended is for US-Standard Region naming. "
       + "See http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html", displayName = "Bucket Naming restrictions",
-      changeListener = BucketNamingRestrictionsValidator.class)
+      changeListener = BucketNamingRestrictionsValidator.class,
+      initial = DEFAULT_BUCKET_NAMING_SCHEME )
   protected String bucket_naming_restrictions;
 
   @Column
   @ConfigurableField(description = "Should provider client attempt a GET / PUT when backend does not support Copy operation",
-      displayName = "attempt GET/PUT on Copy fail", type = ConfigurableFieldType.BOOLEAN)
+      displayName = "attempt GET/PUT on Copy fail", type = ConfigurableFieldType.BOOLEAN, initial = "false" )
   protected Boolean doGetPutOnCopyFail;
 
   @Column
