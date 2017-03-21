@@ -1059,7 +1059,7 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
             MKVBRPATH("type");
             if (xml_ver < 2) {
                 char sBuf[32] = "";
-                XGET_STR(vbrxpath, sBuf);
+                XGET_STR_FREE(vbrxpath, sBuf);
                 // an empty record is old way to store full disk
                 if (strlen(sBuf) == 0) {
                     vbr->type = NC_RESOURCE_FULLDISK;
