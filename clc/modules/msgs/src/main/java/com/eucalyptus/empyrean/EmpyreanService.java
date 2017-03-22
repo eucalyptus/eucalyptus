@@ -646,7 +646,7 @@ public class EmpyreanService {
     @Override
     public DescribeServicesResponseType apply( final DescribeServicesType input ) {
       try {
-        if ( !Contexts.lookup( ).getUser( ).isSystemAdmin( ) ) {
+        if ( !Contexts.lookup( ).isAdministrator() ) {
           return user( input );
         } else {
           return EmpyreanService.describeService( input );
