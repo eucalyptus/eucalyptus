@@ -5,6 +5,7 @@
       "euprop:*",
       "euserv:*",
       "euconfig:*",
+      "ec2:DescribeInstances",
       "ec2:MigrateInstances"
     ],
     "Resource": "*"
