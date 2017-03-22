@@ -645,6 +645,7 @@
     <value name="ServerCertificateId" field="serverCertificateId" usage="required"/>
     <value name="Arn" field="arn" usage="required"/>
     <value name="UploadDate" field="uploadDate" usage="optional"/>
+    <value name="Expiration" field="expiration" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.auth.euare.UserType" abstract="true">
     <value name="Path" field="path" usage="required"/>

@@ -2204,6 +2204,18 @@ public class Entities {
     }
 
     /**
+     * Add a where condition to the criteria.
+     *
+     * @param restrictionFunction The function to build the restriction to add.
+     * @return This criteria query for method chaining.
+     */
+    public B whereRestriction(
+        @Nonnull final java.util.function.Function<EntityRestrictionBuilder<E>, EntityRestrictionBuilder<E>> restrictionFunction
+    ) {
+      return where( restrictionFunction.apply( Entities.restriction( context.entityClass ) ).build( ) );
+    }
+
+    /**
      * Directly add an equality restriction to the join.
      *
      * <p><code>

@@ -656,8 +656,9 @@ public class DatabaseAccountProxy implements EuareAccount {
     if(! ServerCertificateEntity.isCertificatePathValid(certPath))
       throw new AuthException(AuthException.INVALID_SERVER_CERT_PATH);
 
+    final ServerCertificates.VerifiedCertInfo certInfo;
     try{
-      ServerCertificates.verifyCertificate( certBody, pk, certChain );
+      certInfo = ServerCertificates.verifyCertificate( certBody, pk, certChain );
     }catch(final AuthException ex) {
       throw ex;
     }catch(final Exception ex) {
@@ -714,6 +715,7 @@ public class DatabaseAccountProxy implements EuareAccount {
       entity.setCertBody(certBody);
       entity.setCertChain(certChain);
       entity.setCertPath(certPath);
+      entity.setExpiration(certInfo.getExpiration());
       entity.setPrivateKey(encPk);
       entity.setSessionKey(sessionKey);
       entity.setCertId(certId);

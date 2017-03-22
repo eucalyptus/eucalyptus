@@ -720,6 +720,7 @@ public class ServerCertificateMetadataType extends EucalyptusData {
   String serverCertificateId;
   String arn;
   Date uploadDate;
+  Date expiration
   public ServerCertificateMetadataType() {  }
 }
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = IamPolicySpec.IAM_LISTMFADEVICES )
