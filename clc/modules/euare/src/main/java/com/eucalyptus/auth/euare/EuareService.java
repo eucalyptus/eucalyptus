@@ -76,6 +76,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.TimeZone;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.log4j.Logger;
@@ -117,15 +118,12 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Enums;
-import com.google.common.base.Function;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 
 @SuppressWarnings( { "UnusedDeclaration", "Guava" } )
 @ComponentNamed
@@ -435,12 +433,10 @@ public class EuareService {
       final List<ServerCertificate> certs = Privileged.listServerCertificate( requestUser, account, pathPrefix );
       final ListServerCertificatesResultType result = new ListServerCertificatesResultType();
       final ServerCertificateMetadataListTypeType lists = new ServerCertificateMetadataListTypeType();
-      lists.setMemberList(new ArrayList<>(Collections2.transform(certs, new Function<ServerCertificate, ServerCertificateMetadataType>(){
-        @Override
-        public ServerCertificateMetadataType apply(ServerCertificate cert) {
-          return getServerCertificateMetadata(cert);
-        }
-      })));
+      lists.setMemberList( certs.stream( )
+          .map( EuareService::getServerCertificateMetadata )
+          .collect( Collectors.toCollection(ArrayList::new) )
+      );
       result.setServerCertificateMetadataList(lists);
       reply.setListServerCertificatesResult(result);
     }catch(final AuthException ex){
@@ -3077,6 +3073,7 @@ public class EuareService {
     metadata.setServerCertificateName(cert.getCertificateName());
     metadata.setPath(cert.getCertificatePath());
     metadata.setUploadDate(cert.getCreatedTime());
+    metadata.setExpiration(cert.getExpiration());
     return metadata;
   }
  

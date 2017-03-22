@@ -19,23 +19,35 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare.persist.entities;
 
+import java.util.Date;
+import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Index;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
 import javax.persistence.Transient;
 
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Type;
 
+import com.eucalyptus.auth.euare.ServerCertificates;
+import com.eucalyptus.auth.euare.ServerCertificates.VerifiedCertInfo;
 import com.eucalyptus.auth.policy.annotation.PolicyResourceType;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
+import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.auth.type.RestrictedType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityRestriction;
+import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.upgrade.Upgrades;
+import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import com.google.common.base.Predicate;
 
 /**
  * @author Sang-Min Park
@@ -78,6 +90,10 @@ public class ServerCertificateEntity extends AbstractOwnedPersistent implements 
   @Type(type = "org.hibernate.type.StringClobType")
   @Column(name = "metadata_session_key", nullable = true)
   private String sessionKey;
+
+  @Temporal(TemporalType.TIMESTAMP)
+  @Column(name = "metadata_server_cert_expiration")
+  private Date expiration;
 
   @SuppressWarnings("unused")
   private ServerCertificateEntity() {
@@ -177,7 +193,15 @@ public class ServerCertificateEntity extends AbstractOwnedPersistent implements 
     return this.certificateId;
   }
 
-  public static boolean isCertificatePathValid(final String path) {
+  public Date getExpiration( ) {
+    return expiration;
+  }
+
+  public void setExpiration( final Date expiration ) {
+    this.expiration = expiration;
+  }
+
+  public static boolean isCertificatePathValid( final String path) {
     if (path == null)
       return false;
     if (!path.startsWith("/"))
@@ -198,5 +222,35 @@ public class ServerCertificateEntity extends AbstractOwnedPersistent implements 
       return false;
 
     return true;
+  }
+
+  @EntityUpgrade( entities = ServerCertificateEntity.class,  since = Upgrades.Version.v4_4_1, value = Euare.class )
+  public enum ServerCertificateEntityUpgrade441 implements Predicate<Class> {
+    INSTANCE;
+
+    private static Logger logger = Logger.getLogger( ServerCertificateEntityUpgrade441.class );
+
+    @SuppressWarnings( "unchecked" )
+    @Override
+    public boolean apply( final Class entityClass ) {
+      try ( final TransactionResource tx = Entities.transactionFor( ServerCertificateEntity.class ) ) {
+        final List<ServerCertificateEntity> entities = Entities.criteriaQuery( ServerCertificateEntity.class )
+            .whereRestriction( r -> r.isNull( ServerCertificateEntity_.expiration ) ).list( );
+        for ( final ServerCertificateEntity entity : entities ) {
+          final String desc = entity.getCertId( ) + "/" + entity.getCertName( );
+          logger.info( "Setting expiration for server certificate " + desc );
+          try {
+            final VerifiedCertInfo certInfo = ServerCertificates.verifyCertificate(
+                entity.getCertBody( ),
+                entity.getCertChain( ) );
+            entity.setExpiration( certInfo.getExpiration( ) );
+          } catch ( final Exception e ) {
+            logger.error( "Error setting expiration for server certificate " + desc, e );
+          }
+        }
+        tx.commit( );
+      }
+      return true;
+    }
   }
 }

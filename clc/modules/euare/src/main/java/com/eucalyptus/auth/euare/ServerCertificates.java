@@ -23,8 +23,11 @@ import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.NoSuchElementException;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
@@ -57,18 +60,42 @@ import com.google.common.base.Function;
 public class ServerCertificates {
   private static Logger LOG = Logger.getLogger( ServerCertificates.class );
 
-  public static void verifyCertificate(final String certBody, final String pk, final String certChain) 
+  public static final class VerifiedCertInfo {
+    private final Date expiration;
+
+
+    public VerifiedCertInfo( final Date expiration ) {
+      this.expiration = expiration;
+    }
+
+    @Nullable
+    public Date getExpiration( ) {
+      return expiration;
+    }
+  }
+
+  @Nonnull
+  public static VerifiedCertInfo verifyCertificate(final String certBody, final String certChain)
       throws AuthException{
+    final Date expiration;
     try{
       final X509Certificate cert = PEMFiles.getCert(certBody.getBytes( Charsets.UTF_8 ));
       if(cert==null)
         throw new Exception("Malformed certificate");
+      expiration = cert.getNotAfter( );
     }catch(final Exception ex) {
       throw new AuthException(
           String.format("%s (%s)", AuthException.SERVER_CERT_INVALID_FORMAT,
               "Certificate body is invalid - is the cert in PEM format?"));
     }
-     
+    return new VerifiedCertInfo( expiration );
+  }
+
+
+  @Nonnull
+  public static VerifiedCertInfo verifyCertificate(final String certBody, final String pk, final String certChain)
+      throws AuthException{
+    final VerifiedCertInfo certInfo = verifyCertificate( certBody, certChain );
     try{
       final KeyPair kp = PEMFiles.getKeyPair(pk.getBytes( Charsets.UTF_8 ));
       if(kp == null)
@@ -79,6 +106,7 @@ public class ServerCertificates {
           String.format("%s (%s)", AuthException.SERVER_CERT_INVALID_FORMAT,
           "Private key is invalid - is the key in PEM format?"));
     }
+    return certInfo;
   }
 
   @Resolver( ServerCertificateEntity.class )
@@ -176,7 +204,8 @@ public class ServerCertificates {
       final ServerCertificate cert = new ServerCertificate(
           entity.getOwnerAccountNumber( ),
           entity.getCertName( ), 
-          entity.getCreationTimestamp( )
+          entity.getCreationTimestamp( ),
+          entity.getExpiration( )
       );
       cert.setCertificatePath(entity.getCertPath());
       cert.setCertificateBody(entity.getCertBody());
