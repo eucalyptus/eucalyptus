@@ -29,14 +29,16 @@ import com.eucalyptus.objectstorage.exceptions.s3.*;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.google.common.base.Strings;
+
 import javaslang.control.Try.CheckedFunction;
+
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.security.auth.login.LoginException;
-import java.util.*;
 
-import static com.eucalyptus.objectstorage.pipeline.auth.S3Authentication.credentialsFor;
+import java.util.*;
 
 /**
  * S3 V2 specific authentication utilities.
@@ -45,24 +47,38 @@ final class S3V2Authentication {
   private static final Logger LOG = Logger.getLogger(S3V4Authentication.class);
   static final String AWS_V2_AUTH_TYPE = "AWS";
 
+  enum ExcludeFromSignature {
+    NONE, PATH, CONTENT_TYPE;
+  }
+
   private S3V2Authentication() {
   }
 
   static void login(MappingHttpRequest request, String date, String canonicalizedAmzHeaders, String accessKeyId, String signature, String
       securityToken) throws S3Exception {
-    login(request, accessKeyId, excludePath -> {
-      String stringToSign = buildStringToSign(request, date, canonicalizedAmzHeaders, excludePath);
+    login(request, accessKeyId, excludeOption -> {
+      String stringToSign = buildStringToSign(request, date, canonicalizedAmzHeaders, excludeOption);
       return new ObjectStorageWrappedCredentials(request.getCorrelationId(), stringToSign, accessKeyId, signature, securityToken);
     });
   }
 
+  static ObjectStorageWrappedCredentials credentialsFor(CheckedFunction<ExcludeFromSignature, ObjectStorageWrappedCredentials> credsFn,
+      ExcludeFromSignature exclude) throws S3Exception {
+    try {
+      return credsFn.apply(exclude);
+    } catch (Throwable t) {
+      if (t instanceof S3Exception)
+        throw (S3Exception) t;
+      throw new InternalErrorException(t);
+    }
+  }
   /**
-   * Attempts a login and retries sign a signed string that does not contain a path if the initial attempt fails.
+   * Attempts a login and retries sign a signed string that does not contain a path or Content-Type if the initial attempt fails.
    */
-  static void login(MappingHttpRequest request, String accessKeyId, CheckedFunction<Boolean, ObjectStorageWrappedCredentials> credsFn)
+  static void login(MappingHttpRequest request, String accessKeyId, CheckedFunction<ExcludeFromSignature, ObjectStorageWrappedCredentials> credsFn)
       throws S3Exception {
     // Build credentials that includes path
-    ObjectStorageWrappedCredentials creds = credentialsFor(credsFn, false);
+    ObjectStorageWrappedCredentials creds = credentialsFor(credsFn, ExcludeFromSignature.NONE);
 
     try {
       SecurityContext.getLoginContext(creds).login();
@@ -73,19 +89,26 @@ final class S3V2Authentication {
       if (request.getUri().startsWith(ComponentIds.lookup(ObjectStorage.class).getServicePath()) || request.getUri().startsWith
           (ObjectStorageProperties.LEGACY_WALRUS_SERVICE_PATH)) {
         try {
+          LOG.debug("Fallback to login without resource path");
           // Build credentials for a string to sign that excludes the resource path
-          creds = credentialsFor(credsFn, true);
+          creds = credentialsFor(credsFn, ExcludeFromSignature.PATH);
           SecurityContext.getLoginContext(creds).login();
-        } catch (S3Exception ex2) {
+        } catch (Exception ex2) {
           LOG.debug("CorrelationId: " + request.getCorrelationId() + " Authentication failed due to signature match issue:", ex2);
-          throw ex2;
+          throw new SignatureDoesNotMatchException();
+        }
+      } else if (request.getMethod() == HttpMethod.GET || request.getMethod() == HttpMethod.HEAD) {
+        // Build credentials for a string to sign that excludes the Content-Type
+        try {
+          LOG.debug("Fallback to login without content-type");
+          creds = credentialsFor(credsFn, ExcludeFromSignature.CONTENT_TYPE);
+          SecurityContext.getLoginContext(creds).login();
         } catch (Exception ex2) {
           LOG.debug("CorrelationId: " + request.getCorrelationId() + " Authentication failed due to signature match issue:", ex2);
           throw new SignatureDoesNotMatchException();
         }
       } else {
-        LOG.debug("CorrelationId: " + request.getCorrelationId() + " Authentication failed due to signature mismatch:", ex);
-        throw new SignatureDoesNotMatchException();
+          throw new SignatureDoesNotMatchException();
       }
     } catch (Exception e) {
       LOG.warn("CorrelationId: " + request.getCorrelationId() + " Unexpected failure trying to authenticate request", e);
@@ -93,25 +116,33 @@ final class S3V2Authentication {
     }
   }
 
-  private static String buildStringToSign(MappingHttpRequest request, String date, String canonicalizedAmzHeaders, boolean excludePath)
+  /*
+  * @param if exclude is ExcludeFromSignature.CONTENT_TYPE, removes the content type from the address string if found
+  */
+  private static String buildStringToSign(MappingHttpRequest request, String date, String canonicalizedAmzHeaders, ExcludeFromSignature exclude)
       throws S3Exception {
     String verb = request.getMethod().getName();
     String contentMd5 = request.getHeader(HttpHeaders.Names.CONTENT_MD5);
     contentMd5 = contentMd5 == null ? "" : contentMd5;
     String contentType = request.getHeader(HttpHeaders.Names.CONTENT_TYPE);
     contentType = contentType == null ? "" : contentType;
-    String address = buildCanonicalResource(request, excludePath);
-    return verb + "\n" + contentMd5 + "\n" + contentType + "\n" + date + "\n" + canonicalizedAmzHeaders + address;
+    String address = buildCanonicalResource(request, exclude);
+    StringBuilder sb = new StringBuilder(request.getMethod().getName());
+    sb.append("\n").append(contentMd5).append("\n");
+    if (exclude != ExcludeFromSignature.CONTENT_TYPE)
+      sb.append(contentType);
+    sb.append("\n").append(date).append("\n").append(canonicalizedAmzHeaders).append(address);
+    return sb.toString();
   }
 
   /**
    * AWS S3-spec address string, which includes the query parameters
    *
-   * @param excludePath if true, removes the service path from the address string if found and if the request is path-style
+   * @param if exclude is ExcludeFromSignature.PATH, removes the service path from the address string if found and if the request is path-style
    * @see <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/RESTAuthentication.html#ConstructingTheCanonicalizedResourceElement">AWS
    * Docs</a>
    */
-  static String buildCanonicalResource(MappingHttpRequest httpRequest, boolean excludePath) throws S3Exception {
+  static String buildCanonicalResource(MappingHttpRequest httpRequest, ExcludeFromSignature exclude) throws S3Exception {
     /*
       There are two modes: dns-style and path-style. dns-style has the bucket name in the HOST header path-style has
       the bucket name in the request path.
@@ -138,7 +169,7 @@ final class S3V2Authentication {
 
       if (!foundName) {
         // path-style request (or service request that won't have a bucket anyway)
-        if (excludePath) {
+        if (exclude == ExcludeFromSignature.PATH) {
           if (addr.startsWith(osgServicePath)) {
             addr = addr.substring(osgServicePath.length(), addr.length());
           } else if (addr.startsWith(ObjectStorageProperties.LEGACY_WALRUS_SERVICE_PATH)) {
