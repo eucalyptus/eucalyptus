@@ -28,13 +28,14 @@ public class ServiceAdvice extends AbstractRequestHandlerAdvice {
 
   @Override
   protected final Object doInvoke( final ExecutionCallback executionCallback, final Object o, final Message<?> message ) throws Exception {
-    beforeService( message.getPayload( ) );
+    final Object request = message.getPayload( );
+    beforeService( request );
     try {
       final Object result = executionCallback.execute( );
-      afterService( result );
+      afterService( request, result );
       return result;
     } catch ( Exception exception ) {
-      throw serviceError( exception );
+      throw serviceError( request, exception );
     }
   }
 
@@ -50,7 +51,7 @@ public class ServiceAdvice extends AbstractRequestHandlerAdvice {
    *
    * If the service throws an exception this callback is skipped.
    */
-  protected void afterService( @Nullable Object response ) throws Exception { };
+  protected void afterService( @Nonnull Object request, @Nullable Object response ) throws Exception { };
 
   /**
    * Callback on service invocation error.
@@ -58,5 +59,8 @@ public class ServiceAdvice extends AbstractRequestHandlerAdvice {
    * Implementations must throw or return an Exception
    */
   @Nonnull
-  protected Exception serviceError( @Nonnull Exception exception ) throws Exception { return exception; };
+  protected Exception serviceError(
+      @Nonnull Object request,
+      @Nonnull Exception exception
+  ) throws Exception { return exception; };
 }

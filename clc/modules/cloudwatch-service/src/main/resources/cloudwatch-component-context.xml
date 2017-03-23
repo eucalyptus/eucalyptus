@@ -28,7 +28,11 @@
     <int:header-enricher>
       <int:error-channel ref="cloudwatch-error"/>
     </int:header-enricher>
-    <int:service-activator ref="cloudWatchService"/>
+    <int:service-activator ref="cloudWatchService">
+      <int:request-handler-advice-chain>
+        <ref bean="cloudWatchServiceSensor"/>
+      </int:request-handler-advice-chain>
+    </int:service-activator>
   </int:chain>
 
   <int:service-activator input-channel="cloudwatch-error" ref="cloudWatchErrorHandler"/>
