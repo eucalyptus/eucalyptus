@@ -38,6 +38,7 @@ import org.hibernate.annotations.Type;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
+import com.eucalyptus.configurable.ConfigurableInit;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
@@ -70,7 +71,7 @@ public class S3ProviderConfiguration extends AbstractPersistent implements Cache
   @Transient
   private static final String DEFAULT_S3_HEAD_RESPONSE = "405";
 
-  @ConfigurableField(description = "External S3 endpoint.", displayName = "s3_endpoint", initial = "s3.amazonaws.com")
+  @ConfigurableField(description = "External S3 endpoint.", displayName = "s3_endpoint", initial = DEFAULT_S3_ENDPOINT)
   @Column(name = "endpoint")
   protected String S3Endpoint;
 
@@ -180,6 +181,7 @@ public class S3ProviderConfiguration extends AbstractPersistent implements Cache
     S3EndpointHeadResponse = s3EndpointHeadResponse;
   }
 
+  @ConfigurableInit
   public S3ProviderConfiguration initializeDefaults() {
     this.setS3Endpoint(DEFAULT_S3_ENDPOINT);
     this.setS3UseBackendDns(DEFAULT_BACKEND_DNS);

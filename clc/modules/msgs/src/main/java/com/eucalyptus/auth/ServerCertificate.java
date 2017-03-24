@@ -38,11 +38,13 @@ public class ServerCertificate {
   private String certChain = null;
   private String privateKey = null;
   private Date createdTime = null;
-  
-  public ServerCertificate(final String owningAccountNumber, final String certName, final Date createdTime){
+  private Date expiration = null;
+
+  public ServerCertificate(final String owningAccountNumber, final String certName, final Date createdTime, final Date expiration){
     this.owningAccountNumber= owningAccountNumber;
     this.certName = certName;
     this.createdTime = createdTime;
+    this.expiration = expiration;
   }
   
   public void setCertificateName(final String name){
@@ -92,7 +94,7 @@ public class ServerCertificate {
   public String getPrivateKey(){
     return this.privateKey;
   }
-  
+
   public String getArn(){
     String path = this.certPath;
     if(!path.endsWith("/"))
@@ -103,5 +105,9 @@ public class ServerCertificate {
   
   public Date getCreatedTime(){
     return this.createdTime;
+  }
+
+  public Date getExpiration(){
+    return this.expiration;
   }
 }

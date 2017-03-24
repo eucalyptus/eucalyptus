@@ -103,7 +103,7 @@ public class DnsResolvers extends ServiceJarDiscovery {
   @ConfigurableField( description = "Enable pluggable DNS resolvers.  "
                                     + "Note: This must be 'true' for any pluggable resolver to work.  "
                                     + "Also, each resolver may need to be separately enabled."
-                                    + "See 'euca-describe-properties dns'." )
+                                    + "See 'euca-describe-properties dns'.", initial = "true" )
   public static Boolean enabled = Boolean.TRUE;
   private static final ClassToInstanceMap<DnsResolver> resolvers = MutableClassToInstanceMap.create( );
   

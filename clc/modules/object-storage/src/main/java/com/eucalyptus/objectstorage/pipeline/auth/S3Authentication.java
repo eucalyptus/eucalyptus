@@ -209,17 +209,6 @@ public final class S3Authentication {
     }
   }
 
-  static ObjectStorageWrappedCredentials credentialsFor(CheckedFunction<Boolean, ObjectStorageWrappedCredentials> credsFn,
-                                                        boolean excludePath) throws S3Exception {
-    try {
-      return credsFn.apply(excludePath);
-    } catch (Throwable t) {
-      if (t instanceof S3Exception)
-        throw (S3Exception) t;
-      throw new InternalErrorException(t);
-    }
-  }
-
   private static String getDateFromHeaders(MappingHttpRequest request) throws AccessDeniedException {
     String result = request.getHeader(SecurityHeader.X_Amz_Date.header());
     if (result == null)

@@ -67,10 +67,12 @@ import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
+import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
+import com.eucalyptus.configurable.ConfigurableInit;
 
 @Entity
 @PersistenceContext(name = "eucalyptus_storage")
@@ -80,7 +82,8 @@ public class ISCSIMetaInfo extends LVMMetaInfo {
   @ConfigurableIdentifier
   @Column(name = "hostname")
   private String hostName;
-  @ConfigurableField(description = "Prefix for ISCSI device", displayName = "ISCSI Prefix", type = ConfigurableFieldType.PRIVATE)
+  @ConfigurableField(description = "Prefix for ISCSI device", displayName = "ISCSI Prefix",
+      type = ConfigurableFieldType.PRIVATE, initial = StorageProperties.DEFAULT_STORE_PREFIX )
   @Column(name = "store_prefix")
   private String storePrefix;
   @Column(name = "store_number")
@@ -95,6 +98,15 @@ public class ISCSIMetaInfo extends LVMMetaInfo {
 
   public ISCSIMetaInfo(String hostName) {
     this.hostName = hostName;
+  }
+
+  @ConfigurableInit
+  public ISCSIMetaInfo init( ) {
+    setStorePrefix(StorageProperties.STORE_PREFIX);
+    setStoreNumber(0);
+    setStoreUser("eucalyptus");
+    setTid(1);
+    return this;
   }
 
   public String getStorePrefix() {

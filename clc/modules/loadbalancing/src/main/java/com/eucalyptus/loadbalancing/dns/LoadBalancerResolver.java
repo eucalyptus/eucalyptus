@@ -92,7 +92,7 @@ public class LoadBalancerResolver extends DnsResolvers.DnsResolver {
         }
       });
   
-  @ConfigurableField( description = "Enable the load balancing DNS resolver.  Note: dns.enable must also be 'true'" )
+  @ConfigurableField( description = "Enable the load balancing DNS resolver.  Note: dns.enable must also be 'true'", initial = "true" )
   public static Boolean dns_resolver_enabled = Boolean.TRUE;
 
   @Override

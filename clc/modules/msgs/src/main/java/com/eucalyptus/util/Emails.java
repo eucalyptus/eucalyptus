@@ -83,7 +83,7 @@ public class Emails {
   private static Logger LOG             = Logger.getLogger( Emails.class );
   @ConfigurableField( description = "SMTP host to use when sending email.  If unset, the following values are tried: 1) the value of the 'mail.smtp.host' system property, 2) localhost, 3) mailhost." )
   public static String  EMAIL_SMTP_HOST = null;
-  @ConfigurableField( description = "SMTP port to use when sending email.  Defaults to 25" )
+  @ConfigurableField( description = "SMTP port to use when sending email.  Defaults to 25", initial = "25" )
   public static Integer EMAIL_SMTP_PORT = 25;
   
   enum SessionProperties {

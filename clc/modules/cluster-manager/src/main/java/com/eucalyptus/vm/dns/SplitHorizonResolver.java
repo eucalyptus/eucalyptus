@@ -141,7 +141,7 @@ public abstract class SplitHorizonResolver extends DnsResolver {
       Suppliers.memoizeWithExpiration( ClusterSubnets.INSTANCE, 1, TimeUnit.MINUTES );
 
   @ConfigurableField( description = "Enable the split-horizon DNS resolution for internal instance public DNS name queries.  "
-                                    + "Note: dns.enable must also be 'true'" )
+                                    + "Note: dns.enable must also be 'true'", initial = "true" )
   public static Boolean       enabled = Boolean.TRUE;
 
   private static final LoadingCache<VmDnsCacheKey, Optional<VmDnsInfo>> instanceCache = CacheBuilder.newBuilder( )

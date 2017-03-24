@@ -497,7 +497,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 
   @Override
   protected String createUniqueName() {
-    return getDisplayName( ) == null ? null : truncate( getDisplayName( ), 10 );  //TODO:STEVE: this will impact instance lookup post upgrade
+    return getDisplayName( ) == null ? null : truncate( getDisplayName( ), 10 );
   }
 
   /**

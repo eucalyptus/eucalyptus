@@ -75,6 +75,7 @@ import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
+import com.eucalyptus.configurable.ConfigurableInit;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Transactions;
 
@@ -160,7 +161,7 @@ public class DASInfo extends AbstractPersistent {
     } catch (Exception e) {
       LOG.warn("DAS information for " + StorageProperties.NAME + " not found. Loading defaults.");
       try {
-        conf = Transactions.saveDirect(new DASInfo(StorageProperties.NAME, StorageProperties.DAS_DEVICE));
+        conf = Transactions.saveDirect(new DASInfo( ).init( ));
       } catch (Exception e1) {
         try {
           conf = Transactions.find(new DASInfo());
@@ -171,9 +172,15 @@ public class DASInfo extends AbstractPersistent {
     }
 
     if (conf == null) {
-      conf = new DASInfo(StorageProperties.NAME, StorageProperties.DAS_DEVICE);
+      conf = new DASInfo( ).init( );
     }
 
     return conf;
+  }
+
+  @ConfigurableInit
+  public DASInfo init( ) {
+    setDASDevice( StorageProperties.DAS_DEVICE );
+    return this;
   }
 }

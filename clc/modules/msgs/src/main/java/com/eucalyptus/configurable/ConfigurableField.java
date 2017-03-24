@@ -75,6 +75,8 @@ public @interface ConfigurableField {
   
   String initial( ) default "";
 
+  int initialInt( ) default Integer.MIN_VALUE;
+
   /**
    * @deprecated Mark field as "final"
    */

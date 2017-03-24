@@ -41,7 +41,9 @@ public class InstanceLogActivitiesImpl implements InstanceLogActivities {
   private static Logger LOG     =
           Logger.getLogger(  InstanceLogActivitiesImpl.class );
 
-  // key: account_id, value: map of (key: aggregation_key (e.g., instance type, platform, ... ), value: SQS queue)
+  private final static String QUEUE_NAME_PREFIX = "instancehourwork";
+
+  // return key: account_id, value: SQS queue)
   @Override
   public Map<String, String> distributeEvents(String globalQueue) throws BillingActivityException {
     final SimpleQueueClientManager sqClient = SimpleQueueClientManager.getInstance();
@@ -66,7 +68,9 @@ public class InstanceLogActivitiesImpl implements InstanceLogActivities {
     final Map<String, String> queueMap = Maps.newHashMap();
     for (final String accountId : accountEvents.keySet() ) {
       try {
-        final String queueName = String.format("%s-instances-%s", accountId,
+        final String queueName = String.format("%s-%s-%s",
+                QUEUE_NAME_PREFIX,
+                accountId,
                 UUID.randomUUID().toString().substring(0, 13));
         // create a new temporary queue
         sqClient.createQueue(
@@ -89,10 +93,16 @@ public class InstanceLogActivitiesImpl implements InstanceLogActivities {
                 );
         queueMap.put(accountId, queueName);
       } catch (final Exception ex) {
-        LOG.error("Failed to copy SQS message into a new queue", ex);
+        try { // clean up
+          for (final String queueName : queueMap.values()) {
+            sqClient.deleteQueue(queueName);
+          }
+        } catch (final Exception ex2) {
+          ;
+        }
+        throw new BillingActivityException("Failed to copy SQS message into a new queue", ex);
       }
     }
-
     return queueMap;
   }
 
@@ -128,8 +138,20 @@ public class InstanceLogActivitiesImpl implements InstanceLogActivities {
       try {
         SimpleQueueClientManager.getInstance().deleteQueue(queue);
       } catch (final Exception ex) {
-        LOG.error("Failed to delete the temporary queue (" + queue +")", ex);
+        LOG.error("Failed to delete temporary queue (" + queue +")", ex);
       }
+    }
+  }
+
+  @Override
+  public void cleanupQueues() {
+    final SimpleQueueClientManager sqClient = SimpleQueueClientManager.getInstance();
+    try {
+      for (final String queueUrl : sqClient.listQueues(QUEUE_NAME_PREFIX)) {
+        sqClient.deleteQueue(queueUrl);
+      }
+    } catch(final Exception ex) {
+      ;
     }
   }
 }

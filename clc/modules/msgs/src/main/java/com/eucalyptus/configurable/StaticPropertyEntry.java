@@ -186,7 +186,7 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
         ConfigurableClass classAnnote = classAts.get( ConfigurableClass.class );
         ConfigurableField annote = fieldAts.get( ConfigurableField.class );
         String description = annote.description( );
-        String defaultValue = annote.initial( );
+        String defaultValue = configurableFieldInitial( annote );
         String fqPrefix = classAnnote.root( );
         String fq = fqPrefix + "." + field.getName( ).toLowerCase( );
         String alias = classAnnote.alias( );

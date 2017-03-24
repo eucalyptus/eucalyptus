@@ -141,15 +141,19 @@ public class SystemConfiguration extends AbstractPersistent {
   @Column( name = "system_registration_id" )
   private String  registrationId;
   @Deprecated  //GRZE: this class will FINALLY be superceded by new DNS support in 3.4: DO NOT USE IT!
-  @ConfigurableField( description = "Domain name to use for DNS.", changeListener = DomainNamePropertyChangeListener.class )
+  @ConfigurableField( description = "Domain name to use for DNS.",
+      changeListener = DomainNamePropertyChangeListener.class,
+      initial = DNSProperties.LOCALHOST_DOMAIN )
   @Column( name = "dns_domain" )
   private String  dnsDomain;
   @Deprecated  //GRZE: this class will FINALLY be superceded by new DNS support in 3.4: DO NOT USE IT!
-  @ConfigurableField( description = "Nameserver hostname." )
+  @ConfigurableField( description = "Nameserver hostname.", initial = DNSProperties.LOCALHOST_NS )
   @Column( name = "nameserver" )
   private String  nameserver;
   @Deprecated  //GRZE: this class will FINALLY be superceded by new DNS support in 3.4: DO NOT USE IT!
-  @ConfigurableField( description = "Nameserver ip address.", changeListener = SystemConfigurationNameServerChangeListener.class )
+  @ConfigurableField( description = "Nameserver ip address.",
+      changeListener = SystemConfigurationNameServerChangeListener.class,
+      initial = DNSProperties.LOCALHOST_IP )
   @Column( name = "ns_address" )
   private String  nameserverAddress;
 

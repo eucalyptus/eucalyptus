@@ -158,7 +158,7 @@ import groovy.lang.Closure;
                     description = "Parameters controlling transaction behaviour." )
 public class Entities {
   @ConfigurableField( description = "Maximum number of times a transaction may be retried before giving up.",
-                      initial = "5" )
+                      initial = "10" )
   public static Integer                                          CONCURRENT_UPDATE_RETRIES = 10;
   private static final boolean                                   CLEANUP_TX_SESSION        = Boolean.valueOf( System.getProperty( "com.eucalyptus.entities.cleanupTxSession", "true" ) );
   private static Cache<String, String>                           txLog                     = CacheBuilder.newBuilder().weakKeys().softValues().build(); // No softKeys available for CacheBuilder
@@ -2201,6 +2201,18 @@ public class Entities {
      */
     public B where( @Nonnull final EntityRestrictionBuilder<E> restriction ) {
       return where( restriction.build( ) );
+    }
+
+    /**
+     * Add a where condition to the criteria.
+     *
+     * @param restrictionFunction The function to build the restriction to add.
+     * @return This criteria query for method chaining.
+     */
+    public B whereRestriction(
+        @Nonnull final java.util.function.Function<EntityRestrictionBuilder<E>, EntityRestrictionBuilder<E>> restrictionFunction
+    ) {
+      return where( restrictionFunction.apply( Entities.restriction( context.entityClass ) ).build( ) );
     }
 
     /**

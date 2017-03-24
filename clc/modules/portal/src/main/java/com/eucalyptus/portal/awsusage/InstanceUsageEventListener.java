@@ -52,6 +52,7 @@ public class InstanceUsageEventListener implements
         msg = QueuedEvents.EventToMessage.apply(instanceUsageEvent.get());
         SimpleQueueClientManager.getInstance().sendMessage(BillingProperties.SENSOR_QUEUE_NAME,
                 msg);
+        // instance usage event is used for instance hour reports
         SimpleQueueClientManager.getInstance().sendMessage(BillingProperties.INSTANCE_HOUR_SENSOR_QUEUE_NAME, msg);
       }
       // pick up VolumeIOUsage

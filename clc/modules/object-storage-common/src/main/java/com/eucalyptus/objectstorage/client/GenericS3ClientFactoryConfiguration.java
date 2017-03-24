@@ -71,6 +71,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableInit;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Transactions;
 
@@ -105,16 +106,17 @@ public class GenericS3ClientFactoryConfiguration extends AbstractPersistent {
   private Integer max_error_retries;
   private static final Integer DEFAULT_MAX_ERROR_RETRIES = new Integer(3);
 
-  @ConfigurableField(description = "Internal S3 client buffer size", displayName = "buffer_size", initial = "524228")
+  @ConfigurableField(description = "Internal S3 client buffer size", displayName = "buffer_size", initialInt = DEFAULT_BUFFER_SIZE)
   @Column(name = "buffer_size")
   private Integer buffer_size;
-  private static final Integer DEFAULT_BUFFER_SIZE = new Integer(512 * 1024);
+  private static final int DEFAULT_BUFFER_SIZE = 512 * 1024;
 
   //TODO: make configurable?
   private String signer_type = "S3SignerType";
 
+  @ConfigurableInit
   @PrePersist
-  private void initialize() {
+  protected void initialize() {
     if (connection_timeout_ms == null) {
       connection_timeout_ms = DEFAULT_TIMEOUT_MS;
     }

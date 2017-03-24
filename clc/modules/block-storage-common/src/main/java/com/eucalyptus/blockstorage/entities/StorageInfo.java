@@ -87,6 +87,7 @@ import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
+import com.eucalyptus.configurable.ConfigurableInit;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
@@ -105,7 +106,8 @@ import com.google.common.base.Predicate;
 @Table(name = "storage_info")
 @ConfigurableClass(root = "storage", alias = "basic", description = "Basic storage controller configuration.", singleton = false, deferred = true)
 public class StorageInfo extends AbstractPersistent {
-  private static final Boolean DEFAULT_SHOULD_TRANSFER_SNAPSHOTS = Boolean.TRUE;
+  private static final String DEFAULT_SHOULD_TRANSFER_SNAPSHOTS_TXT = "true";
+  private static final Boolean DEFAULT_SHOULD_TRANSFER_SNAPSHOTS = Boolean.valueOf( DEFAULT_SHOULD_TRANSFER_SNAPSHOTS_TXT );
   private static final Integer DEFAULT_SNAPSHOT_PART_SIZE_IN_MB = 100;
   private static final Integer DEFAULT_MAX_SNAPSHOT_PARTS_QUEUE_SIZE = 5;
   private static final Integer DEFAULT_MAX_SNAPSHOT_CONCURRENT_TRANSFERS = 3;
@@ -126,16 +128,19 @@ public class StorageInfo extends AbstractPersistent {
   @Column(name = "storage_name", unique = true)
   private String name;
 
-  @ConfigurableField(description = "Total disk space reserved for volumes", displayName = "Disk space reserved for volumes")
+  @ConfigurableField(description = "Total disk space reserved for volumes",
+      displayName = "Disk space reserved for volumes",
+      initialInt = StorageProperties.MAX_TOTAL_VOLUME_SIZE )
   @Column(name = "system_storage_volume_size_gb")
   private Integer maxTotalVolumeSizeInGb;
 
-  @ConfigurableField(description = "Max volume size", displayName = "Max volume size")
+  @ConfigurableField(description = "Max volume size", displayName = "Max volume size",
+      initialInt = StorageProperties.MAX_VOLUME_SIZE )
   @Column(name = "system_storage_max_volume_size_gb")
   private Integer maxVolumeSizeInGB;
 
   @ConfigurableField(description = "Should transfer snapshots", displayName = "Transfer snapshots to ObjectStorage",
-      type = ConfigurableFieldType.BOOLEAN)
+      type = ConfigurableFieldType.BOOLEAN, initial = DEFAULT_SHOULD_TRANSFER_SNAPSHOTS_TXT )
   @Column(name = "system_storage_transfer_snapshots")
   private Boolean shouldTransferSnapshots;
 
@@ -402,23 +407,14 @@ public class StorageInfo extends AbstractPersistent {
     }
   }
 
+  @ConfigurableInit
+  public StorageInfo init( ) {
+    setDefaults( );
+    return this;
+  }
+
   private static StorageInfo getDefaultInstance() {
-    StorageInfo info = new StorageInfo(StorageProperties.NAME);
-    info.setMaxTotalVolumeSizeInGb(StorageProperties.MAX_TOTAL_VOLUME_SIZE);
-    info.setMaxVolumeSizeInGB(StorageProperties.MAX_VOLUME_SIZE);
-    info.setShouldTransferSnapshots(DEFAULT_SHOULD_TRANSFER_SNAPSHOTS);
-    info.setVolExpiration(DEFAULT_DELETED_VOL_EXPIRATION_TIME);
-    info.setSnapExpiration(DEFAULT_DELETED_SNAP_EXPIRATION_TIME);
-    info.setSnapshotPartSizeInMB(DEFAULT_SNAPSHOT_PART_SIZE_IN_MB);
-    info.setMaxSnapshotPartsQueueSize(DEFAULT_MAX_SNAPSHOT_PARTS_QUEUE_SIZE);
-    info.setMaxConcurrentSnapshotTransfers(DEFAULT_MAX_SNAPSHOT_CONCURRENT_TRANSFERS);
-    info.setSnapshotTransferTimeoutInHours(DEFAULT_SNAPSHOT_TRANSFER_TIMEOUT);
-    info.setReadBufferSizeInMB(DEFAULT_READ_BUFFER_SIZE_IN_MB);
-    info.setWriteBufferSizeInMB(DEFAULT_WRITE_BUFFER_SIZE_IN_MB);
-    info.setMaxConcurrentVolumes(Integer.valueOf(DEFAULT_MAX_CONCURRENT_VOLUMES));
-    info.setMaxConcurrentSnapshots(Integer.valueOf(DEFAULT_MAX_CONCURRENT_SNAPSHOTS));
-    info.setMaxSnapshotDeltas(Integer.valueOf(DEFAULT_MAX_SNAP_DELTAS));
-    return info;
+    return new StorageInfo( ).init( );
   }
 
   public static StorageInfo getStorageInfo() {

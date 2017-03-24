@@ -68,13 +68,15 @@ import org.apache.log4j.Logger;
 public class DNSProperties {
 	private static Logger LOG = Logger.getLogger( DNSProperties.class );
 	public static final String LOCALHOST_DOMAIN = "localhost";
+	public static final String LOCALHOST_NS = "nshost." + LOCALHOST_DOMAIN;
+	public static final String LOCALHOST_IP = "127.0.0.1";
 	public static String DB_NAME             = "eucalyptus_dns";
 	public static String ADDRESS = "0.0.0.0";
 	public static int PORT = 53;
 	public static int MAX_MESSAGE_SIZE = 1024;
 	public static String DOMAIN = LOCALHOST_DOMAIN;
 	public static String NS_HOST = "nshost." + DOMAIN;
-	public static String NS_IP = "127.0.0.1";
+	public static String NS_IP = LOCALHOST_IP;
 	
 	
 	public static String getDomain() {

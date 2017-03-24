@@ -56,20 +56,18 @@ public class DatabaseInfo extends AbstractPersistent {
   
   @ConfigurableField( displayName = "append_only_host", 
       description = "host address of the backend database for append-only data",
-      type = ConfigurableFieldType.KEYVALUE)
+      initial = "localhost" )
   @Column(name = "append_only_host")
   private String appendOnlyHost = null;
 
   @ConfigurableField( displayName = "append_only_port", 
       description = "port number of the backend database for append-only data",
-      type = ConfigurableFieldType.KEYVALUE,
       changeListener = AppendOnlyPortChangeListener.class)
   @Column(name = "append_only_port")
   private String appendOnlyPort = null;
   
   @ConfigurableField( displayName = "append_only_user", 
-      description = "user name of the backend database for append-only data",
-      type = ConfigurableFieldType.KEYVALUE)
+      description = "user name of the backend database for append-only data")
   @Column(name = "append_only_user")
   private String appendOnlyUser = null;
 

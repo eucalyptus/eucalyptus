@@ -34,8 +34,9 @@ public interface AwsUsageActivities {
   Map<String, String> createAccountQueues(final String globalQueue) throws BillingActivityException;
   List<AwsUsageRecord> getAwsReportHourlyUsageRecord(final String accountId, final String queueName ) throws BillingActivityException;
   List<AwsUsageRecord> getAwsReportDailyUsageRecord(final String accountId, final String queueName ) throws BillingActivityException;
-  void writeAwsReportUsage(final String accountId, final List<AwsUsageRecord> records) throws BillingActivityException;
+  void writeAwsReportUsage(final List<AwsUsageRecord> records) throws BillingActivityException;
   void deleteAccountQueues(final List<String> queues) throws BillingActivityException;
+  void cleanupQueues() throws BillingActivityException;
 
   void fireVolumeUsage() throws BillingActivityException;
   void fireSnapshotUsage() throws BillingActivityException;

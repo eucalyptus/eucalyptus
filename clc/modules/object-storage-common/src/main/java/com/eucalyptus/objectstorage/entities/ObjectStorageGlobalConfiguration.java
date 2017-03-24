@@ -62,6 +62,8 @@
 
 package com.eucalyptus.objectstorage.entities;
 
+import com.eucalyptus.bootstrap.Hosts;
+import com.eucalyptus.configurable.ConfigurableInit;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import groovy.sql.GroovyRowResult;
 import groovy.sql.Sql;
@@ -133,45 +135,52 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
   }
 
   @Column
-  @ConfigurableField(description = "Maximum allowed size of metadata request bodies", displayName = "Maximum allowed size of metadata requests")
+  @ConfigurableField(description = "Maximum allowed size of metadata request bodies",
+      displayName = "Maximum allowed size of metadata requests",
+      initialInt = DEFAULT_MAX_METADATA_REQUEST_SIZE )
   protected Integer max_metadata_request_size;
 
   @Column
-  @ConfigurableField(description = "Maximum number of buckets per account", displayName = "Maximum buckets per account")
+  @ConfigurableField(description = "Maximum number of buckets per account",
+      displayName = "Maximum buckets per account",
+      initialInt = DEFAULT_MAX_BUCKETS_PER_ACCOUNT )
   protected Integer max_buckets_per_account;
 
   @Column
   @ConfigurableField(
       description = "Total ObjectStorage storage capacity for Objects soley for reporting usage percentage. Not a size restriction. No enforcement of this value",
-      displayName = "ObjectStorage object capacity (GB)")
+      displayName = "ObjectStorage object capacity (GB)", initialInt = Integer.MAX_VALUE )
   protected Integer max_total_reporting_capacity_gb;
 
   @Column
   @ConfigurableField(description = "Number of hours to wait for object PUT operations to be allowed to complete before cleanup.",
-      displayName = "Object PUT failure cleanup (Hours)")
+      displayName = "Object PUT failure cleanup (Hours)", initialInt = DEFAULT_PUT_TIMEOUT_HOURS )
   protected Integer failed_put_timeout_hrs;
 
   @Column
   @ConfigurableField(description = "Interval, in seconds, at which cleanup tasks are initiated for removing old/stale objects.",
-      displayName = "Cleanup interval (seconds)")
+      displayName = "Cleanup interval (seconds)",
+      initialInt = DEFAULT_CLEANUP_INTERVAL_SEC )
   protected Integer cleanup_task_interval_seconds;
 
   @Column
   @ConfigurableField(
       description = "Interval, in seconds, during which buckets in creating-state are valid. After this interval, the operation is assumed failed.",
-      displayName = "Operation wait interval (seconds)")
+      displayName = "Operation wait interval (seconds)",
+      initialInt = DEFAULT_CLEANUP_INTERVAL_SEC )
   protected Integer bucket_creation_wait_interval_seconds;
 
   @Column
   @ConfigurableField(description = "The S3 bucket naming restrictions to enforce. Values are 'dns-compliant' or 'extended'. "
       + "Default is 'extended'. dns_compliant is non-US region S3 names, extended is for US-Standard Region naming. "
       + "See http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html", displayName = "Bucket Naming restrictions",
-      changeListener = BucketNamingRestrictionsValidator.class)
+      changeListener = BucketNamingRestrictionsValidator.class,
+      initial = DEFAULT_BUCKET_NAMING_SCHEME )
   protected String bucket_naming_restrictions;
 
   @Column
   @ConfigurableField(description = "Should provider client attempt a GET / PUT when backend does not support Copy operation",
-      displayName = "attempt GET/PUT on Copy fail", type = ConfigurableFieldType.BOOLEAN)
+      displayName = "attempt GET/PUT on Copy fail", type = ConfigurableFieldType.BOOLEAN, initial = "false" )
   protected Boolean doGetPutOnCopyFail;
 
   @Column
@@ -183,6 +192,7 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
   @ConfigurableField(description = "List of host names that may not be used as bucket cnames")
   protected String bucket_reserved_cnames;
 
+  @ConfigurableInit
   protected ObjectStorageGlobalConfiguration initializeDefaults() {
     this.setBucket_creation_wait_interval_seconds(DEFAULT_CLEANUP_INTERVAL_SEC);
     this.setBucket_naming_restrictions(DEFAULT_BUCKET_NAMING_SCHEME);
@@ -522,24 +532,24 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
       try (TransactionResource tr = Entities.transactionFor(ObjectStorageConfiguration.class)) {
         boolean match = Iterables.any(Components.lookup(ObjectStorage.class).services(), new Predicate<ServiceConfiguration>() {
           @Override
-          public boolean apply(ServiceConfiguration config) {
-            if (config.isVmLocal()) {
-              // Service is local, so add entries to the valid list (in case of HA configs)
-              // and then check the local memory state
+          public boolean apply(final ServiceConfiguration config) {
+            if ( config.isVmLocal( ) || Hosts.isCoordinator( ) ) {
+              // Add locally discovered entries to the valid list
               validEntries.addAll(ObjectStorageProviders.list());
-              return ObjectStorageProviders.contains(proposedValue);
-            } else {
+            }
+            if ( !config.isVmLocal( ) ) {
+              // Remote OSG, so check the db for the list of valid entries.
               try {
-                // Remote OSG, so check the db for the list of valid entries.
-                ObjectStorageConfiguration objConfig = Entities.uniqueResult((ObjectStorageConfiguration) config);
-                for (String entry : Splitter.on(",").split(objConfig.getAvailableClients())) {
-                  validEntries.add(entry);
+                final ObjectStorageConfiguration objConfig = Entities.uniqueResult((ObjectStorageConfiguration) config);
+                if ( objConfig.getAvailableClients() != null ) {
+                  for ( final String entry : Splitter.on(",").split(objConfig.getAvailableClients()) ) {
+                    validEntries.add(entry);
+                  }
                 }
-                return validEntries.contains(proposedValue);
-              } catch (Exception e) {
-                return false;
+              } catch (Exception ignore) {
               }
             }
+            return validEntries.contains(proposedValue);
           }
         });
         tr.commit();

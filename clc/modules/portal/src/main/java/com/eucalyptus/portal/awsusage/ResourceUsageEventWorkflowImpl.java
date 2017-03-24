@@ -27,9 +27,11 @@ import com.eucalyptus.portal.workflow.AwsUsageActivitiesClient;
 import com.eucalyptus.portal.workflow.AwsUsageActivitiesClientImpl;
 import com.eucalyptus.portal.workflow.BillingWorkflowState;
 import com.eucalyptus.portal.workflow.ResourceUsageEventWorkflow;
+import com.eucalyptus.simpleworkflow.common.client.Repeating;
 import org.apache.log4j.Logger;
 import java.util.Random;
 
+@Repeating(value = ResourceUsageWorkflowStarter.class, sleepSeconds = 300)
 @ComponentPart(Portal.class)
 public class ResourceUsageEventWorkflowImpl implements ResourceUsageEventWorkflow {
   private static Logger LOG     =

@@ -121,11 +121,11 @@ public class Hosts {
   private static final Logger                    LOG                        = Logger.getLogger( Hosts.class );
 
   @ConfigurableField( description = "Timeout for state transfers (in msec).",
-                      readonly = true )
-  public static final Long                       STATE_TRANSFER_TIMEOUT     = 10000L;
+                      initialInt = 10000 )
+  public static Long                             STATE_TRANSFER_TIMEOUT     = 10000L;
   @ConfigurableField( description = "Timeout for state initialization (in msec).",
-                      readonly = true )
-  public static final Long                       STATE_INITIALIZE_TIMEOUT   = 120000L;
+                      initialInt = 120000 )
+  public static Long                             STATE_INITIALIZE_TIMEOUT   = 120000L;
   public static final long                       SERVICE_INITIALIZE_TIMEOUT = 10000L;
   private static ReplicatedHashMap<String, Host> hostMap;
 

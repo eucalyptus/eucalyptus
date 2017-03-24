@@ -93,13 +93,15 @@ public class StorageProperties {
   public static final int MAX_TOTAL_VOLUME_SIZE = 500;
   public static final int MAX_VOLUME_SIZE = 100;
   public static int TRANSFER_CHUNK_SIZE = 8192;
-  public static final boolean zeroFillVolumes = false;
+  public static final String zeroFillVolumesTxt = "false";
+  public static final boolean zeroFillVolumes = Boolean.valueOf( zeroFillVolumesTxt );
   public static final long timeoutInMillis = 10000;
 
   public static boolean enableSnapshots = false;
   public static boolean enableStorage = false;
   public static boolean shouldEnforceUsageLimits = true;
-  public static String STORE_PREFIX = "iqn.2009-06.com.eucalyptus.";
+  public static final String DEFAULT_STORE_PREFIX = "iqn.2009-06.com.eucalyptus.";
+  public static String STORE_PREFIX = DEFAULT_STORE_PREFIX;
   public static String WALRUS_URL = "http://localhost:8773/services/objectstorage";
   public static String NAME = "unregistered";
   public static String STORAGE_HOST = "127.0.0.1";

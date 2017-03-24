@@ -15,7 +15,6 @@
  ************************************************************************/
 package com.eucalyptus.portal.awsusage;
 
-
 import com.amazonaws.services.simpleworkflow.flow.annotations.Asynchronous;
 import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.amazonaws.services.simpleworkflow.flow.core.Promises;
@@ -26,13 +25,16 @@ import com.eucalyptus.portal.common.Portal;
 import com.eucalyptus.portal.workflow.AwsUsageActivitiesClient;
 import com.eucalyptus.portal.workflow.AwsUsageActivitiesClientImpl;
 import com.eucalyptus.portal.workflow.AwsUsageDailyAggregateWorkflow;
+import com.eucalyptus.portal.workflow.AwsUsageRecord;
 import com.eucalyptus.portal.workflow.BillingWorkflowState;
+import com.eucalyptus.simpleworkflow.common.client.Daily;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 
 import java.util.List;
 import java.util.Map;
 
+@Daily(value = AwsUsageDailyWorkflowStarter.class, hour = 0, minute = 0)
 @ComponentPart(Portal.class)
 public class AwsUsageDailyAggregateWorkflowImpl implements AwsUsageDailyAggregateWorkflow {
   private static Logger LOG     =
@@ -53,6 +55,7 @@ public class AwsUsageDailyAggregateWorkflowImpl implements AwsUsageDailyAggregat
 
       @Override
       protected void doCatch(Throwable e) throws Throwable {
+        waitCleanup(client.cleanupQueues());
         state = BillingWorkflowState.WORKFLOW_FAILED;
         LOG.error("Workflow for aggregating AWS usage daily records has failed: ", e);
       }
@@ -79,25 +82,41 @@ public class AwsUsageDailyAggregateWorkflowImpl implements AwsUsageDailyAggregat
     */
     final Promise<Map<String, String>> queueForAccounts =
             client.createAccountQueues(BillingProperties.SENSOR_QUEUE_NAME);
-    final Promise<List<Void>> processed = processAccountQueues(queueForAccounts);
-    wait(client.deleteAccountQueues(getQueues(queueForAccounts), processed));
+    final Promise<List<Void>> processed =
+            writeSerialized(
+                    processAccountQueues(queueForAccounts)
+            );
+    waitFor(
+            client.deleteAccountQueues(
+                    getQueues(queueForAccounts),
+                    processed)
+    );
   }
 
   @Asynchronous
-  Promise<List<Void>> processAccountQueues(final Promise<Map<String, String>> queueForAccounts) {
-    final List<Promise<Void>> written = Lists.newArrayList();
+  Promise<List<List<AwsUsageRecord>>> processAccountQueues(final Promise<Map<String, String>> queueForAccounts) {
+    final List<Promise<List<AwsUsageRecord>>> accountRecords = Lists.newArrayList();
     for (final String accountId : queueForAccounts.get().keySet()) {
       final String queueName = queueForAccounts.get().get(accountId);
-      written.add(
-              client.writeAwsReportUsage(
+      accountRecords.add(
+              client.getAwsReportDailyUsageRecord(
                       Promise.asPromise(accountId),
-                      client.getAwsReportDailyUsageRecord(
-                              Promise.asPromise(accountId),
-                              Promise.asPromise(queueName))
+                      Promise.asPromise(queueName)
               )
       );
     }
-    return Promises.listOfPromisesToPromise(written);
+    return Promises.listOfPromisesToPromise(accountRecords);
+  }
+
+  @Asynchronous
+  Promise<List<Void>> writeSerialized( final Promise<List<List<AwsUsageRecord>>> accountRecords ) {
+    final List<Promise<Void>> result = Lists.newArrayList();
+    Promise<Void> run = Promise.Void();
+    for (final List<AwsUsageRecord> accountRecord : accountRecords.get() ) {
+      run = client.writeAwsReportUsage( accountRecord, run);
+      result.add(run);
+    }
+    return Promises.listOfPromisesToPromise(result);
   }
 
   @Asynchronous
@@ -106,9 +125,12 @@ public class AwsUsageDailyAggregateWorkflowImpl implements AwsUsageDailyAggregat
   }
 
   @Asynchronous
-  void wait(final Promise<Void> task) {
+  void waitFor(final Promise<Void> task) {
     LOG.debug("Finished writing AWS usage daily records");
   }
+
+  @Asynchronous
+  void waitCleanup(final Promise<Void> task) { LOG.error("Failed writing AWS usage daily records"); }
 
   @Override
   public BillingWorkflowState getState() {

@@ -39,10 +39,14 @@ public class ChannelBufferStreamingInputStream extends ChannelBufferInputStream 
   //enough heap space is not provided to the JVM.
   //A smaller queue will limit the number of concurrent requests that can be handled
   //but will be more suitable when memory is constrained.
-  @ConfigurableField(description = "Channel buffer queue size for uploads", displayName = "objectstorage.uploadqueuesize")
+  @ConfigurableField(description = "Channel buffer queue size for uploads",
+      displayName = "objectstorage.uploadqueuesize",
+      initialInt = 128 )
   public static int QUEUE_SIZE = 128;
 
-  @ConfigurableField(description = "Channel buffer queue timeout (in seconds)", displayName = "objectstorage.uploadqueuetimeout")
+  @ConfigurableField(description = "Channel buffer queue timeout (in seconds)",
+      displayName = "objectstorage.uploadqueuetimeout",
+      initialInt = 1 )
   public static int QUEUE_TIMEOUT = 1;
 
   private ChannelBuffer b;

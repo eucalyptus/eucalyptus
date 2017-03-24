@@ -44,7 +44,7 @@ public class BillingProperties {
   private static final String DEFAULT_SWF_WORKFLOW_WORKER_CONFIG =
           "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 4, \"MaximumPollRateIntervalMilliseconds\": 50, \"MaximumPollRatePerSecond\": 20 }";
 
-  @ConfigurableField( description = "Enable billing's data collection and aggregation" )
+  @ConfigurableField( description = "Enable billing's data collection and aggregation", initial = "true" )
   public static Boolean ENABLED = Boolean.TRUE;
 
   @ConfigurableField(

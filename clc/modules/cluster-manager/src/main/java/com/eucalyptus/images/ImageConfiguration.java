@@ -97,12 +97,14 @@ import com.google.common.base.Predicate;
 public class ImageConfiguration extends AbstractPersistent {
   @Transient
   private static Logger LOG = Logger.getLogger( ImageConfiguration.class );
-  
-  private static final Integer DEFAULT_MAX_IMAGE_SIZE_GB = 30;
 
-  private static final Integer DEFAULT_MAX_MANIFEST_SIZE_IN_BYTES = 1024 * 1024 * 5; // 5MiB
-  
-  @ConfigurableField( displayName = "default_visibility", description = "The default value used to determine whether or not images are marked 'public' when first registered." )
+  private static final int DEFAULT_MAX_IMAGE_SIZE_GB = 30;
+
+  private static final int DEFAULT_MAX_MANIFEST_SIZE_IN_BYTES = 1024 * 1024 * 5; // 5MiB
+
+  @ConfigurableField( displayName = "default_visibility",
+      description = "The default value used to determine whether or not images are marked 'public' when first registered.",
+      initial = "false" )
   @Column( name = "config_image_is_public", nullable = false, columnDefinition = "boolean default false" )
   private Boolean       defaultVisibility;
 
@@ -110,11 +112,15 @@ public class ImageConfiguration extends AbstractPersistent {
   @Column( name = "config_image_cleanup_period" )
   private String        cleanupPeriod;
   
-  @ConfigurableField( displayName = "max_image_size_gb", description = "The maximum registerable image size in GB")
+  @ConfigurableField( displayName = "max_image_size_gb",
+      description = "The maximum registerable image size in GB",
+      initialInt = DEFAULT_MAX_IMAGE_SIZE_GB )
   @Column( name = "max_image_size_gb")
   private Integer       maxImageSizeGb;
 
-  @ConfigurableField( displayName = "max_manifest_size", description = "The maximum allowed image manifest size in bytes")
+  @ConfigurableField( displayName = "max_manifest_size",
+      description = "The maximum allowed image manifest size in bytes",
+      initialInt = DEFAULT_MAX_MANIFEST_SIZE_IN_BYTES )
   @Column( name = "max_manifest_size_b")
   private Integer       maxManifestSizeBytes;
 

@@ -111,32 +111,32 @@ public interface AwsUsageActivitiesClient extends ActivitiesClient
     /**
      * Generated from {@link com.eucalyptus.portal.workflow.AwsUsageActivities#writeAwsReportUsage}
      */
-    Promise<Void> writeAwsReportUsage(String accountId, java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord> records);
+    Promise<Void> writeAwsReportUsage(java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord> records);
 
     /**
      * Generated from {@link com.eucalyptus.portal.workflow.AwsUsageActivities#writeAwsReportUsage}
      */
-    Promise<Void> writeAwsReportUsage(String accountId, java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord> records, Promise<?>... waitFor);
+    Promise<Void> writeAwsReportUsage(java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord> records, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.portal.workflow.AwsUsageActivities#writeAwsReportUsage}
      */
-    Promise<Void> writeAwsReportUsage(String accountId, java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord> records, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+    Promise<Void> writeAwsReportUsage(java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord> records, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.portal.workflow.AwsUsageActivities#writeAwsReportUsage}
      */
-    Promise<Void> writeAwsReportUsage(Promise<String> accountId, Promise<java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord>> records);
+    Promise<Void> writeAwsReportUsage(Promise<java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord>> records);
 
     /**
      * Generated from {@link com.eucalyptus.portal.workflow.AwsUsageActivities#writeAwsReportUsage}
      */
-    Promise<Void> writeAwsReportUsage(Promise<String> accountId, Promise<java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord>> records, Promise<?>... waitFor);
+    Promise<Void> writeAwsReportUsage(Promise<java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord>> records, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.portal.workflow.AwsUsageActivities#writeAwsReportUsage}
      */
-    Promise<Void> writeAwsReportUsage(Promise<String> accountId, Promise<java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord>> records, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+    Promise<Void> writeAwsReportUsage(Promise<java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord>> records, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.portal.workflow.AwsUsageActivities#deleteAccountQueues}
@@ -167,6 +167,21 @@ public interface AwsUsageActivitiesClient extends ActivitiesClient
      * Generated from {@link com.eucalyptus.portal.workflow.AwsUsageActivities#deleteAccountQueues}
      */
     Promise<Void> deleteAccountQueues(Promise<java.util.List<java.lang.String>> queues, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.workflow.AwsUsageActivities#cleanupQueues}
+     */
+    Promise<Void> cleanupQueues();
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.workflow.AwsUsageActivities#cleanupQueues}
+     */
+    Promise<Void> cleanupQueues(Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.workflow.AwsUsageActivities#cleanupQueues}
+     */
+    Promise<Void> cleanupQueues(ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
     /**
      * Generated from {@link com.eucalyptus.portal.workflow.AwsUsageActivities#fireVolumeUsage}

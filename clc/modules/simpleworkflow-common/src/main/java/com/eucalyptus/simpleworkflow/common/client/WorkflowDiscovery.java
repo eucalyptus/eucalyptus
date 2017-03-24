@@ -48,6 +48,13 @@ public class WorkflowDiscovery extends ServiceJarDiscovery {
       final Class<? extends ComponentId> componentIdClass = ats.get( ComponentPart.class ).value( );
       if ( ats.has( Workflow.class ) ) {
         WorkflowRegistry.registerWorkflow( componentIdClass, candidate );
+        if ( ats.has ( Hourly.class ) ) {
+          WorkflowTimer.addHourlyWorkflow( candidate );
+        } else if ( ats.has( Daily.class) ) {
+          WorkflowTimer.addDailyWorkflow( candidate );
+        } else if ( ats.has( Repeating.class) ) {
+          WorkflowTimer.addRepeatingWorkflow( candidate );
+        }
       } else {
         WorkflowRegistry.registerActivities( componentIdClass, candidate );
       }

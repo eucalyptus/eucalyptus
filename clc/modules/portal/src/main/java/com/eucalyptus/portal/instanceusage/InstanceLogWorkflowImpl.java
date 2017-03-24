@@ -26,6 +26,7 @@ import com.eucalyptus.portal.workflow.BillingWorkflowState;
 import com.eucalyptus.portal.workflow.InstanceLogActivitiesClient;
 import com.eucalyptus.portal.workflow.InstanceLogActivitiesClientImpl;
 import com.eucalyptus.portal.workflow.InstanceLogWorkflow;
+import com.eucalyptus.simpleworkflow.common.client.Hourly;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 
@@ -33,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Hourly(InstanceLogWorkflowStarter.class)
 @ComponentPart(Portal.class)
 public class InstanceLogWorkflowImpl implements InstanceLogWorkflow {
   private static Logger LOG     =
@@ -53,6 +55,7 @@ public class InstanceLogWorkflowImpl implements InstanceLogWorkflow {
 
       @Override
       protected void doCatch(Throwable e) throws Throwable {
+        waitCleanup(client.cleanupQueues());
         state = BillingWorkflowState.WORKFLOW_FAILED;
         LOG.error("Workflow logging instance usage has failed: ", e);
       }
@@ -77,14 +80,14 @@ public class InstanceLogWorkflowImpl implements InstanceLogWorkflow {
     final Map<String, String> queues = futureQueues.get();
     final List<Promise<Void>> result = Lists.newArrayList();
 
+    Promise<Void> run = Promise.Void();
     for (final String accountId : queues.keySet()) {
       final String queueName = queues.get(accountId);
-      result.add(
-              client.persist(
-                      Promise.asPromise(accountId),
-                      Promise.asPromise(queueName)
-              )
-      );
+      run = client.persist(
+              Promise.asPromise(accountId),
+              Promise.asPromise(queueName),
+              run); // persist is serialized
+      result.add(run);
     }
     return Promises.listOfPromisesToPromise(result);
   }
@@ -93,8 +96,17 @@ public class InstanceLogWorkflowImpl implements InstanceLogWorkflow {
   public void deleteQueues(final Promise<Map<String, String>> futureQueues, Promise<List<Void>> processed) {
     final List<String> queues = futureQueues.get().values().stream()
             .collect(Collectors.toList());
-    client.deleteQueues(queues);
+    waitFor(client.deleteQueues(queues));
   }
+
+  @Asynchronous
+  void waitFor(final Promise<Void> task) {
+    LOG.debug("Finished writing instance hour records");
+  }
+
+  @Asynchronous
+  void waitCleanup(final Promise<Void> task) { LOG.error("Failed writing instance hour records"); }
+
 
   @Override
   public BillingWorkflowState getState() {

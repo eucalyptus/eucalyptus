@@ -138,9 +138,9 @@ public class Topology {
   private static Logger                                         LOG                            = Logger.getLogger( Topology.class );
   private static volatile Topology                              singleton;                                                                   //TODO:GRZE:handle differently for remote case?
   private Integer                                               currentEpoch                   = 0;                                                                      //TODO:GRZE: get the right initial epoch value from membership bootstrap
-  @ConfigurableField( description = "Backoff between service state checks (in seconds)." )
+  @ConfigurableField( description = "Backoff between service state checks (in seconds).", initial = "10" )
   public static Integer                                         COORDINATOR_CHECK_BACKOFF_SECS = 10;
-  @ConfigurableField( description = "Backoff between service state checks (in seconds)." )
+  @ConfigurableField( description = "Backoff between service state checks (in seconds).", initial = "10" )
   public static Integer                                         LOCAL_CHECK_BACKOFF_SECS       = 10;
   private final ConcurrentMap<ServiceKey, ServiceConfiguration> services                       = new ConcurrentSkipListMap<Topology.ServiceKey, ServiceConfiguration>( );
 

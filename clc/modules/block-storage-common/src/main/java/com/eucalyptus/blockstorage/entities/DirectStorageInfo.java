@@ -77,6 +77,7 @@ import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
+import com.eucalyptus.configurable.ConfigurableInit;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
@@ -99,10 +100,15 @@ public class DirectStorageInfo extends AbstractPersistent {
   @ConfigurableField(description = "DAS/Overlay only. Storage volumes directory.", displayName = "Volumes path")
   @Column(name = "system_storage_volumes_dir")
   private String volumesDir;
-  @ConfigurableField(description = "DAS/Overlay only. Should volumes be zero filled.", displayName = "Zero-fill volumes", type = ConfigurableFieldType.BOOLEAN)
+  @ConfigurableField(description = "DAS/Overlay only. Should volumes be zero filled.",
+      displayName = "Zero-fill volumes",
+      type = ConfigurableFieldType.BOOLEAN,
+      initial = StorageProperties.zeroFillVolumesTxt )
   @Column(name = "zero_fill_volumes")
   private Boolean zeroFillVolumes;
-  @ConfigurableField(description = "DAS/Overlay only. Timeout value in milli seconds for storage operations.", displayName = "Timeout in milli seconds")
+  @ConfigurableField(description = "DAS/Overlay only. Timeout value in milli seconds for storage operations.",
+      displayName = "Timeout in milli seconds",
+      initialInt = (int)StorageProperties.timeoutInMillis )
   @Column(name = "timeout_in_millis")
   private Long timeoutInMillis;
 
@@ -112,14 +118,6 @@ public class DirectStorageInfo extends AbstractPersistent {
 
   public DirectStorageInfo(final String name) {
     this.name = name;
-  }
-
-  public DirectStorageInfo(final String name, final String storageInterface, final String volumesDir, final Boolean zeroFillVolumes,
-      final Long timeoutInMillis) {
-    this.name = name;
-    this.volumesDir = volumesDir;
-    this.zeroFillVolumes = zeroFillVolumes;
-    this.timeoutInMillis = timeoutInMillis;
   }
 
   public String getName() {
@@ -201,8 +199,7 @@ public class DirectStorageInfo extends AbstractPersistent {
       LOG.warn("Direct storage information for " + StorageProperties.NAME + " not found. Loading defaults.");
       try {
         conf =
-            Transactions.saveDirect(new DirectStorageInfo(StorageProperties.NAME, StorageProperties.iface, StorageProperties.storageRootDirectory,
-                StorageProperties.zeroFillVolumes, StorageProperties.timeoutInMillis));
+            Transactions.saveDirect( new DirectStorageInfo( ).init( ) );
       } catch (Exception e1) {
         try {
           conf = Transactions.find(new DirectStorageInfo());
@@ -213,12 +210,18 @@ public class DirectStorageInfo extends AbstractPersistent {
     }
 
     if (conf == null) {
-      conf =
-          new DirectStorageInfo(StorageProperties.NAME, StorageProperties.iface, StorageProperties.storageRootDirectory,
-              StorageProperties.zeroFillVolumes, StorageProperties.timeoutInMillis);
+      conf = new DirectStorageInfo( ).init( );
     }
 
     return conf;
+  }
+
+  @ConfigurableInit
+  public DirectStorageInfo init( ) {
+    setVolumesDir( StorageProperties.storageRootDirectory );
+    setZeroFillVolumes( StorageProperties.zeroFillVolumes );
+    setTimeoutInMillis( StorageProperties.timeoutInMillis );
+    return this;
   }
 
   @EntityUpgrade(entities = {DirectStorageInfo.class}, since = Version.v3_2_0, value = Storage.class)
