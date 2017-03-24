@@ -348,6 +348,10 @@ public class TimeoutManager {
           historySizeLimitCause.getWorkflowId( ) );
       return true;
     }
+    if ( Exceptions.isCausedBy( e, SwfMetadataNotFoundException.class ) ) {
+      // no longer relevant or will be retried.
+      return true;
+    }
     return false;
   }
 
