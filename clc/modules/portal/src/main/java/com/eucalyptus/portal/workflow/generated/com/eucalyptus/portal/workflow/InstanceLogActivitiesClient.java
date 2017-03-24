@@ -108,4 +108,19 @@ public interface InstanceLogActivitiesClient extends ActivitiesClient
      */
     Promise<Void> deleteQueues(Promise<java.util.List<java.lang.String>> queues, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
+    /**
+     * Generated from {@link com.eucalyptus.portal.workflow.InstanceLogActivities#cleanupQueues}
+     */
+    Promise<Void> cleanupQueues();
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.workflow.InstanceLogActivities#cleanupQueues}
+     */
+    Promise<Void> cleanupQueues(Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.workflow.InstanceLogActivities#cleanupQueues}
+     */
+    Promise<Void> cleanupQueues(ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+
 }

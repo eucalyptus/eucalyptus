@@ -154,6 +154,8 @@ public class MonthlyReports extends AbstractPersistentSupport<PortalMetadata.Bil
       builder = MonthlyReportEntryBuilder.forEc2(owner);
     } else if ("AmazonS3".equals(record.getService())) {
       builder = MonthlyReportEntryBuilder.forS3(owner);
+    } else {
+      return Optional.empty();
     }
 
     final Optional<MonthlyReportEntryType> optType = MonthlyReportEntryType.getType(record);

@@ -84,6 +84,8 @@ public class AwsUsageActivitiesImpl implements AwsUsageActivities {
     return null;
   }
 
+  private final static String QUEUE_NAME_PREFIX = "awsusagework";
+
   @Override
   public Map<String, String> createAccountQueues(final String globalQueue) throws BillingActivityException {
     final Map<String, String> accountQueues =  Maps.newHashMap();
@@ -122,9 +124,11 @@ public class AwsUsageActivitiesImpl implements AwsUsageActivities {
             .filter( a -> a!=null )
             .collect(Collectors.toList());
 
-    for (final String accountId : uniqueAccounts ) {
+    for ( final String accountId : uniqueAccounts ) {
       try{
-        final String queueName = String.format("%s-%s", accountId,
+        final String queueName = String.format("%s-%s-%s",
+                QUEUE_NAME_PREFIX,
+                accountId,
                 UUID.randomUUID().toString().substring(0, 13) );
         sqClient.createQueue(
                 queueName,
@@ -136,7 +140,14 @@ public class AwsUsageActivitiesImpl implements AwsUsageActivities {
                 ) );
         accountQueues.put(accountId, queueName);
       } catch (final Exception ex) {
-        LOG.error("Failed to create SQS queue", ex);
+        try { // clean up
+          for (final String queueName : accountQueues.values()) {
+            sqClient.deleteQueue(queueName);
+          }
+        } catch (final Exception ex2) {
+          ;
+        }
+        throw new BillingActivityException("Failed to create SQS queue", ex);
       }
     }
 
@@ -177,6 +188,7 @@ public class AwsUsageActivitiesImpl implements AwsUsageActivities {
 
       result.addAll(type.read(accountId, events));
     }
+
     return result;
   }
 
@@ -205,7 +217,7 @@ public class AwsUsageActivitiesImpl implements AwsUsageActivities {
   }
 
   @Override
-  public void writeAwsReportUsage(final String accountId, final List<AwsUsageRecord> records) throws BillingActivityException{
+  public void writeAwsReportUsage(final List<AwsUsageRecord> records) throws BillingActivityException{
     try {
       AwsUsageRecords.getInstance().append(records);
     } catch (final Exception ex) {
@@ -217,10 +229,23 @@ public class AwsUsageActivitiesImpl implements AwsUsageActivities {
   public void deleteAccountQueues(final List<String> queues) throws BillingActivityException {
     for (final String queue : queues) {
       try {
+        // deleteQueue is idempotent operation
         SimpleQueueClientManager.getInstance().deleteQueue(queue);
       } catch (final Exception ex) {
-        LOG.error("Failed to delete the temporary queue (" + queue +")", ex);
+        LOG.error("Failed to delete temporary queue (" + queue +")", ex);
       }
+    }
+  }
+
+  @Override
+  public void cleanupQueues() {
+    final SimpleQueueClientManager sqClient = SimpleQueueClientManager.getInstance();
+    try {
+      for (final String queueUrl : sqClient.listQueues(QUEUE_NAME_PREFIX)) {
+        sqClient.deleteQueue(queueUrl);
+      }
+    } catch(final Exception ex) {
+      ;
     }
   }
 

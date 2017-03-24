@@ -36,7 +36,7 @@ public class MonthlyReportActivitiesImpl implements MonthlyReportActivities {
   @Override
   public List<String> listCandidateAccounts() throws BillingActivityException {
     try {
-      return Accounts.listAllAccounts().stream() // should we filter out system accounts?
+      return Accounts.listAllAccounts().stream() // TODO: should we filter out system accounts?
               .map(e -> e.getAccountNumber())
               .collect(Collectors.toList());
     } catch (final Exception ex) {
@@ -74,7 +74,6 @@ public class MonthlyReportActivitiesImpl implements MonthlyReportActivities {
 
   @Override
   public void persist(String accountId, String year, String month, List<MonthlyUsageRecord> monthly) throws BillingActivityException {
-//  public void createOrUpdate(final OwnerFullName owner, final String year, final String month, List<MonthlyReportEntry> entries) {
     try {
       final AccountFullName owner = AccountFullName.getInstance(accountId);
       final List<MonthlyReportEntry> entries =

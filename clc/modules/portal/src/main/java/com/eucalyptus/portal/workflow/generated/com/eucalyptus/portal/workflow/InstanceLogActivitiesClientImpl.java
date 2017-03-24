@@ -163,4 +163,32 @@ public class InstanceLogActivitiesClientImpl extends ActivitiesClientBase implem
         return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, Void.class, waitFor);
     }
 
+    @Override
+    public final Promise<Void> cleanupQueues() {
+        return cleanupQueuesImpl((ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<Void> cleanupQueues(Promise<?>... waitFor) {
+        return cleanupQueuesImpl((ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> cleanupQueues(ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return cleanupQueuesImpl(optionsOverride, waitFor);
+    }
+    
+    
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    protected Promise<Void> cleanupQueuesImpl(final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+
+        ActivityType _activityType = new ActivityType();
+		_activityType.setName("InstanceLogActivities.cleanupQueues");
+		_activityType.setVersion("1.0");
+
+        Promise[] _input_ = new Promise[0];
+
+        return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, Void.class, waitFor);
+    }
+
 }

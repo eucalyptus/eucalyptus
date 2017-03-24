@@ -33,4 +33,5 @@ public interface InstanceLogActivities {
   Map<String, String> distributeEvents(final String globalQueue) throws BillingActivityException;
   void persist(final String accountId, final String queueName) throws BillingActivityException;
   void deleteQueues(final List<String> queues) throws BillingActivityException;
+  void cleanupQueues();
 }

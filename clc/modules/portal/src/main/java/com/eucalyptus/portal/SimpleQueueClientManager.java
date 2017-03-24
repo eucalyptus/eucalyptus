@@ -157,8 +157,11 @@ public class SimpleQueueClientManager {
             }
           });
 
-  public String getQueueUrl(final String queueName) {
+  public String getQueueUrl(String queueName) {
     try {
+      if (queueName.contains("/")) { // in case queue url is given
+        queueName = queueName.substring(queueName.lastIndexOf('/') + 1);
+      }
       return queueUrlCache.get(queueName);
     } catch (final Exception ex) {
       LOG.error("Failed to get queue url", ex);

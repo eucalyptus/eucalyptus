@@ -24,12 +24,15 @@ import com.eucalyptus.portal.workflow.BillingWorkflowState;
 import com.eucalyptus.portal.workflow.MonthlyReportActivitiesClient;
 import com.eucalyptus.portal.workflow.MonthlyReportActivitiesClientImpl;
 import com.eucalyptus.portal.workflow.MonthlyReportGeneratorWorkflow;
+import com.eucalyptus.simpleworkflow.common.client.Daily;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
-
 import java.util.Date;
 import java.util.List;
 
+// Delay execution after 5 minute of a new day because monthly report depends on AWS usage report
+// which is being updated at 0 minute of every hour.
+@Daily(value = MonthlyReportWorkflowStarter.class, hour = 0, minute = 5)
 @ComponentPart(Portal.class)
 public class MonthlyReportGeneratorWorkflowImpl implements MonthlyReportGeneratorWorkflow {
   private static Logger LOG     =
@@ -57,6 +60,7 @@ public class MonthlyReportGeneratorWorkflowImpl implements MonthlyReportGenerato
 
       @Override
       protected void doCatch(Throwable e) throws Throwable {
+        // no cleanup is necessary
         state = BillingWorkflowState.WORKFLOW_FAILED;
         LOG.error("Workflow generating monthly AWS usage report has failed: ", e);
       }
@@ -78,16 +82,16 @@ public class MonthlyReportGeneratorWorkflowImpl implements MonthlyReportGenerato
   @Asynchronous
   public void generateForAccounts(Promise<List<String>> accounts) {
     for (final String accountId : accounts.get()) {
-      Promise<Void> persist = Promise.Void();
+      Promise<Void> run = Promise.Void();
       for (final String service : Lists.newArrayList("AmazonEC2", "AmazonS3")) {
-        persist = client.persist(
+        run = client.persist(
                 Promise.asPromise(accountId),
                 Promise.asPromise(this.year),
                 Promise.asPromise(this.month),
                 client.transform(
                         client.queryMonthlyAwsUsage(accountId, service, this.year, this.month, this.reportUntil)
                 ),
-                persist
+                run    // persist is serialized
         );
       }
     }

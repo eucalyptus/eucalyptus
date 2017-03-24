@@ -165,46 +165,45 @@ public class AwsUsageActivitiesClientImpl extends ActivitiesClientBase implement
     }
 
     @Override
-    public final Promise<Void> writeAwsReportUsage(String accountId, java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord> records) {
-        return writeAwsReportUsageImpl(Promise.asPromise(accountId), Promise.asPromise(records), (ActivitySchedulingOptions)null);
+    public final Promise<Void> writeAwsReportUsage(java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord> records) {
+        return writeAwsReportUsageImpl(Promise.asPromise(records), (ActivitySchedulingOptions)null);
     }
 
     @Override
-    public final Promise<Void> writeAwsReportUsage(String accountId, java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord> records, Promise<?>... waitFor) {
-        return writeAwsReportUsageImpl(Promise.asPromise(accountId), Promise.asPromise(records), (ActivitySchedulingOptions)null, waitFor);
+    public final Promise<Void> writeAwsReportUsage(java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord> records, Promise<?>... waitFor) {
+        return writeAwsReportUsageImpl(Promise.asPromise(records), (ActivitySchedulingOptions)null, waitFor);
     }
 
     @Override
-    public final Promise<Void> writeAwsReportUsage(String accountId, java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord> records, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
-        return writeAwsReportUsageImpl(Promise.asPromise(accountId), Promise.asPromise(records), optionsOverride, waitFor);
+    public final Promise<Void> writeAwsReportUsage(java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord> records, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return writeAwsReportUsageImpl(Promise.asPromise(records), optionsOverride, waitFor);
     }
 
     @Override
-    public final Promise<Void> writeAwsReportUsage(Promise<String> accountId, Promise<java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord>> records) {
-        return writeAwsReportUsageImpl(accountId, records, (ActivitySchedulingOptions)null);
+    public final Promise<Void> writeAwsReportUsage(Promise<java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord>> records) {
+        return writeAwsReportUsageImpl(records, (ActivitySchedulingOptions)null);
     }
 
     @Override
-    public final Promise<Void> writeAwsReportUsage(Promise<String> accountId, Promise<java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord>> records, Promise<?>... waitFor) {
-        return writeAwsReportUsageImpl(accountId, records, (ActivitySchedulingOptions)null, waitFor);
+    public final Promise<Void> writeAwsReportUsage(Promise<java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord>> records, Promise<?>... waitFor) {
+        return writeAwsReportUsageImpl(records, (ActivitySchedulingOptions)null, waitFor);
     }
 
     @Override
-    public final Promise<Void> writeAwsReportUsage(Promise<String> accountId, Promise<java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord>> records, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
-        return writeAwsReportUsageImpl(accountId, records, optionsOverride, waitFor);
+    public final Promise<Void> writeAwsReportUsage(Promise<java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord>> records, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return writeAwsReportUsageImpl(records, optionsOverride, waitFor);
     }
     
     
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    protected Promise<Void> writeAwsReportUsageImpl(final Promise<String> accountId, final Promise<java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord>> records, final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+    protected Promise<Void> writeAwsReportUsageImpl(final Promise<java.util.List<com.eucalyptus.portal.workflow.AwsUsageRecord>> records, final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
 
         ActivityType _activityType = new ActivityType();
 		_activityType.setName("AwsUsageActivities.writeAwsReportUsage");
 		_activityType.setVersion("1.0");
 
-        Promise[] _input_ = new Promise[2];
-        _input_[0] = accountId;
-        _input_[1] = records;
+        Promise[] _input_ = new Promise[1];
+        _input_[0] = records;
 
         return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, Void.class, waitFor);
     }
@@ -249,6 +248,34 @@ public class AwsUsageActivitiesClientImpl extends ActivitiesClientBase implement
 
         Promise[] _input_ = new Promise[1];
         _input_[0] = queues;
+
+        return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, Void.class, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> cleanupQueues() {
+        return cleanupQueuesImpl((ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<Void> cleanupQueues(Promise<?>... waitFor) {
+        return cleanupQueuesImpl((ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> cleanupQueues(ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return cleanupQueuesImpl(optionsOverride, waitFor);
+    }
+    
+    
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    protected Promise<Void> cleanupQueuesImpl(final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+
+        ActivityType _activityType = new ActivityType();
+		_activityType.setName("AwsUsageActivities.cleanupQueues");
+		_activityType.setVersion("1.0");
+
+        Promise[] _input_ = new Promise[0];
 
         return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, Void.class, waitFor);
     }
