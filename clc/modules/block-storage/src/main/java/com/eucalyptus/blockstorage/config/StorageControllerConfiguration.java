@@ -81,6 +81,7 @@ import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.StorageManagers;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.annotation.ComponentPart;
@@ -182,23 +183,24 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
           if (!Iterables.any(scConfigs, new Predicate<ServiceConfiguration>() {
             @Override
             public boolean apply(ServiceConfiguration config) {
-              if (config.isVmLocal()) {
-                // Service is local, so add entries to the valid list (in case of HA configs)
-                // and then check the local memory state
+              if ( config.isVmLocal( ) || Hosts.isCoordinator( ) ) {
+                // Add locally discovered entries to the valid list
                 validEntries.addAll(StorageManagers.list());
-                return StorageManagers.contains(proposedValue);
-              } else {
+              }
+              if ( !config.isVmLocal( ) ) {
                 try {
                   // Remote SC, so check the db for the list of valid entries.
                   StorageControllerConfiguration scConfig = Entities.uniqueResult((StorageControllerConfiguration) config);
-                  for (String entry : Splitter.on(",").split(scConfig.getAvailableBackends())) {
-                    validEntries.add(entry);
+                  if ( scConfig.getAvailableBackends() != null ) {
+                    for (String entry : Splitter.on(",").split(scConfig.getAvailableBackends())) {
+                      validEntries.add(entry);
+                    }
                   }
-                  return validEntries.contains(proposedValue);
                 } catch (Exception e) {
                   return false;
                 }
               }
+              return validEntries.contains(proposedValue);
             }
           })) {
             // Nothing matched.
