@@ -41,11 +41,15 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
+import com.eucalyptus.objectstorage.exceptions.s3.SignatureDoesNotMatchException;
 import com.eucalyptus.ws.WebServicesException;
 
 public class ObjectStorageRESTExceptionHandler extends SimpleChannelUpstreamHandler {
   private static Logger LOG = Logger.getLogger(ObjectStorageRESTExceptionHandler.class);
-  private static String CODE_UNKNOWN = "UNKNOWN";
+  private static final String CODE_UNKNOWN = "UNKNOWN";
+  private static final String EMPTY_STRING = "";
+  private static final String CONTENT_TYPE = "text/xml; charset=UTF-8";
+  private static final Charset UTF_8 = Charset.forName("UTF-8");
 
   @Override
   public void exceptionCaught(final ChannelHandlerContext ctx, final ExceptionEvent e) throws Exception {
@@ -88,15 +92,28 @@ public class ObjectStorageRESTExceptionHandler extends SimpleChannelUpstreamHand
     }
     message = cause.getMessage();
 
-    StringBuilder error =
-        new StringBuilder().append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><Error><Code>").append(code != null ? code : new String())
-            .append("</Code><Message>").append(message != null ? message : new String()).append("</Message><Resource>")
-            .append(resource != null ? resource : new String()).append("</Resource><RequestId>").append(requestId != null ? requestId : new String())
-            .append("</RequestId></Error>");
+    StringBuilder error = new StringBuilder().append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><Error><Code>")
+            .append(code != null ? code : EMPTY_STRING).append("</Code><Message>")
+            .append(message != null ? message : EMPTY_STRING).append("</Message>");
+    if (cause instanceof SignatureDoesNotMatchException) {
+      SignatureDoesNotMatchException ex = (SignatureDoesNotMatchException) cause;
+      error.append("<AWSAccessKeyId>").append(ex.getAccessKeyId() != null ? ex.getAccessKeyId() : EMPTY_STRING).append("</AWSAccessKeyId>")
+           .append("<StringToSign>").append(ex.getStringToSign() != null ? ex.getStringToSign() : EMPTY_STRING).append("</StringToSign>")
+           .append("<SignatureProvided>").append(ex.getSignatureProvided() != null ? ex.getSignatureProvided() : EMPTY_STRING)
+           .append("</SignatureProvided>").append("<StringToSignBytes>");
+      if (ex.getStringToSign() != null) {
+        byte[] b = ex.getStringToSign().getBytes(UTF_8);
+        for(int i=0; i<b.length; i++)
+          error.append(b[i]).append(" ");
+        error.deleteCharAt(error.length()-1);
+      }
+      error.append("</StringToSignBytes>");
+    }
+    error.append("<RequestId>").append(requestId != null ? requestId : EMPTY_STRING).append("</RequestId></Error>");
 
-    ChannelBuffer buffer = ChannelBuffers.copiedBuffer(error, Charset.forName("UTF-8"));
+    ChannelBuffer buffer = ChannelBuffers.copiedBuffer(error, UTF_8);
     final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
-    response.addHeader(HttpHeaders.Names.CONTENT_TYPE, "text/xml; charset=UTF-8");
+    response.addHeader(HttpHeaders.Names.CONTENT_TYPE, CONTENT_TYPE);
     response.addHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buffer.readableBytes()));
     response.setContent(buffer);
 

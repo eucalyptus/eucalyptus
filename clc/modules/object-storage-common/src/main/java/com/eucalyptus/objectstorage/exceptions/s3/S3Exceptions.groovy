@@ -1064,13 +1064,37 @@ class RequestTorrentOfBucketErrorException extends S3Exception {
 }
 
 class SignatureDoesNotMatchException extends S3Exception {
+  private String accessKeyId;
+  private String stringToSign;
+  private String signatureProvided;
+
   def SignatureDoesNotMatchException() {
-    super(S3ErrorCodeStrings.SignatureDoesNotMatch, "The request signature we calculated does not match the signature you provided.", HttpResponseStatus.FORBIDDEN);
+    super(S3ErrorCodeStrings.SignatureDoesNotMatch, "The request signature we calculated does not match the signature you provided.",
+      HttpResponseStatus.FORBIDDEN);
   }
 
   def SignatureDoesNotMatchException(String resource) {
     this();
     this.resource = resource;
+  }
+
+  def SignatureDoesNotMatchException(String accessKeyId, String stringToSign, String signatureProvided) {
+    this();
+    this.accessKeyId = accessKeyId;
+    this.stringToSign = stringToSign;
+    this.signatureProvided = signatureProvided;
+  }
+
+  public String getAccessKeyId() {
+    return this.accessKeyId;
+  }
+
+  public String getStringToSign() {
+    return this.stringToSign;
+  }
+
+  public String getSignatureProvided() {
+    return this.signatureProvided;
   }
 }
 

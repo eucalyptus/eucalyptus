@@ -86,5 +86,4 @@ public abstract class WrappedCredentials<TYPE> implements CallbackHandler {
   public String getCorrelationId( ) {
     return this.correlationId;
   }
-  
 }
