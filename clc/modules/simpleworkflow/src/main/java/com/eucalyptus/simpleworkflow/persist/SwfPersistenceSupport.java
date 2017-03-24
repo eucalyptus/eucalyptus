@@ -24,6 +24,7 @@ import com.eucalyptus.entities.AbstractPersistentSupport;
 import com.eucalyptus.simpleworkflow.SwfMetadataException;
 import com.eucalyptus.simpleworkflow.SwfMetadataNotFoundException;
 import com.eucalyptus.auth.type.RestrictedType;
+import com.eucalyptus.util.Exceptions;
 
 /**
  *
@@ -42,11 +43,23 @@ public abstract class SwfPersistenceSupport<RT extends RestrictedType, AP extend
 
   @Override
   protected SwfMetadataException notFoundException( final String message, final Throwable cause ) {
-    return new SwfMetadataNotFoundException( message, cause );
+    final SwfMetadataNotFoundException existingException =
+      Exceptions.findCause( cause, SwfMetadataNotFoundException.class );
+    if ( existingException != null ) {
+      return existingException;
+    } else {
+      return new SwfMetadataNotFoundException( message, cause );
+    }
   }
 
   @Override
   protected SwfMetadataException metadataException( final String message, final Throwable cause ) {
-    return new SwfMetadataException( message, cause );
+    final SwfMetadataException existingException =
+      Exceptions.findCause( cause, SwfMetadataException.class );
+    if ( existingException != null ) {
+      return existingException;
+    } else {
+      return new SwfMetadataException( message, cause );
+    }
   }
 }
