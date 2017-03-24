@@ -68,8 +68,11 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -98,19 +101,25 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.network.IPRange;
+import com.eucalyptus.network.config.Cluster;
+import com.eucalyptus.network.config.EdgeSubnet;
 import com.eucalyptus.network.config.NetworkConfiguration;
 import com.eucalyptus.network.config.NetworkConfigurations;
+import com.eucalyptus.network.config.Subnet;
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.Classes;
+import com.eucalyptus.util.Either;
+import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.Subnets;
 import com.eucalyptus.util.Subnets.SystemSubnetPredicate;
+import com.eucalyptus.util.ThrowingFunction;
 import com.eucalyptus.util.dns.DnsResolvers;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResolver;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResponse;
 import com.eucalyptus.util.dns.DnsResolvers.RequestType;
 import com.eucalyptus.util.dns.DomainNameRecords;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
@@ -290,7 +299,7 @@ public abstract class SplitHorizonResolver extends DnsResolver {
   @SuppressWarnings( "EqualsWhichDoesntCheckParameterClass" )
   @Override
   public boolean equals( Object obj ) {
-    return this.getClass( ).equals( Objects.firstNonNull( Classes.typeOf( obj ), Object.class ) );
+    return this.getClass( ).equals( MoreObjects.firstNonNull( Classes.typeOf( obj ), Object.class ) );
   }  
 
   public static class InternalARecordResolver extends SplitHorizonResolver {
@@ -533,12 +542,12 @@ public abstract class SplitHorizonResolver extends DnsResolver {
       if ( this == o ) return true;
       if ( o == null || getClass( ) != o.getClass( ) ) return false;
       final VmPublicIpDnsCacheKey that = (VmPublicIpDnsCacheKey) o;
-      return java.util.Objects.equals( ip, that.ip );
+      return Objects.equals( ip, that.ip );
     }
 
     @Override
     public int hashCode() {
-      return java.util.Objects.hash( ip );
+      return Objects.hash( ip );
     }
   }
 
@@ -559,12 +568,12 @@ public abstract class SplitHorizonResolver extends DnsResolver {
       if ( this == o ) return true;
       if ( o == null || getClass( ) != o.getClass( ) ) return false;
       final VmPrivateIpDnsCacheKey that = (VmPrivateIpDnsCacheKey) o;
-      return java.util.Objects.equals( ip, that.ip );
+      return Objects.equals( ip, that.ip );
     }
 
     @Override
     public int hashCode() {
-      return java.util.Objects.hash( ip );
+      return Objects.hash( ip );
     }
   }
 
@@ -685,29 +694,27 @@ public abstract class SplitHorizonResolver extends DnsResolver {
 
   private enum ClusterSubnets implements Supplier<Iterable<Cidr>> {
     INSTANCE {
-      private final AtomicReference<Iterable<Cidr>> lastLoaded =
-          new AtomicReference<Iterable<Cidr>>( Collections.<Cidr>emptyList( ) );
+      private final AtomicReference<Iterable<Cidr>> lastLoaded = new AtomicReference<Iterable<Cidr>>( Collections.<Cidr>emptyList( ) );
 
       @Override
       public Iterable<Cidr> get( ) {
-        if ( Databases.isVolatile( ) ) {
+        final Optional<NetworkConfiguration> configurationOptional = NetworkConfigurations.getNetworkConfiguration( );
+        if ( !configurationOptional.isPresent( ) || Databases.isVolatile( ) ) {
           return lastLoaded.get( );
         } else try {
-          final List<Cidr> cidrs = ImmutableList.copyOf( Optional.presentInstances( Iterables.transform(
-              ServiceConfigurations.list( ClusterController.class ),
-              new Function<ServiceConfiguration, Optional<Cidr>>( ) {
-                @Override
-                public Optional<Cidr> apply( final ServiceConfiguration serviceConfiguration ) {
-                  final ClusterConfiguration cluster = (ClusterConfiguration) serviceConfiguration;
-                  try {
-                    return Optional.of( Subnets.cidr( cluster.getVnetSubnet( ), cluster.getVnetNetmask( ) ) );
-                  } catch ( final UnknownHostException ex ) {
-                    // try next configuration
-                    return Optional.absent( );
-                  }
-                }
-              }
-          ) ) );
+          final Set<String> clusters = ServiceConfigurations.list( ClusterController.class ).stream( )
+              .map( ServiceConfiguration::getPartition )
+              .collect( Collectors.toSet( ) );
+          final NetworkConfiguration configuration =
+              NetworkConfigurations.explode( configurationOptional.get( ), clusters );
+          final List<Cidr> cidrs = ImmutableList.copyOf( Optional.presentInstances( configuration.getClusters( )
+              .stream( )
+              .map( Cluster::getSubnet )
+              .filter( Objects::nonNull )
+              .map( FUtils.optional( ThrowingFunction.undeclared(
+                  subnet -> Subnets.cidr( subnet.getSubnet( ), subnet.getNetmask( ) )
+              ) ) )
+              .collect( Collectors.toList( ) ) ) );
           lastLoaded.set( cidrs );
           return cidrs;
         } catch ( final Throwable e ) {
