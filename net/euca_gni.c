@@ -5077,7 +5077,7 @@ int gni_validate(globalNetworkInfo *gni) {
         
         // No VPC elements are expected in EDGE mode
         if (gni->max_vpcs || gni->max_dhcpos || gni->max_vpcIgws) {
-            LOGERROR("Invalid GNI (%s): VPC elements found in EDGE mode gni %s\n", gni->version);
+            LOGERROR("Invalid GNI (%s): VPC elements found in EDGE mode gni\n", gni->version);
             return (1);
         }
     }
