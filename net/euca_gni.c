@@ -4468,16 +4468,19 @@ int ingress_gni_to_iptables_rule(char *scidr, gni_rule *ingress_rule, char *outr
 
     if (!ingress_rule || !outrule) {
         LOGERROR("Invalid pointer(s) to ingress_gni_rule and/or iptables rule buffer.\n");
-        return 1;
+        return (1);
     }
 
     // Check for protocol all (-1) - should not happen in non-VPC
     if (-1 != ingress_rule->protocol) {
         proto_info = getprotobynumber(ingress_rule->protocol);
         if (proto_info == NULL) {
-            LOGWARN("Invalid protocol (%d) - cannot create iptables rule.", ingress_rule->protocol);
-            return 1;
+            LOGWARN("Invalid protocol (%d) - cannot create iptables rule.\n", ingress_rule->protocol);
+            return (1);
         }
+    } else {
+        LOGWARN("Invalid protocol (%d) - cannot create iptables rule for EDGE.\n", ingress_rule->protocol);
+        return (1);
     }
 
     newrule[0] = '\0';
@@ -5070,6 +5073,12 @@ int gni_validate(globalNetworkInfo *gni) {
                     return (1);
                 }
             }
+        }
+        
+        // No VPC elements are expected in EDGE mode
+        if (gni->max_vpcs || gni->max_dhcpos || gni->max_vpcIgws) {
+            LOGERROR("Invalid GNI (%s): VPC elements found in EDGE mode gni\n", gni->version);
+            return (1);
         }
     }
 
