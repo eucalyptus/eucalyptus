@@ -37,10 +37,12 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.io.BaseEncoding;
+
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
 
 import javax.security.auth.login.LoginException;
+
 import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.HashMap;
@@ -98,7 +100,7 @@ public final class S3V4Authentication {
       if (ex.getMessage().contains("The AWS Access Key Id you provided does not exist in our records"))
         throw new InvalidAccessKeyIdException(accessKeyId);
       LOG.debug("CorrelationId: " + request.getCorrelationId() + " Authentication failed due to signature mismatch:", ex);
-      throw new SignatureDoesNotMatchException();
+      throw new SignatureDoesNotMatchException(creds.accessKeyId, creds.getLoginData(), creds.signature);
     } catch (Exception e) {
       LOG.warn("CorrelationId: " + request.getCorrelationId() + " Unexpected failure trying to authenticate request", e);
       throw new InternalErrorException(e);

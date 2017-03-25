@@ -385,6 +385,9 @@ public class ObjectStorageErrorMessageType extends BaseMessage {
   String resourceType;
   String resource;
   String accessKeyId
+  String stringToSign;
+  String signatureProvided;
+  String stringToSignBytes;
   String requestId;
   String hostId;
   BucketLogData logData;

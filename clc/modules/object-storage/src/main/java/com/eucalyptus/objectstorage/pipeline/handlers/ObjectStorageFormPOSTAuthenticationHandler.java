@@ -147,7 +147,7 @@ public class ObjectStorageFormPOSTAuthenticationHandler extends MessageStackHand
             throw new InvalidAccessKeyIdException(accessKey);
           } else {
             LOG.debug("CorrelationId: " + httpRequest.getCorrelationId() + " Authentication failed due to signature mismatch:", ex);
-            throw new SignatureDoesNotMatchException();
+            throw new SignatureDoesNotMatchException(accessKey, null, signature);
           }
         } catch (Exception e) {
           LOG.warn("CorrelationId: " + httpRequest.getCorrelationId() + " Unexpected failure trying to authenticate request", e);

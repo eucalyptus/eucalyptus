@@ -20,6 +20,8 @@
 
 package com.eucalyptus.objectstorage.pipeline;
 
+import java.nio.charset.Charset;
+
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
@@ -38,6 +40,7 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidAccessKeyIdException;
+import com.eucalyptus.objectstorage.exceptions.s3.SignatureDoesNotMatchException;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
 import com.eucalyptus.ws.WebServicesException;
 import com.google.common.base.Strings;
@@ -46,6 +49,8 @@ import com.google.common.util.concurrent.Runnables;
 public class ObjectStorageRESTExceptionHandler extends SimpleChannelUpstreamHandler {
   private static final Logger LOG = Logger.getLogger(ObjectStorageRESTExceptionHandler.class);
   private static final String CODE_UNKNOWN = "UNKNOWN";
+
+  private static final Charset UTF_8 = Charset.forName("UTF-8");
 
   @Override
   public void exceptionCaught(final ChannelHandlerContext ctx, final ExceptionEvent e) throws Exception {
@@ -76,7 +81,7 @@ public class ObjectStorageRESTExceptionHandler extends SimpleChannelUpstreamHand
     final HttpResponseStatus status;
     final String code;
     final String resource;
-    final String message;
+
     if (cause instanceof ObjectStorageException) {
       ObjectStorageException walrusEx = (ObjectStorageException) cause;
       status = walrusEx.getStatus();
@@ -92,11 +97,10 @@ public class ObjectStorageRESTExceptionHandler extends SimpleChannelUpstreamHand
       code = CODE_UNKNOWN;
       resource = null;
     }
-    message = cause.getMessage();
 
     final ObjectStorageErrorMessageType errorResponse = new ObjectStorageErrorMessageType( );
     errorResponse.setResource( Strings.nullToEmpty( resource ) );
-    errorResponse.setMessage( Strings.nullToEmpty( message ) );
+    errorResponse.setMessage( Strings.nullToEmpty( cause.getMessage() ) );
     errorResponse.setCode( Strings.nullToEmpty( code ) );
     errorResponse.setRequestId( Strings.nullToEmpty( requestId ) );
     errorResponse.setStatus( status );
@@ -104,6 +108,23 @@ public class ObjectStorageRESTExceptionHandler extends SimpleChannelUpstreamHand
     if ( cause instanceof InvalidAccessKeyIdException ) {
       errorResponse.setAccessKeyId( ( (InvalidAccessKeyIdException) cause ).getAccessKeyId( ) );
       errorResponse.setResource( null );
+    }
+
+    if (cause instanceof SignatureDoesNotMatchException) {
+      SignatureDoesNotMatchException ex = (SignatureDoesNotMatchException) cause;
+      errorResponse.setAccessKeyId( ex.getAccessKeyId( ) );
+      errorResponse.setResource( null );
+      errorResponse.setStringToSign( Strings.nullToEmpty( ex.getStringToSign( ) ) );
+      errorResponse.setSignatureProvided( Strings.nullToEmpty( ex.getSignatureProvided( ) ) );
+      if (ex.getStringToSign() != null) {
+        StringBuilder sb = new StringBuilder();
+        byte[] b = ex.getStringToSign().getBytes(UTF_8);
+        for(int i=0; i<b.length; i++)
+          sb.append(b[i]).append(" ");
+        sb.deleteCharAt(sb.length()-1);
+        errorResponse.setStringToSignBytes( sb.toString() );
+      }
+      
     }
 
     if ( ctx.getChannel( ).isConnected( ) ) {

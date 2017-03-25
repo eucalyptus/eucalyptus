@@ -76,8 +76,8 @@ final class S3V2Authentication {
   /**
    * Attempts a login and retries sign a signed string that does not contain a path or Content-Type if the initial attempt fails.
    */
-  static void login(MappingHttpRequest request, String accessKeyId, CheckedFunction<ExcludeFromSignature, ObjectStorageWrappedCredentials> credsFn)
-      throws S3Exception {
+  private static void login(MappingHttpRequest request, String accessKeyId,
+      CheckedFunction<ExcludeFromSignature, ObjectStorageWrappedCredentials> credsFn) throws S3Exception {
     // Build credentials that includes path
     ObjectStorageWrappedCredentials creds = credentialsFor(credsFn, ExcludeFromSignature.NONE);
 
@@ -96,7 +96,7 @@ final class S3V2Authentication {
           SecurityContext.getLoginContext(creds).login();
         } catch (Exception ex2) {
           LOG.debug("CorrelationId: " + request.getCorrelationId() + " Authentication failed due to signature match issue:", ex2);
-          throw new SignatureDoesNotMatchException();
+          throw new SignatureDoesNotMatchException(creds.accessKeyId, creds.getLoginData(), creds.signature);
         }
       } else if (request.getMethod() == HttpMethod.GET || request.getMethod() == HttpMethod.HEAD) {
         // Build credentials for a string to sign that excludes the Content-Type
@@ -106,10 +106,10 @@ final class S3V2Authentication {
           SecurityContext.getLoginContext(creds).login();
         } catch (Exception ex2) {
           LOG.debug("CorrelationId: " + request.getCorrelationId() + " Authentication failed due to signature match issue:", ex2);
-          throw new SignatureDoesNotMatchException();
+          throw new SignatureDoesNotMatchException(creds.accessKeyId, creds.getLoginData(), creds.signature);
         }
       } else {
-          throw new SignatureDoesNotMatchException();
+        throw new SignatureDoesNotMatchException(creds.accessKeyId, creds.getLoginData(), creds.signature);
       }
     } catch (Exception e) {
       LOG.warn("CorrelationId: " + request.getCorrelationId() + " Unexpected failure trying to authenticate request", e);

@@ -49,6 +49,9 @@
     <value name="Message" field="message" usage="optional"/>
     <value name="Resource" field="resource" usage="optional"/>
     <value name="AWSAccessKeyId" field="accessKeyId" usage="optional"/>
+    <value name="StringToSign" field="stringToSign" usage="optional"/>
+    <value name="SignatureProvided" field="signatureProvided" usage="optional"/>
+    <value name="StringToSignBytes" field="stringToSignBytes" usage="optional"/>
     <value name="RequestId" field="requestId" usage="optional"/>
   </mapping>
 
