@@ -37,6 +37,7 @@ import javax.annotation.Nonnull;
 import org.apache.http.NoHttpResponseException;
 import org.apache.http.conn.ConnectTimeoutException;
 import org.apache.log4j.Logger;
+import com.amazonaws.AbortedException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Request;
@@ -53,6 +54,7 @@ import com.amazonaws.services.simpleworkflow.flow.WorkflowWorker;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.tokens.SecurityTokenAWSCredentialsProvider;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
@@ -136,6 +138,14 @@ public class Config {
       }, 15, TimeUnit.SECONDS );
 
       @Override
+      public void beforeRequest( final Request<?> request ) {
+        if ( Bootstrap.isShuttingDown( ) &&
+            request.getHeaders( ).getOrDefault( "X-Amz-Target", "" ).contains( "Poll" ) ) {
+          Thread.currentThread( ).interrupt( );
+        }
+      }
+
+      @Override
       public void afterResponse( final Request<?> request, final Response<?> response ) {
         // Check and failover (failback) to local swf service if available
         endpointHost = request.getEndpoint( ).getHost( );
@@ -155,14 +165,26 @@ public class Config {
         } else if ( Exceptions.isCausedBy( e, NoHttpResponseException.class ) ) {
           resetEndpoint = true;
         }
-        if ( resetEndpoint ) {
-          resetEndpoint( );
-        }
 
         if ( e instanceof AmazonServiceException ) {
           final int status = ( (AmazonServiceException) e ).getStatusCode( );
           if ( status == 403 ) {
             credentialsProvider.refresh( );
+          } else if ( status == 404 || status == 503 ) {
+            resetEndpoint = true;
+          }
+        }
+
+        if ( resetEndpoint ) {
+          resetEndpoint( );
+
+          // pause and then trigger an SdkInterruptedException
+          if ( Bootstrap.isShuttingDown( ) ) {
+            shutdownSleep( );
+            if ( request.getHeaders( ).getOrDefault( "X-Amz-Target", "" ).contains( "Poll" ) ) {
+              // interrupt triggers SdkInterruptedException handled in PollServiceTask (aws sdk)
+              Thread.currentThread( ).interrupt( );
+            }
           }
         }
       }
@@ -287,11 +309,22 @@ public class Config {
           } else if ( Exceptions.isCausedBy( e, AmazonServiceException.class ) &&
               403 == (Exceptions.findCause( e, AmazonServiceException.class )).getStatusCode( ) ) {
             logger.warn( "Authentication failure (retrying) for " + type + " worker " + t.getName() + "/" + t.getId() );
+          } else if ( Bootstrap.isShuttingDown( ) && ( Exceptions.isCausedBy( e, InterruptedException.class ) ||
+              Exceptions.isCausedBy( e, AbortedException.class ) ) ) {
+            logger.trace( "Interrupted during shutdown" );
+            shutdownSleep( );
           } else {
             logger.error( "Error in " + type + " worker " + t.getName() + "/" + t.getId(), e );
           }
         }
       } );
+    }
+  }
+
+  private static void shutdownSleep( ) {
+    try {
+      Thread.sleep( 2000 );
+    } catch ( InterruptedException e1 ) {
     }
   }
 
