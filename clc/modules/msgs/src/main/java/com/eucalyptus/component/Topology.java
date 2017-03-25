@@ -62,6 +62,7 @@
 
 package com.eucalyptus.component;
 
+import java.net.ConnectException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collection;
@@ -1316,17 +1317,20 @@ public class Topology {
         if ( Exceptions.isCausedBy( ex, ExistingTransitionException.class ) ) {
           LOG.error( this.toString( input, initialState, nextState, ex ) );
           enabledEndState = true;
-          throw Exceptions.toUndeclared( ex );
-        } else if ( Exceptions.isCausedBy( ex, OrderlyTransitionException.class ) ){
+        } else if ( Exceptions.isCausedBy( ex, OrderlyTransitionException.class ) ) {
           Logs.extreme( ).error( ex, ex );
-          throw Exceptions.toUndeclared( ex );
+        } else if ( Exceptions.isCausedBy( ex, ConnectException.class )) {
+          if ( input.lookupState( ) != initialState ) {
+            LOG.warn( this.toString( input, initialState, nextState, ex ) );
+          }
+          Logs.extreme( ).error( ex, ex );
         } else {
           Exceptions.maybeInterrupted( ex );
           LOG.error( this.toString( input, initialState, nextState, ex ) );
           Logs.extreme( ).error( ex, Throwables.getRootCause( ex ) );
           Logs.extreme( ).error( ex, ex );
-          throw Exceptions.toUndeclared( ex );
         }
+        throw Exceptions.toUndeclared( ex );
       } finally {
         enabledEndState |= Component.State.ENABLED.equals( endResult.lookupState( ) );
         if ( Bootstrap.isFinished( ) && !enabledEndState && Topology.getInstance( ).services.containsValue( input ) ) {
