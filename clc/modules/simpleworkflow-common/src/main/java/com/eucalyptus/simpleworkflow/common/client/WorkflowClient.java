@@ -179,7 +179,9 @@ public class WorkflowClient {
       activityWorker.shutdown( );
     }
     if ( waitForWorkflowWorker &&  !workflowWorker.awaitTermination( 30, TimeUnit.SECONDS ) ) {
-      logger.warn( "Workflow worker not yet terminated." );
+      if ( workflowWorker.isRunning( ) ) { // DecisionTaskPoller#awaitTermination is not implemented so we check again
+        logger.warn( "Workflow worker not yet terminated." );
+      }
     }
     if ( waitForActivityWorker && !activityWorker.awaitTermination( 30, TimeUnit.SECONDS ) ) {
       logger.warn( "Activity worker not yet terminated." );

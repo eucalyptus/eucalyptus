@@ -104,6 +104,14 @@ public class OrderedShutdown {
 	  Runtime.getRuntime().addShutdownHook(new Thread( "bootstrap-ordered-shutdown-hook" ) {
 		@Override
 		public void run() {
+			int shutdownChecks = 0;
+			while ( !Bootstrap.isShuttingDown( ) && shutdownChecks++<10 ) {
+				LOG.info( "Waiting for shutdown to be marked..." );
+				try {
+					Thread.sleep( 500 );
+				} catch ( InterruptedException e ) {
+				}
+			}
 			LOG.info("Executing Pre-Shutdown Hooks...");
 			ShutdownHook prehook;
 			while((prehook = preShutdownHooks.poll()) != null) {

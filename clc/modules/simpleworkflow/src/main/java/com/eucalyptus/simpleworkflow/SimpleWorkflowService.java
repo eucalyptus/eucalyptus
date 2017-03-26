@@ -28,13 +28,16 @@ import java.lang.System;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.apache.log4j.Logger;
@@ -45,6 +48,7 @@ import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.bootstrap.OrderedShutdown;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -93,6 +97,11 @@ public class SimpleWorkflowService {
 
   private static final Logger logger = Logger.getLogger( SimpleWorkflowService.class );
   private static final ConcurrentMap<NotifyTaskList, Long> taskListActivity = Maps.newConcurrentMap( );
+  private static final Deque<Pair<Long,Consumer<Boolean>>> timestampedPollers = new ConcurrentLinkedDeque<>( );
+
+  static {
+    OrderedShutdown.registerPreShutdownHook( new PollerShutdown( ) );
+  }
 
   private final Domains domains;
   private final ActivityTasks activityTasks;
@@ -2319,7 +2328,8 @@ public class SimpleWorkflowService {
             return taskResponse;
           }
         }
-        NotifyClient.pollTaskList(accountFullName, domain, type, taskList, pollTimeout, Contexts.consumerWithCurrentContext(
+        final Consumer<Boolean> consumer =
+            NotifyClient.pollTaskList(accountFullName, domain, type, taskList, pollTimeout, Contexts.consumerWithCurrentContext(
                 (notified) -> {
                   try {
                     if (notified) {
@@ -2343,6 +2353,7 @@ public class SimpleWorkflowService {
                   }
                 }
         ));
+        timestampedPollers.add( Pair.of( pollTimeout, consumer ) );
         return null;
     } catch ( Exception e ) {
       logger.error( "Error polling for task " + list, e );
@@ -2351,15 +2362,41 @@ public class SimpleWorkflowService {
     }
   }
 
-  public static class SimpleWorkflowServiceActivityCleanup implements EventListener<ClockTick> {
+  private static void pollerCleanup( final long timestamp ) {
+    // drop fast if excessive pollers
+    final int remove = timestampedPollers.size( ) - 1000;
+    for ( int i=0; i<remove; i++ ) {
+      timestampedPollers.pollFirst( );
+    }
+
+    // remove expired pollers
+    Pair<Long,Consumer<Boolean>> consumerPair;
+    while ( ( consumerPair = timestampedPollers.peekFirst( ) ) != null ) {
+      if ( consumerPair.getLeft( ) < timestamp ) {
+        timestampedPollers.remove( consumerPair );
+      } else {
+        break;
+      }
+    }
+  }
+
+  private static void pollerShutdown( ) {
+    Pair<Long,Consumer<Boolean>> consumerPair;
+    while ( ( consumerPair = timestampedPollers.pollFirst( ) ) != null ) {
+      consumerPair.getRight( ).accept( false );
+    }
+  }
+
+  public static class SimpleWorkflowServiceCleanup implements EventListener<ClockTick> {
 
     public static void register() {
-      Listeners.register( ClockTick.class, new SimpleWorkflowServiceActivityCleanup( ) );
+      Listeners.register( ClockTick.class, new SimpleWorkflowServiceCleanup( ) );
     }
 
     @Override
     public void fireEvent( final ClockTick event ) {
       taskListActivityCleanup( System.currentTimeMillis( ) - TimeUnit.SECONDS.toMillis( 10 ) );
+      pollerCleanup( System.currentTimeMillis( ) );
     }
   }
 
@@ -2388,6 +2425,19 @@ public class SimpleWorkflowService {
 
     StartTimerFailedCause getFailedCause() {
       return failedCause;
+    }
+  }
+
+  private static final class PollerShutdown implements Runnable {
+
+    @Override
+    public void run( ) {
+      logger.info( "Notifying task pollers on shutdown" );
+      pollerShutdown( );
+    }
+
+    public String toString( ) {
+      return "Simple workflow task poller notification";
     }
   }
 }

@@ -347,7 +347,7 @@ public class Bootstrap {
   private static Boolean starting     = false;
   private static Boolean finished     = false;
   private static Stage   currentStage = Stage.SystemInit;
-  static Boolean         shutdown     = false;
+  static volatile Boolean shutdown    = false;
   
   /**
    * @return Bootstrap.currentStage
@@ -548,6 +548,7 @@ public class Bootstrap {
       
       @Override
       public void run( ) {
+        LOG.info( "Marked shutdown" );
         Bootstrap.shutdown = Boolean.TRUE;
       }
       

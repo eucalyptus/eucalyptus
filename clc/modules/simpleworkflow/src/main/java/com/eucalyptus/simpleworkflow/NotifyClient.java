@@ -110,19 +110,23 @@ public class NotifyClient {
     NotifyClientUtils.notifyChannel(taskList);
   }
 
-  public static void pollTaskList( final AccountFullName accountFullName,
-                                   final String domain,
-                                   final String type,
-                                   final String taskList,
-                                   final long timeout,
-                                   final Consumer<Boolean> resultConsumer ) throws Exception {
-    pollTaskList(new NotifyTaskList(accountFullName, domain, type, taskList), timeout, resultConsumer);
+  public static Consumer<Boolean> pollTaskList(
+      final AccountFullName accountFullName,
+      final String domain,
+      final String type,
+      final String taskList,
+      final long timeout,
+      final Consumer<Boolean> resultConsumer
+  ) throws Exception {
+    return pollTaskList(new NotifyTaskList(accountFullName, domain, type, taskList), timeout, resultConsumer);
   }
 
-  public static void pollTaskList(final NotifyTaskList taskList,
-                                  final long timeout,
-                                  final Consumer<Boolean> resultConsumer) throws Exception {
-    NotifyClientUtils.pollChannel(taskList, timeout, resultConsumer);
+  public static Consumer<Boolean> pollTaskList(
+      final NotifyTaskList taskList,
+      final long timeout,
+      final Consumer<Boolean> resultConsumer
+  ) throws Exception {
+    return NotifyClientUtils.pollChannel(taskList, timeout, resultConsumer);
   }
 
 }

@@ -73,9 +73,9 @@ public class NotifyClientUtils {
     }
   }
 
-  public static void pollChannel(final ChannelWrapper channelWrapper,
-                                 final long timeout,
-                                 final Consumer<Boolean> resultConsumer) throws Exception {
+  public static Consumer<Boolean> pollChannel(final ChannelWrapper channelWrapper,
+                                              final long timeout,
+                                              final Consumer<Boolean> resultConsumer) throws Exception {
     final Consumer<Boolean> consumer = Consumers.once(resultConsumer);
     final PollForNotificationType poll = new PollForNotificationType( );
     poll.setChannel(channelWrapper.getChannelName());
@@ -83,7 +83,7 @@ public class NotifyClientUtils {
 
     if ( Bootstrap.isShuttingDown() ) {
       delayedPollFailure( 1000L, consumer );
-      return;
+      return consumer;
     }
 
     final ServiceConfiguration polledNotificationsConfiguration;
@@ -91,7 +91,7 @@ public class NotifyClientUtils {
       polledNotificationsConfiguration = Topology.lookup( PolledNotifications.class );
     } catch ( final NoSuchElementException e ){
       delayedPollFailure( 5000L, consumer );
-      return;
+      return consumer;
     }
 
     final ListenableFuture<PollForNotificationResponseType> dispatchFuture =
@@ -117,6 +117,7 @@ public class NotifyClientUtils {
         }
       }
     } );
+    return consumer;
   }
 
   private static void delayedPollFailure( final long delay,
