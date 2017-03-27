@@ -83,6 +83,8 @@ import com.eucalyptus.compute.common.internal.vpc.Subnets;
 import com.eucalyptus.compute.common.internal.vpc.Vpc;
 import com.eucalyptus.compute.common.internal.vpc.VpcMetadataNotFoundException;
 import com.eucalyptus.compute.common.internal.vpc.Vpcs;
+import com.eucalyptus.compute.common.network.Networking;
+import com.eucalyptus.compute.common.network.NetworkingFeature;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.AbstractPersistent;
@@ -498,6 +500,11 @@ public class VpcManager {
             return natGateways.lookupByClientToken( accountFullName, clientToken, Functions.identity( ) );
           } catch ( final VpcMetadataNotFoundException e ) {
             // create new NAT gateway with the given client token
+          }
+
+          if (!Networking.getInstance( ).supports( NetworkingFeature.Vpc )) {
+            throw new ClientComputeException( "Unsupported",
+                "EC2-VPC platform required for NAT gateway, not supported with EC2-Classic" );
           }
 
           final Subnet subnet = subnets.lookupByName( accountFullName, subnetId, Functions.identity( ) );
