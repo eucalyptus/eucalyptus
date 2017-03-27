@@ -350,8 +350,8 @@ public class VpcManager {
                   throw new ClientComputeException( "InvalidParameterValue", "Network interface zone invalid for instance" );
                 }
                 final String instanceVpcId = vm.getVpcId( );
-                if ( !ctx.isPrivileged( ) && instanceVpcId!=null &&
-                    !instanceVpcId.equals( networkInterface.getVpc( ).getDisplayName( ) ) ) {
+                if ( instanceVpcId==null || ( !ctx.isPrivileged( ) &&
+                    !instanceVpcId.equals( networkInterface.getVpc( ).getDisplayName( ) ) ) ) {
                   throw new ClientComputeException( "InvalidParameterValue", "Network interface vpc invalid for instance" );
                 }
                 final int interfaceCount = vm.getNetworkInterfaces( ).size( ) + 1;
