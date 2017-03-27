@@ -78,7 +78,7 @@ public final class S3V4Authentication {
       securityToken, String payloadHash) throws S3Exception {
     String stringToSign = buildStringToSign(request, date, credential, signedHeaders, payloadHash);
     ObjectStorageWrappedCredentials creds = new ObjectStorageWrappedCredentials(request.getCorrelationId(),
-        date==null?null:date.getTime( ), stringToSign, credential, signedHeaders, signature, securityToken);
+        date==null?null:date.getTime( ), stringToSign, credential, signedHeaders, signature, securityToken, payloadHash);
     login(request, credential.getAccessKeyId(), creds);
   }
 
@@ -86,7 +86,7 @@ public final class S3V4Authentication {
                          String securityToken, String previousSignature, ByteBuffer payload) throws S3Exception {
     String stringToSign = buildChunkStringToSign(date, credential, previousSignature, payload);
     ObjectStorageWrappedCredentials creds = new ObjectStorageWrappedCredentials(request.getCorrelationId(),
-        date==null?null:date.getTime( ), stringToSign, credential, signedHeaders, signature, securityToken);
+        date==null?null:date.getTime( ), stringToSign, credential, signedHeaders, signature, securityToken, null);
     login(request, credential.getAccessKeyId(), creds);
   }
 
@@ -100,7 +100,8 @@ public final class S3V4Authentication {
       if (ex.getMessage().contains("The AWS Access Key Id you provided does not exist in our records"))
         throw new InvalidAccessKeyIdException(accessKeyId);
       LOG.debug("CorrelationId: " + request.getCorrelationId() + " Authentication failed due to signature mismatch:", ex);
-      throw new SignatureDoesNotMatchException(creds.accessKeyId, creds.getLoginData(), creds.signature);
+      StringBuilder canonicalRequest = buildCanonicalRequest(request, creds.signedHeaders, creds.payloadHash);
+      throw new SignatureDoesNotMatchException(creds.accessKeyId, creds.getLoginData(), creds.signature, canonicalRequest.toString());
     } catch (Exception e) {
       LOG.warn("CorrelationId: " + request.getCorrelationId() + " Unexpected failure trying to authenticate request", e);
       throw new InternalErrorException(e);
@@ -167,7 +168,8 @@ public final class S3V4Authentication {
     sb.append('\n');
 
     // Payload
-    sb.append(payloadHash);
+    if (payloadHash != null)
+      sb.append(payloadHash);
     return sb;
   }
 

@@ -1069,6 +1069,7 @@ class SignatureDoesNotMatchException extends S3Exception {
   private String accessKeyId;
   private String stringToSign;
   private String signatureProvided;
+  private String canonicalRequest;
 
   def SignatureDoesNotMatchException() {
     super(S3ErrorCodeStrings.SignatureDoesNotMatch, "The request signature we calculated does not match the signature you provided.",
@@ -1087,6 +1088,14 @@ class SignatureDoesNotMatchException extends S3Exception {
     this.signatureProvided = signatureProvided;
   }
 
+  def SignatureDoesNotMatchException(String accessKeyId, String stringToSign, String signatureProvided, String canonicalRequest) {
+    this();
+    this.accessKeyId = accessKeyId;
+    this.stringToSign = stringToSign;
+    this.signatureProvided = signatureProvided;
+    this.canonicalRequest = canonicalRequest;
+  }
+
   public String getAccessKeyId() {
     return this.accessKeyId;
   }
@@ -1097,6 +1106,10 @@ class SignatureDoesNotMatchException extends S3Exception {
 
   public String getSignatureProvided() {
     return this.signatureProvided;
+  }
+
+  public String getCanonicalRequest() {
+    return this.canonicalRequest;
   }
 }
 
