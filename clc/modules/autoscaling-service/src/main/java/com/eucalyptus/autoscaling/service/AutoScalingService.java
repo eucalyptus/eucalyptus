@@ -26,6 +26,22 @@ import java.util.NoSuchElementException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.autoscaling.common.AutoScalingBackend;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage;
+import com.eucalyptus.autoscaling.common.msgs.DeleteNotificationConfigurationResponseType;
+import com.eucalyptus.autoscaling.common.msgs.DeleteNotificationConfigurationType;
+import com.eucalyptus.autoscaling.common.msgs.DeleteScheduledActionResponseType;
+import com.eucalyptus.autoscaling.common.msgs.DeleteScheduledActionType;
+import com.eucalyptus.autoscaling.common.msgs.DescribeAccountLimitsResponseType;
+import com.eucalyptus.autoscaling.common.msgs.DescribeAccountLimitsType;
+import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingNotificationTypesResponseType;
+import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingNotificationTypesType;
+import com.eucalyptus.autoscaling.common.msgs.DescribeNotificationConfigurationsResponseType;
+import com.eucalyptus.autoscaling.common.msgs.DescribeNotificationConfigurationsType;
+import com.eucalyptus.autoscaling.common.msgs.DescribeScheduledActionsResponseType;
+import com.eucalyptus.autoscaling.common.msgs.DescribeScheduledActionsType;
+import com.eucalyptus.autoscaling.common.msgs.PutNotificationConfigurationResponseType;
+import com.eucalyptus.autoscaling.common.msgs.PutNotificationConfigurationType;
+import com.eucalyptus.autoscaling.common.msgs.PutScheduledUpdateGroupActionResponseType;
+import com.eucalyptus.autoscaling.common.msgs.PutScheduledUpdateGroupActionType;
 import com.eucalyptus.autoscaling.common.msgs.ResponseMetadata;
 import com.eucalyptus.autoscaling.common.policy.AutoScalingPolicySpec;
 import com.eucalyptus.component.Topology;
@@ -47,6 +63,62 @@ import edu.ucsb.eucalyptus.msgs.BaseMessages;
  */
 @ComponentNamed
 public class AutoScalingService {
+
+  public DeleteNotificationConfigurationResponseType deleteNotificationConfiguration(
+      final DeleteNotificationConfigurationType request
+  ) throws EucalyptusCloudException {
+    DeleteNotificationConfigurationResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public DeleteScheduledActionResponseType deleteScheduledAction(
+      final DeleteScheduledActionType request
+  ) throws EucalyptusCloudException {
+    DeleteScheduledActionResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public DescribeAccountLimitsResponseType describeAccountLimits(
+      final DescribeAccountLimitsType request
+  ) throws EucalyptusCloudException {
+    DescribeAccountLimitsResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public DescribeAutoScalingNotificationTypesResponseType describeAutoScalingNotificationTypes(
+      final DescribeAutoScalingNotificationTypesType request
+  ) throws EucalyptusCloudException {
+    DescribeAutoScalingNotificationTypesResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public DescribeNotificationConfigurationsResponseType describeNotificationConfigurations(
+      final DescribeNotificationConfigurationsType request
+  ) throws EucalyptusCloudException {
+    DescribeNotificationConfigurationsResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public DescribeScheduledActionsResponseType describeScheduledActions(
+      final DescribeScheduledActionsType request
+  ) throws EucalyptusCloudException {
+    DescribeScheduledActionsResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public PutNotificationConfigurationResponseType putNotificationConfiguration(
+      final PutNotificationConfigurationType request
+  ) throws EucalyptusCloudException {
+    PutNotificationConfigurationResponseType reply = request.getReply( );
+    return reply;
+  }
+
+  public PutScheduledUpdateGroupActionResponseType putScheduledUpdateGroupAction(
+      final PutScheduledUpdateGroupActionType request
+  ) throws EucalyptusCloudException {
+    PutScheduledUpdateGroupActionResponseType reply = request.getReply( );
+    return reply;
+  }
 
   public AutoScalingMessage dispatchAction( final AutoScalingMessage request ) throws EucalyptusCloudException {
     final AuthContextSupplier user = Contexts.lookup( ).getAuthContext( );

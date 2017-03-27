@@ -62,38 +62,26 @@ import com.eucalyptus.autoscaling.common.backend.msgs.DeleteAutoScalingGroupResp
 import com.eucalyptus.autoscaling.common.backend.msgs.DeleteAutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DeleteLaunchConfigurationResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DeleteLaunchConfigurationType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DeleteNotificationConfigurationResponseType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DeleteNotificationConfigurationType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DeletePolicyResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DeletePolicyType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DeleteScheduledActionResponseType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DeleteScheduledActionType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DeleteTagsResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DeleteTagsType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAccountLimitsResponseType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAccountLimitsType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAdjustmentTypesResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAdjustmentTypesType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAutoScalingGroupsResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAutoScalingGroupsType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAutoScalingInstancesResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAutoScalingInstancesType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAutoScalingNotificationTypesResponseType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAutoScalingNotificationTypesType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribeLaunchConfigurationsResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribeLaunchConfigurationsType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribeMetricCollectionTypesResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribeMetricCollectionTypesType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeNotificationConfigurationsResponseType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeNotificationConfigurationsType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribePoliciesResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribePoliciesType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribeScalingActivitiesResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribeScalingActivitiesType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribeScalingProcessTypesResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribeScalingProcessTypesType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeScheduledActionsResponseType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeScheduledActionsType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribeTagsResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribeTagsType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribeTerminationPolicyTypesResponseType;
@@ -104,12 +92,8 @@ import com.eucalyptus.autoscaling.common.backend.msgs.EnableMetricsCollectionRes
 import com.eucalyptus.autoscaling.common.backend.msgs.EnableMetricsCollectionType;
 import com.eucalyptus.autoscaling.common.backend.msgs.ExecutePolicyResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.ExecutePolicyType;
-import com.eucalyptus.autoscaling.common.backend.msgs.PutNotificationConfigurationResponseType;
-import com.eucalyptus.autoscaling.common.backend.msgs.PutNotificationConfigurationType;
 import com.eucalyptus.autoscaling.common.backend.msgs.PutScalingPolicyResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.PutScalingPolicyType;
-import com.eucalyptus.autoscaling.common.backend.msgs.PutScheduledUpdateGroupActionResponseType;
-import com.eucalyptus.autoscaling.common.backend.msgs.PutScheduledUpdateGroupActionType;
 import com.eucalyptus.autoscaling.common.backend.msgs.ResumeProcessesResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.ResumeProcessesType;
 import com.eucalyptus.autoscaling.common.backend.msgs.SetDesiredCapacityResponseType;
@@ -243,10 +227,6 @@ public class AutoScalingBackendService {
     this.scalingPolicies = scalingPolicies;
     this.activityManager = activityManager;
     this.scalingActivities = scalingActivities;
-  }
-
-  public DescribeAccountLimitsResponseType describeAccountLimits( final DescribeAccountLimitsType request ) throws EucalyptusCloudException {
-    return request.getReply( );
   }
 
   public DescribeAutoScalingGroupsResponseType describeAutoScalingGroups( final DescribeAutoScalingGroupsType request ) throws EucalyptusCloudException {
@@ -570,11 +550,6 @@ public class AutoScalingBackendService {
     return reply;
   }
 
-  public DescribeNotificationConfigurationsResponseType describeNotificationConfigurations(DescribeNotificationConfigurationsType request) throws EucalyptusCloudException {
-    DescribeNotificationConfigurationsResponseType reply = request.getReply( );
-    return reply;
-  }
-
   public DescribeTerminationPolicyTypesResponseType describeTerminationPolicyTypes( final DescribeTerminationPolicyTypesType request ) throws EucalyptusCloudException {
     final DescribeTerminationPolicyTypesResponseType reply = request.getReply( );    
     
@@ -839,11 +814,6 @@ public class AutoScalingBackendService {
     return reply;
   }
 
-  public PutNotificationConfigurationResponseType putNotificationConfiguration(PutNotificationConfigurationType request) throws EucalyptusCloudException {
-    PutNotificationConfigurationResponseType reply = request.getReply( );
-    return reply;
-  }
-
   public DeletePolicyResponseType deletePolicy(final DeletePolicyType request) throws EucalyptusCloudException {
     final DeletePolicyResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
@@ -861,16 +831,6 @@ public class AutoScalingBackendService {
     } catch ( Exception e ) {
       handleException( e );
     }
-    return reply;
-  }
-
-  public DeleteNotificationConfigurationResponseType deleteNotificationConfiguration(DeleteNotificationConfigurationType request) throws EucalyptusCloudException {
-    DeleteNotificationConfigurationResponseType reply = request.getReply( );
-    return reply;
-  }
-
-  public DeleteScheduledActionResponseType deleteScheduledAction(DeleteScheduledActionType request) throws EucalyptusCloudException {
-    DeleteScheduledActionResponseType reply = request.getReply( );
     return reply;
   }
 
@@ -903,11 +863,6 @@ public class AutoScalingBackendService {
       handleException( e );
     }
     
-    return reply;
-  }
-
-  public DescribeAutoScalingNotificationTypesResponseType describeAutoScalingNotificationTypes(DescribeAutoScalingNotificationTypesType request) throws EucalyptusCloudException {
-    DescribeAutoScalingNotificationTypesResponseType reply = request.getReply( );
     return reply;
   }
 
@@ -1355,16 +1310,6 @@ public class AutoScalingBackendService {
             Collections2.filter( EnumSet.allOf( AdjustmentType.class ), RestrictedTypes.filterPrivilegedWithoutOwner() ),
             Strings.toStringFunction() ) ) );
 
-    return reply;
-  }
-
-  public DescribeScheduledActionsResponseType describeScheduledActions(DescribeScheduledActionsType request) throws EucalyptusCloudException {
-    DescribeScheduledActionsResponseType reply = request.getReply( );
-    return reply;
-  }
-
-  public PutScheduledUpdateGroupActionResponseType putScheduledUpdateGroupAction(PutScheduledUpdateGroupActionType request) throws EucalyptusCloudException {
-    PutScheduledUpdateGroupActionResponseType reply = request.getReply( );
     return reply;
   }
 
