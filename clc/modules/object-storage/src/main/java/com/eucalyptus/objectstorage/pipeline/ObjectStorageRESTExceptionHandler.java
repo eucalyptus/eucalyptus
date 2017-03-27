@@ -116,15 +116,11 @@ public class ObjectStorageRESTExceptionHandler extends SimpleChannelUpstreamHand
       errorResponse.setResource( null );
       errorResponse.setStringToSign( Strings.nullToEmpty( ex.getStringToSign( ) ) );
       errorResponse.setSignatureProvided( Strings.nullToEmpty( ex.getSignatureProvided( ) ) );
-      if (ex.getStringToSign() != null) {
-        StringBuilder sb = new StringBuilder();
-        byte[] b = ex.getStringToSign().getBytes(UTF_8);
-        for(int i=0; i<b.length; i++)
-          sb.append(b[i]).append(" ");
-        sb.deleteCharAt(sb.length()-1);
-        errorResponse.setStringToSignBytes( sb.toString() );
-      }
-      
+      if (ex.getStringToSign() != null)
+        errorResponse.setStringToSignBytes( stringToByteString( ex.getStringToSign() ) );
+      errorResponse.setCanonicalRequest( Strings.nullToEmpty( ex.getCanonicalRequest( ) ) );
+      if (ex.getCanonicalRequest() != null)
+        errorResponse.setCanonicalRequestBytes( stringToByteString( ex.getCanonicalRequest() ) );
     }
 
     if ( ctx.getChannel( ).isConnected( ) ) {
@@ -141,5 +137,14 @@ public class ObjectStorageRESTExceptionHandler extends SimpleChannelUpstreamHand
     } else {
       ctx.sendDownstream( e );
     }
+  }
+  
+  private static String stringToByteString(String in) {
+    StringBuilder sb = new StringBuilder();
+    byte[] b = in.getBytes(UTF_8);
+    for(int i=0; i<b.length; i++)
+      sb.append(b[i]).append(" ");
+    sb.deleteCharAt(sb.length()-1);
+    return sb.toString();
   }
 }

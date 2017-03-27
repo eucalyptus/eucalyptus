@@ -73,7 +73,6 @@ import com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication.V4AuthCompo
 import com.eucalyptus.util.Assert;
 import com.eucalyptus.ws.util.HmacUtils.SignatureCredential;
 import javaslang.control.Option;
-import javaslang.control.Try.CheckedFunction;
 
 import java.util.Date;
 import java.util.Map;
@@ -96,11 +95,11 @@ public class ObjectStorageWrappedCredentials extends WrappedCredentials<String> 
   // V4
   public final SignatureCredential credential;
   public final String signedHeaders;
-
+  public final String payloadHash;
   /**
    * V2 auth constructor.
    *
-   * @throws NullPointerException if any arg is null
+   * @throws NullPointerException if accessKeyId or signature is null
    */
   public ObjectStorageWrappedCredentials(String correlationId, Long date, String signableString, String accessKeyId, String signature, String
       securityToken) {
@@ -112,15 +111,17 @@ public class ObjectStorageWrappedCredentials extends WrappedCredentials<String> 
     this.credential = null;
     this.signedHeaders = null;
     this.date = date;
+    this.payloadHash = null;
   }
 
   /**
    * V4 auth constructor.
    *
-   * @throws NullPointerException if any arg is null
+   * @throws NullPointerException if credential or signedHeaders or signature is null
    */
+
   public ObjectStorageWrappedCredentials(String correlationId, Long date, String stringToSign, SignatureCredential credential, String signedHeaders,
-                                         String signature, String securityToken) {
+                                         String signature, String securityToken, String payloadHash) {
     super(correlationId, stringToSign);
     this.date = date;
     this.authVersion = AuthVersion.V4;
@@ -129,6 +130,7 @@ public class ObjectStorageWrappedCredentials extends WrappedCredentials<String> 
     this.signature = Assert.notNull(signature, "signature");
     this.securityToken = securityToken;
     this.accessKeyId = null;
+    this.payloadHash = payloadHash;
   }
 
   public AccessKeyCredential getCredential( @Nonnull final Option<TemporaryAccessKey.TemporaryKeyType> type ) {

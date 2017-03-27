@@ -52,6 +52,8 @@
     <value name="StringToSign" field="stringToSign" usage="optional"/>
     <value name="SignatureProvided" field="signatureProvided" usage="optional"/>
     <value name="StringToSignBytes" field="stringToSignBytes" usage="optional"/>
+    <value name="CanonicalRequest" field="canonicalRequest" usage="optional"/>
+    <value name="CanonicalRequestBytes" field="canonicalRequestBytes" usage="optional"/>
     <value name="RequestId" field="requestId" usage="optional"/>
   </mapping>
 
