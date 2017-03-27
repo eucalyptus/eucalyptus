@@ -274,6 +274,20 @@ public class NetworkRule extends AbstractPersistent {
     return create( protocolPair.getLeft( ).orNull( ), protocolPair.getRight( ), lowPort, highPort, peers, ipRanges );
   }
 
+  public static boolean isValidProtocol( final Integer protocolNumber ) {
+    boolean valid = false;
+    if ( protocolNumber != null ) {
+      for ( final Protocol protocol : Protocol.values( ) ) {
+        if ( protocolNumber == protocol.getNumber( ) ) {
+          valid = true;
+          break;
+        }
+      }
+      valid = valid || ExtendedNetworkingConfiguration.isProtocolInExceptionList( protocolNumber );
+    }
+    return valid;
+  }
+
   protected static Pair<Optional<Protocol>,Integer> parseProtocol(
       final String protocolText,
       final boolean vpc
