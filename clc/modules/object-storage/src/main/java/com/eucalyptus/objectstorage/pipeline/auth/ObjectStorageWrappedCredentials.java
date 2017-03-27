@@ -68,6 +68,7 @@ import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication.V4AuthComponent;
 import com.eucalyptus.util.Assert;
 import com.eucalyptus.ws.util.HmacUtils.SignatureCredential;
+
 import javaslang.control.Try.CheckedFunction;
 
 import java.util.Map;
@@ -88,11 +89,11 @@ public class ObjectStorageWrappedCredentials extends WrappedCredentials<String> 
   // V4
   public final SignatureCredential credential;
   public final String signedHeaders;
-
+  public final String payloadHash;
   /**
    * V2 auth constructor.
    *
-   * @throws NullPointerException if any arg is null
+   * @throws NullPointerException if accessKeyId or signature is null
    */
   public ObjectStorageWrappedCredentials(String correlationId, String signableString, String accessKeyId, String signature, String
       securityToken) {
@@ -103,15 +104,16 @@ public class ObjectStorageWrappedCredentials extends WrappedCredentials<String> 
     this.securityToken = securityToken;
     this.credential = null;
     this.signedHeaders = null;
+    this.payloadHash = null;
   }
 
   /**
    * V4 auth constructor.
    *
-   * @throws NullPointerException if any arg is null
+   * @throws NullPointerException if credential or signedHeaders or signature is null
    */
   public ObjectStorageWrappedCredentials(String correlationId, String stringToSign, SignatureCredential credential, String signedHeaders,
-                                         String signature, String securityToken) {
+                                         String signature, String securityToken, String payloadHash) {
     super(correlationId, stringToSign);
     this.authVersion = AuthVersion.V4;
     this.credential = Assert.notNull(credential, "credential");
@@ -119,5 +121,6 @@ public class ObjectStorageWrappedCredentials extends WrappedCredentials<String> 
     this.signature = Assert.notNull(signature, "signature");
     this.securityToken = securityToken;
     this.accessKeyId = null;
+    this.payloadHash = payloadHash;
   }
 }

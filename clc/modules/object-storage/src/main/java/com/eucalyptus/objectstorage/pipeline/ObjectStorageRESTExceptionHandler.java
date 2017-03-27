@@ -108,6 +108,14 @@ public class ObjectStorageRESTExceptionHandler extends SimpleChannelUpstreamHand
         error.deleteCharAt(error.length()-1);
       }
       error.append("</StringToSignBytes>");
+      if (ex.getCanonicalRequest() != null) {
+        error.append("<CanonicalRequest>").append(ex.getCanonicalRequest()).append("</CanonicalRequest><CanonicalRequestBytes>");
+        byte[] b = ex.getCanonicalRequest().getBytes(UTF_8);
+        for(int i=0; i<b.length; i++)
+          error.append(b[i]).append(" ");
+        error.deleteCharAt(error.length()-1);
+        error.append("</CanonicalRequestBytes>");
+      }
     }
     error.append("<RequestId>").append(requestId != null ? requestId : EMPTY_STRING).append("</RequestId></Error>");
 
