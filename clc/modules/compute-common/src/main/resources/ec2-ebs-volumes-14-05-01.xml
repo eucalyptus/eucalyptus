@@ -135,7 +135,7 @@
            extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
     <value name="volumeId" field="volumeId" usage="required" />
-    <value name="attribute" field="attribute" usage="required" />
+    <value name="attribute" field="attribute" usage="optional" />
   </mapping>
 
   <mapping name="DescribeVolumeAttributeResponse"

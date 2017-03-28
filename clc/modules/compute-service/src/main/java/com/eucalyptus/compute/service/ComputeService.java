@@ -999,8 +999,21 @@ public class ComputeService {
     return reply;
   }
 
-  public DescribeVolumeAttributeResponseType describeVolumeAttribute( DescribeVolumeAttributeType request ) {
-    return request.getReply( );
+  public DescribeVolumeAttributeResponseType describeVolumeAttribute(
+      final DescribeVolumeAttributeType request
+  ) throws EucalyptusCloudException {
+    if ( request.getAttribute( ) == null ) {
+      throw new ComputeServiceClientException( "InvalidParameterCombination", "No attributes specified" );
+    }
+    final DescribeVolumeAttributeResponseType reply = request.getReply( );
+    final String volumeId = normalizeVolumeIdentifier( request.getVolumeId( ) );
+    reply.setVolumeId( volumeId );
+    if ( "autoEnableIO".equals( request.getAttribute( ) ) ) {
+      reply.setAutoEnableIO( false );
+    } else {
+      reply.setProductCodes( false );
+    }
+    return reply;
   }
 
   public CancelImportTaskResponseType cancelImportTask( CancelImportTaskType request ) {
@@ -1882,6 +1895,14 @@ public class ComputeService {
       throw new ComputeServiceClientException(
           "InvalidParameterValue",
           "Value ("+e.getIdentifier()+") for parameter images is invalid." );
+    }
+  }
+
+  private static String normalizeVolumeIdentifier( final String identifier ) throws EucalyptusCloudException {
+    try {
+      return ResourceIdentifiers.parse( Volume.ID_PREFIX, identifier ).getIdentifier( );
+    } catch ( final InvalidResourceIdentifier e ) {
+      throw new ComputeServiceClientException( "InvalidParameterValue", "Value (%s) for parameter volumeId is invalid." );
     }
   }
 
