@@ -202,13 +202,13 @@ class CassandraAwsRecordsVerificationImpl {
       }
       for (String accountId: [ACCOUNT1, ACCOUNT2]) {
         for (String service : [SERVICE1, SERVICE2]) {
-          CassandraSessionManager.session.execute(
+          CassandraSessionManager.doWithSession{ it.execute(
             new SimpleStatement("DELETE FROM eucalyptus_billing.aws_records where account_id=? AND service=?", accountId, service)
-          );
+          ) }
           for (String resource: [RESOURCE1, RESOURCE2, RESOURCE3, RESOURCE4]) {
-            CassandraSessionManager.session.execute(
+            CassandraSessionManager.doWithSession{ it.execute(
               new SimpleStatement("DELETE FROM eucalyptus_billing.aws_records_by_resource where account_id=? AND service=? AND resource=?", accountId, service, resource)
-            );
+            ) }
           }
         }
       }

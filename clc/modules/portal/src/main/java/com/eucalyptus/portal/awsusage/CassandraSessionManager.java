@@ -1,5 +1,5 @@
 /*************************************************************************
- * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,42 +12,38 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- *  This file may incorporate work covered under the following copyright and permission notice:
- *
- *   Copyright 2010-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *    http://aws.amazon.com/apache2.0
- *
- *   or in the "license" file accompanying this file. This file is distributed
- *   on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *   express or implied. See the License for the specific language governing
- *   permissions and limitations under the License.
  ************************************************************************/
 package com.eucalyptus.portal.awsusage;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Session;
+import com.eucalyptus.cassandra.common.CassandraComponent;
+import com.eucalyptus.cassandra.common.CassandraKeyspaceSpecification;
+import com.eucalyptus.cassandra.common.CassandraPersistence;
+import com.eucalyptus.cassandra.common.util.CqlUtil;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
+import com.google.common.io.Resources;
 import org.apache.log4j.Logger;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * Created by ethomas on 11/22/16.
  */
+@CassandraKeyspaceSpecification( "eucalyptus_billing" )
 @ConfigurableClass(root = "services.billing", description = "Parameters controlling billing service")
-public class CassandraSessionManager {
+public class CassandraSessionManager implements CassandraComponent {
   // TODO: this is a temporary class and needs to be replaced once the cassandra framework is committed to master.
   private static final Logger LOG = Logger.getLogger(CassandraSessionManager.class);
   @ConfigurableField(
@@ -87,48 +83,37 @@ public class CassandraSessionManager {
     session.execute("CREATE KEYSPACE IF NOT EXISTS eucalyptus_billing " +
       "WITH replication = {'class':'SimpleStrategy', 'replication_factor':1}; ");
 
-    session.execute("CREATE TABLE IF NOT EXISTS eucalyptus_billing.aws_records (" +
-      "  account_id TEXT,\n" +
-      "  service TEXT,\n" +
-      "  operation TEXT,\n" +
-      "  usage_type TEXT,\n" +
-      "  resource TEXT,\n" +
-      "  start_time TIMESTAMP,\n" +
-      "  end_time TIMESTAMP,\n" +
-      "  usage_value TEXT, \n" +
-      "  natural_id TIMEUUID,\n" +
-      "  operation_usage_type_concat TEXT, \n" +
-      "  PRIMARY KEY((account_id, service), end_time, natural_id)\n" +
-      ") WITH CLUSTERING ORDER BY (end_time ASC, natural_id ASC);");
-    session.execute("CREATE INDEX IF NOT EXISTS aws_records_operation_idx ON eucalyptus_billing.aws_records (operation);");
-    session.execute("CREATE INDEX IF NOT EXISTS aws_records_usage_type_idx ON eucalyptus_billing.aws_records (usage_type);");
-    session.execute("CREATE INDEX IF NOT EXISTS aws_records_operation_usage_type_idx ON eucalyptus_billing.aws_records (operation_usage_type_concat);");
+    session.execute("USE eucalyptus_billing;");
 
-    // separate table for records as it may not be a low cardinality value (secondary index otherwise)
-    session.execute("CREATE TABLE IF NOT EXISTS eucalyptus_billing.aws_records_by_resource (" +
-      "  account_id TEXT,\n" +
-      "  service TEXT,\n" +
-      "  operation TEXT,\n" +
-      "  usage_type TEXT,\n" +
-      "  resource TEXT,\n" +
-      "  start_time TIMESTAMP,\n" +
-      "  end_time TIMESTAMP,\n" +
-      "  usage_value TEXT, \n" +
-      "  natural_id TIMEUUID,\n" +
-      "  operation_usage_type_concat TEXT, \n" +
-      "  PRIMARY KEY((account_id, service, resource), end_time, natural_id)\n" +
-      ") WITH CLUSTERING ORDER BY (end_time ASC, natural_id ASC);");
-    session.execute("CREATE INDEX IF NOT EXISTS aws_records_by_resource_operation_idx ON eucalyptus_billing.aws_records_by_resource (operation);");
-    session.execute("CREATE INDEX IF NOT EXISTS aws_records_by_resource_usage_type_idx ON eucalyptus_billing.aws_records_by_resource (usage_type);");
-    session.execute("CREATE INDEX IF NOT EXISTS aws_records_by_resource_operation_usage_type_idx ON eucalyptus_billing.aws_records_by_resource (operation_usage_type_concat);");
+    try {
+      final String cql = Resources.toString(
+          Resources.getResource("2017-03-28-eucalyptus-billing-base.cql"),
+          StandardCharsets.UTF_8 );
+      CqlUtil.splitCql( cql ).forEach( session::execute );
+    } catch ( final IOException | ParseException e ) {
+      throw Exceptions.toUndeclared( e );
+    }
   }
 
-  public static synchronized Session getSession() {
+  private static synchronized Session getSession() {
     if (session == null) {
       initCluster();
     }
     return session;
   }
+
+  /**
+   * Perform work using a datastax session in a callback.
+   */
+  public static <R> R doWithSession(
+      final Function<? super Session,? extends R> callbackFunction
+  ) {
+    if ( "cassandra".equals( DB_TO_USE ) ) {
+      return callbackFunction.apply( getSession( ) );
+    } else {
+      return CassandraPersistence.doWithSession( "eucalyptus_billing", callbackFunction );
+    }
+  };
 
   public static class ChangeListener implements PropertyChangeListener {
     @Override
