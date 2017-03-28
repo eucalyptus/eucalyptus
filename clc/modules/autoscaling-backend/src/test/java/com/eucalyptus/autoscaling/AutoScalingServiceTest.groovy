@@ -37,12 +37,6 @@ import com.eucalyptus.autoscaling.common.backend.msgs.CreateLaunchConfigurationT
 import com.eucalyptus.autoscaling.common.backend.msgs.DeleteAutoScalingGroupType
 import com.eucalyptus.autoscaling.common.backend.msgs.DeleteLaunchConfigurationType
 import com.eucalyptus.autoscaling.common.backend.msgs.DeletePolicyType
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAutoScalingGroupsResponseType
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAutoScalingGroupsType
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAutoScalingInstancesResponseType
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAutoScalingInstancesType
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeLaunchConfigurationsResponseType
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeLaunchConfigurationsType
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribePoliciesResponseType
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribePoliciesType
 import com.eucalyptus.autoscaling.common.backend.msgs.ExecutePolicyType
@@ -56,6 +50,12 @@ import com.eucalyptus.autoscaling.common.msgs.AutoScalingInstanceDetails
 import com.eucalyptus.autoscaling.common.msgs.AvailabilityZones
 import com.eucalyptus.autoscaling.common.msgs.BlockDeviceMappingType
 import com.eucalyptus.autoscaling.common.msgs.BlockDeviceMappings
+import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseType
+import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsType
+import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingInstancesResponseType
+import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingInstancesType
+import com.eucalyptus.autoscaling.common.msgs.DescribeLaunchConfigurationsResponseType
+import com.eucalyptus.autoscaling.common.msgs.DescribeLaunchConfigurationsType
 import com.eucalyptus.autoscaling.common.msgs.InstanceMonitoring
 import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationNames
 import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationType
@@ -83,6 +83,7 @@ import com.eucalyptus.autoscaling.common.internal.tags.AutoScalingGroupTag
 import com.eucalyptus.autoscaling.common.internal.tags.Tag
 import com.eucalyptus.autoscaling.common.internal.tags.TagSupportDiscovery
 import com.eucalyptus.autoscaling.common.internal.tags.Tags
+import com.eucalyptus.autoscaling.service.AutoScalingService
 import com.eucalyptus.cloudwatch.common.msgs.DescribeAlarmsResponseType
 import com.eucalyptus.cloudwatch.common.msgs.DescribeAlarmsType
 import com.eucalyptus.context.Context
@@ -157,7 +158,7 @@ class AutoScalingServiceTest {
   @Test
   void testLaunchConfigurations() {
     Accounts.setIdentityProvider( identityProvider() )
-    AutoScalingBackendService service = service()
+    AutoScalingConvergedService service = service()
     Contexts.threadLocal(  new Context( "", new BaseMessage() ) )
 
     service.createLaunchConfiguration( new CreateLaunchConfigurationType(
@@ -214,7 +215,7 @@ class AutoScalingServiceTest {
   @Test
   void testAutoScalingGroups() {
     Accounts.setIdentityProvider( identityProvider() )
-    AutoScalingBackendService service = service()
+    AutoScalingConvergedService service = service()
     Contexts.threadLocal(  new Context( "", new BaseMessage() ) )
 
     service.createLaunchConfiguration( new CreateLaunchConfigurationType(
@@ -284,7 +285,7 @@ class AutoScalingServiceTest {
   @Test
   void testScalingPolicies() {
     Accounts.setIdentityProvider( identityProvider() )
-    AutoScalingBackendService service = service()
+    AutoScalingConvergedService service = service()
     Contexts.threadLocal(  new Context( "", new BaseMessage() ) )
 
     service.createLaunchConfiguration( new CreateLaunchConfigurationType(
@@ -365,7 +366,7 @@ class AutoScalingServiceTest {
   @Test
   void testDescribeInstances() {
     Accounts.setIdentityProvider( identityProvider() )
-    AutoScalingBackendService service = service( launchConfigurationStore(), autoScalingGroupStore(), autoScalingInstanceStore( [
+    AutoScalingConvergedService service = service( launchConfigurationStore(), autoScalingGroupStore(), autoScalingInstanceStore( [
       new AutoScalingInstance(
           ownerAccountNumber: '000000000000',
           displayName: 'i-00000001',
@@ -398,7 +399,7 @@ class AutoScalingServiceTest {
   void testTerminateInstances() {
     Accounts.setIdentityProvider( identityProvider() )
     AutoScalingGroup group
-    AutoScalingBackendService service = service( launchConfigurationStore(), autoScalingGroupStore( [
+    AutoScalingConvergedService service = service( launchConfigurationStore(), autoScalingGroupStore( [
         group = new AutoScalingGroup(
             naturalId: '88777c80-7248-11e2-bcfd-0800200c9a66',
             ownerAccountNumber: '000000000000',
@@ -447,7 +448,12 @@ class AutoScalingServiceTest {
     assertEquals( "Activity progress", 13, activity.progress )
   }
 
-  AutoScalingBackendService service(
+  class AutoScalingConvergedService {
+    @Delegate AutoScalingBackendService backend
+    @Delegate AutoScalingService userFacing
+  }
+
+  AutoScalingConvergedService service(
       launchConfigurationStore = launchConfigurationStore(),
       autoScalingGroupStore = autoScalingGroupStore(),
       autoScalingInstanceStore = autoScalingInstanceStore(),
@@ -455,13 +461,21 @@ class AutoScalingServiceTest {
       activityManager = activityManager(),
       scalingActivities = autoScalingActivitiesStore()
   ) {
-    new AutoScalingBackendService(
-        launchConfigurationStore,
-        autoScalingGroupStore,
-        autoScalingInstanceStore,
-        scalingPolicyStore,
-        activityManager,
-        scalingActivities )
+    new AutoScalingConvergedService(
+        backend: new AutoScalingBackendService(
+            launchConfigurationStore,
+            autoScalingGroupStore,
+            autoScalingInstanceStore,
+            scalingPolicyStore,
+            activityManager ),
+        userFacing: new AutoScalingService(
+            launchConfigurationStore,
+            autoScalingGroupStore,
+            autoScalingInstanceStore,
+            scalingPolicyStore,
+            scalingActivities
+        )
+    )
   }
 
   PrincipalProvider identityProvider() {

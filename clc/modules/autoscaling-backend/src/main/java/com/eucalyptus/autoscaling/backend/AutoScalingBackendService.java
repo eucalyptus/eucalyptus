@@ -21,7 +21,6 @@ package com.eucalyptus.autoscaling.backend;
 
 import static com.eucalyptus.autoscaling.common.AutoScalingResourceName.InvalidResourceNameException;
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
-import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.LaunchConfigurationMetadata;
 import static com.eucalyptus.autoscaling.common.AutoScalingResourceName.Type.autoScalingGroup;
 import static com.google.common.base.Strings.nullToEmpty;
 
@@ -38,16 +37,13 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
 import org.apache.log4j.Logger;
-import org.hibernate.criterion.Restrictions;
 import org.hibernate.exception.ConstraintViolationException;
 
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.autoscaling.activities.ActivityManager;
-import com.eucalyptus.autoscaling.common.internal.activities.ScalingActivities;
 import com.eucalyptus.autoscaling.common.internal.activities.ScalingActivity;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
@@ -66,26 +62,8 @@ import com.eucalyptus.autoscaling.common.backend.msgs.DeletePolicyResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DeletePolicyType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DeleteTagsResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DeleteTagsType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAdjustmentTypesResponseType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAdjustmentTypesType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAutoScalingGroupsResponseType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAutoScalingGroupsType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAutoScalingInstancesResponseType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeAutoScalingInstancesType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeLaunchConfigurationsResponseType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeLaunchConfigurationsType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeMetricCollectionTypesResponseType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeMetricCollectionTypesType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribePoliciesResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DescribePoliciesType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeScalingActivitiesResponseType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeScalingActivitiesType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeScalingProcessTypesResponseType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeScalingProcessTypesType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeTagsResponseType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeTagsType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeTerminationPolicyTypesResponseType;
-import com.eucalyptus.autoscaling.common.backend.msgs.DescribeTerminationPolicyTypesType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DisableMetricsCollectionResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.DisableMetricsCollectionType;
 import com.eucalyptus.autoscaling.common.backend.msgs.EnableMetricsCollectionResponseType;
@@ -109,20 +87,9 @@ import com.eucalyptus.autoscaling.common.backend.msgs.TerminateInstanceInAutoSca
 import com.eucalyptus.autoscaling.common.backend.msgs.UpdateAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.backend.msgs.UpdateAutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.Activity;
-import com.eucalyptus.autoscaling.common.msgs.AdjustmentTypes;
 import com.eucalyptus.autoscaling.common.msgs.Alarms;
-import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupType;
-import com.eucalyptus.autoscaling.common.msgs.AutoScalingInstanceDetails;
 import com.eucalyptus.autoscaling.common.msgs.BlockDeviceMappingType;
-import com.eucalyptus.autoscaling.common.msgs.Filter;
-import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationType;
-import com.eucalyptus.autoscaling.common.msgs.MetricCollectionTypes;
-import com.eucalyptus.autoscaling.common.msgs.MetricGranularityType;
-import com.eucalyptus.autoscaling.common.msgs.MetricGranularityTypes;
-import com.eucalyptus.autoscaling.common.msgs.ProcessType;
 import com.eucalyptus.autoscaling.common.msgs.ScalingPolicyType;
-import com.eucalyptus.autoscaling.common.msgs.TagDescription;
-import com.eucalyptus.autoscaling.common.msgs.TagDescriptionList;
 import com.eucalyptus.autoscaling.common.msgs.TagType;
 import com.eucalyptus.autoscaling.common.policy.AutoScalingPolicySpec;
 import com.eucalyptus.autoscaling.config.AutoScalingConfiguration;
@@ -131,7 +98,6 @@ import com.eucalyptus.autoscaling.common.internal.configurations.LaunchConfigura
 import com.eucalyptus.autoscaling.common.internal.configurations.LaunchConfigurations;
 import com.eucalyptus.autoscaling.common.internal.groups.AutoScalingGroup;
 import com.eucalyptus.autoscaling.common.internal.groups.AutoScalingGroupCoreView;
-import com.eucalyptus.autoscaling.common.internal.groups.AutoScalingGroupMinimumView;
 import com.eucalyptus.autoscaling.common.internal.groups.AutoScalingGroups;
 import com.eucalyptus.autoscaling.common.internal.groups.MetricCollectionType;
 import com.eucalyptus.autoscaling.common.internal.groups.HealthCheckType;
@@ -169,7 +135,6 @@ import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMappers;
-import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
@@ -177,11 +142,9 @@ import com.google.common.base.Predicates;
 import com.google.common.base.Splitter;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 
 @SuppressWarnings( { "UnusedDeclaration", "Guava", "StaticPseudoFunctionalStyleMethod", "Convert2Lambda", "Convert2streamapi" } )
@@ -192,19 +155,6 @@ public class AutoScalingBackendService {
   private static final Set<String> reservedPrefixes =
       ImmutableSet.<String>builder().add("aws:").add("euca:").build();
 
-  private static final Map<String,Function<Tag,String>> tagFilterExtractors =
-      ImmutableMap.<String,Function<Tag,String>>builder()
-      .put( "auto-scaling-group", Tags.resourceId() )
-      .put( "key", Tags.key() )
-      .put( "value", Tags.value() )
-      .put( "propagate-at-launch", Tags.propagateAtLaunch() )
-      .build();
-
-  private static final Map<String,Function<String,String>> tagValuePreProcessors =
-      ImmutableMap.<String,Function<String,String>>builder()
-      .put( "propagate-at-launch", Strings.lower() )
-      .build();
-
   public static long MAX_TAGS_PER_RESOURCE = 10;
 
   private final LaunchConfigurations launchConfigurations;
@@ -212,59 +162,18 @@ public class AutoScalingBackendService {
   private final AutoScalingInstances autoScalingInstances;
   private final ScalingPolicies scalingPolicies;
   private final ActivityManager activityManager;
-  private final ScalingActivities scalingActivities;
 
   @Inject
   public AutoScalingBackendService( final LaunchConfigurations launchConfigurations,
                                     final AutoScalingGroups autoScalingGroups,
                                     final AutoScalingInstances autoScalingInstances,
                                     final ScalingPolicies scalingPolicies,
-                                    final ActivityManager activityManager,
-                                    final ScalingActivities scalingActivities ) {
+                                    final ActivityManager activityManager ) {
     this.launchConfigurations = launchConfigurations;
     this.autoScalingGroups = autoScalingGroups;
     this.autoScalingInstances = autoScalingInstances;
     this.scalingPolicies = scalingPolicies;
     this.activityManager = activityManager;
-    this.scalingActivities = scalingActivities;
-  }
-
-  public DescribeAutoScalingGroupsResponseType describeAutoScalingGroups( final DescribeAutoScalingGroupsType request ) throws EucalyptusCloudException {
-    final DescribeAutoScalingGroupsResponseType reply = request.getReply( );
-
-    //TODO: MaxRecords / NextToken support for DescribeAutoScalingGroups
-
-    final Context ctx = Contexts.lookup( );
-    final boolean showAll = request.autoScalingGroupNames().remove( "verbose" ) || !request.autoScalingGroupNames( ).isEmpty( );
-    final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll ?
-        null :
-        ctx.getUserFullName( ).asAccountFullName( );
-
-    final Predicate<AutoScalingGroupMetadata> requestedAndAccessible = 
-        AutoScalingMetadatas.filterPrivilegesByIdOrArn( AutoScalingGroupMetadata.class, request.autoScalingGroupNames() );
-
-    try {
-      final List<AutoScalingGroupType> results = reply.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember();
-      results.addAll( autoScalingGroups.list(
-          ownerFullName,
-          requestedAndAccessible,
-          TypeMappers.lookup( AutoScalingGroup.class, AutoScalingGroupType.class ) ) );
-
-      final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( AutoScalingGroup.class )
-          .getResourceTagMap( ctx.getUserFullName().asAccountFullName(),
-              Iterables.transform( results, AutoScalingGroupType.groupName() ), Predicates.alwaysTrue() );
-      for ( final AutoScalingGroupType type : results ) {
-        final TagDescriptionList tags = new TagDescriptionList();
-        Tags.addFromTags( tags.getMember(), TagDescription.class, tagsMap.get( type.getAutoScalingGroupName() ) );
-        if ( !tags.getMember().isEmpty() ) {
-          type.setTags( tags );
-        }
-      }
-    } catch ( Exception e ) {
-      handleException( e );
-    }    
-    
-    return reply;
   }
 
   public EnableMetricsCollectionResponseType enableMetricsCollection( final EnableMetricsCollectionType request ) throws EucalyptusCloudException {
@@ -408,17 +317,6 @@ public class AutoScalingBackendService {
     return reply;
   }
 
-  public DescribeScalingProcessTypesResponseType describeScalingProcessTypes( final DescribeScalingProcessTypesType request) throws EucalyptusCloudException {
-    final DescribeScalingProcessTypesResponseType reply = request.getReply( );
-
-    final List<ProcessType> policies = reply.getDescribeScalingProcessTypesResult().getProcesses().getMember();
-    policies.addAll( Collections2.transform(
-        Collections2.filter( EnumSet.allOf( ScalingProcessType.class ), RestrictedTypes.filterPrivilegedWithoutOwner() ),
-        TypeMappers.lookup( ScalingProcessType.class, ProcessType.class )) );
-
-    return reply;
-  }
-
   public CreateAutoScalingGroupResponseType createAutoScalingGroup( final CreateAutoScalingGroupType request ) throws EucalyptusCloudException {
     final CreateAutoScalingGroupResponseType reply = request.getReply( );
 
@@ -509,104 +407,6 @@ public class AutoScalingBackendService {
       RestrictedTypes.allocateUnitlessResource( allocator );
     } catch ( Exception e ) {
       handleException( e, true );
-    }
-
-    return reply;
-  }
-
-  public DescribeScalingActivitiesResponseType describeScalingActivities( final DescribeScalingActivitiesType request ) throws EucalyptusCloudException {
-    final DescribeScalingActivitiesResponseType reply = request.getReply( );
-
-    final Context ctx = Contexts.lookup( );
-    final boolean showAll = request.activityIds().remove( "verbose" ) ||
-        AutoScalingResourceName.isResourceName().apply( request.getAutoScalingGroupName( ) );
-    final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll ?
-        null :
-        ctx.getUserFullName( ).asAccountFullName( );
-
-    try {
-      final AutoScalingGroupMinimumView group = com.google.common.base.Strings.isNullOrEmpty( request.getAutoScalingGroupName() ) ?
-          null :
-          autoScalingGroups.lookup(
-              ownerFullName,
-              request.getAutoScalingGroupName(),
-              TypeMappers.lookup( AutoScalingGroup.class, AutoScalingGroupMinimumView.class ) );
-
-      final List<Activity> scalingActivities = this.scalingActivities.list(
-          ownerFullName,
-          group,
-          request.activityIds(),
-          AutoScalingMetadatas.filteringFor( ScalingActivity.class ).byPrivileges( ).buildPredicate( ),
-          TypeMappers.lookup( ScalingActivity.class, Activity.class ) );
-      Collections.sort( scalingActivities, Ordering.natural().reverse().onResultOf( Activity.startTime() ) );
-
-      reply.getDescribeScalingActivitiesResult().getActivities().getMember().addAll( scalingActivities );
-    } catch ( AutoScalingMetadataNotFoundException e ) {
-      throw new ValidationErrorException( "Auto scaling group not found: " + request.getAutoScalingGroupName() );
-    } catch ( AutoScalingMetadataException e ) {
-      handleException( e );
-    }
-
-    return reply;
-  }
-
-  public DescribeTerminationPolicyTypesResponseType describeTerminationPolicyTypes( final DescribeTerminationPolicyTypesType request ) throws EucalyptusCloudException {
-    final DescribeTerminationPolicyTypesResponseType reply = request.getReply( );    
-    
-    final List<String> policies = reply.getDescribeTerminationPolicyTypesResult().getTerminationPolicyTypes().getMember();
-    policies.addAll( Collections2.transform( 
-        Collections2.filter( EnumSet.allOf( TerminationPolicyType.class ), RestrictedTypes.filterPrivilegedWithoutOwner() ), 
-        Strings.toStringFunction() ) );
-    
-    return reply;
-  }
-
-  public DescribeTagsResponseType describeTags( final DescribeTagsType request ) throws EucalyptusCloudException {
-    final DescribeTagsResponseType reply = request.getReply( );
-
-    //TODO: MaxRecords / NextToken support for DescribeTags
-
-    final Collection<Predicate<Tag>> tagFilters = Lists.newArrayList();
-    for ( final Filter filter : request.filters() ) {
-      final Function<Tag,String> extractor = tagFilterExtractors.get( filter.getName() );
-      if ( extractor == null ) {
-        throw new ValidationErrorException( "Filter type "+filter.getName()+" is not correct. Allowed Filter types are: auto-scaling-group key value propagate-at-launch" );
-      }
-      final Function<String,String> tagValueConverter = MoreObjects.firstNonNull(
-          tagValuePreProcessors.get( filter.getName() ),
-          Functions.identity() );
-      tagFilters.add( Predicates.compose(
-          Predicates.in( Collections2.transform( filter.values(), tagValueConverter ) ),
-          extractor ) );
-    }
-
-    final Context context = Contexts.lookup();
-
-    final Ordering<Tag> ordering = Ordering.natural().onResultOf( Tags.resourceId() )
-        .compound( Ordering.natural().onResultOf( Tags.key() ) )
-        .compound( Ordering.natural().onResultOf( Tags.value() ) );
-    try {
-      final TagDescriptionList tagDescriptions = new TagDescriptionList();
-       for ( final Tag tag : ordering.sortedCopy( Tags.list(
-          context.getUserFullName().asAccountFullName(),
-          Predicates.and( tagFilters ),
-          Restrictions.conjunction(),
-          Collections.emptyMap() ) ) ) {
-        if ( Permissions.isAuthorized(
-            AutoScalingPolicySpec.VENDOR_AUTOSCALING,
-            tag.getResourceType(),
-            tag.getKey(),
-            context.getAccount(),
-            PolicySpec.describeAction( AutoScalingPolicySpec.VENDOR_AUTOSCALING, tag.getResourceType() ),
-            context.getAuthContext() ) ) {
-          tagDescriptions.getMember().add( TypeMappers.transform( tag, TagDescription.class ) );
-        }
-      }
-      if ( !tagDescriptions.getMember().isEmpty() ) {
-        reply.getDescribeTagsResult().setTags( tagDescriptions );
-      }
-    } catch ( AutoScalingMetadataNotFoundException e ) {
-      handleException( e );
     }
 
     return reply;
@@ -976,37 +776,6 @@ public class AutoScalingBackendService {
     return reply;
   }
 
-  public DescribeAutoScalingInstancesResponseType describeAutoScalingInstances( final DescribeAutoScalingInstancesType request ) throws EucalyptusCloudException {
-    final DescribeAutoScalingInstancesResponseType reply = request.getReply( );
-
-    //TODO: MaxRecords / NextToken support for DescribeAutoScalingInstances
-
-    final Context ctx = Contexts.lookup( );
-    final boolean showAll = request.instanceIds().remove( "verbose" ) || !request.instanceIds().isEmpty();
-    final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll ?
-        null :
-        ctx.getUserFullName( ).asAccountFullName( );
-
-    final Predicate<? super AutoScalingInstance> requestedAndAccessible =
-        AutoScalingMetadatas.filteringFor(AutoScalingInstance.class)
-            .byId( request.instanceIds() )
-            .byPrivileges( )
-            .buildPredicate( );
-
-    try {
-      final List<AutoScalingInstanceDetails> results =
-          reply.getDescribeAutoScalingInstancesResult().getAutoScalingInstances().getMember();
-      results.addAll( autoScalingInstances.list(
-          ownerFullName,
-          requestedAndAccessible,
-          TypeMappers.lookup( AutoScalingInstance.class, AutoScalingInstanceDetails.class ) ) );
-    } catch ( Exception e ) {
-      handleException( e );
-    }
-
-    return reply;
-  }
-
   public CreateLaunchConfigurationResponseType createLaunchConfiguration( final CreateLaunchConfigurationType request ) throws EucalyptusCloudException {
     final CreateLaunchConfigurationResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
@@ -1270,60 +1039,6 @@ public class AutoScalingBackendService {
     } catch ( Exception e ) {
       handleException( e );
     }
-    return reply;
-  }
-
-
-  public DescribeLaunchConfigurationsResponseType describeLaunchConfigurations(DescribeLaunchConfigurationsType request) throws EucalyptusCloudException {
-    final DescribeLaunchConfigurationsResponseType reply = request.getReply( );
-
-    //TODO: MaxRecords / NextToken support for DescribeLaunchConfigurations
-    
-    final Context ctx = Contexts.lookup( );
-    final boolean showAll = request.launchConfigurationNames().remove( "verbose" ) ||
-        (!request.launchConfigurationNames().isEmpty() && Iterables.all( request.launchConfigurationNames( ), AutoScalingResourceName.isResourceName( ) ) );
-    final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll ?
-        null : 
-        ctx.getUserFullName( ).asAccountFullName( );
-
-    final Predicate<LaunchConfigurationMetadata> requestedAndAccessible =
-        AutoScalingMetadatas.filterPrivilegesByIdOrArn( LaunchConfigurationMetadata.class, request.launchConfigurationNames() );
-
-    try {
-      final List<LaunchConfigurationType> results = reply.getDescribeLaunchConfigurationsResult( ).getLaunchConfigurations().getMember();
-      results.addAll( launchConfigurations.list(
-          ownerFullName,
-          requestedAndAccessible,
-          TypeMappers.lookup( LaunchConfiguration.class, LaunchConfigurationType.class ) ) );
-    } catch ( Exception e ) {
-      handleException( e );
-    }
-
-    return reply;
-  }
-
-  public DescribeAdjustmentTypesResponseType describeAdjustmentTypes(final DescribeAdjustmentTypesType request) throws EucalyptusCloudException {
-    final DescribeAdjustmentTypesResponseType reply = request.getReply( );
-
-    reply.getDescribeAdjustmentTypesResult().setAdjustmentTypes( new AdjustmentTypes(
-        Collections2.transform(
-            Collections2.filter( EnumSet.allOf( AdjustmentType.class ), RestrictedTypes.filterPrivilegedWithoutOwner() ),
-            Strings.toStringFunction() ) ) );
-
-    return reply;
-  }
-
-  public DescribeMetricCollectionTypesResponseType describeMetricCollectionTypes( final DescribeMetricCollectionTypesType request ) throws EucalyptusCloudException {
-    final DescribeMetricCollectionTypesResponseType reply = request.getReply( );
-
-    reply.getDescribeMetricCollectionTypesResult().setMetrics( new MetricCollectionTypes(
-        Collections2.transform(
-            Collections2.filter( EnumSet.allOf( MetricCollectionType.class ), RestrictedTypes.filterPrivilegedWithoutOwner() ),
-            Strings.toStringFunction() ) ) );
-    reply.getDescribeMetricCollectionTypesResult().setGranularities( new MetricGranularityTypes(
-        Collections.singletonList( new MetricGranularityType( "1Minute" ) )
-    ) );
-
     return reply;
   }
 
