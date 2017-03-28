@@ -24,24 +24,26 @@ import com.eucalyptus.auth.api.PrincipalProvider
 import com.eucalyptus.auth.principal.AccountFullName
 import com.eucalyptus.auth.principal.TestProvider
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata
-import com.eucalyptus.autoscaling.configurations.LaunchConfiguration
-import com.eucalyptus.autoscaling.configurations.LaunchConfigurations
-import com.eucalyptus.autoscaling.groups.AutoScalingGroup
-import com.eucalyptus.autoscaling.groups.AutoScalingGroups
-import com.eucalyptus.autoscaling.groups.HealthCheckType
-import com.eucalyptus.autoscaling.groups.ScalingProcessType
-import com.eucalyptus.autoscaling.groups.TerminationPolicyType
-import com.eucalyptus.autoscaling.instances.AutoScalingInstance
-import com.eucalyptus.autoscaling.instances.AutoScalingInstances
-import com.eucalyptus.autoscaling.instances.ConfigurationState
-import com.eucalyptus.autoscaling.instances.HealthStatus
-import com.eucalyptus.autoscaling.instances.LifecycleState
-import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException
-import com.eucalyptus.autoscaling.tags.Tag
+import com.eucalyptus.autoscaling.common.internal.activities.ActivityStatusCode
+import com.eucalyptus.autoscaling.common.internal.activities.ScalingActivities
+import com.eucalyptus.autoscaling.common.internal.activities.ScalingActivity
+import com.eucalyptus.autoscaling.common.internal.configurations.LaunchConfiguration
+import com.eucalyptus.autoscaling.common.internal.configurations.LaunchConfigurations
+import com.eucalyptus.autoscaling.common.internal.groups.AutoScalingGroup
+import com.eucalyptus.autoscaling.common.internal.groups.AutoScalingGroups
+import com.eucalyptus.autoscaling.common.internal.groups.HealthCheckType
+import com.eucalyptus.autoscaling.common.internal.groups.ScalingProcessType
+import com.eucalyptus.autoscaling.common.internal.groups.TerminationPolicyType
+import com.eucalyptus.autoscaling.common.internal.instances.AutoScalingInstance
+import com.eucalyptus.autoscaling.common.internal.instances.AutoScalingInstances
+import com.eucalyptus.autoscaling.common.internal.instances.ConfigurationState
+import com.eucalyptus.autoscaling.common.internal.instances.HealthStatus
+import com.eucalyptus.autoscaling.common.internal.instances.LifecycleState
+import com.eucalyptus.autoscaling.common.internal.metadata.AutoScalingMetadataNotFoundException
+import com.eucalyptus.autoscaling.common.internal.tags.Tag
 import com.eucalyptus.compute.common.DescribeInstanceStatusResponseType
 import com.eucalyptus.compute.common.DescribeInstanceStatusType
 import com.eucalyptus.compute.common.DescribeTagsType
-import com.eucalyptus.compute.common.Filter
 import com.eucalyptus.compute.common.InstanceStateType
 import com.eucalyptus.compute.common.InstanceStatusItemType
 import com.eucalyptus.compute.common.InstanceStatusSetType
@@ -117,7 +119,7 @@ class ActivityManagerTest {
         AutoScalingInstances.AutoScalingInstanceGroupViewTransform,
         LaunchConfigurations.LaunchConfigurationCoreViewTransform,
         LaunchConfigurations.LaunchConfigurationMinimumViewTransform,
-        LaunchConfigurations.LaunchConfigurationToRunInstances,
+        LaunchConfigurationToRunInstances,
         ScalingActivities.ScalingActivityTransform
     ].each( registerTypeMapper )
   }

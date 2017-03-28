@@ -17,29 +17,30 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.activities;
+package com.eucalyptus.autoscaling.common.internal.configurations;
 
-import java.util.Set;
-import com.eucalyptus.autoscaling.common.internal.metadata.AutoScalingMetadataException;
+import java.util.List;
+import com.google.common.collect.ImmutableList;
 
 /**
- *
+ * Immutable core view of a launch configuration.
  */
-public abstract class ZoneUnavailabilityMarkers {
+public class LaunchConfigurationCoreView extends LaunchConfigurationMinimumView {
 
-  /**
-   * Update the set of unavailable zones.
-   *
-   * Note that the callback may be invoked multiple times but within a
-   * transaction that will only commit (successfully) once.
-   *
-   * @param unavailableZones The currently unavailable zones
-   * @param callback Callback for the set of zones with changed availability
-   */
-  public abstract void updateUnavailableZones( Set<String> unavailableZones,
-                                               ZoneCallback callback ) throws AutoScalingMetadataException;
+  private final ImmutableList<BlockDeviceMapping> blockDeviceMappings;
+  private final ImmutableList<String> securityGroups;
 
-  public interface ZoneCallback {
-    void notifyChangedZones( Set<String> zones ) throws AutoScalingMetadataException;
+  public LaunchConfigurationCoreView( final LaunchConfiguration launchConfiguration ) {
+    super( launchConfiguration );
+    this.blockDeviceMappings = ImmutableList.copyOf( launchConfiguration.getBlockDeviceMappings() );
+    this.securityGroups = ImmutableList.copyOf( launchConfiguration.getSecurityGroups() );
+  }
+
+  public List<String> getSecurityGroups() {
+    return securityGroups;
+  }
+
+  public List<BlockDeviceMapping> getBlockDeviceMappings() {
+    return blockDeviceMappings;
   }
 }

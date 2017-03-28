@@ -17,29 +17,38 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.activities;
+package com.eucalyptus.autoscaling.common.internal.activities;
 
-import java.util.Set;
-import com.eucalyptus.autoscaling.common.internal.metadata.AutoScalingMetadataException;
+import javax.annotation.Nullable;
 
 /**
- *
+ * Scaling activity status codes.
  */
-public abstract class ZoneUnavailabilityMarkers {
+public enum ActivityStatusCode {
+
+  WaitingForSpotInstanceRequestId,
+  
+  WaitingForSpotInstanceId,
+  
+  WaitingForInstanceId,
+  
+  PreInService,
+  
+  InProgress,
+  
+  Successful,
+  
+  Failed,
+  
+  Cancelled;
 
   /**
-   * Update the set of unavailable zones.
-   *
-   * Note that the callback may be invoked multiple times but within a
-   * transaction that will only commit (successfully) once.
-   *
-   * @param unavailableZones The currently unavailable zones
-   * @param callback Callback for the set of zones with changed availability
+   * Get an optional description for the status code.
+   * 
+   * @return The description or null.
    */
-  public abstract void updateUnavailableZones( Set<String> unavailableZones,
-                                               ZoneCallback callback ) throws AutoScalingMetadataException;
-
-  public interface ZoneCallback {
-    void notifyChangedZones( Set<String> zones ) throws AutoScalingMetadataException;
+  @Nullable
+  public String getDescription() {
+    return null; 
   }
 }

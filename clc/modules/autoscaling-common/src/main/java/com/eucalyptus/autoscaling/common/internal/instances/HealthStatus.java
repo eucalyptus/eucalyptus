@@ -17,29 +17,47 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.activities;
+package com.eucalyptus.autoscaling.common.internal.instances;
 
-import java.util.Set;
-import com.eucalyptus.autoscaling.common.internal.metadata.AutoScalingMetadataException;
+import javax.annotation.Nullable;
+import com.google.common.base.Predicate;
 
 /**
  *
  */
-public abstract class ZoneUnavailabilityMarkers {
+public enum HealthStatus implements Predicate<AutoScalingInstance> {
 
   /**
-   * Update the set of unavailable zones.
-   *
-   * Note that the callback may be invoked multiple times but within a
-   * transaction that will only commit (successfully) once.
-   *
-   * @param unavailableZones The currently unavailable zones
-   * @param callback Callback for the set of zones with changed availability
+   * Instance is healthy
    */
-  public abstract void updateUnavailableZones( Set<String> unavailableZones,
-                                               ZoneCallback callback ) throws AutoScalingMetadataException;
+  Healthy,
 
-  public interface ZoneCallback {
-    void notifyChangedZones( Set<String> zones ) throws AutoScalingMetadataException;
+  /**
+   * Instance is unhealthy
+   */
+  Unhealthy,
+  ;
+
+  /**
+   * State matching predicate.
+   *
+   * @param instance The instance to match
+   * @return True if the instance is in this state
+   */
+  @Override
+  public boolean apply( @Nullable final AutoScalingInstance instance ) {
+    return instance != null && this == instance.getHealthStatus();
+  }
+
+  /**
+   * Get a Predicate for view matching.
+   */
+  public Predicate<AutoScalingInstanceCoreView> forView() {
+    return new Predicate<AutoScalingInstanceCoreView>() {
+      @Override
+      public boolean apply( @Nullable final AutoScalingInstanceCoreView instance ) {
+        return instance != null && HealthStatus.this == instance.getHealthStatus();
+      }
+    };
   }
 }

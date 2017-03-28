@@ -17,29 +17,35 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.activities;
+package com.eucalyptus.autoscaling.common.internal.tags;
 
-import java.util.Set;
-import com.eucalyptus.autoscaling.common.internal.metadata.AutoScalingMetadataException;
+import java.lang.reflect.Modifier;
+import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 
 /**
  *
  */
-public abstract class ZoneUnavailabilityMarkers {
+public class TagSupportDiscovery extends ServiceJarDiscovery {
 
-  /**
-   * Update the set of unavailable zones.
-   *
-   * Note that the callback may be invoked multiple times but within a
-   * transaction that will only commit (successfully) once.
-   *
-   * @param unavailableZones The currently unavailable zones
-   * @param callback Callback for the set of zones with changed availability
-   */
-  public abstract void updateUnavailableZones( Set<String> unavailableZones,
-                                               ZoneCallback callback ) throws AutoScalingMetadataException;
+  private final Logger logger = Logger.getLogger( TagSupportDiscovery.class );
 
-  public interface ZoneCallback {
-    void notifyChangedZones( Set<String> zones ) throws AutoScalingMetadataException;
+  @Override
+  public boolean processClass( final Class candidate ) throws Exception {
+    boolean accepted = false;
+    if ( TagSupport.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers() ) ) {
+      try {
+        TagSupport.registerTagSupport( (TagSupport) candidate.newInstance() );
+        accepted = true;
+      } catch ( Exception e ) {
+        logger.error( e, e );
+      }
+    }
+    return accepted;
+  }
+
+  @Override
+  public Double getPriority() {
+    return 0.3d;
   }
 }

@@ -17,29 +17,24 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.activities;
+package com.eucalyptus.autoscaling.common.internal.groups;
 
 import java.util.Set;
-import com.eucalyptus.autoscaling.common.internal.metadata.AutoScalingMetadataException;
+import com.google.common.collect.ImmutableSet;
 
 /**
- *
+ * Immutable metrics view of an auto scaling group.
  */
-public abstract class ZoneUnavailabilityMarkers {
+public class AutoScalingGroupMetricsView extends AutoScalingGroupCoreView {
 
-  /**
-   * Update the set of unavailable zones.
-   *
-   * Note that the callback may be invoked multiple times but within a
-   * transaction that will only commit (successfully) once.
-   *
-   * @param unavailableZones The currently unavailable zones
-   * @param callback Callback for the set of zones with changed availability
-   */
-  public abstract void updateUnavailableZones( Set<String> unavailableZones,
-                                               ZoneCallback callback ) throws AutoScalingMetadataException;
+  private final ImmutableSet<MetricCollectionType> enabledMetrics;
 
-  public interface ZoneCallback {
-    void notifyChangedZones( Set<String> zones ) throws AutoScalingMetadataException;
+  public AutoScalingGroupMetricsView( final AutoScalingGroup group ) {
+    super( group );
+    this.enabledMetrics = ImmutableSet.copyOf( group.getEnabledMetrics() );
+  }
+
+  public Set<MetricCollectionType> getEnabledMetrics() {
+    return enabledMetrics;
   }
 }

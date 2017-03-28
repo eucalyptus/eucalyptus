@@ -21,7 +21,7 @@ package com.eucalyptus.autoscaling.activities;
 
 import java.util.List;
 import java.util.Set;
-import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
+import com.eucalyptus.autoscaling.common.internal.metadata.AutoScalingMetadataException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;

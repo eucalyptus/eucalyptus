@@ -17,29 +17,19 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.activities;
-
-import java.util.Set;
-import com.eucalyptus.autoscaling.common.internal.metadata.AutoScalingMetadataException;
+package com.eucalyptus.autoscaling.common.internal.metadata;
 
 /**
- *
+ * Internal metadata access exception.
  */
-public abstract class ZoneUnavailabilityMarkers {
+public class AutoScalingMetadataException extends Exception {
+  private static final long serialVersionUID = 1L;
 
-  /**
-   * Update the set of unavailable zones.
-   *
-   * Note that the callback may be invoked multiple times but within a
-   * transaction that will only commit (successfully) once.
-   *
-   * @param unavailableZones The currently unavailable zones
-   * @param callback Callback for the set of zones with changed availability
-   */
-  public abstract void updateUnavailableZones( Set<String> unavailableZones,
-                                               ZoneCallback callback ) throws AutoScalingMetadataException;
+  public AutoScalingMetadataException( final String message ) {
+    super( message );
+  }
 
-  public interface ZoneCallback {
-    void notifyChangedZones( Set<String> zones ) throws AutoScalingMetadataException;
+  public AutoScalingMetadataException( final String message, final Throwable cause ) {
+    super( message, cause );
   }
 }
