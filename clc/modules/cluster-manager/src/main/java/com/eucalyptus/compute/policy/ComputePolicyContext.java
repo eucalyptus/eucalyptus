@@ -22,21 +22,53 @@ package com.eucalyptus.compute.policy;
 import java.util.Date;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
+import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.internal.blockstorage.Snapshots;
 import com.eucalyptus.records.Logs;
+import javaslang.Tuple;
+import javaslang.Tuple3;
 
 /**
  *
  */
 public class ComputePolicyContext {
   private final static ThreadLocal<ComputePolicyContextResource> resourceLocal = new ThreadLocal<>();
+  private final static ThreadLocal<Tuple3<String,Class<? extends CloudMetadata>,String>> resourceIdLocal =
+      new ThreadLocal<Tuple3<String,Class<? extends CloudMetadata>,String>>( ){
+        @Override
+        protected Tuple3<String,Class<? extends CloudMetadata>,String> initialValue() {
+          return Tuple.of( null, null, null );
+        }
+      };
 
   static void clearContext( ) {
+    resourceIdLocal.set( Tuple.of( null, null, null ) );
     resourceLocal.set( null );
   }
 
-  static void setComputePolicyContextResource( @Nullable final ComputePolicyContextResource resource ) {
+  static void setComputePolicyContextResource(
+      @Nullable final String resourceAccountNumber,
+      @Nullable final Class<? extends CloudMetadata> resourceClass,
+      @Nullable final String resourceId,
+      @Nullable final ComputePolicyContextResource resource
+  ) {
+    resourceIdLocal.set( Tuple.of( resourceAccountNumber, resourceClass, resourceId ) );
     resourceLocal.set( resource );
+  }
+
+  @Nullable
+  static String getResourceAccountNumber( ) {
+    return resourceIdLocal.get( )._1;
+  }
+
+  @Nullable
+  static Class<? extends CloudMetadata> getResourceType( ) {
+    return resourceIdLocal.get( )._2;
+  }
+
+  @Nullable
+  static String getResourceId( ) {
+    return resourceIdLocal.get( )._3;
   }
 
   @Nullable
@@ -152,7 +184,7 @@ public class ComputePolicyContext {
     return resource == null ? null : resource.getVpcArn();
   }
 
-  public static interface ComputePolicyContextResource {
+  public interface ComputePolicyContextResource {
     @Nullable
     String getAvailabilityZone( );
 

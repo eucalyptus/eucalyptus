@@ -308,7 +308,12 @@ public class AdmissionControl {
             }
           };
 
-          RestrictedTypes.allocateUnitlessResources( CloudMetadata.VmInstanceMetadata.class, tryAmount, maxAmount, allocator );
+          if ( allocInfo.getAllocationType( ) == Allocations.AllocationType.Start &&
+              maxAmount==1 && allocInfo.getInstanceIds( ).size( ) == 1 ) {
+            RestrictedTypes.reallocateUnitlessResource( CloudMetadata.VmInstanceMetadata.class, allocator );
+          } else {
+            RestrictedTypes.allocateUnitlessResources( CloudMetadata.VmInstanceMetadata.class, tryAmount, maxAmount, allocator );
+          }
           return allocInfo.getAllocationTokens( );
         } finally {
           cluster.getGateLock( ).readLock( ).unlock( );
@@ -372,6 +377,7 @@ public class AdmissionControl {
             }
 
             if ( !RestrictedTypes.filterPrivileged( ).apply( VmInstance.exampleResource(
+                maxAmount==1 && allocInfo.getInstanceIds( ).size( )==1 ? allocInfo.getInstanceId( 0 ) : "",
                 allocInfo.getOwnerFullName( ),
                 allocInfo.getPartition( ).getName( ),
                 allocInfo.getIamInstanceProfileArn( ),

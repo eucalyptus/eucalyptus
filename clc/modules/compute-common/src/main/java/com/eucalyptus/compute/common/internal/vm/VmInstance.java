@@ -1399,12 +1399,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return vmExample;
   }
 
-  public static VmInstance exampleResource( final OwnerFullName owner,
+  public static VmInstance exampleResource( final String instanceId,
+                                            final OwnerFullName owner,
                                             final String availabilityZone,
                                             final String instanceProfileArn,
                                             final String instanceType,
                                             final boolean isBlockStorage ) {
-    return new VmInstance( owner, "" ) {
+    return new VmInstance( owner, instanceId ) {
       @Override public String getIamInstanceProfileArn( ) { return instanceProfileArn; }
       @Override public String getInstanceType( ) { return instanceType; }
       @Override public String getPartition( ) { return availabilityZone; }

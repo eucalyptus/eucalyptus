@@ -24,6 +24,7 @@ import static com.eucalyptus.compute.policy.ComputePolicyContext.ComputePolicyCo
 import static com.eucalyptus.auth.PolicyResourceContext.PolicyResourceInterceptor;
 import java.util.Set;
 import com.eucalyptus.compute.common.CloudMetadata;
+import com.eucalyptus.compute.common.CloudMetadata.NetworkGroupMetadata;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.auth.type.RestrictedType;
 import com.eucalyptus.util.TypeMappers;
@@ -41,17 +42,29 @@ public class ComputePolicyResourceInterceptor implements PolicyResourceIntercept
   public void onResource( final PolicyResourceInfo resource, final String action ) {
     ComputePolicyContext.clearContext( );
 
-    if ( resource != null && RestrictedType.class.isAssignableFrom( resource.getResourceClass( ) ) ) {
+    if ( resource != null && CloudMetadata.class.isAssignableFrom( resource.getResourceClass( ) ) ) {
+      final String resourceAccountNumber = resource.getResourceAccountNumber( );
+      final Class<? extends CloudMetadata> resourceClass = (Class<? extends CloudMetadata>)resource.getResourceClass( );
+      final String resourceId = NetworkGroupMetadata.class.isAssignableFrom( resource.getResourceClass( ) ) ?
+          ((NetworkGroupMetadata)resource.getResourceObject( )).getGroupId( ):
+          ((CloudMetadata)resource.getResourceObject( )).getDisplayName( );
+
       if ( accepted.contains( resource.getResourceClass( ) ) ||
-          (!rejected.contains( resource.getResourceClass( ) ) &&
-            CloudMetadata.class.isAssignableFrom( resource.getResourceClass( ) ) ) ) try {
+          (!rejected.contains( resource.getResourceClass( ) ) ) ) try {
         ComputePolicyContext.setComputePolicyContextResource(
-            TypeMappers.transform( resource.getResourceObject( ), ComputePolicyContextResource.class ) );
+            resourceAccountNumber,
+            resourceClass,
+            resourceId,
+            TypeMappers.transform( resource.getResourceObject( ), ComputePolicyContextResource.class )
+         );
         accepted.add( (Class<? extends RestrictedType>) resource.getResourceClass( ) );
       } catch ( IllegalArgumentException e ) {
         rejected.add( (Class<? extends RestrictedType>) resource.getResourceClass( ) );
         Logs.exhaust( ).info(
             "Policy context not set for resource type: " + resource.getResourceClass().getSimpleName( ) );
+      }
+      if ( rejected.contains( resource.getResourceClass( ) ) )  {
+        ComputePolicyContext.setComputePolicyContextResource( resourceAccountNumber, resourceClass, resourceId, null );
       }
     }
   }

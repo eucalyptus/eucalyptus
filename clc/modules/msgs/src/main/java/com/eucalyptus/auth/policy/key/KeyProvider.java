@@ -15,6 +15,7 @@
  ************************************************************************/
 package com.eucalyptus.auth.policy.key;
 
+import java.util.Collections;
 import java.util.Map;
 import com.eucalyptus.auth.policy.key.Key.EvaluationConstraint;
 
@@ -65,5 +66,7 @@ public interface KeyProvider {
    * @param constraint The key constraint.
    * @return The key instances, may be empty, never null
    */
-  Map<String,Key> getKeyInstances( final EvaluationConstraint constraint );
+  default Map<String,Key> getKeyInstances( final EvaluationConstraint constraint ) {
+    return Collections.emptyMap( );
+  }
 }
