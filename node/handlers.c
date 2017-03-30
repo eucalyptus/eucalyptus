@@ -4043,7 +4043,7 @@ int instance_network_gate(ncInstance *instance, time_t timeout_seconds) {
         if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_EDGE)) {
             // check to ensure that dhcpd config contains the mac for the instance
             snprintf(path, EUCA_MAX_PATH, "%s/var/run/eucalyptus/net/euca-dhcp.conf", nc_state.home);
-            snprintf(needle, EUCA_MAX_PATH, "node-%s", instance->ncnet.privateIp);
+            snprintf(needle, EUCA_MAX_PATH, "node-%s ", instance->ncnet.privateIp);
             filebuf = file2str(path);
             if (filebuf && strstr(filebuf, needle)) {
                 LOGDEBUG("[%s] local dhcpd config contains required instance record, continuing\n", SP(instance->instanceId));
