@@ -84,6 +84,8 @@ public class DescribeVolumesType extends BlockVolumeMessage {
   @HttpParameterMapping (parameter = "Filter")
   @HttpEmbedded( multiple = true )
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
+  Integer maxResults
+  String nextToken
 }
 public class DescribeVolumesResponseType extends BlockVolumeMessage {
   
@@ -149,6 +151,8 @@ public class DescribeSnapshotsType extends BlockSnapshotMessage {
   @HttpParameterMapping (parameter = "Filter")
   @HttpEmbedded( multiple = true )
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
+  Integer maxResults
+  String nextToken
 }
 public class DescribeSnapshotsResponseType extends BlockSnapshotMessage {
   
