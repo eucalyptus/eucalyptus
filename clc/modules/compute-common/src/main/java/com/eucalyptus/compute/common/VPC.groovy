@@ -1049,7 +1049,7 @@ class VpnConnectionSetType extends EucalyptusData {
 }
 class CreateDhcpOptionsType extends VpcMessage {
   @HttpEmbedded
-  DhcpConfigurationItemSetType dhcpConfigurationSet;
+  DhcpConfigurationItemSetType dhcpConfigurationSet = new DhcpConfigurationItemSetType();
   CreateDhcpOptionsType() {  }
 }
 class AttributeBooleanValueType extends EucalyptusData {

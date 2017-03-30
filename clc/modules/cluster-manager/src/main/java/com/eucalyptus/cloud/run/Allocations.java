@@ -122,11 +122,14 @@ import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 public class Allocations {
   private static Logger LOG = Logger.getLogger(Allocations.class);
 
+  enum AllocationType { Run, Start, Restore }
+
   public static class Allocation implements HasRequest {
     /** to be eliminated **/
     private final Context context;
     private final RunInstancesType request;
     /** values determined by the request **/
+    private final AllocationType allocationType;
     private final UserFullName ownerFullName;
     private byte[] userData;
     private String credential;
@@ -164,6 +167,7 @@ public class Allocations {
     private final AtomicBoolean committed = new AtomicBoolean( false );
 
     private Allocation(final RunInstancesType request) {
+      this.allocationType = AllocationType.Run;
       this.context = Contexts.lookup();
       this.instanceIds = Maps.newHashMap();
       this.instanceUuids = Maps.newHashMap();
@@ -217,6 +221,7 @@ public class Allocations {
                         final SshKeyPair sshKeyPair,
                         final byte[] userData,
                         final UserFullName ownerFullName ) {
+      this.allocationType = AllocationType.Restore;
       this.minCount = 1;
       this.maxCount = 1;
       this.vmType = vmType;
@@ -239,6 +244,9 @@ public class Allocations {
       this.request = inferRequest();
     }
 
+    /**
+     * Constructor for start case.
+     */
     private Allocation(final String reservationId, final String instanceId,
         final String instanceUuid, final byte[] userData,
         final Date expiration, final Partition partition,
@@ -247,6 +255,7 @@ public class Allocations {
         final boolean isUsePrivateAddressing, final boolean monitoring,
         final String clientToken, final String iamInstanceProfileArn,
         final String iamInstanceProfileId, final String iamRoleArn) {
+      this.allocationType = AllocationType.Start;
       this.context = Contexts.lookup();
       this.minCount = 1;
       this.maxCount = 1;
@@ -294,6 +303,10 @@ public class Allocations {
           this.setInstanceType(vmType.getName());
         }
       };
+    }
+
+    public AllocationType getAllocationType( ) {
+      return allocationType;
     }
 
     @Override

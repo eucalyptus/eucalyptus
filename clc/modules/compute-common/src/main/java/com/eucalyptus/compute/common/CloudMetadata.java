@@ -85,7 +85,9 @@ public interface CloudMetadata extends RestrictedType {
   interface KeyPairMetadata extends CloudMetadata {}
   
   @PolicyResourceType( "security-group" )
-  interface NetworkGroupMetadata extends CloudMetadata {}
+  interface NetworkGroupMetadata extends CloudMetadata {
+    String getGroupId( );
+  }
   
   @PolicyResourceType( "address" )
   interface AddressMetadata extends CloudMetadata {}

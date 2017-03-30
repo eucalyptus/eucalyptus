@@ -302,7 +302,7 @@ public class RestrictedTypes {
           final Integer quantity,
           final Supplier<T> allocator
   ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
-      return doAllocate( rscType, quantity, new Supplier<List<T>>() {
+      return doAllocate( false, rscType, quantity, new Supplier<List<T>>() {
           @Override
           public List<T> get( ) {
               return runAllocator( quantity, allocator, ( Predicate ) Predicates.alwaysTrue( ) );
@@ -328,7 +328,7 @@ public class RestrictedTypes {
       final int max,
       final BatchAllocator<T> allocator
   ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
-    return doAllocate( rscType, max, new Supplier<List<T>>( ){
+    return doAllocate( false, rscType, max, new Supplier<List<T>>( ){
       @Override
       public List<T> get() {
         return allocator.allocate( min, max );
@@ -336,7 +336,31 @@ public class RestrictedTypes {
     });
   }
 
-  private static <A> A doAllocate( final Class<?> rscType, final Integer quantity, final Supplier<A> allocator ) throws AuthException, IllegalContextAccessException {
+  /**
+   * Reallocation of a dimension-less type; i.e. only the quantity matters and the characteristics of
+   * the allocated resource cannot be parameterized in any way.
+   *
+   * Assumes permission check is elsewhere, only handles quotas
+   *
+   * @param <T> type to be allocated
+   * @param rscType class for type to be allocated
+   * @param allocator Supplier which performs allocation of a single unit.
+   * @return List<T> of size {@code quantity} of new allocations of {@code <T>}
+   */
+  @SuppressWarnings( { "cast", "unchecked" } )
+  public static <T extends LimitedType> List<T> reallocateUnitlessResource(
+      final Class<?> rscType,
+      final BatchAllocator<T> allocator
+  ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    return doAllocate( true, rscType, 1, new Supplier<List<T>>( ){
+      @Override
+      public List<T> get() {
+        return allocator.allocate( 1, 1 );
+      }
+    });
+  }
+
+  private static <A> A doAllocate( final boolean skipAuth, final Class<?> rscType, final Integer quantity, final Supplier<A> allocator ) throws AuthException, IllegalContextAccessException {
     String identifier = "";
     Context ctx = Contexts.lookup( );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
@@ -345,7 +369,7 @@ public class RestrictedTypes {
       PolicyResourceType type = ats.get( PolicyResourceType.class );
       String action = getIamActionByMessageType();
       AuthContextSupplier userContext = ctx.getAuthContext( );
-      if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, userContext ) ) {
+      if ( !skipAuth && !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, userContext ) ) {
         throw new AuthException( "Not authorized to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
       }
       final Lock lock = allocationInterner.intern( new AllocationScope( vendor.value( ), type.value( ), userContext.get().getAccountNumber() ) ).lock( );
