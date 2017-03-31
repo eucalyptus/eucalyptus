@@ -563,36 +563,20 @@ public class VolumeCreator implements Runnable {
           "Failed to parse bucket and key information for downloading " + snap.getSnapshotId() + ". Cannot download snapshot from objectstorage.");
     }
 
-    // Try to fetch the snapshot size before preparing the snapshot holder on the backend. If size is unavailable, the snapshot
-    // must be downloaded, unzipped and measured before creating the snapshot holder on the backend. Some SANs (Equallogic) add
-    // arbitrary amount of writable space to the lun and hence the exact size of the snapshot is required for preparing the
-    // holder on the backend
-    SnapshotTransfer snapshotTransfer = new S3SnapshotTransfer(snap.getSnapshotId(), bucket, key);
-    Long actualSizeInBytes = null;
-    try {
-      actualSizeInBytes = snapshotTransfer.getSizeInBytes();
-    } catch (Exception e) {
-      LOG.warn("Snapshot size not found", e);
-    }
+    // Prepare the snapshot holder and download the snapshot directly to it
+    // Allocates the necessary resources on the backend
+    StorageResourceWithCallback srwc = blockManager.prepSnapshotBaseForRestore(snapshotId, snap.getSizeGb(), snap.getSnapPointId());
 
-    if (actualSizeInBytes != null) { // Prepare the snapshot holder and download the snapshot directly to it
-      long actualSnapSizeInMB = (long) Math.ceil((double) actualSizeInBytes / StorageProperties.MB);
+    if (srwc != null && srwc.getSr() != null && srwc.getCallback() != null) {
+      // Download the snapshot to the destination
+      SnapshotTransfer snapshotTransfer = new S3SnapshotTransfer(snap.getSnapshotId(), bucket, key);
+      snapshotTransfer.download(srwc.getSr());
 
-      // Allocates the necessary resources on the backend
-      StorageResourceWithCallback srwc = blockManager.prepSnapshotBaseForRestore(snapshotId, snap.getSizeGb(), snap.getSnapPointId());
-
-      if (srwc != null && srwc.getSr() != null && srwc.getCallback() != null) {
-        // Download the snapshot to the destination
-        snapshotTransfer.download(srwc.getSr());
-
-        // Callback with snapshot ID
-        String snapshotPoint = blockManager.executeCallback(srwc.getCallback(), srwc.getSr());
-      } else {
-        LOG.warn("Failed to download base " + snap.getSnapshotId() + " for restoring " + snapshotId);
-        throw new EucalyptusCloudException("Failed to download base " + snap.getSnapshotId() + " for restoring " + snapshotId);
-      }
+      // Callback with snapshot ID
+      blockManager.executeCallback(srwc.getCallback(), srwc.getSr());
     } else {
-      // doomed!
+      LOG.warn("Failed to download base " + snap.getSnapshotId() + " for restoring " + snapshotId);
+      throw new EucalyptusCloudException("Failed to download base " + snap.getSnapshotId() + " for restoring " + snapshotId);
     }
   }
 
@@ -615,14 +599,30 @@ public class VolumeCreator implements Runnable {
     }
     SnapshotTransfer snapshotTransfer = new S3SnapshotTransfer(snap.getSnapshotId(), bucket, key);
     Path diffPath = Files.createTempFile(Paths.get("/var/tmp"), snap.getSnapshotId() + "_" + prevSnap.getSnapshotId() + "_", ".diff");
+    LOG.trace("Created snapshot diff file " + diffPath.toString());
+    StorageResource sr = new FileResource(snap.getSnapshotId(), diffPath.toString());
 
     // Download snapshot delta
-    StorageResource sr = new FileResource(snap.getSnapshotId(), diffPath.toString());
-    snapshotTransfer.download(sr);
-
+    try {
+      snapshotTransfer.download(sr);
+    } catch (Exception e) {
+      LOG.error("Could not download snapshot " + snap.getSnapshotId() + " from object storage to temporary file " + diffPath, e);
+      try {
+        boolean existed = Files.deleteIfExists(diffPath);
+        if (!existed) {
+          LOG.debug("Temporary file " + diffPath + "did not exist to delete it, strange.");
+        }
+      } catch (Exception e2) {
+        LOG.warn("Temporary file " + diffPath + "could not be deleted", e);
+      }
+      throw e;
+    }
+    
     // Apply the snapshot delta
     try {
       blockManager.restoreSnapshotDelta(snap.getSnapshotId(), prevSnap.getSnapshotId(), snapshotId, sr);
+      // blockManager.restoreSnapshotDelta() will delete temp file whether 
+      // success or failure, so we don't have to.
     } catch (EucalyptusCloudException ece) {
       cleanFailedSnapshot(snapshotId);
       throw ece;

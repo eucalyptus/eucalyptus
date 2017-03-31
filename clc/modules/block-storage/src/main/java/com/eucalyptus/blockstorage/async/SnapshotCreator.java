@@ -273,12 +273,12 @@ public class SnapshotCreator implements Runnable {
             uploadFuture = snapshotTransfer.upload(snapshotResource, progressCallback);
           } catch (Exception e) {
             throw new EucalyptusCloudException("Failed to upload snapshot " + this.snapshotId + " to objectstorage", e);
+          } finally {
+            if (srwc != null && srwc.getCallback() != null) {
+              // Call the callback even if the upload fails, to clean up temp snapshot artifacts
+              blockManager.executeCallback(srwc.getCallback(), srwc.getSr());
+            }
           }
-
-          if (srwc != null && srwc.getCallback() != null) {
-            blockManager.executeCallback(srwc.getCallback(), srwc.getSr());
-          }
-
         } else {
           // Snapshot does not have to be transferred
           LOG.debug("Snapshot uploads are disabled, skipping upload step for " + this.snapshotId);
