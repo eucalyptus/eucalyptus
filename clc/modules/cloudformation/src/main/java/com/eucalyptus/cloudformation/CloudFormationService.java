@@ -57,6 +57,7 @@ import com.eucalyptus.cloudformation.template.Template;
 import com.eucalyptus.cloudformation.template.TemplateParser;
 import com.eucalyptus.cloudformation.template.url.S3Helper;
 import com.eucalyptus.cloudformation.template.url.WhiteListURLMatcher;
+import com.eucalyptus.cloudformation.util.CfnIdentityDocumentCredential;
 import com.eucalyptus.cloudformation.workflow.CreateStackWorkflow;
 import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowClient;
 import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowDescriptionTemplate;
@@ -114,6 +115,8 @@ import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Name;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.net.ssl.SSLHandshakeException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -724,7 +727,7 @@ public class CloudFormationService {
       final String accountId = user.getAccountNumber();
       final String stackName = request.getStackName();
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
-      checkStackPermission( ctx, stackName, accountId );
+      checkStackPermission( ctx, stackName, accountId, true );
       final String logicalResourceId = request.getLogicalResourceId();
       if (logicalResourceId == null) throw new ValidationErrorException("logicalResourceId is null");
       final StackResourceEntity stackResourceEntity = StackResourceEntityManager.describeStackResource(
@@ -1174,7 +1177,7 @@ public class CloudFormationService {
         throw new ValidationErrorException("Status must either be SUCCESS or FAILURE");
       }
 
-      checkStackPermission( ctx, stackName, accountId );
+      checkStackPermission( ctx, stackName, accountId, true );
       final StackEntity stackEntity = StackEntityManager.getNonDeletedStackByNameOrId(
               stackName,
               accountId); // no administrator check here because signal requires user on account stack.
@@ -1711,12 +1714,33 @@ public class CloudFormationService {
   }
 
   private static void checkStackPermission( Context ctx, String stackName, String accountId ) throws AccessDeniedException {
+    checkStackPermission( ctx, stackName, accountId, false );
+  }
+
+  private static void checkStackPermission(
+      @Nonnull  final Context ctx,
+      @Nonnull  final String stackName,
+      @Nullable final String accountId,
+                final boolean allowInstance
+  ) throws AccessDeniedException {
     StackEntity stackEntity = StackEntityManager.getAnyStackByNameOrId(stackName, accountId);
     if ( stackEntity == null && ctx.isAdministrator( ) && stackName.startsWith( STACK_ID_PREFIX ) ) {
       stackEntity = StackEntityManager.getAnyStackByNameOrId(stackName, null);
     }
     if ( stackEntity != null && !RestrictedTypes.filterPrivileged().apply( stackEntity ) ) {
-      throw new AccessDeniedException( "Not authorized." );
+      boolean instanceAccessPermitted = false;
+      if ( allowInstance && ctx.getSubject( ) != null ) {
+        final Set<CfnIdentityDocumentCredential> credentials =
+            ctx.getSubject( ).getPublicCredentials( CfnIdentityDocumentCredential.class );
+        if ( !credentials.isEmpty( ) ) {
+          final String instanceId = Iterables.get( credentials, 0 ).getInstanceId( );
+          instanceAccessPermitted = !StackResourceEntityManager
+              .describeStackResources( accountId, stackName, instanceId, null ).isEmpty( );
+        }
+      }
+      if ( !instanceAccessPermitted ) {
+        throw new AccessDeniedException( "Not authorized." );
+      }
     }
   }
 

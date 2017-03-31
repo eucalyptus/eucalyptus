@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2015 Eucalyptus Systems, Inc.
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,47 +12,30 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
  ************************************************************************/
 package com.eucalyptus.cloudformation.ws;
 
 import com.eucalyptus.cloudformation.CloudFormation;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.ws.server.QueryPipeline;
-import org.jboss.netty.channel.ChannelPipeline;
-
-import java.util.EnumSet;
-
-import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
+import com.eucalyptus.ws.stages.UnrollableStage;
 
 
 @ComponentPart(CloudFormation.class)
-public class CloudFormationQueryPipeline extends QueryPipeline {
+public class CloudFormationCfnAuthQueryPipeline extends CloudFormationQueryPipeline {
+  private final CloudFormationCfnAuthenticationStage auth = new CloudFormationCfnAuthenticationStage( );
 
-  protected CloudFormationQueryPipeline( final String name ) {
-    super(
-        name,
-        "/services/CloudFormation",
-        EnumSet.allOf( TemporaryKeyType.class ) );
+  public CloudFormationCfnAuthQueryPipeline( ) {
+    super( "cloudformation-query-cfn-pipeline" );
   }
 
-  public CloudFormationQueryPipeline( ) {
-    this( "cloudformation-query-pipeline"  );
-  } 
-    
   @Override
-  public ChannelPipeline addHandlers( final ChannelPipeline pipeline ) {
-    super.addHandlers( pipeline );
-    pipeline.addLast( "cloudformation-query-binding", new CloudFormationQueryBinding() );
-    return pipeline;
+  protected UnrollableStage getAuthenticationStage( ) {
+    return auth;
   }
 
   @Override
   protected boolean validAuthForPipeline( final MappingHttpRequest request ) {
-    return !CloudFormationCfnAuthenticationHandler.usesCfnV1Authentication( request );
+    return !super.validAuthForPipeline( request );
   }
 }
