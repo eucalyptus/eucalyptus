@@ -631,7 +631,6 @@ public class CephRbdProvider implements SANProvider {
       Files.deleteIfExists(diffPath); // Delete the file before invoking rbd. rbd does not like the file being present
       diffName = diffPath.toString();
 
-      // String diffFilePath = snapshotId + "_" + prevSnapshotId + "_" + ".diff";
       String[] cmd = new String[] {StorageProperties.EUCA_ROOT_WRAPPER, "rbd", "--id", cachedConfig.getCephUser(), "--keyring",
           cachedConfig.getCephKeyringFile(), "export-diff", snapPointId, diffName, "--from-snap", prevSnapPoint};
       LOG.debug("Executing: " + Joiner.on(" ").skipNulls().join(cmd));
@@ -723,10 +722,14 @@ public class CephRbdProvider implements SANProvider {
     } finally {
       // clean up the diff file
       try {
-        if (!Files.deleteIfExists(Paths.get(sr.getPath())))
-          LOG.warn("Cannot delete file " + sr.getPath());
+        LOG.trace("About to delete diff file " + sr.getPath());
+        if (!Files.deleteIfExists(Paths.get(sr.getPath()))) {
+          LOG.warn("Diff file " + sr.getPath() + "did not exist to delete.");
+        } else {
+          LOG.trace("Successfully deleted diff file " + sr.getPath());
+        }
       } catch (Exception e) {
-        LOG.warn("Failed to delete file " + sr.getPath(), e);
+        LOG.warn("Failed to delete diff file " + sr.getPath(), e);
       }
     }
   }
