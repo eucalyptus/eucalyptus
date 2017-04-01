@@ -36,7 +36,6 @@ import javax.annotation.Nullable;
 
 import com.eucalyptus.loadbalancing.common.msgs.HealthCheck;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyDescription;
-import com.eucalyptus.loadbalancing.service.*;
 import com.eucalyptus.ws.StackConfiguration;
 import org.apache.log4j.Logger;
 

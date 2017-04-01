@@ -738,14 +738,22 @@ public class LoadBalancers {
 					}
 				});
 
+		final boolean zoneHasAvailableInstance =
+						backendInstancesInSameZone.stream().anyMatch(inst ->
+										LoadBalancerBackendInstance.STATE.InService.equals(inst.getBackendState()) &&
+														!(inst.getIpAddress() == null || inst.getIpAddress().length() <= 0)
+						);
+
 		// backend instances in cross-zone
 		Collection<LoadBalancerBackendInstanceCoreView> crossZoneBackendInstances =
 				Lists.newArrayList();
-		if (desc.getLoadBalancerAttributes().getCrossZoneLoadBalancing().getEnabled()) {
+		if (!zoneHasAvailableInstance
+						|| desc.getLoadBalancerAttributes().getCrossZoneLoadBalancing().getEnabled()) {
+			// EUCA-13233: when a zone contains no available instance, cross-zone instances are always included
 			crossZoneBackendInstances = Collections2.filter(lb.getBackendInstances(), new Predicate<LoadBalancerBackendInstanceCoreView>() {
 				@Override
 				public boolean apply(LoadBalancerBackendInstanceCoreView arg0) {
-					// Instance's service state can only be determined in the same zone. Cross-zone instances are enabled only when InService
+					// Instance's service state can only be determined in the same zone. Cross-zone instances are included only when InService
 					final boolean inService = LoadBalancerBackendInstance.STATE.InService.equals(arg0.getBackendState()) &&
 							!(arg0.getIpAddress() == null || arg0.getIpAddress().length() <= 0);
 					return inService &&

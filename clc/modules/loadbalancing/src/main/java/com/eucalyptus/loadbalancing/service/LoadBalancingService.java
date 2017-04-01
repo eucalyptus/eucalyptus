@@ -1292,7 +1292,7 @@ public class LoadBalancingService {
 	  final DisableAvailabilityZonesForLoadBalancerResponseType reply = request.getReply( );
 	  final Context ctx = Contexts.lookup( );
 	  final String lbName = request.getLoadBalancerName();
-	  final Collection<String> zones = request.getAvailabilityZones().getMember();
+	  Collection<String> zones = request.getAvailabilityZones().getMember();
 
 	  LoadBalancer lb;
 	  try{
@@ -1332,24 +1332,23 @@ public class LoadBalancingService {
           }
     }));
 
-    List<String> availableZoneNames = Lists.newArrayList(Collections2.transform(availableZones,
-        new Function<LoadBalancerZoneCoreView, String>(){
-      @Override
-      public String apply(@Nullable LoadBalancerZoneCoreView arg0) {
-        return arg0.getName();
-      }
-    }));
+    final Set<String> inServiceZoneNames = Sets.newHashSet(Collections2.transform(availableZones,
+            new Function<LoadBalancerZoneCoreView, String>(){
+              @Override
+              public String apply(@Nullable LoadBalancerZoneCoreView arg0) {
+                return arg0.getName();
+              }
+            }));
 
-    final Set<String> unavailableZoneNames = Sets.newHashSet();
-    for(final String requested : zones){
-      if(! availableZoneNames.contains(requested)){
-        unavailableZoneNames.add(requested);
-      }
-    }
-    // remove the requested zones not already in the loadbalancer
-    zones.removeAll(unavailableZoneNames);
+    zones = zones.stream()
+            .filter( az -> inServiceZoneNames.contains( az ))
+            .collect(Collectors.toList());
 
-	  if(zones != null && zones.size()>0){
+    if(zones != null && zones.size()>0) {
+      if (inServiceZoneNames.size() <= 1) {
+        throw new InvalidConfigurationRequestException("There must be at least one availability zone");
+      }
+
       try{
         if(! LoadBalancingWorkflows.disableZonesSync(ctx.getAccountNumber(),
                 lbName, Lists.newArrayList(zones)))
@@ -1360,7 +1359,7 @@ public class LoadBalancingService {
       }
     }
 
-    availableZoneNames = Lists.newArrayList();
+    List<String> availableZoneNames = Lists.newArrayList();
 	  try{
 		  final LoadBalancer updatedLb = LoadBalancers.getLoadbalancer(ctx, lbName);
 		  availableZoneNames = Lists.transform(LoadBalancers.findZonesInService(updatedLb), new Function<LoadBalancerZoneCoreView, String>(){
@@ -2130,6 +2129,7 @@ public class LoadBalancingService {
     final BiMap<String,String> zoneToSubnetIdMap = HashBiMap.create( );
     final String vpcId;
     final LoadBalancerCoreView lb;
+    final Set<String> inServiceZones;
     try {
       final LoadBalancer lbEntity = LoadBalancers.getLoadbalancer( ctx, lbName );
       if ( !LoadBalancingMetadatas.filterPrivileged( ).apply( lbEntity ) ) { // IAM policy restriction
@@ -2138,6 +2138,10 @@ public class LoadBalancingService {
       lb = lbEntity.getCoreView( );
       vpcId = lb.getVpcId( );
       CollectionUtils.putAll( lbEntity.getZones(), zoneToSubnetIdMap, name(), subnetId() );
+      inServiceZones = lbEntity.getZones().stream()
+              .filter( az -> LoadBalancerZone.STATE.InService.equals(az.getState()) )
+              .map( az -> az.getName() )
+              .collect(Collectors.toSet());
     } catch ( final LoadBalancingException e ) {
       throw e;
     } catch ( final Exception ex ){
@@ -2148,9 +2152,15 @@ public class LoadBalancingService {
       throw new InvalidConfigurationRequestException( "Invalid subnet for load balancer" );
     }
 
-    final List<String> zones = Lists.newArrayList(  );
+    List<String> zones = Lists.newArrayList(  );
     Iterables.addAll( zones, Iterables.transform( requestedSubnetIds, Functions.forMap( zoneToSubnetIdMap.inverse( ) ) ) );
-    if( !zones.isEmpty( ) ){
+    zones = zones.stream()
+            .filter( az -> inServiceZones.contains(az) )
+            .collect(Collectors.toList());
+    if (!zones.isEmpty( )) {
+      if (inServiceZones.size() <= 1) {
+        throw new InvalidConfigurationRequestException("Loadbalancer must be attached to at least one subnet");
+      }
       try{
         if(!LoadBalancingWorkflows.disableZonesSync(ctx.getAccountNumber(),
             lbName, zones))
