@@ -34,6 +34,7 @@ import com.eucalyptus.compute.common.DescribeAvailabilityZonesResponseType;
 import com.eucalyptus.compute.common.DescribeAvailabilityZonesType;
 import com.eucalyptus.compute.common.DescribeSubnetsResponseType;
 import com.eucalyptus.compute.common.DescribeSubnetsType;
+import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.SubnetType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -689,13 +690,17 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       Map<String, String> defaultSubnetMap = Maps.newHashMap();
       DescribeSubnetsType describeSubnetsType = new DescribeSubnetsType();
       describeSubnetsType.setEffectiveUserId(userId);
+      Filter defaultSubnetFilter = new Filter();
+      defaultSubnetFilter.setName("default-for-az");
+      defaultSubnetFilter.setValueSet(Lists.newArrayList("true"));
+      describeSubnetsType.getFilterSet().add(defaultSubnetFilter);
       DescribeSubnetsResponseType describeSubnetsResponseType = AsyncRequests.sendSync(
         configuration, describeSubnetsType
       );
       if (describeSubnetsResponseType != null && describeSubnetsResponseType.getSubnetSet() != null &&
         describeSubnetsResponseType.getSubnetSet().getItem() != null) {
         for (SubnetType subnetType: describeSubnetsResponseType.getSubnetSet().getItem()) {
-          if (subnetType.getDefaultForAz() && subnetType.getVpcId() != null) {
+          if (subnetType.getVpcId() != null) {
             defaultSubnetMap.put(subnetType.getAvailabilityZone(), subnetType.getSubnetId());
           }
         }
