@@ -294,6 +294,10 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
           action.properties.getNetworkInterfaces() != null && !action.properties.getNetworkInterfaces().isEmpty()) {
           throw new ValidationErrorException("SecurityGroupIds and NetworkInterfaces can not both be set on an AWS::EC2::Instance");
         }
+        if (action.properties.getSecurityGroups() != null && !action.properties.getSecurityGroups().isEmpty() &&
+          action.properties.getNetworkInterfaces() != null && !action.properties.getNetworkInterfaces().isEmpty()) {
+          throw new ValidationErrorException("SecurityGroups and NetworkInterfaces can not both be set on an AWS::EC2::Instance");
+        }
         if (action.properties.getPlacementGroupName() != null && !action.properties.getPlacementGroupName().isEmpty()) {
           runInstancesType.setPlacementGroup(action.properties.getPlacementGroupName());
         }
@@ -620,6 +624,10 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
 
         // a couple of checks before we change anything
+        if (newAction.properties.getSecurityGroups() != null && !newAction.properties.getSecurityGroups().isEmpty() &&
+          newAction.properties.getNetworkInterfaces() != null && !newAction.properties.getNetworkInterfaces().isEmpty()) {
+          throw new ValidationErrorException("SecurityGroups and NetworkInterfaces can not both be set on an AWS::EC2::Instance");
+        }
         if (newAction.properties.getSecurityGroupIds() != null && !newAction.properties.getSecurityGroupIds().isEmpty() &&
           newAction.properties.getNetworkInterfaces() != null && !newAction.properties.getNetworkInterfaces().isEmpty()) {
           throw new ValidationErrorException("SecurityGroupIds and NetworkInterfaces can not both be set on an AWS::EC2::Instance");
