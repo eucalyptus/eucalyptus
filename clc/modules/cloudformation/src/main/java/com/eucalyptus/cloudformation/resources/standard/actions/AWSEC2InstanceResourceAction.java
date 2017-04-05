@@ -290,6 +290,10 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
         if (action.properties.getNetworkInterfaces() != null && !action.properties.getNetworkInterfaces().isEmpty()) {
           runInstancesType.setNetworkInterfaceSet(action.convertNetworkInterfaceSet(action.properties.getNetworkInterfaces()));
         }
+        if (action.properties.getSecurityGroupIds() != null && !action.properties.getSecurityGroupIds().isEmpty() &&
+          action.properties.getNetworkInterfaces() != null && !action.properties.getNetworkInterfaces().isEmpty()) {
+          throw new ValidationErrorException("SecurityGroupIds and NetworkInterfaces can not both be set on an AWS::EC2::Instance");
+        }
         if (action.properties.getPlacementGroupName() != null && !action.properties.getPlacementGroupName().isEmpty()) {
           runInstancesType.setPlacementGroup(action.properties.getPlacementGroupName());
         }
@@ -614,6 +618,16 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
         AWSEC2InstanceResourceAction oldAction = (AWSEC2InstanceResourceAction) oldResourceAction;
         AWSEC2InstanceResourceAction newAction = (AWSEC2InstanceResourceAction) newResourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
+
+        // a couple of checks before we change anything
+        if (newAction.properties.getSecurityGroupIds() != null && !newAction.properties.getSecurityGroupIds().isEmpty() &&
+          newAction.properties.getNetworkInterfaces() != null && !newAction.properties.getNetworkInterfaces().isEmpty()) {
+          throw new ValidationErrorException("SecurityGroupIds and NetworkInterfaces can not both be set on an AWS::EC2::Instance");
+        }
+        if (newAction.properties.getSecurityGroupIds() != null && !newAction.properties.getSecurityGroupIds().isEmpty() &&
+          newAction.properties.getSecurityGroups() != null && !newAction.properties.getSecurityGroups().isEmpty()) {
+          throw new ValidationErrorException("SecurityGroupIds and SecurityGroups can not both be set on an AWS::EC2::Instance");
+        }
         // first lookup existing attributes
         DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, newAction.info.getEffectiveUserId());
         describeInstancesType.getFilterSet().add(Filter.filter("instance-id", newAction.info.getPhysicalResourceId()));
@@ -666,14 +680,18 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
             AsyncRequests.sendSync(configuration, modifyInstanceAttributeType);
           }
         }
-        // Only update the 'groupSet' (i.e. security group ids) if: vpc is enabled -- otherwise needs replacement anyway
-        if (runningInstancesItemType.getVpcId() != null) {
-          List<String> newGroups = defaultSecurityGroupInVpcIfNullOrEmpty(configuration, runningInstancesItemType.getVpcId(), newAction.info.getEffectiveUserId(), newAction.properties.getSecurityGroupIds());
-          if (!groupIdsEquals(runningInstancesItemType.getGroupSet(), newGroups)) {
-            ModifyInstanceAttributeType modifyInstanceAttributeType = MessageHelper.createMessage(ModifyInstanceAttributeType.class, newAction.info.getEffectiveUserId());
-            modifyInstanceAttributeType.setInstanceId(newAction.info.getPhysicalResourceId());
-            modifyInstanceAttributeType.setGroupIdSet(convertToGroupIdSet(newGroups));
-            AsyncRequests.sendSync(configuration, modifyInstanceAttributeType);
+        // check security group ids on vpc, but only if the network interfaces property is not set.  If anything has changed in network interfaces,
+        // we run with replacement anyway
+        if (newAction.properties.getNetworkInterfaces() == null || newAction.properties.getNetworkInterfaces().isEmpty()) {
+          // Only update the 'groupSet' (i.e. security group ids) if: vpc is enabled -- otherwise needs replacement anyway
+          if (runningInstancesItemType.getVpcId() != null) {
+            List<String> newGroups = defaultSecurityGroupInVpcIfNullOrEmpty(configuration, runningInstancesItemType.getVpcId(), newAction.info.getEffectiveUserId(), newAction.properties.getSecurityGroupIds());
+            if (!groupIdsEquals(runningInstancesItemType.getGroupSet(), newGroups)) {
+              ModifyInstanceAttributeType modifyInstanceAttributeType = MessageHelper.createMessage(ModifyInstanceAttributeType.class, newAction.info.getEffectiveUserId());
+              modifyInstanceAttributeType.setInstanceId(newAction.info.getPhysicalResourceId());
+              modifyInstanceAttributeType.setGroupIdSet(convertToGroupIdSet(newGroups));
+              AsyncRequests.sendSync(configuration, modifyInstanceAttributeType);
+            }
           }
         }
         if (!Objects.equals(runningInstancesItemType.getMonitoring(), BoolToString(newAction.properties.getMonitoring()))) {
