@@ -632,6 +632,11 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       changeListener = PropertyChangeListeners.CacheSpecListener.class )
   public static volatile String VM_METADATA_REQUEST_CACHE     = "maximumSize=250, expireAfterWrite=1s";
 
+  @ConfigurableField( description = "Instance metadata generated data cache configuration.",
+      initial = "maximumSize=1000, expireAfterWrite=5m",
+      changeListener = PropertyChangeListeners.CacheSpecListener.class )
+  public static volatile String VM_METADATA_GENERATED_CACHE     = "maximumSize=1000, expireAfterWrite=5m";
+
   public static class SubdomainListener implements PropertyChangeListener {
     @Override
     public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {
