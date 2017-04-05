@@ -312,12 +312,7 @@ public class StackActivityImpl implements StackActivity {
   @Override
   public String finalizeCreateStack(String stackId, String accountId, String effectiveUserId, int createdStackVersion) {
     LOG.info("Finalizing create stack");
-    try {
-      setOutputs(stackId, accountId, effectiveUserId, Status.CREATE_COMPLETE, createdStackVersion)
-    } catch (Exception e) {
-      LOG.error(e, e);
-      throw e;
-    }
+    setOutputs(stackId, accountId, effectiveUserId, Status.CREATE_COMPLETE, createdStackVersion)
     LOG.info("Done finalizing create stack");
     return ""; // promiseFor() doesn't work on void return types
   }
@@ -350,12 +345,7 @@ public class StackActivityImpl implements StackActivity {
   @Override
   public String finalizeUpdateStack(String stackId, String accountId, String effectiveUserId, int updatedStackVersion) {
     LOG.info("Finalizing update stack");
-    try {
-      setOutputs(stackId, accountId, effectiveUserId, Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS, updatedStackVersion)
-    } catch (Exception e) {
-      LOG.error(e, e);
-      throw e;
-    }
+    setOutputs(stackId, accountId, effectiveUserId, Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS, updatedStackVersion)
     LOG.info("Done finalizing update stack");
     return ""; // promiseFor() doesn't work on void return types
   }
@@ -394,7 +384,8 @@ public class StackActivityImpl implements StackActivity {
       return false;
     } catch (Exception ex) {
       LOG.info("Error creating resource " + resourceId);
-      LOG.error(ex, ex);
+      LOG.error(ex);
+      LOG.debug(ex, ex);
       stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
       stackResourceEntity.setResourceStatus(Status.CREATE_FAILED);
       Throwable rootCause = Throwables.getRootCause(ex);
@@ -444,7 +435,8 @@ public class StackActivityImpl implements StackActivity {
       return false;
     } catch (Exception ex) {
       LOG.info("Error deleting resource " + resourceId);
-      LOG.error(ex, ex);
+      LOG.error(ex);
+      LOG.error(ex);
       Throwable rootCause = Throwables.getRootCause(ex);
       throw new ResourceFailureException(rootCause.getMessage());
       // Don't put the delete failed step here as we need to return "failure" but this must be done in the caller
@@ -664,15 +656,10 @@ public class StackActivityImpl implements StackActivity {
 
   @Override
   public String validateAWSParameterTypes(String stackId, String accountId, String effectiveUserId, int stackVersion) {
-    try {
-      VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, stackVersion);
-      Map<String, ParameterType> parameterTypeMap = new TemplateParser().getParameterTypeMap(stackEntity.getTemplateBody());
-      for (StackEntity.Parameter parameter: StackEntityHelper.jsonToParameters(stackEntity.getParametersJson())) {
-        AWSParameterTypeValidationHelper.validateParameter(parameter, parameterTypeMap.get(parameter.getKey()), effectiveUserId);
-      }
-    } catch (Exception e) {
-      LOG.error(e, e);
-      throw e;
+    VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, stackVersion);
+    Map<String, ParameterType> parameterTypeMap = new TemplateParser().getParameterTypeMap(stackEntity.getTemplateBody());
+    for (StackEntity.Parameter parameter: StackEntityHelper.jsonToParameters(stackEntity.getParametersJson())) {
+      AWSParameterTypeValidationHelper.validateParameter(parameter, parameterTypeMap.get(parameter.getKey()), effectiveUserId);
     }
     return "";
   }
@@ -892,7 +879,8 @@ public class StackActivityImpl implements StackActivity {
       return false;
     } catch (Exception ex) {
       LOG.info("Error updating resource " + resourceId);
-      LOG.error(ex, ex);
+      LOG.error(ex);
+      LOG.debug(ex, ex);
       nextStackResourceEntity = StackResourceEntityManager.updateResourceInfo(nextStackResourceEntity, nextResourceInfo);
       nextStackResourceEntity.setResourceStatus(Status.UPDATE_FAILED);
       Throwable rootCause = Throwables.getRootCause(ex);
@@ -1321,7 +1309,8 @@ public class StackActivityImpl implements StackActivity {
       return false;
     } catch (Exception ex) {
       LOG.info("Error updating resource " + resourceId);
-      LOG.error(ex, ex);
+      LOG.error(ex);
+      LOG.debug(ex, ex);
       Throwable rootCause = Throwables.getRootCause(ex);
       throw new ResourceFailureException(rootCause.getMessage());
       // Don't put the update failed step here as we need to return "failure" but this must be done in the caller
@@ -1389,7 +1378,8 @@ public class StackActivityImpl implements StackActivity {
       return false;
     } catch (Exception ex) {
       LOG.info("Error updating resource " + resourceId);
-      LOG.error(ex, ex);
+      LOG.error(ex);
+      LOG.debug(ex, ex);
       Throwable rootCause = Throwables.getRootCause(ex);
       throw new ResourceFailureException(rootCause.getMessage());
       // Don't put the update failed step here as we need to return "failure" but this must be done in the caller
