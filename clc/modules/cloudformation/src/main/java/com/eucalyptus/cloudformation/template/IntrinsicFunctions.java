@@ -32,6 +32,10 @@ import com.eucalyptus.compute.common.ClusterInfoType;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.DescribeAvailabilityZonesResponseType;
 import com.eucalyptus.compute.common.DescribeAvailabilityZonesType;
+import com.eucalyptus.compute.common.DescribeSubnetsResponseType;
+import com.eucalyptus.compute.common.DescribeSubnetsType;
+import com.eucalyptus.compute.common.Filter;
+import com.eucalyptus.compute.common.SubnetType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -682,17 +686,42 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
 
     private List<String> describeAvailabilityZones(String userId) throws Exception {
       ServiceConfiguration configuration = Topology.lookup(Compute.class);
+
+      Map<String, String> defaultSubnetMap = Maps.newHashMap();
+      DescribeSubnetsType describeSubnetsType = new DescribeSubnetsType();
+      describeSubnetsType.setEffectiveUserId(userId);
+      Filter defaultSubnetFilter = new Filter();
+      defaultSubnetFilter.setName("default-for-az");
+      defaultSubnetFilter.setValueSet(Lists.newArrayList("true"));
+      describeSubnetsType.getFilterSet().add(defaultSubnetFilter);
+      DescribeSubnetsResponseType describeSubnetsResponseType = AsyncRequests.sendSync(
+        configuration, describeSubnetsType
+      );
+      if (describeSubnetsResponseType != null && describeSubnetsResponseType.getSubnetSet() != null &&
+        describeSubnetsResponseType.getSubnetSet().getItem() != null) {
+        for (SubnetType subnetType: describeSubnetsResponseType.getSubnetSet().getItem()) {
+          if (subnetType.getVpcId() != null) {
+            defaultSubnetMap.put(subnetType.getAvailabilityZone(), subnetType.getSubnetId());
+          }
+        }
+      }
+
+      boolean atLeastOneAZHasDefaultSubnet = false;
+      List<String> availabilityZonesWithDefaultSubnet = Lists.newArrayList();
       DescribeAvailabilityZonesType describeAvailabilityZonesType = new DescribeAvailabilityZonesType();
       describeAvailabilityZonesType.setEffectiveUserId(userId);
       DescribeAvailabilityZonesResponseType describeAvailabilityZonesResponseType =
         AsyncRequests.<DescribeAvailabilityZonesType,DescribeAvailabilityZonesResponseType>
           sendSync(configuration, describeAvailabilityZonesType);
-      List<String> availabilityZones = Lists.newArrayList();
+      List<String> allAvailabilityZones = Lists.newArrayList();
       for (ClusterInfoType clusterInfoType: describeAvailabilityZonesResponseType.getAvailabilityZoneInfo()) {
-        availabilityZones.add(clusterInfoType.getZoneName());
-
+        allAvailabilityZones.add(clusterInfoType.getZoneName());
+        if (defaultSubnetMap.containsKey(clusterInfoType.getZoneName())) {
+          atLeastOneAZHasDefaultSubnet = true;
+          availabilityZonesWithDefaultSubnet.add(clusterInfoType.getZoneName());
+        }
       }
-      return availabilityZones;
+      return atLeastOneAZHasDefaultSubnet ? availabilityZonesWithDefaultSubnet : allAvailabilityZones;
     }
   },
   FN_SUB {
