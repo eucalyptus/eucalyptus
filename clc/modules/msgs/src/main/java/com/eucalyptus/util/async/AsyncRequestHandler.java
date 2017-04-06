@@ -345,6 +345,10 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> e
     } catch ( final Exception t ) {
       LOG.error( t, t );
       this.teardown( t );
+    } finally {
+      if ( message instanceof IoMessage ) {
+        ((IoMessage)message).getHttpMessage( ).release( );
+      }
     }
   }
   
