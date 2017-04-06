@@ -134,7 +134,10 @@ public abstract class QueryPipeline extends FilteredPipeline {
     if ( message instanceof MappingHttpRequest && !message.getHeaderNames().contains( "SOAPAction" )) {
       final boolean usesServicePath = Iterables.any( servicePathPrefixes, Strings.isPrefixOf( message.getUri( ) ) );
       final boolean pathValidForService = validPathForService( message.getUri( ) );
-      if ( !usesServicePath && !( pathValidForService && resolvesByHost( message.getHeader( HttpHeaders.Names.HOST ) ) ) ) {
+      final boolean validAuthForPipeline = validAuthForPipeline( (MappingHttpRequest)message );
+      if ( !validAuthForPipeline || (
+          !usesServicePath && !( pathValidForService && resolvesByHost( message.getHeader( HttpHeaders.Names.HOST ) ) )
+      ) ) {
         return false;
       }
       return true;
@@ -159,5 +162,12 @@ public abstract class QueryPipeline extends FilteredPipeline {
    */
   protected boolean validPathForService( final String path ) {
     return path.isEmpty( ) || path.equals( "/" ) || path.startsWith( "/?" );
+  }
+
+  /**
+   * Does the given request use a valid authentication method for this pipeline.
+   */
+  protected boolean validAuthForPipeline( final MappingHttpRequest request ) {
+    return true;
   }
 }

@@ -66,6 +66,11 @@ public class CloudFormationProperties {
       changeListener = Config.WorkflowWorkerConfigurationValidatingChangeListener.class )
   public static volatile String SWF_WORKFLOW_WORKER_CONFIG = DEFAULT_SWF_WORKFLOW_WORKER_CONFIG;
 
+  @ConfigurableField(
+      description = "CloudFormation instance credential authentication cache",
+      changeListener = PropertyChangeListeners.CacheSpecListener.class )
+  public static volatile String CFN_INSTANCE_AUTH_CACHE = "";
+
   // In case we are using AWS SWF
   public static boolean USE_AWS_SWF = "true".equalsIgnoreCase(System.getProperty("cloudformation.use_aws_swf"));
   public static String AWS_ACCESS_KEY = System.getProperty("cloudformation.aws_access_key", "");

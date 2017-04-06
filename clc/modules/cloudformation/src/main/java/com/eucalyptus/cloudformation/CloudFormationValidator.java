@@ -21,7 +21,9 @@ package com.eucalyptus.cloudformation;
 
 import com.eucalyptus.auth.AuthContextSupplier;
 import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.cloudformation.util.CfnIdentityDocumentCredential;
 import com.eucalyptus.component.annotation.ComponentNamed;
+import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceAdvice;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -29,6 +31,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import static com.eucalyptus.cloudformation.common.policy.CloudFormationPolicySpec.VENDOR_CLOUDFORMATION;
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 import javax.annotation.Nonnull;
+import javax.security.auth.Subject;
 
 /**
  *
@@ -40,8 +43,11 @@ public class CloudFormationValidator extends ServiceAdvice {
   protected void beforeService( @Nonnull final Object object ) throws Exception {
     // Authorization check
     if ( object instanceof BaseMessage ) {
-      final AuthContextSupplier user = Contexts.lookup( ).getAuthContext( );
-      if ( !Permissions.perhapsAuthorized( VENDOR_CLOUDFORMATION, getIamActionByMessageType( (BaseMessage)object ), user ) ) {
+      final Context context = Contexts.lookup( );
+      final AuthContextSupplier user = context.getAuthContext( );
+      final Subject subject = context.getSubject( );
+      if ( !Permissions.perhapsAuthorized( VENDOR_CLOUDFORMATION, getIamActionByMessageType( (BaseMessage)object ), user ) &&
+          subject.getPublicCredentials( CfnIdentityDocumentCredential.class ).isEmpty( ) ) {
         throw new AccessDeniedException( "You are not authorized to perform this operation." );
       }
     }
