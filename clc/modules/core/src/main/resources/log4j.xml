@@ -356,6 +356,10 @@
       <priority value="ERROR"/>
       <appender-ref ref="${euca.log.appender}" />
   </category>
+  <category name="com.amazonaws.auth.AWS4Signer" additivity="false">
+      <priority value="ERROR"/>
+      <appender-ref ref="${euca.log.appender}" />
+  </category>
   <!-- Disable logging of errors from swf activities -->
   <category name="com.amazonaws.services.simpleworkflow.flow.worker.SynchronousActivityTaskPoller">
     <priority value="FATAL"/>
