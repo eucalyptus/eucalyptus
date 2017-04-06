@@ -1,9 +1,28 @@
+/*************************************************************************
+ * Copyright 2017 Hewlett-Packard Enterprise, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
 package com.eucalyptus.objectstorage.pipeline.auth;
 
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
 import com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication.V4AuthComponent;
-import com.google.common.collect.Maps;
+import com.google.common.collect.ImmutableMap;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpVersion;
@@ -114,8 +133,21 @@ public class S3V4AuthenticationTest {
   @Test
   public void testBuildCanonicalQueryString() {
     StringBuilder sb = new StringBuilder();
-    S3V4Authentication.buildCanonicalQueryString(paramsRequest, sb);
+    S3V4Authentication.buildCanonicalQueryString(paramsRequest.getParameters(), sb);
     assertEquals(CANONICAL_QUERY_STRING, sb.toString());
+  }
+
+  @Test
+  public void testBuildCanonicalQueryStringParameterEncoding() {
+    StringBuilder sb = new StringBuilder();
+    S3V4Authentication.buildCanonicalQueryString( ImmutableMap.of(
+        "x", "&#$",
+        "A", "B",
+        "p3", "_",
+        "p1", "~",
+        "p2", "-"
+    ), sb);
+    assertEquals("A=B&p1=~&p2=-&p3=_&x=%26%23%24", sb.toString());
   }
 
   @Test
