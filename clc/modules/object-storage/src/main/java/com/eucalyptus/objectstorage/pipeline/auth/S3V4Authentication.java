@@ -21,6 +21,7 @@
 package com.eucalyptus.objectstorage.pipeline.auth;
 
 import com.eucalyptus.auth.login.AuthenticationException;
+import com.eucalyptus.auth.login.HmacLoginModuleSupport;
 import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.crypto.util.SecurityHeader;
@@ -156,7 +157,7 @@ public final class S3V4Authentication {
     sb.append('\n');
 
     // Query parameters
-    buildCanonicalQueryString(request, sb);
+    buildCanonicalQueryString(request.getParameters(), sb);
     sb.append('\n');
 
     // Headers
@@ -186,17 +187,17 @@ public final class S3V4Authentication {
       return "/".concat(path);
   }
 
-  static void buildCanonicalQueryString(MappingHttpRequest request, StringBuilder sb) {
+  static void buildCanonicalQueryString(Map<String,String> parameters, StringBuilder sb) {
     boolean firstParam = true;
-    for (String parameter : Ordering.natural().sortedCopy(request.getParameters().keySet())) {
+    for (String parameter : Ordering.natural().sortedCopy(parameters.keySet())) {
       // Ignore signature parameters
       if (SecurityParameter.X_Amz_Signature.parameter().equals(parameter))
         continue;
 
       if (!firstParam)
         sb.append('&');
-      String value = request.getParameters().get(parameter);
-      sb.append(S3Authentication.urlEncode(parameter, false));
+      String value = parameters.get(parameter);
+      sb.append(HmacLoginModuleSupport.urlencode(parameter));
       sb.append('=');
 
       if (!Strings.isNullOrEmpty(value)) {
@@ -204,7 +205,7 @@ public final class S3V4Authentication {
         if (subResource.isPresent() && subResource.get().isObjectSubResource)
           sb.append("");
         else
-          sb.append(S3Authentication.urlEncode(value, false));
+          sb.append(HmacLoginModuleSupport.urlencode(value));
       }
 
       firstParam = false;
