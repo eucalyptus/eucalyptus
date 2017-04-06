@@ -331,7 +331,7 @@ public class PortalService {
     sb.append("\"InvoiceID\",\"PayerAccountId\",\"LinkedAccountId\",\"RecordType\",\"RecordID\",\"BillingPeriodStartDate\"," +
             "\"BillingPeriodEndDate\",\"InvoiceDate\",\"PayerAccountName\",\"LinkedAccountName\",\"TaxationAddress\"," +
             "\"PayerPONumber\",\"ProductCode\",\"ProductName\",\"SellerOfRecord\",\"UsageType\",\"Operation\",\"RateId\"," +
-            "\"ItemDescription\",\"UsageStartDate\",\"UsageEndDate\",\"Usage Quantity\",\"BlendedRate\",\"CurrencyCode\"," +
+            "\"ItemDescription\",\"UsageStartDate\",\"UsageEndDate\",\"UsageQuantity\",\"BlendedRate\",\"CurrencyCode\"," +
             "\"CostBeforeTax\",\"Credits\",\"TaxAmount\",\"TaxType\",\"TotalCost\"");
     try {
       final Optional<String> data = MonthlyReports.getInstance()
