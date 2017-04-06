@@ -72,11 +72,10 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
@@ -103,7 +102,6 @@ import com.eucalyptus.compute.common.internal.vm.VmEphemeralAttachment;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
-import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Pkcs7;
 import com.eucalyptus.crypto.Signatures;
 import com.eucalyptus.crypto.util.Timestamps;
@@ -111,7 +109,9 @@ import com.eucalyptus.images.ImageManager;
 import com.eucalyptus.tokens.AssumeRoleResponseType;
 import com.eucalyptus.tokens.AssumeRoleType;
 import com.eucalyptus.tokens.CredentialsType;
+import com.eucalyptus.util.CompatFunction;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.dns.DomainNames;
@@ -123,7 +123,9 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheBuilderSpec;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -141,8 +143,8 @@ public class VmInstanceMetadata {
 
   private static final Logger LOG = Logger.getLogger( VmInstanceMetadata.class );
 
-  private static final com.google.common.cache.Cache<MetadataKey,ImmutableMap<String,String>> metadataCache =
-      CacheBuilder.newBuilder().expireAfterWrite( 5, TimeUnit.MINUTES ).maximumSize( 1000 ).build( );
+  private static final CompatFunction<String,Cache<MetadataKey,ImmutableMap<String,String>>> MEMOIZED_CACHE_BUILDER =
+      FUtils.memoizeLast( spec -> CacheBuilder.from( CacheBuilderSpec.parse( spec ) ).build( ) );
 
   private static final BaseEncoding B64_76 = BaseEncoding.base64( ).withSeparator( "\n", 76 );
 
@@ -499,12 +501,9 @@ public class VmInstanceMetadata {
       @Override
       public Map<String, String> apply( final VmInstance instance ) {
         try {
-          return metadataCache.get( new MetadataKey( instance.getInstanceUuid(), this ), new Callable<ImmutableMap<String,String>>() {
-            @Override
-            public ImmutableMap<String,String> call( ) throws Exception {
-              return ImmutableMap.copyOf( addListingEntries( getIamMetadataMap( instance ) ) );
-            }
-          } );
+          return cache( ).get(
+              new MetadataKey( instance.getInstanceUuid(), instance.getVersion(), this ),
+              () -> ImmutableMap.copyOf( addListingEntries( getIamMetadataMap( instance ) ) ) );
         } catch ( ExecutionException e ) {
           throw Exceptions.toUndeclared( e ); // Cache load exception not expected
         }
@@ -535,7 +534,13 @@ public class VmInstanceMetadata {
     InstanceIdentity( "instance-identity", Type.Dynamic ) {
       @Override
       public Map<String, String> apply( final VmInstance instance ) {
-        return addListingEntries( getInstanceIdentityMetadataMap( instance ) );
+        try {
+          return cache( ).get(
+              new MetadataKey( instance.getInstanceUuid(), instance.getVersion(), this ),
+              () -> ImmutableMap.copyOf( addListingEntries( getInstanceIdentityMetadataMap( instance ) ) ) );
+        } catch ( ExecutionException e ) {
+          throw Exceptions.toUndeclared( e ); // Cache load exception not expected
+        }
       }
     };
 
@@ -626,36 +631,36 @@ public class VmInstanceMetadata {
 
       return metadataMap;
     }
+
+    private static Cache<MetadataKey,ImmutableMap<String,String>> cache( ) {
+      return MEMOIZED_CACHE_BUILDER.apply( VmInstances.VM_METADATA_GENERATED_CACHE );
+    }
   }
 
   private static final class MetadataKey {
     private final String id; // internal id
+    private final Integer version;
     private final MetadataGroup metadataGroup;
 
-    private MetadataKey( final String id, final MetadataGroup metadataGroup ) {
+    private MetadataKey( final String id, final Integer version, final MetadataGroup metadataGroup ) {
       this.id = id;
+      this.version = version;
       this.metadataGroup = metadataGroup;
     }
 
-    @SuppressWarnings( "RedundantIfStatement" )
     @Override
     public boolean equals( final Object o ) {
       if ( this == o ) return true;
-      if ( o == null || getClass() != o.getClass() ) return false;
-
+      if ( o == null || getClass( ) != o.getClass( ) ) return false;
       final MetadataKey that = (MetadataKey) o;
-
-      if ( !id.equals( that.id ) ) return false;
-      if ( metadataGroup != that.metadataGroup ) return false;
-
-      return true;
+      return Objects.equals( id, that.id ) &&
+          Objects.equals( version, that.version ) &&
+          metadataGroup == that.metadataGroup;
     }
 
     @Override
     public int hashCode() {
-      int result = id.hashCode();
-      result = 31 * result + metadataGroup.hashCode();
-      return result;
+      return Objects.hash( id, version, metadataGroup );
     }
   }
 }
