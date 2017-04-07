@@ -1525,6 +1525,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
         // At this point the remote device string is not available. Setting this member to null leads to DB lookup issues later. So setting it to empty string instead
         final VmBootVolumeAttachment volumeAttachment = new VmBootVolumeAttachment( entity, vol.getDisplayName( ), deviceName, new String(), VmVolumeAttachment.AttachmentState.attached.name( ),
             new Date( ), deleteOnTerminate, isRootDevice, Boolean.TRUE );
+        volEntity.setState( State.BUSY );
         entity.getBootRecord( ).getPersistentVolumes().add( volumeAttachment );
         return volEntity;
       }
