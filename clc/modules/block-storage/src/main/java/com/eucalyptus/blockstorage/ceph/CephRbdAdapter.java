@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,11 +12,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
- *
+ * 
  * This file may incorporate work covered under the following copyright
  * and permission notice:
  *
@@ -102,17 +98,21 @@ public interface CephRbdAdapter {
    * @param poolName Name of the pool
    * @param imagePrefix Prefix of images that are marked for deletion
    * @param toBeDeleted Set of images that have never been cleaned up
+   * @return Returns a list of RBD snapshot names that were deleted, so their RBD snapshots (not clones) can be removed
+   * from the snapshot-to-be-deleted table. Necessary because the image might be gone by the time cleanUpSnapshots 
+   * runs, and thus it would be unable to delete these snapshots.
    */
-  public void cleanUpImages(String poolName, String imagePrefix, List<String> toBeDeleted);
+  public List<String> cleanUpImages(String poolName, String imagePrefix, List<String> toBeDeleted);
 
   /**
    * Try deleting RBD snapshots and return the ones that cannot deleted since they are busy (parent-child relationship with other images)
    * 
    * @param poolName Name of the pool
+   * @param imagePrefix Prefix of images that are marked for deletion
    * @param toBeDeleted Mapping of image and RBD snapshots to be deleted
    * @return Returns a mapping of RBD image and RBD snapshots that cannot be deleted due to their inheritance
    */
-  public SetMultimap<String, String> cleanUpSnapshots(String poolName, SetMultimap<String, String> toBeDeleted);
+  public SetMultimap<String, String> cleanUpSnapshots(String poolName, String imagePrefix, SetMultimap<String, String> toBeDeleted);
 
   /**
    * Rename RBD image
