@@ -23,9 +23,11 @@ import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow
 import com.amazonaws.services.simpleworkflow.flow.DataConverter
 import com.amazonaws.services.simpleworkflow.flow.StartWorkflowOptions
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientFactoryExternalBase
+import com.amazonaws.services.simpleworkflow.flow.annotations.WorkflowRegistrationOptions
 import com.amazonaws.services.simpleworkflow.flow.generic.GenericWorkflowClientExternal
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution
 import com.amazonaws.services.simpleworkflow.model.WorkflowType
+import com.eucalyptus.system.Ats
 import com.netflix.glisten.InterfaceBasedWorkflowClient
 import com.netflix.glisten.WorkflowClientFactory
 import com.netflix.glisten.WorkflowDescriptionTemplate
@@ -66,9 +68,13 @@ class StartTimeoutPassableWorkflowClientFactory extends WorkflowClientFactory {
     StartWorkflowOptions startWorkflowOptions = new StartWorkflowOptions(taskList: taskList)
     if (executionStartToCloseTimeoutSeconds) {
       startWorkflowOptions.executionStartToCloseTimeoutSeconds = executionStartToCloseTimeoutSeconds;
+    } else if (Ats.from(workflow).has(WorkflowRegistrationOptions.class)) {
+      startWorkflowOptions.executionStartToCloseTimeoutSeconds = Ats.from(workflow).get(WorkflowRegistrationOptions.class).defaultExecutionStartToCloseTimeoutSeconds();
     }
     if (taskStartToCloseTimeoutSeconds) {
       startWorkflowOptions.taskStartToCloseTimeoutSeconds = taskStartToCloseTimeoutSeconds;
+    } else if (Ats.from(workflow).has(WorkflowRegistrationOptions.class)) {
+      startWorkflowOptions.taskStartToCloseTimeoutSeconds = Ats.from(workflow).get(WorkflowRegistrationOptions.class).defaultTaskStartToCloseTimeoutSeconds();
     }
     if (tags) {
       startWorkflowOptions.tagList = tags.constructTags()
