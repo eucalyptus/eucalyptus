@@ -104,12 +104,6 @@ public class AWSCloudFormationStackResourceInfo extends ResourceInfo {
     copy.addAll(eucaAttributes.keySet());
     return copy;
   }
-  @Override
-  public Collection<String> getRequiredCapabilities(JsonNode propertiesJson) {
-    ArrayList<String> capabilities = new ArrayList<String>();
-    capabilities.add(Capabilities.CAPABILITY_IAM.toString());
-    return capabilities;
-  }
 
   public final static String EUCA_DELETE_STATUS_UPDATE_COMPLETE_CLEANUP_IN_PROGRESS = "Euca.DeleteStatusUpdateCompleteCleanupInProgress";
   public final static String EUCA_DELETE_STATUS_UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS = "Euca.DeleteStatusUpdateCompleteCleanupInProgress";
