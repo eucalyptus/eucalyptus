@@ -166,6 +166,7 @@ class DeleteAutoScalingGroupType extends AutoScalingMessage {
 class DescribeNotificationConfigurationsType extends AutoScalingMessage {
   AutoScalingGroupNames autoScalingGroupNames
   String nextToken
+  @AutoScalingMessageValidation.FieldRange(min=1L,max=100L)
   Integer maxRecords
 }
 class ScheduledUpdateGroupAction extends EucalyptusData {
@@ -302,6 +303,7 @@ class DescribeScheduledActionsType extends AutoScalingMessage {
   Date startTime
   Date endTime
   String nextToken
+  @AutoScalingMessageValidation.FieldRange(min=1L,max=100L)
   Integer maxRecords
 }
 class Filter extends EucalyptusData {
@@ -339,6 +341,7 @@ class DescribeAutoScalingInstancesResult extends EucalyptusData {
 class DescribeLaunchConfigurationsType extends AutoScalingMessage {
   LaunchConfigurationNames launchConfigurationNames = new LaunchConfigurationNames()
   String nextToken
+  @AutoScalingMessageValidation.FieldRange(min=1L,max=100L)
   Integer maxRecords
   List<String> launchConfigurationNames() {
     List<String> names = Lists.newArrayList()
@@ -358,6 +361,7 @@ class AutoScalingInstances extends EucalyptusData {
 class DescribeTagsType extends AutoScalingMessage {
   Filters filters
   String nextToken
+  @AutoScalingMessageValidation.FieldRange(min=1L,max=100L)
   Integer maxRecords
   List<Filter> filters() {
     filters != null ?
@@ -576,6 +580,7 @@ class DescribeScheduledActionsResult extends EucalyptusData {
 }
 class DescribeAutoScalingInstancesType extends AutoScalingMessage {
   InstanceIds instanceIds
+  @AutoScalingMessageValidation.FieldRange(min=1L,max=100L)
   Integer maxRecords
   String nextToken
   List<String> instanceIds() {
@@ -670,6 +675,7 @@ class DescribeScalingActivitiesType extends AutoScalingMessage {
   ActivityIds activityIds
   @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.NAME_OR_ARN)
   String autoScalingGroupName
+  @AutoScalingMessageValidation.FieldRange(min=1L,max=100L)
   Integer maxRecords
   String nextToken
   List<String> activityIds() {
@@ -910,6 +916,7 @@ class DescribePoliciesType extends AutoScalingMessage {
   String autoScalingGroupName
   PolicyNames policyNames
   String nextToken
+  @AutoScalingMessageValidation.FieldRange(min=1L,max=100L)
   Integer maxRecords
   List<String> policyNames() {
     List<String> names = Lists.newArrayList()
@@ -928,6 +935,7 @@ class ResumeProcessesResponseType extends AutoScalingMessage {
 class DescribeAutoScalingGroupsType extends AutoScalingMessage {
   AutoScalingGroupNames autoScalingGroupNames
   String nextToken
+  @AutoScalingMessageValidation.FieldRange(min=1L,max=100L)
   Integer maxRecords
   List<String> autoScalingGroupNames() {
     List<String> names = Lists.newArrayList()
