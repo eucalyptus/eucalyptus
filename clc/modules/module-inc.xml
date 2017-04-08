@@ -92,6 +92,7 @@
 	<property name="build.classes.dir" value="${build.dir}/classes" />
 	<property name="build.test.dir" value="${build.dir}/test-classes" />
 	<property name="build.src.dir" value="${build.dir}/src" />
+	<property name="generated.src.dir" value="${basedir}/src/generated/java" />
 	<property name="src.dir" value="${basedir}/src/main/java" />
 	<property name="test.dir" value="${basedir}/src/test/java" />
 	<property name="conf.dir" value="${basedir}/conf" />
@@ -180,6 +181,7 @@
 		<mkdir dir="${rsrc.dir}" />
 		<mkdir dir="${test.dir}" />
 		<mkdir dir="${src.dir}" />
+		<mkdir dir="${generated.src.dir}" />
 	</target>
 	<target name="classpaths" unless="build.notRequired">
 		<ivy:info file="${basedir}/ivy.xml" />
@@ -208,6 +210,12 @@
 			</dirset>
 			<path refid="classpath"/>
 	 	</path>
+		<path id="generate-classpath">
+			<fileset dir="${lib.dir}/generate" erroronmissingdir="false">
+				<include name="**/*.jar" />
+			</fileset>
+			<path refid="classpath"/>
+		</path>
 	</target>
 	<target name="builder" description="--> build the jar file from source.">
 		<condition property="builder.target" value="build-${builder.suffix}" else="build-java">
@@ -221,6 +229,7 @@
 		<mkdir dir="${build.test.dir}" />
 		<uptodate property="build.notRequired" targetfile="${jar.file}">
 			<srcfiles dir="${src.dir}" includes="**/*" />
+			<srcfiles dir="${generated.src.dir}" includes="**/*" />
 			<srcfiles dir="${test.dir}" includes="**/*" />
 		</uptodate>
 	</target>
@@ -228,18 +237,23 @@
 		<mkdir dir="${build.classes.dir}" />
 		<uptodate property="build.notRequired" targetfile="${jar.file}">
 			<srcfiles dir="${src.dir}" includes="**/*" />
+			<srcfiles dir="${generated.src.dir}" includes="**/*" />
 		</uptodate>
 	</target>
 	<target name="build-java" depends="should-build-java,classpaths" unless="build.notRequired">
 		<echo message="[COMPILE] ${builder.target} for ${ant.project.name}" />
 		<antcall target="clean" />
 		<antcall target="build-mkdirs" inheritall="true" inheritrefs="true" />
-		<javac srcdir="${src.dir}" classpathref="classpath" destdir="${build.classes.dir}" deprecation="false" failonerror="true" debug="${javac.debug}" sourcepathref="srcpath" source="${javac.source}" target="${javac.target}" encoding="utf-8" listfiles="true"  includeantruntime="${javac.includeantruntime}"/>
+		<javac classpathref="classpath" destdir="${build.classes.dir}" deprecation="false" failonerror="true" debug="${javac.debug}" sourcepathref="srcpath" source="${javac.source}" target="${javac.target}" encoding="utf-8" listfiles="true"  includeantruntime="${javac.includeantruntime}">
+			<src path="${src.dir}"/>
+			<src path="${generated.src.dir}"/>
+		</javac>	
 	</target>
 	<target name="should-build-groovy">
 		<mkdir dir="${build.classes.dir}" />
 		<uptodate property="build.notRequired" targetfile="${jar.file}">
 			<srcfiles dir="${src.dir}" includes="**/*" />
+			<srcfiles dir="${generated.src.dir}" includes="**/*" />
 		</uptodate>
 	</target>
 	<target name="build-groovy" depends="should-build-groovy,classpaths" unless="build.notRequired">
@@ -247,7 +261,7 @@
 		<antcall target="clean" />
 		<antcall target="build-mkdirs" inheritall="true" inheritrefs="true" />
 		<taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />
-		<groovyc srcdir="${src.dir}:${build.classes.dir}" classpathref="classpath" includeantruntime="${groovyc.includeantruntime}" fork="${groovyc.fork}" destdir="${build.classes.dir}" verbose="true" listfiles="true" configscript="${project.basedir}/config.groovy">
+		<groovyc srcdir="${src.dir}:${generated.src.dir}:${build.classes.dir}" classpathref="classpath" includeantruntime="${groovyc.includeantruntime}" fork="${groovyc.fork}" destdir="${build.classes.dir}" verbose="true" listfiles="true" configscript="${project.basedir}/config.groovy">
 			<javac source="${javac.source}" target="${javac.target}" encoding="utf-8" debug="${javac.debug}" >
 				<compilerarg value="-Js=${build.src.dir}/main/java"/>
 			</javac>
@@ -327,6 +341,26 @@
 	<target name="indent">
 		<antcall target="indent-module" />
 	</target>
+	<!--============================= code generation targets ============================-->
+	<target name="generate">
+		<antcall target="clean-generated" />
+		<antcall target="generate-module" />
+	</target>
+	<target name="generate-java" depends="classpaths">
+		<antcall target="build-mkdirs" />
+		<echo level="info" messsage="Generating Java source"/>
+		<javac source="${javac.source}" target="${javac.target}" classpathref="generate-classpath" deprecation="false" failonerror="true" debug="${javac.debug}" encoding="utf-8" listfiles="true" includeantruntime="${javac.includeantruntime}">
+			<compilerarg value="-proc:only"/>
+			<compilerarg value="-s"/>
+			<compilerarg value="${generated.src.dir}"/>
+			<src path="${src.dir}"/>
+			<include name="**/workflow/**/*.java"/>
+		</javac>
+	</target>
+	<target name="clean-generated">
+		<antcall target="clean-generated-module" />
+		<delete dir="${generated.src.dir}" />
+	</target>
 	<!--================================== clean target ==================================-->
 	<target name="clean">
 		<antcall target="clean-module" />
@@ -341,8 +375,10 @@
 	</target>
 	<!--================================== module sub-targets ==================================-->
 	<target name="clean-module" />
+	<target name="clean-generated-module" />
+	<target name="generate-module" />
 	<target name="distclean-module" />
 	<target name="uninstall-module" />
 	<target name="install-module" />
-
+	<target name="indent-module" />
 </project>
