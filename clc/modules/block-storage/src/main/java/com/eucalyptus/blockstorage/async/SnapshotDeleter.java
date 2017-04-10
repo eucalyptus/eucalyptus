@@ -187,7 +187,7 @@ public class SnapshotDeleter extends CheckerTask {
       try (TransactionResource tr = Entities.transactionFor(SnapshotInfo.class)) {
         snapshotsToBeDeleted = Entities.criteriaQuery(
             Entities.restriction(SnapshotInfo.class)
-            .like(SnapshotInfo_.status, StorageProperties.Status.deletedfromebs.toString()).build())
+            .equal(SnapshotInfo_.status, StorageProperties.Status.deletedfromebs.toString()).build())
             .orderByDesc(SnapshotInfo_.startTime)
             .list();
         tr.commit();
