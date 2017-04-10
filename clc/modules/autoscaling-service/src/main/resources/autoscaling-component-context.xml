@@ -28,7 +28,11 @@
     <int:header-enricher>
       <int:error-channel ref="autoscaling-error"/>
     </int:header-enricher>
-    <int:service-activator ref="autoScalingService"/>
+    <int:service-activator ref="autoScalingService">
+      <int:request-handler-advice-chain>
+        <ref bean="autoScalingServiceAdvice"/>
+      </int:request-handler-advice-chain>
+    </int:service-activator>
   </int:chain>
 
   <int:service-activator input-channel="autoscaling-error" ref="autoScalingErrorHandler"/>

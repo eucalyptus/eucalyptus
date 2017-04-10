@@ -330,6 +330,7 @@ public class AutoScalingService {
 
   public DescribeScalingActivitiesResponseType describeScalingActivities( final DescribeScalingActivitiesType request ) throws EucalyptusCloudException {
     final DescribeScalingActivitiesResponseType reply = request.getReply( );
+    final int maxRecords = Math.max( 1, MoreObjects.firstNonNull( request.getMaxRecords( ), Integer.MAX_VALUE ) );
 
     final Context ctx = Contexts.lookup( );
     final boolean showAll = request.activityIds().remove( "verbose" ) ||
@@ -354,7 +355,9 @@ public class AutoScalingService {
           TypeMappers.lookup( ScalingActivity.class, Activity.class ) );
       Collections.sort( scalingActivities, Ordering.natural().reverse().onResultOf( Activity.startTime() ) );
 
-      reply.getDescribeScalingActivitiesResult().getActivities().getMember().addAll( scalingActivities );
+      reply.getDescribeScalingActivitiesResult().getActivities().getMember().addAll(
+          scalingActivities.size( ) > maxRecords ? scalingActivities.subList( 0, maxRecords ) : scalingActivities
+      );
     } catch ( AutoScalingMetadataNotFoundException e ) {
       throw new AutoScalingClientException( "ValidationError", "Auto scaling group not found: " + request.getAutoScalingGroupName() );
     } catch ( AutoScalingMetadataException e ) {
@@ -461,17 +464,6 @@ public class AutoScalingService {
 
   public AutoScalingMessage dispatchAction( final AutoScalingMessage request ) throws EucalyptusCloudException {
     final AuthContextSupplier user = Contexts.lookup( ).getAuthContext( );
-
-    // Authorization check
-    if ( !Permissions.perhapsAuthorized( AutoScalingPolicySpec.VENDOR_AUTOSCALING, getIamActionByMessageType( request ), user ) ) {
-      throw new AutoScalingAuthorizationException( "UnauthorizedOperation", "You are not authorized to perform this operation." );
-    }
-
-    // Validation
-    final Map<String,String> validationErrorsByField = request.validate();
-    if ( !validationErrorsByField.isEmpty() ) {
-      throw new AutoScalingClientException( "ValidationError", validationErrorsByField.values().iterator().next() );
-    }
 
     // Dispatch
     try {
