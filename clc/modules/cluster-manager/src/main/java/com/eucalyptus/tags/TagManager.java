@@ -78,8 +78,8 @@ public class TagManager {
   private static final Set<String> reservedPrefixes = 
       ImmutableSet.<String>builder().add("aws:").add("euca:").build();
   
-  @ConfigurableField(initial = "10", description = "The maximum number of tags per resource for each account")
-  public static long MAX_TAGS_PER_RESOURCE = 10;
+  @ConfigurableField(initial = "50", description = "The maximum number of tags per resource for each account")
+  public static long MAX_TAGS_PER_RESOURCE = 50;
 
   public CreateTagsResponseType createTags( final CreateTagsType request ) throws EucalyptusCloudException {
     final CreateTagsResponseType reply = request.getReply( );
