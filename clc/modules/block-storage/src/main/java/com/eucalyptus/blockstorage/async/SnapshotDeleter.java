@@ -58,6 +58,7 @@
 
 package com.eucalyptus.blockstorage.async;
 
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.Date;
 import java.util.List;
 
@@ -93,6 +94,14 @@ import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
 public class SnapshotDeleter extends CheckerTask {
 
   private static Logger LOG = Logger.getLogger(SnapshotDeleter.class);
+
+  private static ConcurrentHashMap<String, Date> retryMap = new ConcurrentHashMap<String, Date>();
+
+  // Retry for two days max
+  // TODO make this configurable?
+  private static final long RETRY_MAX_MILLIS = (2/*days*/ * 24 * 60 * 60 * 1000)/*millisecs*/;
+  private static final long RETRY_MAX_MINUTES = RETRY_MAX_MILLIS / 1000 / 60;
+  private static final long RETRY_MAX_HOURS = RETRY_MAX_MINUTES / 60;
 
   private LogicalStorageManager blockManager;
   private S3SnapshotTransfer snapshotTransfer;
@@ -178,7 +187,7 @@ public class SnapshotDeleter extends CheckerTask {
       try (TransactionResource tr = Entities.transactionFor(SnapshotInfo.class)) {
         snapshotsToBeDeleted = Entities.criteriaQuery(
             Entities.restriction(SnapshotInfo.class)
-            .like(SnapshotInfo_.status, StorageProperties.Status.deletedfromebs.toString()).build())
+            .equal(SnapshotInfo_.status, StorageProperties.Status.deletedfromebs.toString()).build())
             .orderByDesc(SnapshotInfo_.startTime)
             .list();
         tr.commit();
@@ -193,12 +202,13 @@ public class SnapshotDeleter extends CheckerTask {
           try {
             String snapshotId = snap.getSnapshotId();
 
-            LOG.debug("Snapshot " + snapshotId + " was marked for deletion from OSG. Evaluating prerequistes for cleanup...");
+            LOG.debug("Snapshot " + snapshotId + " was marked for deletion from OSG. Evaluating prerequisites for cleanup...");
             if (snap.getIsOrigin() == null) { // old snapshot prior to 4.4
               LOG.debug("Snapshot " + snapshotId + " may have been created prior to incremental snapshot support");
               deleteSnapFromOSG(snap); // delete snapshot
             } else if (snap.getIsOrigin()) { // snapshot originated in the same az
               LOG.debug("Snapshot " + snapshotId + " originates from this az, verifying if it's needed to restore other snapshots");
+              List<SnapshotInfo> nextSnaps = null;
               try (TransactionResource tr = Entities.transactionFor(SnapshotInfo.class)) {
 
                 SnapshotInfo nextSnapSearch = new SnapshotInfo();
@@ -211,26 +221,27 @@ public class SnapshotDeleter extends CheckerTask {
                 search.add(StorageProperties.SNAPSHOT_DELTA_RESTORATION_CRITERION);
                 search.setReadOnly(true);
 
-                List<SnapshotInfo> nextSnaps = (List<SnapshotInfo>) search.list();
+                nextSnaps = (List<SnapshotInfo>) search.list();
                 tr.commit();
-
-                if (nextSnaps != null && !nextSnaps.isEmpty()) {
-                  // Found deltas that might depend on this snapshot for reconstruction, don't delete.
-                  // Normally there will be only 1 next snap, optimize for that case.
-                  String nextSnapIds = nextSnaps.get(0).getSnapshotId();
-                  if (nextSnaps.size() > 1) {
-                    for (int nextSnapIdNum = 1; nextSnapIdNum < nextSnaps.size(); nextSnapIdNum++) {
-                      nextSnapIds = nextSnapIds + ", " + nextSnaps.get(nextSnapIdNum).getSnapshotId();
-                    }
-                  }
-                  LOG.debug("Snapshot " + snapshotId + " is required for restoring other snapshots in the system." +
-                      " Cannot delete from OSG. Direct children of this snapshot: " + nextSnapIds);
-                } else {
-                  LOG.debug("Snapshot " + snapshotId + " is not required for restoring other snapshots in the system");
-                  deleteSnapFromOSG(snap); // delete snapshot
-                }
               } catch (Exception e) {
                 LOG.warn("Failed to lookup snapshots that may depend on " + snapshotId + " for reconstruction", e);
+                return;
+              }
+
+              if (nextSnaps != null && !nextSnaps.isEmpty()) {
+                // Found deltas that might depend on this snapshot for reconstruction, don't delete.
+                // Normally there will be only 1 next snap, optimize for that case.
+                String nextSnapIds = nextSnaps.get(0).getSnapshotId();
+                if (nextSnaps.size() > 1) {
+                  for (int nextSnapIdNum = 1; nextSnapIdNum < nextSnaps.size(); nextSnapIdNum++) {
+                    nextSnapIds = nextSnapIds + ", " + nextSnaps.get(nextSnapIdNum).getSnapshotId();
+                  }
+                }
+                LOG.debug("Snapshot " + snapshotId + " is required for restoring other snapshots in the system." +
+                    " Cannot delete from OSG. Direct children of this snapshot: " + nextSnapIds);
+              } else {
+                LOG.debug("Snapshot " + snapshotId + " is not required for restoring other snapshots in the system");
+                deleteSnapFromOSG(snap); // delete snapshot
               }
             } else { // snapshot originated in a different az
               // skip evaluation and just mark the snapshot deleted, let the source az deal with the osg remnants TODO fix this later
@@ -286,13 +297,16 @@ public class SnapshotDeleter extends CheckerTask {
         snapshotTransfer.setKeyName(names[1]);
         snapshotTransfer.delete();
 
-        LOG.debug("Setting snapshot " + snap.getSnapshotId() + " to 'deleted' state from OSG cleanup");
         markSnapDeleted(snap.getSnapshotId());
       } catch (Exception e) {
-        LOG.warn("Failed to delete snapshot " + snap.getSnapshotId() + " from ObjectStorageGateway", e);
+        LOG.info("Failed to delete snapshot " + snap.getSnapshotId() + " from ObjectStorageGateway.", e);
+        retryOrDelete(snap.getSnapshotId(), /*fromEBS*/ false, "from OSG");
+        return;
       }
     } else {
-      LOG.debug("Snapshot location missing for " + snap.getSnapshotId() + ". Skipping deletion from ObjectStorageGateway");
+      LOG.debug("Snapshot location missing for " + snap.getSnapshotId() + 
+          ". It may be created later. Skipping deletion from ObjectStorageGateway for now.");
+      retryOrDelete(snap.getSnapshotId(), /*fromEBS*/ false, "from OSG");
     }
   }
 
@@ -302,6 +316,11 @@ public class SnapshotDeleter extends CheckerTask {
       foundSnapshotInfo.setStatus(StorageProperties.Status.deleted.toString());
       foundSnapshotInfo.setDeletionTime(new Date());
       tran.commit();
+      // Only remove it from the retry list (OK if it's not there) if we
+      // successfully set the snap to deleted. Otherwise it may be put back
+      // on the list on the next run and start a retry period again.
+      retryMap.remove(snapshotId);
+      LOG.debug("Snapshot " + snapshotId + " set to 'deleted' state");
     } catch (Exception e) {
       LOG.warn("Failed to update status for " + snapshotId + " to deleted", e);
     }
@@ -316,4 +335,42 @@ public class SnapshotDeleter extends CheckerTask {
       LOG.warn("Failed to update status for " + snapshotId + " to deletedfromebs", e);
     }
   }
+  
+  private boolean retryOrDelete(String snapshotId, boolean fromEBS, String fromEBSorOSG) {
+    Date retryStartDate = null;
+    Date now = new Date();
+    boolean timedOut = false;
+    if ((retryStartDate = retryMap.get(snapshotId)) == null) {
+      LOG.warn("Deleting snapshot " + snapshotId + " " + fromEBSorOSG + " failed. Will retry until " + 
+          new Date(now.getTime() + RETRY_MAX_MILLIS));
+      retryMap.put(snapshotId, now);
+    } else {
+      long retryStartMillis = retryStartDate.getTime();
+      if (now.getTime() - retryStartMillis > RETRY_MAX_MILLIS) {
+        timedOut = true;
+        // Compiler warns of "dead code" here due to constants.
+        // Kept here so we can change RETRY_MAX_MILLIS for test purposes.
+        String retryMaxHumanReadable = (RETRY_MAX_HOURS < 1 ? 
+            (RETRY_MAX_MINUTES + " minutes") : (RETRY_MAX_HOURS + " hours"));
+        LOG.error("Deleting snapshot " + snapshotId + " " + fromEBSorOSG + " failed on its final attempt, after " + 
+            retryMaxHumanReadable + 
+            ". Giving up trying to delete it " + fromEBSorOSG);
+        try {
+          if (fromEBS) {
+            markSnapDeletedFromEBS(snapshotId);
+          } else {
+            markSnapDeleted(snapshotId);
+          }
+        } catch (Exception e2) {
+          LOG.info("Snapshot " + snapshotId + " could not be deleted " + fromEBSorOSG + 
+              ". It may have already been deleted in another thread.");
+        }
+      } else {
+        LOG.warn("Deleting snapshot " + snapshotId + " " + fromEBSorOSG + " failed again. Will retry until " + 
+            new Date(retryStartMillis + RETRY_MAX_MILLIS));
+      }
+    }
+    return timedOut;
+  }
+  
 }
