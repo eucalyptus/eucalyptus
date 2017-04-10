@@ -931,7 +931,12 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       ) );
 
       UpgradeUtils.createOrOverwriteProperties( LOG, ImmutableList.of(
-          Tuple.of( "com.eucalyptus.autoscaling.config.AutoScalingConfiguration.maxtags", "autoscaling.maxtags", "10" )
+          Tuple.of( "com.eucalyptus.autoscaling.config.AutoScalingConfiguration.maxtags",
+                    "autoscaling.maxtags",
+                    "10" ),
+          Tuple.of( "com.eucalyptus.loadbalancing.LoadBalancingServiceProperties.max_tags",
+                    "services.loadbalancing.max_tags",
+                    "10" )
       ) );
 
       return true;
