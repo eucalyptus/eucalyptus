@@ -779,11 +779,11 @@ public class ComputeService {
     }
     final Filter filter = filtersBuilder.generate( );
     final Filter persistenceFilter = getPersistenceFilter( Volume.class, volumeIds, "volume-id", filter );
-    final Predicate<? super Volume> requestedAndAccessible = CloudMetadatas.filteringFor( Volume.class )
+    final Predicate<? super Volume> requestedAndAccessibleUnfiltered = CloudMetadatas.filteringFor( Volume.class )
         .byId( volumeIds )
-        .byPredicate( filter.asPredicate( ) )
         .byPrivileges()
         .buildPredicate();
+    final Predicate<? super Volume> filterPredicate = filter.asPredicate( );
 
     final Function<Set<String>, ArrayList<com.eucalyptus.compute.common.Volume>> populateVolumeSet
         = new Function<Set<String>, ArrayList<com.eucalyptus.compute.common.Volume>>( ) {
@@ -796,7 +796,7 @@ public class ComputeService {
             persistenceFilter.getAliases( ) );
         final Iterable<Volume> filteredVolumes = Iterables.filter(
             volumes,
-            Predicates.and( new TrackingPredicate<Volume>( volumeIds ), requestedAndAccessible ) );
+            Predicates.and( new TrackingPredicate<>( volumeIds ), requestedAndAccessibleUnfiltered ) );
 
         // load attachment info
         final Criterion attachmentCriterion;
@@ -828,7 +828,9 @@ public class ComputeService {
         for ( final Volume foundVol : filteredVolumes ) {
           if ( State.ANNIHILATED.equals( foundVol.getState( ) ) ) {
             Entities.delete( foundVol );
-            replyVolumes.add( foundVol.morph( new com.eucalyptus.compute.common.Volume() ) );
+            if ( filterPredicate.apply( foundVol ) ) {
+              replyVolumes.add( foundVol.morph( new com.eucalyptus.compute.common.Volume( ) ) );
+            }
           } else if ( State.BUSY.equals( foundVol.getState( ) ) ) {
             final VmVolumeAttachment attachment = attachmentMap.get( foundVol.getDisplayName( ) );
             Option<AttachedVolume> attachedVolume = Option.none( );
@@ -838,13 +840,13 @@ public class ComputeService {
             } else {
               foundVol.setState( State.EXTANT );
             }
-            if ( requestedAndAccessible.apply( foundVol ) ) { // state change may impact filtering so check again
+            if ( filterPredicate.apply( foundVol ) ) {
               final com.eucalyptus.compute.common.Volume msgTypeVolume =
                   foundVol.morph( new com.eucalyptus.compute.common.Volume( ) );
               msgTypeVolume.getAttachmentSet( ).addAll( attachedVolume.toJavaList( ) );
               replyVolumes.add( msgTypeVolume );
             }
-          } else {
+          } else if ( filterPredicate.apply( foundVol ) ) {
             replyVolumes.add( foundVol.morph( new com.eucalyptus.compute.common.Volume() ) );
           }
         }
