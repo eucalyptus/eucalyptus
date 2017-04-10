@@ -64,6 +64,7 @@ package com.eucalyptus.objectstorage.entities;
 
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.configurable.ConfigurableInit;
+import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import groovy.sql.GroovyRowResult;
 import groovy.sql.Sql;
@@ -98,6 +99,7 @@ import com.eucalyptus.upgrade.Upgrades.DatabaseFilters;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.walrus.entities.WalrusInfo;
 import com.google.common.base.Joiner;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
@@ -111,66 +113,60 @@ import com.google.common.collect.Sets;
 @Entity
 @PersistenceContext(name = "eucalyptus_osg")
 @Table(name = "osg_config")
-@ConfigurableClass(root = "ObjectStorage", description = "Object Storage Gateway configuration.", deferred = true, singleton = true)
+@ConfigurableClass(root = "ObjectStorage", description = "Object Storage Gateway configuration.", deferred = true)
 public class ObjectStorageGlobalConfiguration extends AbstractPersistent implements CacheableConfiguration<ObjectStorageGlobalConfiguration> {
-  @Transient
   private static final Logger LOG = Logger.getLogger(ObjectStorageGlobalConfiguration.class);
-  @Transient
   private static final int DEFAULT_MAX_BUCKETS_PER_ACCOUNT = 100;
-  @Transient
   private static final int DEFAULT_MAX_METADATA_REQUEST_SIZE = 1024 * 300; // 300 KB
-  @Transient
   private static final int DEFAULT_PUT_TIMEOUT_HOURS = 168; // An upload not marked completed or deleted in 24 hours from record creation will be
                                                             // considered 'failed'
-  @Transient
   private static final int DEFAULT_CLEANUP_INTERVAL_SEC = 60; // 60 seconds between cleanup tasks.
-  @Transient
   private static final String DEFAULT_BUCKET_NAMING_SCHEME = "extended";
-  @Transient
   private static final Boolean DEFAULT_COPY_UNSUPPORTED_STRATEGY = Boolean.FALSE;
+  private static final int DEFAULT_MAX_TAGS = 50;
 
   @Override
   public ObjectStorageGlobalConfiguration getLatest() {
     return getConfiguration();
   }
 
-  @Column
+  @Column( name = "max_metadata_request_size" )
   @ConfigurableField(description = "Maximum allowed size of metadata request bodies",
       displayName = "Maximum allowed size of metadata requests",
       initialInt = DEFAULT_MAX_METADATA_REQUEST_SIZE )
   protected Integer max_metadata_request_size;
 
-  @Column
+  @Column( name = "max_buckets_per_account" )
   @ConfigurableField(description = "Maximum number of buckets per account",
       displayName = "Maximum buckets per account",
       initialInt = DEFAULT_MAX_BUCKETS_PER_ACCOUNT )
   protected Integer max_buckets_per_account;
 
-  @Column
+  @Column( name = "max_total_reporting_capacity_gb" )
   @ConfigurableField(
       description = "Total ObjectStorage storage capacity for Objects soley for reporting usage percentage. Not a size restriction. No enforcement of this value",
       displayName = "ObjectStorage object capacity (GB)", initialInt = Integer.MAX_VALUE )
   protected Integer max_total_reporting_capacity_gb;
 
-  @Column
+  @Column( name = "failed_put_timeout_hrs" )
   @ConfigurableField(description = "Number of hours to wait for object PUT operations to be allowed to complete before cleanup.",
       displayName = "Object PUT failure cleanup (Hours)", initialInt = DEFAULT_PUT_TIMEOUT_HOURS )
   protected Integer failed_put_timeout_hrs;
 
-  @Column
+  @Column( name = "cleanup_task_interval_seconds" )
   @ConfigurableField(description = "Interval, in seconds, at which cleanup tasks are initiated for removing old/stale objects.",
       displayName = "Cleanup interval (seconds)",
       initialInt = DEFAULT_CLEANUP_INTERVAL_SEC )
   protected Integer cleanup_task_interval_seconds;
 
-  @Column
+  @Column( name = "bucket_creation_wait_interval_seconds" )
   @ConfigurableField(
       description = "Interval, in seconds, during which buckets in creating-state are valid. After this interval, the operation is assumed failed.",
       displayName = "Operation wait interval (seconds)",
       initialInt = DEFAULT_CLEANUP_INTERVAL_SEC )
   protected Integer bucket_creation_wait_interval_seconds;
 
-  @Column
+  @Column( name = "bucket_naming_restrictions" )
   @ConfigurableField(description = "The S3 bucket naming restrictions to enforce. Values are 'dns-compliant' or 'extended'. "
       + "Default is 'extended'. dns_compliant is non-US region S3 names, extended is for US-Standard Region naming. "
       + "See http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html", displayName = "Bucket Naming restrictions",
@@ -178,19 +174,26 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
       initial = DEFAULT_BUCKET_NAMING_SCHEME )
   protected String bucket_naming_restrictions;
 
-  @Column
+  @Column( name = "dogetputoncopyfail" )
   @ConfigurableField(description = "Should provider client attempt a GET / PUT when backend does not support Copy operation",
       displayName = "attempt GET/PUT on Copy fail", type = ConfigurableFieldType.BOOLEAN, initial = "false" )
   protected Boolean doGetPutOnCopyFail;
 
-  @Column
+  @Column( name = "providerclient" )
   @ConfigurableField(description = "Object Storage Provider client to use for backend", displayName = "Object Storage Provider Client",
       changeListener = ObjectStorageProviderChangeListener.class)
   protected String providerClient; // configured by user to specify which back-end client to use
 
-  @Column
+  @Column( name = "bucket_reserved_cnames" )
   @ConfigurableField(description = "List of host names that may not be used as bucket cnames")
   protected String bucket_reserved_cnames;
+
+  @Column( name = "max_tags" )
+  @ConfigurableField(
+      initial = "50",
+      description = "Maximum number of user defined tags for a bucket.",
+      changeListener = PropertyChangeListeners.IsNonNegativeInteger.class)
+  protected Integer max_tags;
 
   @ConfigurableInit
   protected ObjectStorageGlobalConfiguration initializeDefaults() {
@@ -202,6 +205,7 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
     this.setMax_buckets_per_account(DEFAULT_MAX_BUCKETS_PER_ACCOUNT);
     this.setMax_metadata_request_size(DEFAULT_MAX_METADATA_REQUEST_SIZE);
     this.setMax_total_reporting_capacity_gb(Integer.MAX_VALUE);
+    this.setMax_tags(DEFAULT_MAX_TAGS);
     return this;
   }
 
@@ -300,11 +304,22 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
     this.bucket_reserved_cnames = bucket_reserved_cnames;
   }
 
+  public Integer getMax_tags( ) {
+    return MoreObjects.firstNonNull( max_tags, 10 ); // use old hard-coded limit if null
+  }
+
+  public void setMax_tags( final Integer max_tags ) {
+    this.max_tags = max_tags;
+  }
+
   @PrePersist
   @PreUpdate
   public void updateDefaults() {
     if (max_metadata_request_size == null) {
       max_metadata_request_size = DEFAULT_MAX_METADATA_REQUEST_SIZE;
+    }
+    if (max_tags==null) {
+      max_tags = 10; // initialize to old hard-coded limit
     }
   }
 
