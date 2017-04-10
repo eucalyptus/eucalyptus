@@ -34,6 +34,7 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.Intervals;
 import com.google.common.base.Predicates;
@@ -87,6 +88,9 @@ public class AutoScalingConfiguration {
   @ConfigurableField( initial = "9s", description = "Initial backoff period for failing activities.", changeListener = AutoScalingIntervalPropertyChangeListener.class )
   public static volatile String activityInitialBackoff = "9s";
 
+  @ConfigurableField( initial = "50", description = "Maximum number of user defined tags for a group.", changeListener = PropertyChangeListeners.IsNonNegativeInteger.class )
+  public static volatile int maxTags = 50;
+
   private static AtomicLong activityTimeoutMillis = new AtomicLong( Intervals.parse( activityTimeout, TimeUnit.MINUTES.toMillis( 5 ) ) );
   private static AtomicLong activityExpiryMillis =  new AtomicLong( Intervals.parse( activityExpiry, TimeUnit.DAYS.toMillis( 42 ) ) );
   private static AtomicLong zoneFailureThresholdMillis = new AtomicLong( Intervals.parse( zoneFailureThreshold, TimeUnit.MINUTES.toMillis( 5 ) ) );
@@ -104,6 +108,10 @@ public class AutoScalingConfiguration {
 
   public static int getMaxRegistrationRetries() {
     return maxRegistrationRetries;
+  }
+
+  public static int getMaxTags() {
+    return maxTags;
   }
 
   public static int getSuspensionLaunchAttemptsThreshold() {
