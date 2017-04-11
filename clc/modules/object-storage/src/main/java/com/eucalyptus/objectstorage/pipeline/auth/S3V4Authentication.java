@@ -102,7 +102,7 @@ public final class S3V4Authentication {
         throw new InvalidAccessKeyIdException();
       LOG.debug("CorrelationId: " + request.getCorrelationId() + " Authentication failed due to signature mismatch:", ex);
       StringBuilder canonicalRequest = buildCanonicalRequest(request, creds.signedHeaders, creds.payloadHash);
-      throw new SignatureDoesNotMatchException(creds.accessKeyId, creds.getLoginData(), creds.signature, canonicalRequest.toString());
+      throw new SignatureDoesNotMatchException(accessKeyId, creds.getLoginData(), creds.signature, canonicalRequest.toString());
     } catch (Exception e) {
       LOG.warn("CorrelationId: " + request.getCorrelationId() + " Unexpected failure trying to authenticate request", e);
       throw new InternalErrorException(e);
