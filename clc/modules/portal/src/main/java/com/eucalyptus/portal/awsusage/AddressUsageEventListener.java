@@ -16,23 +16,18 @@
 package com.eucalyptus.portal.awsusage;
 
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.portal.BillingProperties;
-import com.eucalyptus.portal.SimpleQueueClientManager;
 import com.eucalyptus.reporting.event.AddressEvent;
 import org.apache.log4j.Logger;
 
 import javax.annotation.Nonnull;
 
-public class AddressUsageEventListener  implements
-        EventListener<AddressEvent> {
-  private static final Logger LOG = Logger
-          .getLogger(AddressUsageEventListener.class);
+public class AddressUsageEventListener extends SensorQueueEventListener<AddressEvent> {
+  private static final Logger LOG = Logger.getLogger(AddressUsageEventListener.class);
 
   public static void register() {
-    Listeners.register(AddressEvent.class,
-            new AddressUsageEventListener());
+    Listeners.register(AddressEvent.class, new AddressUsageEventListener());
   }
 
   @Override
@@ -49,13 +44,6 @@ public class AddressUsageEventListener  implements
             AddressEvent.AddressAction.USAGE_ASSOCIATE.equals(action)))
       return;
 
-    try {
-      final QueuedEvent qevt = QueuedEvents.FromAddressUsageEvent.apply(event);
-      final String msg = QueuedEvents.EventToMessage.apply(qevt);
-      SimpleQueueClientManager.getInstance().sendMessage(BillingProperties.SENSOR_QUEUE_NAME,
-              msg);
-    } catch (final Exception ex) {
-      LOG.error("Failed to send address usage message to queue", ex);
-    }
+    transformAndQueue( LOG, event, QueuedEvents.FromAddressUsageEvent );
   }
 }

@@ -27,6 +27,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -291,7 +292,36 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
               .build();
       return Lists.newArrayList(data);
     }
-  };
+  },
+  CLOUDWATCH_REQUEST("AmazonCloudWatch", "*", "request", AggregateGranularity.HOURLY) {
+    @Override
+    public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
+      // AmazonCloudWatch,DescribeMetricFilters,USW2-Request-NoCharge,,11/12/16 00:00:00,11/12/16 01:00:00,12
+      List<QueuedEvent> filteredEvents = events.stream()
+          .filter(e -> "CW:Requests".equals(e.getEventType()))
+          .collect(Collectors.toList());
+      if (filteredEvents.size() <= 0)
+        return Lists.newArrayList();
+      final Date earliestRecord = AwsUsageRecordType.getEarliest(filteredEvents);
+      final Date endTime = getNextHour(earliestRecord);
+      final Date startTime = getPreviousHour(endTime);
+      final ConcurrentMap<String, Long> requestsByOperation = Maps.newConcurrentMap( );
+      filteredEvents.stream( ).forEach( event -> {
+        requestsByOperation.merge( event.getResourceId( ), Long.valueOf( event.getUsageValue( ) ), Long::sum);
+      } );
+      return requestsByOperation.entrySet( ).stream( ).map( entry ->
+        AwsUsageRecords.getInstance( ).newRecord( accountId )
+            .withService( "AmazonCloudWatch" )
+            .withOperation( entry.getKey( ) )
+            .withUsageType( "Request-NoCharge" )
+            .withStartTime( startTime )
+            .withEndTime( endTime )
+            .withUsageValue( String.valueOf( entry.getValue( ) ) )
+            .build()
+      ).collect( Collectors.toList( ) );
+    }
+  },
+  ;
 
   private String service = null;
   private String operation = null;

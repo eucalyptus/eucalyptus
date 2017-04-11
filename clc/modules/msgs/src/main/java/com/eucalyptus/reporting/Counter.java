@@ -105,11 +105,20 @@ public class Counter<T,C extends Counter.Counted> {
     }
   }
 
-  public CounterSnapshot snapshot( ) {
+  public long lastPeriodEnd( ) {
+    return lastPeriodEnd( clock.millis( ) );
+  }
+
+  public long lastPeriodEnd( final long time ) {
+    final long periodLengthLong = periodLength;
+    return  ( time / periodLengthLong ) * periodLengthLong;
+  }
+
+  public CounterSnapshot<C> snapshot( ) {
     return snapshot( clock.millis( ) );
   }
 
-  public CounterSnapshot snapshot( final long time ) {
+  public CounterSnapshot<C> snapshot( final long time ) {
     final List<CountPeriod<C>> periodList = periods.get( ).stream( )
         .filter( p -> p.key.end <= time )
         .collect( Collectors.toList( ) );
@@ -246,7 +255,7 @@ public class Counter<T,C extends Counter.Counted> {
     }
   }
 
-  static final class CounterSnapshot<C extends Counter.Counted> {
+  public static final class CounterSnapshot<C extends Counter.Counted> {
     private final CounterPeriodSnapshot<C> aggregate;
     private final List<CounterPeriodSnapshot<C>> periodSnapshots;
 
