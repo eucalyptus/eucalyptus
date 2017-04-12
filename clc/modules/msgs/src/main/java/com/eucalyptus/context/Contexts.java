@@ -62,6 +62,7 @@
 
 package com.eucalyptus.context;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -177,6 +178,25 @@ public class Contexts {
   
   public static void removeThreadLocal( ) {//GRZE: really unhappy these are public.
     tlContext.remove( );
+  }
+
+  public static <T> Callable<T> callableWithCurrentContext( final Callable<T> callable ) {
+    return callableWithContext( callable, Contexts.lookup() );
+  }
+
+  public static <T> Callable<T> callableWithContext( final Callable<T> callable, final Context context ) {
+    return new Callable<T>( ) {
+      @Override
+      public T call( ) throws Exception {
+        final Context previously = threadLocal( );
+        threadLocal( context );
+        try {
+          return callable.call( );
+        } finally {
+          threadLocal( previously );
+        }
+      }
+    };
   }
 
   public static <T> Consumer<T> consumerWithCurrentContext( final Consumer<T> consumer ) {

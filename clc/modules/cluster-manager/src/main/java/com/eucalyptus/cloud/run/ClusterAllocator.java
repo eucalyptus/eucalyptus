@@ -85,6 +85,7 @@ import javax.crypto.spec.SecretKeySpec;
 import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.auth.AuthContextSupplier;
+import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.callback.ResourceStateCallback;
@@ -92,6 +93,9 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
 import com.eucalyptus.compute.common.backend.RunInstancesType;
 import com.eucalyptus.compute.common.backend.StartInstancesType;
+import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.tags.TagHelper;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
@@ -467,14 +471,19 @@ public class ClusterAllocator implements Runnable {
                 final String authenticatedArn = this.allocInfo.getAuthenticatedArn();
                 final String snapshotId = ResourceIdentifiers.tryNormalize().apply( mapping.getEbs().getSnapshotId() );
                 final int volSize = volumeSize;
-                final BaseMessage request = this.allocInfo.getRequest();
-                final Callable<Volume> createVolume = new Callable<Volume>( ) {
+                final RunInstancesType request = this.allocInfo.getRequest();
+                final Callable<Volume> createVolume = Contexts.callableWithContext( new Callable<Volume>( ) {
                     public Volume call( ) throws Exception {
                       final Function<Long, Volume> allocator = new Function<Long, Volume>( ) {
                         @Override
                         public Volume apply( Long size ) {
                           try {
-                            return Volumes.createStorageVolume( sc, authenticatedArn, fullName, snapshotId, Ints.checkedCast( size ), request );
+                            return Volumes.createStorageVolume( sc, authenticatedArn, fullName, snapshotId, Ints.checkedCast( size ),
+                                volume -> {
+                                  final List<ResourceTag> volumeTags =
+                                      TagHelper.tagsForResource( request.getTagSpecification( ), PolicySpec.EC2_RESOURCE_VOLUME );
+                                  TagHelper.createOrUpdateTags( fullName, volume, volumeTags );
+                                } );
                           } catch ( ExecutionException ex ) {
                             throw Exceptions.toUndeclared( ex );
                           }
@@ -487,7 +496,7 @@ public class ClusterAllocator implements Runnable {
                           (long) volSize,
                           allocator );
                     }
-                };
+                }, allocInfo.getContext( ) );
                 final Volume volume; // allocate in separate transaction to ensure metadata matches back-end
                 try {
                   volume = Threads.enqueue( Eucalyptus.class, ClusterAllocator.class, createVolume ).get( );

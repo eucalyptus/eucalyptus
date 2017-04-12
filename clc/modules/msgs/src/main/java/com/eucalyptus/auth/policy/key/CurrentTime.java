@@ -89,10 +89,4 @@ public class CurrentTime implements AwsKey {
   public void validateValueType( String value ) throws JSONException {
     KeyUtils.validateDateValue( value, KEY );
   }
-
-  @Override
-  public boolean canApply( String action ) {
-    return true;
-  }
-  
 }

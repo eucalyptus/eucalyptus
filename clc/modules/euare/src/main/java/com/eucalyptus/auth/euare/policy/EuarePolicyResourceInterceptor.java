@@ -41,7 +41,9 @@ public class EuarePolicyResourceInterceptor implements PolicyResourceContext.Pol
   public void onResource( final PolicyResourceInfo resource, final String action ) {
     EuarePolicyContext.clearContext( );
 
-    if ( resource != null && RestrictedType.class.isAssignableFrom( resource.getResourceClass( ) ) ) {
+    if ( resource != null &&
+        resource.getResourceObject() != null &&
+        RestrictedType.class.isAssignableFrom( resource.getResourceClass( ) ) ) {
       if ( accepted.contains( resource.getResourceClass( ) ) ||
           (!rejected.contains( resource.getResourceClass( ) ) &&
               EuareAccount.class.isAssignableFrom( resource.getResourceClass( ) ) ) ) try {

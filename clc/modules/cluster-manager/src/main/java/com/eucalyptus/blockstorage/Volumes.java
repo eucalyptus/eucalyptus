@@ -68,6 +68,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import java.util.Date;
+import java.util.function.Consumer;
 
 import javax.persistence.EntityTransaction;
 
@@ -224,11 +225,17 @@ public class Volumes {
     }
   }
 
-  public static Volume createStorageVolume( final ServiceConfiguration sc, final String arn, final UserFullName owner, final String snapId, final Integer newSize, final BaseMessage request ) throws ExecutionException {
+  public static Volume createStorageVolume(
+      final ServiceConfiguration sc,
+      final String arn,
+      final UserFullName owner,
+      final String snapId,
+      final Integer newSize,
+      final Consumer<Volume> consumeInTx
+      ) throws ExecutionException {
     final String newId = IdentityIdFormats.generate( arn, Volume.ID_PREFIX );
     LOG.debug("Creating volume");
     final Volume newVol = Transactions.save( Volume.create( sc, owner, snapId, newSize, newId ), new Callback<Volume>( ) {
-      
       @Override
       public void fire( final Volume t ) {
         t.setState( State.GENERATING );
@@ -250,6 +257,9 @@ public class Volumes {
           }
           t.setState( State.FAIL );
           throw Exceptions.toUndeclared( ex );
+        }
+        if ( consumeInTx != null ) {
+          consumeInTx.accept( t );
         }
       }
       

@@ -62,6 +62,9 @@
 
 package com.eucalyptus.blockstorage;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 
@@ -69,10 +72,13 @@ import javax.annotation.Nullable;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthQuotaException;
+import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.ClientUnauthorizedComputeException;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.common.AttachedVolume;
+import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.backend.AttachVolumeResponseType;
 import com.eucalyptus.compute.common.backend.AttachVolumeType;
 import com.eucalyptus.compute.common.backend.CreateVolumeResponseType;
@@ -91,6 +97,11 @@ import com.eucalyptus.compute.common.internal.blockstorage.State;
 import com.eucalyptus.compute.common.internal.blockstorage.Volume;
 import com.eucalyptus.compute.common.internal.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.compute.ClientComputeException;
+import com.eucalyptus.compute.common.internal.tags.Tag;
+import com.eucalyptus.compute.common.internal.tags.TagSupport;
+import com.eucalyptus.compute.common.internal.tags.Tags;
+import com.eucalyptus.compute.common.internal.util.MetadataException;
+import com.eucalyptus.tags.TagHelper;
 import com.google.common.base.Predicates;
 
 import org.apache.log4j.Logger;
@@ -164,6 +175,18 @@ public class VolumeManager {
       throw new EucalyptusCloudException( "One of size or snapshotId is required as a parameter." );
     }
 
+    try {
+      TagHelper.validateTagSpecifications( request.getTagSpecification( ) );
+    } catch ( MetadataException e ) {
+      throw new ClientComputeException( "InvalidParameterValue", e.getMessage( ) );
+    }
+    final List<ResourceTag> volumeTags = TagHelper.tagsForResource( request.getTagSpecification( ), PolicySpec.EC2_RESOURCE_VOLUME );
+
+    if ( !volumeTags.isEmpty( ) ) {
+      if ( !TagHelper.createTagsAuthorized( ctx, PolicySpec.EC2_RESOURCE_VOLUME ) ) {
+        throw new ClientUnauthorizedComputeException( "Not authorized to create tags by " + ctx.getUser( ).getName( ) );
+      }
+    }
     if ( snapId != null ) {
       try {
         Snapshot snap = Transactions.find( Snapshot.named( null, normalizeOptionalSnapshotIdentifier( snapId ) ) );
@@ -198,11 +221,11 @@ public class VolumeManager {
         final String arn = Accounts.getAuthenticatedArn( ctx.getUser( ) );
         final UserFullName owner = ctx.getUserFullName( );
         Function<Long, Volume> allocator = new Function<Long, Volume>( ) {
-
           @Override
           public Volume apply( Long size ) {
             try {
-              return Volumes.createStorageVolume( sc, arn, owner, snapId, Ints.checkedCast( size ), request );
+              return Volumes.createStorageVolume( sc, arn, owner, snapId, Ints.checkedCast( size ),
+                  volume -> TagHelper.createOrUpdateTags( owner, volume, volumeTags ) );
             } catch ( ExecutionException ex ) {
               throw Exceptions.toUndeclared( ex );
             }
@@ -211,6 +234,10 @@ public class VolumeManager {
         Volume newVol = RestrictedTypes.allocateMeasurableResource( newSize.longValue( ), allocator );
         CreateVolumeResponseType reply = request.getReply( );
         reply.setVolume( newVol.morph( new com.eucalyptus.compute.common.Volume( ) ) );
+        Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( Volume.class ).getResourceTagMap(
+            AccountFullName.getInstance( ctx.getAccountNumber( ) ),
+            Collections.singleton( newVol.getDisplayName( ) ) );
+        Tags.addFromTags( reply.getVolume().getTagSet(), ResourceTag.class, tagsMap.get( newVol.getDisplayName( ) ) );
         return reply;
       } catch ( RuntimeException ex ) {
         if ( Exceptions.isCausedBy( ex, NoSuchElementException.class ) ) {

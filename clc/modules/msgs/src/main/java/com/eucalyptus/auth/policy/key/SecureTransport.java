@@ -46,10 +46,5 @@ public class SecureTransport implements AwsKey {
       throw new JSONException( KEY + " is not allowed in condition " + conditionClass.getName( ) + ". Boolean conditions are required." );
     }
   }
-
-  @Override
-  public boolean canApply( String action ) {
-    return true;
-  }
 }
 

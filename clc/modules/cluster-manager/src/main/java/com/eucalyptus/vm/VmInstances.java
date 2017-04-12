@@ -87,6 +87,7 @@ import javax.persistence.EntityTransaction;
 import javax.transaction.Status;
 import javax.transaction.Synchronization;
 
+import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Hosts;
@@ -193,6 +194,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.tracking.MessageContexts;
 import com.eucalyptus.compute.common.internal.tags.FilterSupport;
+import com.eucalyptus.tags.TagHelper;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
@@ -1955,7 +1957,10 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
         builder.onBuild( new Callback<VmInstance>() {
           @Override
           public void fire( final VmInstance input ) {
-            Entities.persist( input );
+            final VmInstance persistedInstance = Entities.persist( input );
+            final List<ResourceTag> instanceTags =
+                TagHelper.tagsForResource( allocInfo.getRequest( ).getTagSpecification( ), PolicySpec.EC2_RESOURCE_INSTANCE );
+            TagHelper.createOrUpdateTags( allocInfo.getOwnerFullName( ), persistedInstance, instanceTags );
           }
         } );
         VmInstanceLifecycleHelpers.get().prepareVmInstance( token, builder );

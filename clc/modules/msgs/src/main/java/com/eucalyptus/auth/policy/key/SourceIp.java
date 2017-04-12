@@ -96,10 +96,4 @@ public class SourceIp implements AwsKey {
   public void validateValueType( String value ) throws JSONException {
     KeyUtils.validateCidrValue( value, KEY );
   }
-  
-  @Override
-  public boolean canApply( String action ) {
-    return true;
-  }
-  
 }

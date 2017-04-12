@@ -22,9 +22,11 @@ package com.eucalyptus.compute.policy;
 import java.util.Date;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
+import com.eucalyptus.auth.policy.annotation.PolicyResourceType;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.internal.blockstorage.Snapshots;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Ats;
 import javaslang.Tuple;
 import javaslang.Tuple3;
 
@@ -64,6 +66,18 @@ public class ComputePolicyContext {
   @Nullable
   static Class<? extends CloudMetadata> getResourceType( ) {
     return resourceIdLocal.get( )._2;
+  }
+
+  @Nullable
+  static String getPolicyResourceType( ) {
+    String policyResourceType = null;
+    final Class<? extends CloudMetadata> type = getResourceType( );
+    if ( type != null ) {
+      policyResourceType = Ats.inClassHierarchy( type ).getOption( PolicyResourceType.class )
+          .map( PolicyResourceType::value )
+          .getOrElse( (String)null );
+    }
+    return policyResourceType;
   }
 
   @Nullable

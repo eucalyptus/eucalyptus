@@ -1,5 +1,5 @@
 /*************************************************************************
- * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,14 +13,27 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  ************************************************************************/
-package com.eucalyptus.auth.policy.key;
+package edu.ucsb.eucalyptus.msgs;
+
+import java.util.Set;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
- * Marker interface for aws condition keys.
+ *
  */
-public interface AwsKey extends Key {
+public interface HasTags {
 
-  default boolean canApply( String action ) {
-    return true;
-  }
+  @Nonnull
+  Set<String> getTagKeys(
+      @Nullable String resourceType,
+      @Nullable String resourceId
+  );
+
+  @Nullable
+  String getTagValue(
+      @Nullable String resourceType,
+      @Nullable String resourceId,
+      @Nonnull String tagKey
+  );
 }

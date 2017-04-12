@@ -55,6 +55,39 @@ class ComputeMessage extends BaseMessage implements Cloneable, Serializable {
     this.userId = userId;
     this.effectiveUserId = userId;
   }
+
+  protected Set<String> getTagKeys(
+      List<ResourceTagSpecification> tagSpecifications,
+      String resourceType,
+      String resourceId
+  ) {
+    ( tagSpecifications && resourceId == null ?
+         tagSpecifications.find{ it.resourceType==resourceType }?.tagSet?.collect{ it.key }?:[] :
+         [] ) as Set<String>
+  }
+
+  protected String getTagValue(
+      List<ResourceTagSpecification> tagSpecifications,
+      String resourceType,
+      String resourceId,
+      String tagKey
+  ) {
+    String value = null
+    if ( tagSpecifications && resourceId == null  ) {
+      specifications:
+      for ( ResourceTagSpecification tagSpecification : tagSpecifications ) {
+        if ( tagSpecification.resourceType==resourceType && tagSpecification.tagSet ) {
+          for ( ResourceTag tag : tagSpecification.tagSet ) {
+            if ( tag.key == tagKey ) {
+              value = tag.value
+              break specifications
+            }
+          }
+        }
+      }
+    }
+    value
+  }
 }
 
 @ComponentMessage(Compute.class)

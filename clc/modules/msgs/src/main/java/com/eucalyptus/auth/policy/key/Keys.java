@@ -88,6 +88,7 @@ public class Keys {
   public static final String AWS_SECURE_TRANSPORT = "aws:securetransport";
   public static final String AWS_TOKEN_ISSUETIME = "aws:tokenissuetime";
   public static final String AWS_FEDERATED_PROVIDER = "aws:federatedprovider";
+  public static final String AWS_TAG_KEYS = "aws:tagkeys";
 
   public static final String S3_MAX_KEYS = "s3:max-keys";
   

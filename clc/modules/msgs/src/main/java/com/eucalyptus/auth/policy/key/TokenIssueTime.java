@@ -71,9 +71,4 @@ public class TokenIssueTime implements AwsKey {
   public void validateValueType( final String value ) throws JSONException {
     KeyUtils.validateDateValue( value, KEY );
   }
-
-  @Override
-  public boolean canApply( String action ) {
-    return true;
-  }
 }

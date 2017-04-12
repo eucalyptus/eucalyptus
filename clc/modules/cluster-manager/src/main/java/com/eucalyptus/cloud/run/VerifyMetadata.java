@@ -85,6 +85,8 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.compute.ClientUnauthorizedComputeException;
+import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.internal.util.InvalidInstanceProfileMetadataException;
 import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
 import com.eucalyptus.compute.common.ImageMetadata.Platform;
@@ -106,6 +108,7 @@ import com.eucalyptus.compute.common.internal.images.ImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.compute.common.internal.keys.KeyPairs;
 import com.eucalyptus.compute.common.internal.keys.SshKeyPair;
+import com.eucalyptus.tags.TagHelper;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.vm.VmInstances;
@@ -136,7 +139,8 @@ public class VerifyMetadata {
   private static final ArrayList<? extends MetadataVerifier> verifiers = Lists.newArrayList( VmTypeVerifier.INSTANCE, PartitionVerifier.INSTANCE,
                                                                                                 ImageVerifier.INSTANCE, KeyPairVerifier.INSTANCE,
                                                                                                 NetworkResourceVerifier.INSTANCE, RoleVerifier.INSTANCE,
-                                                                                                BlockDeviceMapVerifier.INSTANCE, UserDataVerifier.INSTANCE );
+                                                                                                BlockDeviceMapVerifier.INSTANCE, UserDataVerifier.INSTANCE,
+                                                                                                ResourceTagVerifier.INSTANCE );
   
   private enum AsPredicate implements Function<MetadataVerifier, Predicate<Allocation>> {
     INSTANCE;
@@ -441,6 +445,33 @@ public class VerifyMetadata {
      byte[] userData = allocInfo.getUserData();
       if (userData != null && userData.length > Integer.parseInt(VmInstances.USER_DATA_MAX_SIZE_KB) * 1024) {
         throw new InvalidMetadataException("User data may not exceed " + VmInstances.USER_DATA_MAX_SIZE_KB + " KB");
+      }
+      return true;
+    }
+  }
+
+  enum ResourceTagVerifier implements MetadataVerifier {
+    INSTANCE;
+
+    @Override
+    public boolean apply( Allocation allocInfo ) throws MetadataException {
+      TagHelper.validateTagSpecifications( allocInfo.getRequest( ).getTagSpecification( ) );
+
+      final  AuthContextSupplier authContext;
+      try {
+        authContext = allocInfo.getAuthContext( );
+      } catch ( AuthException e ) {
+        throw new MetadataException( "Tag validation error", e );
+      }
+      final UserFullName userFullName = allocInfo.getOwnerFullName( );
+      final AccountFullName accountFullName = userFullName.asAccountFullName( );
+      for ( final String resource : PolicySpec.EC2_RESOURCES ) {
+        final List<ResourceTag> resourceTags = TagHelper.tagsForResource( allocInfo.getRequest( ).getTagSpecification( ), resource );
+        if ( !resourceTags.isEmpty( ) ) {
+          if ( !TagHelper.createTagsAuthorized( authContext, accountFullName, resource ) ) {
+            throw new IllegalMetadataAccessException( "Not authorized to create "+resource+" tags by " + userFullName.getUserName( ) );
+          }
+        }
       }
       return true;
     }

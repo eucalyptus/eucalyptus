@@ -90,6 +90,8 @@ import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.InstanceBlockDeviceMappingItemType;
 import com.eucalyptus.compute.common.MonitorInstanceState;
 import com.eucalyptus.compute.common.ReservationInfoType;
+import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.compute.common.SecurityGroupIdSetItemType;
 import com.eucalyptus.compute.common.TerminateInstancesItemType;
 import com.eucalyptus.compute.common.backend.BundleInstanceResponseType;
@@ -141,6 +143,9 @@ import com.eucalyptus.compute.common.internal.network.NetworkGroup;
 import com.eucalyptus.compute.common.internal.network.NoSuchGroupMetadataException;
 import com.eucalyptus.compute.common.internal.tags.Filter;
 import com.eucalyptus.compute.common.internal.tags.Filters;
+import com.eucalyptus.compute.common.internal.tags.Tag;
+import com.eucalyptus.compute.common.internal.tags.TagSupport;
+import com.eucalyptus.compute.common.internal.tags.Tags;
 import com.eucalyptus.compute.common.internal.util.*;
 import com.eucalyptus.compute.common.internal.vm.MigrationState;
 import com.eucalyptus.compute.common.internal.vm.VmBundleTask;
@@ -207,15 +212,20 @@ public class VmControl {
     Allocation allocInfo = Allocations.run( request );
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      if ( !Strings.isNullOrEmpty( allocInfo.getClientToken() ) ) {
+      if ( !Strings.isNullOrEmpty( allocInfo.getClientToken( ) ) ) {
         final List<VmInstance> instances = VmInstances.listByClientToken(
-            allocInfo.getOwnerFullName( ).asAccountFullName(),
-            allocInfo.getClientToken(), RestrictedTypes.filterPrivileged() );
-        if ( !instances.isEmpty() ) {
+            allocInfo.getOwnerFullName( ).asAccountFullName( ),
+            allocInfo.getClientToken( ), RestrictedTypes.filterPrivileged( ) );
+        if ( !instances.isEmpty( ) ) {
           final VmInstance vm = instances.get( 0 );
+          final Map<String, List<Tag>> tagsMap = TagSupport.forResourceClass( VmInstance.class )
+              .getResourceTagMap( AccountFullName.getInstance( vm.getOwnerAccountNumber( ) ),
+                  Iterables.transform( instances, CloudMetadatas.toDisplayName( ) ) );
           final ReservationInfoType reservationInfoType = TypeMappers.transform( vm, ReservationInfoType.class );
           for ( final VmInstance instance : instances ) {
-            reservationInfoType.getInstancesSet().add( VmInstance.transform( instance ) );
+            final RunningInstancesItemType item = VmInstance.transform( instance );
+            Tags.addFromTags( item.getTagSet( ), ResourceTag.class, tagsMap.get( item.getInstanceId( ) ) );
+            reservationInfoType.getInstancesSet( ).add( item );
           }
           reply.setRsvInfo( reservationInfoType );
           return reply;
@@ -233,8 +243,12 @@ public class VmControl {
               TypeMappers.lookup( NetworkGroup.class, GroupItemType.class ) ) );
 
       reply.setRsvInfo( reservation );
+      final Map<String, List<Tag>> tagsMap = TagSupport.forResourceClass( VmInstance.class )
+          .getResourceTagMap( allocInfo.getOwnerFullName( ).asAccountFullName( ), allocInfo.getInstanceIds( ) );
       for ( ResourceToken allocToken : allocInfo.getAllocationTokens( ) ) {
-        reservation.getInstancesSet( ).add( VmInstance.transform( allocToken.getVmInstance() ) );
+        final RunningInstancesItemType item = VmInstance.transform( allocToken.getVmInstance( ) );
+        Tags.addFromTags( item.getTagSet( ), ResourceTag.class, tagsMap.get( item.getInstanceId( ) ) );
+        reservation.getInstancesSet( ).add( item );
       }
       db.commit( );
     } catch ( Exception ex ) {

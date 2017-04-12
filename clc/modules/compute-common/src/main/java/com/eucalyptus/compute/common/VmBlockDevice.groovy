@@ -25,7 +25,11 @@ import com.eucalyptus.binding.HttpParameterMapping
 import com.eucalyptus.binding.HttpEmbedded
 import com.google.common.collect.Lists
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
-import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID;
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
+import edu.ucsb.eucalyptus.msgs.HasTags
+
+import javax.annotation.Nonnull
+import javax.annotation.Nullable;
 
 public class BlockVolumeMessage extends ComputeMessage {
   
@@ -57,13 +61,26 @@ public class BlockSnapshotMessage extends ComputeMessage {
 }
 
 
-public class CreateVolumeType extends BlockVolumeMessage {
+public class CreateVolumeType extends BlockVolumeMessage implements HasTags {
   String size;
   String snapshotId;
   String availabilityZone;
   String volumeType = "standard"
   Integer iops
   Boolean encrypted
+  String kmsKeyId
+  @HttpEmbedded( multiple = true )
+  ArrayList<ResourceTagSpecification> tagSpecification = new ArrayList<ResourceTagSpecification>()
+
+  @Override
+  Set<String> getTagKeys( @Nullable String resourceType, @Nullable String resourceId ) {
+    getTagKeys( tagSpecification, resourceType, resourceId )
+  }
+
+  @Override
+  String getTagValue( @Nullable String resourceType, @Nullable String resourceId, @Nonnull final String tagKey ) {
+    getTagValue( tagSpecification, resourceType, resourceId, tagKey )
+  }
 }
 public class CreateVolumeResponseType extends BlockVolumeMessage {
   

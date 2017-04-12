@@ -77,9 +77,4 @@ public class FederatedProvider implements AwsKey {
       throw new JSONException( KEY + " is not allowed in condition " + conditionClass.getName( ) + ". String conditions are required." );
     }
   }
-
-  @Override
-  public boolean canApply( final String action ) {
-    return true;
-  }
 }

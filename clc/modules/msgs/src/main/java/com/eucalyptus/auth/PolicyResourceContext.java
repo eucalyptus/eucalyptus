@@ -29,6 +29,8 @@ import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
+import javaslang.Tuple;
+import javaslang.Tuple2;
 
 /**
  *
@@ -36,6 +38,13 @@ import com.google.common.collect.Lists;
 public class PolicyResourceContext implements AutoCloseable {
   private static final Logger logger = Logger.getLogger( PolicyResourceContext.class );
   private static final List<PolicyResourceInterceptor> resourceInterceptors = Lists.newCopyOnWriteArrayList();
+  private static final ThreadLocal<Tuple2<String,String>> resourceIdentityLocal = new ThreadLocal<>( );
+  private static final PolicyResourceIdentity resourceIdentity = new PolicyResourceIdentity( ) {
+    @Override
+    public void setIdentity( final String resourceType, final String resourceId ) {
+      resourceIdentityLocal.set( Tuple.of( resourceType, resourceId) );
+    }
+  };
 
   private PolicyResourceContext( ) {
   }
@@ -49,13 +58,26 @@ public class PolicyResourceContext implements AutoCloseable {
     return new PolicyResourceContext( );
   }
 
+  /**
+   * Context without a resource, e.g. create action
+   */
+  public static PolicyResourceContext of(
+      final String resourceAccountNumber,
+      final Class<?> resourceClass,
+      final String action ) {
+    notifyResourceInterceptors(
+        resourceInfo( resourceAccountNumber, null, resourceClass ),
+        action );
+    return new PolicyResourceContext( );
+  }
+
   public static <T> PolicyResourceInfo<T> resourceInfo( @Nullable final String accountNumber,
                                                         @Nonnull  final T resourceObject ) {
     return resourceInfo( accountNumber, resourceObject, (Class<? extends T>)resourceObject.getClass( ) );
   }
 
   public static <T> PolicyResourceInfo<T> resourceInfo( @Nullable final String accountNumber,
-                                                        @Nonnull  final T resourceObject,
+                                                        @Nullable  final T resourceObject,
                                                         @Nonnull  final Class<? extends T> resourceClass  ) {
     return new PolicyResourceInfo<T>( ) {
       @Nullable
@@ -70,7 +92,7 @@ public class PolicyResourceContext implements AutoCloseable {
         return resourceClass;
       }
 
-      @Nonnull
+      @Nullable
       @Override
       public T getResourceObject( ) {
         return resourceObject;
@@ -81,6 +103,17 @@ public class PolicyResourceContext implements AutoCloseable {
   @Override
   public void close( ) {
     notifyResourceInterceptors( null, null );
+    resourceIdentity.setIdentity( null, null );
+  }
+
+  public static String getResourceType( ){
+    final Tuple2<String,String> resourceTuple = resourceIdentityLocal.get( );
+    return resourceTuple == null ? null : resourceTuple._1;
+  }
+
+  public static String getResourceId( ){
+    final Tuple2<String,String> resourceTuple = resourceIdentityLocal.get( );
+    return resourceTuple == null ? null : resourceTuple._2;
   }
 
   private static void notifyResourceInterceptors(
@@ -89,6 +122,7 @@ public class PolicyResourceContext implements AutoCloseable {
   ) {
     for ( final PolicyResourceContext.PolicyResourceInterceptor interceptor : resourceInterceptors ) {
       interceptor.onResource( policyResourceInfo, action );
+      interceptor.pushResource( resourceIdentity );
     }
   }
 
@@ -99,12 +133,20 @@ public class PolicyResourceContext implements AutoCloseable {
     @Nonnull
     Class<? extends T> getResourceClass( );
 
-    @Nonnull
+    @Nullable
     T getResourceObject( );
+  }
+
+  public interface PolicyResourceIdentity {
+    void setIdentity(
+      String resourceType,
+      String resourceId
+    );
   }
 
   public interface PolicyResourceInterceptor {
     void onResource( @Nullable PolicyResourceInfo<?> resource, @Nullable String action );
+    default void pushResource( PolicyResourceIdentity resourceIdentity ) { }
   }
 
   public static class AccountNumberPolicyResourceInterceptor implements PolicyResourceInterceptor {

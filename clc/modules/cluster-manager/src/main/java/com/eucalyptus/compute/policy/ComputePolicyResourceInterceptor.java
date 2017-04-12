@@ -23,11 +23,13 @@ import static com.eucalyptus.auth.PolicyResourceContext.PolicyResourceInfo;
 import static com.eucalyptus.compute.policy.ComputePolicyContext.ComputePolicyContextResource;
 import static com.eucalyptus.auth.PolicyResourceContext.PolicyResourceInterceptor;
 import java.util.Set;
+import com.eucalyptus.auth.PolicyResourceContext.PolicyResourceIdentity;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.CloudMetadata.NetworkGroupMetadata;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.auth.type.RestrictedType;
 import com.eucalyptus.util.TypeMappers;
+import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 
 /**
@@ -45,9 +47,11 @@ public class ComputePolicyResourceInterceptor implements PolicyResourceIntercept
     if ( resource != null && CloudMetadata.class.isAssignableFrom( resource.getResourceClass( ) ) ) {
       final String resourceAccountNumber = resource.getResourceAccountNumber( );
       final Class<? extends CloudMetadata> resourceClass = (Class<? extends CloudMetadata>)resource.getResourceClass( );
-      final String resourceId = NetworkGroupMetadata.class.isAssignableFrom( resource.getResourceClass( ) ) ?
-          ((NetworkGroupMetadata)resource.getResourceObject( )).getGroupId( ):
-          ((CloudMetadata)resource.getResourceObject( )).getDisplayName( );
+      final String resourceId = Strings.emptyToNull( resource.getResourceObject() == null ?
+          null :
+          NetworkGroupMetadata.class.isAssignableFrom( resource.getResourceClass( ) ) ?
+              ((NetworkGroupMetadata)resource.getResourceObject( )).getGroupId( ):
+              ((CloudMetadata)resource.getResourceObject( )).getDisplayName( ) );
 
       if ( accepted.contains( resource.getResourceClass( ) ) ||
           (!rejected.contains( resource.getResourceClass( ) ) ) ) try {
@@ -55,7 +59,9 @@ public class ComputePolicyResourceInterceptor implements PolicyResourceIntercept
             resourceAccountNumber,
             resourceClass,
             resourceId,
-            TypeMappers.transform( resource.getResourceObject( ), ComputePolicyContextResource.class )
+            resource.getResourceObject() == null ?
+                null :
+                TypeMappers.transform( resource.getResourceObject( ), ComputePolicyContextResource.class )
          );
         accepted.add( (Class<? extends RestrictedType>) resource.getResourceClass( ) );
       } catch ( IllegalArgumentException e ) {
@@ -67,5 +73,13 @@ public class ComputePolicyResourceInterceptor implements PolicyResourceIntercept
         ComputePolicyContext.setComputePolicyContextResource( resourceAccountNumber, resourceClass, resourceId, null );
       }
     }
+  }
+
+  @Override
+  public void pushResource( final PolicyResourceIdentity resourceIdentity ) {
+    resourceIdentity.setIdentity(
+        ComputePolicyContext.getPolicyResourceType( ),
+        ComputePolicyContext.getResourceId( )
+    );
   }
 }

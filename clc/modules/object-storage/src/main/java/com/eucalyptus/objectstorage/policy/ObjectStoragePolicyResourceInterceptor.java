@@ -42,7 +42,9 @@ public class ObjectStoragePolicyResourceInterceptor implements PolicyResourceCon
                           @Nullable final String action ) {
     ObjectStoragePolicyContext.clearContext( );
 
-    if ( resource != null && S3AccessControlledEntity.class.isAssignableFrom( resource.getResourceClass( ) ) ) {
+    if ( resource != null &&
+        resource.getResourceObject() != null &&
+        S3AccessControlledEntity.class.isAssignableFrom( resource.getResourceClass( ) ) ) {
       if ( accepted.contains( resource.getResourceClass( ) ) ||
           (!rejected.contains( resource.getResourceClass( ) ) &&
               S3AccessControlledEntity.class.isAssignableFrom( resource.getResourceClass( ) ) ) ) try {

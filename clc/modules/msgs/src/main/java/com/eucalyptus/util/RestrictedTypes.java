@@ -77,6 +77,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.auth.AuthContext;
 import com.eucalyptus.auth.AuthEvaluationContext;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.AuthQuotaException;
@@ -369,18 +370,20 @@ public class RestrictedTypes {
       PolicyResourceType type = ats.get( PolicyResourceType.class );
       String action = getIamActionByMessageType();
       AuthContextSupplier userContext = ctx.getAuthContext( );
-      if ( !skipAuth && !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, userContext ) ) {
-        throw new AuthException( "Not authorized to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
-      }
-      final Lock lock = allocationInterner.intern( new AllocationScope( vendor.value( ), type.value( ), userContext.get().getAccountNumber() ) ).lock( );
-      lock.lock();
-      try {
-        if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, userContext, ( long ) quantity ) ) {
-          throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
+      try ( final PolicyResourceContext context = PolicyResourceContext.of( ctx.getAccountNumber( ), rscType, PolicySpec.qualifiedName( vendor.value( ), action ) ) ) {
+        if ( !skipAuth && !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, userContext )){
+          throw new AuthException( "Not authorized to create: " + type.value( ) + " by user: " + ctx.getUserFullName( ) );
         }
-        return allocator.get( );
-      } finally {
-        lock.unlock( );
+        final Lock lock = allocationInterner.intern( new AllocationScope( vendor.value( ), type.value( ), userContext.get( ).getAccountNumber( ) ) ).lock( );
+        lock.lock( );
+        try {
+          if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, userContext, (long) quantity ) ) {
+            throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type.value( ) + " by user: " + ctx.getUserFullName( ) );
+          }
+          return allocator.get( );
+        } finally {
+          lock.unlock( );
+        }
       }
     } else {
       return allocator.get( );
@@ -417,7 +420,7 @@ public class RestrictedTypes {
         if ( rsc == null ) {
           throw new NoSuchElementException( "Attempt to allocate " + quantity + " " + type + " failed." );
         }
-        try {
+        try ( final PolicyResourceContext context = PolicyResourceContext.of( ctx.getAccountNumber( ), rscType, PolicySpec.qualifiedName( vendor.value( ), action ) )  ) {
           String identifier = rsc.getDisplayName( );
           if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, userContext ) ) {
             throw new AuthException( "Not authorized to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
@@ -478,15 +481,18 @@ public class RestrictedTypes {
       final Function<Long, T> allocator
   ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     String identifier = "";
-    if ( !userContext.get( ).isSystemAdmin( ) ) {
+    final AuthContext authContext = userContext.get( );
+    if ( !authContext.isSystemAdmin( ) ) {
       final Class<?> rscType = findResourceClass( allocator );
       Ats ats = findPolicyAnnotations( rscType );
       PolicyVendor vendor = ats.get( PolicyVendor.class );
       PolicyResourceType type = ats.get( PolicyResourceType.class );
-      if ( RestrictedType.class.isAssignableFrom( rscType ) && !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, userContext ) ) {
-        throw new AuthException( "Not authorized to create: " + type.value( ) + " by user: " + userDescription );
-      } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, userContext, amount ) ) {
-        throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type.value( ) + " by user: " + userDescription );
+      try ( final PolicyResourceContext context = PolicyResourceContext.of( authContext.getAccountNumber( ), rscType, PolicySpec.qualifiedName( vendor.value( ), action ) ) ) {
+        if ( RestrictedType.class.isAssignableFrom( rscType ) && !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, userContext ) ) {
+          throw new AuthException( "Not authorized to create: " + type.value( ) + " by user: " + userDescription );
+        } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, userContext, amount ) ) {
+          throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type.value( ) + " by user: " + userDescription );
+        }
       }
     }
     return allocator.apply( amount );

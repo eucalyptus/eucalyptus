@@ -22,7 +22,6 @@ package com.eucalyptus.tags;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.AccountFullName;
@@ -33,6 +32,7 @@ import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.internal.tags.Tag;
 import com.eucalyptus.compute.common.internal.tags.TagSupport;
 import com.eucalyptus.compute.common.internal.tags.Tags;
+import com.eucalyptus.compute.common.internal.util.MetadataException;
 import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.ComputeException;
@@ -51,12 +51,11 @@ import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.auth.type.RestrictedType;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.InvalidParameterValueException;
@@ -75,9 +74,6 @@ import com.eucalyptus.compute.common.ResourceTag;
 public class TagManager {
   private static final Logger log = Logger.getLogger( TagManager.class );
   
-  private static final Set<String> reservedPrefixes = 
-      ImmutableSet.<String>builder().add("aws:").add("euca:").build();
-  
   @ConfigurableField(initial = "10", description = "The maximum number of tags per resource for each account")
   public static long MAX_TAGS_PER_RESOURCE = 10;
 
@@ -88,25 +84,15 @@ public class TagManager {
     final Context context = Contexts.lookup();
     final UserFullName userFullName = context.getUserFullName();
     final AccountFullName accountFullName = userFullName.asAccountFullName();
-    final List<String> resourceIds = Objects.firstNonNull( request.getResourcesSet(), Collections.<String>emptyList() );
-    final List<ResourceTag> resourceTags = Objects.firstNonNull( request.getTagSet(), Collections.<ResourceTag>emptyList() );
+    final List<String> resourceIds = MoreObjects.firstNonNull( request.getResourcesSet(), Collections.<String>emptyList() );
+    final List<ResourceTag> resourceTags = MoreObjects.firstNonNull( request.getTagSet(), Collections.<ResourceTag>emptyList() );
 
-    for ( final ResourceTag resourceTag : resourceTags ) {
-      final String key = resourceTag.getKey();
-      final String value = Strings.nullToEmpty( resourceTag.getValue() ).trim();
-
-      if ( isReserved( key ) ) {
-        throw new ClientComputeException( "InvalidParameterValue", "Tag keys starting with 'aws:' and 'euca:' are reserved for internal use" );
-      }
-
-      if ( Strings.isNullOrEmpty( key ) || key.trim().length() > 127 ) {
-        throw new ClientComputeException( "InvalidParameterValue", "Tag key exceeds the maximum length of 127 characters" );
-      }
-      if ( value.length() > 255 ) {
-        throw new ClientComputeException( "InvalidParameterValue", "Tag value exceeds the maximum length of 255 characters" );
-      }
+    try {
+      TagHelper.validateTags( resourceTags );
+    } catch ( MetadataException e ) {
+      throw new ClientComputeException( "InvalidParameterValue", e.getMessage( ) );
     }
-    
+
     if ( resourceTags.size() > 0 && resourceIds.size() > 0 ) {      
       final Predicate<Void> creator = new Predicate<Void>(){
         @Override
@@ -115,19 +101,7 @@ public class TagManager {
           if ( !Iterables.all( resources, Predicates.and( Predicates.notNull(), typeSpecificFilters(), permissionsFilter() ) )  ) {
             return false;
           }
-
-          for ( final CloudMetadata resource : resources ) {
-            for ( final ResourceTag resourceTag : resourceTags ) {
-              final String key = Strings.nullToEmpty( resourceTag.getKey() ).trim();
-              final String value = Strings.nullToEmpty( resourceTag.getValue() ).trim();
-              TagSupport.fromResource( resource ).createOrUpdate( resource, userFullName, key, value );
-            }
-
-            if ( TagSupport.fromResource( resource ).count( resource, accountFullName ) > MAX_TAGS_PER_RESOURCE ) {
-              throw new TagLimitException();
-            }
-          }
-
+          TagHelper.createOrUpdateTags( userFullName, resources, resourceTags );
           return true;
         }
       };
@@ -150,13 +124,14 @@ public class TagManager {
 
     final Context context = Contexts.lookup();
     final OwnerFullName ownerFullName = context.getUserFullName().asAccountFullName();
-    final List<String> resourceIds = Objects.firstNonNull( request.getResourcesSet(), Collections.<String>emptyList() );
-    final List<DeleteResourceTag> resourceTags = Objects.firstNonNull( request.getTagSet(), Collections.<DeleteResourceTag>emptyList() );
+    final List<String> resourceIds = MoreObjects.firstNonNull( request.getResourcesSet(), Collections.<String>emptyList() );
+    final List<DeleteResourceTag> resourceTags = MoreObjects.firstNonNull( request.getTagSet(), Collections.<DeleteResourceTag>emptyList() );
 
     for ( final DeleteResourceTag resourceTag : resourceTags ) {
       final String key = resourceTag.getKey();
-      if ( Strings.isNullOrEmpty( key ) || key.trim().length() > 128 || isReserved( key ) ) {
-        throw new InvalidParameterValueException( "Invalid key (max length 128, must not be empty, reserved prefixes "+reservedPrefixes+"): "+key );
+      if ( Strings.isNullOrEmpty( key ) || key.trim().length() > 128 || TagHelper.isReserved( key ) ) {
+        throw new InvalidParameterValueException(
+            "Invalid key (max length 128, must not be empty, reserved prefixes "+TagHelper.describeReserved()+"): "+key );
       }
     }
 
@@ -165,13 +140,14 @@ public class TagManager {
         @Override
         public boolean apply( final Void v ) {
           final Iterable<CloudMetadata> resources = Iterables.filter( Iterables.transform( resourceIds, resourceLookup(false) ), Predicates.notNull() );
+          if ( !Iterables.all( resources, Predicates.and( Predicates.notNull(), typeSpecificFilters(), permissionsFilter() ) )  ) {
+            return false;
+          }
           for ( final CloudMetadata resource : resources ) {
             for ( final DeleteResourceTag resourceTag : resourceTags ) {
               try {
                 final Tag example = TagSupport.fromResource( resource ).example( resource, ownerFullName, resourceTag.getKey(), resourceTag.getValue() );                
-                if ( RestrictedTypes.filterPrivileged().apply( example ) ) {
-                  Tags.delete( example );
-                }
+                Tags.delete( example );
               } catch ( NoSuchMetadataException e ) {
                 log.trace( e );
               }
@@ -191,21 +167,6 @@ public class TagManager {
 
     return reply;
   }
-
-  private static boolean isReserved( final String text ) {
-    return
-        !Contexts.lookup( ).isPrivileged( ) &&
-        Iterables.any( reservedPrefixes, prefix( text ) );
-  }
-  
-  private static Predicate<String> prefix( final String text ) {
-    return new Predicate<String>() {
-      @Override
-      public boolean apply( final String prefix ) {
-        return text != null && text.trim().startsWith( prefix );
-      }
-    };  
-  } 
 
   private static Predicate<Object> typeSpecificFilters() {
     return TypeSpecificFilters.INSTANCE;
@@ -296,7 +257,4 @@ public class TagManager {
     }
   }
 
-  private static class TagLimitException extends RuntimeException {
-    private static final long serialVersionUID = 1L;
-  }
 }

@@ -28,7 +28,11 @@ import com.google.common.collect.Lists
 import com.google.common.collect.Sets
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
+import edu.ucsb.eucalyptus.msgs.HasTags
 import groovy.transform.TupleConstructor
+
+import javax.annotation.Nonnull
+import javax.annotation.Nullable
 
 import static edu.ucsb.eucalyptus.msgs.ComputeMessageValidation.FieldRegex
 import static edu.ucsb.eucalyptus.msgs.ComputeMessageValidation.FieldRegexValue
@@ -193,7 +197,7 @@ public class RunInstancesResponseType extends VmControlMessage {
 }
 
 
-public class RunInstancesType extends VmControlMessage {
+public class RunInstancesType extends VmControlMessage implements HasTags {
   
   String imageId;
   String reservationId;
@@ -244,6 +248,8 @@ public class RunInstancesType extends VmControlMessage {
   int macLimit;
   int vlan;
   Boolean ebsOptimized = Boolean.FALSE
+  @HttpEmbedded( multiple = true )
+  ArrayList<ResourceTagSpecification> tagSpecification = new ArrayList<ResourceTagSpecification>()
 
   Set<String> securityGroupNames() {
     Set<String> names = Sets.newLinkedHashSet()
@@ -298,6 +304,16 @@ public class RunInstancesType extends VmControlMessage {
       networkInterfaceSet.item << primary
     }
     primary
+  }
+
+  @Override
+  Set<String> getTagKeys( @Nullable String resourceType, @Nullable String resourceId ) {
+    getTagKeys( tagSpecification, resourceType, resourceId )
+  }
+
+  @Override
+  String getTagValue( @Nullable String resourceType, @Nullable String resourceId, @Nonnull String tagKey ) {
+    getTagValue( tagSpecification, resourceType, resourceId, tagKey )
   }
 }
 /** *******************************************************************************/
