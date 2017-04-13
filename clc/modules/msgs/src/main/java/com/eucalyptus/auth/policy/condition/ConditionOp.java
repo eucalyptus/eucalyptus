@@ -62,10 +62,34 @@
 
 package com.eucalyptus.auth.policy.condition;
 
+import java.util.Set;
 import javax.annotation.Nullable;
 
 public interface ConditionOp {
 
-  public boolean check( @Nullable String key, String value );
-  
+  /**
+   * Implemented by conditions.
+   *
+   * @param key A value from the context of policy execution
+   * @param value A value from the policy
+   * @return True if the condition is satisfied
+   */
+  boolean check( @Nullable String key, String value );
+
+  /**
+   * Used for set operations not generally implemented by conditions.
+   *
+   * @see #check(String,String)
+   */
+  default boolean check( final Set<String> keys, final Set<String> values ) {
+    boolean success = false;
+    for ( final String key : keys ) {
+      for ( final String value : values ) {
+        success = check( key, value );
+        if ( success ) break;
+      }
+      if ( !success ) break;
+    }
+    return success;
+  }
 }

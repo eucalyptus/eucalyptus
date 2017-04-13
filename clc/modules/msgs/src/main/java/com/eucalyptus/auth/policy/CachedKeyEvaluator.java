@@ -62,7 +62,9 @@
 
 package com.eucalyptus.auth.policy;
 
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.key.Key;
 import com.google.common.collect.Maps;
@@ -70,21 +72,23 @@ import com.google.common.collect.Maps;
 public class CachedKeyEvaluator {
 
   private final Map<String,String> evaluatedKeys;
-  private final Map<String,String> cache = Maps.newHashMap( );
+  private final Map<String,Set<String>> cache = Maps.newHashMap( );
   
   public CachedKeyEvaluator( Map<String,String> evaluatedKeys ) {
     this.evaluatedKeys = evaluatedKeys;
   }
   
-  public String getValue( final Key key ) throws AuthException {
-    String value = cache.get( key.name( ) );
-    if ( value == null ) {
-      value = evaluatedKeys.get( key.name( ) );
+  public Set<String> getValues( final Key key ) throws AuthException {
+    Set<String> values = cache.get( key.name( ) );
+    if ( values == null ) {
+      String value = evaluatedKeys.get( key.name( ) );
       if ( value == null ) {
-        value = key.value( );
+        values = key.values( );
+      } else {
+        values = Collections.singleton( value );
       }
-      cache.put( key.name( ), value );
+      cache.put( key.name( ), values );
     }
-    return value;
+    return values;
   }
 }

@@ -118,6 +118,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 /**
  * The implementation of policy engine, which evaluates a request against specified policies.
@@ -575,12 +576,11 @@ public class PolicyEngineImpl implements PolicyEngine {
         continue;
       }
       boolean condValue = false;
+      final Set<String> expandedValues = Sets.newLinkedHashSet( );
       for ( String value : cond.getValues( ) ) {
-        if ( op.check( applies ? keyEval.getValue( key ) : null, variableExplode( policyVariables, value ) ) ) {
-          condValue = true;
-          break;
-        }
+        expandedValues.add( variableExplode( policyVariables, value ) );
       }
+      condValue = op.check( applies ? keyEval.getValues( key ) : Collections.singleton( null ), expandedValues );
       if ( !condValue ) {
         return false;
       }

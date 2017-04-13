@@ -63,6 +63,8 @@
 package com.eucalyptus.auth.policy.key;
 
 import java.text.ParseException;
+import java.util.Collections;
+import java.util.Set;
 import java.util.regex.Pattern;
 import net.sf.json.JSONException;
 import com.eucalyptus.auth.AuthException;
@@ -76,7 +78,11 @@ public interface Key {
   }
 
   String value( ) throws AuthException;
-  
+
+  default Set<String> values( ) throws AuthException {
+    return Collections.singleton( value( ) );
+  }
+
   void validateConditionType( Class<? extends ConditionOp> conditionClass ) throws JSONException;
   
   default void validateValueType( String value ) throws JSONException { };

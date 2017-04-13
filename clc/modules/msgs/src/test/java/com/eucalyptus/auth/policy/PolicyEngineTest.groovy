@@ -22,10 +22,17 @@ package com.eucalyptus.auth.policy
 import com.eucalyptus.auth.Accounts
 import com.eucalyptus.auth.AuthException
 import com.eucalyptus.auth.api.PolicyEngine
+import com.eucalyptus.auth.policy.condition.ConditionOp
+import com.eucalyptus.auth.policy.condition.Conditions
+import com.eucalyptus.auth.policy.condition.StringEquals
 import com.eucalyptus.auth.policy.ern.Ern
 import com.eucalyptus.auth.policy.ern.EuareErnBuilder
 import com.eucalyptus.auth.policy.ern.ResourceNameSupport
 import com.eucalyptus.auth.policy.ern.ServiceErnBuilder
+import com.eucalyptus.auth.policy.key.Key
+import com.eucalyptus.auth.policy.key.Keys
+import com.eucalyptus.auth.policy.key.PolicyKey
+import com.eucalyptus.auth.policy.key.RegisteredKeyProvider
 import com.eucalyptus.auth.principal.PolicyScope
 import com.eucalyptus.auth.principal.PolicyVersion
 import com.eucalyptus.auth.principal.Principal
@@ -64,6 +71,11 @@ class PolicyEngineTest {
         return new ResourceNameSupport( service, region, account, Strings.substringBefore('/').apply(resource), Strings.substringAfter('/').apply(resource) ) { }
       }
     } )
+    Conditions.registerCondition( Conditions.STRINGEQUALS, StringEquals, true )
+    Keys.registerKeyProvider( new RegisteredKeyProvider( ) )
+    Keys.registerKey( 'test:nokey', TestNoKey )
+    Keys.registerKey( 'test:key', TestKey )
+    Keys.registerKey( 'test:keys', TestKeys )
   }
 
   @Test
@@ -676,6 +688,168 @@ class PolicyEngineTest {
   void testResourcePolicyDistinctOwnerAuthDeny( ) {
   }
 
+  @Test
+  void testStringEqualsCondition( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": "*",
+          "Resource": "*",
+          "Condition": {
+            "StringEquals": {
+              "test:Key": [ "value", "wrong value" ]
+            }
+          }
+        } ]
+      }
+    """.stripIndent(), "iam:account", "iam:ListAccounts", "123456789012", "/admin" )
+  }
+
+  @Test( expected = AuthException.class )
+  void testStringEqualsConditionAuthDenied( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": "*",
+          "Resource": "*",
+          "Condition": {
+            "StringEquals": {
+              "test:Key": [ "wrong value" ]
+            }
+          }
+        } ]
+      }
+    """.stripIndent(), "iam:account", "iam:ListAccounts", "123456789012", "/admin" )
+  }
+
+  @Test
+  void testStringEqualsIfExistsCondition( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": "*",
+          "Resource": "*",
+          "Condition": {
+            "StringEqualsIfExists": {
+              "test:Key": [ "value" ]
+            }
+          }
+        } ]
+      }
+    """.stripIndent(), "iam:account", "iam:ListAccounts", "123456789012", "/admin" )
+  }
+
+  @Test( expected = AuthException.class )
+  void testStringEqualsIfExistsConditionAuthDenied( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": "*",
+          "Resource": "*",
+          "Condition": {
+            "StringEqualsIfExists": {
+              "test:Key": [ "wrong value" ]
+            }
+          }
+        } ]
+      }
+    """.stripIndent(), "iam:account", "iam:ListAccounts", "123456789012", "/admin" )
+  }
+
+  @Test
+  void testStringEqualsIfExistsConditionNotExists( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": "*",
+          "Resource": "*",
+          "Condition": {
+            "StringEqualsIfExists": {
+              "test:NoKey": [ "wrong value" ]
+            }
+          }
+        } ]
+      }
+    """.stripIndent(), "iam:account", "iam:ListAccounts", "123456789012", "/admin" )
+  }
+
+  @Test
+  void testStringEqualsConditionForAllValues( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": "*",
+          "Resource": "*",
+          "Condition": {
+            "ForAllValues:StringEquals": {
+              "test:Keys": [ "value1", "value2", "value3" ]
+            }
+          }
+        } ]
+      }
+    """.stripIndent(), "iam:account", "iam:ListAccounts", "123456789012", "/admin" )
+  }
+
+  @Test( expected = AuthException.class )
+  void testStringEqualsConditionForAllValuesAuthDenied( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": "*",
+          "Resource": "*",
+          "Condition": {
+            "ForAllValues:StringEquals": {
+              "test:Keys": [ "value1", "value2" ]
+            }
+          }
+        } ]
+      }
+    """.stripIndent(), "iam:account", "iam:ListAccounts", "123456789012", "/admin" )
+  }
+
+  @Test
+  void testStringEqualsConditionForAnyValue( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": "*",
+          "Resource": "*",
+          "Condition": {
+            "ForAnyValue:StringEquals": {
+              "test:Keys": [ "value1"  ]
+            }
+          }
+        } ]
+      }
+    """.stripIndent(), "iam:account", "iam:ListAccounts", "123456789012", "/admin" )
+  }
+
+  @Test( expected = AuthException.class )
+  void testStringEqualsConditionForAnyValueAuthDenied( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": "*",
+          "Resource": "*",
+          "Condition": {
+            "ForAnyValue:StringEquals": {
+              "test:Keys": [ "wrong value"  ]
+            }
+          }
+        } ]
+      }
+    """.stripIndent(), "iam:account", "iam:ListAccounts", "123456789012", "/admin" )
+  }
+
   private void evaluateAuthorization( String policy,
                                       String resourceType,
                                       String requestAction,
@@ -736,4 +910,25 @@ class PolicyEngineTest {
     { String account -> 'eucalyptus'==account ? "010101010101" : account } as Function<String, String>
   }
 
+  @PolicyKey('test:nokey')
+  static class TestNoKey implements Key {
+    @Override String value( ) { null }
+    @Override void validateConditionType( Class<? extends ConditionOp> conditionClass ) { }
+    @Override boolean canApply( String action) { true }
+  }
+
+  @PolicyKey('test:key')
+  static class TestKey implements Key {
+    @Override String value( ) { 'value' }
+    @Override void validateConditionType( Class<? extends ConditionOp> conditionClass ) { }
+    @Override boolean canApply( String action) { true }
+  }
+
+  @PolicyKey('test:keys')
+  static class TestKeys implements Key {
+    @Override String value( ) { 'value1,value2,value3' }
+    @Override Set<String> values( ) { ['value1','value2','value3'] as Set<String> }
+    @Override void validateConditionType( Class<? extends ConditionOp> conditionClass ) { }
+    @Override boolean canApply( String action) { true }
+  }
 }

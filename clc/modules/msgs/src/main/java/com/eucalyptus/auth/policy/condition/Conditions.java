@@ -63,8 +63,10 @@
 package com.eucalyptus.auth.policy.condition;
 
 import java.util.Map;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import com.eucalyptus.util.Strings;
 import com.google.common.collect.Maps;
 
 /**
@@ -133,7 +135,11 @@ public class Conditions {
   public static final String NOTIPADDRESS = "NotIpAddress";
 
   public static final String IF_EXISTS_SUFFIX = "IfExists";
-  
+
+  public static final String FOR_ALL_VALUES_PREFIX = "ForAllValues:";
+
+  public static final String FOR_ANY_VALUE_PREFIX = "ForAnyValue:";
+
   private static final Map<String, Class<? extends ConditionOp>> CONDITION_MAP = Maps.newHashMap( );
   
   public synchronized static boolean registerCondition(
@@ -152,13 +158,13 @@ public class Conditions {
   }
 
   public static Class<? extends ConditionOp> getConditionOpClass( String op ) {
-    return CONDITION_MAP.get( op );
+    return CONDITION_MAP.get( stripPrefix( op ) );
   }
   
   public static ConditionOp getOpInstance( final String op ) {
     final Class<? extends ConditionOp> opClass = getConditionOpClass( op );
     try {
-      return conditional( op, opClass.newInstance( ) );
+      return set( op, conditional( op, opClass.newInstance( ) ) );
     } catch ( final
         IllegalAccessException |
         InstantiationException |
@@ -177,6 +183,24 @@ public class Conditions {
     }
   }
 
+  private static ConditionOp set( final String name,
+                                  final ConditionOp conditionOp ) {
+
+    if ( name.startsWith( FOR_ANY_VALUE_PREFIX ) ) {
+      return new ForAnyValueDelegatingConditionOp( conditionOp );
+    } else if ( name.startsWith( FOR_ALL_VALUES_PREFIX ) ) {
+      return new ForAllValuesDelegatingConditionOp( conditionOp );
+    } else {
+      return conditionOp;
+    }
+  }
+
+  private static String stripPrefix( final String op ) {
+    return Strings.trimPrefix(
+        FOR_ANY_VALUE_PREFIX,
+        Strings.trimPrefix( FOR_ALL_VALUES_PREFIX, op ) );
+  }
+
   private static class IfExistsDelegatingConditionOp implements ConditionOp {
     private final ConditionOp delegate;
 
@@ -187,6 +211,58 @@ public class Conditions {
     @Override
     public boolean check( @Nullable final String key, final String value ) {
       return key == null || delegate.check( key, value );
+    }
+  }
+
+  private static class ForAnyValueDelegatingConditionOp implements ConditionOp {
+    private final ConditionOp delegate;
+
+    private ForAnyValueDelegatingConditionOp( final ConditionOp conditionOp ) {
+      this.delegate = conditionOp;
+    }
+
+    @Override
+    public boolean check( @Nullable final String key, final String value ) {
+      return delegate.check( key, value );
+    }
+
+    @Override
+    public boolean check( final Set<String> keys, final Set<String> values ) {
+      boolean success = false;
+      for ( final String key : keys ) {
+        for ( final String value : values ) {
+          success = check( key, value );
+          if ( success ) break;
+        }
+        if ( success ) break;
+      }
+      return success;
+    }
+  }
+
+  private static class ForAllValuesDelegatingConditionOp implements ConditionOp {
+    private final ConditionOp delegate;
+
+    private ForAllValuesDelegatingConditionOp( final ConditionOp conditionOp ) {
+      this.delegate = conditionOp;
+    }
+
+    @Override
+    public boolean check( @Nullable final String key, final String value ) {
+      return delegate.check( key, value );
+    }
+
+    @Override
+    public boolean check( @Nullable final Set<String> keys, final Set<String> values ) {
+      boolean success = true;
+      for ( final String key : keys ) {
+        for ( final String value : values ) {
+          success = check( key, value );
+          if ( success ) break;
+        }
+        if ( !success ) break;
+      }
+      return success;
     }
   }
 }
