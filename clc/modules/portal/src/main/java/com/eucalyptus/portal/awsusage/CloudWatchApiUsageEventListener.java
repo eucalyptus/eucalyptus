@@ -1,5 +1,5 @@
 /*************************************************************************
- * (c) Copyright 2016 Hewlett Packard Enterprise Development Company LP
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,31 +15,29 @@
  ************************************************************************/
 package com.eucalyptus.portal.awsusage;
 
+import javax.annotation.Nonnull;
+import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.portal.BillingProperties;
-import com.eucalyptus.reporting.event.LoadBalancerEvent;
-import org.apache.log4j.Logger;
+import com.eucalyptus.reporting.event.CloudWatchApiUsageEvent;
 
-import javax.annotation.Nonnull;
+/**
+ *
+ */
+public class CloudWatchApiUsageEventListener extends SensorQueueEventListener<CloudWatchApiUsageEvent> {
+  private static final Logger LOG = Logger.getLogger( LoadBalancerUsageEventListener.class );
 
-public class LoadBalancerUsageEventListener extends SensorQueueEventListener<LoadBalancerEvent> {
-  private static final Logger LOG = Logger.getLogger(LoadBalancerUsageEventListener.class);
-
-  public static void register() {
-    Listeners.register(LoadBalancerEvent.class, new LoadBalancerUsageEventListener());
+  public static void register( ) {
+    Listeners.register( CloudWatchApiUsageEvent.class, new CloudWatchApiUsageEventListener( ) );
   }
 
   @Override
-  public void fireEvent(@Nonnull final LoadBalancerEvent event) {
-    if (!Bootstrap.isOperational() || !BillingProperties.ENABLED) {
-      return;
-    }
-    if (event.getActionInfo() == null ||
-            !LoadBalancerEvent.LoadBalancerAction.LOADBALANCER_USAGE.equals(event.getActionInfo().getAction())) {
+  public void fireEvent( @Nonnull final CloudWatchApiUsageEvent event ) {
+    if ( !Bootstrap.isOperational( ) || !BillingProperties.ENABLED ) {
       return;
     }
 
-    transformAndQueue( LOG, event, QueuedEvents.fromLoadBalancerEvent );
+    transformAndQueue( LOG, event, QueuedEvents.FromCloudWatchApiUsageEvent );
   }
 }

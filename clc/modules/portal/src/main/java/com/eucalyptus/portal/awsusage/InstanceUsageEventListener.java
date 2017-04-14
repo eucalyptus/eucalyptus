@@ -21,15 +21,13 @@ import javax.annotation.Nonnull;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.portal.BillingProperties;
-import com.eucalyptus.portal.SimpleQueueClientManager;
 import org.apache.log4j.Logger;
-import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.reporting.event.InstanceUsageEvent;
-import java.util.Optional;
+import com.eucalyptus.util.Consumer;
 
-public class InstanceUsageEventListener implements
-        EventListener<InstanceUsageEvent> {
+public class InstanceUsageEventListener extends
+    SensorQueueEventListener<InstanceUsageEvent> {
   private static final Logger LOG = Logger
           .getLogger(InstanceUsageEventListener.class);
 
@@ -46,46 +44,35 @@ public class InstanceUsageEventListener implements
     }
 
     try {
-      String msg = null;
-      final Optional<QueuedEvent> instanceUsageEvent = QueuedEvents.FromInstanceUsageEvent.apply(event);
-      if (instanceUsageEvent.isPresent()) {
-        msg = QueuedEvents.EventToMessage.apply(instanceUsageEvent.get());
-        SimpleQueueClientManager.getInstance().sendMessage(BillingProperties.SENSOR_QUEUE_NAME,
-                msg);
-        // instance usage event is used for instance hour reports
-        SimpleQueueClientManager.getInstance().sendMessage(BillingProperties.INSTANCE_HOUR_SENSOR_QUEUE_NAME, msg);
-      }
+      final Consumer<String> sensorSender =
+          queueConsumer( LOG, BillingProperties.SENSOR_QUEUE_NAME );
+
+      QueuedEvents.FromInstanceUsageEvent.apply( event )
+          .map( QueuedEvents.EventToMessage )
+          .ifPresent( sensorSender.andThen(
+              // instance usage event is used for instance hour reports
+             queueConsumer( LOG, BillingProperties.INSTANCE_HOUR_SENSOR_QUEUE_NAME)
+          ) );
+
       // pick up VolumeIOUsage
-      final Optional<QueuedEvent> volIoEvent = QueuedEvents.FromVolumeIoUsage.apply(event);
-      if (volIoEvent.isPresent()) {
-        msg = QueuedEvents.EventToMessage.apply(volIoEvent.get());
-        SimpleQueueClientManager.getInstance().sendMessage(BillingProperties.SENSOR_QUEUE_NAME,
-                msg);
-      }
+      QueuedEvents.FromVolumeIoUsage.apply( event )
+          .map( QueuedEvents.EventToMessage )
+          .ifPresent( sensorSender );
 
       // pick up InstanceDataTransfer
-      final Optional<QueuedEvent> instanceDataTransferEvent = QueuedEvents.FromInstanceDataTransfer.apply(event);
-      if (instanceDataTransferEvent.isPresent()) {
-        msg = QueuedEvents.EventToMessage.apply(instanceDataTransferEvent.get());
-        SimpleQueueClientManager.getInstance().sendMessage(BillingProperties.SENSOR_QUEUE_NAME,
-                msg);
-      }
+      QueuedEvents.FromInstanceDataTransfer.apply(event)
+          .map( QueuedEvents.EventToMessage )
+          .ifPresent( sensorSender );
 
       // pick up PublicIp transfer
-      final Optional<QueuedEvent> publicIpTransferEvent = QueuedEvents.FromPublicIpTransfer.apply(event);
-      if (publicIpTransferEvent.isPresent()) {
-        msg = QueuedEvents.EventToMessage.apply(publicIpTransferEvent.get());
-        SimpleQueueClientManager.getInstance().sendMessage(BillingProperties.SENSOR_QUEUE_NAME,
-                msg);
-      }
+      QueuedEvents.FromPublicIpTransfer.apply(event)
+          .map( QueuedEvents.EventToMessage )
+          .ifPresent( sensorSender );
 
       // pick up ELB data transfer event
-      final Optional<QueuedEvent> elbTransferEvent = QueuedEvents.FromLoadBalancerDataTransfer.apply(event);
-      if (elbTransferEvent.isPresent()) {
-        msg = QueuedEvents.EventToMessage.apply(elbTransferEvent.get());
-        SimpleQueueClientManager.getInstance().sendMessage(BillingProperties.SENSOR_QUEUE_NAME,
-                msg);
-      }
+      QueuedEvents.FromLoadBalancerDataTransfer.apply(event)
+          .map( QueuedEvents.EventToMessage )
+          .ifPresent( sensorSender );
     } catch (final Exception ex) {
       LOG.error("Failed to send instance event message to queue", ex);
     }

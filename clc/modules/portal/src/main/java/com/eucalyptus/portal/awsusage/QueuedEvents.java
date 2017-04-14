@@ -19,6 +19,7 @@ import com.eucalyptus.compute.common.ReservationInfoType;
 import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.loadbalancing.workflow.LoadBalancingAWSCredentialsProvider;
 import com.eucalyptus.reporting.event.AddressEvent;
+import com.eucalyptus.reporting.event.CloudWatchApiUsageEvent;
 import com.eucalyptus.reporting.event.InstanceUsageEvent;
 import com.eucalyptus.reporting.event.LoadBalancerEvent;
 import com.eucalyptus.reporting.event.S3ObjectEvent;
@@ -400,6 +401,16 @@ public class QueuedEvents {
     q.setUserId(event.getUserId());
     q.setUsageValue("1");
     q.setTimestamp(new Date(System.currentTimeMillis()));
+    return q;
+  };
+
+  public static Function<CloudWatchApiUsageEvent, QueuedEvent> FromCloudWatchApiUsageEvent = (event) -> {
+    final QueuedEvent q = new QueuedEvent();
+    q.setEventType("CW:Requests");
+    q.setResourceId(event.getOperation());
+    q.setAccountId(event.getAccountId());
+    q.setUsageValue(String.valueOf(event.getRequestCount()));
+    q.setTimestamp(new Date(event.getEndTime()));
     return q;
   };
 }

@@ -21,6 +21,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
@@ -45,6 +46,7 @@ import com.eucalyptus.portal.common.policy.PortalPolicySpec;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
@@ -57,6 +59,18 @@ import com.google.common.collect.Sets;
 public class PortalService {
 
   private static final Logger logger = Logger.getLogger( PortalService.class );
+
+  private static final Map<String,String> AWS_USAGE_SERVICE_MAP =
+      ImmutableMap.<String,String>builder()
+      .put( "ec2", "AmazonEC2" )
+      .put( "s3", "AmazonS3" )
+      .put( "cloudwatch", "AmazonCloudWatch" )
+      .build( );
+
+  private static final Map<String,Map<String,String>> AWS_USAGE_USAGE_TYPE_MAPS =
+      ImmutableMap.<String,Map<String,String>>builder()
+      .put( "AmazonCloudWatch", ImmutableMap.of( "request", "Request-NoCharge" ) )
+      .build( );
 
   private final BillingAccounts billingAccounts;
   private final BillingInfos billingInfos;
@@ -220,21 +234,22 @@ public class PortalService {
 
     final Function<ViewUsageType, ViewUsageType> requestFormatter = (req) -> {
       final String service = req.getServices().toLowerCase();
-      if ("ec2".equals(service.toLowerCase()))
-        req.setServices("AmazonEC2");
-      else if ("s3".equals(service.toLowerCase()))
-        req.setServices("AmazonS3");
-      else if ("cloudwatch".equals(service.toLowerCase()))
-        req.setServices("AmazonCloudWatch");
+      if ( AWS_USAGE_SERVICE_MAP.containsKey( service ) ) {
+        req.setServices( AWS_USAGE_SERVICE_MAP.get( service ) );
+      }
 
       final String operation = req.getOperations();
       if (operation != null && "all".equals(operation.toLowerCase())) {
         req.setOperations(null);
       }
 
-      String usageType = req.getUsageTypes();
-      if (usageType != null && "all".equals(usageType.toLowerCase())) {
-          req.setUsageTypes(null);
+      if ( "all".equalsIgnoreCase( request.getUsageTypes( ) ) ) {
+        req.setUsageTypes( null );
+      } else if ( AWS_USAGE_USAGE_TYPE_MAPS.containsKey( request.getServices( ) ) ) {
+        final Map<String,String> usageTypeMapForService = AWS_USAGE_USAGE_TYPE_MAPS.get( request.getServices( ) );
+        if ( usageTypeMapForService.containsKey( request.getUsageTypes( ) ) ) {
+          request.setUsageTypes( usageTypeMapForService.get( request.getUsageTypes( ) ) );
+        }
       }
       return req;
     };

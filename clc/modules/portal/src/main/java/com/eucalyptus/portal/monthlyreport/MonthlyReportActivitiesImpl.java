@@ -29,6 +29,7 @@ import com.google.common.collect.Lists;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @ComponentPart(Portal.class)
@@ -64,8 +65,8 @@ public class MonthlyReportActivitiesImpl implements MonthlyReportActivities {
     try {
       return awsUsage.stream()
               .map(MonthlyReports.transform)
-              .filter(opt -> opt.isPresent())
-              .map(opt -> opt.get())
+              .filter(Optional::isPresent)
+              .map(Optional::get)
               .collect(Collectors.toList());
     } catch (final Exception ex) {
       throw new BillingActivityException("Failed to transform aws usage records to monthly records", ex);

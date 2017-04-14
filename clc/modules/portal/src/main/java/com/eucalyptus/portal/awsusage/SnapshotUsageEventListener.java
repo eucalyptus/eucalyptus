@@ -16,23 +16,18 @@
 package com.eucalyptus.portal.awsusage;
 
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.portal.BillingProperties;
-import com.eucalyptus.portal.SimpleQueueClientManager;
 import com.eucalyptus.reporting.event.SnapShotEvent;
 import org.apache.log4j.Logger;
 
 import javax.annotation.Nonnull;
 
-public class SnapshotUsageEventListener implements
-        EventListener<SnapShotEvent>  {
-  private static final Logger LOG = Logger
-          .getLogger(SnapshotUsageEventListener.class);
+public class SnapshotUsageEventListener extends SensorQueueEventListener<SnapShotEvent>  {
+  private static final Logger LOG = Logger.getLogger(SnapshotUsageEventListener.class);
 
   public static void register() {
-    Listeners.register(SnapShotEvent.class,
-            new SnapshotUsageEventListener());
+    Listeners.register(SnapShotEvent.class, new SnapshotUsageEventListener());
   }
 
   @Override
@@ -46,13 +41,6 @@ public class SnapshotUsageEventListener implements
       return;
     }
 
-    try {
-      final QueuedEvent qevt = QueuedEvents.FromSnapshotUsageEvent.apply(event);
-      final String msg = QueuedEvents.EventToMessage.apply(qevt);
-      SimpleQueueClientManager.getInstance().sendMessage(BillingProperties.SENSOR_QUEUE_NAME,
-              msg);
-    } catch (final Exception ex) {
-      LOG.error("Failed to send snapshot usage message to queue", ex);
-    }
+    transformAndQueue( LOG, event, QueuedEvents.FromSnapshotUsageEvent );
   }
 }

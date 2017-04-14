@@ -27,8 +27,6 @@ import com.eucalyptus.portal.workflow.AwsUsageRecord;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
-import org.hibernate.Criteria;
-import org.hibernate.criterion.Restrictions;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -284,33 +282,34 @@ public abstract class AwsUsageRecords {
     @Override
     public Collection<AwsUsageRecord> queryHourly(String accountNumber, String service, String operation, String usageType, Date startDate, Date endDate) {
       try (final TransactionResource db = Entities.transactionFor(AwsUsageRecordEntity.class)) {
-        Criteria criteria = Entities.createCriteria(AwsUsageRecordEntity.class);
+        Entities.EntityCriteriaQuery<AwsUsageRecordEntity,AwsUsageRecordEntity> criteria =
+            Entities.criteriaQuery(AwsUsageRecordEntity.class);
 
         if (accountNumber != null) {
-          criteria = criteria.add(Restrictions.eq("ownerAccountNumber", accountNumber));
+          criteria = criteria.whereEqual( AwsUsageRecordEntity_.ownerAccountNumber, accountNumber);
         }
 
         if (service != null) {
-          criteria = criteria.add(Restrictions.eq("service", service));
+          criteria = criteria.whereEqual( AwsUsageRecordEntity_.service, service);
         }
 
         if (operation != null) {
-          criteria = criteria.add(Restrictions.eq("operation", operation));
+          criteria = criteria.whereEqual( AwsUsageRecordEntity_.operation, operation);
         }
 
         if (usageType != null) {
-          criteria = criteria.add(Restrictions.eq("usageType", usageType));
+          criteria = criteria.whereEqual( AwsUsageRecordEntity_.usageType, usageType);
         }
 
         if (startDate != null) {
-          criteria = criteria.add(Restrictions.ge("endTime", startDate));
+          criteria = criteria.whereRestriction( restriction -> restriction.after( AwsUsageRecordEntity_.endTime, startDate ) );
         }
 
         if (endDate != null) {
-          criteria = criteria.add(Restrictions.le("endTime", endDate));
+          criteria = criteria.whereRestriction( restriction -> restriction.before( AwsUsageRecordEntity_.endTime, endDate ) );
         }
 
-        final List<AwsUsageRecordEntity> entities = (List<AwsUsageRecordEntity>) criteria.list();
+        final List<AwsUsageRecordEntity> entities = criteria.list();
         return entities.stream()
                 .map(e -> (AwsUsageRecord) e)
                 .collect(Collectors.toList());

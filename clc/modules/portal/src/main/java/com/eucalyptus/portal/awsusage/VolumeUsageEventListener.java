@@ -16,23 +16,18 @@
 package com.eucalyptus.portal.awsusage;
 
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.portal.BillingProperties;
-import com.eucalyptus.portal.SimpleQueueClientManager;
 import com.eucalyptus.reporting.event.VolumeEvent;
 import org.apache.log4j.Logger;
 
 import javax.annotation.Nonnull;
 
-public class VolumeUsageEventListener implements
-        EventListener<VolumeEvent> {
-  private static final Logger LOG = Logger
-          .getLogger(VolumeUsageEventListener.class);
+public class VolumeUsageEventListener extends SensorQueueEventListener<VolumeEvent> {
+  private static final Logger LOG = Logger.getLogger(VolumeUsageEventListener.class);
 
   public static void register() {
-    Listeners.register(VolumeEvent.class,
-            new VolumeUsageEventListener());
+    Listeners.register(VolumeEvent.class, new VolumeUsageEventListener());
   }
 
   @Override
@@ -46,13 +41,6 @@ public class VolumeUsageEventListener implements
       return;
     }
 
-    try {
-      final QueuedEvent qevt = QueuedEvents.FromVolumeUsageEvent.apply(event);
-      final String msg = QueuedEvents.EventToMessage.apply(qevt);
-      SimpleQueueClientManager.getInstance().sendMessage(BillingProperties.SENSOR_QUEUE_NAME,
-              msg);
-    } catch (final Exception ex) {
-      LOG.error("Failed to send volume usage message to queue", ex);
-    }
+    transformAndQueue( LOG, event, QueuedEvents.FromVolumeUsageEvent );
   }
 }

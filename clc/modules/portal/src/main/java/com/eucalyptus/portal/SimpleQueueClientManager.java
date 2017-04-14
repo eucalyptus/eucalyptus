@@ -68,7 +68,7 @@ public class SimpleQueueClientManager {
           .setPropertyNamingStrategy( PropertyNamingStrategy.PASCAL_CASE_TO_CAMEL_CASE );
   static {
     // to prevent conflicting setter definitions for property "seed"
-    mapper.addMixInAnnotations( ClientConfiguration.class, ClientConfigurationMixin.class );
+    mapper.addMixIn( ClientConfiguration.class, ClientConfigurationMixin.class );
   }
 
   private static SimpleQueueClientManager instance = new SimpleQueueClientManager();
