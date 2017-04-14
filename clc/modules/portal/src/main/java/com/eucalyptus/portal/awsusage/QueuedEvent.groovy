@@ -22,11 +22,24 @@ class QueuedEvent {
     String userId = null;
     String availabilityZone = null;
     String usageValue = null;
+    String any = null; // fields reserved for any data that's useful for aggregation
     Date timestamp = null;
+
+    QueuedEvent() { }
+    QueuedEvent( final QueuedEvent other ) {
+        this.eventType = other.eventType;
+        this.resourceId = other.resourceId;
+        this.accountId = other.accountId;
+        this.userId = other.userId;
+        this.availabilityZone = other.availabilityZone;
+        this.usageValue = other.usageValue;
+        this.any = other.any;
+        this.timestamp = other.timestamp;
+    }
 
     @Override
     public String toString() {
-        return String.format("%s:%s:%s:%s:%s:%s:%s",
-        eventType, resourceId, accountId, userId, availabilityZone, usageValue, timestamp);
+        return String.format("%s:%s:%s:%s:%s:%s:%s:%s",
+        eventType, resourceId, accountId, userId, availabilityZone, usageValue, any, timestamp);
     }
 }

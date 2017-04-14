@@ -47,6 +47,7 @@ public abstract class AwsUsageRecords {
   }
 
   public abstract AwsUsageHourlyRecordBuilder newRecord(final String accountNumber);
+  public abstract AwsUsageHourlyRecordBuilder newRecord(AwsUsageRecord other);
   public abstract void append(final Collection<AwsUsageRecord> records);
   public abstract Collection<AwsUsageRecord> queryHourly( final String accountNumber, final String service,
                                                    final String operation, final String usageType,
@@ -270,6 +271,25 @@ public abstract class AwsUsageRecords {
     }
 
     @Override
+    public AwsUsageHourlyRecordBuilder newRecord(AwsUsageRecord other) {
+      return new AwsUsageHourlyRecordBuilder(other.getOwnerAccountNumber()) {
+        @Override
+        protected AwsUsageRecord init(String accountId) {
+          final AwsUsageRecord record = new AwsUsageRecordEntity(accountId);
+          record.setService( other.getService() );
+          record.setOperation( other.getOperation() );
+          record.setUsageType( other.getUsageType() );
+          record.setOwnerAccountNumber( other.getOwnerAccountNumber() );
+          record.setEndTime( other.getEndTime() );
+          record.setStartTime( other.getStartTime() );
+          record.setResource( other.getResource() );
+          record.setUsageValue( other.getUsageValue() );
+          return record;
+        }
+      };
+    }
+
+    @Override
     public void append(Collection<AwsUsageRecord> records) {
       try(final TransactionResource db=Entities.transactionFor(AwsUsageRecordEntity.class )){
         records.stream().forEach( r -> Entities.persist(r));
@@ -326,13 +346,31 @@ public abstract class AwsUsageRecords {
   }
 
   private static class AwsUsageHourlyRecordsCassandra extends AwsUsageRecords {
-
     @Override
     public AwsUsageHourlyRecordBuilder newRecord(String accountNumber) {
       return new AwsUsageHourlyRecordBuilder(accountNumber) {
         @Override
         protected AwsUsageRecord init(String accountId) {
           return new SimpleAwsUsageRecord(accountId);
+        }
+      };
+    }
+
+    @Override
+    public AwsUsageHourlyRecordBuilder newRecord(AwsUsageRecord other) {
+      return new AwsUsageHourlyRecordBuilder(other.getOwnerAccountNumber()) {
+        @Override
+        protected AwsUsageRecord init(String accountId) {
+          final AwsUsageRecord record = new SimpleAwsUsageRecord(accountId);
+          record.setService( other.getService() );
+          record.setOperation( other.getOperation() );
+          record.setUsageType( other.getUsageType() );
+          record.setOwnerAccountNumber( other.getOwnerAccountNumber() );
+          record.setEndTime( other.getEndTime() );
+          record.setStartTime( other.getStartTime() );
+          record.setResource( other.getResource() );
+          record.setUsageValue( other.getUsageValue() );
+          return record;
         }
       };
     }

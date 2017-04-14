@@ -27,8 +27,10 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.*;
@@ -104,35 +106,79 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
       return sumDistinctResource(accountId, events, "SnapshotUsage", "AmazonEC2", "CreateSnapshot", "EBS:SnapshotUsage");
     }
   },
-  EC2_ASSOCIATEADDRESS_ELASTIC_IP("AmazonEC2", "AssociateAddress", "ElasticIP", AggregateGranularity.HOURLY) {
+  EC2_ASSOCIATEADDRESS_ELASTIC_IP("AmazonEC2", "AssociateAddress", "ElasticIP:IdleAddress", AggregateGranularity.HOURLY) {
     @Override
     public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
       // AmazonEC2,AssociateAddress,USW2-ElasticIP:IdleAddress,,11/15/16 14:00:00,11/15/16 15:00:00,1
+      // AmazonEC2,AssociateAddressVPC,USW2-ElasticIP:AdditionalAddress,,04/12/17 12:00:00,04/12/17 13:00:00,1
+
       List<QueuedEvent> addressEvents = events.stream()
               .filter(e -> "AddressUsage".equals(e.getEventType()))
               .collect(Collectors.toList());
       if (addressEvents.size() <= 0)
         return Lists.newArrayList();
 
-      addressEvents = AwsUsageRecordType.distinctByResourceIds(addressEvents);
+      final List<QueuedEvent> allocatedAddresses = distinctByResourceIds(addressEvents.stream()
+              .filter(e -> "USAGE_ALLOCATE".equals(e.getUsageValue()))
+              .collect(toList()));
+      final List<QueuedEvent> associatedAddresses = distinctByResourceIds(addressEvents.stream()
+              .filter(e -> "USAGE_ASSOCIATE".equals(e.getUsageValue()))
+              .collect(toList()));
+
+      int numIdleAddresses = allocatedAddresses.size(); // allocated, but not associated addresses
+      for (final QueuedEvent e : associatedAddresses) {
+        if (e.getAny() != null) {
+          final String instanceId = e.getAny();
+          try {
+            final Optional<RunningInstancesItemType> instance =
+                    Ec2Client.getInstance().describeInstances(null,
+                            Lists.newArrayList(instanceId)).stream()
+                            .findFirst();
+            if (instance.isPresent() && "stopped".equals(
+                    instance.get().getStateName())) {
+              numIdleAddresses++;
+            }
+          } catch (final Exception ex) {
+            ; // it is possible that the instance no longer exists
+          }
+        }
+      }
+
+      final Map<String, Long> vmAssociation = associatedAddresses.stream()
+              .filter( e -> e.getAny() != null) // any field is used to hold instance id
+              .map( e -> e.getAny() )
+              .collect( groupingBy( Function.identity(), counting()) );
+      long numAdditionalAddresses = 0;
+      for (final long numAssociation : vmAssociation.values()) {
+          numAdditionalAddresses += (numAssociation-1);
+      }
+
       final List<AwsUsageRecord> records = Lists.newArrayList();
       final Date earliestRecord = AwsUsageRecordType.getEarliest(addressEvents);
       final Date endTime = getNextHour(earliestRecord);
       final Date startTime = getPreviousHour(endTime);
-      final long countAddresses = addressEvents.stream()
-              .count();
-      if (countAddresses > 0) {
-        /// TODO: Group by IdleAddress and AssociateAddress?
-        final AwsUsageRecord data = AwsUsageRecords.getInstance().newRecord(accountId)
+      if (numIdleAddresses > 0 || numAdditionalAddresses > 0) {
+        final AwsUsageRecord prototype = AwsUsageRecords.getInstance().newRecord(accountId)
                 .withService("AmazonEC2")
                 .withOperation("AssociateAddress")
                 .withResource(null)
-                .withUsageType("ElasticIP:IdleAddress")
+                .withUsageType(null)
                 .withStartTime(startTime)
                 .withEndTime(endTime)
-                .withUsageValue(String.format("%d", countAddresses))
+                .withUsageValue(null)
                 .build();
-        records.add(data);
+        if (numIdleAddresses > 0) {
+            records.add(AwsUsageRecords.getInstance().newRecord(prototype)
+                    .withUsageType("ElasticIP:IdleAddress")
+                    .withUsageValue(String.format("%d", numIdleAddresses))
+                    .build());
+        }
+        if (numAdditionalAddresses > 0) {
+          records.add(AwsUsageRecords.getInstance().newRecord(prototype)
+                  .withUsageType("ElasticIP:AdditionalAddress")
+                  .withUsageValue(String.format("%d", numAdditionalAddresses))
+                  .build());
+        }
       }
       return records;
     }
@@ -457,9 +503,13 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
   }
 
   private static List<QueuedEvent> distinctByResourceIds(final List<QueuedEvent> events) {
-    final Map<String, QueuedEvent> uniqueEvents = Maps.newHashMap();
-    events.stream().forEach( evt -> uniqueEvents.put(evt.getResourceId(), evt) );
-    return Lists.newArrayList(uniqueEvents.values());
+    return events.stream().filter(distinctByKey( e -> e.getResourceId() )).collect(toList());
+  }
+
+  private static <T> Predicate<T> distinctByKey(Function<? super T, Object> keyExtractor)
+  {
+    Map<Object, Boolean> map = new ConcurrentHashMap<>();
+    return t -> map.putIfAbsent(keyExtractor.apply(t), Boolean.TRUE) == null;
   }
 
   private static Date getEarliest(final  List<QueuedEvent> events) {

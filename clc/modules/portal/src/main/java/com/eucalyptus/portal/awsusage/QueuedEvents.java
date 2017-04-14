@@ -42,6 +42,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class QueuedEvents {
   private static final Logger LOG = Logger
@@ -140,10 +141,15 @@ public class QueuedEvents {
     q.setResourceId(event.getAddress());
     q.setAccountId(event.getAccountId());
     q.setUserId(event.getUserId());
-    q.setUsageValue(event.getActionInfo().getAction().toString()); // ALLOCATE or ASSOCIATE
+    if ( event.getInstanceId() != null ) {
+      q.setAny(event.getInstanceId());
+    }
+    q.setUsageValue(event.getActionInfo().getAction().toString());
     q.setTimestamp(new Date(System.currentTimeMillis()));
     return q;
   };
+
+
 
   public static Function<S3ObjectEvent, QueuedEvent> FromS3ObjectUsageEvent = (event) -> {
     final QueuedEvent q = new QueuedEvent();
@@ -158,106 +164,118 @@ public class QueuedEvents {
 
   private static Map<String, Long> instancePublicTransferInLastMeter = Maps.newConcurrentMap();
   private static Map<String, Long> instancePublicTransferOutLastMeter = Maps.newConcurrentMap();
-  public static Function<InstanceUsageEvent, Optional<QueuedEvent>> FromPublicIpTransfer = (event) -> {
-    if ( !("NetworkInExternal".equals(event.getMetric()) || "NetworkOutExternal".equals(event.getMetric())) )
-      return Optional.empty();
+  public static Function<InstanceUsageEvent, List<QueuedEvent>> FromPublicIpTransfer = (event) -> {
+    if (!("NetworkInExternal".equals(event.getMetric()) || "NetworkOutExternal".equals(event.getMetric())))
+      return Lists.newArrayList();
     if (event.getDimension() == null || !event.getDimension().equals("default"))
-      return Optional.empty();
-    if (event.getInstanceId() == null )
-      return Optional.empty();
+      return Lists.newArrayList();
+    if (event.getInstanceId() == null)
+      return Lists.newArrayList();
 
-    try{
-      final QueuedEvent q = new QueuedEvent();
-      final Optional<ReservationInfoType> reservation =
-              instanceCache.get(event.getInstanceId());
-      if (reservation.isPresent()) {
-        q.setAccountId(reservation.get().getOwnerId());
-      } else {
-        return Optional.empty();
+    Long newValue = null;
+    final Map<String, Long> cache = "NetworkInExternal".equals(event.getMetric()) ? instancePublicTransferInLastMeter : instancePublicTransferOutLastMeter;
+    try {
+      final Long oldValue = cache.get(event.getInstanceId());
+      if (oldValue != null) {
+        newValue = event.getValue().longValue() - oldValue;
       }
-      final RunningInstancesItemType instance = reservation.get().getInstancesSet().stream()
-              .filter( i -> event.getInstanceId().equals(i.getInstanceId()))
-              .findFirst()
-              .get();
-      q.setResourceId(event.getInstanceId());
-      q.setAvailabilityZone(instance.getPlacement());
+      cache.put(event.getInstanceId(), event.getValue().longValue());
+    } catch (final Exception ex) {
+      return Lists.newArrayList();
+    }
 
+    if (newValue == null || newValue < 0) {
+      return Lists.newArrayList();
+    }
+
+    final List<QueuedEvent> queueEvents = Lists.newArrayList();
+    ReservationInfoType reservation = null;
+    RunningInstancesItemType instance = null;
+    // InstanceDataTransfer and InstancePublicIpTransfer
+    try {
+      final Optional<ReservationInfoType> optReservation =
+              instanceCache.get(event.getInstanceId());
+      if (!optReservation.isPresent()) {
+        return Lists.newArrayList();
+      }
+      reservation = optReservation.get();
+      final Optional<RunningInstancesItemType> optInstance = reservation.getInstancesSet().stream()
+              .filter(i -> event.getInstanceId().equals(i.getInstanceId()))
+              .findFirst();
+      if (!optInstance.isPresent()) {
+        return Lists.newArrayList();
+      }
+      instance = optInstance.get();
+      final QueuedEvent idt = new QueuedEvent();
       if ("NetworkInExternal".equals(event.getMetric())) {
-        final Long oldValue = instancePublicTransferInLastMeter.get(event.getInstanceId());
-        if (oldValue == null || oldValue > event.getValue().longValue()) {
-          instancePublicTransferInLastMeter.put(event.getInstanceId(),  event.getValue().longValue());
-          return Optional.empty();
-        } else {
-          q.setEventType("InstancePublicIpTransfer-In");
-          q.setUsageValue(String.format("%d", event.getValue().longValue() - oldValue));
-        }
+        idt.setEventType("InstanceDataTransfer-In");
       } else {
-        final Long oldValue = instancePublicTransferOutLastMeter.get(event.getInstanceId());
-        if (oldValue == null || oldValue > event.getValue().longValue()) {
-          instancePublicTransferOutLastMeter.put(event.getInstanceId(),  event.getValue().longValue());
-          return Optional.empty();
-        } else {
-          q.setEventType("InstancePublicIpTransfer-Out");
-          q.setUsageValue(String.format("%d", event.getValue().longValue() - oldValue));
-        }
+        idt.setEventType("InstanceDataTransfer-Out");
       }
-      q.setTimestamp(new Date(System.currentTimeMillis()));
-      return Optional.of(q);
-    }catch (final Exception ex) {
-      return Optional.empty();
+      idt.setAccountId(reservation.getOwnerId());
+      idt.setResourceId(event.getInstanceId());
+      idt.setAvailabilityZone(instance.getPlacement());
+      idt.setUsageValue(String.format("%d", newValue));
+      idt.setTimestamp(new Date(System.currentTimeMillis()));
+      final QueuedEvent ipt = new QueuedEvent(idt);
+      if ("NetworkInExternal".equals(event.getMetric())) {
+        ipt.setEventType("InstancePublicIpTransfer-In");
+      } else {
+        ipt.setEventType("InstancePublicIpTransfer-Out");
+      }
+      queueEvents.add(idt);
+      queueEvents.add(ipt);
+    } catch (final Exception ex) {
+      ;
     }
-  };
 
-  private static Map<String, Long> instanceDataInLastMeter = Maps.newConcurrentMap();
-  private static Map<String, Long> instanceDataOutLastMeter = Maps.newConcurrentMap();
-  public static Function<InstanceUsageEvent, Optional<QueuedEvent>> FromInstanceDataTransfer = (event) -> {
-    if ( !("NetworkIn".equals(event.getMetric()) || "NetworkOut".equals(event.getMetric())) )
-      return Optional.empty();
-    if (event.getDimension() == null || !event.getDimension().equals("total"))
-      return Optional.empty();
-    if (event.getInstanceId() == null )
-      return Optional.empty();
-
-    try{
-      final QueuedEvent q = new QueuedEvent();
-      final Optional<ReservationInfoType> reservation =
-              instanceCache.get(event.getInstanceId());
-      if (reservation.isPresent()) {
-        q.setAccountId(reservation.get().getOwnerId());
-      } else {
-        return Optional.empty();
-      }
-      final RunningInstancesItemType instance = reservation.get().getInstancesSet().stream()
-              .filter( i -> event.getInstanceId().equals(i.getInstanceId()))
-              .findFirst()
-              .get();
-      q.setResourceId(event.getInstanceId());
-      q.setAvailabilityZone(instance.getPlacement());
-
-      if ("NetworkIn".equals(event.getMetric())) {
-        final Long oldValue = instanceDataInLastMeter.get(event.getInstanceId());
-        if (oldValue == null || oldValue > event.getValue().longValue()) {
-          instanceDataInLastMeter.put(event.getInstanceId(),  event.getValue().longValue());
-          return Optional.empty();
-        } else {
-          q.setEventType("InstanceDataTransfer-In");
-          q.setUsageValue(String.format("%d", event.getValue().longValue() - oldValue));
+    // LoadBalancing-DataTransfer
+    final Predicate<ReservationInfoType> isLoadbalancer = (rsv) -> {
+      try {
+        if (!LoadBalancingAWSCredentialsProvider.LoadBalancingUserSupplier.INSTANCE.get()
+                .getAccountNumber().equals(rsv.getOwnerId())) {
+          return false;
         }
-      } else {
-        final Long oldValue = instanceDataOutLastMeter.get(event.getInstanceId());
-        if (oldValue == null || oldValue > event.getValue().longValue()) {
-          instanceDataOutLastMeter.put(event.getInstanceId(),  event.getValue().longValue());
-          return Optional.empty();
-        } else {
-          q.setEventType("InstanceDataTransfer-Out");
-          q.setUsageValue(String.format("%d", event.getValue().longValue() - oldValue));
+        final RunningInstancesItemType vm = rsv.getInstancesSet().stream()
+                .filter(i -> event.getInstanceId().equals(i.getInstanceId()))
+                .findFirst()
+                .get();
+        if (vm.getIamInstanceProfile() == null ||
+                vm.getIamInstanceProfile().getArn() == null)
+          return false;
+        final String arn = vm.getIamInstanceProfile().getArn();
+        // arn:aws:iam::000089838020:instance-profile/internal/loadbalancer/loadbalancer-vm-000495165767-httplb02
+        if (!arn.startsWith(String.format("arn:aws:iam::%s:instance-profile/internal/loadbalancer", rsv.getOwnerId()))) {
+          return false;
         }
+        return true;
+      } catch (final Exception ex) {
+        return false;
       }
-      q.setTimestamp(new Date(System.currentTimeMillis()));
-      return Optional.of(q);
-    }catch (final Exception ex) {
-      return Optional.empty();
+    };
+    try {
+      if (isLoadbalancer.test(reservation)) {
+        final String arn = instance.getIamInstanceProfile().getArn();
+        // arn:aws:iam::000089838020:instance-profile/internal/loadbalancer/loadbalancer-vm-000495165767-httplb02
+        String[] tokens = arn.split("/");
+        final String lbIdentifier = tokens[tokens.length-1].substring("loadbalancer-vm-".length());
+        tokens = lbIdentifier.split("-");
+        final String lbOwnerId = tokens[0];
+        final String lbName = lbIdentifier.substring((lbOwnerId+"-").length());
+        final QueuedEvent lbe = new QueuedEvent(queueEvents.get(0)); // copy constructor
+        lbe.setAccountId(lbOwnerId);
+        lbe.setResourceId(lbName);
+        if ("NetworkInExternal".equals(event.getMetric())) {
+          lbe.setEventType("LoadBalancing-DataTransfer-In");
+        } else {
+          lbe.setEventType("LoadBalancing-DataTransfer-Out");
+        }
+        queueEvents.add(lbe);
+      }
+    } catch (final Exception ex) {
+      ;
     }
+    return queueEvents;
   };
 
   private static Map<String, Long> volumeReadOpsLastMeter = Maps.newConcurrentMap();
@@ -313,76 +331,6 @@ public class QueuedEvents {
           return Optional.empty();
         } else {
           q.setEventType("EBS:VolumeIOUsage-Read");
-          q.setUsageValue(String.format("%d", event.getValue().longValue() - oldValue));
-        }
-      }
-      q.setTimestamp(new Date(System.currentTimeMillis()));
-      return Optional.of(q);
-    }catch (final Exception ex) {
-      return Optional.empty();
-    }
-  };
-
-  // key: instanceId of loadbalancer VM, value: latest network usage bytes
-  private static Map<String, Long> loadbalancerDataInLastMeter = Maps.newConcurrentMap();
-  private static Map<String, Long> loadbalancerDataOutLastMeter = Maps.newConcurrentMap();
-  public static Function<InstanceUsageEvent, Optional<QueuedEvent>> FromLoadBalancerDataTransfer = (event) -> {
-    if ( !("NetworkIn".equals(event.getMetric()) || "NetworkOut".equals(event.getMetric())) )
-      return Optional.empty();
-    if (event.getDimension() == null || !event.getDimension().equals("total"))
-      return Optional.empty();
-    if (event.getInstanceId() == null )
-      return Optional.empty();
-
-    try{
-      final QueuedEvent q = new QueuedEvent();
-      final Optional<ReservationInfoType> reservation =
-              instanceCache.get(event.getInstanceId());
-      if (!reservation.isPresent()) {
-        return Optional.empty();
-      }
-
-      final String instanceOwnerId = reservation.get().getOwnerId();
-      if (! LoadBalancingAWSCredentialsProvider.LoadBalancingUserSupplier.INSTANCE.get().getAccountNumber().equals(instanceOwnerId)) {
-        return Optional.empty();
-      }
-
-      final RunningInstancesItemType instance = reservation.get().getInstancesSet().stream()
-              .filter( i -> event.getInstanceId().equals(i.getInstanceId()))
-              .findFirst()
-              .get();
-
-      if(instance.getIamInstanceProfile() == null ||
-              instance.getIamInstanceProfile().getArn() == null )
-        return Optional.empty();
-      final String arn = instance.getIamInstanceProfile().getArn();
-      // arn:aws:iam::000089838020:instance-profile/internal/loadbalancer/loadbalancer-vm-000495165767-httplb02
-      if (!arn.startsWith(String.format("arn:aws:iam::%s:instance-profile/internal/loadbalancer", instanceOwnerId)))
-        return Optional.empty();
-      String[] tokens = arn.split("/");
-      final String lbIdentifier = tokens[tokens.length-1].substring("loadbalancer-vm-".length());
-      tokens = lbIdentifier.split("-");
-      final String lbOwnerId = tokens[0];
-      final String lbName = lbIdentifier.substring((lbOwnerId+"-").length());
-      q.setAccountId(lbOwnerId);
-      q.setResourceId(lbName);
-
-      if ("NetworkIn".equals(event.getMetric())) {
-        final Long oldValue = loadbalancerDataInLastMeter.get(event.getInstanceId());
-        if (oldValue == null || oldValue > event.getValue().longValue()) {
-          loadbalancerDataInLastMeter.put(event.getInstanceId(),  event.getValue().longValue());
-          return Optional.empty();
-        } else {
-          q.setEventType("LoadBalancing-DataTransfer-In");
-          q.setUsageValue(String.format("%d", event.getValue().longValue() - oldValue));
-        }
-      } else {
-        final Long oldValue = loadbalancerDataOutLastMeter.get(event.getInstanceId());
-        if (oldValue == null || oldValue > event.getValue().longValue()) {
-          loadbalancerDataOutLastMeter.put(event.getInstanceId(),  event.getValue().longValue());
-          return Optional.empty();
-        } else {
-          q.setEventType("LoadBalancing-DataTransfer-Out");
           q.setUsageValue(String.format("%d", event.getValue().longValue() - oldValue));
         }
       }

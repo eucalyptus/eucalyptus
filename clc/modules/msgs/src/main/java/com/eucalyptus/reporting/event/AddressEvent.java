@@ -48,6 +48,7 @@ public class AddressEvent implements Event {
   private final String userName;
   private final String accountId;
   private final String accountName;
+  private final String instanceId;
   private final EventActionInfo<AddressAction> actionInfo;
 
   public static EventActionInfo<AddressAction> forAllocate() {
@@ -92,11 +93,37 @@ public class AddressEvent implements Event {
     );
   }
 
+  public static AddressEvent with( final String address,
+                                   final OwnerFullName owner,
+                                   final String accountName,
+                                   final String instanceId,
+                                   final EventActionInfo<AddressAction> action ) {
+    return new AddressEvent(
+            address,
+            owner.getUserId(),
+            owner.getUserName(),
+            owner.getAccountNumber(),
+            accountName,
+            instanceId,
+            action
+    );
+  }
+
   private AddressEvent( final String address,
                         final String userId,
                         final String userName,
                         final String accountId,
                         final String accountName,
+                        final EventActionInfo<AddressAction> actionInfo) {
+    this(address, userId, userName, accountId, accountName, null, actionInfo);
+  }
+
+  private AddressEvent( final String address,
+                        final String userId,
+                        final String userName,
+                        final String accountId,
+                        final String accountName,
+                        final String instanceId,
                         final EventActionInfo<AddressAction> actionInfo) {
     checkParam( address, not(isEmptyOrNullString()) );
     checkParam( userId, not(isEmptyOrNullString()) );
@@ -111,6 +138,7 @@ public class AddressEvent implements Event {
     this.accountId = accountId;
     this.accountName = accountName;
     this.actionInfo = actionInfo;
+    this.instanceId = instanceId;
   }
 
   public String getAddress() {
@@ -132,6 +160,8 @@ public class AddressEvent implements Event {
   public String getAccountName() {
     return accountName;
   }
+
+  public String getInstanceId() { return instanceId; }
 
   public EventActionInfo<AddressAction> getActionInfo() {
     return actionInfo;

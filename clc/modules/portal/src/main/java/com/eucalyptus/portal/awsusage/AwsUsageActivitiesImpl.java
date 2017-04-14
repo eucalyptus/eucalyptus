@@ -319,16 +319,25 @@ public class AwsUsageActivitiesImpl implements AwsUsageActivities {
       }
     };
 
-    final Function<AllocatedAddressEntity, AddressEvent> toEvent = (addr) -> AddressEvent.with(
-            addr.getAddress(),
-            addr.getOwner(),
-            accountName.apply(addr),
-            AddressState.assigned.equals(addr.getState()) ? AddressEvent.forUsageAssociate()
-                    : AddressEvent.forUsageAllocate()
-    );
+    final Function<AllocatedAddressEntity, AddressEvent> toEvent = (addr) -> AddressState.assigned.equals(addr.getState()) ?
+            AddressEvent.with(
+                    addr.getAddress(),
+                    addr.getOwner(),
+                    accountName.apply(addr),
+                    addr.getInstanceId(),
+                    AddressEvent.forUsageAssociate()) :
+            AddressEvent.with(
+                    addr.getAddress(),
+                    addr.getOwner(),
+                    accountName.apply(addr),
+                    AddressEvent.forUsageAllocate());
 
+    // EUCA-13348
+    // Elastic IP is charged when 1) IP is NOT associated with a running instance,
+    // or 2) For any additional IPs associated with a running instance
     try {
       addresses.stream()
+              .filter( addr -> !"000000000000".equals(addr.getOwnerAccountNumber()))
               .filter (addr -> AddressState.allocated.equals(addr.getState())
                       || AddressState.assigned.equals(addr.getState()))
               .map( toEvent )

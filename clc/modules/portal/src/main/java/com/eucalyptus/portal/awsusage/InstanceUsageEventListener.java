@@ -59,20 +59,10 @@ public class InstanceUsageEventListener extends
           .map( QueuedEvents.EventToMessage )
           .ifPresent( sensorSender );
 
-      // pick up InstanceDataTransfer
-      QueuedEvents.FromInstanceDataTransfer.apply(event)
-          .map( QueuedEvents.EventToMessage )
-          .ifPresent( sensorSender );
-
-      // pick up PublicIp transfer
-      QueuedEvents.FromPublicIpTransfer.apply(event)
-          .map( QueuedEvents.EventToMessage )
-          .ifPresent( sensorSender );
-
-      // pick up ELB data transfer event
-      QueuedEvents.FromLoadBalancerDataTransfer.apply(event)
-          .map( QueuedEvents.EventToMessage )
-          .ifPresent( sensorSender );
+      // pick up InstanceDataTransfer, PublicIpTransfer, and LoadBalancerDataTransfer
+      QueuedEvents.FromPublicIpTransfer.apply(event).stream()
+              .map( QueuedEvents.EventToMessage )
+              .forEach( sensorSender );
     } catch (final Exception ex) {
       LOG.error("Failed to send instance event message to queue", ex);
     }
