@@ -111,6 +111,7 @@ import com.google.common.io.ByteStreams;
 import com.netflix.glisten.InterfaceBasedWorkflowClient;
 import com.netflix.glisten.WorkflowClientFactory;
 import com.netflix.glisten.WorkflowDescriptionTemplate;
+import com.netflix.glisten.WorkflowTags;
 import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Name;

@@ -1138,7 +1138,7 @@ public class VmControl {
 
     if ( v.getPasswordData( ) == null && !Strings.isNullOrEmpty( v.getKeyPair( ).getPublicKey( ) ) ) {
       try {
-        final GetConsoleOutputResponseType consoleOutput = getConsoleOutput( new GetConsoleOutputType( instanceId ) );
+        final GetConsoleOutputResponseType consoleOutput = getConsoleOutput( new GetConsoleOutputType( (String) instanceId ) );
         final String tempCo = B64.standard.decString( String.valueOf( consoleOutput.getOutput( ) ) ).replaceAll( "[\r\n]*", "" );
         final String passwordData = substringBefore( "</Password>", substringAfter( "<Password>", tempCo ) );
         if ( tempCo.matches( ".*<Password>[\\w=+/]*</Password>.*" ) ) {

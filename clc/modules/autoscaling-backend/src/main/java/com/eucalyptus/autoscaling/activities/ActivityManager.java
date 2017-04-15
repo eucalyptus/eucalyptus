@@ -2898,7 +2898,7 @@ public class ActivityManager {
     void dispatchInternal( final ActivityContext context,
                            final Callback.Checked<DescribeInstanceTypesResponseType> callback ) {
       final VmTypesClient client = context.getVmTypesClient( );
-      client.dispatch( new DescribeInstanceTypesType( Collections.singleton( instanceType ) ), callback );
+      client.dispatch( new DescribeInstanceTypesType( Collections.singletonList( instanceType ) ), callback );
     }
 
     @Override
