@@ -62,7 +62,10 @@
 
 package com.eucalyptus.auth.json;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Function;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
@@ -92,17 +95,21 @@ public class JsonUtils {
     }
     return ( has1 ? element1 : element2 );
   }
-  
+
   public static List<String> parseStringOrStringList( JSONObject statement, String key ) throws JSONException {
+    return parseStringOrStringList( Collections.singleton( String.class ), statement, key );
+  }
+
+  public static List<String> parseStringOrStringList( Set<Class<?>> types, JSONObject statement, String key ) throws JSONException {
     List<String> results = Lists.newArrayList( );
     try {
-      String value = getByType( String.class, statement, key );
-      if (value != null) results.add( value );
+      Object value = getByType( types, statement, key );
+      if (value != null) results.add( String.valueOf( value ) );
       return results;
     } catch ( JSONException e ) {
     }
     try {
-      return getArrayByType( String.class, statement, key );
+      return getArrayByType( types, statement, key, String::valueOf );
     } catch ( JSONException e ) {
       throw new JSONException( key + " element can only be String or a list of String" );
     }
@@ -110,30 +117,38 @@ public class JsonUtils {
   
   @SuppressWarnings( "unchecked" )
   public static <T> List<T> getArrayByType( Class<T> type, JSONObject map, String key ) throws JSONException {
+    return ( List<T> ) getArrayByType( Collections.singleton( type ), map, key, Function.identity( ) );
+  }
+
+  public static <T> List<T> getArrayByType( Set<Class<?>> types, JSONObject map, String key, Function<Object,T> converter ) throws JSONException {
     List<T> results = Lists.newArrayList( );
     JSONArray array = getByType( JSONArray.class, map, key );
     if ( array != null ) {
       for ( Object o : array ) {
-        if ( o.getClass( ) == type ) {
-          results.add( ( T ) o );
+        if ( types.contains( o.getClass( ) ) ) {
+          results.add( converter.apply( o ) );
         } else {
-          throw new JSONException( "Expecting array element type " + type.getName( ) + " but got " + o.getClass( ).getName( ) );
+          throw new JSONException( "Expecting array element type " + types + " but got " + o.getClass( ).getName( ) );
         }
       }
     }
     return results;
   }
-  
+
   @SuppressWarnings( "unchecked" )
   public static <T> T getByType( Class<T> type, JSONObject map, String key ) throws JSONException {
+    return ( T ) getByType( Collections.singleton( type ), map, key );
+  }
+
+  public static Object getByType( Set<Class<?>> types, JSONObject map, String key ) throws JSONException {
     Object value = map.get( key );
     if ( value == null ) {
       return null;
     }
-    if ( value.getClass( ) != type ) {
-      throw new JSONException( "Expecting " + type.getName( ) + " but got " + value.getClass( ).getName( ) );
+    if ( !types.contains( value.getClass( ) ) ) {
+      throw new JSONException( "Expecting " + types + " but got " + value.getClass( ).getName( ) );
     }
-    return ( T ) value;
+    return value;
   }
 
   public static <T> T getRequiredByType( Class<T> type, JSONObject map, String key ) throws JSONException {
