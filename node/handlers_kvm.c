@@ -387,9 +387,7 @@ static void *rebooting_thread(void *arg)
     virDomainFree(dom);                // release libvirt resource
     unlock_hypervisor_conn();
 
-    instance->bootTime = time(NULL);    // otherwise nc_state.booting_cleanup_threshold will kick in
-    change_state(instance, BOOTING);    // not STAGING, since in that mode we don't poll hypervisor for info
-
+    LOGINFO("[%s] shutting down\n", instance->instanceId);
     // try shutdown first, then kill it if uncooperative
     if (shutdown_then_destroy_domain(instance->instanceId, TRUE) != EUCA_OK) {
         LOGERROR("[%s] failed to shutdown and destroy the instance to reboot, giving up\n", instance->instanceId);
@@ -465,10 +463,14 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     pthread_t tcb = { 0 };
     ncInstance *instance = NULL;
     rebooting_thread_params *params = NULL;
-
+    int old_state;
     sem_p(inst_sem);
     {
         instance = find_instance(&global_instances, instanceId);
+        old_state = instance->state;
+        instance->bootTime = time(NULL);    // otherwise nc_state.booting_cleanup_threshold will kick in
+        change_state(instance, BOOTING);    // not STAGING, since in that mode we don't poll hypervisor for info
+        LOGDEBUG("[%s] is set to BOOTING stage\n", instanceId);
     }
     sem_v(inst_sem);
 
@@ -483,6 +485,16 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     // since shutdown/restart may take a while, we do them in a thread
     if (pthread_create(&tcb, NULL, rebooting_thread, params)) {
         LOGERROR("[%s] failed to spawn a reboot thread\n", instanceId);
+        sem_p(inst_sem);
+        {
+            instance = find_instance(&global_instances, instanceId);
+            // if instance state is still BOOTING set it back to the old one
+            if (instance->state == BOOTING) {
+                instance->bootTime = 0;
+                change_state(instance, old_state);
+            }
+        }
+        sem_v(inst_sem);
         return (EUCA_FATAL_ERROR);
     }
     set_corrid_pthread(get_corrid() != NULL ? get_corrid()->correlation_id : NULL, tcb);
