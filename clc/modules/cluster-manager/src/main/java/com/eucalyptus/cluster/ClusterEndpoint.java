@@ -79,6 +79,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.Regions;
+import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.ClientComputeException;
@@ -322,7 +323,7 @@ public class ClusterEndpoint {
   
   private List<ClusterInfoType> getDescriptionEntry( Cluster c ) {
     final List<ClusterInfoType> ret = Lists.newArrayList( );
-    ret.add( new ClusterInfoType( c.getConfiguration( ).getPartition( ), ClusterFunctions.STATE.apply( c ) ) );
+    ret.add( new ClusterInfoType( c.getConfiguration( ).getPartition( ), ClusterFunctions.STATE.apply( c ), region( ) ) );
     NavigableSet<String> tagList = new ConcurrentSkipListSet<>( );
     if ( tagList.size( ) == 1 )
       tagList = c.getNodeTags( );
@@ -336,6 +337,10 @@ public class ClusterEndpoint {
   
   private static ClusterInfoType s( String left, String right ) {
     return new ClusterInfoType( String.format( INFO_FSTRING, left ), right );
+  }
+
+  private static String region( ) {
+    return RegionConfigurations.getRegionName( ).or( "" );
   }
   
   private static NonNullFunction<Cluster, List<ClusterInfoType>> describeSystemInfo = new NonNullFunction<Cluster, List<ClusterInfoType>>( ) {
@@ -410,7 +415,7 @@ public class ClusterEndpoint {
     public AvailabilityZoneFilterSupport() {
       super( builderFor( Cluster.class )
           .withUnsupportedProperty( "message" )
-          .withUnsupportedProperty( "region-name" )
+          .withStringProperty( "region-name", (r)->region( ) )
           .withStringProperty( "state", ClusterFunctions.STATE )
           .withStringProperty( "zone-name", CloudMetadatas.toDisplayName() ) );
     }
