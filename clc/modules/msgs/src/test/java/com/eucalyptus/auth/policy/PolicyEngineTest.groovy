@@ -24,6 +24,8 @@ import com.eucalyptus.auth.AuthException
 import com.eucalyptus.auth.api.PolicyEngine
 import com.eucalyptus.auth.policy.condition.ConditionOp
 import com.eucalyptus.auth.policy.condition.Conditions
+import com.eucalyptus.auth.policy.condition.NullConditionOp
+import com.eucalyptus.auth.policy.condition.NumericGreaterThan
 import com.eucalyptus.auth.policy.condition.StringEquals
 import com.eucalyptus.auth.policy.ern.Ern
 import com.eucalyptus.auth.policy.ern.EuareErnBuilder
@@ -72,10 +74,13 @@ class PolicyEngineTest {
       }
     } )
     Conditions.registerCondition( Conditions.STRINGEQUALS, StringEquals, true )
+    Conditions.registerCondition( Conditions.NUMERICGREATERTHAN, NumericGreaterThan, true )
+    Conditions.registerCondition( 'Null', NullConditionOp, false )
     Keys.registerKeyProvider( new RegisteredKeyProvider( ) )
     Keys.registerKey( 'test:nokey', TestNoKey )
     Keys.registerKey( 'test:key', TestKey )
     Keys.registerKey( 'test:keys', TestKeys )
+    Keys.registerKey( 'test:keysize', TestKeySize )
   }
 
   @Test
@@ -850,6 +855,222 @@ class PolicyEngineTest {
     """.stripIndent(), "iam:account", "iam:ListAccounts", "123456789012", "/admin" )
   }
 
+  @Test
+  void testNullConditionStringValue( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": "*",
+          "Resource": "*",
+          "Condition": {
+            "Null": {
+              "test:NoKey": "true"
+            }
+          }
+        } ]
+      }
+    """.stripIndent(), "iam:account", "iam:ListAccounts", "123456789012", "/admin" )
+  }
+
+  @Test( expected = AuthException.class )
+  void testNullConditionStringValueAuthDenied( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": "*",
+          "Resource": "*",
+          "Condition": {
+            "Null": {
+              "test:Key": "true"
+            }
+          }
+        } ]
+      }
+    """.stripIndent(), "iam:account", "iam:ListAccounts", "123456789012", "/admin" )
+  }
+
+  @Test
+  void testNullCondition( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": "*",
+          "Resource": "*",
+          "Condition": {
+            "Null": {
+              "test:NoKey": true
+            }
+          }
+        } ]
+      }
+    """.stripIndent(), "iam:account", "iam:ListAccounts", "123456789012", "/admin" )
+  }
+
+  @Test
+  void testNotNullCondition( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": "*",
+          "Resource": "*",
+          "Condition": {
+            "Null": {
+              "test:Key": false
+            }
+          }
+        } ]
+      }
+    """.stripIndent(), "iam:account", "iam:ListAccounts", "123456789012", "/admin" )
+  }
+
+  @Test
+  void testNumericGreaterThanCondition( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": "*",
+          "Resource": "*",
+          "Condition": {
+            "NumericGreaterThan": {
+              "test:KeySize": 0
+            }
+          }
+        } ]
+      }
+    """.stripIndent(), "iam:account", "iam:ListAccounts", "123456789012", "/admin" )
+  }
+
+  @Test
+  void testNumericGreaterThanConditionMultipleValues( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": "*",
+          "Resource": "*",
+          "Condition": {
+            "NumericGreaterThan": {
+              "test:KeySize": [ 0, 0, -1, -19231 ]
+            }
+          }
+        } ]
+      }
+    """.stripIndent(), "iam:account", "iam:ListAccounts", "123456789012", "/admin" )
+  }
+
+  @Test
+  void testNumericGreaterThanConditionMultipleValuesMixed( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": "*",
+          "Resource": "*",
+          "Condition": {
+            "NumericGreaterThan": {
+              "test:KeySize": [ 0, "0", -1, "-19231.9", 0.99 ]
+            }
+          }
+        } ]
+      }
+    """.stripIndent(), "iam:account", "iam:ListAccounts", "123456789012", "/admin" )
+  }
+
+  @Test
+  void testNumericGreaterThanConditionDecimal( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": "*",
+          "Resource": "*",
+          "Condition": {
+            "NumericGreaterThan": {
+              "test:KeySize": 0.1
+            }
+          }
+        } ]
+      }
+    """.stripIndent(), "iam:account", "iam:ListAccounts", "123456789012", "/admin" )
+  }
+
+  @Test( expected = AuthException.class )
+  void testNumericGreaterThanConditionAuthDenied( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": "*",
+          "Resource": "*",
+          "Condition": {
+            "NumericGreaterThan": {
+              "test:KeySize": 1
+            }
+          }
+        } ]
+      }
+    """.stripIndent(), "iam:account", "iam:ListAccounts", "123456789012", "/admin" )
+  }
+
+  @Test
+  void testNumericGreaterThanConditionStringValue( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": "*",
+          "Resource": "*",
+          "Condition": {
+            "NumericGreaterThan": {
+              "test:KeySize": "0"
+            }
+          }
+        } ]
+      }
+    """.stripIndent(), "iam:account", "iam:ListAccounts", "123456789012", "/admin" )
+  }
+
+  @Test( expected = AuthException.class )
+  void testNumericGreaterThanConditionNoValueAuthDenied( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": "*",
+          "Resource": "*",
+          "Condition": {
+            "NumericGreaterThan": {
+              "test:NoKey": "0"
+            }
+          }
+        } ]
+      }
+    """.stripIndent(), "iam:account", "iam:ListAccounts", "123456789012", "/admin" )
+  }
+
+  @Test
+  void testNumericGreaterThanIfExistsCondition( ) {
+    evaluateAuthorization( """\
+      {
+        "Statement":[ {
+          "Effect": "Allow",
+          "Action": "*",
+          "Resource": "*",
+          "Condition": {
+            "NumericGreaterThanIfExists": {
+              "test:NoKey": "0"
+            }
+          }
+        } ]
+      }
+    """.stripIndent(), "iam:account", "iam:ListAccounts", "123456789012", "/admin" )
+  }
+
   private void evaluateAuthorization( String policy,
                                       String resourceType,
                                       String requestAction,
@@ -931,4 +1152,12 @@ class PolicyEngineTest {
     @Override void validateConditionType( Class<? extends ConditionOp> conditionClass ) { }
     @Override boolean canApply( String action) { true }
   }
+
+  @PolicyKey('test:keysize')
+  static class TestKeySize implements Key {
+    @Override String value( ) { '1' }
+    @Override void validateConditionType( Class<? extends ConditionOp> conditionClass ) { }
+    @Override boolean canApply( String action) { true }
+  }
+
 }

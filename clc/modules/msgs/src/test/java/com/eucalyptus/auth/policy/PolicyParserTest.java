@@ -69,8 +69,17 @@ import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import com.eucalyptus.auth.PolicyParseException;
+import com.eucalyptus.auth.policy.condition.ConditionOp;
+import com.eucalyptus.auth.policy.condition.Conditions;
+import com.eucalyptus.auth.policy.condition.NullConditionOp;
+import com.eucalyptus.auth.policy.condition.NumericGreaterThan;
+import com.eucalyptus.auth.policy.condition.StringEquals;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.EuareErnBuilder;
+import com.eucalyptus.auth.policy.key.Key;
+import com.eucalyptus.auth.policy.key.Keys;
+import com.eucalyptus.auth.policy.key.PolicyKey;
+import com.eucalyptus.auth.policy.key.RegisteredKeyProvider;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Condition;
 import com.eucalyptus.auth.principal.Principal;
@@ -108,6 +117,11 @@ public class PolicyParserTest {
   @BeforeClass
   public static void beforeClass( ) {
     Ern.registerServiceErnBuilder( new EuareErnBuilder( ) );
+    Conditions.registerCondition( Conditions.STRINGEQUALS, StringEquals.class, true );
+    Conditions.registerCondition( Conditions.NUMERICGREATERTHAN, NumericGreaterThan.class, true );
+    Conditions.registerCondition( "Null", NullConditionOp.class, false );
+    Keys.registerKeyProvider( new RegisteredKeyProvider( ) );
+    Keys.registerKey( "test:key", TestKey.class );
   }
 
   @Test
@@ -495,4 +509,90 @@ public class PolicyParserTest {
     assertEquals( "Authorization policy variable count", 0, authorization.getPolicyVariables().size() );
   }
 
+  @Test(expected = PolicyParseException.class )
+  public void testParsePolicyWithNonStringAction() throws Exception {
+    String policyJson =
+        "{\n" +
+            "  \"Statement\": [{\n" +
+            "    \"Action\": 5,\n" +
+            "    \"Effect\": \"Allow\",\n" +
+            "    \"Resource\": \"*\"\n" +
+            "  }]\n" +
+            "}";
+    PolicyParser.getInstance().parse( policyJson );
+  }
+
+  @Test(expected = PolicyParseException.class )
+  public void testParsePolicyWithNonStringActionArray() throws Exception {
+    String policyJson =
+        "{\n" +
+            "  \"Statement\": [{\n" +
+            "    \"Action\": [\"Describe*\",5],\n" +
+            "    \"Effect\": \"Allow\",\n" +
+            "    \"Resource\": \"*\"\n" +
+            "  }]\n" +
+            "}";
+    PolicyParser.getInstance().parse( policyJson );
+  }
+
+  @Test
+  public void testParsePolicyWithBooleanCondition() throws Exception {
+    String policyJson =
+        "{\n"+
+            "        \"Statement\":[ {\n"+
+            "          \"Effect\": \"Allow\",\n"+
+            "          \"Action\": \"*\",\n"+
+            "          \"Resource\": \"*\",\n"+
+            "          \"Condition\": {\n"+
+            "            \"Null\": {\n"+
+            "              \"test:key\": true\n"+
+            "            }\n"+
+            "          }\n"+
+            "        } ]\n"+
+            "      }";
+    PolicyParser.getInstance().parse( policyJson );
+  }
+
+  @Test
+  public void testParsePolicyWithNumericCondition() throws Exception {
+    String policyJson =
+        "{\n"+
+            "        \"Statement\":[ {\n"+
+            "          \"Effect\": \"Allow\",\n"+
+            "          \"Action\": \"*\",\n"+
+            "          \"Resource\": \"*\",\n"+
+            "          \"Condition\": {\n"+
+            "            \"NumericGreaterThan\": {\n"+
+            "              \"test:key\": 0\n"+
+            "            }\n"+
+            "          }\n"+
+            "        } ]\n"+
+            "      }";
+    PolicyParser.getInstance().parse( policyJson );
+  }
+
+  @Test
+  public void testParsePolicyWithMixedTypeCondition() throws Exception {
+    String policyJson =
+        "{\n"+
+            "        \"Statement\":[ {\n"+
+            "          \"Effect\": \"Allow\",\n"+
+            "          \"Action\": \"*\",\n"+
+            "          \"Resource\": \"*\",\n"+
+            "          \"Condition\": {\n"+
+            "            \"NumericGreaterThan\": {\n"+
+            "              \"test:key\": [ 0, \"1\", true ]\n"+
+            "            }\n"+
+            "          }\n"+
+            "        } ]\n"+
+            "      }";
+    PolicyParser.getInstance().parse( policyJson );
+  }
+
+  @PolicyKey("test:key")
+  public static class TestKey implements Key {
+    @Override public String value( ) { return "value"; }
+    @Override public void validateConditionType( Class<? extends ConditionOp> conditionClass ) { }
+    @Override public boolean canApply( String action) { return true; }
+  }
 }

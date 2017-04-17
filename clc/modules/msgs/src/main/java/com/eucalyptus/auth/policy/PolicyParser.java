@@ -506,7 +506,8 @@ public class PolicyParser {
         for ( Object k : paramsObj.keySet( ) ) {
           String key = ( String ) k;
           Set<String> values = Sets.newHashSet( );
-          values.addAll( JsonUtils.parseStringOrStringList( paramsObj, key ) );
+          values.addAll( JsonUtils.parseStringOrStringList(
+              Sets.newHashSet( String.class, Boolean.class, Integer.class, Double.class ), paramsObj, key ) );
           key = normalizeString( key );
           checkConditionKeyAndValues( key, values, typeClass, isQuota );
           results.add( new PolicyCondition( type, key, values ) );
