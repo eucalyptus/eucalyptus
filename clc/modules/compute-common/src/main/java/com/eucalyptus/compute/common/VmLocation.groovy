@@ -80,7 +80,7 @@ public class DescribeRegionsResponseType extends CloudTopologyMessage {
 public class ClusterInfoType extends EucalyptusData {
   //** added 2008-02-01  **/
   public ClusterInfoType(){}
-  public ClusterInfoType(String zoneName, String zoneState){this.zoneName = zoneName; this.zoneState = zoneState; this.regionName="";}
+  public ClusterInfoType(String zoneName, String zoneState, String regionName=''){this.zoneName = zoneName; this.zoneState = zoneState; this.regionName=regionName;}
   String zoneName;
   String zoneState;
   String regionName;
