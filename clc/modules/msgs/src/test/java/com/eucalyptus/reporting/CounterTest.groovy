@@ -91,6 +91,24 @@ class CounterTest {
   }
 
   @Test
+  void testMultipleItemsAndAccountsS3( ) {
+    AtomicLong time = timeOnPeriodStart( 1000 );
+    Counter<List<String>,CountedS3> counter =
+        new Counter<>( SuppliedClock.of({time.get( )}), 1000, 10, { new CountedS3( it.get(0), it.get(1) ) }, {1}  )
+    counter.count( ['000000000000', 'foo'] )
+    counter.count( ['111111111111', 'foo'] )
+    time.addAndGet( 1000L )
+    counter.count( ['000000000000', 'foo'] )
+    counter.count( ['000000000000', 'bar'] )
+    counter.count( ['000000000000', 'bar'] )
+    counter.count( ['111111111111', 'baz'] )
+    println counter
+    assertEquals( '000000000000 account total', 4, counter.accountTotal( '000000000000')._2() )
+    assertEquals( '111111111111 account total', 2, counter.accountTotal( '111111111111' )._2() )
+    assertEquals( 'total', 6, counter.total( )._2() )
+  }
+
+  @Test
   void testEmptySnapshot( ) {
     AtomicLong time = timeOnPeriodStart(1000);
     Counter<List<String>, Counted> counter =

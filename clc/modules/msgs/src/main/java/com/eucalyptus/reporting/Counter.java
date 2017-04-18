@@ -379,8 +379,8 @@ public class Counter<T,C extends Counter.Counted> {
   }
 
   public static class Counted {
-    private final String account;
-    private final String item;
+    protected final String account;
+    protected final String item;
 
     public Counted( final String account, final String item ) {
       this.account = account;
@@ -417,4 +417,51 @@ public class Counter<T,C extends Counter.Counted> {
           .toString( );
     }
   }
+
+  public static class CountedS3 extends Counted {
+    // For S3, the "item" is the S3 API operation, e.g. "GetObject"
+    protected final String bucketName;
+    protected final Long bytesTransferred;
+
+    public CountedS3( final String account, final String item, 
+        final String bucketName, final Long bytesTransferred) {
+      super(account, item);
+      this.bucketName = bucketName;
+      this.bytesTransferred = bytesTransferred;
+    }
+
+    public String getBucketName() {
+      return bucketName;
+    }
+
+    public Long getBytesTransferred() {
+      return bytesTransferred;
+    }
+
+    @Override
+    public boolean equals( final Object o ) {
+      if ( this == o ) return true;
+      if ( o == null || getClass( ) != o.getClass( ) ) return false;
+      final CountedS3 countedS3 = (CountedS3) o;
+      return ( ((Counted) this).equals((Counted) countedS3) ) &&
+          Objects.equals( bucketName, countedS3.bucketName ) &&
+          Objects.equals( bytesTransferred, countedS3.bytesTransferred );
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash( account, item, bucketName, bytesTransferred );
+    }
+
+    @Override
+    public String toString() {
+      return MoreObjects.toStringHelper( this )
+          .add( "Account", account )
+          .add( "S3 Operation", item )
+          .add( "Bucket Name", bucketName )
+          .add( "Bytes Transferred", bytesTransferred )
+          .toString( );
+    }
+  }
+
 }

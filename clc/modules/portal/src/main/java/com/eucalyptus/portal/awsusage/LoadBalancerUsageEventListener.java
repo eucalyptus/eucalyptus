@@ -40,6 +40,6 @@ public class LoadBalancerUsageEventListener extends SensorQueueEventListener<Loa
       return;
     }
 
-    transformAndQueue( LOG, event, QueuedEvents.fromLoadBalancerEvent );
+    transformAndQueue( LOG, event, QueuedEvents.FromLoadBalancerEvent );
   }
 }

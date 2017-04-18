@@ -341,7 +341,7 @@ public class QueuedEvents {
     }
   };
 
-  public static Function<LoadBalancerEvent, QueuedEvent> fromLoadBalancerEvent = (event) -> {
+  public static Function<LoadBalancerEvent, QueuedEvent> FromLoadBalancerEvent = (event) -> {
     final QueuedEvent q = new QueuedEvent();
     q.setEventType("LoadBalancerUsage");
     q.setResourceId(event.getLoadbalancerName());
