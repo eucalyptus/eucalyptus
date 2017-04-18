@@ -17,9 +17,11 @@ package com.eucalyptus.cassandra.config;
 
 import static com.eucalyptus.bootstrap.Bootstrap.Stage.DatabaseInit;
 import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.cassandra.common.Cassandra;
+import com.eucalyptus.util.EucalyptusCloudException;
 
 /**
  *
@@ -50,13 +52,16 @@ public class CassandraBootstrapper extends Bootstrapper {
   @Override
   public boolean load( ) throws Exception {
     CassandraSysUtil.createDirectories( );
-    CassandraSysUtil.writeConfiguration( );
     return true;
   }
 
   @Override
   public boolean start( ) throws Exception {
-    if ( !check( ) ) return false;
+    if ( !check( ) ) {
+      throw new EucalyptusCloudException( "Cannot start cassandra (waiting for seed?)" );
+    }
+    CassandraSysUtil.createDirectories( );
+    CassandraSysUtil.writeConfiguration( );
     CassandraSysUtil.startCassandra( );
     CassandraSysUtil.createKeyspaces( );
     return true;

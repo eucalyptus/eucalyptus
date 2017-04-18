@@ -38,6 +38,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
+import javaslang.Function3;
 import javaslang.Tuple2;
 
 /**
@@ -46,42 +47,43 @@ import javaslang.Tuple2;
 public class CassandraKeyspaces {
   private static final ConcurrentMap<String,KeyspaceSpec> keyspaceMap = Maps.newConcurrentMap( );
   private static final String KEYSPACE_CQL =
-      "CREATE KEYSPACE IF NOT EXISTS %s WITH replication = {'class': 'SimpleStrategy', 'replication_factor': %d};";
+      "CREATE KEYSPACE IF NOT EXISTS %1$s WITH REPLICATION = {'class': 'NetworkTopologyStrategy', '%2$s': %3$d};";
   private static final String KEYSPACE_RESOURCE_TEMPLATE = "classpath*:*-*-*-%s-*.cql";
 
   /**
    * Process all keyspaces, returning any failures.
    */
-  public static List<Tuple2<String,Optional<Throwable>>> all( ) {
+  public static List<Tuple2<String,Optional<Throwable>>> all( final String dc, final int dcNodes ) {
     return keyspaceMap.values( ).stream( )
         .map( KeyspaceSpec::name )
         .sorted( String.CASE_INSENSITIVE_ORDER )
-        .map( FUtils.tuple(
-            FUtils.eitherThrowable( FUtils.function( CassandraKeyspaces::keyspace ) ).andThen( Either.leftOption( ) )
-        ) )
+        .map( FUtils.tuple( FUtils.eitherThrowable(
+            Function3.of( CassandraKeyspaces::keyspace ).reversed( ).apply( dcNodes, dc )
+        ).andThen( Either.leftOption( ) ) ) )
         .collect( Collectors.toList( ) );
   }
 
   /**
    * Process the specified keyspace
    */
-  public static void keyspace( final String name ) {
+  public static boolean keyspace( final String name, final String dc, final int dcNodes ) {
     final KeyspaceSpec keyspaceSpec = keyspaceMap.get( name );
     if ( keyspaceSpec == null ) {
       throw new IllegalArgumentException( "Unknown keyspace: " + name );
     }
-    CassandraPersistence.doWithSession(
+    return CassandraPersistence.doWithSession(
         CassandraPersistence.SessionUsage.Admin,
         name,
         session -> {
           session.execute( String.format(
               KEYSPACE_CQL,
               keyspaceSpec.name( ),
-              keyspaceSpec.replicas( ).replicas( 1  ) ) );
+              dc,
+              keyspaceSpec.replicas( ).replicas( dcNodes  ) ) );
           scripts( name )
               .flatMap( ThrowingFunction.undeclared( CqlUtil::splitCql ).andThen( Collection::stream ) )
               .forEach( session::execute );
-          return null;
+          return true;
         } );
   }
 

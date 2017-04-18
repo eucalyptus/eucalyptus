@@ -15,32 +15,45 @@
  ************************************************************************/
 package com.eucalyptus.cassandra.common;
 
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
-import com.eucalyptus.component.id.Eucalyptus;
+import com.google.common.collect.Sets;
 
 /**
  * Component identifier class for Cassandra
  */
-@Partition( Eucalyptus.class )
+@Partition( value = Cassandra.class, manyToOne = true )
 @FaultLogPrefix( "cloud" )
+@Description( "Eucalyptus Cassandra service" )
 public class Cassandra extends ComponentId {
   private static final long serialVersionUID = 1L;
 
   @Override
-  public boolean isDistributedService( ) {
-    return true;
-  }
-
-  @Override
-  public boolean isRegisterable( ) {
-    return false;
-  }
-
-  @Override
   public Integer getPort( ) {
     return 8787;
+  }
+
+  public static Set<ServiceConfiguration> sortedServiceConfigurations( ) {
+    final Set<ServiceConfiguration> sortedConfigurations = Sets.newLinkedHashSet( );
+    final List<ServiceConfiguration> services = ServiceConfigurations.list( Cassandra.class );
+    for ( final ServiceConfiguration configuration : services ) {
+      if ( Hosts.isCoordinator( configuration.getInetAddress( ) ) ) {
+        sortedConfigurations.add( configuration );
+      }
+    }
+    sortedConfigurations.addAll( services.stream( )
+        .sorted( )
+        .collect( Collectors.toList( ) ) );
+    return sortedConfigurations;
   }
 }
 
