@@ -1991,7 +1991,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
       TaggingConfiguration taggingConfiguration = request.getTaggingConfiguration();
       List<BucketTag> bucketTagList = taggingConfiguration.getBucketTagSet().getBucketTags();
 
-      if (bucketTagList.isEmpty() || bucketTagList.size() > 10) {
+      int maxTags = ConfigurationCache.getConfiguration( ObjectStorageGlobalConfiguration.class ).getMax_tags( );
+      if (bucketTagList.isEmpty() || bucketTagList.size() > maxTags ) {
         throw new MalformedXMLException(bucket.getBucketName());
       }
 

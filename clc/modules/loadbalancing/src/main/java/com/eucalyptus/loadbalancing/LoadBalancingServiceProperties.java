@@ -22,6 +22,7 @@ package com.eucalyptus.loadbalancing;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
+import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.simpleworkflow.common.client.Config;
 import com.eucalyptus.util.Exceptions;
 /**
@@ -44,7 +45,6 @@ public class LoadBalancingServiceProperties {
       type = ConfigurableFieldType.KEYVALUE
       )
   public static String VM_PER_ZONE = "1";
-  // com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.vm_per_zone
 
   @ConfigurableField(
       initial = "LoadbalancingDomain",
@@ -70,6 +70,12 @@ public class LoadBalancingServiceProperties {
       changeListener = Config.WorkflowWorkerConfigurationValidatingChangeListener.class )
   public static volatile String SWF_WORKFLOW_WORKER_CONFIG = DEFAULT_SWF_WORKFLOW_WORKER_CONFIG;
 
+  @ConfigurableField(
+      initial = "50",
+      description = "Maximum number of user defined tags for a load balancer.",
+      changeListener = PropertyChangeListeners.IsNonNegativeInteger.class  )
+  public static volatile int MAX_TAGS = 50;
+
   public static int getCapacityPerZone( ) {
     int numVm = 1;
     try{
@@ -78,5 +84,9 @@ public class LoadBalancingServiceProperties {
       throw Exceptions.toUndeclared("unable to parse loadbalancer_num_vm");
     }
     return numVm;
+  }
+
+  public static int getMaxTags( ) {
+    return MAX_TAGS;
   }
 }
