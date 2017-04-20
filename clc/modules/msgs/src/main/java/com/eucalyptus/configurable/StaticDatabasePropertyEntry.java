@@ -286,6 +286,23 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       }
     }
 
+    private static void createOrOverwriteProperties(
+        final Logger logger,
+        final Iterable<Tuple3<String,String,String>> properties
+    ) {
+      try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
+        for ( final Tuple3<String,String,String> property : properties ) {
+          final String fieldName = property._1( );
+          final String propName = property._2( );
+          final String value = property._3( );
+          logger.info( "Setting value for "+propName+" property to " + value );
+          update( fieldName, propName, value );
+        }
+        db.commit( );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
 
   }
 
@@ -911,6 +928,15 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
 
       UpgradeUtils.updatePropertyValues( LOG, ImmutableList.of(
           Tuple.of( "bootstrap.webservices.cluster_connect_timeout_millis", "2000", "3000" )
+      ) );
+
+      UpgradeUtils.createOrOverwriteProperties( LOG, ImmutableList.of(
+          Tuple.of( "com.eucalyptus.autoscaling.config.AutoScalingConfiguration.maxtags",
+                    "autoscaling.maxtags",
+                    "10" ),
+          Tuple.of( "com.eucalyptus.loadbalancing.LoadBalancingServiceProperties.max_tags",
+                    "services.loadbalancing.max_tags",
+                    "10" )
       ) );
 
       return true;

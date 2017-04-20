@@ -155,8 +155,6 @@ public class AutoScalingBackendService {
   private static final Set<String> reservedPrefixes =
       ImmutableSet.<String>builder().add("aws:").add("euca:").build();
 
-  public static long MAX_TAGS_PER_RESOURCE = 10;
-
   private final LaunchConfigurations launchConfigurations;
   private final AutoScalingGroups autoScalingGroups;
   private final AutoScalingInstances autoScalingInstances;
@@ -330,7 +328,7 @@ public class AutoScalingBackendService {
         }
       }
 
-      if ( request.getTags().getMember().size() > MAX_TAGS_PER_RESOURCE ) {
+      if ( request.getTags().getMember().size() > AutoScalingConfiguration.getMaxTags( ) ) {
         throw Exceptions.toUndeclared( new LimitExceededException("Tag limit exceeded") );
       }
     }
@@ -709,7 +707,7 @@ public class AutoScalingBackendService {
               tagSupport.createOrUpdate( resource, ownerFullName, key, value, propagateAtLaunch );
 
               final Tag example = tagSupport.example( resource, accountFullName, null, null );
-              if ( Entities.count( example ) > MAX_TAGS_PER_RESOURCE ) {
+              if ( Entities.count( example ) > AutoScalingConfiguration.getMaxTags( ) ) {
                 throw Exceptions.toUndeclared( new LimitExceededException("Tag limit exceeded for resource '"+resource.getDisplayName()+"'") );
               }
             }

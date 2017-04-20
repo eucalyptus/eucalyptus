@@ -44,9 +44,3 @@ class RegisterService(BootstrapRequest):
                 help='''availability zone to register the new service instance
                 in.  This is required only for services of certain types.''')]
 
-    def preprocess(self):
-        if not self.params['Port']:
-            if self.args.get('Type').lower() == 'cluster':
-                self.params['Port'] = 8774
-            else:
-                self.params['Port'] = 8773

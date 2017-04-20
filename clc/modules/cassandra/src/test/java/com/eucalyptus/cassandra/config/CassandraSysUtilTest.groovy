@@ -28,8 +28,9 @@ class CassandraSysUtilTest {
   void testTemplate( ) {
     String name = 'test-name'
     String bindAddr = '1.2.3.4'
+    Set<String> seeds = [ '1.2.3.4', '1.2.3.5' ]
     String dir = '/var/lib/eucalyptus/cassandra'
-    String generated = CassandraSysUtil.generateCassandraYaml( name, bindAddr, dir )
+    String generated = CassandraSysUtil.generateCassandraYaml( name, bindAddr, seeds, dir, true )
     println generated
     Assert.assertThat( 'All placeholders replaced', generated, Matchers.not( Matchers.containsString('$') ) )
   }

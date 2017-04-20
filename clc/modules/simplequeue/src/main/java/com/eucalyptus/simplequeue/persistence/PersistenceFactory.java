@@ -17,7 +17,9 @@ package com.eucalyptus.simplequeue.persistence;
 
 import java.util.Map;
 import java.util.function.Function;
+import com.eucalyptus.cassandra.common.Cassandra;
 import com.eucalyptus.cassandra.common.CassandraPersistence;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.simplequeue.Constants;
 import com.eucalyptus.simplequeue.common.policy.SimpleQueueResourceName;
 import com.eucalyptus.simplequeue.config.SimpleQueueProperties;
@@ -66,7 +68,7 @@ public class PersistenceFactory {
 
   private static String resolveAuto( final String dbToUse ) {
     if ( "auto".equals( dbToUse ) ) {
-      return CassandraPersistence.isAvailable( ) ?
+      return Topology.isEnabled( Cassandra.class ) ?
           "euca-cassandra" :
           defaultPersistence;
     }

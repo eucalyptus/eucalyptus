@@ -26,7 +26,6 @@ import static com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCore
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -44,7 +43,6 @@ import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.loadbalancing.*;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerVersionException;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
-import com.eucalyptus.loadbalancing.workflow.InstanceStatusWorkflowImpl;
 import com.eucalyptus.loadbalancing.workflow.LoadBalancingWorkflowException;
 import com.eucalyptus.system.Threads;
 import org.apache.log4j.Logger;
@@ -218,7 +216,6 @@ public class LoadBalancingService {
   private static final int MIN_HEALTHCHECK_INTERVAL_SEC = 5;
   public static final int MAX_HEALTHCHECK_INTERVAL_SEC = 120;
   private static final int MIN_HEALTHCHECK_THRESHOLDS = 2;
-  private static final int MAX_TAGS = 10;
 
   private static final Set<String> reservedPrefixes =
       ImmutableSet.<String>builder().add("aws:").add("euca:").build();
@@ -249,7 +246,7 @@ public class LoadBalancingService {
       if ( tags.size( ) - userTags > 0 && !Contexts.lookup( ).isPrivileged( ) ) {
         throw new InvalidConfigurationRequestException("Invalid tag key (reserved prefix)");
       }
-      if ( userTags > MAX_TAGS ) {
+      if ( userTags > LoadBalancingServiceProperties.getMaxTags( ) ) {
         throw Exceptions.toUndeclared( new LoadBalancingClientException( "TooManyTags", "Tag limit exceeded" ) );
       }
     }
@@ -1345,7 +1342,8 @@ public class LoadBalancingService {
             .collect(Collectors.toList());
 
     if(zones != null && zones.size()>0) {
-      if (inServiceZoneNames.size() <= 1) {
+      inServiceZoneNames.removeAll(zones);
+      if (inServiceZoneNames.size() <= 0) {
         throw new InvalidConfigurationRequestException("There must be at least one availability zone");
       }
 
@@ -2158,7 +2156,8 @@ public class LoadBalancingService {
             .filter( az -> inServiceZones.contains(az) )
             .collect(Collectors.toList());
     if (!zones.isEmpty( )) {
-      if (inServiceZones.size() <= 1) {
+      inServiceZones.removeAll(zones);
+      if (inServiceZones.size() <= 0) {
         throw new InvalidConfigurationRequestException("Loadbalancer must be attached to at least one subnet");
       }
       try{
@@ -2232,7 +2231,8 @@ public class LoadBalancingService {
           if ( RestrictedTypes.filterPrivileged( ).apply( loadBalancer ) ) {
             final Map<String,String> lbTags = loadBalancer.getTags( );
             lbTags.putAll( tags );
-            if ( Iterables.size( Iterables.filter( lbTags.keySet( ), Predicates.not( isReservedTagPrefix( ) ) ) ) > MAX_TAGS ) {
+            if ( Iterables.size( Iterables.filter( lbTags.keySet( ), Predicates.not( isReservedTagPrefix( ) ) ) ) >
+                LoadBalancingServiceProperties.getMaxTags( ) ) {
               throw Exceptions.toUndeclared( new LoadBalancingClientException( "TooManyTags", "Tag limit exceeded" ) );
             }
             return null;

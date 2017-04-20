@@ -162,7 +162,11 @@ class Cidr implements Predicate<InetAddress> {
   }
 
   static NonNullFunction<String, Optional<Cidr>> parse( ) {
-    CidrParse.INSTANCE
+    CidrParse.STRICT
+  }
+
+  static NonNullFunction<String, Optional<Cidr>> parseLax( ) {
+    CidrParse.LAX
   }
 
   static NonNullFunction<Cidr, Integer> prefix( ) {
@@ -213,12 +217,19 @@ class Cidr implements Predicate<InetAddress> {
   }
 
   private static enum CidrParse implements NonNullFunction<String,Optional<Cidr>> {
-    INSTANCE;
+    STRICT(false),
+    LAX(true);
+
+    private boolean lax;
+
+    CidrParse( final boolean lax ) {
+      this.lax = lax
+    }
 
     @Override
     Optional<Cidr> apply( @Nullable final String cidr ) {
       try {
-        Optional.of( parse( cidr ) )
+        Optional.of( parse( cidr, this.lax ) )
       } catch ( IllegalArgumentException ) {
         Optional.absent( )
       }

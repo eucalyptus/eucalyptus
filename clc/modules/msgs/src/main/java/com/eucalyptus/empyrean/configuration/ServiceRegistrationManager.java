@@ -70,6 +70,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
 import com.eucalyptus.component.Topology;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Throwables;
 import org.apache.log4j.Logger;
 
@@ -138,7 +139,7 @@ public class ServiceRegistrationManager {
       final String partition = request.getPartition( );
       final String name = request.getName( );
       final String hostName = request.getHost( );
-      final Integer port = request.getPort( );
+      Integer port = null;
       try {
         /**
          * Check all the parameters.
@@ -147,7 +148,7 @@ public class ServiceRegistrationManager {
         ServiceBuilders.lookup( componentId );//NOTE: this is an existence test which can fail w/ an exception.
         checkParam( "Name must not be null: " + request, name, notNullValue( ) );
         checkParam( "Hostname must not be null: " + request, hostName, notNullValue( ) );
-        checkParam( "Port must not be null: " + request, port, notNullValue( ) );
+        port = MoreObjects.firstNonNull( request.getPort( ), componentId.getPort( ) );
         /**
          * Do the thing.
          */
@@ -169,8 +170,9 @@ public class ServiceRegistrationManager {
                                         + name
                                         + " at host: "
                                         + hostName
-                                        + ":"
-                                        + port
+                                        + ( port == null ? "" :
+                                          ":"
+                                          + port )
                                         + " because of : "
                                         + ex.getMessage( ) );
       }

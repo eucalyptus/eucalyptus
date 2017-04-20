@@ -82,6 +82,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import javax.annotation.Nonnull;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -1042,7 +1043,8 @@ public class Topology {
       return res;
     }
   }
-  
+
+  @Nonnull
   public static <T extends ServiceConfiguration> Iterable<T> lookupMany( final Class<? extends ComponentId> compClass, final Partition... maybePartition ) {
 	    final ComponentId compId = ComponentIds.lookup( compClass );
 	    final Partition partition =
@@ -1067,7 +1069,17 @@ public class Topology {
 	    	return res;
 	    }    
   }
-  
+
+  public static <T extends ServiceConfiguration> Iterable<T> lookupAtLeastOne(
+      final Class<? extends ComponentId> compClass
+  ) {
+    final Iterable<T> res = lookupMany( compClass );
+    if ( Iterables.isEmpty( res ) ) {
+      throw new NoSuchElementException( "Failed to lookup ENABLED service of type " + compClass.getSimpleName( ) );
+    }
+    return res;
+  }
+
   public static Collection<ServiceConfiguration> enabledServices( final Class<? extends ComponentId> compId ) {
     return Collections2.filter( enabledServices( ), componentFilter( compId ) );
   }

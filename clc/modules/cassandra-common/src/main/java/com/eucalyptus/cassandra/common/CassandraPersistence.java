@@ -15,8 +15,8 @@
  ************************************************************************/
 package com.eucalyptus.cassandra.common;
 
-import java.io.File;
 import java.util.Collections;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadFactory;
@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.data.cassandra.repository.support.CassandraRepositoryFactory;
 import org.springframework.retry.backoff.ExponentialRandomBackOffPolicy;
 import org.springframework.retry.policy.ExceptionClassifierRetryPolicy;
@@ -45,6 +46,7 @@ import com.eucalyptus.util.LockResource;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.Parameters;
 import com.eucalyptus.util.ThrowingFunction;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -62,7 +64,6 @@ public class CassandraPersistence {
       buildRetryTemplate( NoSuchElementException.class, 15_000L, TimeUnit.MINUTES.toMillis( 5 ) );
   private static final RetryTemplate startupRetryTemplate =
       buildRetryTemplate( NoHostAvailableException.class, 15_000L, TimeUnit.MINUTES.toMillis( 1 ) );
-  private static final boolean cassandraInstalled = new File( "/usr/sbin/cassandra" ).exists( ); //TODO:STEVE: remove
 
   /**
    * Perform work using a datastax session in a callback.
@@ -226,18 +227,6 @@ public class CassandraPersistence {
     return callbackFunction.apply( getRepository( repositoryType ) );
   }
 
-  /**
-   * Temporary helper used to check if cassandra is available.
-   *
-   * TODO:STEVE: remove
-   *
-   * @deprecated
-   */
-  @Deprecated
-  public static boolean isAvailable( ) {
-    return cassandraInstalled;
-  }
-
   private static String keyspace( final Class<?> repositoryType  ) {
     final Ats repositoryAts = Ats.from( repositoryType );
     return
@@ -264,11 +253,11 @@ public class CassandraPersistence {
     Parameters.checkParamNotNull( "usage", usage );
     Session session = sessionMap.get( Parameters.checkParamNotNullOrEmpty( "keyspace", keyspace ) );
     if ( session == null ) {
-      final ServiceConfiguration configuration = usage.getCassandraServiceConfiguration( );
+      final List<ServiceConfiguration> configurations = usage.getCassandraServiceConfigurations( );
       try ( final LockResource lockResource = LockResource.lock( sessionLock ) ) {
         session = sessionMap.get( keyspace );
         if ( session == null ) {
-          session = usage.buildSession( configuration, keyspace );
+          session = usage.buildSession( configurations, keyspace );
           sessionMap.put( keyspace, session );
         }
       }
@@ -276,9 +265,9 @@ public class CassandraPersistence {
     return session;
   }
 
-  private static Session buildSession( final ServiceConfiguration configuration, final String keyspace ) {
+  private static Session buildSession( final List<ServiceConfiguration> configurations, final String keyspace ) {
     final Cluster cluster = Cluster.builder( )
-        .addContactPoints( configuration.getInetAddress( ) )
+        .addContactPointsWithPorts( configurations.stream( ).map( ServiceConfiguration::getSocketAddress ).collect( Collectors.toList( ) ) )
         //.withLoadBalancingPolicy(  ) //TODO topology aware policy?
         .withNettyOptions( new NettyOptions( ) {
           @Override
@@ -286,7 +275,6 @@ public class CassandraPersistence {
             return new NioEventLoopGroup( 0, threadFactory );
           }
         } )
-        .withPort( configuration.getPort( ) )
         .withReconnectionPolicy( new ExponentialReconnectionPolicy( 1_000L, 60_000L ) )
         .withRetryPolicy( DefaultRetryPolicy.INSTANCE )
         //.withSSL( new NettySSLOptions( ) ) //TODO use ssl
@@ -332,14 +320,18 @@ public class CassandraPersistence {
      */
     Admin {
       @Override
-      ServiceConfiguration getCassandraServiceConfiguration( ) {
-        return Components.lookup( Cassandra.class ).getLocalServiceConfiguration( );
+      List<ServiceConfiguration> getCassandraServiceConfigurations( ) {
+        try {
+          return Lists.newArrayList( Topology.lookupAtLeastOne( Cassandra.class ) );
+        } catch ( final NoSuchElementException e ) {
+          return Collections.singletonList( Components.lookup( Cassandra.class ).getLocalServiceConfiguration( ) );
+        }
       }
 
       @Override
-      Session buildSession( final ServiceConfiguration configuration, final String keyspace ) {
+      Session buildSession( final List<ServiceConfiguration> configurations, final String keyspace ) {
         return startupRetryTemplate.execute( retryContext ->
-            CassandraPersistence.buildSession( configuration, null ) ); // keyspace may not be created at this point
+            CassandraPersistence.buildSession( configurations, null ) ); // keyspace may not be created at this point
       }
 
       @Override
@@ -352,15 +344,15 @@ public class CassandraPersistence {
      */
     Service {
       @Override
-      ServiceConfiguration getCassandraServiceConfiguration( ) {
-        return template.execute( retryContext -> Topology.lookup( Cassandra.class ) );
+      List<ServiceConfiguration> getCassandraServiceConfigurations( ) {
+        return template.execute( retryContext -> Lists.newArrayList( Topology.lookupAtLeastOne( Cassandra.class ) ) );
       }
     },
     ;
 
-    abstract ServiceConfiguration getCassandraServiceConfiguration( );
-    Session buildSession( final ServiceConfiguration configuration, final String keyspace ) {
-      return CassandraPersistence.buildSession( configuration, keyspace );
+    abstract List<ServiceConfiguration> getCassandraServiceConfigurations( );
+    Session buildSession( final List<ServiceConfiguration> configurations, final String keyspace ) {
+      return CassandraPersistence.buildSession( configurations, keyspace );
     }
     void releaseSession( final Session session, final String keyspace ) { }
   }

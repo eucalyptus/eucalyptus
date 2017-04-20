@@ -18,8 +18,11 @@ package com.eucalyptus.cassandra.config;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.EnumSet;
+import java.util.Set;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.SystemIds;
+import com.eucalyptus.cassandra.CassandraCluster;
+import com.eucalyptus.cassandra.CassandraDirectory;
 import com.eucalyptus.cassandra.CassandraKeyspaces;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -40,16 +43,19 @@ class CassandraSysUtil {
   private static final String PATH_ROOTWRAP = "/usr/lib/eucalyptus/euca_rootwrap";
   private static final String PATH_EUCACASS = "/usr/libexec/eucalyptus/euca-cassandra-ctl";
   private static final String YAML_RESOURCE_NAME = "cassandra.yaml";
+  private static final String RACKDC_RESOURCE_NAME = "cassandra-rackdc.properties";
 
   static boolean checkCassandra( ) {
     if ( !new File( PATH_CASSANDRA ).isFile( ) ||
         !new File( PATH_EUCACASS ).isFile( ) ) {
       return false;
     }
+    boolean running = false;
     final int code = SystemUtil.runAndGetCode( new String[]{ PATH_ROOTWRAP, PATH_EUCACASS, "status" } );
     switch ( code ) {
       case 0:
         logger.trace( "Cassandra running" );
+        running = true;
         break;
       case 1:
       case 2:
@@ -62,6 +68,9 @@ class CassandraSysUtil {
       default:
         logger.warn( "Cassandra status unknown, code: " + code );
         return false;
+    }
+    if ( !running ) {
+      return CassandraCluster.canStart( );
     }
     return true;
   }
@@ -81,7 +90,7 @@ class CassandraSysUtil {
   }
 
   static void createKeyspaces( ) {
-    CassandraKeyspaces.all( ).forEach( t -> {
+    CassandraKeyspaces.all( CassandraCluster.datacenter( ), 1 ).forEach( t -> {
       final String keyspace = t._1( );
       final Optional<Throwable> throwableOptional = t._2( );
       if ( throwableOptional.isPresent( ) ) {
@@ -93,10 +102,7 @@ class CassandraSysUtil {
   }
 
   static void createDirectories( ) {
-    BaseDirectory.VAR.getChildFile( "cassandra", "data" ).mkdirs( );
-    BaseDirectory.VAR.getChildFile( "cassandra", "commitlog" ).mkdirs( );
-    BaseDirectory.VAR.getChildFile( "cassandra", "saved_caches" ).mkdirs( );
-    BaseDirectory.VAR.getChildFile( "cassandra", "conf", "triggers" ).mkdirs( );
+    EnumSet.allOf( CassandraDirectory.class ).forEach( CassandraDirectory::mkdirs );
   }
 
   private static void cleanup( ) {
@@ -111,30 +117,57 @@ class CassandraSysUtil {
         generateCassandraYaml( ),
         BaseDirectory.VAR.getChildFile( "cassandra", "conf", "cassandra.yaml" ),
         StandardCharsets.UTF_8 );
+    Files.write(
+        generateCassandraRackDcProperties( ),
+        BaseDirectory.VAR.getChildFile( "cassandra", "conf", "cassandra-rackdc.properties" ),
+        StandardCharsets.UTF_8 );
   }
 
   private static String generateCassandraYaml( ) throws IOException {
-    final String name = SystemIds.createShortCloudUniqueName( "cassandra" );
+    final String name = CassandraCluster.name( );
     final String bindAddr = Internets.localHostInetAddress( ).getHostAddress( );
+    final Set<String> seeds = CassandraCluster.seeds( );
     final String dir = BaseDirectory.VAR.toString( );
-    return generateCassandraYaml( name, bindAddr, dir );
+    final boolean autoBootstrap = CassandraCluster.autoBootstrap( );
+    return generateCassandraYaml( name, bindAddr, seeds, dir, autoBootstrap );
+  }
+
+  private static String generateCassandraRackDcProperties( ) throws IOException {
+    return generateCassandraRackDcProperties(
+        CassandraCluster.datacenter( ),
+        CassandraCluster.rack( ) );
   }
 
   static String generateCassandraYaml(
       final String name,
       final String bindAddr,
-      final String dir
+      final Set<String> seeds,
+      final String dir,
+      final boolean autoBootstrap
   ) throws IOException {
     final String cassandraYamlTemplate =
         Resources.toString( Resources.getResource( YAML_RESOURCE_NAME ), StandardCharsets.UTF_8 );
     return Templates.prepare( YAML_RESOURCE_NAME )
         .withProperty( "cluster_name", name )
-        .withProperty( "seeds", bindAddr )
+        .withProperty( "seeds", seeds )
         .withProperty( "bind_addr", bindAddr )
         .withProperty( "port_native", 8787 )
         .withProperty( "port_storage", 8782 )
         .withProperty( "port_storage_ssl", 8783 )
         .withProperty( "dir_lib", dir )
+        .withProperty( "auto_bootstrap", autoBootstrap )
         .evaluate( cassandraYamlTemplate );
+  }
+
+  static String generateCassandraRackDcProperties(
+      final String dc,
+      final String rack
+  ) throws IOException {
+    final String cassandraRackDcTemplate =
+        Resources.toString( Resources.getResource( RACKDC_RESOURCE_NAME ), StandardCharsets.UTF_8 );
+    return Templates.prepare( RACKDC_RESOURCE_NAME )
+        .withProperty( "dc", dc )
+        .withProperty( "rack", rack )
+        .evaluate( cassandraRackDcTemplate );
   }
 }

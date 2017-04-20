@@ -559,10 +559,11 @@ public class VpcManager {
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName();
     final String networkAclId = Identifier.acl.normalize( request.getNetworkAclId() );
     final String cidr = request.getCidrBlock( );
-    final Optional<Cidr> cidrOptional = Cidr.parse( ).apply( cidr );
+    final Optional<Cidr> cidrOptional = Cidr.parseLax( ).apply( cidr );
     if ( !cidrOptional.isPresent( ) ) {
       throw new ClientComputeException( "InvalidParameterValue", "Cidr invalid: " + cidr );
     }
+    final String aclCidr = cidrOptional.get( ).toString( );
     final Optional<Integer> protocolOptional = protocolNumber( request.getProtocol( ) );
     if ( !protocolOptional.isPresent( ) ) {
       throw new ClientComputeException( "InvalidParameterValue", "Protocol invalid: " + request.getProtocol( ) );
@@ -608,7 +609,7 @@ public class VpcManager {
                             request.getRuleNumber(),
                             FUtils.valueOfFunction( NetworkAclEntry.RuleAction.class ).apply( request.getRuleAction() ),
                             request.getEgress(),
-                            cidr,
+                            aclCidr,
                             request.getIcmpTypeCode().getCode(),
                             request.getIcmpTypeCode().getType() );
                         break;
@@ -620,7 +621,7 @@ public class VpcManager {
                             protocolOptional.get(),
                             FUtils.valueOfFunction( NetworkAclEntry.RuleAction.class ).apply( request.getRuleAction() ),
                             request.getEgress(),
-                            cidr,
+                            aclCidr,
                             request.getPortRange().getFrom(),
                             request.getPortRange().getTo() );
                         break;
@@ -631,7 +632,7 @@ public class VpcManager {
                             protocolOptional.get(),
                             FUtils.valueOfFunction( NetworkAclEntry.RuleAction.class ).apply( request.getRuleAction( ) ),
                             request.getEgress( ),
-                            cidr );
+                            aclCidr );
                     }
 
                     entries.add( entry );
@@ -746,10 +747,11 @@ public class VpcManager {
         null : Identifier.eni.normalize( request.getNetworkInterfaceId( ) );
     final String routeTableId = Identifier.rtb.normalize( request.getRouteTableId() );
     final String destinationCidr = request.getDestinationCidrBlock( );
-    final Optional<Cidr> destinationCidrOption = Cidr.parse( ).apply( destinationCidr );
+    final Optional<Cidr> destinationCidrOption = Cidr.parseLax( ).apply( destinationCidr );
     if ( !destinationCidrOption.isPresent( ) ) {
       throw new ClientComputeException( "InvalidParameterValue", "Cidr invalid: " + destinationCidr );
     }
+    final String routeCidr = destinationCidrOption.get( ).toString( );
     if ( gatewayId == null && natGatewayId == null && instanceId == null && networkInterfaceId == null ) {
       throw new ClientComputeException( "InvalidParameterCombination", "Route target required" );
     }
@@ -776,7 +778,7 @@ public class VpcManager {
                     if ( RestrictedTypes.filterPrivileged( ).apply( routeTable ) ) {
                       final Optional<Route> existingRoute =
                           Iterables.tryFind( routeTable.getRoutes( ), CollectionUtils.propertyPredicate(
-                              destinationCidr,
+                              routeCidr,
                               RouteTables.RouteFilterStringFunctions.DESTINATION_CIDR ) );
 
                       if ( existingRoute.isPresent( ) ) {
@@ -792,7 +794,7 @@ public class VpcManager {
                       }
 
                       final Route route = createRouteForTarget(
-                          routeTable, destinationCidr, networkInterface, instance, natGateway, internetGateway, gatewayId );
+                          routeTable, routeCidr, networkInterface, instance, natGateway, internetGateway, gatewayId );
 
                       routeTable.getRoutes().add( route );
                       routeTable.updateTimeStamps( ); // ensure version of table increments also
@@ -862,7 +864,7 @@ public class VpcManager {
                     Predicates.<RestrictedType>alwaysTrue( ) :
                     CollectionUtils.propertyPredicate( request.getAvailabilityZone( ), CloudMetadatas.toDisplayName( ) ),
                 RestrictedTypes.filterPrivilegedWithoutOwner( ) ) ).transform( CloudMetadatas.toDisplayName( ) );
-    final Optional<Cidr> subnetCidr = Cidr.parse( ).apply( request.getCidrBlock( ) );
+    final Optional<Cidr> subnetCidr = Cidr.parseLax( ).apply( request.getCidrBlock( ) );
     if ( !subnetCidr.isPresent( ) ) {
       throw new ClientComputeException( "InvalidParameterValue", "Cidr invalid: " + request.getCidrBlock( ) );
     }
@@ -901,7 +903,7 @@ public class VpcManager {
               vpc,
               networkAcl,
               Identifier.subnet.generate( ctx.getUser( ) ),
-              request.getCidrBlock( ),
+              subnetCidr.get( ).toString( ),
               availabilityZone.get() ) );
         } catch ( VpcMetadataNotFoundException ex ) {
           throw Exceptions.toUndeclared( new ClientComputeException( "InvalidVpcID.NotFound", "Vpc not found '" + request.getVpcId() + "'" ) );
@@ -920,8 +922,9 @@ public class VpcManager {
     final Context ctx = Contexts.lookup();
     final UserFullName userFullName = ctx.getUserFullName();
     final boolean createDefault = ctx.isAdministrator( ) && request.getCidrBlock( ).matches( "[0-9]{12}" );
+    final Optional<Cidr> requestedCidr;
     if ( !createDefault ) {
-      final Optional<Cidr> requestedCidr = Cidr.parse().apply( request.getCidrBlock( ) );
+      requestedCidr = Cidr.parseLax( ).apply( request.getCidrBlock( ) );
       if ( requestedCidr.transform( Vpcs::isReservedVpcCidr ).or( true ) ||
           requestedCidr
               .transform( Cidr.prefix( ) )
@@ -929,6 +932,8 @@ public class VpcManager {
       ) {
         throw new ClientComputeException( "InvalidVpc.Range", "The CIDR '" + request.getCidrBlock( ) + "' is invalid." );
       }
+    } else {
+      requestedCidr = Optional.absent( );
     }
     final Supplier<Vpc> allocator = new Supplier<Vpc>( ) {
       @Override
@@ -955,7 +960,7 @@ public class VpcManager {
               // so create it
             }
           } else {
-            vpcCidr = request.getCidrBlock( );
+            vpcCidr = requestedCidr.get( ).toString( );
             vpcAccountFullName = userFullName.asAccountFullName( );
             vpcOwnerFullName = userFullName;
           }
@@ -1287,7 +1292,12 @@ public class VpcManager {
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.isAdministrator( ) ? null : ctx.getUserFullName( ).asAccountFullName( );
     final String routeTableId = Identifier.rtb.normalize( request.getRouteTableId( ) );
-    final String cidr = request.getDestinationCidrBlock( );
+    final String destinationCidr = request.getDestinationCidrBlock( );
+    final Optional<Cidr> destinationCidrOption = Cidr.parseLax( ).apply( destinationCidr );
+    if ( !destinationCidrOption.isPresent( ) ) {
+      throw new ClientComputeException( "InvalidParameterValue", "Cidr invalid: " + destinationCidr );
+    }
+    final String routeCidr = destinationCidrOption.get( ).toString( );
     try {
       routeTables.withRetries( ).updateByExample(
           RouteTable.exampleWithName( accountFullName, routeTableId ),
@@ -1300,17 +1310,17 @@ public class VpcManager {
                 if ( RestrictedTypes.filterPrivileged( ).apply( routeTable ) ) {
                   final Optional<Route> routeOption = Iterables.tryFind(
                       routeTable.getRoutes( ),
-                      CollectionUtils.propertyPredicate( cidr, RouteTables.RouteFilterStringFunctions.DESTINATION_CIDR ) );
+                      CollectionUtils.propertyPredicate( routeCidr, RouteTables.RouteFilterStringFunctions.DESTINATION_CIDR ) );
                   if ( routeOption.isPresent( ) ) {
                     final Route route = routeOption.get( );
                     if ( route.getDestinationCidr( ).equals( routeTable.getVpc( ).getCidr( ) ) ) {
                       throw new ClientComputeException(
-                          "InvalidParameterValue", "Cannot remove local route "+cidr+" in route table " + routeTableId );
+                          "InvalidParameterValue", "Cannot remove local route "+destinationCidr+" in route table " + routeTableId );
                     }
                     routeTable.getRoutes( ).remove( route );
                     routeTable.updateTimeStamps( ); // ensure version of table increments also
                   } else {
-                    throw new ClientComputeException( "InvalidRoute.NotFound", "Route not found for cidr: " + cidr );
+                    throw new ClientComputeException( "InvalidRoute.NotFound", "Route not found for cidr: " + destinationCidr );
                   }
                 } else {
                   throw Exceptions.toUndeclared( new ClientUnauthorizedComputeException( "Not authorized to delete route" ) );
@@ -1323,7 +1333,7 @@ public class VpcManager {
       invalidate( routeTableId );
     } catch ( VpcMetadataNotFoundException e ) {
       throw new ClientComputeException(
-          "InvalidRoute.NotFound", "no route with destination-cidr-block "+cidr+" in route table " + routeTableId );
+          "InvalidRoute.NotFound", "no route with destination-cidr-block "+routeCidr+" in route table " + routeTableId );
     } catch ( Exception e ) {
       throw handleException( e );
     }
@@ -1782,10 +1792,11 @@ public class VpcManager {
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName();
     final String networkAclId = Identifier.acl.normalize( request.getNetworkAclId( ) );
     final String cidr = request.getCidrBlock( );
-    final Optional<Cidr> cidrOptional = Cidr.parse( ).apply( cidr );
+    final Optional<Cidr> cidrOptional = Cidr.parseLax( ).apply( cidr );
     if ( !cidrOptional.isPresent( ) ) {
       throw new ClientComputeException( "InvalidParameterValue", "Cidr invalid: " + cidr );
     }
+    final String aclCidr = cidrOptional.get( ).toString( );
     final Optional<Integer> protocolOptional = protocolNumber( request.getProtocol() );
     if ( !protocolOptional.isPresent( ) ) {
       throw new ClientComputeException( "InvalidParameterValue", "Protocol invalid: " + request.getProtocol( ) );
@@ -1821,7 +1832,7 @@ public class VpcManager {
                         request.getRuleNumber(),
                         FUtils.valueOfFunction( NetworkAclEntry.RuleAction.class ).apply( request.getRuleAction() ),
                         request.getEgress(),
-                        cidr,
+                        aclCidr,
                         request.getIcmpTypeCode().getCode(),
                         request.getIcmpTypeCode().getType() );
                     break;
@@ -1833,7 +1844,7 @@ public class VpcManager {
                         protocolOptional.get(),
                         FUtils.valueOfFunction( NetworkAclEntry.RuleAction.class ).apply( request.getRuleAction() ),
                         request.getEgress(),
-                        cidr,
+                        aclCidr,
                         request.getPortRange().getFrom(),
                         request.getPortRange().getTo() );
                     break;
@@ -1844,7 +1855,7 @@ public class VpcManager {
                         protocolOptional.get(),
                         FUtils.valueOfFunction( NetworkAclEntry.RuleAction.class ).apply( request.getRuleAction( ) ),
                         request.getEgress( ),
-                        cidr );
+                        aclCidr );
                 }
 
                 entries.set(
@@ -1880,10 +1891,11 @@ public class VpcManager {
         null : Identifier.eni.normalize( request.getNetworkInterfaceId( ) );
     final String routeTableId = Identifier.rtb.normalize( request.getRouteTableId( ) );
     final String destinationCidr = request.getDestinationCidrBlock( );
-    final Optional<Cidr> destinationCidrOption = Cidr.parse( ).apply( destinationCidr );
+    final Optional<Cidr> destinationCidrOption = Cidr.parseLax( ).apply( destinationCidr );
     if ( !destinationCidrOption.isPresent( ) ) {
       throw new ClientComputeException( "InvalidParameterValue", "Cidr invalid: " + destinationCidr );
     }
+    final String routeCidr = destinationCidrOption.get( ).toString( );
     if ( gatewayId == null && natGatewayId == null && instanceId == null && networkInterfaceId == null ) {
       throw new ClientComputeException( "InvalidParameterCombination", "Route target required" );
     }
@@ -1908,11 +1920,11 @@ public class VpcManager {
                 final List<Route> routes = routeTable.getRoutes( );
                 final Optional<Route> oldRoute =
                     Iterables.tryFind( routes, CollectionUtils.propertyPredicate(
-                        destinationCidr,
+                        routeCidr,
                         RouteTables.RouteFilterStringFunctions.DESTINATION_CIDR ) );
 
                 final Route route = createRouteForTarget(
-                    routeTable, destinationCidr, networkInterface, instance, natGateway, internetGateway, gatewayId );
+                    routeTable, routeCidr, networkInterface, instance, natGateway, internetGateway, gatewayId );
 
                 if ( !oldRoute.isPresent( ) ) {
                   throw new ClientComputeException(
