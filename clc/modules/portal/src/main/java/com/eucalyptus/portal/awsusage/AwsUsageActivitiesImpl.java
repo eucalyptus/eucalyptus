@@ -390,51 +390,6 @@ public class AwsUsageActivitiesImpl implements AwsUsageActivities {
     }
   }
 
-  /*
-  @Override
-  public void fireS3ApiUsage() throws BillingActivityException {
-    final List<ObjectEntity> objects = Lists.newArrayList();
-    try ( final TransactionResource db = Entities.transactionFor( ObjectEntity.class ) ) {
-      final ObjectEntity sample = new ObjectEntity();
-      objects.addAll(Entities.query(sample));
-    }
-
-    final Map<String, String> accountNumberCache = Maps.newHashMap();
-    final Function<String, String> lookupAccountNumber = (alias) -> {
-      if(accountNumberCache.keySet().contains(alias))
-        return accountNumberCache.get(alias);
-
-      try {
-        final String accountNumber = Accounts.lookupAccountIdByAlias(alias);
-        accountNumberCache.put(alias, accountNumber);
-        return accountNumber;
-      }catch(final AuthException ex) {
-        ;
-      }
-      return "000000000000";
-    };
-
-    final Function<ObjectEntity, S3ObjectEvent> toEvent = (obj) -> S3ObjectEvent.with(
-            S3ObjectEvent.S3ObjectAction.OBJECTUSAGE,
-            obj.getBucket().getBucketName(),
-            obj.getObjectKey(),
-            obj.getVersionId(),
-            obj.getOwnerIamUserId(),
-            obj.getOwnerIamUserDisplayName(),
-            lookupAccountNumber.apply(obj.getOwnerDisplayName()),
-            obj.getSize());
-
-    try{
-      objects.stream()
-              .filter( o -> ObjectState.extant.equals(o.getState()) )
-              .map ( toEvent )
-              .forEach ( fire );
-    } catch( final Exception ex) {
-      throw new BillingActivityException("Failed to fire s3 object usage events", ex);
-    }
-  }
-*/    
-
   @Override
   public void fireLoadBalancerUsage() throws BillingActivityException {
     final List<LoadBalancer> loadbalancers = LoadBalancers.listLoadbalancers();
