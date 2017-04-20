@@ -257,6 +257,47 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
       return records;
     }
   },
+  S3_API_REQUEST("AmazonS3", "*", "*", AggregateGranularity.HOURLY) {
+    @Override
+    public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
+      // Example:
+      // AmazonS3,PutObject,USW2-DataTransfer-In-Bytes,billing-test-bucket-tmp,11/14/16 22:00:00,11/14/16 23:00:00,206836
+      List<QueuedEvent> filteredEvents = events.stream()
+          .filter(e -> "S3ApiUsage".equals(e.getEventType()))
+          .collect(Collectors.toList());
+      if (filteredEvents.size() <= 0)
+        return Lists.newArrayList();
+      final Date earliestRecord = AwsUsageRecordType.getEarliest(filteredEvents);
+      final Date endTime = getNextHour(earliestRecord);
+      final Date startTime = getPreviousHour(endTime);
+      class EventKey {
+        public String operation;
+        public String usageType;
+        public String resource;
+        public EventKey( String operation, String usageType, String resource ) {
+          this.operation = operation;
+          this.usageType = usageType;
+          this.resource = resource;
+        }
+      }
+      final ConcurrentMap<EventKey, Long> requests = new ConcurrentHashMap<EventKey, Long>( );
+      filteredEvents.stream( ).forEach( event -> {
+        EventKey requestKey = new EventKey( event.getOperation( ), event.getUsageType( ), event.getResourceId( ) );
+        requests.merge( requestKey, Long.valueOf( event.getUsageValue( ) ), Long::sum);
+      } );
+      return requests.entrySet( ).stream( ).map( entry ->
+        AwsUsageRecords.getInstance( ).newRecord( accountId )
+            .withService( "AmazonS3" )
+            .withOperation( entry.getKey( ).operation )
+            .withUsageType( entry.getKey( ).usageType )
+            .withResource( entry.getKey( ).resource )
+            .withStartTime( startTime )
+            .withEndTime( endTime )
+            .withUsageValue( String.valueOf( entry.getValue( ) ) )
+            .build()
+      ).collect( Collectors.toList( ) );
+    }
+  },
   EC2_EBS_VolumeIORead("AmazonEC2", "EBS:IO-Read", "EBS:VolumeIOUsage", AggregateGranularity.HOURLY) {
     @Override
     public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
@@ -397,6 +438,11 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
       sb.append(":");
     if (usageType != null)
       sb.append(String.format("%s", usageType));
+//LPT test this
+    else
+      sb.append(":");
+    if (granularity != null)
+      sb.append(String.format("%s", granularity));
     return sb.toString();
   }
 

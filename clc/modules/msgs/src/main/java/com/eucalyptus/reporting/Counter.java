@@ -424,7 +424,7 @@ public class Counter<T,C extends Counter.Counted> {
     protected final Long bytesTransferred;
 
     public CountedS3( final String account, final String item, 
-        final String bucketName, final Long bytesTransferred) {
+        final String bucketName, final Long bytesTransferred ) {
       super(account, item);
       this.bucketName = bucketName;
       this.bytesTransferred = bytesTransferred;
@@ -443,7 +443,8 @@ public class Counter<T,C extends Counter.Counted> {
       if ( this == o ) return true;
       if ( o == null || getClass( ) != o.getClass( ) ) return false;
       final CountedS3 countedS3 = (CountedS3) o;
-      return ( ((Counted) this).equals((Counted) countedS3) ) &&
+      return Objects.equals( account, countedS3.account ) &&
+          Objects.equals( item, countedS3.item ) &&
           Objects.equals( bucketName, countedS3.bucketName ) &&
           Objects.equals( bytesTransferred, countedS3.bytesTransferred );
     }

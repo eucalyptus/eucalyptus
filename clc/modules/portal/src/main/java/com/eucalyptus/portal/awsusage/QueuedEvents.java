@@ -18,11 +18,13 @@ package com.eucalyptus.portal.awsusage;
 import com.eucalyptus.compute.common.ReservationInfoType;
 import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.loadbalancing.workflow.LoadBalancingAWSCredentialsProvider;
+import com.eucalyptus.objectstorage.util.S3BillingActions;
 import com.eucalyptus.reporting.event.AddressEvent;
 import com.eucalyptus.reporting.event.CloudWatchApiUsageEvent;
 import com.eucalyptus.reporting.event.InstanceUsageEvent;
 import com.eucalyptus.reporting.event.LoadBalancerEvent;
 import com.eucalyptus.reporting.event.S3ObjectEvent;
+import com.eucalyptus.reporting.event.S3ApiUsageEvent;
 import com.eucalyptus.reporting.event.SnapShotEvent;
 import com.eucalyptus.reporting.event.VolumeEvent;
 import com.eucalyptus.resources.client.Ec2Client;
@@ -158,6 +160,19 @@ public class QueuedEvents {
     q.setAccountId(event.getAccountNumber());
     q.setUserId(event.getUserId());
     q.setUsageValue(String.format("%d", event.getSize()));
+    q.setTimestamp(new Date(System.currentTimeMillis()));
+    return q;
+  };
+
+  public static Function<S3ApiUsageEvent, QueuedEvent> FromS3ApiUsageEvent = (event) -> {
+    final QueuedEvent q = new QueuedEvent();
+    q.setEventType("S3ApiUsage");
+    q.setOperation(S3BillingActions.getBillingActionName(event.getAction()));
+    q.setUsageType(event.getUsageType());
+    q.setResourceId(String.format("%s", event.getBucketName()));
+    q.setAccountId(event.getAccountNumber());
+    Long bytes = event.getBytesTransferred();
+    q.setUsageValue(String.format("%d", bytes == null ? 0 : bytes));
     q.setTimestamp(new Date(System.currentTimeMillis()));
     return q;
   };
