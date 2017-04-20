@@ -1342,7 +1342,8 @@ public class LoadBalancingService {
             .collect(Collectors.toList());
 
     if(zones != null && zones.size()>0) {
-      if (inServiceZoneNames.size() <= 1) {
+      inServiceZoneNames.removeAll(zones);
+      if (inServiceZoneNames.size() <= 0) {
         throw new InvalidConfigurationRequestException("There must be at least one availability zone");
       }
 
@@ -2155,7 +2156,8 @@ public class LoadBalancingService {
             .filter( az -> inServiceZones.contains(az) )
             .collect(Collectors.toList());
     if (!zones.isEmpty( )) {
-      if (inServiceZones.size() <= 1) {
+      inServiceZones.removeAll(zones);
+      if (inServiceZones.size() <= 0) {
         throw new InvalidConfigurationRequestException("Loadbalancer must be attached to at least one subnet");
       }
       try{
