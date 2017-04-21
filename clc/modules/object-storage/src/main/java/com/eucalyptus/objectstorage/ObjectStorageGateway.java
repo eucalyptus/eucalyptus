@@ -206,7 +206,6 @@ import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.MetadataDirective;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.VersioningStatus;
-import com.eucalyptus.objectstorage.util.S3BillingActions;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.S3ApiUsageEvent;
 import com.eucalyptus.reporting.event.S3ObjectEvent;
