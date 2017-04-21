@@ -171,7 +171,7 @@ public class QueuedEvents {
     q.setUsageType(event.getUsageType());
     q.setResourceId(String.format("%s", event.getBucketName()));
     q.setAccountId(event.getAccountNumber());
-    Long bytes = event.getBytesTransferred();
+    Long bytes = event.getUsageValue();
     q.setUsageValue(String.format("%d", bytes == null ? 0 : bytes));
     q.setTimestamp(new Date(System.currentTimeMillis()));
     return q;

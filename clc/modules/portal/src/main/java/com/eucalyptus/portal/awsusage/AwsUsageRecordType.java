@@ -438,7 +438,6 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
       sb.append(":");
     if (usageType != null)
       sb.append(String.format("%s", usageType));
-//LPT test this
     else
       sb.append(":");
     if (granularity != null)
