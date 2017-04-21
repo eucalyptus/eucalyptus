@@ -95,7 +95,7 @@ class CounterTest {
   void testMultipleItemsAndAccountsS3( ) {
     AtomicLong time = timeOnPeriodStart( 1000 );
     Counter<List<String>,CountedS3> counter =
-        new Counter<>( SuppliedClock.of({time.get( )}), 1000, 10, { new CountedS3( it.get(0), it.get(1), "bucket1", new Long(100L)) }, {2}  )
+        new Counter<>( SuppliedClock.of({time.get( )}), 1000, 10, { new CountedS3( it.get(0), it.get(1), "bucket1", "Requests-Tier1", new Long(100L)) }, {2}  )
     counter.count( ['000000000000', 'foo'] )
     counter.count( ['111111111111', 'foo'] )
     time.addAndGet( 1000L )
