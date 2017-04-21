@@ -421,21 +421,27 @@ public class Counter<T,C extends Counter.Counted> {
   public static class CountedS3 extends Counted {
     // For S3, the "item" is the S3 API operation, e.g. "GetObject"
     protected final String bucketName;
-    protected final Long bytesTransferred;
+    protected final String usageType;
+    protected final Long usageValue;
 
     public CountedS3( final String account, final String item, 
-        final String bucketName, final Long bytesTransferred ) {
+        final String bucketName, String usageType, final Long usageValue ) {
       super(account, item);
       this.bucketName = bucketName;
-      this.bytesTransferred = bytesTransferred;
+      this.usageType = usageType;
+      this.usageValue = usageValue;
     }
 
     public String getBucketName() {
       return bucketName;
     }
 
-    public Long getBytesTransferred() {
-      return bytesTransferred;
+    public String getUsageType() {
+      return usageType;
+    }
+
+    public Long getUsageValue() {
+      return usageValue;
     }
 
     @Override
@@ -446,12 +452,13 @@ public class Counter<T,C extends Counter.Counted> {
       return Objects.equals( account, countedS3.account ) &&
           Objects.equals( item, countedS3.item ) &&
           Objects.equals( bucketName, countedS3.bucketName ) &&
-          Objects.equals( bytesTransferred, countedS3.bytesTransferred );
+          Objects.equals( usageType, countedS3.usageType ) &&
+          Objects.equals( usageValue, countedS3.usageValue );
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash( account, item, bucketName, bytesTransferred );
+      return Objects.hash( account, item, bucketName, usageType, usageValue  );
     }
 
     @Override
@@ -460,7 +467,8 @@ public class Counter<T,C extends Counter.Counted> {
           .add( "Account", account )
           .add( "S3 Operation", item )
           .add( "Bucket Name", bucketName )
-          .add( "Bytes Transferred", bytesTransferred )
+          .add( "Usage Type", usageType )
+          .add( "Usage Value (count, or bytes transferred)", usageValue )
           .toString( );
     }
   }

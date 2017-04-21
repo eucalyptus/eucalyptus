@@ -261,7 +261,7 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
     @Override
     public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
       // Example:
-      // AmazonS3,PutObject,USW2-DataTransfer-In-Bytes,billing-test-bucket-tmp,11/14/16 22:00:00,11/14/16 23:00:00,206836
+      // AmazonS3,PutObject,In-Bytes,billing-test-bucket-tmp,11/14/16 22:00:00,11/14/16 23:00:00,206836
       List<QueuedEvent> filteredEvents = events.stream()
           .filter(e -> "S3ApiUsage".equals(e.getEventType()))
           .collect(Collectors.toList());
