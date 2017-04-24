@@ -108,7 +108,6 @@ public class SANInfo extends AbstractPersistent {
   private static String currentSanHosts = null;
   private static TreeMap<String, Long> sanControllerAddresses = Maps.newTreeMap();
   private static final Long ADDRESS_FAILURE_RETRY_INTERVAL_IN_MILLIS = 300 * 1000L; // 5 mins
-  private static final long TASK_TIMEOUT = 5 * 60 * 1000;
   public static final String DEFAULT_CHAP_USER = "nouser";
   public static final String DEFAULT_PATHS = "nopath";
 
@@ -137,9 +136,6 @@ public class SANInfo extends AbstractPersistent {
       changeListener = PathsChangeListener.class, initial = DEFAULT_PATHS)
   @Column(name = "scpaths")
   private String scPaths;
-  @ConfigurableField(description = "Timeout for SAN commands.", displayName = "SAN Task Timeout")
-  @Column(name = "task_timeout")
-  private Long taskTimeout;
   @ConfigurableField(description = "Prefix for resource name on SAN", displayName = "Resource Prefix", initial = "")
   @Column(name = "resource_prefix")
   private String resourcePrefix;
@@ -227,14 +223,6 @@ public class SANInfo extends AbstractPersistent {
     this.scPaths = scPaths;
   }
 
-  public Long getTaskTimeout() {
-    return taskTimeout;
-  }
-
-  public void setTaskTimeout(Long taskTimeout) {
-    this.taskTimeout = taskTimeout;
-  }
-
   public String getResourcePrefix() {
     return resourcePrefix;
   }
@@ -254,9 +242,6 @@ public class SANInfo extends AbstractPersistent {
   @PreUpdate
   @PostLoad
   public void setDefaults() {
-    if (this.taskTimeout == null) {
-      this.taskTimeout = TASK_TIMEOUT;
-    }
     if (this.chapUser == null) {
       this.chapUser = DEFAULT_CHAP_USER;
     }
@@ -274,7 +259,6 @@ public class SANInfo extends AbstractPersistent {
     setChapUser(DEFAULT_CHAP_USER);
     setNcPaths(SANInfo.DEFAULT_PATHS);
     setScPaths(SANInfo.DEFAULT_PATHS);
-    setTaskTimeout(TASK_TIMEOUT);
     return this;
   }
 
