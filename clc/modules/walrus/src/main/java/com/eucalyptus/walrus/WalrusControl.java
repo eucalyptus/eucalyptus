@@ -62,9 +62,11 @@
 
 package com.eucalyptus.walrus;
 
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.annotation.ComponentNamed;
+import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.troubleshooting.checker.DiskResourceCheck;
 import com.eucalyptus.troubleshooting.checker.DiskResourceCheck.Checker;
@@ -206,7 +208,9 @@ public class WalrusControl implements WalrusService {
    * @throws AccessDeniedException
    */
   protected void checkPermissions() throws AccessDeniedException {
-    if (!Contexts.lookup().hasAdministrativePrivileges()) {
+    final Context context = Contexts.lookup( );
+    if ( !context.hasAdministrativePrivileges( ) &&
+        !AccountIdentifiers.OBJECT_STORAGE_WALRUS_ACCOUNT.equals( context.getAccountAlias( ) )  ) {
       throw new AccessDeniedException("Service", "WalrusBackend");
     }
   }

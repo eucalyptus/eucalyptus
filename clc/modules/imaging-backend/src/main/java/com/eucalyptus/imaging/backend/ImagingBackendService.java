@@ -19,14 +19,13 @@
  ************************************************************************/
 package com.eucalyptus.imaging.backend;
 
-import static com.eucalyptus.auth.policy.PolicySpec.IMAGINGSERVICE_GETINSTANCEIMPORTTASK;
-import static com.eucalyptus.auth.policy.PolicySpec.IMAGINGSERVICE_PUTINSTANCEIMPORTTASKSTATUS;
 import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_IMAGINGSERVICE;
 import static com.eucalyptus.auth.policy.PolicySpec.EC2_RESOURCE_INSTANCE;
 
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Context;
@@ -37,6 +36,7 @@ import com.eucalyptus.imaging.common.backend.msgs.GetInstanceImportTaskType;
 import com.eucalyptus.imaging.common.backend.msgs.PutInstanceImportTaskStatusResponseType;
 import com.eucalyptus.imaging.common.backend.msgs.PutInstanceImportTaskStatusType;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.RestrictedTypes;
 
 @ComponentNamed
 public class ImagingBackendService {
@@ -46,15 +46,8 @@ public class ImagingBackendService {
 
   public PutInstanceImportTaskStatusResponseType PutInstanceImportTaskStatus( PutInstanceImportTaskStatusType request ) throws EucalyptusCloudException {
     final PutInstanceImportTaskStatusResponseType reply = request.getReply( );
-    final Context context = Contexts.lookup();
     try{
-      if ( ! ( context.getUser().isSystemAdmin() || ( context.isAdministrator() && Permissions.isAuthorized(
-          VENDOR_IMAGINGSERVICE,
-          EC2_RESOURCE_INSTANCE, // resource type should not affect evaluation
-          "",
-          null,
-          IMAGINGSERVICE_PUTINSTANCEIMPORTTASKSTATUS,
-          context.getAuthContext() ) ) ) ) {
+      if ( !isAuthorized( ) ) {
         throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to put import task status." );
       }
     }catch(final ImagingServiceException ex){
@@ -177,15 +170,8 @@ public class ImagingBackendService {
 
   public GetInstanceImportTaskResponseType GetInstanceImportTask( GetInstanceImportTaskType request ) throws EucalyptusCloudException {
     final GetInstanceImportTaskResponseType reply = request.getReply( );
-    final Context context = Contexts.lookup();
     try{
-      if ( ! ( context.getUser().isSystemAdmin() || ( context.isAdministrator() && Permissions.isAuthorized(
-          VENDOR_IMAGINGSERVICE,
-          EC2_RESOURCE_INSTANCE, // resource type should not affect evaluation
-          "",
-          null,
-          IMAGINGSERVICE_GETINSTANCEIMPORTTASK,
-          context.getAuthContext() ) ) ) ) {
+      if ( !isAuthorized( ) ) {
         throw new ImagingServiceException( ImagingServiceException.DEFAULT_CODE, "Not authorized to get import task." );
       }
     }catch(final ImagingServiceException ex){
@@ -240,4 +226,16 @@ public class ImagingBackendService {
     return reply;
   }
 
+  private static boolean isAuthorized( ) {
+    final Context context = Contexts.lookup();
+    return context.hasAdministrativePrivileges( ) ||
+        ( AccountIdentifiers.IMAGING_SYSTEM_ACCOUNT.equals( context.getAccountAlias( ) ) && Permissions.isAuthorized(
+            VENDOR_IMAGINGSERVICE,
+            EC2_RESOURCE_INSTANCE, // resource type should not affect evaluation
+            "",
+            null,
+            RestrictedTypes.getIamActionByMessageType( ),
+            context.getAuthContext() ) );
+
+  }
 }

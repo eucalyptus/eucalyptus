@@ -223,6 +223,12 @@ public class Accounts {
     );
   }
 
+  public static boolean isAdministrativeAccount( String accountName ) {
+    return
+        AccountIdentifiers.SYSTEM_ACCOUNT.equals( accountName ) ||
+        AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT.equals( accountName );
+  }
+
   public static boolean isSystemAccount( String accountName ) {
     return
         AccountIdentifiers.SYSTEM_ACCOUNT.equals( accountName ) ||

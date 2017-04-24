@@ -206,7 +206,7 @@ public class UserPrincipalImpl implements UserPrincipal, HasRole {
     this.accountNumber = account.getAccountNumber();
     this.enabled = user.isEnabled();
     this.accountAdmin = DatabaseAuthUtils.isAccountAdmin( user.getName( ) );
-    this.systemAdmin = com.eucalyptus.auth.Accounts.isSystemAccount( account.getName() );
+    this.systemAdmin = Accounts.isAdministrativeAccount( account.getName( ) );
     this.systemUser = systemAdmin;
     this.password = user.getPassword();
     this.passwordExpires = password == null ? null : Objects.firstNonNull( user.getPasswordExpires( ), Long.MAX_VALUE );
