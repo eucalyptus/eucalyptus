@@ -276,6 +276,21 @@ public class StackEntityManager {
     return stackEntity;
   }
 
+  public static StackEntity getNonDeletedStackById(String stackId) {
+    StackEntity stackEntity = null;
+    try ( TransactionResource db =
+            Entities.transactionFor( STACK_ENTITY_TRANSACTION_CLASS ) ) {
+      Criteria criteria = Entities.createCriteria(StackEntity.class)
+        .add(Restrictions.eq("stackId", stackId))
+        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+      List<StackEntity> entityList = criteria.list();
+      if (entityList != null && !entityList.isEmpty()) {
+        stackEntity = entityList.get(0);
+      }
+    }
+    return stackEntity;
+  }
+
   public static StackEntity getAnyStackByNameOrId(String stackNameOrId, String accountId) {
     StackEntity stackEntity = null;
     try ( TransactionResource db =

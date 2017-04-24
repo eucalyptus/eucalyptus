@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2013-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,16 +17,22 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
+package com.eucalyptus.cloudformation.workflow
 
-package com.eucalyptus.cloudformation.workflow;
+import com.netflix.glisten.InterfaceBasedWorkflowClient
 
-import com.amazonaws.services.simpleworkflow.flow.annotations.Execute;
-import com.amazonaws.services.simpleworkflow.flow.annotations.Workflow;
-import com.amazonaws.services.simpleworkflow.flow.annotations.WorkflowRegistrationOptions;
+/**
+ * Created by ethomas on 6/9/44.
+ */
+class RollbackStackWorkflowClient implements RollbackStackWorkflow {
+  RollbackStackWorkflow workflow
 
-@Workflow
-@WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 10800)
-public interface UpdateStackWorkflow {
-  @Execute(version = "2.0")
-  public void updateStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int updatedStackVersion);
+  RollbackStackWorkflowClient(InterfaceBasedWorkflowClient<RollbackStackWorkflow> client ) {
+    workflow = client.asWorkflow( ) as RollbackStackWorkflow
+  }
+
+  @Override
+  void rollbackStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int rolledBackStackVersion) {
+    workflow.rollbackStack(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, rolledBackStackVersion);
+  }
 }

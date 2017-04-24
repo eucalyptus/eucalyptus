@@ -17,18 +17,31 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.cloudformation.workflow;
+package com.eucalyptus.cloudformation.workflow
 
-import com.amazonaws.services.simpleworkflow.flow.annotations.Execute;
-import com.amazonaws.services.simpleworkflow.flow.annotations.Workflow;
-import com.amazonaws.services.simpleworkflow.flow.annotations.WorkflowRegistrationOptions;
+import com.netflix.glisten.InterfaceBasedWorkflowClient
 
 /**
- * Created by ethomas on 10/6/14.
+ * Created by ethomas on 6/9/44.
  */
-@Workflow
-@WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 12600)
-public interface MonitorCreateStackWorkflow {
-  @Execute(version = "2.0")
-  public void monitorCreateStack(String stackId, String stackName, String accountId, String accountAlias, String resourceDependencyManagerJson, String effectiveUserId, String onFailure, int createdStackVersion);
+class MonitorUpdateRollbackCleanupStackWorkflowClient implements MonitorUpdateRollbackCleanupStackWorkflow {
+  MonitorUpdateRollbackCleanupStackWorkflow workflow
+
+  InterfaceBasedWorkflowClient<MonitorUpdateRollbackCleanupStackWorkflow> getClient() {
+    return client
+  }
+
+  InterfaceBasedWorkflowClient<MonitorUpdateRollbackCleanupStackWorkflow> client;
+
+  MonitorUpdateRollbackCleanupStackWorkflowClient(InterfaceBasedWorkflowClient<MonitorUpdateRollbackCleanupStackWorkflow> client ) {
+    this.client = client;
+    workflow = client.asWorkflow( ) as MonitorUpdateRollbackCleanupStackWorkflow
+  }
+
+  @Override
+  void monitorUpdateRollbackCleanupStack(String stackId, String accountId, int rolledBackStackVersion) {
+    workflow.monitorUpdateRollbackCleanupStack(stackId, accountId, rolledBackStackVersion);
+  }
+
+
 }

@@ -19,14 +19,13 @@
  ************************************************************************/
 
 package com.eucalyptus.cloudformation.workflow;
-
 import com.amazonaws.services.simpleworkflow.flow.annotations.Execute;
 import com.amazonaws.services.simpleworkflow.flow.annotations.Workflow;
 import com.amazonaws.services.simpleworkflow.flow.annotations.WorkflowRegistrationOptions;
 
 @Workflow
 @WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 10800)
-public interface UpdateStackWorkflow {
+public interface RollbackStackWorkflow {
   @Execute(version = "2.0")
-  public void updateStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int updatedStackVersion);
+  public void rollbackStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int rolledBackStackVersion);
 }

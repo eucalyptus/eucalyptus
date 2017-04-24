@@ -29,7 +29,7 @@ import com.amazonaws.services.simpleworkflow.flow.annotations.ActivityRegistrati
   defaultTaskHeartbeatTimeoutSeconds = 450,
   defaultTaskScheduleToCloseTimeoutSeconds = 1350
 )
-@Activities(version="1.0")
+@Activities(version="2.0")
 public interface StackActivity {
 
   public String initCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson, int stackVersion);
@@ -101,5 +101,14 @@ public interface StackActivity {
   public String kickOffUpdateRollbackCleanupStackWorkflow(String stackId, String accountId, String effectiveUserId);
   public String kickOffUpdateRollbackStackWorkflow(String stackId, String accountId, String outerStackArn, String effectiveUserId);
   public String kickOffUpdateCleanupStackWorkflow(String stackId, String accountId, String effectiveUserId);
+
+  public String kickOffDeleteStackWorkflow(String effectiveUserId, String stackId, String stackName, String stackAccountId, String stackAccountAlias, String resourceDependencyManagerJson, int deletedStackVersion, String retainedResourcesStr);
+  public String kickOffRollbackStackWorkflow(String effectiveUserId, String stackId, String stackName, String accountId, String accountAlias, String resourceDependencyManagerJson, int rolledBackStackVersion);
+  public String logMessage(String level, String message);
+  public String cancelOutstandingDeleteResources(String stackId, String accountId, String cancelMessage, int deletedResourceVersion);
+
+  public String getWorkflowExecutionCloseStatus(String stackId, String workflowType);
+  public String getStackStatusIfLatest(String stackId, String accountId, int stackVersion);
+  public String setStackStatusIfLatest(String stackId, String accountId, String status, String statusReason, int stackVersion);
 
 }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2013-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,16 +17,17 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
+package com.eucalyptus.cloudformation.workflow
 
-package com.eucalyptus.cloudformation.workflow;
+import com.netflix.glisten.WorkflowDescriptionTemplate
 
-import com.amazonaws.services.simpleworkflow.flow.annotations.Execute;
-import com.amazonaws.services.simpleworkflow.flow.annotations.Workflow;
-import com.amazonaws.services.simpleworkflow.flow.annotations.WorkflowRegistrationOptions;
+/**
+ * Created by ethomas on 7/23/14.
+ */
+class MonitorDeleteStackWorkflowDescriptionTemplate extends WorkflowDescriptionTemplate implements MonitorDeleteStackWorkflow {
 
-@Workflow
-@WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 10800)
-public interface UpdateStackWorkflow {
-  @Execute(version = "2.0")
-  public void updateStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int updatedStackVersion);
+  @Override
+  void monitorDeleteStack(String stackId, String accountId, String effectiveUserId, int deletedStackVersion) {
+    description="MonitorRollbackStackWorkflow";
+  }
 }

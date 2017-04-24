@@ -23,19 +23,20 @@ package com.eucalyptus.cloudformation.workflow
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow
 import com.amazonaws.services.simpleworkflow.model.DescribeWorkflowExecutionRequest
 import com.amazonaws.services.simpleworkflow.model.RequestCancelWorkflowExecutionRequest
+import com.amazonaws.services.simpleworkflow.model.UnknownResourceException
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionDetail
 import com.eucalyptus.cloudformation.CloudFormation
 import com.eucalyptus.cloudformation.InternalFailureException
 import com.eucalyptus.cloudformation.ValidationErrorException
 import com.eucalyptus.cloudformation.config.CloudFormationProperties
-import com.eucalyptus.cloudformation.entity.DeleteStackWorkflowExtraInfoEntity
 import com.eucalyptus.cloudformation.entity.DeleteStackWorkflowExtraInfoEntityManager
 import com.eucalyptus.cloudformation.entity.SignalEntityManager
 import com.eucalyptus.cloudformation.entity.StackEntity
 import com.eucalyptus.cloudformation.entity.StackEntityHelper
 import com.eucalyptus.cloudformation.entity.StackEntityManager
 import com.eucalyptus.cloudformation.entity.StackEventEntityManager
+import com.eucalyptus.cloudformation.entity.StackEventHelper
 import com.eucalyptus.cloudformation.entity.StackResourceEntity
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager
 import com.eucalyptus.cloudformation.entity.StackUpdateInfoEntity
@@ -75,6 +76,7 @@ import com.google.common.collect.Maps
 import com.netflix.glisten.ActivityOperations
 import com.netflix.glisten.impl.swf.SwfActivityOperations
 import groovy.transform.CompileStatic
+import org.apache.log4j.Level
 import org.apache.log4j.Logger
 
 import static com.eucalyptus.cloudformation.entity.StackWorkflowEntity.WorkflowType.CREATE_STACK_WORKFLOW
@@ -91,31 +93,7 @@ public class StackActivityImpl implements StackActivity {
 
   @Override
   public String createGlobalStackEvent(String stackId, String accountId, String resourceStatus, String resourceStatusReason, int stackVersion) {
-    LOG.info("Creating global stack event: " + resourceStatus);
-    VersionedStackEntity stackEntity = StackEntityManager.getNonDeletedVersionedStackById(stackId, accountId, stackVersion);
-    String stackName = stackEntity.getStackName();
-    String eventId = UUID.randomUUID().toString(); //TODO: AWS has a value related to stack id. (I think)
-    String logicalResourceId = stackName;
-    String physicalResourceId = stackId;
-    ObjectNode properties = new ObjectMapper().createObjectNode();
-    for (StackEntity.Parameter parameter : StackEntityHelper.jsonToParameters(stackEntity.getParametersJson())) {
-      properties.put(parameter.getKey(), parameter.getStringValue());
-    }
-    Status status = Status.valueOf(resourceStatus);
-    String resourceProperties = JsonHelper.getStringFromJsonNode(properties);
-    String resourceType = "AWS::CloudFormation::Stack";
-    Date timestamp = new Date();
-    StackEventEntityManager.addStackEvent(accountId, eventId, logicalResourceId, physicalResourceId,
-      resourceProperties, status, resourceStatusReason, resourceType, stackId, stackName, timestamp);
-
-    // Good to update the global stack too
-    stackEntity.setStackStatus(status);
-    stackEntity.setStackStatusReason(resourceStatusReason);
-    if ((status == Status.DELETE_IN_PROGRESS) && (stackEntity.getDeleteOperationTimestamp() == null)) {
-      stackEntity.setDeleteOperationTimestamp(new Date()); // AWS only records the first delete attempt timestamp
-    }
-    StackEntityManager.updateStack(stackEntity);
-    LOG.info("Done creating global stack event: " + resourceStatus);
+    StackEventHelper.createGlobalStackEvent(stackId, accountId, resourceStatus, resourceStatusReason, stackVersion);
     return ""; // promiseFor() doesn't work on void return types
   }
 
@@ -152,7 +130,7 @@ public class StackActivityImpl implements StackActivity {
     return "";
   }
 
-  private void updateResourceInfoFields(ResourceInfo resourceInfo, VersionedStackEntity stackEntity, LinkedHashMap<String, ResourceInfo> resourceInfoMap, String effectiveUserId) {
+  private void updateResourceInfoFields(ResourceInfo resourceInfo, VersionedStackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap, String effectiveUserId) {
     // Evaluate all properties
     if (resourceInfo.getPropertiesJson() != null) {
       JsonNode propertiesJsonNode = JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson());
@@ -519,59 +497,12 @@ public class StackActivityImpl implements StackActivity {
 
   @Override
   public String getCreateWorkflowExecutionCloseStatus(final String stackId) {
-    final AmazonSimpleWorkflow simpleWorkflowClient = WorkflowClientManager.simpleWorkflowClient
-    final List<StackWorkflowEntity> createStackWorkflowEntities =
-      StackWorkflowEntityManager.getStackWorkflowEntities( stackId, CREATE_STACK_WORKFLOW );
-    // TODO: is it really appropriate to fail if no workflows exist
-    if ( createStackWorkflowEntities == null || createStackWorkflowEntities.empty ) {
-      throw new InternalFailureException( "There is no create stack workflow for stack id ${stackId}" );
-    }
-    if ( createStackWorkflowEntities.size( ) > 1 ) {
-      throw new InternalFailureException( "More than one create stack workflow was found for stack id ${stackId}" );
-    }
-    createStackWorkflowEntities.get( 0 ).with{
-      simpleWorkflowClient.describeWorkflowExecution(
-        new DescribeWorkflowExecutionRequest(
-          domain: domain,
-          execution: new WorkflowExecution(
-            runId: runId,
-            workflowId: workflowId
-          )
-        )
-      ).with{
-        executionInfo.closeStatus
-      }
-    }
+    return getWorkflowExecutionCloseStatus(stackId, CREATE_STACK_WORKFLOW.toString());
   }
 
   @Override
   public String getUpdateWorkflowExecutionCloseStatus(final String stackId) {
-    LOG.debug("Getting update execution close status for stack " + stackId);
-    final AmazonSimpleWorkflow simpleWorkflowClient = WorkflowClientManager.simpleWorkflowClient
-    final List<StackWorkflowEntity> updateStackWorkflowEntities =
-      StackWorkflowEntityManager.getStackWorkflowEntities( stackId, UPDATE_STACK_WORKFLOW );
-    // TODO: is it really appropriate to fail if no workflows exist
-    if ( updateStackWorkflowEntities == null || updateStackWorkflowEntities.empty ) {
-      throw new InternalFailureException( "There is no update stack workflow for stack id ${stackId}" );
-    }
-    if ( updateStackWorkflowEntities.size( ) > 1 ) {
-      throw new InternalFailureException( "More than one update stack workflow was found for stack id ${stackId}" );
-    }
-    String status = updateStackWorkflowEntities.get( 0 ).with{
-      simpleWorkflowClient.describeWorkflowExecution(
-        new DescribeWorkflowExecutionRequest(
-          domain: domain,
-          execution: new WorkflowExecution(
-            runId: runId,
-            workflowId: workflowId
-          )
-        )
-      ).with{
-        executionInfo.closeStatus
-      }
-    }
-    LOG.info("Update stack status = " + status);
-    return status;
+    return getWorkflowExecutionCloseStatus(stackId, UPDATE_STACK_WORKFLOW.toString());
   }
 
   @Override
@@ -623,20 +554,25 @@ public class StackActivityImpl implements StackActivity {
     }
     return isOpen;
   }
+
   private void cancelOpenWorkflows(AmazonSimpleWorkflow simpleWorkflowClient, List<StackWorkflowEntity> workflows) {
     if (workflows != null) {
       // Should only be one here, but that is checked for elsewhere, cancel everything
       for (StackWorkflowEntity workflow : workflows) {
-        if (isWorkflowOpen(simpleWorkflowClient, workflow)) {
+        LOG.info("Cancelling open workflow " + workflow.getWorkflowType() + " for stack " + workflow.getStackId());
+        try {
           RequestCancelWorkflowExecutionRequest requestCancelWorkflowRequest = new RequestCancelWorkflowExecutionRequest();
           requestCancelWorkflowRequest.setDomain(workflow.getDomain());
           requestCancelWorkflowRequest.setWorkflowId(workflow.getWorkflowId());
           requestCancelWorkflowRequest.setRunId(workflow.getRunId());
           simpleWorkflowClient.requestCancelWorkflowExecution(requestCancelWorkflowRequest);
+        } catch (UnknownResourceException ex) {
+          LOG.info("UnknownResourceFault found when trying to cancel open workflow " + workflow.getWorkflowType() + " for stack " + workflow.getStackId() + ", but that means the workflow no longer exists, so we don't care. ");
         }
       }
     }
   }
+
   @Override
   public String verifyCreateAndMonitorWorkflowsClosed(String stackId) {
     AmazonSimpleWorkflow simpleWorkflowClient = WorkflowClientManager.simpleWorkflowClient
@@ -1112,7 +1048,7 @@ public class StackActivityImpl implements StackActivity {
 
   @Override
   public String failUpdateRollbackStack(String stackId, String accountId, int rolledBackStackVersion, String errorMessage) {
-    createGlobalStackEvent(stackId, accountId, Status.UPDATE_ROLLBACK_FAILED.toString(), "", rolledBackStackVersion);
+    createGlobalStackEvent(stackId, accountId, Status.UPDATE_ROLLBACK_FAILED.toString(), errorMessage, rolledBackStackVersion);
     return "FAILURE";
   }
 
@@ -1402,4 +1338,98 @@ public class StackActivityImpl implements StackActivity {
     return "";
   }
 
+
+  @Override
+  public String kickOffDeleteStackWorkflow(String effectiveUserId, String stackId, String stackName, String stackAccountId, String stackAccountAlias, String resourceDependencyManagerJson, int deletedStackVersion, String retainedResourcesStr) {
+    CommonDeleteRollbackKickoff.kickOffDeleteStackWorkflow(effectiveUserId, stackId, stackName, stackAccountId, stackAccountAlias, resourceDependencyManagerJson, deletedStackVersion, retainedResourcesStr);
+    return "";
+  }
+
+  @Override
+  public String kickOffRollbackStackWorkflow(String effectiveUserId, String stackId, String stackName, String accountId, String accountAlias, String resourceDependencyManagerJson, int rolledBackStackVersion) {
+    CommonDeleteRollbackKickoff.kickOffRollbackStackWorkflow(effectiveUserId, stackId, stackName, accountId, accountAlias, resourceDependencyManagerJson, rolledBackStackVersion);
+    return "";
+  }
+
+  @Override
+  public String logMessage(String level, String message) {
+    LOG.log(Level.toLevel(level), message);
+    return "";
+  }
+
+  @Override
+  public String cancelOutstandingDeleteResources(String stackId, String accountId, String cancelMessage, int deletedResourceVersion) {
+    List<StackResourceEntity> stackResourceEntityList = StackResourceEntityManager.getStackResources(stackId, accountId, deletedResourceVersion);
+    for (StackResourceEntity stackResourceEntity : stackResourceEntityList) {
+      if (stackResourceEntity.getResourceStatus() == Status.DELETE_IN_PROGRESS) {
+        stackResourceEntity.setResourceStatus(Status.DELETE_FAILED);
+        stackResourceEntity.setResourceStatusReason(cancelMessage);
+        StackResourceEntityManager.updateStackResource(stackResourceEntity);
+        StackEventEntityManager.addStackEvent(stackResourceEntity);
+      }
+    }
+    return "";
+  }
+
+  @Override
+  public String getWorkflowExecutionCloseStatus(String stackId, String workflowType) {
+    LOG.info("Getting ${workflowType} execution close status for stack " + stackId);
+    final AmazonSimpleWorkflow simpleWorkflowClient = WorkflowClientManager.simpleWorkflowClient
+    final List<StackWorkflowEntity> stackWorkflowEntities =
+      StackWorkflowEntityManager.getStackWorkflowEntities(stackId, StackWorkflowEntity.WorkflowType.valueOf(workflowType));
+    if (stackWorkflowEntities == null || stackWorkflowEntities.empty) {
+      throw new InternalFailureException( "There is no ${workflowType} for stack id ${stackId}" );
+    }
+    if (stackWorkflowEntities.size() > 1) {
+      throw new InternalFailureException("More than one ${workflowType} was found for stack id ${stackId}");
+    }
+    String status = stackWorkflowEntities.get(0).with {
+      simpleWorkflowClient.describeWorkflowExecution(
+        new DescribeWorkflowExecutionRequest(
+          domain: domain,
+          execution: new WorkflowExecution(
+            runId: runId,
+            workflowId: workflowId
+          )
+        )
+      ).with {
+        executionInfo.closeStatus
+      }
+    }
+    LOG.info("${workflowType} stack status = " + status);
+    return status;
+  }
+
+  @Override
+  public String getStackStatusIfLatest(String stackId, String accountId, int stackVersion) {
+    LOG.info("Getting stack status for stack " + stackId + " if version " + stackVersion + " is the latest");
+    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId);
+    if (stackEntity == null) {
+      LOG.info("No current version found for " + stackId + ", returning null status");
+      return null;
+    } else if (stackEntity.getStackVersion() != null && stackEntity.getStackVersion() == stackVersion) {
+      String status = stackEntity.getStackStatus().toString();
+      LOG.info("status = " + status);
+      return status;
+    } else {
+      LOG.info("Version " + stackVersion + " not current for stack " + stackId + " so returning null status");
+      return null;
+    }
+  }
+
+  @Override
+  public String setStackStatusIfLatest(String stackId, String accountId, String status, String statusReason, int stackVersion) {
+    LOG.info("Setting stack status for stack " + stackId + " if version " + stackVersion + " is the latest");
+    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId);
+    if (stackEntity == null) {
+     LOG.info(stackId + " does not exist, so can not set status.");
+    } else if (stackEntity.getStackVersion() != null && stackEntity.getStackVersion() == stackVersion) {
+      stackEntity.setStackStatus(Status.valueOf(status));
+      stackEntity.setStackStatusReason(statusReason);
+      StackEntityManager.updateStack(stackEntity);
+    } else {
+      LOG.info("Version " + stackVersion + " not current for stack " + stackId + " so not updating status");
+    }
+    return "";
+  }
 }
