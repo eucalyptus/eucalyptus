@@ -3689,35 +3689,6 @@ int doCancelBundleTask(ncMetadata * pMeta, char *instanceId)
 }
 
 //!
-//! Handles the describe bundle tasks request.
-//!
-//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
-//! @param[in]  instIds a list of instance identifier string
-//! @param[in]  instIdsLen the number of instance identifiers in the instIds list
-//! @param[out] outBundleTasks a pointer to the created bundle tasks list
-//! @param[out] outBundleTasksLen the number of bundle tasks in the outBundleTasks list
-//!
-//! @return EUCA_ERROR on failure or the result of the proper doDescribeBundleTasks() handler call.
-//!
-int doDescribeBundleTasks(ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen)
-{
-    int ret = EUCA_OK;
-
-    if (init())
-        return (EUCA_ERROR);
-    DISABLED_CHECK;
-
-    LOGINFO("describing bundle tasks (for %d instances)\n", instIdsLen);
-
-    if (nc_state.H->doDescribeBundleTasks)
-        ret = nc_state.H->doDescribeBundleTasks(&nc_state, pMeta, instIds, instIdsLen, outBundleTasks, outBundleTasksLen);
-    else
-        ret = nc_state.D->doDescribeBundleTasks(&nc_state, pMeta, instIds, instIdsLen, outBundleTasks, outBundleTasksLen);
-
-    return ret;
-}
-
-//!
 //! Handles the image creation request.
 //!
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure

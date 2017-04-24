@@ -135,7 +135,6 @@ adb_ncCreateImageResponse_t *ncCreateImageMarshal(adb_ncCreateImage_t * ncCreate
 adb_ncBundleInstanceResponse_t *ncBundleInstanceMarshal(adb_ncBundleInstance_t * ncBundleInstance, const axutil_env_t * env);
 adb_ncBundleRestartInstanceResponse_t *ncBundleRestartInstanceMarshal(adb_ncBundleRestartInstance_t * ncBundleInstance, const axutil_env_t * env);
 adb_ncCancelBundleTaskResponse_t *ncCancelBundleTaskMarshal(adb_ncCancelBundleTask_t * ncCancelBundleTask, const axutil_env_t * env);
-adb_ncDescribeBundleTasksResponse_t *ncDescribeBundleTasksMarshal(adb_ncDescribeBundleTasks_t * ncDescribeBundleTasks, const axutil_env_t * env);
 adb_ncDescribeSensorsResponse_t *ncDescribeSensorsMarshal(adb_ncDescribeSensors_t * ncDescribeSensors, const axutil_env_t * env);
 adb_ncModifyNodeResponse_t *ncModifyNodeMarshal(adb_ncModifyNode_t * ncModifyNode, const axutil_env_t * env);
 adb_ncMigrateInstancesResponse_t *ncMigrateInstancesMarshal(adb_ncMigrateInstances_t * ncMigrateInstances, const axutil_env_t * env);
