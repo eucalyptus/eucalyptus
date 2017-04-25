@@ -26,6 +26,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
+import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Restrictions;
 
 import java.util.Calendar;
@@ -35,12 +36,11 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.collectingAndThen;
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.mapping;
+import static java.util.stream.Collectors.*;
 
 public abstract class InstanceLogs {
   private static Logger LOG =
@@ -329,6 +329,7 @@ public abstract class InstanceLogs {
             throws Ec2ReportsInvalidParameterException {
       try (final TransactionResource db = Entities.transactionFor(InstanceLogEntity.class)) {
         Criteria criteria = Entities.createCriteria(InstanceLogEntity.class);
+
         if (accountNumber != null) {
           criteria = criteria.add(Restrictions.eq("ownerAccountNumber", accountNumber));
         }
@@ -338,46 +339,54 @@ public abstract class InstanceLogs {
         if (rangeEnd != null) {
           criteria = criteria.add(Restrictions.le("logTime", rangeEnd));
         }
+
         if (filters!= null && filters.getMember()!=null) {
-          for (final InstanceUsageFilter filter : filters.getMember()) {
-            final String type = filter.getType()!=null ? filter.getType().toLowerCase() : null;
-            final String key = filter.getKey();
-            if (type == null || key == null) {
-              throw new Ec2ReportsInvalidParameterException("Type and key must be specified for filter");
+          final Map<String, List<InstanceUsageFilter>> filtersByType =
+                  filters.getMember().stream()
+                          .filter( f -> f.getType() != null && f.getKey() != null )
+                          .collect(Collectors.groupingBy( InstanceUsageFilter::getType, toList()));
+          for (final String type : filtersByType.keySet()) {
+            Criterion criterion = null;
+            for (final InstanceUsageFilter filter : filtersByType.get(type)) {
+              if ("instancetype".equals(type.toLowerCase()) || "instance_type".equals(type.toLowerCase())) {
+                criterion = criterion == null ? Restrictions.eq("instanceType", filter.getKey() )
+                        : Restrictions.or(criterion,  Restrictions.eq("instanceType", filter.getKey() ) );
+              } else if ("platform".equals(type.toLowerCase()) || "platforms".equals(type.toLowerCase())) {
+                criterion = criterion == null ? Restrictions.eq("platform", filter.getKey() )
+                        : Restrictions.or(criterion,  Restrictions.eq("platform", filter.getKey() ) );
+              } else if ("availabilityzone".equals(type.toLowerCase()) || "availability_zone".equals(type.toLowerCase())) {
+                criterion = criterion == null ? Restrictions.eq("availabilityZone", filter.getKey() )
+                        : Restrictions.or(criterion,  Restrictions.eq("availabilityZone", filter.getKey() ) );
+              }
             }
-            if ("instancetype".equals(type) || "instance_type".equals(type)) {
-              criteria = criteria.add(Restrictions.eq("instanceType", key ));
-            } else if ("platform".equals(type) || "platforms".equals(type)) {
-              criteria = criteria.add(Restrictions.eq("platform", key));
-            } else if ("availabilityzone".equals(type) || "availability_zone".equals(type)) {
-              criteria = criteria.add(Restrictions.eq("availabilityZone", key));
-            }
+            if (criterion != null)
+              criteria = criteria.add(criterion);
           }
         }
 
         List<InstanceLogEntity> results = (List<InstanceLogEntity>) criteria.list();
         if (filters!= null && filters.getMember()!=null) {
-          for (final InstanceUsageFilter filter : filters.getMember()) {
-            final String type = filter.getType() != null ? filter.getType().toLowerCase() : null;
-            final String key = filter.getKey();
-            final String value = filter.getValue();
-            if("tag".equals(type) || "tags".equals(type)) {
-              if (key == null || value == null)
-                throw new Ec2ReportsInvalidParameterException("Key and value must be specified for tag type filter");
-              results = results.stream()
-                      .filter(l -> l.getTags().stream()
-                              .filter(t -> key.equals(t.getKey()) && value.equals(t.getValue()))
-                              .findAny()
-                              .isPresent()
-                      ).collect(Collectors.toList());
-            }
+          // key: tag_key, value: set of tag values
+          final Map<String, Set<String>> tagFilters =
+                  filters.getMember().stream()
+                          .filter ( f -> f.getType() != null )
+                          .filter( f -> "tag".equals(f.getType().toLowerCase()) || "tags".equals(f.getType().toLowerCase()) )
+                          .collect( Collectors.groupingBy(
+                                  InstanceUsageFilter::getKey, Collectors.mapping(
+                                          InstanceUsageFilter::getValue, toSet()
+                                  )) );
+          if (!tagFilters.isEmpty()) {
+            results = results.stream()
+                    .filter(l -> l.getTags().stream()
+                            .filter(t -> tagFilters.containsKey(t.getKey()) && tagFilters.get(t.getKey()).contains(t.getValue()))
+                            .findAny()
+                            .isPresent()
+                    ).collect(Collectors.toList());
           }
         }
         return results.stream()
                 .map( l -> new InstanceHourLogImpl(l, 1))
                 .collect(Collectors.toList());
-      } catch (final Ec2ReportsInvalidParameterException ex) {
-        throw ex;
       } catch ( final Exception ex) {
         LOG.error("Failed to query instance log", ex);
         return Lists.newArrayList();
