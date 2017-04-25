@@ -432,28 +432,16 @@ public abstract class AwsUsageRecords {
         // due to secondary indexes working on only a single field we add an additional concatenated field for
         // operation and usage_type if both are searched
         if ( operation != null ) {
-          if ( usageType != null ) {
-            // suffix query if appropriate
-            if (usageType.endsWith("*")) {
-              queryBuilder.append( " AND operation_usage_type_concat LIKE ?" );
-              queryValues.add( operation + "|" + usageType.replace('*','%') );
-            } else {
-              queryBuilder.append(" AND operation_usage_type_concat = ?");
-              queryValues.add(operation + "|" + usageType);
-            }
+          if ( usageType != null && !usageType.trim().isEmpty() ) { // straight wildcard not allowed, so assume not blank
+            queryBuilder.append( " AND operation_usage_type_concat LIKE ?" );
+            queryValues.add( operation + "|" + usageType + "%" );
           } else {
             queryBuilder.append( " AND operation = ?" );
             queryValues.add( operation );
           }
-        } else if ( usageType != null ) {
-          // suffix query if appropriate
-          if (usageType.endsWith("*")) {
-            queryBuilder.append( " AND usage_type LIKE ?" );
-            queryValues.add( usageType.replace('*','%') );
-          } else {
-            queryBuilder.append( " AND usage_type = ?" );
-            queryValues.add( usageType );
-          }
+        } else if ( usageType != null && !usageType.trim().isEmpty() ) { // straight wildcard not allowed, so assume not blank
+          queryBuilder.append( " AND usage_type LIKE ?" );
+          queryValues.add( usageType + "%" );
         }
 
         if ( startDate != null ) {

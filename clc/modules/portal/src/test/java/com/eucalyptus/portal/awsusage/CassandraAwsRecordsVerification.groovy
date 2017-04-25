@@ -34,8 +34,7 @@ class CassandraAwsRecordsVerificationImpl {
     return sample.findAll { \
     it.ownerAccountNumber == accountNumber && it.service == service && \
      (operation == null || it.operation == operation) && \
-     (usageType == null || it.usageType == usageType \
-       || (usageType.endsWith("*") && it.usageType.startsWith(usageType.substring(0, usageType.length() - 1)))) && \
+     (usageType == null || it.usageType.startsWith(usageType)) && \
      (startDate == null || it.endTime >= startDate) && \
      (endDate == null || it.endTime <= endDate)
     };
