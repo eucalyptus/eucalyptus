@@ -63,8 +63,13 @@
  */
 package com.eucalyptus.blockstorage.san.common.entities;
 
+import static com.eucalyptus.upgrade.Upgrades.Version.v5_0_0;
+import groovy.sql.GroovyRowResult;
+import groovy.sql.Sql;
+
 import java.util.List;
 import java.util.TreeMap;
+import java.util.concurrent.Callable;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -77,6 +82,7 @@ import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Type;
 
+import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.san.common.SANProperties;
 import com.eucalyptus.blockstorage.util.BlockStorageUtil;
 import com.eucalyptus.blockstorage.util.StorageProperties;
@@ -90,6 +96,8 @@ import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.upgrade.Upgrades.DatabaseFilters;
+import com.eucalyptus.upgrade.Upgrades.PreUpgrade;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
@@ -450,4 +458,37 @@ public class SANInfo extends AbstractPersistent {
     return parsed;
   }
 
+  @PreUpgrade(since = v5_0_0, value = Storage.class)
+  public static class RemoveTaskTimeout implements Callable<Boolean> {
+
+    private static final Logger LOG = Logger.getLogger(RemoveTaskTimeout.class);
+
+    @Override
+    public Boolean call() throws Exception {
+      Sql sql = null;
+      String table = "san_info";
+      try {
+        sql = DatabaseFilters.NEWVERSION.getConnection("eucalyptus_storage");
+        // check if the old column exists before removing it
+        String column = "task_timeout";
+        List<GroovyRowResult> result =
+            sql.rows(String.format("select column_name from information_schema.columns where table_name='%s' and column_name='%s'", table, column));
+        if (result != null && !result.isEmpty()) {
+          // drop column if it exists
+          LOG.info("Dropping column if it exists " + column);
+          sql.execute(String.format("alter table %s drop column if exists %s", table, column));
+        } else {
+          LOG.debug("Column " + column + " not found, nothing to drop");
+        }
+        return Boolean.TRUE;
+      } catch (Exception e) {
+        LOG.warn("Failed to drop columns in table " + table, e);
+        return Boolean.TRUE;
+      } finally {
+        if (sql != null) {
+          sql.close();
+        }
+      }
+    }
+  }
 }
