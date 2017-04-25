@@ -63,8 +63,13 @@
  */
 package com.eucalyptus.blockstorage.san.common.entities;
 
+import static com.eucalyptus.upgrade.Upgrades.Version.v5_0_0;
+import groovy.sql.GroovyRowResult;
+import groovy.sql.Sql;
+
 import java.util.List;
 import java.util.TreeMap;
+import java.util.concurrent.Callable;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -77,6 +82,7 @@ import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Type;
 
+import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.san.common.SANProperties;
 import com.eucalyptus.blockstorage.util.BlockStorageUtil;
 import com.eucalyptus.blockstorage.util.StorageProperties;
@@ -90,6 +96,8 @@ import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.upgrade.Upgrades.DatabaseFilters;
+import com.eucalyptus.upgrade.Upgrades.PreUpgrade;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
@@ -108,7 +116,6 @@ public class SANInfo extends AbstractPersistent {
   private static String currentSanHosts = null;
   private static TreeMap<String, Long> sanControllerAddresses = Maps.newTreeMap();
   private static final Long ADDRESS_FAILURE_RETRY_INTERVAL_IN_MILLIS = 300 * 1000L; // 5 mins
-  private static final long TASK_TIMEOUT = 5 * 60 * 1000;
   public static final String DEFAULT_CHAP_USER = "nouser";
   public static final String DEFAULT_PATHS = "nopath";
 
@@ -137,9 +144,6 @@ public class SANInfo extends AbstractPersistent {
       changeListener = PathsChangeListener.class, initial = DEFAULT_PATHS)
   @Column(name = "scpaths")
   private String scPaths;
-  @ConfigurableField(description = "Timeout for SAN commands.", displayName = "SAN Task Timeout")
-  @Column(name = "task_timeout")
-  private Long taskTimeout;
   @ConfigurableField(description = "Prefix for resource name on SAN", displayName = "Resource Prefix", initial = "")
   @Column(name = "resource_prefix")
   private String resourcePrefix;
@@ -227,14 +231,6 @@ public class SANInfo extends AbstractPersistent {
     this.scPaths = scPaths;
   }
 
-  public Long getTaskTimeout() {
-    return taskTimeout;
-  }
-
-  public void setTaskTimeout(Long taskTimeout) {
-    this.taskTimeout = taskTimeout;
-  }
-
   public String getResourcePrefix() {
     return resourcePrefix;
   }
@@ -254,9 +250,6 @@ public class SANInfo extends AbstractPersistent {
   @PreUpdate
   @PostLoad
   public void setDefaults() {
-    if (this.taskTimeout == null) {
-      this.taskTimeout = TASK_TIMEOUT;
-    }
     if (this.chapUser == null) {
       this.chapUser = DEFAULT_CHAP_USER;
     }
@@ -274,7 +267,6 @@ public class SANInfo extends AbstractPersistent {
     setChapUser(DEFAULT_CHAP_USER);
     setNcPaths(SANInfo.DEFAULT_PATHS);
     setScPaths(SANInfo.DEFAULT_PATHS);
-    setTaskTimeout(TASK_TIMEOUT);
     return this;
   }
 
@@ -466,4 +458,37 @@ public class SANInfo extends AbstractPersistent {
     return parsed;
   }
 
+  @PreUpgrade(since = v5_0_0, value = Storage.class)
+  public static class RemoveTaskTimeout implements Callable<Boolean> {
+
+    private static final Logger LOG = Logger.getLogger(RemoveTaskTimeout.class);
+
+    @Override
+    public Boolean call() throws Exception {
+      Sql sql = null;
+      String table = "san_info";
+      try {
+        sql = DatabaseFilters.NEWVERSION.getConnection("eucalyptus_storage");
+        // check if the old column exists before removing it
+        String column = "task_timeout";
+        List<GroovyRowResult> result =
+            sql.rows(String.format("select column_name from information_schema.columns where table_name='%s' and column_name='%s'", table, column));
+        if (result != null && !result.isEmpty()) {
+          // drop column if it exists
+          LOG.info("Dropping column if it exists " + column);
+          sql.execute(String.format("alter table %s drop column if exists %s", table, column));
+        } else {
+          LOG.debug("Column " + column + " not found, nothing to drop");
+        }
+        return Boolean.TRUE;
+      } catch (Exception e) {
+        LOG.warn("Failed to drop columns in table " + table, e);
+        return Boolean.TRUE;
+      } finally {
+        if (sql != null) {
+          sql.close();
+        }
+      }
+    }
+  }
 }
