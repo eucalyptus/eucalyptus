@@ -433,15 +433,27 @@ public abstract class AwsUsageRecords {
         // operation and usage_type if both are searched
         if ( operation != null ) {
           if ( usageType != null ) {
-            queryBuilder.append( " AND operation_usage_type_concat = ?" );
-            queryValues.add( operation + "|" + usageType );
+            // suffix query if appropriate
+            if (usageType.endsWith("*")) {
+              queryBuilder.append( " AND operation_usage_type_concat LIKE ?" );
+              queryValues.add( operation + "|" + usageType.replace('*','%') );
+            } else {
+              queryBuilder.append(" AND operation_usage_type_concat = ?");
+              queryValues.add(operation + "|" + usageType);
+            }
           } else {
             queryBuilder.append( " AND operation = ?" );
             queryValues.add( operation );
           }
         } else if ( usageType != null ) {
-          queryBuilder.append( " AND usage_type = ?" );
-          queryValues.add( usageType );
+          // suffix query if appropriate
+          if (usageType.endsWith("*")) {
+            queryBuilder.append( " AND usage_type LIKE ?" );
+            queryValues.add( usageType.replace('*','%') );
+          } else {
+            queryBuilder.append( " AND usage_type = ?" );
+            queryValues.add( usageType );
+          }
         }
 
         if ( startDate != null ) {

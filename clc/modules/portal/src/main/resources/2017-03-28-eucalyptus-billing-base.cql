@@ -38,6 +38,13 @@ CREATE INDEX IF NOT EXISTS aws_records_usage_type_idx ON eucalyptus_billing.aws_
 CREATE INDEX IF NOT EXISTS aws_records_operation_usage_type_idx
   ON eucalyptus_billing.aws_records (operation_usage_type_concat);
 
+CREATE INDEX IF NOT EXISTS aws_records_operation_usage_type_idx
+  ON eucalyptus_billing.aws_records (operation_usage_type_concat);
+
+-- prefix index (to allow LIKE with % in suffix, requires cassandra 3.4 (I think) or later.
+CREATE CUSTOM INDEX IF NOT EXISTS aws_records_usage_type_prefix_idx ON eucalyptus_billing.aws_records (usage_type) USING 'org.apache.cassandra.index.sasi.SASIIndex';
+CREATE CUSTOM INDEX IF NOT EXISTS aws_records_operation_usage_type_prefix_idx ON eucalyptus_billing.aws_records (operation_usage_type_concat) USING 'org.apache.cassandra.index.sasi.SASIIndex';
+
 -- separate table for records as it may not be a low cardinality value (secondary index otherwise)
 CREATE TABLE IF NOT EXISTS eucalyptus_billing.aws_records_by_resource (
   account_id TEXT,
@@ -61,3 +68,7 @@ CREATE INDEX IF NOT EXISTS aws_records_by_resource_usage_type_idx
 
 CREATE INDEX IF NOT EXISTS aws_records_by_resource_operation_usage_type_idx
   ON eucalyptus_billing.aws_records_by_resource (operation_usage_type_concat);
+
+-- prefix index (to allow LIKE with % in suffix, requires cassandra 3.4 (I think) or later.
+CREATE CUSTOM INDEX IF NOT EXISTS aws_records_by_resource_usage_type_prefix_idx ON eucalyptus_billing.aws_records_by_resource (usage_type) USING 'org.apache.cassandra.index.sasi.SASIIndex';
+CREATE CUSTOM INDEX IF NOT EXISTS aws_records_by_resource_operation_usage_type_prefix_idx ON eucalyptus_billing.aws_records_by_resource (operation_usage_type_concat) USING 'org.apache.cassandra.index.sasi.SASIIndex';
