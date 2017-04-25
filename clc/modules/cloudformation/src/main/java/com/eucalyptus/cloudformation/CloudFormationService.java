@@ -545,11 +545,11 @@ public class CloudFormationService {
       StackWorkflowEntity.WorkflowType.UPDATE_STACK_WORKFLOW,
       StackWorkflowEntity.WorkflowType.UPDATE_CLEANUP_STACK_WORKFLOW,
       StackWorkflowEntity.WorkflowType.UPDATE_ROLLBACK_STACK_WORKFLOW,
-      StackWorkflowEntity.WorkflowType.UPDATE_ROLLBACK_STACK_WORKFLOW,
+      StackWorkflowEntity.WorkflowType.UPDATE_ROLLBACK_CLEANUP_STACK_WORKFLOW,
       StackWorkflowEntity.WorkflowType.MONITOR_UPDATE_STACK_WORKFLOW,
       StackWorkflowEntity.WorkflowType.MONITOR_UPDATE_CLEANUP_STACK_WORKFLOW,
       StackWorkflowEntity.WorkflowType.MONITOR_UPDATE_ROLLBACK_STACK_WORKFLOW,
-      StackWorkflowEntity.WorkflowType.MONITOR_UPDATE_ROLLBACK_STACK_WORKFLOW
+      StackWorkflowEntity.WorkflowType.MONITOR_UPDATE_ROLLBACK_CLEANUP_STACK_WORKFLOW
   );
 
 
