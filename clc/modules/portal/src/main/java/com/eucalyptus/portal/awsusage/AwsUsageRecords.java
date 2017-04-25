@@ -318,7 +318,7 @@ public abstract class AwsUsageRecords {
         }
 
         if (usageType != null) {
-          criteria = criteria.whereEqual( AwsUsageRecordEntity_.usageType, usageType);
+          criteria = criteria.whereRestriction( restriction -> restriction.like(AwsUsageRecordEntity_.usageType, String.format("%s%%", usageType)) );
         }
 
         if (startDate != null) {
