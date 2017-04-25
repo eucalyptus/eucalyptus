@@ -43,7 +43,6 @@ import com.eucalyptus.cloudformation.entity.StackEntityManager;
 import com.eucalyptus.cloudformation.entity.StackEventEntityManager;
 import com.eucalyptus.cloudformation.entity.StackResourceEntity;
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
-import com.eucalyptus.cloudformation.entity.StackUpdateInfoEntity;
 import com.eucalyptus.cloudformation.entity.StackUpdateInfoEntityManager;
 import com.eucalyptus.cloudformation.entity.StackWorkflowEntity;
 import com.eucalyptus.cloudformation.entity.StackWorkflowEntityManager;
@@ -58,12 +57,10 @@ import com.eucalyptus.cloudformation.template.TemplateParser;
 import com.eucalyptus.cloudformation.template.url.S3Helper;
 import com.eucalyptus.cloudformation.template.url.WhiteListURLMatcher;
 import com.eucalyptus.cloudformation.util.CfnIdentityDocumentCredential;
+import com.eucalyptus.cloudformation.workflow.CommonDeleteRollbackKickoff;
 import com.eucalyptus.cloudformation.workflow.CreateStackWorkflow;
 import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowClient;
 import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowDescriptionTemplate;
-import com.eucalyptus.cloudformation.workflow.DeleteStackWorkflow;
-import com.eucalyptus.cloudformation.workflow.DeleteStackWorkflowClient;
-import com.eucalyptus.cloudformation.workflow.DeleteStackWorkflowDescriptionTemplate;
 import com.eucalyptus.cloudformation.workflow.MonitorCreateStackWorkflow;
 import com.eucalyptus.cloudformation.workflow.MonitorCreateStackWorkflowClient;
 import com.eucalyptus.cloudformation.workflow.MonitorCreateStackWorkflowDescriptionTemplate;
@@ -71,9 +68,7 @@ import com.eucalyptus.cloudformation.workflow.MonitorUpdateStackWorkflow;
 import com.eucalyptus.cloudformation.workflow.MonitorUpdateStackWorkflowClient;
 import com.eucalyptus.cloudformation.workflow.MonitorUpdateStackWorkflowDescriptionTemplate;
 import com.eucalyptus.cloudformation.workflow.StartTimeoutPassableWorkflowClientFactory;
-import com.eucalyptus.cloudformation.workflow.UpdateRollbackStackWorkflow;
-import com.eucalyptus.cloudformation.workflow.UpdateRollbackStackWorkflowClient;
-import com.eucalyptus.cloudformation.workflow.UpdateRollbackStackWorkflowDescriptionTemplate;
+import com.eucalyptus.cloudformation.workflow.UpdateStackPartsWorkflowKickOff;
 import com.eucalyptus.cloudformation.workflow.UpdateStackWorkflow;
 import com.eucalyptus.cloudformation.workflow.UpdateStackWorkflowClient;
 import com.eucalyptus.cloudformation.workflow.UpdateStackWorkflowDescriptionTemplate;
@@ -109,7 +104,6 @@ import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteStreams;
 import com.netflix.glisten.InterfaceBasedWorkflowClient;
-import com.netflix.glisten.WorkflowClientFactory;
 import com.netflix.glisten.WorkflowDescriptionTemplate;
 import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.log4j.Logger;
@@ -126,7 +120,9 @@ import java.net.URLConnection;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -270,24 +266,7 @@ public class CloudFormationService {
         }
       }
       if (!existingOpenContinueUpdateRollbackWorkflow) {
-        String stackId = stackEntity.getStackId();
-        StackUpdateInfoEntity stackUpdateInfoEntity = StackUpdateInfoEntityManager.getStackUpdateInfoEntity(stackId, accountId);
-        StackWorkflowTags stackWorkflowTags =
-          new StackWorkflowTags(stackId, stackName, stackAccountId, accountAlias );
-        StartTimeoutPassableWorkflowClientFactory workflowClientFactory = new StartTimeoutPassableWorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient(), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
-        WorkflowDescriptionTemplate workflowDescriptionTemplate = new UpdateRollbackStackWorkflowDescriptionTemplate();
-        InterfaceBasedWorkflowClient<UpdateRollbackStackWorkflow> client = workflowClientFactory
-          .getNewWorkflowClient(UpdateRollbackStackWorkflow.class, workflowDescriptionTemplate, stackWorkflowTags, null, null);
-        UpdateRollbackStackWorkflow updateRollbackStackWorkflow = new UpdateRollbackStackWorkflowClient(client);
-        updateRollbackStackWorkflow.performUpdateRollbackStack(stackId, accountId,
-          outerStackArn, stackUpdateInfoEntity.getOldResourceDependencyManagerJson(),
-          userId,
-          stackUpdateInfoEntity.getUpdatedStackVersion().intValue() + 1);
-        StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackEntity.getStackId(),
-          StackWorkflowEntity.WorkflowType.UPDATE_ROLLBACK_STACK_WORKFLOW,
-          CloudFormationProperties.SWF_DOMAIN,
-          client.getWorkflowExecution().getWorkflowId(),
-          client.getWorkflowExecution().getRunId());
+        UpdateStackPartsWorkflowKickOff.kickOffUpdateRollbackStackWorkflow(stackEntity.getStackId(), stackEntity.getAccountId(), outerStackArn, userId);
       }
     } catch (Exception ex) {
       handleException(ex);
@@ -456,7 +435,7 @@ public class CloudFormationService {
               .getNewWorkflowClient(MonitorCreateStackWorkflow.class, monitorCreateStackWorkflowDescriptionTemplate, stackWorkflowTags, null, null);
 
             MonitorCreateStackWorkflow monitorCreateStackWorkflow = new MonitorCreateStackWorkflowClient(monitorCreateStackWorkflowClient);
-            monitorCreateStackWorkflow.monitorCreateStack(stackEntity.getStackId(),  stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), userId, onFailure, INIT_STACK_VERSION);
+            monitorCreateStackWorkflow.monitorCreateStack(stackId, stackName, accountId, accountAlias, stackEntity.getResourceDependencyManagerJson(), userId, onFailure, INIT_STACK_VERSION);
 
 
             StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
@@ -555,6 +534,25 @@ public class CloudFormationService {
     }
   }
 
+  private EnumSet<Status> inProgressCantDeleteStatuses = EnumSet.of(
+    Status.UPDATE_IN_PROGRESS,
+    Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS,
+    Status.UPDATE_ROLLBACK_IN_PROGRESS,
+    Status.UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS
+  );
+
+  private EnumSet<StackWorkflowEntity.WorkflowType> updateOrMonitorUpdateWorkflowTypes = EnumSet.of(
+      StackWorkflowEntity.WorkflowType.UPDATE_STACK_WORKFLOW,
+      StackWorkflowEntity.WorkflowType.UPDATE_CLEANUP_STACK_WORKFLOW,
+      StackWorkflowEntity.WorkflowType.UPDATE_ROLLBACK_STACK_WORKFLOW,
+      StackWorkflowEntity.WorkflowType.UPDATE_ROLLBACK_CLEANUP_STACK_WORKFLOW,
+      StackWorkflowEntity.WorkflowType.MONITOR_UPDATE_STACK_WORKFLOW,
+      StackWorkflowEntity.WorkflowType.MONITOR_UPDATE_CLEANUP_STACK_WORKFLOW,
+      StackWorkflowEntity.WorkflowType.MONITOR_UPDATE_ROLLBACK_STACK_WORKFLOW,
+      StackWorkflowEntity.WorkflowType.MONITOR_UPDATE_ROLLBACK_CLEANUP_STACK_WORKFLOW
+  );
+
+
   public DeleteStackResponseType deleteStack( final DeleteStackType request ) throws CloudFormationException {
     DeleteStackResponseType reply = request.getReply();
     String retainedResourcesStr = "";
@@ -578,17 +576,19 @@ public class CloudFormationService {
           throw new AccessDeniedException( "Not authorized." );
         }
         final String stackAccountId = stackEntity.getAccountId( );
+        final String stackAccountAlias = Accounts.lookupAccountAliasById(stackAccountId);
 
         // eucalyptus administrators act as account admin to delete resources
         final String userId = ctx.isAdministrator( ) ?
           Accounts.lookupCachedPrincipalByAccountNumber( stackAccountId ).getUserId( ) :
           user.getUserId( );
 
-        if (stackEntity.getStackStatus() == Status.UPDATE_IN_PROGRESS || stackEntity.getStackStatus() == Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS ||
-          stackEntity.getStackStatus() == Status.UPDATE_ROLLBACK_IN_PROGRESS || stackEntity.getStackStatus() == Status.UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS) {
+        String stackId = stackEntity.getStackId();
+        
+        if (inProgressCantDeleteStatuses.contains(stackEntity.getStackStatus())
+          && hasOpenWorkflowOfType(stackEntity, updateOrMonitorUpdateWorkflowTypes)) {
           throw new ValidationErrorException("Stack " + stackEntity.getStackId() + " is in " + stackEntity.getStackStatus() + " state and can not be deleted.");
         }
-
         // check to see if there has been a delete workflow.  If one exists and is still going on, just quit:
         // unless its retain resources list doesn't match what is passed in.
         boolean existingOpenDeleteWorkflow = false;
@@ -635,14 +635,14 @@ public class CloudFormationService {
             Set<String> alreadyDeletedResources = Sets.newHashSet();
             Set<String> realResources = Sets.newHashSet();
             // see that we don't try to delete resources that are already deleted
-            for (StackResourceEntity stackResourceEntity:
+            for (StackResourceEntity stackResourceEntity :
               StackResourceEntityManager.describeStackResources(accountId, stackEntity.getStackId())) {
               if (stackResourceEntity.getResourceStatus() == Status.DELETE_COMPLETE) {
                 alreadyDeletedResources.add(stackResourceEntity.getLogicalResourceId());
               }
               realResources.add(stackResourceEntity.getLogicalResourceId());
             }
-            for (String retainedResource: Splitter.on(",").omitEmptyStrings().split(retainedResourcesStr)) {
+            for (String retainedResource : Splitter.on(",").omitEmptyStrings().split(retainedResourcesStr)) {
               if (alreadyDeletedResources.contains(retainedResource) || !realResources.contains(retainedResource)) {
                 throw new ValidationErrorException("The specified resources to retain must be in a valid state. Do not " +
                   "specify resources that are in the DELETE_COMPLETE state.");
@@ -650,32 +650,48 @@ public class CloudFormationService {
             }
           }
 
-          String stackId = stackEntity.getStackId();
-          StackWorkflowTags stackWorkflowTags =
-              new StackWorkflowTags(stackId, stackName, stackAccountId, accountAlias );
-
-          StartTimeoutPassableWorkflowClientFactory workflowClientFactory = new StartTimeoutPassableWorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient(), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
-          WorkflowDescriptionTemplate workflowDescriptionTemplate = new DeleteStackWorkflowDescriptionTemplate();
-          InterfaceBasedWorkflowClient<DeleteStackWorkflow> client = workflowClientFactory
-            .getNewWorkflowClient(DeleteStackWorkflow.class, workflowDescriptionTemplate, stackWorkflowTags, null, null);
-          DeleteStackWorkflow deleteStackWorkflow = new DeleteStackWorkflowClient(client);
-          deleteStackWorkflow.deleteStack(stackId, stackAccountId, stackEntity.getResourceDependencyManagerJson(), userId, stackEntity.getStackVersion(), retainedResourcesStr);
-          StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackEntity.getStackId(),
-            StackWorkflowEntity.WorkflowType.DELETE_STACK_WORKFLOW,
-            CloudFormationProperties.SWF_DOMAIN,
-            client.getWorkflowExecution().getWorkflowId(),
-            client.getWorkflowExecution().getRunId());
-          DeleteStackWorkflowExtraInfoEntityManager.addOrUpdateExtraInfo(stackEntity.getStackId(),
-            CloudFormationProperties.SWF_DOMAIN,
-            client.getWorkflowExecution().getWorkflowId(),
-            client.getWorkflowExecution().getRunId(),
-            retainedResourcesStr);
+          String resourceDependencyManagerJson = stackEntity.getResourceDependencyManagerJson();
+          int stackVersion = stackEntity.getStackVersion();
+          CommonDeleteRollbackKickoff.kickOffDeleteStackWorkflow(userId, stackId, stackName, stackAccountId, stackAccountAlias,
+            resourceDependencyManagerJson, stackVersion, retainedResourcesStr);
         }
       }
     } catch (Exception ex) {
       handleException(ex);
     }
     return reply;
+  }
+
+  private boolean hasOpenWorkflowOfType(StackEntity stackEntity, Collection<StackWorkflowEntity.WorkflowType> workflowTypes) throws ValidationErrorException {
+    for (StackWorkflowEntity.WorkflowType workflowType: workflowTypes) {
+      List<StackWorkflowEntity> workflows = StackWorkflowEntityManager.getStackWorkflowEntities(stackEntity.getStackId(),
+        workflowType);
+      if ( workflows != null && !workflows.isEmpty( ) ) {
+        if (workflows.size() > 1) {
+          throw new ValidationErrorException("More than one " + workflowType + "workflow exists for "
+            + stackEntity.getStackId()); // TODO: InternalFailureException (?)
+        }
+        // see if the workflow is open
+        try {
+          AmazonSimpleWorkflow simpleWorkflowClient = WorkflowClientManager.getSimpleWorkflowClient();
+          StackWorkflowEntity deleteStackWorkflowEntity = workflows.get(0);
+          DescribeWorkflowExecutionRequest describeWorkflowExecutionRequest = new DescribeWorkflowExecutionRequest();
+          describeWorkflowExecutionRequest.setDomain(deleteStackWorkflowEntity.getDomain());
+          WorkflowExecution execution = new WorkflowExecution();
+          execution.setRunId(deleteStackWorkflowEntity.getRunId());
+          execution.setWorkflowId(deleteStackWorkflowEntity.getWorkflowId());
+          describeWorkflowExecutionRequest.setExecution(execution);
+          WorkflowExecutionDetail workflowExecutionDetail = simpleWorkflowClient.describeWorkflowExecution(describeWorkflowExecutionRequest);
+          if ("OPEN".equals(workflowExecutionDetail.getExecutionInfo().getExecutionStatus())) {
+            return true;
+          }
+        } catch (Exception ex) {
+          LOG.error("Unable to get status of " + workflowType + " workflow for " + stackEntity.getStackId() + ", assuming not open");
+          LOG.debug(ex);
+        }
+      }
+    }
+    return false;
   }
 
   private String getRetainedResourcesFromCurrentOpenWorkflow(StackEntity stackEntity, StackWorkflowEntity deleteStackWorkflowEntity) {

@@ -34,6 +34,7 @@ import com.google.common.collect.Maps;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 
@@ -84,7 +85,7 @@ public class StackEntityHelper {
     }
   }
 
-  public static String outputsToJson(ArrayList<StackEntity.Output> outputs) throws CloudFormationException {
+  public static String outputsToJson(List<StackEntity.Output> outputs) throws CloudFormationException {
     try {
       return mapper.writeValueAsString(outputs == null ? Lists.<StackEntity.Output>newArrayList() : outputs);
     } catch (JsonProcessingException e) {
