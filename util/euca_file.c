@@ -98,7 +98,7 @@
 #include <limits.h>
 #include <sys/mman.h>                  // mmap
 #include <pthread.h>
-
+#include <sys/statvfs.h>
 #include "eucalyptus.h"
 
 #include <diskutil.h>
@@ -467,7 +467,7 @@ int check_path(const char *path)
 int statfs_path(const char *path, unsigned long long *fs_bytes_size, unsigned long long *fs_bytes_available, int *fs_id)
 {
     char cpath[PATH_MAX] = { 0 };
-    struct statfs fs = { 0 };
+    struct statvfs fs = { 0 };
 
     if ((path == NULL) || (fs_bytes_size == NULL) || (fs_bytes_available == NULL) || (fs_id == NULL))
         return (EUCA_INVALID_ERROR);
@@ -480,7 +480,7 @@ int statfs_path(const char *path, unsigned long long *fs_bytes_size, unsigned lo
         return (EUCA_IO_ERROR);
     }
     // obtain the size and ID info from the file system of the canonical path
-    if (statfs(cpath, &fs) == -1) {
+    if (statvfs(cpath, &fs) == -1) {
         LOGERROR("failed to stat %s (%s)\n", cpath, strerror(errno));
         return (EUCA_IO_ERROR);
     }
