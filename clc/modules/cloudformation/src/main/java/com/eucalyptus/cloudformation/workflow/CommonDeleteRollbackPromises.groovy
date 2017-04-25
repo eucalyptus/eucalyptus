@@ -59,7 +59,7 @@ public class CommonDeleteRollbackPromises {
     this.deleteStackRecordsWhenSuccessful = deleteStackRecordsWhenSuccessful
   }
 
-  public Promise<?> getPromise(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int stackVersion, String retainedResourcesStr) {
+  Promise<String> getPromise(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int stackVersion, String retainedResourcesStr) {
     Promise<String> deleteInitialStackPromise = activities.createGlobalStackEvent(
       stackId,
       accountId,
@@ -128,8 +128,8 @@ public class CommonDeleteRollbackPromises {
           }
         }
       }.withCatch { Throwable t ->
-        CreateStackWorkflowImpl.LOG.error(t);
-        CreateStackWorkflowImpl.LOG.debug(t, t);
+        CommonDeleteRollbackPromises.LOG.error(t);
+        CommonDeleteRollbackPromises.LOG.debug(t, t);
         Throwable cause = Throwables.getRootCause(t);
         Promise<String> errorMessagePromise = Promise.asPromise((cause != null) && (cause.getMessage() != null) ? cause.getMessage() : "");
         if (cause != null && cause instanceof ResourceFailureException) {

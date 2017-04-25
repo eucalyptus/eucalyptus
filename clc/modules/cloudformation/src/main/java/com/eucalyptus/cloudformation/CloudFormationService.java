@@ -120,7 +120,9 @@ import java.net.URLConnection;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -532,6 +534,25 @@ public class CloudFormationService {
     }
   }
 
+  private EnumSet<Status> inProgressCantDeleteStatuses = EnumSet.of(
+    Status.UPDATE_IN_PROGRESS,
+    Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS,
+    Status.UPDATE_ROLLBACK_IN_PROGRESS,
+    Status.UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS
+  );
+
+  private EnumSet<StackWorkflowEntity.WorkflowType> updateOrMonitorUpdateWorkflowTypes = EnumSet.of(
+      StackWorkflowEntity.WorkflowType.UPDATE_STACK_WORKFLOW,
+      StackWorkflowEntity.WorkflowType.UPDATE_CLEANUP_STACK_WORKFLOW,
+      StackWorkflowEntity.WorkflowType.UPDATE_ROLLBACK_STACK_WORKFLOW,
+      StackWorkflowEntity.WorkflowType.UPDATE_ROLLBACK_STACK_WORKFLOW,
+      StackWorkflowEntity.WorkflowType.MONITOR_UPDATE_STACK_WORKFLOW,
+      StackWorkflowEntity.WorkflowType.MONITOR_UPDATE_CLEANUP_STACK_WORKFLOW,
+      StackWorkflowEntity.WorkflowType.MONITOR_UPDATE_ROLLBACK_STACK_WORKFLOW,
+      StackWorkflowEntity.WorkflowType.MONITOR_UPDATE_ROLLBACK_STACK_WORKFLOW
+  );
+
+
   public DeleteStackResponseType deleteStack( final DeleteStackType request ) throws CloudFormationException {
     DeleteStackResponseType reply = request.getReply();
     String retainedResourcesStr = "";
@@ -564,21 +585,8 @@ public class CloudFormationService {
 
         String stackId = stackEntity.getStackId();
         
-        if (
-          (stackEntity.getStackStatus() == Status.UPDATE_IN_PROGRESS ||
-          stackEntity.getStackStatus() == Status.UPDATE_COMPLETE_CLEANUP_IN_PROGRESS ||
-          stackEntity.getStackStatus() == Status.UPDATE_ROLLBACK_IN_PROGRESS ||
-          stackEntity.getStackStatus() == Status.UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS) 
-        &&
-          hasOpenWorkflowOfType(stackEntity, StackWorkflowEntity.WorkflowType.UPDATE_STACK_WORKFLOW,
-            StackWorkflowEntity.WorkflowType.UPDATE_CLEANUP_STACK_WORKFLOW,
-            StackWorkflowEntity.WorkflowType.UPDATE_ROLLBACK_STACK_WORKFLOW,
-            StackWorkflowEntity.WorkflowType.UPDATE_ROLLBACK_STACK_WORKFLOW,
-            StackWorkflowEntity.WorkflowType.MONITOR_UPDATE_STACK_WORKFLOW,
-            StackWorkflowEntity.WorkflowType.MONITOR_UPDATE_CLEANUP_STACK_WORKFLOW,
-            StackWorkflowEntity.WorkflowType.MONITOR_UPDATE_ROLLBACK_STACK_WORKFLOW,
-            StackWorkflowEntity.WorkflowType.MONITOR_UPDATE_ROLLBACK_STACK_WORKFLOW)
-          ) {
+        if (inProgressCantDeleteStatuses.contains(stackEntity.getStackStatus())
+          && hasOpenWorkflowOfType(stackEntity, updateOrMonitorUpdateWorkflowTypes)) {
           throw new ValidationErrorException("Stack " + stackEntity.getStackId() + " is in " + stackEntity.getStackStatus() + " state and can not be deleted.");
         }
         // check to see if there has been a delete workflow.  If one exists and is still going on, just quit:
@@ -654,16 +662,7 @@ public class CloudFormationService {
     return reply;
   }
 
-  private void checkStatusOnDelete(StackEntity stackEntity, Status status, StackWorkflowEntity.WorkflowType workflowType,
-                                   StackWorkflowEntity.WorkflowType monitoringWorkflowType) throws ValidationErrorException {
-    boolean openWorkflow = hasOpenWorkflowOfType(stackEntity, workflowType);
-    boolean openMonitoringWorkflow = hasOpenWorkflowOfType(stackEntity, monitoringWorkflowType);
-    if (stackEntity.getStackStatus() == status && (openWorkflow || openMonitoringWorkflow)) {
-      throw new ValidationErrorException("Stack " + stackEntity.getStackId() + " is in " + stackEntity.getStackStatus() + " state and can not be deleted.");
-    }
-  }
-
-  private boolean hasOpenWorkflowOfType(StackEntity stackEntity, StackWorkflowEntity.WorkflowType... workflowTypes) throws ValidationErrorException {
+  private boolean hasOpenWorkflowOfType(StackEntity stackEntity, Collection<StackWorkflowEntity.WorkflowType> workflowTypes) throws ValidationErrorException {
     for (StackWorkflowEntity.WorkflowType workflowType: workflowTypes) {
       List<StackWorkflowEntity> workflows = StackWorkflowEntityManager.getStackWorkflowEntities(stackEntity.getStackId(),
         workflowType);

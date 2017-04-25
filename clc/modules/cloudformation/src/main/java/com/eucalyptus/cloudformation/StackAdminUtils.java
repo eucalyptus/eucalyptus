@@ -82,17 +82,21 @@ public class StackAdminUtils {
     AmazonSimpleWorkflow simpleWorkflowClient = Config.buildClient(
       CloudFormationAWSCredentialsProvider.CloudFormationUserSupplier.INSTANCE
     );
-    // first cancel all outstanding workflows
-    for (StackWorkflowEntity stackWorkflowEntity : StackWorkflowEntityManager.getStackWorkflowEntities(stackId)) {
-      try {
-        RequestCancelWorkflowExecutionRequest requestCancelWorkflowExecutionRequest = new RequestCancelWorkflowExecutionRequest();
-        requestCancelWorkflowExecutionRequest.setWorkflowId(stackWorkflowEntity.getWorkflowId());
-        requestCancelWorkflowExecutionRequest.setRunId(stackWorkflowEntity.getRunId());
-        requestCancelWorkflowExecutionRequest.setDomain(stackWorkflowEntity.getDomain());
-        simpleWorkflowClient.requestCancelWorkflowExecution(requestCancelWorkflowExecutionRequest);
-      } catch (UnknownResourceException ex) {
-        ; // don't bother
+    try {
+      // first cancel all outstanding workflows
+      for (StackWorkflowEntity stackWorkflowEntity : StackWorkflowEntityManager.getStackWorkflowEntities(stackId)) {
+        try {
+          RequestCancelWorkflowExecutionRequest requestCancelWorkflowExecutionRequest = new RequestCancelWorkflowExecutionRequest();
+          requestCancelWorkflowExecutionRequest.setWorkflowId(stackWorkflowEntity.getWorkflowId());
+          requestCancelWorkflowExecutionRequest.setRunId(stackWorkflowEntity.getRunId());
+          requestCancelWorkflowExecutionRequest.setDomain(stackWorkflowEntity.getDomain());
+          simpleWorkflowClient.requestCancelWorkflowExecution(requestCancelWorkflowExecutionRequest);
+        } catch (UnknownResourceException ex) {
+          ; // don't bother
+        }
       }
+    } finally {
+      simpleWorkflowClient.shutdown();
     }
   }
 }

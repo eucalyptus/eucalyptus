@@ -280,10 +280,10 @@ public class StackEntityManager {
     StackEntity stackEntity = null;
     try ( TransactionResource db =
             Entities.transactionFor( STACK_ENTITY_TRANSACTION_CLASS ) ) {
-      Criteria criteria = Entities.createCriteria(StackEntity.class)
-        .add(Restrictions.eq("stackId", stackId))
-        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
-      List<StackEntity> entityList = criteria.list();
+      List<StackEntity> entityList = Entities.criteriaQuery(StackEntity.class)
+        .whereEqual(StackEntity_.stackId, stackId)
+        .whereEqual(StackEntity_.recordDeleted, Boolean.FALSE)
+        .list();
       if (entityList != null && !entityList.isEmpty()) {
         stackEntity = entityList.get(0);
       }
