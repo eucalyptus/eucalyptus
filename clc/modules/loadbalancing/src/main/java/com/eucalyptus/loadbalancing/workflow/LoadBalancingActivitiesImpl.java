@@ -23,11 +23,21 @@ import static com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCore
 import static com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView.subnetId;
 import static com.eucalyptus.loadbalancing.service.LoadBalancingService.MAX_HEALTHCHECK_INTERVAL_SEC;
 
+import com.amazonaws.services.s3.model.CannedAccessControlList;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.Role;
+import com.eucalyptus.auth.tokens.SecurityTokenAWSCredentialsProvider;
 import com.eucalyptus.compute.common.*;
 import com.eucalyptus.loadbalancing.*;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
 import com.eucalyptus.loadbalancing.LoadBalancingSystemVpcs;
+
+import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -36,6 +46,8 @@ import javax.annotation.Nullable;
 
 import com.eucalyptus.loadbalancing.common.msgs.HealthCheck;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyDescription;
+import com.eucalyptus.objectstorage.client.EucaS3Client;
+import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import com.eucalyptus.ws.StackConfiguration;
 import org.apache.log4j.Logger;
 
@@ -64,7 +76,6 @@ import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceEntityTransform;
-import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.STATE;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
@@ -208,7 +219,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       "{\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":[\"ec2.amazonaws.com\"]},\"Action\":[\"sts:AssumeRole\"]}]}";   
 
   // FIXME: use lambda expression
-  private static String getRoleName(final String accountNumber, final String loadbalancer) {
+  public static String getRoleName(final String accountNumber, final String loadbalancer) {
     return String.format("%s-%s-%s", ROLE_NAME_PREFIX, accountNumber, loadbalancer);
   }
   
@@ -2143,6 +2154,22 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       // the actual security group is delete during the clean-up workflow
     }    
   }
+
+  private static EucaS3Client getS3Client (final String roleName) throws AuthException {
+    try {
+      final Role lbRole = Accounts.lookupRoleByName(
+              Accounts.lookupAccountIdByAlias( AccountIdentifiers.ELB_SYSTEM_ACCOUNT),
+              roleName);
+      final SecurityTokenAWSCredentialsProvider roleCredentialProvider =
+              SecurityTokenAWSCredentialsProvider.forUserOrRole(Accounts.lookupPrincipalByRoleId(lbRole.getRoleId()));
+      return EucaS3ClientFactory.getEucaS3Client(roleCredentialProvider);
+    }catch (AuthException ex) {
+      LOG.error("Failed to get credentials for loadbalancing role", ex);
+    }catch (Exception ex) {
+      LOG.error("Failed to get credentials for loadbalancing role", ex);
+    }
+    return null;
+  }
   
   final String ACCESSLOG_ROLE_POLICY_NAME = "euca-internal-loadbalancer-vm-policy-accesslog";
   @Override
@@ -2193,6 +2220,21 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       result.setShouldRollback(true);
     }catch(final Exception ex){
       throw new LoadBalancingActivityException("failed to put role policy for loadbalancer vm's access to S3 buckets");
+    }
+
+    try {
+      final EucaS3Client s3c = getS3Client(roleName);
+      final String key = s3BucketPrefix != null && !s3BucketPrefix.isEmpty() ? String.format("%s/AWSLogs/%s/ELBAccessLogTestFile", s3BucketPrefix, accountNumber)
+              : String.format("AWSLogs/%s/ELBAccessLogTestFile", accountNumber);
+      final DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
+      final String content = String.format("Enable AccessLog for ELB: %s at %s",
+              lbName, df.format(new Date()));
+      final PutObjectRequest req = new PutObjectRequest(bucketName, key,
+              new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)), new ObjectMetadata())
+              .withCannedAcl(CannedAccessControlList.BucketOwnerFullControl);
+      s3c.putObject(req);
+    } catch (final Exception ex) {
+      LOG.warn("Failed to put test key to the access log bucket");
     }
     return result;
   }

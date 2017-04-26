@@ -123,4 +123,34 @@ public interface MonthlyReportActivitiesClient extends ActivitiesClient
      */
     Promise<Void> persist(Promise<String> accountId, Promise<String> year, Promise<String> month, Promise<java.util.List<com.eucalyptus.portal.workflow.MonthlyUsageRecord>> monthly, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
 
+    /**
+     * Generated from {@link com.eucalyptus.portal.workflow.MonthlyReportActivities#uploadToS3Bucket}
+     */
+    Promise<Void> uploadToS3Bucket(String accountId, String year, String month);
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.workflow.MonthlyReportActivities#uploadToS3Bucket}
+     */
+    Promise<Void> uploadToS3Bucket(String accountId, String year, String month, Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.workflow.MonthlyReportActivities#uploadToS3Bucket}
+     */
+    Promise<Void> uploadToS3Bucket(String accountId, String year, String month, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.workflow.MonthlyReportActivities#uploadToS3Bucket}
+     */
+    Promise<Void> uploadToS3Bucket(Promise<String> accountId, Promise<String> year, Promise<String> month);
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.workflow.MonthlyReportActivities#uploadToS3Bucket}
+     */
+    Promise<Void> uploadToS3Bucket(Promise<String> accountId, Promise<String> year, Promise<String> month, Promise<?>... waitFor);
+
+    /**
+     * Generated from {@link com.eucalyptus.portal.workflow.MonthlyReportActivities#uploadToS3Bucket}
+     */
+    Promise<Void> uploadToS3Bucket(Promise<String> accountId, Promise<String> year, Promise<String> month, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor);
+
 }

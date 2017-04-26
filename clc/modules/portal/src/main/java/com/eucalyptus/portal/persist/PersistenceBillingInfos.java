@@ -36,7 +36,7 @@ public class PersistenceBillingInfos
     extends AbstractPersistentSupport<PortalMetadata.BillingInfoMetadata,BillingInfo,PortalMetadataException>
     implements BillingInfos {
 
-  protected PersistenceBillingInfos( ) {
+  public PersistenceBillingInfos( ) {
     super( "billing-info" );
   }
 

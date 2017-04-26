@@ -33,4 +33,5 @@ public interface MonthlyReportActivities {
   List<AwsUsageRecord> queryMonthlyAwsUsage(final String accountId, final String service, final String year, final String month, final Date end) throws BillingActivityException;
   List<MonthlyUsageRecord> transform(List<AwsUsageRecord> awsUsage) throws BillingActivityException;
   void persist(final String accountId, final String year, final String month, List<MonthlyUsageRecord> monthly) throws BillingActivityException;
+  void uploadToS3Bucket(final String accountId, final String year, final String month) throws BillingActivityException;
 }

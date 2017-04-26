@@ -13,18 +13,28 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  ************************************************************************/
-package com.eucalyptus.portal.provider;
+package com.eucalyptus.portal;
 
 import com.eucalyptus.auth.principal.AccountIdentifiers;
-import com.eucalyptus.auth.util.SystemAccountProvider;
+import com.eucalyptus.auth.util.ClassPathSystemAccountProvider;
+import com.google.common.collect.ImmutableList;
 
-/**
- *
- */
-public class BillingSystemAccountProvider implements SystemAccountProvider {
 
-  @Override
-  public String getAlias( ) {
-    return AccountIdentifiers.BILLING_SYSTEM_ACCOUNT;
+public class BillingSystemAccountProvider extends ClassPathSystemAccountProvider {
+
+  public BillingSystemAccountProvider( ) {
+    super(
+            AccountIdentifiers.BILLING_SYSTEM_ACCOUNT,
+            false,
+            ImmutableList.<SystemAccountRole>of(
+                    newSystemAccountRole(
+                            "BillingServiceWorkflow",
+                            "/billing",
+                            ImmutableList.<AttachedPolicy>of(
+                                    newAttachedPolicy( "BillingServiceWorkflow" )
+                            )
+                    )
+            )
+    );
   }
 }

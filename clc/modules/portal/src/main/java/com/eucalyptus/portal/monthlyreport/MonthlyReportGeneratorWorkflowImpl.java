@@ -24,6 +24,7 @@ import com.eucalyptus.portal.workflow.BillingWorkflowState;
 import com.eucalyptus.portal.workflow.MonthlyReportActivitiesClient;
 import com.eucalyptus.portal.workflow.MonthlyReportActivitiesClientImpl;
 import com.eucalyptus.portal.workflow.MonthlyReportGeneratorWorkflow;
+import com.eucalyptus.portal.workflow.MonthlyUsageRecord;
 import com.eucalyptus.simpleworkflow.common.client.Daily;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
@@ -84,15 +85,21 @@ public class MonthlyReportGeneratorWorkflowImpl implements MonthlyReportGenerato
     for (final String accountId : accounts.get()) {
       Promise<Void> run = Promise.Void();
       for (final String service : Lists.newArrayList("AmazonEC2", "AmazonS3")) {
+        final Promise<List<MonthlyUsageRecord>> records = client.transform(
+                client.queryMonthlyAwsUsage(accountId, service, this.year, this.month, this.reportUntil)
+        );
         run = client.persist(
                 Promise.asPromise(accountId),
                 Promise.asPromise(this.year),
                 Promise.asPromise(this.month),
-                client.transform(
-                        client.queryMonthlyAwsUsage(accountId, service, this.year, this.month, this.reportUntil)
-                ),
+                records,
                 run    // persist is serialized
         );
+        client.uploadToS3Bucket(
+                Promise.asPromise(accountId),
+                Promise.asPromise(this.year),
+                Promise.asPromise(this.month),
+                run);
       }
     }
   }

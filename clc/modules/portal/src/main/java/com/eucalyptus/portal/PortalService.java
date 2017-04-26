@@ -17,6 +17,8 @@ package com.eucalyptus.portal;
 
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -30,7 +32,11 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import javax.inject.Inject;
 
+import com.amazonaws.services.s3.model.CannedAccessControlList;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.portal.monthlyreport.MonthlyReports;
 import com.eucalyptus.portal.workflow.AwsUsageRecord;
 import com.eucalyptus.portal.awsusage.AwsUsageRecords;
@@ -149,7 +155,26 @@ public class PortalService {
       }
       return info;
     };
+    final Predicate<String> testBucket = (bucket) -> {
+      try {
+        final EucaS3Client s3c = BucketUploadableActivities.getS3Client();
+        PutObjectRequest req = new PutObjectRequest(bucket, "aws-programmatic-access-test-object",
+                new ByteArrayInputStream("test".getBytes(StandardCharsets.UTF_8)),
+                new ObjectMetadata())
+                .withCannedAcl(CannedAccessControlList.BucketOwnerFullControl);
+        s3c.putObject(req);
+        return true;
+      } catch (final Exception ex) {
+        ;
+      }
+      return false;
+    };
+
     try {
+      if (request.getReportBucket()!=null && !testBucket.test(request.getReportBucket()) ) {
+        throw new PortalInvalidParameterException("Requested bucket is not accessible by billing");
+      }
+
       try {
         response.getResult( ).setBillingSettings( billingInfos.updateByAccount(
                 context.getAccountNumber( ),

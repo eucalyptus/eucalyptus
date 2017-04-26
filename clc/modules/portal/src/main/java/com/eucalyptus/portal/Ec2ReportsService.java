@@ -124,7 +124,7 @@ public class Ec2ReportsService {
         throw error.get();
       }
 
-      final String granularity = request.getGranularity();
+      final String granularity = request.getGranularity().toLowerCase();
       final List<InstanceHourLog> logs = Lists.newArrayList();
       if (granularity.equals("hourly") || granularity.equals("hour")) {
         logs.addAll(InstanceLogs.getInstance().queryHourly(context.getAccountNumber(),

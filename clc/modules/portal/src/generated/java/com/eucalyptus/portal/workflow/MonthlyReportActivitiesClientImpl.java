@@ -197,4 +197,50 @@ public class MonthlyReportActivitiesClientImpl extends ActivitiesClientBase impl
         return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, Void.class, waitFor);
     }
 
+    @Override
+    public final Promise<Void> uploadToS3Bucket(String accountId, String year, String month) {
+        return uploadToS3BucketImpl(Promise.asPromise(accountId), Promise.asPromise(year), Promise.asPromise(month), (ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<Void> uploadToS3Bucket(String accountId, String year, String month, Promise<?>... waitFor) {
+        return uploadToS3BucketImpl(Promise.asPromise(accountId), Promise.asPromise(year), Promise.asPromise(month), (ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> uploadToS3Bucket(String accountId, String year, String month, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return uploadToS3BucketImpl(Promise.asPromise(accountId), Promise.asPromise(year), Promise.asPromise(month), optionsOverride, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> uploadToS3Bucket(Promise<String> accountId, Promise<String> year, Promise<String> month) {
+        return uploadToS3BucketImpl(accountId, year, month, (ActivitySchedulingOptions)null);
+    }
+
+    @Override
+    public final Promise<Void> uploadToS3Bucket(Promise<String> accountId, Promise<String> year, Promise<String> month, Promise<?>... waitFor) {
+        return uploadToS3BucketImpl(accountId, year, month, (ActivitySchedulingOptions)null, waitFor);
+    }
+
+    @Override
+    public final Promise<Void> uploadToS3Bucket(Promise<String> accountId, Promise<String> year, Promise<String> month, ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+        return uploadToS3BucketImpl(accountId, year, month, optionsOverride, waitFor);
+    }
+    
+    
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    protected Promise<Void> uploadToS3BucketImpl(final Promise<String> accountId, final Promise<String> year, final Promise<String> month, final ActivitySchedulingOptions optionsOverride, Promise<?>... waitFor) {
+
+        ActivityType _activityType = new ActivityType();
+		_activityType.setName("MonthlyReportActivities.uploadToS3Bucket");
+		_activityType.setVersion("1.0");
+
+        Promise[] _input_ = new Promise[3];
+        _input_[0] = accountId;
+        _input_[1] = year;
+        _input_[2] = month;
+
+        return (Promise)scheduleActivity(_activityType, _input_, optionsOverride, Void.class, waitFor);
+    }
+
 }
