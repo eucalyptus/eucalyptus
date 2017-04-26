@@ -55,7 +55,7 @@ class CassandraAwsRecordsVerificationImpl {
   }
 
   static String verify() {
-    if (!"cassandra".equals(CassandraSessionManager.DB_TO_USE)) {
+    if (!"cassandra".equals(CassandraSessionManager.DB_TO_USE) && !"euca-cassandra".equals(CassandraSessionManager.DB_TO_USE)) {
       return "Error: not configured to use cassandra";
     }
 
