@@ -369,14 +369,14 @@ class VmInstanceLifecycleHelpers {
     }
 
     @Nonnull
-    static <T extends RestrictedType> T lookup( final String typeDesc, final String id, final Class<T> type ) {
+    static <T extends RestrictedType> T lookup( final String account, final String typeDesc, final String id, final Class<T> type ) {
       final T resource = RestrictedTypes.<T>resolver( type ).apply( normalizeIdentifier( id ) )
-      if ( !RestrictedTypes.filterPrivileged( ).apply( resource ) ) {
+      if ( !RestrictedTypes.filterPrivileged( ).apply( resource ) ||
+          ( account && account != resource.owner.accountNumber ) ) {
         throw new IllegalMetadataAccessException( "Not authorized to use ${typeDesc} ${id}" )
       }
       resource
     }
-
   }
 
   static final class PrivateIPVmInstanceLifecycleHelper extends NetworkResourceVmInstanceLifecycleHelper {
@@ -749,6 +749,9 @@ class VmInstanceLifecycleHelpers {
       final String subnetId = normalizeIdentifier( instanceNetworkInterface?.subnetId ?: runInstances.subnetId )
       final Set<String> networkIds = getSecurityGroupIds( instanceNetworkInterface )
       final Set<NetworkingFeature> networkingFeatures = Networking.getInstance( ).describeFeatures( );
+      final String requiredResourceAccountNumber = !allocation.context.privileged ?
+          allocation.ownerFullName.accountNumber :
+          null
       if ( !Strings.isNullOrEmpty( subnetId ) ||
           instanceNetworkInterface != null ||
           !Iterables.isEmpty( secondaryNetworkInterfaces ) ) {
@@ -794,7 +797,7 @@ class VmInstanceLifecycleHelpers {
             final VpcNetworkInterface networkInterface
             try {
               networkInterface =
-                  lookup("network interface", instanceNetworkInterface.networkInterfaceId, VpcNetworkInterface) as
+                  lookup( requiredResourceAccountNumber, "network interface", instanceNetworkInterface.networkInterfaceId, VpcNetworkInterface) as
                       VpcNetworkInterface
             } catch ( Exception e ) {
               throw new NoSuchNetworkInterfaceMetadataException( "Network interface (${instanceNetworkInterface.networkInterfaceId}) not found", e )
@@ -810,7 +813,7 @@ class VmInstanceLifecycleHelpers {
         if ( !resolveSubnetId ) throw new InvalidMetadataException( "SubnetId required" )
         final Subnet subnet
         try {
-          subnet = lookup( "subnet", resolveSubnetId, Subnet )
+          subnet = lookup( requiredResourceAccountNumber, "subnet", resolveSubnetId, Subnet )
         } catch ( NoSuchElementException e ) {
           throw new NoSuchSubnetMetadataException( "Subnet (${resolveSubnetId}) not found", e )
         }
@@ -828,7 +831,7 @@ class VmInstanceLifecycleHelpers {
         final Set<NetworkGroup> groups = Sets.newHashSet( )
         for ( String groupId : networkIds ) {
           if ( !Iterables.tryFind( groups, CollectionUtils.propertyPredicate( groupId, NetworkGroup.groupId() ) ).isPresent() ) try {
-            groups.add( lookup( "security group", groupId, NetworkGroup  ) )
+            groups.add( lookup( requiredResourceAccountNumber, "security group", groupId, NetworkGroup  ) )
           } catch ( Exception e ) {
             throw new NoSuchGroupMetadataException( "Security group (${groupId}) not found", e )
           }
@@ -871,7 +874,7 @@ class VmInstanceLifecycleHelpers {
                 throw new InvalidMetadataException("Network interface duplicate (${networkInterfaceItem.networkInterfaceId})" )
               }
               final VpcNetworkInterface secondaryNetworkInterface =
-                  lookup("network interface", secondaryNetworkInterfaceId, VpcNetworkInterface)
+                  lookup(requiredResourceAccountNumber, "network interface", secondaryNetworkInterfaceId, VpcNetworkInterface)
               if ( secondaryNetworkInterface.attached ) {
                 throw new NetworkInterfaceInUseMetadataException( "Network interface (${networkInterfaceItem.networkInterfaceId}) in use", )
               }
@@ -882,7 +885,7 @@ class VmInstanceLifecycleHelpers {
               throw new NoSuchNetworkInterfaceMetadataException( "Network interface (${networkInterfaceItem.networkInterfaceId}) not found", e )
             }
             if ( !secondarySubnet ) try {
-              secondarySubnet = lookup( "subnet", networkInterfaceItem.subnetId, Subnet )
+              secondarySubnet = lookup( requiredResourceAccountNumber, "subnet", networkInterfaceItem.subnetId, Subnet )
             } catch ( Exception e ) {
               throw new NoSuchSubnetMetadataException( "Subnet (${networkInterfaceItem.subnetId}) not found", e )
             }
@@ -908,7 +911,7 @@ class VmInstanceLifecycleHelpers {
             final Set<NetworkGroup> secondaryGroups = [] as Set<NetworkGroup>
             for ( String groupId : secondaryNetworkIds ) {
               if ( !Iterables.tryFind( secondaryGroups, CollectionUtils.propertyPredicate( groupId, NetworkGroup.groupId() ) ).isPresent() ) try {
-                secondaryGroups.add( lookup( "security group", groupId, NetworkGroup ) )
+                secondaryGroups.add( lookup( requiredResourceAccountNumber, "security group", groupId, NetworkGroup ) )
               } catch ( Exception e ) {
                 throw new NoSuchGroupMetadataException( "Security group (${groupId}) not found", e );
               }
