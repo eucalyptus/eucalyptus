@@ -686,7 +686,15 @@ public abstract class FilterSupport<RT> {
   public static boolean isTotallyWildLikeExpression( final String expression ) {
     return expression.replace("%","").isEmpty();  
   }
-  
+
+  protected static Function<String,String> ignoredValueFunction( final String... ignored ) {
+    return ignoredValueFunction( Sets.newHashSet( ignored ) );
+  }
+
+  protected static Function<String,String> ignoredValueFunction( final Set<String> ignored ) {
+    return value -> ignored.contains( value ) ? null : value;
+  }
+
   private static <T> Function<? super String, Predicate<? super T>> falseFilter() {
     return Functions.<Predicate<? super T>>constant( Predicates.alwaysFalse() );
   }

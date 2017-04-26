@@ -238,7 +238,7 @@ class NetworkInfoBroadcasts {
     } )
     Set<String> activeDhcpOptionSets = (Set<String>) vpcs.inject( Sets.newHashSetWithExpectedSize( 500 ) ) {
       Set<String> dhcpOptionSetIds, VpcNetworkView vpc ->
-        if ( activeVpcs.contains( vpc.id ) ) {
+        if ( activeVpcs.contains( vpc.id ) && vpc.dhcpOptionSetId ) {
           dhcpOptionSetIds.add( vpc.dhcpOptionSetId )
         }
         dhcpOptionSetIds
@@ -822,7 +822,7 @@ class NetworkInfoBroadcasts {
           vpc.version,
           vpc.ownerAccountNumber,
           vpc.cidr,
-          vpc.dhcpOptionSet.displayName
+          vpc.dhcpOptionSet?.displayName
       )
     }
   }

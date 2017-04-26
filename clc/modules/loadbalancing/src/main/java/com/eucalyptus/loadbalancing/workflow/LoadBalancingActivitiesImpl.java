@@ -1106,7 +1106,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
           for (Listener listener : listeners) {
             int port = listener.getLoadBalancerPort();
             try {
-              EucalyptusActivityTasks.getInstance().authorizeSystemSecurityGroup(groupId, protocol, port, lb.useSystemAccount());
+              EucalyptusActivityTasks.getInstance().authorizeSystemSecurityGroup(groupId, protocol, port, false);
             } catch (Exception ex) {
               throw new LoadBalancingActivityException(String.format("failed to authorize %s, %s, %d", groupId, protocol, port), ex);
             }

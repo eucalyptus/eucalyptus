@@ -307,7 +307,6 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> e
     } else {
       this.teardown( cause );
     }
-    super.exceptionCaught( ctx, cause );
   }
 
   private void messageReceived( final ChannelHandlerContext ctx, final Object message ) {
