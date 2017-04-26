@@ -34,7 +34,7 @@ class CassandraAwsRecordsVerificationImpl {
     return sample.findAll { \
     it.ownerAccountNumber == accountNumber && it.service == service && \
      (operation == null || it.operation == operation) && \
-     (usageType == null || it.usageType == usageType) && \
+     (usageType == null || it.usageType.startsWith(usageType)) && \
      (startDate == null || it.endTime >= startDate) && \
      (endDate == null || it.endTime <= endDate)
     };
@@ -55,7 +55,7 @@ class CassandraAwsRecordsVerificationImpl {
   }
 
   static String verify() {
-    if (!"cassandra".equals(CassandraSessionManager.DB_TO_USE)) {
+    if (!"cassandra".equals(CassandraSessionManager.DB_TO_USE) && !"euca-cassandra".equals(CassandraSessionManager.DB_TO_USE)) {
       return "Error: not configured to use cassandra";
     }
 
@@ -187,7 +187,7 @@ class CassandraAwsRecordsVerificationImpl {
       for (String accountId: [ACCOUNT1, ACCOUNT2]) {
         for (String service : [SERVICE1, SERVICE2]) {
           for (String operation : [OPERATION1, OPERATION2, null]) {
-            for (String usageType : [USAGETYPE1, USAGETYPE1, null]) {
+            for (String usageType : [USAGETYPE1, USAGETYPE1, "usageType*", null]) {
               for (Date startDate : [TWO_HOURS_AGO, ONE_HOUR_AGO, NOW, ONE_HOUR_FROM_NOW, null]) {
                 for (Date endDate : [TWO_HOURS_AGO, ONE_HOUR_AGO, NOW, ONE_HOUR_FROM_NOW, null]) {
                   assert (
