@@ -194,7 +194,7 @@ public class VpcManager {
             public void fire( final Vpc vpc ) {
               if ( RestrictedTypes.filterPrivileged( ).apply( vpc ) ) try {
                 final DhcpOptionSet dhcpOptionSet = "default".equals( dhcpOptionsId ) ?
-                    dhcpOptionSets.lookupByExample( DhcpOptionSet.exampleDefault( accountFullName ), accountFullName, "default", Predicates.alwaysTrue( ), Functions.identity() ):
+                    null :
                     dhcpOptionSets.lookupByName( accountFullName, dhcpOptionsId, Functions.identity( ) );
                 vpc.setDhcpOptionSet( dhcpOptionSet );
               } catch ( VpcMetadataNotFoundException e ) {
