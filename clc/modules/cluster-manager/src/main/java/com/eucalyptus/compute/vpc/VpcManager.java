@@ -759,14 +759,37 @@ public class VpcManager {
       @Override
       public Route get( ) {
         try {
-          final NetworkInterface networkInterface = networkInterfaceId == null ? null :
+          final NetworkInterface networkInterface;
+          try {
+            networkInterface = networkInterfaceId == null ? null :
               networkInterfaces.lookupByName( accountFullName, networkInterfaceId, Functions.identity( ) );
-          final VmInstance instance = instanceId == null ? null :
-              VmInstances.lookup( instanceId );
-          final InternetGateway internetGateway = gatewayId == null ? null :
-              internetGateways.lookupByName( accountFullName, gatewayId, Functions.identity() );
-          final NatGateway natGateway = natGatewayId == null ? null :
+          } catch ( VpcMetadataNotFoundException e ) {
+            throw new ClientComputeException( "InvalidNetworkInterfaceID.NotFound",
+                "Network interface not found '" + request.getNetworkInterfaceId( ) + "'" );
+          }
+          final VmInstance instance;
+          try {
+            instance = instanceId == null ? null : VmInstances.lookup( instanceId );
+          } catch ( NoSuchElementException e ) {
+            throw new ClientComputeException( "InvalidInstanceID.NotFound",
+                "Instance not found '" + request.getInstanceId( ) + "'" );
+          }
+          final InternetGateway internetGateway;
+          try {
+            internetGateway = gatewayId == null ?
+                null : internetGateways.lookupByName( accountFullName, gatewayId, Functions.identity( ) );
+          } catch ( VpcMetadataNotFoundException e ) {
+            throw new ClientComputeException( "InvalidInternetGatewayID.NotFound",
+                "Internet gateway not found '" + request.getGatewayId( ) + "'" );
+          }
+          final NatGateway natGateway;
+          try {
+            natGateway = natGatewayId == null ? null :
               natGateways.lookupByName( accountFullName, natGatewayId, Functions.identity() );
+          } catch ( VpcMetadataNotFoundException e ) {
+            throw new ClientComputeException( "InvalidNatGatewayID.NotFound",
+                "NAT gateway not found '" + request.getNatGatewayId( ) + "'" );
+          }
           routeTables.updateByExample(
               RouteTable.exampleWithName( accountFullName, routeTableId ),
               accountFullName,
@@ -807,6 +830,9 @@ public class VpcManager {
                 }
               } );
           return null;
+        } catch ( VpcMetadataNotFoundException e ) {
+          throw Exceptions.toUndeclared( new ClientComputeException( "InvalidRouteTableID.NotFound", "" +
+              "Route table not found '" + request.getRouteTableId() + "'" ) );
         } catch ( Exception ex ) {
           throw new RuntimeException( ex );
         }
