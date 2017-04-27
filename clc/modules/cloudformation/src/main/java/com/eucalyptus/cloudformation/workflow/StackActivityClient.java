@@ -35,7 +35,7 @@ import com.amazonaws.services.simpleworkflow.flow.core.Promise;
     defaultTaskHeartbeatTimeoutSeconds = 450,
     defaultTaskScheduleToCloseTimeoutSeconds = 1350
 )
-@Activities(version="1.0")
+@Activities(version="2.0")
 public interface StackActivityClient {
   @Activity(name = "StackActivity.initCreateResource")
   Promise<String> initCreateResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson, int stackVersion);
@@ -190,4 +190,27 @@ public interface StackActivityClient {
 
   @Activity(name = "StackActivity.kickOffUpdateCleanupStackWorkflow")
   Promise<String> kickOffUpdateCleanupStackWorkflow(String stackId, String accountId, String effectiveUserId);
+
+  @Activity(name = "StackActivity.kickOffDeleteStackWorkflow")
+  Promise<String> kickOffDeleteStackWorkflow(String effectiveUserId, String stackId, String stackName, String stackAccountId, String stackAccountAlias, String resourceDependencyManagerJson, int deletedStackVersion, String retainedResourcesStr);
+
+  @Activity(name = "StackActivity.kickOffRollbackStackWorkflow")
+  Promise<String> kickOffRollbackStackWorkflow(String effectiveUserId, String stackId, String stackName, String accountId, String accountAlias, String resourceDependencyManagerJson, int rolledBackStackVersion);
+
+  @Activity(name = "StackActivity.logMessage")
+  Promise<String> logMessage(String level, String message);
+
+  @Activity(name = "StackActivity.cancelOutstandingDeleteResources")
+  Promise<String> cancelOutstandingDeleteResources(String stackId, String accountId, String cancelMessage, int deletedResourceVersion);
+
+  @Activity(name = "StackActivity.getWorkflowExecutionCloseStatus")
+  Promise<String> getWorkflowExecutionCloseStatus(String stackId, String workflowType);
+
+  @Activity(name = "StackActivity.getStackStatusIfLatest")
+  Promise<String> getStackStatusIfLatest(String stackId, String accountId, int stackVersion);
+
+  @Activity(name = "StackActivity.setStackStatusIfLatest")
+  Promise<String> setStackStatusIfLatest(String stackId, String accountId, String status, String statusReason, int stackVersion);
+
+
 }

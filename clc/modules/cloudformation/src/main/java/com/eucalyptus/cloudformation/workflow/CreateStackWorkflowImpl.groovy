@@ -49,77 +49,86 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
   @Override
   public void createStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, String onFailure, int createdStackVersion) {
     try {
-      Promise<String> createInitialStackPromise =
-        activities.createGlobalStackEvent(
-          stackId,
-          accountId,
-          Status.CREATE_IN_PROGRESS.toString(),
-          "User Initiated", createdStackVersion
-        );
-
-      waitFor(createInitialStackPromise) {
-        DependencyManager resourceDependencyManager = StackEntityHelper.jsonToResourceDependencyManager(
-          resourceDependencyManagerJson
-        );
-        Map<String, Settable<String>> createdResourcePromiseMap = Maps.newConcurrentMap();
-        for (String resourceId : resourceDependencyManager.getNodes()) {
-          createdResourcePromiseMap.put(resourceId, new Settable<String>()); // placeholder promise
-        }
-        doTry {
-          // This is in case any part of setting up the stack fails
-          // AWS has added some new parameter types whose values are not validated until now, so we do the same.  (Why?)
-          Promise<String> validateAWSParameterTypesPromise = activities.validateAWSParameterTypes(stackId, accountId, effectiveUserId, createdStackVersion);
-          waitFor(validateAWSParameterTypesPromise) {
-            // Now for each resource, set up the promises and the dependencies they have for each other
-            for (String resourceId : resourceDependencyManager.getNodes()) {
-              String resourceIdLocalCopy = new String(resourceId); // passing "resourceId" into a waitFor() uses the for reference pointer after the for loop has expired
-              Collection<Promise<String>> promisesDependedOn = Lists.newArrayList();
-              for (String dependingResourceId : resourceDependencyManager.getReverseDependentNodes(resourceIdLocalCopy)) {
-                promisesDependedOn.add(createdResourcePromiseMap.get(dependingResourceId));
-              }
-              AndPromise dependentAndPromise = new AndPromise(promisesDependedOn);
-              waitFor(dependentAndPromise) {
-                String reverseDependentResourcesJson = new ObjectMapper().writeValueAsString(
-                  resourceDependencyManager.getReverseDependentNodes(resourceIdLocalCopy) == null ?
-                    Lists.<String>newArrayList() :
-                    resourceDependencyManager.getReverseDependentNodes(resourceIdLocalCopy)
-                );
-                Promise<String> currentResourcePromise = getCreatePromise(resourceIdLocalCopy, stackId, accountId, effectiveUserId, reverseDependentResourcesJson, createdStackVersion);
-                createdResourcePromiseMap.get(resourceIdLocalCopy).chain(currentResourcePromise);
-                return currentResourcePromise;
-              }
-            }
-            AndPromise allResourcePromises = new AndPromise(createdResourcePromiseMap.values());
-            waitFor(allResourcePromises) {
-              waitFor(activities.finalizeCreateStack(stackId, accountId, effectiveUserId, createdStackVersion)) {
-                activities.createGlobalStackEvent(stackId, accountId,
-                  Status.CREATE_COMPLETE.toString(),
-                  "", createdStackVersion);
-              }
-            }
-          }
-        }.withCatch { Throwable t ->
-          CreateStackWorkflowImpl.LOG.error(t);
-          CreateStackWorkflowImpl.LOG.debug(t, t);
-          Throwable cause = Throwables.getRootCause(t);
-          Promise<String> errorMessagePromise = Promise.asPromise((cause != null) && (cause.getMessage() != null) ? cause.getMessage() : "");
-          if (cause != null && cause instanceof ResourceFailureException) {
-            errorMessagePromise = activities.determineCreateResourceFailures(stackId, accountId, createdStackVersion);
-          }
-          waitFor(errorMessagePromise) { String errorMessage ->
-            activities.createGlobalStackEvent(
-              stackId,
-              accountId,
-              Status.CREATE_FAILED.toString(),
-              errorMessage,
-              createdStackVersion
-            );
-          }
-        }.getResult()
+      doTry {
+        return performCreateStack(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, onFailure, createdStackVersion);
+      } withCatch { Throwable t->
+        CreateStackWorkflowImpl.LOG.error(t);
+        CreateStackWorkflowImpl.LOG.debug(t, t);
       }
     } catch (Exception ex) {
       CreateStackWorkflowImpl.LOG.error(ex);
       CreateStackWorkflowImpl.LOG.debug(ex, ex);
+    }
+  }
+
+  private Promise<String> performCreateStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, String onFailure, int createdStackVersion) {
+    Promise<String> createInitialStackPromise =
+      activities.createGlobalStackEvent(
+        stackId,
+        accountId,
+        Status.CREATE_IN_PROGRESS.toString(),
+        "User Initiated", createdStackVersion
+      );
+
+    waitFor(createInitialStackPromise) {
+      DependencyManager resourceDependencyManager = StackEntityHelper.jsonToResourceDependencyManager(
+        resourceDependencyManagerJson
+      );
+      Map<String, Settable<String>> createdResourcePromiseMap = Maps.newConcurrentMap();
+      for (String resourceId : resourceDependencyManager.getNodes()) {
+        createdResourcePromiseMap.put(resourceId, new Settable<String>()); // placeholder promise
+      }
+      doTry {
+        // This is in case any part of setting up the stack fails
+        // AWS has added some new parameter types whose values are not validated until now, so we do the same.  (Why?)
+        Promise<String> validateAWSParameterTypesPromise = activities.validateAWSParameterTypes(stackId, accountId, effectiveUserId, createdStackVersion);
+        waitFor(validateAWSParameterTypesPromise) {
+          // Now for each resource, set up the promises and the dependencies they have for each other
+          for (String resourceId : resourceDependencyManager.getNodes()) {
+            String resourceIdLocalCopy = new String(resourceId); // passing "resourceId" into a waitFor() uses the for reference pointer after the for loop has expired
+            Collection<Promise<String>> promisesDependedOn = Lists.newArrayList();
+            for (String dependingResourceId : resourceDependencyManager.getReverseDependentNodes(resourceIdLocalCopy)) {
+              promisesDependedOn.add(createdResourcePromiseMap.get(dependingResourceId));
+            }
+            AndPromise dependentAndPromise = new AndPromise(promisesDependedOn);
+            waitFor(dependentAndPromise) {
+              String reverseDependentResourcesJson = new ObjectMapper().writeValueAsString(
+                resourceDependencyManager.getReverseDependentNodes(resourceIdLocalCopy) == null ?
+                  Lists.<String>newArrayList() :
+                  resourceDependencyManager.getReverseDependentNodes(resourceIdLocalCopy)
+              );
+              Promise<String> currentResourcePromise = getCreatePromise(resourceIdLocalCopy, stackId, accountId, effectiveUserId, reverseDependentResourcesJson, createdStackVersion);
+              createdResourcePromiseMap.get(resourceIdLocalCopy).chain(currentResourcePromise);
+              return currentResourcePromise;
+            }
+          }
+          AndPromise allResourcePromises = new AndPromise(createdResourcePromiseMap.values());
+          waitFor(allResourcePromises) {
+            waitFor(activities.finalizeCreateStack(stackId, accountId, effectiveUserId, createdStackVersion)) {
+              activities.createGlobalStackEvent(stackId, accountId,
+                Status.CREATE_COMPLETE.toString(),
+                "", createdStackVersion);
+            }
+          }
+        }
+      }.withCatch { Throwable t ->
+        CreateStackWorkflowImpl.LOG.error(t);
+        CreateStackWorkflowImpl.LOG.debug(t, t);
+        Throwable cause = Throwables.getRootCause(t);
+        Promise<String> errorMessagePromise = Promise.asPromise((cause != null) && (cause.getMessage() != null) ? cause.getMessage() : "");
+        if (cause != null && cause instanceof ResourceFailureException) {
+          errorMessagePromise = activities.determineCreateResourceFailures(stackId, accountId, createdStackVersion);
+        }
+        waitFor(errorMessagePromise) { String errorMessage ->
+          activities.createGlobalStackEvent(
+            stackId,
+            accountId,
+            Status.CREATE_FAILED.toString(),
+            errorMessage,
+            createdStackVersion
+          );
+        }
+      }.getResult()
     }
   }
 

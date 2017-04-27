@@ -105,7 +105,7 @@
 		</sequential>
 	</macrodef>
 	<!--================================== build targets ==================================-->
-	<target name="build">
+	<target name="build" description="Build and package">
 		<ant inheritall="false" target="build-all" />
 		<ant inheritall="false" target="jar" />
 	</target>
@@ -128,7 +128,7 @@
 	</target>
 
 	<!--================================== test targets ===================================-->
-	<target name="junit">
+	<target name="junit" description="Run unit tests">
 		<property name="module.skipNativeMake" value="true"/>
 		<call-module-target target="junit"/>
 	</target>
@@ -160,12 +160,18 @@
 		<fail if="junit.failure" message="JUnit test failure"/>
 	</target>
 
-	<!--================================== clean targets ==================================-->
-	<target name="indent">
+	<!--================================== code targets ==================================-->
+	<target name="indent" description="Indent code">
 		<call-module-target target="indent"/>
 	</target>
+	<target name="generate" description="Generate checked in sources">
+		<call-module-target target="generate"/>
+	</target>
+	<target name="clean-generated">
+		<call-module-target target="clean-generated"/>
+	</target>
 	<!--================================== clean targets ==================================-->
-	<target name="clean">
+	<target name="clean" description="Clean all build artifacts">
 		<call-module-target target="clean"/>
 		<delete file="${project.basedir}/modules/msgs/src/main/resources/msgs-binding.xml"/>
 	</target>
@@ -180,7 +186,7 @@
 	<property name="euca.run.dir" value="${euca.home}/var/run/eucalyptus" />
 	<property name="euca.log.dir" value="${euca.home}/var/log/eucalyptus" />
 	<property name="euca.bin.dir" value="${euca.home}/usr/sbin" />
-	<target name="install"> <!-- depends="build-all,jar" -->
+	<target name="install" description="Copy files to install locations"> <!-- depends="build-all,jar" -->
 		<mkdir dir="${DESTDIR}${euca.bin.dir}" />
 		<chmod dir="${DESTDIR}${euca.bin.dir}" perm="0755">
 			<include name="**/euca-*" />

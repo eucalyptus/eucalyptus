@@ -784,23 +784,6 @@ int ncCancelBundleTaskStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
 }
 
 //!
-//! Handles the client describe bundles task request
-//!
-//! @param[in]  pStub a pointer to the node controller (NC) stub structure
-//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
-//! @param[in]  instIds a list of instance identifier string
-//! @param[in]  instIdsLen the number of instance identifiers in the instIds list
-//! @param[out] outBundleTasks a pointer to the created bundle tasks list
-//! @param[out] outBundleTasksLen the number of bundle tasks in the outBundleTasks list
-//!
-//! @return Always return EUCA_OK
-//!
-int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen)
-{
-    return (EUCA_OK);
-}
-
-//!
 //! Handle the client describe resource request
 //!
 //! @param[in]  pStub a pointer to the node controller (NC) stub structure

@@ -152,7 +152,6 @@ int ncBundleInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, c
                          char *userPublicKey, char *S3Policy, char *S3PolicySig, char *architecture);
 int ncBundleRestartInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
 int ncCancelBundleTaskStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
-int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen);
 
 int ncCreateImageStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
 int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen,

@@ -41,6 +41,7 @@ import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
 
@@ -97,7 +98,7 @@ public interface Vpcs extends Lister<Vpc> {
               vpc.getDisplayName( ),
               Objects.toString( vpc.getState( ), null ),
               vpc.getCidr( ),
-              CloudMetadatas.toDisplayName().apply( vpc.getDhcpOptionSet() ),
+              MoreObjects.firstNonNull( CloudMetadatas.toDisplayName().apply( vpc.getDhcpOptionSet() ), "default" ),
               vpc.getDefaultVpc( ) );
     }
   }
@@ -127,8 +128,8 @@ public interface Vpcs extends Lister<Vpc> {
           .withPersistenceAlias( "dhcpOptionSet", "dhcpOptionSet" )
           .withPersistenceFilter( "cidr" )
           .withPersistenceFilter( "cidrBlock", "cidr" )
-          .withPersistenceFilter( "dhcp-options-id", "dhcpOptionSet.displayName" )
-          .withPersistenceFilter( "dhcpOptionsId", "dhcpOptionSet.displayName" )
+          .withPersistenceFilter( "dhcp-options-id", "dhcpOptionSet.displayName", ignoredValueFunction( "default" ) )
+          .withPersistenceFilter( "dhcpOptionsId", "dhcpOptionSet.displayName", ignoredValueFunction( "default" ) )
           .withPersistenceFilter( "isDefault", "defaultVpc", Collections.<String>emptySet(), PersistenceFilter.Type.Boolean )
           .withPersistenceFilter( "state", "state", FUtils.valueOfFunction( Vpc.State.class ) )
           .withPersistenceFilter( "vpc-id", "displayName" )
@@ -146,7 +147,7 @@ public interface Vpcs extends Lister<Vpc> {
     DHCP_OPTIONS_ID {
       @Override
       public String apply( final Vpc vpc ){
-        return CloudMetadatas.toDisplayName( ).apply( vpc.getDhcpOptionSet( ) );
+        return MoreObjects.firstNonNull( CloudMetadatas.toDisplayName( ).apply( vpc.getDhcpOptionSet( ) ), "default" );
       }
     },
     STATE {

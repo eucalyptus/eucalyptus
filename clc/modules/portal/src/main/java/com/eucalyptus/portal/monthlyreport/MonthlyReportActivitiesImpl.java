@@ -18,6 +18,8 @@ package com.eucalyptus.portal.monthlyreport;
 import com.eucalyptus.auth.euare.Accounts;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.component.annotation.ComponentPart;
+import com.eucalyptus.portal.BucketUploadableActivities;
+import com.eucalyptus.portal.S3UploadException;
 import com.eucalyptus.portal.awsusage.AwsUsageRecords;
 import com.eucalyptus.portal.common.Portal;
 import com.eucalyptus.portal.workflow.AwsUsageRecord;
@@ -25,15 +27,22 @@ import com.eucalyptus.portal.workflow.BillingActivityException;
 import com.eucalyptus.portal.workflow.MonthlyReportActivities;
 import com.eucalyptus.portal.workflow.MonthlyUsageRecord;
 import com.google.common.collect.Lists;
+import org.apache.log4j.Logger;
 
+import java.io.ByteArrayInputStream;
+import java.io.UnsupportedEncodingException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 @ComponentPart(Portal.class)
-public class MonthlyReportActivitiesImpl implements MonthlyReportActivities {
+public class MonthlyReportActivitiesImpl extends BucketUploadableActivities implements MonthlyReportActivities {
+  private static Logger LOG     =
+          Logger.getLogger(  MonthlyReportActivitiesImpl.class );
+
   @Override
   public List<String> listCandidateAccounts() throws BillingActivityException {
     try {
@@ -84,6 +93,40 @@ public class MonthlyReportActivitiesImpl implements MonthlyReportActivities {
       MonthlyReports.getInstance().createOrUpdate(owner, year, month, entries);
     } catch (final Exception ex) {
       throw new BillingActivityException("Failed to persist monthly report entries", ex);
+    }
+  }
+
+  @Override
+  public void uploadToS3Bucket(String accountId, String year, String month) throws BillingActivityException {
+    final StringBuilder sb = new StringBuilder();
+    sb.append("\"InvoiceID\",\"PayerAccountId\",\"LinkedAccountId\",\"RecordType\",\"RecordID\",\"BillingPeriodStartDate\"," +
+            "\"BillingPeriodEndDate\",\"InvoiceDate\",\"PayerAccountName\",\"LinkedAccountName\",\"TaxationAddress\"," +
+            "\"PayerPONumber\",\"ProductCode\",\"ProductName\",\"SellerOfRecord\",\"UsageType\",\"Operation\",\"RateId\"," +
+            "\"ItemDescription\",\"UsageStartDate\",\"UsageEndDate\",\"UsageQuantity\",\"BlendedRate\",\"CurrencyCode\"," +
+            "\"CostBeforeTax\",\"Credits\",\"TaxAmount\",\"TaxType\",\"TotalCost\"");
+    try {
+      MonthlyReports.getInstance()
+              .lookupReport(AccountFullName.getInstance(accountId), year, month).stream()
+              .forEach( r -> sb.append(String.format("\n%s", r.toString())) );
+    } catch (final NoSuchElementException ex) {
+      LOG.warn("No monthly record is found in persistence storage");
+      return;
+    }
+
+    try {
+      if (month!=null && month.length()<=1) {
+        month = "0"+month;
+      }
+      final String keyName = String.format("%s-aws-billing-csv-%s-%s.csv", accountId, year, month);
+      if (this.upload(accountId, keyName, new ByteArrayInputStream( sb.toString().getBytes("UTF-8")))) {
+        LOG.debug(String.format("Monthly report for account " + accountId + " has been uploaded"));
+      } else {
+        LOG.warn("Failed to upload monthly report to s3 bucket for account " + accountId);
+      }
+    } catch (final UnsupportedEncodingException ex) {
+      LOG.warn("Failed to create input stream out of report");
+    } catch (final S3UploadException ex) {
+      LOG.warn("Failed to upload monthly report to s3 bucket", ex);
     }
   }
 }

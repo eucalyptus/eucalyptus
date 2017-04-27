@@ -41,29 +41,38 @@ public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
   @Override
   public void deleteStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int deletedStackVersion, String retainedResourcesStr) {
     try {
-      // cancel existing creae/monitor workflows...
-      ExponentialRetryPolicy retryPolicy = new ExponentialRetryPolicy(10L).withMaximumRetryIntervalSeconds(10L).withExceptionsToRetry([RetryAfterConditionCheckFailedException.class])
-      Promise<String> cancelWorkflowsPromise = activities.cancelCreateAndMonitorWorkflows(stackId);
-      waitFor(cancelWorkflowsPromise) {
-        waitFor(
-          retry(retryPolicy) {
-            activities.verifyCreateAndMonitorWorkflowsClosed(stackId);
-          }
-        ) {
-          Promise<String> flattenStackPromise = activities.flattenStackForDelete(stackId, accountId);
-          waitFor(flattenStackPromise) {
-            new CommonDeleteRollbackPromises(workflowOperations,
-              Status.DELETE_IN_PROGRESS.toString(),
-              "User Initiated",
-              Status.DELETE_FAILED.toString(),
-              Status.DELETE_COMPLETE.toString(),
-              true).getPromise(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, deletedStackVersion, retainedResourcesStr);
-          }
-        }
+      doTry {
+        return performDeleteStack(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, deletedStackVersion, retainedResourcesStr);
+      } withCatch { Throwable t->
+        DeleteStackWorkflowImpl.LOG.error(t);
+        DeleteStackWorkflowImpl.LOG.debug(t, t);
       }
     } catch (Exception ex) {
       DeleteStackWorkflowImpl.LOG.error(ex);
       DeleteStackWorkflowImpl.LOG.debug(ex, ex);
+    }
+  }
+
+  private Promise<String> performDeleteStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId, int deletedStackVersion, String retainedResourcesStr) {
+    // cancel existing creae/monitor workflows...
+    ExponentialRetryPolicy retryPolicy = new ExponentialRetryPolicy(10L).withMaximumRetryIntervalSeconds(10L).withExceptionsToRetry([RetryAfterConditionCheckFailedException.class])
+    Promise<String> cancelWorkflowsPromise = activities.cancelCreateAndMonitorWorkflows(stackId);
+    waitFor(cancelWorkflowsPromise) {
+      waitFor(
+        retry(retryPolicy) {
+          activities.verifyCreateAndMonitorWorkflowsClosed(stackId);
+        }
+      ) {
+        Promise<String> flattenStackPromise = activities.flattenStackForDelete(stackId, accountId);
+        waitFor(flattenStackPromise) {
+          new CommonDeleteRollbackPromises(workflowOperations,
+            Status.DELETE_IN_PROGRESS.toString(),
+            "User Initiated",
+            Status.DELETE_FAILED.toString(),
+            Status.DELETE_COMPLETE.toString(),
+            true).getPromise(stackId, accountId, resourceDependencyManagerJson, effectiveUserId, deletedStackVersion, retainedResourcesStr);
+        }
+      }
     }
   }
 }

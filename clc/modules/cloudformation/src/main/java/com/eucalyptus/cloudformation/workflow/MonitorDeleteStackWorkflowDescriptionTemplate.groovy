@@ -13,18 +13,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  ************************************************************************/
-package com.eucalyptus.portal.provider;
+package com.eucalyptus.cloudformation.workflow
 
-import com.eucalyptus.auth.principal.AccountIdentifiers;
-import com.eucalyptus.auth.util.SystemAccountProvider;
+import com.netflix.glisten.WorkflowDescriptionTemplate
 
 /**
- *
+ * Created by ethomas on 7/23/14.
  */
-public class BillingSystemAccountProvider implements SystemAccountProvider {
+class MonitorDeleteStackWorkflowDescriptionTemplate extends WorkflowDescriptionTemplate implements MonitorDeleteStackWorkflow {
 
   @Override
-  public String getAlias( ) {
-    return AccountIdentifiers.BILLING_SYSTEM_ACCOUNT;
+  void monitorDeleteStack(String stackId, String accountId, String effectiveUserId, int deletedStackVersion) {
+    description="MonitorDeleteStackWorkflow";
   }
 }

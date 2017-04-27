@@ -226,7 +226,6 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
                             char *userPublicKey, char *S3Policy, char *S3PolicySig, char *architecture);
 static int doBundleRestartInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *psInstanceId);
 static int doCancelBundleTask(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
-static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen);
 static int doDescribeSensors(struct nc_state_t *nc, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds,
                              int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
 static int doModifyNode(struct nc_state_t *nc, ncMetadata * pMeta, char *stateName);
@@ -265,7 +264,6 @@ struct handlers default_libvirt_handlers = {
     .doBundleInstance = doBundleInstance,
     .doBundleRestartInstance = doBundleRestartInstance,
     .doCancelBundleTask = doCancelBundleTask,
-    .doDescribeBundleTasks = doDescribeBundleTasks,
     .doDescribeSensors = doDescribeSensors,
     .doModifyNode = doModifyNode,
     .doMigrateInstances = doMigrateInstances,
@@ -2522,58 +2520,6 @@ static int doCancelBundleTask(struct nc_state_t *nc, ncMetadata * pMeta, char *p
     }
 
     return (EUCA_OK);
-}
-
-//!
-//! Handles the describe bundle tasks request.
-//!
-//! @param[in]  nc a pointer to the NC state structure
-//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
-//! @param[in]  instIds a list of instance identifier string
-//! @param[in]  instIdsLen the number of instance identifiers in the instIds list
-//! @param[out] outBundleTasks a pointer to the created bundle tasks list
-//! @param[out] outBundleTasksLen the number of bundle tasks in the outBundleTasks list
-//!
-//! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_ERROR
-//!         and EUCA_MEMORY_ERROR.
-//!
-static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen)
-{
-    int i = 0;
-    int j = 0;
-    ncInstance *pInstance = NULL;
-
-    if ((instIdsLen < 1) || (instIds == NULL)) {
-        LOGDEBUG("internal error (invalid parameters to doDescribeBundleTasks)\n");
-        return EUCA_ERROR;
-    }
-    // Maximum size
-    if ((*outBundleTasks = EUCA_ZALLOC(instIdsLen, sizeof(bundleTask *))) == NULL) {
-        return EUCA_MEMORY_ERROR;
-    }
-
-    *outBundleTasksLen = 0;            // we may return fewer than instIdsLen
-
-    for (i = 0, j = 0; i < instIdsLen; i++) {
-        bundleTask *bundle = NULL;
-
-        sem_p(inst_sem);
-        if ((pInstance = find_instance(&global_instances, instIds[i])) != NULL) {
-            if ((bundle = allocate_bundleTask(pInstance)) == NULL) {
-                LOGERROR("out of memory\n");
-                sem_v(inst_sem);
-                return EUCA_MEMORY_ERROR;
-            }
-        }
-        sem_v(inst_sem);
-
-        if (bundle) {
-            (*outBundleTasks)[j++] = bundle;
-            (*outBundleTasksLen)++;
-        }
-    }
-
-    return EUCA_OK;
 }
 
 //!

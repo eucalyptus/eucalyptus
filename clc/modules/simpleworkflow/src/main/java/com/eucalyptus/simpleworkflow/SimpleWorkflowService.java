@@ -2260,7 +2260,7 @@ public class SimpleWorkflowService {
   }
 
   private static <T> Iterable<List<T>> shufflePartitions( final List<T> pending ) {
-    return Iterables.transform(
+    return (Iterable<List<T>>) Iterables.transform(
         Iterables.partition( pending, 40 ),
         segment -> { List<T> copy = Lists.newArrayList( segment ); Collections.shuffle( copy ); return copy; } );
   }

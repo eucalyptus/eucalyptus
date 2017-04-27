@@ -277,10 +277,6 @@ public class PolicySpec {
   public static final String STS_GETIMPERSONATIONTOKEN = "getimpersonationtoken"; // eucalyptus extension
   public static final String STS_GETSESSIONTOKEN = "getsessiontoken";
 
-  // Euca-specific Imaging Service operations
-  public static final String IMAGINGSERVICE_PUTINSTANCEIMPORTTASKSTATUS = "putinstanceimporttaskstatus";
-  public static final String IMAGINGSERVICE_GETINSTANCEIMPORTTASK = "getinstanceimporttask";
-
   // Map vendors to resource vendors
   public static final Map<String, Set<String>> VENDOR_RESOURCE_VENDORS = new ImmutableMap.Builder<String,Set<String>>()
       .put( VENDOR_STS, ImmutableSet.of( VENDOR_IAM ) )

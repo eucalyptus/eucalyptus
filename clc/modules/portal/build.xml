@@ -20,7 +20,6 @@
 		<srcfiles dir="${src.dir}" includes="**/*" />
 	</uptodate>
 	<import file="../module-inc.xml" />
-	<target name="indent-module">
-	</target>
+	<target name="generate-module" depends="generate-java"/>
 </project>
 

@@ -100,12 +100,8 @@ public class WalrusLoginModule extends BaseLoginModule<WalrusWrappedCredentials>
     final String queryKey = key.getSecretKey();
     final String authSig = checkSignature(queryKey, credentials.getLoginData());
     if (authSig.equals(signature)) {
-      try {
-        if (!AccountIdentifiers.OBJECT_STORAGE_WALRUS_ACCOUNT.equals( Accounts.lookupAccountAliasById( user.getAccountNumber( ) ) )) {
-          throw new AccessDeniedException("walrus only accepts requests from " + AccountIdentifiers.OBJECT_STORAGE_WALRUS_ACCOUNT);
-        }
-      } catch (AuthException e) {
-        throw new AccessDeniedException(e.getMessage());
+      if ( !AccountIdentifiers.OBJECT_STORAGE_WALRUS_ACCOUNT.equals( user.getAccountAlias( ) ) ) {
+        throw new AccessDeniedException("walrus only accepts requests from " + AccountIdentifiers.OBJECT_STORAGE_WALRUS_ACCOUNT);
       }
       super.setCredential(credentials.getQueryId());
       super.setPrincipal(user);

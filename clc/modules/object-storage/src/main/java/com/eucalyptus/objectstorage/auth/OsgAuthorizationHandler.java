@@ -43,6 +43,7 @@ import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
+import com.eucalyptus.objectstorage.ObjectState;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.objectstorage.entities.S3AccessControlledEntity;
@@ -169,14 +170,6 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
             }
             break;
           case S3PolicySpec.S3_RESOURCE_OBJECT:
-            // get the object owner.
-            if (objectResourceEntity == null) {
-              LOG.error("Could not check access for operation due to no object resource entity found");
-              return false;
-            } else {
-              resourceOwnerAccountNumber = lookupAccountIdByCanonicalId(objectResourceEntity.getOwnerCanonicalId());
-              policyResourceInfo = PolicyResourceContext.resourceInfo(resourceOwnerAccountNumber, objectResourceEntity);
-            }
             // get the bucket owner account number as the bucket and object owner may be different
             if (bucketResourceEntity == null) { // cannot be null as every object is associated with one bucket
               LOG.error("Could not check access for operation due to no bucket resource entity found");
@@ -188,6 +181,17 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
                   bucketResourceEntity.getBucketName( ),
                   bucketResourceEntity.getVersion( ),
                   bucketResourceEntity.getPolicy( ) ) );
+            }
+            // get the object owner.
+            if (objectResourceEntity == null) {
+              LOG.error("Could not check access for operation due to no object resource entity found");
+              return false;
+            } else {
+              // on create treat the object owner as the bucket owner for authorization purposes
+              resourceOwnerAccountNumber = ObjectState.creating == objectResourceEntity.getState( ) ?
+                  bucketOwnerAccountNumber :
+                  lookupAccountIdByCanonicalId( objectResourceEntity.getOwnerCanonicalId( ) );
+              policyResourceInfo = PolicyResourceContext.resourceInfo(resourceOwnerAccountNumber, objectResourceEntity);
             }
             break;
           default:

@@ -613,51 +613,6 @@ static int ncClientBundleRestartInstance(ncStub * pStub, ncMetadata * pMeta, cha
 }
 
 //!
-//! Builds and execute the "DescribeBundleTask" request
-//!
-//! @param[in]  pStub a pointer to the NC stub structure
-//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
-//!
-//! @return EUCA_OK on success. On failure, the program will terminate
-//!
-//! @see
-//!
-//! @pre The pStub and pMeta fields must not be NULL
-//!
-//! @post The request is sent to the NC client and the result of the request will be displayed.
-//!
-//! @note
-//!
-static int ncClientDescribeBundleTask(ncStub * pStub, ncMetadata * pMeta)
-{
-    int rc = EUCA_OK;
-    int instIdsLen = 4;
-    int outBundleTasksLen = 0;
-    char *ppInstIds[4] = { NULL };
-    bundleTask **ppOutBundleTasks = NULL;
-
-    ppInstIds[0] = EUCA_ZALLOC(32, sizeof(char));
-    ppInstIds[1] = EUCA_ZALLOC(32, sizeof(char));
-    ppInstIds[2] = EUCA_ZALLOC(32, sizeof(char));
-    ppInstIds[3] = EUCA_ZALLOC(32, sizeof(char));
-
-    snprintf(ppInstIds[0], 32, "i-12345675");
-    snprintf(ppInstIds[1], 32, "i-12345674");
-    snprintf(ppInstIds[2], 32, "i-12345673");
-    snprintf(ppInstIds[3], 32, "i-12345672");
-
-    rc = ncDescribeBundleTasksStub(pStub, pMeta, ppInstIds, instIdsLen, &ppOutBundleTasks, &outBundleTasksLen);
-    printf("ncDescribeBundleTasksStub = %d\n", rc);
-    for (int i = 0; i < outBundleTasksLen; i++) {
-        printf("\tBUNDLE %d: %s %s\n", i, ppOutBundleTasks[i]->instanceId, ppOutBundleTasks[i]->state);
-        EUCA_FREE(ppOutBundleTasks[i]);
-    }
-
-    EUCA_FREE(ppOutBundleTasks);
-    return (rc);
-}
-
-//!
 //! Builds and execute the "PowerDown" request
 //!
 //! @param[in]  pStub a pointer to the NC stub structure
@@ -1399,8 +1354,6 @@ int main(int argc, char *argv[])
         ncClientBundleRestartInstance(pStub, &meta, psInstanceId);
     } else if (!strcmp(psCommand, "powerDown")) {
         ncClientPowerDown(pStub, &meta);
-    } else if (!strcmp(psCommand, "describeBundleTasks")) {
-        ncClientDescribeBundleTask(pStub, &meta);
     } else if (!strcmp(psCommand, "broadcastNetworkInfo")) {
         ncClientBroadcastNetworkInfo(pStub, &meta, psNetworkInfo);
     } else if (!strcmp(psCommand, "assignAddress")) {

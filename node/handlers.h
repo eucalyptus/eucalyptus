@@ -246,7 +246,6 @@ struct handlers {
                              char *userPublicKey, char *S3Policy, char *S3PolicySig, char *architecture);
     int (*doBundleRestartInstance) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId);
     int (*doCancelBundleTask) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId);
-    int (*doDescribeBundleTasks) (struct nc_state_t * nc, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen);
     int (*doDescribeSensors) (struct nc_state_t * nc, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds,
                               int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
     int (*doModifyNode) (struct nc_state_t * nc, ncMetadata * pMeta, char *stateName);
@@ -333,7 +332,6 @@ int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, cha
                      char *architecture);
 int doBundleRestartInstance(ncMetadata * pMeta, char *instanceId);
 int doCancelBundleTask(ncMetadata * pMeta, char *instanceId);
-int doDescribeBundleTasks(ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen);
 int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
 int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds,
                       int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
