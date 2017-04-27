@@ -126,10 +126,10 @@ public class InstanceLogEntity extends AbstractPersistent implements InstanceLog
 
   @PostLoad
   private void onLoad(){
-    immutableTags = ImmutableList.copyOf(
+    immutableTags = ImmutableList.<InstanceTag>copyOf(
             tags != null ?
                     tags.stream()
-                            .map( t -> new InstanceTag() {
+                            .<InstanceTag>map( t -> new InstanceTag() {
                               private String key = t.getKey();
                               private String value = t.getValue();
 
@@ -153,7 +153,7 @@ public class InstanceLogEntity extends AbstractPersistent implements InstanceLog
                                 this.value = value;
                               }
                             })
-                            .collect(Collectors.toList()) : Lists.newArrayList());
+                            .collect(Collectors.<InstanceTag>toList()) : Lists.<InstanceTag>newArrayList());
   }
 
   @Override
