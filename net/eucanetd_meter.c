@@ -240,11 +240,13 @@ static void enm_exit(int code, char *msg) {
  */
 int main(int argc, char *argv[]) {
     int opt = 0;
-    char *dev = NULL;
-    char *mode = NULL;
-    char *lips = NULL;
-    char *lsn = NULL;
+    char dev[IF_NAME_LEN];
+    char mode[SMALL_CHAR_BUFFER_SIZE];
+    char lips[CHAR_BUFFER_SIZE];
+    char lsn[NETWORK_ADDR_LEN];
     globalNetworkInfo *gni;
+
+    dev[0] = mode[0] = lips[0] = lsn[0] = '\0';
 
     config = EUCA_ZALLOC_C(1, sizeof (enmConfig));
     config->snaplen = 64;
@@ -255,16 +257,16 @@ int main(int argc, char *argv[]) {
                 config->count = atoi(optarg);
                 break;
             case 'i':
-                dev = strdup(optarg);
+                snprintf(dev, IF_NAME_LEN, "%s", optarg);
                 break;
             case 'm':
-                mode = strdup(optarg);
+                snprintf(mode, SMALL_CHAR_BUFFER_SIZE, "%s", optarg);
                 break;
             case 'l':
-                lips = strdup(optarg);
+                snprintf(lips, CHAR_BUFFER_SIZE, "%s", optarg);
                 break;
             case 'n':
-                lsn = strdup(optarg);
+                snprintf(dev, NETWORK_ADDR_LEN, "%s", optarg);
                 break;
             case 'd':
                 config->daemonize = 1;
@@ -286,12 +288,12 @@ int main(int argc, char *argv[]) {
                 break;
         }
     }
-    if (dev == NULL) {
+    if (!strlen(dev)) {
         fprintf(stderr, "\tPlease specify interface to meter.\n");
         enm_exit(1, NULL);
     }
-    if (mode == NULL) {
-        mode = strdup("device");
+    if (!strlen(mode)) {
+        snprintf(dev, IF_NAME_LEN, "device");
     }
 
     if (config->daemonize) {
@@ -328,10 +330,10 @@ int main(int argc, char *argv[]) {
 
     if (!strcmp(mode, "device")) {
         LOGINFO("device mode selected\n");
-        if (lips) {
+        if (strlen(lips)) {
             config->lips = strdup(lips);
         }
-        if (lsn) {
+        if (strlen(lsn)) {
             config->lsn = strdup(lsn);
         }
         enm_read_config_dev(dev, config);
@@ -369,10 +371,6 @@ int main(int argc, char *argv[]) {
     LOGINFO("\n%s\n", stats);
     EUCA_FREE(stats);
 
-    EUCA_FREE(dev);
-    EUCA_FREE(mode);
-    EUCA_FREE(lips);
-    EUCA_FREE(lsn);
     enm_config_free(config);
     EUCA_FREE(config);
     return (0);
@@ -965,6 +963,7 @@ static int enm_read_config_dev(char *dev, enmConfig *config) {
  */
 static int enm_config_free(enmConfig *config) {
     if (config) {
+        enmInterface_free(&(config->eni));
         EUCA_FREE(config->eucahome);
         EUCA_FREE(config->eucauser);
         EUCA_FREE(config->euca_version_str);
