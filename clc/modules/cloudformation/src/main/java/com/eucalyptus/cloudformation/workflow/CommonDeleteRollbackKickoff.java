@@ -23,6 +23,7 @@ import com.eucalyptus.cloudformation.entity.StackWorkflowEntityManager;
 import com.eucalyptus.cloudformation.ws.StackWorkflowTags;
 import com.netflix.glisten.InterfaceBasedWorkflowClient;
 import com.netflix.glisten.WorkflowDescriptionTemplate;
+import com.netflix.glisten.WorkflowTags;
 
 /**
  * Created by ethomas on 4/18/17.

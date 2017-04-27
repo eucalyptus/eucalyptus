@@ -78,14 +78,20 @@ import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.util.Cidr;
+import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResolver;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResponse;
 import com.eucalyptus.util.dns.DnsResolvers.RequestType;
 import com.eucalyptus.util.dns.DomainNameRecords;
 import com.eucalyptus.util.dns.DomainNames;
+import com.google.common.base.CharMatcher;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import com.google.common.base.Splitter;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -272,14 +278,15 @@ public class TopologyDnsResolver extends DnsResolver {
     return false;
   }
 
-  private Predicate<ServiceConfiguration> RESOLVABLE_STATE = new Predicate<ServiceConfiguration>(){
-    @Override
-    public boolean apply(ServiceConfiguration arg0) {
-      if ( Component.State.ENABLED.equals(arg0.lookupState()) || Component.State.DISABLED.equals(arg0.lookupState()))
-          return true;
-      return false;
-    }
-  };
+  @SuppressWarnings( { "StaticPseudoFunctionalStyleMethod", "Guava" } )
+  private static Supplier<Predicate<ServiceConfiguration>> RESOLVABLE_STATE_SUPPLIER = Suppliers.memoizeWithExpiration(
+      () -> Predicates.or( Iterables.filter( Iterables.transform(
+          Splitter.on( CharMatcher.anyOf( " ,|" ) ).split( System.getProperty( "com.eucalyptus.component.TopologyDnsResolver.resolvableStates", "ENABLED" ) ),
+          FUtils.valueOfFunction( Component.State.class )
+      ),Predicates.notNull( ) ) ),
+      1,
+      TimeUnit.MINUTES
+  );
 
   @Override
   public DnsResponse lookupRecords( DnsRequest request ) {
@@ -289,7 +296,7 @@ public class TopologyDnsResolver extends DnsResolver {
       final Class<? extends ComponentId> compIdType = ResolverSupport.COMPONENT_FUNCTION.apply( name );
       final ComponentId componentId = ComponentIds.lookup( compIdType );
       final List<ServiceConfiguration> configs = Lists.newArrayList( );
-      Predicate<ServiceConfiguration> configFilter = RESOLVABLE_STATE;
+      Predicate<ServiceConfiguration> configFilter = RESOLVABLE_STATE_SUPPLIER.get( );
       if ( componentId.isPartitioned( ) ) {
         final String partitionName = name.getLabelString( 1 );
         final Partition partition = Partitions.lookupByName( partitionName );
