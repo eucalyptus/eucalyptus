@@ -6295,9 +6295,6 @@ int cmp_gni_route_table(gni_route_table *a, gni_route_table *b) {
         return (1);
     }
     for (int i = 0; i < a->max_entries; i++) {
-        if (a->entries[i].applied == 0) {
-            return (1);
-        }
         if ((strcmp(a->entries[i].destCidr, b->entries[i].destCidr)) ||
                 (strcmp(a->entries[i].target, b->entries[i].target))) {
             return (1);
