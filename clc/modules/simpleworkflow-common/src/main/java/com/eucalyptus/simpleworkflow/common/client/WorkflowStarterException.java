@@ -1,13 +1,3 @@
-package com.eucalyptus.simpleworkflow.common.client;
-
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
 /*************************************************************************
  * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
@@ -23,10 +13,16 @@ import java.lang.annotation.Target;
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  ************************************************************************/
-@Target( { ElementType.TYPE } )
-@Retention( RetentionPolicy.RUNTIME )
-public @interface Repeating {
-  Class<? extends WorkflowStarter> value();
-  Class<? extends ComponentId> dependsOn() default SimpleWorkflow.class;
-  int sleepSeconds() default 600;
+package com.eucalyptus.simpleworkflow.common.client;
+
+public class WorkflowStarterException extends Exception {
+  private static final long serialVersionUID = 1L;
+  public WorkflowStarterException() {  }
+  public WorkflowStarterException(String message){
+    super(message);
+  }
+  public WorkflowStarterException(String message, Throwable cause){
+    super(message, cause);
+  }
+
 }

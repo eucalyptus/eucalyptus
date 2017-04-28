@@ -35,6 +35,8 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
@@ -42,6 +44,7 @@ import java.util.stream.Collectors;
 public class WorkflowTimer implements EventListener<Hertz> {
   private static Logger LOG  = Logger.getLogger( WorkflowTimer.class );
 
+  private static Map<Class<?>, Integer> onetimeWorkflows = Maps.newConcurrentMap();
   private static Set<Class<?>> repeatingWorkflows = Sets.newConcurrentHashSet();
   private static Set<Class<?>> hourlyWorkflows = Sets.newConcurrentHashSet();
   private static Set<Class<?>> dailyWorkflows = Sets.newConcurrentHashSet();
@@ -56,6 +59,9 @@ public class WorkflowTimer implements EventListener<Hertz> {
   static void addRepeatingWorkflow(@Nonnull final Class<?> workflowImpl) {
     lastExecution.put(workflowImpl, System.currentTimeMillis());
     repeatingWorkflows.add(workflowImpl);
+  }
+  static void addOnceWorkflow(@Nonnull final Class<?> workflowImpl) {
+    onetimeWorkflows.put( workflowImpl, 0);
   }
 
   static List<Class<?>> listHourlyWorkflows() {
@@ -88,14 +94,16 @@ public class WorkflowTimer implements EventListener<Hertz> {
       listRepeatingWorkflows().stream().forEach((impl) -> {
         try {
           final Repeating ats = Ats.inClassHierarchy(impl).get(Repeating.class);
-          final Long lastRun = lastExecution.get(impl);
-          if (lastRun != null ) {
-            final DateTime now = new DateTime(System.currentTimeMillis());
-            final DateTime sleepBegin = now.minusSeconds(ats.sleepSeconds());
-            final Interval interval = new Interval( sleepBegin, now );
-            if (!interval.contains(new DateTime(lastRun))) {
-              if(lastExecution.replace(impl, lastRun, System.currentTimeMillis())) {
-                starters.add(ats.value().newInstance());
+          if (Topology.isEnabled(ats.dependsOn())) {
+            final Long lastRun = lastExecution.get(impl);
+            if (lastRun != null) {
+              final DateTime now = new DateTime(System.currentTimeMillis());
+              final DateTime sleepBegin = now.minusSeconds(ats.sleepSeconds());
+              final Interval interval = new Interval(sleepBegin, now);
+              if (!interval.contains(new DateTime(lastRun))) {
+                if (lastExecution.replace(impl, lastRun, System.currentTimeMillis())) {
+                  starters.add(ats.value().newInstance());
+                }
               }
             }
           }
@@ -178,6 +186,55 @@ public class WorkflowTimer implements EventListener<Hertz> {
     }
   }
 
+  static synchronized List<WorkflowStarter> getOnetimeStarters() {
+    try {
+      List<WorkflowStarter> starters = Lists.newArrayList();
+      onetimeWorkflows.keySet().stream().forEach( impl ->  {
+        try {
+          final Once ats = Ats.inClassHierarchy(impl).get(Once.class);
+          if (Topology.isEnabled(ats.dependsOn())) {
+            if (onetimeWorkflows.get(impl) < ats.retry()) {
+              starters.add(ats.value().newInstance());
+            }
+          }
+        } catch (InstantiationException ex) {
+          ;
+        } catch (IllegalAccessException ex) {
+          ;
+        }
+      });
+      return starters;
+    } catch (final Exception ex) {
+      return Lists.newArrayList();
+    }
+  }
+
+  static synchronized void markOneTimeStarterFailure(final WorkflowStarter starter) {
+    try {
+      for (final Class<?> cls : onetimeWorkflows.keySet()) {
+        if (Ats.inClassHierarchy(cls).get(Once.class).value().equals(starter.getClass())) {
+          onetimeWorkflows.put(cls, onetimeWorkflows.get(cls)+1);
+          break;
+        }
+      }
+    } catch (final Exception ex) {
+      ;
+    }
+  }
+
+  static synchronized  void markOneTimeStarterSuccess(final WorkflowStarter starter) {
+    try {
+      final Optional<Class<?>> found = onetimeWorkflows.keySet().stream()
+              .filter(impl -> Ats.inClassHierarchy(impl).get(Once.class).value().equals(starter.getClass()))
+              .findAny();
+      if (found.isPresent()) {
+        onetimeWorkflows.remove(found.get());
+      }
+    }catch (final Exception ex) {
+      ;
+    }
+  }
+
   public static void register() {
     Listeners.register(Hertz.class, new WorkflowTimer());
   }
@@ -209,6 +266,16 @@ public class WorkflowTimer implements EventListener<Hertz> {
         starter.start();
       } catch (final  Exception ex) {
         LOG.error("Failed to start repeating workflow: " + starter.name(), ex);
+      }
+    }
+
+    for (final WorkflowStarter starter : getOnetimeStarters()) {
+      try {
+        starter.start();
+        markOneTimeStarterSuccess(starter);
+      } catch (final Exception ex) {
+        markOneTimeStarterFailure(starter);
+        LOG.error("Failed to start one-time workflow (will retry): " + starter.name(), ex);
       }
     }
   }

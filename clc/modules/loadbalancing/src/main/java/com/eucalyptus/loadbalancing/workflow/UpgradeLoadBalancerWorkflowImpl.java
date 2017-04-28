@@ -21,6 +21,7 @@ import com.amazonaws.services.simpleworkflow.flow.core.Settable;
 import com.amazonaws.services.simpleworkflow.flow.core.TryCatchFinally;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
+import com.eucalyptus.simpleworkflow.common.client.Once;
 import org.apache.log4j.Logger;
 import java.util.concurrent.CancellationException;
 
@@ -29,6 +30,7 @@ import java.util.concurrent.CancellationException;
  *
  */
 @ComponentPart(LoadBalancing.class)
+@Once(value = UpgradeLoadBalancerWorkflowStarter.class, dependsOn = LoadBalancing.class)
 public class UpgradeLoadBalancerWorkflowImpl implements  UpgradeLoadBalancerWorkflow {
   private static Logger LOG     =
           Logger.getLogger(  UpgradeLoadBalancerWorkflowImpl.class );

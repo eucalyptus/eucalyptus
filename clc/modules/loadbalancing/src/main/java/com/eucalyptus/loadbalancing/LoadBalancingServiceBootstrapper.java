@@ -35,7 +35,6 @@ import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
-import com.eucalyptus.loadbalancing.workflow.LoadBalancingWorkflows;
 import com.eucalyptus.loadbalancing.workflow.WorkflowClientManager;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
 import com.google.common.collect.Lists;
@@ -65,10 +64,6 @@ public class LoadBalancingServiceBootstrapper extends Bootstrapper.Simple {
 
     private static int CheckCounter = 0;
     private static boolean EmiCheckResult = true;
-    private static final String ELB_SERVICE_STATE_WORKFLOW_ID =
-            "loadbalancing-service-state-workflow-01";
-    private static final String ELB_UPGRADE_LOADBALANCER_WORKFLOW_ID =
-            "upgrade-loadbalancer-workflow-01";
 
     @Override
     public boolean check() throws Exception {
@@ -88,10 +83,6 @@ public class LoadBalancingServiceBootstrapper extends Bootstrapper.Simple {
         }
         if (!isImageConfigured())
             return false;
-        if (!runServiceStateWorkflow())
-            return false;
-        if (!loadBalancerUpgraded)
-            runUpgradeLoadBalancerWorkflow();
         try {
             LoadBalancerPolicies.initialize();
         } catch (final Exception ex) {
@@ -154,26 +145,6 @@ public class LoadBalancingServiceBootstrapper extends Bootstrapper.Simple {
                 LOG.debug( e );
             }
             return false;
-        }
-    }
-
-    private boolean runServiceStateWorkflow() {
-        try{
-            LoadBalancingWorkflows.runServiceStateWorkflow(ELB_SERVICE_STATE_WORKFLOW_ID);
-        }catch(final Exception ex) {
-            LOG.error("Failed to run service state workflow", ex);
-            return false;
-        }
-        return true;
-    }
-
-    private static boolean loadBalancerUpgraded = false;
-    private void runUpgradeLoadBalancerWorkflow() {
-        if(LoadBalancingWorkflows.runUpgradeLoadBalancerWorkflowSync(ELB_UPGRADE_LOADBALANCER_WORKFLOW_ID)) {
-            loadBalancerUpgraded = true;
-        } else {
-            LOG.error("Failed to upgrade old loadbalancers. Will retry...");
-            loadBalancerUpgraded = false;
         }
     }
 }

@@ -54,6 +54,8 @@ public class WorkflowDiscovery extends ServiceJarDiscovery {
           WorkflowTimer.addDailyWorkflow( candidate );
         } else if ( ats.has( Repeating.class) ) {
           WorkflowTimer.addRepeatingWorkflow( candidate );
+        } else if ( ats.has (Once.class) ) {
+          WorkflowTimer.addOnceWorkflow( candidate );
         }
       } else {
         WorkflowRegistry.registerActivities( componentIdClass, candidate );
