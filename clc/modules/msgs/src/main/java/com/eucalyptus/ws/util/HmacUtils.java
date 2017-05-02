@@ -73,6 +73,11 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.util.CollectionUtils;
+import com.eucalyptus.util.CompatFunction;
+import javaslang.control.Option;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import com.eucalyptus.auth.login.AuthenticationException;
@@ -619,5 +624,32 @@ public class HmacUtils {
     public String getCredentialScope() {
       return date + "/" + region + "/" + serviceName + "/" + terminator;
     }
-  }  
+  }
+
+  public static CompatFunction<String,List<String>> headerLookup(final MappingHttpRequest request ) {
+    return request::getHeaders;
+  }
+
+  public static CompatFunction<String,List<String>> parameterLookup( final MappingHttpRequest request ) {
+    final Map<String,String> parameters = request.getParameters();
+    return header -> CollectionUtils.<String>listUnit().apply( parameters.get( header ) );
+  }
+
+  public static Option<SignatureVariant> signatureVariantOption( final MappingHttpRequest request  ) {
+    try {
+      final CompatFunction<String, List<String>> headerLookup = headerLookup( request );
+      final CompatFunction<String, List<String>> parameterLookup = parameterLookup( request );
+      final SignatureVariant variant = detectSignatureVariant( headerLookup, parameterLookup );
+      variant.getAccessKeyId( headerLookup, parameterLookup );
+      return Option.of( variant );
+    } catch ( AuthenticationException e ) {
+      return Option.none( );
+    }
+  }
+
+  @Nonnull
+  public static SignatureVariant detectSignatureVariant( @Nonnull final MappingHttpRequest request ) throws AuthenticationException {
+    return detectSignatureVariant( headerLookup( request ), parameterLookup( request ) );
+  }
+
 }

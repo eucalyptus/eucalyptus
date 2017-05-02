@@ -41,6 +41,8 @@ import com.eucalyptus.auth.euare.Accounts;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
 import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.policy.ern.Ern;
+import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.type.LimitedType;
 import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataType;
 import com.eucalyptus.component.ServiceUris;
@@ -98,6 +100,7 @@ import javax.annotation.Nullable;
 import javax.persistence.PersistenceException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.ByteBuffer;
@@ -1279,13 +1282,23 @@ public class SimpleQueueService {
 
     return new MessageInfo(message, messageLength, sendAttributes);
   }
+
+  private String getSenderId(Context ctx) {
+    if (Principals.isSameUser(ctx.getUser(), Principals.nobodyUser())) {
+      // use ip address on anonymous user
+      return ctx.getRemoteAddress().getHostAddress();
+    } else {
+      return ctx.getUser().getAuthenticatedId();
+    }
+  }
+
   public SendMessageResponseType sendMessage(SendMessageType request) throws EucalyptusCloudException {
     SendMessageResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
       final Queue queue = getAndCheckPermissionOnQueue(request.getQueueUrl());
 
-      MessageInfo messageInfo = validateAndGetMessageInfo(queue, ctx.getUser().getAuthenticatedId(), request.getMessageBody(), request.getDelaySeconds(),  request.getMessageAttribute());
+      MessageInfo messageInfo = validateAndGetMessageInfo(queue, getSenderId(ctx), request.getMessageBody(), request.getDelaySeconds(),  request.getMessageAttribute());
 
       PersistenceFactory.getMessagePersistence().sendMessage(queue, messageInfo.getMessage(), messageInfo.getSendAttributes());
 
@@ -1482,7 +1495,7 @@ public class SimpleQueueService {
       Map<String, MessageInfo> messageInfoMap = Maps.newLinkedHashMap();
       int totalMessageLength = 0;
       for (SendMessageBatchRequestEntry batchRequestEntry: request.getSendMessageBatchRequestEntry()) {
-        MessageInfo messageInfo = validateAndGetMessageInfo(queue, ctx.getUser().getAuthenticatedId(), batchRequestEntry.getMessageBody(),
+        MessageInfo messageInfo = validateAndGetMessageInfo(queue, getSenderId(ctx), batchRequestEntry.getMessageBody(),
           batchRequestEntry.getDelaySeconds(), batchRequestEntry.getMessageAttribute());
         totalMessageLength += messageInfo.getMessageLength();
         if (totalMessageLength > queue.getMaximumMessageSize()) {
