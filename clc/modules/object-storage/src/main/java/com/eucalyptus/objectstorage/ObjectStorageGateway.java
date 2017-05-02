@@ -1897,10 +1897,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
       }
     }
 
-    if (!ObjectStorageProperties.VersioningStatus.Disabled.equals(bucket.getVersioning())) {
-      throw new InvalidBucketStateException(bucketName);
-    }
-
     try {
       BucketLifecycleManagers.getInstance().addLifecycleRules(goodRules, bucket.getBucketUuid());
     } catch (Exception ex) {

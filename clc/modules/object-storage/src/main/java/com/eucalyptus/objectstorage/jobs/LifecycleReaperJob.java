@@ -66,6 +66,7 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
 import org.quartz.InterruptableJob;
@@ -73,16 +74,20 @@ import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.quartz.UnableToInterruptJobException;
 
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.objectstorage.BucketLifecycleManagers;
 import com.eucalyptus.objectstorage.BucketMetadataManagers;
 import com.eucalyptus.objectstorage.BucketState;
 import com.eucalyptus.objectstorage.ObjectMetadataManagers;
-import com.eucalyptus.objectstorage.ObjectState;
+import com.eucalyptus.objectstorage.OsgObjectFactory;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.LifecycleRule;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
+import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
+import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
 import com.google.common.collect.Lists;
 
 /*
@@ -101,8 +106,8 @@ public class LifecycleReaperJob implements InterruptableJob {
 
   @Override
   public void execute(JobExecutionContext context) throws JobExecutionException {
-    if ( Databases.isVolatile( ) ) {
-      LOG.warn( "Skipping job due to database not available" );
+    if (Databases.isVolatile()) {
+      LOG.warn("Skipping job due to database not available");
       return;
     }
     LOG.info("beginning Object Lifecycle processing");
@@ -219,8 +224,9 @@ public class LifecycleReaperJob implements InterruptableJob {
           try {
             ObjectEntity objectEntity = ObjectMetadataManagers.getInstance().lookupObject(bucket, objectKey, null);
             if (objectEntity == null) {
-              LOG.debug("failed to process object " + objectKey + " in bucket " + bucket.getBucketName()
-                  + " because it was not found in the database");
+              LOG.debug(
+                  "failed to process object " + objectKey + " in bucket " + bucket.getBucketName() + " because it was not found in the database");
+              return;
             }
             handle(objectEntity);
           } catch (Exception ex) {
@@ -246,7 +252,13 @@ public class LifecycleReaperJob implements InterruptableJob {
     ObjectInfoProcessor processor = new ObjectInfoProcessor(expiredObjectKeys, bucket) {
       @Override
       public void handle(ObjectEntity retrieved) {
-        ObjectMetadataManagers.getInstance().transitionObjectToState(retrieved, ObjectState.deleting);
+        try {
+          // Use object deletion workflow instead of directly changing the database state. This should take care of versioned and unversioned buckets
+          OsgObjectFactory.getFactory().logicallyDeleteObject(ObjectStorageProviders.getInstance(), retrieved, Accounts.lookupSystemAdmin());
+        } catch (S3Exception | NoSuchElementException | AuthException e) {
+          LOG.warn("Failed to process expiration by date for ruleId " + ruleId + " for bucket " + bucket.getBucketName() + " and object "
+              + retrieved.getDisplayName() + ". Unable to delete object due to", e);
+        }
         if (interrupted) {
           this.interrupt();
         }
@@ -265,7 +277,13 @@ public class LifecycleReaperJob implements InterruptableJob {
     ObjectInfoProcessor processor = new ObjectInfoProcessor(expiredObjectKeys, bucket) {
       @Override
       public void handle(ObjectEntity retrieved) {
-        ObjectMetadataManagers.getInstance().transitionObjectToState(retrieved, ObjectState.deleting);
+        try {
+          // Use object deletion workflow instead of directly changing the database state. This should take care of versioned and unversioned buckets
+          OsgObjectFactory.getFactory().logicallyDeleteObject(ObjectStorageProviders.getInstance(), retrieved, Accounts.lookupSystemAdmin());
+        } catch (S3Exception | NoSuchElementException | AuthException e) {
+          LOG.warn("Failed to process expiration by days for ruleId " + ruleId + " for bucket " + bucket.getBucketName() + " and object "
+              + retrieved.getDisplayName() + ". Unable to delete object due to", e);
+        }
         if (interrupted) {
           this.interrupt();
         }
