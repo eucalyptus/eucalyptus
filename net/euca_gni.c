@@ -6307,6 +6307,21 @@ int cmp_gni_secgroup(gni_secgroup *a, gni_secgroup *b, int *ingress_diff, int *e
         } else {
             abmatch = 0;
         }
+        // For EDGE mode (EUCA-13389)
+        if ((a->max_interfaces == 0) && (b->max_interfaces == 0) &&
+                (a->max_instances == b->max_instances)) {
+            int diffound = 0;
+            for (int i = 0; i < a->max_instances && !diffound; i++) {
+                if (strcmp(a->instances[i]->name, b->instances[i]->name)) {
+                    diffound = 1;
+                }
+            }
+            if (diffound) {
+                abmatch = 0;
+            }
+        } else {
+            abmatch = 0;
+        }
     }
 
     if (abmatch) {
