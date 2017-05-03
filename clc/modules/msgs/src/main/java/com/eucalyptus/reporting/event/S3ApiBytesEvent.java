@@ -16,52 +16,40 @@
 package com.eucalyptus.reporting.event;
 
 import com.amazonaws.auth.policy.actions.S3Actions;
-import static com.eucalyptus.util.Parameters.checkParam;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
-public class S3ApiUsageEvent extends S3EventSupport<S3Actions> {
+public class S3ApiBytesEvent extends S3EventSupport<S3Actions> {
   private static final long serialVersionUID = 1L;
 
-  private final String usageType;
-  private final Long usageValue;
+  private final Long bytesTransferred;
   
-  public static S3ApiUsageEvent with( @Nonnull  final S3Actions action,
+  public static S3ApiBytesEvent with( @Nonnull  final S3Actions action,
                                     @Nonnull  final String bucketName,
-                                    @Nonnull  final String usageType,
-                                    @Nullable final Long usageValue,
+                                    @Nonnull final Long bytesTransferred,
                                     @Nonnull  final String accountNumber) {
 
-    return new S3ApiUsageEvent( action, bucketName, usageType, usageValue, accountNumber );
+    return new S3ApiBytesEvent( action, bucketName, bytesTransferred, accountNumber );
   }
 
-  S3ApiUsageEvent( @Nonnull  final S3Actions action,
+  S3ApiBytesEvent( @Nonnull  final S3Actions action,
                  @Nonnull  final String bucketName,
-                 @Nonnull  final String usageType,
-                 @Nullable final Long usageValue,
+                 @Nonnull final Long bytesTransferred,
                  @Nonnull  final String accountNumber ) {
     super( action, bucketName, null, null, accountNumber, null );
-    checkParam( usageType, not( isEmptyOrNullString() ) );
-    this.usageType = usageType;
-    this.usageValue = usageValue;
+    this.bytesTransferred = bytesTransferred;
   }
 
   @Nonnull
-  public String getUsageType() {
-    return usageType;
-  }
-
-  public Long getUsageValue() {
-    return usageValue;
+  public Long getBytesTransferred() {
+    return bytesTransferred;
   }
 
   @Override
   public String toString() {
-    return "S3ApiUsageEvent [action=" + getAction()
+    return "S3ApiBytesEvent [action=" + getAction()
         + ", bucketName=" + getBucketName()
-        + ", usageType=" + getUsageType()
-        + ", usageValue=" + getUsageValue() + "]";
+        + ", bytesTransferred=" + getBytesTransferred()
+        + ", accountNumber=" + getAccountNumber() + "]";
+
   }
 }

@@ -21,26 +21,83 @@ import java.util.EnumMap;
 
 public class S3BillingActions {
 
-  private static EnumMap<S3Actions, String> S3BillingActionsMap = 
-      new EnumMap<S3Actions, String>(S3Actions.class);
+  private static class S3BillingTypes {
+    String operationName;
+    UsageCountTypes usageCountType;
+    UsageBytesTypes usageBytesType;
 
-  static {
-    for (S3Actions action : S3BillingActionsMap.keySet()) {
-      S3BillingActionsMap.put(action, action.getActionName());
+    public S3BillingTypes(S3Actions operation, UsageCountTypes usageCountType, UsageBytesTypes usageBytesType) {
+      this.operationName = operation.getActionName();
+      this.usageCountType = usageCountType;
+      this.usageBytesType = usageBytesType;
     }
-    // Change those names that are different in AWS billing reports from the S3Actions enums.
-    S3BillingActionsMap.put(S3Actions.ListBuckets, "ListAllMyBuckets");
-    S3BillingActionsMap.put(S3Actions.ListObjects, "ListBucket");
-    // Some other names are different too, but so far we don't include those in 
-    // usage reports, and we might never support usage reports of may of them. 
-    // When new operations are added, check the usage reports from AWS to see what
-    // names they call them, for compatibility.
+    public S3BillingTypes(String operationName, UsageCountTypes usageCountType, UsageBytesTypes usageBytesType) {
+      this.operationName = operationName;
+      this.usageCountType = usageCountType;
+      this.usageBytesType = usageBytesType;
+    }
+    public String getOperationName() {
+      return operationName;
+    }
+    public void setOperationName(String operationName) {
+      this.operationName = operationName;
+    }
+    public UsageCountTypes getUsageCountType() {
+      return usageCountType;
+    }
+    public void setUsageCountType(UsageCountTypes usageCountType) {
+      this.usageCountType = usageCountType;
+    }
+    public UsageBytesTypes getUsageBytesType() {
+      return usageBytesType;
+    }
+    public void setUsageBytesType(UsageBytesTypes usageBytesType) {
+      this.usageBytesType = usageBytesType;
+    }
+  }
+  
+  private static EnumMap<S3Actions, S3BillingTypes> S3BillingActionsMap = 
+      new EnumMap<S3Actions, S3BillingTypes>(S3Actions.class);
+
+  public enum UsageCountTypes {
+    Tier1("Requests-Tier1"),
+    Tier2("Requests-Tier2");
+    private final String usageCountType;
+    private UsageCountTypes(String usageCountType) {
+      this.usageCountType = usageCountType;
+    }
+  }
+  
+  public enum UsageBytesTypes {
+    In("DataTransfer-In-Bytes"),
+    Out("DataTransfer-Out-Bytes");
+    private final String usageBytesType;
+    private UsageBytesTypes(String usageBytesType) {
+      this.usageBytesType = usageBytesType;
+    }
+  }
+  
+  static {
+    // Assign string operation names in AWS billing reports for those that are
+    // different from the S3Actions enum names.
+    S3BillingActionsMap.put(S3Actions.ListBuckets, new S3BillingTypes("ListAllMyBuckets", UsageCountTypes.Tier1, UsageBytesTypes.Out));
+    S3BillingActionsMap.put(S3Actions.ListObjects, new S3BillingTypes("ListBucket", UsageCountTypes.Tier1, UsageBytesTypes.Out));
+    // When new operations are added, check the usage reports from AWS to see
+    // what names they call them, for compatibility.
   }
   
   private S3BillingActions() {
   }
 
-  public static String getBillingActionName(S3Actions action) {
-    return S3BillingActionsMap.get(action); 
+  public static String getBillingOperationName(S3Actions action) {
+    return S3BillingActionsMap.get(action).getOperationName(); 
+  }
+
+  public static String getBillingUsageCountName(S3Actions action) {
+    return S3BillingActionsMap.get(action).getUsageCountType().toString(); 
+  }
+
+  public static String getBillingUsageBytesName(S3Actions action) {
+    return S3BillingActionsMap.get(action).getUsageBytesType().toString(); 
   }
 }

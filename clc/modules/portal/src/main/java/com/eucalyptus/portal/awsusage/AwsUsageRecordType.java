@@ -257,45 +257,20 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
       return records;
     }
   },
-  S3_API_REQUEST("AmazonS3", "*", "*", AggregateGranularity.HOURLY) {
+  S3_API_COUNTED("AmazonS3", "*", "*", AggregateGranularity.HOURLY) {
+    @Override
+    public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
+      // Example:
+      // AmazonS3,PutObject,Requests-Tier1,billing-test-bucket-tmp,11/14/16 22:00:00,11/14/16 23:00:00,17
+      return readS3ApiEvents("S3ApiCounted", accountId, events);
+    }
+  },
+  S3_API_BYTES("AmazonS3", "*", "*", AggregateGranularity.HOURLY) {
     @Override
     public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
       // Example:
       // AmazonS3,PutObject,In-Bytes,billing-test-bucket-tmp,11/14/16 22:00:00,11/14/16 23:00:00,206836
-      List<QueuedEvent> filteredEvents = events.stream()
-          .filter(e -> "S3ApiUsage".equals(e.getEventType()))
-          .collect(Collectors.toList());
-      if (filteredEvents.size() <= 0)
-        return Lists.newArrayList();
-      final Date earliestRecord = AwsUsageRecordType.getEarliest(filteredEvents);
-      final Date endTime = getNextHour(earliestRecord);
-      final Date startTime = getPreviousHour(endTime);
-      class EventKey {
-        public String operation;
-        public String usageType;
-        public String resource;
-        public EventKey( String operation, String usageType, String resource ) {
-          this.operation = operation;
-          this.usageType = usageType;
-          this.resource = resource;
-        }
-      }
-      final ConcurrentMap<EventKey, Long> requests = new ConcurrentHashMap<EventKey, Long>( );
-      filteredEvents.stream( ).forEach( event -> {
-        EventKey requestKey = new EventKey( event.getOperation( ), event.getUsageType( ), event.getResourceId( ) );
-        requests.merge( requestKey, Long.valueOf( event.getUsageValue( ) ), Long::sum);
-      } );
-      return requests.entrySet( ).stream( ).map( entry ->
-        AwsUsageRecords.getInstance( ).newRecord( accountId )
-            .withService( "AmazonS3" )
-            .withOperation( entry.getKey( ).operation )
-            .withUsageType( entry.getKey( ).usageType )
-            .withResource( entry.getKey( ).resource )
-            .withStartTime( startTime )
-            .withEndTime( endTime )
-            .withUsageValue( String.valueOf( entry.getValue( ) ) )
-            .build()
-      ).collect( Collectors.toList( ) );
+      return readS3ApiEvents("S3ApiBytes", accountId, events);
     }
   },
   EC2_EBS_VolumeIORead("AmazonEC2", "EBS:IO-Read", "EBS:VolumeIOUsage", AggregateGranularity.HOURLY) {
@@ -394,7 +369,7 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
       final Date startTime = getPreviousHour(endTime);
       final ConcurrentMap<String, Long> requestsByOperation = Maps.newConcurrentMap( );
       filteredEvents.stream( ).forEach( event -> {
-        requestsByOperation.merge( event.getResourceId( ), Long.valueOf( event.getUsageValue( ) ), Long::sum);
+        requestsByOperation.merge( event.getOperation( ), Long.valueOf( event.getUsageValue( ) ), Long::sum);
       } );
       return requestsByOperation.entrySet( ).stream( ).map( entry ->
         AwsUsageRecords.getInstance( ).newRecord( accountId )
@@ -579,5 +554,49 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
     c.setTime(time);
     c.set(Calendar.HOUR, c.get(Calendar.HOUR) - 1);
     return c.getTime();
+  }
+  
+  private static List<AwsUsageRecord> readS3ApiEvents(String eventType, String accountId, List<QueuedEvent> events) {
+    // For now, the processing of S3 usage events for counting the number of
+    // API requests and for counting the number of bytes transferred are 
+    // exactly the same, except for the event type name.
+    List<QueuedEvent> filteredEvents = events.stream()
+        .filter( e -> eventType.equals(e.getEventType()))
+        .collect(Collectors.toList());
+    if (filteredEvents.size() <= 0) {
+      return Lists.newArrayList();
+    }
+    final Date earliestRecord = AwsUsageRecordType.getEarliest(filteredEvents);
+    final Date endTime = getNextHour(earliestRecord);
+    final Date startTime = getPreviousHour(endTime);
+    class EventKey {
+      public String operation;
+      public String usageType;
+      public String resource;
+      public EventKey( String operation, String usageType, String resource ) {
+        this.operation = operation;
+        this.usageType = usageType;
+        this.resource = resource;
+      }
+    }
+    final ConcurrentMap<EventKey, Long> requests = new ConcurrentHashMap<EventKey, Long>( );
+    filteredEvents.stream( ).forEach( event -> {
+      EventKey requestKey = new EventKey( 
+          event.getOperation( ),
+          event.getAny( ),
+          event.getResourceId( ) );
+      requests.merge( requestKey, Long.valueOf( event.getUsageValue( ) ), Long::sum);
+    } );
+    return requests.entrySet( ).stream( ).map( entry ->
+      AwsUsageRecords.getInstance( ).newRecord( accountId )
+          .withService( "AmazonS3" )
+          .withOperation( entry.getKey( ).operation )
+          .withUsageType( entry.getKey( ).usageType )
+          .withResource( entry.getKey( ).resource )
+          .withStartTime( startTime )
+          .withEndTime( endTime )
+          .withUsageValue( String.valueOf( entry.getValue( ) ) )
+          .build()
+    ).collect( Collectors.toList( ) );
   }
 }

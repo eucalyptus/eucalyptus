@@ -24,7 +24,8 @@ import com.eucalyptus.reporting.event.CloudWatchApiUsageEvent;
 import com.eucalyptus.reporting.event.InstanceUsageEvent;
 import com.eucalyptus.reporting.event.LoadBalancerEvent;
 import com.eucalyptus.reporting.event.S3ObjectEvent;
-import com.eucalyptus.reporting.event.S3ApiUsageEvent;
+import com.eucalyptus.reporting.event.S3ApiCountedEvent;
+import com.eucalyptus.reporting.event.S3ApiBytesEvent;
 import com.eucalyptus.reporting.event.SnapShotEvent;
 import com.eucalyptus.reporting.event.VolumeEvent;
 import com.eucalyptus.resources.client.Ec2Client;
@@ -164,14 +165,26 @@ public class QueuedEvents {
     return q;
   };
 
-  public static Function<S3ApiUsageEvent, QueuedEvent> FromS3ApiUsageEvent = (event) -> {
+  public static Function<S3ApiCountedEvent, QueuedEvent> FromS3ApiCountedEvent = (event) -> {
     final QueuedEvent q = new QueuedEvent();
-    q.setEventType("S3ApiUsage");
-    q.setOperation(S3BillingActions.getBillingActionName(event.getAction()));
-    q.setUsageType(event.getUsageType());
+    q.setEventType("S3ApiCounted");
+    q.setOperation(S3BillingActions.getBillingOperationName(event.getAction()));
+    q.setAny(S3BillingActions.getBillingUsageCountName(event.getAction()));
     q.setResourceId(String.format("%s", event.getBucketName()));
     q.setAccountId(event.getAccountNumber());
-    Long bytes = event.getUsageValue();
+    q.setUsageValue("1"); // this event is an individual S3 API call
+    q.setTimestamp(new Date(System.currentTimeMillis()));
+    return q;
+  };
+
+  public static Function<S3ApiBytesEvent, QueuedEvent> FromS3ApiBytesEvent = (event) -> {
+    final QueuedEvent q = new QueuedEvent();
+    q.setEventType("S3ApiBytes");
+    q.setOperation(S3BillingActions.getBillingOperationName(event.getAction()));
+    q.setAny(S3BillingActions.getBillingUsageCountName(event.getAction()));
+    q.setResourceId(String.format("%s", event.getBucketName()));
+    q.setAccountId(event.getAccountNumber());
+    Long bytes = event.getSize();
     q.setUsageValue(String.format("%d", bytes == null ? 0 : bytes));
     q.setTimestamp(new Date(System.currentTimeMillis()));
     return q;
@@ -370,7 +383,7 @@ public class QueuedEvents {
   public static Function<CloudWatchApiUsageEvent, QueuedEvent> FromCloudWatchApiUsageEvent = (event) -> {
     final QueuedEvent q = new QueuedEvent();
     q.setEventType("CW:Requests");
-    q.setResourceId(event.getOperation());
+    q.setOperation(event.getOperation());
     q.setAccountId(event.getAccountId());
     q.setUsageValue(String.valueOf(event.getRequestCount()));
     q.setTimestamp(new Date(event.getEndTime()));

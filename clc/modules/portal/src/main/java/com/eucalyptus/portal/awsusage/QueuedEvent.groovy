@@ -18,7 +18,6 @@ package com.eucalyptus.portal.awsusage
 class QueuedEvent {
     String eventType = null;
     String operation = null;
-    String usageType = null;
     String resourceId = null;
     String accountId = null;
     String userId = null;
@@ -31,7 +30,6 @@ class QueuedEvent {
     QueuedEvent( final QueuedEvent other ) {
         this.eventType = other.eventType;
         this.operation = other.operation;
-        this.usageType = other.usageType;
         this.resourceId = other.resourceId;
         this.accountId = other.accountId;
         this.userId = other.userId;
@@ -43,7 +41,7 @@ class QueuedEvent {
 
     @Override
     public String toString() {
-        return String.format("%s:%s:%s:%s:%s:%s:%s:%s:%s:%s",
-        eventType, operation, usageType, resourceId, accountId, userId, availabilityZone, usageValue, any, timestamp);
+        return String.format("%s:%s:%s:%s:%s:%s:%s:%s:%s",
+        eventType, operation, resourceId, accountId, userId, availabilityZone, usageValue, any, timestamp);
     }
 }
