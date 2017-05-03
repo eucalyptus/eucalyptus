@@ -69,6 +69,7 @@ public class S3BillingActions {
   }
   
   public enum UsageBytesTypes {
+    // In = sent by client into S3, Out = returned by S3 to client
     In("DataTransfer-In-Bytes"),
     Out("DataTransfer-Out-Bytes");
     private final String usageBytesType;
@@ -80,8 +81,10 @@ public class S3BillingActions {
   static {
     // Assign string operation names in AWS billing reports for those that are
     // different from the S3Actions enum names.
+    S3BillingActionsMap.put(S3Actions.GetObject, new S3BillingTypes(S3Actions.GetObject, UsageCountTypes.Tier2, UsageBytesTypes.Out));
     S3BillingActionsMap.put(S3Actions.ListBuckets, new S3BillingTypes("ListAllMyBuckets", UsageCountTypes.Tier1, UsageBytesTypes.Out));
     S3BillingActionsMap.put(S3Actions.ListObjects, new S3BillingTypes("ListBucket", UsageCountTypes.Tier1, UsageBytesTypes.Out));
+    S3BillingActionsMap.put(S3Actions.PutObject, new S3BillingTypes(S3Actions.PutObject, UsageCountTypes.Tier1, UsageBytesTypes.In));
     // When new operations are added, check the usage reports from AWS to see
     // what names they call them, for compatibility.
   }
