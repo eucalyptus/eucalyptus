@@ -541,6 +541,8 @@ public class FakeClusterService implements ClusterService {
     NetworkInExternal( 1, "default" ),
     NetworkOut( 4, "total" ),
     NetworkOutExternal( 3, "default" ),
+    NetworkPacketsIn( 1, "total" ),
+    NetworkPacketsOut( 2, "total" ),
     VolumeQueueLength( 0, false, "ephemeral0", "vda" ),
     VolumeTotalReadTime( 0.0001, "ephemeral0", "vda" ),
     VolumeTotalWriteTime( 0.0002, "ephemeral0", "vda" ),
