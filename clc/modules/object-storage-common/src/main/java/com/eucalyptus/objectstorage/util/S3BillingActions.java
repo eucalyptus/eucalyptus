@@ -39,20 +39,11 @@ public class S3BillingActions {
     public String getOperationName() {
       return operationName;
     }
-    public void setOperationName(String operationName) {
-      this.operationName = operationName;
-    }
     public UsageCountTypes getUsageCountType() {
       return usageCountType;
     }
-    public void setUsageCountType(UsageCountTypes usageCountType) {
-      this.usageCountType = usageCountType;
-    }
     public UsageBytesTypes getUsageBytesType() {
       return usageBytesType;
-    }
-    public void setUsageBytesType(UsageBytesTypes usageBytesType) {
-      this.usageBytesType = usageBytesType;
     }
   }
   
