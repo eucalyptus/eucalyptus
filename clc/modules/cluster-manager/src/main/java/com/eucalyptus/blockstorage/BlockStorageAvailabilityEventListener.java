@@ -29,9 +29,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.blockstorage.entities.StorageInfo;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
-import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.component.Topology;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.ClockTick;
@@ -40,7 +38,6 @@ import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
 import com.eucalyptus.util.HasFullName;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -59,7 +56,7 @@ public class BlockStorageAvailabilityEventListener implements EventListener<Cloc
     if ( BootstrapArgs.isCloudController( ) && Bootstrap.isOperational() ) {
       final List<Availability> resourceAvailability = Lists.newArrayList();
       final Set<String> partitions =
-          Sets.newHashSet( Iterables.transform( Clusters.getInstance().listValues(), HasFullName.GET_PARTITION ) );
+          Sets.newHashSet( Clusters.stream( ).map( HasFullName.GET_PARTITION ) );
       for ( final String partition : partitions ) {
         long total = 0;
 

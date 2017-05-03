@@ -91,6 +91,8 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Hosts;
+import com.eucalyptus.cloud.VmInstanceToken;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.compute.common.CloudMetadataLimitedType;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
@@ -105,7 +107,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.msgs.GetVolumeTokenResponseType;
 import com.eucalyptus.blockstorage.msgs.GetVolumeTokenType;
 import com.eucalyptus.blockstorage.util.StorageProperties;
-import com.eucalyptus.cloud.ResourceToken;
+import com.eucalyptus.cluster.common.internal.ResourceToken;
 import com.eucalyptus.cloud.run.AdmissionControl;
 import com.eucalyptus.cloud.run.Allocations;
 import com.eucalyptus.cluster.callback.StartInstanceCallback;
@@ -113,7 +115,7 @@ import com.eucalyptus.cluster.callback.StopInstanceCallback;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.cluster.common.ClusterController;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.DeleteResourceTag;
 import com.eucalyptus.compute.common.ResourceTag;
@@ -132,8 +134,7 @@ import com.eucalyptus.compute.common.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
-import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.common.internal.Cluster;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.InstanceStatusEventType;
@@ -232,14 +233,14 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
-import edu.ucsb.eucalyptus.cloud.VmInfo;
-import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import com.eucalyptus.cluster.common.msgs.VmInfo;
+import com.eucalyptus.cluster.common.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.ClusterAttachVolumeType;
-import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
-import edu.ucsb.eucalyptus.msgs.StartInstanceType;
-import edu.ucsb.eucalyptus.msgs.StopInstanceType;
+import com.eucalyptus.cluster.common.msgs.VirtualBootRecord;
+import com.eucalyptus.cluster.common.msgs.ClusterAttachVolumeType;
+import com.eucalyptus.cluster.common.msgs.NetworkConfigType;
+import com.eucalyptus.cluster.common.msgs.ClusterStartInstanceType;
+import com.eucalyptus.cluster.common.msgs.ClusterStopInstanceType;
 
 @ConfigurableClass( root = "cloud.vmstate",
                     description = "Parameters controlling the lifecycle of virtual machines." )
@@ -689,7 +690,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
 
     private long countPendingInstances( final OwnerFullName ownerFullName ) {
       long pending = 0;
-      for ( final Cluster cluster : Clusters.getInstance( ).listValues( ) ) {
+      for ( final Cluster cluster : Clusters.list( ) ) {
         pending += cluster.getNodeState( ).countUncommittedPendingInstances( ownerFullName );
       }
       return pending;
@@ -718,7 +719,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
 
     private long countPendingInstances( final OwnerFullName ownerFullName ) {
       long pending = 0;
-      for ( final Cluster cluster : Clusters.getInstance( ).listValues( ) ) {
+      for ( final Cluster cluster : Clusters.list( ) ) {
         pending += cluster.getNodeState( ).countUncommittedPendingInstances( ownerFullName );
       }
       return pending;
@@ -1232,26 +1233,24 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
   }
 
   public static void stopVmInstance( final VmInstance vmInstance, final StopInstanceCallback cb ) {
-    final StopInstanceType request = new StopInstanceType();
+    final ClusterStopInstanceType request = new ClusterStopInstanceType();
     try{
       ServiceConfiguration ccConfig = Topology.lookup(ClusterController.class, vmInstance.lookupPartition());
-      final Cluster cluster = Clusters.lookup(ccConfig);
       request.setInstanceId(vmInstance.getInstanceId());
       cb.setRequest(request);
-      AsyncRequests.newRequest( cb ).dispatch(cluster.getConfiguration());
+      AsyncRequests.newRequest( cb ).dispatch(ccConfig);
     } catch (final Exception e) {
       Exceptions.toUndeclared(e);
     }
   }
 
   public static void startVmInstance( final VmInstance vmInstance, final StartInstanceCallback cb ) {
-    final StartInstanceType request = new StartInstanceType();
+    final ClusterStartInstanceType request = new ClusterStartInstanceType();
     try{
       ServiceConfiguration ccConfig = Topology.lookup(ClusterController.class, vmInstance.lookupPartition());
-      final Cluster cluster = Clusters.lookup(ccConfig);
       request.setInstanceId(vmInstance.getInstanceId());
       cb.setRequest(request);
-      AsyncRequests.newRequest( cb ).dispatch(cluster.getConfiguration());
+      AsyncRequests.newRequest( cb ).dispatch(ccConfig);
     }catch (final Exception e){
       Exceptions.toUndeclared(e);
     }
@@ -1378,7 +1377,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
        */
       private void updateVolumeAttachments( final List<AttachedVolume> volumes ) {
         try {
-          final List<VmStandardVolumeAttachment> ncAttachedVols = Lists.transform( volumes, VmStandardVolumeAttachment.fromAttachedVolume( vm ) );
+          final List<VmStandardVolumeAttachment> ncAttachedVols = Lists.transform( volumes, AttachedVolume.toStandardVolumeAttachment( vm ) );
           Set<String> remoteVolumes = Sets.newHashSet( Collections2.transform( ncAttachedVols, VmVolumeState.VmVolumeAttachmentName.INSTANCE ) );
           Set<String> localVolumes = Sets.newHashSet( Collections2.transform( vm.getTransientVolumeState().getAttachments(), VmVolumeState.VmVolumeAttachmentName.INSTANCE ) );
           localVolumes.addAll(Collections2.transform( vm.getBootRecord().getPersistentVolumes(), VmVolumeState.VmVolumeAttachmentName.INSTANCE ));
@@ -1925,7 +1924,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
         return false;
       }
       try {
-        Topology.lookup( ClusterController.class, Clusters.getInstance( ).lookup( arg0.getPlacement( ) ).lookupPartition( ) );
+        Topology.lookup( ClusterController.class, Clusters.lookup( arg0.getPlacement( ) ).lookupPartition( ) );
       } catch ( NoSuchElementException ex ) {
         return false;//GRZE:ARG: skip restoring while cluster is enabling since Builder.placement() depends on a running cluster...
       }
@@ -1934,14 +1933,14 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
 
   }
 
-  public enum Create implements Function<ResourceToken, VmInstance> {
+  public enum Create implements Function<VmInstanceToken, VmInstance> {
     INSTANCE;
 
     /**
      * @see Predicate#apply(Object)
      */
     @Override
-    public VmInstance apply( final ResourceToken token ) {
+    public VmInstance apply( final VmInstanceToken token ) {
       final EntityTransaction db = Entities.get( VmInstance.class );
       try {
         // remove existing persistent terminated instance.
@@ -2208,7 +2207,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
                 RestoreHandler.restoreUserData( input ),
                 userFullName );
 
-            final ResourceToken token = Iterables.getOnlyElement( allocation.getAllocationTokens( ) );
+            final VmInstanceToken token = Iterables.getOnlyElement( allocation.getAllocationTokens( ) );
             token.setZombie( true );
 
             allocation.commit( );
@@ -2234,7 +2233,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
         final VmState inputState = VmState.Mapper.get( input.getStateName() );
         if ( VmStateSet.RUN.contains( inputState ) ) {
           try {
-            final String partition = Clusters.getInstance( ).lookup( input.getPlacement( ) ).getPartition( );
+            final String partition = Clusters.lookup( input.getPlacement( ) ).getPartition( );
             LOG.info( "Requesting termination for instance " + input.getInstanceId( ) + " in zone " + partition );
             sendTerminate( input.getInstanceId( ), partition );
           } catch ( final NoSuchElementException e ) {
@@ -2471,7 +2470,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
         partition = Partitions.lookupByName( input.getPlacement() );
       } catch ( final Exception ex2 ) {
         try {
-          partition = Partitions.lookupByName( Clusters.getInstance( ).lookup( input.getPlacement( ) ).getPartition( ) );
+          partition = Partitions.lookupByName( Clusters.lookup( input.getPlacement( ) ).getPartition( ) );
         } catch ( final Exception ex ) {
           LOG.error( "Failed to lookup partition " + input.getPlacement( ) + " for: " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
           Logs.extreme( ).error( ex, ex );

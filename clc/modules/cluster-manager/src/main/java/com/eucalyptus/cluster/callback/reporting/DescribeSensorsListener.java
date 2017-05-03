@@ -24,7 +24,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
-import edu.ucsb.eucalyptus.msgs.DescribeSensorsResponse;
+import com.eucalyptus.cluster.common.msgs.DescribeSensorsResponseType;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
@@ -43,7 +43,7 @@ import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
 
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.cluster.common.ClusterController;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.event.Hertz;
@@ -124,12 +124,12 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
                             public void fireException( Throwable e ) {}
 
                             @Override
-                            public void fire( DescribeSensorsResponse msg ) {}
+                            public void fire( DescribeSensorsResponseType msg ) {}
                           };
                           /**
                            * Here we actually get the future reference to the result and on a response processing thread, invoke .fire().
                            */
-                          final DescribeSensorsResponse response = AsyncRequests.newRequest( msgCallback ).dispatch( ccConfig ).get( );
+                          final DescribeSensorsResponseType response = AsyncRequests.newRequest( msgCallback ).dispatch( ccConfig ).get( );
                           executorService.submit( new Runnable( ){
                             @Override
                             public void run() {

@@ -69,12 +69,12 @@ import java.util.concurrent.TimeoutException;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.common.internal.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.util.CompatFunction;
 import com.eucalyptus.util.EucalyptusClusterException;
-import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
@@ -136,7 +136,7 @@ public class StatefulMessageSet<E extends Enum<E>> {
         EventRecord.caller( StatefulMessageSet.class, EventType.VM_STARTING, state.name( ), event.getCallback( ).toString( ) ).debug( );
         if ( event.getCallback( ) instanceof BroadcastCallback ) {
           final BroadcastCallback callback = ( BroadcastCallback ) event.getCallback( );
-          this.pendingEvents.addAll( Lists.transform( Clusters.getInstance( ).listValues( ), new Function<Cluster, Request>( ) {
+          this.pendingEvents.addAll( Clusters.stream( ).map( new CompatFunction<Cluster, Request>( ) {
             @Override
             public Request apply( final Cluster c ) {
               LOG.debug( "VM_STARTING: " + state.name( ) + " " + c.getName( ) + " " + event.getClass( ).getSimpleName( ) + " " + event.getCallback( ) );
@@ -145,7 +145,7 @@ public class StatefulMessageSet<E extends Enum<E>> {
               request.dispatch( c.getConfiguration( ) );
               return request;
             }
-          } ) );
+          } ).toJavaList( ) );
         } else {
           LOG.debug( "VM_STARTING: " + state.name( ) + " " + this.cluster.getName( ) + " " + event.getClass( ).getSimpleName( ) + " " + event.getCallback( ) );
           event.dispatch( this.cluster.getConfiguration( ) );

@@ -85,7 +85,7 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.compute.ClientUnauthorizedComputeException;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.internal.util.InvalidInstanceProfileMetadataException;
 import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
@@ -96,7 +96,6 @@ import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.compute.common.internal.util.IllegalMetadataAccessException;
 import com.eucalyptus.compute.common.internal.util.InvalidMetadataException;
 import com.eucalyptus.compute.common.internal.util.MetadataException;
-import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
@@ -182,9 +181,9 @@ public class VerifyMetadata {
     public boolean apply( Allocation allocInfo ) throws MetadataException {
       RunInstancesType request = allocInfo.getRequest( );
       String zoneName = request.getAvailabilityZone( );
-      if ( Clusters.getInstance( ).listValues( ).isEmpty( ) ) {
-        LOG.debug( "enabled values: " + Joiner.on( "\n" ).join( Clusters.getInstance( ).listValues( ) ) );
-        LOG.debug( "disabled values: " + Joiner.on( "\n" ).join( Clusters.getInstance( ).listValues( ) ) );
+      if ( Clusters.list( ).isEmpty( ) ) {
+        LOG.debug( "enabled values: " + Joiner.on( "\n" ).join( Clusters.list( ) ) );
+        LOG.debug( "disabled values: " + Joiner.on( "\n" ).join( Clusters.listDisabled( ) ) );
         throw new VerificationException( "Not enough resources: no cluster controller is currently available to run instances." );
       } else if ( Partitions.exists( zoneName ) ) {
         Partition partition = Partitions.lookupByName( zoneName );

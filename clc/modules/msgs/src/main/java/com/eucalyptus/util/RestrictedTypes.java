@@ -612,7 +612,7 @@ public class RestrictedTypes {
     }
   }
 
-  public static <T extends RestrictedType> Predicate<T> filterPrivileged( ) {
+  public static <T extends RestrictedType> CompatPredicate<T> filterPrivileged( ) {
     return filterPrivileged( false, ContextSupplier.INSTANCE );
   }
 
@@ -625,12 +625,12 @@ public class RestrictedTypes {
    *
    * @see #filterPrivileged
    */
-  public static <T extends RestrictedType> Predicate<T> filterPrivilegedWithoutOwner( ) {
+  public static <T extends RestrictedType> CompatPredicate<T> filterPrivilegedWithoutOwner( ) {
     return filterPrivileged( true, ContextSupplier.INSTANCE );
   }
 
-  public static <T extends RestrictedType> Function<T, String> toDisplayName( ) {
-    return new Function<T, String>( ) {
+  public static <T extends RestrictedType> CompatFunction<T, String> toDisplayName( ) {
+    return new CompatFunction<T, String>( ) {
       @Override
       public String apply( T arg0 ) {
         return arg0 == null ? null : arg0.getDisplayName( );
@@ -638,18 +638,18 @@ public class RestrictedTypes {
     };
   }
 
-  public static <T extends RestrictedType> Predicate<T> filterById( final Collection<String> requestedIdentifiers ) {
+  public static <T extends RestrictedType> CompatPredicate<T> filterById( final Collection<String> requestedIdentifiers ) {
     return filterByProperty( requestedIdentifiers, toDisplayName() );
   }
 
-  public static <T extends RestrictedType> Predicate<T> filterByProperty( final String requestedValue,
+  public static <T extends RestrictedType> CompatPredicate<T> filterByProperty( final String requestedValue,
                                                                           final Function<? super T,String> extractor ) {
     return filterByProperty( CollectionUtils.<String>listUnit().apply( requestedValue ), extractor );
   }
 
-  public static <T extends RestrictedType> Predicate<T> filterByProperty( final Collection<String> values,
+  public static <T extends RestrictedType> CompatPredicate<T> filterByProperty( final Collection<String> values,
                                                                           final Function<? super T,String> extractor ) {
-    return new Predicate<T>( ) {
+    return new CompatPredicate<T>( ) {
       final ImmutableList<String> requestedValues = values == null ? null : ImmutableList.copyOf( values );
 
       @Override
@@ -659,8 +659,8 @@ public class RestrictedTypes {
     };
   }
 
-  public static <T extends RestrictedType> Predicate<T> filterByOwningAccount( final Collection<String> identifiers ) {
-    return new Predicate<T>( ) {
+  public static <T extends RestrictedType> CompatPredicate<T> filterByOwningAccount( final Collection<String> identifiers ) {
+    return new CompatPredicate<T>( ) {
       final ImmutableList<String> requestedIdentifiers = identifiers == null ? null : ImmutableList.copyOf( identifiers );
 
       @Override
@@ -678,8 +678,8 @@ public class RestrictedTypes {
    * Please, ignoreOwningAccount here is necessary. Consult me first before making any changes.
    *  -- Ye Wen (wenye@eucalyptus.com)
    */
-  private static <T extends RestrictedType> Predicate<T> filterPrivileged( final boolean ignoreOwningAccount, final Function<? super Class<?>, AuthEvaluationContext> contextFunction ) {
-    return new Predicate<T>( ) {
+  private static <T extends RestrictedType> CompatPredicate<T> filterPrivileged( final boolean ignoreOwningAccount, final Function<? super Class<?>, AuthEvaluationContext> contextFunction ) {
+    return new CompatPredicate<T>( ) {
 
       @SuppressWarnings( { "ConstantConditions", "unused" } )
       @Override

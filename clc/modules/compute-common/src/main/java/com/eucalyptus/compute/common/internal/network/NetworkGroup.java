@@ -149,7 +149,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "networkGroup" )
   private Collection<NetworkGroupTag> tags;
 
-  protected NetworkGroup( ) {}
+  public NetworkGroup( ) {}
   
   protected NetworkGroup( final OwnerFullName ownerFullName ) {
     super( ownerFullName );
@@ -279,7 +279,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     return this.groupId;
   }
   
-  protected void setDescription( final String description ) {
+  public void setDescription( final String description ) {
     this.description = description;
   }
 
@@ -303,11 +303,11 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     return Iterables.filter( getNetworkRules( ), NetworkRule.egress( ) );
   }
 
-  private void setGroupId( final String groupId ){
+  public void setGroupId( final String groupId ){
      this.groupId = groupId;
   }
   
-  private void setNetworkRules( final Set<NetworkRule> networkRules ) {
+  public void setNetworkRules( final Set<NetworkRule> networkRules ) {
     this.networkRules = networkRules;
   }
 

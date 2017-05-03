@@ -39,8 +39,6 @@ import javax.persistence.Table;
 import com.eucalyptus.auth.principal.FullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
@@ -299,7 +297,7 @@ public class AllocatedAddressEntity extends UserMetadata<AddressState> implement
 
   @Override
   public FullName getFullName( ) {
-    return FullName.create.vendor( "euca" ).region( ComponentIds.lookup( ClusterController.class ).name( ) ).namespace( this.getPartition( ) ).relativeId( "public-address",
+    return FullName.create.vendor( "euca" ).region( "cluster" ).namespace( this.getPartition( ) ).relativeId( "public-address",
         this.getName( ) );
   }
 

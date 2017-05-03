@@ -88,6 +88,8 @@ import com.eucalyptus.auth.AuthContextSupplier;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.VmInstanceToken;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.ResourceStateCallback;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
@@ -104,8 +106,8 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.DescribeResourcesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeResourcesType;
+import com.eucalyptus.cluster.common.msgs.DescribeResourcesResponseType;
+import com.eucalyptus.cluster.common.msgs.DescribeResourcesType;
 
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.Arrays;
@@ -124,21 +126,20 @@ import com.eucalyptus.blockstorage.msgs.GetVolumeTokenResponseType;
 import com.eucalyptus.blockstorage.msgs.GetVolumeTokenType;
 import com.eucalyptus.blockstorage.msgs.StorageVolume;
 import com.eucalyptus.blockstorage.util.StorageProperties;
-import com.eucalyptus.cloud.ResourceToken;
+import com.eucalyptus.cluster.common.internal.ResourceToken;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
-import com.eucalyptus.cloud.VmRunType;
+import com.eucalyptus.cluster.common.msgs.VmRunType;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.compute.common.internal.util.MetadataException;
 import com.eucalyptus.compute.common.internal.util.NotEnoughResourcesException;
-import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.ResourceState;
+import com.eucalyptus.cluster.common.internal.Cluster;
+import com.eucalyptus.cluster.common.internal.ResourceState;
 import com.eucalyptus.cluster.callback.VmRunCallback;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.auth.SystemCredentials;
-import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.cluster.common.ClusterController;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Ciphers;
@@ -176,10 +177,10 @@ import com.google.common.primitives.Ints;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
-import edu.ucsb.eucalyptus.cloud.VmKeyInfo;
-import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
+import com.eucalyptus.cluster.common.msgs.VmKeyInfo;
+import com.eucalyptus.cluster.common.msgs.VmRunResponseType;
+import com.eucalyptus.cluster.common.msgs.VirtualBootRecord;
+import com.eucalyptus.cluster.common.msgs.VmTypeInfo;
 
 public class ClusterAllocator implements Runnable {
   private static final long BYTES_PER_GB = ( 1024L * 1024L * 1024L );
@@ -256,7 +257,7 @@ public class ClusterAllocator implements Runnable {
     this.allocInfo = allocInfo;
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      this.cluster = Clusters.lookup( clusterConfig );
+      this.cluster = Clusters.lookupAny( clusterConfig );
       this.messages = new StatefulMessageSet<State>( this.cluster, State.values( ) );
       this.setupNetworkMessages( );
       this.setupVolumeMessages( );
@@ -270,7 +271,7 @@ public class ClusterAllocator implements Runnable {
     }
     
     try {
-      for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
+      for ( final VmInstanceToken token : allocInfo.getAllocationTokens( ) ) {
         this.setupVmMessages( token );
       }
     } catch ( final Exception e ) {
@@ -305,7 +306,7 @@ public class ClusterAllocator implements Runnable {
     LOG.error( e );
     Logs.extreme().error( e, e );
     this.allocInfo.abort( );
-    for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
+    for ( final VmInstanceToken token : allocInfo.getAllocationTokens( ) ) {
       try {
         final VmInstance vm = VmInstances.lookup( token.getInstanceId() );
         if ( VmState.STOPPED.equals( vm.getLastState( ) ) ) {
@@ -444,7 +445,7 @@ public class ClusterAllocator implements Runnable {
 
       int rootVolSizeInGb = ( int ) Math.ceil( ( ( double ) volSizeBytes ) / BYTES_PER_GB );
 
-      for ( final ResourceToken token : this.allocInfo.getAllocationTokens( ) ) {
+      for ( final VmInstanceToken token : this.allocInfo.getAllocationTokens( ) ) {
         final VmInstance vm = VmInstances.lookup( token.getInstanceId( ) );
         if ( !vm.getBootRecord( ).hasPersistentVolumes( ) ) { // No persistent volumes in the db
           if (!instanceDeviceMappings.isEmpty()) { // First time a bfebs instance starts up 
@@ -567,7 +568,7 @@ public class ClusterAllocator implements Runnable {
     VmInstanceLifecycleHelpers.get( ).prepareNetworkMessages( this.allocInfo, this.messages );
   }
   
-  private void setupVmMessages( final ResourceToken token ) throws Exception {
+  private void setupVmMessages( final VmInstanceToken token ) throws Exception {
     final VmTypeInfo vmInfo = this.allocInfo.getVmTypeInfo( this.allocInfo.getPartition( ), token.getAllocationInfo().getReservationId() );
     allocInfo.setRootDirective();
     try {
@@ -596,7 +597,7 @@ public class ClusterAllocator implements Runnable {
   // Modifying the logic to enable multiple block device mappings for boot from ebs. Fixes EUCA-3254 and implements EUCA-4786
   // Using resource token to construct vbr record rather than volume attachments from the database as there might be race condition
   // where the vm instance record may not have been updated with the volume attachments. EUCA-5670
-  private VmTypeInfo makeVmTypeInfo( final VmTypeInfo vmInfo, final ResourceToken token ) throws Exception {
+  private VmTypeInfo makeVmTypeInfo( final VmTypeInfo vmInfo, final VmInstanceToken token ) throws Exception {
     VmTypeInfo childVmInfo = vmInfo.child( );
     
     if ( this.allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo ) {        
@@ -739,7 +740,7 @@ public class ClusterAllocator implements Runnable {
     throw new EucalyptusCloudException( "volume " + vol.getDisplayName( ) + " was not created in time" );
   }
   
-  private VmRunCallback makeRunCallback( final ResourceToken childToken, final VmTypeInfo vmInfo ) {
+  private VmRunCallback makeRunCallback( final VmInstanceToken childToken, final VmTypeInfo vmInfo ) {
     final SshKeyPair keyPair = this.allocInfo.getSshKeyPair( );
     final VmKeyInfo vmKeyInfo = new VmKeyInfo( keyPair.getName( ), keyPair.getPublicKey( ), keyPair.getFingerPrint( ) );
     final String platform = this.allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( ) != null

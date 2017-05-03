@@ -85,7 +85,7 @@ import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.cluster.common.ClusterController;
 import com.eucalyptus.compute.common.internal.vm.VmRuntimeState.ReachabilityStatus;
 import com.eucalyptus.compute.common.internal.vm.MigrationState;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
@@ -112,7 +112,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.bootstrap.Databases;
-import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.common.internal.Cluster;
 import com.eucalyptus.compute.common.network.InstanceResourceReportType;
 import com.eucalyptus.compute.common.network.Networking;
 import com.eucalyptus.compute.common.network.UpdateInstanceResourcesType;
@@ -138,12 +138,12 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Sets;
 
-import edu.ucsb.eucalyptus.cloud.VmDescribeResponseType;
-import edu.ucsb.eucalyptus.cloud.VmDescribeType;
-import edu.ucsb.eucalyptus.cloud.VmInfo;
-import edu.ucsb.eucalyptus.msgs.AttachedVolume;
-import edu.ucsb.eucalyptus.msgs.NetworkConfigType;
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
+import com.eucalyptus.cluster.common.msgs.VmDescribeResponseType;
+import com.eucalyptus.cluster.common.msgs.VmDescribeType;
+import com.eucalyptus.cluster.common.msgs.VmInfo;
+import com.eucalyptus.cluster.common.msgs.AttachedVolume;
+import com.eucalyptus.cluster.common.msgs.NetworkConfigType;
+import com.eucalyptus.cluster.common.msgs.VmTypeInfo;
 
 public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescribeType, VmDescribeResponseType> {
   private static Logger               LOG                       = Logger.getLogger( VmStateCallback.class );

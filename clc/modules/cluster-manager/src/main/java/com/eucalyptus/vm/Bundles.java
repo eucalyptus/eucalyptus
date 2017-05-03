@@ -79,21 +79,19 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.tokens.SecurityTokenAWSCredentialsProvider;
-import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.common.msgs.ClusterBundleInstanceResponseType;
+import com.eucalyptus.cluster.common.msgs.ClusterBundleInstanceType;
+import com.eucalyptus.cluster.common.msgs.ClusterBundleRestartInstanceResponseType;
+import com.eucalyptus.cluster.common.msgs.ClusterBundleRestartInstanceType;
+import com.eucalyptus.cluster.common.msgs.ClusterCancelBundleTaskResponseType;
+import com.eucalyptus.cluster.common.msgs.ClusterCancelBundleTaskType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.cluster.common.ClusterController;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.common.BundleTask;
-import com.eucalyptus.compute.common.backend.BundleInstanceResponseType;
-import com.eucalyptus.compute.common.backend.BundleInstanceType;
-import com.eucalyptus.compute.common.backend.BundleRestartInstanceResponseType;
-import com.eucalyptus.compute.common.backend.BundleRestartInstanceType;
-import com.eucalyptus.compute.common.backend.CancelBundleTaskResponseType;
-import com.eucalyptus.compute.common.backend.CancelBundleTaskType;
 import com.eucalyptus.compute.common.internal.vm.VmBundleTask;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.compute.common.internal.vm.VmRuntimeState;
@@ -129,13 +127,13 @@ public class Bundles {
   private static final Map<String, VmBundleTask> previousBundleTaskMap = Maps.newConcurrentMap();
   private static Logger LOG = Logger.getLogger( Bundles.class );
   
-  public static MessageCallback createCallback( BundleInstanceType request ) throws AuthException, IllegalContextAccessException, ServiceStateException {
+  public static MessageCallback createCallback( ClusterBundleInstanceType request ) throws AuthException, IllegalContextAccessException, ServiceStateException {
     final String objectStorageUrl = ServiceUris.remote( Topology.lookup( ObjectStorage.class ) ).toASCIIString( );
     request.setUrl( objectStorageUrl );
     return new BundleCallback( request );
   }
   
-  public static MessageCallback cancelCallback( CancelBundleTaskType request ) {
+  public static MessageCallback cancelCallback( ClusterCancelBundleTaskType request ) {
     return new CancelBundleCallback( request );
   }
 
@@ -147,21 +145,16 @@ public class Bundles {
   public static void bundleRestartInstance( VmBundleTask bundleTask ) {
     VmBundleTask.BundleState state = bundleTask.getState( );
     if ( VmBundleTask.BundleState.complete.equals( state ) || VmBundleTask.BundleState.failed.equals( state ) || VmBundleTask.BundleState.cancelled.equals( state ) ) {
-      final BundleRestartInstanceType request = new BundleRestartInstanceType( );
-      final BundleRestartInstanceResponseType reply = request.getReply( );
-
-      reply.set_return( true );
+      final ClusterBundleRestartInstanceType request = new ClusterBundleRestartInstanceType( );
       try {
         LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_RESTART, bundleTask.getVmInstance().getOwner().getUserName(),
             bundleTask.getBundleId(),
             bundleTask.getVmInstance().getInstanceId() ) );
 
         ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, bundleTask.getVmInstance( ).lookupPartition() );
-        final Cluster cluster = Clusters.lookup( ccConfig );
 
         request.setInstanceId( bundleTask.getVmInstance( ).getInstanceId() );
-        reply.setTask( transform( bundleTask ) );
-        AsyncRequests.newRequest( bundleRestartInstanceCallback( request ) ).dispatch( cluster.getConfiguration( ) );
+        AsyncRequests.newRequest( bundleRestartInstanceCallback( request ) ).dispatch( ccConfig );
       } catch ( final Exception e ) {
         Logs.extreme( ).trace( "Failed to find bundle task: " + bundleTask.getBundleId( ) );
       }
@@ -297,13 +290,13 @@ public class Bundles {
     return oldTask;
   }
 
-  public static class CancelBundleCallback extends MessageCallback<CancelBundleTaskType, CancelBundleTaskResponseType> {
-    private CancelBundleCallback( CancelBundleTaskType request ) {
+  public static class CancelBundleCallback extends MessageCallback<ClusterCancelBundleTaskType, ClusterCancelBundleTaskResponseType> {
+    private CancelBundleCallback( ClusterCancelBundleTaskType request ) {
       super( request );
     }
     
     @Override
-    public void fire( CancelBundleTaskResponseType reply ) {
+    public void fire( ClusterCancelBundleTaskResponseType reply ) {
       if ( !reply.get_return( ) ) {
         LOG.info( "Attempt to CancelBundleTask for instance " + this.getRequest( ).getBundleId( ) + " has failed." );
       } else {
@@ -322,17 +315,17 @@ public class Bundles {
     }
   }
   
-  public static MessageCallback bundleRestartInstanceCallback( BundleRestartInstanceType request ) {
+  public static MessageCallback bundleRestartInstanceCallback( ClusterBundleRestartInstanceType request ) {
     return new BundleRestartInstanceCallback( request );
   }
   
-  public static class BundleRestartInstanceCallback extends MessageCallback<BundleRestartInstanceType, BundleRestartInstanceResponseType> {
-    private BundleRestartInstanceCallback( BundleRestartInstanceType request ) {
+  public static class BundleRestartInstanceCallback extends MessageCallback<ClusterBundleRestartInstanceType, ClusterBundleRestartInstanceResponseType> {
+    private BundleRestartInstanceCallback( ClusterBundleRestartInstanceType request ) {
       super( request );
     }
     
     @Override
-    public void fire( BundleRestartInstanceResponseType reply ) {
+    public void fire( ClusterBundleRestartInstanceResponseType reply ) {
       if ( !reply.get_return( ) ) {
           LOG.info( "Attempt to restart bundle instance " + this.getRequest( ).getInstanceId( ) + " has failed." );
       } else {
@@ -351,13 +344,13 @@ public class Bundles {
     }
   }
   
-  public static class BundleCallback extends MessageCallback<BundleInstanceType, BundleInstanceResponseType> {
-    private BundleCallback( BundleInstanceType request ) {
+  public static class BundleCallback extends MessageCallback<ClusterBundleInstanceType, ClusterBundleInstanceResponseType> {
+    private BundleCallback( ClusterBundleInstanceType request ) {
       super( request );
     }
     
     @Override
-    public void fire( BundleInstanceResponseType reply ) {
+    public void fire( ClusterBundleInstanceResponseType reply ) {
       EntityTransaction db = Entities.get( VmInstance.class );
       try {
         if ( !reply.get_return( ) ) {

@@ -39,11 +39,11 @@ import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.principal.UserPrincipal;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.compute.common.NatGatewayType;
 import com.eucalyptus.compute.common.internal.account.IdentityIdFormats;
 import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
 import com.eucalyptus.compute.common.internal.util.ResourceAllocationException;
-import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.ClientUnauthorizedComputeException;
@@ -884,7 +884,7 @@ public class VpcManager {
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName();
     final String vpcId = Identifier.vpc.normalize( request.getVpcId( ) );
     final Optional<String> availabilityZone = Iterables.tryFind(
-            Clusters.getInstance( ).listValues( ),
+            Clusters.list( ),
             Predicates.and(
                 request.getAvailabilityZone( ) == null ?
                     Predicates.<RestrictedType>alwaysTrue( ) :
@@ -1049,7 +1049,7 @@ public class VpcManager {
             // ensure there is a default subnet in each availability zone
             final Set<String> cidrsInUse = Sets.newHashSet( );
             final Set<String> zonesWithoutSubnets = Sets.newTreeSet( );
-            for ( final String zone : Iterables.transform( Clusters.getInstance( ).listValues( ), CloudMetadatas.toDisplayName( ) ) ) {
+            for ( final String zone : Clusters.stream( ).map( CloudMetadatas.toDisplayName( ) ) ) {
               try {
                 cidrsInUse.add( subnets.lookupDefault( vpcAccountFullName, zone, Subnets.FilterStringFunctions.CIDR ) );
               } catch ( final VpcMetadataNotFoundException e ) {

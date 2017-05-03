@@ -94,7 +94,6 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.imaging.manifest.BundleImageManifest;
-import com.eucalyptus.imaging.manifest.DownloadManifestException;
 import com.eucalyptus.imaging.manifest.DownloadManifestFactory;
 import com.eucalyptus.imaging.manifest.ImageManifestFile;
 import com.eucalyptus.records.Logs;
@@ -113,7 +112,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
+import com.eucalyptus.cluster.common.msgs.VmTypeInfo;
 
 public class Emis {
   private static Logger LOG = Logger.getLogger( Emis.class );

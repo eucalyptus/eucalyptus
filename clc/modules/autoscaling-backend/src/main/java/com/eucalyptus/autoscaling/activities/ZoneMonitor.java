@@ -22,10 +22,10 @@ package com.eucalyptus.autoscaling.activities;
 import java.util.Map;
 import java.util.Set;
 import org.apache.log4j.Logger;
+import com.eucalyptus.cluster.common.ClusterController;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.Empyrean;
@@ -118,7 +118,7 @@ class ZoneMonitor {
       boolean enabled = false;
       final Partition partition = Partitions.lookupByName( zone );
       if ( partition != null ) try {
-        Topology.lookup( ClusterController.class, partition );
+        Topology.lookup( ClusterController.class, partition );  //TODO:STEVE: should should be describe-availability-zones? (check zoneState?)
         enabled = true;
       } catch ( Exception e ) {
         Logs.exhaust().info( "Lookup failed for zone: " + zone, e );

@@ -23,16 +23,11 @@ import com.eucalyptus.address.Addresses
 import com.eucalyptus.bootstrap.Bootstrap
 import com.eucalyptus.bootstrap.Databases
 import com.eucalyptus.bootstrap.Hosts
-import com.eucalyptus.cluster.ClusterConfiguration
-import com.eucalyptus.component.Components
 import com.eucalyptus.component.Faults
-import com.eucalyptus.component.ServiceConfiguration
-import com.eucalyptus.component.id.ClusterController
 import com.eucalyptus.component.id.Eucalyptus
 import com.eucalyptus.configurable.ConfigurableProperty
 import com.eucalyptus.configurable.ConfigurablePropertyException
 import com.eucalyptus.configurable.PropertyChangeListener
-import com.eucalyptus.entities.Entities
 import com.eucalyptus.event.ClockTick
 import com.eucalyptus.event.Listeners
 import com.eucalyptus.event.EventListener as EucaEventListener
@@ -48,9 +43,7 @@ import com.eucalyptus.vm.VmInstances
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.PropertyNamingStrategy
-import com.google.common.base.MoreObjects
 import com.google.common.base.Optional
-import com.google.common.base.Predicate
 import com.google.common.base.Splitter
 import com.google.common.base.Strings
 import com.google.common.base.Supplier
@@ -67,7 +60,6 @@ import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.ValidationUtils
 
 import javax.annotation.Nullable
-import javax.persistence.EntityTransaction
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -396,12 +388,9 @@ class NetworkConfigurations {
             DispatchingNetworkingService.updateNetworkService(
                 NetworkMode.fromString( configurationOptional.get( ).mode, NetworkMode.EDGE ) )
             if ( Hosts.isCoordinator( ) ) {
-              Iterables.all(
-                  configurationOptional.asSet(),
-                  Entities.asTransaction(ClusterConfiguration.class, { NetworkConfiguration networkConfiguration ->
-                    NetworkConfigurations.process(networkConfiguration)
-                    true
-                  } as Predicate<NetworkConfiguration>))
+              configurationOptional.orNull( )?.with{ NetworkConfiguration networkConfiguration ->
+                NetworkConfigurations.process( networkConfiguration )
+              }
             }
           }
         } catch ( e ) {

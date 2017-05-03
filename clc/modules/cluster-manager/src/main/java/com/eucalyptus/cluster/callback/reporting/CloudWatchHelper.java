@@ -76,12 +76,12 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.DescribeSensorsResponse;
-import edu.ucsb.eucalyptus.msgs.MetricCounterType;
-import edu.ucsb.eucalyptus.msgs.MetricDimensionsType;
-import edu.ucsb.eucalyptus.msgs.MetricDimensionsValuesType;
-import edu.ucsb.eucalyptus.msgs.MetricsResourceType;
-import edu.ucsb.eucalyptus.msgs.SensorsResourceType;
+import com.eucalyptus.cluster.common.msgs.DescribeSensorsResponseType;
+import com.eucalyptus.cluster.common.msgs.MetricCounterType;
+import com.eucalyptus.cluster.common.msgs.MetricDimensionsType;
+import com.eucalyptus.cluster.common.msgs.MetricDimensionsValuesType;
+import com.eucalyptus.cluster.common.msgs.MetricsResourceType;
+import com.eucalyptus.cluster.common.msgs.SensorsResourceType;
 
 public class CloudWatchHelper {
 
@@ -653,7 +653,7 @@ public class CloudWatchHelper {
 
   public List<AbsoluteMetricQueueItem> collectMetricData(
       final Collection<String> expectedInstanceIds,
-      final DescribeSensorsResponse msg
+      final DescribeSensorsResponseType msg
   ) throws Exception {
     ArrayList<AbsoluteMetricQueueItem> absoluteMetricQueueItems = new ArrayList<>();
 

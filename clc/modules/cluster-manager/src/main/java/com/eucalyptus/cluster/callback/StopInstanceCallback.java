@@ -20,17 +20,17 @@
 package com.eucalyptus.cluster.callback;
 
 import com.eucalyptus.util.async.MessageCallback;
-import edu.ucsb.eucalyptus.msgs.StopInstanceResponseType;
-import edu.ucsb.eucalyptus.msgs.StopInstanceType;
+import com.eucalyptus.cluster.common.msgs.ClusterStopInstanceResponseType;
+import com.eucalyptus.cluster.common.msgs.ClusterStopInstanceType;
 
 /**
  * @author Sang-Min Park
  *
  */
-public abstract class StopInstanceCallback extends MessageCallback<StopInstanceType, StopInstanceResponseType> {
+public abstract class StopInstanceCallback extends MessageCallback<ClusterStopInstanceType, ClusterStopInstanceResponseType> {
 	public StopInstanceCallback(){}
 	
-	public void setRequest(final StopInstanceType req){
+	public void setRequest(final ClusterStopInstanceType req){
 		super.setRequest(req);
 	}
 }

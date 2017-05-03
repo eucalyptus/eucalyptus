@@ -20,17 +20,17 @@
 package com.eucalyptus.cluster.callback;
 
 import com.eucalyptus.util.async.MessageCallback;
-import edu.ucsb.eucalyptus.msgs.StartInstanceResponseType;
-import edu.ucsb.eucalyptus.msgs.StartInstanceType;
+import com.eucalyptus.cluster.common.msgs.ClusterStartInstanceResponseType;
+import com.eucalyptus.cluster.common.msgs.ClusterStartInstanceType;
 
 /**
  * @author Sang-Min Park
  *
  */
-public abstract class StartInstanceCallback extends MessageCallback<StartInstanceType, StartInstanceResponseType> {
+public abstract class StartInstanceCallback extends MessageCallback<ClusterStartInstanceType, ClusterStartInstanceResponseType> {
 	public StartInstanceCallback(){}
 	
-	public void setRequest(final StartInstanceType req){
+	public void setRequest(final ClusterStartInstanceType req){
 		super.setRequest(req);
 	}
 }

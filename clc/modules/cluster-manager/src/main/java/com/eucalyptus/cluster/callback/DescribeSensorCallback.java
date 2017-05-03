@@ -28,13 +28,13 @@ import java.util.List;
 import com.eucalyptus.cluster.callback.reporting.AbsoluteMetricQueue;
 import com.eucalyptus.cluster.callback.reporting.AbsoluteMetricQueueItem;
 import com.eucalyptus.cluster.callback.reporting.CloudWatchHelper;
-import edu.ucsb.eucalyptus.msgs.DescribeSensorsResponse;
-import edu.ucsb.eucalyptus.msgs.DescribeSensorsType;
-import edu.ucsb.eucalyptus.msgs.MetricCounterType;
-import edu.ucsb.eucalyptus.msgs.MetricDimensionsType;
-import edu.ucsb.eucalyptus.msgs.MetricsResourceType;
-import edu.ucsb.eucalyptus.msgs.SensorsResourceType;
-import edu.ucsb.eucalyptus.msgs.MetricDimensionsValuesType;
+import com.eucalyptus.cluster.common.msgs.DescribeSensorsResponseType;
+import com.eucalyptus.cluster.common.msgs.DescribeSensorsType;
+import com.eucalyptus.cluster.common.msgs.MetricCounterType;
+import com.eucalyptus.cluster.common.msgs.MetricDimensionsType;
+import com.eucalyptus.cluster.common.msgs.MetricsResourceType;
+import com.eucalyptus.cluster.common.msgs.SensorsResourceType;
+import com.eucalyptus.cluster.common.msgs.MetricDimensionsValuesType;
 
 import org.apache.log4j.Logger;
 
@@ -52,7 +52,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 
 public class DescribeSensorCallback extends
-    MessageCallback<DescribeSensorsType, DescribeSensorsResponse> {
+    MessageCallback<DescribeSensorsType, DescribeSensorsResponseType> {
 
   private static final Logger LOG = Logger.getLogger(DescribeSensorCallback.class);
   private static final String RESOURCE_TYPE_INSTANCE = "instance";
@@ -85,7 +85,7 @@ public class DescribeSensorCallback extends
   }
 
   @Override
-  public void fire(final DescribeSensorsResponse msg) {
+  public void fire(final DescribeSensorsResponseType msg) {
     LOG.trace("DescribeSensorCallback (fire) called at " + new Date());
     try {
       processCloudWatchStats(msg);
@@ -99,14 +99,14 @@ public class DescribeSensorCallback extends
     }
   }
 
-  private void processCloudWatchStats(final DescribeSensorsResponse msg) throws Exception {
+  private void processCloudWatchStats(final DescribeSensorsResponseType msg) throws Exception {
     CloudWatchHelper cloudWatchHelper = new CloudWatchHelper(new CloudWatchHelper.DefaultInstanceInfoProvider());
     List<AbsoluteMetricQueueItem> queueItems = cloudWatchHelper.collectMetricData(instanceIds, msg);
     AbsoluteMetricQueue.getInstance().addQueueItems(queueItems);
   }
 
 
-  private void processReportingStats(final DescribeSensorsResponse msg) throws Exception {
+  private void processReportingStats(final DescribeSensorsResponseType msg) throws Exception {
     for (final SensorsResourceType sensorData : msg.getSensorsResources()) {
       if (!RESOURCE_TYPE_INSTANCE.equals(sensorData.getResourceType()) ||
           !instanceIds.contains( sensorData.getResourceName( )) ||

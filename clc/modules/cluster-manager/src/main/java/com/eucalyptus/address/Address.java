@@ -71,7 +71,7 @@ import com.eucalyptus.auth.type.RestrictedType.AccountRestrictedType;
 import com.eucalyptus.compute.common.AddressInfoType;
 import com.eucalyptus.compute.common.CloudMetadata.AddressMetadata;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.cluster.common.ClusterController;
 import com.eucalyptus.compute.common.internal.address.AddressDomain;
 import com.eucalyptus.compute.common.internal.address.AddressI;
 import com.eucalyptus.compute.common.internal.address.AddressState;

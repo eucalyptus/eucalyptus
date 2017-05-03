@@ -3,6 +3,7 @@
     <dependencies>
         <dependency name="eucalyptus-core" rev="latest.integration"/>
         <dependency name="eucalyptus-compute-common" rev="latest.integration"/>
+        <dependency name="eucalyptus-cluster-common" rev="latest.integration"/>
         <dependency name="eucalyptus-resources-support" rev="latest.integration"/>
         <dependency name="eucalyptus-tokens-common" rev="latest.integration"/>
         <dependency name="eucalyptus-object-storage-common" rev="latest.integration"/>

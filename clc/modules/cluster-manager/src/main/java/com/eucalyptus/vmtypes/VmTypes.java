@@ -78,17 +78,17 @@ import javax.annotation.Nullable;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.compute.common.CloudMetadata.VmTypeMetadata;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.internal.util.InvalidMetadataException;
 import com.eucalyptus.compute.common.internal.util.MetadataException;
 import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
-import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.common.internal.Cluster;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.cluster.common.ClusterController;
 import com.eucalyptus.compute.common.VmTypeDetails;
 import com.eucalyptus.compute.common.internal.vmtypes.EphemeralDisk;
 import com.eucalyptus.compute.common.internal.vmtypes.VmType;
@@ -116,7 +116,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
 
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
+import com.eucalyptus.cluster.common.msgs.VmTypeInfo;
 
 @ConfigurableClass( root = "cloud.vmtypes",
                     description = "Parameters controlling the definition of virtual machine types." )
@@ -145,7 +145,7 @@ public class VmTypes {
     @Override
     public boolean apply( ServiceConfiguration input ) {
       try {
-        final Cluster cluster = Clusters.lookup( input );
+        final Cluster cluster = Clusters.lookupAny( input );
         try ( final LockResource lock =
                   LockResource.tryLock( cluster.getGateLock( ).readLock( ), 20, TimeUnit.SECONDS ) ) {
           if ( lock.isLocked( ) ) {

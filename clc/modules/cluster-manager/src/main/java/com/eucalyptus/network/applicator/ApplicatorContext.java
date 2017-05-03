@@ -21,7 +21,7 @@ package com.eucalyptus.network.applicator;
 
 import static org.hamcrest.CoreMatchers.notNullValue;
 import javax.annotation.Nonnull;
-import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.common.internal.Cluster;
 import com.eucalyptus.cluster.NetworkInfo;
 import com.eucalyptus.util.Parameters;
 import com.eucalyptus.util.TypedContext;

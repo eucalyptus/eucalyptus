@@ -72,7 +72,6 @@ import javax.annotation.Nullable;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthQuotaException;
-import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.ClientUnauthorizedComputeException;
@@ -115,15 +114,13 @@ import com.eucalyptus.blockstorage.msgs.DetachStorageVolumeType;
 import com.eucalyptus.blockstorage.msgs.GetVolumeTokenResponseType;
 import com.eucalyptus.blockstorage.msgs.GetVolumeTokenType;
 import com.eucalyptus.blockstorage.util.StorageProperties;
-import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.VolumeAttachCallback;
 import com.eucalyptus.cluster.callback.VolumeDetachCallback;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.cluster.common.ClusterController;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -153,8 +150,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
 
 import edu.ucsb.eucalyptus.cloud.VolumeSizeExceededException;
-import edu.ucsb.eucalyptus.msgs.ClusterAttachVolumeType;
-import edu.ucsb.eucalyptus.msgs.ClusterDetachVolumeType;
+import com.eucalyptus.cluster.common.msgs.ClusterAttachVolumeType;
+import com.eucalyptus.cluster.common.msgs.ClusterDetachVolumeType;
 
 @ComponentNamed("computeVolumeManager")
 public class VolumeManager {
@@ -525,11 +522,9 @@ public class VolumeManager {
     	}
     	VmInstances.removeVolumeAttachment( vm, volume.getVolumeId( ) );
     } else {
-    	Cluster cluster = null;
     	ServiceConfiguration ccConfig = null;
     	try {
     		ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
-    		cluster = Clusters.lookup( ccConfig );
     	} catch ( NoSuchElementException e ) {
     		LOG.debug( e, e );
     		throw new EucalyptusCloudException( "Cluster does not exist in partition: " + vm.getPartition( ) );
@@ -549,7 +544,7 @@ public class VolumeManager {
     		Logs.extreme( ).debug( e, e );
     		//GRZE: attach is idempotent, failure here is ok, throw new EucalyptusCloudException( e.getMessage( ) );
     	}*/
-    	AsyncRequests.newRequest( ncDetach ).dispatch( cluster.getConfiguration( ) );
+    	AsyncRequests.newRequest( ncDetach ).dispatch( ccConfig );
     	
     	//Update the state of the attachment to 'detaching'
       VmInstances.updateVolumeAttachment( vm, volumeId, AttachmentState.detaching );

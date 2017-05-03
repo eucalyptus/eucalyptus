@@ -84,7 +84,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.ResourceToken;
+import com.eucalyptus.cloud.VmInstanceToken;
 import com.eucalyptus.compute.common.internal.account.IdentityIdFormats;
 import com.eucalyptus.compute.common.internal.util.MetadataException;
 import com.eucalyptus.component.Partition;
@@ -115,9 +115,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-import edu.ucsb.eucalyptus.cloud.VmInfo;
+import com.eucalyptus.cluster.common.msgs.VmInfo;
 import edu.ucsb.eucalyptus.msgs.HasRequest;
-import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
+import com.eucalyptus.cluster.common.msgs.VmTypeInfo;
 
 public class Allocations {
   private static Logger LOG = Logger.getLogger(Allocations.class);
@@ -156,7 +156,7 @@ public class Allocations {
 
     /** intermediate allocation state **/
     private final String reservationId;
-    private final List<ResourceToken> allocationTokens = Lists.newArrayList();
+    private final List<VmInstanceToken> allocationTokens = Lists.newArrayList();
     private final Long reservationIndex;
     private final Map<Integer, String> instanceIds;
     private final Map<Integer, String> instanceUuids;
@@ -236,7 +236,7 @@ public class Allocations {
       this.instanceIds.put(launchIndex, instanceId);
       this.instanceUuids = Maps.newHashMap();
       this.instanceUuids.put(launchIndex, instanceUuid);
-      this.allocationTokens.add( new ResourceToken( this, launchIndex ) );
+      this.allocationTokens.add( new VmInstanceToken( this, launchIndex ) );
       this.context = null;
       this.monitoring = false;
       this.usePrivateAddressing = usePrivateAddressing;
@@ -324,7 +324,7 @@ public class Allocations {
 
     public void commit() throws Exception {
       if ( !committed.get( ) ) try {
-        for (final ResourceToken t : this.getAllocationTokens()) {
+        for (final VmInstanceToken t : this.getAllocationTokens()) {
           VmInstances.Create.INSTANCE.apply(t);
         }
         committed.set( true );
@@ -339,7 +339,7 @@ public class Allocations {
     }
 
     public void abort() {
-      for (final ResourceToken token : this.allocationTokens) {
+      for (final VmInstanceToken token : this.allocationTokens) {
         LOG.warn("Aborting resource token: " + token);
         Logs.exhaust().error( "Aborting resource token", new RuntimeException( ) );
         final EntityTransaction db = Entities.get(VmInstance.class);
@@ -390,7 +390,7 @@ public class Allocations {
       return Accounts.getAuthenticatedArn( context.getUser( ) );
     }
 
-    public List<ResourceToken> getAllocationTokens() {
+    public List<VmInstanceToken> getAllocationTokens() {
       return this.allocationTokens;
     }
 

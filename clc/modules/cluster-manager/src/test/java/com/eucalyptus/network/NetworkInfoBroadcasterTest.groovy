@@ -19,8 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.network
 
-import com.eucalyptus.cluster.Cluster
-import com.eucalyptus.cluster.ClusterConfiguration
+import com.eucalyptus.cluster.common.TestClusterProvider
+import com.eucalyptus.cluster.common.internal.Cluster
 import com.eucalyptus.cluster.NICluster
 import com.eucalyptus.cluster.NIClusters
 import com.eucalyptus.cluster.NIConfiguration
@@ -59,7 +59,7 @@ import com.eucalyptus.compute.common.internal.vpc.NetworkInterface
 import com.google.common.base.Function
 import com.google.common.base.Optional
 import com.google.common.base.Supplier
-import edu.ucsb.eucalyptus.cloud.NodeInfo
+import com.eucalyptus.cluster.common.msgs.NodeInfo
 import org.junit.BeforeClass
 import org.junit.Test
 
@@ -984,7 +984,7 @@ class NetworkInfoBroadcasterTest {
   }
 
   private static Cluster cluster( String partition, String host, List<String> nodes = [ ] ) {
-    Cluster cluster = new Cluster( new ClusterConfiguration( partition: partition, hostName: host ), (Void) null ){ }
+    Cluster cluster = new Cluster( new TestClusterProvider( name: partition, partition: partition, hostName: host ) )
     nodes.each{ String node -> cluster.nodeMap.put( node, new NodeInfo( name: node ) ) }
     cluster
   }

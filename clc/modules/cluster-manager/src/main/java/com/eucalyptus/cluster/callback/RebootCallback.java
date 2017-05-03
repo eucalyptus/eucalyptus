@@ -65,8 +65,8 @@ package com.eucalyptus.cluster.callback;
 import org.apache.log4j.Logger;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.MessageCallback;
-import edu.ucsb.eucalyptus.msgs.ClusterRebootInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.ClusterRebootInstancesType;
+import com.eucalyptus.cluster.common.msgs.ClusterRebootInstancesResponseType;
+import com.eucalyptus.cluster.common.msgs.ClusterRebootInstancesType;
 
 public class RebootCallback extends MessageCallback<ClusterRebootInstancesType,ClusterRebootInstancesResponseType> {
 

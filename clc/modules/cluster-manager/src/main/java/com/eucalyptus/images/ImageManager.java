@@ -93,9 +93,8 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ImageMetadata;
-import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.cluster.common.ClusterController;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.common.backend.CopyImageResponseType;
 import com.eucalyptus.compute.common.backend.CopyImageType;
@@ -418,7 +417,7 @@ public class ImageManager {
       }
       
 	  try {
-	      Clusters.lookup( Topology.lookup( ClusterController.class, vm.lookupPartition( ) ) );
+	      Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
 	  } catch ( NoSuchElementException e ) {
 	      LOG.debug( e );
 	      throw new EucalyptusCloudException( "Cluster does not exist: " + vm.getPartition( )  );
