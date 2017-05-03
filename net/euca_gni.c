@@ -6307,6 +6307,21 @@ int cmp_gni_secgroup(gni_secgroup *a, gni_secgroup *b, int *ingress_diff, int *e
         } else {
             abmatch = 0;
         }
+        if (a->max_instances == b->max_instances)  {
+            int diffound = 0;
+            for (int i = 0; i < a->max_instances && !diffound; i++) {
+                if (strcmp(a->instances[i]->name, b->instances[i]->name)) {
+                    diffound = 1;
+                }
+            }
+            if (!diffound) {
+                // Who cares
+            } else {
+                abmatch = 0;
+            }
+        } else {
+            abmatch = 0;
+        }
     }
 
     if (abmatch) {
