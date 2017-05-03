@@ -124,7 +124,6 @@ public class WalrusProperties {
   public static String TRACKER_URL = "http://localhost:6969/announce";
   public static String TRACKER_PORT = "6969";
   public static final String EUCA_ROOT_WRAPPER = BaseDirectory.LIBEXEC.toString() + "/euca_rootwrap";
-  public static final Integer DEFAULT_INITIAL_CAPACITY = 10; // 10 GB initial total capacity.
 
   // 15 minutes
   public final static long EXPIRATION_LIMIT = 900000;
