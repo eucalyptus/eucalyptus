@@ -16,6 +16,6 @@
 package com.eucalyptus.simpleworkflow.common.client;
 
 public interface WorkflowStarter {
-  void start();
+  void start() throws WorkflowStarterException;
   String name();
 }

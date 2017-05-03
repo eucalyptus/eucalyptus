@@ -352,35 +352,6 @@ public class LoadBalancingWorkflows {
     };
   }
 
-  public static Boolean runUpgradeLoadBalancerWorkflowSync(final String workflowId) {
-    final Future<Boolean> task =
-            Threads.enqueue(LoadBalancing.class, LoadBalancingWorkflows.class,
-                    upgradeLoadBalancersImpl(workflowId));
-    try{
-      return task.get();
-    }catch(final Exception ex) {
-      LOG.error("Failed to run upgrade-loadbalancer workflow", ex);
-      return false;
-    }
-  }
-
-  private static Callable<Boolean> upgradeLoadBalancersImpl(final String workflowId ) {
-    return new Callable<Boolean>() {
-      @Override
-      public Boolean call() throws Exception {
-        final UpgradeLoadBalancerWorkflowClientExternal workflow =
-                WorkflowClients.getUpgradeLoadBalancerClient(workflowId);
-        workflow.upgradeLoadBalancer();
-        return waitFor(new Supplier<ElbWorkflowState>() {
-          @Override
-          public ElbWorkflowState get() {
-            return workflow.getState();
-          }
-        });
-      }
-    };
-  }
-  
   private static Boolean waitFor(Supplier<ElbWorkflowState> supplier) {
     ElbWorkflowState state = ElbWorkflowState.WORKFLOW_RUNNING;
     do {
@@ -528,18 +499,6 @@ public class LoadBalancingWorkflows {
       }catch(final Exception ex) {
         LOG.error("Failed to cancel put-metric workflow", ex);
       }
-    }
-  }
-  
-  public static void runServiceStateWorkflow(final String workflowId) {
-    try{
-      final LoadBalancingServiceHealthCheckWorkflowClientExternal workflow =
-          WorkflowClients.getServiceStateWorkflowClient(workflowId);
-      workflow.performServiceHealthCheck();
-    }catch(final WorkflowExecutionAlreadyStartedException ex ) {
-      ;
-    }catch(final Exception ex) {
-      throw Exceptions.toUndeclared("Failed to start loadbalancing service state workflow", ex);
     }
   }
 }

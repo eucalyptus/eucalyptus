@@ -28,7 +28,11 @@
     <int:header-enricher>
       <int:error-channel ref="simplequeue-error"/>
     </int:header-enricher>
-    <int:service-activator ref="simpleQueueService"/>
+    <int:service-activator ref="simpleQueueService">
+      <int:request-handler-advice-chain>
+        <ref bean="simpleQueueServiceAdvice"/>
+      </int:request-handler-advice-chain>
+    </int:service-activator>
   </int:chain>
 
   <int:service-activator input-channel="simplequeue-error" ref="simpleQueueErrorHandler"/>

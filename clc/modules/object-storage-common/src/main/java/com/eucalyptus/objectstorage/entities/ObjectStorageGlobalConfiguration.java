@@ -371,7 +371,6 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
         config = Entities.merge(config);
         WalrusInfo walrusConfig = WalrusInfo.getWalrusInfo();
         config.setMax_buckets_per_account(walrusConfig.getStorageMaxBucketsPerAccount());
-        config.setMax_total_reporting_capacity_gb(walrusConfig.getStorageMaxTotalCapacity());
         config.setBucket_naming_restrictions((walrusConfig.getBucketNamesRequireDnsCompliance() ? "dns-compliant" : "extended"));
         config.setProviderClient("walrus"); // set the provider client to walrus since its an upgrade to 4.0.0
         trans.commit();

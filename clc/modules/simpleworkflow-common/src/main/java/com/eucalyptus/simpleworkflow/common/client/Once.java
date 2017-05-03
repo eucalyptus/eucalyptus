@@ -23,10 +23,11 @@ import java.lang.annotation.Target;
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  ************************************************************************/
+
 @Target( { ElementType.TYPE } )
 @Retention( RetentionPolicy.RUNTIME )
-public @interface Repeating {
+public @interface Once {
   Class<? extends WorkflowStarter> value();
   Class<? extends ComponentId> dependsOn() default SimpleWorkflow.class;
-  int sleepSeconds() default 600;
+  int retry() default 3;
 }

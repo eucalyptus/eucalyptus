@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.workflow;
 
+import com.eucalyptus.simpleworkflow.common.client.Repeating;
 import org.apache.log4j.Logger;
 
 import com.amazonaws.services.simpleworkflow.flow.DecisionContextProvider;
@@ -36,6 +37,7 @@ import com.eucalyptus.loadbalancing.common.LoadBalancing;
  *
  */
 @ComponentPart(LoadBalancing.class)
+@Repeating(value = LoadBalancingServiceHealthCheckWorkflowStarter.class, sleepSeconds = 60, dependsOn = LoadBalancing.class)
 public class LoadBalancingServiceHealthCheckWorkflowImpl
 implements LoadBalancingServiceHealthCheckWorkflow {
   private static Logger    LOG     = 

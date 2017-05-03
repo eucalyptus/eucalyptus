@@ -62,8 +62,8 @@
 
 package com.eucalyptus.walrus.entities;
 
-import java.io.File;
-
+import static com.eucalyptus.upgrade.Upgrades.Version.*;
+import java.util.concurrent.Callable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
@@ -75,7 +75,11 @@ import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.upgrade.Upgrades;
+import com.eucalyptus.upgrade.Upgrades.PreUpgrade;
+import com.eucalyptus.walrus.WalrusBackend;
 import com.eucalyptus.walrus.util.WalrusProperties;
+import groovy.sql.Sql;
 
 @Entity
 @PersistenceContext(name = "eucalyptus_walrus")
@@ -97,10 +101,6 @@ public class WalrusInfo extends AbstractPersistent {
   @Column(name = "storage_snapshot_size_gb")
   private Integer storageMaxTotalSnapshotSizeInGb;
 
-  @ConfigurableField(description = "Total WalrusBackend storage capacity for Objects", displayName = "WalrusBackend object capacity (GB)")
-  @Column(name = "storage_walrus_total_capacity")
-  private Integer storageMaxTotalCapacity;
-
   @Column(name = "storage_walrus_bucket_names_require_compliance")
   private Boolean bucketNamesRequireDnsCompliance;
 
@@ -109,13 +109,12 @@ public class WalrusInfo extends AbstractPersistent {
   public WalrusInfo() {}
 
   public WalrusInfo(final String name, final String storageDir, final Integer storageMaxBucketsPerAccount, final Integer storageMaxBucketSizeInMB,
-      final Integer storageMaxTotalSnapshotSizeInGb, final Integer storageMaxObjectCapacity, final Boolean bucketNamesRequireDnsCompliance) {
+      final Integer storageMaxTotalSnapshotSizeInGb, final Boolean bucketNamesRequireDnsCompliance) {
     this.name = name;
     this.storageDir = storageDir;
     this.storageMaxBucketsPerAccount = storageMaxBucketsPerAccount;
     this.storageMaxBucketSizeInMB = storageMaxBucketSizeInMB;
     this.storageMaxTotalSnapshotSizeInGb = storageMaxTotalSnapshotSizeInGb;
-    this.storageMaxTotalCapacity = storageMaxObjectCapacity;
     this.bucketNamesRequireDnsCompliance = bucketNamesRequireDnsCompliance;
   }
 
@@ -159,14 +158,6 @@ public class WalrusInfo extends AbstractPersistent {
     this.storageMaxTotalSnapshotSizeInGb = storageMaxTotalSnapshotSizeInGb;
   }
 
-  public Integer getStorageMaxTotalCapacity() {
-    return storageMaxTotalCapacity;
-  }
-
-  public void setStorageMaxTotalCapacity(final Integer storageMaxTotalCapacity) {
-    this.storageMaxTotalCapacity = storageMaxTotalCapacity;
-  }
-
   public Boolean getBucketNamesRequireDnsCompliance() {
     return bucketNamesRequireDnsCompliance;
   }
@@ -200,40 +191,17 @@ public class WalrusInfo extends AbstractPersistent {
     return true;
   }
 
-  private static int estimateWalrusCapacity() {
-    // Load the defaults.
-    // Try to determine available space on the bucket root directory.
-    int capacity = WalrusProperties.DEFAULT_INITIAL_CAPACITY;
-    try {
-      long bytesAvailable = new File(WalrusProperties.bucketRootDirectory).getUsableSpace(); // keep 1GB at least reserved.
-
-      // Set initial capacity to available space minus 1GB unless there is less than 1GB avaiable.
-      // zhill: The cast to int should only affect systems with more than 2^31-1 GB capacity (2.1 Exabytes), so we should be safe for a while
-      capacity = (int) (bytesAvailable / WalrusProperties.G);
-      capacity = (capacity > 1 ? capacity - 1 : capacity);
-
-    } catch (Exception e) {
-      LOG.warn("Unable to detect usable space in the directory:" + WalrusProperties.bucketRootDirectory + " because of exception: " + e.getMessage()
-          + ". Using WalrusBackend default: " + WalrusProperties.DEFAULT_INITIAL_CAPACITY + "GB");
-    }
-    return capacity;
-  }
-
   @PreUpdate
   public void preUpdateChecks() {
-    // cover the upgrade case
-    if (this.getStorageMaxTotalCapacity() == null) {
-      this.setStorageMaxTotalCapacity(estimateWalrusCapacity());
-    }
     if (this.getBucketNamesRequireDnsCompliance() == null) {
-      this.setBucketNamesRequireDnsCompliance(new Boolean(WalrusProperties.BUCKET_NAMES_REQUIRE_DNS_COMPLIANCE));
+      this.setBucketNamesRequireDnsCompliance(WalrusProperties.BUCKET_NAMES_REQUIRE_DNS_COMPLIANCE);
     }
   }
 
   private static WalrusInfo generateDefault() {
     return new WalrusInfo(WalrusProperties.NAME, WalrusProperties.bucketRootDirectory, WalrusProperties.MAX_BUCKETS_PER_ACCOUNT,
-        (int) (WalrusProperties.MAX_BUCKET_SIZE / WalrusProperties.M), WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE, estimateWalrusCapacity(),
-        new Boolean(WalrusProperties.BUCKET_NAMES_REQUIRE_DNS_COMPLIANCE));
+        (int) (WalrusProperties.MAX_BUCKET_SIZE / WalrusProperties.M), WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE,
+        WalrusProperties.BUCKET_NAMES_REQUIRE_DNS_COMPLIANCE);
   }
 
   public static WalrusInfo getWalrusInfo() {
@@ -258,5 +226,25 @@ public class WalrusInfo extends AbstractPersistent {
     }
 
     return walrusInfo;
+  }
+
+  @PreUpgrade( value = WalrusBackend.class, since = v5_0_0 )
+  public static class WalrusInfoPreUpgrade500 implements Callable<Boolean> {
+    @Override
+    public Boolean call( ) throws Exception {
+      Sql sql = null;
+      try {
+        sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection( "eucalyptus_walrus" );
+        sql.execute( "alter table walrus_info drop column if exists storage_walrus_total_capacity" );
+        return true;
+      } catch ( Exception ex ) {
+        LOG.error( "Error deleting column storage_walrus_total_capacity for walrus_info", ex );
+        return false;
+      } finally {
+        if ( sql != null ) {
+          sql.close( );
+        }
+      }
+    }
   }
 }
