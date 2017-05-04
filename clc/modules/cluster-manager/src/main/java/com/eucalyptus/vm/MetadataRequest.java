@@ -62,14 +62,7 @@
 
 package com.eucalyptus.vm;
 
-import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Databases;
-import com.eucalyptus.cluster.ClusterConfiguration;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.entities.Entities;
 import com.google.common.base.Optional;
 
 public class MetadataRequest {
@@ -132,36 +125,6 @@ public class MetadataRequest {
   
   public String getVmInstanceId( ) {
     return this.vmId;
-  }
-  
-  public boolean isSystem( ) {
-    for ( ServiceConfiguration config : Components.lookup( ClusterController.class ).services( ) ) {
-      if (  config.getHostName( ).equals( this.requestIp ) ) {
-        return true;
-      } else if ( config instanceof ClusterConfiguration && ( ( ClusterConfiguration ) config ).getSourceHostName( ).equals( this.requestIp ) ) {
-        return true;
-      }
-    }
-    if ( !Databases.isVolatile( ) ) {
-      ClusterConfiguration cConfig = new ClusterConfiguration( );
-      cConfig.setSourceHostName( this.requestIp );
-      EntityTransaction db = Entities.get( ClusterConfiguration.class );
-      
-      try {
-        ClusterConfiguration ccAddresses = Entities.uniqueResult( cConfig );
-        if ( ccAddresses.getSourceHostName( ).equals( this.requestIp )
-             || ccAddresses.getHostName( ).equals( this.requestIp ) ) {
-          db.commit( );
-          return true;
-        } else {
-          db.commit( );
-        }
-      } catch ( Exception e ) {
-        LOG.debug( "Unable to find Cluster Controller request address.", e );
-        db.rollback( );
-      }
-    }
-    return false;
   }
 
   @Override

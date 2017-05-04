@@ -64,15 +64,15 @@
 package com.eucalyptus.vmtypes;
 
 import javax.annotation.Nullable;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
-import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
+import com.eucalyptus.cluster.common.internal.ResourceState.VmTypeAvailability;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.cluster.common.ClusterController;
 import com.eucalyptus.compute.common.backend.DescribeInstanceTypesResponseType;
 import com.eucalyptus.compute.common.backend.DescribeInstanceTypesType;
 import com.eucalyptus.compute.common.backend.ModifyInstanceTypeAttributeResponseType;
@@ -131,7 +131,7 @@ public class VmTypesManager {
               throw new ClientComputeException( "AuthFailure", "Not permitted to access availability" );
             }
             for ( ServiceConfiguration cc : Topology.enabledServices( ClusterController.class ) ) {
-              VmTypeAvailability available = Clusters.lookup( cc ).getNodeState( ).getAvailability( v.getName( ) );
+              VmTypeAvailability available = Clusters.lookupAny( cc ).getNodeState( ).getAvailability( v );
               VmTypeZoneStatus status = VmAvailabilityToZoneStatus.INSTANCE.apply( available );
               status.setZoneName( cc.getPartition( ) );//sucks having to set this here...
               this.getAvailability( ).add( status );

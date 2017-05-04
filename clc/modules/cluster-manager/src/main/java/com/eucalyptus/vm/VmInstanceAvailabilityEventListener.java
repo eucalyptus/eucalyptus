@@ -28,9 +28,9 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
-import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.common.internal.Cluster;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.ResourceState;
+import com.eucalyptus.cluster.common.internal.ResourceState;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
@@ -77,13 +77,13 @@ public class VmInstanceAvailabilityEventListener implements EventListener<ClockT
       final List<ResourceAvailabilityEvent> resourceAvailabilityEvents = Lists.newArrayList();
       final Map<ResourceAvailabilityEvent.ResourceType,AvailabilityAccumulator> availabilities = Maps.newEnumMap( ResourceAvailabilityEvent.ResourceType.class );
       final Iterable<VmType> vmTypes = Lists.newArrayList( VmTypes.list());
-      for ( final Cluster cluster : Clusters.getInstance().listValues() ) {
+      for ( final Cluster cluster : Clusters.list( ) ) {
         availabilities.put( Core, new AvailabilityAccumulator( VmType.SizeProperties.Cpu ) );
         availabilities.put( Disk, new AvailabilityAccumulator( VmType.SizeProperties.Disk ) );
         availabilities.put( Memory, new AvailabilityAccumulator( VmType.SizeProperties.Memory ) );
 
         for ( final VmType vmType : vmTypes ) {
-          final ResourceState.VmTypeAvailability va = cluster.getNodeState().getAvailability( vmType.getName() );
+          final ResourceState.VmTypeAvailability va = cluster.getNodeState().getAvailability( vmType );
 
           resourceAvailabilityEvents.add( new ResourceAvailabilityEvent( Instance, new ResourceAvailabilityEvent.Availability( va.getMax(), va.getAvailable(), Lists.<ResourceAvailabilityEvent.Tag>newArrayList(
               new ResourceAvailabilityEvent.Dimension( "availabilityZone", cluster.getPartition() ),

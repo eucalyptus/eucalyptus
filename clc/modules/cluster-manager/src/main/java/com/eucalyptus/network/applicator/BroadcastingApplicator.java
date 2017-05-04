@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.NetworkInfo;
 import com.eucalyptus.cluster.callback.BroadcastNetworkInfoCallback;
+import com.eucalyptus.cluster.common.internal.Cluster;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
@@ -33,7 +34,7 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Maps;
-import edu.ucsb.eucalyptus.msgs.BroadcastNetworkInfoResponseType;
+import com.eucalyptus.cluster.common.msgs.BroadcastNetworkInfoResponseType;
 
 /**
  *
@@ -56,7 +57,7 @@ public class BroadcastingApplicator implements Applicator {
         netInfo.getVersion( ),
         netInfo.getAppliedVersion( )
     );
-    for ( final com.eucalyptus.cluster.Cluster cluster : context.getClusters( ) ) {
+    for ( final Cluster cluster : context.getClusters( ) ) {
       final Long broadcastTime = System.currentTimeMillis( );
       if ( null == activeBroadcastMap.putIfAbsent( cluster.getPartition( ), broadcastTime ) ) {
         try {

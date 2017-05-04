@@ -25,9 +25,10 @@ import com.eucalyptus.auth.AuthContext
 import com.eucalyptus.auth.principal.AccountFullName
 import com.eucalyptus.auth.principal.Principals
 import com.eucalyptus.auth.principal.UserFullName
-import com.eucalyptus.cloud.VmRunType.Builder as VmRunBuilder
+import com.eucalyptus.cluster.common.msgs.VmRunType.Builder as VmRunBuilder
 import com.eucalyptus.cloud.run.Allocations.Allocation
 import com.eucalyptus.cloud.run.ClusterAllocator.State
+import com.eucalyptus.cluster.common.internal.ResourceToken
 import com.eucalyptus.compute.common.internal.network.NoSuchGroupMetadataException
 import com.eucalyptus.compute.common.internal.util.IllegalMetadataAccessException
 import com.eucalyptus.compute.common.internal.util.InvalidMetadataException
@@ -108,8 +109,8 @@ import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.google.common.collect.Sets
 
-import edu.ucsb.eucalyptus.cloud.VmInfo
-import edu.ucsb.eucalyptus.msgs.NetworkConfigType
+import com.eucalyptus.cluster.common.msgs.VmInfo
+import com.eucalyptus.cluster.common.msgs.NetworkConfigType
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import org.apache.log4j.Logger

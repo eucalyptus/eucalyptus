@@ -129,9 +129,11 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import javaslang.collection.Stream;
 
 
 @ConfigurableClass( root = "bootstrap.topology",
@@ -266,7 +268,7 @@ public class Topology {
       
       @Override
       public boolean apply( final ServiceConfiguration input ) {
-        return input.getComponentId( ).getClass( ).equals( c );
+        return input.getComponentId( ).getClass( ).equals( c ) || input.getComponentId( ).hasApi( c );
       }
     };
   }
@@ -1001,38 +1003,46 @@ public class Topology {
    * @return
    */
   public static ServiceConfiguration lookup( final Class<? extends ComponentId> compClass, final Partition... maybePartition ) {
-    final ComponentId compId = ComponentIds.lookup( compClass );
-    final Partition partition =
-      ( ( maybePartition != null ) && ( maybePartition.length > 0 )
-                                                                   ? ( compId.isPartitioned( )
-                                                                                                                        ? maybePartition[0]
-                                                                                                                        : null )
-                                                                   : null );
+    final ComponentId requestedCompId = ComponentIds.lookup( compClass );
+    final Partition partition =( ( maybePartition != null ) && ( maybePartition.length > 0 ) ?
+        ( requestedCompId.isPartitioned( ) ?
+            maybePartition[ 0 ] :
+            null ) :
+        null );
     ServiceConfiguration res = null;
-    //ManyToOne partitions are handled differently
-    if(ComponentIds.lookup(compClass).isManyToOnePartition()) {
-      if(partition != null) {
-        res = Iterables.getFirst(ServiceConfigurations.filter(compClass, ServiceConfigurations.filterByPartition(partition)), null);
-      } else {
-        final Iterable<ServiceConfiguration> configurations = ServiceConfigurations.filter( compClass, ServiceConfigurations.filterEnabled( ) );
-        res = Iterables.tryFind( configurations, ServiceConfigurations.filterHostLocal( ) )
-            .or( Iterables.tryFind( configurations, Predicates.alwaysTrue( ) ) )
-            .orNull( );
-      }
+    final Set<ComponentId> serviceComponentIds = Sets.newHashSet( );
+    if ( requestedCompId.isApi( ) ) { // resolve to impl component
+      serviceComponentIds.addAll( Stream.ofAll( ComponentIds.list( ) ).filter( comp -> comp.hasApi( compClass ) ).toJavaList( ) );
     } else {
-      res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( ComponentIds.lookup( compClass ), partition ) );
-      if ( res == null && !compClass.equals( compId.partitionParent( ).getClass( ) ) && !compId.isAlwaysLocal( ) ) {
-        try {
-          ServiceConfiguration parent = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId.partitionParent( ), null ) );
-          Partition fakePartition = Partitions.lookupInternal( ServiceConfigurations.createEphemeral( compId, parent.getInetAddress( ) ) );
-          res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId, fakePartition ) );
-        } catch ( RuntimeException e ) {//these may throw runtime exceptions and the only thing that should propage out of lookup ever is NoSuchElementException
-          res = null;
+      serviceComponentIds.add( requestedCompId );
+    }
+    //ManyToOne partitions are handled differently
+    for ( final ComponentId compId : serviceComponentIds ) {
+      if ( compId.isManyToOnePartition( ) ) {
+        if ( partition != null ) {
+          res = Iterables.getFirst( ServiceConfigurations.filter( compId, ServiceConfigurations.filterByPartition( partition ) ), null );
+        } else {
+          final Iterable<ServiceConfiguration> configurations = ServiceConfigurations.filter( compId, ServiceConfigurations.filterEnabled( ) );
+          res = Iterables.tryFind( configurations, ServiceConfigurations.filterHostLocal( ) )
+              .or( Iterables.tryFind( configurations, Predicates.alwaysTrue( ) ) )
+              .orNull( );
         }
-      } else if ( res == null && ( compId.isAlwaysLocal() ||
-          ( BootstrapArgs.isCloudController() && compId.isCloudLocal() && !compId.isRegisterable() ) ) ) {
-        res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( ServiceConfigurations.createEphemeral( compId ) ) );
+      } else {
+        res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId, partition ) );
+        if ( res == null && !compId.equals( compId.partitionParent( ) ) && !compId.isAlwaysLocal( ) ) {
+          try {
+            ServiceConfiguration parent = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId.partitionParent( ), null ) );
+            Partition fakePartition = Partitions.lookupInternal( ServiceConfigurations.createEphemeral( compId, parent.getInetAddress( ) ) );
+            res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId, fakePartition ) );
+          } catch ( RuntimeException e ) {//these may throw runtime exceptions and the only thing that should propage out of lookup ever is NoSuchElementException
+            res = null;
+          }
+        } else if ( res == null && ( compId.isAlwaysLocal( ) ||
+            ( BootstrapArgs.isCloudController( ) && compId.isCloudLocal( ) && !compId.isRegisterable( ) ) ) ) {
+          res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( ServiceConfigurations.createEphemeral( compId ) ) );
+        }
       }
+      if ( res != null ) break;
     }
     String err = "Failed to lookup ENABLED service of type " + compClass.getSimpleName( ) + ( partition != null ? " in partition " + partition : "." );
     if ( res == null ) {
@@ -1055,7 +1065,7 @@ public class Topology {
 	                                                                   : null );
 	    Iterable<T> res = null;
 	    //ManyToOne partitions are handled differently
-	    if(ComponentIds.lookup(compClass).isManyToOnePartition()) {
+	    if(compId.isManyToOnePartition()) {
 	    	if(partition != null) {
 	    		res = (Iterable<T>) ServiceConfigurations.filter(compClass, ServiceConfigurations.filterByPartition(partition));
 	    	} else {

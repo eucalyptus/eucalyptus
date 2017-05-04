@@ -44,7 +44,7 @@ import io.netty.channel.ChannelPromise;
 /**
  *
  */
-abstract class IoWsSecHandler extends ChannelDuplexHandler {
+public abstract class IoWsSecHandler extends ChannelDuplexHandler {
 
   private static Logger LOG    = Logger.getLogger( IoWsSecHandler.class );
   private final CredentialProxy credentials;

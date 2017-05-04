@@ -68,6 +68,8 @@ public class DefaultAbsoluteMetricConverter {
     // DiskWriteBytes
     // NetworkIn
     // NetworkOut
+    // NetworkPacketsIn
+    // NetworkPacketsOut
 
     Multimap<String, AbsoluteMetricQueueItem> instanceMetricMap = LinkedListMultimap.create();
     Multimap<String, AbsoluteMetricQueueItem> volumeMetricMap = LinkedListMultimap.create();

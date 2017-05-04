@@ -81,7 +81,6 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.ByteArray;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.vm.MetadataRequest;
-import com.eucalyptus.vm.SensorsConfigMetadata;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vm.VmInstanceMetadata;
 import com.eucalyptus.vm.VmInstances;
@@ -186,22 +185,6 @@ public class VmMetadata {
                                                                                           }
                                                                                         };
 
-  private static//
-  ConcurrentMap<String, Function<MetadataRequest, ByteArray>> //
-                                                              systemMetadataEndpoints   = new ConcurrentSkipListMap<String, Function<MetadataRequest, ByteArray>>( ) {
-                                                                                          {
-                                                                                            put( "",
-                                                                                              new Function<MetadataRequest, ByteArray>( ) {
-                                                                                                public ByteArray apply( MetadataRequest arg0 ) {
-                                                                                                  return ByteArray.newInstance( Joiner.on(
-                                                                                                    "\n" ).join(
-                                                                                                                            keySet( ) ) );
-                                                                                                }
-                                                                                              } );
-                                                                                            put( "sensors-conf", new SensorsConfigMetadata( ) );
-                                                                                          }
-                                                                                        };
-
   private static final Supplier<Set<NetworkingFeature>> networkingFeatureSupplier =
       Suppliers.memoizeWithExpiration( new Supplier<Set<NetworkingFeature>>( ) {
         @Override
@@ -264,8 +247,6 @@ public class VmMetadata {
           throw new NoSuchElementException( "Metadata request failed (invalid for platform): " + path );
         }
         return instanceMetadataEndpoints.get( request.getMetadataName( ) ).apply( request ).getBytes( );
-      } else if ( systemMetadataEndpoints.containsKey( request.getMetadataName( ) ) && request.isSystem( ) ) {
-        return systemMetadataEndpoints.get( request.getMetadataName( ) ).apply( request ).getBytes( );
       } else if ( publicMetadataEndpoints.containsKey( request.getMetadataName( ) ) ) {
         return publicMetadataEndpoints.get( request.getMetadataName( ) ).apply( request ).getBytes( );
       } else {

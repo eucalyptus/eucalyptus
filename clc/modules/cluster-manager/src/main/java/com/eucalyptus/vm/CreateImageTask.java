@@ -84,8 +84,8 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.StartInstanceResponseType;
-import edu.ucsb.eucalyptus.msgs.StopInstanceResponseType;
+import com.eucalyptus.cluster.common.msgs.ClusterStartInstanceResponseType;
+import com.eucalyptus.cluster.common.msgs.ClusterStopInstanceResponseType;
 
 /**
  * @author Sang-Min Park
@@ -674,7 +674,7 @@ public class CreateImageTask {
 	
 	private class CreateImageStopInstanceCallback extends StopInstanceCallback{
 		@Override
-		public void fire(StopInstanceResponseType msg) {
+		public void fire(ClusterStopInstanceResponseType msg) {
 			if(!msg.get_return()){
 				LOG.error(String.format("failed to stop instance %s", CreateImageTask.this.instanceId));
 				CreateImageTask.this.setVmCreateImageTaskState(CreateImageState.failed);
@@ -686,7 +686,7 @@ public class CreateImageTask {
 	
 	private class CreateImageStartInstanceCallback extends StartInstanceCallback{
 		@Override
-		public void fire(StartInstanceResponseType msg) {
+		public void fire(ClusterStartInstanceResponseType msg) {
 			if(!msg.get_return()){
 				LOG.error(String.format("failed to start instance %s", CreateImageTask.this.instanceId));
 				CreateImageTask.this.setVmCreateImageTaskState(CreateImageState.failed);

@@ -98,13 +98,7 @@ interface ComputeBackendMessage extends BaseMessageMarker {
 
 // Instances
 @InheritConstructors class BundleInstanceResponseType extends com.eucalyptus.compute.common.BundleInstanceResponseType implements ComputeBackendMessage { }
-@InheritConstructors class BundleInstanceType extends com.eucalyptus.compute.common.BundleInstanceType implements ComputeBackendMessage {
-  String url
-  String userKey
-  String architecture
-}
-@InheritConstructors class BundleRestartInstanceResponseType extends com.eucalyptus.compute.common.BundleRestartInstanceResponseType implements ComputeBackendMessage { }
-@InheritConstructors class BundleRestartInstanceType extends com.eucalyptus.compute.common.BundleRestartInstanceType implements ComputeBackendMessage { }
+@InheritConstructors class BundleInstanceType extends com.eucalyptus.compute.common.BundleInstanceType implements ComputeBackendMessage { }
 @InheritConstructors class CancelBundleTaskResponseType extends com.eucalyptus.compute.common.CancelBundleTaskResponseType implements ComputeBackendMessage { }
 @InheritConstructors class CancelBundleTaskType extends com.eucalyptus.compute.common.CancelBundleTaskType implements ComputeBackendMessage { }
 @InheritConstructors class DescribeBundleTasksResponseType extends com.eucalyptus.compute.common.DescribeBundleTasksResponseType implements ComputeBackendMessage { }

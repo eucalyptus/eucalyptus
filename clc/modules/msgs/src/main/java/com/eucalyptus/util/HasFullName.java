@@ -63,15 +63,14 @@
 package com.eucalyptus.util;
 
 import com.eucalyptus.auth.principal.FullName;
-import com.google.common.base.Function;
 
 public interface HasFullName<T> extends HasName<T> {
   
-  public abstract String getPartition( );
+  String getPartition( );
   
-  public abstract FullName getFullName( );
+  FullName getFullName( );
 
-  public final Function<HasFullName<?>,String> GET_PARTITION = new Function<HasFullName<?>,String>() {
+  CompatFunction<HasFullName<?>,String> GET_PARTITION = new CompatFunction<HasFullName<?>,String>() {
     @Override
     public String apply( final HasFullName<?> hasFullName ) {
       return hasFullName==null ? null : hasFullName.getPartition( );

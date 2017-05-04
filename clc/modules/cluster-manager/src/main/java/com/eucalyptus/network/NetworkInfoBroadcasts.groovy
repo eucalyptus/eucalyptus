@@ -19,7 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.network
 
-import com.eucalyptus.cluster.Cluster
+import com.eucalyptus.cluster.common.internal.Cluster
 import com.eucalyptus.cluster.NICluster
 import com.eucalyptus.cluster.NIClusters
 import com.eucalyptus.cluster.NIConfiguration
@@ -93,7 +93,7 @@ import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.google.common.collect.Multimap
 import com.google.common.collect.Sets
-import edu.ucsb.eucalyptus.cloud.NodeInfo
+import com.eucalyptus.cluster.common.msgs.NodeInfo
 import groovy.transform.Immutable
 import groovy.transform.PackageScope
 import org.apache.log4j.Logger

@@ -87,7 +87,4 @@ public interface Request<Q extends BaseMessage, R extends BaseMessage> {
   
   Q getRequest( );
   
-  @Deprecated
-  CheckedListenableFuture<R> dispatch( String cluster );
-  
 }

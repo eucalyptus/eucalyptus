@@ -73,8 +73,8 @@ import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment.AttachmentState;
 import com.google.common.base.Function;
-import edu.ucsb.eucalyptus.msgs.ClusterDetachVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.ClusterDetachVolumeType;
+import com.eucalyptus.cluster.common.msgs.ClusterDetachVolumeResponseType;
+import com.eucalyptus.cluster.common.msgs.ClusterDetachVolumeType;
 
 public class VolumeDetachCallback extends MessageCallback<ClusterDetachVolumeType,ClusterDetachVolumeResponseType> {
   

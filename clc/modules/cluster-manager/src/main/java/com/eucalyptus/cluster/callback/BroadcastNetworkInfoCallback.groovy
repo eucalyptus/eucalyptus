@@ -20,8 +20,8 @@
 package com.eucalyptus.cluster.callback
 
 import com.eucalyptus.util.async.BroadcastCallback
-import edu.ucsb.eucalyptus.msgs.BroadcastNetworkInfoResponseType
-import edu.ucsb.eucalyptus.msgs.BroadcastNetworkInfoType
+import com.eucalyptus.cluster.common.msgs.BroadcastNetworkInfoResponseType
+import com.eucalyptus.cluster.common.msgs.BroadcastNetworkInfoType
 import org.apache.log4j.Logger
 
 /**

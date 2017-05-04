@@ -62,28 +62,19 @@
 
 package com.eucalyptus.util.async;
 
-import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Partition;
-import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.context.Contexts;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Callback.TwiceChecked;
 import com.eucalyptus.util.Exceptions;
-import com.google.common.collect.Iterables;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -179,45 +170,12 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
     };
     Callbacks.addListenerHandler( this.requestResult, this.wrapperCallback );
   }
-  
-  /**
-   * @param clusterOrPartition
-   * @return
-   * @see com.eucalyptus.util.async.Request#dispatch(java.lang.String)
-   */
-  @Override
-  public CheckedListenableFuture<R> dispatch( String clusterOrPartition ) {//TODO:GRZE:ASAP: get rid of this method, must only use service configuration here
-    ServiceConfiguration serviceConfig = null;
-    if ( Partitions.exists( clusterOrPartition ) ) {
-      Partition partition = Partitions.lookupByName( clusterOrPartition );
-      try {
-        serviceConfig = Topology.lookup( ClusterController.class, partition );
-      } catch ( Exception ex ) {
-        Iterable<ServiceConfiguration> serviceInPartition = Iterables.filter(
-          Components.lookup( ClusterController.class ).services( ),
-          ServiceConfigurations.filterByPartition( partition ) );
-        if ( serviceInPartition.iterator( ).hasNext( ) ) {
-          serviceConfig = serviceInPartition.iterator( ).next( );
-        }
-      }
-    }
-    if ( serviceConfig == null ) {
-      serviceConfig = ServiceConfigurations.lookupByName( ClusterController.class, clusterOrPartition );
-    }
-    if ( serviceConfig != null ) {
-      return this.dispatch( serviceConfig );
-    } else {
-      throw new NoSuchElementException( "Failed to lookup service configuration named: " + clusterOrPartition );
-    }
-  }
-  
+
 //  @ConfigurableField( initial = "8", description = "Maximum number of concurrent messages sent to a single CC at a time." )
   public static Integer NUM_WORKERS = 8;
   
   /**
-   * @see com.eucalyptus.util.async.Request#dispatch(java.lang.String)
-   * @param cluster
-   * @return
+   *
    */
   @Override
   public CheckedListenableFuture<R> dispatch( final ServiceConfiguration serviceConfig ) {
@@ -258,24 +216,12 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
                                                                serviceConfig.getFullName( ).toString( ) )
                                                       .limitTo( NUM_WORKERS )
                                                       .submit( call );
-//GRZE: really?  if this needs to be done then this certainly can't be called dispatch.
-//      try {
-//        res.get( ).get( );
-//      } catch ( ExecutionException ex ) {
-//        LOG.error( ex, ex );
-//      } catch ( InterruptedException ex ) {
-//        Thread.currentThread( ).interrupt( );
-//        LOG.error( ex, ex );
-//      }
       return this.getResponse( );
     }
   }
   
   /**
-   * @param endpoint
-   * @return
-   * @throws ExecutionException
-   * @throws InterruptedException
+   *
    */
   @Override
   public R sendSync( ServiceConfiguration serviceConfig ) throws ExecutionException, InterruptedException {

@@ -19,6 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.cluster
 
+import com.eucalyptus.cluster.common.TestClusterProvider
+import com.eucalyptus.cluster.common.internal.Cluster
 import org.junit.Test
 import com.eucalyptus.tags.FilterSupportTest
 
@@ -50,6 +52,6 @@ class AvailabilityZoneFilterSupportTest extends FilterSupportTest.InstanceTestSu
   }
 
   private Cluster cluster( String name ) {
-    new Cluster( new ClusterConfiguration( partition: name ), (Void) null )
+    new Cluster( new TestClusterProvider( name: name, partition: name ) )
   }
 }

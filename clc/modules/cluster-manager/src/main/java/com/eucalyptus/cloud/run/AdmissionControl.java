@@ -66,29 +66,31 @@ import static com.eucalyptus.cloud.VmInstanceLifecycleHelpers.NetworkResourceVmI
 import static com.eucalyptus.util.RestrictedTypes.BatchAllocator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.cloud.VmInstanceToken;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.compute.common.CloudMetadataLimitedType;
+import com.eucalyptus.compute.common.internal.vmtypes.VmType;
 import com.google.common.base.Function;
 import org.apache.log4j.Logger;
 import com.eucalyptus.blockstorage.Storage;
-import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelper;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.compute.common.internal.util.IllegalMetadataAccessException;
 import com.eucalyptus.compute.common.internal.util.NotEnoughResourcesException;
-import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.ResourceState;
-import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
+import com.eucalyptus.cluster.common.internal.Cluster;
+import com.eucalyptus.cluster.common.internal.ResourceState;
+import com.eucalyptus.cluster.common.internal.ResourceState.VmTypeAvailability;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.cluster.common.ClusterController;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.network.DnsHostNamesFeature;
 import com.eucalyptus.compute.common.network.NetworkFeature;
@@ -228,9 +230,9 @@ public class AdmissionControl {
 
   enum NodeResourceAllocator implements ResourceAllocator {
     INSTANCE;
-    private List<ResourceToken> requestResourceToken( final Allocation allocInfo, final int tryAmount, final int maxAmount ) throws Exception {
+    private List<VmInstanceToken> requestResourceToken( final Allocation allocInfo, final int tryAmount, final int maxAmount ) throws Exception {
       ServiceConfiguration config = Topology.lookup( ClusterController.class, allocInfo.getPartition( ) );
-      Cluster cluster = Clusters.lookup( config );
+      Cluster cluster = Clusters.lookupAny( config );
       /**
        * TODO:GRZE: this is the call path which needs to trigger gating.  
        * It shouldn't be handled directly here, but instead be handled in {@link ResourceState#requestResourceAllocation().
@@ -257,9 +259,9 @@ public class AdmissionControl {
           if ( forceResourceRefresh ) {
             cluster.refreshResources( );
           }
-          final BatchAllocator<ResourceToken> allocator = new BatchAllocator<ResourceToken>( ) {
+          final BatchAllocator<VmInstanceToken> allocator = new BatchAllocator<VmInstanceToken>( ) {
             @Override
-            public List<ResourceToken> allocate( int min, int max ) {
+            public List<VmInstanceToken> allocate( int min, int max ) {
               try {
               // do quotas for "active" instances
                 RestrictedTypes.allocateMeasurableResource(Long.valueOf(1L*max),
@@ -299,7 +301,13 @@ public class AdmissionControl {
                       }; // kind of a marker for disk
                     }
                   });
-                final List<ResourceToken> ret = state.requestResourceAllocation( allocInfo, min, max );
+                final List<VmInstanceToken> ret = state.requestResourceAllocation( allocInfo.getVmType( ), min, max, new Supplier<VmInstanceToken>( ) {
+                  private int count = 0;
+                  @Override
+                  public VmInstanceToken get( ) {
+                    return new VmInstanceToken( allocInfo, count++ );
+                  }
+                } );
                 allocInfo.getAllocationTokens().addAll( ret );
                 return ret;
               } catch ( final NotEnoughResourcesException | AuthException e ) {
@@ -327,7 +335,7 @@ public class AdmissionControl {
     public void allocate( Allocation allocInfo ) throws Exception {
       Partition reqPartition = allocInfo.getPartition();
       String zoneName = reqPartition.getName( );
-      String vmTypeName = allocInfo.getVmType( ).getName( );
+      VmType vmType = allocInfo.getVmType( );
       
       /* Validate min and max amount */
       final int minAmount = allocInfo.getMinCount( );
@@ -336,7 +344,7 @@ public class AdmissionControl {
     	  throw new RuntimeException("Maximum instance count must not be smaller than minimum instance count");
       
       /* Retrieve our context and list of clusters associated with this zone */
-      List<Cluster> authorizedClusters = this.doPrivilegedLookup( zoneName, vmTypeName );
+      List<Cluster> authorizedClusters = this.doPrivilegedLookup( zoneName, vmType );
       
       int remaining = maxAmount;
       int allocated = 0;
@@ -345,7 +353,7 @@ public class AdmissionControl {
       LOG.info( "Found authorized clusters: " + Iterables.transform( authorizedClusters, HasName.GET_NAME ) );
       
       /* Do we have any VM available throughout our clusters? */
-      if ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < minAmount ) {
+      if ( ( available = checkAvailability( vmType, authorizedClusters ) ) < minAmount ) {
         throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
       } else {
         for ( Cluster cluster : authorizedClusters ) {
@@ -364,7 +372,7 @@ public class AdmissionControl {
             	 * maxAmount value since its a best effort at this point. If we select the partition here and we
             	 * can't fit maxAmount, based on the sorting order, the next partition will not fit maxAmount anyway. 
             	 */
-            	int zoneAvailable = checkZoneAvailability( vmTypeName, partition, authorizedClusters );
+            	int zoneAvailable = checkZoneAvailability( vmType, partition, authorizedClusters );
             	if( zoneAvailable < minAmount )
             	  continue;
             	
@@ -397,11 +405,11 @@ public class AdmissionControl {
             }
             
             try {
-              int tryAmount = ( remaining > state.getAvailability( vmTypeName ).getAvailable( ) )
-                ? state.getAvailability( vmTypeName ).getAvailable( )
+              int tryAmount = ( remaining > state.getAvailability( vmType ).getAvailable( ) )
+                ? state.getAvailability( vmType ).getAvailable( )
                 : remaining;
               
-              List<ResourceToken> tokens = this.requestResourceToken( allocInfo, tryAmount, maxAmount );
+              List<VmInstanceToken> tokens = this.requestResourceToken( allocInfo, tryAmount, maxAmount );
               remaining -= tokens.size( );
               allocated += tokens.size( );
             } catch ( Exception t ) {
@@ -412,7 +420,7 @@ public class AdmissionControl {
               allocInfo.setPartition( reqPartition );
               
               /* if we still have some allocation remaining AND no more resources are available */
-              if ( ( ( available = checkZoneAvailability( vmTypeName, partition, authorizedClusters ) ) < remaining ) && ( remaining > 0 ) ) {
+              if ( ( ( available = checkZoneAvailability( vmType, partition, authorizedClusters ) ) < remaining ) && ( remaining > 0 ) ) {
                 throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances.", t );
               } else {
                 throw new NotEnoughResourcesException( t.getMessage(), t );
@@ -430,42 +438,42 @@ public class AdmissionControl {
             throw new NotEnoughResourcesException( "Not enough resources available in all zone for " + minAmount + "): vm instances." );
           }
           else {
-        	available = checkZoneAvailability( vmTypeName, reqPartition, authorizedClusters );
+        	available = checkZoneAvailability( vmType, reqPartition, authorizedClusters );
             throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances." );
           }
         }
       }
     }
     
-    private int checkAvailability( String vmTypeName, List<Cluster> authorizedClusters ) throws NotEnoughResourcesException {
+    private int checkAvailability( VmType vmType, List<Cluster> authorizedClusters ) throws NotEnoughResourcesException {
       int available = 0;
       for ( Cluster authorizedCluster : authorizedClusters ) {
-        VmTypeAvailability vmAvailability = authorizedCluster.getNodeState( ).getAvailability( vmTypeName );
+        VmTypeAvailability vmAvailability = authorizedCluster.getNodeState( ).getAvailability( vmType );
         available += vmAvailability.getAvailable( );
         LOG.info( "Availability: " + authorizedCluster.getName( ) + " -> " + vmAvailability.getAvailable( ) );
       }
       return available;
     }
     
-    private int checkZoneAvailability( String vmTypeName, Partition partition, List<Cluster> authorizedClusters ) throws NotEnoughResourcesException {
+    private int checkZoneAvailability( VmType vmType, Partition partition, List<Cluster> authorizedClusters ) throws NotEnoughResourcesException {
       int available = 0;
       for ( Cluster authorizedCluster : authorizedClusters ) {
     	if( !authorizedCluster.getConfiguration( ).lookupPartition( ).equals( partition ) )
     		continue;
     	
-        VmTypeAvailability vmAvailability = authorizedCluster.getNodeState( ).getAvailability( vmTypeName );
+        VmTypeAvailability vmAvailability = authorizedCluster.getNodeState( ).getAvailability( vmType );
         available += vmAvailability.getAvailable( );
         LOG.info( "Availability: " + authorizedCluster.getName( ) + " -> " + vmAvailability.getAvailable( ) );
       }
       return available;
     }
       
-    private List<Cluster> doPrivilegedLookup( String partitionName, String vmTypeName ) throws NotEnoughResourcesException {
+    private List<Cluster> doPrivilegedLookup( String partitionName, VmType vmType ) throws NotEnoughResourcesException {
       if ( Partition.DEFAULT_NAME.equals( partitionName ) ) {
-        Iterable<Cluster> authorizedClusters = Iterables.filter( Clusters.getInstance( ).listValues( ), RestrictedTypes.filterPrivilegedWithoutOwner( ) );
+        Iterable<Cluster> authorizedClusters = Clusters.stream( ).filter( RestrictedTypes.filterPrivilegedWithoutOwner( ) );
         Multimap<VmTypeAvailability, Cluster> sorted = TreeMultimap.create( );
         for ( Cluster c : authorizedClusters ) {
-          sorted.put( c.getNodeState( ).getAvailability( vmTypeName ), c );
+          sorted.put( c.getNodeState( ).getAvailability( vmType ), c );
         }
         if ( sorted.isEmpty( ) ) {
           throw new NotEnoughResourcesException( "Not enough resources: no availability zone is available in which you have permissions to run instances." );
@@ -474,7 +482,7 @@ public class AdmissionControl {
         }
       } else {
         ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, Partitions.lookupByName( partitionName ) );
-        Cluster cluster = Clusters.lookup( ccConfig );
+        Cluster cluster = Clusters.lookupAny( ccConfig );
         if ( cluster == null ) {
           throw new NotEnoughResourcesException( "Can't find cluster " + partitionName );
         }
@@ -506,7 +514,7 @@ public class AdmissionControl {
         helper.prepareNetworkAllocation( allocInfo, request );
         final PrepareNetworkResourcesResultType result = Networking.getInstance().prepare( request ) ;
 
-        for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
+        for ( final VmInstanceToken token : allocInfo.getAllocationTokens( ) ) {
           for ( final NetworkResource networkResource : result.getResources( ) ) {
             if ( token.getInstanceId( ).equals( networkResource.getOwnerId( ) ) ) {
               token.getAttribute( NetworkResourceVmInstanceLifecycleHelper.NetworkResourcesKey ).add( networkResource );

@@ -395,7 +395,9 @@ public class Handlers {
     private final Class<? extends ComponentId> componentIdClass;
 
     private ComponentMessageCheckHandler( final Class<? extends ComponentId> componentIdClass ) {
-      this.componentIdClass = componentIdClass;
+      this.componentIdClass = componentIdClass == null ?
+          null :
+          ComponentIds.lookup( componentIdClass ).toApiClass( );
     }
 
     @Override

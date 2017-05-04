@@ -459,6 +459,10 @@ public class ServiceConfigurations {
         ServiceUris.internal( compId, Internets.localHostInetAddress( ), ownerType.getSimpleName( ) ) );
   }
 
+  public static <T extends ServiceConfiguration, C extends ComponentId> Iterable<T> filter( final C componentId, final Predicate<T> pred ) throws PersistenceException {
+    return filter( componentId.getClass( ), pred );
+  }
+
   public static <T extends ServiceConfiguration, C extends ComponentId> Iterable<T> filter( final Class<C> type, final Predicate<T> pred ) throws PersistenceException {
     List<T> list = ServiceConfigurations.list( type );
     return Iterables.filter( list, pred );

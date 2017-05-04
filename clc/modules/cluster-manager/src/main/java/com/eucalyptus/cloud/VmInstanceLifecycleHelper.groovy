@@ -19,9 +19,10 @@
  ************************************************************************/
 package com.eucalyptus.cloud
 
-import com.eucalyptus.cloud.VmRunType.Builder as VmRunBuilder
+import com.eucalyptus.cluster.common.msgs.VmRunType.Builder as VmRunBuilder
 import com.eucalyptus.cloud.run.Allocations.Allocation
 import com.eucalyptus.cloud.run.ClusterAllocator.State
+import com.eucalyptus.cluster.common.internal.ResourceToken
 import com.eucalyptus.compute.common.internal.util.MetadataException
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesResultType
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesType
@@ -29,7 +30,7 @@ import com.eucalyptus.util.async.StatefulMessageSet
 import com.eucalyptus.compute.common.internal.vm.VmInstance
 import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState
 import com.eucalyptus.vm.VmInstances.Builder as VmInstanceBuilder
-import edu.ucsb.eucalyptus.cloud.VmInfo
+import com.eucalyptus.cluster.common.msgs.VmInfo
 import groovy.transform.CompileStatic
 
 /**
@@ -65,8 +66,8 @@ interface VmInstanceLifecycleHelper {
   void prepareNetworkMessages( Allocation allocation,
                                StatefulMessageSet<State> state )
 
-  void prepareVmRunType( ResourceToken resourceToken,
-                         VmRunBuilder builder );
+  void prepareVmRunType(ResourceToken resourceToken,
+                        VmRunBuilder builder );
 
   /**
    * Build the instance based on information from the corresponding token.

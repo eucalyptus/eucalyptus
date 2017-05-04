@@ -27,8 +27,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.upgrade.Upgrades;
-import com.google.common.base.Function;
-import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 
 /**
  *
@@ -75,16 +73,6 @@ public class VmStandardVolumeAttachment extends VmVolumeAttachment {
     final VmStandardVolumeAttachment ex = new VmStandardVolumeAttachment( );
     ex.setVolumeId( volumeId );
     return ex;
-  }
-
-
-  public static Function<AttachedVolume, VmStandardVolumeAttachment> fromAttachedVolume( final VmInstance vm ) {
-    return new Function<edu.ucsb.eucalyptus.msgs.AttachedVolume, VmStandardVolumeAttachment>( ) {
-      @Override
-      public VmStandardVolumeAttachment apply( edu.ucsb.eucalyptus.msgs.AttachedVolume vol ) {
-        return new VmStandardVolumeAttachment( vm, vol.getVolumeId( ), vol.getDevice( ), vol.getRemoteDevice( ), vol.getStatus( ), vol.getAttachTime( ), false, Boolean.FALSE );
-      }
-    };
   }
 
   @Upgrades.PreUpgrade( since = v4_2_0, value = Compute.class )

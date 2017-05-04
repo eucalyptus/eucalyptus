@@ -70,8 +70,8 @@ import com.eucalyptus.util.Expendable;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.MessageCallback;
 
-import edu.ucsb.eucalyptus.msgs.ClusterTerminateInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.ClusterTerminateInstancesType;
+import com.eucalyptus.cluster.common.msgs.ClusterTerminateInstancesResponseType;
+import com.eucalyptus.cluster.common.msgs.ClusterTerminateInstancesType;
 
 public class TerminateCallback extends MessageCallback<ClusterTerminateInstancesType,ClusterTerminateInstancesResponseType> implements Expendable<TerminateCallback> {
   

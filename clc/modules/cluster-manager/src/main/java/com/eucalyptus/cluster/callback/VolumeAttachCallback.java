@@ -78,8 +78,8 @@ import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment.AttachmentState;
 import com.google.common.base.Function;
-import edu.ucsb.eucalyptus.msgs.ClusterAttachVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.ClusterAttachVolumeType;
+import com.eucalyptus.cluster.common.msgs.ClusterAttachVolumeResponseType;
+import com.eucalyptus.cluster.common.msgs.ClusterAttachVolumeType;
 
 public class VolumeAttachCallback extends MessageCallback<ClusterAttachVolumeType, ClusterAttachVolumeResponseType> {
   private static Logger        LOG = Logger.getLogger( VolumeAttachCallback.class );

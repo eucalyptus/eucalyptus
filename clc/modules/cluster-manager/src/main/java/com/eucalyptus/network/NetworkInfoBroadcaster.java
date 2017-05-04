@@ -24,6 +24,7 @@ import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.NetworkInfo;
+import com.eucalyptus.cluster.common.internal.Cluster;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.internal.network.NetworkGroup;
@@ -219,8 +220,8 @@ public class NetworkInfoBroadcaster {
     try ( final SemaphoreResource semaphore = SemaphoreResource.acquire( activeBroadcastSemaphore ) ) {
       // populate with info directly from configuration
       final Optional<NetworkConfiguration> networkConfiguration = NetworkConfigurations.getNetworkConfiguration( );
-      final List<com.eucalyptus.cluster.Cluster> clusters = Clusters.getInstance( ).listValues( );
-      final List<com.eucalyptus.cluster.Cluster> otherClusters = Clusters.getInstance( ).listDisabledValues( );
+      final List<Cluster> clusters = Clusters.list( );
+      final List<Cluster> otherClusters = Clusters.listDisabled( );
 
       final NetworkInfoSource source = cacheSource( );
       final Set<String> dirtyPublicAddresses = PublicAddresses.dirtySnapshot( );
@@ -263,7 +264,7 @@ public class NetworkInfoBroadcaster {
   @SuppressWarnings( "serial" )
   private static int fingerprint(
       final NetworkInfoSource source,
-      final List<com.eucalyptus.cluster.Cluster> clusters,
+      final List<Cluster> clusters,
       final Set<String> dirtyPublicAddresses,
       final String networkConfiguration
   ) {

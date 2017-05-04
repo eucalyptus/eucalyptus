@@ -66,9 +66,9 @@ import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.cloud.ResourceToken;
-import com.eucalyptus.cloud.VmRunType;
-import com.eucalyptus.cluster.ResourceState.NoSuchTokenException;
+import com.eucalyptus.cloud.VmInstanceToken;
+import com.eucalyptus.cluster.common.msgs.VmRunType;
+import com.eucalyptus.cluster.common.internal.ResourceState.NoSuchTokenException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.Logs;
@@ -83,16 +83,16 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 
-import edu.ucsb.eucalyptus.cloud.VmInfo;
-import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
+import com.eucalyptus.cluster.common.msgs.VmInfo;
+import com.eucalyptus.cluster.common.msgs.VmRunResponseType;
 
 public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType> {
   
   private static Logger       LOG = Logger.getLogger( VmRunCallback.class );
   
-  private final ResourceToken token;
+  private final VmInstanceToken token;
   
-  public VmRunCallback( final VmRunType msg, final ResourceToken token ) {
+  public VmRunCallback( final VmRunType msg, final VmInstanceToken token ) {
     super( msg );
     this.token = token;
     LOG.debug( this.token );

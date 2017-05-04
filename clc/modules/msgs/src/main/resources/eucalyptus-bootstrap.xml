@@ -93,6 +93,21 @@
       #end
     </int:payload-type-router>
 
+    <!-- api component channel routing -->
+    #foreach( $component in $components )
+      #if( $component.api )
+      <int:recipient-list-router input-channel="${component.name}-request" apply-sequence="true" ignore-send-failures="true">
+        #foreach( $impl_component in $components )
+          #if( $impl_component.hasApi( $component.class ) )
+          <int:recipient
+              channel="${impl_component.name}-request"
+              selector-expression="T(com.eucalyptus.component.Topology).isEnabledLocally(T(${impl_component.class.name}))"/>
+          #end
+        #end
+      </int:recipient-list-router>
+      #end
+    #end
+
     <!-- import component configurations -->
     <import resource="classpath*:*-component-context.xml"/>
 

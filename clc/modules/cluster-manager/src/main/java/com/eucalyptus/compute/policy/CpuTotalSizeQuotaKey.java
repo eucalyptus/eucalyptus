@@ -27,7 +27,7 @@ import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.PolicyScope;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.cluster.common.internal.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.compute.common.CloudMetadataLimitedType;
 import com.eucalyptus.entities.Entities;
@@ -111,7 +111,7 @@ public class CpuTotalSizeQuotaKey extends QuotaKey {
 
     private long measureFromPendingInstances( final OwnerFullName ownerFullName ) {
       long pending = 0;
-      for ( final Cluster cluster : Clusters.getInstance().listValues( ) ) {
+      for ( final Cluster cluster : Clusters.list( ) ) {
         pending += cluster.getNodeState( ).measureUncommittedPendingInstanceCpus(ownerFullName);
       }
       return pending;

@@ -80,6 +80,8 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.Regions;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
+import com.eucalyptus.cluster.common.ClusterController;
+import com.eucalyptus.cluster.common.internal.Cluster;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.ClientComputeException;
@@ -88,10 +90,9 @@ import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ClusterInfoType;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.ImageMetadata.Platform;
-import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
+import com.eucalyptus.cluster.common.internal.ResourceState.VmTypeAvailability;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.compute.common.RegionInfoType;
 import com.eucalyptus.compute.common.backend.DescribeAvailabilityZonesResponseType;
 import com.eucalyptus.compute.common.backend.DescribeAvailabilityZonesType;
@@ -103,7 +104,6 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.node.Nodes;
 import com.eucalyptus.compute.common.internal.tags.FilterSupport;
 import com.eucalyptus.compute.common.internal.tags.Filters;
 import com.eucalyptus.util.CollectionUtils;
@@ -123,8 +123,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-import edu.ucsb.eucalyptus.msgs.ClusterGetConsoleOutputResponseType;
-import edu.ucsb.eucalyptus.msgs.ClusterGetConsoleOutputType;
+import com.eucalyptus.cluster.common.msgs.ClusterGetConsoleOutputResponseType;
+import com.eucalyptus.cluster.common.msgs.ClusterGetConsoleOutputType;
 
 @ComponentNamed("computeClusterEndpoint")
 public class ClusterEndpoint {
@@ -138,7 +138,7 @@ public class ClusterEndpoint {
                                                                               @Override
                                                                               public List<ClusterInfoType> apply( final Predicate<Object> filterPredicate ) {
                                                                                 List<ClusterInfoType> verbose = Lists.newArrayList( );
-                                                                                for ( Cluster c : Iterables.filter( Clusters.getInstance( ).listValues( ), filterPredicate ) ) {
+                                                                                for ( Cluster c : Iterables.filter( Clusters.list( ), filterPredicate ) ) {
                                                                                   verbose.addAll( describeSystemInfo.apply( c ) );
                                                                                 }
                                                                                 return verbose;
@@ -167,8 +167,10 @@ public class ClusterEndpoint {
       };
       for ( ServiceConfiguration ccConfig : Topology.enabledServices( ClusterController.class ) ) {
         try {
-          ServiceConfiguration node = Nodes.lookup( ccConfig, request.getSourceHost( ) );//found the node!
-          Cluster cluster = Clusters.lookup( ccConfig );//lookup the cluster
+          Cluster cluster = Clusters.lookupAny( ccConfig );//lookup the cluster
+          if ( !cluster.hasNode( request.getSourceHost( ) ) ) {
+            continue;
+          }
           final List<VmInstance> instances = VmInstances.list(filterHost);
           for(final VmInstance instance : instances){
             try{
@@ -179,7 +181,7 @@ public class ClusterEndpoint {
           }
           
           try {
-            cluster.migrateInstances( request.getSourceHost( ), request.getAllowHosts( ), request.getDestinationHosts( ) );//submit the migration request
+            Migrations.using( cluster ).migrateInstances( request.getSourceHost( ), request.getAllowHosts( ), request.getDestinationHosts( ) );//submit the migration request
             return reply.markWinning( );
           } catch ( Exception ex ) {
             LOG.error( ex );
@@ -212,14 +214,14 @@ public class ClusterEndpoint {
       }
       try {
         ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
-        Cluster cluster = Clusters.lookup( ccConfig );
+        Cluster cluster = Clusters.lookupAny( ccConfig );
         // update windows password
         try{
           updatePasswordIfWindows(vm, ccConfig);
         }catch(final Exception ex){
         }
         try {
-          cluster.migrateInstance( request.getInstanceId( ), request.getAllowHosts( ), request.getDestinationHosts( ) );
+          Migrations.using( cluster ).migrateInstance( request.getInstanceId( ), request.getAllowHosts( ), request.getDestinationHosts( ) );
           return reply.markWinning( );
         } catch ( Exception ex ) {
           LOG.error( ex );
@@ -278,12 +280,11 @@ public class ClusterEndpoint {
       }
     }
 
-    final Clusters clusterRegistry = Clusters.getInstance( );
     final List<Cluster> clusters;
     if ( args.isEmpty( ) ) {
-      clusters = Lists.newArrayList( clusterRegistry.listValues( ) );
+      clusters = Clusters.list( );
       Iterables.addAll( clusters, Iterables.filter(
-          clusterRegistry.listDisabledValues( ),
+          Clusters.listDisabled( ),
           Predicates.not(
               CollectionUtils.propertyPredicate(
                   Collections2.transform( clusters, CloudMetadatas.toDisplayName() ),
@@ -292,7 +293,7 @@ public class ClusterEndpoint {
       clusters = Lists.newArrayList();
       for ( final String partitionName : request.getAvailabilityZoneSet( ) ) {
         try {
-          clusters.add( Iterables.find( clusterRegistry.listValues( ), new Predicate<Cluster>( ) {
+          clusters.add( Iterables.find( Clusters.list( ), new Predicate<Cluster>( ) {
             @Override
             public boolean apply( Cluster input ) {
               return partitionName.equals( input.getConfiguration( ).getPartition( ) );
@@ -300,14 +301,10 @@ public class ClusterEndpoint {
           } ) );
         } catch ( NoSuchElementException e ) {
           try {
-            clusters.add( clusterRegistry.lookup( partitionName ) );
+            clusters.add( Clusters.lookupAny( partitionName ) );
           } catch ( NoSuchElementException ex ) {
-            try {
-              clusters.add( clusterRegistry.lookupDisabled( partitionName ) );
-            } catch ( NoSuchElementException ex2 ) {
-              if ( !describeKeywords.containsValue( partitionName ) ) {
-                throw new ClientComputeException("InvalidParameterValue", "Invalid availability zone: [" + partitionName + "]");
-              }
+            if ( !describeKeywords.containsValue( partitionName ) ) {
+              throw new ClientComputeException("InvalidParameterValue", "Invalid availability zone: [" + partitionName + "]");
             }
           }
         }
@@ -357,7 +354,7 @@ public class ClusterEndpoint {
                                                                                    info.add( new ClusterInfoType( String.format( INFO_FSTRING, "vm types" ),
                                                                                                                   HEADER_STRING ) );
                                                                                    for ( VmType v : VmTypes.list( ) ) {
-                                                                                     VmTypeAvailability va = cluster.getNodeState( ).getAvailability( v.getName( ) );
+                                                                                     VmTypeAvailability va = cluster.getNodeState( ).getAvailability( v );
                                                                                      info.add( s( v.getName( ),
                                                                                                   String.format( STATE_FSTRING, va.getAvailable( ),
                                                                                                                  va.getMax( ), v.getCpu( ), v.getMemory( ),
@@ -404,7 +401,7 @@ public class ClusterEndpoint {
     STATE {
       @Override
       public String apply( final Cluster cluster ) {
-        return cluster.getStateMachine().getState().ordinal() >= Cluster.State.ENABLED.ordinal () ?
+        return Clusters.list( ).contains( cluster ) ?
             "available" :
             "unavailable";
       }

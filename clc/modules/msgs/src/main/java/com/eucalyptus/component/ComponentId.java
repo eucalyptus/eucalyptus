@@ -78,6 +78,7 @@ import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.component.annotation.AdminService;
 import com.eucalyptus.component.annotation.AwsServiceName;
+import com.eucalyptus.component.annotation.ComponentApi;
 import com.eucalyptus.component.annotation.PublicComponentAccounts;
 import com.eucalyptus.component.annotation.ComponentDatabase;
 import com.eucalyptus.component.annotation.DatabaseNamingStrategy;
@@ -389,6 +390,36 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
    */
   public boolean isAdminService( ) {
     return this.ats.has(AdminService.class);
+  }
+
+  /**
+    * @return true if this component represents the api for another component
+   */
+  public boolean isApi( ) {
+    return this.ats.has( ComponentApi.class ) && this.ats.get( ComponentApi.class ).value( ).equals( getClass( ) );
+  }
+
+  /**
+   * @return true if this component implements the api defined by another component
+   */
+  public boolean hasApi( ) {
+    return this.ats.has( ComponentApi.class ) && !isApi( );
+  }
+
+  /**
+   * @return true if this component implements the api defined by another component
+   */
+  public boolean hasApi( Class<? extends ComponentId> api ) {
+    return hasApi( ) && this.ats.get( ComponentApi.class ).value( ).equals( api );
+  }
+
+  /**
+   * @return the api component class, which will be this components class if !hasApi()
+   */
+  public Class<? extends ComponentId> toApiClass( ) {
+    return hasApi( ) ?
+        this.ats.get( ComponentApi.class ).value( ) :
+        getClass( );
   }
 
   /**

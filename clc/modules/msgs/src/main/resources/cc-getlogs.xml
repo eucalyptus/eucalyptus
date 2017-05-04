@@ -63,17 +63,17 @@
 
 <binding force-classes="true" add-constructors="true">
 
-    <mapping name="GetLogs" class="edu.ucsb.eucalyptus.msgs.GetLogsType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <mapping name="GetLogs" class="com.eucalyptus.cluster.common.msgs.GetLogsType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <value name="serviceTag" field="serviceTag"/>
     </mapping>
-    <mapping name="GetLogsResponse" class="edu.ucsb.eucalyptus.msgs.GetLogsResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <mapping name="GetLogsResponse" class="com.eucalyptus.cluster.common.msgs.GetLogsResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <structure usage="optional">
-            <structure field="logs" map-as="edu.ucsb.eucalyptus.msgs.NodeLogInfo"/>
+            <structure field="logs" map-as="com.eucalyptus.cluster.common.msgs.NodeLogInfo"/>
         </structure>
     </mapping>
-    <mapping class="edu.ucsb.eucalyptus.msgs.NodeLogInfo" abstract="true">
+    <mapping class="com.eucalyptus.cluster.common.msgs.NodeLogInfo" abstract="true">
         <value name="serviceTag" field="serviceTag" usage="required"/>
         <value name="CCLog" field="ccLog" usage="optional"/>
         <value name="NCLog" field="ncLog" usage="optional"/>
@@ -81,17 +81,17 @@
         <value name="axis2Log" field="axis2Log" usage="optional"/>
     </mapping>
 
-    <mapping name="GetKeys" class="edu.ucsb.eucalyptus.msgs.GetKeysType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <mapping name="GetKeys" class="com.eucalyptus.cluster.common.msgs.GetKeysType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <value name="serviceTag" field="serviceTag"/>
     </mapping>
-    <mapping name="GetKeysResponse" class="edu.ucsb.eucalyptus.msgs.GetKeysResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <mapping name="GetKeysResponse" class="com.eucalyptus.cluster.common.msgs.GetKeysResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
         <structure usage="optional">
-            <structure field="certs" map-as="edu.ucsb.eucalyptus.msgs.NodeCertInfo"/>
+            <structure field="certs" map-as="com.eucalyptus.cluster.common.msgs.NodeCertInfo"/>
         </structure>
     </mapping>
-    <mapping class="edu.ucsb.eucalyptus.msgs.NodeCertInfo" abstract="true">
+    <mapping class="com.eucalyptus.cluster.common.msgs.NodeCertInfo" abstract="true">
         <value name="serviceTag" field="serviceTag" usage="optional"/>
         <value name="CCcert" field="ccCert" usage="optional"/>
         <value name="NCcert" field="ncCert" usage="optional"/>

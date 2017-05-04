@@ -69,17 +69,18 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.blockstorage.Volumes;
-import com.eucalyptus.cloud.ResourceToken;
+import com.eucalyptus.cluster.common.internal.ResourceToken;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
+import com.eucalyptus.cloud.VmInstanceToken;
 import com.eucalyptus.cloud.run.*;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.RebootCallback;
+import com.eucalyptus.cluster.common.msgs.ClusterBundleInstanceType;
+import com.eucalyptus.cluster.common.msgs.ClusterCancelBundleTaskType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentNamed;
-import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.cluster.common.ClusterController;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.ClientUnauthorizedComputeException;
 import com.eucalyptus.compute.ClusterComputeServiceUnavailableException;
@@ -181,10 +182,10 @@ import com.eucalyptus.vmtypes.VmTypes;
 import com.eucalyptus.ws.util.HmacUtils;
 import com.google.common.base.*;
 import com.google.common.collect.*;
-import edu.ucsb.eucalyptus.msgs.ClusterGetConsoleOutputResponseType;
-import edu.ucsb.eucalyptus.msgs.ClusterGetConsoleOutputType;
-import edu.ucsb.eucalyptus.msgs.ClusterRebootInstancesResponseType;
-import edu.ucsb.eucalyptus.msgs.ClusterRebootInstancesType;
+import com.eucalyptus.cluster.common.msgs.ClusterGetConsoleOutputResponseType;
+import com.eucalyptus.cluster.common.msgs.ClusterGetConsoleOutputType;
+import com.eucalyptus.cluster.common.msgs.ClusterRebootInstancesResponseType;
+import com.eucalyptus.cluster.common.msgs.ClusterRebootInstancesType;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
@@ -245,7 +246,7 @@ public class VmControl {
       reply.setRsvInfo( reservation );
       final Map<String, List<Tag>> tagsMap = TagSupport.forResourceClass( VmInstance.class )
           .getResourceTagMap( allocInfo.getOwnerFullName( ).asAccountFullName( ), allocInfo.getInstanceIds( ) );
-      for ( ResourceToken allocToken : allocInfo.getAllocationTokens( ) ) {
+      for ( VmInstanceToken allocToken : allocInfo.getAllocationTokens( ) ) {
         final RunningInstancesItemType item = VmInstance.transform( allocToken.getVmInstance( ) );
         Tags.addFromTags( item.getTagSet( ), ResourceTag.class, tagsMap.get( item.getInstanceId( ) ) );
         reservation.getInstancesSet( ).add( item );
@@ -277,7 +278,7 @@ public class VmControl {
     }
 
     MessageContexts.remember(allocInfo.getReservationId(), request.getClass(), request);
-    for( final ResourceToken allocToken : allocInfo.getAllocationTokens()){
+    for( final VmInstanceToken allocToken : allocInfo.getAllocationTokens()){
       MessageContexts.remember(allocToken.getInstanceId(), request.getClass(), request);
     }
 
@@ -466,16 +467,15 @@ public class VmControl {
     } else if ( !VmState.RUNNING.apply( v ) ) {
       throw new EucalyptusCloudException( "Instance " + instanceId + " is not in a running state." );
     } else {
-      Cluster cluster;
+      ServiceConfiguration ccConfig;
       try {
-        ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
-        cluster = Clusters.lookup( ccConfig );
+        ccConfig = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
       } catch ( final NoSuchElementException e1 ) {
         throw new ComputeException( "InternalError", "Failed to find enabled cluster controller for cluster '"+v.getPartition()+"'");
       }
       try {
         final ClusterGetConsoleOutputResponseType response =
-            AsyncRequests.sendSync( cluster.getConfiguration( ), new ClusterGetConsoleOutputType( instanceId ) );
+            AsyncRequests.sendSync( ccConfig, new ClusterGetConsoleOutputType( instanceId ) );
         GetConsoleOutputResponseType reply = request.getReply();
         reply.setInstanceId( instanceId );
         reply.setTimestamp( response.getTimestamp() );
@@ -994,11 +994,10 @@ public class VmControl {
                                       v.getInstanceId( ) ) );
 
         ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
-        final Cluster cluster = Clusters.lookup( ccConfig );
-
-        request.setInstanceId( v.getInstanceId( ) );
+        final ClusterCancelBundleTaskType cancelRequest = new ClusterCancelBundleTaskType( );
+        cancelRequest.setInstanceId( v.getInstanceId( ) );
         reply.setTask( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
-        AsyncRequests.newRequest( Bundles.cancelCallback( request ) ).dispatch( cluster.getConfiguration( ) );
+        AsyncRequests.newRequest( Bundles.cancelCallback( cancelRequest ) ).dispatch( ccConfig );
         return reply;
       } else {
         throw new EucalyptusCloudException( "Failed to find bundle task: " + request.getBundleId( ) );
@@ -1097,19 +1096,15 @@ public class VmControl {
     final AccessKey accessKeyForPolicySignature = accessKey;
     try {
       ServiceConfiguration cluster = Topology.lookup( ClusterController.class, bundledVm.lookupPartition( ) );
-      BundleInstanceType reqInternal = new BundleInstanceType(){
-			{
-  			setInstanceId(request.getInstanceId());
-  			setBucket(request.getBucket());
-  			setPrefix(request.getPrefix());
-  			setAwsAccessKeyId(accessKeyForPolicySignature.getAccessKey());
-  			setUploadPolicy(request.getUploadPolicy());
-  			setUploadPolicySignature(request.getUploadPolicySignature());
-  			setUrl(request.getUrl());
-  			setUserKey(request.getUserKey());
-  			setArchitecture(imageInfo != null ? imageInfo.getArchitecture().name() : "i386");
-			}
-		}.regardingUserRequest(request);
+      ClusterBundleInstanceType reqInternal = new ClusterBundleInstanceType( );
+      reqInternal.setInstanceId(request.getInstanceId());
+      reqInternal.setBucket(request.getBucket());
+      reqInternal.setPrefix(request.getPrefix());
+      reqInternal.setAwsAccessKeyId(accessKeyForPolicySignature.getAccessKey());
+      reqInternal.setUploadPolicy(request.getUploadPolicy());
+      reqInternal.setUploadPolicySignature(request.getUploadPolicySignature());
+      reqInternal.setArchitecture(imageInfo != null ? imageInfo.getArchitecture().name() : "i386");
+      reqInternal.regardingUserRequest(request);
       AsyncRequests.newRequest( Bundles.createCallback(reqInternal)).dispatch( cluster );
     } catch ( Exception ex ) {
       LOG.error( ex );
