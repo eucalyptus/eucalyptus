@@ -544,9 +544,7 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
       final String proposedValue = newValue;
       final Set<String> validEntries = Sets.newHashSet();
       try (TransactionResource tr = Entities.transactionFor(ObjectStorageConfiguration.class)) {
-        boolean match = Iterables.any(Components.lookup(ObjectStorage.class).services(), new Predicate<ServiceConfiguration>() {
-          @Override
-          public boolean apply(final ServiceConfiguration config) {
+        boolean match = Components.services( ObjectStorage.class ).find( config -> {
             if ( config.isVmLocal( ) || Hosts.isCoordinator( ) ) {
               // Add locally discovered entries to the valid list
               validEntries.addAll(ObjectStorageProviders.list());
@@ -564,8 +562,7 @@ public class ObjectStorageGlobalConfiguration extends AbstractPersistent impleme
               }
             }
             return validEntries.contains(proposedValue);
-          }
-        });
+          } ).isDefined( );
         tr.commit();
         if (!match) {
           // Nothing matched.

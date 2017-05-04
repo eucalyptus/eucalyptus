@@ -1002,13 +1002,12 @@ public class Topology {
    * @param maybePartition
    * @return
    */
+  @Nonnull
   public static ServiceConfiguration lookup( final Class<? extends ComponentId> compClass, final Partition... maybePartition ) {
     final ComponentId requestedCompId = ComponentIds.lookup( compClass );
-    final Partition partition =( ( maybePartition != null ) && ( maybePartition.length > 0 ) ?
-        ( requestedCompId.isPartitioned( ) ?
+    final Partition partition = requestedCompId.isPartitioned( ) && maybePartition != null && maybePartition.length > 0 ?
             maybePartition[ 0 ] :
-            null ) :
-        null );
+            null;
     ServiceConfiguration res = null;
     final Set<ComponentId> serviceComponentIds = Sets.newHashSet( );
     if ( requestedCompId.isApi( ) ) { // resolve to impl component
@@ -1020,9 +1019,12 @@ public class Topology {
     for ( final ComponentId compId : serviceComponentIds ) {
       if ( compId.isManyToOnePartition( ) ) {
         if ( partition != null ) {
-          res = Iterables.getFirst( ServiceConfigurations.filter( compId, ServiceConfigurations.filterByPartition( partition ) ), null );
+          res = Components.services( compId )
+              .filter( ServiceConfigurations.filterEnabledByPartition( partition ) )
+              .getOrElse( (ServiceConfiguration) null );
         } else {
-          final Iterable<ServiceConfiguration> configurations = ServiceConfigurations.filter( compId, ServiceConfigurations.filterEnabled( ) );
+          final Iterable<ServiceConfiguration> configurations =
+              Components.services( compId ).filter( ServiceConfigurations.filterEnabled( ) );
           res = Iterables.tryFind( configurations, ServiceConfigurations.filterHostLocal( ) )
               .or( Iterables.tryFind( configurations, Predicates.alwaysTrue( ) ) )
               .orNull( );
@@ -1055,37 +1057,45 @@ public class Topology {
   }
 
   @Nonnull
-  public static <T extends ServiceConfiguration> Iterable<T> lookupMany( final Class<? extends ComponentId> compClass, final Partition... maybePartition ) {
-	    final ComponentId compId = ComponentIds.lookup( compClass );
-	    final Partition partition =
-	      ( ( maybePartition != null ) && ( maybePartition.length > 0 )
-	                                                                   ? ( compId.isPartitioned( )
-	                                                                                                                        ? maybePartition[0]
-	                                                                                                                        : null )
-	                                                                   : null );
-	    Iterable<T> res = null;
-	    //ManyToOne partitions are handled differently
-	    if(compId.isManyToOnePartition()) {
-	    	if(partition != null) {
-	    		res = (Iterable<T>) ServiceConfigurations.filter(compClass, ServiceConfigurations.filterByPartition(partition));
-	    	} else {
-	    		res = (Iterable<T>) ServiceConfigurations.filter(compClass, ServiceConfigurations.filterEnabled());
-	    	}
-	    }
-	    String err = "Failed to lookup ENABLED service of type " + compClass.getSimpleName( ) + ( partition != null ? " in partition " + partition : "." );
-	    if ( res == null ) {
-	      throw new NoSuchElementException( err );
-	    } else {
-	    	return res;
-	    }    
+  public static Iterable<ServiceConfiguration> lookupMany(
+      final Class<? extends ComponentId> compClass,
+      final Partition... maybePartition
+  ) {
+    final ComponentId compId = ComponentIds.lookup( compClass );
+    final Partition partition = compId.isPartitioned( ) && maybePartition != null && maybePartition.length > 0 ?
+            maybePartition[ 0 ] :
+            null;
+    final Iterable<ServiceConfiguration> res;
+    if ( compId.isManyToOnePartition( ) ) {
+      res = Components.services( compId ).filter(
+          partition != null ?
+              ServiceConfigurations.filterEnabledByPartition( partition ) :
+              ServiceConfigurations.filterEnabled( ) );
+    } else {
+      res = Collections.singleton( lookup( compClass, partition ) );
+    }
+    String err = "Failed to lookup ENABLED service of type " + compClass.getSimpleName( ) +
+        ( partition != null ? " in partition " + partition : "." );
+    if ( res == null ) {
+      throw new NoSuchElementException( err );
+    } else {
+      return res;
+    }
   }
 
-  public static <T extends ServiceConfiguration> Iterable<T> lookupAtLeastOne(
-      final Class<? extends ComponentId> compClass
+  @Nonnull
+  public static Iterable<ServiceConfiguration> lookupAtLeastOne(
+      final Class<? extends ComponentId> compClass,
+      final Partition... maybePartition
   ) {
-    final Iterable<T> res = lookupMany( compClass );
+    final ComponentId compId = ComponentIds.lookup( compClass );
+    final Partition partition = compId.isPartitioned( ) && maybePartition != null && maybePartition.length > 0 ?
+        maybePartition[ 0 ] :
+        null;
+    final Iterable<ServiceConfiguration> res = lookupMany( compClass, partition );
     if ( Iterables.isEmpty( res ) ) {
-      throw new NoSuchElementException( "Failed to lookup ENABLED service of type " + compClass.getSimpleName( ) );
+      throw new NoSuchElementException( "Failed to lookup ENABLED service of type " + compClass.getSimpleName( ) +
+          ( partition != null ? " in partition " + partition : "." ) );
     }
     return res;
   }

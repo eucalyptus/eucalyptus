@@ -75,14 +75,15 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.CompatFunction;
+import com.eucalyptus.util.CompatPredicate;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Mbeans;
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import javaslang.collection.Stream;
 
 public class Components {
   private static Logger                                                 LOG        = Logger.getLogger( Components.class );
@@ -148,7 +149,7 @@ public class Components {
    * GRZE:NOTE: this should only ever be applied to user input and /never/ called with a hardcoded
    * string.
    */
-  public static <T extends ComponentId> Component lookup( final String componentIdName ) throws NoSuchElementException {
+  public static Component lookup( final String componentIdName ) throws NoSuchElementException {
     return lookup( IdNameToId.INSTANCE.apply( componentIdName ) );
   }
   
@@ -159,13 +160,29 @@ public class Components {
   public static Component lookup( final ComponentId componentId ) throws NoSuchElementException {
     return IdToComponent.INSTANCE.apply( componentId );
   }
-  
+
+  public static Stream<ServiceConfiguration> services( final Class<? extends ComponentId> componentId ) {
+    try {
+      return Stream.ofAll( lookup( componentId ).services( ) );
+    } catch ( NoSuchElementException e ) {
+      return Stream.empty( );
+    }
+  }
+
+  public static Stream<ServiceConfiguration> services( final ComponentId componentId ) {
+    try {
+      return Stream.ofAll( lookup( componentId ).services( ) );
+    } catch ( NoSuchElementException e ) {
+      return Stream.empty( );
+    }
+  }
+
   public static boolean contains( final ComponentId component ) {
-    return components.containsKey( component );
+    return component != null && components.containsKey( component.getClass( ) );
   }
   
   public static Component create( final ComponentId id ) throws ServiceRegistrationException {
-    if ( !components.containsKey( id ) ) {
+    if ( !components.containsKey( id.getClass( ) ) ) {
       final Component c = new Component( id );
       components.put( id.getClass( ), c );
       EventRecord.here( Bootstrap.class, EventType.COMPONENT_REGISTERED, c.toString( ) ).info( );
@@ -190,15 +207,15 @@ public class Components {
     }
   }
 
-  public static Function<ServiceConfiguration,ServiceConfiguration> updateConfiguration( ) {
+  public static CompatFunction<ServiceConfiguration,ServiceConfiguration> updateConfiguration( ) {
     return UpdateComponentServiceConfiguration.INSTANCE;
   }
 
-  public static Function<Component,ComponentId> componentId( ) {
+  public static CompatFunction<Component,ComponentId> componentId( ) {
     return ToComponentId.INSTANCE;
   }
 
-  enum ToComponentId implements Function<Component, ComponentId> {
+  enum ToComponentId implements CompatFunction<Component, ComponentId> {
     INSTANCE;
     @Override
     public ComponentId apply( final Component input ) {
@@ -206,7 +223,7 @@ public class Components {
     }
   }
   
-  enum IdNameToId implements Function<String, ComponentId> {
+  enum IdNameToId implements CompatFunction<String, ComponentId> {
     INSTANCE;
     @Override
     public ComponentId apply( final String input ) {
@@ -214,7 +231,7 @@ public class Components {
     }
   }
   
-  enum IdClassToId implements Function<Class<? extends ComponentId>, ComponentId> {
+  enum IdClassToId implements CompatFunction<Class<? extends ComponentId>, ComponentId> {
     INSTANCE;
     @Override
     public ComponentId apply( final Class<? extends ComponentId> input ) {
@@ -222,7 +239,7 @@ public class Components {
     }
   }
   
-  enum IdToComponent implements Function<ComponentId, Component> {
+  enum IdToComponent implements CompatFunction<ComponentId, Component> {
     INSTANCE;
     @Override
     public Component apply( final ComponentId input ) {
@@ -239,7 +256,7 @@ public class Components {
     }
   }
   
-  enum ComponentToLocalService implements Function<Component, ServiceConfiguration> {
+  enum ComponentToLocalService implements CompatFunction<Component, ServiceConfiguration> {
     INSTANCE;
     @Override
     public ServiceConfiguration apply( final Component input ) {
@@ -247,7 +264,7 @@ public class Components {
     }
   }
   
-  enum ToString implements Function<Component, String> {
+  enum ToString implements CompatFunction<Component, String> {
     INSTANCE;
     @Override
     public String apply( final Component comp ) {
@@ -269,7 +286,7 @@ public class Components {
     }
   }
 
-  enum UpdateComponentServiceConfiguration implements Function<ServiceConfiguration,ServiceConfiguration> {
+  enum UpdateComponentServiceConfiguration implements CompatFunction<ServiceConfiguration,ServiceConfiguration> {
     INSTANCE;
 
     @Override
@@ -281,11 +298,11 @@ public class Components {
     }
   }
   
-  public static Function<Component, String> componentToString( ) {
+  public static CompatFunction<Component, String> componentToString( ) {
     return ToString.INSTANCE;
   }
   
-  private enum Predicates implements Predicate<Component> {
+  private enum Predicates implements CompatPredicate<Component> {
     BOOTSTRAP_LOAD_LOCAL {
       @Override
       public boolean apply( final Component component ) {

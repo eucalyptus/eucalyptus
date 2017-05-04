@@ -21,9 +21,6 @@ package com.eucalyptus.loadbalancing.config;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
-import com.eucalyptus.loadbalancing.workflow.WorkflowClientManager;
-import com.google.common.base.Predicates;
-import com.google.common.collect.Iterables;
 import com.eucalyptus.balancing.common.config.DeregisterLoadBalancingType;
 import com.eucalyptus.balancing.common.config.DescribeLoadBalancingType;
 import com.eucalyptus.balancing.common.config.ModifyLoadBalancingAttributeType;
@@ -33,7 +30,6 @@ import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.annotation.ComponentPart;
 
@@ -82,13 +78,5 @@ public class LoadBalancingServiceBuilder extends AbstractServiceBuilder<LoadBala
 
   @Override
   public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {
-  }
-
-  @SuppressWarnings( "unchecked" )
-  private boolean noOtherEnabled( final ServiceConfiguration config ) {
-    return Iterables.isEmpty( ServiceConfigurations.filter( LoadBalancing.class, Predicates.and(
-        ServiceConfigurations.filterHostLocal( ),
-        ServiceConfigurations.filterEnabled( ),
-        Predicates.not( Predicates.equalTo( config ) ) ) ) );
   }
 }

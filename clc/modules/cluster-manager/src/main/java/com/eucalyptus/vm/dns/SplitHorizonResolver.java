@@ -84,8 +84,8 @@ import org.xbill.DNS.Record;
 
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Databases;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.cluster.common.ClusterController;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.compute.common.internal.vpc.Vpc;
@@ -697,9 +697,9 @@ public abstract class SplitHorizonResolver extends DnsResolver {
         if ( !configurationOptional.isPresent( ) || Databases.isVolatile( ) ) {
           return lastLoaded.get( );
         } else try {
-          final Set<String> clusters = ServiceConfigurations.list( ClusterController.class ).stream( )
+          final Set<String> clusters = Components.services( ClusterController.class )
               .map( ServiceConfiguration::getPartition )
-              .collect( Collectors.toSet( ) );
+              .toJavaSet( );
           final NetworkConfiguration configuration =
               NetworkConfigurations.explode( configurationOptional.get( ), clusters );
           final List<Cidr> cidrs = ImmutableList.copyOf( Optional.presentInstances( configuration.getClusters( )

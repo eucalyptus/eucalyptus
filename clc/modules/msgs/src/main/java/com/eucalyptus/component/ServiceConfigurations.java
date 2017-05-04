@@ -83,8 +83,8 @@ import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.empyrean.ServiceAccount;
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.CollectionUtils;
+import com.eucalyptus.util.CompatPredicate;
 import com.eucalyptus.util.NonNullFunction;
-import com.google.common.base.*;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Faults.CheckException;
@@ -100,6 +100,11 @@ import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import com.google.common.base.Strings;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.collect.Collections2;
@@ -553,7 +558,7 @@ public class ServiceConfigurations {
     configuration.setPort( port );
   }
 
-  enum ServiceIsHostLocal implements Predicate<ServiceConfiguration> {
+  enum ServiceIsHostLocal implements CompatPredicate<ServiceConfiguration> {
     INSTANCE;
     
     @Override
@@ -563,7 +568,7 @@ public class ServiceConfigurations {
     
   }
 
-  enum ServiceIsVmLocal implements Predicate<ServiceConfiguration> {
+  enum ServiceIsVmLocal implements CompatPredicate<ServiceConfiguration> {
     INSTANCE;
 
     @Override
@@ -572,7 +577,7 @@ public class ServiceConfigurations {
     }
   }
 
-  enum EnabledServiceConfiguration implements Predicate<ServiceConfiguration> {
+  enum EnabledServiceConfiguration implements CompatPredicate<ServiceConfiguration> {
     INSTANCE;
     @Override
     public boolean apply( final ServiceConfiguration arg0 ) {
@@ -581,15 +586,15 @@ public class ServiceConfigurations {
   };
   
   @SuppressWarnings( "unchecked" )
-  public static final <T extends ServiceConfiguration> Predicate<T> filterEnabled( ) {
-    return ( Predicate<T> ) EnabledServiceConfiguration.INSTANCE;
+  public static final <T extends ServiceConfiguration> CompatPredicate<T> filterEnabled( ) {
+    return ( CompatPredicate<T> ) EnabledServiceConfiguration.INSTANCE;
   }
   
-  public static Predicate<ServiceConfiguration> filterHostLocal( ) {
+  public static CompatPredicate<ServiceConfiguration> filterHostLocal( ) {
     return ServiceIsHostLocal.INSTANCE;
   }
 
-  public static Predicate<ServiceConfiguration> filterVmLocal( ) {
+  public static CompatPredicate<ServiceConfiguration> filterVmLocal( ) {
     return ServiceIsVmLocal.INSTANCE;
   }
 
@@ -598,8 +603,8 @@ public class ServiceConfigurations {
    * @param partition
    * @return
    */
-  public static Predicate<ServiceConfiguration> filterByPartition( final Partition partition ) {
-    return new Predicate<ServiceConfiguration>( ) {
+  public static CompatPredicate<ServiceConfiguration> filterEnabledByPartition( final Partition partition ) {
+    return new CompatPredicate<ServiceConfiguration>( ) {
       
       @Override
       public boolean apply( ServiceConfiguration arg0 ) {

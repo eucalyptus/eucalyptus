@@ -78,24 +78,17 @@ import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.util.Cidr;
-import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResolver;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResponse;
 import com.eucalyptus.util.dns.DnsResolvers.RequestType;
 import com.eucalyptus.util.dns.DomainNameRecords;
 import com.eucalyptus.util.dns.DomainNames;
-import com.google.common.base.CharMatcher;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
-import com.google.common.base.Splitter;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 /**
@@ -278,69 +271,41 @@ public class TopologyDnsResolver extends DnsResolver {
     return false;
   }
 
-  @SuppressWarnings( { "StaticPseudoFunctionalStyleMethod", "Guava" } )
-  private static Supplier<Predicate<ServiceConfiguration>> RESOLVABLE_STATE_SUPPLIER = Suppliers.memoizeWithExpiration(
-      () -> Predicates.or( Iterables.filter( Iterables.transform(
-          Splitter.on( CharMatcher.anyOf( " ,|" ) ).split( System.getProperty( "com.eucalyptus.component.TopologyDnsResolver.resolvableStates", "ENABLED" ) ),
-          FUtils.valueOfFunction( Component.State.class )
-      ),Predicates.notNull( ) ) ),
-      1,
-      TimeUnit.MINUTES
-  );
-
   @Override
   public DnsResponse lookupRecords( DnsRequest request ) {
     final Record query = request.getQuery( );
     final Name name = query.getName( );
-    if ( ResolverSupport.COMPONENT.apply( name ) ) {
-      final Class<? extends ComponentId> compIdType = ResolverSupport.COMPONENT_FUNCTION.apply( name );
-      final ComponentId componentId = ComponentIds.lookup( compIdType );
+    try {
       final List<ServiceConfiguration> configs = Lists.newArrayList( );
-      Predicate<ServiceConfiguration> configFilter = RESOLVABLE_STATE_SUPPLIER.get( );
-      if ( componentId.isPartitioned( ) ) {
-        final String partitionName = name.getLabelString( 1 );
-        final Partition partition = Partitions.lookupByName( partitionName );
-        if ( componentId.isManyToOnePartition( ) ) {
-          for ( ServiceConfiguration conf : Iterables.filter( Components.lookup( compIdType ).services( ),
-                                                              ServiceConfigurations.filterByPartition( partition ) ) ) {
-            configs.add( conf );
-          }
-          Collections.shuffle( configs );
-        } else {
-          configs.add( Topology.lookup( compIdType, partition ) );
+      if ( ResolverSupport.COMPONENT.apply( name ) ) {
+        final Class<? extends ComponentId> compIdType = ResolverSupport.COMPONENT_FUNCTION.apply( name );
+        final ComponentId componentId = ComponentIds.lookup( compIdType );
+        final Partition[] partitions = componentId.isPartitioned( ) ?
+            new Partition[]{ Partitions.lookupByName( name.getLabelString( 1 ) ) } :
+            new Partition[ 0 ];
+        for ( final ServiceConfiguration conf : Topology.lookupAtLeastOne( compIdType, partitions ) ) {
+          configs.add( conf );
         }
-      } else {
-        if ( componentId.isManyToOnePartition( ) ) {
-          for ( ServiceConfiguration conf : Components.lookup( compIdType ).services( ) ) {
-            configs.add( conf );
-          }
-          Collections.shuffle( configs );
-        } else {
-          configs.add( Topology.lookup( compIdType ) );
-        }
+        Collections.shuffle( configs );
+      } else if ( ResolverSupport.SERVICE.apply( name ) ) {
+        final ServiceConfiguration config = ResolverSupport.SERVICE_FUNCTION.apply( name );
+        configs.add( config );
       }
       final List<Record> answers = Lists.newArrayList( );
-      for ( ServiceConfiguration config : configs ) {
-        if(configFilter.apply(config)){
-          Record aRecord = DomainNameRecords.addressRecord(
-              name,
-              maphost( request.getLocalAddress( ), config.getInetAddress( ) ) );
-          answers.add( aRecord );
-        }
+      for ( final ServiceConfiguration config : configs ) {
+        final Record aRecord = DomainNameRecords.addressRecord(
+            name,
+            maphost( request.getLocalAddress( ), config.getInetAddress( ) ) );
+        answers.add( aRecord );
       }
-      return DnsResponse.forName( query.getName( ) )
-                        .answer( RequestType.A.apply( query ) ? answers : null);
-    } else if ( ResolverSupport.SERVICE.apply( name ) ) {
-      final ServiceConfiguration config = ResolverSupport.SERVICE_FUNCTION.apply( name );
-      return DnsResponse.forName( query.getName( ) )
-                        .answer( RequestType.A.apply( query ) ?
-                            DomainNameRecords.addressRecord(
-                                name,
-                                maphost( request.getLocalAddress( ), config.getInetAddress( ) ) )
-                                : null );
-    } else {
-      throw new NoSuchElementException( "Failed to lookup name: " + name );
+      return DnsResponse.forName( query.getName( ) ).answer(
+          RequestType.A.apply( query ) ? answers : null
+      );
+    } catch ( final NoSuchElementException ignore ) {
+    } catch ( final Exception e ) {
+      LOG.error( "Error resolving name " + name + " due to "  + e, LOG.isDebugEnabled( ) ? e : null );
     }
+    return DnsResponse.forName( query.getName( ) ).nxdomain( );
   }
 
   @Override

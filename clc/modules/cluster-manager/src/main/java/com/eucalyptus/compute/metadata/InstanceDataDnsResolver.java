@@ -102,25 +102,27 @@ public class InstanceDataDnsResolver extends DnsResolver {
     final Record query = request.getQuery( );
     final InetAddress source = request.getRemoteAddress( );
     final Name name = query.getName( );
-    if ( !Bootstrap.isOperational( ) || !enabled || !Subnets.isSystemManagedAddress( source ) ) {
+    if ( !Bootstrap.isOperational( ) || !enabled ) {
       return false;
     } else if ( RequestType.PTR.apply( query ) ) {
       return name.equals( INSTANCE_PTR );
     } else {
+      boolean nameMatch = false;
       if ( INSTANCE_DATA.equals( name ) ) {
-        return true;
+        nameMatch = true;
       } else if ( name.subdomain( DomainNames.internalSubdomain( ) )
                   && RELATIVE_INSTANCE_DATA.equals( DomainNames.relativize( name, DomainNames.internalSubdomain( ) ) ) ) {
-        return true;
+        nameMatch = true;
       } else if ( name.subdomain( DomainNames.internalSubdomain( Eucalyptus.class ) )
                   && RELATIVE_INSTANCE_DATA.equals( DomainNames.relativize( name, DomainNames.internalSubdomain( Eucalyptus.class ) ) ) ) {
-        return true;
+        nameMatch = true;
       } else if ( InstanceDomainNames.isInstanceSubdomain( name )
                   && RELATIVE_INSTANCE_DATA.equals( DomainNames.relativize( name, InstanceDomainNames.lookupInstanceDomain( name ) ) ) ) {
-        return true;
+        nameMatch = true;
       }
+      // subnet check can be slow, so put last
+      return nameMatch && Subnets.isSystemManagedAddress( source );
     }       
-    return false;
   }
   
   @Override

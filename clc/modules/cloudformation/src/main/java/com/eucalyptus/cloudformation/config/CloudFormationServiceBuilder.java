@@ -26,6 +26,7 @@ import com.eucalyptus.cloudformation.workflow.WorkflowClientManager;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceRegistrationException;
@@ -33,12 +34,11 @@ import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
-import com.google.common.base.Predicates;
-import com.google.common.collect.Iterables;
 import org.apache.log4j.Logger;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Predicate;
 
 /**
  *
@@ -112,10 +112,11 @@ public class CloudFormationServiceBuilder extends AbstractServiceBuilder<CloudFo
 
   @SuppressWarnings( "unchecked" )
   private boolean noOtherEnabled( final ServiceConfiguration config ) {
-    return Iterables.isEmpty( ServiceConfigurations.filter( CloudFormation.class, Predicates.and(
-        ServiceConfigurations.filterHostLocal( ),
-        ServiceConfigurations.filterEnabled( ),
-        Predicates.not( Predicates.equalTo( config ) ) ) ) );
+    return Components.services( CloudFormation.class )
+        .filter( ServiceConfigurations.filterHostLocal( ) )
+        .filter( ServiceConfigurations.filterEnabled( ) )
+        .filter( Predicate.isEqual( config ).negate( ) )
+        .isEmpty( );
   }
 
   private static void stopWorkflowClient( final long timestampMatch ) {
