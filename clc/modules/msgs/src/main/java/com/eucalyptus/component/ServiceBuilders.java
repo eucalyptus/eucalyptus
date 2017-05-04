@@ -72,6 +72,8 @@ import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.techpreview.TechPreviews;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -155,6 +157,6 @@ public class ServiceBuilders {
   }
 
   public static List<Class<? extends ComponentId>> listRegisterableComponents( ) {
-    return Lists.newArrayList( componentBuilders.keySet() );
+    return Lists.newArrayList( Iterables.filter( componentBuilders.keySet(), comp -> !TechPreviews.check( comp ) ) );
   }
 }
