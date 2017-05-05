@@ -72,7 +72,7 @@ version "@EUCA_VERSION@"
 ###### long-opt          # short # description                                        # type  # type desc.              # default value        # req. # extras... 
 section "Bootstrap Configuration"#                                                    #       #                         #                      #      #
 option "user"                  u   "User to drop privs to after starting."             string  typestr="USERNAME"        default="eucalyptus"    no
-option "home"                  h   "Eucalyptus home directory."                        string  typestr="DIRECTORY"       default="@prefix@/"     no
+option "home"                  h   "Eucalyptus home directory."                        string  typestr="DIRECTORY"       default="@prefix@"     no
 option "extra-version"         -   "Extra version string."                             string  typestr="EXTRAVERSION"    default="@EXTRA_VERSION@" no  hidden
 
 option "initialize"            -   "Perform first-time setup.  This is run one time (only!) on the first cloud controller before the first time it is run." flag                              off
