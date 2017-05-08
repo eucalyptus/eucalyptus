@@ -19,7 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.compute.policy;
 
-import static com.eucalyptus.auth.policy.PolicySpec.*;
+import static com.eucalyptus.auth.policy.PolicySpec.qualifiedName;
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.*;
 import java.util.Set;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
@@ -35,13 +36,22 @@ import net.sf.json.JSONException;
 public class AvailabilityZoneKey implements ComputeKey {
   static final String KEY_NAME = "ec2:availabilityzone";
   private static final Set<String> actions = ImmutableSet.<String>builder( )
+      .add( qualifiedName( VENDOR_EC2, EC2_ASSOCIATEIAMINSTANCEPROFILE ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_ATTACHCLASSICLINKVPC ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_ATTACHVOLUME ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_CREATETAGS ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_CREATEVOLUME ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_DELETEVOLUME ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_DETACHCLASSICLINKVPC ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_DETACHVOLUME ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_DISASSOCIATEIAMINSTANCEPROFILE ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_GETCONSOLESCREENSHOT ) )
       .add( qualifiedName( VENDOR_EC2, EC2_REBOOTINSTANCES ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_REPLACEIAMINSTANCEPROFILEASSOCIATION ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_RUNINSTANCES ) )
       .add( qualifiedName( VENDOR_EC2, EC2_STARTINSTANCES ) )
       .add( qualifiedName( VENDOR_EC2, EC2_STOPINSTANCES ) )
       .add( qualifiedName( VENDOR_EC2, EC2_TERMINATEINSTANCES ) )
-      .add( qualifiedName( VENDOR_EC2, EC2_ATTACHVOLUME ) )
-      .add( qualifiedName( VENDOR_EC2, EC2_DELETEVOLUME ) )
-      .add( qualifiedName( VENDOR_EC2, EC2_DETACHVOLUME ) )
       .build( );
 
   @Override

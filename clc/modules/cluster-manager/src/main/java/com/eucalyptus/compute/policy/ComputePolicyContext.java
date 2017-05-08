@@ -175,6 +175,12 @@ public class ComputePolicyContext {
   }
 
   @Nullable
+  static Boolean getVolumeEncrypted() {
+    final ComputePolicyContextResource resource = resourceLocal.get( );
+    return resource == null ? null : resource.getVolumeEncrypted();
+  }
+
+  @Nullable
   static Integer getVolumeIops() {
     final ComputePolicyContextResource resource = resourceLocal.get( );
     return resource == null ? null : resource.getVolumeIops();
@@ -240,6 +246,9 @@ public class ComputePolicyContext {
 
     @Nullable
     String getTenancy( );
+
+    @Nullable
+    Boolean getVolumeEncrypted( );
 
     @Nullable
     Integer getVolumeIops( );
@@ -336,6 +345,12 @@ public class ComputePolicyContext {
     @Override
     @Nullable
     public String getTenancy( ) {
+      return null;
+    }
+
+    @Override
+    @Nullable
+    public Boolean getVolumeEncrypted( ) {
       return null;
     }
 

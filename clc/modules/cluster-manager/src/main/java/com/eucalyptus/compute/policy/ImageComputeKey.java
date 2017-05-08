@@ -19,9 +19,9 @@
  ************************************************************************/
 package com.eucalyptus.compute.policy;
 
-import static com.eucalyptus.auth.policy.PolicySpec.EC2_RUNINSTANCES;
-import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_EC2;
+
 import static com.eucalyptus.auth.policy.PolicySpec.qualifiedName;
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.*;
 import java.util.Set;
 import com.google.common.collect.ImmutableSet;
 
@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableSet;
  */
 public abstract class ImageComputeKey implements ComputeKey {
   private static final Set<String> actions = ImmutableSet.<String>builder()
+      .add( qualifiedName( VENDOR_EC2, EC2_CREATETAGS ) )
       .add( qualifiedName( VENDOR_EC2, EC2_RUNINSTANCES ) )
       .build( );
 

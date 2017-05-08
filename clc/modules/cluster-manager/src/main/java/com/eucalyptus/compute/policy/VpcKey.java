@@ -19,7 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.compute.policy;
 
-import static com.eucalyptus.auth.policy.PolicySpec.*;
+import static com.eucalyptus.auth.policy.PolicySpec.qualifiedName;
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.*;
 import java.util.Set;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.condition.ArnConditionOp;
@@ -35,6 +36,8 @@ import net.sf.json.JSONException;
 public class VpcKey implements ComputeKey {
   static final String KEY_NAME = "ec2:vpc";
   private static final Set<String> actions = ImmutableSet.<String>builder()
+      .add( qualifiedName( VENDOR_EC2, EC2_CREATETAGS ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_ATTACHCLASSICLINKVPC ) )
       .add( qualifiedName( VENDOR_EC2, EC2_AUTHORIZESECURITYGROUPEGRESS ) )
       .add( qualifiedName( VENDOR_EC2, EC2_AUTHORIZESECURITYGROUPINGRESS ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETENETWORKACL ) )
