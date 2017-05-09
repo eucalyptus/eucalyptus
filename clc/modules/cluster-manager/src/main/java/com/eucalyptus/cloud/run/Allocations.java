@@ -318,6 +318,16 @@ public class Allocations {
       return this.request;
     }
 
+    public VmInstance exampleInstanceResource( boolean includeId ) {
+      return VmInstance.exampleResource(
+          includeId && getInstanceIds( ).size( )==1 ? getInstanceId( 0 ) : "",
+          getOwnerFullName( ),
+          getPartition( ).getName( ),
+          getIamInstanceProfileArn( ),
+          getVmType( ).getName( ),
+          getBootSet().isBlockStorage( ) );
+    }
+
     public NetworkGroup getPrimaryNetwork() {
       return this.primaryNetwork;
     }

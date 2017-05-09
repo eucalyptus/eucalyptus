@@ -495,7 +495,8 @@ public class ClusterAllocator implements Runnable {
                           fullName,
                           RestrictedTypes.getIamActionByMessageType( request ),
                           (long) volSize,
-                          allocator );
+                          allocator,
+                          Volume.exampleResource( fullName, snapshotId, sc.getPartition( ), volSize ) );
                     }
                 }, allocInfo.getContext( ) );
                 final Volume volume; // allocate in separate transaction to ensure metadata matches back-end
