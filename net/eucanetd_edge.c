@@ -848,6 +848,8 @@ int do_edge_update_sgs(edge_config *edge) {
     snprintf(rule, MAX_RULE_LEN, "-A EUCA_FILTER_FWD -m physdev --physdev-in vn_i+ " 
             "-m set ! --match-set EUCA_NCPRIVATE dst -j ACCEPT");
     ipt_chain_add_rule(edge->config->ipt, "filter", "EUCA_FILTER_FWD", rule);
+
+    vmgwip = hex2dot(edge->config->vmGatewayIP);
     
     // add referenced SG ipsets
     for (i = 0; i < edge->max_ref_sgs; i++) {
