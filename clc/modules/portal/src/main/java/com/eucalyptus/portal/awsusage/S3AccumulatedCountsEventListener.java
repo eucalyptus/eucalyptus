@@ -25,19 +25,19 @@ import com.eucalyptus.reporting.event.CloudWatchApiUsageEvent;
 /**
  *
  */
-public class CloudWatchApiUsageEventListener extends SensorQueueEventListener<CloudWatchApiUsageEvent> {
-  private static final Logger LOG = Logger.getLogger( CloudWatchApiUsageEventListener.class );
+public class S3AccumulatedCountsEventListener extends SensorQueueEventListener<S3AccumulatedCountsEvent> {
+  private static final Logger LOG = Logger.getLogger( S3AccumuatedCountsEventListener.class );
 
   public static void register( ) {
-    Listeners.register( CloudWatchApiUsageEvent.class, new CloudWatchApiUsageEventListener( ) );
+    Listeners.register( S3AccumuatedCountsEvent.class, new S3AccumuatedCountsEventListener( ) );
   }
 
   @Override
-  public void fireEvent( @Nonnull final CloudWatchApiUsageEvent event ) {
+  public void fireEvent( @Nonnull final S3AccumuatedCountsEventListener event ) {
     if ( !Bootstrap.isOperational( ) || !BillingProperties.ENABLED ) {
       return;
     }
 
-    transformAndQueue( LOG, event, QueuedEvents.FromCloudWatchApiUsageEvent );
+    transformAndQueue( LOG, event, QueuedEvents.FromS3AccumuatedCountsEvent );
   }
 }

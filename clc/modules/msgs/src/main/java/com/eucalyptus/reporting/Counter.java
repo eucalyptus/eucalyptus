@@ -316,9 +316,9 @@ public class Counter<T,C extends Counter.Counted> {
       this.counts = ImmutableMap.copyOf( counts );
     }
 
-    CounterPeriodSnapshot<C> subtractMatching( final List<CounterPeriodSnapshot<C>> oldSnapshosts ) {
+    CounterPeriodSnapshot<C> subtractMatching( final List<CounterPeriodSnapshot<C>> oldSnapshots ) {
       final Optional<CounterPeriodSnapshot<C>> matching =
-          oldSnapshosts.stream( ).filter( s -> s.key.equals( key ) ).findFirst( );
+          oldSnapshots.stream( ).filter( s -> s.key.equals( key ) ).findFirst( );
       if ( matching.isPresent( ) ) {
         final CounterPeriodSnapshot<C> oldSnapshot = matching.get( );
         return new CounterPeriodSnapshot<>( key, counts.entrySet( ).stream( ).map( entry -> {
