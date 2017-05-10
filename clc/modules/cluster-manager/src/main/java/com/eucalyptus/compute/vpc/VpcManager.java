@@ -973,7 +973,7 @@ public class VpcManager {
           NetworkAcl networkAcl = null;
           if ( createDefault ) {
             final UserPrincipal user = Accounts.lookupPrincipalByAccountNumber( request.getCidrBlock( ) );
-            vpcCidr = Vpcs.DEFAULT_VPC_CIDR;
+            vpcCidr = VpcConfiguration.getDefaultVpcCidr( );
             vpcAccountFullName = AccountFullName.getInstance( user.getAccountNumber( ) );
             vpcOwnerFullName = UserFullName.getInstance( user );
 
@@ -1057,7 +1057,7 @@ public class VpcManager {
               }
             }
             final List<String> subnetCidrs = Lists.newArrayList( Iterables.transform(
-                Cidr.parseUnsafe( ).apply( Vpcs.DEFAULT_VPC_CIDR ).split( 16 ),
+                Cidr.parseUnsafe( ).apply( vpcCidr ).split( 16 ),
                 Functions.toStringFunction( ) ) );
             subnetCidrs.removeAll( cidrsInUse );
             for ( final String zone : zonesWithoutSubnets ) {

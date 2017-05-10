@@ -19,8 +19,15 @@
  ************************************************************************/
 package com.eucalyptus.compute.vpc;
 
+import com.eucalyptus.compute.common.internal.vpc.Vpcs;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.ConfigurablePropertyException;
+import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.util.Cidr;
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.Range;
 
 /**
  *
@@ -58,6 +65,9 @@ public class VpcConfiguration {
   @ConfigurableField( initial = "true", description = "Enable default VPC." )
   public static volatile boolean defaultVpc = true;
 
+  @ConfigurableField( initial = Vpcs.DEFAULT_VPC_CIDR, description = "CIDR to use when creating default VPCs.", changeListener = DefaultVpcCidrChangeListener.class )
+  public static volatile String defaultVpcCidr = Vpcs.DEFAULT_VPC_CIDR;
+
   public static int getSubnetsPerVpc() {
     return subnetsPerVpc;
   }
@@ -93,4 +103,22 @@ public class VpcConfiguration {
   public static int getNatGatewaysPerAvailabilityZone() { return natGatewaysPerAvailabilityZone; }
 
   public static boolean getDefaultVpc() { return defaultVpc; }
+
+  public static String getDefaultVpcCidr() { return MoreObjects.firstNonNull( defaultVpcCidr, Vpcs.DEFAULT_VPC_CIDR ); }
+
+  public static class DefaultVpcCidrChangeListener implements PropertyChangeListener<String> {
+
+    @Override
+    public void fireChange( final ConfigurableProperty t, final String newValue ) throws ConfigurablePropertyException {
+      if ( newValue != null ) {
+        final Cidr cidr = Cidr.parse( ).apply( newValue ).orNull( );
+        if ( cidr == null ) {
+          throw new ConfigurablePropertyException( "Invalid cidr: " + newValue );
+        }
+        if ( !Range.closed( 16, 24 ).contains( cidr.getPrefix( ) ) ) {
+          throw new ConfigurablePropertyException( "Invalid cidr range (/16-24): " + newValue );
+        }
+      }
+    }
+  }
 }
