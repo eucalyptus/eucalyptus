@@ -951,7 +951,7 @@ public class VpcManager {
     final Optional<Cidr> requestedCidr;
     if ( !createDefault ) {
       requestedCidr = Cidr.parseLax( ).apply( request.getCidrBlock( ) );
-      if ( requestedCidr.transform( Vpcs::isReservedVpcCidr ).or( true ) ||
+      if ( requestedCidr.transform( Vpcs.isReservedVpcCidr( VpcConfiguration.getReservedCidrs( ) ) ).or( true ) ||
           requestedCidr
               .transform( Cidr.prefix( ) )
               .transform( Functions.forPredicate( Predicates.not( Range.closed( 16, 28 ) ) ) ).or( true )

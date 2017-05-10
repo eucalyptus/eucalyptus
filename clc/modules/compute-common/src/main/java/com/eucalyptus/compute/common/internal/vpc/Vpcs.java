@@ -37,6 +37,7 @@ import com.eucalyptus.compute.common.internal.tags.Tag;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.Cidr;
+import com.eucalyptus.util.CompatFunction;
 import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMapper;
@@ -44,6 +45,7 @@ import com.google.common.base.Function;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
+import javaslang.collection.Stream;
 
 /**
  *
@@ -81,8 +83,12 @@ public interface Vpcs extends Lister<Vpc> {
                        String key,
                        Callback<Vpc> updateCallback ) throws VpcMetadataException;
 
-  static boolean isReservedVpcCidr( @Nonnull final Cidr cidr ) {
-    return RESERVED_VPC_CIDRS.stream( ).anyMatch( reservedCidr -> reservedCidr.contains( cidr ) );
+  static CompatFunction<Cidr,Boolean> isReservedVpcCidr( @Nonnull List<Cidr> additionalCidrs ) {
+    return cidr ->
+        Stream.ofAll( RESERVED_VPC_CIDRS )
+            .appendAll( additionalCidrs )
+            .find( reservedCidr -> reservedCidr.contains( cidr ) )
+            .isDefined( );
   }
 
   @TypeMapper

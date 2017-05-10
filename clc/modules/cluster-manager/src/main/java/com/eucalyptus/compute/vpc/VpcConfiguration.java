@@ -19,6 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.compute.vpc;
 
+import java.util.List;
+import java.util.function.Function;
 import com.eucalyptus.compute.common.internal.vpc.Vpcs;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -26,7 +28,14 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.util.Cidr;
+import com.eucalyptus.util.FUtils;
+import com.google.common.base.CharMatcher;
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Optional;
+import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
 
 /**
@@ -65,8 +74,25 @@ public class VpcConfiguration {
   @ConfigurableField( initial = "true", description = "Enable default VPC." )
   public static volatile boolean defaultVpc = true;
 
-  @ConfigurableField( initial = Vpcs.DEFAULT_VPC_CIDR, description = "CIDR to use when creating default VPCs.", changeListener = DefaultVpcCidrChangeListener.class )
+  @ConfigurableField( initial = Vpcs.DEFAULT_VPC_CIDR, description = "CIDR to use when creating default VPCs.",
+      changeListener = DefaultVpcCidrChangeListener.class )
   public static volatile String defaultVpcCidr = Vpcs.DEFAULT_VPC_CIDR;
+
+  @ConfigurableField( description = "Comma separated list of reserved CIDRs.",
+      changeListener = CidrListChangeListener.class )
+  public static volatile String reservedCidrs = "";
+
+  private static final Splitter LIST_SPLITTER =
+      Splitter.on( CharMatcher.anyOf(", ;:") ).trimResults( ).omitEmptyStrings( );
+
+  private static final Function<String,List<Cidr>> RESERVED_CIDR_TRANSFORM =
+      FUtils.memoizeLast( VpcConfiguration::toCidrs );
+
+  private static List<Cidr> toCidrs( final String cidrValues ) {
+    //noinspection StaticPseudoFunctionalStyleMethod
+    return Lists.newArrayList( Optional.presentInstances(
+        Iterables.transform( LIST_SPLITTER.split( cidrValues ), Cidr.parse( ) ) ) );
+  }
 
   public static int getSubnetsPerVpc() {
     return subnetsPerVpc;
@@ -106,6 +132,8 @@ public class VpcConfiguration {
 
   public static String getDefaultVpcCidr() { return MoreObjects.firstNonNull( defaultVpcCidr, Vpcs.DEFAULT_VPC_CIDR ); }
 
+  public static List<Cidr> getReservedCidrs() { return RESERVED_CIDR_TRANSFORM.apply( reservedCidrs ); }
+
   public static class DefaultVpcCidrChangeListener implements PropertyChangeListener<String> {
 
     @Override
@@ -117,6 +145,19 @@ public class VpcConfiguration {
         }
         if ( !Range.closed( 16, 24 ).contains( cidr.getPrefix( ) ) ) {
           throw new ConfigurablePropertyException( "Invalid cidr range (/16-24): " + newValue );
+        }
+      }
+    }
+  }
+
+  public static class CidrListChangeListener implements PropertyChangeListener<String> {
+    @Override
+    public void fireChange( final ConfigurableProperty t, final String newValue ) throws ConfigurablePropertyException {
+      if ( !Strings.isNullOrEmpty( newValue ) ) {
+        for ( final String cidr : LIST_SPLITTER.split( newValue ) ) {
+          if ( !Cidr.parse( ).apply( cidr ).isPresent( ) ) {
+            throw new ConfigurablePropertyException( "Invalid cidr: " + cidr );
+          }
         }
       }
     }
