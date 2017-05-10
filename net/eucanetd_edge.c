@@ -2255,6 +2255,29 @@ int cmp_edge_config(edge_config *a, edge_config *b, int *my_instances_diff,
         *sgs_diff = 1;
     }
 
+    // Compare referenced security groups
+    //  - We assume the ref_sgs are sorted identically
+    //  - eucanetd only supports one level of indirection, more would (maybe?) require loop detection 
+    //      - would need to be implemented in gni_get_referenced_secgroups
+    if (abmatch) { 
+        if(a->ref_sgs && b->ref_sgs) {
+            if (a->max_ref_sgs != b->max_ref_sgs) {
+                abmatch = 0;
+            } else {
+                for (int i = 0; i < a->max_ref_sgs && abmatch; i++) {
+                    if (cmp_gni_secgroup(a->ref_sgs[i], b->ref_sgs[i], NULL, NULL, NULL)) {
+                        abmatch = 0;
+                    }
+                }
+            }
+        } else if ( (a->ref_sgs && !(b->ref_sgs)) || (!(a->ref_sgs) && b->ref_sgs) ) {
+            abmatch = 0;
+        }
+    }
+    if (!abmatch && sgs_diff) {
+        *sgs_diff = 1;
+    }
+
     // Compare all instances
     if (abmatch && a->gni && b->gni) {
         if (a->gni->max_instances != b->gni->max_instances) {
