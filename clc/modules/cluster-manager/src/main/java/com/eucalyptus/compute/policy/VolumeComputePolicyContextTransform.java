@@ -48,6 +48,12 @@ public class VolumeComputePolicyContextTransform implements Function<Volume,Comp
 
       @Nullable
       @Override
+      public Boolean getVolumeEncrypted( ) {
+        return false;
+      }
+
+      @Nullable
+      @Override
       public Integer getVolumeIops( ) {
         return input.getIops( );
       }

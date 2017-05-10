@@ -20,6 +20,12 @@
 package com.eucalyptus.compute.policy;
 
 import static com.eucalyptus.auth.policy.PolicySpec.*;
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.EC2_ATTACHVOLUME;
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.EC2_CREATEVOLUME;
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.EC2_DELETEVOLUME;
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.EC2_DETACHVOLUME;
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.EC2_RUNINSTANCES;
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.VENDOR_EC2;
 import java.util.Set;
 import com.google.common.collect.ImmutableSet;
 
@@ -27,10 +33,13 @@ import com.google.common.collect.ImmutableSet;
  *
  */
 public abstract class VolumeComputeKey implements ComputeKey {
-  private static final Set<String> actions = ImmutableSet.<String>builder()
+  private static final Set<String> actions = ImmutableSet.<String>builder( )
       .add( qualifiedName( VENDOR_EC2, EC2_ATTACHVOLUME ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_CREATETAGS ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_CREATEVOLUME ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETEVOLUME ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DETACHVOLUME ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_RUNINSTANCES ) )
       .build( );
 
   @Override

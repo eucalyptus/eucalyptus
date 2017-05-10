@@ -320,7 +320,12 @@ public class AdmissionControl {
               maxAmount==1 && allocInfo.getInstanceIds( ).size( ) == 1 ) {
             RestrictedTypes.reallocateUnitlessResource( CloudMetadata.VmInstanceMetadata.class, allocator );
           } else {
-            RestrictedTypes.allocateUnitlessResources( CloudMetadata.VmInstanceMetadata.class, tryAmount, maxAmount, allocator );
+            RestrictedTypes.allocateUnitlessResources(
+                CloudMetadata.VmInstanceMetadata.class,
+                tryAmount,
+                maxAmount,
+                allocator,
+                allocInfo.exampleInstanceResource( maxAmount==1 ) );
           }
           return allocInfo.getAllocationTokens( );
         } finally {
@@ -384,13 +389,7 @@ public class AdmissionControl {
           	  continue;
             }
 
-            if ( !RestrictedTypes.filterPrivileged( ).apply( VmInstance.exampleResource(
-                maxAmount==1 && allocInfo.getInstanceIds( ).size( )==1 ? allocInfo.getInstanceId( 0 ) : "",
-                allocInfo.getOwnerFullName( ),
-                allocInfo.getPartition( ).getName( ),
-                allocInfo.getIamInstanceProfileArn( ),
-                allocInfo.getVmType( ).getName( ),
-                allocInfo.getBootSet().isBlockStorage( ) ) ) ) {
+            if ( !RestrictedTypes.filterPrivileged( ).apply( allocInfo.exampleInstanceResource( maxAmount==1 )) ) {
               throw new IllegalMetadataAccessException( "Instance resource denied." );
             }
 

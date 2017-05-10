@@ -228,7 +228,10 @@ public class VolumeManager {
             }
           }
         };
-        Volume newVol = RestrictedTypes.allocateMeasurableResource( newSize.longValue( ), allocator );
+        Volume newVol = RestrictedTypes.allocateMeasurableResource(
+            newSize.longValue( ),
+            allocator,
+            Volume.exampleResource( owner, snapId, partition, newSize ) );
         CreateVolumeResponseType reply = request.getReply( );
         reply.setVolume( newVol.morph( new com.eucalyptus.compute.common.Volume( ) ) );
         Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( Volume.class ).getResourceTagMap(

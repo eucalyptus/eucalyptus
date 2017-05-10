@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,15 +12,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
  ************************************************************************/
 package com.eucalyptus.compute.policy;
 
 import static com.eucalyptus.auth.policy.PolicySpec.qualifiedName;
-import static com.eucalyptus.compute.common.policy.ComputePolicySpec.*;
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.EC2_RUNINSTANCES;
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.VENDOR_EC2;
 import java.util.Set;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
@@ -32,25 +29,18 @@ import net.sf.json.JSONException;
 /**
  *
  */
-@PolicyKey( TenancyKey.KEY_NAME )
-public class TenancyKey extends InstanceComputeKey {
-  static final String KEY_NAME = "ec2:tenancy";
+@PolicyKey( PlacementGroupStrategyKey.KEY_NAME )
+public class PlacementGroupStrategyKey implements ComputeKey {
+  static final String KEY_NAME = "ec2:placementgroupstrategy";
 
-  private static final Set<String> actions = ImmutableSet.<String>builder( )
-      .add( qualifiedName( VENDOR_EC2, EC2_ACCEPTVPCPEERINGCONNECTION ) )
-      .add( qualifiedName( VENDOR_EC2, EC2_CREATEVPCPEERINGCONNECTION ) )
-      .add( qualifiedName( VENDOR_EC2, EC2_DISABLEVPCCLASSICLINK ) )
-      .add( qualifiedName( VENDOR_EC2, EC2_ENABLEVPCCLASSICLINK ) )
+  private static final Set<String> actions = ImmutableSet.<String>builder()
+      .add( qualifiedName( VENDOR_EC2, EC2_RUNINSTANCES ) )
       .build( );
 
-  @Override
-  public boolean canApply( final String action ) {
-    return super.canApply( action ) || actions.contains( action );
-  }
 
   @Override
   public String value( ) throws AuthException {
-    return ComputePolicyContext.getTenancy( );
+    return null;
   }
 
   @Override
@@ -58,5 +48,10 @@ public class TenancyKey extends InstanceComputeKey {
     if ( !StringConditionOp.class.isAssignableFrom( conditionClass ) ) {
       throw new JSONException( KEY_NAME + " is not allowed in condition " + conditionClass.getName( ) + ". String conditions are required." );
     }
+  }
+
+  @Override
+  public boolean canApply( final String action ) {
+    return actions.contains( action );
   }
 }

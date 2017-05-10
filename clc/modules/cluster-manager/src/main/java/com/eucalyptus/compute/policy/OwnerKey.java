@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.compute.policy;
 
+import static com.eucalyptus.auth.policy.PolicySpec.EC2_CREATETAGS;
 import static com.eucalyptus.auth.policy.PolicySpec.EC2_RUNINSTANCES;
 import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_EC2;
 import static com.eucalyptus.auth.policy.PolicySpec.qualifiedName;
@@ -37,6 +38,7 @@ import net.sf.json.JSONException;
 public class OwnerKey implements ComputeKey {
   static final String KEY_NAME = "ec2:owner";
   private static final Set<String> actions = ImmutableSet.<String>builder()
+      .add( qualifiedName( VENDOR_EC2, EC2_CREATETAGS ) )
       .add( qualifiedName( VENDOR_EC2, EC2_RUNINSTANCES ) )
       .build( );
 

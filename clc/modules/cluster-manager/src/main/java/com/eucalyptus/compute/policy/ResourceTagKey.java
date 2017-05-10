@@ -15,7 +15,8 @@
  ************************************************************************/
 package com.eucalyptus.compute.policy;
 
-import static com.eucalyptus.auth.policy.PolicySpec.*;
+import static com.eucalyptus.auth.policy.PolicySpec.qualifiedName;
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.*;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -35,9 +36,14 @@ import net.sf.json.JSONException;
 public class ResourceTagKey implements ComputeKey {
 
   private static final Set<String> actions = ImmutableSet.<String>builder( )
+      .add( qualifiedName( VENDOR_EC2, EC2_ACCEPTVPCPEERINGCONNECTION ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_ASSOCIATEIAMINSTANCEPROFILE ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_ATTACHCLASSICLINKVPC ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_ATTACHVOLUME ) )
       .add( qualifiedName( VENDOR_EC2, EC2_AUTHORIZESECURITYGROUPEGRESS ) )
       .add( qualifiedName( VENDOR_EC2, EC2_AUTHORIZESECURITYGROUPINGRESS ) )
-      .add( qualifiedName( VENDOR_EC2, EC2_ATTACHVOLUME ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_CREATETAGS ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_CREATEVPCPEERINGCONNECTION ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETEDHCPOPTIONS ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETEINTERNETGATEWAY ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETENETWORKACL ) )
@@ -45,9 +51,18 @@ public class ResourceTagKey implements ComputeKey {
       .add( qualifiedName( VENDOR_EC2, EC2_DELETEROUTE ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETEROUTETABLE ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETESECURITYGROUP ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_DELETETAGS ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETEVOLUME ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_DELETEVPCPEERINGCONNECTION ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_DETACHCLASSICLINKVPC ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DETACHVOLUME ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_DISABLEVPCCLASSICLINK ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_DISASSOCIATEIAMINSTANCEPROFILE ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_ENABLEVPCCLASSICLINK ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_GETCONSOLESCREENSHOT ) )
       .add( qualifiedName( VENDOR_EC2, EC2_REBOOTINSTANCES ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_REJECTVPCPEERINGCONNECTION ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_REPLACEIAMINSTANCEPROFILEASSOCIATION ) )
       .add( qualifiedName( VENDOR_EC2, EC2_REVOKESECURITYGROUPEGRESS ) )
       .add( qualifiedName( VENDOR_EC2, EC2_REVOKESECURITYGROUPINGRESS ) )
       .add( qualifiedName( VENDOR_EC2, EC2_RUNINSTANCES ) )

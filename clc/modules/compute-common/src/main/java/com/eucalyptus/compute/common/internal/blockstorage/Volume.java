@@ -84,6 +84,7 @@ import com.eucalyptus.compute.common.CloudMetadata.VolumeMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.auth.principal.FullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
@@ -153,7 +154,18 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
     volume.setNaturalId( naturalId );
     return volume;
   }
-  
+
+  public static Volume exampleResource( final OwnerFullName owner,
+                                        final String parentSnapshot,
+                                        final String partition,
+                                        final int size ) {
+    return new Volume( owner, "" ) {
+      @Override public String getParentSnapshot( ) { return parentSnapshot; }
+      @Override public String getPartition( ) { return partition; }
+      @Override public Integer getSize( ) { return size; }
+    };
+  }
+
   public String mapState( ) {
     switch ( this.getState( ) ) {
       case GENERATING:

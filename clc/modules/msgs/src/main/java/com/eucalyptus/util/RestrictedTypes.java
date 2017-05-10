@@ -303,7 +303,7 @@ public class RestrictedTypes {
           final Integer quantity,
           final Supplier<T> allocator
   ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
-      return doAllocate( false, rscType, quantity, new Supplier<List<T>>() {
+      return doAllocate( false, rscType, quantity, null, new Supplier<List<T>>() {
           @Override
           public List<T> get( ) {
               return runAllocator( quantity, allocator, ( Predicate ) Predicates.alwaysTrue( ) );
@@ -320,6 +320,7 @@ public class RestrictedTypes {
    * @param min minimum quantity to be allocated
    * @param max maximum quantity to be allocated
    * @param allocator Supplier which performs allocation of a single unit.
+   * @param example Example resource
    * @return List<T> of size {@code quantity} of new allocations of {@code <T>}
    */
   @SuppressWarnings( { "cast", "unchecked" } )
@@ -327,9 +328,10 @@ public class RestrictedTypes {
       final Class<?> rscType,
       final int min,
       final int max,
-      final BatchAllocator<T> allocator
+      final BatchAllocator<T> allocator,
+      final RestrictedType example
   ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
-    return doAllocate( false, rscType, max, new Supplier<List<T>>( ){
+    return doAllocate( false, rscType, max, example, new Supplier<List<T>>( ){
       @Override
       public List<T> get() {
         return allocator.allocate( min, max );
@@ -353,7 +355,7 @@ public class RestrictedTypes {
       final Class<?> rscType,
       final BatchAllocator<T> allocator
   ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
-    return doAllocate( true, rscType, 1, new Supplier<List<T>>( ){
+    return doAllocate( true, rscType, 1, null, new Supplier<List<T>>( ){
       @Override
       public List<T> get() {
         return allocator.allocate( 1, 1 );
@@ -361,7 +363,7 @@ public class RestrictedTypes {
     });
   }
 
-  private static <A> A doAllocate( final boolean skipAuth, final Class<?> rscType, final Integer quantity, final Supplier<A> allocator ) throws AuthException, IllegalContextAccessException {
+  private static <A> A doAllocate( final boolean skipAuth, final Class<?> rscType, final Integer quantity, final Object example, final Supplier<A> allocator ) throws AuthException, IllegalContextAccessException {
     String identifier = "";
     Context ctx = Contexts.lookup( );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
@@ -369,8 +371,12 @@ public class RestrictedTypes {
       PolicyVendor vendor = ats.get( PolicyVendor.class );
       PolicyResourceType type = ats.get( PolicyResourceType.class );
       String action = getIamActionByMessageType();
+      String qualifiedAction = PolicySpec.qualifiedName( vendor.value( ), action );
       AuthContextSupplier userContext = ctx.getAuthContext( );
-      try ( final PolicyResourceContext context = PolicyResourceContext.of( ctx.getAccountNumber( ), rscType, PolicySpec.qualifiedName( vendor.value( ), action ) ) ) {
+      try ( final PolicyResourceContext context = example == null ?
+          PolicyResourceContext.of( ctx.getAccountNumber( ), rscType, qualifiedAction ) :
+          PolicyResourceContext.of( example, qualifiedAction )
+      ) {
         if ( !skipAuth && !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, userContext )){
           throw new AuthException( "Not authorized to create: " + type.value( ) + " by user: " + ctx.getUserFullName( ) );
         }
@@ -452,10 +458,28 @@ public class RestrictedTypes {
       final Long amount,
       final Function<Long, T> allocator
   ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+    return allocateMeasurableResource( amount, allocator, null );
+  }
+
+  /**
+   * Allocation of a type which requires dimensional parameters (e.g., size of a volume) where
+   * {@code amount} indicates the desired value for the measured dimensional parameter.
+   *
+   * @param <T> type to be allocated
+   * @param amount amount to be allocated
+   * @param allocator Supplier which performs allocation of a single unit.
+   * @param example Example resource
+   * @return List<T> of size {@code quantity} of new allocations of {@code <T>}
+   */
+  public static <T extends LimitedType> T allocateMeasurableResource(
+      final Long amount,
+      final Function<Long, T> allocator,
+      final T example
+  ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     Context ctx = Contexts.lookup( );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
       String action = getIamActionByMessageType( ctx.getRequest( ) );
-      return allocateMeasurableResource( ctx.getAuthContext( ), ctx.getUserFullName( ), action, amount, allocator );
+      return allocateMeasurableResource( ctx.getAuthContext( ), ctx.getUserFullName( ), action, amount, allocator, example );
     } else {
       return allocator.apply( amount );
     }
@@ -471,6 +495,7 @@ public class RestrictedTypes {
    * @param action The unqualified API action related to the allocation
    * @param amount amount to be allocated
    * @param allocator Supplier which performs allocation of a single unit.
+   * @param example Example resource
    * @return List<T> of size {@code quantity} of new allocations of {@code <T>}
    */
   public static <T extends LimitedType> T allocateMeasurableResource(
@@ -478,7 +503,8 @@ public class RestrictedTypes {
       final UserFullName userDescription,
       final String action,
       final Long amount,
-      final Function<Long, T> allocator
+      final Function<Long, T> allocator,
+      final T example
   ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     String identifier = "";
     final AuthContext authContext = userContext.get( );
@@ -487,7 +513,11 @@ public class RestrictedTypes {
       Ats ats = findPolicyAnnotations( rscType );
       PolicyVendor vendor = ats.get( PolicyVendor.class );
       PolicyResourceType type = ats.get( PolicyResourceType.class );
-      try ( final PolicyResourceContext context = PolicyResourceContext.of( authContext.getAccountNumber( ), rscType, PolicySpec.qualifiedName( vendor.value( ), action ) ) ) {
+      final String qualifiedAction = PolicySpec.qualifiedName( vendor.value( ), action );
+      try ( final PolicyResourceContext context = example == null ?
+          PolicyResourceContext.of( authContext.getAccountNumber( ), rscType, qualifiedAction ) :
+          PolicyResourceContext.of( example, qualifiedAction )
+      ) {
         if ( RestrictedType.class.isAssignableFrom( rscType ) && !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, userContext ) ) {
           throw new AuthException( "Not authorized to create: " + type.value( ) + " by user: " + userDescription );
         } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, userContext, amount ) ) {
