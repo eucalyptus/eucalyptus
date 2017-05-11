@@ -23,6 +23,8 @@ import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceT
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType.Disk;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType.Instance;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType.Memory;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
@@ -37,10 +39,15 @@ import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
 import com.eucalyptus.compute.common.internal.vmtypes.VmType;
+import com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Availability;
+import com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType;
+import com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Type;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Function;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 
 /**
  *
@@ -53,14 +60,14 @@ public class VmInstanceAvailabilityEventListener implements EventListener<ClockT
     private long total;
     private long available;
     private final Function<VmType,Integer> valueExtractor;
-    private final List<ResourceAvailabilityEvent.Availability> availabilities = Lists.newArrayList();
+    private final List<Availability> availabilities = Lists.newArrayList();
 
     private AvailabilityAccumulator( final Function<VmType,Integer> valueExtractor ) {
       this.valueExtractor = valueExtractor;
     }
 
     private void rollUp( final Iterable<ResourceAvailabilityEvent.Tag> tags ) {
-      availabilities.add( new ResourceAvailabilityEvent.Availability( total, available, tags ) );
+      availabilities.add( new Availability( total, available, tags ) );
       total = 0;
       available = 0;
     }
@@ -74,9 +81,9 @@ public class VmInstanceAvailabilityEventListener implements EventListener<ClockT
   public void fireEvent( final ClockTick event ) {
     if ( Bootstrap.isOperational() && Hosts.isCoordinator() ) {
 
-      final List<ResourceAvailabilityEvent> resourceAvailabilityEvents = Lists.newArrayList();
-      final Map<ResourceAvailabilityEvent.ResourceType,AvailabilityAccumulator> availabilities = Maps.newEnumMap( ResourceAvailabilityEvent.ResourceType.class );
-      final Iterable<VmType> vmTypes = Lists.newArrayList( VmTypes.list());
+      final ArrayListMultimap<ResourceType,Availability> availabilityByType = ArrayListMultimap.create( );
+      final Map<ResourceType,AvailabilityAccumulator> availabilities = Maps.newEnumMap( ResourceType.class );
+      final Iterable<VmType> vmTypes = Lists.newArrayList( VmTypes.list( ) );
       for ( final Cluster cluster : Clusters.list( ) ) {
         availabilities.put( Core, new AvailabilityAccumulator( VmType.SizeProperties.Cpu ) );
         availabilities.put( Disk, new AvailabilityAccumulator( VmType.SizeProperties.Disk ) );
@@ -85,11 +92,10 @@ public class VmInstanceAvailabilityEventListener implements EventListener<ClockT
         for ( final VmType vmType : vmTypes ) {
           final ResourceState.VmTypeAvailability va = cluster.getNodeState().getAvailability( vmType );
 
-          resourceAvailabilityEvents.add( new ResourceAvailabilityEvent( Instance, new ResourceAvailabilityEvent.Availability( va.getMax(), va.getAvailable(), Lists.<ResourceAvailabilityEvent.Tag>newArrayList(
-              new ResourceAvailabilityEvent.Dimension( "availabilityZone", cluster.getPartition() ),
-              new ResourceAvailabilityEvent.Dimension( "cluster", cluster.getName() ),
-              new ResourceAvailabilityEvent.Type( "vm-type", vmType.getName() )
-              ) ) ) );
+          availabilityByType.put( Instance, new Availability( va.getMax(), va.getAvailable(), Lists.<ResourceAvailabilityEvent.Tag>newArrayList(
+              new ResourceAvailabilityEvent.Dimension( "AvailabilityZone", cluster.getPartition() ),
+              new Type( "vm-type", vmType.getName() )
+              ) ) );
 
           for ( final AvailabilityAccumulator availability : availabilities.values() ) {
             availability.total = Math.max( availability.total, va.getMax() * availability.valueExtractor.apply(vmType) );
@@ -99,18 +105,21 @@ public class VmInstanceAvailabilityEventListener implements EventListener<ClockT
 
         for ( final AvailabilityAccumulator availability : availabilities.values() ) {
           availability.rollUp(  Lists.<ResourceAvailabilityEvent.Tag>newArrayList(
-              new ResourceAvailabilityEvent.Dimension( "availabilityZone", cluster.getPartition() ),
-              new ResourceAvailabilityEvent.Dimension( "cluster", cluster.getName() )
+              new ResourceAvailabilityEvent.Dimension( "AvailabilityZone", cluster.getPartition() )
           ) );
         }
       }
 
-      for ( final Map.Entry<ResourceAvailabilityEvent.ResourceType,AvailabilityAccumulator> entry : availabilities.entrySet() )  {
-        resourceAvailabilityEvents.add( new ResourceAvailabilityEvent( entry.getKey(), entry.getValue().availabilities ) );
+      for ( final Map.Entry<ResourceType,AvailabilityAccumulator> entry : availabilities.entrySet() )  {
+        for ( final Availability availability : entry.getValue().availabilities ) {
+          availabilityByType.put( entry.getKey( ), availability );
+        }
       }
 
-      for ( final ResourceAvailabilityEvent resourceAvailabilityEvent : resourceAvailabilityEvents  ) try {
-        ListenerRegistry.getInstance().fireEvent( resourceAvailabilityEvent );
+      for ( final Map.Entry<ResourceType,Collection<Availability>> resourceEntry :
+          availabilityByType.asMap( ).entrySet( ) ) try {
+        ListenerRegistry.getInstance().fireEvent(
+            new ResourceAvailabilityEvent( resourceEntry.getKey( ), resourceEntry.getValue( ) ) );
       } catch ( Exception ex ) {
         logger.error( ex, ex );
       }

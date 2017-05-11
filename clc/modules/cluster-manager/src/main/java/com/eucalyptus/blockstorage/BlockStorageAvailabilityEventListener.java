@@ -67,7 +67,7 @@ public class BlockStorageAvailabilityEventListener implements EventListener<Cloc
         }
 
         resourceAvailability.add( new Availability( total, Math.max( total - StorageUtil.getBlockStorageTotalSize(partition), 0), Lists.<Tag>newArrayList(
-            new ResourceAvailabilityEvent.Dimension( "availabilityZone", partition )
+            new ResourceAvailabilityEvent.Dimension( "AvailabilityZone", partition )
         ) ) );
       }
 

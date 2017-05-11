@@ -43,7 +43,7 @@ import com.google.common.collect.ImmutableSet;
 public class ResourceAvailabilityEvent implements Event {
   private static final long serialVersionUID = 1L;
 
-  public enum ResourceType { Instance, Core, Memory, Disk, Address, StorageWalrus, StorageEBS }
+  public enum ResourceType { Instance, Core, Memory, Disk, Address, StorageObject, StorageEBS }
 
   public static final class Availability implements Serializable {
     private static final long serialVersionUID = 1L;

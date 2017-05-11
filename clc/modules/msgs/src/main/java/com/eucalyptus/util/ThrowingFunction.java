@@ -25,7 +25,7 @@ public interface ThrowingFunction<T,R,E extends Throwable> {
 
   R apply( T t ) throws E;
 
-  static <T,R> Function<T,R> undeclared( ThrowingFunction<T,R,?> function ) {
+  static <T,R> CompatFunction<T,R> undeclared( ThrowingFunction<T,R,?> function ) {
     return function.asUndeclaredFunction( );
   }
 
