@@ -72,3 +72,118 @@ CREATE INDEX IF NOT EXISTS aws_records_by_resource_operation_usage_type_idx
 -- prefix index (to allow LIKE with % in suffix, requires cassandra 3.4 (I think) or later.
 CREATE CUSTOM INDEX IF NOT EXISTS aws_records_by_resource_usage_type_prefix_idx ON eucalyptus_billing.aws_records_by_resource (usage_type) USING 'org.apache.cassandra.index.sasi.SASIIndex';
 CREATE CUSTOM INDEX IF NOT EXISTS aws_records_by_resource_operation_usage_type_prefix_idx ON eucalyptus_billing.aws_records_by_resource (operation_usage_type_concat) USING 'org.apache.cassandra.index.sasi.SASIIndex';
+
+
+-- instance usage data --
+CREATE TABLE IF NOT EXISTS eucalyptus_billing.instance_log (
+  account_id TEXT,
+  instance_id TEXT,
+  instance_type TEXT,
+  platform TEXT,
+  region TEXT,
+  availability_zone TEXT,
+  log_time TIMESTAMP,
+  -- a list of tags in json format  TODO: user defined types?
+  tags_json LIST<TEXT>,
+  natural_id TIMEUUID,
+  PRIMARY KEY((account_id), log_time, natural_id)
+) WITH CLUSTERING ORDER BY (log_time ASC, natural_id ASC);
+
+-- instance usage data --
+CREATE TABLE IF NOT EXISTS eucalyptus_billing.instance_log_by_inst_type (
+  account_id TEXT,
+  instance_id TEXT,
+  instance_type TEXT,
+  platform TEXT,
+  region TEXT,
+  availability_zone TEXT,
+  log_time TIMESTAMP,
+  tags_json LIST<TEXT>,
+  natural_id TIMEUUID,
+  PRIMARY KEY((account_id, instance_type), log_time, natural_id)
+) WITH CLUSTERING ORDER BY (log_time ASC, natural_id ASC);
+
+-- instance usage data --
+CREATE TABLE IF NOT EXISTS eucalyptus_billing.instance_log_by_platform (
+  account_id TEXT,
+  instance_id TEXT,
+  instance_type TEXT,
+  platform TEXT,
+  region TEXT,
+  availability_zone TEXT,
+  log_time TIMESTAMP,
+  tags_json LIST<TEXT>,
+  natural_id TIMEUUID,
+  PRIMARY KEY((account_id, platform), log_time, natural_id)
+) WITH CLUSTERING ORDER BY (log_time ASC, natural_id ASC);
+
+-- instance usage data --
+CREATE TABLE IF NOT EXISTS eucalyptus_billing.instance_log_by_az (
+  account_id TEXT,
+  instance_id TEXT,
+  instance_type TEXT,
+  platform TEXT,
+  region TEXT,
+  availability_zone TEXT,
+  log_time TIMESTAMP,
+  tags_json LIST<TEXT>,
+  natural_id TIMEUUID,
+  PRIMARY KEY((account_id, availability_zone), log_time, natural_id)
+) WITH CLUSTERING ORDER BY (log_time ASC, natural_id ASC);
+
+-- instance usage data --
+CREATE TABLE IF NOT EXISTS eucalyptus_billing.instance_log_by_inst_type_and_platform (
+  account_id TEXT,
+  instance_id TEXT,
+  instance_type TEXT,
+  platform TEXT,
+  region TEXT,
+  availability_zone TEXT,
+  log_time TIMESTAMP,
+  tags_json LIST<TEXT>,
+  natural_id TIMEUUID,
+  PRIMARY KEY((account_id, instance_type, platform), log_time, natural_id)
+) WITH CLUSTERING ORDER BY (log_time ASC, natural_id ASC);
+
+-- instance usage data --
+CREATE TABLE IF NOT EXISTS eucalyptus_billing.instance_log_by_platform_and_az (
+  account_id TEXT,
+  instance_id TEXT,
+  instance_type TEXT,
+  platform TEXT,
+  region TEXT,
+  availability_zone TEXT,
+  log_time TIMESTAMP,
+  tags_json LIST<TEXT>,
+  natural_id TIMEUUID,
+  PRIMARY KEY((account_id, platform, availability_zone), log_time, natural_id)
+) WITH CLUSTERING ORDER BY (log_time ASC, natural_id ASC);
+
+-- instance usage data --
+CREATE TABLE IF NOT EXISTS eucalyptus_billing.instance_log_by_inst_type_and_az (
+  account_id TEXT,
+  instance_id TEXT,
+  instance_type TEXT,
+  platform TEXT,
+  region TEXT,
+  availability_zone TEXT,
+  log_time TIMESTAMP,
+  tags_json LIST<TEXT>,
+  natural_id TIMEUUID,
+  PRIMARY KEY((account_id, instance_type, availability_zone), log_time, natural_id)
+) WITH CLUSTERING ORDER BY (log_time ASC, natural_id ASC);
+
+-- instance usage data --
+CREATE TABLE IF NOT EXISTS eucalyptus_billing.instance_log_by_inst_type_platform_and_az (
+  account_id TEXT,
+  instance_id TEXT,
+  instance_type TEXT,
+  platform TEXT,
+  region TEXT,
+  availability_zone TEXT,
+  log_time TIMESTAMP,
+  tags_json LIST<TEXT>,
+  natural_id TIMEUUID,
+  PRIMARY KEY((account_id, instance_type, platform, availability_zone), log_time, natural_id)
+) WITH CLUSTERING ORDER BY (log_time ASC, natural_id ASC);
+

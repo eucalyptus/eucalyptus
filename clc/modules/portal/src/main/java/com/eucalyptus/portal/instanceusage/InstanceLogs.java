@@ -15,15 +15,29 @@
  ************************************************************************/
 package com.eucalyptus.portal.instanceusage;
 
+import com.datastax.driver.core.BatchStatement;
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
+import com.datastax.driver.core.SimpleStatement;
+import com.datastax.driver.core.Statement;
+import com.datastax.driver.core.utils.UUIDs;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.portal.Ec2ReportsInvalidParameterException;
+import com.eucalyptus.portal.awsusage.CassandraSessionManager;
 import com.eucalyptus.portal.common.model.InstanceUsageFilter;
 import com.eucalyptus.portal.common.model.InstanceUsageFilters;
 import com.eucalyptus.portal.workflow.InstanceLog;
 import com.eucalyptus.portal.workflow.InstanceTag;
+import com.eucalyptus.util.Exceptions;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Criterion;
@@ -37,6 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -46,8 +61,10 @@ public abstract class InstanceLogs {
   private static Logger LOG =
           Logger.getLogger(InstanceLogs.class );
   final static InstanceLogs instance = new InstanceHourRecordsEntity();
+  final static InstanceLogs instanceCassandra = new InstanceHourRecordsCassandra();
+
   public static final InstanceLogs getInstance() {
-    return instance;
+    return ("postgres".equals(CassandraSessionManager.DB_TO_USE) ? instance : instanceCassandra );
   }
   public abstract InstanceLogBuilder newRecord(final String accountNumber);
   public abstract void append(final Collection<InstanceLog> records);
@@ -391,6 +408,356 @@ public abstract class InstanceLogs {
         LOG.error("Failed to query instance log", ex);
         return Lists.newArrayList();
       }
+    }
+  }
+
+  public static class InstanceHourRecordsCassandra extends InstanceLogs {
+    private static Map<Set<QueryPositions>, String> tableByProvidedQueryParameters = ImmutableMap.<Set<QueryPositions>, String>builder()
+      .put(ImmutableSet.of(), "instance_log")
+      .put(ImmutableSet.of(QueryPositions.INSTANCE_TYPE), "instance_log_by_inst_type")
+      .put(ImmutableSet.of(QueryPositions.PLATFORM), "instance_log_by_platform")
+      .put(ImmutableSet.of(QueryPositions.AVAILABILITY_ZONE), "instance_log_by_az")
+      .put(ImmutableSet.of(QueryPositions.INSTANCE_TYPE, QueryPositions.PLATFORM), "instance_log_by_inst_type_and_platform")
+      .put(ImmutableSet.of(QueryPositions.PLATFORM, QueryPositions.AVAILABILITY_ZONE), "instance_log_by_platform_and_az")
+      .put(ImmutableSet.of(QueryPositions.INSTANCE_TYPE, QueryPositions.AVAILABILITY_ZONE), "instance_log_by_inst_type_and_az")
+      .put(ImmutableSet.of(QueryPositions.INSTANCE_TYPE, QueryPositions.PLATFORM, QueryPositions.AVAILABILITY_ZONE), "instance_log_by_inst_type_platform_and_az")
+      .build();
+
+
+    @Override
+    public InstanceLogBuilder newRecord(String accountNumber) {
+      return new InstanceLogBuilder(accountNumber) {
+        @Override
+        protected InstanceLog init() {
+          return new SimpleInstanceLog();
+        }
+
+        @Override
+        public InstanceLogBuilder addTag(final String tagKey, final String tagValue) {
+          if (this.instance.isPresent()) {
+            this.instance.get().addTag(new SimpleInstanceTag(tagKey, tagValue));
+          }
+          return this;
+        }
+      };
+    }
+
+    @Override
+    public void append(Collection<InstanceLog> records) {
+      CassandraSessionManager.doWithSession( session -> {
+        try {
+          for ( InstanceLog record : records ) {
+            UUID naturalId = UUIDs.timeBased();
+            BatchStatement batchStatement = new BatchStatement();
+            List<String> tagsJson = Lists.transform(record.getTags(),
+              (InstanceTag t) -> {
+                ObjectNode objectNode = new ObjectMapper().createObjectNode();
+                objectNode.put("tag_key", t.getKey());
+                objectNode.put("tag_value", t.getValue());
+                return objectNode.toString();
+              }
+            );
+
+            for (String tableName: tableByProvidedQueryParameters.values()) {
+              Statement statement = new SimpleStatement(
+                "INSERT INTO eucalyptus_billing." + tableName + "(account_id, instance_id," +
+                  "instance_type, platform, region, availability_zone, log_time, tags_json, natural_id) VALUES " +
+                  "(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                record.getAccountId(),
+                record.getInstanceId(),
+                record.getInstanceType(),
+                record.getPlatform(),
+                record.getRegion(),
+                record.getAvailabilityZone(),
+                record.getLogTime(),
+                tagsJson,
+                naturalId);
+              batchStatement.add(statement);
+            }
+            session.execute( batchStatement );
+          }
+        } catch ( final Exception ex ) {
+          LOG.error( "Failed to add records", ex );
+        }
+        return null;
+      } );
+    }
+
+    enum QueryPositions {
+      INSTANCE_TYPE("instance_type"),
+      PLATFORM("platform"),
+      AVAILABILITY_ZONE("availability_zone");
+      String fieldName;
+
+      QueryPositions(String fieldName) {
+        this.fieldName = fieldName;
+      }
+
+      public String getFieldName() {
+        return fieldName;
+      }
+    };
+
+    @Override
+    public List<InstanceHourLog> queryHourly(String accountId, Date rangeStart, Date rangeEnd, InstanceUsageFilters filters) throws Ec2ReportsInvalidParameterException {
+      if (accountId == null) throw new IllegalArgumentException("accountId can not be null");
+      return CassandraSessionManager.doWithSession( session -> {
+        try {
+
+          // Note: this is done in the canonical cassandra way.  Tables for each possible query combination (except for tags).
+          // There is no 'OR' in cassandra, so we are forced to do either multiple queries or one large query and filter in memory.
+          // We filter tag results in memory as postgres does, but do explicit queries otherwise.  Whether this approach is the
+          // best approach will need to be determined by scalability testing going forward.
+
+          // In addition, we are using the fact that (A OR B) AND (C OR D) is equivalent to (A AND C) OR (A AND D) OR (B AND C) OR (B AND D)
+
+          List<InstanceLog> results = Lists.newArrayList();
+          List<Set<Optional<String>>> queryParameters = Lists.newArrayList();
+          for (QueryPositions queryPosition: QueryPositions.values()) {
+            queryParameters.add(Sets.newHashSet());
+          }
+
+          if (filters != null && filters.getMember() != null) {
+            final Map<String, List<InstanceUsageFilter>> filtersByType =
+              filters.getMember().stream()
+                .filter(f -> f.getType() != null && f.getKey() != null)
+                .collect(Collectors.groupingBy(InstanceUsageFilter::getType, toList()));
+            for (final String type : filtersByType.keySet()) {
+              for (final InstanceUsageFilter filter : filtersByType.get(type)) {
+                if ("instancetype".equals(type.toLowerCase()) || "instance_type".equals(type.toLowerCase())) {
+                  queryParameters.get(QueryPositions.INSTANCE_TYPE.ordinal()).add(Optional.of(filter.getKey()));
+                } else if ("platform".equals(type.toLowerCase()) || "platforms".equals(type.toLowerCase())) {
+                  queryParameters.get(QueryPositions.PLATFORM.ordinal()).add(Optional.of(filter.getKey()));
+                } else if ("availabilityzone".equals(type.toLowerCase()) || "availability_zone".equals(type.toLowerCase())) {
+                  queryParameters.get(QueryPositions.AVAILABILITY_ZONE.ordinal()).add(Optional.of(filter.getKey()));
+                }
+              }
+            }
+          }
+          // put something in each list, just to allow cartesian products
+          for (QueryPositions queryPosition: QueryPositions.values()) {
+            if (queryParameters.get(queryPosition.ordinal()).isEmpty()) {
+              queryParameters.get(queryPosition.ordinal()).add(Optional.empty());
+            }
+          }
+
+          for (List<Optional<String>> filter: Sets.cartesianProduct(queryParameters)) {
+            Set<QueryPositions> filledPositions = Sets.newHashSet();
+            for (QueryPositions queryPosition : QueryPositions.values()) {
+              if (filter.get(queryPosition.ordinal()).isPresent()) {
+                filledPositions.add(queryPosition);
+              }
+            }
+            String tableName = tableByProvidedQueryParameters.get(filledPositions);
+            List<Object> queryValues = Lists.newArrayList();
+            StringBuilder queryBuilder = new StringBuilder("SELECT account_id, instance_id," +
+              "instance_type, platform, region, availability_zone, log_time, tags_json " +
+              "FROM eucalyptus_billing." + tableName + " WHERE account_id = ?");
+            queryValues.add(accountId);
+
+            if (rangeStart != null) {
+              queryBuilder.append(" AND log_time >= ?");
+              queryValues.add(rangeStart);
+            }
+
+            if (rangeEnd != null) {
+              queryBuilder.append(" AND log_time <= ?");
+              queryValues.add(rangeEnd);
+            }
+
+            for (QueryPositions queryPosition : QueryPositions.values()) {
+              if (filter.get(queryPosition.ordinal()).isPresent()) {
+                queryBuilder.append(" AND " + queryPosition.getFieldName() + " = ?");
+                queryValues.add(filter.get(queryPosition.ordinal()).get());
+              }
+            }
+            Statement statement = new SimpleStatement(queryBuilder.toString(), queryValues.toArray());
+            ResultSet rs = session.execute(statement);
+            for (Row row: rs) {
+              SimpleInstanceLog instanceLog = new SimpleInstanceLog();
+              instanceLog.setAccountId(row.getString("account_id"));
+              instanceLog.setInstanceId(row.getString("instance_id"));
+              instanceLog.setInstanceType(row.getString("instance_type"));
+              instanceLog.setPlatform(row.getString("platform"));
+              instanceLog.setRegion(row.getString("region"));
+              instanceLog.setAvailabilityZone(row.getString("availability_zone"));
+              instanceLog.setLogTime(row.getTimestamp("log_time"));
+              instanceLog.getTags().addAll(Lists.transform(
+                row.getList("tags_json", String.class),
+                (String s) -> {
+                  try {
+                    JsonNode jsonNode = new ObjectMapper().readTree(s);
+                    SimpleInstanceTag instanceTag = new SimpleInstanceTag();
+                    instanceTag.setKey(jsonNode.get("tag_key").asText());
+                    instanceTag.setValue(jsonNode.get("tag_value").asText());
+                    return instanceTag;
+                  } catch (Exception e) {
+                    throw Exceptions.toUndeclared(e);
+                  }
+                }));
+              // there should be no overlap as each query is distinct
+              results.add(instanceLog);
+            }
+          }
+
+          if (filters!= null && filters.getMember()!=null) {
+            // key: tag_key, value: set of tag values
+            final Map<String, Set<String>> tagFilters =
+              filters.getMember().stream()
+                .filter ( f -> f.getType() != null )
+                .filter( f -> "tag".equals(f.getType().toLowerCase()) || "tags".equals(f.getType().toLowerCase()) )
+                .collect( Collectors.groupingBy(
+                  InstanceUsageFilter::getKey, Collectors.mapping(
+                    InstanceUsageFilter::getValue, toSet()
+                  )) );
+            if (!tagFilters.isEmpty()) {
+              results = results.stream()
+                .filter(l -> l.getTags().stream()
+                  .filter(t -> tagFilters.containsKey(t.getKey()) && tagFilters.get(t.getKey()).contains(t.getValue()))
+                  .findAny()
+                  .isPresent()
+                ).collect(Collectors.toList());
+            }
+          }
+          return results.stream()
+            .map( l -> new InstanceHourLogImpl(l, 1))
+            .collect(Collectors.toList());
+        } catch ( final Exception ex) {
+          LOG.error("Failed to query instance log", ex);
+          return Lists.newArrayList();
+        }
+      });
+    }
+  }
+
+  private static class SimpleInstanceLog implements InstanceLog {
+    private String accountId;
+    private String instanceId;
+    private String instanceType;
+    private String platform;
+    private String region;
+    private String availabilityZone;
+    private Date logTime;
+    private List<InstanceTag> tags = Lists.newArrayList();
+
+    public SimpleInstanceLog() {
+    }
+
+    @Override
+    public String getAccountId() {
+      return accountId;
+    }
+
+    @Override
+    public void setAccountId(String accountId) {
+      this.accountId = accountId;
+    }
+
+    @Override
+    public String getInstanceId() {
+      return instanceId;
+    }
+
+    @Override
+    public void setInstanceId(String instanceId) {
+      this.instanceId = instanceId;
+    }
+
+    @Override
+    public String getInstanceType() {
+      return instanceType;
+    }
+
+    @Override
+    public void setInstanceType(String instanceType) {
+      this.instanceType = instanceType;
+    }
+
+    @Override
+    public String getPlatform() {
+      return platform;
+    }
+
+    @Override
+    public void setPlatform(String platform) {
+      this.platform = platform;
+    }
+
+    @Override
+    public String getRegion() {
+      return region;
+    }
+
+    @Override
+    public void setRegion(String region) {
+      this.region = region;
+    }
+
+    @Override
+    public String getAvailabilityZone() {
+      return availabilityZone;
+    }
+
+    @Override
+    public void setAvailabilityZone(String az) {
+      this.availabilityZone = az;
+    }
+
+    @Override
+    public List<InstanceTag> getTags() {
+      return tags;
+    }
+
+    @Override
+    public void addTag(InstanceTag tag) {
+      tags.add(new SimpleInstanceTag(tag));
+    }
+
+    @Override
+    public Date getLogTime() {
+      return logTime;
+    }
+
+    @Override
+    public void setLogTime(Date date) {
+      this.logTime = date;
+    }
+  }
+
+  private static class SimpleInstanceTag implements InstanceTag {
+
+    private String tagKey;
+    private String tagValue;
+
+    public SimpleInstanceTag() {
+    }
+
+    public SimpleInstanceTag(String tagKey, String tagValue) {
+      this.tagKey = tagKey;
+      this.tagValue = tagValue;
+    }
+
+    public SimpleInstanceTag(InstanceTag tag) {
+      this.tagKey = tag.getKey();
+      this.tagValue = tag.getValue();
+    }
+    @Override
+    public String getKey() {
+      return tagKey;
+
+    }
+    @Override
+    public void setKey(String key) {
+      this.tagKey = key;
+    }
+
+    @Override
+    public String getValue() {
+      return tagValue;
+    }
+    @Override
+    public void setValue(String value) {
+      this.tagValue = value;
     }
   }
 }
