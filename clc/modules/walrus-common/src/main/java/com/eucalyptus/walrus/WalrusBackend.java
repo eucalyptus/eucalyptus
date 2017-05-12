@@ -73,4 +73,8 @@ import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 @FaultLogPrefix
 @Description("The legacy Walrus Backend service")
 public class WalrusBackend extends ComponentId {
+  @Override
+  public boolean isImpersonationSupported( ) {
+    return true;
+  }
 }
