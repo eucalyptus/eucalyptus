@@ -17,39 +17,37 @@ package com.eucalyptus.reporting.event;
 
 import com.amazonaws.auth.policy.actions.S3Actions;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-public class S3ApiBytesEvent extends S3EventSupport<S3Actions> {
+public class S3ApiUsageEvent extends S3EventSupport<S3Actions> {
   private static final long serialVersionUID = 1L;
 
-  private final Long bytesTransferred;
-  
-  public static S3ApiBytesEvent with( @Nonnull  final S3Actions action,
-                                    @Nonnull  final String bucketName,
-                                    @Nonnull final Long bytesTransferred,
-                                    @Nonnull  final String accountNumber) {
+  // For API usage events, the "size" inherited from S3EventSupport holds
+  // the number of bytes transferred (for operations that transfer data)
+  public static S3ApiUsageEvent with( 
+      @Nonnull  final S3Actions action,
+      @Nonnull  final String bucketName,
+      @Nonnull  final String accountNumber,
+      @Nullable final Long bytesTransferred) {
 
-    return new S3ApiBytesEvent( action, bucketName, bytesTransferred, accountNumber );
+    return new S3ApiUsageEvent( action, bucketName, accountNumber, bytesTransferred );
   }
 
-  S3ApiBytesEvent( @Nonnull  final S3Actions action,
-                 @Nonnull  final String bucketName,
-                 @Nonnull final Long bytesTransferred,
-                 @Nonnull  final String accountNumber ) {
-    super( action, bucketName, null, null, accountNumber, null );
-    this.bytesTransferred = bytesTransferred;
-  }
-
-  @Nonnull
-  public Long getBytesTransferred() {
-    return bytesTransferred;
+  private S3ApiUsageEvent( 
+      @Nonnull  final S3Actions action,
+      @Nonnull  final String bucketName,
+      @Nonnull  final String accountNumber,
+      @Nullable final Long bytesTransferred) {
+    super( action, bucketName, null, null, accountNumber, bytesTransferred );
   }
 
   @Override
   public String toString() {
-    return "S3ApiBytesEvent [action=" + getAction()
+    return "S3ApiUsageEvent "
+        + "[action=" + getAction()
         + ", bucketName=" + getBucketName()
-        + ", bytesTransferred=" + getBytesTransferred()
-        + ", accountNumber=" + getAccountNumber() + "]";
-
+        + ", accountNumber=" + getAccountNumber()
+        + ", bytesTransferred=" + getSize()
+        + "]";
   }
 }

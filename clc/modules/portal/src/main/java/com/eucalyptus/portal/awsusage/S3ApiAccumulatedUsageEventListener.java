@@ -20,24 +20,28 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.portal.BillingProperties;
-import com.eucalyptus.reporting.event.CloudWatchApiUsageEvent;
+import com.eucalyptus.reporting.event.S3ApiAccumulatedUsageEvent;
 
 /**
  *
  */
-public class S3AccumulatedCountsEventListener extends SensorQueueEventListener<S3AccumulatedCountsEvent> {
-  private static final Logger LOG = Logger.getLogger( S3AccumuatedCountsEventListener.class );
+public class S3ApiAccumulatedUsageEventListener extends SensorQueueEventListener<S3ApiAccumulatedUsageEvent> {
+  private static final Logger LOG = Logger.getLogger( S3ApiAccumulatedUsageEventListener.class );
 
   public static void register( ) {
-    Listeners.register( S3AccumuatedCountsEvent.class, new S3AccumuatedCountsEventListener( ) );
+    Listeners.register( S3ApiAccumulatedUsageEvent.class, new S3ApiAccumulatedUsageEventListener( ) );
   }
 
   @Override
-  public void fireEvent( @Nonnull final S3AccumuatedCountsEventListener event ) {
+  public void fireEvent( @Nonnull final S3ApiAccumulatedUsageEvent event ) {
     if ( !Bootstrap.isOperational( ) || !BillingProperties.ENABLED ) {
       return;
     }
 
-    transformAndQueue( LOG, event, QueuedEvents.FromS3AccumuatedCountsEvent );
+    if (event.getValueType() == S3ApiAccumulatedUsageEvent.ValueType.Counts) {
+      transformAndQueue( LOG, event, QueuedEvents.FromS3ApiAccumulatedCountsEvent );
+    } else if (event.getValueType() == S3ApiAccumulatedUsageEvent.ValueType.Bytes) {
+      transformAndQueue( LOG, event, QueuedEvents.FromS3ApiAccumulatedBytesEvent );
+    }
   }
 }

@@ -32,7 +32,7 @@ public class CloudWatchApiUsageEvent implements Event {
   private final String accountId;
   @Nonnull
   private final String operation;
-  private final int requestCount;
+  private final long requestCount;
   private final long startTime;
   private final long endTime;
 
@@ -40,7 +40,7 @@ public class CloudWatchApiUsageEvent implements Event {
       @Nonnull final String host,
       @Nonnull final String accountId,
       @Nonnull final String operation,
-               final int requestCount,
+               final long requestCount,
                final long startTime,
                final long endTime
   ) {
@@ -56,7 +56,7 @@ public class CloudWatchApiUsageEvent implements Event {
       @Nonnull final String host,
       @Nonnull final String accountId,
       @Nonnull final String operation,
-      final int requestCount,
+      final long requestCount,
       final long startTime,
       final long endTime
   ) {
@@ -78,7 +78,7 @@ public class CloudWatchApiUsageEvent implements Event {
     return operation;
   }
 
-  public int getRequestCount( ) {
+  public long getRequestCount( ) {
     return requestCount;
   }
 

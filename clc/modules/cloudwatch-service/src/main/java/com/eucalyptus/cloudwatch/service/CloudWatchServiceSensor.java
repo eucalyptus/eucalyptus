@@ -15,7 +15,6 @@
  ************************************************************************/
 package com.eucalyptus.cloudwatch.service;
 
-import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -93,7 +92,7 @@ public class CloudWatchServiceSensor extends ServiceAdvice {
             final CounterSnapshot<Counted> diffSnapshot = newSnapshot.since( snapshot );
             diffSnapshot.counts( ).forEach( tuple -> {
               final Counted counted = tuple._1;
-              final Integer count = tuple._2;
+              final Long count = tuple._2;
               CloudWatchApiUsageEvent usageEvent = null;
               if ( count > 0 ) try {
                 usageEvent = CloudWatchApiUsageEvent.of(

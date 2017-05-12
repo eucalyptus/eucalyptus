@@ -57,6 +57,10 @@ public class S3BillingActions {
     private UsageCountTypes(String usageCountType) {
       this.usageCountType = usageCountType;
     }
+    @Override
+    public String toString() {
+      return usageCountType;
+    }
   }
   
   public enum UsageBytesTypes {
@@ -66,6 +70,10 @@ public class S3BillingActions {
     private final String usageBytesType;
     private UsageBytesTypes(String usageBytesType) {
       this.usageBytesType = usageBytesType;
+    }
+    @Override
+    public String toString() {
+      return usageBytesType;
     }
   }
   

@@ -24,8 +24,7 @@ import com.eucalyptus.reporting.event.CloudWatchApiUsageEvent;
 import com.eucalyptus.reporting.event.InstanceUsageEvent;
 import com.eucalyptus.reporting.event.LoadBalancerEvent;
 import com.eucalyptus.reporting.event.S3ObjectEvent;
-import com.eucalyptus.reporting.event.S3ApiCountedEvent;
-import com.eucalyptus.reporting.event.S3ApiBytesEvent;
+import com.eucalyptus.reporting.event.S3ApiAccumulatedUsageEvent;
 import com.eucalyptus.reporting.event.SnapShotEvent;
 import com.eucalyptus.reporting.event.VolumeEvent;
 import com.eucalyptus.resources.client.Ec2Client;
@@ -165,28 +164,29 @@ public class QueuedEvents {
     return q;
   };
 
-  public static Function<S3ApiCountedEvent, QueuedEvent> FromS3ApiCountedEvent = (event) -> {
+  public static Function<S3ApiAccumulatedUsageEvent, QueuedEvent> FromS3ApiAccumulatedCountsEvent = (event) -> {
     final QueuedEvent q = new QueuedEvent();
-    q.setEventType("S3ApiCounted");
+    q.setEventType(S3ApiAccumulatedUsageEvent.ValueType.Counts.toString());
     q.setOperation(S3BillingActions.getBillingOperationName(event.getAction()));
+    // Any = UsageType in the billing report
     q.setAny(S3BillingActions.getBillingUsageCountName(event.getAction()));
     q.setResourceId(String.format("%s", event.getBucketName()));
     q.setAccountId(event.getAccountNumber());
-    q.setUsageValue("1"); // this event is an individual S3 API call
-    q.setTimestamp(new Date(System.currentTimeMillis()));
+    q.setUsageValue(String.valueOf(event.getAccumulatedValue()));
+    q.setTimestamp(new Date(event.getEndTime()));
     return q;
   };
 
-  public static Function<S3ApiBytesEvent, QueuedEvent> FromS3ApiBytesEvent = (event) -> {
+  public static Function<S3ApiAccumulatedUsageEvent, QueuedEvent> FromS3ApiAccumulatedBytesEvent = (event) -> {
     final QueuedEvent q = new QueuedEvent();
-    q.setEventType("S3ApiBytes");
+    q.setEventType(S3ApiAccumulatedUsageEvent.ValueType.Counts.toString());
     q.setOperation(S3BillingActions.getBillingOperationName(event.getAction()));
-    q.setAny(S3BillingActions.getBillingUsageCountName(event.getAction()));
+    // Any = UsageType in the billing report
+    q.setAny(S3BillingActions.getBillingUsageBytesName(event.getAction()));
     q.setResourceId(String.format("%s", event.getBucketName()));
     q.setAccountId(event.getAccountNumber());
-    Long bytes = event.getSize();
-    q.setUsageValue(String.format("%d", bytes == null ? 0 : bytes));
-    q.setTimestamp(new Date(System.currentTimeMillis()));
+    q.setUsageValue(String.valueOf(event.getAccumulatedValue()));
+    q.setTimestamp(new Date(event.getEndTime()));
     return q;
   };
 

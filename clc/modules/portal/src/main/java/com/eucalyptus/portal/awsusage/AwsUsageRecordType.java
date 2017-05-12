@@ -16,8 +16,8 @@
 package com.eucalyptus.portal.awsusage;
 
 import com.eucalyptus.compute.common.RunningInstancesItemType;
-
 import com.eucalyptus.portal.workflow.AwsUsageRecord;
+import com.eucalyptus.reporting.event.S3ApiAccumulatedUsageEvent;
 import com.eucalyptus.resources.client.Ec2Client;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -262,7 +262,7 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
     public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
       // Example:
       // AmazonS3,PutObject,Requests-Tier1,billing-test-bucket-tmp,11/14/16 22:00:00,11/14/16 23:00:00,17
-      return readS3ApiEvents("S3ApiCounted", accountId, events);
+      return readS3ApiEvents(S3ApiAccumulatedUsageEvent.ValueType.Counts.toString(), accountId, events);
     }
   },
   S3_API_BYTES("AmazonS3", "*", "*", AggregateGranularity.HOURLY) {
@@ -270,7 +270,7 @@ public enum AwsUsageRecordType implements AwsUsageRecordTypeReader {
     public List<AwsUsageRecord> read(String accountId, List<QueuedEvent> events) {
       // Example:
       // AmazonS3,PutObject,In-Bytes,billing-test-bucket-tmp,11/14/16 22:00:00,11/14/16 23:00:00,206836
-      return readS3ApiEvents("S3ApiBytes", accountId, events);
+      return readS3ApiEvents(S3ApiAccumulatedUsageEvent.ValueType.Bytes.toString(), accountId, events);
     }
   },
   EC2_EBS_VolumeIORead("AmazonEC2", "EBS:IO-Read", "EBS:VolumeIOUsage", AggregateGranularity.HOURLY) {
