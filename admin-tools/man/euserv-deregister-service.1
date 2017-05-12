@@ -3,10 +3,10 @@
 .SH NAME
 euserv-deregister-service \- De-register an instance of a service
 .SH SYNOPSIS
-euserv\-deregister\-service [\-U URL] [\-\-region USER@REGION] [\-I KEY_ID]
+euserv\-deregister\-service [\-t TYPE] [\-U URL] [\-\-region USER@REGION]
 .TP
-[\-S KEY] [\-\-security\-token TOKEN] [\-\-debug]
-[\-\-debugger] [\-\-version] [\-h]
+[\-I KEY_ID] [\-S KEY] [\-\-security\-token TOKEN]
+[\-\-debug] [\-\-debugger] [\-\-version] [\-h]
 SVCINSTANCE
 .SH DESCRIPTION
 De\-register an instance of a service
@@ -15,6 +15,9 @@ De\-register an instance of a service
 SVCINSTANCE
 name of the service instance to de\-register
 .SS "optional arguments:"
+.TP
+\fB\-t\fR TYPE, \fB\-\-type\fR TYPE
+the registered service instance's type
 .TP
 \fB\-U\fR URL, \fB\-\-url\fR URL
 bootstrap service endpoint URL
