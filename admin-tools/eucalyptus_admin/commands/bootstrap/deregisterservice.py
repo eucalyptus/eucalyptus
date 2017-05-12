@@ -31,4 +31,6 @@ from eucalyptus_admin.commands.bootstrap import BootstrapRequest
 class DeregisterService(BootstrapRequest):
     DESCRIPTION = 'De-register an instance of a service'
     ARGS = [Arg('Name', metavar='SVCINSTANCE',
-                help='name of the service instance to de-register')]
+                help='name of the service instance to de-register'),
+            Arg('-t', '--type', dest='Type',
+                help="the registered service instance's type")]

@@ -71,6 +71,7 @@ import java.util.concurrent.Future;
 
 import com.eucalyptus.component.Topology;
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import org.apache.log4j.Logger;
 
@@ -102,6 +103,13 @@ import com.google.common.collect.Lists;
  */
 public class ServiceRegistrationManager {
   private static Logger LOG = Logger.getLogger( ServiceRegistrationManager.class );
+
+  private static final String TYPE_MAP_PROP = "com.eucalyptus.empyrean.registration.map.";
+
+  private static ComponentId getMappedComponentId( final String type, final boolean require ) {
+    if ( !require && Strings.isNullOrEmpty( type ) ) return null;
+    return ComponentIds.lookup( System.getProperty( TYPE_MAP_PROP + type, type ) );
+  }
 
   @ServiceOperation( hostDispatch = true )
   public enum RegisterService implements Function<RegisterServiceType, RegisterServiceResponseType> {
@@ -144,7 +152,7 @@ public class ServiceRegistrationManager {
         /**
          * Check all the parameters.
          */
-        final ComponentId componentId = ComponentIds.lookup( request.getType( ) );
+        ComponentId componentId = getMappedComponentId( request.getType( ), true );
         ServiceBuilders.lookup( componentId );//NOTE: this is an existence test which can fail w/ an exception.
         checkParam( "Name must not be null: " + request, name, notNullValue( ) );
         checkParam( "Hostname must not be null: " + request, hostName, notNullValue( ) );
@@ -222,7 +230,10 @@ public class ServiceRegistrationManager {
          * Check all the parameters.
          */
         checkParam( "Name must not be null: " + request, name, notNullValue( ) );
-        ServiceConfiguration config = ServiceConfigurations.lookupByName( request.getName( ) );
+        ComponentId requestComponentId = getMappedComponentId( request.getType( ), false );
+        ServiceConfiguration config = requestComponentId == null ?
+            ServiceConfigurations.lookupByName( request.getName( ) ) :
+            ServiceConfigurations.lookupByName( requestComponentId.getClass( ), request.getName( ) );
         final ComponentId componentId = config.getComponentId( );
         ServiceBuilders.lookup( componentId ); //NOTE: this is an existence test which can fail w/ an exception.
         Collection<Future<ServiceConfiguration>> configurations = Topology.doTopologyWork( new Callable<Collection<Future<ServiceConfiguration>>>(){
