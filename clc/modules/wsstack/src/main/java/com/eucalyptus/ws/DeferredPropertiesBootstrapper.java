@@ -64,6 +64,7 @@ package com.eucalyptus.ws;
 
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
@@ -71,8 +72,8 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
 import com.eucalyptus.configurable.PropertyDirectory;
@@ -87,51 +88,58 @@ import com.google.common.collect.Lists;
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
 public class DeferredPropertiesBootstrapper extends Bootstrapper.Simple {
   private static Logger LOG = Logger.getLogger( DeferredPropertiesBootstrapper.class );
-  
+
+  private static final AtomicBoolean active = new AtomicBoolean( false );
+
   @Override
   public boolean load( ) throws Exception {
-    Threads.lookup( Empyrean.class, DeferredPropertiesBootstrapper.class ).submit( new Runnable( ) {
-      
-      @Override
-      public void run( ) {
-        if ( Bootstrap.isShuttingDown( ) ) {
-          return;
-        } else {
-          Bootstrap.awaitFinished( );
-          List<ConfigurableProperty> staticProps = Lists.newArrayList( );
-          for ( Entry<String, ConfigurableProperty> entry : PropertyDirectory.getPendingPropertyEntries( ) ) {
-            ConfigurableProperty prop = entry.getValue( );
-            if ( prop instanceof StaticPropertyEntry ) {
-              staticProps.add( prop );
+    if ( active.compareAndSet( false, true ) ) {
+      Threads.lookup( Empyrean.class, DeferredPropertiesBootstrapper.class ).submit( new Runnable( ) {
+        @Override
+        public void run( ) {
+          try {
+            if ( Bootstrap.isShuttingDown( ) ) {
+              return;
             } else {
-              try {
-                ComponentId compId = ComponentIds.lookup( prop.getEntrySetName( ) );
-                for ( ServiceConfiguration s : ServiceConfigurations.list( compId.getClass( ) ) ) {
-                  if ( compId.name( ).equals( prop.getEntrySetName( ) ) ) {
-                    if ( prop instanceof SingletonDatabasePropertyEntry ) {
-                      PropertyDirectory.addProperty( prop );
-                    } else if ( prop instanceof MultiDatabasePropertyEntry ) {
-                      PropertyDirectory.addProperty( ( ( MultiDatabasePropertyEntry ) prop ).getClone( s.getPartition( ) ) );
+              Bootstrap.awaitFinished( );
+              List<ConfigurableProperty> staticProps = Lists.newArrayList( );
+              for ( Entry<String, ConfigurableProperty> entry : PropertyDirectory.getPendingPropertyEntries( ) ) {
+                ConfigurableProperty prop = entry.getValue( );
+                if ( prop instanceof StaticPropertyEntry ) {
+                  staticProps.add( prop );
+                } else {
+                  try {
+                    ComponentId compId = ComponentIds.lookup( prop.getEntrySetName( ) );
+                    for ( ServiceConfiguration s : Components.services( compId.getClass( ) ) ) {
+                      if ( compId.name( ).equals( prop.getEntrySetName( ) ) ) {
+                        if ( prop instanceof SingletonDatabasePropertyEntry ) {
+                          PropertyDirectory.addProperty( prop );
+                        } else if ( prop instanceof MultiDatabasePropertyEntry ) {
+                          PropertyDirectory.addProperty( ( (MultiDatabasePropertyEntry) prop ).getClone( s.getPartition( ) ) );
+                        }
+                      }
                     }
+                  } catch ( Exception ex ) {
+                    LOG.error( ex, ex );
                   }
                 }
-              } catch ( Exception ex ) {
-                LOG.error( ex, ex );
+              }
+              for ( ConfigurableProperty prop : staticProps ) {
+                if ( PropertyDirectory.addProperty( prop ) ) {
+                  try {
+                    prop.getValue( );
+                  } catch ( Exception ex ) {
+                    Logs.extreme( ).error( ex, ex );
+                  }
+                }
               }
             }
-          }
-          for ( ConfigurableProperty prop : staticProps ) {
-            if ( PropertyDirectory.addProperty( prop ) ) {
-              try {
-                prop.getValue( );
-              } catch ( Exception ex ) {
-                Logs.extreme( ).error( ex, ex );
-              }
-            }
+          } finally {
+            active.set( false );
           }
         }
-      }
-    } );
+      } );
+    }
     return true;
   }
 }
