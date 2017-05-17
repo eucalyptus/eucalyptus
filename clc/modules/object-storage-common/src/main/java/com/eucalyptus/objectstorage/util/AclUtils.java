@@ -103,12 +103,12 @@ public class AclUtils {
    * Just checks the basic S3 groups for membership of the userId. Caller must ensure that the userId is a valid ID in the system. That is outside the
    * scope of this method.
    *
-   * @param userId
-   * @param group
-   * @return
+   * @param userId The s3 user id, i.e. the accounts canonical identifier
+   * @param group The group to check membership of
+   * @return true if a member
    */
   public static boolean isUserMember(String userId, ObjectStorageProperties.S3_GROUP group) {
-    if (group == null) {
+    if ( group == null || Strings.isNullOrEmpty( userId ) ) {
       return false;
     }
 
@@ -116,39 +116,32 @@ public class AclUtils {
       return true;
     }
 
-    if (ObjectStorageProperties.S3_GROUP.AUTHENTICATED_USERS_GROUP.equals(group) && !Strings.isNullOrEmpty(userId)
-        && !userId.equals(Principals.nobodyUser().getUserId())) {
+    if (ObjectStorageProperties.S3_GROUP.AUTHENTICATED_USERS_GROUP.equals(group) &&
+        !Principals.nobodyUser( ).getCanonicalId( ).equals( userId ) ) {
       return true;
     }
 
-    boolean isSystemAdmin = false;
-    try {
-      isSystemAdmin = (Principals.systemUser().getUserId().equals(userId) || Accounts.lookupSystemAdmin().getUserId().equals(userId));
-    } catch (AuthException e) {
-      // Fall through
-      LOG.debug("Got auth exception trying to lookup system admin user for group membership check in ec2-bundle-read", e);
+    if (ObjectStorageProperties.S3_GROUP.AWS_EXEC_READ.equals(group)) {
+      try {
+        return Accounts.lookupSystemAccountByAlias( AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT ).getCanonicalId( )
+            .equals( userId );
+      } catch (AuthException e) {
+        // Fall through
+        LOG.debug("Got auth exception trying to lookup aws-exec-read admin user for group membership check in ec2-bundle-read", e);
+      }
     }
 
-    boolean isAWSExecReadUser = false;
-    try {
-      isAWSExecReadUser = Accounts.lookupSystemAccountByAlias( AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT ).getUserId( ).equals( userId );
-    } catch (AuthException e) {
-      // Fall through
-      LOG.debug("Got auth exception trying to lookup aws-exec-read admin user for group membership check in ec2-bundle-read", e);
-    }
-
-    if (ObjectStorageProperties.S3_GROUP.AWS_EXEC_READ.equals(group) && isAWSExecReadUser) {
-      return true;
-    }
-
-    // System only (or euca/admin) in the ec2-bundle-read group
-    if (ObjectStorageProperties.S3_GROUP.EC2_BUNDLE_READ.equals(group) && isSystemAdmin) {
-      return true;
-    }
-
-    // System or euca/admin only in logging
-    if (ObjectStorageProperties.S3_GROUP.LOGGING_GROUP.equals(group) && isSystemAdmin) {
-      return true;
+    // System or euca/admin only in logging and ec2-bundle-read groups
+    if (ObjectStorageProperties.S3_GROUP.EC2_BUNDLE_READ.equals(group) ||
+        ObjectStorageProperties.S3_GROUP.LOGGING_GROUP.equals(group)) {
+      try {
+        return
+            Principals.systemUser( ).getCanonicalId( ).equals(userId) ||
+            Accounts.lookupSystemAdmin( ).getCanonicalId( ).equals(userId);
+      } catch (AuthException e) {
+        // Fall through
+        LOG.debug("Got auth exception trying to lookup system admin user for group membership check in ec2-bundle-read", e);
+      }
     }
 
     return false;
