@@ -558,21 +558,19 @@ public class Faults {
     public CheckException apply( final ServiceStatusDetail input ) {
       ServiceConfiguration config = null;
       final String serviceFullName = Strings.nullToEmpty( input.getServiceFullName() );
-      try {
+      for ( Component c : Components.list( ) ) {
+        for ( ServiceConfiguration s : c.services( ) ) {
+          if ( serviceFullName.equals( s.getFullName().toString() ) ) {
+            config = s;
+            break;
+          }
+        }
+      }
+      if ( config == null ) try {
         final String serviceName = Strings.nullToEmpty( input.getServiceName() );
         config = ServiceConfigurations.lookupByName( serviceName );
       } catch ( RuntimeException e ) {
-        for ( Component c : Components.list( ) ) {
-          for ( ServiceConfiguration s : c.services() ) {
-            if ( serviceFullName.equals( s.getFullName().toString() ) ) {
-              config = s;
-              break;
-            }
-          }
-        }
-        if(config==null){
-          throw e;
-        }
+        throw e;
       }
       Severity severity = Severity.DEBUG;
       if ( input.getSeverity( ) != null ) {

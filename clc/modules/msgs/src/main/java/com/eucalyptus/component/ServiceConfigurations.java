@@ -649,26 +649,19 @@ public class ServiceConfigurations {
       ServiceConfiguration config = null;
       final String serviceFullName = Strings.nullToEmpty( input.getServiceFullName() );
       String checkName = Strings.nullToEmpty(input.getServiceName());
-      try {
-        config = ServiceConfigurations.lookupByName( checkName );
-        if (!serviceFullName.equals( config.getFullName().toString() )) {
-          //NOTE: throwing this here means we will do the full search in the catch,
-          // but fall back to config as set here if nothing better is found.
-          throw Exceptions.toUndeclared("Mismatched service fullnames, do full component service search" );
-        }
-      } catch ( RuntimeException e ) {
-        for ( Component c : Components.list( ) ) {
-          for ( ServiceConfiguration s : c.services() ) {
-            if ( serviceFullName.equals( s.getFullName().toString() ) ) {
-              config = s;
-              checkName = s.getName();
-              break;
-            }
+      for ( Component c : Components.list( ) ) {
+        for ( ServiceConfiguration s : c.services( ) ) {
+          if ( serviceFullName.equals( s.getFullName().toString() ) ) {
+            config = s;
+            checkName = s.getName();
+            break;
           }
         }
-        if(config==null){
-          throw e;
-        }
+      }
+      if ( config == null ) try {
+        config = ServiceConfigurations.lookupByName( checkName );
+      } catch ( RuntimeException e ) {
+        throw e;
       }
       final String serviceName = checkName;
       final ServiceConfiguration finalConfig = config;
