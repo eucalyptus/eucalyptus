@@ -20,7 +20,6 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -108,7 +107,7 @@ public class AWSEC2NetworkAclResourceAction extends StepBasedResourceAction {
         AWSEC2NetworkAclResourceAction action = (AWSEC2NetworkAclResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         // Create 'system' tags as admin user
-        String effectiveAdminUserId = Accounts.lookupPrincipalByAccountNumber( Accounts.lookupPrincipalByUserId(action.info.getEffectiveUserId()).getAccountNumber( ) ).getUserId();
+        String effectiveAdminUserId = action.info.getAccountId( );
         CreateTagsType createSystemTagsType = MessageHelper.createPrivilegedMessage(CreateTagsType.class, effectiveAdminUserId);
         createSystemTagsType.setResourcesSet(Lists.newArrayList(action.info.getPhysicalResourceId()));
         createSystemTagsType.setTagSet(EC2Helper.createTagSet(TagHelper.getEC2SystemTags(action.info, action.getStackEntity())));

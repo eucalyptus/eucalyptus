@@ -20,7 +20,6 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -288,7 +287,7 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends StepBased
         AWSElasticLoadBalancingLoadBalancerResourceAction action = (AWSElasticLoadBalancingLoadBalancerResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
         // Create 'system' tags as admin user
-        String effectiveAdminUserId = Accounts.lookupPrincipalByAccountNumber(Accounts.lookupPrincipalByUserId(action.info.getEffectiveUserId()).getAccountNumber()).getUserId();
+        String effectiveAdminUserId = action.info.getAccountId( );
         AddTagsType addSystemTagsType = MessageHelper.createPrivilegedMessage(AddTagsType.class, effectiveAdminUserId);
         addSystemTagsType.setLoadBalancerNames(getLoadBalancerNames(action));
         addSystemTagsType.setTags(TagHelper.convertToTagList(TagHelper.getCloudFormationResourceSystemTags(action.info, action.getStackEntity())));
