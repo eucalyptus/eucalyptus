@@ -104,6 +104,9 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
   @Column( name = "config_static_prop_name", nullable = false, unique = true )
   private String       propName;
 
+  public static StaticDatabasePropertyEntry example( ) {
+    return new StaticDatabasePropertyEntry( );
+  }
 
   private StaticDatabasePropertyEntry( ) {
     super( );

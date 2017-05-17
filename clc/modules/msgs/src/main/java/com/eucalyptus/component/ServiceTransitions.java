@@ -64,8 +64,11 @@ package com.eucalyptus.component;
 
 import java.net.UnknownHostException;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 import com.eucalyptus.component.events.ServiceEvents;
 import org.apache.log4j.Logger;
@@ -81,6 +84,7 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.configurable.SingletonDatabasePropertyEntry;
+import com.eucalyptus.configurable.StaticDatabasePropertyEntry;
 import com.eucalyptus.configurable.StaticPropertyEntry;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
@@ -96,6 +100,7 @@ import com.eucalyptus.empyrean.StartServiceResponseType;
 import com.eucalyptus.empyrean.StartServiceType;
 import com.eucalyptus.empyrean.StopServiceResponseType;
 import com.eucalyptus.empyrean.StopServiceType;
+import com.eucalyptus.entities.EntityCache;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
@@ -117,8 +122,12 @@ import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.ObjectArrays;
+import javaslang.Tuple;
+import javaslang.Tuple2;
+import javaslang.collection.Stream;
 
 public class ServiceTransitions {
   static Logger                                     LOG   = Logger.getLogger( ServiceTransitions.class );
@@ -885,18 +894,33 @@ public class ServiceTransitions {
   private enum StaticPropertiesAdd implements Supplier<Void> {
     INSTANCE;
 
+    private final EntityCache<StaticDatabasePropertyEntry,Tuple2<String,Integer>> propertyCache =
+        new EntityCache<>(
+            StaticDatabasePropertyEntry.example( ),
+            property -> Tuple.of( property.getPropName( ), property.getVersion( ) )
+        );
+
+    private AtomicReference<Map<String,Integer>> versionInfoRef = new AtomicReference<>( ImmutableMap.of( ) );
+
     @Override
     public Void get() {
+      final Map<String,Integer> previousVersionInfo = versionInfoRef.get( );
+      final Map<String,Integer> versionInfo = Databases.isVolatile( ) ?
+          previousVersionInfo :
+          Stream.ofAll( propertyCache.get( ) ).toJavaMap( Function.identity( ) );
+      boolean forceGets = !previousVersionInfo.equals( versionInfo );
+      if ( forceGets ) {
+        versionInfoRef.compareAndSet( previousVersionInfo, ImmutableMap.copyOf( versionInfo ) );
+      }
       for ( ConfigurableProperty prop : Iterables.filter( PropertyDirectory.getPendingPropertyValues( ),
           Predicates.instanceOf( StaticPropertyEntry.class ) ) ) {
         try {
-          PropertyDirectory.addProperty( prop );
-          try {
-            if (!Databases.isVolatile()) {
+          if ( ( PropertyDirectory.addProperty( prop ) || forceGets ) && !Databases.isVolatile( ) ) {
+            try {
               prop.getValue();
+            } catch (Exception ex) {
+              Logs.extreme().error(ex);
             }
-          } catch (Exception ex) {
-            Logs.extreme().error(ex);
           }
         } catch ( Exception ex ) {
           Logs.extreme( ).error( ex, ex );
