@@ -478,19 +478,19 @@ public abstract class InstanceLogs {
           Set<String> instanceTypes =
             filters != null && filters.getMember() != null ?
             filters.getMember().stream()
-              .filter(f -> "instancetype".equals(f.getKey()) || "instance_type".equals(f.getKey()))
+              .filter(f -> "instancetype".equals(f.getType()) || "instance_type".equals(f.getType()))
               .map(InstanceUsageFilter::getKey)
               .collect(Collectors.toSet()) : Sets.newHashSet();
           Set<String> platforms =
             filters != null && filters.getMember() != null ?
               filters.getMember().stream()
-                .filter(f -> "platform".equals(f.getKey()) || "platforms".equals(f.getKey()))
+                .filter(f -> "platform".equals(f.getType()) || "platforms".equals(f.getType()))
                 .map(InstanceUsageFilter::getKey)
                 .collect(Collectors.toSet()) : Sets.newHashSet();
           Set<String> availabilityZones =
             filters != null && filters.getMember() != null ?
               filters.getMember().stream()
-                .filter(f -> "availabilityzone".equals(f.getKey()) || "availability_zone".equals(f.getKey()))
+                .filter(f -> "availabilityzone".equals(f.getType()) || "availability_zone".equals(f.getType()))
                 .map(InstanceUsageFilter::getKey)
                 .collect(Collectors.toSet()) : Sets.newHashSet();
 
