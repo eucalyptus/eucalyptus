@@ -54,6 +54,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import static java.util.stream.Collectors.*;
 
@@ -412,16 +413,6 @@ public abstract class InstanceLogs {
   }
 
   public static class InstanceHourRecordsCassandra extends InstanceLogs {
-    private static Map<Set<QueryPositions>, String> tableByProvidedQueryParameters = ImmutableMap.<Set<QueryPositions>, String>builder()
-      .put(ImmutableSet.of(), "instance_log")
-      .put(ImmutableSet.of(QueryPositions.INSTANCE_TYPE), "instance_log_by_inst_type")
-      .put(ImmutableSet.of(QueryPositions.PLATFORM), "instance_log_by_platform")
-      .put(ImmutableSet.of(QueryPositions.AVAILABILITY_ZONE), "instance_log_by_az")
-      .put(ImmutableSet.of(QueryPositions.INSTANCE_TYPE, QueryPositions.PLATFORM), "instance_log_by_inst_type_and_platform")
-      .put(ImmutableSet.of(QueryPositions.PLATFORM, QueryPositions.AVAILABILITY_ZONE), "instance_log_by_platform_and_az")
-      .put(ImmutableSet.of(QueryPositions.INSTANCE_TYPE, QueryPositions.AVAILABILITY_ZONE), "instance_log_by_inst_type_and_az")
-      .put(ImmutableSet.of(QueryPositions.INSTANCE_TYPE, QueryPositions.PLATFORM, QueryPositions.AVAILABILITY_ZONE), "instance_log_by_inst_type_platform_and_az")
-      .build();
 
 
     @Override
@@ -448,7 +439,6 @@ public abstract class InstanceLogs {
         try {
           for ( InstanceLog record : records ) {
             UUID naturalId = UUIDs.timeBased();
-            BatchStatement batchStatement = new BatchStatement();
             List<String> tagsJson = Lists.transform(record.getTags(),
               (InstanceTag t) -> {
                 ObjectNode objectNode = new ObjectMapper().createObjectNode();
@@ -458,23 +448,20 @@ public abstract class InstanceLogs {
               }
             );
 
-            for (String tableName: tableByProvidedQueryParameters.values()) {
-              Statement statement = new SimpleStatement(
-                "INSERT INTO eucalyptus_billing." + tableName + "(account_id, instance_id," +
-                  "instance_type, platform, region, availability_zone, log_time, tags_json, natural_id) VALUES " +
-                  "(?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                record.getAccountId(),
-                record.getInstanceId(),
-                record.getInstanceType(),
-                record.getPlatform(),
-                record.getRegion(),
-                record.getAvailabilityZone(),
-                record.getLogTime(),
-                tagsJson,
-                naturalId);
-              batchStatement.add(statement);
-            }
-            session.execute( batchStatement );
+            Statement statement = new SimpleStatement(
+              "INSERT INTO eucalyptus_billing.instance_log (account_id, instance_id," +
+                "instance_type, platform, region, availability_zone, log_time, tags_json, natural_id) VALUES " +
+                "(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+              record.getAccountId(),
+              record.getInstanceId(),
+              record.getInstanceType(),
+              record.getPlatform(),
+              record.getRegion(),
+              record.getAvailabilityZone(),
+              record.getLogTime(),
+              tagsJson,
+              naturalId);
+            session.execute(statement);
           }
         } catch ( final Exception ex ) {
           LOG.error( "Failed to add records", ex );
@@ -483,97 +470,50 @@ public abstract class InstanceLogs {
       } );
     }
 
-    enum QueryPositions {
-      INSTANCE_TYPE("instance_type"),
-      PLATFORM("platform"),
-      AVAILABILITY_ZONE("availability_zone");
-      String fieldName;
-
-      QueryPositions(String fieldName) {
-        this.fieldName = fieldName;
-      }
-
-      public String getFieldName() {
-        return fieldName;
-      }
-    };
-
     @Override
     public List<InstanceHourLog> queryHourly(String accountId, Date rangeStart, Date rangeEnd, InstanceUsageFilters filters) throws Ec2ReportsInvalidParameterException {
       if (accountId == null) throw new IllegalArgumentException("accountId can not be null");
       return CassandraSessionManager.doWithSession( session -> {
         try {
-
-          // Note: this is done in the canonical cassandra way.  Tables for each possible query combination (except for tags).
-          // There is no 'OR' in cassandra, so we are forced to do either multiple queries or one large query and filter in memory.
-          // We filter tag results in memory as postgres does, but do explicit queries otherwise.  Whether this approach is the
-          // best approach will need to be determined by scalability testing going forward.
-
-          // In addition, we are using the fact that (A OR B) AND (C OR D) is equivalent to (A AND C) OR (A AND D) OR (B AND C) OR (B AND D)
-
-          List<InstanceLog> results = Lists.newArrayList();
-          List<Set<Optional<String>>> queryParameters = Lists.newArrayList();
-          for (QueryPositions queryPosition: QueryPositions.values()) {
-            queryParameters.add(Sets.newHashSet());
-          }
-
-          if (filters != null && filters.getMember() != null) {
-            final Map<String, List<InstanceUsageFilter>> filtersByType =
+          Set<String> instanceTypes =
+            filters != null && filters.getMember() != null ?
+            filters.getMember().stream()
+              .filter(f -> "instancetype".equals(f.getKey()) || "instance_type".equals(f.getKey()))
+              .map(InstanceUsageFilter::getKey)
+              .collect(Collectors.toSet()) : Sets.newHashSet();
+          Set<String> platforms =
+            filters != null && filters.getMember() != null ?
               filters.getMember().stream()
-                .filter(f -> f.getType() != null && f.getKey() != null)
-                .collect(Collectors.groupingBy(InstanceUsageFilter::getType, toList()));
-            for (final String type : filtersByType.keySet()) {
-              for (final InstanceUsageFilter filter : filtersByType.get(type)) {
-                if ("instancetype".equals(type.toLowerCase()) || "instance_type".equals(type.toLowerCase())) {
-                  queryParameters.get(QueryPositions.INSTANCE_TYPE.ordinal()).add(Optional.of(filter.getKey()));
-                } else if ("platform".equals(type.toLowerCase()) || "platforms".equals(type.toLowerCase())) {
-                  queryParameters.get(QueryPositions.PLATFORM.ordinal()).add(Optional.of(filter.getKey()));
-                } else if ("availabilityzone".equals(type.toLowerCase()) || "availability_zone".equals(type.toLowerCase())) {
-                  queryParameters.get(QueryPositions.AVAILABILITY_ZONE.ordinal()).add(Optional.of(filter.getKey()));
-                }
-              }
-            }
+                .filter(f -> "platform".equals(f.getKey()) || "platforms".equals(f.getKey()))
+                .map(InstanceUsageFilter::getKey)
+                .collect(Collectors.toSet()) : Sets.newHashSet();
+          Set<String> availabilityZones =
+            filters != null && filters.getMember() != null ?
+              filters.getMember().stream()
+                .filter(f -> "availabilityzone".equals(f.getKey()) || "availability_zone".equals(f.getKey()))
+                .map(InstanceUsageFilter::getKey)
+                .collect(Collectors.toSet()) : Sets.newHashSet();
+
+          List<Object> queryValues = Lists.newArrayList();
+          StringBuilder queryBuilder = new StringBuilder("SELECT account_id, instance_id," +
+            "instance_type, platform, region, availability_zone, log_time, tags_json " +
+            "FROM eucalyptus_billing.instance_log WHERE account_id = ?");
+          queryValues.add(accountId);
+
+          if (rangeStart != null) {
+            queryBuilder.append(" AND log_time >= ?");
+            queryValues.add(rangeStart);
           }
-          // put something in each list, just to allow cartesian products
-          for (QueryPositions queryPosition: QueryPositions.values()) {
-            if (queryParameters.get(queryPosition.ordinal()).isEmpty()) {
-              queryParameters.get(queryPosition.ordinal()).add(Optional.empty());
-            }
+
+          if (rangeEnd != null) {
+            queryBuilder.append(" AND log_time <= ?");
+            queryValues.add(rangeEnd);
           }
 
-          for (List<Optional<String>> filter: Sets.cartesianProduct(queryParameters)) {
-            Set<QueryPositions> filledPositions = Sets.newHashSet();
-            for (QueryPositions queryPosition : QueryPositions.values()) {
-              if (filter.get(queryPosition.ordinal()).isPresent()) {
-                filledPositions.add(queryPosition);
-              }
-            }
-            String tableName = tableByProvidedQueryParameters.get(filledPositions);
-            List<Object> queryValues = Lists.newArrayList();
-            StringBuilder queryBuilder = new StringBuilder("SELECT account_id, instance_id," +
-              "instance_type, platform, region, availability_zone, log_time, tags_json " +
-              "FROM eucalyptus_billing." + tableName + " WHERE account_id = ?");
-            queryValues.add(accountId);
-
-            if (rangeStart != null) {
-              queryBuilder.append(" AND log_time >= ?");
-              queryValues.add(rangeStart);
-            }
-
-            if (rangeEnd != null) {
-              queryBuilder.append(" AND log_time <= ?");
-              queryValues.add(rangeEnd);
-            }
-
-            for (QueryPositions queryPosition : QueryPositions.values()) {
-              if (filter.get(queryPosition.ordinal()).isPresent()) {
-                queryBuilder.append(" AND " + queryPosition.getFieldName() + " = ?");
-                queryValues.add(filter.get(queryPosition.ordinal()).get());
-              }
-            }
-            Statement statement = new SimpleStatement(queryBuilder.toString(), queryValues.toArray());
-            ResultSet rs = session.execute(statement);
-            for (Row row: rs) {
+          Statement statement = new SimpleStatement(queryBuilder.toString(), queryValues.toArray());
+          ResultSet rs = session.execute(statement);
+          List<InstanceLog> results = StreamSupport.stream(rs.spliterator(), false)
+            .map((Row row) -> {
               SimpleInstanceLog instanceLog = new SimpleInstanceLog();
               instanceLog.setAccountId(row.getString("account_id"));
               instanceLog.setInstanceId(row.getString("instance_id"));
@@ -595,10 +535,12 @@ public abstract class InstanceLogs {
                     throw Exceptions.toUndeclared(e);
                   }
                 }));
-              // there should be no overlap as each query is distinct
-              results.add(instanceLog);
-            }
-          }
+              return instanceLog;
+            })
+            .filter(l -> instanceTypes.isEmpty() || instanceTypes.contains(l.getInstanceType()))
+            .filter(l -> platforms.isEmpty() || platforms.contains(l.getPlatform()))
+            .filter(l -> availabilityZones.isEmpty() || availabilityZones.contains(l.getAvailabilityZone()))
+            .collect(Collectors.toList());
 
           if (filters!= null && filters.getMember()!=null) {
             // key: tag_key, value: set of tag values
