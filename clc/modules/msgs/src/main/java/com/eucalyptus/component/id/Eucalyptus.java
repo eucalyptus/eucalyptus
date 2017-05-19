@@ -63,7 +63,6 @@
 package com.eucalyptus.component.id;
 
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.GenerateKeys;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
@@ -71,7 +70,6 @@ import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 @GenerateKeys
 @PolicyVendor( "ec2" )
 @Partition( Eucalyptus.class )
-@FaultLogPrefix( "cloud" )
 public class Eucalyptus extends ComponentId {
   public static final Eucalyptus INSTANCE = new Eucalyptus( );                   //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
 

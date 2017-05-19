@@ -63,14 +63,12 @@
 package com.eucalyptus.cluster.proxy.node;
 
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.InternalService;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.cluster.proxy.ProxyClusterController;
 
 @Partition( value = { ProxyClusterController.class }, manyToOne = true )
 @InternalService
-@FaultLogPrefix( "cloud" ) // nc stub, but within clc
 public class ProxyNodeController extends ComponentId {
   
   public ProxyNodeController( ) {

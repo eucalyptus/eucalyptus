@@ -24,7 +24,6 @@ import com.eucalyptus.bootstrap.CloudControllerColocatingBootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.id.Eucalyptus;
 
@@ -32,7 +31,6 @@ import com.eucalyptus.component.id.Eucalyptus;
  *
  */
 @Partition(Eucalyptus.class)
-@FaultLogPrefix( "cloud" )
 public class PolledNotifications extends ComponentId {
   private static final long serialVersionUID = 1L;
 

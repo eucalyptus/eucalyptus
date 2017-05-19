@@ -66,19 +66,14 @@ import java.util.List;
 import java.util.Map;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ServiceUris;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.GenerateKeys;
 import com.eucalyptus.component.annotation.Partition;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.util.Internets;
 import com.eucalyptus.ws.TransportDefinition;
 import com.eucalyptus.ws.StackConfiguration.BasicTransport;
 import com.google.common.collect.Lists;
 
 @Partition( Eucalyptus.class )
 @GenerateKeys
-@FaultLogPrefix( "cloud" )
 public class Database extends ComponentId {
 
   public Database( ) {

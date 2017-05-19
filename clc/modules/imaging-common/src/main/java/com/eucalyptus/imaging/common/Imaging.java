@@ -21,7 +21,6 @@ package com.eucalyptus.imaging.common;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.Description;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.component.annotation.PublicService;
@@ -31,7 +30,6 @@ import com.eucalyptus.component.annotation.PublicService;
  */
 @PublicService
 @Partition(value = Imaging.class, manyToOne = true)
-@FaultLogPrefix("cloud")
 @PolicyVendor("eucaimaging")
 @Description("Eucalyptus imaging service")
 public class Imaging extends ComponentId {

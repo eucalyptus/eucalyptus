@@ -68,7 +68,6 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
@@ -80,7 +79,6 @@ import com.google.common.collect.Sets;
 /**
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-@FaultLogPrefix( "cloud" )
 @Partition( value = { ServiceGroup.class } )
 public abstract class ServiceGroup extends ComponentId implements Predicate<ComponentId>, Supplier<ServiceGroup> {
   private static Logger LOG = Logger.getLogger( ServiceGroup.class );

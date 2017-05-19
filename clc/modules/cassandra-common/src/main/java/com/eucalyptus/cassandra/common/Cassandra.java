@@ -20,11 +20,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.annotation.Description;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.google.common.collect.Sets;
 
@@ -32,7 +30,6 @@ import com.google.common.collect.Sets;
  * Component identifier class for Cassandra
  */
 @Partition( value = Cassandra.class, manyToOne = true )
-@FaultLogPrefix( "cloud" )
 @Description( "Eucalyptus Cassandra service" )
 public class Cassandra extends ComponentId {
   private static final long serialVersionUID = 1L;

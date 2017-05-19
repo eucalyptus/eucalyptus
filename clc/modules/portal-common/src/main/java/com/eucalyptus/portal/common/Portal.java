@@ -20,7 +20,6 @@ import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.annotation.Description;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PublicComponentAccounts;
 import com.eucalyptus.component.annotation.PublicService;
@@ -33,7 +32,6 @@ import com.eucalyptus.portal.common.policy.PortalPolicySpec;
 @AwsServiceName( "portal" )
 @PolicyVendor( PortalPolicySpec.VENDOR_PORTAL )
 @Partition( value = Portal.class, manyToOne = true )
-@FaultLogPrefix( "services" )
 @Description( "Portal service" )
 @PublicComponentAccounts( AccountIdentifiers.BILLING_SYSTEM_ACCOUNT )
 public class Portal extends ComponentId {

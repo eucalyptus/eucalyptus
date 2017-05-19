@@ -20,7 +20,6 @@ import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.annotation.Description;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PublicService;
 
@@ -31,7 +30,6 @@ import com.eucalyptus.component.annotation.PublicService;
 @AwsServiceName( "sqs" )
 @PolicyVendor( "sqs" )
 @Partition( value = SimpleQueue.class, manyToOne = true )
-@FaultLogPrefix( "services" )
 @Description( "Simple Queue API service" )
 public class SimpleQueue extends ComponentId {
   private static final long serialVersionUID = 1L;
