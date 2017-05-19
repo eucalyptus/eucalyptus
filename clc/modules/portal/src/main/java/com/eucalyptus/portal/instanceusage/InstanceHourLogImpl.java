@@ -78,4 +78,5 @@ public class InstanceHourLogImpl implements InstanceHourLog {
   public void setHours(long hours) {
     this.hours = hours;
   }
+
 }
