@@ -142,6 +142,9 @@ public class CassandraMessagePersistence implements MessagePersistence {
           Date expirationTimestamp = row.getTimestamp( "expiration_timestamp" );
           String messageJson = row.getString( "message_json" );
           long sendTimeSecs = row.getLong( "send_time_secs" );
+          if ( expirationTimestamp == null ||  messageJson == null ) {
+            continue;
+          }
           if ( deadLetterQueue && receiveCount >= maxReceiveCount ) {
             BatchStatement batchStatement1 = new BatchStatement( );
             Statement statement2 = new SimpleStatement(
