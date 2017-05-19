@@ -368,65 +368,9 @@ class CassandraInstanceLogsVerificationImpl {
       for (String accountId : [ACCOUNT_1, ACCOUNT_2]) {
         CassandraSessionManager.doWithSession {
           it.execute(
-            new SimpleStatement("DELETE FROM eucalyptus_billing.instance_log where account_id=?", accountId)
+              new SimpleStatement("DELETE FROM eucalyptus_billing.instance_log where account_id=?", accountId)
           )
         };
-        for (String instanceType : [TYPE_1, TYPE_2, TYPE_3]) {
-          CassandraSessionManager.doWithSession {
-            it.execute(
-              new SimpleStatement("DELETE FROM eucalyptus_billing.instance_log_by_inst_type where account_id=? AND instance_type=?", accountId, instanceType)
-            )
-          };
-          for (String platform : [PLATFORM_1, PLATFORM_2]) {
-            CassandraSessionManager.doWithSession {
-              it.execute(
-                new SimpleStatement("DELETE FROM eucalyptus_billing.instance_log_by_inst_type_and_platform where account_id=? AND instance_type=? AND platform=?",
-                  accountId, instanceType, platform)
-              )
-            };
-            for (String availabilityZone : [AZ_1, AZ_2, AZ_3, AZ_4]) {
-              CassandraSessionManager.doWithSession {
-                it.execute(
-                  new SimpleStatement("DELETE FROM eucalyptus_billing.instance_log_by_inst_type_platform_and_az where account_id=? AND instance_type=? " +
-                    "AND platform=? AND availability_zone=?",
-                    accountId, instanceType, platform, availabilityZone)
-                )
-              };
-            }
-          }
-          for (String availabilityZone : [AZ_1, AZ_2, AZ_3, AZ_4]) {
-            CassandraSessionManager.doWithSession {
-              it.execute(
-                new SimpleStatement("DELETE FROM eucalyptus_billing.instance_log_by_inst_type_and_az where account_id=? AND instance_type=? AND availability_zone=?",
-                  accountId, instanceType, availabilityZone)
-              )
-            };
-          }
-        }
-        for (String platform : [PLATFORM_1, PLATFORM_2]) {
-          CassandraSessionManager.doWithSession {
-            it.execute(
-              new SimpleStatement("DELETE FROM eucalyptus_billing.instance_log_by_platform where account_id=? AND platform=?",
-                accountId, platform)
-            )
-          };
-          for (String availabilityZone : [AZ_1, AZ_2, AZ_3, AZ_4]) {
-            CassandraSessionManager.doWithSession {
-              it.execute(
-                new SimpleStatement("DELETE FROM eucalyptus_billing.instance_log_by_platform_and_az where account_id=? AND platform=? AND availability_zone=?",
-                  accountId, platform, availabilityZone)
-              )
-            };
-          }
-        }
-        for (String availabilityZone : [AZ_1, AZ_2, AZ_3, AZ_4]) {
-          CassandraSessionManager.doWithSession {
-            it.execute(
-              new SimpleStatement("DELETE FROM eucalyptus_billing.instance_log_by_az where account_id=? AND availability_zone=?",
-                accountId, availabilityZone)
-            )
-          };
-        }
       }
     } catch (Exception e) {
       return "Error: " + e.getMessage() == null ? e.getClass().getName() : e.getMessage();
