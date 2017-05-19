@@ -1351,6 +1351,7 @@ public class Topology {
           enabledEndState = true;
         } else if ( Exceptions.isCausedBy( ex, OrderlyTransitionException.class ) ) {
           Logs.extreme( ).error( ex, ex );
+          LOG.warn( this.toString( input, initialState, nextState, ex ) );
         } else if ( Exceptions.isCausedBy( ex, ConnectException.class )) {
           if ( input.lookupState( ) != initialState ) {
             LOG.warn( this.toString( input, initialState, nextState, ex ) );

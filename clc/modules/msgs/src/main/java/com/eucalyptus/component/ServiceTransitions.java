@@ -112,6 +112,7 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.Automata;
+import com.eucalyptus.util.fsm.OrderlyTransitionException;
 import com.eucalyptus.util.fsm.TransitionAction;
 import com.eucalyptus.util.fsm.TransitionRecord;
 import com.google.common.base.Joiner;
@@ -600,13 +601,23 @@ public class ServiceTransitions {
   
   enum ServiceLocalTransitionCallbacks implements ServiceTransitionCallback {
     LOAD {
-      
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        parent.lookupBootstrapper( ).load( );
-        ServiceBuilders.lookup( parent.getComponentId( ) ).fireLoad( parent );
+        try {
+          parent.lookupBootstrapper( ).load( );
+          ServiceBuilders.lookup( parent.getComponentId( ) ).fireLoad( parent );
+        } catch ( Exception e ) {
+          final ServiceConfigurationException sce = Exceptions.findCause( e, ServiceConfigurationException.class );
+          final OrderlyTransitionException ote = Exceptions.findCause( e, OrderlyTransitionException.class );
+          if ( ote==null && sce != null  ) {
+            throw new OrderlyTransitionException( "Load failed with error: '"
+                + sce.getMessage( )
+                + "', terminating bootstrap for component: "
+                + parent.getComponentId( ).getName( ), e );
+          }
+          throw e;
+        }
       }
-      
     },
     DESTROY {
       

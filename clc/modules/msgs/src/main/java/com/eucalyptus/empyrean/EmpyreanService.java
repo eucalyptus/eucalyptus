@@ -294,7 +294,7 @@ public class EmpyreanService {
       } catch ( final Exception ex ) {
         final OrderlyTransitionException otex = Exceptions.findCause( ex, OrderlyTransitionException.class );
         if ( otex != null ) {
-          LOG.info( otex );
+          LOG.warn( otex );
         } else {
           LOG.error( ex, ex );
         }

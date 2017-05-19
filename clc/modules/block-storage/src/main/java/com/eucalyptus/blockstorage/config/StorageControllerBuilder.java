@@ -62,6 +62,7 @@
 
 package com.eucalyptus.blockstorage.config;
 
+import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
@@ -79,6 +80,7 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurationException;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.entities.Entities;
@@ -119,7 +121,11 @@ public class StorageControllerBuilder extends AbstractServiceBuilder<StorageCont
         }
 
         String propertyBackend = ((StorageControllerConfiguration) parent).getBlockStorageManager();
-        StorageManagers.getInstance(propertyBackend);
+        try {
+          StorageManagers.getInstance( propertyBackend );
+        } catch ( final NoSuchElementException e ) {
+          throw new ServiceConfigurationException( e.getMessage( ), e );
+        }
       }
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);

@@ -62,6 +62,7 @@
 
 package com.eucalyptus.objectstorage.config;
 
+import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
@@ -71,6 +72,7 @@ import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurationException;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.entities.Entities;
@@ -121,7 +123,11 @@ public class OsgBuilder extends AbstractServiceBuilder<ObjectStorageConfiguratio
           tx.rollback();
         }
 
-        ObjectStorageProviders.getInstance();
+        try {
+          ObjectStorageProviders.getInstance( );
+        } catch ( final NoSuchElementException e ) {
+          throw new ServiceConfigurationException( e.getMessage( ), e );
+        }
       }
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);

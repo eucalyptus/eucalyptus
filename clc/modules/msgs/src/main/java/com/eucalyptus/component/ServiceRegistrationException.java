@@ -62,9 +62,8 @@
 
 package com.eucalyptus.component;
 
-import com.eucalyptus.util.EucalyptusCloudException;
-
-public class ServiceRegistrationException extends EucalyptusCloudException {
+public class ServiceRegistrationException extends ServiceException {
+  private static final long serialVersionUID = 1L;
 
   public ServiceRegistrationException( ) {
     super( );

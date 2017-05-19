@@ -647,14 +647,24 @@ public class Component implements HasName<Component> {
                 + this.component.getName( ) );
             }
           } catch ( Exception e ) {
-            LOG.error( e );
             Logs.extreme( ).error( e, e );
-            ex = new TransitionException( b.getClass( ).getSimpleName( ) + "."
-              + name
-              + "( ): failed because of: "
-              + e.getMessage( )
-              + ", terminating bootstrap for component: "
-              + this.component.getName( ), e );
+            final ServiceConfigurationException sce = Exceptions.findCause( e, ServiceConfigurationException.class );
+            if ( sce != null  ) {
+              ex = new OrderlyTransitionException( b.getClass( ).getSimpleName( ) + "."
+                  + name
+                  + "( ): failed with error: '"
+                  + sce.getMessage( )
+                  + "', terminating bootstrap for component: "
+                  + this.component.getName( ), sce );
+            } else {
+              LOG.error( e );
+              ex = new TransitionException( b.getClass( ).getSimpleName( ) + "."
+                  + name
+                  + "( ): failed because of: "
+                  + e.getMessage( )
+                  + ", terminating bootstrap for component: "
+                  + this.component.getName( ), e );
+            }
           }
           if ( ex != null ) {
             for ( Bootstrapper rollback : Lists.reverse( rollbackBootstrappers ) ) {
