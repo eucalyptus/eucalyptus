@@ -42,8 +42,6 @@ import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
 import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.type.LimitedType;
 import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataType;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
@@ -100,7 +98,6 @@ import javax.annotation.Nullable;
 import javax.persistence.PersistenceException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.ByteBuffer;
@@ -117,7 +114,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -389,8 +385,12 @@ public class SimpleQueueService {
     }
   }
 
-  private static String getQueueUrlFromQueueUrlParts(QueueUrlParts queueUrlParts) {
-    return ServiceUris.remotePublicify(Topology.lookup(SimpleQueue.class)).toString() + queueUrlParts.getAccountId() + "/" + queueUrlParts.getQueueName();
+  private static String getQueueUrlFromQueueUrlParts( final QueueUrlParts queueUrlParts ) {
+    String serviceUrl = ServiceUris.remotePublicify( Topology.lookup( SimpleQueue.class ) ).toString( );
+    if ( !serviceUrl.endsWith( "/" ) ) {
+      serviceUrl = serviceUrl + "/";
+    }
+    return serviceUrl + queueUrlParts.getAccountId( ) + "/" + queueUrlParts.getQueueName( );
   }
 
   private static class QueueUrlParts {
@@ -460,7 +460,7 @@ public class SimpleQueueService {
       if (queueUrl != null && queueUrl.getPath() != null) {
         List<String> pathParts = Splitter.on('/').omitEmptyStrings().splitToList(queueUrl.getPath());
         return (pathParts != null && pathParts.size() == 4 && "services".equals(pathParts.get(0))
-          && "simplequeue".equals(pathParts.get(1)));
+          && "SimpleQueue".equals(pathParts.get(1)));
       } else {
         return false;
       }
@@ -516,8 +516,6 @@ public class SimpleQueueService {
       handleException(ex);
     }
     return reply;
-
-
   }
 
   public ListQueuesResponseType listQueues(ListQueuesType request) throws EucalyptusCloudException {
