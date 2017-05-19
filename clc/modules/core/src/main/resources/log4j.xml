@@ -114,14 +114,6 @@
       <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%t] [%C.%M(%F):%L] %m%n" />
     </layout>
   </appender>
-  <appender name="cloud-cluster-file" class="com.eucalyptus.util.PermissionedRollingFileAppender">
-    <param name="Threshold" value="${euca.log.level}" />
-    <param name="File" value="${euca.log.dir}/cloud-cluster.log" />
-    <param name="MaxFileSize" value="10MB" />
-    <param name="MaxBackupIndex" value="10" />
-    <param name="Permissions" value="rw-r-----" />
-    <layout class="com.eucalyptus.system.EucaLayout" />
-  </appender>
   <appender name="cloud-exhaust-file" class="com.eucalyptus.util.PermissionedRollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-exhaust.log" />
     <param name="MaxFileSize" value="10MB" />
@@ -154,10 +146,6 @@
   <appender name="logfile" class="org.apache.log4j.AsyncAppender">
     <param name="BufferSize" value="1000"/>
     <appender-ref ref="cloud-debug-file"/>
-  </appender>
-  <appender name="cloud-cluster" class="org.apache.log4j.AsyncAppender">
-    <param name="BufferSize" value="1000"/>
-    <appender-ref ref="cloud-cluster-file"/>
   </appender>
   <appender name="cloud-exhaust" class="org.apache.log4j.AsyncAppender">
     <param name="BufferSize" value="5000"/>
@@ -208,19 +196,16 @@
     <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
-  <category name="com.eucalyptus.cluster" additivity="false">
+  <category name="com.eucalyptus.cluster">
     <priority value="${euca.log.level}" />
-    <appender-ref ref="cloud-cluster" />
     <appender-ref ref="tracking-log-file" />
   </category>
-  <category name="com.eucalyptus.cluster.callback" additivity="false">
+  <category name="com.eucalyptus.cluster.callback">
     <priority value="${euca.log.level}" />
-    <appender-ref ref="cloud-cluster" />
     <appender-ref ref="tracking-log-file" />
   </category>
-  <category name="edu.ucsb.eucalyptus.cloud.cluster" additivity="false">
+  <category name="edu.ucsb.eucalyptus.cloud.cluster">
     <priority value="${euca.log.level}" />
-    <appender-ref ref="cloud-cluster" />
     <appender-ref ref="tracking-log-file" />
   </category>
   <category name="com.eucalyptus.context.Context" additivity="false">
