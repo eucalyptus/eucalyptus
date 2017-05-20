@@ -21,7 +21,6 @@ package com.eucalyptus.auth.euare.common.identity;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.Description;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.component.annotation.PublicService;
@@ -34,7 +33,6 @@ import io.netty.channel.ChannelOption;
 @PublicService
 @PolicyVendor( "euid" )
 @Partition( value = Identity.class, manyToOne=true )
-@FaultLogPrefix( "services" )
 @Description( "Eucalyptus identity service" )
 public class Identity extends ComponentId {
   private static final long serialVersionUID = 1L;

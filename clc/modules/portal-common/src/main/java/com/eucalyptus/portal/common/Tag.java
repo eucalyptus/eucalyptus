@@ -19,7 +19,6 @@ import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.annotation.Description;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PublicService;
 import com.eucalyptus.portal.common.policy.TagPolicySpec;
@@ -31,7 +30,6 @@ import com.eucalyptus.portal.common.policy.TagPolicySpec;
 @AwsServiceName( "tag" )
 @PolicyVendor( TagPolicySpec.VENDOR_TAG )
 @Partition( value = Tag.class, manyToOne = true )
-@FaultLogPrefix( "services" )
 @Description( "Tag service" )
 public class Tag extends ComponentId {
   private static final long serialVersionUID = 1L;

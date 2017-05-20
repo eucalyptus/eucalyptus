@@ -64,13 +64,11 @@ package com.eucalyptus.component.id;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AdminService;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.empyrean.Empyrean;
 
 @Partition( Empyrean.class )
 @AdminService
-@FaultLogPrefix( "cloud" )
 public class ComponentService extends ComponentId {
   
   public ComponentService( ) {

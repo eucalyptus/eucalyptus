@@ -19,7 +19,6 @@ import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.annotation.Description;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PublicService;
 import com.eucalyptus.portal.common.policy.Ec2ReportsPolicySpec;
@@ -28,7 +27,6 @@ import com.eucalyptus.portal.common.policy.Ec2ReportsPolicySpec;
 @AwsServiceName( "ec2reports" )
 @PolicyVendor(Ec2ReportsPolicySpec.VENDOR_EC2REPORTS)
 @Partition( value = Ec2Reports.class, manyToOne = true )
-@FaultLogPrefix( "services" )
 @Description( "Ec2 reports service" )
 public class Ec2Reports extends ComponentId {
   private static final long serialVersionUID = 1L;

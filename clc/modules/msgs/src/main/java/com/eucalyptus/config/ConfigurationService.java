@@ -64,7 +64,6 @@ package com.eucalyptus.config;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AdminService;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -72,7 +71,6 @@ import com.eucalyptus.component.id.Eucalyptus;
 @Partition( Eucalyptus.class )
 @AdminService
 @PolicyVendor( "euconfig" )
-@FaultLogPrefix( "cloud" )
 public class ConfigurationService extends ComponentId {
 
   public ConfigurationService( ) {

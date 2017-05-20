@@ -75,14 +75,12 @@ import com.eucalyptus.system.Ats;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.ComponentPart;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.util.techpreview.TechPreviews;
 
 /**
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-@FaultLogPrefix( "cloud" )
 @Partition( value = { ApiEndpointServicesGroup.class }, manyToOne = true )
 @Description( "The service group of all user-facing API endpoint services" )
 public class ApiEndpointServicesGroup extends ServiceGroup {

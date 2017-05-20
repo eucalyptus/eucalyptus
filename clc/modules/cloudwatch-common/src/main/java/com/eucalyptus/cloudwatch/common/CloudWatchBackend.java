@@ -25,14 +25,12 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.cloudwatch.common.policy.CloudWatchPolicySpec;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.component.id.Eucalyptus;
 
 @PolicyVendor( CloudWatchPolicySpec.VENDOR_CLOUDWATCH )
 @Partition( Eucalyptus.class )
-@FaultLogPrefix( "cloud" )
 public class CloudWatchBackend extends ComponentId {
   private static final long serialVersionUID = 1L;
 

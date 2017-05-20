@@ -64,13 +64,11 @@ package com.eucalyptus.component.id;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.Description;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PublicService;
 
 @Partition( value = {Dns.class}, manyToOne = true )
 @PublicService
-@FaultLogPrefix( "cloud" )
 @Description( "Eucalyptus DNS server" )
 public class Dns extends ComponentId {
   

@@ -299,7 +299,7 @@ public class ResourceState {
       redeemed += t.getAmount( );
     final int outstandingCount = pending + submitted;
     EventRecord.here( ResourceState.class, EventType.CLUSTER_STATE_UPDATE, this.clusterName,
-                      String.format( "outstanding=%d:pending=%d:submitted=%d:redeemed=%d", outstandingCount, pending, submitted, redeemed ) ).info( );
+                      String.format( "outstanding=%d:pending=%d:submitted=%d:redeemed=%d", outstandingCount, pending, submitted, redeemed ) ).debug( );
     this.redeemedTokens.clear( );
     
     StringBuilder before = new StringBuilder( );
@@ -313,8 +313,8 @@ public class ResourceState {
       vmAvailable.setMax( rsc.getMaxInstances( ) );
       after.append( String.format( ":%s:%d/%d", vmAvailable.getType( ).getName( ), vmAvailable.getAvailable( ), vmAvailable.getMax( ) ) );
     }
-    EventRecord.here( ResourceState.class, EventType.CLUSTER_STATE_UPDATE, this.clusterName, "ANTE" + before.toString( ) ).info( );
-    EventRecord.here( ResourceState.class, EventType.CLUSTER_STATE_UPDATE, this.clusterName, "POST" + after.toString( ) ).info( );
+    EventRecord.here( ResourceState.class, EventType.CLUSTER_STATE_UPDATE, this.clusterName, "ANTE" + before.toString( ) ).debug( );
+    EventRecord.here( ResourceState.class, EventType.CLUSTER_STATE_UPDATE, this.clusterName, "POST" + after.toString( ) ).debug( );
   }
 
   private int getExpiryMinutes( final int defaultValue ) {

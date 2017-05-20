@@ -22,7 +22,6 @@ package com.eucalyptus.simpleworkflow.common;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.annotation.Description;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.component.annotation.PublicService;
@@ -35,7 +34,6 @@ import com.eucalyptus.simpleworkflow.common.policy.SimpleWorkflowPolicySpec;
 @AwsServiceName( "swf" )
 @PolicyVendor( SimpleWorkflowPolicySpec.VENDOR_SWF )
 @Partition( value = SimpleWorkflow.class, manyToOne = true )
-@FaultLogPrefix( "services" )
 @Description( "Simple Workflow API service" )
 public class SimpleWorkflow extends ComponentId {
   private static final long serialVersionUID = 1L;
