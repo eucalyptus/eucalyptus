@@ -243,13 +243,16 @@ public class SimpleQueueClientManager {
   public List<Message> receiveAllMessages(final String queueName, final boolean shouldDelete)
           throws Exception{
     try {
+      final int visibilityTimeout = 600;
+      final int visibilityBuffer = 300;
+      final long startTime = System.currentTimeMillis( );
       final List<Message> messages = Lists.newArrayList();
-      while (true) {
+      while ( ( System.currentTimeMillis( ) - startTime ) < (( visibilityTimeout - visibilityBuffer ) * 1000L ) ) {
         final ReceiveMessageRequest req = new ReceiveMessageRequest();
         req.setQueueUrl(getQueueUrl(queueName));
         req.setMaxNumberOfMessages(10);
         req.setWaitTimeSeconds(0);
-        req.setVisibilityTimeout(10);
+        req.setVisibilityTimeout(visibilityTimeout);
 
         final ReceiveMessageResult result = getSimpleQueueClient().receiveMessage(req);
         final List<Message> received = result.getMessages();
