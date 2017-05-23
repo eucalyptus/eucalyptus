@@ -66,6 +66,7 @@ clc/modules/www/gwt-unitCache/
 clc/target
 config.log
 config.status
+configure
 core.*
 gatherlog/GLclient
 gatherlog/libEucalyptusGL.so
