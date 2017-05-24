@@ -108,6 +108,9 @@ class NetworkInfoBroadcasts {
 
   private static final Logger logger = Logger.getLogger( NetworkInfoBroadcasts )
 
+  protected static volatile boolean MODE_CLEAN =
+      Boolean.valueOf( System.getProperty( 'com.eucalyptus.network.broadcastModeClean', 'true' ) )
+
   /**
    * All state used for building network configuration must be passed in (and be part of the fingerprint)
    */
@@ -331,7 +334,7 @@ class NetworkInfoBroadcasts {
           macAddress: Strings.emptyToNull( instance.macAddress ),
           publicIp: VmNetworkConfig.DEFAULT_IP==instance.publicAddress||dirtyPublicAddresses.contains(instance.publicAddress) ? null : instance.publicAddress,
           privateIp: instance.privateAddress,
-          securityGroups: instance.securityGroupIds,
+          securityGroups: Lists.newArrayList(instance.securityGroupIds),
           networkInterfaces: instanceIdToNetworkInterfaces.get( instance.id )?.collect{ NetworkInterfaceNetworkView networkInterface ->
             new NINetworkInterface(
                 name: networkInterface.id,
@@ -443,6 +446,10 @@ class NetworkInfoBroadcasts {
       )
     } )
 
+    if ( MODE_CLEAN ) {
+      modeClean( vpcmido, info )
+    }
+
     if ( logger.isTraceEnabled( ) ) {
       logger.trace( "Constructed network information for ${Iterables.size( instances )} instance(s), ${Iterables.size( groups )} security group(s)" )
     }
@@ -533,6 +540,101 @@ class NetworkInfoBroadcasts {
         !VmNetworkConfig.DEFAULT_IP.equals( instance.privateAddress ) &&
         !instance.networkGroups.isEmpty( ) &&
         !Strings.isNullOrEmpty( VmInstances.toNodeHost( ).apply( instance ) )
+  }
+
+  private static Set<String> modeClean( final boolean vpc, final NetworkInfo networkInfo ) {
+    Set<String> removedResources
+    if ( vpc ) {
+      removedResources = modeCleanVpc( networkInfo )
+    } else {
+      removedResources = modeCleanEdge( networkInfo )
+    }
+    networkInfo.configuration.clusters.clusters.forEach{ NICluster cluster ->
+      cluster.nodes.nodes.forEach{ NINode node ->
+        node.instanceIds.removeAll( removedResources )
+      }
+    }
+    networkInfo.instances.forEach{ NIInstance instance ->
+      instance.securityGroups.removeAll( removedResources )
+    }
+    removedResources
+  }
+
+  /**
+   * Remove any EC2-Classic platform info:
+   * - instances running without a vpc or without any network interfaces
+   */
+  private static Set<String> modeCleanVpc( final NetworkInfo networkInfo ) {
+    Set<String> removedResources = Sets.newHashSet( )
+    Iterator<NIInstance> instanceIterator = networkInfo.instances.iterator( )
+    while ( instanceIterator.hasNext( ) ) {
+      NIInstance instance = instanceIterator.next( )
+      if ( !instance.vpc || !instance.networkInterfaces ) {
+        instanceIterator.remove( )
+        removedResources.add( instance.name )
+      }
+    }
+    removedResources
+  }
+
+  /**
+   * Remove any EC2-VPC platform info:
+   * - instances running in a a vpc
+   * - instances running with network interfaces attached
+   * - security groups using egress rules
+   * - security groups using ingress rules with invalid protocols
+   * - vpcs
+   * - internet gateways
+   * - dhcp option sets
+   */
+  private static Set<String> modeCleanEdge( final NetworkInfo networkInfo ) {
+    Set<String> removedResources = Sets.newHashSet( )
+    Iterator<NIInstance> instanceIterator = networkInfo.instances.iterator( )
+    while ( instanceIterator.hasNext( ) ) {
+      NIInstance instance = instanceIterator.next( )
+      if ( instance.vpc || instance.networkInterfaces ) {
+        instanceIterator.remove( )
+        removedResources.add( instance.name )
+      }
+    }
+
+    Iterator<NISecurityGroup> securityGroupIterator = networkInfo.securityGroups.iterator( )
+    while ( securityGroupIterator.hasNext( ) ) {
+      NISecurityGroup securityGroup = securityGroupIterator.next()
+      boolean remove = securityGroup.egressRules
+      if ( !remove ) {
+        remove = securityGroup.ingressRules.find{ NISecurityGroupIpPermission permission ->
+          !NetworkRule.isValidProtocol( permission.protocol )
+        }
+      }
+      if ( remove ) {
+        securityGroupIterator.remove( )
+        removedResources.add( securityGroup.name )
+      }
+    }
+
+    Iterator<NIVpc> vpcIterator = networkInfo.vpcs.iterator( )
+    while ( vpcIterator.hasNext( ) ) {
+      NIVpc vpc = vpcIterator.next( )
+      vpcIterator.remove( )
+      removedResources.add( vpc.name )
+    }
+
+    Iterator<NIInternetGateway> internetGatewayIterator = networkInfo.internetGateways.iterator( )
+    while ( internetGatewayIterator.hasNext( ) ) {
+      NIInternetGateway internetGateway = internetGatewayIterator.next( )
+      internetGatewayIterator.remove( )
+      removedResources.add( internetGateway.name )
+    }
+
+    Iterator<NIDhcpOptionSet> dhcpOptionSetIterator = networkInfo.dhcpOptionSets.iterator( )
+    while ( dhcpOptionSetIterator.hasNext( ) ) {
+      NIDhcpOptionSet dhcpOptionSet = dhcpOptionSetIterator.next( )
+      dhcpOptionSetIterator.remove( )
+      removedResources.add( dhcpOptionSet.name )
+    }
+
+    removedResources
   }
 
   static interface NetworkInfoSource {

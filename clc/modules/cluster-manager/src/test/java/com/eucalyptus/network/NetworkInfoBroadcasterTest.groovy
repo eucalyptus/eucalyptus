@@ -39,11 +39,13 @@ import com.eucalyptus.cluster.NIProperty
 import com.eucalyptus.cluster.NIRoute
 import com.eucalyptus.cluster.NIRouteTable
 import com.eucalyptus.cluster.NISecurityGroup
+import com.eucalyptus.cluster.NISecurityGroupIpPermission
 import com.eucalyptus.cluster.NISubnet
 import com.eucalyptus.cluster.NISubnets
 import com.eucalyptus.cluster.NIVpc
 import com.eucalyptus.cluster.NIVpcSubnet
 import com.eucalyptus.cluster.NetworkInfo
+import com.eucalyptus.compute.common.config.ExtendedNetworkingConfiguration
 import com.eucalyptus.compute.common.internal.vpc.NatGateway
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaceAttachment
 import com.eucalyptus.compute.vpc.RouteKey
@@ -217,6 +219,167 @@ class NetworkInfoBroadcasterTest {
           )
         ],
         securityGroups: [ ]
+    ), info )
+  }
+
+  @Test
+  void testBasicBroadcastVpcInfoCleaned( ) {
+    ExtendedNetworkingConfiguration.EC2_CLASSIC_ADDITIONAL_PROTOCOLS_ALLOWED = "123"
+    NetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
+        Optional.of( new NetworkConfiguration(
+            instanceDnsDomain: 'eucalyptus.internal',
+            instanceDnsServers: [ '1.2.3.4' ],
+            publicIps: [ '2.0.0.2-2.0.0.255' ],
+            publicGateway: '2.0.0.1',
+            privateIps: [ '10.0.0.0-10.0.0.255' ],
+            subnets: [
+                new EdgeSubnet(
+                    name: 'default',
+                    subnet: '10.0.0.0',
+                    netmask: '255.255.0.0',
+                    gateway: '10.0.1.0'
+                ),
+                new EdgeSubnet(
+                    name: 'global',
+                    subnet: '192.168.0.0',
+                    netmask: '255.255.0.0',
+                    gateway: '192.168.0.1'
+                )
+            ],
+            clusters: [
+                new ConfigCluster(
+                    name: 'cluster1',
+                    subnet: new EdgeSubnet(
+                        name: 'default',
+                    )
+                )
+            ]
+        ) ),
+        new NetworkInfoBroadcasts.NetworkInfoSource( ) {
+          @Override Iterable<NetworkInfoBroadcasts.VmInstanceNetworkView> getInstances() {
+            [
+                instance( 'i-00000001', 'cluster1', 'node1', '000000000002', '00:00:00:00:00:00', '2.0.0.2', '10.0.0.0', null, null, [ 'sg-00000001', 'sg-00000002', 'sg-00000003' ] ),
+                instance( 'i-00000002', 'cluster1', 'node1', '000000000002', '00:00:00:00:00:01', '2.0.0.0', '10.0.0.0', 'vpc-00000001', 'subnet-00000001' )
+            ]
+          }
+          @Override Iterable<NetworkInfoBroadcasts.NetworkGroupNetworkView> getSecurityGroups() {
+            [
+                group( 'sg-00000001', '000000000002', null, [
+                    permission( 'sg-00000001', '000000000002', 123 )
+                ], [] ),
+                group( 'sg-00000002', '000000000002', null, [
+                    permission( 'sg-00000002', '000000000002', 321 )
+                ], [] ),
+                group( 'sg-00000003', '000000000002', null, [], [
+                    permission( 'sg-00000003', '000000000002', 123 )
+                ] )
+            ]
+          }
+          @Override Iterable<NetworkInfoBroadcasts.VpcNetworkView> getVpcs() {
+            [ vpc( 'vpc-00000001', '000000000002' ) ]
+          }
+          @Override Iterable<NetworkInfoBroadcasts.SubnetNetworkView> getSubnets() {
+            [ subnet( 'subnet-00000001', '000000000002', 'cluster1', 'vpc-00000001' ) ]
+          }
+          @Override Iterable<NetworkInfoBroadcasts.DhcpOptionSetNetworkView> getDhcpOptionSets() {
+            []
+          }
+          @Override Iterable<NetworkInfoBroadcasts.NetworkAclNetworkView> getNetworkAcls() {
+            []
+          }
+          @Override Iterable<NetworkInfoBroadcasts.RouteTableNetworkView> getRouteTables() {
+            [ routeTable( 'rtb-00000001', '000000000002', 'vpc-00000001', true, [ 'subnet-00000001' ], [
+                route( 'rtb-00000001', '192.168.0.0/16', 'igw-00000001' )
+            ] ) ]
+          }
+          @Override Iterable<NetworkInfoBroadcasts.InternetGatewayNetworkView> getInternetGateways() {
+            [ internetGateway( 'igw-00000001', '000000000002', 'vpc-00000001' ) ]
+          }
+          @Override Iterable<NetworkInfoBroadcasts.NetworkInterfaceNetworkView> getNetworkInterfaces() {
+            [ networkInterface( 'eni-00000001', '000000000002', 'i-00000002', 'eni-attach-00000001', '00:00:00:00:00:00', '2.0.0.0', '10.0.0.0', 'vpc-00000001', 'subnet-00000001' ) ]
+          }
+          @Override Iterable<NetworkInfoBroadcasts.NatGatewayNetworkView> getNatGateways() {
+            []
+          }
+          @Override Map<String,Iterable<? extends NetworkInfoBroadcasts.VmInstanceNetworkView>> getView() {
+            [:]
+          }
+        },
+        { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
+        { [ ] } as Supplier<List<Cluster>>,
+        { '1.1.1.1' } as Supplier<String>,
+        { [ '127.0.0.1' ] } as Function<List<String>, List<String>>,
+        [] as Set<String>,
+        [] as Set<RouteKey>
+    )
+    assertEquals( 'basic broadcast', new NetworkInfo(
+        configuration: new NIConfiguration(
+            properties: [
+                new NIProperty( name: 'mode', values: ['EDGE'] ),
+                new NIProperty( name: 'publicIps', values: ['2.0.0.2-2.0.0.255'] ),
+                new NIProperty( name: 'enabledCLCIp', values: ['1.1.1.1'] ),
+                new NIProperty( name: 'instanceDNSDomain', values: ['eucalyptus.internal'] ),
+                new NIProperty( name: 'instanceDNSServers', values: ['1.2.3.4'] ),
+                new NIProperty( name: 'publicGateway', values: ['2.0.0.1'] ),
+            ],
+            subnets: new NISubnets( name: 'subnets', subnets: [
+                new NISubnet(
+                    name: '192.168.0.0',
+                    properties: [
+                        new NIProperty( name: 'subnet', values: ['192.168.0.0'] ),
+                        new NIProperty( name: 'netmask', values: ['255.255.0.0'] ),
+                        new NIProperty( name: 'gateway', values: ['192.168.0.1'] )
+                    ]
+                )
+            ] ),
+            clusters: new NIClusters( name: 'clusters', clusters: [
+                new NICluster(
+                    name: 'cluster1',
+                    subnet: new NISubnet(
+                        name: '10.0.0.0',
+                        properties: [
+                            new NIProperty( name: 'subnet', values: ['10.0.0.0'] ),
+                            new NIProperty( name: 'netmask', values: ['255.255.0.0'] ),
+                            new NIProperty( name: 'gateway', values: ['10.0.1.0'] )
+                        ]
+                    ),
+                    properties: [
+                        new NIProperty( name: 'enabledCCIp', values: ['6.6.6.6'] ),
+                        new NIProperty( name: 'macPrefix', values: ['d0:0d'] ),
+                        new NIProperty( name: 'privateIps', values: ['10.0.0.0-10.0.0.255'] ),
+                    ],
+                    nodes: new NINodes( name: 'nodes', nodes: [
+                        new NINode(
+                            name: 'node1',
+                            instanceIds: [ 'i-00000001' ]
+                        )
+                    ] )
+                )
+            ] ),
+        ),
+        instances: [
+            new NIInstance(
+                name: 'i-00000001',
+                ownerId: '000000000002',
+                macAddress: '00:00:00:00:00:00',
+                publicIp: '2.0.0.2',
+                privateIp: '10.0.0.0',
+                securityGroups: [ 'sg-00000001' ],
+            )
+        ],
+        securityGroups: [
+          new NISecurityGroup(
+            name: 'sg-00000001',
+            ownerId: '000000000002',
+            ingressRules: [
+                new NISecurityGroupIpPermission(
+                    groupId: 'sg-00000001',
+                    groupOwnerId: '000000000002',
+                    protocol: 123
+                )
+            ]
+          )
+        ]
     ), info )
   }
 
@@ -989,7 +1152,7 @@ class NetworkInfoBroadcasterTest {
     cluster
   }
 
-  private static NetworkInfoBroadcasts.VmInstanceNetworkView instance( String id, String partition, String node, String ownerAccountNumber, String mac, String publicAddress, String privateAddress, String vpcId = null, String subnetId = null ) {
+  private static NetworkInfoBroadcasts.VmInstanceNetworkView instance( String id, String partition, String node, String ownerAccountNumber, String mac, String publicAddress, String privateAddress, String vpcId = null, String subnetId = null, List<String> groupsIds = [] ) {
     new NetworkInfoBroadcasts.VmInstanceNetworkView(
       id,
       1,
@@ -1003,7 +1166,7 @@ class NetworkInfoBroadcasterTest {
       publicAddress,
       partition,
       node,
-      [ ],
+      groupsIds,
     )
   }
 
@@ -1113,9 +1276,9 @@ class NetworkInfoBroadcasterTest {
     )
   }
 
-  private static NetworkInfoBroadcasts.IPPermissionNetworkView permission( String groupId, String groupOwnerAccountNumber ) {
+  private static NetworkInfoBroadcasts.IPPermissionNetworkView permission( String groupId, String groupOwnerAccountNumber, Integer protocol = -1 ) {
     new NetworkInfoBroadcasts.IPPermissionNetworkView(
-        protocol: -1,
+        protocol: protocol,
         fromPort: null,
         toPort: null,
         icmpType: null,

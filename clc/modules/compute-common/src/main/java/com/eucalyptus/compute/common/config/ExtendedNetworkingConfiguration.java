@@ -1,8 +1,10 @@
 package com.eucalyptus.compute.common.config;
 
+import com.eucalyptus.util.CompatFunction;
+import com.eucalyptus.util.FUtils;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.ImmutableSet;
 
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -10,6 +12,7 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -21,12 +24,21 @@ public class ExtendedNetworkingConfiguration {
   @ConfigurableField( description = "Comma delimited list of protocol numbers to support in EDGE mode for security group rules beyond the EC2-classic defaults (tcp,udp,icmp)",
       initial="",
       changeListener = ProtocolListPropertyChangeListener.class)
-  public static String EC2_CLASSIC_ADDITIONAL_PROTOCOLS_ALLOWED = "";
+  public static volatile String EC2_CLASSIC_ADDITIONAL_PROTOCOLS_ALLOWED = "";
+
+  private static CompatFunction<String,Set<String>> protocolSetBuilder =
+      FUtils.memoizeLast( ExtendedNetworkingConfiguration::buildEc2ClassicAdditionalProtocolsAllowed );
 
   public static boolean isProtocolInExceptionList(Integer number) {
-    return number != null && Iterables.contains(
-        Splitter.on(',').trimResults()
-            .split(EC2_CLASSIC_ADDITIONAL_PROTOCOLS_ALLOWED), String.valueOf(number));
+    return number != null && getEc2ClassicAdditionalProtocolsAllowed( ).contains( String.valueOf(number) );
+  }
+
+  private static Set<String> getEc2ClassicAdditionalProtocolsAllowed( ) {
+    return protocolSetBuilder.apply( EC2_CLASSIC_ADDITIONAL_PROTOCOLS_ALLOWED );
+  }
+
+  private static Set<String> buildEc2ClassicAdditionalProtocolsAllowed( final String list ) {
+    return ImmutableSet.copyOf( Splitter.on( ',' ).trimResults( ).split( EC2_CLASSIC_ADDITIONAL_PROTOCOLS_ALLOWED ) );
   }
 
   /**
