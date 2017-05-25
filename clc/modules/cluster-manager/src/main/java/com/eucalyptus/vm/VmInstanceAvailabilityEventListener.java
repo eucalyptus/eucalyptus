@@ -23,16 +23,15 @@ import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceT
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType.Disk;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType.Instance;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType.Memory;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
-import com.eucalyptus.cluster.common.internal.Cluster;
+import com.eucalyptus.cluster.common.Cluster;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.common.internal.ResourceState;
+import com.eucalyptus.cluster.common.ResourceState;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
@@ -47,7 +46,6 @@ import com.google.common.base.Function;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
 
 /**
  *

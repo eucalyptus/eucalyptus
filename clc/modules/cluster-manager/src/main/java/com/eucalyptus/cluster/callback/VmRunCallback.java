@@ -68,7 +68,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.cloud.VmInstanceToken;
 import com.eucalyptus.cluster.common.msgs.VmRunType;
-import com.eucalyptus.cluster.common.internal.ResourceState.NoSuchTokenException;
+import com.eucalyptus.cluster.common.ResourceState.NoSuchTokenException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.Logs;

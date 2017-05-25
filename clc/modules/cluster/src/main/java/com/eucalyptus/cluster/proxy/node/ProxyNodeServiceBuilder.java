@@ -66,6 +66,9 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Handles;
+import com.eucalyptus.cluster.common.ClusterController;
+import com.eucalyptus.cluster.common.msgs.ClusterEnableServiceType;
+import com.eucalyptus.cluster.common.msgs.ClusterStopServiceType;
 import com.eucalyptus.component.*;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.cluster.proxy.ProxyClusterController;
@@ -131,18 +134,17 @@ public class ProxyNodeServiceBuilder implements ServiceBuilder<ProxyNodeConfigur
   @Override
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
     if ( Bootstrap.isOperational() ) {
-      Nodes.send( new StopServiceType( ), config );
+      Nodes.send( new ClusterStopServiceType( ), config );
     }
   }
 
   @Override
   public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {
     try {
-      ServiceConfiguration ccConfig = Topology.lookup( ProxyClusterController.class, config.lookupPartition() );
-      Nodes.send( new EnableServiceType(), config );
+      Nodes.send( new ClusterEnableServiceType(), config );
     } catch ( RuntimeException e ) {
       throw new ServiceRegistrationException( "Failed to enable node controller " + config.getFullName() + " because: " + e.getMessage(), e );
-  }
+    }
   }
 
   @Override

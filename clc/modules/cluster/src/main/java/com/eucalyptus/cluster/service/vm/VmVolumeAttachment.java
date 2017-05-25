@@ -14,7 +14,10 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  ************************************************************************/package com.eucalyptus.cluster.service.vm;
 
+import java.util.Date;
 import java.util.Objects;
+import com.eucalyptus.crypto.util.Timestamps;
+import com.google.common.base.MoreObjects;
 
 /**
  *
@@ -58,6 +61,17 @@ public final class VmVolumeAttachment {
 
   public String getVolumeId() {
     return volumeId;
+  }
+
+  public String toString( ) {
+    return MoreObjects.toStringHelper( this )
+        .add( "volume-id", getVolumeId( ) )
+        .add( "device", getDevice( ) )
+        .add( "remote-device", getRemoteDevice( ) )
+        .add( "state", getState( ) )
+        .add( "attachment-timestamp", Timestamps.formatIso8601Timestamp( new Date( getAttachmentTimestamp( ) ) ) )
+        .omitNullValues( )
+        .toString( );
   }
 
   @Override

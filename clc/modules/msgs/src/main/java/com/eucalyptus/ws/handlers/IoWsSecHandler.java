@@ -17,6 +17,7 @@ package com.eucalyptus.ws.handlers;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Function;
 import javax.xml.crypto.dsig.Reference;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMException;
@@ -39,6 +40,7 @@ import com.eucalyptus.ws.IoMessage;
 import com.eucalyptus.ws.util.CredentialProxy;
 import com.google.common.collect.Lists;
 import io.netty.channel.ChannelDuplexHandler;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 
 /**
@@ -47,14 +49,18 @@ import io.netty.channel.ChannelPromise;
 public abstract class IoWsSecHandler extends ChannelDuplexHandler {
 
   private static Logger LOG    = Logger.getLogger( IoWsSecHandler.class );
-  private final CredentialProxy credentials;
+  private final Function<ChannelHandlerContext,CredentialProxy> credentialLookup;
 
   static {
-    WSSecurity.init();
+    WSSecurity.init( );
   }
 
   public IoWsSecHandler( final CredentialProxy credentials ) {
-    this.credentials = credentials;
+    this( ctx -> credentials );
+  }
+
+  public IoWsSecHandler( final Function<ChannelHandlerContext, CredentialProxy> credentialLookup ) {
+    this.credentialLookup = credentialLookup;
   }
 
   @Override
@@ -76,7 +82,7 @@ public abstract class IoWsSecHandler extends ChannelDuplexHandler {
           HoldMe.canHas.unlock( );
         }
 
-        final List<WSEncryptionPart> partsToSign = Lists.newArrayList();
+        final List<WSEncryptionPart> partsToSign = Lists.newArrayList( );
         final WSSecHeader wsheader = new WSSecHeader( "", false );
         try {
           wsheader.insertSecurityHeader( doc );
@@ -92,7 +98,7 @@ public abstract class IoWsSecHandler extends ChannelDuplexHandler {
         signer.setKeyIdentifierType( WSConstants.BST_DIRECT_REFERENCE );
         signer.setSigCanonicalization( WSConstants.C14N_EXCL_OMIT_COMMENTS );
         try {
-          signer.prepare( doc, this.credentials, wsheader );
+          signer.prepare( doc, this.credentialLookup.apply( ctx ), wsheader );
         } catch ( WSSecurityException e ) {
           LOG.error( doc );
           LOG.error( e, e );
@@ -128,7 +134,7 @@ public abstract class IoWsSecHandler extends ChannelDuplexHandler {
         try {
           final StAXSOAPModelBuilder stAXSOAPModelBuilder = new StAXSOAPModelBuilder( elem.getXMLStreamReader( ), HoldMe.getOMSOAP11Factory( ), null );
           envelope = stAXSOAPModelBuilder.getSOAPEnvelope( );
-          if(envelope != null)
+          if (envelope != null)
             envelope.build( );
         } finally {
           HoldMe.canHas.unlock( );

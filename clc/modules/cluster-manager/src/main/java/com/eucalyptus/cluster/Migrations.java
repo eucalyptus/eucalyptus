@@ -25,7 +25,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
-import com.eucalyptus.cluster.common.internal.Cluster;
+import com.eucalyptus.cluster.common.Cluster;
 import com.eucalyptus.cluster.common.msgs.ClusterMigrateInstancesType;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;

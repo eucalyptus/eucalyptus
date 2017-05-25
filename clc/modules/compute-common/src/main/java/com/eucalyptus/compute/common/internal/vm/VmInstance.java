@@ -248,6 +248,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return Restrictions.isNull( "runtimeState.serviceTag" );
   }
 
+  public static Criterion serviceTagCriterion( final String tag ) {
+    return Restrictions.eq( "runtimeState.serviceTag", tag );
+  }
+
   public static Criterion lastUpdatedCriterion( final long timestamp ) {
     return Restrictions.lt( "lastUpdateTimestamp", new Date( timestamp ) );
   }

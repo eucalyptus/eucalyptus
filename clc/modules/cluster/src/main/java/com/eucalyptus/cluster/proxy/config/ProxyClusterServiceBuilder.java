@@ -64,8 +64,8 @@ package com.eucalyptus.cluster.proxy.config;
 
 import java.util.NoSuchElementException;
 
-import com.eucalyptus.cluster.common.internal.Cluster;
-import com.eucalyptus.cluster.common.internal.ClusterRegistry;
+import com.eucalyptus.cluster.common.Cluster;
+import com.eucalyptus.cluster.common.ClusterRegistry;
 import com.eucalyptus.cluster.proxy.ProxyClusterController;
 import com.eucalyptus.component.*;
 import org.apache.log4j.Logger;

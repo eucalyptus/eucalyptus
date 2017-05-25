@@ -12,9 +12,19 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
- ************************************************************************/package com.eucalyptus.cluster.service.vm;
+ ************************************************************************/
+package com.eucalyptus.cluster.service.vm;
 
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.concurrent.ConcurrentMap;
+import com.eucalyptus.cluster.common.msgs.InstanceType;
+import com.eucalyptus.cluster.common.msgs.MetricsResourceType;
+import com.eucalyptus.cluster.common.msgs.VmRunType;
+import com.eucalyptus.cluster.common.msgs.VolumeType;
+import com.eucalyptus.crypto.util.Timestamps;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
 
 /**
@@ -39,13 +49,14 @@ public final class VmInfo {
 
   private final String ownerId;
   private final String accountId;
-  private final String serviceTag;
 
   private volatile String vpcId;
   private volatile String state;
   private volatile long stateTimestamp;
 
   private final ConcurrentMap<String, VmVolumeAttachment> volumeAttachments = Maps.newConcurrentMap( );
+
+  private volatile ArrayList<MetricsResourceType> metrics = new ArrayList<>( );
 
   public VmInfo(
       final String id,
@@ -68,7 +79,6 @@ public final class VmInfo {
       final String publicAddress,
       final String ownerId,
       final String accountId,
-      final String serviceTag,
       final String vpcId
   ) {
     this.id = id;
@@ -94,8 +104,82 @@ public final class VmInfo {
     );
     this.ownerId = ownerId;
     this.accountId = accountId;
-    this.serviceTag = serviceTag;
     this.vpcId = vpcId;
+  }
+
+  public static VmInfo create( final VmRunType request, final long currentTime ) {
+    final VmInfo vmInfo = new VmInfo(
+        request.getInstanceId( ),
+        request.getUuid( ),
+        request.getReservationId( ),
+        request.getLaunchIndex( ),
+        request.getVmTypeInfo( ).getName( ),
+        request.getVmTypeInfo( ).getCores( ),
+        request.getVmTypeInfo( ).getDisk( ),
+        request.getVmTypeInfo( ).getMemory( ),
+        request.getPlatform( ),
+        request.getKeyInfo( ).getValue( ),
+        currentTime,
+        "Extant",
+        currentTime,
+        null,
+        request.getPrimaryEniAttachmentId( ),
+        request.getMacAddress( ),
+        request.getPrivateAddress( ),
+        null,
+        request.getOwnerId( ),
+        request.getAccountId( ),
+        null
+    );
+    request.getVmTypeInfo( ).getVirtualBootRecord( ).forEach( vbr -> {
+      if ( Strings.nullToEmpty( vbr.getId( ) ).startsWith( "vol-" ) ) {
+        vmInfo.getVolumeAttachments( ).put( vbr.getId( ), new VmVolumeAttachment(
+            System.currentTimeMillis( ),
+            vbr.getId( ),
+            vbr.getGuestDeviceName( ),
+            vbr.getResourceLocation( ),
+            "attached"
+        ) );
+      }
+    } );
+    return vmInfo;
+  }
+
+  public static VmInfo create( final InstanceType instance ) {
+    final VmInfo vmInfo = new VmInfo(
+        instance.getInstanceId( ),
+        instance.getUuid( ),
+        instance.getReservationId( ),
+        Integer.valueOf( instance.getLaunchIndex( ) ),
+        instance.getInstanceType( ).getName( ),
+        instance.getInstanceType( ).getCores( ),
+        instance.getInstanceType( ).getDisk( ),
+        instance.getInstanceType( ).getMemory( ),
+        instance.getPlatform( ),
+        instance.getKeyName( ),
+        instance.getLaunchTime( ).getTime( ),
+        instance.getStateName( ),
+        instance.getLaunchTime( ).getTime( ), //TODO: state time?
+        null,
+        instance.getNetParams( ).getAttachmentId( ),
+        instance.getNetParams( ).getPrivateMacAddress( ),
+        instance.getNetParams( ).getPrivateIp( ),
+        null,
+        instance.getOwnerId( ),
+        instance.getAccountId( ),
+        null
+    );
+
+    for ( final VolumeType volume : instance.getVolumes( ) ) {
+      vmInfo.getVolumeAttachments( ).put( volume.getVolumeId( ), new VmVolumeAttachment(
+          0, //TODO attach time?
+          volume.getVolumeId( ),
+          volume.getLocalDev( ),
+          volume.getRemoteDev( ),
+          volume.getState( )
+      ) );
+    }
+    return vmInfo;
   }
 
   public String getId() {
@@ -158,10 +242,6 @@ public final class VmInfo {
     return accountId;
   }
 
-  public String getServiceTag() {
-    return serviceTag;
-  }
-
   public String getVpcId() {
     return vpcId;
   }
@@ -188,5 +268,36 @@ public final class VmInfo {
 
   public ConcurrentMap<String, VmVolumeAttachment> getVolumeAttachments() {
     return volumeAttachments;
+  }
+
+  public ArrayList<MetricsResourceType> getMetrics( ) {
+    return metrics;
+  }
+
+  public void setMetrics( final ArrayList<MetricsResourceType> metrics ) {
+    this.metrics = metrics;
+  }
+
+  public String state( final String state, final long timestamp ) {
+    if ( state != null && ( getState( ) == null || !getState( ).equals( state ) ) ) {
+      setState( state );
+      setStateTimestamp( timestamp );
+    }
+    return getState( );
+  }
+
+  public String toString( ) {
+    return MoreObjects.toStringHelper( this )
+        .add( "id", getId( ) )
+        .add( "uuid", getUuid( ) )
+        .add( "reservation-id", getReservationId( ) )
+        .add( "owner-id", getOwnerId( ) )
+        .add( "launch-index", getLaunchIndex( ) )
+        .add( "launch-time", Timestamps.formatIso8601Timestamp( new Date( getLaunchtime( ) ) ) )
+        .add( "instance-type-name", getInstanceTypeName( ) )
+        .add( "state", getState( ) )
+        .add( "vpc-id", getVpcId( ) )
+        .omitNullValues( )
+        .toString( );
   }
 }

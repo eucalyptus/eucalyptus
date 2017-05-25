@@ -22,8 +22,8 @@
 <ivy-module version="2.0">
     <info organisation="com.eucalyptus" module="eucalyptus-cluster"/>
     <dependencies>
-        <dependency name="eucalyptus-cluster-manager" rev="latest.integration"/>
-        <dependency name="eucalyptus-block-storage" rev="latest.integration"/>
+        <dependency name="eucalyptus-cluster-common" rev="latest.integration"/>
+        <dependency name="eucalyptus-ws" rev="latest.integration"/>
     </dependencies>
 </ivy-module>
 

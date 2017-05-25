@@ -411,38 +411,6 @@ public class DescribeSensorsResponseType extends CloudClusterMessage {
 
 }
 
-public class SensorsResourceType extends EucalyptusData {
-  String resourceName;
-  String resourceType;
-  String resourceUuid;
-
-  ArrayList<MetricsResourceType> metrics = new ArrayList<MetricsResourceType>();
-
-}
-
-public class MetricsResourceType extends EucalyptusData {
-  String metricName;
-  ArrayList<MetricCounterType> counters = new ArrayList<MetricCounterType>();
-}
-
-public class MetricCounterType extends EucalyptusData {
-  String type;
-  Long collectionIntervalMs;
-  ArrayList<MetricDimensionsType> dimensions = new ArrayList<MetricDimensionsType>();
-}
-
-public class MetricDimensionsType extends EucalyptusData {
-  String dimensionName;
-  Long sequenceNum;
-  ArrayList<MetricDimensionsValuesType> values = new ArrayList<MetricDimensionsValuesType>();
-}
-
-public class MetricDimensionsValuesType extends EucalyptusData {
-  Date timestamp;
-  Double value;
-}
-
-
 public class DescribeResourcesType extends CloudClusterMessage {
 
   ArrayList<VmTypeInfo> instanceTypes = new ArrayList<VmTypeInfo>();

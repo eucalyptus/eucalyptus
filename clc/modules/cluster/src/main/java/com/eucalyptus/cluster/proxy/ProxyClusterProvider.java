@@ -32,12 +32,19 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.FullName;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
-import com.eucalyptus.cluster.common.internal.Cluster;
-import com.eucalyptus.cluster.common.internal.ClusterRegistry;
+import com.eucalyptus.cluster.common.Cluster;
+import com.eucalyptus.cluster.common.ClusterRegistry;
+import com.eucalyptus.cluster.common.callback.ResourceStateCallback;
+import com.eucalyptus.cluster.common.callback.VmStateCallback;
+import com.eucalyptus.cluster.common.msgs.ClusterDescribeServicesResponseType;
+import com.eucalyptus.cluster.common.msgs.ClusterDescribeServicesType;
+import com.eucalyptus.cluster.common.msgs.ClusterDisableServiceType;
+import com.eucalyptus.cluster.common.msgs.ClusterEnableServiceType;
+import com.eucalyptus.cluster.common.msgs.ClusterStartServiceType;
 import com.eucalyptus.cluster.common.msgs.NodeInfo;
 import com.eucalyptus.cluster.proxy.config.ClusterConfiguration;
 import com.eucalyptus.cluster.proxy.node.ProxyNodeController;
-import com.eucalyptus.cluster.common.internal.spi.ClusterProvider;
+import com.eucalyptus.cluster.common.provider.ClusterProvider;
 import com.eucalyptus.cluster.common.msgs.NodeType;
 import com.eucalyptus.cluster.proxy.callback.ProxyClusterCertsCallback;
 import com.eucalyptus.component.Component;
@@ -53,14 +60,9 @@ import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
-import com.eucalyptus.empyrean.DescribeServicesResponseType;
-import com.eucalyptus.empyrean.DescribeServicesType;
-import com.eucalyptus.empyrean.DisableServiceType;
-import com.eucalyptus.empyrean.EnableServiceType;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.empyrean.ServiceTransitionType;
-import com.eucalyptus.empyrean.StartServiceType;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
@@ -299,7 +301,7 @@ public class ProxyClusterProvider implements ClusterProvider, EventListener, Has
       }
     };
     //GRZE: submit the node controller state updates in a separate thread to ensure it doesn't interfere with the Cluster state machine.
-    Threads.enqueue( ProxyNodeController.class, ProxyClusterProvider.class, updateNodes ); //TODO:STEVE: revert class to ResourceStateCallback
+    Threads.enqueue( ProxyNodeController.class, ResourceStateCallback.class, updateNodes );
   }
 
   @Override
@@ -522,8 +524,8 @@ public class ProxyClusterProvider implements ClusterProvider, EventListener, Has
   }
 
   private enum ServiceStateDispatch implements Predicate<ProxyClusterProvider>, RemoteCallback<ServiceTransitionType, ServiceTransitionType> {
-    STARTED( StartServiceType.class ),
-    ENABLED( EnableServiceType.class ) {
+    STARTED( ClusterStartServiceType.class ),
+    ENABLED( ClusterEnableServiceType.class ) {
       @Override
       public boolean apply( final ProxyClusterProvider input ) {
         try {
@@ -537,7 +539,7 @@ public class ProxyClusterProvider implements ClusterProvider, EventListener, Has
         }
       }
     },
-    DISABLED( DisableServiceType.class ) {
+    DISABLED( ClusterDisableServiceType.class ) {
       @Override
       public boolean apply( final ProxyClusterProvider input ) {
         try {
@@ -611,13 +613,13 @@ public class ProxyClusterProvider implements ClusterProvider, EventListener, Has
     }
   }
 
-  private static class ServiceStateCallback extends SubjectMessageCallback<Cluster, DescribeServicesType, DescribeServicesResponseType> {
+  private static class ServiceStateCallback extends SubjectMessageCallback<Cluster, ClusterDescribeServicesType, ClusterDescribeServicesResponseType> {
     public ServiceStateCallback( ) {
-      this.setRequest( new DescribeServicesType( ) );
+      this.setRequest( new ClusterDescribeServicesType( ) );
     }
 
     @Override
-    public void fire( DescribeServicesResponseType msg ) {
+    public void fire( final ClusterDescribeServicesResponseType msg ) {
       List<ServiceStatusType> serviceStatuses = msg.getServiceStatuses();
       Cluster parent = this.getSubject();
       ProxyClusterProvider proxyClusterSpi = (ProxyClusterProvider) parent.getClusterProvider( );
@@ -669,9 +671,8 @@ public class ProxyClusterProvider implements ClusterProvider, EventListener, Has
   }
 
   private enum Refresh implements Function<ProxyClusterProvider, TransitionAction<ProxyClusterProvider>> {
-    RESOURCES( "com.eucalyptus.cluster.callback.ResourceStateCallback" ), //TODO:STEVE: revert back to class references
-    INSTANCES( "com.eucalyptus.cluster.callback.VmStateCallback" ),
-    VOLATILEINSTANCES( "com.eucalyptus.cluster.callback.VmStateCallback$VmPendingCallback" ),
+    RESOURCES( ResourceStateCallback.class ),
+    INSTANCES( VmStateCallback.class ),
     SERVICEREADY( ServiceStateCallback.class );
     Class<? extends SubjectMessageCallback<Cluster,?,?>>  refresh;
 
@@ -679,16 +680,7 @@ public class ProxyClusterProvider implements ClusterProvider, EventListener, Has
       this.refresh = refresh;
     }
 
-    Refresh( final String refresh ) {
-      try {
-        this.refresh = (Class<? extends SubjectMessageCallback<Cluster,?,?>> ) Class.forName( refresh );
-      } catch ( ClassNotFoundException e ) {
-        throw Exceptions.toUndeclared( e );
-      }
-    }
-
-    @SuppressWarnings( { "rawtypes",
-        "unchecked" } )
+    @SuppressWarnings( { "rawtypes", "unchecked" } )
     @Override
     public TransitionAction<ProxyClusterProvider> apply( final ProxyClusterProvider cluster ) {
       final SubjectRemoteCallbackFactory<? extends RemoteCallback<?,?>, Cluster> factory = newSubjectMessageFactory( this.refresh, cluster );
@@ -863,28 +855,11 @@ public class ProxyClusterProvider implements ClusterProvider, EventListener, Has
 
   private void fireClockTick( final Hertz tick ) {
     try {
-      Component.State systemState;
       try {
-        systemState = this.configuration.lookupState( );
+        this.configuration.lookupState( );
       } catch ( final NoSuchElementException ex1 ) {
         this.stop( );
         return;
-      }
-      final boolean initialized = systemState.ordinal( ) > Component.State.LOADED.ordinal( );
-      if ( !this.stateMachine.isBusy( ) ) {
-        switch ( this.stateMachine.getState( ) ) {
-          case ENABLED:
-          case ENABLED_RSC:
-          case ENABLED_VMS:
-          case ENABLED_SERVICE_CHECK:
-            if ( initialized && tick.isAsserted( Long.MAX_VALUE )
-                && Component.State.ENABLED.equals( this.configuration.lookupState( ) ) ) {
-              Refresh.VOLATILEINSTANCES.fire( this );
-            }
-            break;
-          default:
-            break;
-        }
       }
     } catch ( final Exception ex ) {
       LOG.error( ex, ex );

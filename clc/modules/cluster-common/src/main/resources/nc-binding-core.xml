@@ -1,0 +1,359 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+  -->
+<binding force-classes="true" add-constructors="true">
+  <mapping class="com.eucalyptus.cluster.common.msgs.CloudNodeMessage" abstract="true" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="nodeName" field="nodeName" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cluster.common.msgs.VirtualMachineType" abstract="true">
+    <value name="name" field="name" usage="optional"/>
+    <value name="memory" field="memory" usage="optional"/>
+    <value name="cores" field="cores" usage="optional"/>
+    <value name="disk" field="disk" usage="optional"/>
+    <collection field="virtualBootRecord">
+      <structure name="virtualBootRecord" type="com.eucalyptus.cluster.common.msgs.VirtualBootRecordType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cluster.common.msgs.VirtualBootRecordType" abstract="true">
+    <value name="resourceLocation" field="resourceLocation" usage="optional"/>
+    <value name="guestDeviceName" field="guestDeviceName" usage="optional"/>
+    <value name="size" field="size" usage="optional"/>
+    <value name="format" field="format" usage="optional"/>
+    <value name="id" field="id" usage="optional"/>
+    <value name="type" field="type" usage="optional"/>
+  </mapping>
+  <mapping name="ncDescribeInstances" class="com.eucalyptus.cluster.common.msgs.NcDescribeInstancesType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <collection field="instanceIds">
+      <value name="instanceIds" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping name="ncDescribeInstancesResponse" class="com.eucalyptus.cluster.common.msgs.NcDescribeInstancesResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <collection field="instances">
+      <structure name="instances" type="com.eucalyptus.cluster.common.msgs.InstanceType"/>
+    </collection>
+  </mapping>
+  <mapping name="ncRebootInstance" class="com.eucalyptus.cluster.common.msgs.NcRebootInstanceType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <value name="instanceId" field="instanceId" usage="required"/>
+  </mapping>
+  <mapping name="ncRebootInstanceResponse" class="com.eucalyptus.cluster.common.msgs.NcRebootInstanceResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <value name="status" field="status" usage="required"/>
+  </mapping>
+  <mapping name="ncAttachVolume" class="com.eucalyptus.cluster.common.msgs.NcAttachVolumeType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <value name="instanceId" field="instanceId" usage="optional"/>
+    <value name="volumeId" field="volumeId" usage="optional"/>
+    <value name="remoteDev" field="remoteDev" usage="optional"/>
+    <value name="localDev" field="localDev" usage="optional"/>
+  </mapping>
+  <mapping name="ncAttachVolumeResponse" class="com.eucalyptus.cluster.common.msgs.NcAttachVolumeResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+  </mapping>
+  <mapping name="ncDetachVolume" class="com.eucalyptus.cluster.common.msgs.NcDetachVolumeType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <value name="instanceId" field="instanceId" usage="optional"/>
+    <value name="volumeId" field="volumeId" usage="optional"/>
+    <value name="remoteDev" field="remoteDev" usage="optional"/>
+    <value name="localDev" field="localDev" usage="optional"/>
+    <value name="force" field="force" usage="optional"/>
+  </mapping>
+  <mapping name="ncDetachVolumeResponse" class="com.eucalyptus.cluster.common.msgs.NcDetachVolumeResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+  </mapping>
+  <mapping name="ncAttachNetworkInterface" class="com.eucalyptus.cluster.common.msgs.NcAttachNetworkInterfaceType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <value name="instanceId" field="instanceId" usage="optional"/>
+    <structure name="netConfig" field="netConfig" usage="optional" type="com.eucalyptus.cluster.common.msgs.NetConfigType"/>
+  </mapping>
+  <mapping name="ncAttachNetworkInterfaceResponse" class="com.eucalyptus.cluster.common.msgs.NcAttachNetworkInterfaceResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+  </mapping>
+  <mapping name="ncDetachNetworkInterface" class="com.eucalyptus.cluster.common.msgs.NcDetachNetworkInterfaceType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <value name="instanceId" field="instanceId" usage="optional"/>
+    <value name="attachmentId" field="attachmentId" usage="optional"/>
+    <value name="force" field="force" usage="optional"/>
+  </mapping>
+  <mapping name="ncDetachNetworkInterfaceResponse" class="com.eucalyptus.cluster.common.msgs.NcDetachNetworkInterfaceResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+  </mapping>
+  <mapping name="ncCreateImage" class="com.eucalyptus.cluster.common.msgs.NcCreateImageType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <value name="instanceId" field="instanceId" usage="optional"/>
+    <value name="volumeId" field="volumeId" usage="optional"/>
+    <value name="remoteDev" field="remoteDev" usage="optional"/>
+  </mapping>
+  <mapping name="ncCreateImageResponse" class="com.eucalyptus.cluster.common.msgs.NcCreateImageResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+  </mapping>
+  <mapping name="ncBundleInstance" class="com.eucalyptus.cluster.common.msgs.NcBundleInstanceType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <value name="instanceId" field="instanceId" usage="optional"/>
+    <value name="bucketName" field="bucketName" usage="optional"/>
+    <value name="filePrefix" field="filePrefix" usage="optional"/>
+    <value name="objectStorageURL" field="objectStorageURL" usage="optional"/>
+    <value name="userPublicKey" field="userPublicKey" usage="optional"/>
+    <value name="cloudPublicKey" field="cloudPublicKey" usage="optional"/>
+    <value name="S3Policy" field="s3Policy" usage="optional"/>
+    <value name="S3PolicySig" field="s3PolicySig" usage="optional"/>
+    <value name="architecture" field="architecture" usage="optional"/>
+  </mapping>
+  <mapping name="ncBundleInstanceResponse" class="com.eucalyptus.cluster.common.msgs.NcBundleInstanceResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+  </mapping>
+  <mapping name="ncBundleRestartInstance" class="com.eucalyptus.cluster.common.msgs.NcBundleRestartInstanceType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <value name="instanceId" field="instanceId" usage="optional"/>
+  </mapping>
+  <mapping name="ncBundleRestartInstanceResponse" class="com.eucalyptus.cluster.common.msgs.NcBundleRestartInstanceResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+  </mapping>
+  <mapping name="ncCancelBundleTask" class="com.eucalyptus.cluster.common.msgs.NcCancelBundleTaskType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <value name="instanceId" field="instanceId" usage="optional"/>
+  </mapping>
+  <mapping name="ncCancelBundleTaskResponse" class="com.eucalyptus.cluster.common.msgs.NcCancelBundleTaskResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+  </mapping>
+  <mapping name="bundleTaskType" class="com.eucalyptus.cluster.common.msgs.BundleTaskType">
+    <value name="instanceId" field="instanceId" usage="optional"/>
+    <value name="state" field="state" usage="optional"/>
+    <value name="manifest" field="manifest" usage="optional"/>
+    <value name="progress" field="progress" usage="optional"/>
+  </mapping>
+  <mapping name="ncGetConsoleOutput" class="com.eucalyptus.cluster.common.msgs.NcGetConsoleOutputType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <value name="instanceId" field="instanceId" usage="required"/>
+  </mapping>
+  <mapping name="ncGetConsoleOutputResponse" class="com.eucalyptus.cluster.common.msgs.NcGetConsoleOutputResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <value name="consoleOutput" field="consoleOutput" usage="required"/>
+  </mapping>
+  <mapping name="ncTerminateInstance" class="com.eucalyptus.cluster.common.msgs.NcTerminateInstanceType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <value name="instanceId" field="instanceId" usage="required"/>
+    <value name="force" field="force" usage="required"/>
+  </mapping>
+  <mapping name="ncTerminateInstanceResponse" class="com.eucalyptus.cluster.common.msgs.NcTerminateInstanceResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <value name="instanceId" field="instanceId" usage="required"/>
+    <value name="shutdownState" field="shutdownState" usage="optional"/>
+    <value name="previousState" field="previousState" usage="optional"/>
+  </mapping>
+  <mapping name="ncDescribeResource" class="com.eucalyptus.cluster.common.msgs.NcDescribeResourceType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <value name="resourceType" field="resourceType" usage="optional"/>
+  </mapping>
+  <mapping name="ncPowerDown" class="com.eucalyptus.cluster.common.msgs.NcPowerDownType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+  </mapping>
+  <mapping name="ncPowerDownResponse" class="com.eucalyptus.cluster.common.msgs.NcPowerDownResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+  </mapping>
+  <mapping name="ncDescribeResourceResponse" class="com.eucalyptus.cluster.common.msgs.NcDescribeResourceResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <value name="nodeStatus" field="nodeStatus" usage="required"/>
+    <value name="migrationCapable" field="migrationCapable" usage="required"/>
+    <value name="iqn" field="iqn" usage="required"/>
+    <value name="memorySizeMax" field="memorySizeMax" usage="required"/>
+    <value name="memorySizeAvailable" field="memorySizeAvailable" usage="required"/>
+    <value name="diskSizeMax" field="diskSizeMax" usage="required"/>
+    <value name="diskSizeAvailable" field="diskSizeAvailable" usage="required"/>
+    <value name="numberOfCoresMax" field="numberOfCoresMax" usage="required"/>
+    <value name="numberOfCoresAvailable" field="numberOfCoresAvailable" usage="required"/>
+    <value name="publicSubnets" field="publicSubnets" usage="required"/>
+    <value name="hypervisor" field="hypervisor" usage="required"/>
+  </mapping>
+  <mapping name="ncRunInstance" class="com.eucalyptus.cluster.common.msgs.NcRunInstanceType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <value name="imageId" field="imageId" usage="optional"/>
+    <value name="kernelId" field="kernelId" usage="optional"/>
+    <value name="ramdiskId" field="ramdiskId" usage="optional"/>
+    <value name="imageURL" field="imageURL" usage="optional"/>
+    <value name="kernelURL" field="kernelURL" usage="optional"/>
+    <value name="ramdiskURL" field="ramdiskURL" usage="optional"/>
+    <value name="ownerId" field="ownerId" usage="required"/>
+    <value name="accountId" field="accountId" usage="required"/>
+    <value name="reservationId" field="reservationId" usage="required"/>
+    <value name="instanceId" field="instanceId" usage="required"/>
+    <value name="uuid" field="uuid" usage="required"/>
+    <structure name="instanceType" field="instanceType" usage="required" type="com.eucalyptus.cluster.common.msgs.VirtualMachineType"/>
+    <value name="keyName" field="keyName" usage="required"/>
+    <structure name="netParams" field="netParams" usage="required" type="com.eucalyptus.cluster.common.msgs.NetConfigType"/>
+    <value name="userData" field="userData" usage="optional"/>
+    <value name="credential" field="credential" usage="optional"/>
+    <value name="launchIndex" field="launchIndex" usage="optional"/>
+    <value name="platform" field="platform" usage="optional"/>
+    <value name="expiryTime" field="expiryTime" usage="optional"/>
+    <collection field="groupNames">
+      <value name="groupNames" type="java.lang.String"/>
+    </collection>
+    <value name="rootDirective" field="rootDirective" usage="optional"/>
+    <collection field="groupIds">
+      <value name="groupIds" type="java.lang.String"/>
+    </collection>
+    <collection field="secondaryNetConfig">
+      <structure name="secondaryNetConfig" type="com.eucalyptus.cluster.common.msgs.NetConfigType"/>
+    </collection>
+  </mapping>
+  <mapping name="ncRunInstanceResponse" class="com.eucalyptus.cluster.common.msgs.NcRunInstanceResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <structure name="instance" field="instance" usage="optional" type="com.eucalyptus.cluster.common.msgs.InstanceType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cluster.common.msgs.InstanceType" abstract="true">
+    <value name="uuid" field="uuid" usage="required"/>
+    <value name="reservationId" field="reservationId" usage="required"/>
+    <value name="instanceId" field="instanceId" usage="required"/>
+    <value name="imageId" field="imageId" usage="required"/>
+    <value name="kernelId" field="kernelId" usage="optional"/>
+    <value name="ramdiskId" field="ramdiskId" usage="optional"/>
+    <value name="userId" field="userId" usage="required"/>
+    <value name="ownerId" field="ownerId" usage="required"/>
+    <value name="accountId" field="accountId" usage="required"/>
+    <value name="keyName" field="keyName" usage="required"/>
+    <structure name="instanceType" field="instanceType" usage="required" type="com.eucalyptus.cluster.common.msgs.VirtualMachineType"/>
+    <structure name="netParams" field="netParams" usage="optional" type="com.eucalyptus.cluster.common.msgs.NetConfigType"/>
+    <value name="stateName" field="stateName" usage="required"/>
+    <value name="bundleTaskStateName" field="bundleTaskStateName" usage="optional"/>
+    <value name="bundleTaskProgress" field="bundleTaskProgress" usage="optional"/>
+    <value name="createImageStateName" field="createImageStateName" usage="optional"/>
+    <value name="launchTime" field="launchTime" usage="optional"/>
+    <value name="expiryTime" field="expiryTime" usage="optional"/>
+    <value name="blkbytes" field="blkbytes" usage="optional"/>
+    <value name="netbytes" field="netbytes" usage="optional"/>
+    <value name="guestStateName" field="guestStateName" usage="optional"/>
+    <value name="migrationStateName" field="migrationStateName" usage="optional"/>
+    <value name="migrationSource" field="migrationSource" usage="optional"/>
+    <value name="migrationDestination" field="migrationDestination" usage="optional"/>
+    <value name="userData" field="userData" usage="optional"/>
+    <value name="launchIndex" field="launchIndex" usage="optional"/>
+    <value name="platform" field="platform" usage="optional"/>
+    <collection field="groupNames">
+      <value name="groupNames" type="java.lang.String"/>
+    </collection>
+    <collection field="groupIds">
+      <value name="groupIds" type="java.lang.String"/>
+    </collection>
+    <collection field="volumes">
+      <structure name="volumes" type="com.eucalyptus.cluster.common.msgs.VolumeType"/>
+    </collection>
+    <value name="serviceTag" field="serviceTag" usage="optional"/>
+    <value name="hasFloopy" field="hasFloopy" usage="optional"/>
+    <collection field="secondaryNetConfig">
+      <structure name="secondaryNetConfig" type="com.eucalyptus.cluster.common.msgs.NetConfigType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cluster.common.msgs.NetConfigType" abstract="true">
+    <value name="interfaceId" field="interfaceId" usage="required"/>
+    <value name="device" field="device" usage="required"/>
+    <value name="privateMacAddress" field="privateMacAddress" usage="required"/>
+    <value name="privateIp" field="privateIp" usage="required"/>
+    <value name="publicIp" field="publicIp" usage="required"/>
+    <value name="vlan" field="vlan" usage="required"/>
+    <value name="networkIndex" field="networkIndex" usage="required"/>
+    <value name="attachmentId" field="attachmentId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cluster.common.msgs.VolumeType" abstract="true">
+    <value name="volumeId" field="volumeId" usage="optional"/>
+    <value name="remoteDev" field="remoteDev" usage="optional"/>
+    <value name="localDev" field="localDev" usage="optional"/>
+    <value name="state" field="state" usage="optional"/>
+  </mapping>
+  <mapping name="ncStartNetwork" class="com.eucalyptus.cluster.common.msgs.NcStartNetworkType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <collection field="remoteHosts">
+      <value name="remoteHosts" type="java.lang.String"/>
+    </collection>
+    <value name="remoteHostPort" field="remoteHostPort" usage="optional"/>
+    <value name="vlan" field="vlan" usage="optional"/>
+    <value name="uuid" field="uuid" usage="optional"/>
+  </mapping>
+  <mapping name="ncStartNetworkResponse" class="com.eucalyptus.cluster.common.msgs.NcStartNetworkResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <value name="networkStatus" field="networkStatus" usage="optional"/>
+  </mapping>
+  <mapping name="ncDescribeSensors" class="com.eucalyptus.cluster.common.msgs.NcDescribeSensorsType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <value name="historySize" field="historySize" usage="optional"/>
+    <value name="collectionIntervalTimeMs" field="collectionIntervalTimeMs" usage="optional"/>
+    <collection field="instanceIds">
+      <value name="instanceIds" type="java.lang.String"/>
+    </collection>
+    <collection field="sensorIds">
+      <value name="sensorIds" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping name="ncDescribeSensorsResponse" class="com.eucalyptus.cluster.common.msgs.NcDescribeSensorsResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <collection field="sensorsResources">
+      <structure name="sensorsResources" type="com.eucalyptus.cluster.common.msgs.SensorsResourceType"/>
+    </collection>
+  </mapping>
+  <mapping name="ncModifyNode" class="com.eucalyptus.cluster.common.msgs.NcModifyNodeType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <value name="stateName" field="stateName" usage="optional"/>
+  </mapping>
+  <mapping name="ncModifyNodeResponse" class="com.eucalyptus.cluster.common.msgs.NcModifyNodeResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+  </mapping>
+  <mapping name="ncMigrateInstances" class="com.eucalyptus.cluster.common.msgs.NcMigrateInstancesType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <collection field="instances">
+      <structure name="instances" type="com.eucalyptus.cluster.common.msgs.InstanceType"/>
+    </collection>
+    <value name="action" field="action" usage="required"/>
+    <value name="credentials" field="credentials" usage="optional"/>
+    <collection field="resourceLocation">
+      <value name="resourceLocation" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping name="ncMigrateInstancesResponse" class="com.eucalyptus.cluster.common.msgs.NcMigrateInstancesResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+  </mapping>
+  <mapping name="ncStartInstance" class="com.eucalyptus.cluster.common.msgs.NcStartInstanceType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <value name="instanceId" field="instanceId" usage="required"/>
+  </mapping>
+  <mapping name="ncStartInstanceResponse" class="com.eucalyptus.cluster.common.msgs.NcStartInstanceResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+  </mapping>
+  <mapping name="ncStopInstance" class="com.eucalyptus.cluster.common.msgs.NcStopInstanceType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <value name="instanceId" field="instanceId" usage="required"/>
+  </mapping>
+  <mapping name="ncStopInstanceResponse" class="com.eucalyptus.cluster.common.msgs.NcStopInstanceResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+  </mapping>
+  <mapping name="ncBroadcastNetworkInfo" class="com.eucalyptus.cluster.common.msgs.NcBroadcastNetworkInfoType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <value name="networkInfo" field="networkInfo" usage="required"/>
+  </mapping>
+  <mapping name="ncBroadcastNetworkInfoResponse" class="com.eucalyptus.cluster.common.msgs.NcBroadcastNetworkInfoResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+  </mapping>
+  <mapping name="ncAssignAddress" class="com.eucalyptus.cluster.common.msgs.NcAssignAddressType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+    <value name="instanceId" field="instanceId" usage="required"/>
+    <value name="publicIp" field="publicIp" usage="required"/>
+  </mapping>
+  <mapping name="ncAssignAddressResponse" class="com.eucalyptus.cluster.common.msgs.NcAssignAddressResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudNodeMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudNodeMessage"/>
+  </mapping>
+</binding>

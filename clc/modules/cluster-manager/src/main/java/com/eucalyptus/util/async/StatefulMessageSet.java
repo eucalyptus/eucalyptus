@@ -69,7 +69,7 @@ import java.util.concurrent.TimeoutException;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.cluster.common.internal.Cluster;
+import com.eucalyptus.cluster.common.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;

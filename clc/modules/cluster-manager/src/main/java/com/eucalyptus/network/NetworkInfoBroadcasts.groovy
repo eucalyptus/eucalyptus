@@ -19,34 +19,34 @@
  ************************************************************************/
 package com.eucalyptus.network
 
-import com.eucalyptus.cluster.common.internal.Cluster
-import com.eucalyptus.cluster.NICluster
-import com.eucalyptus.cluster.NIClusters
-import com.eucalyptus.cluster.NIConfiguration
-import com.eucalyptus.cluster.NIDhcpOptionSet
-import com.eucalyptus.cluster.NIInstance
-import com.eucalyptus.cluster.NIInternetGateway
-import com.eucalyptus.cluster.NIManagedSubnet
-import com.eucalyptus.cluster.NIManagedSubnets
-import com.eucalyptus.cluster.NIMidonet
-import com.eucalyptus.cluster.NIMidonetGateway
-import com.eucalyptus.cluster.NIMidonetGateways
-import com.eucalyptus.cluster.NINatGateway
-import com.eucalyptus.cluster.NINetworkAcl
-import com.eucalyptus.cluster.NINetworkAclEntry
-import com.eucalyptus.cluster.NINetworkInterface
-import com.eucalyptus.cluster.NINode
-import com.eucalyptus.cluster.NINodes
-import com.eucalyptus.cluster.NIProperty
-import com.eucalyptus.cluster.NIRoute
-import com.eucalyptus.cluster.NIRouteTable
-import com.eucalyptus.cluster.NISecurityGroup
-import com.eucalyptus.cluster.NISecurityGroupIpPermission
-import com.eucalyptus.cluster.NISubnet
-import com.eucalyptus.cluster.NISubnets
-import com.eucalyptus.cluster.NIVpc
-import com.eucalyptus.cluster.NIVpcSubnet
-import com.eucalyptus.cluster.NetworkInfo
+import com.eucalyptus.cluster.common.Cluster
+import com.eucalyptus.cluster.common.broadcast.NICluster
+import com.eucalyptus.cluster.common.broadcast.NIClusters
+import com.eucalyptus.cluster.common.broadcast.NIConfiguration
+import com.eucalyptus.cluster.common.broadcast.NIDhcpOptionSet
+import com.eucalyptus.cluster.common.broadcast.NIInstance
+import com.eucalyptus.cluster.common.broadcast.NIInternetGateway
+import com.eucalyptus.cluster.common.broadcast.NIManagedSubnet
+import com.eucalyptus.cluster.common.broadcast.NIManagedSubnets
+import com.eucalyptus.cluster.common.broadcast.NIMidonet
+import com.eucalyptus.cluster.common.broadcast.NIMidonetGateway
+import com.eucalyptus.cluster.common.broadcast.NIMidonetGateways
+import com.eucalyptus.cluster.common.broadcast.NINatGateway
+import com.eucalyptus.cluster.common.broadcast.NINetworkAcl
+import com.eucalyptus.cluster.common.broadcast.NINetworkAclEntry
+import com.eucalyptus.cluster.common.broadcast.NINetworkInterface
+import com.eucalyptus.cluster.common.broadcast.NINode
+import com.eucalyptus.cluster.common.broadcast.NINodes
+import com.eucalyptus.cluster.common.broadcast.NIProperty
+import com.eucalyptus.cluster.common.broadcast.NIRoute
+import com.eucalyptus.cluster.common.broadcast.NIRouteTable
+import com.eucalyptus.cluster.common.broadcast.NISecurityGroup
+import com.eucalyptus.cluster.common.broadcast.NISecurityGroupIpPermission
+import com.eucalyptus.cluster.common.broadcast.NISubnet
+import com.eucalyptus.cluster.common.broadcast.NISubnets
+import com.eucalyptus.cluster.common.broadcast.NIVpc
+import com.eucalyptus.cluster.common.broadcast.NIVpcSubnet
+import com.eucalyptus.cluster.common.broadcast.NetworkInfo
 import com.eucalyptus.compute.common.internal.network.NetworkGroup
 import com.eucalyptus.compute.common.internal.network.NetworkPeer
 import com.eucalyptus.compute.common.internal.network.NetworkRule
@@ -211,7 +211,7 @@ class NetworkInfoBroadcasts {
       info.configuration.clusters.clusters.find{ NICluster cluster -> cluster.name == entry.key[0] }?.with{
         NINode node = nodes.nodes.find{ NINode node -> node.name == entry.key[1] }
         if ( node ) {
-          node.instanceIds = entry.value ? entry.value as List<String> : null
+          node.instanceIds = entry.value ? entry.value as List<String> : (List<String>) null
         } else {
           null
         }

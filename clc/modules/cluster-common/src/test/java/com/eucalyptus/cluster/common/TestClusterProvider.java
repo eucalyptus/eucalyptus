@@ -16,8 +16,7 @@
 package com.eucalyptus.cluster.common;
 
 import java.util.List;
-import com.eucalyptus.cluster.common.internal.Cluster;
-import com.eucalyptus.cluster.common.internal.spi.ClusterProvider;
+import com.eucalyptus.cluster.common.provider.ClusterProvider;
 import com.eucalyptus.cluster.common.msgs.NodeType;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.ServiceConfiguration;

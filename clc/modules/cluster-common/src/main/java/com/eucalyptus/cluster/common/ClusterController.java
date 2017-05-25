@@ -31,4 +31,9 @@ public class ClusterController extends ComponentId {
   public boolean isPartitioned( ) {
     return true;
   }
+
+  @Override
+  public boolean isImpersonationSupported( ) {
+    return true;
+  }
 }

@@ -20,6 +20,17 @@
 
 package com.eucalyptus.cluster
 
+import com.eucalyptus.cluster.common.broadcast.NICluster
+import com.eucalyptus.cluster.common.broadcast.NIClusters
+import com.eucalyptus.cluster.common.broadcast.NIConfiguration
+import com.eucalyptus.cluster.common.broadcast.NIInstance
+import com.eucalyptus.cluster.common.broadcast.NINode
+import com.eucalyptus.cluster.common.broadcast.NINodes
+import com.eucalyptus.cluster.common.broadcast.NIProperty
+import com.eucalyptus.cluster.common.broadcast.NISecurityGroup
+import com.eucalyptus.cluster.common.broadcast.NISubnet
+import com.eucalyptus.cluster.common.broadcast.NISubnets
+import com.eucalyptus.cluster.common.broadcast.NetworkInfo
 import org.junit.Test
 import static org.junit.Assert.*
 
@@ -111,7 +122,7 @@ class NetworkInfoTest {
 
     )
 
-    JAXBContext jc = JAXBContext.newInstance( "com.eucalyptus.cluster" );
+    JAXBContext jc = JAXBContext.newInstance( NetworkInfo.class.getPackage( ).getName( ) );
     Marshaller marshaller = jc.createMarshaller( )
     marshaller.setProperty( Marshaller.JAXB_FORMATTED_OUTPUT, true )
     StringWriter writer = new StringWriter();

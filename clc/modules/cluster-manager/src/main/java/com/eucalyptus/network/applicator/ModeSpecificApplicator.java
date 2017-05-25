@@ -21,8 +21,8 @@ package com.eucalyptus.network.applicator;
 
 import java.util.EnumSet;
 import java.util.Optional;
-import com.eucalyptus.cluster.NIProperty;
-import com.eucalyptus.cluster.NetworkInfo;
+import com.eucalyptus.cluster.common.broadcast.NIProperty;
+import com.eucalyptus.cluster.common.broadcast.NetworkInfo;
 import com.eucalyptus.network.NetworkMode;
 import com.eucalyptus.util.TypedKey;
 import com.google.common.collect.Iterables;

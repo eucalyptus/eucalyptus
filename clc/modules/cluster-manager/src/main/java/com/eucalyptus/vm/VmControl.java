@@ -69,7 +69,7 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.blockstorage.Volumes;
-import com.eucalyptus.cluster.common.internal.ResourceToken;
+import com.eucalyptus.cluster.common.ResourceToken;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.VmInstanceToken;
 import com.eucalyptus.cloud.run.*;

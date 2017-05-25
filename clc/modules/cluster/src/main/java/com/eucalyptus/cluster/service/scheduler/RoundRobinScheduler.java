@@ -1,0 +1,52 @@
+/*************************************************************************
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ ************************************************************************/
+package com.eucalyptus.cluster.service.scheduler;
+
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+import com.eucalyptus.cluster.common.msgs.VmTypeInfo;
+import com.eucalyptus.cluster.service.node.ClusterNode;
+import javaslang.collection.Stream;
+import javaslang.control.Option;
+
+/**
+ *
+ */
+public class RoundRobinScheduler implements Scheduler {
+
+  private AtomicReference<String> lastNode = new AtomicReference<>( "" );
+
+  @Override
+  public String name( ) {
+    return "ROUNDROBIN";
+  }
+
+  @Override
+  public Option<ClusterNode> schedule(
+      final Stream<ClusterNode> nodes,
+      final VmTypeInfo vmTypeInfo
+  ) {
+    return Scheduler.withLock( ( ) -> {
+      final List<ClusterNode> head = nodes.takeWhile( node -> !node.getNode( ).equals( lastNode.get( ) ) ).toJavaList( );
+      if ( !nodes.isEmpty( ) ) {
+        head.add( nodes.get( ) );
+      }
+      Option<ClusterNode> scheduled = nodes.appendAll( head ).find( Scheduler.reserve( vmTypeInfo ) );
+      scheduled.forEach( clusterNode -> lastNode.set( clusterNode.getNode( ) ) );
+      return scheduled;
+    } );
+  }
+}

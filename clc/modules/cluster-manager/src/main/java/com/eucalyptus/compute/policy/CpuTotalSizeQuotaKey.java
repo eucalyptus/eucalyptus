@@ -27,7 +27,7 @@ import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.PolicyScope;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cluster.common.internal.Cluster;
+import com.eucalyptus.cluster.common.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.compute.common.CloudMetadataLimitedType;
 import com.eucalyptus.entities.Entities;

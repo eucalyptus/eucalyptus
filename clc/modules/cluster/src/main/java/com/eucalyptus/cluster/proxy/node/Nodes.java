@@ -69,7 +69,10 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import com.eucalyptus.cluster.common.ClusterController;
-import com.eucalyptus.cluster.common.internal.ClusterRegistry;
+import com.eucalyptus.cluster.common.ClusterRegistry;
+import com.eucalyptus.cluster.common.msgs.ClusterDescribeServicesResponseType;
+import com.eucalyptus.cluster.common.msgs.ClusterDescribeServicesType;
+import com.eucalyptus.cluster.common.msgs.ClusterServiceMessage;
 import com.eucalyptus.component.*;
 import com.eucalyptus.empyrean.*;
 import com.eucalyptus.system.Threads;
@@ -80,7 +83,7 @@ import com.google.common.base.Objects;
 import com.google.common.collect.*;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import org.apache.log4j.Logger;
-import com.eucalyptus.cluster.common.internal.Cluster;
+import com.eucalyptus.cluster.common.Cluster;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.cluster.common.msgs.NodeInfo;
 import com.eucalyptus.cluster.common.msgs.NodeType;
@@ -240,7 +243,7 @@ public class Nodes {
 
     Iterable<ServiceConfiguration> nodesConfigs = Iterables.transform( nodeInfoSet, setupNode );
     if ( !nodeInfoSet.isEmpty() ) {
-      DescribeServicesResponseType reply = Nodes.send( new DescribeServicesType( ), toArray( nodesConfigs, ServiceConfiguration.class ) );
+      ClusterDescribeServicesResponseType reply = Nodes.send( new ClusterDescribeServicesType( ), toArray( nodesConfigs, ServiceConfiguration.class ) );
       Map<String, ServiceStatusType> statusMap = Maps.uniqueIndex( reply.getServiceStatuses( ), statusToName );
       Map<String, NodeInfo> nodeInfoMap = Maps.uniqueIndex( nodeInfoSet, new Function<NodeInfo, String>( ) {
         @Nullable
@@ -304,7 +307,7 @@ public class Nodes {
 
   }
 
-  static <T extends BaseMessage> T send( ServiceTransitionType msg, ServiceConfiguration... configsArr ) throws RuntimeException {
+  static <T extends BaseMessage, R extends ServiceTransitionType & ClusterServiceMessage> T send( R msg, ServiceConfiguration... configsArr ) throws RuntimeException {
     ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, configsArr[0].lookupPartition() );
     if ( Component.State.ENABLED.apply( ccConfig ) ) { 
       // EUCA-10136: the condition below causes race condition and effectively prevents sending the message

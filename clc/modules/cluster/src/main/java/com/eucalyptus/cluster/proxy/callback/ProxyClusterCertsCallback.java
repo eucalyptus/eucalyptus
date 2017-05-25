@@ -63,7 +63,7 @@
 package com.eucalyptus.cluster.proxy.callback;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.cluster.common.internal.Cluster;
+import com.eucalyptus.cluster.common.Cluster;
 import com.eucalyptus.cluster.proxy.ProxyClusterProvider;
 import com.eucalyptus.util.InvalidCredentialsException;
 import com.eucalyptus.util.async.FailedRequestException;

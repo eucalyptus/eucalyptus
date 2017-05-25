@@ -274,6 +274,10 @@ public class Topology {
   }
 
   public static void populateServices( final ServiceConfiguration config, BaseMessage msg ) {
+    populateServices( config, msg, false );
+  }
+
+  public static void populateServices( final ServiceConfiguration config, BaseMessage msg, boolean force ) {
     try {
       Predicate<ServiceConfiguration> filter = new Predicate<ServiceConfiguration>( ) {
         
@@ -295,7 +299,7 @@ public class Topology {
         }
       };
       Function<ServiceConfiguration, ServiceId> typeMapper = TypeMappers.lookup( ServiceConfiguration.class, ServiceId.class );
-      if ( Hosts.isCoordinator( ) ) {
+      if ( force || Hosts.isCoordinator( ) ) {
         msg.set_epoch( Topology.epoch( ) );
         for ( ServiceConfiguration s : Topology.getInstance( ).getServices( ).values( ) ) {
           if ( filter.apply( s ) ) {

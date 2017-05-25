@@ -66,7 +66,10 @@ import org.apache.ws.security.WSSecurityException;
 import org.apache.ws.security.components.crypto.Crypto;
 import org.apache.ws.security.components.crypto.CryptoType;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.auth.SystemCredentials;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 
 import java.io.InputStream;
 import java.security.PrivateKey;
@@ -74,32 +77,40 @@ import java.security.PublicKey;
 import javax.security.auth.callback.CallbackHandler;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.concurrent.TimeUnit;
+import javaslang.Tuple;
+import javaslang.Tuple2;
 
 public class CredentialProxy implements Crypto {
 
-  private final Class<? extends ComponentId> componentId;
+  private final CredentialSource source;
+
   public CredentialProxy( Class<? extends ComponentId> componentId ) {
-    this.componentId = componentId;
+    this.source = new SystemCredentialsCredentialSource( componentId ).memoize( );
+  }
+
+  public CredentialProxy( final Partition partition ) {
+    this.source = new PartitionCredentialSource( partition ).memoize( );
   }
 
   @Override
   public X509Certificate[] getCertificatesFromBytes( final byte[] data ) throws WSSecurityException {
-    return new X509Certificate[] { SystemCredentials.lookup( this.componentId ).getCertificate( ) };
+    return new X509Certificate[] { source.getCertificate( ) };
   }
 
   @Override
   public X509Certificate[] getX509Certificates( final CryptoType cryptoType ) throws WSSecurityException {
-    return new X509Certificate[] { SystemCredentials.lookup( this.componentId ).getCertificate( ) };
+    return new X509Certificate[] { source.getCertificate( ) };
   }
 
   @Override
   public PrivateKey getPrivateKey( final String alias, final String password ) throws WSSecurityException {
-    return SystemCredentials.lookup( this.componentId ).getPrivateKey( );
+    return source.getPrivateKey( );
   }
 
   @Override
   public PrivateKey getPrivateKey( final X509Certificate certificate, final CallbackHandler callbackHandler ) throws WSSecurityException {
-    return SystemCredentials.lookup( this.componentId ).getPrivateKey( );
+    return source.getPrivateKey( );
   }
 
   @Override public void setCryptoProvider( final String provider ) { }
@@ -115,4 +126,70 @@ public class CredentialProxy implements Crypto {
   @Override public boolean verifyTrust( final X509Certificate[] certs ) throws WSSecurityException { return false; }
   @Override public boolean verifyTrust( final X509Certificate[] certs, boolean enableRevocation ) throws WSSecurityException { return false; }
   @Override public boolean verifyTrust( final PublicKey publicKey ) throws WSSecurityException { return false; }
+
+  private interface CredentialSource {
+    X509Certificate getCertificate( );
+    PrivateKey getPrivateKey( );
+    default CredentialSource memoize( ) {
+      return this instanceof MemoizedCredentialSource ? this : new MemoizedCredentialSource( this );
+    }
+  }
+
+  private static final class SystemCredentialsCredentialSource implements CredentialSource {
+    private final Class<? extends ComponentId> componentId;
+
+    private SystemCredentialsCredentialSource( final Class<? extends ComponentId> componentId ) {
+      this.componentId = componentId;
+    }
+
+    @Override
+    public X509Certificate getCertificate( ) {
+      return SystemCredentials.lookup( this.componentId ).getCertificate( );
+    }
+
+    @Override
+    public PrivateKey getPrivateKey( ) {
+      return SystemCredentials.lookup( this.componentId ).getPrivateKey( );
+    }
+  }
+
+  private static final class PartitionCredentialSource implements CredentialSource {
+    private final Partition partition;
+
+    private PartitionCredentialSource( final Partition partition ) {
+      this.partition = partition;
+    }
+
+    @Override
+    public X509Certificate getCertificate( ) {
+      return partition.getCertificate( );
+    }
+
+    @Override
+    public PrivateKey getPrivateKey( ) {
+      return partition.getPrivateKey( );
+    }
+  }
+
+  @SuppressWarnings( "Guava" )
+  private static final class MemoizedCredentialSource implements CredentialSource {
+    private final Supplier<Tuple2<X509Certificate,PrivateKey>> credSupplier;
+
+    private MemoizedCredentialSource( final CredentialSource source ) {
+      this.credSupplier = Suppliers.memoizeWithExpiration(
+          ( ) -> Tuple.of( source.getCertificate( ), source.getPrivateKey( ) ),
+          1,
+          TimeUnit.MINUTES );
+    }
+
+    @Override
+    public X509Certificate getCertificate( ) {
+      return credSupplier.get( )._1;
+    }
+
+    @Override
+    public PrivateKey getPrivateKey( ) {
+      return credSupplier.get( )._2;
+    }
+  }
 }

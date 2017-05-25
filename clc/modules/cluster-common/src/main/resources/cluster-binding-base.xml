@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+  -->
+<binding name="eucalyptus_ucsb_edu" force-classes="true" add-constructors="true">
+
+  <mapping class="com.eucalyptus.empyrean.ServiceId" abstract="true">
+    <value name="partition" field="partition" usage="optional"/>
+    <value name="type" field="type" usage="required" />
+    <value name="name" field="name" usage="required" />
+    <collection field="uris" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <value name="uris" type="java.lang.String" />
+    </collection>
+  </mapping>
+
+  <mapping class="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" abstract="true" extends="edu.ucsb.eucalyptus.msgs.BaseMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
+  </mapping>
+
+  <mapping class="edu.ucsb.eucalyptus.msgs.BaseMessage" abstract="true">
+    <value name="correlationId" field="correlationId" usage="optional" />
+    <value name="userId" field="userId" usage="optional" />
+    <value name="statusMessage" field="statusMessage" usage="optional" />
+    <value name="return" field="_return" usage="optional" />
+    <value name="epoch" field="_epoch" usage="optional" />
+    <collection field="_services" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="services" map-as="com.eucalyptus.empyrean.ServiceId" />
+    </collection>
+    <collection field="_disabledServices" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="disabledServices" map-as="com.eucalyptus.empyrean.ServiceId" />
+    </collection>
+    <collection field="_notreadyServices" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="notreadyServices" map-as="com.eucalyptus.empyrean.ServiceId" />
+    </collection>
+  </mapping>
+
+</binding>

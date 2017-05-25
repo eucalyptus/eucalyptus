@@ -20,7 +20,7 @@
 package com.eucalyptus.cluster
 
 import com.eucalyptus.cluster.common.TestClusterProvider
-import com.eucalyptus.cluster.common.internal.Cluster
+import com.eucalyptus.cluster.common.Cluster
 import org.junit.Test
 import com.eucalyptus.tags.FilterSupportTest
 

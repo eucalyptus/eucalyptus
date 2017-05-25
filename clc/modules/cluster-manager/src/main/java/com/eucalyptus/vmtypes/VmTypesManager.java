@@ -69,7 +69,7 @@ import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
-import com.eucalyptus.cluster.common.internal.ResourceState.VmTypeAvailability;
+import com.eucalyptus.cluster.common.ResourceState.VmTypeAvailability;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.cluster.common.ClusterController;

@@ -21,8 +21,8 @@ package com.eucalyptus.network.applicator;
 
 import java.util.Iterator;
 import org.apache.log4j.Logger;
-import com.eucalyptus.cluster.common.internal.Cluster;
-import com.eucalyptus.cluster.NetworkInfo;
+import com.eucalyptus.cluster.common.Cluster;
+import com.eucalyptus.cluster.common.broadcast.NetworkInfo;
 import com.google.common.collect.ImmutableList;
 
 /**

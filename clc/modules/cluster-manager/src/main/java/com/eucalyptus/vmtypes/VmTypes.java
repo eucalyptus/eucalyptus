@@ -79,13 +79,14 @@ import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.common.vm.VmTypesSupplier;
 import com.eucalyptus.compute.common.CloudMetadata.VmTypeMetadata;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.internal.util.InvalidMetadataException;
 import com.eucalyptus.compute.common.internal.util.MetadataException;
 import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
-import com.eucalyptus.cluster.common.internal.Cluster;
+import com.eucalyptus.cluster.common.Cluster;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.cluster.common.ClusterController;
@@ -122,6 +123,11 @@ import com.eucalyptus.cluster.common.msgs.VmTypeInfo;
                     description = "Parameters controlling the definition of virtual machine types." )
 public class VmTypes {
   private static Logger LOG = Logger.getLogger( VmTypes.class );
+
+  static {
+    VmTypesSupplier.init( VmTypes::list );
+  }
+
   @ConfigurableField( description = "Default type used when no instance type is specified for run instances.",
                       initial = "m1.small" )
   public static String         DEFAULT_TYPE_NAME        = "m1.small";

@@ -35,7 +35,7 @@ import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.OrderedShutdown;
-import com.eucalyptus.cluster.NetworkInfo;
+import com.eucalyptus.cluster.common.broadcast.NetworkInfo;
 import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.util.Timestamps;

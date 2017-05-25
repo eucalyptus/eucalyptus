@@ -21,7 +21,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.cloud.run.Allocations;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.common.internal.ResourceToken;
+import com.eucalyptus.cluster.common.ResourceToken;
 import com.eucalyptus.cluster.common.ClusterController;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.CloudMetadata;

@@ -17,8 +17,8 @@ package com.eucalyptus.cluster;
 
 import java.util.List;
 import java.util.NoSuchElementException;
-import com.eucalyptus.cluster.common.internal.Cluster;
-import com.eucalyptus.cluster.common.internal.ClusterRegistry;
+import com.eucalyptus.cluster.common.Cluster;
+import com.eucalyptus.cluster.common.ClusterRegistry;
 import com.eucalyptus.component.ServiceConfiguration;
 import javaslang.collection.Stream;
 

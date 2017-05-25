@@ -366,6 +366,8 @@ public class ListenerRegistry {
                     } finally {
                       busy.set( false );
                     }
+                  } else if ( busy.get( ) ) {
+                    LOG.debug( "Skipping busy event listener " + key );
                   }
                   return input;
                 }

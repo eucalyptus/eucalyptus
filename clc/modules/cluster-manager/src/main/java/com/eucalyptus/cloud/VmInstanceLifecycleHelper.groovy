@@ -22,7 +22,7 @@ package com.eucalyptus.cloud
 import com.eucalyptus.cluster.common.msgs.VmRunType.Builder as VmRunBuilder
 import com.eucalyptus.cloud.run.Allocations.Allocation
 import com.eucalyptus.cloud.run.ClusterAllocator.State
-import com.eucalyptus.cluster.common.internal.ResourceToken
+import com.eucalyptus.cluster.common.ResourceToken
 import com.eucalyptus.compute.common.internal.util.MetadataException
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesResultType
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesType

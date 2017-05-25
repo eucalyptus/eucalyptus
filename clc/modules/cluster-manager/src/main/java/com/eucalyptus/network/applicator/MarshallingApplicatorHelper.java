@@ -23,7 +23,7 @@ import java.io.StringWriter;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.cluster.NetworkInfo;
+import com.eucalyptus.cluster.common.broadcast.NetworkInfo;
 import com.eucalyptus.util.TypedKey;
 
 /**
@@ -43,7 +43,7 @@ class MarshallingApplicatorHelper {
     String networkInfo = context.getAttribute( MARSHALLED_INFO_KEY );
     if ( networkInfo == null ) try {
       final NetworkInfo info = context.getNetworkInfo( );
-      final JAXBContext jc = JAXBContext.newInstance( "com.eucalyptus.cluster" );
+      final JAXBContext jc = JAXBContext.newInstance( NetworkInfo.class.getPackage( ).getName( ) );
       final StringWriter writer = new StringWriter( 8192 );
       jc.createMarshaller().marshal( info, writer );
 
