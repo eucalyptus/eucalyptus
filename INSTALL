@@ -7,13 +7,13 @@ Eucalyptus source code into installable packages.
 
 If you instead wish to evaluate Eucalyptus by deploying a small private
 cloud on your own machine with a single command, see
-http://www8.hp.com/us/en/cloud/helion-eucalyptus-overview.html to download
-and install the FastStart package.
+http://www.eucalyptus.com/download to download and install the FastStart 
+package.
 
 If you instead wish to implement a Eucalyptus cloud on multiple systems with
 full configurability, from pre-built component packages, refer to the
-Eucalyptus documentation at http://docs.hpcloud.com/eucalyptus to get
-started.
+Eucalyptus documentation at https://docs.eucalyptus.com/eucalyptus/latest/#install-guide/eucalyptus.html 
+to get started.
 ===================================
 
 The process consists of:
@@ -198,7 +198,7 @@ IP addresses:
 
 You can now install the Eucalyptus RPMs onto each system.
 The Eucalyptus documentation can be found here:
-http://docs.hpcloud.com/eucalyptus
+https://docs.eucalyptus.com/
 
 Follow the instructions in the Installation Guide for the following
 sections:
