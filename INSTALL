@@ -164,6 +164,7 @@ at /usr/share/eucalyptus for rpmbuild to find.
 
 >>>>> Commands 4c: 
 # cd $EUCAGIT && \
+autoconf && \
 tar -cvJf $EUCARPM/SOURCES/eucalyptus.tar.xz --exclude .git --exclude eucalyptus/clc/lib --exclude build-info.properties eucalyptus
 >>>>> (end of commands)
 
@@ -313,6 +314,7 @@ Run the "configure" scripts to prepare the system to build:
 # autoconf
 # ./configure --prefix=/usr
 # cd $EUCAGIT/eucalyptus
+# autoconf
 # ./configure --prefix=$EUCALYPTUS \
 --disable-bundled-jars \
 --with-apache2-module-dir=/usr/lib64/httpd/modules \
