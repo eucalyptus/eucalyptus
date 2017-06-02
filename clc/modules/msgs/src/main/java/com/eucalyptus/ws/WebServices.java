@@ -420,7 +420,7 @@ public class WebServices {
     private boolean       CHANNEL_REUSE_ADDRESS             = true;
     private Boolean       CHANNEL_KEEP_ALIVE                = true;
     private Boolean       CHANNEL_NODELAY                   = true;
-    private Integer       SERVER_POOL_MAX_THREADS           = 128;
+    private Integer       SERVER_POOL_MAX_THREADS           = 32;
     private Long          SERVER_POOL_MAX_MEM_PER_CONN      = 0L;
     private Long          SERVER_POOL_TOTAL_MEM             = 0L;
     private Long          SERVER_POOL_TIMEOUT_MILLIS        = 500L;
@@ -429,7 +429,7 @@ public class WebServices {
     private Long          SERVER_BOSS_POOL_TOTAL_MEM        = 0L;
     private Long          SERVER_BOSS_POOL_TIMEOUT_MILLIS   = 500L;
     private Integer       PORT                              = 8773;
-    private String        LISTENER_ADDRESS_MATCH            = "";
+    private String        LISTENER_ADDRESS_MATCH            = "0.0.0.0";
     private AtomicBoolean isRunning = new AtomicBoolean(false);
 
     public static void register( ) {
@@ -457,7 +457,7 @@ public class WebServices {
         Long NEW_SERVER_BOSS_POOL_TOTAL_MEM = StackConfiguration.SERVER_BOSS_POOL_TOTAL_MEM;
         Long NEW_SERVER_BOSS_POOL_TIMEOUT_MILLIS = StackConfiguration.SERVER_BOSS_POOL_TIMEOUT_MILLIS;
         Integer NEW_PORT = StackConfiguration.PORT;
-        String NEW_LISTENER_ADDRESS_MATCH = Bootstrap.isOperational( ) ? StackConfiguration.LISTENER_ADDRESS_MATCH : "";
+        String NEW_LISTENER_ADDRESS_MATCH = StackConfiguration.LISTENER_ADDRESS_MATCH;
         if (!CHANNEL_CONNECT_TIMEOUT.equals(NEW_CHANNEL_CONNECT_TIMEOUT)) {
           LOG.info("bootstrap.webservices.channel_connect_timeout has changed: oldValue = " + CHANNEL_CONNECT_TIMEOUT + ", newValue = " + NEW_CHANNEL_CONNECT_TIMEOUT);
           CHANNEL_CONNECT_TIMEOUT = NEW_CHANNEL_CONNECT_TIMEOUT;
