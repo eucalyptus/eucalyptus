@@ -37,5 +37,7 @@ public interface ImageManifest {
   String getManifest(String location, int maximumSize)
       throws EucalyptusCloudException;
 
+  String getPrefix(String location);
+
   String getBaseBucket(String location);
 }
