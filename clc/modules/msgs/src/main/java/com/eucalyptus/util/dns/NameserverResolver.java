@@ -70,6 +70,7 @@ import java.net.InetAddress;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
@@ -79,7 +80,6 @@ import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -92,12 +92,14 @@ import com.eucalyptus.util.dns.DnsResolvers.DnsResponse;
 import com.eucalyptus.util.dns.DnsResolvers.RequestType;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
+import javaslang.collection.Stream;
+import javaslang.control.Option;
 
 @ConfigurableClass( root = "dns.ns",
                     description = "Options controlling DNS name resolution for the system's nameservers." )
@@ -119,7 +121,7 @@ public class NameserverResolver extends DnsResolver {
     if ( !Bootstrap.isOperational( ) || !enabled || !DomainNames.isSystemSubdomain( name ) ) {
       return false;
     } else if ( RequestType.A.apply( query ) ) {
-      return name.getLabelString( 0 ).matches( "ns[1-9]*" );
+      return name.getLabelString( 0 ).matches( "ns(?:[1-9][0-9]*)?" );
     } else if ( RequestType.NS.apply( query ) ) {
       return true;
     } else {
@@ -136,7 +138,7 @@ public class NameserverResolver extends DnsResolver {
       if ( name.equals( Name.fromConstantString( label0 + "." + DomainNames.internalSubdomain( ) ) )
            || name.equals( Name.fromConstantString( label0 + "." + DomainNames.externalSubdomain( ) ) ) ) {
         NavigableSet<ServiceConfiguration> nsServers = Components.lookup( Dns.class ).services( );
-        Integer index = Objects.firstNonNull( Ints.tryParse( label0.substring( 2 ) ), 1 );
+        Integer index = MoreObjects.firstNonNull( Ints.tryParse( label0.substring( 2 ) ), 1 );
         if ( nsServers.size( ) >= index ) {
           ServiceConfiguration conf = nsServers.toArray( new ServiceConfiguration[] {} )[index-1];
           final Record addressRecord = DomainNameRecords.addressRecord(
@@ -146,14 +148,18 @@ public class NameserverResolver extends DnsResolver {
         }
       }
     } else if ( RequestType.NS.apply( query ) ) {
-      NavigableSet<ServiceConfiguration> nsServers = Components.lookup( Dns.class ).services( );
-      List<Record> aRecs = Lists.newArrayList( );
-      Name domain = DomainNames.isInternalSubdomain( name ) ? DomainNames.internalSubdomain( ) : DomainNames.externalSubdomain( );
+      final NavigableSet<ServiceConfiguration> nsServers = Components.lookup( Dns.class ).services( );
+      final Predicate<ServiceConfiguration> nsServerUsable = DomainNameRecords.activeNameserverPredicate( );
+      final Name domain = DomainNames.isInternalSubdomain( name ) ? DomainNames.internalSubdomain( ) : DomainNames.externalSubdomain( );
+      final List<Record> aRecs = Lists.newArrayList( );
       int idx = 1;
-      for ( ServiceConfiguration conf : nsServers ) {
-        aRecs.add( DomainNameRecords.addressRecord(
-            Name.fromConstantString( "ns" + (idx++) + "." + domain ) ,
-            maphost( request.getLocalAddress( ), conf.getInetAddress( ) ) ) );
+      for ( final ServiceConfiguration conf : nsServers ) {
+        final int offset = idx++;
+        if ( nsServerUsable.test( conf ) ) {
+          aRecs.add( DomainNameRecords.addressRecord(
+              Name.fromConstantString( "ns" + offset + "." + domain ) ,
+              maphost( request.getLocalAddress( ), conf.getInetAddress( ) ) ) );
+        }
       }
       return DnsResponse.forName( name )
                         .withAdditional( aRecs )
@@ -168,6 +174,7 @@ public class NameserverResolver extends DnsResolver {
   }
 
 
+  @SuppressWarnings( "unused" )
   public static class NameserverReverseResolver extends DnsResolver {
     
     @Override
@@ -182,11 +189,15 @@ public class NameserverResolver extends DnsResolver {
       final InetAddress hostAddr = DomainNameRecords.inAddrArpaToInetAddress( query.getName( ) );
       final String hostAddress = hostAddr.getHostAddress( );
       if ( Hosts.contains( hostAddress ) ) {
-        NavigableSet<ServiceConfiguration> nsServers = Components.lookup( Dns.class ).services( );
-        int index = nsServers.headSet( ServiceConfigurations.lookupByHost( Dns.class, hostAddr.getHostAddress( ) ) ).size( );
-        final Name nsName = Name.fromConstantString( "ns" + index + "." + DomainNames.externalSubdomain( ) );
-        final Record ptrRecord = DomainNameRecords.ptrRecord( nsName, hostAddr );
-        return DnsResponse.forName( query.getName( ) ).answer( ptrRecord );
+        final NavigableSet<ServiceConfiguration> nsServers = Components.lookup( Dns.class ).services( );
+        final Option<ServiceConfiguration> hostConfiguration =
+            Stream.ofAll( nsServers ).find( configuration -> hostAddress.equals( configuration.getHostName( ) ) );
+        if ( hostConfiguration.isDefined( ) ) {
+          int index = nsServers.headSet( hostConfiguration.get( ) ).size( );
+          final Name nsName = Name.fromConstantString( "ns" + index + "." + DomainNames.externalSubdomain( ) );
+          final Record ptrRecord = DomainNameRecords.ptrRecord( nsName, hostAddr );
+          return DnsResponse.forName( query.getName( ) ).answer( ptrRecord );
+        }
       }
       // EUCA-10245: return zero answer so that the next reverse resolver would answer
       return DnsResponse.forName( query.getName( ) ).answer();

@@ -65,6 +65,7 @@ package com.eucalyptus.util.dns;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import org.apache.log4j.Logger;
 import org.xbill.DNS.DClass;
@@ -253,13 +254,19 @@ public class DomainNames {
     }
 
     public List<NSRecord> getNameServers( ) {
-      List<NSRecord> nsRecs = Lists.newArrayList( );
+      final Predicate<ServiceConfiguration> nsServerUsable = DomainNameRecords.activeNameserverPredicate( );
+      final List<NSRecord> nsRecs = Lists.newArrayList( );
       int idx = 1;
       for ( ServiceConfiguration conf : Components.lookup( Dns.class ).services( ) ) {
-        nsRecs.add( new NSRecord( this.get( ),
-                                  DClass.IN,
-                                  60,
-                                  Name.fromConstantString( "ns" + idx++ + "." + this.get( ).toString( ) ) ) );
+        final int offset = idx++;
+        if ( nsServerUsable.test( conf ) ) {
+          nsRecs.add( new NSRecord(
+              this.get( ),
+              DClass.IN,
+              60,
+              Name.fromConstantString( "ns" + offset + "." + this.get( ).toString( ) )
+          ) );
+        }
       }
       return nsRecs; 
     }
