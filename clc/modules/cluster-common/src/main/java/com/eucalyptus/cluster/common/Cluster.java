@@ -353,8 +353,8 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster> {
     vmInfoUpdateConsumer.get( ).accept( update );
   }
 
-  public void updateNodeInfo( final ArrayList<NodeType> nodes ) {
-    clusterProvider.updateNodeInfo( nodes );
+  public void updateNodeInfo( final long time, final ArrayList<NodeType> nodes ) {
+    clusterProvider.updateNodeInfo( time, nodes );
   }
 
   public boolean hasNode( final String sourceHost ) {

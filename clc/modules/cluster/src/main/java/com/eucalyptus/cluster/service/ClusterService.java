@@ -38,8 +38,6 @@ import com.eucalyptus.cluster.common.msgs.ClusterBundleRestartInstanceResponseTy
 import com.eucalyptus.cluster.common.msgs.ClusterBundleRestartInstanceType;
 import com.eucalyptus.cluster.common.msgs.ClusterCancelBundleTaskResponseType;
 import com.eucalyptus.cluster.common.msgs.ClusterCancelBundleTaskType;
-import com.eucalyptus.cluster.common.msgs.ClusterDescribeBundleTasksResponseType;
-import com.eucalyptus.cluster.common.msgs.ClusterDescribeBundleTasksType;
 import com.eucalyptus.cluster.common.msgs.ClusterDetachVolumeResponseType;
 import com.eucalyptus.cluster.common.msgs.ClusterDetachVolumeType;
 import com.eucalyptus.cluster.common.msgs.ClusterGetConsoleOutputResponseType;
@@ -77,15 +75,13 @@ public interface ClusterService {
 
   ClusterGetConsoleOutputResponseType getConsoleOutput( ClusterGetConsoleOutputType request );
 
-  ClusterMigrateInstancesResponseType migrateInstancesResponseType( ClusterMigrateInstancesType request );
+  ClusterMigrateInstancesResponseType migrateInstances( ClusterMigrateInstancesType request );
 
   ClusterBundleInstanceResponseType bundleInstance( ClusterBundleInstanceType request );
 
   ClusterBundleRestartInstanceResponseType bundleRestartInstance( ClusterBundleRestartInstanceType request );
 
   ClusterCancelBundleTaskResponseType cancelBundleTask( ClusterCancelBundleTaskType request );
-
-  ClusterDescribeBundleTasksResponseType describeBundleTasks( ClusterDescribeBundleTasksType request );
 
   ClusterRebootInstancesResponseType rebootInstances( ClusterRebootInstancesType request );
 

@@ -40,6 +40,8 @@
 package com.eucalyptus.cluster.common;
 
 import com.eucalyptus.event.AbstractNamedRegistry;
+import javaslang.collection.Stream;
+import javaslang.control.Option;
 
 public class ClusterRegistry extends AbstractNamedRegistry<Cluster> {
   private static ClusterRegistry singleton = getInstance( );
@@ -51,4 +53,21 @@ public class ClusterRegistry extends AbstractNamedRegistry<Cluster> {
     return singleton;
   }
 
+  public static boolean hasEnabledLocalCluster( ) {
+    return hasLocalCluster( true );
+  }
+
+  public static boolean hasLocalCluster( ) {
+    return hasLocalCluster( false );
+  }
+
+  public static Option<Cluster> getLocalCluster( final boolean enabledOnly ) {
+    return Stream.ofAll( ClusterRegistry.getInstance( ).listValues( ) )
+        .appendAll( enabledOnly ? Stream.empty( ) : ClusterRegistry.getInstance( ).listDisabledValues( ) )
+        .find( cluster -> cluster.getConfiguration( ).isHostLocal( ) );
+  }
+
+  private static boolean hasLocalCluster( final boolean enabledOnly  ) {
+    return getLocalCluster( enabledOnly ).isDefined( );
+  }
 }

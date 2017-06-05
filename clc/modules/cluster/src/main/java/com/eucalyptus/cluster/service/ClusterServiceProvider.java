@@ -145,10 +145,10 @@ public class ClusterServiceProvider implements ClusterProvider {
   }
 
   @Override
-  public void updateNodeInfo( final List<NodeType> nodes ) {
+  public void updateNodeInfo( final long time, final List<NodeType> nodes ) {
     Callable<Boolean> updateNodes = ( ) -> {
       try {
-        Nodes.updateNodeInfo( getConfiguration(), nodes );
+        Nodes.updateNodeInfo( time, getConfiguration(), nodes );
         return true;
       } catch ( Exception e ) {
         LOG.error( e, e );

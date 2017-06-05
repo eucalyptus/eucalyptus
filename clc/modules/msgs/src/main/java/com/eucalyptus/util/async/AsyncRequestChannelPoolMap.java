@@ -63,7 +63,7 @@ class AsyncRequestChannelPoolMap extends AbstractChannelPoolMap<AsyncRequestChan
   private static final String CHANNEL_REUSE_MAX_REQUESTS_PROP = "com.eucalyptus.util.async.channelReuseMaxRequests";
 
   private static long CHANNEL_REUSE_MAX_IDLE =
-      MoreObjects.firstNonNull( Longs.tryParse( System.getProperty( CHANNEL_REUSE_MAX_IDLE_PROP, "" ) ), 45_000L );
+      MoreObjects.firstNonNull( Longs.tryParse( System.getProperty( CHANNEL_REUSE_MAX_IDLE_PROP, "" ) ), 25_000L );
   private static int  CHANNEL_REUSE_MAX_REQUESTS =
       MoreObjects.firstNonNull( Ints.tryParse( System.getProperty( CHANNEL_REUSE_MAX_REQUESTS_PROP, "" ) ), 75 );
 

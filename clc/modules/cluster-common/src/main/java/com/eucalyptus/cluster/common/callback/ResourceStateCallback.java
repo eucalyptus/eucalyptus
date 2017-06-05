@@ -77,7 +77,7 @@ public class ResourceStateCallback extends StateUpdateMessageCallback<Cluster, D
       final Cluster cluster = this.getSubject();
       cluster.getNodeState().update( new VmTypesSupplier( ).get( ), reply.getResources( ) );
       LOG.debug( "Adding node service tags: " + Joiner.on( ", " ).join( reply.getNodes() ) );
-      cluster.updateNodeInfo( reply.getNodes( ) );
+      cluster.updateNodeInfo( System.currentTimeMillis( ), reply.getNodes( ) );
     } catch ( Exception e ) {
       LOG.error( e, e );
     }

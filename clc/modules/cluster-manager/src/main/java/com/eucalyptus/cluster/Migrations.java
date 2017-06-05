@@ -134,15 +134,13 @@ public class Migrations {
           //Get updated download manifests for PV instances
           final Map<Boolean, Set<String>> updatedResources = getFreshBootrecords(instanceIds, true);
 
-          AsyncRequests.sendSync( this.getConfiguration( ), new ClusterMigrateInstancesType( ) {
-            {
-              this.setCorrelationId( Contexts.lookup( ).getCorrelationId( ) );
-              this.setSourceHost( sourceHost );
-              this.setResourceLocations( Lists.newArrayList(updatedResources.get(true)));
-              this.setAllowHosts( destHostsWhiteList );
-              this.getDestinationHosts( ).addAll( destHosts );
-            }
-          } );
+          final ClusterMigrateInstancesType migrateInstances = new ClusterMigrateInstancesType( );
+          migrateInstances.setCorrelationId( Contexts.lookup( ).getCorrelationId( ) );
+          migrateInstances.setSourceHost( sourceHost );
+          migrateInstances.setResourceLocations( Lists.newArrayList(updatedResources.get(true)));
+          migrateInstances.setAllowHosts( destHostsWhiteList );
+          migrateInstances.getDestinationHosts( ).addAll( destHosts );
+          AsyncRequests.sendSync( this.getConfiguration( ), migrateInstances );
         } catch ( Exception ex ) {
           //#5 On error go back and abort the migration status for every instance
           this.rollbackInstanceEvacuations( sourceHost );
@@ -252,15 +250,13 @@ public class Migrations {
           final Map<Boolean, Set<String>> updatedResources = getFreshBootrecords( ImmutableList.of(instanceId), true);
 
           //#5 Send the MigrateInstances operation.
-          AsyncRequests.sendSync( this.getConfiguration( ), new ClusterMigrateInstancesType( ) {
-            {
-              this.setCorrelationId( Contexts.lookup( ).getCorrelationId());
-              this.setInstanceId(instanceId);
-              this.setResourceLocations(Lists.newArrayList(updatedResources.get(true)));
-              this.setAllowHosts(destHostsWhiteList);
-              this.getDestinationHosts( ).addAll( destHosts );
-            }
-          } );
+          final ClusterMigrateInstancesType migrateInstances = new ClusterMigrateInstancesType( );
+          migrateInstances.setCorrelationId( Contexts.lookup( ).getCorrelationId());
+          migrateInstances.setInstanceId(instanceId);
+          migrateInstances.setResourceLocations(Lists.newArrayList(updatedResources.get(true)));
+          migrateInstances.setAllowHosts(destHostsWhiteList);
+          migrateInstances.getDestinationHosts( ).addAll( destHosts );
+          AsyncRequests.sendSync( this.getConfiguration( ), migrateInstances );
         } catch ( Exception ex ) {
           //#5 On error go back and abort the migration status for every instance
           this.rollbackInstanceMigrations( instanceId );

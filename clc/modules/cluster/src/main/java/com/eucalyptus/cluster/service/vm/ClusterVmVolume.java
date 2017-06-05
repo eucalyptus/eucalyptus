@@ -29,20 +29,21 @@
 
 import java.util.Date;
 import java.util.Objects;
+import com.eucalyptus.cluster.common.msgs.VolumeType;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.google.common.base.MoreObjects;
 
 /**
  *
  */
-public final class VmVolumeAttachment {
+public final class ClusterVmVolume {
   private final long attachmentTimestamp;
   private final String volumeId;
   private final String device;
   private final String remoteDevice;
   private final String state;
 
-  public VmVolumeAttachment(
+  private ClusterVmVolume(
       final long attachmentTimestamp,
       final String volumeId,
       final String device,
@@ -54,6 +55,36 @@ public final class VmVolumeAttachment {
     this.device = device;
     this.remoteDevice = remoteDevice;
     this.state = state;
+  }
+
+  public static ClusterVmVolume of(
+      final long attachmentTimestamp,
+      final String volumeId,
+      final String device,
+      final String remoteDevice,
+      final String state
+  ) {
+    return new ClusterVmVolume(
+        attachmentTimestamp,
+        volumeId,
+        device,
+        remoteDevice,
+        state
+    );
+  }
+
+  public static ClusterVmVolume fromNodeVolume(
+      final long attachmentTimestamp,
+      final VolumeType volume
+  ) {
+    return of(
+        attachmentTimestamp,
+        volume.getVolumeId( ),
+        volume.getLocalDev( ),
+        volume.getRemoteDev( ),
+        volume.getState( )
+
+    );
   }
 
   public long getAttachmentTimestamp() {
@@ -91,13 +122,15 @@ public final class VmVolumeAttachment {
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
     if ( o == null || getClass( ) != o.getClass( ) ) return false;
-    final VmVolumeAttachment that = (VmVolumeAttachment) o;
-    return Objects.equals( volumeId, that.volumeId ) &&
-        Objects.equals( device, that.device );
+    final ClusterVmVolume that = (ClusterVmVolume) o;
+    return Objects.equals( getVolumeId( ), that.getVolumeId( ) ) &&
+        Objects.equals( getDevice( ), that.getDevice( ) ) &&
+        Objects.equals( getRemoteDevice( ), that.getRemoteDevice( ) ) &&
+        Objects.equals( getState( ), that.getState( ) );
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash( volumeId, device );
+    return Objects.hash( getVolumeId( ), getDevice( ), getRemoteDevice( ), getState( ) );
   }
 }

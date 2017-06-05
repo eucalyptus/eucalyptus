@@ -47,6 +47,7 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.UrlBase64;
+import com.eucalyptus.util.CompatSupplier;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
@@ -58,7 +59,7 @@ import com.google.common.base.Suppliers;
 public class Crypto {
   private static final Logger LOG = Logger.getLogger( Crypto.class );
   private static final BaseSecurityProvider DUMMY = new BaseSecurityProvider( ) {};
-  private static final ConcurrentMap<Class, BaseSecurityProvider> providers = new ConcurrentHashMap<Class, BaseSecurityProvider>( );
+  private static final ConcurrentMap<Class, BaseSecurityProvider> providers = new ConcurrentHashMap<>( );
   static {
     BaseSecurityProvider provider;
     try {
@@ -72,7 +73,7 @@ public class Crypto {
     providers.put( HmacProvider.class, provider );
     providers.put( CryptoProvider.class, provider );
   }
-  private static final Supplier<SecureRandom> secureRandomSupplier = Suppliers.memoizeWithExpiration( new Supplier<SecureRandom>() {
+  private static final CompatSupplier<SecureRandom> secureRandomSupplier = CompatSupplier.of( Suppliers.memoizeWithExpiration( new Supplier<SecureRandom>() {
     private final String secureRandomAlgorithm = System.getProperty( "euca.crypto.random.algorithm", "SHA1PRNG" );
     private final String secureRandomProvider = System.getProperty( "euca.crypto.random.provider", "SUN" );
     @Override
@@ -85,11 +86,12 @@ public class Crypto {
         throw Exceptions.toUndeclared(e);
       }
     }
-  }, 15, TimeUnit.MINUTES );
+  }, 15, TimeUnit.MINUTES ) );
 
   /**
    * @see com.eucalyptus.crypto.CryptoProvider#generateHashedPassword(java.lang.String)
    */
+  @SuppressWarnings( "WeakerAccess" )
   public static String generateHashedPassword( final String password ) {
     return Crypto.getCryptoProvider( ).generateHashedPassword( password );
   }
@@ -137,18 +139,22 @@ public class Crypto {
     return (CertificateProvider) providers.get( CertificateProvider.class );
   }
 
+  @SuppressWarnings( "WeakerAccess" )
   public static HmacProvider getHmacProvider( ) {
     return (HmacProvider) providers.get( HmacProvider.class );
   }
 
+  @SuppressWarnings( "WeakerAccess" )
   public static CryptoProvider getCryptoProvider( ) {
     return (CryptoProvider) providers.get( CryptoProvider.class );
   }
-  
+
+  @SuppressWarnings( "WeakerAccess" )
   public static String generateLinuxSaltedPassword( final String password ) {
     return Crypto.getCryptoProvider( ).generateLinuxSaltedPassword( password );
   }
-  
+
+  @SuppressWarnings( "WeakerAccess" )
   public static boolean verifyLinuxSaltedPassword( final String clear, final String hashed ) {
     return Crypto.getCryptoProvider( ).verifyLinuxSaltedPassword( clear, hashed );
   }
@@ -188,7 +194,7 @@ public class Crypto {
    * @return The supplier
    */
   @Nonnull
-  public static Supplier<SecureRandom> getSecureRandomSupplier() {
+  public static CompatSupplier<SecureRandom> getSecureRandomSupplier() {
     return secureRandomSupplier;
   }
 

@@ -185,26 +185,6 @@
   <mapping name="RebootInstancesResponse" class="com.eucalyptus.cluster.common.msgs.ClusterRebootInstancesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
   </mapping>
-  <mapping name="DescribeBundleTasks" class="com.eucalyptus.cluster.common.msgs.ClusterDescribeBundleTasksType" extends="edu.ucsb.eucalyptus.msgs.BaseMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
-    <structure usage="optional">
-      <collection get-method="getBundleIds" set-method="setBundleIds" factory="org.jibx.runtime.Utility.arrayListFactory">
-        <value name="instanceIds" type="java.lang.String" />
-      </collection>
-    </structure>
-  </mapping>
-  <mapping name="DescribeBundleTasksResponse" class="com.eucalyptus.cluster.common.msgs.ClusterDescribeBundleTasksResponseType" extends="edu.ucsb.eucalyptus.msgs.BaseMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
-    <structure usage="optional">
-      <collection get-method="getBundleTaskStates" set-method="setBundleTaskStates" factory="org.jibx.runtime.Utility.arrayListFactory">
-        <structure name="bundleTasks" map-as="com.eucalyptus.cluster.common.msgs.BundleTaskState" />
-      </collection>
-    </structure>
-  </mapping>
-  <mapping abstract="true" class="com.eucalyptus.cluster.common.msgs.BundleTaskState">
-    <value name="instanceId" field="instanceId" usage="required" />
-    <value name="state" field="state" usage="required" />
-  </mapping>
   <mapping name="BundleInstance" class="com.eucalyptus.cluster.common.msgs.ClusterBundleInstanceType" extends="edu.ucsb.eucalyptus.msgs.BaseMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
     <value name="instanceId" get-method="getInstanceId" set-method="setInstanceId" usage="required" />

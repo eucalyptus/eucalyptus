@@ -28,10 +28,12 @@
  ************************************************************************/
 package com.eucalyptus.cluster.service.scheduler;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
-import com.eucalyptus.cluster.common.msgs.VmTypeInfo;
 import com.eucalyptus.cluster.service.node.ClusterNode;
+import com.eucalyptus.cluster.service.vm.ClusterVmType;
+import com.google.common.collect.Lists;
 import javaslang.collection.Stream;
 import javaslang.control.Option;
 
@@ -50,14 +52,20 @@ public class RoundRobinScheduler implements Scheduler {
   @Override
   public Option<ClusterNode> schedule(
       final Stream<ClusterNode> nodes,
-      final VmTypeInfo vmTypeInfo
+      final ClusterVmType vmTypeResources
   ) {
     return Scheduler.withLock( ( ) -> {
-      final List<ClusterNode> head = nodes.takeWhile( node -> !node.getNode( ).equals( lastNode.get( ) ) ).toJavaList( );
-      if ( !nodes.isEmpty( ) ) {
-        head.add( nodes.get( ) );
+      final Iterator<ClusterNode> nodesIterator = nodes.iterator( );
+      final List<ClusterNode> head = Lists.newArrayList( );
+      while ( nodesIterator.hasNext( ) ) {
+        final ClusterNode node = nodesIterator.next( );
+        head.add( node );
+        if ( node.getNode( ).equals( lastNode.get( ) ) ) {
+          break;
+        }
       }
-      Option<ClusterNode> scheduled = nodes.appendAll( head ).find( Scheduler.reserve( vmTypeInfo ) );
+      final Option<ClusterNode> scheduled =
+          Stream.ofAll( () -> nodesIterator ).appendAll( head ).find( Scheduler.reserve( vmTypeResources ) );
       scheduled.forEach( clusterNode -> lastNode.set( clusterNode.getNode( ) ) );
       return scheduled;
     } );

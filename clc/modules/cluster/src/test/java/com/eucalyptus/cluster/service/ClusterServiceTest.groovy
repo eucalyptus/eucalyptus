@@ -41,11 +41,16 @@ import com.eucalyptus.cluster.common.msgs.VmKeyInfo
 import com.eucalyptus.cluster.common.msgs.VmRunType
 import com.eucalyptus.cluster.service.conf.ClusterEucaConfLoader
 import com.eucalyptus.cluster.service.fake.FakeClusterNodeServiceFactory
+import com.eucalyptus.cluster.service.node.ClusterNodeActivities
 import com.eucalyptus.cluster.service.node.ClusterNodes
 import com.eucalyptus.compute.common.internal.network.NetworkGroup
 import com.eucalyptus.cluster.common.msgs.VmTypeInfo
 import groovy.transform.CompileStatic
 import org.junit.Test
+
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
 
 import static org.junit.Assert.assertEquals
 import static org.junit.Assert.assertNotNull
@@ -58,15 +63,16 @@ class ClusterServiceTest {
 
   @Test
   void testDescribeResources( ) {
+    final Clock clock = Clock.fixed( Instant.now( ), ZoneId.systemDefault( ) )
     final ClusterEucaConfLoader loader = new ClusterEucaConfLoader( { [
         NODES: '"10.20.40.1 10.20.40.2 10.20.40.3 10.20.40.4 10.20.40.5"'
     ] } )
     final ClusterNodes nodes = new ClusterNodes(
         loader,
-        new FakeClusterNodeServiceFactory( false )
+        new FakeClusterNodeServiceFactory( clock, false )
     )
     nodes.refreshResources( );
-    final ClusterService service = new ClusterServiceImpl( loader, nodes )
+    final ClusterService service = new ClusterServiceImpl( loader, nodes, new ClusterNodeActivities( nodes ) )
     service.describeResources( new DescribeResourcesType(
         instanceTypes: [
             new VmTypeInfo(
@@ -91,15 +97,19 @@ class ClusterServiceTest {
 
   @Test
   void testDescribeSensors( ) {
+    final Clock clock = Clock.fixed( Instant.now( ), ZoneId.systemDefault( ) )
     final ClusterEucaConfLoader loader = new ClusterEucaConfLoader( { [
         NODES: '"10.20.40.1 10.20.40.2 10.20.40.3 10.20.40.4 10.20.40.5"'
     ] } )
     final ClusterNodes nodes = new ClusterNodes(
         loader,
-        new FakeClusterNodeServiceFactory( false )
+        new FakeClusterNodeServiceFactory( clock, false )
     )
     nodes.refreshResources( );
-    final ClusterService service = new ClusterServiceImpl( loader, nodes )
+    final ClusterNodeActivities nodeActivities = new ClusterNodeActivities( nodes );
+    nodeActivities.enable( true );
+    nodeActivities.configureSensorPolling( 5, 150000 );
+    final ClusterService service = new ClusterServiceImpl( loader, nodes, nodeActivities )
     service.runVm( (VmRunType) VmRunType.builder( )
         .reservationId( 'r-00000001' )
         .platform( 'linux' )
@@ -123,6 +133,8 @@ class ClusterServiceTest {
             cores: 1
         ) )
         .create( ) )
+
+    nodeActivities.doActivities( );
 
     service.describeSensors( new DescribeSensorsType(
         historySize: 5,
@@ -153,15 +165,16 @@ class ClusterServiceTest {
 
   @Test
   void testDescribeVms( ) {
+    final Clock clock = Clock.fixed( Instant.now( ), ZoneId.systemDefault( ) )
     final ClusterEucaConfLoader loader = new ClusterEucaConfLoader( { [
         NODES: '"10.20.40.1 10.20.40.2 10.20.40.3 10.20.40.4 10.20.40.5"'
     ] } )
     final ClusterNodes nodes = new ClusterNodes(
         loader,
-        new FakeClusterNodeServiceFactory( false )
+        new FakeClusterNodeServiceFactory( clock, false )
     )
     nodes.refreshResources( );
-    final ClusterService service = new ClusterServiceImpl( loader, nodes )
+    final ClusterService service = new ClusterServiceImpl( loader, nodes, new ClusterNodeActivities( nodes ) )
     final String instanceUuid = UUID.randomUUID( ).toString( )
     service.runVm( (VmRunType) VmRunType.builder( )
         .reservationId( 'r-00000001' )

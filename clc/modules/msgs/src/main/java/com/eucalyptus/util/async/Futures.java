@@ -80,6 +80,7 @@ import com.google.common.collect.Maps;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.emptyArray;
 import static org.hamcrest.Matchers.not;
+import javaslang.control.Either;
 
 public class Futures {
   private static Logger LOG = Logger.getLogger( Futures.class );
@@ -230,6 +231,37 @@ public class Futures {
       nextCallables[0] = Futures.combine( callables[0], callables[1] );
       return sequence( nextCallables );
     }
+  }
+
+  public static <R> Either<Exception,R> asEither( final CheckedListenableFuture<R> future ) {
+    try {
+      return Either.right( future.get( ) );
+    } catch ( final CancellationException | ExecutionException | InterruptedException e ){
+      return Either.left( e );
+    }
+  }
+
+  public static <R> CheckedListenableFuture<List<Either<Exception,R>>> allAsEitherList(
+      final List<CheckedListenableFuture<R>> futures
+  ) {
+    final GenericCheckedListenableFuture<List<Either<Exception,R>>> combined = new GenericCheckedListenableFuture<>();
+    final List<Either<Exception,R>> resultList = Lists.newArrayListWithCapacity( futures.size() );
+    Iterables.addAll(
+        resultList,
+        Iterables.limit( Iterables.<Either<Exception,R>>cycle( (Either<Exception,R>)null ), futures.size() ) );
+    final AtomicInteger completionCountdown = new AtomicInteger( futures.size() );
+    for ( int i=0; i<futures.size(); i++ ) {
+      final int resultIndex = i;
+      final CheckedListenableFuture<R> future = futures.get( i );
+      future.addListener( () -> {
+        resultList.set( resultIndex, asEither( future ) );
+        if ( completionCountdown.decrementAndGet() == 0 ) {
+          combined.set( resultList );
+        }
+      } );
+    }
+
+    return combined;
   }
 
   /**

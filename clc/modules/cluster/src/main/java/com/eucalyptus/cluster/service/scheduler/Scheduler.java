@@ -30,11 +30,10 @@ package com.eucalyptus.cluster.service.scheduler;
 
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import com.eucalyptus.cluster.common.msgs.VmTypeInfo;
 import com.eucalyptus.cluster.service.node.ClusterNode;
+import com.eucalyptus.cluster.service.vm.ClusterVmType;
 import com.eucalyptus.util.LockResource;
 import javaslang.collection.Stream;
 import javaslang.control.Option;
@@ -48,7 +47,7 @@ public interface Scheduler {
 
   String name( );
 
-  Option<ClusterNode> schedule( Stream<ClusterNode> nodes, VmTypeInfo vmTypeInfo );
+  Option<ClusterNode> schedule( Stream<ClusterNode> nodes, ClusterVmType vmTypeResources );
 
   static <R> R withLock( Supplier<R> schedulingAction ) {
     try ( final LockResource resource = LockResource.lock( schedulingLock ) ) {
@@ -60,19 +59,19 @@ public interface Scheduler {
     ScheduleResource.adjustAll( node );
   }
 
-  static Predicate<ClusterNode> resourcesFor( final VmTypeInfo vmTypeInfo ) {
+  static Predicate<ClusterNode> resourcesFor( final ClusterVmType vmTypeResources ) {
     return clusterNode ->
-        clusterNode.getCoresAvailable( ) >= vmTypeInfo.getCores( ) &&
-        clusterNode.getDiskAvailable( ) >= vmTypeInfo.getDisk( ) &&
-        clusterNode.getMemoryAvailable( ) >= vmTypeInfo.getMemory( );
+        clusterNode.getCoresAvailable( ) >= vmTypeResources.getCores( ) &&
+        clusterNode.getDiskAvailable( ) >= vmTypeResources.getDisk( ) &&
+        clusterNode.getMemoryAvailable( ) >= vmTypeResources.getMemory( );
   }
 
-  static Predicate<ClusterNode> reserve( final VmTypeInfo vmTypeInfo ) {
+  static Predicate<ClusterNode> reserve( final ClusterVmType vmTypeResources ) {
     return clusterNode -> withLock( ( ) -> {
       final Option<ScheduleResource> resourceOption = ScheduleResource.active( );
       boolean reserved = false;
-      if ( resourceOption.isDefined( ) && resourcesFor( vmTypeInfo ).test( clusterNode ) ) {
-        resourceOption.get( ).resources( vmTypeInfo.getCores( ), vmTypeInfo.getDisk( ), vmTypeInfo.getMemory( ) );
+      if ( resourceOption.isDefined( ) && resourcesFor( vmTypeResources ).test( clusterNode ) ) {
+        resourceOption.get( ).resources( vmTypeResources.getCores( ), vmTypeResources.getDisk( ), vmTypeResources.getMemory( ) );
         resourceOption.get( ).apply( clusterNode );
         reserved = true;
       }

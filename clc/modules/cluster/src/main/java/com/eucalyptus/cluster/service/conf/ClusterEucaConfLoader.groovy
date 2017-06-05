@@ -29,17 +29,18 @@ class ClusterEucaConfLoader {
     this.propertiesSupplier = propertiesSupplier;
   }
 
-  ClusterEucaConf load( ) {
-    load( propertiesSupplier.get( ) )
+  ClusterEucaConf load( final long now ) {
+    load( now, propertiesSupplier.get( ) )
   }
 
-  ClusterEucaConf load( Map<String,String> properties ) {
+  ClusterEucaConf load( final long now, Map<String,String> properties ) {
     new ClusterEucaConf(
-        System.currentTimeMillis( ),
+        now,
         getTrimmedDequotedProperty( properties, 'SCHEDPOLICY', 'ROUNDROBIN' ),
         Sets.newLinkedHashSet( getFilteredDequotedPropertyList( properties, 'NODES', '', InetAddresses.&isInetAddress ) ),
         getTrimmedDequotedMappedProperty( properties, 'NC_PORT', '8775', Integer.&valueOf ) as Integer,
-        getTrimmedDequotedMappedProperty( properties, 'MAX_INSTANCES_PER_CC', '10000', Integer.&valueOf ) as Integer
+        getTrimmedDequotedMappedProperty( properties, 'MAX_INSTANCES_PER_CC', '10000', Integer.&valueOf ) as Integer,
+        Math.max( 30, getTrimmedDequotedMappedProperty( properties, 'INSTANCE_TIMEOUT', '300', Integer.&valueOf ) as Integer)
     )
   }
 

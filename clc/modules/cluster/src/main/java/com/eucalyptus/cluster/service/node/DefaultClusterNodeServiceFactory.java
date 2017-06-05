@@ -56,7 +56,9 @@ public class DefaultClusterNodeServiceFactory implements ClusterNodeServiceFacto
     return AsyncProxy.client( NodeService.class, ( BaseMessage message) -> {
       Topology.populateServices( configuration, message, true );
       message.set_return( null );
-      message.setUserId( Principals.systemUser( ).getUserId( ) );
+      if ( message.getUserId( ) == null ) {
+        message.setUserId( Principals.systemUser( ).getUserId( ) );
+      }
       if ( message instanceof CloudNodeMessage ) {
         ((CloudNodeMessage)message).setNodeName( node.getNode( ) );
       }
@@ -65,9 +67,7 @@ public class DefaultClusterNodeServiceFactory implements ClusterNodeServiceFacto
   }
 
   private static Cluster localCluster( ) {
-    return Stream.ofAll( ClusterRegistry.getInstance( ).listValues( ) )
-        .appendAll( ClusterRegistry.getInstance( ).listDisabledValues( ) )
-        .find( cluster -> cluster.getConfiguration( ).isHostLocal( ) )
+    return ClusterRegistry.getLocalCluster( false )
         .getOrElseThrow( ( ) -> new IllegalStateException( "No local cluster" ) );
   }
 

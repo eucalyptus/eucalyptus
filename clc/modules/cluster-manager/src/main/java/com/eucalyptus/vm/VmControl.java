@@ -155,6 +155,7 @@ import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Request;
 import com.eucalyptus.vm.Bundles.BundleCallback;
+import com.eucalyptus.vm.Bundles.CancelBundleCallback;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.eucalyptus.ws.util.HmacUtils;
 import com.google.common.base.*;
@@ -959,20 +960,22 @@ public class VmControl {
     reply.set_return( true );
     final Context ctx = Contexts.lookup( );
     try {
-      final VmInstance v = VmInstances.lookupByBundleId( normalizeBundleIdentifier( request.getBundleId() ) );
+      final String bundleId =  normalizeBundleIdentifier( request.getBundleId() );
+      final VmInstance v = VmInstances.lookupByBundleId( bundleId );
       BundleState bundleState = v.getRuntimeState( ).getBundleTaskState( );
       if ( !( bundleState == BundleState.pending || bundleState == BundleState.storing ) )
         throw new EucalyptusCloudException( "Can't cancel bundle task when the bundle task is " + bundleState );
 
       if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
         Bundles.updateBundleTaskState( v, BundleState.canceling, 0.0d );
-        LOG.info( EventRecord.here( BundleCallback.class, EventType.BUNDLE_CANCELING, ctx.getUserFullName( ).toString( ),
+        LOG.info( EventRecord.here( CancelBundleCallback.class, EventType.BUNDLE_CANCELING, ctx.getUserFullName( ).toString( ),
                                       v.getRuntimeState( ).getBundleTask( ).getBundleId( ),
                                       v.getInstanceId( ) ) );
 
         ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
         final ClusterCancelBundleTaskType cancelRequest = new ClusterCancelBundleTaskType( );
         cancelRequest.setInstanceId( v.getInstanceId( ) );
+        cancelRequest.setBundleId( bundleId );
         reply.setTask( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
         AsyncRequests.newRequest( Bundles.cancelCallback( cancelRequest ) ).dispatch( ccConfig );
         return reply;

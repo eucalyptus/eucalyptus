@@ -116,7 +116,7 @@ public class Nodes {
     return Functions.compose( transformNodeInfo( ccConfig ), lookupNodeInfo( ccConfig ) );
   }
 
-  public static void updateNodeInfo( ServiceConfiguration ccConfig, List<NodeType> nodes ) {
+  public static void updateNodeInfo( final long now, final ServiceConfiguration ccConfig, final List<NodeType> nodes ) {
     ConcurrentNavigableMap<String, NodeInfo> clusterNodeMap = lookupAny( ccConfig ).getNodeMap( );
     /** prepare key sets for comparison **/
     Set<String> knownTags = Sets.newHashSet( clusterNodeMap.keySet( ) );
@@ -132,7 +132,7 @@ public class Nodes {
     /** maybe remove unreported nodes **/
     for ( String unreportedTag : unreportedTags ) {
       NodeInfo unreportedNode = clusterNodeMap.get( unreportedTag );
-      if ( unreportedNode != null && ( System.currentTimeMillis( ) - unreportedNode.getLastSeen( ).getTime( ) ) > Nodes.REFRESH_TIMEOUT ) {
+      if ( unreportedNode != null && ( now - unreportedNode.getLastSeen( ).getTime( ) ) > Nodes.REFRESH_TIMEOUT ) {
         Topology.destroy( Components.lookup( ProxyNodeController.class ).lookup( unreportedNode.getName() ) );
         NodeInfo removed = clusterNodeMap.remove( unreportedTag );
         nodeLog.append( "GONE:" ).append( removed.getName() ).append( ":" ).append( removed.getLastState() ).append( " " );

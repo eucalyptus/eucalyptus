@@ -100,9 +100,10 @@ public class ScheduleResource implements AutoCloseable {
 
   private void adjustWithFactor( final ClusterNode clusterNode, final int factor ) {
     if ( clusterNode.getNode( ).equals( this.node ) ) {
-      clusterNode.setCoresAvailable( clusterNode.getCoresAvailable( ) - (cores * factor) );
-      clusterNode.setDiskAvailable( clusterNode.getDiskAvailable( ) - (disk * factor) );
-      clusterNode.setMemoryAvailable( clusterNode.getMemoryAvailable( ) - (memory * factor) );
+      clusterNode.setAvailability(
+          clusterNode.getCoresAvailable( ) - (cores * factor),
+          clusterNode.getDiskAvailable( ) - (disk * factor),
+          clusterNode.getMemoryAvailable( ) - (memory * factor) );
     }
   }
 

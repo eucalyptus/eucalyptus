@@ -53,7 +53,7 @@ public interface ClusterProvider {
   void stop( ) throws ServiceRegistrationException;
   void enable( ) throws ServiceRegistrationException;
   void disable( ) throws ServiceRegistrationException;
-  void updateNodeInfo( List<NodeType> nodes );
+  void updateNodeInfo( long time, List<NodeType> nodes );
   boolean hasNode( String sourceHost );
   void cleanup( Cluster cluster, Exception ex );
 }

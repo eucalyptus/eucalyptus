@@ -30,6 +30,7 @@ package com.eucalyptus.cluster.proxy;
 
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.net.ConnectException;
 import java.net.URI;
 import java.security.cert.X509Certificate;
 import java.util.List;
@@ -41,6 +42,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.FullName;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -302,10 +304,10 @@ public class ProxyClusterProvider implements ClusterProvider, EventListener, Has
   }
 
   @Override
-  public void updateNodeInfo( final List<NodeType> nodes ) {
+  public void updateNodeInfo( final long time, final List<NodeType> nodes ) {
     Callable<Boolean> updateNodes = ( ) -> {
       try {
-        Nodes.updateNodeInfo( getConfiguration(), nodes );
+        Nodes.updateNodeInfo( time, getConfiguration(), nodes );
         return true;
       } catch ( Exception e ) {
         LOG.error( e, e );
@@ -457,7 +459,8 @@ public class ProxyClusterProvider implements ClusterProvider, EventListener, Has
   }
 
   private <T extends Throwable> boolean swallowException( final T t ) {
-    LOG.error( this.getConfiguration( ).getFullName( ) + " checking: " + Exceptions.causeString( t ) );
+    final Level level = Exceptions.isCausedBy( t, ConnectException.class ) ? Level.WARN : Level.ERROR;
+    LOG.log( level, this.getConfiguration( ).getFullName( ) + " checking: " + Exceptions.causeString( t ) );
     if ( Exceptions.isCausedBy(t, InterruptedException.class) ) {
       Thread.currentThread( ).interrupt( );
       return true;

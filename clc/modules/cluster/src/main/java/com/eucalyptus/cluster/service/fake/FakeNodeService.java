@@ -29,6 +29,7 @@
 package com.eucalyptus.cluster.service.fake;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -94,9 +95,11 @@ import com.eucalyptus.cluster.common.msgs.VirtualMachineType;
 import com.eucalyptus.cluster.common.msgs.VolumeType;
 import com.eucalyptus.cluster.service.NodeService;
 import com.eucalyptus.cluster.service.node.ClusterNode;
-import com.eucalyptus.cluster.service.vm.VmInfo;
-import com.eucalyptus.cluster.service.vm.VmInterface;
-import com.eucalyptus.cluster.service.vm.VmVolumeAttachment;
+import com.eucalyptus.cluster.service.vm.ClusterVm;
+import com.eucalyptus.cluster.service.vm.ClusterVmBootRecord;
+import com.eucalyptus.cluster.service.vm.ClusterVmInterface;
+import com.eucalyptus.cluster.service.vm.ClusterVmType;
+import com.eucalyptus.cluster.service.vm.ClusterVmVolume;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.compute.common.internal.vm.VmInstances;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
@@ -121,14 +124,18 @@ public class FakeNodeService implements NodeService {
 
   private final ClusterNode node;
   private final FakeNodeState state;
+  private final Clock clock;
 
-  public FakeNodeService( final ClusterNode node, final boolean allowReload ) {
+  @SuppressWarnings( "WeakerAccess" )
+  public FakeNodeService( final ClusterNode node, final Clock clock, final boolean allowReload ) {
     this.node = node;
     this.state = new FakeNodeState( );
+    this.clock = clock;
     if ( allowReload && node.getVms( ).isEmpty( ) ) {
       reload( );
     }
-    node.getVms( ).forEach( state::extant );
+    final long now = clock.millis( );
+    node.getVms( ).forEach( vm -> state.extant( now, vm ) );
   }
 
   @Override
@@ -146,8 +153,8 @@ public class FakeNodeService implements NodeService {
   public NcAttachVolumeResponseType attachVolume( final NcAttachVolumeType request ) {
     final NcAttachVolumeResponseType reply = request.getReply( );
     state.vm( request.getInstanceId( ) ).forEach( vm -> {
-      final VmVolumeAttachment fakeVolumeAttachment = new VmVolumeAttachment(
-          System.currentTimeMillis( ),
+      final ClusterVmVolume fakeVolumeAttachment = ClusterVmVolume.of(
+          clock.millis( ),
           request.getVolumeId( ),
           request.getLocalDev( ),
           request.getRemoteDev( ),
@@ -187,16 +194,16 @@ public class FakeNodeService implements NodeService {
   public NcDescribeInstancesResponseType describeInstances( final NcDescribeInstancesType request ) {
     final NcDescribeInstancesResponseType reply = request.getReply( );
     final ArrayList<InstanceType> instances = Lists.newArrayList( );
-    state.cleanup( );
+    state.cleanup( clock.millis( ) );
     node.getVms( ).forEach( vm -> {
       final Option<FakeNodeVmInfo> nodeVm = state.vm( vm.getId( ) );
       if ( nodeVm.isEmpty( ) ) return;
 
       final VirtualMachineType vmType = new VirtualMachineType( );
-      vmType.setName( vm.getInstanceTypeName( ) );
-      vmType.setCores( vm.getInstanceTypeCores( ) );
-      vmType.setDisk( vm.getInstanceTypeDisk() );
-      vmType.setMemory( vm.getInstanceTypeMemory( ) );
+      vmType.setName( vm.getVmType( ).getName( ) );
+      vmType.setCores( vm.getVmType( ).getCores( ) );
+      vmType.setDisk( vm.getVmType( ).getDisk( ) );
+      vmType.setMemory( vm.getVmType( ).getMemory( ) );
       nodeVm.get( ).getVolumeAttachments( ).values( ).forEach( attachment -> {
         final VirtualBootRecordType virtualBootRecord = new VirtualBootRecordType( );
         virtualBootRecord.setType( "machine" );
@@ -245,7 +252,7 @@ public class FakeNodeService implements NodeService {
 //      instance.setGroupNames(  );
 //      instance.setGroupIds(  );
       instance.setHasFloopy( 0 );
-      for ( VmVolumeAttachment attachment : nodeVm.get( ).getVolumeAttachments( ).values( ) ) {
+      for ( ClusterVmVolume attachment : nodeVm.get( ).getVolumeAttachments( ).values( ) ) {
         final VolumeType volume = new VolumeType( );
         volume.setVolumeId( attachment.getVolumeId( ) );
         volume.setLocalDev( attachment.getDevice( ) );
@@ -271,6 +278,7 @@ public class FakeNodeService implements NodeService {
     reply.setDiskSizeAvailable( 500_000 - ( node.getVms( ).size( ) ) * 5 );
     reply.setMemorySizeMax( 25_600_000 );
     reply.setMemorySizeAvailable( 25_600_000 - ( node.getVms( ).size( ) ) );
+    reply.setNodeStatus( "enabled" );
     return reply;
   }
 
@@ -281,12 +289,12 @@ public class FakeNodeService implements NodeService {
     final int history = request.getHistorySize( );
     final long interval = request.getCollectionIntervalTimeMs( ).longValue( );
 
-    final long currentTime = System.currentTimeMillis( );
+    final long currentTime = clock.millis( );
     final long mostRecentTimestamp = currentTime - ( currentTime % interval );
 
     for ( final String instanceId : instanceIds ) {
-      VmInfo vmInfo = null;
-      for ( final VmInfo fakeVmInfo : node.getVms( ) ) {
+      ClusterVm vmInfo = null;
+      for ( final ClusterVm fakeVmInfo : node.getVms( ) ) {
         if ( fakeVmInfo.getId( ).equals( instanceId ) ) {
           vmInfo = fakeVmInfo;
           break;
@@ -336,9 +344,9 @@ public class FakeNodeService implements NodeService {
   public NcDetachVolumeResponseType detachVolume( final NcDetachVolumeType request ) {
     final NcDetachVolumeResponseType reply = request.getReply( );
     state.vm( request.getInstanceId( ) ).forEach( vm -> {
-      final VmVolumeAttachment existingFakeVolumeAttachment = vm.getVolumeAttachments( ).get( request.getVolumeId( ) );
+      final ClusterVmVolume existingFakeVolumeAttachment = vm.getVolumeAttachments( ).get( request.getVolumeId( ) );
       if ( existingFakeVolumeAttachment != null ) {
-        final VmVolumeAttachment newFakeVolumeAttachment = new VmVolumeAttachment(
+        final ClusterVmVolume newFakeVolumeAttachment = ClusterVmVolume.of(
             existingFakeVolumeAttachment.getAttachmentTimestamp( ),
             existingFakeVolumeAttachment.getVolumeId( ),
             existingFakeVolumeAttachment.getDevice( ),
@@ -354,7 +362,7 @@ public class FakeNodeService implements NodeService {
   @Override
   public NcGetConsoleOutputResponseType getConsoleOutput( final NcGetConsoleOutputType request ) {
     final NcGetConsoleOutputResponseType reply = request.getReply( );
-    final Option<VmInfo> vm = vm( request.getInstanceId( ) );
+    final Option<ClusterVm> vm = vm( request.getInstanceId( ) );
     final Option<FakeNodeVmInfo> fakeVm = state.vm( request.getInstanceId( ) );
     reply.setConsoleOutput( BaseEncoding.base64( ).encode(
         (
@@ -391,7 +399,7 @@ public class FakeNodeService implements NodeService {
   @Override
   public NcRunInstanceResponseType runInstance( final NcRunInstanceType request ) {
     final NcRunInstanceResponseType reply = request.getReply( );
-    vm( request.getInstanceId( ) ).forEach( state::extant );
+    vm( request.getInstanceId( ) ).forEach( vm -> state.extant( clock.millis( ), vm ) );
     final InstanceType instanceType = new InstanceType( );
     instanceType.setReservationId( request.getReservationId( ) );
     instanceType.setInstanceId( request.getInstanceId( ) );
@@ -419,9 +427,14 @@ public class FakeNodeService implements NodeService {
   @Override
   public NcTerminateInstanceResponseType terminateInstance( final NcTerminateInstanceType request ) {
     final NcTerminateInstanceResponseType reply = request.getReply( );
-    state.terminate( request.getInstanceId( ) );
+    state.terminate( clock.millis( ), request.getInstanceId( ) );
     reply.setInstanceId( request.getInstanceId( ) );
     return reply;
+  }
+
+  @Override
+  public CheckedListenableFuture<NcAssignAddressResponseType> assignAddressAsync( final NcAssignAddressType request ) {
+    return Futures.predestinedFuture( assignAddress( request ) );
   }
 
   @Override
@@ -444,12 +457,17 @@ public class FakeNodeService implements NodeService {
     return Futures.predestinedFuture( describeSensors( request ) );
   }
 
-  private Option<VmInfo> vm( final String id ) {
+  @Override
+  public CheckedListenableFuture<NcMigrateInstancesResponseType> migrateInstancesAsync( final NcMigrateInstancesType request ) {
+    return Futures.predestinedFuture( migrateInstances( request ) );
+  }
+
+  private Option<ClusterVm> vm( final String id ) {
     return Stream.ofAll( node.getVms( ) ).find( vm -> vm.getId( ).equals( id ) );
   }
 
   private void reload( ) {
-    try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( VmInstance.class ) ) {
+    try ( final TransactionResource ignored = Entities.readOnlyDistinctTransactionFor( VmInstance.class ) ) {
       for ( final VmInstance instance : VmInstances.list(
           null,
           Restrictions.and(
@@ -460,15 +478,11 @@ public class FakeNodeService implements NodeService {
           VmInstance.VmStateSet.RUN,
           false ) ) {
 
-          final VmInfo fakeVmInfo = new VmInfo(
+          final ClusterVm fakeVmInfo = new ClusterVm(
               instance.getInstanceId( ),
               instance.getInstanceUuid( ),
               instance.getReservationId( ),
               instance.getLaunchIndex( ),
-              instance.getVmType( ).getName( ),
-              instance.getVmType( ).getCpu( ),
-              instance.getVmType( ).getDisk( ),
-              instance.getVmType( ).getMemory( ),
               instance.getPlatform( ),
               instance.getKeyPair( ).getPublicKey( ),
               instance.getCreationTimestamp( ).getTime( ),
@@ -483,27 +497,26 @@ public class FakeNodeService implements NodeService {
               null,
               instance.getOwnerUserId( ),
               instance.getOwnerAccountNumber( ),
-              instance.getVpcId( )
+              ClusterVmBootRecord.none( ),
+              ClusterVmType.from( instance.getVmType( ) )
           );
 
-          instance.getNetworkInterfaces( ).stream( ).skip( 1 ).collect( Collectors.toMap(
+        fakeVmInfo.getSecondaryInterfaceAttachments().putAll( instance.getNetworkInterfaces( ).stream( ).skip( 1 ).collect( Collectors.toMap(
               FUtils.chain( NetworkInterface::getAttachment, NetworkInterfaceAttachment::getDeviceIndex ),
-              ni -> new VmInterface(
+              ni -> ClusterVmInterface.of(
                   ni.getDisplayName( ),
                   ni.getAttachment( ).getAttachmentId( ),
                   ni.getAttachment( ).getDeviceIndex( ),
                   ni.getMacAddress( ),
                   ni.getPrivateIpAddress( ),
                   Optional.ofNullable( ni.getAssociation( ) )
-                      .map( NetworkInterfaceAssociation::getPublicIp ).<String>orElse( null ) ),
-              ( v1, v2 ) -> v1,
-              fakeVmInfo::getSecondaryInterfaceAttachments
-          ) );
+                      .map( NetworkInterfaceAssociation::getPublicIp ).<String>orElse( null ) )
+          ) ) );
 
           for ( com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment attachment : Iterables.concat(
               instance.getBootRecord( ).getPersistentVolumes( ),
               instance.getTransientVolumeState( ).getAttachments( ) ) ) {
-            fakeVmInfo.getVolumeAttachments( ).put( attachment.getVolumeId( ), new VmVolumeAttachment(
+            fakeVmInfo.getVolumeAttachments( ).put( attachment.getVolumeId( ), ClusterVmVolume.of(
                 attachment.getAttachTime( ).getTime( ),
                 attachment.getVolumeId( ),
                 attachment.getDevice( ),

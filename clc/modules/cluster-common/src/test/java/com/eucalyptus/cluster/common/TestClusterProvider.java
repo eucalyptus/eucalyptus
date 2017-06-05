@@ -112,7 +112,7 @@ public class TestClusterProvider implements ClusterProvider {
   }
 
   @Override
-  public void updateNodeInfo( final List<NodeType> nodes ) {
+  public void updateNodeInfo( final long time, final List<NodeType> nodes ) {
   }
 
   @Override

@@ -33,8 +33,10 @@ import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.util.async.AsyncRequestPoolable;
 import com.eucalyptus.ws.IoHandlers;
 import com.eucalyptus.ws.client.MonitoredSocketChannelInitializer;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.primitives.Ints;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
@@ -44,6 +46,11 @@ import io.netty.channel.socket.SocketChannel;
  */
 @ComponentPart( ProxyNodeController.class )
 public class NodeClientChannelInitializer extends MonitoredSocketChannelInitializer implements AsyncRequestPoolable {
+
+  private static final String POOL_SIZE_PROP = "com.eucalyptus.cluster.nodeHttpPoolSize";
+  private static final int POOL_SIZE_DEFAULT = 1; // should be enough for anything
+  private static int POOL_SIZE =
+      MoreObjects.firstNonNull( Ints.tryParse( System.getProperty( POOL_SIZE_PROP, "" ) ), POOL_SIZE_DEFAULT );
 
   @SuppressWarnings( "Guava" )
   private static final Supplier<ChannelHandler> wsSecHandler = Suppliers.memoize( NodeWsSecHandler::new );
@@ -61,5 +68,10 @@ public class NodeClientChannelInitializer extends MonitoredSocketChannelInitiali
     pipeline.addLast( "addressing", IoHandlers.addressingHandler( "EucalyptusNC#" ) );
     pipeline.addLast( "soap", IoHandlers.soapHandler( ) );
     pipeline.addLast( "binding", IoHandlers.bindingHandler( "eucalyptus_ucsb_edu" ) );
+  }
+
+  @Override
+  public int fixedSize( ) {
+    return POOL_SIZE;
   }
 }

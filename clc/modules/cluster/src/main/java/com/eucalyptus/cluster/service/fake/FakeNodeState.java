@@ -32,7 +32,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
-import com.eucalyptus.cluster.service.vm.VmInfo;
+import com.eucalyptus.cluster.service.vm.ClusterVm;
 import com.google.common.collect.Maps;
 import javaslang.collection.Stream;
 import javaslang.control.Option;
@@ -43,18 +43,18 @@ import javaslang.control.Option;
 public class FakeNodeState {
   private final ConcurrentMap<String,FakeNodeVmInfo> vms = Maps.newConcurrentMap( );
 
-  public void extant( final VmInfo vm ) {
+  public void extant( final long now, final ClusterVm vm ) {
     vms.computeIfAbsent( vm.getId( ), __ -> {
       final FakeNodeVmInfo fakeNodeVmInfo = new FakeNodeVmInfo( vm.getId( ) );
-      fakeNodeVmInfo.state( System.currentTimeMillis( ), FakeNodeVmInfo.State.Extant );
+      fakeNodeVmInfo.state( now, FakeNodeVmInfo.State.Extant );
       fakeNodeVmInfo.setPublicIp( vm.getPrimaryInterface( ).getPublicAddress( ) );
       fakeNodeVmInfo.getVolumeAttachments( ).putAll( vm.getVolumeAttachments( ) );
       return fakeNodeVmInfo;
     } );
   }
 
-  public void terminate( final String instanceId ) {
-    vm( instanceId ).forEach( vm -> vm.state( System.currentTimeMillis( ), FakeNodeVmInfo.State.Teardown ) );
+  public void terminate( final long now, final String instanceId ) {
+    vm( instanceId ).forEach( vm -> vm.state( now, FakeNodeVmInfo.State.Teardown ) );
   }
 
   public void assignAddress( final String instanceId, final String publicIp ) {
@@ -65,8 +65,8 @@ public class FakeNodeState {
     return Option.of( vms.get( id ) );
   }
 
-  public void cleanup( ) {
-    final long expiryAge = System.currentTimeMillis( ) - TimeUnit.MINUTES.toMillis( 2 );
+  public void cleanup( final long now ) {
+    final long expiryAge = now - TimeUnit.MINUTES.toMillis( 2 );
     final Predicate<FakeNodeVmInfo> isExpired =
         vm -> vm.getState( )== FakeNodeVmInfo.State.Teardown && vm.getStateTimestamp( ) < expiryAge;
     final Set<String> expired = Stream.ofAll( vms.values( ) ).filter( isExpired ).map( FakeNodeVmInfo::getId ).toJavaSet( );

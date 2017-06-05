@@ -736,17 +736,3 @@ public class ClusterCancelBundleTaskType extends CloudClusterMessage {
 public class ClusterCancelBundleTaskResponseType extends CloudClusterMessage {
 }
 
-public class ClusterDescribeBundleTasksType extends CloudClusterMessage {
-  ArrayList<String> bundleIds = new ArrayList<String>();
-}
-
-public class BundleTaskState extends EucalyptusData {
-  String instanceId;
-  String state;
-}
-
-public class ClusterDescribeBundleTasksResponseType extends CloudClusterMessage {
-  ArrayList<BundleTaskState> bundleTaskStates = new ArrayList<BundleTaskState>();
-}
-
-
