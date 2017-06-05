@@ -46,6 +46,10 @@ public class ImageManifestFile {
     return manifestType.getBaseBucket(this.location);
   }
 
+  public String getPrefix() throws EucalyptusCloudException {
+    return manifestType.getPrefix(this.location);
+  }
+
   public int getManifestSizeLimit() {
     return manifestSizeLimit;
   }

@@ -23,6 +23,7 @@ import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
 
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.function.Predicate;
 
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
@@ -73,14 +74,18 @@ public class GenericDnsResolver extends DnsResolver {
       if(DomainNames.externalSubdomain().equals(name)){
         final List<Record> answers = Lists.newArrayList();
         answers.add(DomainNameRecords.sourceOfAuthorityStaticSerial(name));
+        final Predicate<ServiceConfiguration> nsServerUsable = DomainNameRecords.activeNameserverPredicate( );
         NavigableSet<ServiceConfiguration> nsServers = Components.lookup( Dns.class ).services( );
         List<Record> additional = Lists.newArrayList( );
         Name domain = DomainNames.isInternalSubdomain( name ) ? DomainNames.internalSubdomain( ) : DomainNames.externalSubdomain( );
         int idx = 1;
         for ( ServiceConfiguration conf : nsServers ) {
-          additional.add( DomainNameRecords.addressRecord(
-              Name.fromConstantString( "ns" + (idx++) + "." + domain ) ,
-              NameserverResolver.maphost( request.getLocalAddress( ), conf.getInetAddress( ) ) ) );
+          final int offset = idx++;
+          if ( nsServerUsable.test( conf ) ) {
+            additional.add( DomainNameRecords.addressRecord(
+                Name.fromConstantString( "ns" + offset + "." + domain ),
+                NameserverResolver.maphost( request.getLocalAddress( ), conf.getInetAddress( ) ) ) );
+          }
         }
         answers.addAll(DomainNameRecords.nameservers( name ));
         return DnsResponse.forName( name )

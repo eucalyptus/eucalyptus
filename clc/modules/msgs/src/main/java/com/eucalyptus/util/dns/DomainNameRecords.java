@@ -65,8 +65,10 @@ package com.eucalyptus.util.dns;
 import java.net.InetAddress;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.function.Predicate;
 import org.xbill.DNS.ARecord;
 import org.xbill.DNS.CNAMERecord;
 import org.xbill.DNS.DClass;
@@ -75,6 +77,9 @@ import org.xbill.DNS.PTRRecord;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.ReverseMap;
 import org.xbill.DNS.SOARecord;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.google.common.net.InetAddresses;
@@ -96,6 +101,11 @@ public class DomainNameRecords {
   
   public static long negativeTtl( ) {
     return NEGATIVE_TTL;
+  }
+
+  public static Predicate<ServiceConfiguration> activeNameserverPredicate( ) {
+    final Collection<ServiceConfiguration> enabledNsServers = Topology.enabledServices( Dns.class );
+    return conf -> enabledNsServers.contains( conf ) || conf.isHostLocal( );
   }
 
   public static List<? extends Record> nameservers( Name subdomain ) {

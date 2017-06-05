@@ -78,9 +78,23 @@ public enum BundleImageManifest implements ImageManifest {
   }
 
   @Override
+  public String getPrefix(String location) {
+    final String cleanLocation = clean( location );
+    final int index = cleanLocation.indexOf('/') + 1;
+    final int endIndex = cleanLocation.lastIndexOf('/');
+    return endIndex > index ?
+        cleanLocation.substring( index, endIndex ) :
+        "";
+  }
+
+  @Override
   public String getBaseBucket(String location) {
-    String cleanLocation = location.replaceAll("^/*", "");
-    int index = cleanLocation.indexOf('/');
+    final String cleanLocation = clean( location );
+    final int index = cleanLocation.indexOf('/');
     return cleanLocation.substring(0, index);
+  }
+
+  private String clean( final String location ) {
+    return location.replaceAll("^/*", "");
   }
 }

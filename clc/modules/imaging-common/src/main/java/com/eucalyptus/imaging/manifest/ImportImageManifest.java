@@ -90,6 +90,11 @@ public enum ImportImageManifest implements ImageManifest {
   }
 
   @Override
+  public String getPrefix(String location) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public String getBaseBucket(String location) {
     throw new UnsupportedOperationException();
   }
