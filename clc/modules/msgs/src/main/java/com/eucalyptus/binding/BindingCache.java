@@ -449,6 +449,7 @@ public class BindingCache {
 
     public static void processFiles( final FileProcessingMode mode ) {
       BindingFileSearch.CURRENT_PROPS.clear( );
+      BindingFileSearch.BINDING_LIST.clear( );
       final File libDir = new File( BaseDirectory.LIB.toString( ) );
       for ( final File f : libDir.listFiles( ) ) {
         if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" )
