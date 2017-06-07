@@ -139,7 +139,7 @@
 
 #define MONITORING_PERIOD                           (5) //!< Instance state transition monitoring period in seconds.
 #define MAX_CREATE_TRYS                              5
-#define CREATE_TIMEOUT_SEC                           60
+#define CREATE_TIMEOUT_SEC                           300
 #define LIBVIRT_TIMEOUT_SEC                          5
 #define NETWORK_GATE_TIMEOUT_SEC                     1200
 #define PER_INSTANCE_BUFFER_MB                       20 //!< by default reserve this much extra room (in MB) per instance (for kernel, ramdisk, and metadata overhead)
@@ -1816,6 +1816,7 @@ void *startup_thread(void *arg)
     int error = EUCA_OK;
     int status = 0;
     int rc = 0;
+    int create_timedout = 0;
     char *xml = NULL;
     char brname[IF_NAME_LEN] = "";
     pid_t cpid = 0;
@@ -1898,6 +1899,25 @@ void *startup_thread(void *arg)
 
             sem_p(loop_sem);
 
+            if (i > 0 && create_timedout == 1) {
+                dom = virDomainLookupByName(conn, instance->instanceId);
+                if (dom) {
+
+                    // a forked process failed to return in a timely manner, yet the instance
+                    // launched. Since we can't verify the validity of the instance, terminate and
+                    // let the NC clean up.
+                    LOGERROR("[%s] failed to launch cleanly after %d seconds, destroying instance\n", instance->instanceId, CREATE_TIMEOUT_SEC);
+                    error = virDomainDestroy(dom);
+                    LOGINFO("[%s] instance destroyed - return: %d\n", instance->instanceId, error);
+
+                    virDomainFree(dom);
+                    sem_v(loop_sem);
+                    unlock_hypervisor_conn();
+
+                    goto shutoff;
+                }
+            }
+
             // We have seen virDomainCreateLinux() on occasion block indefinitely,
             // which freezes all activity on the NC since hyp_sem and loop_sem are
             // being held by the thread. (This is on Lucid with AppArmor enabled.)
@@ -1949,6 +1969,7 @@ void *startup_thread(void *arg)
                     try_killing = TRUE;
                 } else if (rc == 0) {
                     LOGERROR("[%s] timed out waiting for forked process pid=%d\n", instance->instanceId, cpid);
+                    create_timedout = 1; // Sometimes a timeout can occur but the instance is running...
                     try_killing = TRUE;
                 } else if (WEXITSTATUS(status) != 0) {
                     LOGERROR("[%s] hypervisor failed to create the instance\n", instance->instanceId);
