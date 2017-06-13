@@ -187,14 +187,15 @@ public class NameserverResolver extends DnsResolver {
     public DnsResponse lookupRecords( DnsRequest request ) {
       final Record query = request.getQuery( );
       final InetAddress hostAddr = DomainNameRecords.inAddrArpaToInetAddress( query.getName( ) );
-      final String hostAddress = hostAddr.getHostAddress( );
-      if ( Hosts.contains( hostAddress ) ) {
+      final Host host = Hosts.lookup( hostAddr );
+      if ( host != null ) {
+        final String hostAddress = host.getBindAddress( ).getHostAddress( );
         final NavigableSet<ServiceConfiguration> nsServers = Components.lookup( Dns.class ).services( );
         final Option<ServiceConfiguration> hostConfiguration =
             Stream.ofAll( nsServers ).find( configuration -> hostAddress.equals( configuration.getHostName( ) ) );
         if ( hostConfiguration.isDefined( ) ) {
           int index = nsServers.headSet( hostConfiguration.get( ) ).size( );
-          final Name nsName = Name.fromConstantString( "ns" + index + "." + DomainNames.externalSubdomain( ) );
+          final Name nsName = Name.fromConstantString( "ns" + (index+1) + "." + DomainNames.externalSubdomain( ) );
           final Record ptrRecord = DomainNameRecords.ptrRecord( nsName, hostAddr );
           return DnsResponse.forName( query.getName( ) ).answer( ptrRecord );
         }
