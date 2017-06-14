@@ -74,7 +74,12 @@ public abstract class EucalyptusClientTask<TM extends BaseMessage, TC extends Co
       });
       return future;
     } catch (Exception e) {
-      LOG.error("Got error", e);
+      NoSuchElementException nsee = Exceptions.findCause( e, NoSuchElementException.class );
+      if ( nsee != null ) {
+        LOG.warn( nsee.getMessage( ) );
+      } else {
+        LOG.error( "Got error", e );
+      }
     }
     return Futures.predestinedFuture(false);
   }

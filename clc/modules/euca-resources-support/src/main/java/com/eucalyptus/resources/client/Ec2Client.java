@@ -1232,7 +1232,7 @@ public class Ec2Client {
       } else
         throw new EucalyptusActivityException(
             task.getErrorMessage() != null ? task.getErrorMessage()
-                : "failed to describe the instances");
+                : "Failed to describe the instances");
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }

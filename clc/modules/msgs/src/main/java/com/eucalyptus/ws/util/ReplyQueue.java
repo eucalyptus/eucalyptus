@@ -71,6 +71,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.eucalyptus.ws.WebServicesException;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
@@ -102,8 +103,8 @@ public class ReplyQueue {
             new HttpResponseStatus( statusCodeOptional.get(), "" );
         Contexts.response( new ExceptionResponseType( msg, webServiceException.getCode( ), webServiceException.getMessage( ), status, webServiceException )  );
       } else {
-        final Throwable cause = messagingEx.getCause( );
-        Contexts.response( new ExceptionResponseType( msg, cause.getMessage( ), HttpResponseStatus.NOT_ACCEPTABLE, cause )  );
+        final Throwable responseEx = MoreObjects.firstNonNull( messagingEx.getCause( ), messagingEx );
+        Contexts.response( new ExceptionResponseType( msg, responseEx.getMessage( ), HttpResponseStatus.NOT_ACCEPTABLE, responseEx )  );
       }
     } else {
       LOG.error( "Failed to identify request context for received error: " + messagingEx.toString( ) );

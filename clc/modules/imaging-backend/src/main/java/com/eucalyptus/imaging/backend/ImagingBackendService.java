@@ -58,8 +58,8 @@ public class ImagingBackendService {
     try{
       final String remoteHost = request.getSourceIp();
       ImagingWorkers.verifyWorker(request.getInstanceId(), remoteHost);
-    }catch(final Exception ex){
-      LOG.warn("Failed to verify worker", ex);
+    }catch(final ImagingWorkers.ImagingWorkerVerifyException ex){
+      LOG.warn(ex.getMessage( ), ex.getCause( ));
       throw new ImagingServiceException(ImagingServiceException.DEFAULT_CODE, "Not authorized to put import task status." );
     }
     reply.setCancelled(false);
@@ -183,8 +183,8 @@ public class ImagingBackendService {
     try{
       final String remoteHost = request.getSourceIp();
       ImagingWorkers.verifyWorker(request.getInstanceId(), remoteHost);
-    }catch(final Exception ex){
-      LOG.warn("Failed to verify worker", ex);
+    }catch(final ImagingWorkers.ImagingWorkerVerifyException ex){
+      LOG.warn(ex.getMessage( ), ex.getCause( ));
       throw new ImagingServiceException(ImagingServiceException.DEFAULT_CODE, "Not authorized to get instance import task." );
     }
     

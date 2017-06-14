@@ -81,6 +81,7 @@ import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.SimpleChannelHandler;
 import org.jboss.netty.channel.local.DefaultLocalClientChannelFactory;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpVersion;
@@ -129,7 +130,7 @@ public class Context {
         this.message = msg;
       }
     };
-    this.channel = new DefaultLocalClientChannelFactory( ).newChannel( Channels.pipeline( ) );
+    this.channel = new DefaultLocalClientChannelFactory( ).newChannel( Channels.pipeline( new SimpleChannelHandler( ) ) );
     this.channelManaged = true;
     this.user = Principals.systemUser( );
     EventRecord.caller( Context.class, EventType.CONTEXT_CREATE, this.correlationId, this.channel.toString( ) ).debug( );
