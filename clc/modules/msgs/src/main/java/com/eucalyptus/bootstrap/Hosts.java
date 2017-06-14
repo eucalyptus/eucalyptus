@@ -511,13 +511,13 @@ public class Hosts {
       /**
        * Which host was the coordinator for the partition this host belongs to.
        */
-      final Host preMergeCoordinator = Coordinator.INSTANCE.get();
+      final Host preMergeCoordinator = getCoordinator( );
       LOG.info("Hosts.viewChange(): merge   : pre-merge-coordinator=" + preMergeCoordinator );
       Runnable mergeViews = new Runnable() {
         /**
-         * Was this host the coordinator when the merge view arrived (i.e., before the partiton has been resolved)?
+         * Was this host the coordinator when the merge view arrived (i.e., before the partition has been resolved)?
          */
-        private final boolean coordinator = preMergeCoordinator.isLocalHost();
+        private final boolean coordinator = preMergeCoordinator!=null && preMergeCoordinator.isLocalHost();
         /**
          * Which host was the coordinator for the partition this host belongs to.
          */
@@ -1301,7 +1301,6 @@ public class Hosts {
 
     public Host await( ) {//GRZE: this needs to use all DBs to ensure waiting for booting coordinator
       while ( !Hosts.isCoordinator( ) && AwaitDatabase.INSTANCE.apply( Hosts.getCoordinator( ) ) );
-      Host coord = get( );
       if ( !BootstrapArgs.isCloudController( ) ) {
         Coordinator.loggedWait( JoinShouldWait.NON_CLOUD_CONTROLLER );
         return JoinShouldWait.NON_CLOUD_CONTROLLER.get( );
