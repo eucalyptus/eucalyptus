@@ -25,7 +25,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
 
@@ -36,6 +35,8 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.RunningInstancesItemType;
+import com.eucalyptus.compute.common.internal.identifier.InvalidResourceIdentifier;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
@@ -43,6 +44,7 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.imaging.ImagingServiceProperties;
 import com.eucalyptus.imaging.common.ImagingBackend;
+import com.eucalyptus.resources.EucalyptusActivityException;
 import com.eucalyptus.resources.client.Ec2Client;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
@@ -175,12 +177,13 @@ public class ImagingWorkers {
   }
   
   private static final String DEFAULT_LAUNCHER_TAG = "euca-internal-imaging-workers";
-  private static final Pattern INSTANCE_ID = Pattern.compile( "i-[0-9a-fA-F]{8}" );
 
-  public static void verifyWorker(final String instanceId, final String remoteHost) throws Exception {
-    if (instanceId == null || !INSTANCE_ID.matcher(instanceId).matches())
-      throw new Exception("Failed to verify imaging worker. The '" + instanceId + "' can't be an instance ID");
-
+  public static void verifyWorker(final String instanceId, final String remoteHost) throws ImagingWorkerVerifyException {
+    try {
+      ResourceIdentifiers.parse( "i", instanceId );
+    } catch ( InvalidResourceIdentifier e ) {
+      throw new ImagingWorkerVerifyException( "Failed to verify imaging worker "+remoteHost+". The '" + instanceId + "' can't be an instance ID" );
+    }
     if(!verifiedWorkers.contains(instanceId)){
       try{
         final List<RunningInstancesItemType> instances=
@@ -196,12 +199,18 @@ public class ImagingWorkers {
           } 
         }
         if(!tagFound)
-          throw new Exception("Instance does not have a proper tag");
+          throw new ImagingWorkerVerifyException("Instance does not have a proper tag");
         if(! (remoteHost.equals(workerInstance.getIpAddress()) || remoteHost.equals(workerInstance.getPrivateIpAddress())))
-          throw new Exception("Request came from invalid host address: "+remoteHost);        
+          throw new ImagingWorkerVerifyException("Request came from invalid host address: "+remoteHost);        
         verifiedWorkers.add(instanceId);
-      }catch(final Exception ex){
-        throw new Exception("Failed to verify imaging worker", ex);
+      } catch( final ImagingWorkerVerifyException e ) {
+        throw e;
+      } catch( final Exception ex ){
+        final EucalyptusActivityException eae = Exceptions.findCause( ex, EucalyptusActivityException.class );
+        if ( eae != null ) {
+          throw new ImagingWorkerVerifyException( "Failed to verify imaging worker. " + eae.getMessage( ) );
+        }
+        throw new ImagingWorkerVerifyException("Failed to verify imaging worker", ex);
       }
     }
   }
@@ -327,5 +336,17 @@ public class ImagingWorkers {
       "CertificateFailure");
   public static boolean isFatalError(final String errorCode){
       return FatalTaskErrors.contains(errorCode);
+  }
+
+  public static class ImagingWorkerVerifyException extends Exception {
+    private static final long serialVersionUID = 1L;
+
+    public ImagingWorkerVerifyException( final String message ) {
+      super( message );
+    }
+
+    public ImagingWorkerVerifyException( final String message, final Throwable cause ) {
+      super( message, cause );
+    }
   }
 }
