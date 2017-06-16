@@ -52,37 +52,41 @@ public class FullTableScanAbsoluteMetricConverter {
     try (final TransactionResource db = Entities.transactionFor(AbsoluteMetricHistory.class)) {
       int count = 0;
       Criteria criteria = Entities.createCriteria(AbsoluteMetricHistory.class);
-      ScrollableResults absoluteMetrics = criteria.setCacheMode(CacheMode.IGNORE).scroll(ScrollMode.FORWARD_ONLY);
-      while (absoluteMetrics.next()) {
-        AbsoluteMetricHistory absoluteMetricHistory = (AbsoluteMetricHistory) absoluteMetrics.get(0);
-        if (absoluteMetricMap.containsKey(
-          absoluteMetricHistory.getNamespace(), absoluteMetricHistory.getMetricName(),
-          absoluteMetricHistory.getDimensionName(), absoluteMetricHistory.getDimensionValue())) {
-          MetricsAndOtherFields metricsAndOtherFields =
-            absoluteMetricMap.getMetricsAndOtherFields(absoluteMetricHistory.getNamespace(),
-              absoluteMetricHistory.getMetricName(), absoluteMetricHistory.getDimensionName(),
-              absoluteMetricHistory.getDimensionValue());
-          Map<TimestampAndMetricValue, MetricDatum> metricDatumMap = metricsAndOtherFields.getMetricDatumMap();
-          SequentialMetrics sequentialMetrics = calculateSequentialMetrics(absoluteMetricHistory, metricDatumMap, metricsAndOtherFields.getAccountId(), metricsAndOtherFields.getRelativeMetricName());
-          absoluteMetricMap.removeEntries(absoluteMetricHistory.getNamespace(), absoluteMetricHistory.getMetricName(),
-            absoluteMetricHistory.getDimensionName(), absoluteMetricHistory.getDimensionValue());
-          for (AbsoluteMetricQueueItem regularMetric: sequentialMetrics.getRegularMetrics()) {
-            if (AbsoluteMetricHelper.AWS_EBS_NAMESPACE.equals(regularMetric.getNamespace())) {
-              if (AbsoluteMetricHelper.VOLUME_READ_OPS_METRIC_NAME.equals(regularMetric.getMetricDatum().getMetricName())) { // special case
-                regularMetrics.add(AbsoluteMetricHelper.createVolumeThroughputMetric(regularMetric.getAccountId(), regularMetric.getNamespace(), regularMetric.getMetricDatum()));
-              } else if (AbsoluteMetricHelper.VOLUME_TOTAL_READ_WRITE_TIME_METRIC_NAME.equals(regularMetric.getMetricDatum().getMetricName())) {
-                AbsoluteMetricHelper.convertVolumeTotalReadWriteTimeToVolumeIdleTime(regularMetric.getMetricDatum());
+      final ScrollableResults absoluteMetrics = criteria.setCacheMode(CacheMode.IGNORE).scroll(ScrollMode.FORWARD_ONLY);
+      try {
+        while ( absoluteMetrics.next( ) ) {
+          AbsoluteMetricHistory absoluteMetricHistory = (AbsoluteMetricHistory) absoluteMetrics.get( 0 );
+          if ( absoluteMetricMap.containsKey(
+              absoluteMetricHistory.getNamespace( ), absoluteMetricHistory.getMetricName( ),
+              absoluteMetricHistory.getDimensionName( ), absoluteMetricHistory.getDimensionValue( ) ) ) {
+            MetricsAndOtherFields metricsAndOtherFields =
+                absoluteMetricMap.getMetricsAndOtherFields( absoluteMetricHistory.getNamespace( ),
+                    absoluteMetricHistory.getMetricName( ), absoluteMetricHistory.getDimensionName( ),
+                    absoluteMetricHistory.getDimensionValue( ) );
+            Map<TimestampAndMetricValue, MetricDatum> metricDatumMap = metricsAndOtherFields.getMetricDatumMap( );
+            SequentialMetrics sequentialMetrics = calculateSequentialMetrics( absoluteMetricHistory, metricDatumMap, metricsAndOtherFields.getAccountId( ), metricsAndOtherFields.getRelativeMetricName( ) );
+            absoluteMetricMap.removeEntries( absoluteMetricHistory.getNamespace( ), absoluteMetricHistory.getMetricName( ),
+                absoluteMetricHistory.getDimensionName( ), absoluteMetricHistory.getDimensionValue( ) );
+            for ( AbsoluteMetricQueueItem regularMetric : sequentialMetrics.getRegularMetrics( ) ) {
+              if ( AbsoluteMetricHelper.AWS_EBS_NAMESPACE.equals( regularMetric.getNamespace( ) ) ) {
+                if ( AbsoluteMetricHelper.VOLUME_READ_OPS_METRIC_NAME.equals( regularMetric.getMetricDatum( ).getMetricName( ) ) ) { // special case
+                  regularMetrics.add( AbsoluteMetricHelper.createVolumeThroughputMetric( regularMetric.getAccountId( ), regularMetric.getNamespace( ), regularMetric.getMetricDatum( ) ) );
+                } else if ( AbsoluteMetricHelper.VOLUME_TOTAL_READ_WRITE_TIME_METRIC_NAME.equals( regularMetric.getMetricDatum( ).getMetricName( ) ) ) {
+                  AbsoluteMetricHelper.convertVolumeTotalReadWriteTimeToVolumeIdleTime( regularMetric.getMetricDatum( ) );
+                }
               }
+              regularMetrics.add( regularMetric );
             }
-            regularMetrics.add(regularMetric);
-          }
-          absoluteMetricHistory.setTimestamp(sequentialMetrics.getUpdateTimestamp());
-          absoluteMetricHistory.setLastMetricValue(sequentialMetrics.getUpdateValue());
-          if (++count % AbsoluteMetricQueue.ABSOLUTE_METRIC_NUM_DB_OPERATIONS_UNTIL_SESSION_FLUSH == 0) {
-            Entities.flushSession(AbsoluteMetricHistory.class);
-            Entities.clearSession(AbsoluteMetricHistory.class);
+            absoluteMetricHistory.setTimestamp( sequentialMetrics.getUpdateTimestamp( ) );
+            absoluteMetricHistory.setLastMetricValue( sequentialMetrics.getUpdateValue( ) );
+            if ( ++count % AbsoluteMetricQueue.ABSOLUTE_METRIC_NUM_DB_OPERATIONS_UNTIL_SESSION_FLUSH == 0 ) {
+              Entities.flushSession( AbsoluteMetricHistory.class );
+              Entities.clearSession( AbsoluteMetricHistory.class );
+            }
           }
         }
+      } finally {
+        absoluteMetrics.close( );
       }
       db.commit();
     }
