@@ -159,12 +159,12 @@ public class Handlers {
       pipeline.addLast( "decoder", Handlers.newHttpDecoder( ) );
       pipeline.addLast( "encoder", Handlers.newHttpResponseEncoder( ) );
       pipeline.addLast( "chunkedWriter", Handlers.newChunkedWriteHandler( ) );
+      pipeline.addLast( "http-response-headers", Handlers.httpResponseHeaderhandler( ) );
       pipeline.addLast( "fence", Handlers.bootstrapFence( ) );
       pipeline.addLast( "pipeline-filter", Handlers.newNioServerHandler( ) );
       if ( StackConfiguration.ASYNC_PIPELINE ) {
         pipeline.addLast( "async-pipeline-execution-handler", Handlers.pipelineExecutionHandler( ) );
       }
-      pipeline.addLast( "http-response-headers", Handlers.httpResponseHeaderhandler());
       return pipeline;
     }
 
