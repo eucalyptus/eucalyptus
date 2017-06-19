@@ -19,24 +19,16 @@
  ************************************************************************/
 package com.eucalyptus.cloudwatch.common.internal.domain.metricdata;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import javax.persistence.EntityTransaction;
-
 import com.eucalyptus.cloudwatch.common.internal.domain.AbstractPersistentWithDimensions;
-import com.eucalyptus.configurable.ConfigurableClass;
-import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.entities.TransactionResource;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedListMultimap;
@@ -55,12 +47,10 @@ import com.eucalyptus.cloudwatch.common.internal.domain.DimensionEntity;
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricEntity.MetricType;
 import com.eucalyptus.cloudwatch.common.internal.hashing.HashUtils;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.records.Logs;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
 
 public class MetricManager {
 
@@ -392,25 +382,29 @@ public class MetricManager {
         criteria.setProjection(projectionList);
         criteria.addOrder(Order.asc("timestamp"));
 
-        ScrollableResults results = criteria.setCacheMode(CacheMode.IGNORE).scroll(ScrollMode.FORWARD_ONLY);
-        while (results.next()) {
-          MetricEntity me = getMetricEntity(results);
-          for (GetMetricStatisticsParams getMetricStatisticsParams : hashGroupMap.get(metricEntityClass)) {
-            if (metricDataMatches(getMetricStatisticsParams, me)) {
-              Map<GetMetricStatisticsAggregationKey, MetricStatistics> aggregationMap = multiAggregationMap.get(getMetricStatisticsParams);
-              GetMetricStatisticsAggregationKey key = new GetMetricStatisticsAggregationKey(me, getMetricStatisticsParams.getStartTime(), getMetricStatisticsParams.getPeriod(), getMetricStatisticsParams.getDimensionHash());
-              MetricStatistics item = new MetricStatistics(me, getMetricStatisticsParams.getStartTime(), getMetricStatisticsParams.getPeriod(), getMetricStatisticsParams.getDimensions());
-              if (!aggregationMap.containsKey(key)) {
-                aggregationMap.put(key, item);
-              } else {
-                MetricStatistics totalSoFar = aggregationMap.get(key);
-                totalSoFar.setSampleMax(Math.max(item.getSampleMax(), totalSoFar.getSampleMax()));
-                totalSoFar.setSampleMin(Math.min(item.getSampleMin(), totalSoFar.getSampleMin()));
-                totalSoFar.setSampleSize(totalSoFar.getSampleSize() + item.getSampleSize());
-                totalSoFar.setSampleSum(totalSoFar.getSampleSum() + item.getSampleSum());
+        final ScrollableResults results = criteria.setCacheMode(CacheMode.IGNORE).scroll(ScrollMode.FORWARD_ONLY);
+        try {
+          while ( results.next( ) ) {
+            MetricEntity me = getMetricEntity( results );
+            for ( GetMetricStatisticsParams getMetricStatisticsParams : hashGroupMap.get( metricEntityClass ) ) {
+              if ( metricDataMatches( getMetricStatisticsParams, me ) ) {
+                Map<GetMetricStatisticsAggregationKey, MetricStatistics> aggregationMap = multiAggregationMap.get( getMetricStatisticsParams );
+                GetMetricStatisticsAggregationKey key = new GetMetricStatisticsAggregationKey( me, getMetricStatisticsParams.getStartTime( ), getMetricStatisticsParams.getPeriod( ), getMetricStatisticsParams.getDimensionHash( ) );
+                MetricStatistics item = new MetricStatistics( me, getMetricStatisticsParams.getStartTime( ), getMetricStatisticsParams.getPeriod( ), getMetricStatisticsParams.getDimensions( ) );
+                if ( !aggregationMap.containsKey( key ) ) {
+                  aggregationMap.put( key, item );
+                } else {
+                  MetricStatistics totalSoFar = aggregationMap.get( key );
+                  totalSoFar.setSampleMax( Math.max( item.getSampleMax( ), totalSoFar.getSampleMax( ) ) );
+                  totalSoFar.setSampleMin( Math.min( item.getSampleMin( ), totalSoFar.getSampleMin( ) ) );
+                  totalSoFar.setSampleSize( totalSoFar.getSampleSize( ) + item.getSampleSize( ) );
+                  totalSoFar.setSampleSum( totalSoFar.getSampleSum( ) + item.getSampleSum( ) );
+                }
               }
             }
           }
+        } finally {
+          results.close( );
         }
         for (GetMetricStatisticsParams getMetricStatisticsParams : multiAggregationMap.keySet()) {
           resultMap.put(getMetricStatisticsParams, multiAggregationMap.get(getMetricStatisticsParams).values());
@@ -467,20 +461,24 @@ public class MetricManager {
       projectionList.add(Projections.groupProperty("timestamp"));
       criteria.setProjection(projectionList);
       criteria.addOrder(Order.asc("timestamp"));
-      ScrollableResults results = criteria.setCacheMode(CacheMode.IGNORE).scroll(ScrollMode.FORWARD_ONLY);
-      while (results.next()) {
-        MetricEntity me = getMetricEntity(getMetricStatisticsParams.getAccountId(), getMetricStatisticsParams.getMetricName(), getMetricStatisticsParams.getNamespace(), getMetricStatisticsParams.getMetricType(), getMetricStatisticsParams.getDimensionHash(), results);
-        GetMetricStatisticsAggregationKey key = new GetMetricStatisticsAggregationKey(me, getMetricStatisticsParams.getStartTime(), getMetricStatisticsParams.getPeriod(), getMetricStatisticsParams.getDimensionHash());
-        MetricStatistics item = new MetricStatistics(me, getMetricStatisticsParams.getStartTime(), getMetricStatisticsParams.getPeriod(), getMetricStatisticsParams.getDimensions());
-        if (!aggregationMap.containsKey(key)) {
-          aggregationMap.put(key, item);
-        } else {
-          MetricStatistics totalSoFar = aggregationMap.get(key);
-          totalSoFar.setSampleMax(Math.max(item.getSampleMax(), totalSoFar.getSampleMax()));
-          totalSoFar.setSampleMin(Math.min(item.getSampleMin(), totalSoFar.getSampleMin()));
-          totalSoFar.setSampleSize(totalSoFar.getSampleSize() + item.getSampleSize());
-          totalSoFar.setSampleSum(totalSoFar.getSampleSum() + item.getSampleSum());
+      final ScrollableResults results = criteria.setCacheMode(CacheMode.IGNORE).scroll(ScrollMode.FORWARD_ONLY);
+      try {
+        while ( results.next( ) ) {
+          MetricEntity me = getMetricEntity( getMetricStatisticsParams.getAccountId( ), getMetricStatisticsParams.getMetricName( ), getMetricStatisticsParams.getNamespace( ), getMetricStatisticsParams.getMetricType( ), getMetricStatisticsParams.getDimensionHash( ), results );
+          GetMetricStatisticsAggregationKey key = new GetMetricStatisticsAggregationKey( me, getMetricStatisticsParams.getStartTime( ), getMetricStatisticsParams.getPeriod( ), getMetricStatisticsParams.getDimensionHash( ) );
+          MetricStatistics item = new MetricStatistics( me, getMetricStatisticsParams.getStartTime( ), getMetricStatisticsParams.getPeriod( ), getMetricStatisticsParams.getDimensions( ) );
+          if ( !aggregationMap.containsKey( key ) ) {
+            aggregationMap.put( key, item );
+          } else {
+            MetricStatistics totalSoFar = aggregationMap.get( key );
+            totalSoFar.setSampleMax( Math.max( item.getSampleMax( ), totalSoFar.getSampleMax( ) ) );
+            totalSoFar.setSampleMin( Math.min( item.getSampleMin( ), totalSoFar.getSampleMin( ) ) );
+            totalSoFar.setSampleSize( totalSoFar.getSampleSize( ) + item.getSampleSize( ) );
+            totalSoFar.setSampleSum( totalSoFar.getSampleSum( ) + item.getSampleSum( ) );
+          }
         }
+      } finally {
+        results.close( );
       }
     }
     return Lists.newArrayList(aggregationMap.values());
