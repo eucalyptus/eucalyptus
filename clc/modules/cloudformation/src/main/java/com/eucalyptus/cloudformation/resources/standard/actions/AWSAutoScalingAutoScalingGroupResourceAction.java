@@ -256,15 +256,15 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
           createAutoScalingGroupType.setAvailabilityZones(new AvailabilityZones(action.properties.getAvailabilityZones()));
         }
         createAutoScalingGroupType.setDefaultCooldown(action.properties.getCooldown());
-        createAutoScalingGroupType.setDesiredCapacity(action.properties.getDesiredCapacity());
+        createAutoScalingGroupType.setDesiredCapacity(0);
         createAutoScalingGroupType.setHealthCheckGracePeriod(action.properties.getHealthCheckGracePeriod());
         createAutoScalingGroupType.setHealthCheckType(action.properties.getHealthCheckType());
         createAutoScalingGroupType.setLaunchConfigurationName(action.properties.getLaunchConfigurationName());
         if (action.properties.getLoadBalancerNames() != null) {
           createAutoScalingGroupType.setLoadBalancerNames(new LoadBalancerNames(action.properties.getLoadBalancerNames()));
         }
-        createAutoScalingGroupType.setMaxSize(action.properties.getMaxSize());
-        createAutoScalingGroupType.setMinSize(action.properties.getMinSize());
+        createAutoScalingGroupType.setMaxSize(0);
+        createAutoScalingGroupType.setMinSize(0);
         if (action.properties.getTerminationPolicies() != null) {
           createAutoScalingGroupType.setTerminationPolicies(new TerminationPolicies(action.properties.getTerminationPolicies()));
         }
@@ -323,6 +323,22 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
         }
         return action;
       }
+    },
+    UPDATE_CAPACITY {
+      @Override
+      public ResourceAction perform(final ResourceAction resourceAction) throws Exception {
+        final AWSAutoScalingAutoScalingGroupResourceAction action = 
+            (AWSAutoScalingAutoScalingGroupResourceAction) resourceAction;
+        final ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
+        final UpdateAutoScalingGroupType updateAutoScalingGroupType = 
+            MessageHelper.createMessage(UpdateAutoScalingGroupType.class, action.info.getEffectiveUserId());
+        updateAutoScalingGroupType.setAutoScalingGroupName(action.info.getPhysicalResourceId());
+        updateAutoScalingGroupType.setDesiredCapacity(action.properties.getDesiredCapacity());
+        updateAutoScalingGroupType.setMaxSize(action.properties.getMaxSize());
+        updateAutoScalingGroupType.setMinSize(action.properties.getMinSize());
+        sendSyncWithRetryOnScalingEvent(configuration, updateAutoScalingGroupType);
+        return action;      
+      }      
     },
     CHECK_SIGNALS {
       @Override
