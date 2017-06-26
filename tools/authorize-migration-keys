@@ -338,7 +338,7 @@ if __name__ == '__main__':
                 break
             except CalledProcessError as e:
                 logger.debug("Unable to connect to hypervisor on attempt number: [%d]", i+1)
-                sleep(1)
+                time.sleep(1)
         if not connected:
             logger.error("Error, unable to connect to hypervisor after %d seconds",MAX_RETRIES)
             sys.exit(1)
