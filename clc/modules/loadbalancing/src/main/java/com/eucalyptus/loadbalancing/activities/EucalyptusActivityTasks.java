@@ -2572,6 +2572,16 @@ public class EucalyptusActivityTasks {
 			req.setGroupName(this.groupName);
 			return req;
 		}
+
+		@Override
+		boolean dispatchFailure( final ActivityContext<ComputeMessage, Compute> context, final Throwable throwable ) {
+			if ( AsyncExceptions.isWebServiceErrorCode( throwable, "InvalidGroup.InUse" ) ) {
+				LOG.warn( "Could not delete in-use security group " + groupName );
+				return false;
+			} else {
+				return super.dispatchFailure( context, throwable );
+			}
+		}
 	}
 
 	private class EucalyptusDescribeSecurityGroupTask extends EucalyptusActivityTaskWithResult<ComputeMessage, Compute, List<SecurityGroupItemType>>{
