@@ -2211,7 +2211,8 @@ public class EucalyptusActivityTasks {
 
 		@Override
 		boolean dispatchFailure(ActivityContext<AutoScalingMessage, AutoScaling> context, Throwable throwable) {
-			if ( !AsyncExceptions.isWebServiceErrorCode( throwable, "ScalingActivityInProgress" ) ) {
+			if ( !AsyncExceptions.isWebServiceErrorCode( throwable, "ScalingActivityInProgress" ) &&
+					!AsyncExceptions.isWebServiceErrorCode( throwable, "ResourceInUse" ) ) {
 				return super.dispatchFailure( context, throwable );
 			}
 			return false;
