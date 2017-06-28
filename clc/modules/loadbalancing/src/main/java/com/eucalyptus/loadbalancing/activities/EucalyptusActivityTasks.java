@@ -2211,7 +2211,8 @@ public class EucalyptusActivityTasks {
 
 		@Override
 		boolean dispatchFailure(ActivityContext<AutoScalingMessage, AutoScaling> context, Throwable throwable) {
-			if ( !AsyncExceptions.isWebServiceErrorCode( throwable, "ScalingActivityInProgress" ) ) {
+			if ( !AsyncExceptions.isWebServiceErrorCode( throwable, "ScalingActivityInProgress" ) &&
+					!AsyncExceptions.isWebServiceErrorCode( throwable, "ResourceInUse" ) ) {
 				return super.dispatchFailure( context, throwable );
 			}
 			return false;
@@ -2571,6 +2572,16 @@ public class EucalyptusActivityTasks {
 			final DeleteSecurityGroupType req = new DeleteSecurityGroupType();
 			req.setGroupName(this.groupName);
 			return req;
+		}
+
+		@Override
+		boolean dispatchFailure( final ActivityContext<ComputeMessage, Compute> context, final Throwable throwable ) {
+			if ( AsyncExceptions.isWebServiceErrorCode( throwable, "InvalidGroup.InUse" ) ) {
+				LOG.warn( "Could not delete in-use security group " + groupName );
+				return false;
+			} else {
+				return super.dispatchFailure( context, throwable );
+			}
 		}
 	}
 
