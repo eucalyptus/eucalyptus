@@ -55,7 +55,8 @@ import com.eucalyptus.storage.msgs.s3.Part;
 @OptimisticLocking(type = OptimisticLockType.NONE)
 @PersistenceContext(name = "eucalyptus_osg")
 @Table(name = "parts", indexes = {
-    @Index(name = "IDX_part_uuid", columnList = "part_uuid")
+    @Index(name = "IDX_part_uuid", columnList = "part_uuid"),
+    @Index(name = "IDX_part_bucket_fk", columnList = "bucket_fk"),
 })
 public class PartEntity extends S3AccessControlledEntity<ObjectState> implements Comparable {
   @Column(name = "object_key")
