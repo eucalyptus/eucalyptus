@@ -70,6 +70,8 @@ import com.google.common.collect.Maps;
     @Index(name = "IDX_object_key", columnList = "object_key"),
     @Index(name = "IDX_object_uuid", columnList = "object_uuid"),
     @Index(name = "IDX_version_id", columnList = "version_id"),
+    @Index(name = "IDX_object_bucket_fk", columnList = "bucket_fk"),
+    @Index(name = "IDX_object_sort", columnList = "object_key, object_last_modified desc"),
 })
 public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implements Comparable {
   @Transient
