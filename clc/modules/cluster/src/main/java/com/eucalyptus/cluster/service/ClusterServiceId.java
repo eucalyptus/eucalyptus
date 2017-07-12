@@ -32,7 +32,6 @@ import com.eucalyptus.cluster.common.ClusterController;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.ComponentApi;
 import com.eucalyptus.component.annotation.Description;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.techpreview.TechPreview;
@@ -41,7 +40,6 @@ import com.eucalyptus.util.techpreview.TechPreview;
  *
  */
 @Partition( Eucalyptus.class )
-@FaultLogPrefix( "services" )
 @ComponentApi( ClusterController.class )
 @TechPreview( enableByDefaultProperty = "com.eucalyptus.cluster.service.enable" )
 @Description( "Cluster controller service" )
