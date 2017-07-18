@@ -33,14 +33,14 @@ import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
+import org.hibernate.ScrollMode;
+import org.hibernate.ScrollableResults;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
@@ -642,17 +642,21 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
   }
 
   @Override
-  public PaginatedResult<ObjectEntity> listVersionsPaginated(final Bucket bucket, int maxEntries, String prefix, String delimiter,
-      String fromKeyMarker, String fromVersionId, boolean latestOnly) throws Exception {
-
-    EntityTransaction db = Entities.get(ObjectEntity.class);
-    try {
+  public PaginatedResult<ObjectEntity> listVersionsPaginated(
+      final Bucket bucket,
+      final int maxEntries,
+            String prefix,
+            String delimiter,
+      final String fromKeyMarker,
+      final String fromVersionId,
+      final boolean latestOnly
+  ) throws Exception {
+    try ( final TransactionResource db = Entities.readOnlyDistinctTransactionFor( ObjectEntity.class ) ) {
       PaginatedResult<ObjectEntity> result = new PaginatedResult<ObjectEntity>();
       HashSet<String> commonPrefixes = new HashSet<String>();
 
       // Include zero since 'istruncated' is still valid
       if (maxEntries >= 0) {
-        final int queryStrideSize = maxEntries + 1;
         ObjectEntity searchObj = new ObjectEntity().withBucket(bucket).withState(ObjectState.extant);
 
         // Return latest version, so exclude delete markers as well.
@@ -664,11 +668,10 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
 
         Criteria objCriteria = Entities.createCriteria(ObjectEntity.class);
         objCriteria.setReadOnly(true);
-        objCriteria.setFetchSize(queryStrideSize);
+        objCriteria.setFetchSize(1_000);
         objCriteria.add(Example.create(searchObj));
         objCriteria.addOrder(Order.asc("objectKey"));
         objCriteria.addOrder(Order.desc("objectModifiedTimestamp"));
-        objCriteria.setMaxResults(queryStrideSize);
 
         if (!Strings.isNullOrEmpty(fromKeyMarker)) {
           if (!Strings.isNullOrEmpty(fromVersionId)) {
@@ -711,30 +714,18 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
           delimiter = "";
         }
 
-        List<ObjectEntity> objectInfos = null;
         int resultKeyCount = 0;
         String[] parts = null;
         String prefixString = null;
         boolean useDelimiter = !Strings.isNullOrEmpty(delimiter);
-        int pages = 0;
 
-        // Iterate over result sets of size maxkeys + 1 since
+        // Iterate over results, since
         // commonPrefixes collapse the list, we may examine many more
         // records than maxkeys + 1
-        do {
-          parts = null;
-          prefixString = null;
-
-          // Skip ahead the next page of 'queryStrideSize' results.
-          objCriteria.setFirstResult(pages++ * queryStrideSize);
-
-          objectInfos = (List<ObjectEntity>) objCriteria.list();
-          if (objectInfos == null) {
-            // nothing to do.
-            break;
-          }
-
-          for (ObjectEntity objectRecord : objectInfos) {
+        final ScrollableResults objectResults = objCriteria.scroll( ScrollMode.FORWARD_ONLY );
+        try {
+          while ( objectResults.next( ) ) {
+            final ObjectEntity objectRecord = (ObjectEntity) objectResults.get( 0 );
             if (useDelimiter) {
               // Check if it will get aggregated as a commonprefix
               // Split the substring with at least 2 matches as we need a result containing trailing strings. For instance
@@ -749,7 +740,6 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
                     // This is a new record, so we know
                     // we're truncating if this is true
                     result.setIsTruncated(true);
-                    resultKeyCount++;
                     break;
                   } else {
                     // Add it to the common prefix set
@@ -759,9 +749,8 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
                     // single return entry
                     resultKeyCount++;
                   }
-                } else {
-                  // Already have this prefix, so skip
-                }
+                } // else, already have this prefix, so skip
+                Entities.evict( objectRecord );
                 continue;
               }
             }
@@ -770,7 +759,6 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
               // This is a new (non-commonprefix) record, so
               // we know we're truncating
               result.setIsTruncated(true);
-              resultKeyCount++;
               break;
             }
 
@@ -778,11 +766,9 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
             result.setLastEntry(objectRecord);
             resultKeyCount++;
           }
-
-          if (resultKeyCount <= maxEntries && objectInfos.size() <= maxEntries) {
-            break;
-          }
-        } while (resultKeyCount <= maxEntries);
+        } finally {
+          objectResults.close( );
+        }
 
         // Sort the prefixes from the hashtable and add to the reply
         if (commonPrefixes != null) {
@@ -797,8 +783,6 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
     } catch (Exception e) {
       LOG.error("Error generating paginated object list of bucket " + bucket.getBucketName(), e);
       throw e;
-    } finally {
-      db.rollback();
     }
   }
 
