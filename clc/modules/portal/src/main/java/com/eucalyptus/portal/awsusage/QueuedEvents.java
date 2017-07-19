@@ -18,11 +18,13 @@ package com.eucalyptus.portal.awsusage;
 import com.eucalyptus.compute.common.ReservationInfoType;
 import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.loadbalancing.workflow.LoadBalancingAWSCredentialsProvider;
+import com.eucalyptus.objectstorage.util.S3BillingActions;
 import com.eucalyptus.reporting.event.AddressEvent;
 import com.eucalyptus.reporting.event.CloudWatchApiUsageEvent;
 import com.eucalyptus.reporting.event.InstanceUsageEvent;
 import com.eucalyptus.reporting.event.LoadBalancerEvent;
 import com.eucalyptus.reporting.event.S3ObjectEvent;
+import com.eucalyptus.reporting.event.S3ApiAccumulatedUsageEvent;
 import com.eucalyptus.reporting.event.SnapShotEvent;
 import com.eucalyptus.reporting.event.VolumeEvent;
 import com.eucalyptus.resources.client.Ec2Client;
@@ -159,6 +161,32 @@ public class QueuedEvents {
     q.setUserId(event.getUserId());
     q.setUsageValue(String.format("%d", event.getSize()));
     q.setTimestamp(new Date(System.currentTimeMillis()));
+    return q;
+  };
+
+  public static Function<S3ApiAccumulatedUsageEvent, QueuedEvent> FromS3ApiAccumulatedCountsEvent = (event) -> {
+    final QueuedEvent q = new QueuedEvent();
+    q.setEventType(S3ApiAccumulatedUsageEvent.ValueType.Counts.toString());
+    q.setOperation(S3BillingActions.getBillingOperationName(event.getAction()));
+    // Any = UsageType in the billing report
+    q.setAny(S3BillingActions.getBillingUsageCountName(event.getAction()));
+    q.setResourceId(String.format("%s", event.getBucketName()));
+    q.setAccountId(event.getAccountNumber());
+    q.setUsageValue(String.valueOf(event.getAccumulatedValue()));
+    q.setTimestamp(new Date(event.getEndTime()));
+    return q;
+  };
+
+  public static Function<S3ApiAccumulatedUsageEvent, QueuedEvent> FromS3ApiAccumulatedBytesEvent = (event) -> {
+    final QueuedEvent q = new QueuedEvent();
+    q.setEventType(S3ApiAccumulatedUsageEvent.ValueType.Counts.toString());
+    q.setOperation(S3BillingActions.getBillingOperationName(event.getAction()));
+    // Any = UsageType in the billing report
+    q.setAny(S3BillingActions.getBillingUsageBytesName(event.getAction()));
+    q.setResourceId(String.format("%s", event.getBucketName()));
+    q.setAccountId(event.getAccountNumber());
+    q.setUsageValue(String.valueOf(event.getAccumulatedValue()));
+    q.setTimestamp(new Date(event.getEndTime()));
     return q;
   };
 
@@ -341,7 +369,7 @@ public class QueuedEvents {
     }
   };
 
-  public static Function<LoadBalancerEvent, QueuedEvent> fromLoadBalancerEvent = (event) -> {
+  public static Function<LoadBalancerEvent, QueuedEvent> FromLoadBalancerEvent = (event) -> {
     final QueuedEvent q = new QueuedEvent();
     q.setEventType("LoadBalancerUsage");
     q.setResourceId(event.getLoadbalancerName());
@@ -355,7 +383,7 @@ public class QueuedEvents {
   public static Function<CloudWatchApiUsageEvent, QueuedEvent> FromCloudWatchApiUsageEvent = (event) -> {
     final QueuedEvent q = new QueuedEvent();
     q.setEventType("CW:Requests");
-    q.setResourceId(event.getOperation());
+    q.setOperation(event.getOperation());
     q.setAccountId(event.getAccountId());
     q.setUsageValue(String.valueOf(event.getRequestCount()));
     q.setTimestamp(new Date(event.getEndTime()));

@@ -23,12 +23,14 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.LongPredicate;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+
+import com.amazonaws.auth.policy.actions.S3Actions;
 import com.eucalyptus.util.Assert;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
@@ -48,7 +50,7 @@ public class Counter<T,C extends Counter.Counted> {
   private final int periodCount;  // how many windows
 
   private final Function<? super T,C> countedFunction;     // build a counted item from an input
-  private final Function<? super T,Integer> countFunction; // build the count for the input (perhaps X per item)
+  private final Function<? super T,Long> countFunction; // build the count for the input (perhaps X per item)
 
   private final Clock clock; // clock for current time
 
@@ -59,16 +61,16 @@ public class Counter<T,C extends Counter.Counted> {
       final int periodCount,
       @Nonnull final Function<? super T, C> countedFunction
   ) {
-    this( Clock.systemUTC( ), periodLength, periodCount, countedFunction, c -> 1 );
+    this( Clock.systemUTC( ), periodLength, periodCount, countedFunction, c -> 1L );
   }
 
   public Counter(
                final int periodLength,
                final int periodCount,
       @Nonnull final Function<? super T, C> countedFunction,
-      @Nonnull final Function<? super T, Integer> countFunction
+      @Nonnull final Function<? super T, Long> countFunction
   ) {
-    this( Clock.systemUTC( ), periodLength, periodCount,countedFunction, countFunction );
+    this( Clock.systemUTC( ), periodLength, periodCount, countedFunction, countFunction );
   }
 
   public Counter(
@@ -76,7 +78,7 @@ public class Counter<T,C extends Counter.Counted> {
                final int periodLength,
                final int periodCount,
       @Nonnull final Function<? super T, C> countedFunction,
-      @Nonnull final Function<? super T, Integer> countFunction
+      @Nonnull final Function<? super T, Long> countFunction
   ) {
     this.clock = Assert.notNull( clock, "clock" );
     this.periodLength = periodLength;
@@ -98,7 +100,7 @@ public class Counter<T,C extends Counter.Counted> {
   public void count( final long time, final T t ) {
     if ( t != null ) {
       final C counted = countedFunction.apply( t );
-      final int count = countFunction.apply( t );
+      final long count = countFunction.apply( t );
       if ( counted != null && count > 0 ) {
         period( time ).count( counted, count );
       }
@@ -130,24 +132,24 @@ public class Counter<T,C extends Counter.Counted> {
     );
   }
 
-  public Tuple2<Long,Integer> total( ) {
+  public Tuple2<Long,Long> total( ) {
     final List<CountPeriod<C>> periodList = periods.get( );
-    final int totalCount = periodList.stream( )
+    final long totalCount = periodList.stream( )
         .<Number>flatMap( p -> p.counts.values( ).stream( ) )
-        .reduce( 0, ( a, b) -> a.intValue( ) + b.intValue( ) )
-        .intValue( );
+        .reduce( 0, ( a, b) -> a.longValue( ) + b.longValue( ) )
+        .longValue( );
     return Tuple.of( created( periodList ), totalCount );
   }
 
-  public Tuple2<Long,Integer> accountTotal( final String account ) {
+  public Tuple2<Long,Long> accountTotal( final String account ) {
     Assert.notNull( account, "account" );
     final List<CountPeriod<C>> periodList = periods.get( );
-    final int totalCount = periodList.stream( )
+    final long totalCount = periodList.stream( )
         .<Number>flatMap( p -> p.counts.entrySet( ).stream( )
             .filter( entry -> account.equals( entry.getKey( ).getAccount( ) ) )
             .map( Entry::getValue ) )
-        .reduce( 0, ( a, b) -> a.intValue( ) + b.intValue( ) )
-        .intValue( );
+        .reduce( 0, ( a, b) -> a.longValue( ) + b.longValue( ) )
+        .longValue( );
     return Tuple.of( created( periodList ), totalCount );
   }
 
@@ -189,7 +191,7 @@ public class Counter<T,C extends Counter.Counted> {
   }
 
   public String toString( ) {
-    final Tuple2<Long,Integer> totals = total( );
+    final Tuple2<Long,Long> totals = total( );
     return MoreObjects.toStringHelper( this )
         .add( "totalCount", totals._2( ) )
         .add( "since", totals._1( ) )
@@ -276,11 +278,11 @@ public class Counter<T,C extends Counter.Counted> {
       return aggregate.counts.keySet( );
     }
 
-    public int total( ) {
-      return aggregate.counts.values( ).stream( ).reduce( 0, Integer::sum );
+    public long total( ) {
+      return aggregate.counts.values( ).stream( ).reduce( 0L, Long::sum );
     }
 
-    public Iterable<Tuple2<C,Integer>> counts( ) {
+    public Iterable<Tuple2<C,Long>> counts( ) {
       return ()->aggregate.counts.entrySet( ).stream( ).map( e -> Tuple.of( e.getKey( ), e.getValue( ) ) ).iterator( );
     }
 
@@ -302,27 +304,27 @@ public class Counter<T,C extends Counter.Counted> {
 
   static final class CounterPeriodSnapshot<C extends Counter.Counted> {
     private final CountPeriodKey key;
-    private final Map<C,Integer> counts;
+    private final Map<C,Long> counts;
 
     CounterPeriodSnapshot( final CountPeriod<C> period ) {
       this(
           period.key,
           period.counts.entrySet( ).stream( )
-              .collect( Collectors.toMap( Entry::getKey, e -> e.getValue( ).intValue( ) ) ) );
+              .collect( Collectors.toMap( Entry::getKey, e -> e.getValue( ).longValue( ) ) ) );
     }
 
-    CounterPeriodSnapshot( final CountPeriodKey key, final Map<C, Integer> counts ) {
+    CounterPeriodSnapshot( final CountPeriodKey key, final Map<C, Long> counts ) {
       this.key = key;
       this.counts = ImmutableMap.copyOf( counts );
     }
 
-    CounterPeriodSnapshot<C> subtractMatching( final List<CounterPeriodSnapshot<C>> oldSnapshosts ) {
+    CounterPeriodSnapshot<C> subtractMatching( final List<CounterPeriodSnapshot<C>> oldSnapshots ) {
       final Optional<CounterPeriodSnapshot<C>> matching =
-          oldSnapshosts.stream( ).filter( s -> s.key.equals( key ) ).findFirst( );
+          oldSnapshots.stream( ).filter( s -> s.key.equals( key ) ).findFirst( );
       if ( matching.isPresent( ) ) {
         final CounterPeriodSnapshot<C> oldSnapshot = matching.get( );
         return new CounterPeriodSnapshot<>( key, counts.entrySet( ).stream( ).map( entry -> {
-          final Integer oldCount = oldSnapshot.counts.get( entry.getKey( ) );
+          final Long oldCount = oldSnapshot.counts.get( entry.getKey( ) );
           return Tuple.of( entry.getKey( ), oldCount==null ? entry.getValue( ) : entry.getValue( ) - oldCount  );
         } ).collect( Collectors.toMap( Tuple2::_1, Tuple2::_2 ) ) );
       } else {
@@ -342,7 +344,7 @@ public class Counter<T,C extends Counter.Counted> {
   static final class CountPeriod<C extends Counter.Counted> implements LongPredicate {
     private final CountPeriodKey key;
 
-    private final ConcurrentMap<C,AtomicInteger> counts = Maps.newConcurrentMap( );
+    private final ConcurrentMap<C,AtomicLong> counts = Maps.newConcurrentMap( );
 
     CountPeriod( final CountPeriodKey key ) {
       this.key = key;
@@ -356,8 +358,8 @@ public class Counter<T,C extends Counter.Counted> {
       snapshots.forEach( s -> s.counts.entrySet( ).forEach( entry -> count( entry.getKey( ), entry.getValue( ) ) ) );
     }
 
-    int count( C counted, int count ) {
-      return counts.computeIfAbsent( counted, c -> new AtomicInteger( ) ).addAndGet( count );
+    long count( C counted, long count ) {
+      return counts.computeIfAbsent( counted, c -> new AtomicLong( ) ).addAndGet( count );
     }
 
     CounterPeriodSnapshot<C> snapshot( ) {
@@ -379,8 +381,8 @@ public class Counter<T,C extends Counter.Counted> {
   }
 
   public static class Counted {
-    private final String account;
-    private final String item;
+    protected final String account;
+    protected final String item;
 
     public Counted( final String account, final String item ) {
       this.account = account;
@@ -417,4 +419,55 @@ public class Counter<T,C extends Counter.Counted> {
           .toString( );
     }
   }
+
+  public static class CountedS3 extends Counted {
+
+    // The S3 API operation enum, e.g. GetObject
+    protected final S3Actions action;
+    
+    protected final String bucketName;
+    
+    // For S3, the "item" inherited from Counted holds the Usage Type
+    // shown in billing reports
+    public CountedS3( final String account, final String usageType,
+        final S3Actions action, final String bucketName ) {
+      super(account, usageType);
+      this.action = action;
+      this.bucketName = bucketName;
+    }
+
+    public S3Actions getAction() {
+      return action;
+    }
+
+    public String getBucketName() {
+      return bucketName;
+    }
+
+    @Override
+    public boolean equals( final Object o ) {
+      if ( this == o ) return true;
+      if ( o == null || getClass( ) != o.getClass( ) ) return false;
+      final CountedS3 countedS3 = (CountedS3) o;
+      return super.equals(o) &&
+          Objects.equals( action, countedS3.action ) &&
+          Objects.equals( bucketName, countedS3.bucketName );
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash( super.hashCode(), action, bucketName );
+    }
+
+    @Override
+    public String toString() {
+      return MoreObjects.toStringHelper( this )
+          .add( "Account", account )
+          .add( "S3 Operation", action )
+          .add( "Usage Type", item )
+          .add( "Bucket Name", bucketName )
+          .toString( );
+    }
+  }
+
 }

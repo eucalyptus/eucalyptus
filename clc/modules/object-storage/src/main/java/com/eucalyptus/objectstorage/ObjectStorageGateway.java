@@ -45,6 +45,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTimeComparator;
 import org.joda.time.DateTimeFieldType;
 
+import com.amazonaws.auth.policy.actions.S3Actions;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Principals;
@@ -200,6 +201,7 @@ import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
 import com.eucalyptus.objectstorage.msgs.UploadPartType;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
+import com.eucalyptus.objectstorage.reporting.S3ApiUsageCounter;
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
@@ -506,6 +508,14 @@ public class ObjectStorageGateway implements ObjectStorageService {
       } catch (Exception ex) {
         LOG.debug("Failed to fire reporting event for OSG object creation", ex);
       }
+      try {
+        Long bytesTransferred = new Long(objectSize);
+        LOG.trace("PutObject: firing usage event, object size = " + bytesTransferred);
+        S3ApiUsageCounter.count(S3Actions.PutObject, bucket.getBucketName(), 
+            requestUser.getAccountNumber(), bytesTransferred);
+      } catch (Exception ex) {
+        LOG.debug("Failed to fire API usage event for OSG object creation", ex);
+      }
       setCorsInfo(request, response, bucket);
       return response;
     } catch (AccessDeniedException e) {
@@ -789,10 +799,19 @@ public class ObjectStorageGateway implements ObjectStorageService {
         List<Bucket> listing = BucketMetadataManagers.getInstance().lookupBucketsByOwner(canonicalUser.getID());
         response.setBucketList(generateBucketListing(listing));
         response.setOwner(canonicalUser);
-        return response;
       } catch (Exception e) {
         throw new InternalErrorException("Error getting bucket metadata", e);
       }
+      try {
+        // BaseMessage.toString() marshals the response into XML.
+        // We count the bytes of the XML body of the response. 
+        Long bytesTransferred = new Long(response.toString().length());
+        LOG.trace("ListAllMyBuckets: firing usage event, output size = " + bytesTransferred);
+        S3ApiUsageCounter.count(S3Actions.ListBuckets, null,  getRequestUser(request).getAccountNumber(), bytesTransferred);
+      } catch (Exception ex) {
+        LOG.debug("Failed to fire API usage event for OSG list all my buckets", ex);
+      }
+      return response;
     } else {
       AccessDeniedException ex = new AccessDeniedException("ListAllMyBuckets");
       ex.setMessage("Insufficient permissions to list buckets. Check with your account administrator");
@@ -1033,7 +1052,16 @@ public class ObjectStorageGateway implements ObjectStorageService {
       }
     } else {
       // Do nothing
-      // reply.setContents(new ArrayList<ListEntry>());
+    }
+    try {
+      // BaseMessage.toString() marshals the reply into XML.
+      // We count the bytes of the XML body of the response. 
+      Long bytesTransferred = new Long(reply.toString().length());
+      LOG.trace("ListBucket: firing usage event, output size = " + bytesTransferred);
+      S3ApiUsageCounter.count(S3Actions.ListObjects, bucket.getBucketName(), 
+          getRequestUser(request).getAccountNumber(), bytesTransferred);
+    } catch (Exception ex) {
+      LOG.debug("Failed to fire API usage events for OSG list objects in bucket", ex);
     }
     setCorsInfo(request, reply, bucket);
     return reply;
@@ -1260,11 +1288,19 @@ public class ObjectStorageGateway implements ObjectStorageService {
         reply.setDataInputStream(null); // null out the input stream as it is no longer valid
         reply.setHasStreamingData(false);
       }
-      // return reply;
     }
     populateStoredHeaders(reply, objectEntity.getStoredHeaders());
     reply.setResponseHeaderOverrides(request.getResponseHeaderOverrides());
     reply.setStatus(HttpResponseStatus.OK);
+    try {
+      // BaseMessage.toString() marshals the response into XML
+      Long bytesTransferred = new Long(objectEntity.getSize());
+      LOG.trace("GetObject: firing usage event, object size = " + bytesTransferred);
+      S3ApiUsageCounter.count(S3Actions.GetObject, objectEntity.getBucket().getBucketName(), 
+          getRequestUser(request).getAccountNumber(), bytesTransferred);
+    } catch (Exception ex) {
+      LOG.debug("Failed to fire API usage events for OSG get object", ex);
+    }
     setCorsInfo(request, reply, objectEntity.getBucket());
     return reply;
   }
