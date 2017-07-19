@@ -47,7 +47,7 @@ public class BucketReaperTask implements Runnable {
   private static final Logger LOG = Logger.getLogger(BucketReaperTask.class);
 
   private long startTime;
-  private static final long MAX_TASK_DURATION = 30 * 1000; // 30 seconds
+  private static final long MAX_TASK_DURATION = 10 * 60 * 1000; // 10 minutes
   private static final Random rand = new Random(System.currentTimeMillis());
   private boolean interrupted = false;
 
@@ -66,14 +66,21 @@ public class BucketReaperTask implements Runnable {
         return;
       }
 
+      // Resolve all bucket states (fast) before cleaning histories (slow, could time out)
+      for (Bucket bucket : buckets) {
+        if (!isTimedOut() && !interrupted) {
+          resolveBucketState(bucket);
+        } else {
+          break;
+        }
+      }
+      // Randomly iterate through the buckets so they all have equal chance of running before a timeout
       Bucket b;
-      // Randomly iterate through
       int idx;
       while (buckets.size() > 0 && !isTimedOut() && !interrupted) {
         idx = rand.nextInt(buckets.size());
         b = buckets.get(idx);
         cleanObjectHistoriesInBucket(b);
-        resolveBucketState(b);
         buckets.remove(idx);
       }
 
@@ -104,7 +111,7 @@ public class BucketReaperTask implements Runnable {
    * @param bucket
    */
   private void resolveBucketState(Bucket bucket) {
-    LOG.trace("Resolving bucket state for bucket uuid " + bucket.getBucketUuid());
+    LOG.info("Resolving bucket state for bucket uuid " + bucket.getBucketUuid());
     if (BucketState.deleting.equals(bucket.getState())
         || !bucket.stateStillValid(ConfigurationCache.getConfiguration(ObjectStorageGlobalConfiguration.class)
             .getBucket_creation_wait_interval_seconds())) {
@@ -144,6 +151,7 @@ public class BucketReaperTask implements Runnable {
           LOG.error("Error doing async repair of object " + b.getBucketName() + "/" + obj.getObjectKey() + " Continuing to next object", f);
         }
         if (interrupted) {
+          LOG.warn("Timed out while cleaning up versions of object " + obj.getObjectKey() + " in bucket " + b.getBucketName());
           break INNER;
         }
       }
