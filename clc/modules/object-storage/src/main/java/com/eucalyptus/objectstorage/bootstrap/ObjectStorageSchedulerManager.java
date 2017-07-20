@@ -105,10 +105,10 @@ public class ObjectStorageSchedulerManager {
   static final String LIFECYCLE_CLEANUP_CLASSNAME = LifecycleReaperJob.class.getName();
   static final String LIFECYCLE_CLEANUP_DEFAULT_SCHEDULE = "0 0 1 * * ?";
   static final String OBJECT_REAPER_CLASSNAME = MainObjectReaperJob.class.getName();
-  static final String OBJECT_REAPER_DEFAULT_SCHEDULE = "interval: 60";
+  static final String OBJECT_REAPER_DEFAULT_SCHEDULE = "interval: 60"; // seconds
   static final String BUCKET_REAPER_CLASSNAME = MainBucketReaperJob.class.getName();
-  static final String BUCKET_REAPER_DEFAULT_SCHEDULE = "interval: 1200"; // 20 minutes
-
+  static final String BUCKET_REAPER_DEFAULT_SCHEDULE = "interval: 1800"; // 30 minutes
+  
   private static Scheduler scheduler = null;
   private static final Lock lock = new ReentrantLock(true);
   private static boolean initted = false;
