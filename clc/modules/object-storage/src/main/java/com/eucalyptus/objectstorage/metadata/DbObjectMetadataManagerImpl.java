@@ -224,6 +224,7 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
             obj.setIsLatest(Boolean.FALSE);
             if (latest.getVersionId() != null && ObjectStorageProperties.NULL_VERSION_ID.equals(latest.getVersionId()) && obj.getVersionId() != null
                 && ObjectStorageProperties.NULL_VERSION_ID.equals(obj.getVersionId())) {
+              LOG.trace("Transitioning to deleting");
               transitionObjectToState(obj, ObjectState.deleting);
             }
 
@@ -239,6 +240,7 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
     };
 
     try {
+      LOG.trace("Starting cleanup for " + bucket.getBucketName() + "/" + objectKey);
       Entities.asTransaction(repairPredicate).apply(searchExample);
     } catch (final Throwable f) {
       LOG.error("Error in version/null repair", f);
