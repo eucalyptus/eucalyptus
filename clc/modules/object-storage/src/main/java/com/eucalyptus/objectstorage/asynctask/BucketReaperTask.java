@@ -47,7 +47,7 @@ public class BucketReaperTask implements Runnable {
   private static final Logger LOG = Logger.getLogger(BucketReaperTask.class);
 
   private long startTime;
-  private static final long MAX_TASK_DURATION = 30 * 1000; // 30 seconds
+  private static final long MAX_TASK_DURATION = 15 * 60 * 1000; // 15 minutes
   private static final Random rand = new Random(System.currentTimeMillis());
   private boolean interrupted = false;
 
@@ -57,6 +57,10 @@ public class BucketReaperTask implements Runnable {
   @Override
   public void run() {
     startTime = System.currentTimeMillis();
+    int bucketsResolved = 0;
+    int bucketsCleaned = 0;
+    boolean cleaningStarted = false;
+    
     try {
       LOG.trace("Initiating bucket cleanup task");
       final List<Bucket> buckets = BucketMetadataManagers.getInstance().lookupBucketsByState(null);
@@ -66,15 +70,30 @@ public class BucketReaperTask implements Runnable {
         return;
       }
 
+      // Resolve all bucket states (fast) before cleaning histories (slow, could time out)
+      for (Bucket bucket : buckets) {
+        if (!isTimedOut() && !interrupted) {
+          resolveBucketState(bucket);
+          bucketsResolved++;
+        } else {
+          LOG.warn("Timed out while cleaning up bucket states after processing " + bucketsResolved + " buckets.");
+          break;
+        }
+      }
+      LOG.trace("Finished resolving " + bucketsResolved + " bucket states.");
+      // Randomly iterate through the buckets so they all have equal chance of running before a timeout
       Bucket b;
-      // Randomly iterate through
       int idx;
+      cleaningStarted = true;
       while (buckets.size() > 0 && !isTimedOut() && !interrupted) {
         idx = rand.nextInt(buckets.size());
         b = buckets.get(idx);
         cleanObjectHistoriesInBucket(b);
-        resolveBucketState(b);
         buckets.remove(idx);
+        bucketsCleaned++;
+      }
+      if (isTimedOut() || interrupted) {
+        LOG.warn("Timed out while cleaning up object records after processing " + bucketsCleaned + " buckets.");
       }
 
     } catch (final Throwable f) {
@@ -83,6 +102,14 @@ public class BucketReaperTask implements Runnable {
       try {
         long endTime = System.currentTimeMillis();
         LOG.trace("Bucket cleanup execution task took " + Long.toString(endTime - startTime) + "ms to complete");
+        if (isTimedOut() || interrupted) {
+          if (!cleaningStarted) {
+            LOG.warn("Timed out while cleaning up bucket states after processing " + bucketsResolved + " buckets. " +
+                    "No object records were cleaned up.");
+          } else {
+            LOG.warn("Timed out while cleaning up object records after processing " + bucketsCleaned + " buckets.");
+          }
+        }
       } catch (final Throwable f) {
         // Do nothing, but don't allow exceptions out
       }
@@ -104,7 +131,7 @@ public class BucketReaperTask implements Runnable {
    * @param bucket
    */
   private void resolveBucketState(Bucket bucket) {
-    LOG.trace("Resolving bucket state for bucket uuid " + bucket.getBucketUuid());
+    LOG.trace("Resolving bucket state for bucket uuid " + bucket.getBucketUuid() + ", name " + bucket.getBucketName());
     if (BucketState.deleting.equals(bucket.getState())
         || !bucket.stateStillValid(ConfigurationCache.getConfiguration(ObjectStorageGlobalConfiguration.class)
             .getBucket_creation_wait_interval_seconds())) {
@@ -125,8 +152,9 @@ public class BucketReaperTask implements Runnable {
   protected void cleanObjectHistoriesInBucket(Bucket b) {
     String nextKey = null;
     final int chunkSize = 1000;
+    int objectsProcessed = 0;
     PaginatedResult<ObjectEntity> result = null;
-    LOG.trace("Cleaning object histories for bucket uuid " + b.getBucketUuid());
+    LOG.trace("Cleaning object histories for bucket uuid " + b.getBucketUuid() + ", name " + b.getBucketName());
     do {
       try {
         result = ObjectMetadataManagers.getInstance().listPaginated(b, chunkSize, null, null, nextKey);
@@ -140,10 +168,18 @@ public class BucketReaperTask implements Runnable {
       INNER: for (ObjectEntity obj : result.getEntityList()) {
         try {
           ObjectMetadataManagers.getInstance().cleanupInvalidObjects(b, obj.getObjectKey());
+          objectsProcessed++;
+          if ((objectsProcessed % 1000) == 0) {
+            LOG.trace("Processed " + objectsProcessed + " objects for bucket uuid " + b.getBucketUuid() + 
+                    ", name " + b.getBucketName());
+          }
         } catch (final Throwable f) {
           LOG.error("Error doing async repair of object " + b.getBucketName() + "/" + obj.getObjectKey() + " Continuing to next object", f);
         }
         if (interrupted) {
+          LOG.warn("Timed out while cleaning up records of object " + obj.getObjectKey() + 
+                  " in bucket uuid " +  b.getBucketUuid() + ", name " + b.getBucketName() + 
+                  " after processing " + objectsProcessed + " objects.");
           break INNER;
         }
       }
@@ -154,5 +190,13 @@ public class BucketReaperTask implements Runnable {
         nextKey = null;
       }
     } while (nextKey != null && !isTimedOut());
+    if (interrupted || isTimedOut()) {
+      LOG.warn("Timed out while cleaning up object records in bucket uuid " + 
+              b.getBucketUuid() + ", name " + b.getBucketName() + 
+              " after processing " + objectsProcessed + " objects.");
+    } else {
+      LOG.trace("Finished cleaning " + objectsProcessed + " object histories for bucket uuid " + 
+          b.getBucketUuid() + ", name " + b.getBucketName());
+    }
   }
 }
