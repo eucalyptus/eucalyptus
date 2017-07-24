@@ -3085,7 +3085,7 @@ int ccInstance_to_ncInstance(ncInstance * dst, ccInstance * src)
     for(i = 0; (i < src->secNetCfgsSize && i < EUCA_MAX_NICS); i++) {
         if(strlen(src->secNetCfgs[i].interfaceId) == 0)
             break;
-        memcpy(&(dst->secNetCfgs[i]), &(src->secNetCfgs), sizeof(netConfig));
+        memcpy(&(dst->secNetCfgs[i]), &(src->secNetCfgs[i]), sizeof(netConfig));
     }
 
     for (i = 0; i < 64; i++) {
