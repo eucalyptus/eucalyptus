@@ -997,6 +997,7 @@ static inline ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, 
         outInst->secNetCfgs[i].vlan = adb_netConfigType_get_vlan(netParams, env);
         outInst->secNetCfgs[i].networkIndex = adb_netConfigType_get_networkIndex(netParams, env);
         euca_strncpy(outInst->secNetCfgs[i].attachmentId, adb_netConfigType_get_attachmentId(netParams, env), ENI_ATTACHMENT_ID_LEN);
+        euca_strncpy(outInst->secNetCfgs[i].stateName, VOL_STATE_ATTACHED, CHAR_BUFFER_SIZE);
     }
     outInst->hasFloppy = adb_instanceType_get_hasFloopy(instance, env);
     return (outInst);
