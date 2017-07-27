@@ -42,7 +42,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 public class ObjectReaperTask implements Runnable {
   private static final Logger LOG = Logger.getLogger(ObjectReaperTask.class);
 
-  private boolean interrupted = false;
+  private volatile boolean interrupted = false;
 
   public ObjectReaperTask() {}
 

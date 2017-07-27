@@ -62,7 +62,9 @@
 
 package com.eucalyptus.objectstorage.jobs;
 
+import java.util.Date;
 import org.apache.log4j.Logger;
+import org.quartz.DisallowConcurrentExecution;
 import org.quartz.InterruptableJob;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -70,12 +72,17 @@ import org.quartz.UnableToInterruptJobException;
 
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.objectstorage.asynctask.BucketReaperTask;
+import javaslang.control.Option;
 
+@DisallowConcurrentExecution
 public class MainBucketReaperJob implements InterruptableJob {
 
-  private static Logger LOG = Logger.getLogger(MainBucketReaperJob.class);
+  private static final Logger LOG = Logger.getLogger(MainBucketReaperJob.class);
 
-  static final BucketReaperTask reaper = new BucketReaperTask();
+  private static final boolean ENABLE_TIMEOUT =
+      Boolean.parseBoolean( System.getProperty( "com.eucalyptus.objectstorage.bucketReaperTimeout", "true" ) );
+
+  private static final BucketReaperTask reaper = new BucketReaperTask();
 
   @Override
   public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
@@ -84,7 +91,10 @@ public class MainBucketReaperJob implements InterruptableJob {
       return;
     }
     reaper.resume();
-    reaper.run();
+    reaper.run( Option.of( jobExecutionContext.getNextFireTime( ) )
+        .map( Date::getTime )
+        .filter( __ -> ENABLE_TIMEOUT )
+        .getOrElse( Long.MAX_VALUE ) );
   }
 
   @Override
