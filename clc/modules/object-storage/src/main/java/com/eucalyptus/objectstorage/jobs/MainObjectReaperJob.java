@@ -63,6 +63,7 @@
 package com.eucalyptus.objectstorage.jobs;
 
 import org.apache.log4j.Logger;
+import org.quartz.DisallowConcurrentExecution;
 import org.quartz.InterruptableJob;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -74,11 +75,12 @@ import com.eucalyptus.objectstorage.asynctask.ObjectReaperTask;
 /*
  *
  */
+@DisallowConcurrentExecution
 public class MainObjectReaperJob implements InterruptableJob {
 
-  private static Logger LOG = Logger.getLogger(MainObjectReaperJob.class);
+  private static final Logger LOG = Logger.getLogger(MainObjectReaperJob.class);
 
-  static final ObjectReaperTask reaper = new ObjectReaperTask();
+  private static final ObjectReaperTask reaper = new ObjectReaperTask();
 
   @Override
   public void execute(JobExecutionContext context) throws JobExecutionException {
