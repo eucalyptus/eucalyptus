@@ -68,6 +68,7 @@ import java.util.Date;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.quartz.DisallowConcurrentExecution;
 import org.quartz.InterruptableJob;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -88,11 +89,12 @@ import com.google.common.collect.Lists;
 /*
  *
  */
+@DisallowConcurrentExecution
 public class LifecycleReaperJob implements InterruptableJob {
 
-  private static Logger LOG = Logger.getLogger(LifecycleReaperJob.class);
+  private static final Logger LOG = Logger.getLogger(LifecycleReaperJob.class);
 
-  private boolean interrupted = false;
+  private volatile boolean interrupted = false;
 
   @Override
   public void interrupt() throws UnableToInterruptJobException {
@@ -160,16 +162,16 @@ public class LifecycleReaperJob implements InterruptableJob {
   }
 
   private List<String> findMatchingObjects(String ruleId, Bucket bucket, String objPrefix, Date age) {
-
     try {
       // this check has the additional responsibility of keeping other OSGs from processing the same rule
       LifecycleRule retrievedRule = BucketLifecycleManagers.getInstance().getLifecycleRuleForReaping(ruleId, bucket.getBucketUuid());
       if (retrievedRule == null) {
-        return Collections.EMPTY_LIST;
+        return Collections.emptyList( );
       }
     } catch (ObjectStorageException e) {
       LOG.error("exception caught while attempting to retrieve lifecycle rule with id - " + ruleId + " in bucket - " + bucket.getBucketName()
           + " with message " + e.getMessage());
+      return Collections.emptyList( );
     }
 
     // normalize the date to query by
@@ -190,7 +192,7 @@ public class LifecycleReaperJob implements InterruptableJob {
     if (results == null || results.size() == 0) {
       LOG.debug("there were no objects in bucket " + bucket.getBucketName() + " with prefix " + objPrefix + " older than " + queryCal.toString());
       // no matches
-      return Collections.EMPTY_LIST;
+      return Collections.emptyList( );
     }
 
     // gather up keys
@@ -199,7 +201,7 @@ public class LifecycleReaperJob implements InterruptableJob {
       objectKeys.add(objectInfo.getObjectKey());
     }
     LOG.debug("found " + objectKeys.size() + " matching objects in bucket " + bucket.getBucketName());
-    return interrupted ? Collections.EMPTY_LIST : objectKeys;
+    return interrupted ? Collections.emptyList( ) : objectKeys;
   }
 
   private static abstract class ObjectInfoProcessor {
