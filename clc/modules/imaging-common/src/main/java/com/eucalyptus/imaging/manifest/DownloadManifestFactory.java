@@ -323,8 +323,6 @@ public class DownloadManifestFactory {
             "Base manifest does not have parts");
       }
 
-      final String bucket = baseManifest.getBaseBucket( );
-      final String prefix = baseManifest.getPrefix( );
       for (int i = 0; i < parts.getLength(); i++) {
         Node part = parts.item(i);
         String partIndex = part.getAttributes().getNamedItem("index")
@@ -333,6 +331,8 @@ public class DownloadManifestFactory {
             .getPartUrlElement(), part, XPathConstants.NODE)).getTextContent();
         String partDownloadUrl = partKey;
         if (baseManifest.getManifestType().signPartUrl()) {
+          final String bucket = baseManifest.getBaseBucket( );
+          final String prefix = baseManifest.getPrefix( );
           final String key = prefix.isEmpty( ) ? partKey : prefix + "/" + partKey;
           GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(
               bucket, key, HttpMethod.GET);

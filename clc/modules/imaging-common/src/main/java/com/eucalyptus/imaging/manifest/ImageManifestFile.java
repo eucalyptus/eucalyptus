@@ -25,6 +25,8 @@ public class ImageManifestFile {
   private final ImageManifest manifestType;
   private final String location;
   private final int manifestSizeLimit;
+  private volatile String baseBucket;
+  private volatile String prefix;
 
   public ImageManifestFile(String location, ImageManifest type,
       int manifestSizeLimit) {
@@ -43,11 +45,17 @@ public class ImageManifestFile {
   }
 
   public String getBaseBucket() throws EucalyptusCloudException {
-    return manifestType.getBaseBucket(this.location);
+    if ( baseBucket == null ) {
+      baseBucket = manifestType.getBaseBucket( this.location );
+    }
+    return baseBucket;
   }
 
   public String getPrefix() throws EucalyptusCloudException {
-    return manifestType.getPrefix(this.location);
+    if ( prefix == null ) {
+      prefix = manifestType.getPrefix( this.location );
+    }
+    return prefix;
   }
 
   public int getManifestSizeLimit() {
