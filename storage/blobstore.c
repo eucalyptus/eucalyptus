@@ -3011,7 +3011,6 @@ int blobstore_search(blobstore * bs, const char *regex, blockblob_meta ** result
         prev = bm;
     }
 
-    *results = head;
     ret = blobs_matched;
 
 free:
@@ -3030,6 +3029,8 @@ free:
             EUCA_FREE(bm);
             bm = next;
         }
+    } else {
+        *results = head;
     }
 
     return ret;
