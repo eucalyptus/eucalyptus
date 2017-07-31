@@ -173,6 +173,7 @@
 #define EUCALYPTUS_DETACH                        EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/detach.pl"
 #define EUCALYPTUS_GENERATE_MIGRATION_KEYS       EUCALYPTUS_HELPER_DIR "/generate-migration-keys.sh"
 #define EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS      EUCALYPTUS_HELPER_DIR "/authorize-migration-keys"
+#define EUCALYPTUS_CONFIG_NO_POLKIT              EUCALYPTUS_HELPER_DIR "/config-no-polkit"
 
 #define EUCALYPTUS_CONNECT_ISCSI                 EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/connect_iscsitarget.pl"
 #define EUCALYPTUS_DISCONNECT_ISCSI              EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/disconnect_iscsitarget.pl"
@@ -242,6 +243,7 @@
 #define CONFIG_NC_CEPH_KEYS                     "CEPH_KEYRING_PATH"
 #define CONFIG_NC_CEPH_CONF                     "CEPH_CONFIG_PATH"
 #define CONFIG_NC_EPHEMERAL_CACHE_HIGHWATER_GB  "EPHEMERAL_CACHE_HIGHWATER_GB"
+#define CONFIG_LIBVIRT_USE_POLICY_KIT           "LIBVIRT_USE_POLICY_KIT"
 
 //! @}
 //! path to axis on NC

@@ -112,6 +112,7 @@ install: build
 	@$(INSTALL) -m 644 nc-hooks/example.sh $(DESTDIR)$(etcdir)/eucalyptus/nc-hooks/
 	@$(INSTALL) -m 755 generate-migration-keys.sh $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 authorize-migration-keys $(DESTDIR)$(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 config-no-polkit $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 euca-upgrade $(DESTDIR)$(libexecdir)/eucalyptus
 	@$(INSTALL) -m 644 iptables-preload.template $(DESTDIR)$(datarootdir)/eucalyptus/doc/
 	@$(INSTALL) -m 644 nginx_proxy.conf $(DESTDIR)$(datarootdir)/eucalyptus
@@ -144,7 +145,8 @@ uninstall:
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/lic_default
 	@$(RM) -f $(DESTDIR)$(sbindir)/euca-lictool
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/generate-migration-keys.sh
-	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/authorize-migration-keys.pl
+	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/authorize-migration-keys
+	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/config-no-polkit
 	@$(RM) -f $(DESTDIR)$(libexecdir)/eucalyptus/euca-upgrade
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/doc/iptables-preload.template
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/nginx_proxy.conf
