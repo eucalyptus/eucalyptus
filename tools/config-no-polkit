@@ -1,0 +1,241 @@
+#!/usr/bin/python -tt
+
+#
+# (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see http://www.gnu.org/licenses/.
+#
+
+import os
+import re
+import sys
+import time
+import shutil
+import logging
+import os.path
+import argparse
+import subprocess
+from subprocess import CalledProcessError
+
+MAX_RETRIES = 20
+LIBVIRT_CONF = '/etc/libvirt/libvirtd.conf'
+
+#
+# Configuration values that need to be set correctly in order
+# to disable polkit usage from libvirtd.
+#
+CONFIG_VALUES = {
+    "unix_sock_group":"libvirt",
+    "unix_sock_ro_perms":"0770",
+    "unix_sock_rw_perms":"0770",
+    "auth_unix_rw":"none"
+}
+
+CONFIG_KEYS_STR = "|".join(CONFIG_VALUES.keys())
+
+# Build the regex from the keys of the CONFIG_VALUES dict as part of the <config_keys> group
+CONFIG_REGEX = re.compile("(?P<comment>#*)\s*(?P<config_key>%s)\s*=\s*\"(?P<config_value>.*)\"" % CONFIG_KEYS_STR)
+
+#
+#
+def getLogger(name, verbose):
+    '''
+    Setup simple logging to stdout
+    '''
+    logger = logging.getLogger(name)
+    if verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
+    ch = logging.StreamHandler()
+    if verbose:
+        ch.setLevel(logging.DEBUG)
+    else:
+        ch.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(message)s')
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+
+    return logger
+
+def copy_file(src, dst):
+    '''
+    Copy a file, on failure exit program
+    '''
+    try:
+        shutil.copy(src, dst)
+    except IOError as e:
+        logger.error("Unable to copy %s to %s errno: %d error: %s",
+                     src, dst, e.errno, e.strerror)
+        sys.exit(1)
+
+def move_file(src, dst):
+    '''
+    Move file, exit program on failure
+    '''
+    try:
+        shutil.move(src, dst)
+    except IOError as e:
+        logger.error("Unable to move file %s to %s errno: %d error: %s",
+                     src, dst, e.errno, e.strerror)
+        sys.exit(1)
+
+def write_config(config_values, config_file, disable_polkit=True):
+    '''
+    Modifies the configuration file on disk, to ensure that polkit is
+    not configured for libvirtd socket authentication. By default libvirtd
+    uses polkitd, by setting the configuration values it will disable polkitd 
+    from performing socket authentication and causing communication issues. 
+
+    Creates a backup of the distribution configuration
+    file to: config_file + '.orig', if not already present.
+
+    If the file did not need to be modified, then no changes
+    will be made to the file and libvirtd will not be restarted.
+    inputs:
+       config_values - set of configuration values to uncomment or set
+       config_file - libvirt configuration filename.
+       disable_polkit - will comment configuration values to bring back usage of polkit
+
+    returns: True - if the configuration file was modified.
+             False - if there was no need to modify the configuration file
+    '''
+    updated = False
+
+    config_file_orig = config_file + '.orig'
+    config_file_bak = config_file + '.bak'
+    config_file_new = config_file + '.new'
+
+    if not os.path.exists(config_file):
+        logger.error("Configuration file: %s is missing, exiting", config_file)
+        sys.exit(1)
+
+    # Copy distribution original to .orig
+    if not os.path.exists(config_file_orig):
+        copy_file(config_file, config_file_orig)
+
+    # Construct the new configuration file
+    missing_values = config_values.keys()
+    with open(config_file) as cf:
+        try:
+            with open(config_file_new, 'wc') as nf:
+                for line in cf:
+                    m = CONFIG_REGEX.match(line)
+                    if m:
+                        commented = m.group('comment') == '#'
+                        k = m.group('config_key')
+                        v = m.group('config_value')
+
+                        if disable_polkit:
+                            if v != config_values[k] or commented:
+                                nf.write("{} = \"{}\"\n".format(k, config_values[k]))
+                                updated = True
+                            else:
+                                # Config value is correct, no need to update
+                                nf.write(line)
+                            missing_values.remove(k)
+                        else:
+                            # Revert the config to *use* polkitd by commenting out the values
+                            if not commented:
+                                nf.write("#" + line)
+                                updated = True
+
+                    # No match, then write the line as is
+                    else:
+                        nf.write(line)
+                #
+                # Handle the case where the config values are not in the configuration
+                # file at all. Will write config values at end of the configuration file.
+                # 
+                if disable_polkit:
+                    for k in missing_values:
+                        nf.write("{} = \"{}\"\n".format(k, config_values[k]))
+                        updated = True
+
+        except IOError as e:
+            logger.error("Unable to write to new file: %s [Errno:%d] %s",
+                         config_file_new,
+                         e.errno,
+                         e.strerror)
+            sys.exit(1)
+
+    if updated:
+        # Copy current config to .bak
+        copy_file(config_file, config_file_bak)
+
+        # move .new file to real conf file
+        move_file(config_file_new, config_file)
+
+    elif os.path.exists(config_file_new):
+        # No differences, remove the generated config file
+        os.unlink(config_file_new)
+    return updated
+
+if __name__ == '__main__':
+
+    config_updated = False
+
+    parser = argparse.ArgumentParser(description='Modify polkitd configuration for libvirtd')
+    parser.add_argument('-v', action='store_true', dest='verbose',
+                        help='Verbose')
+    parser.add_argument('-e', action='store_true', dest='enable_polkit',
+                        help='Revert necessary changes by commenting out configuration lines')
+    parser.add_argument('-c', metavar='filename', dest='config',
+                        default=LIBVIRT_CONF,
+                        help="Configuration file, default: %s" % LIBVIRT_CONF)
+
+    parser.add_argument('-n', action='store_false', dest='restart',
+                        help="Don't restart libvirtd after changing confguration, for debugging")
+
+    # Handle case where NC is calling with extra parameters that we don't need.
+    parser.add_argument('args', metavar='', nargs=argparse.REMAINDER,
+                        help=argparse.SUPPRESS) 
+    args = parser.parse_args()
+
+    logger = getLogger('config-no-polkit', args.verbose)
+
+    if not os.path.exists(args.config):
+        logger.error("Error, configuration file: %s not found, exiting", args.config)
+        sys.exit(1)
+
+    config_updated = write_config(CONFIG_VALUES, args.config, not args.enable_polkit)
+
+    if config_updated and args.restart:
+        #
+        # Restart is always required in order to stop/start using polkit
+        # for socket authentication.
+        #
+        logger.debug("Restarting libvirtd")
+        subprocess.call(['/usr/bin/systemctl', 'restart', 'libvirtd.service'])
+
+        #
+        # After restarting libvirtd, we need to wait for it to become available so
+        # that the node controller can connect with the hypervisor in startup
+        # situations.
+        #
+        connected = False
+        for i in range(0,MAX_RETRIES):
+            try:
+                subprocess.check_call(['virsh','connect'],stdin=open('/dev/null'), stdout=open('/dev/null','w'))
+                connected = True
+                break
+            except CalledProcessError as e:
+                logger.debug("Unable to connect to hypervisor on attempt number: [%d]", i+1)
+                time.sleep(1)
+        if not connected:
+            logger.error("Error, unable to connect to hypervisor after %d seconds",MAX_RETRIES)
+            sys.exit(1)
+    elif not config_updated:
+        logger.debug("No configuration change, will not restart libvirtd")
+    else:
+        logger.debug("Configuration file changed, libvirtd restart not requested")

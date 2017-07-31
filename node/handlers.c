@@ -515,6 +515,40 @@ int authorize_migration_keys(char *host, char *credentials, ncInstance * instanc
 }
 
 //!
+//! Configure libvirtd to not use polkitd by default.
+//!
+//! Only needs to be run during init() as a one time operation. In most cases
+//! this will check the config and not restart libvirt if everything is ok.
+//!
+//! @param[in] use_polkit set 1, will enable polkit, 0 will disable (default)
+//! @return EUCA_OK, EUCA_INVALID_ERROR, or EUCA_SYSTEM_ERROR
+//!
+int config_polkit(int use_polkit)
+{
+    int rc = 0;
+    char euca_rootwrap[EUCA_MAX_PATH] = "";
+    char command[EUCA_MAX_PATH] = "";
+    char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
+
+    snprintf(command, EUCA_MAX_PATH, EUCALYPTUS_CONFIG_NO_POLKIT, NP(euca_base));
+    snprintf(euca_rootwrap, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, NP(euca_base));
+    LOGDEBUG("config-no-polkit command: '%s %s'\n", euca_rootwrap, command);
+
+    if (use_polkit)
+        rc = euca_execlp(NULL, euca_rootwrap, command, "-e", NULL); // enable
+    else
+        rc = euca_execlp(NULL, euca_rootwrap, command, NULL);       // disable - default
+
+    if (rc != EUCA_OK) {
+        LOGERROR("%s %s' failed. rc=%d\n",euca_rootwrap, command, rc);
+        return (EUCA_SYSTEM_ERROR);
+    } else {
+        LOGDEBUG("Libvirtd polkit configuration succeeded\n");
+    }
+    return (EUCA_OK);
+}
+
+//!
 //! Copies the url string of the ENABLED service of the requested type into dest_buffer.
 //! dest_buffer MUST be the same size as the services uri array length, 512.
 //!
@@ -2381,6 +2415,7 @@ static int init(void)
          * required file depends on the process owner's home directory, which
          * may change after the initial installation.
          */
+        int use_polkit = 0;
         char libVirtConf[EUCA_MAX_PATH];
         uid_t uid = geteuid();
         struct passwd *pw;
@@ -2412,8 +2447,23 @@ static int init(void)
         } else {
             LOGINFO("Cannot get EUID, not creating libvirtd.conf\n");
         }
-    }
 
+        //
+        // Configure libvirtd polkit authentication on the libvirt sockets
+        // by default we *disable* polkit authentication due to stability issues.
+        // If the configuration parameter is set to -1 we won't touch the configuration
+        //
+        GET_VAR_INT(use_polkit, CONFIG_LIBVIRT_USE_POLICY_KIT, 0);
+        if (use_polkit >= 0) {
+            if (config_polkit(use_polkit) != EUCA_OK) {
+                LOGERROR("Unable to %s polkitd for libvirtd.\n", use_polkit ? "enable" : "disable");
+            } else {
+                LOGINFO("libvirtd configured to %s polkitd.\n", use_polkit ? "use" : "not use");
+            }
+        } else {
+            LOGDEBUG("Skipping libvirt policy kit configuration\n");
+        }
+    }
     {                                  // initialize hooks if their directory looks ok
         char dir[EUCA_MAX_PATH];
         snprintf(dir, sizeof(dir), EUCALYPTUS_NC_HOOKS_DIR, nc_state.home);
