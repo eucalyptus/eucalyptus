@@ -2964,10 +2964,13 @@ int blobstore_search(blobstore * bs, const char *regex, blockblob_meta ** result
         return -1;
     }
 
+    int blobstore_locked = 0;
     if (blobstore_lock(bs, BLOBSTORE_LOCK_TIMEOUT_USEC) == -1) {    // lock it so we can traverse blobstore safely
         ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to lock the blobstore");
         ret = -1;
         goto free;
+    } else {
+        blobstore_locked = 1;
     }
     // put existing items in the blobstore into a LL
     _blobstore_errno = BLOBSTORE_ERROR_OK;
@@ -3018,7 +3021,7 @@ free:
     if (bbs)
         free_bbs(bbs);                 // free the blockblobs LL returned by the search function
 
-    if (blobstore_unlock(bs) == -1) {
+    if (blobstore_locked && blobstore_unlock(bs) == -1) {
         ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to unlock the blobstore");
         ret = -1;
     }
