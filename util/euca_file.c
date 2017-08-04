@@ -1123,31 +1123,9 @@ int ensure_directories_exist(const char *path, int is_file_path, const char *use
 //!
 //! @return -1 on failure or the corresponding files descriptor for the temp file
 //!
-char *safe_mkdtemp(char *template)
-{
-    mode_t u = 0;
-    char *ret = NULL;
-
-    u = umask(0077);
-    ret = mkdtemp(template);
-    umask(u);
-    return (ret);
-}
-
-//!
-//! ensure the temp file is only readable by the user
-//!
-//! @param[in] template
-//!
-//! @return -1 on failure or the corresponding files descriptor for the temp file
-//!
 int safe_mkstemp(char *template)
 {
-    mode_t u = 0;
     int ret = 0;
-
-    u = umask(0077);
     ret = mkstemp(template);
-    umask(u);
     return (ret);
 }
