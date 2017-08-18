@@ -3927,13 +3927,13 @@ int blockblob_delete(blockblob * bb, long long timeout_usec, char do_force)
         if (close_and_unlock(bb->fd_lock) == -1) {
             ret = -1;
         } else {
-            bb->fd_lock = 0;           //! @TODO needed? maybe -1?
+            bb->fd_lock = -1;
         }
 
         if (close(bb->fd_blocks) == -1) {
             ret = -1;
         } else {
-            bb->fd_blocks = 0;         //! @TODO needed? maybe -1?
+            bb->fd_blocks = -1;
         }
 
         // free the blob struct if everything above was OK
