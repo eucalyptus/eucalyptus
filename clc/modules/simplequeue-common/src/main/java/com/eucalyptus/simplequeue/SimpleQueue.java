@@ -35,6 +35,7 @@ import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PublicService;
+import com.eucalyptus.util.techpreview.TechPreview;
 
 /**
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
@@ -44,6 +45,7 @@ import com.eucalyptus.component.annotation.PublicService;
 @PolicyVendor( "sqs" )
 @Partition( value = SimpleQueue.class, manyToOne = true )
 @Description( "Simple Queue API service" )
+@TechPreview(enableByDefaultProperty = "enable.sqs.tech.preview")
 public class SimpleQueue extends ComponentId {
   private static final long serialVersionUID = 1L;
 }
