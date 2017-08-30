@@ -138,7 +138,7 @@ public class Topology {
         return this.internal;
       }
     },
-    EXTERNAL( 256 ) {
+    EXTERNAL( 32 ) {
       ServiceConfiguration external;
       
       @Override
@@ -194,12 +194,6 @@ public class Topology {
         @Override
         public Object call( ) {
           try {
-            TimeUnit.SECONDS.sleep( backoff );
-          } catch ( InterruptedException ex ) {
-            busy.set( false );
-            return Collections.EMPTY_LIST;
-          }
-          try {
             return RunChecks.INSTANCE.call( );
           } finally {
             busy.set( false );
@@ -208,6 +202,13 @@ public class Topology {
       };
 
       if ( busy.compareAndSet( false, true ) ) {
+        try {
+          TimeUnit.SECONDS.sleep( backoff );
+        } catch ( InterruptedException ex ) {
+          busy.set( false );
+          return;
+        }
+
         final Set<String> enabledComponentClassNames = ImmutableSet.copyOf( Iterables.transform(
             Topology.getInstance( ).services.values( ),
             Functions.compose( Classes.nameFunction( ), ServiceConfigurations.componentId( ) ) ) );
@@ -397,13 +398,11 @@ public class Topology {
   public static Function<ServiceConfiguration, Future<ServiceConfiguration>> transition( final Component.State toState ) {
     final Function<ServiceConfiguration, Future<ServiceConfiguration>> transition = new Function<ServiceConfiguration, Future<ServiceConfiguration>>( ) {
       private final List<Component.State> serializedStates = Lists.newArrayList( Component.State.ENABLED, Component.State.STOPPED );
-
+      
       @Override
       public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
         final Callable<ServiceConfiguration> call = Topology.callable( input, Topology.get( toState ) );
-        if ( input.getComponentId().isManyToOnePartition() ) {//GRZE:ORLY: yes really.  if this doesn't work the whole scheme is gebroken.
-          return Queue.EXTERNAL.enqueue( call );
-        } else if ( this.serializedStates.contains( toState ) || this.serializedStates.contains( input.lookupState( ) ) ) {
+        if ( this.serializedStates.contains( toState ) || this.serializedStates.contains( input.lookupState( ) ) ) {
           return Threads.enqueue( input, Topology.class, 1, call );
         } else {
           return Queue.EXTERNAL.enqueue( call );
