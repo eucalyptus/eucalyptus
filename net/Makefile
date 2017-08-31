@@ -73,7 +73,6 @@ include ../Makedefs
 
 # Standard Libraries, Dependencies and Includes
 STDLIBS      := -lpthread -lm -lssl -lxml2 -lcurl -lcrypto -ljson -ljson-c
-PCAPLIB      := -lpcap
 STDDEPS      := ../util/sequence_executor.o ../util/atomic_file.o ../util/log.o ../util/ipc.o ../util/misc.o  
 STDDEPS      += ../util/euca_string.o ../util/euca_file.o ../util/hash.o ../util/fault.o ../util/wc.o ../util/utf8.o  
 STDDEPS      += ../util/euca_auth.o ../storage/diskutil.o ../storage/http.o ../util/config.o ../util/euca_network.o
@@ -91,12 +90,6 @@ EUCANETD     += eucanetd_vpc midonet-api euca-to-mido
 EUCANETDOBJS := $(EUCANETD:=.o)
 EUCANETDDEPS := $(EUCANETDOBJS) $(LIBNETNAME) $(STDDEPS)
 EUCANETDNAME := eucanetd
-
-# eucanetd meter component
-EUCANETDMETER	    := eucanetd_meter
-EUCANETDMETEROBJS   := $(EUCANETDMETER:=.o)
-EUCANETDMETERDEPS   := $(EUCANETDMETEROBJS) $(LIBNETNAME) $(STDDEPS)
-EUCANETDMETERNAME   := eucanetd_meter
 
 # The EUCA_ARP Cloud Component
 EUCAARP      := euca_arp
@@ -120,9 +113,6 @@ $(LIBNETNAME): $(LIBNETDEPS)
 
 $(EUCANETDNAME): $(EUCANETDDEPS)
 	$(CC) -o $@ $(EUCANETDDEPS) $(LIBNETNAME) $(STDLIBS)
-	
-$(EUCANETDMETERNAME): $(EUCANETDMETERDEPS)
-	$(CC) -o $@ $(EUCANETDMETERDEPS)  $(LIBNETNAME) $(STDLIBS) $(PCAPLIB)
 
 $(EUCAARPNAME): $(EUCAARPDEPS)
 	$(CC) -o $@ $(EUCAARPDEPS) $(STDLIBS)

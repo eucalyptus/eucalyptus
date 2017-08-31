@@ -111,9 +111,6 @@ char *euca_truncate_interfaceid(const char *id);
 u32 euca_dot2hex(const char *psDot);
 char *euca_hex2dot(u32 hex);
 char *euca_hex2dot_s(u32 hex);
-u32 euca_inet_aton(const char *ineta);
-char *euca_inet_ntoa(struct in_addr *inetn);
-int euca_cidr_aton(char *cidr, struct in_addr *outnet, struct in_addr *outmask);
 //! @}
 
 //! @{
@@ -148,9 +145,6 @@ int inline euca_strstrcmp(const char *str1, const char *str2);
 #define dot2hex(_dot)                            euca_dot2hex((_dot))
 #define hex2dot(_hex)                            euca_hex2dot((_hex))
 #define hex2dot_s(_hex)                          euca_hex2dot_s((_hex))
-
-#define EUCA_DOT2INETA(_dot)                     euca_inet_aton((_dot))
-#define EUCA_INETA2DOT(_ineta)                   euca_inet_ntoa((_ineta))
 
 //! @}
 

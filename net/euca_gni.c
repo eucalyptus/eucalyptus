@@ -535,42 +535,6 @@ int gni_find_instance(globalNetworkInfo *gni, const char *psInstanceId, gni_inst
 }
 
 /**
- * Searches for the given interface name and returns the associated gni_instance structure.
- * @param gni [in] pointer to the global network information structure.
- * @param psInstanceId [in] the ID string of the interface of interest.
- * @param pInstance [out] pointer to the gni_instance structure of interest.
- * @return 0 on success. Positive integer otherwise.
- */
-int gni_find_interface(globalNetworkInfo *gni, const char *psInstanceId, gni_instance ** pInstance) {
-    if (!gni || !psInstanceId || !pInstance) {
-        LOGWARN("invalid argument: cannot find instance from NULL\n");
-        return (1);
-    }
-    // Initialize to NULL
-    (*pInstance) = NULL;
-
-    LOGTRACE("attempting search for interface id %s in gni\n", psInstanceId);
-
-    if (gni->sorted_ifs == FALSE) {
-        qsort(gni->ifs, gni->max_ifs,
-                sizeof (gni_instance *), compare_gni_interface_name);
-        gni->sorted_ifs = TRUE;
-    }
-    gni_instance inst;
-    snprintf(inst.name, INTERFACE_ID_LEN, "%s", psInstanceId);
-    gni_instance *pinst = &inst;
-    gni_instance **res = (gni_instance **) bsearch(&pinst,
-            gni->ifs, gni->max_ifs,
-            sizeof (gni_instance *), compare_gni_interface_name);
-    if (res) {
-        *pInstance = *res;
-        return (0);
-    }
-
-    return (1);
-}
-
-/**
  * Searches through the list of network interfaces in the gni  and returns all
  * non-primary interfaces for a given instance
  *
@@ -5158,7 +5122,7 @@ int gni_validate(globalNetworkInfo *gni) {
                 }
             }
         }
-
+        
         // No VPC elements are expected in EDGE mode
         if (gni->max_vpcs || gni->max_dhcpos || gni->max_vpcIgws) {
             LOGERROR("Invalid GNI (%s): VPC elements found in EDGE mode gni\n", gni->version);
@@ -6259,7 +6223,6 @@ int cmp_gni_vpcsubnet(gni_vpcsubnet *a, gni_vpcsubnet *b, int *nacl_diff) {
         }
     }
     if ((!strcmp(a->routeTable_name, b->routeTable_name)) &&
-            (!strcmp(a->networkAcl_name, b->networkAcl_name)) &&
             (!cmp_gni_route_table(a->routeTable, b->routeTable))) {
         return (0);
     }
@@ -6717,56 +6680,6 @@ int compare_gni_instance_name(const void *p1, const void *p2) {
     }
     if (name2 == NULL) {
         return (-1);
-    }
-    return (strcmp(name1, name2));
-}
-
-/**
- * Comparator function for gni_instance structures. Used for ENIs. Comparison is
- * base on name and/or ifname property.
- * @param p1 [in] pointer to gni_instance pointer 1.
- * @param p2 [in] pointer to gni_instance pointer 2.
- * @return 0 iff p1->.->name == p2->.->(if)name. -1 iff p1->.->name < p2->.->(if)name.
- * 1 iff p1->.->name > p2->.->(if)name.
- * NULL is considered larger than a non-NULL string.
- */
-int compare_gni_interface_name(const void *p1, const void *p2) {
-    gni_instance **pp1 = NULL;
-    gni_instance **pp2 = NULL;
-    gni_instance *e1 = NULL;
-    gni_instance *e2 = NULL;
-    char *name1 = NULL;
-    char *name2 = NULL;
-    char *ifname2 = NULL;
-
-    if ((p1 == NULL) || (p2 == NULL)) {
-        LOGWARN("Invalid argument: cannot compare NULL gni_instance\n");
-        return (0);
-    }
-    pp1 = (gni_instance **) p1;
-    pp2 = (gni_instance **) p2;
-    e1 = *pp1;
-    e2 = *pp2;
-    if (e1 && strlen(e1->name)) {
-        name1 = e1->name;
-    }
-    if (e2 && strlen(e2->name)) {
-        name2 = e2->name;
-    }
-    if (e2 && strlen(e2->ifname)) {
-        ifname2 = e2->ifname;
-    }
-    if (name1 == name2) {
-        return (0);
-    }
-    if (name1 == NULL) {
-        return (1);
-    }
-    if (name2 == NULL) {
-        return (-1);
-    }
-    if (!strcmp(name1, ifname2)) {
-        return (0);
     }
     return (strcmp(name1, name2));
 }

@@ -367,7 +367,6 @@ typedef struct globalNetworkInfo_t {
     boolean sorted_instances;
     gni_instance **ifs;                     //!< List of interfaces information
     int max_ifs;                            //!< Number of interfaces in the list
-    boolean sorted_ifs;
     gni_secgroup *secgroups;                //!< List of security group information
     int max_secgroups;                      //!< Number of security groups in the list
     gni_vpc *vpcs;                          //!< List of VPC information
@@ -433,7 +432,6 @@ int gni_find_self_node(globalNetworkInfo *gni, gni_node **outnodeptr);
 int gni_find_self_cluster(globalNetworkInfo *gni, gni_cluster **outclusterptr);
 int gni_find_secgroup(globalNetworkInfo *gni, const char *psGroupId, gni_secgroup **pSecGroup);
 int gni_find_instance(globalNetworkInfo *gni, const char *psInstanceId, gni_instance **pInstance);
-int gni_find_interface(globalNetworkInfo *gni, const char *psInstanceId, gni_instance **pInstance);
 int gni_find_secondary_interfaces(globalNetworkInfo *gni, const char *psInstanceId, gni_instance *pAInstances[], int *size);
 
 int gni_cloud_get_clusters(globalNetworkInfo *gni, char **cluster_names, int max_cluster_names, char ***out_cluster_names, int *out_max_cluster_names, gni_cluster **out_clusters,
@@ -526,7 +524,6 @@ int ruleconvert(char *rulebuf, char *outrule);
 int ingress_gni_to_iptables_rule(char *scidr, gni_rule *iggnirule, char *outrule, int flags);
 
 int compare_gni_instance_name(const void *p1, const void *p2);
-int compare_gni_interface_name(const void *p1, const void *p2);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
