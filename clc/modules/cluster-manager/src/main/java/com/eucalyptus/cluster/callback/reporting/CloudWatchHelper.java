@@ -344,7 +344,8 @@ public class CloudWatchHelper {
       "DiskTotalWriteTime", 
       "DiskConsumedReadWriteOps");
 
-  private static final Map<String, String> ABSOLUTE_METRICS = ImmutableMap.<String, String>builder( )
+  private static final Map<String, String> ABSOLUTE_METRICS = 
+      new ImmutableMap.Builder<String, String>()
       .put("CPUUtilization", "CPUUtilizationMSAbsolute") // this is actually the data in milliseconds, not percentage
       .put("VolumeReadOps", "VolumeReadOpsAbsolute") // this is actually the total volume read Ops since volume creation, not for the period
       .put("VolumeWriteOps", "VolumeWriteOpsAbsolute") // this is actually the total volume write Ops since volume creation, not for the period
@@ -360,8 +361,6 @@ public class CloudWatchHelper {
       .put("DiskWriteBytes", "DiskWriteBytesAbsolute") // this is actually the total disk write bytes since instance creation, not for the period
       .put("NetworkIn", "NetworkInAbsolute") // this is actually the total network in bytes since instance creation, not for the period
       .put("NetworkOut", "NetworkOutAbsolute") // this is actually the total network out bytes since instance creation, not for the period
-      .put("NetworkPacketsIn", "NetworkPacketsInAbsolute") // this is actually the total network packets in count since instance creation, not for the period
-      .put("NetworkPacketsOut", "NetworkPacketsOutAbsolute") // this is actually the total network packets out count since instance creation, not for the period
       .build();
 
   private static final Map<String,String> metricsToUnitTypes = new ImmutableMap.Builder<String, String>()
@@ -394,8 +393,6 @@ public class CloudWatchHelper {
     VolumeConsumedReadWriteOps,
     DiskReadOps,
     DiskWriteOps,
-    NetworkPacketsIn,
-    NetworkPacketsOut,
     StatusCheckFailed,
     StatusCheckFailed_Instance,
     StatusCheckFailed_System,

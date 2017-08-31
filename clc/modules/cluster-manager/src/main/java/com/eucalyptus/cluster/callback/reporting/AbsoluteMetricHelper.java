@@ -73,8 +73,6 @@ public class AbsoluteMetricHelper {
       .put("DiskWriteBytesAbsolute", "DiskWriteBytes")
       .put("NetworkInAbsolute", "NetworkIn")
       .put("NetworkOutAbsolute", "NetworkOut")
-      .put("NetworkPacketsInAbsolute", "NetworkPacketsIn")
-      .put("NetworkPacketsOutAbsolute", "NetworkPacketsOut")
       .build();
   static final long MAX_DIFFERENCE_DURATION_MS = TimeUnit.MINUTES.toMillis(15L); // 15 minutes, also max reporting time
   static final String AWS_EBS_NAMESPACE = "AWS/EBS";
