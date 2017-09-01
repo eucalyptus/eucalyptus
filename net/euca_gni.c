@@ -6223,6 +6223,7 @@ int cmp_gni_vpcsubnet(gni_vpcsubnet *a, gni_vpcsubnet *b, int *nacl_diff) {
         }
     }
     if ((!strcmp(a->routeTable_name, b->routeTable_name)) &&
+            (!strcmp(a->networkAcl_name, b->networkAcl_name)) &&
             (!cmp_gni_route_table(a->routeTable, b->routeTable))) {
         return (0);
     }
