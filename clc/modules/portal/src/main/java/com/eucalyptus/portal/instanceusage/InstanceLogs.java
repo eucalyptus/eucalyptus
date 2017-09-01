@@ -28,29 +28,15 @@
  ************************************************************************/
 package com.eucalyptus.portal.instanceusage;
 
-import com.datastax.driver.core.BatchStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
-import com.datastax.driver.core.SimpleStatement;
-import com.datastax.driver.core.Statement;
-import com.datastax.driver.core.utils.UUIDs;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.portal.Ec2ReportsInvalidParameterException;
-import com.eucalyptus.portal.awsusage.CassandraSessionManager;
 import com.eucalyptus.portal.common.model.InstanceUsageFilter;
 import com.eucalyptus.portal.common.model.InstanceUsageFilters;
 import com.eucalyptus.portal.workflow.InstanceLog;
 import com.eucalyptus.portal.workflow.InstanceTag;
-import com.eucalyptus.util.Exceptions;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Criterion;
@@ -64,10 +50,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import static java.util.stream.Collectors.*;
 
@@ -75,10 +59,9 @@ public abstract class InstanceLogs {
   private static Logger LOG =
           Logger.getLogger(InstanceLogs.class );
   final static InstanceLogs instance = new InstanceHourRecordsEntity();
-  final static InstanceLogs instanceCassandra = new InstanceHourRecordsCassandra();
 
   public static final InstanceLogs getInstance() {
-    return ("postgres".equals(CassandraSessionManager.DB_TO_USE) ? instance : instanceCassandra );
+    return instance;
   }
   public abstract InstanceLogBuilder newRecord(final String accountNumber);
   public abstract void append(final Collection<InstanceLog> records);
@@ -422,166 +405,6 @@ public abstract class InstanceLogs {
         LOG.error("Failed to query instance log", ex);
         return Lists.newArrayList();
       }
-    }
-  }
-
-  public static class InstanceHourRecordsCassandra extends InstanceLogs {
-
-
-    @Override
-    public InstanceLogBuilder newRecord(String accountNumber) {
-      return new InstanceLogBuilder(accountNumber) {
-        @Override
-        protected InstanceLog init() {
-          return new SimpleInstanceLog();
-        }
-
-        @Override
-        public InstanceLogBuilder addTag(final String tagKey, final String tagValue) {
-          if (this.instance.isPresent()) {
-            this.instance.get().addTag(new SimpleInstanceTag(tagKey, tagValue));
-          }
-          return this;
-        }
-      };
-    }
-
-    @Override
-    public void append(Collection<InstanceLog> records) {
-      CassandraSessionManager.doWithSession( session -> {
-        try {
-          for ( InstanceLog record : records ) {
-            UUID naturalId = UUIDs.timeBased();
-            List<String> tagsJson = Lists.transform(record.getTags(),
-              (InstanceTag t) -> {
-                ObjectNode objectNode = new ObjectMapper().createObjectNode();
-                objectNode.put("tag_key", t.getKey());
-                objectNode.put("tag_value", t.getValue());
-                return objectNode.toString();
-              }
-            );
-
-            Statement statement = new SimpleStatement(
-              "INSERT INTO eucalyptus_billing.instance_log (account_id, instance_id," +
-                "instance_type, platform, region, availability_zone, log_time, tags_json, natural_id) VALUES " +
-                "(?, ?, ?, ?, ?, ?, ?, ?, ?)",
-              record.getAccountId(),
-              record.getInstanceId(),
-              record.getInstanceType(),
-              record.getPlatform(),
-              record.getRegion(),
-              record.getAvailabilityZone(),
-              record.getLogTime(),
-              tagsJson,
-              naturalId);
-            session.execute(statement);
-          }
-        } catch ( final Exception ex ) {
-          LOG.error( "Failed to add records", ex );
-        }
-        return null;
-      } );
-    }
-
-    @Override
-    public List<InstanceHourLog> queryHourly(String accountId, Date rangeStart, Date rangeEnd, InstanceUsageFilters filters) throws Ec2ReportsInvalidParameterException {
-      if (accountId == null) throw new IllegalArgumentException("accountId can not be null");
-      return CassandraSessionManager.doWithSession( session -> {
-        try {
-          Set<String> instanceTypes =
-            filters != null && filters.getMember() != null ?
-            filters.getMember().stream()
-              .filter(f -> "instancetype".equals(f.getType()) || "instance_type".equals(f.getType()))
-              .map(InstanceUsageFilter::getKey)
-              .collect(Collectors.toSet()) : Sets.newHashSet();
-          Set<String> platforms =
-            filters != null && filters.getMember() != null ?
-              filters.getMember().stream()
-                .filter(f -> "platform".equals(f.getType()) || "platforms".equals(f.getType()))
-                .map(InstanceUsageFilter::getKey)
-                .collect(Collectors.toSet()) : Sets.newHashSet();
-          Set<String> availabilityZones =
-            filters != null && filters.getMember() != null ?
-              filters.getMember().stream()
-                .filter(f -> "availabilityzone".equals(f.getType()) || "availability_zone".equals(f.getType()))
-                .map(InstanceUsageFilter::getKey)
-                .collect(Collectors.toSet()) : Sets.newHashSet();
-
-          List<Object> queryValues = Lists.newArrayList();
-          StringBuilder queryBuilder = new StringBuilder("SELECT account_id, instance_id," +
-            "instance_type, platform, region, availability_zone, log_time, tags_json " +
-            "FROM eucalyptus_billing.instance_log WHERE account_id = ?");
-          queryValues.add(accountId);
-
-          if (rangeStart != null) {
-            queryBuilder.append(" AND log_time >= ?");
-            queryValues.add(rangeStart);
-          }
-
-          if (rangeEnd != null) {
-            queryBuilder.append(" AND log_time <= ?");
-            queryValues.add(rangeEnd);
-          }
-
-          Statement statement = new SimpleStatement(queryBuilder.toString(), queryValues.toArray());
-          ResultSet rs = session.execute(statement);
-          List<InstanceLog> results = StreamSupport.stream(rs.spliterator(), false)
-            .map((Row row) -> {
-              SimpleInstanceLog instanceLog = new SimpleInstanceLog();
-              instanceLog.setAccountId(row.getString("account_id"));
-              instanceLog.setInstanceId(row.getString("instance_id"));
-              instanceLog.setInstanceType(row.getString("instance_type"));
-              instanceLog.setPlatform(row.getString("platform"));
-              instanceLog.setRegion(row.getString("region"));
-              instanceLog.setAvailabilityZone(row.getString("availability_zone"));
-              instanceLog.setLogTime(row.getTimestamp("log_time"));
-              instanceLog.getTags().addAll(Lists.transform(
-                row.getList("tags_json", String.class),
-                (String s) -> {
-                  try {
-                    JsonNode jsonNode = new ObjectMapper().readTree(s);
-                    SimpleInstanceTag instanceTag = new SimpleInstanceTag();
-                    instanceTag.setKey(jsonNode.get("tag_key").asText());
-                    instanceTag.setValue(jsonNode.get("tag_value").asText());
-                    return instanceTag;
-                  } catch (Exception e) {
-                    throw Exceptions.toUndeclared(e);
-                  }
-                }));
-              return instanceLog;
-            })
-            .filter(l -> instanceTypes.isEmpty() || instanceTypes.contains(l.getInstanceType()))
-            .filter(l -> platforms.isEmpty() || platforms.contains(l.getPlatform()))
-            .filter(l -> availabilityZones.isEmpty() || availabilityZones.contains(l.getAvailabilityZone()))
-            .collect(Collectors.toList());
-
-          if (filters!= null && filters.getMember()!=null) {
-            // key: tag_key, value: set of tag values
-            final Map<String, Set<String>> tagFilters =
-              filters.getMember().stream()
-                .filter ( f -> f.getType() != null )
-                .filter( f -> "tag".equals(f.getType().toLowerCase()) || "tags".equals(f.getType().toLowerCase()) )
-                .collect( Collectors.groupingBy(
-                  InstanceUsageFilter::getKey, Collectors.mapping(
-                    InstanceUsageFilter::getValue, toSet()
-                  )) );
-            if (!tagFilters.isEmpty()) {
-              results = results.stream()
-                .filter(l -> l.getTags().stream()
-                  .filter(t -> tagFilters.containsKey(t.getKey()) && tagFilters.get(t.getKey()).contains(t.getValue()))
-                  .findAny()
-                  .isPresent()
-                ).collect(Collectors.toList());
-            }
-          }
-          return results.stream()
-            .map( l -> new InstanceHourLogImpl(l, 1))
-            .collect(Collectors.toList());
-        } catch ( final Exception ex) {
-          LOG.error("Failed to query instance log", ex);
-          return Lists.newArrayList();
-        }
-      });
     }
   }
 

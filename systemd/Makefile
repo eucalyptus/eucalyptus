@@ -51,9 +51,6 @@ install: deploy
 	# For backwards compatibility with ``service eucalyptus-cc/nc start''
 	ln -fs eucalyptus-cluster.service $(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-cc.service
 	ln -fs eucalyptus-node.service $(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-nc.service
-	# Delete cassandra files until packaging is updated to allow them
-	rm -f $(DESTDIR)/$(prefix)/usr/lib/sysctl.d/70-eucalyptus-cloud-cassandra.conf
-	rm -f $(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-cloud-cassandra.service
 
 uninstall:
 # Extra "if" checks prevent e.g. "rm -f /..../system/*.service" removing files we didn't install.

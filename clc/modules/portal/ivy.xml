@@ -40,7 +40,6 @@
         <dependency name="eucalyptus-msgs" rev="latest.integration"/>
         <dependency name="eucalyptus-euare" rev="latest.integration"/>
         <dependency name="eucalyptus-resources-support" rev="latest.integration"/>
-        <dependency name="eucalyptus-cassandra-common" rev="latest.integration"/>
     </dependencies>
 </ivy-module>
 

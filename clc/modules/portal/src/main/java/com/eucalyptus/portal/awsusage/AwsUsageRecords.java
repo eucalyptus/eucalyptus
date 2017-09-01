@@ -28,25 +28,16 @@
  ************************************************************************/
 package com.eucalyptus.portal.awsusage;
 
-import com.datastax.driver.core.BatchStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
-import com.datastax.driver.core.SimpleStatement;
-import com.datastax.driver.core.Statement;
-import com.datastax.driver.core.utils.UUIDs;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.portal.workflow.AwsUsageRecord;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 
@@ -54,9 +45,8 @@ public abstract class AwsUsageRecords {
   private static Logger LOG=
           Logger.getLogger(AwsUsageRecords.class );
   final static AwsUsageRecords instance = new AwsUsageHourlyRecordsEntity();
-  final static AwsUsageRecords instanceCassandra = new AwsUsageHourlyRecordsCassandra();
   public static final AwsUsageRecords getInstance() {
-    return ("postgres".equals(CassandraSessionManager.DB_TO_USE) ? instance : instanceCassandra );
+    return instance;
   }
 
   public abstract AwsUsageHourlyRecordBuilder newRecord(final String accountNumber);
@@ -350,141 +340,6 @@ public abstract class AwsUsageRecords {
         LOG.error("Failed to query aws usage record entity", ex);
         return Lists.newArrayList();
       }
-    }
-
-    @Override
-    public void purge(String accountNumber, Date beginning) {
-
-    }
-  }
-
-  private static class AwsUsageHourlyRecordsCassandra extends AwsUsageRecords {
-    @Override
-    public AwsUsageHourlyRecordBuilder newRecord(String accountNumber) {
-      return new AwsUsageHourlyRecordBuilder(accountNumber) {
-        @Override
-        protected AwsUsageRecord init(String accountId) {
-          return new SimpleAwsUsageRecord(accountId);
-        }
-      };
-    }
-
-    @Override
-    public AwsUsageHourlyRecordBuilder newRecord(AwsUsageRecord other) {
-      return new AwsUsageHourlyRecordBuilder(other.getOwnerAccountNumber()) {
-        @Override
-        protected AwsUsageRecord init(String accountId) {
-          final AwsUsageRecord record = new SimpleAwsUsageRecord(accountId);
-          record.setService( other.getService() );
-          record.setOperation( other.getOperation() );
-          record.setUsageType( other.getUsageType() );
-          record.setOwnerAccountNumber( other.getOwnerAccountNumber() );
-          record.setEndTime( other.getEndTime() );
-          record.setStartTime( other.getStartTime() );
-          record.setResource( other.getResource() );
-          record.setUsageValue( other.getUsageValue() );
-          return record;
-        }
-      };
-    }
-
-    @Override
-    public void append(Collection<AwsUsageRecord> records) {
-      CassandraSessionManager.doWithSession( session -> {
-        try {
-          List<String> tableNamesWithNonNullResource = ImmutableList.of( "aws_records", "aws_records_by_resource" );
-          List<String> tableNamesWithNullResource = ImmutableList.of( "aws_records" );
-          for ( AwsUsageRecord record : records ) {
-            BatchStatement batchStatement = new BatchStatement( );
-            UUID naturalId = UUIDs.timeBased( );
-            for ( String tableName : record.getResource( ) == null ? tableNamesWithNullResource : tableNamesWithNonNullResource ) {
-              Statement statement = new SimpleStatement(
-                  "INSERT INTO eucalyptus_billing." + tableName + " (account_id, service, operation, usage_type, resource, start_time, " +
-                      "end_time, usage_value, natural_id, operation_usage_type_concat) VALUES " +
-                      "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
-                  record.getOwnerAccountNumber( ),
-                  record.getService( ),
-                  record.getOperation( ),
-                  record.getUsageType( ),
-                  record.getResource( ),
-                  record.getStartTime( ),
-                  record.getEndTime( ),
-                  record.getUsageValue( ),
-                  naturalId,
-                  record.getOperation( ) + "|" + record.getUsageType( ) );
-              batchStatement.add( statement );
-            }
-            session.execute( batchStatement );
-          }
-        } catch ( final Exception ex ) {
-          LOG.error( "Failed to add records", ex );
-        }
-        return null;
-      } );
-    }
-
-    @Override
-    public Collection<AwsUsageRecord> queryHourly(String accountNumber, String service, String operation, String usageType, Date startDate, Date endDate) {
-      String resource = null; // Eventually support querying by resource
-      if (accountNumber == null) throw new IllegalArgumentException("accountNumber can not be null");
-      if (service == null) throw new IllegalArgumentException("service can not be null");
-      return CassandraSessionManager.doWithSession( session -> {
-        List<AwsUsageRecord> retVal = new ArrayList<>();
-
-        List<Object> queryValues = new ArrayList<>( );
-        StringBuilder queryBuilder = new StringBuilder( "SELECT account_id, service, operation, usage_type, resource, " +
-            "start_time, end_time, usage_value FROM eucalyptus_billing.aws_records" + ( resource == null ? "" : "_by_resource " ) +
-            " WHERE account_id = ? AND service = ?" );
-        queryValues.add( accountNumber );
-        queryValues.add( service );
-        if ( resource != null ) {
-          queryBuilder.append( " AND resource = ?" );
-          queryValues.add( resource );
-        }
-
-        // due to secondary indexes working on only a single field we add an additional concatenated field for
-        // operation and usage_type if both are searched
-        if ( operation != null ) {
-          if ( usageType != null && !usageType.trim().isEmpty() ) { // straight wildcard not allowed, so assume not blank
-            queryBuilder.append( " AND operation_usage_type_concat LIKE ?" );
-            queryValues.add( operation + "|" + usageType + "%" );
-          } else {
-            queryBuilder.append( " AND operation = ?" );
-            queryValues.add( operation );
-          }
-        } else if ( usageType != null && !usageType.trim().isEmpty() ) { // straight wildcard not allowed, so assume not blank
-          queryBuilder.append( " AND usage_type LIKE ?" );
-          queryValues.add( usageType + "%" );
-        }
-
-        if ( startDate != null ) {
-          queryBuilder.append( " AND end_time >= ?" );
-          queryValues.add( startDate );
-        }
-        if ( endDate != null ) {
-          queryBuilder.append( " AND end_time <= ?" );
-          queryValues.add( endDate );
-        }
-        SimpleStatement simpleStatement = new SimpleStatement(
-            queryBuilder.toString( ),
-            (Object[]) queryValues.toArray( )
-        );
-        ResultSet results = session.execute( simpleStatement );
-        for ( Row row : results ) {
-          retVal.add(
-              newRecord( row.getString( "account_id" ) )
-                  .withService( row.getString( "service" ) )
-                  .withOperation( row.getString( "operation" ) )
-                  .withUsageType( row.getString( "usage_type" ) )
-                  .withResource( row.getString( "resource" ) )
-                  .withStartTime( row.getTimestamp( "start_time" ) )
-                  .withEndTime( row.getTimestamp( "end_time" ) )
-                  .withUsageValue( row.getString( "usage_value" ) )
-                  .build( )
-          );
-        }
-        return retVal;
-      } );
     }
 
     @Override

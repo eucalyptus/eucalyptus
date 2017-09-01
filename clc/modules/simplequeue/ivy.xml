@@ -36,7 +36,6 @@
         <dependency name="eucalyptus-euare" rev="latest.integration"/>
         <dependency name="eucalyptus-core" rev="latest.integration"/>
         <dependency name="eucalyptus-ws" rev="latest.integration"/>
-        <dependency name="eucalyptus-cassandra-common" rev="latest.integration"/>
     </dependencies>
 </ivy-module>
 
