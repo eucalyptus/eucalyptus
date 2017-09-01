@@ -73,7 +73,6 @@ public interface AccountIdentifiers {
   // EUCA-10471 - System account for sqs, for cloudwatch metrics
   String SIMPLEQUEUE_SYSTEM_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "simplequeue";
 
-  String BILLING_SYSTEM_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "billing";
   String getAccountNumber( );
   String getAccountAlias( );
   String getCanonicalId( );
