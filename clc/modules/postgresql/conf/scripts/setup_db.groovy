@@ -87,6 +87,7 @@ class PostgresqlBootstrapper extends Bootstrapper.Simple implements DatabaseBoot
   
   // Static definitions of postgres commands and options
   private static final String EUCA_OLD_HOME = System.getProperty( 'euca.upgrade.old.dir' )
+  private static final String EUCA_DB_USER  = System.getProperty( 'euca.db.user', DatabaseBootstrapper.DB_USERNAME )
   private static final String EUCA_DB_DIR  = 'data'
   private static final String EUCA_TX_DIR  = 'tx'
   private static final String PG_BIN = 'bin'
@@ -108,7 +109,7 @@ class PostgresqlBootstrapper extends Bootstrapper.Simple implements DatabaseBoot
   private static final String PG_DB_OPT = '-D'
   private static final String PG_X_OPT = '-X'
   private static final String PG_X_DIR =  SubDirectory.DB.getChildFile( EUCA_TX_DIR ).getAbsolutePath()
-  private static final String PG_USER_OPT = "-U${DatabaseBootstrapper.DB_USERNAME}"
+  private static final String PG_USER_OPT = "-U${EUCA_DB_USER}"
   private static final String PG_TRUST_OPT = '--auth=password'
   private static final String PG_PASSFILE = SubDirectory.DB.getChildPath( 'pgpass.txt' )
   private static final String PG_PASSWORDFILE = SubDirectory.DB.getChildPath( 'pass.txt' )
@@ -1019,7 +1020,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   
   @Override
   String getUserName( ) {
-    DatabaseBootstrapper.DB_USERNAME
+    EUCA_DB_USER
   }
 
   @Override

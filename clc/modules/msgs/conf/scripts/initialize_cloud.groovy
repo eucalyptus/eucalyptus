@@ -83,7 +83,7 @@ try {
           "hibernate.hbm2ddl.auto": "create",
           "hibernate.generate_statistics": "false",
           "hibernate.connection.driver_class": Databases.getDriverName( ),
-          "hibernate.connection.username": "eucalyptus",
+          "hibernate.connection.username": Databases.getUserName( ),
           "hibernate.connection.password": Databases.getPassword( ),
           "hibernate.bytecode.use_reflection_optimizer": "true",
           "hibernate.cglib.use_reflection_optimizer": "true",
