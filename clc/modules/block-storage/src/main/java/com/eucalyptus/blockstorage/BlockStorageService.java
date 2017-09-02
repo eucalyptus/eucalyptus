@@ -33,8 +33,6 @@ import com.eucalyptus.blockstorage.msgs.AttachStorageVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.AttachStorageVolumeType;
 import com.eucalyptus.blockstorage.msgs.CloneVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.CloneVolumeType;
-import com.eucalyptus.blockstorage.msgs.ConvertVolumesResponseType;
-import com.eucalyptus.blockstorage.msgs.ConvertVolumesType;
 import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotResponseType;
 import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotType;
 import com.eucalyptus.blockstorage.msgs.CreateStorageVolumeResponseType;
@@ -99,8 +97,6 @@ public interface BlockStorageService {
 
   DescribeStorageVolumesResponseType DescribeStorageVolumes( DescribeStorageVolumesType request )
       throws EucalyptusCloudException;
-
-  ConvertVolumesResponseType ConvertVolumes( ConvertVolumesType request ) throws EucalyptusCloudException;
 
   AttachStorageVolumeResponseType attachVolume( AttachStorageVolumeType request ) throws EucalyptusCloudException;
 

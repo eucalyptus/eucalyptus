@@ -49,8 +49,6 @@ import com.eucalyptus.walrus.WalrusBackend;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.StreamedBaseMessage;
-import edu.ucsb.eucalyptus.msgs.ComponentMessageResponseType;
-import edu.ucsb.eucalyptus.msgs.ComponentMessageType;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import edu.ucsb.eucalyptus.msgs.StatEventRecord
@@ -450,16 +448,6 @@ public class GetObjectExtendedType extends WalrusDataGetRequestType {
 
 public class GetObjectExtendedResponseType extends WalrusDataGetResponseType {
   Status status;
-}
-
-public class WalrusComponentMessageType extends ComponentMessageType {
-  @Override
-  public String getComponent( ) {
-    return "walrus";
-  }
-}
-
-public class WalrusComponentMessageResponseType extends ComponentMessageResponseType {
 }
 
 public class WalrusUsageStatsRecord extends StatEventRecord {

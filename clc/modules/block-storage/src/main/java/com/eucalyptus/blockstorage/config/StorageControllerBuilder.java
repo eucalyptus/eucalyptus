@@ -46,11 +46,6 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.StorageManagers;
-import com.eucalyptus.blockstorage.msgs.DeregisterStorageControllerType;
-import com.eucalyptus.blockstorage.msgs.DescribeStorageControllersType;
-import com.eucalyptus.blockstorage.msgs.ModifyStorageControllerAttributeType;
-import com.eucalyptus.blockstorage.msgs.RegisterStorageControllerType;
-import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
@@ -74,8 +69,6 @@ import com.google.common.base.Joiner;
  *
  */
 @ComponentPart(Storage.class)
-@Handles({RegisterStorageControllerType.class, DeregisterStorageControllerType.class, DescribeStorageControllersType.class,
-    ModifyStorageControllerAttributeType.class})
 public class StorageControllerBuilder extends AbstractServiceBuilder<StorageControllerConfiguration> {
 
   /**

@@ -30,11 +30,6 @@ package com.eucalyptus.loadbalancing.config;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
-import com.eucalyptus.balancing.common.config.DeregisterLoadBalancingType;
-import com.eucalyptus.balancing.common.config.DescribeLoadBalancingType;
-import com.eucalyptus.balancing.common.config.ModifyLoadBalancingAttributeType;
-import com.eucalyptus.balancing.common.config.RegisterLoadBalancingType;
-import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
@@ -46,12 +41,6 @@ import com.eucalyptus.component.annotation.ComponentPart;
  *
  */
 @ComponentPart( LoadBalancing.class )
-@Handles( {
-    DeregisterLoadBalancingType.class,
-    DescribeLoadBalancingType.class,
-    ModifyLoadBalancingAttributeType.class,
-    RegisterLoadBalancingType.class,
-} )
 public class LoadBalancingServiceBuilder extends AbstractServiceBuilder<LoadBalancingConfiguration> {
   private static final Logger LOG = Logger.getLogger( LoadBalancingServiceBuilder.class );
 

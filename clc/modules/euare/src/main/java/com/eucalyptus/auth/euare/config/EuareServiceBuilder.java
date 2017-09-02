@@ -28,7 +28,6 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare.config;
 
-import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
@@ -38,12 +37,6 @@ import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.Euare;
 
 @ComponentPart( Euare.class )
-@Handles( {
-    RegisterEuareType.class,
-    DeregisterEuareType.class,
-    DescribeEuareType.class,
-    ModifyEuareAttributeType.class
-} )
 public class EuareServiceBuilder extends AbstractServiceBuilder<EuareConfiguration> {
 
   @Override

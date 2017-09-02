@@ -45,7 +45,6 @@ import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 
-import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.PublicService;
 import com.eucalyptus.system.Ats;
@@ -91,7 +90,6 @@ public class ApiEndpointServicesGroup extends ServiceGroup {
   }
   
   @ComponentPart( ApiEndpointServicesGroup.class )
-  @Handles( {} )
   public static class ApiEndpointServiceBuilder extends BaseServiceGroupBuilder<ApiEndpointGroup> {
     
     @Override

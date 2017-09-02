@@ -29,7 +29,6 @@
 package com.eucalyptus.simpleworkflow.config;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
@@ -37,21 +36,11 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
-import com.eucalyptus.simpleworkflow.common.config.DeregisterSimpleWorkflowType;
-import com.eucalyptus.simpleworkflow.common.config.DescribeSimpleWorkflowType;
-import com.eucalyptus.simpleworkflow.common.config.ModifySimpleWorkflowAttributeType;
-import com.eucalyptus.simpleworkflow.common.config.RegisterSimpleWorkflowType;
 
 /**
  *
  */
 @ComponentPart( SimpleWorkflow.class )
-@Handles( {
-    DeregisterSimpleWorkflowType.class,
-    DescribeSimpleWorkflowType.class,
-    ModifySimpleWorkflowAttributeType.class,
-    RegisterSimpleWorkflowType.class,
-} )
 public class SimpleWorkflowServiceBuilder extends AbstractServiceBuilder<SimpleWorkflowConfiguration> {
   private static final Logger LOG = Logger.getLogger( SimpleWorkflowServiceBuilder.class );
 

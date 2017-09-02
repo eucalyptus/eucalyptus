@@ -43,8 +43,6 @@ package com.eucalyptus.blockstorage.msgs;
 import com.eucalyptus.component.annotation.ComponentMessage;
 import com.eucalyptus.blockstorage.Storage;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.ComponentMessageResponseType;
-import edu.ucsb.eucalyptus.msgs.ComponentMessageType;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import edu.ucsb.eucalyptus.msgs.StatEventRecord
@@ -291,29 +289,6 @@ public class DescribeStorageSnapshotsType extends StorageRequestType {
 }
 public class DescribeStorageSnapshotsResponseType extends StorageResponseType {
   ArrayList<StorageSnapshot> snapshotSet = new ArrayList<StorageSnapshot>();
-}
-
-public class StorageComponentMessageType extends ComponentMessageType {
-
-  @Override
-  public String getComponent( ) {
-    return "storage";
-  }
-}
-
-public class StorageComponentMessageResponseType extends ComponentMessageResponseType {
-}
-
-public class ConvertVolumesType extends StorageComponentMessageType {
-  String originalProvider;
-
-  def ConvertVolumesType() {
-  }
-}
-
-public class ConvertVolumesResponseType extends StorageComponentMessageResponseType {
-  def ConvertVolumesResponseType() {
-  }
 }
 
 public class AttachStorageVolumeType extends StorageRequestType {

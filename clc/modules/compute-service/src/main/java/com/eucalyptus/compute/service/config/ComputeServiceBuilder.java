@@ -28,7 +28,6 @@
  ************************************************************************/
 package com.eucalyptus.compute.service.config;
 
-import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
@@ -36,21 +35,11 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.compute.common.Compute;
-import com.eucalyptus.compute.common.config.DeregisterComputeType;
-import com.eucalyptus.compute.common.config.DescribeComputeType;
-import com.eucalyptus.compute.common.config.ModifyComputeAttributeType;
-import com.eucalyptus.compute.common.config.RegisterComputeType;
 
 /**
  *
  */
 @ComponentPart( Compute.class )
-@Handles( {
-    DeregisterComputeType.class,
-    DescribeComputeType.class,
-    ModifyComputeAttributeType.class,
-    RegisterComputeType.class,
-} )
 public class ComputeServiceBuilder extends AbstractServiceBuilder<ComputeConfiguration> {
 
   @Override

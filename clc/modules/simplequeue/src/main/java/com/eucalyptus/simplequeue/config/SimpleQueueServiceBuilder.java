@@ -28,17 +28,12 @@
  ************************************************************************/
 package com.eucalyptus.simplequeue.config;
 
-import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.annotation.ComponentPart;
-import com.eucalyptus.simplequeue.DeregisterSimpleQueueType;
-import com.eucalyptus.simplequeue.DescribeSimpleQueueType;
-import com.eucalyptus.simplequeue.ModifySimpleQueueAttributeType;
-import com.eucalyptus.simplequeue.RegisterSimpleQueueType;
 import com.eucalyptus.simplequeue.SimpleQueue;
 import org.apache.log4j.Logger;
 
@@ -46,12 +41,6 @@ import org.apache.log4j.Logger;
  *
  */
 @ComponentPart( SimpleQueue.class )
-@Handles( {
-    DeregisterSimpleQueueType.class,
-    DescribeSimpleQueueType.class,
-    ModifySimpleQueueAttributeType.class,
-    RegisterSimpleQueueType.class,
-} )
 public class SimpleQueueServiceBuilder extends AbstractServiceBuilder<SimpleQueueConfiguration> {
   private static final Logger LOG = Logger.getLogger( SimpleQueueServiceBuilder.class );
 

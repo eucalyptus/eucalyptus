@@ -29,7 +29,6 @@
 package com.eucalyptus.cluster.service.config;
 
 import java.util.NoSuchElementException;
-import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.cluster.common.Cluster;
 import com.eucalyptus.cluster.common.ClusterRegistry;
 import com.eucalyptus.cluster.service.ClusterServiceId;
@@ -44,12 +43,6 @@ import com.eucalyptus.component.annotation.ComponentPart;
  *
  */
 @ComponentPart( ClusterServiceId.class )
-@Handles( {
-    RegisterClusterServiceType.class,
-    DeregisterClusterServiceType.class,
-    DescribeClusterServicesType.class,
-    ModifyClusterServiceAttributeType.class
-} )
 public class ClusterServiceBuilder extends AbstractServiceBuilder<ClusterServiceConfiguration> {
 
   @Override

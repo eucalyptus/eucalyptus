@@ -42,7 +42,6 @@ package edu.ucsb.eucalyptus.msgs;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
 import com.eucalyptus.component.annotation.ComponentMessage
-import com.eucalyptus.component.id.ComponentService
 import com.eucalyptus.component.id.Eucalyptus
 import com.eucalyptus.util.Exceptions
 
@@ -243,25 +242,6 @@ public class StatEventRecord extends BaseMessage {
   
   public String toString() {
     return String.format("%s", this.service);
-  }
-}
-
-@ComponentMessage(ComponentService.class)
-public class ComponentMessageType extends BaseMessage {
-  String component;
-  String host;
-  String name;
-  
-  def ComponentMessageType() {
-  }
-  
-  def ComponentMessageType(String component) {
-    this.component = component;
-  }
-}
-
-public class ComponentMessageResponseType extends BaseMessage {
-  def ComponentMessageResponseType() {
   }
 }
 

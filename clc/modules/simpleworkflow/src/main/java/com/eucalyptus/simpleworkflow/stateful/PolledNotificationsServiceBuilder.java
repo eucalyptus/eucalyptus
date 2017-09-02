@@ -28,7 +28,6 @@
  ************************************************************************/
 package com.eucalyptus.simpleworkflow.stateful;
 
-import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.DistributedServiceBuilder;
 import com.eucalyptus.component.annotation.ComponentPart;
@@ -38,7 +37,6 @@ import com.eucalyptus.simpleworkflow.common.stateful.PolledNotifications;
  *
  */
 @ComponentPart( PolledNotifications.class )
-@Handles({})
 public class PolledNotificationsServiceBuilder extends DistributedServiceBuilder {
   public PolledNotificationsServiceBuilder( ) {
     super( ComponentIds.lookup( PolledNotifications.class ) );

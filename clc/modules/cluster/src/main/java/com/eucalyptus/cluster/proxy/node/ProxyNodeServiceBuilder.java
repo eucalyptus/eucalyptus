@@ -42,15 +42,10 @@ package com.eucalyptus.cluster.proxy.node;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Handles;
-import com.eucalyptus.cluster.common.ClusterController;
 import com.eucalyptus.cluster.common.msgs.ClusterEnableServiceType;
 import com.eucalyptus.cluster.common.msgs.ClusterStopServiceType;
 import com.eucalyptus.component.*;
 import com.eucalyptus.component.annotation.ComponentPart;
-import com.eucalyptus.cluster.proxy.ProxyClusterController;
-import com.eucalyptus.empyrean.EnableServiceType;
-import com.eucalyptus.empyrean.StopServiceType;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Joiner;
 import com.eucalyptus.cluster.common.msgs.NodeInfo;
@@ -60,10 +55,6 @@ import com.eucalyptus.cluster.common.msgs.NodeInfo;
  * @todo doc
  */
 @ComponentPart(ProxyNodeController.class)
-@Handles({RegisterNodeControllerType.class,
-         DeregisterNodeControllerType.class,
-         DescribeNodeControllersType.class,
-         ModifyNodeControllerAttributeType.class})
 public class ProxyNodeServiceBuilder implements ServiceBuilder<ProxyNodeConfiguration> {
   private static Logger LOG = Logger.getLogger( ProxyNodeServiceBuilder.class );
 

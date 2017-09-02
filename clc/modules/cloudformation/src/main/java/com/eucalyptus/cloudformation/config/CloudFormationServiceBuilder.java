@@ -29,7 +29,6 @@
 package com.eucalyptus.cloudformation.config;
 
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.cloudformation.CloudFormation;
 import com.eucalyptus.cloudformation.workflow.WorkflowClientManager;
 import com.eucalyptus.component.AbstractServiceBuilder;
@@ -53,12 +52,6 @@ import java.util.function.Predicate;
  *
  */
 @ComponentPart( CloudFormation.class )
-@Handles( {
-    DeregisterCloudFormationType.class,
-    DescribeCloudFormationType.class,
-    ModifyCloudFormationAttributeType.class,
-    RegisterCloudFormationType.class,
-} )
 public class CloudFormationServiceBuilder extends AbstractServiceBuilder<CloudFormationConfiguration> {
 
   private static final Logger logger = Logger.getLogger( CloudFormationServiceBuilder.class );

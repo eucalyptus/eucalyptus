@@ -46,21 +46,12 @@ import com.eucalyptus.cluster.common.ClusterRegistry;
 import com.eucalyptus.cluster.proxy.ProxyClusterController;
 import com.eucalyptus.component.*;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.annotation.ComponentPart;
-import com.eucalyptus.cluster.proxy.config.DeregisterClusterType;
-import com.eucalyptus.cluster.proxy.config.DescribeClustersType;
-import com.eucalyptus.cluster.proxy.config.ModifyClusterAttributeType;
-import com.eucalyptus.cluster.proxy.config.RegisterClusterType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 
 @ComponentPart( ProxyClusterController.class )
-@Handles( { RegisterClusterType.class,
-           DeregisterClusterType.class,
-           DescribeClustersType.class,
-           ModifyClusterAttributeType.class } )
 public class ProxyClusterServiceBuilder extends AbstractServiceBuilder<ClusterConfiguration> {
   static Logger LOG = Logger.getLogger( ProxyClusterServiceBuilder.class );
   

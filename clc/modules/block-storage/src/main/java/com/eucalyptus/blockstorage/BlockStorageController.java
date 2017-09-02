@@ -77,8 +77,6 @@ import com.eucalyptus.blockstorage.msgs.AttachStorageVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.AttachStorageVolumeType;
 import com.eucalyptus.blockstorage.msgs.CloneVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.CloneVolumeType;
-import com.eucalyptus.blockstorage.msgs.ConvertVolumesResponseType;
-import com.eucalyptus.blockstorage.msgs.ConvertVolumesType;
 import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotResponseType;
 import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotType;
 import com.eucalyptus.blockstorage.msgs.CreateStorageVolumeResponseType;
@@ -1180,32 +1178,6 @@ public class BlockStorageController implements BlockStorageService {
     }
     return reply;
 
-  }
-
-  @Override
-  public ConvertVolumesResponseType ConvertVolumes(ConvertVolumesType request) throws EucalyptusCloudException {
-    ConvertVolumesResponseType reply = (ConvertVolumesResponseType) request.getReply();
-    String provider = request.getOriginalProvider();
-    provider = "com.eucalyptus.storage." + provider;
-    if (!blockManager.getClass().getName().equals(provider)) {
-      // different backend provider. Try upgrade
-      try {
-        LogicalStorageManager fromBlockManager = (LogicalStorageManager) ClassLoader.getSystemClassLoader().loadClass(provider).newInstance();
-        fromBlockManager.checkPreconditions();
-        // initialize fromBlockManager
-        new VolumesConvertor(fromBlockManager, blockManager).start();
-      } catch (InstantiationException e) {
-        LOG.error(e);
-        throw new EucalyptusCloudException(e);
-      } catch (ClassNotFoundException e) {
-        LOG.error(e);
-        throw new EucalyptusCloudException(e);
-      } catch (IllegalAccessException e) {
-        LOG.error(e);
-        throw new EucalyptusCloudException(e);
-      }
-    }
-    return reply;
   }
 
   /**

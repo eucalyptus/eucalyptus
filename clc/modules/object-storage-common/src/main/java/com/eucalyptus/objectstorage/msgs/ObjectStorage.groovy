@@ -69,8 +69,6 @@ import com.eucalyptus.util.ChannelBufferStreamingInputStream
 import com.google.common.collect.Maps
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage
-import edu.ucsb.eucalyptus.msgs.ComponentMessageResponseType
-import edu.ucsb.eucalyptus.msgs.ComponentMessageType
 import edu.ucsb.eucalyptus.msgs.ComponentProperty
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 import edu.ucsb.eucalyptus.msgs.StreamedBaseMessage
@@ -1101,16 +1099,6 @@ public class GetObjectStorageConfigurationResponseType extends ObjectStorageRequ
 
   def GetObjectStorageConfigurationResponseType() {}
 }
-
-public class ObjectStorageComponentMessageType extends ComponentMessageType {
-  @Override
-  public String getComponent() {
-    return "objectstorage";
-  }
-}
-
-public class ObjectStorageComponentMessageResponseType extends ComponentMessageResponseType {}
-
 
 @AdminOverrideAllowed
 @RequiresPermission(standard = S3PolicySpec.S3_PUTOBJECT)

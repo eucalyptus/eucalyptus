@@ -45,7 +45,6 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Databases;
-import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.AbstractServiceBuilder;
@@ -56,10 +55,6 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.compute.common.config.DeregisterEucalyptusType;
-import com.eucalyptus.compute.common.config.DescribeEucalyptusType;
-import com.eucalyptus.compute.common.config.ModifyEucalyptusAttributeType;
-import com.eucalyptus.compute.common.config.RegisterEucalyptusType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Exceptions;
@@ -67,10 +62,6 @@ import com.eucalyptus.util.Internets;
 import com.google.common.base.Predicate;
 
 @ComponentPart( Eucalyptus.class )
-@Handles( { RegisterEucalyptusType.class,
-           DeregisterEucalyptusType.class,
-           DescribeEucalyptusType.class,
-           ModifyEucalyptusAttributeType.class } )
 public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfiguration> {
   static Logger               LOG           = Logger.getLogger( EucalyptusBuilder.class );
 
