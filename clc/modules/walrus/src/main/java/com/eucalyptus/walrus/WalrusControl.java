@@ -102,17 +102,7 @@ public class WalrusControl implements WalrusService {
   private static StorageManager storageManager;
   private static WalrusManager walrusManager;
 
-  public static void checkPreconditions() throws EucalyptusCloudException, ExecutionException {
-    try {
-      SystemUtil.CommandOutput out = SystemUtil.runWithRawOutput(new String[] {WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "status"});
-      if (out.failed() || out.output.length() == 0) {
-        Faults.advisory(Components.lookup(WalrusBackend.class).getLocalServiceConfiguration(), new EucalyptusCloudException(
-            "drbdadm not found: Is drbd installed?"));
-      }
-    } catch (Exception e) {
-      LOG.warn("Failed determining if drbd is installed using 'drbdadm status'.", e);
-      throw new EucalyptusCloudException(e);
-    }
+  public static void checkPreconditions() throws EucalyptusCloudException {
   }
 
   public static void configure() {
@@ -124,10 +114,6 @@ public class WalrusControl implements WalrusService {
     }
     walrusManager = new WalrusFSManager(storageManager);
     WalrusManager.configure();
-    String limits = System.getProperty(WalrusProperties.USAGE_LIMITS_PROPERTY);
-    if (limits != null) {
-      WalrusProperties.shouldEnforceUsageLimits = Boolean.parseBoolean(limits);
-    }
     try {
       walrusManager.check();
     } catch (EucalyptusCloudException ex) {
@@ -135,9 +121,6 @@ public class WalrusControl implements WalrusService {
       SystemUtil.shutdownWithError(ex.getMessage());
     }
 
-    if (System.getProperty("euca.virtualhosting.disable") != null) {
-      WalrusProperties.enableVirtualHosting = false;
-    }
     try {
       if (storageManager != null) {
         storageManager.start();
@@ -175,8 +158,6 @@ public class WalrusControl implements WalrusService {
     storageManager.stop();
     storageManager = null;
     walrusManager = null;
-    WalrusProperties.shouldEnforceUsageLimits = true;
-    WalrusProperties.enableVirtualHosting = true;
   }
 
   /**

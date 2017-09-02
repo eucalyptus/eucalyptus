@@ -38,133 +38,60 @@
  ************************************************************************/
 package com.eucalyptus.walrus.util;
 
-import java.net.InetAddress;
-
-import org.apache.log4j.Logger;
-
-import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.component.Topology;
 import com.eucalyptus.system.BaseDirectory;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.walrus.WalrusBackend;
 
-public class WalrusProperties {
-  private static Logger LOG = Logger.getLogger(WalrusProperties.class);
+public interface WalrusProperties {
 
-  public static String NAME = "Walrus"; // leave as walrus for upgrade ease
-  public static final long G = 1024 * 1024 * 1024;
-  public static final long M = 1024 * 1024;
-  public static final long K = 1024;
+  String NAME = "Walrus"; // leave as walrus for upgrade ease
+  long G = 1024 * 1024 * 1024;
+  long M = 1024 * 1024;
 
-  public static final String bucketRootDirectory = BaseDirectory.VAR.toString() + "/bukkits";
-  public static int MAX_BUCKETS_PER_ACCOUNT = 100;
-  public static long MAX_BUCKET_SIZE = 5 * G;
-  public static long IMAGE_CACHE_SIZE = 30 * G;
-  public static int MAX_TOTAL_SNAPSHOT_SIZE = 50;
-  public static final boolean BUCKET_NAMES_REQUIRE_DNS_COMPLIANCE = false;
-  public static int MAX_KEYS = 1000;
+  String bucketRootDirectory = BaseDirectory.VAR.toString() + "/bukkits";
+  int MAX_BUCKETS_PER_ACCOUNT = 100;
+  long MAX_BUCKET_SIZE = 5 * G;
+  int MAX_TOTAL_SNAPSHOT_SIZE = 50;
+  boolean BUCKET_NAMES_REQUIRE_DNS_COMPLIANCE = false;
+  int MAX_KEYS = 1000;
 
-  public static int IO_CHUNK_SIZE = 102400;
-  public static boolean shouldEnforceUsageLimits = true;
-  public static boolean enableTorrents = false;
-  public static boolean enableVirtualHosting = true;
-  public static long MAX_INLINE_DATA_SIZE = 10 * M;
-  public static final String NAMESPACE_VERSION = "2006-03-01";
-  public static final String CONTENT_LEN = "Content-Length";
-  public static final String CONTENT_TYPE = "Content-Type";
-  public static final String CONTENT_DISPOSITION = "Content-Disposition";
-  public static final String CONTENT_MD5 = "Content-MD5";
-  public static final String MULTIFORM_DATA_TYPE = "multipart/form-data";
+  long MAX_INLINE_DATA_SIZE = 10 * M;
+  String NAMESPACE_VERSION = "2006-03-01";
+  String CONTENT_LEN = "Content-Length";
+  String CONTENT_TYPE = "Content-Type";
+  String CONTENT_MD5 = "Content-MD5";
 
-  public static final String USAGE_LIMITS_PROPERTY = "euca.walrus.usageLimits";
-  public static final String AMZ_META_HEADER_PREFIX = "x-amz-meta-";
-  public static final String AMZ_ACL = "x-amz-acl";
-  public static final String AMZ_REQUEST_ID = "x-amz-request-id";
+  String AMZ_META_HEADER_PREFIX = "x-amz-meta-";
+  String AMZ_ACL = "x-amz-acl";
+  String AMZ_REQUEST_ID = "x-amz-request-id";
 
-  public static final String ALL_USERS_GROUP = "http://acs.amazonaws.com/groups/global/AllUsers";
-  public static final String AUTHENTICATED_USERS_GROUP = "http://acs.amazonaws.com/groups/global/AuthenticatedUsers";
-  public static final String LOGGING_GROUP = "http://acs.amazonaws.com/groups/s3/LogDelivery";
+  String IGNORE_PREFIX = "x-ignore-";
+  String COPY_SOURCE = "x-amz-copy-source";
+  String METADATA_DIRECTIVE = "x-amz-metadata-directive";
 
-  public static final String IGNORE_PREFIX = "x-ignore-";
-  public static final String COPY_SOURCE = "x-amz-copy-source";
-  public static final String METADATA_DIRECTIVE = "x-amz-metadata-directive";
+  String X_AMZ_VERSION_ID = "x-amz-version-id";
+  String NULL_VERSION_ID = "null";
 
-  public static final String X_AMZ_VERSION_ID = "x-amz-version-id";
-  public static final String NULL_VERSION_ID = "null";
-
-  public static final String X_AMZ_SECURITY_TOKEN = "x-amz-security-token";
-
-  public static final String TRACKER_BINARY = "bttrack";
-  public static final String TORRENT_CREATOR_BINARY = "btmakemetafile";
-  public static final String TORRENT_CLIENT_BINARY = "btdownloadheadless";
-  public static String TRACKER_DIR = BaseDirectory.VAR.toString() + "/bt";
-  public static String TRACKER_URL = "http://localhost:6969/announce";
-  public static String TRACKER_PORT = "6969";
-  public static final String EUCA_ROOT_WRAPPER = BaseDirectory.LIBEXEC.toString() + "/euca_rootwrap";
+  String X_AMZ_SECURITY_TOKEN = "x-amz-security-token";
 
   // 15 minutes
-  public final static long EXPIRATION_LIMIT = 900000;
+  long EXPIRATION_LIMIT = 900000;
 
-  public enum CannedACL {
-    private_only {
-      public String toString() {
-        return "private";
-      }
-    },
-    public_read {
-      public String toString() {
-        return "public-read";
-      }
-    },
-    public_read_write {
-      public String toString() {
-        return "public-read-write";
-      }
-    },
-    authenticated_read {
-      public String toString() {
-        return "authenticated-read";
-      }
-    },
-    bucket_owner_read {
-      public String toString() {
-        return "bucket-owner-read";
-      }
-    },
-    bucket_owner_full_control {
-      public String toString() {
-        return "bucket-owner-full-control";
-      }
-    },
-    log_delivery_write {
-      public String toString() {
-        return "log-delivery-write";
-      }
-    },
-    aws_exec_read {
-      public String toString() {
-        return "aws-exec-read";
-      }
-    }
-  }
-
-  public enum Permission {
+  enum Permission {
     READ, WRITE, READ_ACP, WRITE_ACP, FULL_CONTROL
   }
 
-  public enum VersioningStatus {
+  enum VersioningStatus {
     Enabled, Disabled, Suspended
   }
 
-  public enum Headers {
+  enum Headers {
     Bucket, Key, RandomKey, VolumeId, S3UploadPolicy, S3UploadPolicySignature
   }
 
-  public enum ExtendedGetHeaders {
+  enum ExtendedGetHeaders {
     IfModifiedSince, IfUnmodifiedSince, IfMatch, IfNoneMatch, Range
   }
 
-  public enum ExtendedHeaderDateTypes {
+  enum ExtendedHeaderDateTypes {
     IfModifiedSince, IfUnmodifiedSince, CopySourceIfModifiedSince, CopySourceIfUnmodifiedSince;
 
     public static boolean contains(String value) {
@@ -177,93 +104,39 @@ public class WalrusProperties {
     }
   }
 
-  public enum ExtendedHeaderRangeTypes {
+  enum ExtendedHeaderRangeTypes {
     ByteRangeStart, ByteRangeEnd
   }
 
-  public enum GetOptionalParameters {
+  enum GetOptionalParameters {
     IsCompressed
   }
 
-  public enum FormField {
+  enum FormField {
     FormUploadPolicyData, AWSAccessKeyId, key, bucket, acl, policy, redirect, success_action_redirect, success_action_status, signature, file
   }
 
-  public enum IgnoredFields {
-    AWSAccessKeyId, signature, file, policy, submit
-  }
-
-  public enum PolicyHeaders {
-    expiration, conditions
-  }
-
-  public enum CopyHeaders {
+  enum CopyHeaders {
     CopySourceIfMatch, CopySourceIfNoneMatch, CopySourceIfUnmodifiedSince, CopySourceIfModifiedSince
   }
 
-  public enum SubResource {
+  enum SubResource {
     // Per the S3 Dev guide, these must be included in the canonicalized resource:
-    acl, lifecycle, location, logging, notification, partNumber, policy, requestPayment, torrent, uploadId, uploads, versionId, versioning, versions, website, cors, tagging;
+    acl, lifecycle, location, logging, notification, partNumber, policy, requestPayment, torrent, uploadId, uploads, versionId, versioning, versions, website, cors, tagging
   }
 
-  public enum HTTPVerb {
-    GET, PUT, DELETE, POST, HEAD;
+  enum HTTPVerb {
+    GET, PUT, DELETE, POST, HEAD
   }
 
-  public enum ServiceParameter {
+  enum ServiceParameter {
   }
 
-  public enum BucketParameter {
-    acl, location, prefix, maxkeys, delimiter, marker, torrent, logging, versioning, versions, versionidmarker, keymarker, cors, lifecycle, policy, notification, tagging, requestPayment, website, uploads;
+  enum BucketParameter {
+    acl, location, prefix, maxkeys, delimiter, marker, torrent, logging, versioning, versions, versionidmarker, keymarker, cors, lifecycle, policy, notification, tagging, requestPayment, website, uploads
   }
 
-  public enum ObjectParameter {
-    acl, torrent, versionId, uploads, partNumber, uploadId;
-  }
-
-  public enum RequiredQueryParams {
-    Date
-  }
-
-  public enum RequiredSOAPTags {
-    AWSAccessKeyId, Timestamp, Signature
-  }
-
-  /*
-   * Simply determines if the userId is a member of the groupId, very simplistic only for ALL_USERS and AUTHENTICATED_USERS, not arbitrary groups.
-   * Arbitrary groups are not yet supported in Walrus bucket policies/IAM policies.
-   */
-  public static boolean isUserMember(String userId, String groupId) {
-    if (groupId == null) {
-      return false;
-    }
-
-    if (groupId.equals(WalrusProperties.ALL_USERS_GROUP)) {
-      return true;
-    }
-
-    if (groupId.equals(WalrusProperties.AUTHENTICATED_USERS_GROUP) && userId != null && !"".equals(userId)
-        && !userId.equals(Principals.nobodyUser().getUserId())) {
-      return true;
-    }
-
-    return false;
-  }
-
-  public static String getTrackerUrl() {
-    try {
-      TRACKER_URL = "http://" + Topology.lookup(WalrusBackend.class).getUri().getHost() + ":" + TRACKER_PORT + "/announce";
-    } catch (Exception e) {
-      LOG.error(e);
-    }
-    return TRACKER_URL;
-  }
-
-  public static InetAddress getWalrusAddress() throws EucalyptusCloudException {
-    if (Topology.isEnabled(WalrusBackend.class)) {
-      return Topology.lookup(WalrusBackend.class).getInetAddress();
-    } else {
-      throw new EucalyptusCloudException("WalrusBackend not ENABLED");
-    }
+  enum ObjectParameter {
+    acl, torrent, versionId, uploads, partNumber, uploadId
   }
 }
