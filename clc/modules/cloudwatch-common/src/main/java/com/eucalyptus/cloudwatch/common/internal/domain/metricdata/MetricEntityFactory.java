@@ -44,7 +44,6 @@ import com.google.common.collect.Lists;
 import groovy.sql.Sql;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricEntity.MetricType;
-import com.eucalyptus.component.annotation.RemotablePersistence;
 import com.google.common.collect.ImmutableSet;
 public class MetricEntityFactory {
   private static MetricFactoryDelegate delegate = new MetricFactoryDelegate32();
@@ -81,7 +80,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "metric_data", indexes = {
       @Index( name = "metric_data_timestamp_idx", columnList = "timestamp" )
   } )
@@ -373,7 +371,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "custom_metric_data_0", indexes = {
       @Index( name = "custom_metric_data_0_timestamp_idx", columnList = "timestamp" )
   } )
@@ -385,7 +382,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "custom_metric_data_1", indexes = {
       @Index( name = "custom_metric_data_1_timestamp_idx", columnList = "timestamp" )
   } )
@@ -397,7 +393,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "custom_metric_data_2", indexes = {
       @Index( name = "custom_metric_data_2_timestamp_idx", columnList = "timestamp" )
   } )
@@ -409,7 +404,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "custom_metric_data_3", indexes = {
       @Index( name = "custom_metric_data_3_timestamp_idx", columnList = "timestamp" )
   } )
@@ -421,7 +415,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "custom_metric_data_4", indexes = {
       @Index( name = "custom_metric_data_4_timestamp_idx", columnList = "timestamp" )
   } )
@@ -433,7 +426,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "custom_metric_data_5", indexes = {
       @Index( name = "custom_metric_data_5_timestamp_idx", columnList = "timestamp" )
   } )
@@ -445,7 +437,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "custom_metric_data_6", indexes = {
       @Index( name = "custom_metric_data_6_timestamp_idx", columnList = "timestamp" )
   } )
@@ -457,7 +448,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "custom_metric_data_7", indexes = {
       @Index( name = "custom_metric_data_7_timestamp_idx", columnList = "timestamp" )
   } )
@@ -469,7 +459,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "custom_metric_data_8", indexes = {
       @Index( name = "custom_metric_data_8_timestamp_idx", columnList = "timestamp" )
   } )
@@ -481,7 +470,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "custom_metric_data_9", indexes = {
       @Index( name = "custom_metric_data_9_timestamp_idx", columnList = "timestamp" )
   } )
@@ -493,7 +481,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "custom_metric_data_a", indexes = {
       @Index( name = "custom_metric_data_a_timestamp_idx", columnList = "timestamp" )
   } )
@@ -505,7 +492,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "custom_metric_data_b", indexes = {
       @Index( name = "custom_metric_data_b_timestamp_idx", columnList = "timestamp" )
   } )
@@ -517,7 +503,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "custom_metric_data_c", indexes = {
       @Index( name = "custom_metric_data_c_timestamp_idx", columnList = "timestamp" )
   } )
@@ -529,7 +514,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "custom_metric_data_d", indexes = {
       @Index( name = "custom_metric_data_d_timestamp_idx", columnList = "timestamp" )
   } )
@@ -541,7 +525,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "custom_metric_data_e", indexes = {
       @Index( name = "custom_metric_data_e_timestamp_idx", columnList = "timestamp" )
   } )
@@ -553,7 +536,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "custom_metric_data_f", indexes = {
       @Index( name = "custom_metric_data_f_timestamp_idx", columnList = "timestamp" )
   } )
@@ -565,7 +547,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "System_metric_data_0", indexes = {
       @Index( name = "System_metric_data_0_timestamp_idx", columnList = "timestamp" )
   } )
@@ -577,7 +558,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "System_metric_data_1", indexes = {
       @Index( name = "System_metric_data_1_timestamp_idx", columnList = "timestamp" )
   } )
@@ -589,7 +569,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "System_metric_data_2", indexes = {
       @Index( name = "System_metric_data_2_timestamp_idx", columnList = "timestamp" )
   } )
@@ -601,7 +580,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "System_metric_data_3", indexes = {
       @Index( name = "System_metric_data_3_timestamp_idx", columnList = "timestamp" )
   } )
@@ -613,7 +591,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "System_metric_data_4", indexes = {
       @Index( name = "System_metric_data_4_timestamp_idx", columnList = "timestamp" )
   } )
@@ -625,7 +602,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "System_metric_data_5", indexes = {
       @Index( name = "System_metric_data_5_timestamp_idx", columnList = "timestamp" )
   } )
@@ -637,7 +613,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "System_metric_data_6", indexes = {
       @Index( name = "System_metric_data_6_timestamp_idx", columnList = "timestamp" )
   } )
@@ -649,7 +624,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "System_metric_data_7", indexes = {
       @Index( name = "System_metric_data_7_timestamp_idx", columnList = "timestamp" )
   } )
@@ -661,7 +635,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "System_metric_data_8", indexes = {
       @Index( name = "System_metric_data_8_timestamp_idx", columnList = "timestamp" )
   } )
@@ -673,7 +646,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "System_metric_data_9", indexes = {
       @Index( name = "System_metric_data_9_timestamp_idx", columnList = "timestamp" )
   } )
@@ -685,7 +657,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "System_metric_data_a", indexes = {
       @Index( name = "System_metric_data_a_timestamp_idx", columnList = "timestamp" )
   } )
@@ -697,7 +668,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "System_metric_data_b", indexes = {
       @Index( name = "System_metric_data_b_timestamp_idx", columnList = "timestamp" )
   } )
@@ -709,7 +679,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "System_metric_data_c", indexes = {
       @Index( name = "System_metric_data_c_timestamp_idx", columnList = "timestamp" )
   } )
@@ -721,7 +690,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "System_metric_data_d", indexes = {
       @Index( name = "System_metric_data_d_timestamp_idx", columnList = "timestamp" )
   } )
@@ -733,7 +701,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "System_metric_data_e", indexes = {
       @Index( name = "System_metric_data_e_timestamp_idx", columnList = "timestamp" )
   } )
@@ -745,7 +712,6 @@ public class MetricEntityFactory {
 
   @Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch_backend")
-  @RemotablePersistence
   @Table(name = "System_metric_data_f", indexes = {
       @Index( name = "System_metric_data_f_timestamp_idx", columnList = "timestamp" )
   } )

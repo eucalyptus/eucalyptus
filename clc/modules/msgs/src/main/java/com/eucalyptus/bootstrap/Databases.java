@@ -53,7 +53,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.ServiceUris;
@@ -121,10 +120,6 @@ public class Databases {
     return Sets.newTreeSet( Iterables.transform( PersistenceContexts.list( ), PersistenceContexts.toDatabaseName( ) ) );
   }
   
-  public static Iterable<String> remoteDatabases( ) {
-    return Sets.newTreeSet( PersistenceContexts.listRemotable() );
-  }
-
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.PoolInit )
   public static class DatabasePoolBootstrapper extends Bootstrapper.Simple {
@@ -138,20 +133,6 @@ public class Databases {
     }
   }
 
-  @Provides( Empyrean.class )
-  @RunDuring( Bootstrap.Stage.RemoteDbPoolInit )
-  public static class DatabaseRemotePoolBootstrapper extends Bootstrapper.Simple {
-    @Override
-    public boolean load( ) throws Exception {
-      try{
-        Groovyness.run( "setup_dbpool_remote.groovy" );
-      }catch(final Exception ex){
-        ;
-      }
-      return true;
-    }
-  }
-  
   static boolean shouldInitialize( ) {//GRZE:WARNING:HACKHACKHACK do not duplicate pls thanks.
     final String context = "eucalyptus_config";
     final String databaseName = PersistenceContexts.toDatabaseName( ).apply( context );

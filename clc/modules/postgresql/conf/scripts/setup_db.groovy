@@ -454,10 +454,8 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   }
 
   private Iterable<Pair<String,Optional<String>>> databases( ) {
-    final List<String> contexts = PersistenceContexts.list();
-    contexts.addAll(PersistenceContexts.listRemotable());
     Iterables.transform(
-        contexts,
+        PersistenceContexts.list( ),
         Pair.robuilder( PersistenceContexts.toDatabaseName( ), PersistenceContexts.toSchemaName( ) ) )
   }
   
