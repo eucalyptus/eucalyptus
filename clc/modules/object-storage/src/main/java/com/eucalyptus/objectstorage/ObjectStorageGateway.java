@@ -71,7 +71,6 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.objectstorage.auth.RequestAuthorizationHandler;
-import com.eucalyptus.objectstorage.bittorrent.Tracker;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.BucketTags;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
@@ -246,6 +245,7 @@ import com.eucalyptus.storage.msgs.s3.TaggingConfiguration;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.storage.msgs.s3.Upload;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -368,7 +368,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
     synchronized (ObjectStorageGateway.class) {
       ospClient = null;
     }
-    Tracker.die();
 
     try {
       ObjectMetadataManagers.getInstance().stop();
@@ -1213,17 +1212,19 @@ public class ObjectStorageGateway implements ObjectStorageService {
    */
   @Override
   public GetObjectResponseType getObject(final GetObjectType request) throws S3Exception {
-    ObjectEntity objectEntity = getObjectEntityAndCheckPermissions(request, request.getVersionId());
-    // Handle 100-continue here.
+    final ObjectEntity objectEntity = getObjectEntityAndCheckPermissions(request, request.getVersionId());
     if (objectEntity.getIsDeleteMarker()) {
       throw new NoSuchKeyException(request.getKey());
+    }
+    if ( MoreObjects.firstNonNull( request.getGetTorrent( ), false ) ) {
+      throw new AccessDeniedException( request.getBucket( ) + "/" + request.getKey( ) );
     }
 
     request.setKey(objectEntity.getObjectUuid());
     request.setBucket(objectEntity.getBucket().getBucketUuid());
-    GetObjectResponseType reply;
     // Versioning not used on backend
     request.setVersionId(null);
+    final GetObjectResponseType reply;
     try {
       reply = ospClient.getObject(request);
     } catch (Exception e) {
@@ -1237,7 +1238,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     reply.setVersionId(objectEntity.getVersionId());
     reply.setHasStreamingData(true);
 
-    if (request.getInlineData()) {
+    if ( MoreObjects.firstNonNull( request.getInlineData( ), false ) ) {
       // Write the data into a string and include in response. Only use for small internal operations.
       // Cannot be invoked by S3 clients (inline flag is not part of s3 binding)
       if (reply.getSize() * 4 > ObjectStorageProperties.MAX_INLINE_DATA_SIZE) {
