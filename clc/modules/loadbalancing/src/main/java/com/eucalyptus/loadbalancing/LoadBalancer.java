@@ -375,32 +375,6 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		return this.relationView.getAutoScaleGroups();
 	}
 	
-	public void addPolicyDescription(final LoadBalancerPolicyDescription desc){
-	  if (this.policies ==null)
-	    this.policies = Lists.newArrayList();
-	  this.policies.remove(desc);
-	  this.policies.add(desc);
-	}
-	
-	public void removePolicyDescription(final LoadBalancerPolicyDescription desc){
-	  if(this.policies ==null)
-	    return;
-	  this.policies.remove(desc);
-	}
-	
-	public void addBackendServerDescription(final LoadBalancerBackendServerDescription desc) {
-	  if (this.backendServers == null)
-	    this.backendServers = Lists.newArrayList();
-	  this.backendServers.remove(desc);
-	  this.backendServers.add(desc);
-	}
-	
-	public void removeBackendServerDescription(final LoadBalancerBackendServerDescription desc) {
-	  if(this.backendServers == null)
-	    return;
-	  this.backendServers.remove(desc);
-	}
-	
 	public boolean useSystemAccount(){
     return this.getLoadbalancerDeploymentVersion() != null &&
         DeploymentVersion.getVersion(this.getLoadbalancerDeploymentVersion()).isEqualOrLaterThan(DeploymentVersion.v4_2_0);

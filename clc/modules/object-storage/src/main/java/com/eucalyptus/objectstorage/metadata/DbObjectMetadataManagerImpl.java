@@ -168,40 +168,6 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
     }
   }
 
-  /**
-   * A more limited version of read-repair, it just modifies the 'islatest' tag, but will not mark any for deletion
-   */
-  private static final Predicate<ObjectEntity> SET_LATEST_PREDICATE = new Predicate<ObjectEntity>() {
-    public boolean apply(ObjectEntity example) {
-      try {
-        example.setIsLatest(true);
-        example = example.withState(ObjectState.extant);
-        Criteria search = Entities.createCriteria(ObjectEntity.class);
-        search.add(Example.create(example)).addOrder(Order.desc("objectModifiedTimestamp"));
-        search = getSearchByBucket(search, example.getBucket());
-        List<ObjectEntity> results = search.list();
-
-        if (results != null && results.size() > 1) {
-          try {
-            // Set all but the first element as not latest
-            for (ObjectEntity obj : results.subList(1, results.size())) {
-              obj.setIsLatest(false);
-            }
-          } catch (IndexOutOfBoundsException e) {
-            // Either 0 or 1 result, nothing to do
-          }
-        }
-      } catch (NoSuchElementException e) {
-        // Nothing to do.
-      } catch (Exception e) {
-        LOG.error("Error consolidating Object records for " + example.getResourceFullName(), e);
-        return false;
-      }
-      return true;
-
-    }
-  };
-
   @Override
   public void cleanupInvalidObjects(final Bucket bucket, final String objectKey) throws Exception {
     ObjectEntity searchExample = new ObjectEntity(bucket, objectKey, null);
@@ -638,18 +604,6 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
       throw ex;
     }
     return retrieved;
-  }
-
-  private ObjectEntity makeNotLatest(ObjectEntity entity) throws Exception {
-    try (TransactionResource tran = Entities.transactionFor(ObjectEntity.class)) {
-      ObjectEntity retrieved = Entities.merge(entity);
-      retrieved.setIsLatest(Boolean.FALSE);
-      tran.commit();
-      return retrieved;
-    } catch (Exception ex) {
-      LOG.warn("while attempting to set isLatest = true on the newest remaining object version, an exception was encountered: ", ex);
-      throw ex;
-    }
   }
 
   @Override

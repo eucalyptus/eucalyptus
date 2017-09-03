@@ -959,58 +959,6 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     return accessControlPolicy;
   }
 
-  protected AccessControlList getAccessControlList(MappingHttpRequest httpRequest) throws S3Exception, BindingException {
-    AccessControlList accessControlList = new AccessControlList();
-    ArrayList<Grant> grants = new ArrayList<Grant>();
-    String aclString = "";
-    try {
-      aclString = getMessageString(httpRequest);
-      if (aclString.length() > 0) {
-        XMLParser xmlParser = new XMLParser(aclString);
-        String ownerId = xmlParser.getValue("//Owner/ID");
-        String displayName = xmlParser.getValue("//Owner/DisplayName");
-
-        List<String> permissions = xmlParser.getValues("/AccessControlList/Grant/Permission");
-        if (permissions == null) {
-          throw new MalformedACLErrorException("/AccessControlList/Grant/Permission");
-        }
-        DTMNodeList grantees = xmlParser.getNodes("/AccessControlList/Grant/Grantee");
-        if (grantees == null) {
-          throw new MalformedACLErrorException("/AccessControlList/Grant/Grantee");
-        }
-
-        for (int i = 0; i < grantees.getLength(); ++i) {
-          String canonicalUserName = xmlParser.getValue(grantees.item(i), "DisplayName");
-          if (canonicalUserName.length() > 0) {
-            String id = xmlParser.getValue(grantees.item(i), "ID");
-            Grant grant = new Grant();
-            Grantee grantee = new Grantee();
-            grantee.setCanonicalUser(new CanonicalUser(id, canonicalUserName));
-            grant.setGrantee(grantee);
-            grant.setPermission(permissions.get(i));
-            grants.add(grant);
-          } else {
-            String groupUri = xmlParser.getValue(grantees.item(i), "URI");
-            if (groupUri.length() == 0)
-              throw new MalformedACLErrorException("Group-URI");
-            Grant grant = new Grant();
-            Grantee grantee = new Grantee();
-            grantee.setGroup(new Group(groupUri));
-            grant.setGrantee(grantee);
-            grant.setPermission(permissions.get(i));
-            grants.add(grant);
-          }
-        }
-      }
-    } catch (S3Exception e) {
-      throw e;
-    } catch (Exception ex) {
-      throw new MalformedACLErrorException("Unable to parse access control list: " + aclString);
-    }
-    accessControlList.setGrants(grants);
-    return accessControlList;
-  }
-
   private ArrayList<Part> getPartsList(MappingHttpRequest httpRequest) throws BindingException {
     ArrayList<Part> partList = new ArrayList<Part>();
     try {
@@ -1208,36 +1156,6 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
   protected static void validateCannedAcl(String cannedAcl) throws InvalidArgumentException {
     if (!AclUtils.isValidCannedAcl(cannedAcl)) {
       throw new InvalidArgumentException(cannedAcl);
-    }
-  }
-
-  protected static void addAccessControlList(final GroovyObject obj, final Map<String, String> paramFieldMap, Map bindingMap, String cannedACLString)
-      throws S3Exception {
-
-    AccessControlList accessControlList;
-    ArrayList<Grant> grants;
-
-    if (bindingMap.containsKey("AccessControlPolicy")) {
-      AccessControlPolicy accessControlPolicy = (AccessControlPolicy) bindingMap.get("AccessControlPolicy");
-      accessControlList = accessControlPolicy.getAccessControlList();
-      grants = accessControlList.getGrants();
-    } else {
-      accessControlList = new AccessControlList();
-      grants = new ArrayList<Grant>();
-    }
-
-    validateCannedAcl(cannedACLString);
-
-    CanonicalUser aws = new CanonicalUser();
-    aws.setDisplayName("");
-    Grant grant = new Grant(new Grantee(aws), cannedACLString);
-    grants.add(grant);
-
-    accessControlList.setGrants(grants);
-    // set obj property
-    String acl = paramFieldMap.remove("AccessControlList");
-    if (acl != null) {
-      obj.setProperty(acl, accessControlList);
     }
   }
 

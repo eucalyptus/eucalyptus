@@ -178,21 +178,6 @@ public class BlockStorageController implements BlockStorageService {
     }
   };
 
-  // TODO: zhill, this can be added later for snapshot abort capabilities
-  // static ConcurrentHashMap<String,HttpTransfer> httpTransferMap; //To keep track of current transfers to support aborting
-
-  // Introduced for testing EUCA-9297 fix: allows artificial capacity changes of backend
-  static boolean setUseTestingDelegateManager(boolean enableDelegate) {
-    if (enableDelegate && !(blockManager instanceof StorageManagerTestingProxy)) {
-      LOG.info("Switching to use delegating storage manager for testing");
-      blockManager = new StorageManagerTestingProxy(blockManager);
-    } else if (!enableDelegate && (blockManager instanceof StorageManagerTestingProxy)) {
-      LOG.info("Switching to NOT use delegating storage manager anymore");
-      blockManager = ((StorageManagerTestingProxy) blockManager).getDelegateStorageManager();
-    }
-    return enableDelegate;
-  }
-
   public static void configure() throws EucalyptusCloudException {
     BlockStorageGlobalConfiguration.getInstance();
     StorageProperties.updateWalrusUrl();

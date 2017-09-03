@@ -58,12 +58,9 @@ import com.eucalyptus.util.fsm.Transitions;
 import com.google.common.collect.ImmutableList;
 
 public class ServiceState implements StateMachine<ServiceConfiguration, Component.State, Component.Transition> {
-  static Logger                                                                           LOG     = Logger.getLogger( ServiceState.class );
   private final StateMachine<ServiceConfiguration, Component.State, Component.Transition> stateMachine;
   private final ServiceConfiguration                                                      parent;
-  private Component.State                                                                 goal    = Component.State.DISABLED;              //TODO:GRZE:OMGFIXME
-  private final NavigableSet<String>                                                      details = new ConcurrentSkipListSet<String>( );
-  
+
   public ServiceState( final ServiceConfiguration parent ) {
     this.parent = parent;
     this.stateMachine = this.buildStateMachine( );
@@ -72,10 +69,6 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
   @Override
   public Component.State getState( ) {
     return this.stateMachine.getState( );
-  }
-  
-  public String getDetails( ) {
-    return this.details.toString( );
   }
   
   private StateMachine<ServiceConfiguration, Component.State, Component.Transition> buildStateMachine( ) {
@@ -123,24 +116,9 @@ public class ServiceState implements StateMachine<ServiceConfiguration, Componen
     }
   }
   
-  /**
-   * @return the goal
-   */
-  public Component.State getGoal( ) {
-    return this.goal;
-  }
-  
-  void setGoal( final Component.State goal ) {
-    this.goal = goal;
-  }
-  
   @Override
   public boolean isBusy( ) {
     return this.stateMachine.isBusy( );
-  }
-  
-  protected boolean checkTransition( Transition transition ) {
-    return this.parent.getComponentId( ).isAvailableLocally( ) && this.stateMachine.isLegalTransition( transition );
   }
   
   @Override

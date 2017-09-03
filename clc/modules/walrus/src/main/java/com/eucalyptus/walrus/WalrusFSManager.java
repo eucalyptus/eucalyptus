@@ -165,8 +165,6 @@ public class WalrusFSManager extends WalrusManager {
 
   private StorageManager storageManager;
 
-  public static void configure() {}
-
   public WalrusFSManager(StorageManager storageManager) {
     this.storageManager = storageManager;
   }

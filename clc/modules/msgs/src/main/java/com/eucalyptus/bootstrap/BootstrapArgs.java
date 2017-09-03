@@ -70,22 +70,7 @@ public class BootstrapArgs {
     }
     
   }
-  
-  enum BootstrapHostValidator implements Predicate<String> {
-    INSTANCE;
-    @Override
-    public boolean apply( String arg0 ) {
-      try {
-        InetAddress.getByName( arg0 );
-        return true;
-      } catch ( UnknownHostException ex ) {
-        LOG.error( ex, ex );
-        return false;
-      }
-    }
-    
-  }
-  
+
   static void init( ) {
     bindAddrs.addAll( BootstrapArgs.parseMultipleArgs( "euca.bind.addr", BindAddressValidator.INSTANCE ) );
     bootstrapHosts.addAll( BootstrapArgs.parseMultipleArgs( "euca.bootstrap.host", BindAddressValidator.INSTANCE ) );

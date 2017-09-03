@@ -231,14 +231,6 @@ public class LoadBalancingSystemVpcs {
         return result;
     };
 
-    private static Predicate<RunningInstancesItemType> instanceAttachedToSystemVpc = (instance) -> {
-        final Optional<InstanceNetworkInterfaceSetItemType> controlIf =
-                instance.getNetworkInterfaceSet().getItem().stream()
-                        .filter(netif -> systemVpcs().contains(netif.getVpcId()))
-                        .findAny();
-        return controlIf.isPresent();
-    };
-
     private static Predicate<RunningInstancesItemType> instanceAttachedToUserVpc = (instance) -> {
         final Optional<InstanceNetworkInterfaceSetItemType> userIf =
                 instance.getNetworkInterfaceSet().getItem().stream()
@@ -326,13 +318,6 @@ public class LoadBalancingSystemVpcs {
                         systemCidrTokens[1].equals(userCidrTokens[1]);
             };
 
-    private static Function<String, RunningInstancesItemType> instanceLookup =
-            (instanceId) -> {
-                final EucalyptusActivityTasks client = EucalyptusActivityTasks.getInstance();
-                return client.describeSystemInstances(Lists.newArrayList(instanceId)).stream()
-                        .findAny().orElse(null);
-            };
-
     private static Function<String, String> systemSubnetToSecurityGroupId =
             (subnetId) -> {
                 final EucalyptusActivityTasks client = EucalyptusActivityTasks.getInstance();
@@ -395,42 +380,6 @@ public class LoadBalancingSystemVpcs {
                 return privateSubnets.get(az);
             };
 
-    private static Function<RunningInstancesItemType, String> systemVpcPrivateSubnet =
-            (instance) -> {
-                final EucalyptusActivityTasks client = EucalyptusActivityTasks.getInstance();
-
-                // describeSystemVpc returns user VPC when vpc name is explicitly given
-                final Optional<VpcType> userVpc =
-                        client.describeSystemVpcs(Lists.newArrayList(instance.getVpcId())).stream()
-                                .findAny();
-                if(! userVpc.isPresent())
-                    throw Exceptions.toUndeclared("No VPC ID is found for instance " + instance.getInstanceId());
-
-                final String userVpcCidrBlock = userVpc.get().getCidrBlock();
-
-                // find system VPC with no-overlapping cidr block
-                final String systemCidrBlock = SystemVpcCidrBlocks.stream().filter((systemCidr ->
-                    ! cidrBlockInclusive.test(systemCidr, userVpcCidrBlock)
-                )).findFirst().get();
-
-                final Optional<String> vpcId =
-                        client.describeSystemVpcs(null).stream()
-                        .filter(vpc -> systemCidrBlock.equals(vpc.getCidrBlock()))
-                        .map(vpc -> vpc.getVpcId())
-                        .findAny();
-                if(! vpcId.isPresent())
-                    throw Exceptions.toUndeclared("No system VPC with cidr block " + systemCidrBlock +" is found");
-
-                final String az = instance.getPlacement();
-                final Map<String, String> privateSubnets = getSubnets(vpcId.get(),
-                        SystemVpcPrivateSubnetBlocks().get(systemCidrBlock),
-                        Lists.newArrayList(az));
-                if(! privateSubnets.containsKey(az))
-                    throw Exceptions.toUndeclared("Failed to lookup system VPC's private subnet for instance " + instance.getInstanceId());
-
-                return privateSubnets.get(az);
-            };
-
     final static LoadingCache<String, Set<String>> controlInterfaceCache =   CacheBuilder.newBuilder()
             .maximumSize(10000)
             .expireAfterWrite(10, TimeUnit.MINUTES) /// control interface address shouldn't change
@@ -464,17 +413,6 @@ public class LoadBalancingSystemVpcs {
     // given the system vpc's subnet ID, return the security group ID for the VPC.
     public static String getSecurityGroupId(final String systemSubnetId) {
         return systemSubnetToSecurityGroupId.apply(systemSubnetId);
-    }
-
-    public static Set<String> getControlInterfaceAddresses(final LoadBalancerServoInstance instance) {
-        if(!isCloudVpc().isPresent() || !isCloudVpc().get())
-            return null;
-        try{
-            return controlInterfaceCache.get(instance.getInstanceId());
-        }catch(final Exception ex) {
-            LOG.error("Failed to lookup system vpc's control interface address", ex);
-            return null;
-        }
     }
 
     public static Optional<InstanceNetworkInterfaceSetItemType> getUserVpcInterface(final String instanceId) {

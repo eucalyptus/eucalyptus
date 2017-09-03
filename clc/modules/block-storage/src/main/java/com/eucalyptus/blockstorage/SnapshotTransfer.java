@@ -54,8 +54,6 @@ public interface SnapshotTransfer {
 
   public Future<String> upload(StorageResource storageResource, SnapshotProgressCallback progressCallback) throws SnapshotTransferException;
 
-  public void resumeUpload(StorageResource storageResource) throws SnapshotTransferException;
-
   public void cancelUpload() throws SnapshotTransferException;
 
   public void download(StorageResource storageResource) throws SnapshotTransferException;

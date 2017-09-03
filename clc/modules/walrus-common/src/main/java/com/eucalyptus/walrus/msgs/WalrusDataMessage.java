@@ -44,7 +44,6 @@ import java.nio.ByteBuffer;
 public class WalrusDataMessage {
   private Header header;
   private byte[] payload;
-  private static final String DELIMITER = "/";
 
   public enum Header {
     START, DATA, INTERRUPT, EOF
@@ -70,8 +69,6 @@ public class WalrusDataMessage {
     this.header = header;
     this.payload = payload;
   }
-
-  public WalrusDataMessage() {}
 
   public static WalrusDataMessage EOF() {
     return new WalrusDataMessage(Header.EOF, String.valueOf(System.currentTimeMillis()).getBytes());

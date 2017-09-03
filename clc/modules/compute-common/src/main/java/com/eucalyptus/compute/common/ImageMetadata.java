@@ -177,10 +177,6 @@ public interface ImageMetadata extends CloudMetadata {
     }
   }
   
-  public enum Hypervisor {
-    xen, kvm, other
-  }
-  
   public enum DeviceMappingType {
     root, swap, suppress, ephemeral, blockstorage, ami
   }

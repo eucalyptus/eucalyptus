@@ -61,7 +61,6 @@ public class EuareException extends EucalyptusWebServiceException {
   public static final String MALFORMED_CERTIFICATE = "MalformedCertificate";
   public static final String INVALID_NAME = "InvalidName";
   public static final String INVALID_ID = "InvalidId";
-  public static final String INVALID_PATH = "InvalidPath";
   public static final String INVALID_VALUE = "InvalidValue";
   public static final String VALIDATION_ERROR = "ValidationError";
 

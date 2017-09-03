@@ -225,20 +225,6 @@ public class ConnectionHandler extends Thread {
 		}
 	}
 
-	private final void
-	addCacheNS(Message response, Cache cache, Name name) {
-		SetResponse sr = cache.lookupRecords(name, Type.NS, Credibility.HINT);
-		if (!sr.isDelegation())
-			return;
-		RRset nsRecords = sr.getNS();
-		Iterator it = nsRecords.rrs();
-		while (it.hasNext()) {
-			Record r = (Record) it.next();
-			response.addRecord(r, Section.AUTHORITY);
-		}
-	}
-
-
 	void
 	addRRset(Name name, Message response, RRset rrset, int section, int flags) {
 		for (int s = 1; s <= section; s++)

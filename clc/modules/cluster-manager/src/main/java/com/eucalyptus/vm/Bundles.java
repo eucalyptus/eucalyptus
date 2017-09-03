@@ -347,26 +347,6 @@ public class Bundles {
     
   }
 
-  public static Function<BundleTask, VmBundleTask> fromBundleTask( final VmInstance vm ) {
-    return new Function<BundleTask, VmBundleTask>( ) {
-
-      @Override
-      public VmBundleTask apply( final BundleTask input ) {
-        return new VmBundleTask( vm,
-            input.getState( ),
-            input.getStartTime( ),
-            input.getUpdateTime( ),
-            input.getProgress( ) != null
-                ? Integer.parseInt( input.getProgress( ).replace( "%", "" ) )
-                : 0,
-            input.getBucket( ),
-            input.getPrefix( ),
-            input.getErrorMessage( ),
-            input.getErrorCode( ) );
-      }
-    };
-  }
-
   public static Function<VmBundleTask, BundleTask> asBundleTask( ) {
     return new Function<VmBundleTask, BundleTask>( ) {
 
@@ -394,10 +374,6 @@ public class Bundles {
   
   public static VmBundleTask create( VmInstance v, String bucket, String prefix, String policy ) throws AuthException {
     verifyPolicy( policy, bucket );
-    // TODO: this was removed to get bundle-instance to work we still need to resolve the 
-    // permissions issue see EUCA-3665
-    //verifyBucket( bucket );
-    // verifyPrefix( prefix );
     return VmBundleTask.create( v, bucket, prefix, policy );
   }
   

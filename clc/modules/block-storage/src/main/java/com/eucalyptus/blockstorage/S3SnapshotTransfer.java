@@ -418,14 +418,6 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
   }
 
   /**
-   * Not implemented
-   */
-  @Override
-  public void resumeUpload(StorageResource storageResource) throws SnapshotTransferException {
-    throw new SnapshotTransferException("Not supported yet");
-  }
-
-  /**
    * Downloads the compressed snapshot from objectstorage gateway to the filesystem
    */
   public void download(StorageResource storageResource) throws SnapshotTransferException {
@@ -916,14 +908,6 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
       } catch (IOException e) {
         LOG.debug("Failed to delete file: " + fileName);
       }
-    }
-  }
-
-  private void deleteFile(Path path) {
-    try {
-      Files.deleteIfExists(path);
-    } catch (IOException e) {
-      LOG.debug("Failed to delete file: " + path.toString());
     }
   }
 

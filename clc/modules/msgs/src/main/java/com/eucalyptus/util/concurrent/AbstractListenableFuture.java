@@ -212,7 +212,6 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
 
   class ExecPair<C> implements Runnable {
     private Callable<C>                      callable;
-    private Runnable                         runnable;
     private final CheckedListenableFuture<C> future = Futures.newGenericeFuture( );
     private final ExecutorService            executor;
 
@@ -279,7 +278,7 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
           }
         }
         if ( !this.future.isDone() ) {
-          String message = "Failed to invoke listener for " + AbstractListenableFuture.this + " of type: " + (this.runnable != null ? this.runnable : this.callable);
+          String message = "Failed to invoke listener for " + AbstractListenableFuture.this + " of type: " + this.callable;
           LOG.error( message );
           LOG.error( startingStack );
           throw new TimeoutException( message );
@@ -307,7 +306,7 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
     
     @Override
     public String toString( ) {
-      return String.format( "ExecPair:callable=%s:runnable=%s", this.callable, this.runnable );
+      return String.format( "ExecPair:callable=%s", this.callable );
     }
     
   }

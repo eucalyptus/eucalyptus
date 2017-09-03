@@ -122,18 +122,6 @@ public class LoadBalancerBackendServerDescription extends AbstractPersistent {
       this.policyDescriptions.add(policy);
   }
   
-  public void removePolicy(final String policyName){
-    if(this.policyDescriptions==null || policyName==null)
-      return;
-    LoadBalancerPolicyDescription toDelete = null;
-    for(final LoadBalancerPolicyDescription pol : this.policyDescriptions){
-      if(policyName.equals(pol.getPolicyName()))
-        toDelete = pol;
-    }
-    if(toDelete!=null)
-      this.policyDescriptions.remove(toDelete);
-  }
-  
   public void removePolicy(final LoadBalancerPolicyDescription policy){
     if(this.policyDescriptions==null || policy==null)
       return;

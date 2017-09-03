@@ -134,7 +134,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
   private static final Map<String, String> unsupportedOperationMap = populateUnsupportedOperationMap();
   private static final Map<String, String> notAllowedOperationMap = populateNotAllowedOperationMap();
   private static WalrusDataMessenger putMessenger;
-  public static final int DATA_MESSAGE_SIZE = 102400;
   private String key;
   private String randomKey;
   private WalrusDataQueue<WalrusDataMessage> putQueue;
@@ -1225,52 +1224,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
     return string.substring(0, 1).toUpperCase().concat(string.substring(1));
   }
 
-  private boolean exactMatch(JSONObject jsonObject, Map formFields, List<String> policyItemNames) {
-    Iterator<String> iterator = jsonObject.keys();
-    boolean returnValue = false;
-    while (iterator.hasNext()) {
-      String key = iterator.next();
-      key = key.replaceAll("\\$", "");
-      policyItemNames.add(key);
-      try {
-        if (jsonObject.get(key).equals(formFields.get(key)))
-          returnValue = true;
-        else
-          returnValue = false;
-      } catch (Exception ex) {
-        ex.printStackTrace();
-        return false;
-      }
-    }
-    return returnValue;
-  }
-
-  private boolean partialMatch(JSONArray jsonArray, Map<String, String> formFields, List<String> policyItemNames) {
-    boolean returnValue = false;
-    if (jsonArray.size() != 3)
-      return false;
-    try {
-      String condition = (String) jsonArray.get(0);
-      String key = (String) jsonArray.get(1);
-      key = key.replaceAll("\\$", "");
-      policyItemNames.add(key);
-      String value = (String) jsonArray.get(2);
-      if (condition.contains("eq")) {
-        if (value.equals(formFields.get(key)))
-          returnValue = true;
-      } else if (condition.contains("starts-with")) {
-        if (!formFields.containsKey(key))
-          return false;
-        if (formFields.get(key).startsWith(value))
-          returnValue = true;
-      }
-    } catch (Exception ex) {
-      ex.printStackTrace();
-      return false;
-    }
-    return returnValue;
-  }
-
   private String getMessageString(MappingHttpRequest httpRequest) {
     ChannelBuffer buffer = httpRequest.getContent();
     buffer.markReaderIndex();
@@ -1330,35 +1283,4 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
     }
     return putMessenger;
   }
-
-  class Writer extends Thread {
-
-    private ChannelBuffer firstBuffer;
-    private long dataLength;
-
-    public Writer(ChannelBuffer firstBuffer, long dataLength) {
-      this.firstBuffer = firstBuffer;
-      this.dataLength = dataLength;
-    }
-
-    public void run() {
-      byte[] bytes = new byte[DATA_MESSAGE_SIZE];
-
-      try {
-        Logs.extreme().trace("Starting upload");
-        putQueue.put(WalrusDataMessage.StartOfData(dataLength));
-
-        firstBuffer.markReaderIndex();
-        byte[] read = new byte[firstBuffer.readableBytes()];
-        firstBuffer.readBytes(read);
-        putQueue.put(WalrusDataMessage.DataMessage(read));
-        // putQueue.put(WalrusDataMessage.EOF());
-
-      } catch (Exception ex) {
-        LOG.error("Error putting data into internal transfer queue in Walrus", ex);
-      }
-    }
-
-  }
-
 }

@@ -51,20 +51,4 @@ public interface HasNaturalId {
    * Get the natural id.
    */
   String getNaturalId( );
-
-  static class Utils {
-    public static Function<HasNaturalId, String> toNaturalId() {
-      return NaturalId.INSTANCE;
-    }
-
-
-    private enum NaturalId implements Function<HasNaturalId, String> {
-      INSTANCE;
-
-      @Override
-      public String apply( final HasNaturalId hasNaturalId ) {
-        return hasNaturalId!=null ? hasNaturalId.getNaturalId() : null;
-      }
-    }
-  }
 }

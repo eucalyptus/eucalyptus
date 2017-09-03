@@ -84,7 +84,6 @@ public class ObjectStorageProperties {
   public static final long K = 1024;
 
   public static int IO_CHUNK_SIZE = 4096;
-  public static boolean enableTorrents = false;
   public static final String NAMESPACE_VERSION = "2006-03-01";
   public static int MAX_KEYS = 1000;
   public static int MIN_PART_NUMBER = 1;
@@ -139,17 +138,7 @@ public class ObjectStorageProperties {
   public static final String NULL_VERSION_ID = "null";
   public static final String X_AMZ_DELETE_MARKER = "x-amz-delete-marker";
 
-  public static final String TRACKER_BINARY = "bttrack";
-  public static final String TORRENT_CREATOR_BINARY = "btmakemetafile";
-  public static final String TORRENT_CLIENT_BINARY = "btdownloadheadless";
-  public static String TRACKER_DIR = BaseDirectory.VAR.toString() + "/bt";
-  public static String TRACKER_URL = "http://localhost:6969/announce";
-  public static String TRACKER_PORT = "6969";
-
   public static long MAX_INLINE_DATA_SIZE = 10 * M;
-  // public static String FORM_BOUNDARY_FIELD = IGNORE_PREFIX + "euca-form-boundary"; //internal header value for passing info
-  // public static String FIRST_CHUNK_FIELD = IGNORE_PREFIX + "FirstDataChunk";
-  // public static String UPLOAD_LENGTH_FIELD = IGNORE_PREFIX + "FileContentLength";
   public static long MPU_PART_MIN_SIZE = 5 * 1024 * 1024; // 5MB
 
   // 15 minutes
@@ -288,10 +277,6 @@ public class ObjectStorageProperties {
 
   public enum VersioningStatus {
     Enabled, Disabled, Suspended
-  }
-
-  public enum Headers {
-    Bucket, Key, RandomKey, VolumeId, S3UploadPolicy, S3UploadPolicySignature
   }
 
   public enum SubResource {
@@ -485,18 +470,5 @@ public class ObjectStorageProperties {
 
   public enum ObjectParameter {
     acl, torrent, versionId, uploads, partNumber, uploadId, maxParts, partNumberMarker;
-  }
-
-  public enum RequiredQueryParams {
-    Date
-  }
-
-  public static String getTrackerUrl() {
-    try {
-      TRACKER_URL = "http://" + Topology.lookup(ObjectStorage.class).getUri().getHost() + ":" + TRACKER_PORT + "/announce";
-    } catch (Exception e) {
-      LOG.error(e);
-    }
-    return TRACKER_URL;
   }
 }

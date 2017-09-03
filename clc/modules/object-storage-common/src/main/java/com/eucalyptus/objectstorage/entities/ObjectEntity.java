@@ -434,25 +434,6 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
     return true;
   }
 
-  public static class QueryHelpers {
-
-    public static Criterion getIsPartRestriction() {
-      return Restrictions.isNotNull("partNumber");
-    }
-
-    public static Criterion getIsNotPartRestriction() {
-      return Restrictions.isNull("partNumber");
-    }
-
-    public static Criterion getIsPendingRestriction() {
-      return Restrictions.isNull("objectModifiedTimestamp");
-    }
-
-    public static Criterion getIsMultipartRestriction() {
-      return Restrictions.isNotNull("uploadId");
-    }
-  }
-
   /**
    * Return a ListEntry for this entity
    *

@@ -68,7 +68,6 @@ public interface AccountIdentifiers {
 
   // EUCA-10102
   String IMAGING_SYSTEM_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "imaging";
-  String DATABASE_SYSTEM_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "database";
 
   // EUCA-10471 - System account for sqs, for cloudwatch metrics
   String SIMPLEQUEUE_SYSTEM_ACCOUNT = SYSTEM_ACCOUNT_PREFIX + "simplequeue";

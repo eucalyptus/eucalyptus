@@ -154,12 +154,6 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
     this.userGroup = userGroup;
   }
 
-  public static GroupEntity newInstanceWithGroupId( final String id ) {
-    GroupEntity g = new GroupEntity( );
-    g.groupId = id;
-    return g;
-  }
-
   @PrePersist
   public void generateOnCommit() {
     if( this.groupId == null ) {

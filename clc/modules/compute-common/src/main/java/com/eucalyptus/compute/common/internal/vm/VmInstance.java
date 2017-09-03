@@ -166,7 +166,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 
   public static final String         DEFAULT_TYPE         = "m1.small";
   public static final String         ROOT_DEVICE_TYPE_EBS = "ebs";
-  public static final String         ROOT_DEVICE_TYPE_INSTANCE_STORE = "instance-store";
   public static final String         ID_PREFIX            = "i";
   public static final String         VM_NC_HOST_TAG       = "euca:node";
 

@@ -63,16 +63,6 @@ class UnavailableImageInfo implements BootableImageInfo {
   }
 
   @Override
-  public boolean hasKernel() {
-    return false;
-  }
-
-  @Override
-  public boolean hasRamdisk() {
-    return false;
-  }
-
-  @Override
   public Platform getPlatform() {
     return platform;
   }

@@ -35,6 +35,4 @@ package com.eucalyptus.stats;
 public class StatsOutputValues {
     public static final String CHECK_OK = "OK";
     public static final String CHECK_FAILED = "FAILED";
-    public static final String SENSOR_NAME_SEPARATOR = ".";
-
 }

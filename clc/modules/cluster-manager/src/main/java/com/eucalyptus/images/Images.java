@@ -504,43 +504,6 @@ public class Images extends com.eucalyptus.compute.common.internal.images.Images
 	  return true;
   }
   
-  public static ImageInfo                         ALL              = new ImageInfo( );
-  
-  public static List<ImageInfo> listAllImages( ) {
-    final List<ImageInfo> images = Lists.newArrayList( );
-    final EntityTransaction db = Entities.get(ImageInfo.class);
-    try {
-      final List<ImageInfo> found = Entities.query( Images.ALL, true );
-      images.addAll( found );
-      db.rollback( );
-    } catch ( final Exception e ) {
-      db.rollback( );
-      LOG.error("failed to query images", e);
-    } finally{
-      if(db.isActive())
-        db.rollback();
-    }
-    return images;
-  }
-  
-  public static void enableImage( String imageId ) throws NoSuchImageException {
-    final EntityTransaction db = Entities.get(ImageInfo.class);
-    try {
-      final ImageInfo img = Entities.uniqueResult(Images.exampleWithImageId( imageId ));
-      img.setState( ImageMetadata.State.available );
-      db.commit();
-    } catch ( final NoSuchElementException e ) {
-      db.rollback();
-      throw new NoSuchImageException("Failed to lookup image: " + imageId, e); 
-    } catch ( final Exception e) {
-      db.rollback();
-      throw new NoSuchImageException( "Failed to lookup image: " + imageId, e );
-    } finally{
-      if(db.isActive())
-        db.rollback();
-    }
-  }
-
   public static void setImageState( String imageId, ImageMetadata.State state) throws NoSuchImageException {
 	  final EntityTransaction db = Entities.get( ImageInfo.class );
 	  try {
@@ -673,15 +636,6 @@ public class Images extends com.eucalyptus.compute.common.internal.images.Images
 	  };
   }
   
-  public static Predicate<DeviceMapping> findDeviceMap ( final String deviceName ) {
-    return new Predicate<DeviceMapping>( ) {
-	  @Override
-	  public boolean apply( DeviceMapping input ) {
-	    return deviceName.equals( input.getDeviceName( ) );
-	  }
-	};
-  }
-  
   public static Predicate<BlockDeviceMappingItemType> findBlockDeviceMappingItempType ( final String deviceName ) {
     return new Predicate<BlockDeviceMappingItemType>( ) {
 	  @Override
@@ -691,16 +645,7 @@ public class Images extends com.eucalyptus.compute.common.internal.images.Images
 	};
   }
   
-  public static Predicate<VmVolumeAttachment> findEbsRootVolumeAttachment( final String rootDevName ) {
-	return new Predicate<VmVolumeAttachment>() {
-  	  @Override
-	  public boolean apply( VmVolumeAttachment input ) {
-		return ( input.getDevice().equals(rootDevName) || input.getIsRootDevice() );
-	  }
-	};
-  }
-  
-  public static ImageInfo createFromDeviceMapping( 
+  public static ImageInfo createFromDeviceMapping(
       final UserFullName userFullName,
       final String imageName,
       final String imageDescription,
@@ -953,11 +898,6 @@ public class Images extends com.eucalyptus.compute.common.internal.images.Images
     } catch ( Exception e ) {
       throw new EucalyptusCloudException( "Failed to register image: " + manifest + " because of: " + e.getMessage( ), e );
     }
-    // TODO:GRZE:RESTORE
-// for( String p : extractProductCodes( inputSource, xpath ) ) {
-// imageInfo.addProductCode( p );
-// }
-// imageInfo.grantPermission( ctx.getAccount( ) );
     return ret;
   }
   
@@ -965,63 +905,6 @@ public class Images extends com.eucalyptus.compute.common.internal.images.Images
     return ImageConfiguration.getInstance( );
   }
   
-
-  public static void setConversionTaskId(final String imageId, final String taskId){
-    try ( final TransactionResource db =
-        Entities.transactionFor( ImageInfo.class ) ) {
-      try{
-        final ImageInfo entity = Entities.uniqueResult(Images.exampleWithImageId(imageId));
-        ((MachineImageInfo)entity).setImageConversionId(taskId);
-        Entities.persist(entity);
-        db.commit();
-      }catch(final Exception ex){
-        throw Exceptions.toUndeclared(ex);
-      }
-    } 
-  }
-  
-  public static void setImageFormat(final String imageId, ImageMetadata.ImageFormat format){
-    try ( final TransactionResource db =
-        Entities.transactionFor( ImageInfo.class ) ) {
-      try{
-        final ImageInfo entity = Entities.uniqueResult(Images.exampleWithImageId(imageId));
-        entity.setImageFormat(format.toString());
-        Entities.persist(entity);
-        db.commit();
-      }catch(final Exception ex){
-        throw Exceptions.toUndeclared(ex);
-      }
-    }
-  }
-  
-  public static void setRunManifestLocation(final String imageId, final String runManifestLocation){
-    try ( final TransactionResource db =
-        Entities.transactionFor( ImageInfo.class ) ) {
-      try{
-        final ImageInfo entity = Entities.uniqueResult(Images.exampleWithImageId(imageId));
-        ((MachineImageInfo)entity).setRunManifestLocation(runManifestLocation);
-        Entities.persist(entity);
-        db.commit();
-      }catch(final Exception ex){
-        throw Exceptions.toUndeclared(ex);
-      }
-    }
-  }
-  
-  public static void setImageVirtualizationType(final String imageId, ImageMetadata.VirtualizationType virtType){
-    try ( final TransactionResource db =
-        Entities.transactionFor( ImageInfo.class ) ) {
-      try{
-        final ImageInfo entity = Entities.uniqueResult(Images.exampleWithImageId(imageId));
-        ((MachineImageInfo) entity).setVirtualizationType(virtType);
-        Entities.persist(entity);
-        db.commit();
-      }catch(final Exception ex){
-        throw Exceptions.toUndeclared(ex);
-      }
-    }
-  }
-
   public static class ImageInfoFilterSupport extends FilterSupport<ImageInfo> {
     public ImageInfoFilterSupport() {
       super( builderFor( ImageInfo.class )

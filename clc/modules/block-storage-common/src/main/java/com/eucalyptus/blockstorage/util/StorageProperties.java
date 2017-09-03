@@ -70,10 +70,8 @@ public class StorageProperties {
   public static final long GB = 1024 * 1024 * 1024;
   public static final long MB = 1024 * 1024;
   public static final long KB = 1024;
-  public static final String iface = "eth0";
   public static final int MAX_TOTAL_VOLUME_SIZE = 500;
   public static final int MAX_VOLUME_SIZE = 100;
-  public static int TRANSFER_CHUNK_SIZE = 8192;
   public static final String zeroFillVolumesTxt = "false";
   public static final boolean zeroFillVolumes = Boolean.valueOf( zeroFillVolumesTxt );
   public static final long timeoutInMillis = 10000;
@@ -107,27 +105,7 @@ public class StorageProperties {
   public static final String S3_SNAPSHOT_OBJECT_ACCESS_POLICY =
       "{\"Statement\":[" + "{" + "\"Effect\":\"Allow\"," + "\"Action\": [\"s3:*\"]," + "\"Resource\": \"arn:aws:s3:::*/*\"" + "}" + "]}";
 
-  /**
-   * <p>
-   * Perl connection script returns xml output for libvirt usage. Use this pattern for parsing the block device name from the output.
-   * </p>
-   * 
-   * Example output from perl script:
-   * 
-   * <pre>
-   * {@code 
-   * <disk type='block'> 
-   * <driver cache='none' name='qemu'/> 
-   * <source dev='/dev/disk/by-id/dm-uuid-mpath-3600a098037542d68732b447869397146'/> 
-   * <target bus='virtio' dev='vdb'/> <serial>vol-5062e8f1-dev-sdb</serial> </disk>
-   * }
-   * </pre>
-   * 
-   * Use this regex pattern for parsing the block device string /dev/disk/by-id/dm-uuid-mpath-3600a098037542d68732b447869397146
-   */
-  public static final Pattern PARSE_BLOCK_DEVICE = Pattern.compile("source.* dev='([^']*)'");
-
-  public static final ImmutableSet<String> DELTA_GENERATION_STATE_EXCLUSION = ImmutableSet.of(StorageProperties.Status.failed.toString(), 
+  public static final ImmutableSet<String> DELTA_GENERATION_STATE_EXCLUSION = ImmutableSet.of(StorageProperties.Status.failed.toString(),
       StorageProperties.Status.deleting.toString(), StorageProperties.Status.deletedfromebs.toString(), StorageProperties.Status.deleted.toString());
 
   public static final ImmutableSet<String> DELTA_RESTORATION_STATE_EXCLUSION = ImmutableSet.of(StorageProperties.Status.failed.toString(),
@@ -139,7 +117,6 @@ public class StorageProperties {
   public static final Criterion SNAPSHOT_DELTA_RESTORATION_CRITERION =
       Restrictions.not(Restrictions.in("status", DELTA_RESTORATION_STATE_EXCLUSION));
 
-  
 
   public static String formatVolumeAttachmentTokenForTransfer(String token, String volumeId) {
     return TOKEN_PREFIX + volumeId + "," + token;
@@ -226,9 +203,5 @@ public class StorageProperties {
 
   public enum Status {
     creating, available, pending, failed, deleting, deleted, deletedfromebs
-  }
-
-  public enum StorageParameters {
-    EucaSignature, EucaSnapSize, EucaCert, EucaEffectiveUserId
   }
 }

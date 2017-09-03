@@ -778,20 +778,12 @@ public class AlarmManager {
   }
 
   private static class AutoScalingClient extends DispatchingClient<AutoScalingMessage,AutoScaling> {
-    public AutoScalingClient( final String userId ) {
-      super( userId, AutoScaling.class );
-    }
-
     public AutoScalingClient( final AccountFullName accountFullName ) {
       super( accountFullName, AutoScaling.class );
     }
   }
 
   private static class EucalyptusClient extends DispatchingClient<ComputeMessage,Eucalyptus> {
-    public EucalyptusClient( final String userId ) {
-      super( userId, Eucalyptus.class );
-    }
-
     public EucalyptusClient( final AccountFullName accountFullName ) {
       super( accountFullName, Eucalyptus.class );
     }

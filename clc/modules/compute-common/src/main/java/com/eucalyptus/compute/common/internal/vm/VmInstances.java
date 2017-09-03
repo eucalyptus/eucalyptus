@@ -303,28 +303,6 @@ public class VmInstances {
         predicate;
   }
 
-  public static VmVolumeAttachment lookupVolumeAttachment( final String volumeId , final List<VmInstance> vms ) {
-    VmVolumeAttachment ret = null;
-    try {
-      for ( VmInstance vm : vms ) {
-        try {
-          ret = vm.lookupVolumeAttachment( volumeId );
-          if ( ret.getVmInstance( ) == null ) {
-            ret.setVmInstance( vm );
-          }
-        } catch ( NoSuchElementException ex ) {
-          continue;
-        }
-      }
-      if ( ret == null ) {
-        throw new NoSuchElementException( "VmVolumeAttachment: no volume attachment for " + volumeId );
-      }
-      return ret;
-    } catch ( Exception ex ) {
-      throw new NoSuchElementException( ex.getMessage( ) );
-    }
-  }
-
   @RestrictedTypes.Resolver( CloudMetadata.VmInstanceMetadata.class )
   enum PersistentLookup implements Function<String, VmInstance> {
     INSTANCE;

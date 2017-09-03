@@ -58,8 +58,6 @@ import java.util.regex.PatternSyntaxException;
  * Created by ethomas on 12/10/13.
  */
 public class TemplateParser {
-  private static final String NO_ECHO_PARAMETER_VALUE = "****";
-
   private static final Logger LOG = Logger.getLogger(TemplateParser.class);
   public TemplateParser() {
   }

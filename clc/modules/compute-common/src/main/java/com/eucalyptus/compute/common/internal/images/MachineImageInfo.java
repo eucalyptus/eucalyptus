@@ -129,16 +129,6 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
   }
   
   @Override
-  public boolean hasKernel( ) {
-    return this.getKernelId( ) != null;
-  }
-  
-  @Override
-  public boolean hasRamdisk( ) {
-    return this.getRamdiskId( ) != null;
-  }
-  
-  @Override
   public String getManifestLocation( ) {
     return super.getManifestLocation( );
   }

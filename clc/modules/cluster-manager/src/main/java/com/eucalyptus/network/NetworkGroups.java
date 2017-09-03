@@ -123,17 +123,6 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
     }
   }
 
-  public static NetworkGroup lookupByNaturalId( final String uuid ) throws NoSuchMetadataException {
-    try ( final TransactionResource db = Entities.transactionFor( NetworkGroup.class ) ) {
-      NetworkGroup entity = Entities.uniqueResult( NetworkGroup.withNaturalId( uuid ) );
-      db.commit( );
-      return entity;
-    } catch ( Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
-      throw new NoSuchMetadataException( "Failed to find security group: " + uuid, ex );
-    }
-  }
-  
   public static NetworkGroup lookupByGroupId( final String groupId ) throws NoSuchMetadataException {
     return lookupByGroupId( null, groupId );
   }

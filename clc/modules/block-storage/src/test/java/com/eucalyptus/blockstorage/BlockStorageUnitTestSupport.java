@@ -240,11 +240,6 @@ public class BlockStorageUnitTestSupport {
       }
 
       @Override
-      public void resumeUpload(StorageResource storageResource) throws SnapshotTransferException {
-
-      }
-
-      @Override
       public void download(StorageResource storageResource) throws SnapshotTransferException {
 
       }

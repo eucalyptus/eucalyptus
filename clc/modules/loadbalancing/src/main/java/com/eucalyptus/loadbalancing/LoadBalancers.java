@@ -532,29 +532,6 @@ public class LoadBalancers {
 		}
 	}
 	
-	public static LoadBalancerBackendInstance lookupBackendInstance(final LoadBalancer lb, final String instanceId) {
-		try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
-			final LoadBalancerBackendInstance found = Entities.uniqueResult(LoadBalancerBackendInstance.named(lb, instanceId));
-			return found;
-		}catch(final NoSuchElementException ex){
-			throw ex;
-		}catch(final Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
-	}
-	
-	public static void deleteBackendInstance(final LoadBalancer lb, final String instanceId) {
-		try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
-			final LoadBalancerBackendInstance toDelete = Entities.uniqueResult(LoadBalancerBackendInstance.named(lb, instanceId));
-		    Entities.delete(toDelete);
-		    db.commit();
-		}catch(final NoSuchElementException ex){
-			throw ex;
-		}catch(final Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
-	}
-	
 	public static void unsetForeignKeys(final Context ctx, final String loadbalancer){
 		Predicate<LoadBalancerServoInstance> unsetServoInstanceKey = new Predicate<LoadBalancerServoInstance>(){
 			@Override

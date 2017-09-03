@@ -498,17 +498,6 @@ public class LoadBalancerPolicies {
     }
   }
 
-  public static void removePolicyFromListener(final LoadBalancerListener listener, final LoadBalancerPolicyDescription policy){
-    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerListener.class ) ) {
-      final LoadBalancerListener update = Entities.uniqueResult(listener);
-      update.removePolicy(policy);
-      db.commit();
-    }catch(final Exception ex){
-      throw Exceptions.toUndeclared(ex);
-    }
-  }
-
-
   public static void addPoliciesToBackendServer(final LoadBalancerBackendServerDescription server, final List<LoadBalancerPolicyDescription> policies)
       throws LoadBalancingException {
     try ( final TransactionResource db =

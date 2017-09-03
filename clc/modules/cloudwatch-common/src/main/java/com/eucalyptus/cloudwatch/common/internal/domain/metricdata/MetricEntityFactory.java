@@ -59,11 +59,6 @@ public class MetricEntityFactory {
     return delegate.getClassForEntitiesGet(metricType, hash);
   }
 
-  public static Collection<Class> getAllClassesForEntitiesGet(
-      MetricType metricType) {
-    return delegate.getAllClassesForEntitiesGet(metricType);
-  }
-
   public static Collection<Class> getAllClassesForEntitiesGet() {
     return delegate.getAllClassesForEntitiesGet();
   }
@@ -72,8 +67,6 @@ public class MetricEntityFactory {
     public MetricEntity getNewMetricEntity(MetricType metricType, String hash);
 
     public Class getClassForEntitiesGet(MetricType metricType, String hash);
-
-    public Collection<Class> getAllClassesForEntitiesGet(MetricType metricType);
 
     public Collection<Class> getAllClassesForEntitiesGet();
   }
@@ -100,11 +93,6 @@ public class MetricEntityFactory {
     @Override
     public Class getClassForEntitiesGet(MetricType metricType, String hash) {
       return MetricEntitySingle.class;
-    }
-
-    @Override
-    public Collection<Class> getAllClassesForEntitiesGet(MetricType metricType) {
-      return ImmutableSet.<Class> of(MetricEntitySingle.class);
     }
 
     @Override
@@ -308,37 +296,6 @@ public class MetricEntityFactory {
             default:
               throw new IllegalArgumentException("Illegal hash " + hash);
           }
-        }
-        default: {
-          throw new IllegalArgumentException("Invalid metric type");
-        }
-      }
-    }
-
-    @Override
-    public Collection<Class> getAllClassesForEntitiesGet(MetricType metricType) {
-      switch (metricType) {
-        case System: {
-          return ImmutableSet.<Class> of(SystemMetricEntity0.class,
-              SystemMetricEntity1.class, SystemMetricEntity2.class,
-              SystemMetricEntity3.class, SystemMetricEntity4.class,
-              SystemMetricEntity5.class, SystemMetricEntity6.class,
-              SystemMetricEntity7.class, SystemMetricEntity8.class,
-              SystemMetricEntity9.class, SystemMetricEntityA.class,
-              SystemMetricEntityB.class, SystemMetricEntityC.class,
-              SystemMetricEntityD.class, SystemMetricEntityE.class,
-              SystemMetricEntityF.class);
-        }
-        case Custom: {
-          return ImmutableSet.<Class> of(CustomMetricEntity0.class,
-              CustomMetricEntity1.class, CustomMetricEntity2.class,
-              CustomMetricEntity3.class, CustomMetricEntity4.class,
-              CustomMetricEntity5.class, CustomMetricEntity6.class,
-              CustomMetricEntity7.class, CustomMetricEntity8.class,
-              CustomMetricEntity9.class, CustomMetricEntityA.class,
-              CustomMetricEntityB.class, CustomMetricEntityC.class,
-              CustomMetricEntityD.class, CustomMetricEntityE.class,
-              CustomMetricEntityF.class);
         }
         default: {
           throw new IllegalArgumentException("Invalid metric type");

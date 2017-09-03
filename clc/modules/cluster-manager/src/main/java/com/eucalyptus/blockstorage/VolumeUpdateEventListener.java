@@ -86,7 +86,6 @@ import com.google.common.collect.Multimap;
 public class VolumeUpdateEventListener implements EventListener<ClockTick>, Callable<Boolean> {
   private static final Logger LOG                 = Logger.getLogger( VolumeUpdateEventListener.class );
   private static final long VOLUME_STATE_TIMEOUT  = 2 * 60 * 60 * 1000L;
-  private static final long VOLUME_DELETE_TIMEOUT = 30 * 60 * 1000L;
   private static final AtomicBoolean ready = new AtomicBoolean( true );
   private static final ConcurrentMap<String, Long> pendingUpdates = Maps.newConcurrentMap( );
 

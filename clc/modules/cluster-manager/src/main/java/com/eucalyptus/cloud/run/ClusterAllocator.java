@@ -181,7 +181,6 @@ public class ClusterAllocator implements Runnable {
     ROLLBACK,
   }
   
-  public static Boolean             SPLIT_REQUESTS = true; //TODO:GRZE:@Configurable
   private StatefulMessageSet<State> messages;
   private final Allocation          allocInfo;
   private Cluster                   cluster;

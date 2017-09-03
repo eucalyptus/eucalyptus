@@ -85,7 +85,6 @@ public class Exceptions {
 
   private static Logger                    LOG                      = Logger.getLogger( Exceptions.class );
   private static final List<String>        DEFAULT_FILTER_MATCHES   = Lists.newArrayList( "com.eucalyptus", "edu.ucsb.eucalyptus" );
-  private static final Integer             DEFAULT_FILTER_MAX_DEPTH = 10;
   private static final StackTraceElement[] steArrayType             = new StackTraceElement[1];
 
   public static WebServicesException notFound( String message, Throwable... t ) {

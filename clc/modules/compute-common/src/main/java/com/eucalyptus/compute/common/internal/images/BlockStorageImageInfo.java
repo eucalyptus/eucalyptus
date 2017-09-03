@@ -136,16 +136,6 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
   }
   
   @Override
-  public boolean hasKernel( ) {
-    return this.getKernelId( ) != null;
-  }
-  
-  @Override
-  public boolean hasRamdisk( ) {
-    return this.getRamdiskId( ) != null;
-  }
-
-  @Override
   public String getRootDeviceName( ) {
     return this.rootDeviceName;
   }

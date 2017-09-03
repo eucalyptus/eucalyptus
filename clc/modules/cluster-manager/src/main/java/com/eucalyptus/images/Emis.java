@@ -94,25 +94,6 @@ import com.eucalyptus.cluster.common.msgs.VmTypeInfo;
 public class Emis {
   private static Logger LOG = Logger.getLogger( Emis.class );
   
-  enum VBRTypes {
-    MACHINE( "objectstorage://" ),
-    EBS,
-    KERNEL( "objectstorage://" ),
-    RAMDISK( "objectstorage://" ),
-    EPHEMERAL,
-    SWAP;
-    String prefix;
-    
-    private VBRTypes( ) {
-      this( "" );
-    }
-    
-    private VBRTypes( final String prefix ) {
-      this.prefix = prefix;
-    }
-    
-  }
-  
   @Resolver( ImageMetadata.class )
   public enum LookupImage implements Function<String, ImageInfo> {
     INSTANCE;

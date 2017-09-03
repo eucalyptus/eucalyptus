@@ -53,7 +53,6 @@ import java.util.List;
  */
 public class ComponentsSensor implements EucalyptusStatsSensor {
     private static final Logger LOG = Logger.getLogger(ComponentsSensor.class);
-    private static final long DEFAULT_TTL_SEC = 30;
     private static final String STATE_NAME = "state";
     private String sensorName = "euca.components";
     private long ttl;

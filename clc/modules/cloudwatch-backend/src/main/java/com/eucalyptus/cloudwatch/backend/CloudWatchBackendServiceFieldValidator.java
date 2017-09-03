@@ -70,47 +70,6 @@ public class CloudWatchBackendServiceFieldValidator {
     }
   }
 
-  static void validateNotTooManyDataPoints(Date startTime, Date endTime,
-                                           Integer period, long maxDataPoints) throws CloudWatchException {
-    NumberFormat nf = NumberFormat.getInstance();
-    long possibleRequestedDataPoints = (endTime.getTime() - startTime.getTime()) / (1000L * period);
-    if (possibleRequestedDataPoints > maxDataPoints) {
-      throw new InvalidParameterCombinationException("You have requested up to " + nf.format(possibleRequestedDataPoints)+ " datapoints, which exceeds the limit of " + nf.format(maxDataPoints) + ". You may reduce the datapoints requested by increasing Period, or decreasing the time range.");
-    }
-  }
-
-  static int NUM_SYSTEM_METRIC_DATA_POINTS = 50;
-  static int NUM_CUSTOM_METRIC_DATA_POINTS = 20;
-  static List<MetricDatum> validateMetricData(MetricData metricData, MetricType metricType) throws CloudWatchException {
-    List<MetricDatum> metricDataCollection = null;
-    if (metricData != null) {
-      metricDataCollection = metricData.getMember();
-      ;
-    }
-    if (metricDataCollection == null) {
-      throw new MissingParameterException(
-        "The parameter MetricData is required.");
-    }
-    if (metricDataCollection.size() < 1) {
-      throw new MissingParameterException(
-        "The parameter MetricData is required.");
-    }
-    if (metricDataCollection.size() > NUM_CUSTOM_METRIC_DATA_POINTS && metricType == MetricType.Custom) {
-      throw new InvalidParameterValueException(
-        "The collection MetricData must not have a size greater than " + NUM_CUSTOM_METRIC_DATA_POINTS);
-    }
-    if (metricDataCollection.size() > NUM_SYSTEM_METRIC_DATA_POINTS && metricType == MetricType.Custom) {
-      throw new InvalidParameterValueException(
-        "The collection MetricData must not have a size greater than " + NUM_SYSTEM_METRIC_DATA_POINTS + " (for system metrics)");
-    }
-    int ctr = 1;
-    for (MetricDatum metricDatum : metricDataCollection) {
-      validateMetricDatum(metricDatum, "MetricData.member." + ctr);
-      ctr++;
-    }
-    return metricDataCollection;
-  }
-
   static Date validateStartDate(Date startDate, boolean required)
       throws CloudWatchException {
     return validateTimestamp(startDate, "StartDate", required);
@@ -119,105 +78,6 @@ public class CloudWatchBackendServiceFieldValidator {
   static Date validateEndDate(Date endDate, boolean required)
       throws CloudWatchException {
     return validateTimestamp(endDate, "EndDate", required);
-  }
-
-  static Date validateStartTime(Date startTime, boolean required)
-      throws CloudWatchException {
-    return validateTimestamp(startTime, "StartTime", required);
-  }
-
-  static Date validateEndTime(Date endTime, boolean required)
-      throws CloudWatchException {
-    return validateTimestamp(endTime, "EndTime", required);
-  }
-
-  static MetricDatum validateMetricDatum(MetricDatum metricDatum, String name) throws CloudWatchException {
-    if (metricDatum == null) {
-      throw new MissingParameterException("The parameter " + name + " is required.");
-    }
-    validateDimensions(metricDatum.getDimensions(), name + ".Dimensions");
-    validateMetricName(metricDatum.getMetricName(), name + ".MetricName",
-        true);
-    validateWithinTwoWeeks(metricDatum.getTimestamp(), name + "Timestamp");
-    validateUnits(metricDatum.getUnit(), name + ".Unit", true);
-    validateValueAndStatisticSet(metricDatum.getValue(), name + ".Value",
-          metricDatum.getStatisticValues(), name + ".StatisticValues");
-    return metricDatum;
-  }
-
-  static void validateWithinTwoWeeks(Date timestamp, String name) throws CloudWatchException {
-    if (timestamp == null) return;
-    Date now = new Date();
-    Date twoWeeksAgo = new Date(now.getTime() - 2 * 7 * 24 * 3600 * 1000L);
-    long BUFFER = 2 * 3600 * 1000L; // two hours
-    if (timestamp.getTime() > now.getTime() + BUFFER || timestamp.getTime() < twoWeeksAgo.getTime() - BUFFER) {
-      throw new InvalidParameterValueException("The parameter " + name + ".Timestamp must specify a time within the past two weeks.");
-    }
-  }
-
-  static void validateValueAndStatisticSet(Double value, String valueName, StatisticSet statisticValues, String statisticValuesName) throws CloudWatchException {
-    if (value == null && statisticSetHasNoFields(statisticValues)) {
-      throw new MissingParameterException("At least one of the parameters " + valueName + " or "
-          + statisticValuesName + " must be specified.");
-    }
-    if (value != null && !statisticSetHasNoFields(statisticValues)) {
-      throw new InvalidParameterCombinationException("The parameters " + valueName + " and "
-          + statisticValuesName + " are mutually exclusive and you have specified both.");
-    }
-    if (value != null) return; // value is set
-    validateAllStatisticSetFields(statisticValues, statisticValuesName);
-    if (statisticValues.getMaximum() < statisticValues.getMinimum()) {
-      throw new MissingParameterException("The parameter " + statisticValuesName+ ".Maximum must be greater than " + statisticValuesName + ".Minimum.");
-
-    }
-    if (statisticValues.getSampleCount() < 0) {
-      throw new MissingParameterException("The parameter " + statisticValuesName+ ".SampleCount must be greater than 0.");
-    }
-    if (statisticValues.getSampleCount() == 0.0) {
-      throw new MissingParameterException("The parameter " + statisticValuesName+ ".SampleCount must not equal 0.");
-    }
-  }
-
-  static void validateAllStatisticSetFields(StatisticSet statisticValues, String statisticValuesName) throws CloudWatchException {
-    StringBuilder errors = new StringBuilder();
-    boolean haveErrors = false;
-    if (statisticValues == null || statisticValues.getMaximum() == null) {
-      if (haveErrors) {
-        errors.append("\n");
-      }
-      errors.append("The parameter " + statisticValuesName + ".Maximum is required.");
-      haveErrors = true;
-    }
-    if (statisticValues == null || statisticValues.getMinimum() == null) {
-      if (haveErrors) {
-        errors.append("\n");
-      }
-      errors.append("The parameter " + statisticValuesName + ".Minimum is required.");
-      haveErrors = true;
-    }
-    if (statisticValues == null || statisticValues.getSampleCount() == null) {
-      if (haveErrors) {
-        errors.append("\n");
-      }
-      errors.append("The parameter " + statisticValuesName + ".SampleCount is required.");
-      haveErrors = true;
-    }
-    if (statisticValues == null || statisticValues.getSum() == null) {
-      if (haveErrors) {
-        errors.append("\n");
-      }
-      errors.append("The parameter " + statisticValuesName + ".Sum is required.");
-      haveErrors = true;
-    }
-    if (haveErrors) {
-      throw new MissingParameterException(errors.toString());
-    }
-  }
-
-  static boolean statisticSetHasNoFields(StatisticSet statisticValues) {
-    return (statisticValues == null) || (
-        (statisticValues.getMaximum()) == null && (statisticValues.getMinimum() == null) &&
-        (statisticValues.getSampleCount()) == null && (statisticValues.getSum() == null));
   }
 
   static Units validateUnits(String unit, boolean useNoneIfNull) throws CloudWatchException {
@@ -258,12 +118,6 @@ public class CloudWatchBackendServiceFieldValidator {
   static Dimensions validateDimensions(Dimensions dimensions)
       throws CloudWatchException {
     return validateDimensions(dimensions, "Dimensions");
-  }
-
-  static DimensionFilters validateDimensionFilters(
-    DimensionFilters dimensionFilters)
-      throws CloudWatchException {
-    return validateDimensionFilters(dimensionFilters, "Dimensions");
   }
 
   static Double validateDouble(Double value, String name, boolean required)
@@ -340,65 +194,6 @@ public class CloudWatchBackendServiceFieldValidator {
   static String validateActionPrefix(String actionPrefix, boolean required)
       throws CloudWatchException {
     return validateStringLength(actionPrefix, "ActionPrefix", 1, 1024, required);
-  }
-
-  static Statistics validateStatistics(Statistics statistics)
-      throws CloudWatchException {
-    Collection<String> statisticCollection = null;
-    if (statistics != null) {
-      statisticCollection = statistics.getMember();
-    }
-    if (statisticCollection == null) {
-      throw new MissingParameterException("The parameter Statistics is required.");
-    }
-    if (statisticCollection.size() < 1) {
-      throw new MissingParameterException("The parameter Statistics is required.");
-    }
-
-    if (statisticCollection.size() > 5) {
-      throw new InvalidParameterValueException(
-          "The collection MetricData must not have a size greater than 5.");
-    }
-    int ctr = 1;
-    String[] statisticValues = new String[] { "Average", "Sum", "SampleCount",
-        "Maximum", "Minimum" };
-    for (String statistic : statisticCollection) {
-      if (statistic == null) {
-        throw new InvalidParameterValueException("The parameter Statistics.member." + ctr
-            + " is required.");
-      }
-      if (!Arrays.asList(statisticValues).contains(statistic)) {
-        throw new InvalidParameterValueException("The parameter Statistics.member." + ctr
-            + " must be a value in the set " + Arrays.asList(statisticValues) + ".");
-      }
-      ctr++;
-    }
-    return statistics;
-  }
-
-  static DimensionFilters validateDimensionFilters(
-    DimensionFilters dimensionFilters, String name)
-      throws CloudWatchException {
-    Collection<DimensionFilter> dimensionFiltersCollection = null;
-    if (dimensionFilters != null) {
-      dimensionFiltersCollection = dimensionFilters.getMember();
-    }
-    if (dimensionFiltersCollection == null) {
-      return dimensionFilters;
-    }
-    if (dimensionFiltersCollection.size() > 10) {
-      throw new InvalidParameterValueException("The collection " + name
-          + " must not have a size greater than 10.");
-    }
-    int ctr = 1;
-    for (DimensionFilter dimensionFilter : dimensionFiltersCollection) {
-      validateStringLength(dimensionFilter.getName(), name + ".member." + (ctr)
-          + ".Name", 1, 255, true);
-      validateStringLength(dimensionFilter.getValue(), name + ".member."
-          + (ctr) + ".Value", 1, 255, true);
-      ctr++;
-    }
-    return dimensionFilters;
   }
 
   static Dimensions validateDimensions(Dimensions dimensions, String name) throws CloudWatchException {
@@ -618,39 +413,6 @@ public class CloudWatchBackendServiceFieldValidator {
   static MetricEntity.MetricType getMetricTypeFromNamespace(String namespace) {
     return namespace.startsWith(SystemMetricPrefix) ? MetricEntity.MetricType.System
         : MetricEntity.MetricType.Custom;
-  }
-
-  static ArrayList<Datapoint> convertMetricStatisticsToDatapoints(
-    Statistics statistics, Collection<MetricStatistics> metrics) {
-    ArrayList<Datapoint> datapoints = Lists.newArrayList();
-    boolean wantsAverage = statistics.getMember().contains("Average");
-    boolean wantsSum = statistics.getMember().contains("Sum");
-    boolean wantsSampleCount = statistics.getMember().contains("SampleCount");
-    boolean wantsMaximum = statistics.getMember().contains("Maximum");
-    boolean wantsMinimum = statistics.getMember().contains("Minimum");
-    for (MetricStatistics metricStatistics : metrics) {
-      Datapoint datapoint = new Datapoint();
-      datapoint.setTimestamp(metricStatistics.getTimestamp());
-      datapoint.setUnit(metricStatistics.getUnits().toString());
-      if (wantsSum) {
-        datapoint.setSum(metricStatistics.getSampleSum());
-      }
-      if (wantsSampleCount) {
-        datapoint.setSampleCount(metricStatistics.getSampleSize());
-      }
-      if (wantsMaximum) {
-        datapoint.setMaximum(metricStatistics.getSampleMax());
-      }
-      if (wantsMinimum) {
-        datapoint.setMinimum(metricStatistics.getSampleMin());
-      }
-      if (wantsAverage) {
-        datapoint.setAverage(MetricUtils.average(
-          metricStatistics.getSampleSum(), metricStatistics.getSampleSize()));
-      }
-      datapoints.add(datapoint);
-    }
-    return datapoints;
   }
 
   static void validateNotBothAlarmNamesAndAlarmNamePrefix(

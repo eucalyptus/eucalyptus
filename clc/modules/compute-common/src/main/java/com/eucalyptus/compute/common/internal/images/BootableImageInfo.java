@@ -48,10 +48,6 @@ public interface BootableImageInfo {
   
   String getRamdiskId( );
   
-  boolean hasKernel( );
-  
-  boolean hasRamdisk( );
-
   ImageMetadata.Platform getPlatform( );
   
   ImageMetadata.VirtualizationType getVirtualizationType();

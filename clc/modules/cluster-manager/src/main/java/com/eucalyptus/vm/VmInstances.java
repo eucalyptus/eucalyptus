@@ -730,19 +730,6 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
     }
   }
 
-  public static boolean privateIpInUse( final String ip ) {
-    try ( final TransactionResource tx = Entities.transactionFor( VmInstance.class ) ) {
-      VmInstance vmExample = VmInstance.exampleWithPrivateIp( ip );
-      return Entities.count(
-          vmExample,
-          Restrictions.in( "state", new VmState[] { VmState.RUNNING, VmState.PENDING } ),
-          Collections.<String,String>emptyMap( ) ) > 0;
-    } catch ( Exception ex ) {
-      LOG.error( ex, ex );
-      return false;
-    }
-  }
-
   public static VmVolumeAttachment lookupVolumeAttachment( final String volumeId ) {
     VmVolumeAttachment ret = null;
     try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
@@ -1160,10 +1147,6 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
 
   public static Function<VmInstance,String> toServiceTag() {
     return VmInstanceFilterFunctions.SERVICE_TAG;
-  }
-
-  public static Function<VmInstance,String> toInstanceUuid() {
-    return Functions.compose( HasNaturalId.Utils.toNaturalId(), Functions.<VmInstance>identity() );
   }
 
   /**
@@ -1762,56 +1745,6 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       tx.commit( );
     } catch ( final Exception e ) {
       LOG.error( "Error restoring service tag ("+serviceTag+") for instance ("+instanceId+")", e );
-    }
-  }
-
-  /**
-   * Caller must have session for given vm
-   */
-  private static void restoreVolumeState( final VmInstance vm ) {
-    if ( vm.isBlockStorage( ) ) {
-      final String vmId = vm.getInstanceId( );
-      final ServiceConfiguration scConfig = Topology.lookup( Storage.class, vm.lookupPartition( ) );
-      final ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
-      final Predicate<VmVolumeAttachment> attachVolumes = new Predicate<VmVolumeAttachment>( ) {
-        public boolean apply( VmVolumeAttachment input ) {
-          final String volumeId = input.getVolumeId( );
-          final String vmDevice = input.getDevice( );
-          try {
-            LOG.debug( vmId + ": attaching volume: " + input );
-            //final AttachStorageVolumeType attachMsg = new AttachStorageVolumeType( Nodes.lookupIqns( ccConfig ), volumeId );
-            GetVolumeTokenType tokenRequest = new GetVolumeTokenType(volumeId);
-            final CheckedListenableFuture<GetVolumeTokenResponseType> scGetTokenReplyFuture = AsyncRequests.dispatch( scConfig, tokenRequest );
-            final Callable<Boolean> ncAttachRequest = new Callable<Boolean>( ) {
-              public Boolean call( ) {
-                try {
-                  LOG.debug( vmId + ": waiting for storage volume: " + volumeId );
-                  GetVolumeTokenResponseType scReply = scGetTokenReplyFuture.get();
-                  String token = StorageProperties.formatVolumeAttachmentTokenForTransfer( scReply.getToken(), volumeId );
-                  LOG.debug( vmId + ": " + volumeId + " => " + scGetTokenReplyFuture.get( ) );
-                  AsyncRequests.dispatch( ccConfig, new ClusterAttachVolumeType( volumeId, vmId, vmDevice, token));
-                } catch ( Exception ex ) {
-                  Exceptions.maybeInterrupted( ex );
-                  LOG.error( vmId + ": " + ex );
-                  Logs.extreme( ).error( ex, ex );
-                }
-                return true;
-              }
-            };
-            Threads.enqueue( Eucalyptus.class, VmRuntimeState.class, ncAttachRequest );
-          } catch ( Exception ex ) {
-            LOG.error( vmId + ": " + ex );
-            Logs.extreme( ).error( ex, ex );
-          }
-          return true;
-        }
-      };
-      try {
-        vm.getTransientVolumeState( ).eachVolumeAttachment( attachVolumes );
-      } catch ( Exception ex ) {
-        LOG.error( vm.getInstanceId( ) + ": " + ex );
-        Logs.extreme( ).error( vm.getInstanceId( ) + ": " + ex, ex );
-      }
     }
   }
 

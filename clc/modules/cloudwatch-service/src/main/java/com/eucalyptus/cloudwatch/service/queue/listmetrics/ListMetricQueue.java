@@ -57,23 +57,8 @@ public class ListMetricQueue {
     public synchronized void drainTo(List<T> list) {
       list.addAll(items);
       items.clear();
-
-    }
-    public synchronized void drainTo(List<T> list, int maxItems) {
-      List<T> intermediateList = Lists.newArrayList();
-      int ctr=0;
-      for (T item: items) {
-        intermediateList.add(item);
-        ctr++;
-        if (ctr == maxItems) break;
-      }
-      list.addAll(intermediateList);
-      items.removeAll(intermediateList);
     }
 
-    public synchronized void putAll(List<T> list) {
-      items.addAll(list);
-    }
     public synchronized void put(T item) {
       items.add(item);
     }

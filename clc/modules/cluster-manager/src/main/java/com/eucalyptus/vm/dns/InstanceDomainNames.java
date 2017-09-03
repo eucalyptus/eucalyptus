@@ -146,10 +146,6 @@ public enum InstanceDomainNames implements Function<Name, InetAddress> {
     return this.instancePattern.get( ).matcher( name.toString( ) ).matches( );
   }
   
-  static Matcher matcher( Name name ) {
-    return PATTERN.matcher( name.toString( ) );
-  }
-  
   static Name fromInetAddress( InstanceDomainNames instanceDomain, InetAddress ip ) {
     final String instancePart = "euca-" + ip.getHostAddress( ).replace( '.', '-' );
     return DomainNames.absolute( Name.fromConstantString( instancePart ), instanceDomain.get( ) );

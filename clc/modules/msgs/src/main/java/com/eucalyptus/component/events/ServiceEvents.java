@@ -220,19 +220,7 @@ public class ServiceEvents {
     
   }
   
-  public static class EnabledEvent extends ServiceEvent {}
-  
-  public static class DisabledEvent extends ServiceEvent {}
-  
-  public static class NotreadyEvent extends ServiceEvent {}
-  
-  public static class StartedEvent extends ServiceEvent {}
-  
-  public static class StoppedEvent extends ServiceEvent {}
-  
   public static class RegistrationEvent extends ServiceEvent {}
-  
-  public static class UpdateRegistrationEvent extends ServiceEvent {}
   
   public static class DeregistrationEvent extends ServiceEvent {}
 }

@@ -78,8 +78,6 @@ import edu.ucsb.eucalyptus.util.SystemUtil.CommandOutput;
 public class OverlayManager extends DASManager {
   private static Logger LOG = Logger.getLogger(OverlayManager.class);
 
-  public static boolean zeroFillVolumes = false;
-
   private static final Joiner JOINER = Joiner.on(" ").skipNulls();
 
   @Override

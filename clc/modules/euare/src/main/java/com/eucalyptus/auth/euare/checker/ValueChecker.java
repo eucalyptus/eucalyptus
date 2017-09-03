@@ -41,11 +41,6 @@ package com.eucalyptus.auth.euare.checker;
 
 public interface ValueChecker {
 
-  public static final String WEAK = "weak";
-  public static final String MEDIUM = "medium";
-  public static final String STRONG = "strong";
-  public static final String STRONGER = "stronger";
-  
   /**
    * Check a value's validity.
    * 
