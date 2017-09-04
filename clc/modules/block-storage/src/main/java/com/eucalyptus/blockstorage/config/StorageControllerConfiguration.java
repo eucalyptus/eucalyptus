@@ -267,7 +267,7 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
 
     private static String loadLocalBlockStorageManagerConfig() throws Exception {
       String manager = BLOCK_STORAGE_MANAGER_OVERLAY; // default
-      BufferedReader fileReader = new BufferedReader(new FileReader(BaseDirectory.HOME + "/etc/eucalyptus/eucalyptus.conf"));
+      BufferedReader fileReader = new BufferedReader(new FileReader(BaseDirectory.CONF.getChildFile( "eucalyptus.conf" ) ) );
       String ebsStorageManager = null;
       String ebsSanProvider = null;
       String line;

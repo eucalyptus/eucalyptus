@@ -41,8 +41,8 @@ package com.eucalyptus.component;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
@@ -95,7 +95,6 @@ import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
-import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Emails;
 import com.eucalyptus.util.Exceptions;
@@ -707,7 +706,7 @@ public class Faults {
             LOG.debug( "Fault notifications: preparing digest for " + digestDate + "." );
             try {
               String subject = Faults.EMAIL_SUBJECT_PREFIX + " system state for " + digestDate;
-              String result = Groovyness.run( SubDirectory.SCRIPTS, "notifications_digest" );
+              String result = Groovyness.run( "notifications_digest" );
               if ( !Strings.isNullOrEmpty( result ) ) {
                 dispatchEmail( subject, result );
               }
@@ -748,11 +747,9 @@ public class Faults {
             LOG.debug( "Fault notifications: no state changes pending, discarding pending faults" );
           } else {
             try {
-              String result = Groovyness.run( SubDirectory.SCRIPTS, "notifications", new HashMap( ) {
-                {
-                  this.put( "faults", pendingFaults );
-                }
-              } );
+              String result = Groovyness.run(
+                  "notifications",
+                  Maps.newHashMap( Collections.singletonMap( "faults", pendingFaults ) ) );
               if ( !Strings.isNullOrEmpty( result ) ) {
                 dispatchEmail( subject, result );
               }

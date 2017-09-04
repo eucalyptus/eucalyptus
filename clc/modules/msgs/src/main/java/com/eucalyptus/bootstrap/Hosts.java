@@ -788,7 +788,7 @@ public class Hosts {
     }
 
     private static List<Protocol> getMembershipProtocolStack( ) {
-      return Groovyness.run( "setup_membership.groovy" );
+      return Groovyness.run( "setup_membership" );
     }
 
     private static synchronized void start( ) {

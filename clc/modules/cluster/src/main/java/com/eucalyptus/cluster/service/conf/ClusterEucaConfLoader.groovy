@@ -1,6 +1,7 @@
 package com.eucalyptus.cluster.service.conf
 
 import com.eucalyptus.component.annotation.ComponentNamed
+import com.eucalyptus.system.BaseDirectory
 import com.google.common.base.Splitter
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
@@ -46,7 +47,7 @@ class ClusterEucaConfLoader {
 
   private static Properties loadEucalyptusConf( ) {
     Properties properties = new Properties()
-    File eucalyptusConf = new File( "${System.getenv('EUCALYPTUS')}/etc/eucalyptus/eucalyptus.conf" )
+    File eucalyptusConf = BaseDirectory.CONF.getChildFile( "eucalyptus.conf" );
     if ( eucalyptusConf.canRead( ) && eucalyptusConf.isFile( ) ) {
       eucalyptusConf.newInputStream( ).withStream{ BufferedInputStream input ->
         properties.load( input )

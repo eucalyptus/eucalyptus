@@ -467,11 +467,9 @@ public class ServiceTransitions {
                                                                 + "." );
             errors = Faults.failure( parent, ex );
           } else {
-            DescribeServicesResponseType response = ServiceTransitions.sendEmpyreanRequest( parent, new DescribeServicesType( ) {
-              {
-                this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
-              }
-            } );
+            DescribeServicesType describeServicesType = new DescribeServicesType();
+            describeServicesType.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
+            DescribeServicesResponseType response = ServiceTransitions.sendEmpyreanRequest( parent, describeServicesType );
             ServiceStatusType status = Iterables.find( response.getServiceStatuses( ), new Predicate<ServiceStatusType>( ) {
               
               @Override
@@ -500,11 +498,9 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        StartServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, new StartServiceType( ) {
-          {
-            this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
-          }
-        } );
+        StartServiceType startServiceType = new StartServiceType( );
+        startServiceType.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
+        StartServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, startServiceType );
         try {
           ServiceBuilders.lookup( parent.getComponentId( ) ).fireStart( parent );
         } catch ( Exception ex ) {
@@ -516,11 +512,9 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        EnableServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, new EnableServiceType( ) {
-          {
-            this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
-          }
-        } );
+        EnableServiceType enableServiceType = new EnableServiceType( );
+        enableServiceType.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
+        EnableServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, enableServiceType );
         try {
           ServiceBuilders.lookup( parent.getComponentId( ) ).fireEnable( parent );
         } catch ( Exception ex ) {
@@ -533,11 +527,9 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        DisableServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, new DisableServiceType( ) {
-          {
-            this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
-          }
-        } );
+        DisableServiceType disableServiceType = new DisableServiceType( );
+        disableServiceType.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
+        DisableServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, disableServiceType );
         try {
           ServiceBuilders.lookup( parent.getComponentId( ) ).fireDisable( parent );
         } catch ( Exception ex ) {
@@ -549,11 +541,9 @@ public class ServiceTransitions {
       
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
-        StopServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, new StopServiceType( ) {
-          {
-            this.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
-          }
-        } );
+        StopServiceType stopServiceType = new StopServiceType( );
+        stopServiceType.getServices( ).add( TypeMappers.transform( parent, ServiceId.class ) );
+        StopServiceResponseType msg = ServiceTransitions.sendEmpyreanRequest( parent, stopServiceType );
         try {
           ServiceBuilders.lookup( parent.getComponentId( ) ).fireStop( parent );
         } catch ( Exception ex ) {

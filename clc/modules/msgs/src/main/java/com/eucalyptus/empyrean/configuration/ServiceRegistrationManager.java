@@ -47,6 +47,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.annotation.ComponentNamed;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
@@ -78,6 +79,7 @@ import com.google.common.collect.Lists;
 /**
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
+@ComponentNamed
 public class ServiceRegistrationManager {
   private static Logger LOG = Logger.getLogger( ServiceRegistrationManager.class );
 
@@ -306,4 +308,15 @@ public class ServiceRegistrationManager {
     }
   }
 
+  public DescribeAvailableServiceTypesResponseType describeServiceTypes( final DescribeAvailableServiceTypesType request ) {
+    return DescribeAvailableComponents.INSTANCE.apply( request );
+  }
+
+  public RegisterServiceResponseType registerService( RegisterServiceType request ) {
+    return RegisterService.INSTANCE.apply( request );
+  }
+
+  public DeregisterServiceResponseType deregisterService( DeregisterServiceType request ) {
+    return DeregisterService.INSTANCE.apply( request );
+  }
 }

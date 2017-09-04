@@ -191,8 +191,12 @@ public class VmTypes {
         Iterators.size( vmType.getEphemeralDisks().iterator() ); // Ensure materialized
         return vmType;
       } catch ( Exception ex ) {
-        if ( !(ex instanceof NoSuchElementException) ) LOG.error( ex );
-        LOG.debug( ex, ex );
+        if ( !(ex instanceof NoSuchElementException) ) {
+          LOG.error( ex );
+          LOG.debug( ex, ex );
+        } else {
+          LOG.debug( "Instance type not found for " + input );
+        }
         PredefinedTypes t = PredefinedTypes.valueOf( input.toUpperCase( ).replace( ".", "" ) );
         VmType vmType = VmType.create( input, t.getCpu( ), t.getDisk( ), t.getMemory( ), t.getEthernetInterfaceLimit( ) );
         vmType = Entities.persist( vmType );

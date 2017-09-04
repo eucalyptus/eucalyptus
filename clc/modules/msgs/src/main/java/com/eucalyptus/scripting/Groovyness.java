@@ -44,17 +44,15 @@ import groovy.lang.ExpandoMetaClassCreationHandle;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyObject;
 import groovy.lang.GroovySystem;
-import groovy.lang.ReadOnlyPropertyException;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.IOException;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Function;
 import javax.script.Bindings;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
 import javax.script.SimpleBindings;
 import javax.script.SimpleScriptContext;
 import org.apache.log4j.Logger;
@@ -65,8 +63,16 @@ import com.google.common.collect.Maps;
 
 public class Groovyness {
   private static Logger      LOG          = Logger.getLogger( Groovyness.class );
-  public static ScriptEngine groovyEngine = getGroovyEngine( );
-  
+  private static List<Function<String,String>> fileMappers = new CopyOnWriteArrayList<>( );
+  private static ScriptEngine groovyEngine = getGroovyEngine( );
+
+  static {
+    registerFileMapper( fileName ->
+        SubDirectory.SCRIPTS + File.separator + fileName + ( fileName.endsWith( ".groovy" ) ?
+            "" :
+            ".groovy" ) );
+  }
+
   public static <T extends GroovyObject> T expandoMetaClass( T obj ) {
     ExpandoMetaClass emc = new ExpandoMetaClass( obj.getClass( ), false );
     emc.initialize( );
@@ -96,17 +102,12 @@ public class Groovyness {
     }
   }
   
-  public static <T> T newInstance( String fileName ) throws ScriptExecutionFailedException {
-    GroovyObject groovyObject = null;
+  public static <T> T newInstance( final String fileName ) throws ScriptExecutionFailedException {
+    GroovyObject groovyObject;
     try {
-      File f = new File( fileName );
-      if ( !f.exists( ) ) {
-        f = new File( SubDirectory.SCRIPTS + File.separator + fileName + ( fileName.endsWith( ".groovy" )
-                                                                                                         ? ""
-                                                                                                         : ".groovy" ) );
-      }
-      GroovyClassLoader loader = getGroovyClassLoader( );
-      Class groovyClass = loader.parseClass( f );
+      final File f = new File( mapScriptName( fileName ) );
+      final GroovyClassLoader loader = getGroovyClassLoader( );
+      final Class groovyClass = loader.parseClass( f );
       groovyObject = ( GroovyObject ) groovyClass.newInstance( );
     } catch ( Exception e ) {
       LOG.error( e, e );
@@ -120,40 +121,22 @@ public class Groovyness {
     }
   }
   
-  public static <T> T run( SubDirectory dir, String fileName, Map context ) {
-    fileName = dir + File.separator + fileName;
-    String fileNameWExt = fileName + ".groovy";
-    if ( !new File( fileName ).exists( ) && new File( fileNameWExt ).exists( ) ) {
-      fileName = fileNameWExt;
-    }
-    FileReader fileReader = null;
-    try {
-      fileReader = new FileReader( fileName );
-      Bindings bindings = new SimpleBindings( context );
-      SimpleScriptContext scriptContext = new SimpleScriptContext( );
+  public static <T> T run( final String fileName, final Map<String,Object> context ) {
+    final File f = new File( mapScriptName( fileName ) );
+    try ( final FileReader fileReader = new FileReader( f ) ) {
+      final Bindings bindings = new SimpleBindings( context );
+      final SimpleScriptContext scriptContext = new SimpleScriptContext( );
       scriptContext.setBindings( bindings, SimpleScriptContext.ENGINE_SCOPE );
       T ret = ( T ) getGroovyEngine( ).eval( fileReader, scriptContext );
       return ret;
     } catch ( Exception e ) {
       LOG.debug( e, e );
       throw new RuntimeException( "Executing the requested script failed: " + fileName, e );
-    } finally {
-      if ( fileReader != null ) {
-        try {
-          fileReader.close( );
-        } catch ( IOException e ) {
-          LOG.error( e );
-        }
-      }
     }
   }
   
-  public static <T> T run( SubDirectory dir, String fileName ) {
-    return run( dir, fileName, Maps.newHashMap( ) );
-  }
-  
-  public static <T> T run( String fileName ) {
-    return ( T ) run( SubDirectory.SCRIPTS, fileName );
+  public static <T> T run( final String fileName ) {
+    return run( fileName, Maps.newHashMap( ) );
   }
   
   public static int exec( final String code ) throws ScriptExecutionFailedException {
@@ -170,10 +153,10 @@ public class Groovyness {
     }
   }
   
-  public static <T> T eval( String code, Map context ) throws ScriptExecutionFailedException {
+  public static <T> T eval( final String code, final Map<String,Object> context ) throws ScriptExecutionFailedException {
     try {
-      Bindings bindings = new SimpleBindings( context );
-      SimpleScriptContext scriptContext = new SimpleScriptContext( );
+      final Bindings bindings = new SimpleBindings( context );
+      final SimpleScriptContext scriptContext = new SimpleScriptContext( );
       scriptContext.setBindings( bindings, SimpleScriptContext.ENGINE_SCOPE );
       return ( T ) getGroovyEngine( ).eval( code, scriptContext );
     } catch ( Exception e ) {
@@ -186,7 +169,7 @@ public class Groovyness {
     }
   }
   
-  public static <T> T eval( String code ) throws ScriptExecutionFailedException {
+  public static <T> T eval( final String code ) throws ScriptExecutionFailedException {
     try {
       return ( T ) getGroovyEngine( ).eval( code );
     } catch ( Exception e ) {
@@ -198,42 +181,21 @@ public class Groovyness {
                                                 + "\nbecause of:\n" + Exceptions.causeString( e ), e );
     }
   }
-  
-  public static void loadConfig( String confFile ) {
-    try {
-      confFile = SubDirectory.SCRIPTS + File.separator + confFile;
-      String className = Thread.currentThread( ).getStackTrace( )[2].getClassName( );
-      LOG.info( "Trying to load config for " + className + " from " + confFile );
-      String conf = "import " + className;
-      String line = null;
-      try {
-        BufferedReader fileReader = null;
-        try {
-          fileReader = new BufferedReader( new FileReader( confFile ) );
-          for ( ; ( line = fileReader.readLine( ) ) != null; conf += !line.matches( "\\s*\\w+\\s*=[\\s\\.\\w*\"']*;{0,1}" )
-                                                                                                                           ? ""
-                                                                                                                           : "\n" + className + "." + line );
-          LOG.debug( conf );
-          try {
-            getGroovyEngine( ).eval( conf );
-          } catch ( ScriptException e ) {
-            if ( !( e.getCause( ) instanceof ReadOnlyPropertyException ) ) {
-              LOG.warn( e, e );
-            } else {
-              LOG.warn( e.getMessage( ) );
-            }
-          }
-        } finally {
-          if ( fileReader != null ) {
-            fileReader.close( );
-          }
+
+  public static String mapScriptName( String fileName ) {
+    if ( !new File( fileName ).exists( ) ) {
+      for ( final Function<String,String> fileNameMapper : fileMappers ) {
+        final String mappedFileName = fileNameMapper.apply( fileName );
+        if ( new File( mappedFileName ).exists( ) ) {
+          fileName = mappedFileName;
+          break;
         }
-      } catch ( FileNotFoundException e ) {
-        LOG.info( "-> No config file found." );
       }
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
     }
+    return fileName;
   }
-  
+
+  public static void registerFileMapper( final Function<String,String> fileMapper ) {
+    fileMappers.add( fileMapper );
+  }
 }

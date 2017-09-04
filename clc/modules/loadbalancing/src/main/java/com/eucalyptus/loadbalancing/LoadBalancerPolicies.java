@@ -656,7 +656,7 @@ public class LoadBalancerPolicies {
       PolicyDescription policyDesc = null;
       String[] policyFiles = null;
       final Set<String> policyNames = Sets.newHashSet();
-      final String dir = String.format("%s/elb-security-policy", BaseDirectory.CONF);
+      final String dir = String.format("%s/elb-security-policy", BaseDirectory.ETC);
       try{
         final File policyDirectory = new File(dir);
         policyFiles = policyDirectory.list(new FilenameFilter() {

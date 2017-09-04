@@ -35,6 +35,16 @@
         http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd"
 >
 
-  <int:service-activator input-channel="bootstrap-request" ref="empyreanService"/>
+  <int:channel id="bootstrap-default-request"/>
+  <int:channel id="bootstrap-registration-request"/>
+
+  <int:payload-type-router input-channel="bootstrap-request">
+    <int:mapping type="com.eucalyptus.empyrean.configuration.ServiceRegistrationMessage" channel="bootstrap-registration-request"/>
+    <int:mapping type="edu.ucsb.eucalyptus.msgs.BaseMessage" channel="bootstrap-default-request"/>
+  </int:payload-type-router>
+
+  <int:service-activator input-channel="bootstrap-default-request" ref="empyreanService"/>
+
+  <int:service-activator input-channel="bootstrap-registration-request" ref="serviceRegistrationManager"/>
 
 </beans>

@@ -43,20 +43,17 @@ import java.io.File;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 
 public enum SubDirectory {
   SYSFAULTS( BaseDirectory.LIB, "faults", false ),
-  CUSTOMFAULTS( BaseDirectory.HOME, "/etc/eucalyptus/faults", false  ),
-  
+  CUSTOMFAULTS( BaseDirectory.ETC, "faults", false  ),
   DB( BaseDirectory.STATE, "db" ) {
     @Override
     protected void assertPermissions( ) {
-      
       super.assertPermissions( );
       try {
-        Groovyness.exec( "chmod -R 700 " + this.toString( ) );
+        Directories.execPermissions( "chmod -R 700 " + this.toString( ) );
       } catch ( ScriptExecutionFailedException ex ) {
         LOG.error( ex, ex );
       }
@@ -65,52 +62,49 @@ public enum SubDirectory {
   BACKUPS( BaseDirectory.STATE, "backups" ) {
     @Override
     protected void assertPermissions( ) {
-      
       super.assertPermissions( );
       try {
-        Groovyness.exec( "chmod -R 700 " + this.toString( ) );
+        Directories.execPermissions( "chmod -R 700 " + this.toString( ) );
       } catch ( ScriptExecutionFailedException ex ) {
         LOG.error( ex, ex );
       }
     }
   },
-  TX( BaseDirectory.RUN, "/tx" ) {
+  TX( BaseDirectory.RUN, "tx" ) {
     @Override
     protected void assertPermissions( ) {
-      
       super.assertPermissions( );
       try {
-        Groovyness.exec( "chmod -R 700 " + this.toString( ) );
+        Directories.execPermissions( "chmod -R 700 " + this.toString( ) );
       } catch ( ScriptExecutionFailedException ex ) {
         LOG.error( ex, ex );
       }
     }
   },
-  CLASSCACHE( BaseDirectory.RUN, "/classcache" ),
+  CLASSCACHE( BaseDirectory.RUN, "classcache" ),
   KEYS( BaseDirectory.STATE, "keys" ) {
     @Override
     protected void assertPermissions( ) {
-      
       super.assertPermissions( );
       try {
-        Groovyness.exec( "chmod -R 700 " + this.toString( ) );
-        Groovyness.exec( "chgrp -R -L " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
-        Groovyness.exec( "chown -R -L " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
+        Directories.execPermissions( "chmod -R 700 " + this.toString( ) );
+        Directories.execPermissions( "chgrp -R -L " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
+        Directories.execPermissions( "chown -R -L " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
       } catch ( ScriptExecutionFailedException ex ) {
         LOG.error( ex, ex );
       }
     }
   },
-  SCRIPTS( BaseDirectory.CONF, "scripts", false ),
-  MANAGEMENT( BaseDirectory.CONF, "jmx", false ),
+  SCRIPTS( BaseDirectory.ETC, "scripts", false ),
+  MANAGEMENT( BaseDirectory.ETC, "jmx", false ),
   STATUS( BaseDirectory.RUN, "status") {
     @Override
     protected void assertPermissions () {
       try {
         // set 750 permission only to directories
-        Groovyness.exec( "chmod 750 $(find " + this.toString( ) + " -type d)");
-        Groovyness.exec( "chgrp -R -L " + System.getProperty( "euca.status_group", "eucalyptus-status" ) + " " + this.toString( ) );
-        Groovyness.exec( "chown -R -L " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
+        Directories.execPermissions( "chmod 750 $(find " + this.toString( ) + " -type d)");
+        Directories.execPermissions( "chgrp -R -L " + System.getProperty( "euca.status_group", "eucalyptus-status" ) + " " + this.toString( ) );
+        Directories.execPermissions( "chown -R -L " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
       } catch ( ScriptExecutionFailedException ex ) {
         LOG.error( ex, ex );
       }
@@ -120,19 +114,16 @@ public enum SubDirectory {
   QUEUE( BaseDirectory.VAR, "queue" ),
   LIB( BaseDirectory.LIB, "", false ),
   RUNDB( BaseDirectory.RUN, "/db" ) {
-    
     @Override
     protected void assertPermissions( ) {
-      
       super.assertPermissions( );
       try {
-        Groovyness.exec( "chmod -R -L +rwX " + this.toString( ) );
-        Groovyness.exec( "chgrp -R -L " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
+        Directories.execPermissions( "chmod -R -L +rwX " + this.toString( ) );
+        Directories.execPermissions( "chgrp -R -L " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
       } catch ( ScriptExecutionFailedException ex ) {
         LOG.error( ex, ex );
       }
     }
-    
   };
   
   private static Logger LOG = Logger.getLogger( SubDirectory.class );
@@ -182,18 +173,14 @@ public enum SubDirectory {
   }
   
   public String getChildPath( String... path ) {
-    String ret = this.toString( );
-    for ( String s : path ) {
-      ret += File.separator + s;
-    }
-    return ret;
+    return Directories.getChildPath( this.toString( ), path );
   }
   
   protected void assertPermissions( ) {
     try {
-      Groovyness.exec( "chown -R  " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
-      Groovyness.exec( "chgrp -R  " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
-      Groovyness.exec( "chmod -R  +rwX " + this.toString( ) );
+      Directories.execPermissions( "chown -R  " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
+      Directories.execPermissions( "chgrp -R  " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
+      Directories.execPermissions( "chmod -R  +rwX " + this.toString( ) );
     } catch ( ScriptExecutionFailedException ex ) {
       LOG.error( ex, ex );
     }

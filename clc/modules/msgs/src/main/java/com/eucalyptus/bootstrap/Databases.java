@@ -128,7 +128,7 @@ public class Databases {
     public boolean load( ) throws Exception {
       Hosts.awaitDatabases( );
 
-      Groovyness.run( "setup_dbpool.groovy" );
+      Groovyness.run( "setup_dbpool" );
       return true;
     }
   }

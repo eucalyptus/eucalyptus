@@ -43,22 +43,37 @@ import java.io.File;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 
 public enum BaseDirectory {
-  HOME( "euca.home" ), VAR( "euca.var.dir" ), CONF( "euca.conf.dir" ), LIB( "euca.lib.dir" ), LOG( "euca.log.dir" ),
-  RUN( "euca.run.dir" ), LIBEXEC( "euca.libexec.dir" ), STATE( "euca.state.dir" ), JNI( "euca.jni.dir" );
+  HOME( "euca.home" ),
+  VAR( "euca.var.dir", "var", "lib", "eucalyptus" ),
+  ETC( "euca.etc.dir", "etc", "eucalyptus", "cloud.d" ),
+  CONF( "euca.conf.dir", "etc", "eucalyptus"  ),
+  LIB( "euca.lib.dir", "usr", "share", "eucalyptus" ),
+  LOG( "euca.log.dir", "var", "log", "eucalyptus" ),
+  RUN( "euca.run.dir", "var", "run", "eucalyptus"  ),
+  LIBEXEC( "euca.libexec.dir", "usr", "lib", "eucalyptus" ),
+  STATE( "euca.state.dir",  "var", "lib", "eucalyptus" ),
+  ;
+
   private static Logger LOGG = Logger.getLogger( BaseDirectory.class );
   
   private String        key;
-  
+  private String[]      defaultPath; // based on HOME
+
   BaseDirectory( final String key ) {
     this.key = key;
+    this.defaultPath = null;
   }
-  
+
+  BaseDirectory( final String key, final String... defaultPath ) {
+    this.key = key;
+    this.defaultPath = defaultPath;
+  }
+
   public boolean check( ) {
-    if ( System.getProperty( this.key ) == null ) {
+    if ( System.getProperty( this.key ) == null && this.defaultPath == null ) {
       LOGG.fatal( "System property '" + this.key + "' must be set." );
       return false;
     }
@@ -68,7 +83,7 @@ public enum BaseDirectory {
   
   @Override
   public String toString( ) {
-    return System.getProperty( this.key );
+    return System.getProperty( this.key, this.defaultPath==null ? null : HOME.getChildPath( this.defaultPath ) );
   }
   
   public File getFile( ) {
@@ -90,21 +105,17 @@ public enum BaseDirectory {
   }
   
   public String getChildPath( String... args ) {
-    String ret = this.toString( );
-    for ( String s : args ) {
-      ret += File.separator + s;
-    }
-    return ret;
+    return Directories.getChildPath( this.toString( ), args );
   }
-  
+
   private void assertPermissions( ) {
     try {
-      Groovyness.exec( "chown " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
+      Directories.execPermissions( "chown " + System.getProperty( "euca.user" ) + " " + this.toString( ) );
     } catch ( ScriptExecutionFailedException ex ) {
       LOGG.error( ex, ex );
     }
     try {
-      Groovyness.exec( "chmod og-rwX " + this.toString( ) );
+      Directories.execPermissions( "chmod og-rwX " + this.toString( ) );
     } catch ( ScriptExecutionFailedException ex ) {
       LOGG.error( ex, ex );
     }

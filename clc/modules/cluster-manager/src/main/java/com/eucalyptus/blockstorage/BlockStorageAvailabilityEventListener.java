@@ -32,6 +32,7 @@ import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Availabil
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType.StorageEBS;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Tag;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import org.apache.log4j.Logger;
 
@@ -73,6 +74,8 @@ public class BlockStorageAvailabilityEventListener implements EventListener<Cloc
           total = Transactions.find( new StorageInfo( partition ) ).getMaxTotalVolumeSizeInGb();
         } catch ( TransactionException e ) {
           logger.debug( "Error finding capacity for " + partition, e );
+        } catch ( NoSuchElementException e ) {
+          continue;
         }
 
         resourceAvailability.add( new Availability( total, Math.max( total - StorageUtil.getBlockStorageTotalSize(partition), 0), Lists.<Tag>newArrayList(

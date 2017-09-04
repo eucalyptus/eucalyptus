@@ -102,7 +102,7 @@ public class PersistenceContexts {
 
     @Override
     public boolean load() throws Exception {
-      Groovyness.run( "setup_persistence.groovy" );
+      Groovyness.run( "setup_persistence" );
       return true;
     }
   }
