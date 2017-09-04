@@ -34,11 +34,12 @@ import java.util.ResourceBundle;
 
 import org.apache.log4j.Appender;
 import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.apache.log4j.Priority;
 import org.apache.log4j.spi.LoggerRepository;
 import org.apache.log4j.spi.LoggingEvent;
 
-public class NullEucaLogger extends EucaLogger {
+public class NullEucaLogger extends Logger {
 	public NullEucaLogger() {
 		super("/dev/null");
 	}

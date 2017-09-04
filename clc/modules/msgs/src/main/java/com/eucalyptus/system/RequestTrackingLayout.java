@@ -33,7 +33,6 @@ import org.hibernate.exception.GenericJDBCException;
 
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.system.log.EucaLoggingEvent;
 import com.eucalyptus.system.log.EucaPatternLayout;
 import com.google.common.base.Optional;
 
@@ -93,7 +92,7 @@ public class RequestTrackingLayout extends EucaPatternLayout {
         boolean con = false;
         for( int i = 0; i < messages.length; i++ ) {
           String substring= messages[i];
-          LoggingEvent n = new EucaLoggingEvent( event.getFQNOfLoggerClass( ), event.getLogger( ), 
+          LoggingEvent n = new LoggingEvent( event.getFQNOfLoggerClass( ), event.getLogger( ),
               event.getTimeStamp( ), event.getLevel( ), 
               substring, event.getThreadName( ), 
               event.getThrowableInformation( ), null, null, null );

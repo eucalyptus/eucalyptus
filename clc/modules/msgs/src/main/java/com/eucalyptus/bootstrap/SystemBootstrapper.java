@@ -45,7 +45,6 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.security.Security;
-import java.util.Map;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -79,14 +78,13 @@ import com.google.common.collect.Lists;
  */
 public class SystemBootstrapper {
   private static final String       SEP = " -- ";
-  
+
   static Logger                     LOG = Logger.getLogger( SystemBootstrapper.class );
-  
+
   private static volatile SystemBootstrapper singleton;
-  private static ThreadGroup        singletonGroup;
   public static final PrintStream   out = System.out;
   public static final PrintStream   err = System.err;
-  
+
   public static SystemBootstrapper getInstance( ) {
     if (singleton == null) {
       synchronized(SystemBootstrapper.class) {
@@ -152,10 +150,6 @@ public class SystemBootstrapper {
             System.out.println( "Thread:      " + t.toString( ) );
             System.out.println( "Exception:   " + e.getClass( ) );
             System.out.println( "Message:     " + e.getMessage( ) );
-            System.out.println( "All threads:\n" );
-            for ( Map.Entry<Thread, StackTraceElement[]> ent : Thread.getAllStackTraces( ).entrySet( ) ) {
-
-            }
           }
         }
       }

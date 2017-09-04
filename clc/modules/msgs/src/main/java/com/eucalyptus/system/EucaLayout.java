@@ -39,15 +39,10 @@
 
 package com.eucalyptus.system;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.log4j.spi.LoggingEvent;
 import org.hibernate.exception.GenericJDBCException;
 
-import com.eucalyptus.context.Contexts;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.system.log.EucaLoggingEvent;
 import com.eucalyptus.system.log.EucaPatternLayout;
 
 public class EucaLayout extends EucaPatternLayout {
@@ -94,7 +89,7 @@ public class EucaLayout extends EucaPatternLayout {
 				boolean con = false;
 				for( int i = 0; i < messages.length; i++ ) {
 					String substring= messages[i];
-					LoggingEvent n = new EucaLoggingEvent( event.getFQNOfLoggerClass( ), event.getLogger( ), 
+					LoggingEvent n = new LoggingEvent( event.getFQNOfLoggerClass( ), event.getLogger( ),
 							event.getTimeStamp( ), event.getLevel( ), 
 							substring, event.getThreadName( ), 
 							event.getThrowableInformation( ), null, null, null );

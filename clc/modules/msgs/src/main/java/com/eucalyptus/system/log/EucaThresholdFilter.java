@@ -26,24 +26,33 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
-
 package com.eucalyptus.system.log;
 
-import org.apache.log4j.Logger;
-import org.apache.log4j.Priority;
+import org.apache.log4j.Level;
+import org.apache.log4j.spi.Filter;
 import org.apache.log4j.spi.LoggingEvent;
+import com.eucalyptus.records.Logs;
 
-public class EucaLogger extends Logger {
+/**
+ *
+ */
+public class EucaThresholdFilter extends Filter {
 
-	protected EucaLogger(String name) {
-		super(name);
-	}
+  private final String property;
 
-	@Override
-	protected void forcedLog(String fqcn, Priority level, Object message,
-			Throwable t) {
-		// TODO Auto-generated method stub
-	    callAppenders(new EucaLoggingEvent(fqcn, this, level, message, t));
-	}
-	
+  public EucaThresholdFilter( ) {
+    this( Logs.PROP_LOG_LEVEL );
+  }
+
+  public EucaThresholdFilter( final String property ) {
+    this.property = property;
+  }
+
+  @Override
+  public int decide( final LoggingEvent event ) {
+    final Level threshold = LoggingResetter.getThreshold( property );
+    return threshold == null || event.getLevel( ).isGreaterOrEqual( threshold ) ?
+        Filter.NEUTRAL :
+        Filter.DENY;
+  }
 }

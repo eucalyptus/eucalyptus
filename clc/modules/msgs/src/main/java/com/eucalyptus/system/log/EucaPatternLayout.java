@@ -29,8 +29,10 @@
 
 package com.eucalyptus.system.log;
 
+import org.apache.log4j.MDC;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.helpers.PatternParser;
+import org.apache.log4j.spi.LoggingEvent;
 
 public class EucaPatternLayout extends PatternLayout {
 
@@ -44,5 +46,13 @@ public class EucaPatternLayout extends PatternLayout {
 	@Override
 	protected PatternParser createPatternParser(String pattern) {
 		return new EucaPatternParser(pattern);
+	}
+
+	@Override
+	public String format( final LoggingEvent event ) {
+		if ( MDC.get( "thread-id" ) == null ) {
+			MDC.put( "thread-id", Thread.currentThread( ).getId( ) );
+		}
+		return super.format( event );
 	}
 }

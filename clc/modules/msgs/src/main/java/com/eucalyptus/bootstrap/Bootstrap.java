@@ -234,11 +234,12 @@ public class Bootstrap {
     
     private void printAgenda( ) {
       if ( !this.bootstrappers.isEmpty( ) ) {
-        LOG.info( LogUtil.header( "Bootstrap stage: " + this.name( )
-                                  + "."
-                                  + ( !Bootstrap.starting
-                                                         ? "load()"
-                                                         : "start()" ) ) );
+        LOG.info( "Bootstrap stage: " +
+            this.name( )
+            + "."
+            + ( !Bootstrap.starting
+            ? "load()"
+            : "start()" ) );
         LOG.debug( Joiner.on( " " ).join( this.name( ) + " bootstrappers:  ", this.bootstrappers ) );
       }
     }
@@ -424,7 +425,7 @@ public class Bootstrap {
       starting = false;
       finished = false;
     } else if ( currentStage != null ) {
-      LOG.info( LogUtil.header( "Bootstrap stage completed: " + currentStage.toString( ) ) );
+      LOG.info( "Bootstrap stage completed: " + currentStage.toString( ) );
       if ( Stage.Final.equals( currentStage ) ) {
         currentStage = null;
         if ( loading && !starting
@@ -532,7 +533,7 @@ public class Bootstrap {
     /**
      * Populate the binding cache.  Skip it when running the upgrade.
      */
-    LOG.info( LogUtil.header( "Populating binding cache." ) );
+    LOG.info( "Populating binding cache." );
     BindingCache.compileBindings( );
     /**
      * run discovery to find (primarily) bootstrappers, msg typs, bindings, util-providers, etc. See
@@ -540,10 +541,10 @@ public class Bootstrap {
      * 
      * @see ServiceJarDiscovery
      */
-    LOG.info( LogUtil.header( "Initializing discoverable bootstrap resources." ) );
+    LOG.info( "Initializing discoverable bootstrap resources." );
     Bootstrap.doDiscovery( );
     
-    LOG.info( LogUtil.header( "Initializing component identifiers:" ) );
+    LOG.info( "Initializing component identifiers:" );
     for ( ComponentId compId : ComponentIds.list( ) ) {
       Components.create( compId );
     }
@@ -552,7 +553,7 @@ public class Bootstrap {
      * Create the component stubs (but do not startService) to do dependency checks on bootstrappers
      * and satisfy any forward references from bootstrappers.
      */
-    LOG.info( LogUtil.header( "Building core local services: cloudLocal=" + BootstrapArgs.isCloudController( ) ) );
+    LOG.info( "Building core local services: cloudLocal=" + BootstrapArgs.isCloudController( ) );
     for ( Component comp : Components.whichCanLoad( ) ) {
       try {
         comp.initService( );
@@ -561,13 +562,13 @@ public class Bootstrap {
       }
     }
     
-    LOG.info( LogUtil.header( "Initializing component resources:" ) );
+    LOG.info( "Initializing component resources:" );
     Bootstrap.applyTransition( Component.State.INITIALIZED, Components.whichCanLoad( ) );
     
-    LOG.info( LogUtil.header( "Initializing bootstrappers." ) );
+    LOG.info( "Initializing bootstrappers." );
     Bootstrap.initBootstrappers( );
     
-    LOG.info( LogUtil.header( "System ready: starting bootstrap." ) );
+    LOG.info( "System ready: starting bootstrap." );
     for ( Component c : Components.list( ) ) {
       LOG.info( c.toString( ) );
     }

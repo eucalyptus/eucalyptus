@@ -77,18 +77,16 @@ public class EucaPatternParser extends PatternParser {
 	}
 	private static class ThreadIdPatternConverter extends PatternConverter {
 		private static final DecimalFormat df = new DecimalFormat("00000000000");
-		int type;
 
 		ThreadIdPatternConverter(FormattingInfo formattingInfo) {
 			super(formattingInfo);
 		}
 		@Override
 		public String convert(LoggingEvent event) {
-			if (event instanceof EucaLoggingEvent) {
-				return df.format(((EucaLoggingEvent) event).getThreadId());
-			} else {
-				return "unknown";
-			}
+			final Long threadId = (Long) event.getMDC( "thread-id" );
+			return threadId == null ?
+					"unknown" :
+					df.format(threadId);
 		}
 	}
 	private static class CorrelationIdPatternConverter extends PatternConverter {

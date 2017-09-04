@@ -26,24 +26,15 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
-
 package com.eucalyptus.system.log;
 
-import org.apache.log4j.Hierarchy;
-import org.apache.log4j.Logger;
-import org.apache.log4j.spi.LoggerFactory;
+import org.apache.log4j.Level;
 
-public class EucaHierarchy extends Hierarchy {
-
-	private LoggerFactory defaultFactory;
-
-	public EucaHierarchy(Logger root) {
-		super(root);
-		defaultFactory = new EucaLoggerFactory();
-	}
-
-	@Override
-	public Logger getLogger(String name) {
-		return getLogger(name, defaultFactory);
-	}
+/**
+ * Level that uses TRACE for EXHAUST or EXTREME
+ */
+public class EucaLevel {
+  public static Level toLevel( final String sArg ) {
+    return Level.toLevel( sArg, Level.TRACE );
+  }
 }

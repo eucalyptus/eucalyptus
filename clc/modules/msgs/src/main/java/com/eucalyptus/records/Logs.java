@@ -39,101 +39,29 @@
 
 package com.eucalyptus.records;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.URL;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.ResourceBundle;
+import java.util.Properties;
 import java.util.concurrent.Callable;
-import org.apache.log4j.Appender;
-import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Hierarchy;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
-import org.apache.log4j.PatternLayout;
-import org.apache.log4j.Priority;
-import org.apache.log4j.RollingFileAppender;
-import org.apache.log4j.spi.Configurator;
-import org.apache.log4j.spi.DefaultRepositorySelector;
-import org.apache.log4j.spi.LoggerRepository;
-import org.apache.log4j.spi.LoggingEvent;
-import org.apache.log4j.spi.RepositorySelector;
-import org.apache.log4j.xml.DOMConfigurator;
 
 import com.eucalyptus.bootstrap.SystemBootstrapper;
-import com.eucalyptus.scripting.Groovyness;
-import com.eucalyptus.system.BaseDirectory;
-import com.eucalyptus.system.EucaLayout;
-import com.eucalyptus.system.Threads;
-import com.eucalyptus.system.log.EucaHierarchy;
 import com.eucalyptus.system.log.EucaLoggingOutputStream;
-import com.eucalyptus.system.log.EucaRootLogger;
 import com.eucalyptus.system.log.NullEucaLogger;
 import com.eucalyptus.util.LogUtil;
-import com.google.common.base.Joiner;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 
 public class Logs {
-  static {
-	  // Some things were done here to add %i (ThreadID) to the PatternLayout class in log4j.
-	  // It was a bit complicated, requiring creating new LoggerFactory, Logger, and Hierarchy
-	  // classes among other things.  Also, default initialization of log4j (basically anywhere
-	  // Logger.getLogger() is called will initialize everything with default values, with no
-	  // easy way to change references to things already created.
-	  // Hence, we force the simplest initialization of the normal log4j. (creating only the root logger)
-	  BasicConfigurator.configure(new ConsoleAppender(new PatternLayout("%d{yyyy-MM-dd HH:mm:ss} %p %m%n")));
-	  
-	  // Hack: If we pass "EXTREME" or "EXHAUST" to the dom configurator,
-	  // by default it will use the DEBUG level when we want it to use the trace level
-	  // So we save the old level, change it back when we are done.
-	  String logLevelProp = "euca.log.level";
-	  String oldLogLevel = System.getProperty(logLevelProp);
-	  if ("EXHAUST".equals(oldLogLevel) || "EXTREME".equals(oldLogLevel)) {
-		  System.setProperty(logLevelProp, "TRACE");
-	  }
-	  // Then we run the DOMConfigurator on a new LoggerRepository
-	  URL url = Thread.currentThread().getContextClassLoader().getResource("log4j.xml");
-	  Hierarchy eucaHierarchy = new EucaHierarchy(new EucaRootLogger(Level.DEBUG));
-	  new DOMConfigurator().doConfigure(url, eucaHierarchy);
-      // Then we hook the new logger repository into the LogManager. 
-	  LogManager.setRepositorySelector(new DefaultRepositorySelector(eucaHierarchy), null);
+  public static final String PROP_LOG_LEVEL           = "euca.log.level";
+  public static final String PROP_LOG_EXHAUST_LEVEL   = "euca.exhaust.level";
+  public static final String RESOURCE_LOG4J_EXTRA     = "/eucalyptus.log.properties";
 
-	  // Now set it back
-	  if ( oldLogLevel != null )
-	    System.setProperty(logLevelProp, oldLogLevel);
-  }
-  private static Logger       LOG                     = Logger.getLogger( Logs.class );
-  /**
-   * <pre>
-   *   <appender name="cloud-cluster" class="org.apache.log4j.RollingFileAppender">
-   *     <param name="File" value="${euca.log.dir}/cloud-cluster.log" />
-   *     <param name="MaxFileSize" value="10MB" />
-   *     <param name="MaxBackupIndex" value="25" />
-   *     <param name="Threshold" value="${euca.log.level}" />
-   *     <layout class="org.apache.log4j.PatternLayout">
-   *       <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%t] %m%n" />
-   *     </layout>
-   *   </appender>
-   *   <appender name="cloud-exhaust" class="org.apache.log4j.RollingFileAppender">
-   *     <param name="File" value="${euca.log.dir}/cloud-exhaust.log" />
-   *     <param name="MaxFileSize" value="10MB" />
-   *     <param name="MaxBackupIndex" value="25" />
-   *     <param name="Threshold" value="${euca.exhaust.level}" />
-   *     <layout class="org.apache.log4j.PatternLayout">
-   *       <param name="ConversionPattern" value="${euca.log.exhaust.pattern}" />
-   *     </layout>
-   *   </appender>
-   * </pre>
-   */
-  
-  private static final Logger nullLogger = new NullEucaLogger();
+  private static final Logger nullLogger              = new NullEucaLogger();
+  private static final AtomicBoolean initialized      = new AtomicBoolean( false );
 
   public static Logger extreme( ) {
     return LogLevel.EXTREME.logger( );
@@ -147,40 +75,52 @@ public class Logs {
     return Logger.getLogger( "BOOTSTRAP" );
   }
   
-  
   public static void init( ) {
     logLevel.get( );
-    try {
+    if ( initialized.compareAndSet( false, true ) ) try {
       final Logger stdLogger = ( Logs.isExtrrreeeme( ) ? Logger.getLogger( SystemBootstrapper.class ) : Logs.extreme( ) );
-      final PrintStream oldOut = System.out;
-      final PrintStream oldErr = System.err;
       if ( !System.getProperty( "euca.log.appender", "" ).equals( "console" ) ) {
         System.setOut( new PrintStream( new EucaLoggingOutputStream( stdLogger, Level.INFO ), true ) );
         System.setErr( new PrintStream( new EucaLoggingOutputStream( stdLogger, Level.ERROR ), true ) );
       }
       Logger.getRootLogger( ).info( LogUtil.subheader( "Starting system with debugging set as: " + Logs.logLevel.get( ) ) );
+      loadLevels( );
     } catch ( final Exception t ) {
       t.printStackTrace( );
       System.exit( 1 );//GRZE: special case, can't open log files, hosed
     }
   }
 
-  public static void reInit( ) {
-	    logLevel.recalculate( );
-	    try {
-	      final Logger stdLogger = ( Logs.isExtrrreeeme( ) ? Logger.getLogger( SystemBootstrapper.class ) : Logs.extreme( ) );
-	      final PrintStream oldOut = System.out;
-	      final PrintStream oldErr = System.err;
-	      if ( !System.getProperty( "euca.log.appender", "" ).equals( "console" ) ) {
-	        System.setOut( new PrintStream( new EucaLoggingOutputStream( stdLogger, Level.INFO ), true ) );
-	        System.setErr( new PrintStream( new EucaLoggingOutputStream( stdLogger, Level.ERROR ), true ) );
-	      }
-	      Logger.getRootLogger( ).info( LogUtil.subheader( "Starting system with debugging set as: " + Logs.logLevel.get( ) ) );
-	    } catch ( final Exception t ) {
-	      t.printStackTrace( );
-	      System.exit( 1 );//GRZE: special case, can't open log files, hosed
-	    }
-	  }
+  /**
+   * Applies levels from file, set level to NONE to clear, e.g.
+   *
+   * com.eucalyptus.somepackage = NONE
+   * com.eucalyptus.somepackage.SomeClass = NONE
+   */
+  public static void loadLevels( ) {
+    Logger.getRootLogger( ).info( LogUtil.subheader( "Loading log levels from classpath: " + RESOURCE_LOG4J_EXTRA ) );
+    try {
+      final URL loggingPropertiesUrl = Logs.class.getResource( RESOURCE_LOG4J_EXTRA );
+      if ( loggingPropertiesUrl != null ) {
+        try ( final InputStream loggingPropertiesIn = loggingPropertiesUrl.openStream( ) ) {
+          Properties logLevelProperties = new Properties(  );
+          logLevelProperties.load( loggingPropertiesIn );
+          logLevelProperties.forEach( ( logger, level ) -> {
+            Logger.getLogger( String.valueOf( logger ).trim( ) ).setLevel(
+                Level.toLevel( String.valueOf( level ).trim( ), null )
+            );
+          } );
+        }
+      }
+    } catch ( final Exception e ) {
+      Logger.getRootLogger( ).error( "Error Loading log levels", e );
+    }
+  }
+
+  public static void resetLevel( ) {
+    logLevel.recalculate( );
+  }
+
   enum LogLevel implements Callable<Boolean> {
     ALL,
     EXHAUST {
@@ -214,7 +154,6 @@ public class Logs {
     ERROR,
     FATAL,
     OFF;
-    private static final String PROP_LOG_LEVEL   = "euca.log.level";
     private final Logger        logger;
     
     LogLevel( ) {
@@ -236,13 +175,7 @@ public class Logs {
     
     private LogLevel init( ) {
       System.setProperty( PROP_LOG_LEVEL, this.level( ) );
-      System.setProperty( "euca.exhaust.level", this.exhaustLevel( ) );
-      System.setProperty( "euca.log.exhaustive", this.exhaustLevel( ) );
-      System.setProperty( "euca.log.exhaustive.cc", this.exhaustLevel( ) );
-      System.setProperty( "euca.log.exhaustive.user", this.exhaustLevel( ) );
-      System.setProperty( "euca.log.exhaustive.db", this.exhaustLevel( ) );
-      System.setProperty( "euca.log.exhaustive.external", this.exhaustLevel( ) );
-      System.setProperty( "euca.log.exhaustive.user", this.exhaustLevel( ) );
+      System.setProperty( PROP_LOG_EXHAUST_LEVEL, this.exhaustLevel( ) );
       return this;
     }
     
@@ -301,63 +234,5 @@ public class Logs {
   
   public static boolean isTrace( ) {
     return LogLevel.TRACE.call( );
-  }
-
-  @Deprecated
-  public static String dump( final Object o ) {
-    String ret = null;
-    if ( ( ret = groovyDump( o ) ) != null ) {
-      return ret;
-    } else if ( ( ret = groovyInspect( o ) ) != null ) {
-      return ret;
-    } else {
-      return ( o == null
-                        ? Threads.currentStackFrame( 1 ) + ": null"
-                        : "" + o );
-    }
-  }
-  
-  public static String groovyDump( final Object o ) {
-    final HashMap ctx = new HashMap( ) {
-      /**
-       * 
-       */
-      private static final long serialVersionUID = 1L;
-      
-      {
-        this.put( "o", o );
-      }
-    };
-    try {
-      return ""
-             + Groovyness.eval( "try {return o.dump()" +
-                                ".replaceAll(\"<\",\"[\")" +
-                                ".replaceAll(\">\",\"]\")" +
-                                ".replaceAll(\"[\\\\w\\\\.]+\\\\.(\\\\w+)@\\\\w*\", { Object[] it -> it[1] })" +
-                                ".replaceAll(\"class:class [\\\\w\\\\.]+\\\\.(\\\\w+),\", { Object[] it -> it[1] });" +
-                                "} catch( Exception e ) {return \"\"+o;}", ctx );
-    } catch ( final Exception ex ) {
-      LOG.error( ex, ex );
-      return null;
-    }
-  }
-  
-  public static String groovyInspect( final Object o ) {
-    final HashMap ctx = new HashMap( ) {
-      /**
-       * 
-       */
-      private static final long serialVersionUID = 1L;
-      
-      {
-        this.put( "o", o );
-      }
-    };
-    try {
-      return "" + Groovyness.eval( "try{return o.inspect();}catch(Exception e){return \"\"+o;}", ctx );
-    } catch ( final Exception ex ) {
-      LOG.error( ex, ex );
-      return null;
-    }
   }
 }
