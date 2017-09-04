@@ -625,7 +625,7 @@ public class Component implements HasName<Component> {
             }
           } catch ( Exception e ) {
             Logs.extreme( ).error( e, e );
-            final ServiceConfigurationException sce = Exceptions.findCause( e, ServiceConfigurationException.class );
+            final ServiceOrderlyException sce = Exceptions.findCause( e, ServiceOrderlyException.class );
             if ( sce != null  ) {
               ex = new OrderlyTransitionException( b.getClass( ).getSimpleName( ) + "."
                   + name

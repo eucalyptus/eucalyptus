@@ -43,7 +43,12 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.ServiceDependencyException;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.EmpyreanService;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Exceptions;
@@ -299,7 +304,18 @@ public abstract class Bootstrapper implements Comparable<Bootstrapper>, CanBoots
     }
     
   }
-  
+
+  protected void throwIfNotEnabled(
+      final Class<? extends ComponentId> componentIdClass
+  ) throws ServiceDependencyException {
+    if ( Components.services( componentIdClass ).find( ServiceConfigurations.filterEnabled( ) ).isEmpty( ) ) {
+      throw new ServiceDependencyException( "The "
+          + ComponentIds.lookup( getProvides( ) ).name( )
+          + " service depends upon an ENABLED "
+          + ComponentIds.lookup( componentIdClass ).name( ) );
+    }
+  }
+
   @Override
   public int hashCode( ) {
     final int prime = 31;

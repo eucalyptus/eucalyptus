@@ -34,6 +34,7 @@ import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.cloudformation.CloudFormation;
+import com.eucalyptus.component.ServiceDependencyException;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
 
@@ -47,7 +48,8 @@ public class CloudFormationBootstrapper extends Bootstrapper.Simple {
 
   @Override
   public boolean check() throws Exception {
-    return Topology.isEnabled( SimpleWorkflow.class );
+    throwIfNotEnabled( SimpleWorkflow.class );
+    return true;
   }
 
 }

@@ -42,6 +42,7 @@ package com.eucalyptus.component;
 import java.net.ConnectException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -1329,7 +1330,8 @@ public class Topology {
         if ( Exceptions.isCausedBy( ex, ExistingTransitionException.class ) ) {
           LOG.error( this.toString( input, initialState, nextState, ex ) );
           enabledEndState = true;
-        } else if ( Exceptions.isCausedBy( ex, OrderlyTransitionException.class ) ) {
+        } else if ( Exceptions.isCausedBy( ex, OrderlyTransitionException.class ) ||
+            Exceptions.isCausedBy( ex, UnknownHostException.class ) ) {
           Logs.extreme( ).error( ex, ex );
           LOG.warn( this.toString( input, initialState, nextState, ex ) );
         } else if ( Exceptions.isCausedBy( ex, ConnectException.class )) {

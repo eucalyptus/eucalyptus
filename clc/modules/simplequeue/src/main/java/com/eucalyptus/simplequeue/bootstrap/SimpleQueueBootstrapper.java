@@ -56,6 +56,7 @@ public class SimpleQueueBootstrapper extends Bootstrapper.Simple {
   public boolean check() throws Exception {
     if (!super.check())
       return false;
+    throwIfNotEnabled( SimpleWorkflow.class );
     if (Topology.isEnabled( SimpleWorkflow.class ))  {
       try {
         if(!WorkflowClientManager.isRunning()) {

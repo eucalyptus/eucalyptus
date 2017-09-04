@@ -44,6 +44,7 @@ import com.eucalyptus.bootstrap.Bootstrapper.Simple;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceDependencyException;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.ServiceStateException;
@@ -79,11 +80,11 @@ public abstract class CloudControllerColocatingBootstrapper extends Simple {
     return super.check( );
   }
 
-  private void enforceColocation( final boolean requireEnabled ) throws ServiceStateException {
+  private void enforceColocation( final boolean requireEnabled ) throws ServiceDependencyException {
     if ( !ComponentIds.lookup( this.component ).isManyToOnePartition( ) &&
         !Topology.isEnabledLocally( Eucalyptus.class ) &&
         ( !requireEnabled || Topology.isEnabledLocally( component ) ) ) {
-      throw new ServiceStateException( "The "
+      throw new ServiceDependencyException( "The "
           + ComponentIds.lookup( component ).name( )
           + " service depends upon a locally ENABLED "
           + ComponentIds.lookup( Eucalyptus.class ).name( ) );

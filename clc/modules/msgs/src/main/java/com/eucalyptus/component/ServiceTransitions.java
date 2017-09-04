@@ -574,7 +574,7 @@ public class ServiceTransitions {
           parent.lookupBootstrapper( ).load( );
           ServiceBuilders.lookup( parent.getComponentId( ) ).fireLoad( parent );
         } catch ( Exception e ) {
-          final ServiceConfigurationException sce = Exceptions.findCause( e, ServiceConfigurationException.class );
+          final ServiceOrderlyException sce = Exceptions.findCause( e, ServiceOrderlyException.class );
           final OrderlyTransitionException ote = Exceptions.findCause( e, OrderlyTransitionException.class );
           if ( ote==null && sce != null  ) {
             throw new OrderlyTransitionException( "Load failed with error: '"

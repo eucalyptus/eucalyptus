@@ -31,7 +31,7 @@ package com.eucalyptus.component;
 /**
  *
  */
-public class ServiceConfigurationException extends ServiceException {
+public class ServiceConfigurationException extends ServiceOrderlyException {
   private static final long serialVersionUID = 1L;
 
   public ServiceConfigurationException( final String message ) {
