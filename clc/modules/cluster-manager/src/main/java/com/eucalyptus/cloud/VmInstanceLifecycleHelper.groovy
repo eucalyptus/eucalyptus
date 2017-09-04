@@ -30,16 +30,13 @@ package com.eucalyptus.cloud
 
 import com.eucalyptus.cluster.common.msgs.VmRunType.Builder as VmRunBuilder
 import com.eucalyptus.cloud.run.Allocations.Allocation
-import com.eucalyptus.cloud.run.ClusterAllocator.State
 import com.eucalyptus.cluster.common.ResourceToken
 import com.eucalyptus.compute.common.internal.util.MetadataException
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesResultType
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesType
-import com.eucalyptus.util.async.StatefulMessageSet
 import com.eucalyptus.compute.common.internal.vm.VmInstance
 import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState
 import com.eucalyptus.vm.VmInstances.Builder as VmInstanceBuilder
-import com.eucalyptus.cluster.common.msgs.VmInfo
 import groovy.transform.CompileStatic
 
 /**
@@ -72,9 +69,6 @@ interface VmInstanceLifecycleHelper {
   void verifyNetworkAllocation( Allocation allocation,
                                 PrepareNetworkResourcesResultType prepareNetworkResourcesResultType )
 
-  void prepareNetworkMessages( Allocation allocation,
-                               StatefulMessageSet<State> state )
-
   void prepareVmRunType(ResourceToken resourceToken,
                         VmRunBuilder builder );
 
@@ -89,14 +83,8 @@ interface VmInstanceLifecycleHelper {
   void prepareAllocation( VmInstance instance,
                           Allocation allocation )
 
-  void prepareAllocation( VmInfo vmInfo,
-                          Allocation allocation )
-
   void startVmInstance( ResourceToken resourceToken,
                         VmInstance instance )
-
-  void restoreInstanceResources( ResourceToken resourceToken,
-                                 VmInfo vmInfo )
 
   /**
    * Can be called multiple times during clean with various states.

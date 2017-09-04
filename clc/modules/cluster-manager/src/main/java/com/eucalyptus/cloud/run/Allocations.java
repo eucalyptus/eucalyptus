@@ -88,6 +88,7 @@ import com.eucalyptus.compute.common.internal.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -585,7 +586,7 @@ public class Allocations {
                                     final SshKeyPair sshKeyPair,
                                     final byte[] userData,
                                     final UserFullName ownerFullName ) {
-    return new Allocation(
+    final Allocation allocation = new Allocation(
         input.getReservationId( ),
         input.getInstanceId( ),
         input.getUuid( ),
@@ -597,5 +598,10 @@ public class Allocations {
         sshKeyPair,
         userData,
         ownerFullName );
+
+    final VmInstanceToken token = Iterables.getOnlyElement( allocation.getAllocationTokens( ) );
+    token.setZombie( true );
+
+    return allocation;
   }
 }

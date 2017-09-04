@@ -36,7 +36,6 @@ import com.eucalyptus.auth.principal.Principals
 import com.eucalyptus.auth.principal.UserFullName
 import com.eucalyptus.cluster.common.msgs.VmRunType.Builder as VmRunBuilder
 import com.eucalyptus.cloud.run.Allocations.Allocation
-import com.eucalyptus.cloud.run.ClusterAllocator.State
 import com.eucalyptus.cluster.common.ResourceToken
 import com.eucalyptus.compute.common.internal.network.NoSuchGroupMetadataException
 import com.eucalyptus.compute.common.internal.util.IllegalMetadataAccessException
@@ -98,7 +97,6 @@ import com.eucalyptus.auth.type.RestrictedType
 import com.eucalyptus.util.Pair
 import com.eucalyptus.util.RestrictedTypes
 import com.eucalyptus.util.TypedKey
-import com.eucalyptus.util.async.StatefulMessageSet
 import com.eucalyptus.util.dns.DomainNames
 import com.eucalyptus.compute.common.internal.vm.VmInstance
 import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState
@@ -212,13 +210,6 @@ class VmInstanceLifecycleHelpers {
     }
 
     @Override
-    void prepareNetworkMessages(
-        final Allocation allocation,
-        final StatefulMessageSet<State> state
-    ) {
-    }
-
-    @Override
     void prepareVmRunType(
         final ResourceToken resourceToken,
         final VmRunBuilder builder
@@ -240,23 +231,9 @@ class VmInstanceLifecycleHelpers {
     }
 
     @Override
-    void prepareAllocation(
-        final VmInfo vmInfo,
-        final Allocation allocation
-    ) {
-    }
-
-    @Override
     void startVmInstance(
         final ResourceToken resourceToken,
         final VmInstance instance
-    ) {
-    }
-
-    @Override
-    void restoreInstanceResources(
-        final ResourceToken resourceToken,
-        final VmInfo vmInfo
     ) {
     }
 
@@ -436,22 +413,6 @@ class VmInstanceLifecycleHelpers {
     }
 
     @Override
-    void prepareAllocation(
-        final VmInfo vmInfo,
-        final Allocation allocation ) {
-      vmInfo?.netParams?.with {
-        if ( ipAddress != null ) {
-          allocation?.allocationTokens?.find{ final ResourceToken resourceToken ->
-            resourceToken.instanceUuid == vmInfo.uuid
-          }?.getAttribute(NetworkResourcesKey)?.add( new PrivateIPResource(
-              value: ipAddress, ownerId: vmInfo.instanceId
-          ) )
-        }
-        void
-      }
-    }
-
-    @Override
     void startVmInstance(
         final ResourceToken resourceToken,
         final VmInstance instance ) {
@@ -513,21 +474,6 @@ class VmInstanceLifecycleHelpers {
       }
     }
 
-    @Override
-    void prepareAllocation(
-        final VmInfo vmInfo,
-        final Allocation allocation
-    ) {
-      vmInfo?.netParams?.with {
-        if ( !Strings.isNullOrEmpty( ignoredPublicIp ) && !VmNetworkConfig.DEFAULT_IP.equals( ignoredPublicIp ) ) {
-          allocation?.allocationTokens?.find{ final ResourceToken resourceToken ->
-            resourceToken.instanceUuid == vmInfo.uuid
-          }?.getAttribute(NetworkResourcesKey)?.add( new PublicIPResource( ownerId: vmInfo.instanceId, value: ignoredPublicIp ) )
-        }
-        void
-      }
-    }
-
     @SuppressWarnings("UnnecessaryQualifiedReference")
     @Override
     void prepareVmInstance( final ResourceToken resourceToken,
@@ -554,15 +500,6 @@ class VmInstanceLifecycleHelpers {
         Addresses.getInstance( ).assign( address, instance )
         VmInstances.updatePublicAddress( instance, address.address )
       }
-    }
-
-    @Override
-    void restoreInstanceResources(
-        final ResourceToken resourceToken,
-        final VmInfo vmInfo ) {
-      Optional<String> publicIp = Optional.fromNullable( resourceToken?.getAttribute( NetworkResourcesKey )?.find{
-        NetworkResource resource -> resource instanceof PublicIPResource }?.value )
-      restoreAddress( publicIp, vmInfo )
     }
 
     @Override

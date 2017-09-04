@@ -235,7 +235,6 @@ public class ClusterAllocator implements Runnable {
     try {
       this.cluster = Clusters.lookupAny( clusterConfig );
       this.messages = new StatefulMessageSet<State>( this.cluster, State.values( ) );
-      this.setupNetworkMessages( );
       this.setupVolumeMessages( );
       this.setupCredentialMessages( );
       this.updateResourceMessages( );
@@ -538,11 +537,6 @@ public class ClusterAllocator implements Runnable {
         }
       }
     }
-  }
-  
-  @SuppressWarnings( "unchecked" )
-  private void setupNetworkMessages( ) throws NotEnoughResourcesException {
-    VmInstanceLifecycleHelpers.get( ).prepareNetworkMessages( this.allocInfo, this.messages );
   }
   
   private void setupVmMessages( final VmInstanceToken token ) throws Exception {

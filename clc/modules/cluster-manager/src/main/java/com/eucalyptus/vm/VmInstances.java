@@ -40,10 +40,9 @@
 package com.eucalyptus.vm;
 
 import static org.hamcrest.Matchers.notNullValue;
-import static com.eucalyptus.util.Parameters.checkParam;
 import static com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment.deleteOnTerminateFilter;
 import static com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment.volumeIdFilter;
-
+import static com.eucalyptus.util.Parameters.checkParam;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -57,20 +56,11 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import javax.transaction.Status;
 import javax.transaction.Synchronization;
-
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Databases;
-import com.eucalyptus.bootstrap.Hosts;
-import com.eucalyptus.cloud.VmInstanceToken;
-import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.compute.common.CloudMetadataLimitedType;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.criterion.Criterion;
@@ -78,49 +68,61 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.SimpleExpression;
 import org.xbill.DNS.Name;
-
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.blockstorage.msgs.GetVolumeTokenResponseType;
-import com.eucalyptus.blockstorage.msgs.GetVolumeTokenType;
-import com.eucalyptus.blockstorage.util.StorageProperties;
-import com.eucalyptus.cluster.common.ResourceToken;
-import com.eucalyptus.cloud.run.AdmissionControl;
+import com.eucalyptus.blockstorage.Storage;
+import com.eucalyptus.blockstorage.Volumes;
+import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeResponseType;
+import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeType;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Databases;
+import com.eucalyptus.bootstrap.Hosts;
+import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
+import com.eucalyptus.cloud.VmInstanceToken;
 import com.eucalyptus.cloud.run.Allocations;
+import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.StartInstanceCallback;
 import com.eucalyptus.cluster.callback.StopInstanceCallback;
+import com.eucalyptus.cluster.callback.TerminateCallback;
+import com.eucalyptus.cluster.common.Cluster;
+import com.eucalyptus.cluster.common.ClusterController;
+import com.eucalyptus.cluster.common.msgs.AttachedVolume;
+import com.eucalyptus.cluster.common.msgs.ClusterStartInstanceType;
+import com.eucalyptus.cluster.common.msgs.ClusterStopInstanceType;
+import com.eucalyptus.cluster.common.msgs.NetworkConfigType;
+import com.eucalyptus.cluster.common.msgs.VmInfo;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.cluster.common.ClusterController;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
+import com.eucalyptus.compute.common.CloudMetadata.VmInstanceMetadata;
+import com.eucalyptus.compute.common.CloudMetadataLimitedType;
+import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.DeleteResourceTag;
+import com.eucalyptus.compute.common.ImageMetadata;
+import com.eucalyptus.compute.common.InstanceStatusEventType;
 import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.ResourceTagMessage;
 import com.eucalyptus.compute.common.backend.CreateTagsType;
 import com.eucalyptus.compute.common.backend.DeleteTagsType;
-import com.eucalyptus.compute.common.internal.account.IdentityIdFormats;
-import com.eucalyptus.compute.common.internal.blockstorage.State;
-import com.eucalyptus.blockstorage.Storage;
-import com.eucalyptus.compute.common.internal.blockstorage.Volume;
-import com.eucalyptus.blockstorage.Volumes;
-import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeResponseType;
-import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeType;
-import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
-import com.eucalyptus.compute.common.CloudMetadata.VmInstanceMetadata;
-import com.eucalyptus.compute.common.CloudMetadatas;
-import com.eucalyptus.compute.common.ImageMetadata;
-import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
-import com.eucalyptus.cluster.common.Cluster;
-import com.eucalyptus.cluster.callback.TerminateCallback;
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.compute.common.InstanceStatusEventType;
 import com.eucalyptus.compute.common.backend.StopInstancesType;
 import com.eucalyptus.compute.common.backend.TerminateInstancesType;
+import com.eucalyptus.compute.common.internal.account.IdentityIdFormats;
+import com.eucalyptus.compute.common.internal.blockstorage.State;
+import com.eucalyptus.compute.common.internal.blockstorage.Volume;
+import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
+import com.eucalyptus.compute.common.internal.images.BootableImageInfo;
+import com.eucalyptus.compute.common.internal.images.ImageInfo;
 import com.eucalyptus.compute.common.internal.images.KernelImageInfo;
 import com.eucalyptus.compute.common.internal.images.RamdiskImageInfo;
 import com.eucalyptus.compute.common.internal.keys.KeyPairs;
 import com.eucalyptus.compute.common.internal.keys.SshKeyPair;
+import com.eucalyptus.compute.common.internal.network.NetworkGroup;
+import com.eucalyptus.compute.common.internal.tags.FilterSupport;
 import com.eucalyptus.compute.common.internal.util.MetadataException;
 import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
 import com.eucalyptus.compute.common.internal.util.ResourceAllocationException;
@@ -131,6 +133,8 @@ import com.eucalyptus.compute.common.internal.vm.VmBundleTask;
 import com.eucalyptus.compute.common.internal.vm.VmEphemeralAttachment;
 import com.eucalyptus.compute.common.internal.vm.VmId;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet;
 import com.eucalyptus.compute.common.internal.vm.VmInstanceTag;
 import com.eucalyptus.compute.common.internal.vm.VmLaunchRecord;
 import com.eucalyptus.compute.common.internal.vm.VmMigrationTask;
@@ -140,12 +144,11 @@ import com.eucalyptus.compute.common.internal.vm.VmRuntimeState;
 import com.eucalyptus.compute.common.internal.vm.VmStandardVolumeAttachment;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeState;
+import com.eucalyptus.compute.common.internal.vmtypes.VmType;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaceAttachment;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaces;
 import com.eucalyptus.compute.common.internal.vpc.Subnet;
-import com.eucalyptus.compute.common.network.Networking;
-import com.eucalyptus.compute.common.network.NetworkingFeature;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -158,39 +161,27 @@ import com.eucalyptus.entities.PersistenceExceptions;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
-import com.eucalyptus.compute.common.internal.images.BootableImageInfo;
-import com.eucalyptus.compute.common.internal.images.ImageInfo;
-import com.eucalyptus.compute.common.internal.network.NetworkGroup;
 import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.images.Emis;
-import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.system.tracking.MessageContexts;
-import com.eucalyptus.compute.common.internal.tags.FilterSupport;
 import com.eucalyptus.tags.TagHelper;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FUtils;
-import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.Intervals;
-import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.util.dns.DomainNames;
-import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
-import com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet;
-import com.eucalyptus.compute.common.internal.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Enums;
@@ -200,24 +191,14 @@ import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-
 import com.google.common.base.Splitter;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-
-import com.eucalyptus.cluster.common.msgs.VmInfo;
-import com.eucalyptus.cluster.common.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import com.eucalyptus.cluster.common.msgs.VirtualBootRecord;
-import com.eucalyptus.cluster.common.msgs.ClusterAttachVolumeType;
-import com.eucalyptus.cluster.common.msgs.NetworkConfigType;
-import com.eucalyptus.cluster.common.msgs.ClusterStartInstanceType;
-import com.eucalyptus.cluster.common.msgs.ClusterStopInstanceType;
 
 @ConfigurableClass( root = "cloud.vmstate",
                     description = "Parameters controlling the lifecycle of virtual machines." )
@@ -589,7 +570,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       initial = "5" )
   public static Integer INSTANCE_REACHABILITY_TIMEOUT   = 5;
 
-  @ConfigurableField( description = "Comma separated list of handlers to use for unknown instances ('restore', 'restore-failed', 'terminate', 'terminate-done')",
+  @ConfigurableField( description = "Comma separated list of handlers to use for unknown instances ('restore-failed', 'terminate', 'terminate-done')",
       initial = "terminate-done, restore-failed", changeListener = UnknownInstanceHandlerChangeListener.class )
   public static String UNKNOWN_INSTANCE_HANDLERS        = "terminate-done, restore-failed";
 
@@ -1817,20 +1798,11 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
 
     @Override
     public boolean apply( VmInfo arg0 ) {
-      if ( arg0.getGroupNames( ).isEmpty( ) ) {
-        LOG.warn( "Instance " + arg0.getInstanceId( ) + " reported no groups: " + arg0.getGroupNames( ) );
-      }
       if ( arg0.getInstanceType( ).getName( ) == null ) {
         LOG.warn( "Instance " + arg0.getInstanceId( ) + " reported no instance type: " + arg0.getInstanceType( ) );
       }
       if ( arg0.getInstanceType( ).getVirtualBootRecord( ).isEmpty( ) ) {
         LOG.warn( "Instance " + arg0.getInstanceId( ) + " reported no vbr entries: " + arg0.getInstanceType( ).getVirtualBootRecord( ) );
-        return false;
-      }
-      try {
-        VirtualBootRecord vbr = arg0.getInstanceType( ).lookupRoot( );
-      } catch ( NoSuchElementException ex ) {
-        LOG.warn( "Instance " + arg0.getInstanceId( ) + " reported no root vbr entry: " + arg0.getInstanceType( ).getVirtualBootRecord( ) );
         return false;
       }
       try {
@@ -2027,64 +1999,12 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
 
   public enum RestoreHandler implements Predicate<VmInfo> {
     /**
-     * Restores non-VPC instances
+     * Restores non-VPC instances. No longer supported, now the same as RestoreFailed.
      */
     Restore {
       @Override
       public boolean apply( final VmInfo input ) {
-        if ( Networking.getInstance().supports( NetworkingFeature.Vpc ) ) {
-          return false; // restore not supported with VPC
-        }
-        final VmState inputState = VmState.Mapper.get( input.getStateName( ) );
-        if ( !VmStateSet.RUN.contains( inputState ) ) {
-          return false;
-        } else if ( !ValidateVmInfo.INSTANCE.apply( input ) ) {
-          return false;
-        } else {
-          final UserFullName userFullName =
-              UserFullName.getInstanceForAccount( input.getAccountId( ), input.getOwnerId( ) );
-          Allocations.Allocation allocation = null;
-          try {
-            final String imageId = RestoreHandler.restoreImage( input );
-            final String kernelId = RestoreHandler.restoreKernel( input );
-            final String ramdiskId = RestoreHandler.restoreRamdisk( input );
-
-            allocation = Allocations.restore(
-                input,
-                RestoreHandler.restoreLaunchIndex( input ),
-                RestoreHandler.restoreVmType( input ),
-                RestoreHandler.restoreBootSet( input, imageId, kernelId, ramdiskId ),
-                RestoreHandler.restorePartition( input ),
-                RestoreHandler.restoreSshKeyPair( input, userFullName ),
-                RestoreHandler.restoreUserData( input ),
-                userFullName );
-
-            final List<NetworkGroup> networks = RestoreHandler.restoreNetworks( input, userFullName );
-            allocation.setNetworkRules( CollectionUtils.putAll(
-                networks,
-                Maps.<String,NetworkGroup>newLinkedHashMap(),
-                RestrictedTypes.toDisplayName( ),
-                Functions.<NetworkGroup>identity( ) ) );
-
-            VmInstanceLifecycleHelpers.get().prepareAllocation( input, allocation );
-
-            AdmissionControl.restore().apply( allocation );
-
-            allocation.commit();
-
-            final ResourceToken token = Iterables.getOnlyElement( allocation.getAllocationTokens() );
-            VmInstanceLifecycleHelpers.get().restoreInstanceResources( token, input );
-
-            restoreServiceTag( input.getServiceTag( ), input.getInstanceId( ) );
-
-            return true;
-          } catch ( final Exception ex ) {
-            if ( allocation != null ) allocation.abort( );
-            LOG.error( "Failed to restore instance " + input.getInstanceId( ) + " because of: " + ex.getMessage( ), /*building ? null :*/ ex );
-            Logs.extreme( ).error( ex, ex );
-            return false;
-          }
-        }
+        return RestoreFailed.apply( input );
       }
     },
     /**
@@ -2116,9 +2036,6 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
                 RestoreHandler.restoreSshKeyPair( input, userFullName ),
                 RestoreHandler.restoreUserData( input ),
                 userFullName );
-
-            final VmInstanceToken token = Iterables.getOnlyElement( allocation.getAllocationTokens( ) );
-            token.setZombie( true );
 
             allocation.commit( );
 
@@ -2215,43 +2132,6 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
           }
         }
       };
-    }
-
-    private static List<NetworkGroup> restoreNetworks( final VmInfo input, final UserFullName userFullName ) {
-      final List<NetworkGroup> networks = Lists.newArrayList();
-      networks.addAll( Lists.transform( input.getGroupNames(), transformNetworkNames( userFullName ) ) );
-      Iterables.removeIf( networks, Predicates.isNull() );
-
-      if ( networks.isEmpty() ) {
-        final EntityTransaction restore = Entities.get( NetworkGroup.class );
-        int index = input.getGroupNames().get( 0 ).lastIndexOf( "-" );
-        String truncatedSecGroup = (String) input.getGroupNames().get( 0 ).subSequence( 0, index );
-        String orphanedSecGrp = truncatedSecGroup.concat( "-orphaned" );
-        try {
-          NetworkGroup found = NetworkGroups.lookup( userFullName, orphanedSecGrp );
-          networks.add( found );
-          restore.commit();
-        } catch ( NoSuchMetadataException ex ) {
-
-          try {
-            NetworkGroup restoredGroup = NetworkGroups.create( userFullName, orphanedSecGrp, orphanedSecGrp );
-            networks.add( restoredGroup );
-          } catch ( Exception e ) {
-            LOG.debug( "Failed to restored security group : " + orphanedSecGrp );
-            restore.rollback();
-          }
-
-        } catch ( Exception e ) {
-          LOG.debug( "Failed to restore security group : " + orphanedSecGrp + " for InstanceID : " + input.getInstanceId()
-              + " User Name  : " + userFullName + " because of: " + e.getMessage() );
-          restore.rollback();
-        } finally {
-          if ( restore.isActive() ) {
-            restore.rollback();
-          }
-        }
-      }
-      return networks;
     }
 
     private static byte[] restoreUserData( final VmInfo input ) {
