@@ -39,165 +39,52 @@
 
 package com.eucalyptus.bootstrap;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
-import java.net.URLClassLoader;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.Collection;
 import java.util.List;
-import java.util.Properties;
-import java.util.Set;
 import java.util.SortedSet;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
-import javax.persistence.PersistenceContext;
+import java.util.stream.Stream;
+import javax.annotation.Nonnull;
 import org.apache.log4j.Logger;
-import com.eucalyptus.entities.PersistenceContexts;
+import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
+import org.springframework.core.type.AnnotationMetadata;
+import org.springframework.core.type.ClassMetadata;
+import org.springframework.core.type.classreading.MetadataReader;
+import org.springframework.core.type.classreading.MetadataReaderFactory;
+import org.springframework.core.type.filter.AbstractClassTestingTypeFilter;
+import org.springframework.core.type.filter.AnnotationTypeFilter;
+import org.springframework.core.type.filter.AssignableTypeFilter;
+import org.springframework.core.type.filter.TypeFilter;
+import org.springframework.util.ClassUtils;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.system.Ats;
-import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.LogUtil;
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
 /**
- * TODO: DOCUMENT
+ *
  */
 public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscovery> {
   private static Logger                         LOG       = Logger.getLogger( ServiceJarDiscovery.class );
   private static SortedSet<ServiceJarDiscovery> discovery = Sets.newTreeSet( );
   private static Multimap<Class, String>        classList = ArrayListMultimap.create( );
   
-  enum JarFilePass {
-    CLASSES {
-      @Override
-      public void process( File f ) throws Exception {
-        final JarFile jar = new JarFile( f );
-        final Properties props = new Properties( );
-        final List<JarEntry> jarList = Collections.list( jar.entries( ) );
-        LOG.trace( "-> Trying to load component info from " + f.getAbsolutePath( ) );
-        for ( final JarEntry j : jarList ) {
-          try {
-            if ( j.getName( ).matches( ".*\\.class.{0,1}" ) ) {
-              handleClassFile( f, j );
-            }
-          } catch ( RuntimeException ex ) {
-            LOG.error( ex, ex );
-            jar.close( );
-            throw ex;
-          }
-        }
-        jar.close( );
-      }
-      
-      private void handleClassFile( final File f, final JarEntry j ) throws IOException, RuntimeException {
-        final String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" );
-        try {
-          final Class candidate = ClassLoader.getSystemClassLoader( ).loadClass( classGuess );
-          classList.put( candidate, f.getAbsolutePath( ) );
-          if ( ServiceJarDiscovery.class.isAssignableFrom( candidate ) && !ServiceJarDiscovery.class.equals( candidate ) && !candidate.isAnonymousClass( ) ) {
-            try {
-              final ServiceJarDiscovery discover = ( ServiceJarDiscovery ) candidate.newInstance( );
-              discovery.add( discover );
-            } catch ( final Exception e ) {
-              LOG.fatal( e, e );
-              throw new RuntimeException( e );
-            }
-          } else if ( Ats.from( candidate ).has( Bootstrap.Discovery.class ) && Predicate.class.isAssignableFrom( candidate ) ) {
-            try {
-              @SuppressWarnings( { "rawtypes",
-                  "unchecked" } )
-              final ServiceJarDiscovery discover = new ServiceJarDiscovery( ) {
-                final Bootstrap.Discovery annote   = Ats.from( candidate ).get( Bootstrap.Discovery.class );
-                final Predicate<Class>    instance = ( Predicate<Class> ) Classes.builder( candidate ).newInstance( );
-                
-                @Override
-                public boolean processClass( Class discoveryCandidate ) throws Exception {
-                  boolean classFiltered =
-                    this.annote.value( ).length != 0 ? Iterables.any( Arrays.asList( this.annote.value( ) ), Classes.assignableTo( discoveryCandidate ) )
-                                                    : true;
-                  if ( classFiltered ) {
-                    boolean annotationFiltered =
-                      this.annote.annotations( ).length != 0 ? Iterables.any( Arrays.asList( this.annote.annotations( ) ), Ats.from( discoveryCandidate ) )
-                                                            : true;
-                    if ( annotationFiltered ) {
-                      return this.instance.apply( discoveryCandidate );
-                    } else {
-                      return false;
-                    }
-                  } else {
-                    return false;
-                  }
-                }
-                
-                @Override
-                public Double getPriority( ) {
-                  return this.annote.priority( );
-                }
-              };
-              discovery.add( discover );
-            } catch ( final Exception e ) {
-              LOG.fatal( e, e );
-              throw new RuntimeException( e );
-            }
-          }
-        } catch ( final ClassNotFoundException e ) {
-          LOG.debug( e, e );
-        }
-      }
-      
-    };
-    
-    JarFilePass( ) {}
-    
-    public abstract void process( final File f ) throws Exception;
-  }
-  
-  private static void doDiscovery( ) {
-    final File libDir = new File( BaseDirectory.LIB.toString( ) );
-    for ( final File f : libDir.listFiles( ) ) {
-      if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" )
-           && !f.getName( ).matches( ".*-ext-.*" ) ) {
-        LOG.debug( "Found eucalyptus component jar: " + f.getName( ) );
-        try {
-          ServiceJarDiscovery.JarFilePass.CLASSES.process( f );
-        } catch ( final Throwable e ) {
-          LOG.error( e.getMessage( ) );
-          continue;
-        }
-      }
-    }
-    ServiceJarDiscovery.runDiscovery( );
-  }
-  
   public static void doSingleDiscovery( final ServiceJarDiscovery s ) {
-    final File libDir = new File( BaseDirectory.LIB.toString( ) );
-    for ( final File f : libDir.listFiles( ) ) {
-      if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" )
-             && !f.getName( ).matches( ".*-ext-.*" ) ) {
-        LOG.debug( "Found eucalyptus component jar: " + f.getName( ) );
-        try {
-          ServiceJarDiscovery.JarFilePass.CLASSES.process( f );
-        } catch ( final Throwable e ) {
-          LOG.error( e.getMessage( ) );
-          continue;
-        }
-      }
-    }
+    processClasspath( );
     ServiceJarDiscovery.runDiscovery( s );
   }
   
-  public static void checkUniqueness( final Class c ) {
+  private static void checkUniqueness( final Class c ) {
     if ( classList.get( c ).size( ) > 1 ) {
       
       LOG.fatal( "Duplicate bootstrap class registration: " + c.getName( ) );
@@ -208,13 +95,12 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
     }
   }
   
+  @SuppressWarnings( "WeakerAccess" )
   public static void runDiscovery( ) {
     for ( final ServiceJarDiscovery s : discovery ) {
       EventRecord.here( ServiceJarDiscovery.class, EventType.BOOTSTRAP_INIT_DISCOVERY, s.getClass( ).getCanonicalName( ) ).trace( );
     }
-    for ( final ServiceJarDiscovery s : discovery ) {
-      runDiscovery( s );
-    }
+    discovery.forEach( ServiceJarDiscovery::runDiscovery );
   }
   
   public static void runDiscovery( final ServiceJarDiscovery s ) {
@@ -235,7 +121,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
         EventRecord.here( ServiceJarDiscovery.class, EventType.DISCOVERY_LOADED_ENTRY, this.getClass( ).getSimpleName( ), candidate.getName( ) ).trace( );
       }
     } catch ( final Throwable e ) {
-      if ( e instanceof InstantiationException ) {} else {
+      if ( !(e instanceof InstantiationException) ) {
         LOG.trace( e, e );
       }
     }
@@ -245,13 +131,12 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
    * Process the potential bootstrap-related class. Return false or throw an exception if the class
    * is rejected.
    * 
-   * @param candidate
+   * @param candidate The candidate class
    * @return true if the candidate is accepted.
-   * 
-   * @throws Exception
    */
   public abstract boolean processClass( Class candidate ) throws Exception;
   
+  @SuppressWarnings( "WeakerAccess" )
   public Double getDistinctPriority( ) {
     return this.getPriority( ) + ( .1d / this.getClass( ).hashCode( ) );
   }
@@ -259,95 +144,129 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   public abstract Double getPriority( );
   
   @Override
-  public int compareTo( final ServiceJarDiscovery that ) {
+  public int compareTo( @Nonnull final ServiceJarDiscovery that ) {
     return this.getDistinctPriority( ).compareTo( that.getDistinctPriority( ) );
   }
   
   public static void processLibraries( ) {
-    final File libDir = new File( BaseDirectory.LIB.toString( ) );
-    for ( final File f : libDir.listFiles( ) ) {
-      if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" )
-           && !f.getName( ).matches( ".*-ext-.*" ) ) {
-        EventRecord.here( ServiceJarDiscovery.class, EventType.BOOTSTRAP_INIT_SERVICE_JAR, f.getName( ) ).info( );
-        try {
-          ServiceJarDiscovery.JarFilePass.CLASSES.process( f );
-        } catch ( final Throwable e ) {
-          Bootstrap.LOG.error( e.getMessage( ) );
-          continue;
-        }
-      }
+    processClasspath( );
+  }
+
+  private static void processClasspath( ) {
+    if ( classList.isEmpty( ) ) {
+      Stream.of( "com.eucalyptus", "edu.ucsb.eucalyptus" ).forEach( ServiceJarDiscovery::processPackage );
     }
   }
-  
-  public static URLClassLoader makeClassLoader( final File libDir ) {
-    final URLClassLoader loader = new URLClassLoader( Lists.transform( Arrays.asList( libDir.listFiles( ) ), new Function<File, URL>( ) {
+
+  private static void processPackage( final String packageRoot ) {
+    final ComponentClassScanner classScanner = new ComponentClassScanner();
+    classScanner.addIncludeFilter(new AbstractClassTestingTypeFilter(){
       @Override
-      public URL apply( final File arg0 ) {
+      protected boolean match( final ClassMetadata metadata ) {
+        return metadata.isIndependent( );
+      }
+    });
+    for ( final Class<?> clazz : classScanner.getComponentClasses(packageRoot) ) {
+      classList.put( clazz, null );
+    }
+
+    final ComponentClassScanner scanner = new ComponentClassScanner();
+    scanner.addIncludeFilter(new AssignableTypeFilter(ServiceJarDiscovery.class));
+    scanner.addIncludeFilter(new AndTypeFilter(
+        new AssignableTypeFilter(Predicate.class),
+        new AnnotationTypeFilter(Bootstrap.Discovery.class)));
+
+    final Collection<Class<?>> classes = scanner.getComponentClasses(packageRoot);
+    for ( final Class<?> clazz : classes ) {
+      if ( ServiceJarDiscovery.class.equals(clazz) ) continue;
+      if ( ServiceJarDiscovery.class.isAssignableFrom( clazz ) ) {
         try {
-          return URI.create( "file://" + arg0.getAbsolutePath( ) ).toURL( );
-        } catch ( final MalformedURLException e ) {
+          discovery.add( ServiceJarDiscovery.class.cast( clazz.newInstance() ) );
+        } catch (InstantiationException e) {
+          System.err.println( clazz.getName() );
+          e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+        } catch (IllegalAccessException e) {
+          e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+        }
+      } else { // must be a Discovery/Predicate
+        discovery.add( fromDiscovery( clazz ) );
+      }
+    }
+  }
+
+  private static class ComponentClassScanner extends ClassPathScanningCandidateComponentProvider {
+
+    private ComponentClassScanner() {
+      super(false);
+    }
+
+    @Override
+    protected boolean isCandidateComponent( final AnnotatedBeanDefinition beanDefinition ) {
+      final AnnotationMetadata metadata = beanDefinition.getMetadata();
+      return metadata.isIndependent( );
+    }
+
+    Collection<Class<?>> getComponentClasses( String basePackage) {
+      basePackage = basePackage == null ? "" : basePackage;
+      List<Class<?>> classes = new ArrayList<>();
+      for (BeanDefinition candidate : findCandidateComponents(basePackage)) {
+        try {
+          Class cls = ClassUtils.resolveClassName( candidate.getBeanClassName(),
+              ClassUtils.getDefaultClassLoader() );
+          classes.add(cls);
+        } catch (Throwable e) {
           LOG.debug( e, e );
-          return null;
         }
       }
-    } ).toArray( new URL[] {} ) );
-    return loader;
+      return classes;
+    }
   }
-  
-  public static List<String> contextsInDir( final File libDir ) {
-    final ClassLoader oldLoader = Thread.currentThread( ).getContextClassLoader( );
-    try {
-      Thread.currentThread( ).setContextClassLoader( makeClassLoader( libDir ) );
-      final Set<String> ctxs = Sets.newHashSet( );
-      for ( final Class candidate : getClassList( libDir ) ) {
-        if ( PersistenceContexts.isEntityClass( candidate ) ) {
-          if ( Ats.from( candidate ).has( PersistenceContext.class ) ) {
-            ctxs.add( Ats.from( candidate ).get( PersistenceContext.class ).name( ) );
-          }
+
+
+  private static final class AndTypeFilter implements TypeFilter {
+    final TypeFilter[] filters;
+    private AndTypeFilter( final TypeFilter... filters ) {
+      this.filters = filters;
+    }
+
+    @Override
+    public boolean match( MetadataReader metadataReader, MetadataReaderFactory metadataReaderFactory) throws IOException {
+      boolean match = true;
+
+      for ( final TypeFilter filter : filters ) {
+        if ( !filter.match( metadataReader, metadataReaderFactory ) ) {
+          match = false;
+          break;
         }
       }
-      return Lists.newArrayList( ctxs );
-    } finally {
-      Thread.currentThread( ).setContextClassLoader( oldLoader );
+
+      return match;
     }
   }
-  
-  public static List<Class> classesInDir( final File libDir ) {
-    final ClassLoader oldLoader = Thread.currentThread( ).getContextClassLoader( );
-    try {
-      Thread.currentThread( ).setContextClassLoader( makeClassLoader( libDir ) );
-      return getClassList( libDir );
-    } finally {
-      Thread.currentThread( ).setContextClassLoader( oldLoader );
-    }
-  }
-  
-  private static List<Class> getClassList( final File libDir ) {
-    final List<Class> classList = Lists.newArrayList( );
-    for ( final File f : libDir.listFiles( ) ) {
-      if ( f.getName( ).startsWith( "eucalyptus" ) && f.getName( ).endsWith( ".jar" ) && !f.getName( ).matches( ".*-ext-.*" ) ) {
-//        LOG.trace( "Found eucalyptus component jar: " + f.getName( ) );
-        try {
-          final JarFile jar = new JarFile( f );
-          for ( final JarEntry j : Collections.list( jar.entries( ) ) ) {
-            if ( j.getName( ).matches( ".*\\.class.{0,1}" ) ) {
-              final String classGuess = j.getName( ).replaceAll( "/", "." ).replaceAll( "\\.class.{0,1}", "" );
-              try {
-                final Class candidate = ClassLoader.getSystemClassLoader( ).loadClass( classGuess );
-                classList.add( candidate );
-              } catch ( final ClassNotFoundException e ) {
-//                LOG.trace( e, e );
-              }
-            }
-          }
-          jar.close( );
-        } catch ( final Throwable e ) {
-          LOG.error( e.getMessage( ) );
-          continue;
+
+  private static ServiceJarDiscovery fromDiscovery( final Class candidate ) {
+    //noinspection Guava,unchecked
+    return new ServiceJarDiscovery( ) {
+      final Bootstrap.Discovery annote = Ats.from( candidate ).get( Bootstrap.Discovery.class );
+      final Predicate<Class> instance = ( Predicate<Class> ) Classes.builder( candidate ).newInstance( );
+      @Override
+      public boolean processClass( Class discoveryCandidate ) throws Exception {
+        @SuppressWarnings( "StaticPseudoFunctionalStyleMethod" )
+        boolean classFiltered =
+            this.annote.value( ).length == 0 || Iterables.any( Arrays.asList( this.annote.value( ) ), Classes.assignableTo( discoveryCandidate ) );
+        if ( classFiltered ) {
+          boolean annotationFiltered =
+              this.annote.annotations( ).length == 0 || Iterables.any( Arrays.asList( this.annote.annotations( ) ), Ats.from( discoveryCandidate ) );
+          return annotationFiltered && this.instance.apply( discoveryCandidate );
+        } else {
+          return false;
         }
       }
-    }
-    return classList;
+
+      @Override
+      public Double getPriority( ) {
+        return this.annote.priority( );
+      }
+    };
   }
-  
 }

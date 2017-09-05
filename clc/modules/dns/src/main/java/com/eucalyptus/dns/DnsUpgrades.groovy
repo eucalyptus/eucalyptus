@@ -45,7 +45,7 @@ import org.apache.log4j.Logger
 
 class DnsUpgrades {
   @EntityUpgrade( entities = DnsConfiguration.class, value = Dns.class, since = Upgrades.Version.v4_2_0 )
-  enum Dns420RegistrationUpgrade implements Predicate<Class> {
+  static enum Dns420RegistrationUpgrade implements Predicate<Class> {
     INSTANCE
 
     protected static final Logger logger = Logger.getLogger( Dns420RegistrationUpgrade )

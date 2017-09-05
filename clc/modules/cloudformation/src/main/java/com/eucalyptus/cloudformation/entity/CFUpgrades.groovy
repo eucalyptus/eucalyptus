@@ -86,7 +86,7 @@ class CFUpgrades {
   }
 
   @EntityUpgrade(entities = CloudFormationConfiguration.class, value = CloudFormation.class, since = Upgrades.Version.v4_1_0)
-  enum CloudFormation410RegistrationUpgrade implements Predicate<Class> {
+  static enum CloudFormation410RegistrationUpgrade implements Predicate<Class> {
     INSTANCE
 
     protected static final Logger logger = Logger.getLogger(CloudFormation410RegistrationUpgrade)
