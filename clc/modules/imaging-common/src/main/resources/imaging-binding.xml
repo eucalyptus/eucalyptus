@@ -30,8 +30,22 @@
 
 <binding force-classes="true" add-constructors="true" name="www_eucalyptus_com_ns_imaging_2014_02_14">
   <namespace uri="http://www.eucalyptus.com/ns/imaging/2014-02-14/" default="elements"/>
+  
+  <mapping class="com.eucalyptus.imaging.common.Error" abstract="true">
+    <value name="Type" field="type" usage="required"/>
+    <value name="Code" field="code" usage="required"/>
+    <value name="Message" field="message" usage="required"/>
+    <structure name="Detail" field="detail" usage="required" type="com.eucalyptus.imaging.common.ErrorDetail"/>
+  </mapping>
+  <mapping class="com.eucalyptus.imaging.common.ErrorDetail" abstract="true"/>
+  <mapping name="ErrorResponse" class="com.eucalyptus.imaging.common.ErrorResponse" extends="com.eucalyptus.imaging.common.ImagingMessage">
+    <structure map-as="com.eucalyptus.imaging.common.ImagingMessage"/>
+    <collection field="error">
+      <structure name="Error" type="com.eucalyptus.imaging.common.Error"/>
+    </collection>
+    <value name="RequestId" field="requestId" usage="required"/>
+  </mapping>
   <mapping class="com.eucalyptus.imaging.common.ImagingMessage" abstract="true" />
-
   <mapping name="ImportImage" class="com.eucalyptus.imaging.common.ImportImageType" extends="com.eucalyptus.imaging.common.ImagingMessage">
     <structure map-as="com.eucalyptus.imaging.common.ImagingMessage"/>
     <value name="description" field="description" usage="optional" />

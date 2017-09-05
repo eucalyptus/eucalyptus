@@ -32,12 +32,7 @@ package com.eucalyptus.cloudformation
 import com.eucalyptus.ws.WebServiceError
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.core.JsonProcessingException
-import com.fasterxml.jackson.databind.JsonSerializer
-import com.fasterxml.jackson.databind.SerializerProvider
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID;
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
 import java.lang.reflect.Field;
 
@@ -257,7 +252,6 @@ public class DeleteStackResult extends EucalyptusData {
 
 public class DescribeStackEventsResult extends EucalyptusData {
   String nextToken
-  @JsonSerialize(using = StackEventsRemoveMemberSerializer.class, as=StackEvents.class)
   StackEvents stackEvents;
   public DescribeStackEventsResult() {  }
 }
@@ -266,13 +260,11 @@ public class DescribeStackResourceResult extends EucalyptusData {
   public DescribeStackResourceResult() {  }
 }
 public class DescribeStackResourcesResult extends EucalyptusData {
-  @JsonSerialize(using = StackResourcesRemoveMemberSerializer.class, as=StackResources.class)
   StackResources stackResources;
   public DescribeStackResourcesResult() {  }
 }
 public class DescribeStacksResult extends EucalyptusData {
   String nextToken
-  @JsonSerialize(using = StacksRemoveMemberSerializer.class, as=Stacks.class)
   Stacks stacks;
   public DescribeStacksResult() {  }
 }
@@ -289,14 +281,11 @@ public class GetTemplateResult extends EucalyptusData {
   public GetTemplateResult() {  }
 }
 public class GetTemplateSummaryResult extends EucalyptusData {
-  @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
   ResourceList capabilities;
-  @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
   ResourceList resourceTypes;
   String capabilitiesReason;
   String description;
   String metadata;
-  @JsonSerialize(using = ParameterDeclarationsRemoveMemberSerializer.class, as=ParameterDeclarations.class)
   ParameterDeclarations parameters;
   String version;
   public GetTemplateSummaryResult() {  }
@@ -305,13 +294,11 @@ public class GetTemplateSummaryResult extends EucalyptusData {
 
 public class ListStackResourcesResult extends EucalyptusData {
   String nextToken
-  @JsonSerialize(using = StackResourceSummariesRemoveMemberSerializer.class, as=StackResourceSummaries.class)
   StackResourceSummaries stackResourceSummaries;
   public ListStackResourcesResult() {  }
 }
 public class ListStacksResult extends EucalyptusData {
   String nextToken
-  @JsonSerialize(using = StackSummariesRemoveMemberSerializer.class, as=StackSummaries.class)
   StackSummaries stackSummaries;
   public ListStacksResult() {  }
 }
@@ -333,7 +320,6 @@ public class Parameter extends EucalyptusData {
   }
 }
 public class ParameterConstraints extends EucalyptusData {
-  @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
   ResourceList allowedValues;
   public ParameterConstraints() {  }
 }
@@ -352,23 +338,18 @@ public class SignalResourceResult extends EucalyptusData {
   public SignalResourceResult() {  }
 }
 public class Stack extends EucalyptusData {
-  @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
   ResourceList capabilities;
   Date creationTime;
   String description;
   Boolean disableRollback;
   Date lastUpdatedTime;
-  @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
   ResourceList notificationARNs;
-  @JsonSerialize(using = OutputsRemoveMemberSerializer.class, as=Outputs.class)
   Outputs outputs;
-  @JsonSerialize(using = ParametersRemoveMemberSerializer.class, as=Parameters.class)
   Parameters parameters;
   String stackId;
   String stackName;
   String stackStatus;
   String stackStatusReason;
-  @JsonSerialize(using = TagsRemoveMemberSerializer.class, as=Tags.class)
   Tags tags;
   Integer timeoutInMinutes;
   public Stack() {  }
@@ -448,11 +429,9 @@ public class UpdateStackResult extends EucalyptusData {
   public UpdateStackResult() {  }
 }
 public class ValidateTemplateResult extends EucalyptusData {
-  @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
   ResourceList capabilities;
   String capabilitiesReason;
   String description;
-  @JsonSerialize(using = TemplateParametersRemoveMemberSerializer.class, as=TemplateParameters.class)
   TemplateParameters parameters;
   public ValidateTemplateResult() {  }
 }
@@ -475,20 +454,15 @@ public class ContinueUpdateRollbackResponseType extends CloudFormationMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
 public class CreateStackType extends CloudFormationMessage {
-  @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
   ResourceList capabilities;
   Boolean disableRollback;
-  @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
   ResourceList notificationARNs;
   String onFailure;
-  @JsonSerialize(using = ParametersRemoveMemberSerializer.class, as=Parameters.class)
   Parameters parameters;
-  @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
   ResourceList resourceTypes;
   String stackName;
   String stackPolicyBody;
   String stackPolicyURL;
-  @JsonSerialize(using = TagsRemoveMemberSerializer.class, as=Tags.class)
   Tags tags;
   String templateBody;
   String templateURL;
@@ -502,7 +476,6 @@ public class CreateStackResponseType extends CloudFormationMessage {
 }
 public class DeleteStackType extends CloudFormationMessage {
   String stackName;
-  @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
   ResourceList retainResources;
   public DeleteStackType() {  }
 }
@@ -553,7 +526,6 @@ public class DescribeStacksResponseType extends CloudFormationMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
 public class EstimateTemplateCostType extends CloudFormationMessage {
-  @JsonSerialize(using = ParametersRemoveMemberSerializer.class, as=Parameters.class)
   Parameters parameters;
   String templateBody;
   String templateURL;
@@ -606,7 +578,6 @@ public class ListStackResourcesResponseType extends CloudFormationMessage {
 }
 public class ListStacksType extends CloudFormationMessage {
   String nextToken;
-  @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
   ResourceList stackStatusFilter;
   public ListStacksType() {  }
 }
@@ -638,20 +609,15 @@ public class SignalResourceResponseType extends CloudFormationMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
 public class UpdateStackType extends CloudFormationMessage {
-  @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
   ResourceList capabilities;
-  @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
   ResourceList notificationARNs;
-  @JsonSerialize(using = ParametersRemoveMemberSerializer.class, as=Parameters.class)
   Parameters parameters;
-  @JsonSerialize(using = ResourceListRemoveMemberSerializer.class, as=ResourceList.class)
   ResourceList resourceTypes;
   String stackName;
   String stackPolicyBody;
   String stackPolicyDuringUpdateBody;
   String stackPolicyDuringUpdateURL;
   String stackPolicyURL;
-  @JsonSerialize(using = TagsRemoveMemberSerializer.class, as=Tags.class)
   Tags tags;
   String templateBody;
   String templateURL;
@@ -672,171 +638,5 @@ public class ValidateTemplateResponseType extends CloudFormationMessage {
   public ValidateTemplateResponseType() {  }
   ValidateTemplateResult validateTemplateResult = new ValidateTemplateResult();
   ResponseMetadata responseMetadata = new ResponseMetadata();
-}
-
-// TODO: figure out how to consolidate serializers below
-public class ResourceListRemoveMemberSerializer extends JsonSerializer<ResourceList> {
-  @Override
-  void serialize(ResourceList resourceList, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException, JsonProcessingException {
-    if (resourceList == null) {
-      jsonGenerator.writeNull();
-    } else {
-      jsonGenerator.writeStartArray();
-      for (String item: resourceList.getMember()) {
-        jsonGenerator.writeObject(item);
-      }
-      jsonGenerator.writeEndArray();
-    }
-  }
-}
-
-public class OutputsRemoveMemberSerializer extends JsonSerializer<Outputs> {
-  @Override
-  void serialize(Outputs outputs, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException, JsonProcessingException {
-    if (outputs == null) {
-      jsonGenerator.writeNull();
-    } else {
-      jsonGenerator.writeStartArray();
-      for (String item: outputs.getMember()) {
-        jsonGenerator.writeObject(item);
-      }
-      jsonGenerator.writeEndArray();
-    }
-  }
-}
-
-public class ParameterDeclarationsRemoveMemberSerializer extends JsonSerializer<ParameterDeclarations> {
-  @Override
-  void serialize(ParameterDeclarations parameterDeclarations, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException, JsonProcessingException {
-    if (parameterDeclarations == null) {
-      jsonGenerator.writeNull();
-    } else {
-      jsonGenerator.writeStartArray();
-      for (String item: parameterDeclarations.getMember()) {
-        jsonGenerator.writeObject(item);
-      }
-      jsonGenerator.writeEndArray();
-    }
-  }
-}
-
-public class ParametersRemoveMemberSerializer extends JsonSerializer<Parameters> {
-  @Override
-  void serialize(Parameters parameters, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException, JsonProcessingException {
-    if (parameters == null) {
-      jsonGenerator.writeNull();
-    } else {
-      jsonGenerator.writeStartArray();
-      for (String item: parameters.getMember()) {
-        jsonGenerator.writeObject(item);
-      }
-      jsonGenerator.writeEndArray();
-    }
-  }
-}
-
-public class StackEventsRemoveMemberSerializer extends JsonSerializer<StackEvents> {
-  @Override
-  void serialize(StackEvents stackEvents, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException, JsonProcessingException {
-    if (stackEvents == null) {
-      jsonGenerator.writeNull();
-    } else {
-      jsonGenerator.writeStartArray();
-      for (String item: stackEvents.getMember()) {
-        jsonGenerator.writeObject(item);
-      }
-      jsonGenerator.writeEndArray();
-    }
-  }
-}
-
-public class StackResourcesRemoveMemberSerializer extends JsonSerializer<StackResources> {
-  @Override
-  void serialize(StackResources stackResources, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException, JsonProcessingException {
-    if (stackResources == null) {
-      jsonGenerator.writeNull();
-    } else {
-      jsonGenerator.writeStartArray();
-      for (String item: stackResources.getMember()) {
-        jsonGenerator.writeObject(item);
-      }
-      jsonGenerator.writeEndArray();
-    }
-  }
-}
-
-public class StackResourceSummariesRemoveMemberSerializer extends JsonSerializer<StackResourceSummaries> {
-  @Override
-  void serialize(StackResourceSummaries stackResourceSummaries, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException, JsonProcessingException {
-    if (stackResourceSummaries == null) {
-      jsonGenerator.writeNull();
-    } else {
-      jsonGenerator.writeStartArray();
-      for (String item: stackResourceSummaries.getMember()) {
-        jsonGenerator.writeObject(item);
-      }
-      jsonGenerator.writeEndArray();
-    }
-  }
-}
-
-public class StackSummariesRemoveMemberSerializer extends JsonSerializer<StackSummaries> {
-  @Override
-  void serialize(StackSummaries stackSummaries, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException, JsonProcessingException {
-    if (stackSummaries == null) {
-      jsonGenerator.writeNull();
-    } else {
-      jsonGenerator.writeStartArray();
-      for (String item: stackSummaries.getMember()) {
-        jsonGenerator.writeObject(item);
-      }
-      jsonGenerator.writeEndArray();
-    }
-  }
-}
-
-public class StacksRemoveMemberSerializer extends JsonSerializer<Stacks> {
-  @Override
-  void serialize(Stacks stacks, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException, JsonProcessingException {
-    if (stacks == null) {
-      jsonGenerator.writeNull();
-    } else {
-      jsonGenerator.writeStartArray();
-      for (String item: stacks.getMember()) {
-        jsonGenerator.writeObject(item);
-      }
-      jsonGenerator.writeEndArray();
-    }
-  }
-}
-
-public class TagsRemoveMemberSerializer extends JsonSerializer<Tags> {
-  @Override
-  void serialize(Tags tags, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException, JsonProcessingException {
-    if (tags == null) {
-      jsonGenerator.writeNull();
-    } else {
-      jsonGenerator.writeStartArray();
-      for (String item: tags.getMember()) {
-        jsonGenerator.writeObject(item);
-      }
-      jsonGenerator.writeEndArray();
-    }
-  }
-}
-
-public class TemplateParametersRemoveMemberSerializer extends JsonSerializer<TemplateParameters> {
-  @Override
-  void serialize(TemplateParameters templateParameters, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException, JsonProcessingException {
-    if (templateParameters == null) {
-      jsonGenerator.writeNull();
-    } else {
-      jsonGenerator.writeStartArray();
-      for (String item: templateParameters.getMember()) {
-        jsonGenerator.writeObject(item);
-      }
-      jsonGenerator.writeEndArray();
-    }
-  }
 }
 

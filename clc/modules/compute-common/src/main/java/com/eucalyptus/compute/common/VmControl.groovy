@@ -228,7 +228,7 @@ public class RunInstancesType extends VmControlMessage implements HasTags {
   String kernelId; //** added 2008-02-01  **/
   String ramdiskId; //** added 2008-02-01  **/
   @HttpParameterMapping (parameter = "Placement.AvailabilityZone")
-  String availabilityZone = ""; //** added 2008-02-01  **/
+  String availabilityZone; //** added 2008-02-01  **/
   @HttpParameterMapping (parameter = "Placement.GroupName")
   String placementGroup = "default"; //** added 2010-02-01  **/
   @HttpParameterMapping (parameter = "Placement.Tenancy")
@@ -243,7 +243,7 @@ public class RunInstancesType extends VmControlMessage implements HasTags {
   @HttpParameterMapping (parameter = "InstanceInitiatedShutdownBehavior")
   String shutdownAction = "stop"; //or "terminate"
   /** InstanceLicenseRequest license; **/
-  String privateIpAddress = "";
+  String privateIpAddress;
   String clientToken;
   @HttpEmbedded
   InstanceNetworkInterfaceSetRequestType networkInterfaceSet;

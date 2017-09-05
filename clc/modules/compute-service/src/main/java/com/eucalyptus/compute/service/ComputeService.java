@@ -67,6 +67,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.*;
+import com.eucalyptus.compute.common.backend.ComputeBackendMessage;
 import com.eucalyptus.compute.common.internal.account.IdentityIdFormat;
 import com.eucalyptus.compute.common.internal.account.IdentityIdFormat.IdResource;
 import com.eucalyptus.compute.common.internal.account.IdentityIdFormat.IdType;
@@ -2071,9 +2072,8 @@ public class ComputeService {
     }
   }
 
-  private static Class getBackendMessageClass( final BaseMessage request ) throws BindingException {
-    final Binding binding = BindingManager.getDefaultBinding( );
-    return binding.getElementClass( "Eucalyptus." + request.getClass( ).getSimpleName( ) );
+  private static Class getBackendMessageClass( final BaseMessage request ) throws ClassNotFoundException {
+    return Class.forName( ComputeBackendMessage.class.getPackage( ).getName( ) + "." + request.getClass( ).getSimpleName( ) );
   }
 
   private static BaseMessage send( final BaseMessage request ) throws Exception {

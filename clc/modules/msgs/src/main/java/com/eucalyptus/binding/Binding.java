@@ -39,7 +39,6 @@
 
 package com.eucalyptus.binding;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -50,7 +49,9 @@ import java.util.List;
 import java.util.Map;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
+import org.apache.axiom.om.OMDocument;
 import org.apache.axiom.om.OMElement;
+import org.apache.axiom.om.OMFactory;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.axiom.soap.SOAPFactory;
@@ -70,7 +71,8 @@ import org.jibx.runtime.impl.StAXReaderWrapper;
 import org.jibx.runtime.impl.StAXWriter;
 import org.jibx.runtime.impl.UnmarshallingContext;
 import com.eucalyptus.util.NamespaceMappingXMLStreamWriter;
-import com.eucalyptus.util.UnsafeByteArrayOutputStream;
+import com.eucalyptus.util.OMXMLStreamWriter;
+import com.eucalyptus.util.ThrowingFunction;
 import com.eucalyptus.ws.WebServicesException;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -143,12 +145,42 @@ public class Binding {
   }
 
   public String toStream( final OutputStream outputStream, final Object param, final String altNs ) throws BindingException {
-    if ( param == null ) {
+    return toWriter(
+        (__) -> HoldMe.getXMLOutputFactory( ).createXMLStreamWriter( outputStream, null ),
+        param,
+        altNs );
+  }
+
+  public OMElement toOM( final Object param ) throws BindingException {
+    return this.toOM( param, null );
+  }
+
+  public OMElement toOM( final Object param, final String altNs ) throws BindingException {
+    final OMDocument[] document = new OMDocument[1];
+    toWriter( holdMe -> {
+      final OMFactory factory = HoldMe.getOMFactory( );
+      document[0] = factory.createOMDocument( );
+      return new OMXMLStreamWriter( factory, document[0] );
+    }, param, altNs );
+    return document[0].getOMDocumentElement( );
+  }
+
+  private Object bindingReplace( final Object param) {
+    if ( param instanceof BindingReplace ) {
+      return ((BindingReplace<?>)param).bindingReplace( );
+    } else {
+      return param;
+    }
+  }
+  
+  private String toWriter( final ThrowingFunction<Void,XMLStreamWriter,XMLStreamException> writerFunction, final Object paramObj, final String altNs ) throws BindingException {
+    if ( paramObj == null ) {
       throw new BindingException( "Cannot bind null value" );
-    } else if ( !( param instanceof IMarshallable ) ) {
+    }
+    final Object param = bindingReplace( paramObj );
+    if ( !( param instanceof IMarshallable ) ) {
       throw new BindingException( "No JiBX <mapping> defined for class " + param.getClass( ) );
     }
-
     final IMarshallable mrshable = ( IMarshallable ) param;
     final String fqName = mrshable.JiBX_getName( );
     final String origNs = this.classToNamespaceMap.get(fqName);
@@ -166,7 +198,7 @@ public class Binding {
     try {
       final IMarshallingContext mctx = this.bindingFactory.createMarshallingContext( );
       final XMLStreamWriter wrtr = new NamespaceMappingXMLStreamWriter(
-          HoldMe.getXMLOutputFactory( ).createXMLStreamWriter( outputStream, null ),
+          writerFunction.apply( null ),
           Collections.singletonMap( origNs, useNs ) );
       final StAXWriter staxWriter = new StAXWriter( this.bindingFactory.getNamespaces( ), wrtr );
       mctx.setXmlWriter( staxWriter );
@@ -181,29 +213,6 @@ public class Binding {
     return useNs;
   }
 
-  public OMElement toOM( final Object param ) throws BindingException {
-    return this.toOM( param, null );
-  }
-
-  public OMElement toOM( final Object param, final String altNs ) throws BindingException {
-    final UnsafeByteArrayOutputStream bos = new UnsafeByteArrayOutputStream( 4196 );
-    final String useNs = toStream( bos, param, altNs );
-    final OMElement retVal;
-    HoldMe.canHas.lock( );
-    try {
-      final StAXOMBuilder stAXOMBuilder = HoldMe.getStAXOMBuilder( HoldMe.getXMLStreamReader( new ByteArrayInputStream( bos.getBuffer( ), 0, bos.getCount( ) ) ) );
-      retVal = stAXOMBuilder.getDocumentElement( );
-    } catch ( XMLStreamException e ) {
-      LOG.error( e, e );
-      throw new BindingException( this.name + " failed to marshall type " + param.getClass( ).getCanonicalName( ) + " with ns:" + useNs + " caused by: "
-                                  + e.getMessage( ), e );
-    } finally {
-      HoldMe.canHas.unlock( );
-    }
-    
-    return retVal;
-  }
-  
   public UnmarshallingContext getNewUnmarshalContext( final OMElement param ) throws JiBXException {
     if ( this.bindingFactory == null ) {
       throw new RuntimeException( "Binding bootstrap failed to construct the binding factory for " + this.name );

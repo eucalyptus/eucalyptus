@@ -158,7 +158,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
   }
 
   public ObjectStorageRESTBinding() {
-    super("http://s3.amazonaws.com/doc/" + ObjectStorageProperties.NAMESPACE_VERSION);
+    super("http://s3.amazonaws.com/doc/" + ObjectStorageProperties.NAMESPACE_VERSION + "/");
     operationMap = populateOperationMap();
     unsupportedOperationMap = populateUnsupportedOperationMap();
   }

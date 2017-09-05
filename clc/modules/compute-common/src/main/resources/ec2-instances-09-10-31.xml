@@ -97,8 +97,8 @@
     <value name="instanceType" field="instanceType" usage="optional" />
     <value name="launchTime" field="launchTime" usage="optional" />
     <!--2008-02-01 -->
-    <structure name="placement">
-      <value name="availabilityZone" field="placement" />
+    <structure name="placement" usage="optional">
+      <value name="availabilityZone" field="placement" usage="optional"/>
     </structure>
     <value name="kernelId" field="kernel" usage="optional" />
     <value name="ramdiskId" field="ramdisk" usage="optional" />

@@ -41,6 +41,7 @@ import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.eucalyptus.ws.protocol.BaseQueryBinding;
 import com.eucalyptus.ws.protocol.OperationParameter;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -52,6 +53,7 @@ import com.fasterxml.jackson.databind.module.SimpleSerializers;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import org.apache.log4j.Logger;
@@ -63,6 +65,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
 
 
@@ -148,7 +151,13 @@ public class CloudFormationQueryBinding extends BaseQueryBinding<OperationParame
         new SimpleSerializers( Lists.<JsonSerializer<?>>newArrayList( new EpochSecondsDateSerializer( ) ) )
     ) );
     mapper.setSerializationInclusion( JsonInclude.Include.NON_NULL );
+    mapper.addMixIn( EucalyptusData.class, MemberMixin.class ); // omit "member" objects when serializing lists
     return mapper.writer( ).without( SerializationFeature.FAIL_ON_EMPTY_BEANS );
+  }
+
+  private interface MemberMixin {
+    @JsonValue
+    ArrayList<Object> getMember( );
   }
 
   private static final class EpochSecondsDateSerializer extends StdSerializer<Date> {

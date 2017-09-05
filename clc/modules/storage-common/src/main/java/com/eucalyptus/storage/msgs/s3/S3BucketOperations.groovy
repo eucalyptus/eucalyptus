@@ -30,6 +30,8 @@
 @GroovyAddClassUUID
 package com.eucalyptus.storage.msgs.s3
 
+import edu.ucsb.eucalyptus.msgs.EucalyptusData
+
 import java.util.ArrayList
 import java.util.List;
 
@@ -145,11 +147,11 @@ public class CreateBucketResponse extends S3Response {
   String bucket;
 }
 
-public class BucketCreationConfiguration {
+public class BucketCreationConfiguration extends EucalyptusData {
   LocationConstraint bucketLocationConstraint;
 }
 
-public class LocationConstraint {
+public class LocationConstraint extends EucalyptusData {
   String location;
 }
 
@@ -204,7 +206,7 @@ public class GetBucketVersioningStatusResponse extends S3Response {
   VersioningConfiguration configuration;
 }
 
-public class VersioningConfiguration {
+public class VersioningConfiguration extends EucalyptusData {
   String status;
   String mfaDelete; //Unused currently
 }
@@ -268,7 +270,7 @@ public class SetRESTBucketAccessControlPolicyResponse extends S3Response {
  * Data types
  */
 
-public class AllowedCorsMethods {
+public class AllowedCorsMethods extends EucalyptusData {
 
   // Valid methods for a CORS rule are: GET, HEAD, PUT, POST, DELETE
   public static List<HttpMethod> methodList = new ArrayList<HttpMethod>();
@@ -283,11 +285,11 @@ public class AllowedCorsMethods {
 
 }
 
-public class CorsConfiguration {
+public class CorsConfiguration extends EucalyptusData {
   List<CorsRule> rules;
 }
 
-public class CorsRule {
+public class CorsRule extends EucalyptusData {
   String id;
   int sequence;
   List<String> allowedOrigins;
@@ -297,12 +299,12 @@ public class CorsRule {
   List<String> exposeHeaders;
 }
 
-public class CorsMatchResult {
+public class CorsMatchResult extends EucalyptusData {
   CorsRule CorsRuleMatch = null;
   boolean anyOrigin = false;
 }
 
-public class PreflightRequest {
+public class PreflightRequest extends EucalyptusData {
   String origin;
   String method;
   List<String> requestHeaders;
@@ -324,7 +326,7 @@ public class PreflightRequest {
   }
 }
 
-public class PreflightResponse {
+public class PreflightResponse extends EucalyptusData {
   String origin;
   List<String> methods;
   int maxAgeSeconds;
@@ -380,24 +382,24 @@ public class SetBucketWebsiteRequest extends S3Request {
 }
 public class SetBucketWebsiteResponse extends S3Response {}
 
-public class WebsiteConfiguration {
+public class WebsiteConfiguration extends EucalyptusData {
   WebsiteRedirectConfiguration redirectAllConfiguration;
   IndexDocumentConfiguration indexDocument;
   ErrorDocumentConfiguration errorDocument;
   ArrayList<RoutingRule> routingRules;
 }
 
-public class RoutingRule {
+public class RoutingRule extends EucalyptusData {
   RoutingCondition condition;
   RoutingRedirectConfiguration redirect;
 }
 
-public class RoutingCondition {
+public class RoutingCondition extends EucalyptusData {
   String keyPrefixEquals;
   String httpErrorCodeReturnedEquals;
 }
 
-public class RoutingRedirectConfiguration {
+public class RoutingRedirectConfiguration extends EucalyptusData {
   String replaceKeyPrefixWith;
   String replaceKeyWith;
   String hostName;
@@ -405,15 +407,15 @@ public class RoutingRedirectConfiguration {
   String httpRedirectCode;
 }
 
-public class IndexDocumentConfiguration {
+public class IndexDocumentConfiguration extends EucalyptusData {
   String suffix;
 }
 
-public class ErrorDocumentConfiguration {
+public class ErrorDocumentConfiguration extends EucalyptusData {
   String key; //Object key to use when 4xx error occurs. page returned will be this object
 }
 
-public class WebsiteRedirectConfiguration {
+public class WebsiteRedirectConfiguration extends EucalyptusData {
   String hostName;
   String protocol;
 }
@@ -424,11 +426,11 @@ public class WebsiteRedirectConfiguration {
  * --------------------
  */
 
-public class TaggingConfiguration {
+public class TaggingConfiguration extends EucalyptusData {
   BucketTagSet bucketTagSet;
 }
 
-public class BucketTagSet {
+public class BucketTagSet extends EucalyptusData {
   List<BucketTag> bucketTags;
 }
 
@@ -438,7 +440,7 @@ public class BucketTagSet {
 /*
  public class GetBucketTaggingRequest extends S3Request {}
  */
-public class BucketTag {
+public class BucketTag extends EucalyptusData {
   String key;
   String value;
   public BucketTag() {}
@@ -488,11 +490,11 @@ public class BucketTag {
  */
 //public class GetBucketLifecycleRequest extends S3Request {}
 
-public class LifecycleConfiguration {
+public class LifecycleConfiguration extends EucalyptusData {
   List<LifecycleRule> rules;
 }
 
-public class LifecycleRule {
+public class LifecycleRule extends EucalyptusData {
   String id;
   String prefix;
   String status;
@@ -500,7 +502,7 @@ public class LifecycleRule {
   Transition transition;
 }
 
-public class Expiration {
+public class Expiration extends EucalyptusData {
   int creationDelayDays;
   Date effectiveDate;
 }
@@ -563,16 +565,16 @@ public class DeleteBucketPolicyResponse extends S3Response {}
 /*
  * POST /bucket/?delete
  */
-public class DeleteMultipleObjectsMessage {
+public class DeleteMultipleObjectsMessage extends EucalyptusData {
   Boolean quiet;
   List<DeleteMultipleObjectsEntry> objects;
 }
-public class DeleteMultipleObjectsMessageReply {
+public class DeleteMultipleObjectsMessageReply extends EucalyptusData {
   List<DeleteMultipleObjectsEntryVersioned> deleted;
   List<DeleteMultipleObjectsError> errors;
 }
 
-public class DeleteMultipleObjectsEntry {
+public class DeleteMultipleObjectsEntry extends EucalyptusData {
   String key;
   String versionId;
 }

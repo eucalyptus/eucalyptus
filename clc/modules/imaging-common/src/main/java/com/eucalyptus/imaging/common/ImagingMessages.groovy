@@ -31,15 +31,11 @@ package com.eucalyptus.imaging.common
 
 import com.eucalyptus.ws.WebServiceError;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-
 import com.eucalyptus.binding.HttpParameterMapping
 import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.component.annotation.ComponentMessage
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 import net.sf.json.JSONObject;
 import net.sf.json.JSONArray;

@@ -157,7 +157,7 @@ public class VerifyMetadata {
     @Override
     public boolean apply( Allocation allocInfo ) throws MetadataException {
       RunInstancesType request = allocInfo.getRequest( );
-      String zoneName = request.getAvailabilityZone( );
+      String zoneName = Strings.nullToEmpty( request.getAvailabilityZone( ) );
       if ( Clusters.list( ).isEmpty( ) ) {
         LOG.debug( "enabled values: " + Joiner.on( "\n" ).join( Clusters.list( ) ) );
         LOG.debug( "disabled values: " + Joiner.on( "\n" ).join( Clusters.listDisabled( ) ) );

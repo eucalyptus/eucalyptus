@@ -411,7 +411,9 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
       throw new BindingException(errMsg.toString());
     }
 
-    LOG.trace(groovyMsg.toString());
+    if ( LOG.isTraceEnabled( ) ) {
+      LOG.trace( groovyMsg.toString( ) );
+    }
     try {
       Binding binding = BindingManager.getDefaultBinding();
       msg = binding.toOM(groovyMsg);

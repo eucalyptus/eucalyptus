@@ -161,7 +161,7 @@
         <value name="instanceType" field="instanceType" usage="optional" />
         <!--2008-02-01 -->
         <structure name="placement" usage="optional">
-            <value name="availabilityZone" field="availabilityZone" />
+            <value name="availabilityZone" field="availabilityZone" usage="optional"/>
         </structure>
         <value name="kernelId" field="kernelId" usage="optional" />
         <value name="ramdiskId" field="ramdiskId" usage="optional" />

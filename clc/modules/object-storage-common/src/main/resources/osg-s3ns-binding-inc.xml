@@ -169,13 +169,6 @@
         usage="optional"/>
   </mapping>
 
-  <mapping
-      class="com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyResponseType"
-      abstract="true">
-    <structure field="accessControlPolicy"
-               map-as="com.eucalyptus.storage.msgs.s3.AccessControlPolicy" usage="optional"/>
-  </mapping>
-
   <mapping name="SetBucketAccessControlPolicyType"
            class="com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyType"
            extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
@@ -197,13 +190,6 @@
     <structure
         map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
         usage="optional"/>
-  </mapping>
-
-  <mapping
-      class="com.eucalyptus.objectstorage.msgs.GetObjectAccessControlPolicyResponseType"
-      abstract="true">
-    <structure field="accessControlPolicy"
-               map-as="com.eucalyptus.storage.msgs.s3.AccessControlPolicy"/>
   </mapping>
 
   <mapping name="SetObjectAccessControlPolicyType"
@@ -489,12 +475,6 @@
         usage="optional"/>
   </mapping>
 
-  <mapping class="com.eucalyptus.objectstorage.msgs.GetBucketLocationResponseType"
-           abstract="true">
-    <structure field="locationConstraint" usage="optional"
-               map-as="com.eucalyptus.storage.msgs.s3.LocationConstraint"/>
-  </mapping>
-
   <mapping name="GetBucketLoggingStatus"
            class="com.eucalyptus.objectstorage.msgs.GetBucketLoggingStatusType"
            extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
@@ -682,13 +662,6 @@
         usage="optional"/>
   </mapping>
 
-  <mapping
-      class="com.eucalyptus.objectstorage.msgs.GetBucketLifecycleResponseType"
-      abstract="true">
-    <structure field="lifecycleConfiguration" usage="optional"
-               map-as="com.eucalyptus.storage.msgs.s3.LifecycleConfiguration"/>
-  </mapping>
-
   <mapping name="SetBucketLifecycle"
            class="com.eucalyptus.objectstorage.msgs.SetBucketLifecycleType"
            extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
@@ -732,13 +705,6 @@
         usage="optional"/>
   </mapping>
 
-  <mapping
-      class="com.eucalyptus.objectstorage.msgs.GetBucketTaggingResponseType"
-      abstract="true">
-    <structure field="taggingConfiguration" usage="optional"
-               map-as="com.eucalyptus.storage.msgs.s3.TaggingConfiguration"/>
-  </mapping>
-
   <mapping name="DeleteBucketTagging"
            class="com.eucalyptus.objectstorage.msgs.DeleteBucketTaggingType"
            extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
@@ -759,13 +725,6 @@
     <structure
         map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
         usage="optional"/>
-  </mapping>
-
-  <mapping
-      class="com.eucalyptus.objectstorage.msgs.GetBucketCorsResponseType"
-      abstract="true">
-    <structure field="corsConfiguration" usage="optional"
-               map-as="com.eucalyptus.storage.msgs.s3.CorsConfiguration"/>
   </mapping>
 
   <mapping name="SetBucketCors"
@@ -824,12 +783,6 @@
         usage="optional"/>
   </mapping>
 
-  <mapping
-      class="com.eucalyptus.objectstorage.msgs.GetBucketPolicyResponseType"
-      abstract="true">
-    <value name="Policy" field="policy" usage="optional"/>
-  </mapping>
-
   <mapping name="DeleteBucketPolicy"
            class="com.eucalyptus.objectstorage.msgs.DeleteBucketPolicyType"
            extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
@@ -840,11 +793,6 @@
 
   <mapping name="DeleteBucketPolicyResponse"
            class="com.eucalyptus.objectstorage.msgs.DeleteBucketPolicyResponseType">
-  </mapping>
-
-  <!-- multi-object-delete: POST bucket?delete -->
-  <mapping class="com.eucalyptus.objectstorage.msgs.DeleteMultipleObjectsResponseType" abstract="true">
-    <structure field="deleteResult" map-as="com.eucalyptus.storage.msgs.s3.DeleteMultipleObjectsMessageReply" usage="optional"/>
   </mapping>
 
 </binding>

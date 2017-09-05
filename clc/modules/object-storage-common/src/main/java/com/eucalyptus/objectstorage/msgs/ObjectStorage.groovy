@@ -30,7 +30,7 @@
 @GroovyAddClassUUID
 package com.eucalyptus.objectstorage.msgs
 
-
+import com.eucalyptus.binding.BindingReplace
 import com.eucalyptus.objectstorage.policy.S3PolicySpec
 import org.jboss.netty.channel.Channel
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
@@ -451,8 +451,9 @@ public class ObjectStorageErrorMessageType extends BaseMessage {
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.READ_ACP])
 public class GetBucketAccessControlPolicyType extends ObjectStorageRequestType {}
 
-public class GetBucketAccessControlPolicyResponseType extends ObjectStorageResponseType {
+public class GetBucketAccessControlPolicyResponseType extends ObjectStorageResponseType implements BindingReplace<AccessControlPolicy> {
   AccessControlPolicy accessControlPolicy;
+  @Override AccessControlPolicy bindingReplace( ) { accessControlPolicy }
 }
 
 /* GET /bucket/object?acl */
@@ -464,8 +465,9 @@ public class GetBucketAccessControlPolicyResponseType extends ObjectStorageRespo
 public class GetObjectAccessControlPolicyType extends ObjectStorageRequestType {
 }
 
-public class GetObjectAccessControlPolicyResponseType extends ObjectStorageResponseType {
+public class GetObjectAccessControlPolicyResponseType extends ObjectStorageResponseType implements BindingReplace<AccessControlPolicy> {
   AccessControlPolicy accessControlPolicy;
+  @Override AccessControlPolicy bindingReplace( ) { accessControlPolicy }
 }
 
 /* GET / on service. Lists buckets*/
@@ -859,8 +861,9 @@ public class SetObjectAccessControlPolicyResponseType extends ObjectStorageRespo
 @RequiresACLPermission(object = [], bucket = [], ownerOf = [ObjectStorageProperties.Resource.bucket])
 public class GetBucketLocationType extends ObjectStorageRequestType {}
 
-public class GetBucketLocationResponseType extends ObjectStorageResponseType {
+public class GetBucketLocationResponseType extends ObjectStorageResponseType implements BindingReplace<LocationConstraint> {
   LocationConstraint locationConstraint = new LocationConstraint( )
+  @Override LocationConstraint bindingReplace( ) { locationConstraint }
 }
 
 /* GET /bucket?logging */
@@ -923,8 +926,9 @@ public class SetBucketVersioningStatusResponseType extends ObjectStorageResponse
 @RequiresACLPermission(object = [], bucket = [], ownerOf = [ObjectStorageProperties.Resource.bucket])
 public class GetBucketLifecycleType extends ObjectStorageRequestType {}
 
-public class GetBucketLifecycleResponseType extends ObjectStorageResponseType {
+public class GetBucketLifecycleResponseType extends ObjectStorageResponseType implements BindingReplace<LifecycleConfiguration> {
   LifecycleConfiguration lifecycleConfiguration;
+  @Override LifecycleConfiguration bindingReplace( ) { lifecycleConfiguration }
 }
 
 /* PUT /bucket?lifecycle */
@@ -970,8 +974,9 @@ public class SetBucketTaggingResponseType extends ObjectStorageResponseType {}
 @RequiresACLPermission(object = [], bucket = [], ownerOf = [ObjectStorageProperties.Resource.bucket])
 public class GetBucketTaggingType extends ObjectStorageRequestType {}
 
-public class GetBucketTaggingResponseType extends ObjectStorageResponseType {
+public class GetBucketTaggingResponseType extends ObjectStorageResponseType implements BindingReplace<TaggingConfiguration> {
   TaggingConfiguration taggingConfiguration;
+  @Override TaggingConfiguration bindingReplace( ) { taggingConfiguration }
 }
 
 /* DELETE /bucket/?tagging */
@@ -1003,8 +1008,9 @@ public class SetBucketCorsResponseType extends ObjectStorageResponseType {}
 @RequiresACLPermission(object = [], bucket = [], ownerOf = [ObjectStorageProperties.Resource.bucket])
 public class GetBucketCorsType extends ObjectStorageRequestType {}
 
-public class GetBucketCorsResponseType extends ObjectStorageResponseType {
+public class GetBucketCorsResponseType extends ObjectStorageResponseType implements BindingReplace<CorsConfiguration> {
   CorsConfiguration corsConfiguration;
+  @Override CorsConfiguration bindingReplace( ) { corsConfiguration }
 }
 
 /* DELETE /bucket/?cors */
@@ -1228,6 +1234,7 @@ public class DeleteMultipleObjectsType extends ObjectStorageRequestType {
   DeleteMultipleObjectsMessage delete;
 }
 
-public class DeleteMultipleObjectsResponseType extends ObjectStorageResponseType {
+public class DeleteMultipleObjectsResponseType extends ObjectStorageResponseType implements BindingReplace<DeleteMultipleObjectsMessageReply> {
   DeleteMultipleObjectsMessageReply deleteResult;
+  @Override DeleteMultipleObjectsMessageReply bindingReplace( ) { deleteResult }
 }

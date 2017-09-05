@@ -152,7 +152,7 @@ public class PurchaseReservedInstancesOfferingType extends ReservedInstanceMessa
 
 public class PurchaseReservedInstancesOfferingResponseType extends ReservedInstanceMessage {}
 
-class TargetConfigurationRequestType {
+class TargetConfigurationRequestType extends EucalyptusData {
   Integer instanceCount
   String offeringId
 }

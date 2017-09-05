@@ -56,7 +56,7 @@
     </mapping>
 
     <mapping name="AccessControlPolicy"
-             class="com.eucalyptus.storage.msgs.s3.AccessControlPolicy" abstract="true">
+             class="com.eucalyptus.storage.msgs.s3.AccessControlPolicy">
         <structure name="Owner" field="owner"
                    map-as="com.eucalyptus.storage.msgs.s3.CanonicalUser" usage="optional" />
         <structure field="accessControlList"
