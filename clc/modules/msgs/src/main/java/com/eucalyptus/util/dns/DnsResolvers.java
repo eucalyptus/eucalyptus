@@ -83,7 +83,7 @@ public class DnsResolvers extends ServiceJarDiscovery {
                                     + "See 'euca-describe-properties dns'.", initial = "true" )
   public static Boolean enabled = Boolean.TRUE;
   private static final ClassToInstanceMap<DnsResolver> resolvers = MutableClassToInstanceMap.create( );
-  
+
   public enum RequestType implements Predicate<Record> {
     A( 1 ),
     NS( 2 ),
@@ -462,10 +462,10 @@ public class DnsResolvers extends ServiceJarDiscovery {
             ;
           }
           response.getHeader( ).setRcode( Rcode.NXDOMAIN );
-          return SetResponse.ofType( SetResponse.NXDOMAIN );
+          return SetResponses.ofType( SetResponses.SetResponseType.nxdomain );
         } else if (reply.isRefused()) {
           response.getHeader().setRcode( Rcode.REFUSED );
-          return SetResponse.ofType( SetResponse.UNKNOWN );
+          return SetResponses.ofType( SetResponses.SetResponseType.unknown );
         } else if ( reply.hasAnswer( ) ) {
           for ( ResponseSection s : ResponseSection.values( ) ) {
             Record[] records = reply.section( s );
@@ -473,15 +473,15 @@ public class DnsResolvers extends ServiceJarDiscovery {
               addRRset( name, response, records, s.section( ) );
             }
           }
-          return SetResponse.ofType( SetResponse.SUCCESSFUL );
+          return SetResponses.ofType( SetResponses.SetResponseType.successful );
         } else {
-          return SetResponse.ofType( SetResponse.SUCCESSFUL );
+          return SetResponses.ofType( SetResponses.SetResponseType.successful );
         }
       } catch ( final Exception ex ) {
         LOG.debug( "DnsResolver: failed for " + name + " using " + r + " because of: " + ex.getMessage( ), ex );
       }
     }
-    return SetResponse.ofType( SetResponse.UNKNOWN );// no dice, return unknown
+    return SetResponses.ofType( SetResponses.SetResponseType.unknown );// no dice, return unknown
   }
   
   @SuppressWarnings( "unchecked" )
@@ -512,11 +512,11 @@ public class DnsResolvers extends ServiceJarDiscovery {
                                          final DnsRequest request ) {
     try {
       if ( !enabled || !Bootstrap.isOperational( ) ) {
-        return SetResponse.ofType( SetResponse.UNKNOWN );
+        return SetResponses.ofType( SetResponses.SetResponseType.unknown );
       } else {
         final Iterable<DnsResolver> resolverList = DnsResolvers.resolversFor( request );
         if ( Iterables.isEmpty( resolverList ) ) {
-          return SetResponse.ofType( SetResponse.NXDOMAIN );
+          return SetResponses.ofType( SetResponses.SetResponseType.nxdomain );
         } else {
           return DnsResolvers.lookupRecords( response, request );
         }
@@ -525,6 +525,6 @@ public class DnsResolvers extends ServiceJarDiscovery {
       LOG.error( ex );
       LOG.trace( ex, ex );
     }
-    return SetResponse.ofType( SetResponse.UNKNOWN );
+    return SetResponses.ofType( SetResponses.SetResponseType.unknown );
   }
 }
