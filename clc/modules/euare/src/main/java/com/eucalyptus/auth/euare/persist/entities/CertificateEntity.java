@@ -49,15 +49,11 @@ import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Index;
 import javax.persistence.JoinColumn;
-import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Type;
-import org.hibernate.criterion.Restrictions;
-import com.eucalyptus.auth.euare.common.identity.Certificate;
 import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.component.id.Euare;
@@ -97,8 +93,7 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
   private String certificateHashId;
 
   // The certificate
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   @Column( name = "auth_certificate_pem" )
   private String pem;
   

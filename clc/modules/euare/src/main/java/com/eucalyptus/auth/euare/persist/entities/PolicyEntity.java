@@ -45,7 +45,6 @@ import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Index;
 import javax.persistence.JoinColumn;
-import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
@@ -77,8 +76,7 @@ public class PolicyEntity extends AbstractPersistent implements Serializable {
   
   // The original policy text in JSON
   @Column( name = "auth_policy_text" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String text;
   
   // The owning group

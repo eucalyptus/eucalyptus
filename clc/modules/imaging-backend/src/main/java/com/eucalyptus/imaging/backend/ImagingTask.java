@@ -39,7 +39,6 @@ import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
-import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
@@ -75,8 +74,7 @@ public class ImagingTask extends UserMetadata<ImportTaskState>
   implements ImagingMetadata.ImagingTaskMetadata, IConversionTask {
   private static Logger LOG  = Logger.getLogger( ImagingTask.class );
 
-  @Type( type = "org.hibernate.type.StringClobType" )
-  @Lob
+  @Type(type="text")
   // so there is not need to worry about length of the JSON
   @Column( name = "metadata_task_in_json" )
   protected String         taskInJSON;

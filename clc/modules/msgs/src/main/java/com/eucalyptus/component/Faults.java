@@ -58,7 +58,6 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
-import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
@@ -193,8 +192,7 @@ public class Faults {
     @Column( name = "fault_service_state" )
     private final Component.State eventState;
     @Column( name = "fault_stack_trace" )
-    @Lob
-    @Type(type="org.hibernate.type.StringClobType")
+    @Type(type="text")
     private String                stackString;
     @Transient
     private CheckException        other;

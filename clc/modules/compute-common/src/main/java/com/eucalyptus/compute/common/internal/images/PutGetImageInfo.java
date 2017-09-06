@@ -43,7 +43,6 @@ import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
 import javax.persistence.Column;
-import javax.persistence.Lob;
 import javax.persistence.MappedSuperclass;
 
 import com.eucalyptus.auth.principal.UserFullName;
@@ -54,9 +53,8 @@ import com.eucalyptus.compute.common.StaticDiskImage;
 public class PutGetImageInfo extends ImageInfo implements StaticDiskImage {
   @Column( name = "metadata_image_manifest_path" )
   private String manifestLocation;
-  
-  @Lob
-  @org.hibernate.annotations.Type(type="org.hibernate.type.StringClobType")
+
+  @org.hibernate.annotations.Type(type="text")
   @Column( name = "metadata_image_signature" )
   private String signature;
   

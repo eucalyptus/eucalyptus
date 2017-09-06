@@ -51,7 +51,6 @@ import java.util.concurrent.Callable;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PostLoad;
 import javax.persistence.PreUpdate;
@@ -108,8 +107,7 @@ public class SANInfo extends AbstractPersistent {
   private String sanUser;
   @ConfigurableField(description = "Password for SAN device.", displayName = "SAN Password", type = ConfigurableFieldType.KEYVALUEHIDDEN)
   @Column(name = "san_password")
-  @Type(type = "org.hibernate.type.StringClobType")
-  @Lob
+  @Type(type="text")
   private String sanPassword;
   @ConfigurableField(description = "User ID for CHAP authentication", displayName = "CHAP user", type = ConfigurableFieldType.KEYVALUE)
   @Column(name = "chap_user")

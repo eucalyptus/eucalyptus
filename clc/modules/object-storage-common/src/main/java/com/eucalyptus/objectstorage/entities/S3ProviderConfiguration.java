@@ -34,7 +34,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
@@ -90,8 +89,7 @@ public class S3ProviderConfiguration extends AbstractPersistent implements Cache
 
   @ConfigurableField(description = "Local Store S3 Secret Key.", displayName = "s3_secret_key", type = ConfigurableFieldType.KEYVALUEHIDDEN)
   @Column(name = "secret_key")
-  @Lob
-  @Type(type = "org.hibernate.type.StringClobType")
+  @Type(type="text")
   protected String S3SecretKey;
 
   @Transient

@@ -36,7 +36,6 @@ import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
-import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
@@ -106,8 +105,7 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
   private String activityVersion;
 
   @Column( name = "input", updatable = false  )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   private String input;
 
   @Column( name = "schedule_to_close_timeout", updatable = false )
@@ -123,8 +121,7 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
   private Integer heartbeatTimeout;
 
   @Column( name = "heartbeat_details", updatable = false )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   private String heartbeatDetails;
 
   @Column( name = "started_timestamp" )

@@ -35,7 +35,6 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
-import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import java.util.Date;
@@ -57,19 +56,16 @@ public class StackEventEntity extends AbstractPersistent {
   @Column(name = "logical_resource_id", nullable = false )
   String logicalResourceId;
   @Column(name = "physical_resource_id" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String physicalResourceId;
   @Column(name = "resource_properties" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String resourceProperties;
   @Column(name = "resource_status", nullable = false )
   @Enumerated(EnumType.STRING)
   Status resourceStatus;
   @Column(name = "resource_status_reason" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String resourceStatusReason;
   @Column(name = "resource_type", nullable = false )
   String resourceType;

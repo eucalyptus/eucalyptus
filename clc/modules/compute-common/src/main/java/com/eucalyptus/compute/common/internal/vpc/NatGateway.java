@@ -34,7 +34,6 @@ import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Index;
 import javax.persistence.JoinColumn;
-import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
@@ -112,8 +111,7 @@ public class NatGateway extends UserMetadata<NatGateway.State> implements NatGat
   private String failureCode;
 
   @Column( name = "metadata_failure_message" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   private String failureMessage;
 
   @Column( name = "metadata_allocation_id", nullable = false, updatable = false )

@@ -68,12 +68,16 @@ import com.google.common.base.Predicate;
 @PersistenceContext(name = "eucalyptus_storage")
 @Table(name = "san_volume_info")
 public class SANVolumeInfo extends AbstractPersistent {
+  @Column(name = "volumeid")
   protected String volumeId;
+  @Column(name = "scname")
   private String scName;
+  @Column(name = "iqn")
   private String iqn;
+  @Column(name = "storeuser")
   private String storeUser;
-  @Type(type = "org.hibernate.type.StringClobType")
-  @Lob
+  @Column(name = "encryptedpassword")
+  @Type(type="text")
   private String encryptedPassword;
   @Column(name = "size")
   protected Integer size;

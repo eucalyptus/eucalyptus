@@ -33,7 +33,6 @@ import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Index;
-import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
@@ -80,23 +79,19 @@ public class ServerCertificateEntity extends AbstractOwnedPersistent implements 
   @Column(name = "metadata_server_cert_id", nullable=true)
   private String certificateId;
 
-  @Lob
-  @Type(type = "org.hibernate.type.StringClobType")
+  @Type(type="text")
   @Column(name = "metadata_server_cert_body", nullable = true)
   private String certificateBody;
 
-  @Lob
-  @Type(type = "org.hibernate.type.StringClobType")
+  @Type(type="text")
   @Column(name = "metadata_server_cert_chain", nullable = true)
   private String certificateChain;
 
-  @Lob
-  @Type(type = "org.hibernate.type.StringClobType")
+  @Type(type="text")
   @Column(name = "metadata_server_cert_pk", nullable = true)
   private String privateKey;
 
-  @Lob
-  @Type(type = "org.hibernate.type.StringClobType")
+  @Type(type="text")
   @Column(name = "metadata_session_key", nullable = true)
   private String sessionKey;
 

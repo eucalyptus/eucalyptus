@@ -37,7 +37,6 @@ import java.util.Map;
 
 import javax.annotation.Nonnull;
 import javax.persistence.Column;
-import javax.persistence.Lob;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
@@ -86,8 +85,7 @@ public abstract class S3AccessControlledEntity<STATE extends Enum<STATE>> extend
 
   // 8k size should cover 100 80-byte entries which allows for json chars etc
   @Column(name = "acl", nullable = false)
-  @Lob
-  @Type(type = "org.hibernate.type.StringClobType")
+  @Type( type = "text" )
   private String acl; // A JSON encoded string that is the acl list.
 
   @Column(name = "owner_displayname")

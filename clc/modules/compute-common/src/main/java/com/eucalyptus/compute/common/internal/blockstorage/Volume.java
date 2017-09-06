@@ -48,7 +48,6 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Index;
-import javax.persistence.Lob;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
@@ -85,9 +84,8 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   private String   partition;     //TODO:GRZE: change to injected ref.
   @Column( name = "metadata_volume_parentsnapshot" )
   private String   parentSnapshot;
-  @Lob
   @Column( name = "metadata_volume_remotedevice" )
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   private String   remoteDevice;
   @Column( name = "metadata_volume_localdevice" )
   private String   localDevice;

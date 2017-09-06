@@ -49,7 +49,6 @@ import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PostPersist;
 import javax.persistence.PostRemove;
@@ -74,20 +73,16 @@ public class Partition extends AbstractPersistent implements Comparable<Partitio
   private static Logger LOG = Logger.getLogger( Partition.class );
   @Column( name = "config_partition_name", unique = true )
   String                name;
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   @Column( name = "config_partition_x509_certificate" )
   private String        pemCertificate;
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   @Column( name = "config_partition_node_x509_certificate" )
   private String        pemNodeCertificate;
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   @Column( name = "config_partition_kp" )
   private String        pemPrivateKey;
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   @Column( name = "config_partition_node_kp" )
   private String        pemNodePrivateKey;
   

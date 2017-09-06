@@ -44,7 +44,6 @@ import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
-import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
@@ -71,8 +70,8 @@ public class ISCSIVolumeInfo extends LVMVolumeInfo {
   @Column(name = "storeuser")
   private String storeUser;
 
-  @Lob
-  @Type(type = "org.hibernate.type.StringClobType")
+  @Column(name = "encryptedpassword")
+  @Type(type="text")
   private String encryptedPassword;
 
   public String toString() {

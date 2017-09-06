@@ -45,7 +45,6 @@ import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
-import javax.persistence.Lob;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Parent;
 import org.hibernate.annotations.Type;
@@ -102,8 +101,7 @@ public class VmBundleTask {
   @Column( name = "metadata_vm_bundle_prefix" )
   private String      prefix;
   @Column( name = "metadata_vm_bundle_policy" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   private String      policy;
   @Column( name = "metadata_vm_bundle_error_msg" )
   private String      errorMessage;

@@ -52,7 +52,6 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
-import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.PreRemove;
@@ -122,8 +121,7 @@ public class VmBootRecord {
   private String                  iamInstanceProfileId;
   @Column( name = "metadata_vm_iam_role_arn", updatable = false, length =  2048 )
   private String                  iamRoleArn;
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   @Column( name = "metadata_vm_sshkey" )
   private String                  sshKeyString;
   @ManyToOne

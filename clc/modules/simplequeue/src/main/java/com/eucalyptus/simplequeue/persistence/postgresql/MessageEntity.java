@@ -50,7 +50,6 @@ import org.hibernate.annotations.Type;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
@@ -83,8 +82,7 @@ public class MessageEntity extends AbstractPersistent {
   // In this case receipt handle = account id + queue id + message_id + #times received (might not be best choice)
 
   @Column(name = "message_json", nullable = false)
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String messageJson;
 
   public MessageEntity() {

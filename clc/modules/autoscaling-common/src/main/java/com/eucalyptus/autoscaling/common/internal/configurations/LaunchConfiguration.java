@@ -38,7 +38,6 @@ import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
-import javax.persistence.Lob;
 import javax.persistence.OrderColumn;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
@@ -82,8 +81,7 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
   private List<String> securityGroups = Lists.newArrayList();
 
   @Column( name = "metadata_user_data" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")  
+  @Type(type="text")
   private String userData;
 
   @Column( name = "metadata_instance_type", nullable = false )

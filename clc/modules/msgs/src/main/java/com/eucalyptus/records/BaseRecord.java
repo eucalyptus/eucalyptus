@@ -53,7 +53,6 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
-import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -87,8 +86,7 @@ public class BaseRecord extends AbstractPersistent implements Serializable, Reco
   private String                            userId;
   @Column( name = "record_correlation_id" )
   private String                            correlationId;
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   @Column( name = "record_extra" )
   private String                            extra;
   @Column( name = "record_level" )

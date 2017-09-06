@@ -36,7 +36,6 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
-import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
@@ -88,8 +87,7 @@ public class Bucket extends S3AccessControlledEntity<BucketState> implements Com
   private Long bucketSize;
 
   @Column(name = "policy")
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   private String policy;
 
   @PrePersist

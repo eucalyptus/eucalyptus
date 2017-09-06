@@ -50,7 +50,6 @@ import org.hibernate.annotations.Type;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
@@ -70,8 +69,7 @@ public class QueueEntity extends AbstractPersistent {
   @Column(name = "partition_token", nullable = false)
   String partitionToken;
   @Column(name = "attributes_json", nullable = false)
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String attributes;
 
   @Column(name = "last_lookup_timestamp", nullable = false)

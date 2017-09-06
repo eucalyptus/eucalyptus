@@ -40,7 +40,6 @@ import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
-import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PostLoad;
 import javax.persistence.Transient;
@@ -101,9 +100,8 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
   
   @Transient
   private ImmutableList<String> snapshotIdsCopy;
-  
-  @Type( type = "org.hibernate.type.StringClobType" )
-  @Lob
+
+  @Type(type="text")
   @Column( name = "metadata_launchspec_userdata")
   private String userData;
   

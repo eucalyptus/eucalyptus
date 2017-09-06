@@ -45,7 +45,6 @@ import java.util.NoSuchElementException;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
-import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
@@ -74,8 +73,7 @@ import javaslang.Tuple3;
 public class StaticDatabasePropertyEntry extends AbstractPersistent {
   @Column( name = "config_static_field_name", nullable = false, unique = true )
   private String fieldName;
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   @Column( name = "config_static_field_value" )
   private String       value;
   @Column( name = "config_static_prop_name", nullable = false, unique = true )

@@ -41,7 +41,6 @@ import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Index;
 import javax.persistence.JoinColumn;
-import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
@@ -126,9 +125,8 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
   @Column(name = "upload_id")
   private String uploadId;
 
-  @Column(name = "stored_headers")
-  @Lob
-  @Type(type = "org.hibernate.type.StringClobType")
+  @Column(name = "stored_headers" )
+  @Type( type = "text" )
   private String storedHeaders;
 
   public Long getCreationExpiration() {

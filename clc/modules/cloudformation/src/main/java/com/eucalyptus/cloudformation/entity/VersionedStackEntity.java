@@ -34,7 +34,6 @@ import org.hibernate.annotations.Type;
 import javax.persistence.Column;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
-import javax.persistence.Lob;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -60,8 +59,7 @@ public abstract class VersionedStackEntity extends AbstractPersistent {
   String accountId;
 
   @Column(name = "capabilities_json" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String capabilitiesJson;
 
   @Column(name = "description", length =  4000)
@@ -71,52 +69,43 @@ public abstract class VersionedStackEntity extends AbstractPersistent {
   Boolean disableRollback;
 
   @Column(name = "pseudo_parameter_map_json" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String pseudoParameterMapJson;
 
   @Column(name = "condition_map_json" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String conditionMapJson;
 
   @Column(name = "resource_dependency_manager_json" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String resourceDependencyManagerJson;
 
 
   @Column(name = "mapping_json" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String mappingJson;
 
   @Column(name = "notification_arns_json" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String notificationARNsJson;
 
   @Column(name = "working_outputs_json" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String workingOutputsJson;
 
   @Column(name = "outputs_json" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String outputsJson;
 
   @Column(name = "parameters_json" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String parametersJson;
 
   @Column(name = "stack_id", nullable = false, length = 400 )
   String stackId;
 
   @Column( name = "stack_policy")
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String stackPolicy;
 
   @Column(name = "stack_name", nullable = false )
@@ -127,18 +116,15 @@ public abstract class VersionedStackEntity extends AbstractPersistent {
   Status stackStatus;
 
   @Column(name = "stack_status_reason" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String stackStatusReason;
 
   @Column(name = "tags_json" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String tagsJson;
 
   @Column( name = "template_body" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String templateBody;
 
   @Column(name = "template_format_version", nullable = false )

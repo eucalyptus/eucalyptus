@@ -51,7 +51,6 @@ import javax.persistence.Embeddable;
 import javax.persistence.Embedded;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
-import javax.persistence.Lob;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
@@ -143,8 +142,7 @@ public class VmRuntimeState {
   @ElementCollection
   @CollectionTable( name = "metadata_instances_state_reasons" )
   private Set<String>         reasonDetails       = Sets.newHashSet( );
-  @Lob
-  @Type( type = "org.hibernate.type.StringClobType" )
+  @Type(type="text")
   @Column( name = "metadata_vm_password_data" )
   private String              passwordData;
   @Column( name = "metadata_vm_pending" )
