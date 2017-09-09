@@ -1,0 +1,166 @@
+/*************************************************************************
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ ************************************************************************/
+apply plugin: 'java'
+apply plugin: 'java-library'
+
+configurations {
+  all*.exclude module: 'commons-logging' // we redirect to slf4j
+  all*.exclude module: 'geronimo-activation_1.1_spec'
+  all*.exclude module: 'geronimo-stax-api_1.0_spec'
+
+  // these should be excluded via jibx deps but that fails due to these
+  // dependencies being scoped in the pom
+  all*.exclude module: 'ant'  // jibx-bind
+  all*.exclude module: 'jdom' // jibx-extras
+  all*.exclude module: 'qdox' // jibx-bind
+}
+
+dependencies {
+  runtimeOnly 'antlr:antlr:2.7.7'
+  runtimeOnly 'aopalliance:aopalliance:1.0'
+  runtimeOnly 'bsf:bsf:2.4.0'
+  api 'com.amazonaws:aws-java-sdk-core:1.11.61'
+  api 'com.amazonaws:aws-java-sdk-s3:1.11.61'
+  api 'com.amazonaws:aws-java-sdk-simpleworkflow:1.11.61'
+  api 'com.amazonaws:aws-java-sdk-sqs:1.11.61'
+  api 'com.amazonaws:aws-java-sdk-swf-libraries:1.11.22'
+  api 'com.ceph:rados:0.3.0' // 0.4.0-SNAPSHOT
+  runtimeOnly 'com.cloudhopper.proxool:proxool-cglib:0.9.1'
+  api('com.cloudhopper.proxool:proxool:0.9.1') {
+    exclude module: 'avalon-framework-api' // optional dependency
+  }
+  api 'com.fasterxml.jackson.core:jackson-annotations:2.6.0'
+  api 'com.fasterxml.jackson.core:jackson-core:2.6.6'
+  api 'com.fasterxml.jackson.core:jackson-databind:2.6.6'
+  api 'com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.6.6'
+  api 'com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.6.6'
+  api('com.github.sjones4:glisten:0.3.euca'){
+    exclude module: 'groovy-all' // we include the indy variant
+    exclude module: 'json-simple' // optional dependency
+    exclude module: 'aws-java-sdk' // we include more recent modularised version
+  }
+  api 'com.google.code.findbugs:jsr305:2.0.1'
+  api 'com.google.guava:guava:19.0'
+  api 'com.io7m.xom:xom:1.2.10' // 1.2.9
+  api 'com.jcraft:jsch:0.1.49'
+  api 'commons-beanutils:commons-beanutils:1.8.3'
+  api 'commons-cli:commons-cli:1.2'
+  api 'commons-codec:commons-codec:1.10'
+  api 'commons-collections:commons-collections:3.2.1'
+  api 'commons-fileupload:commons-fileupload:1.3'
+  api 'commons-httpclient:commons-httpclient:3.1'
+  api 'commons-io:commons-io:2.4'
+  api 'commons-lang:commons-lang:2.6'
+  api 'commons-pool:commons-pool:1.6'
+  api 'dnsjava:dnsjava:2.1.8' // 2.1.4
+  runtimeOnly 'dom4j:dom4j:1.6.1'
+  api('io.javaslang:javaslang:2.0.2') {
+    exclude module: 'javaslang-match' // optional dependency
+  }
+  api 'io.netty:netty-buffer:4.0.37.Final'
+  api 'io.netty:netty-codec-http:4.0.37.Final'
+  api 'io.netty:netty-codec:4.0.37.Final'
+  api 'io.netty:netty-common:4.0.37.Final'
+  api 'io.netty:netty-handler:4.0.37.Final'
+  api 'io.netty:netty:3.6.6.Final'
+  api 'io.netty:netty-transport:4.0.37.Final'
+  api 'javax.inject:javax.inject:1'
+  api 'jaxen:jaxen:1.1.4'
+  api 'joda-time:joda-time:2.9.6'
+  api 'log4j:log4j:1.2.17'
+  api 'net.java.dev.jna:jna:4.1.0' // 3.5.2
+  runtimeOnly 'net.sf.ezmorph:ezmorph:1.0.6'
+  api 'net.sf.json-lib:json-lib:2.4:jdk15'
+  api 'org.apache.bcel:bcel:6.0' // api as it must come before xalan in the classpath
+  api 'org.apache.geronimo.javamail:geronimo-javamail_1.4_provider:1.8.3'
+  api 'org.apache.geronimo.specs:geronimo-j2ee-connector_1.5_spec:2.0.0'
+  api 'org.apache.geronimo.specs:geronimo-javamail_1.4_spec:1.7.1'
+  api 'org.apache.httpcomponents:httpclient:4.5.2'
+  api 'org.apache.httpcomponents:httpcore:4.4.4'
+  api 'org.apache.santuario:xmlsec:1.5.6'
+  api 'org.apache.velocity:velocity:1.7'
+  api 'org.apache.ws.commons.axiom:axiom-api:1.2.8'
+  api('org.apache.ws.commons.axiom:axiom-dom:1.2.8') {
+    exclude module: 'wstx-asl'
+  }
+  api('org.apache.ws.commons.axiom:axiom-impl:1.2.8') {
+    exclude module: 'wstx-asl'
+  }
+  api('org.apache.ws.security:wss4j:1.6.13') {
+    exclude module: 'opensaml' // optional dependency
+  }
+  runtimeOnly 'org.aspectj:aspectjweaver:1.8.8'
+  api 'org.bouncycastle:bcpkix-jdk15on:1.55'
+  api 'org.bouncycastle:bcprov-jdk15on:1.55'
+  api 'org.codehaus.groovy:groovy-all:2.4.5:indy'
+  api('org.codehaus.woodstox:stax2-api:3.1.1') {
+    exclude module: 'stax-api'
+  }
+  api('org.codehaus.woodstox:woodstox-core-asl:4.2.0') {
+    exclude module: 'stax-api'
+  }
+  api 'org.hamcrest:hamcrest-library:1.3' // 1.2
+  api 'org.hibernate.common:hibernate-commons-annotations:4.0.5.Final'
+  api 'org.hibernate.javax.persistence:hibernate-jpa-2.1-api:1.0.0.Final'
+  api 'org.hibernate:hibernate-core:4.3.11.Final'
+  api 'org.hibernate:hibernate-entitymanager:4.3.11.Final'
+  api 'org.hibernate:hibernate-jpamodelgen:4.3.11.Final'
+  api('org.hibernate:hibernate-proxool:4.3.11.Final'){
+    exclude module: 'proxool' // we include a more recent version from another org
+  }
+  runtimeOnly 'org.javassist:javassist:3.18.1-GA'
+  runtimeOnly 'org.jboss.logging:jboss-logging:3.1.3.GA'
+  runtimeOnly 'org.jboss.marshalling:jboss-marshalling:1.3.17.GA'
+  runtimeOnly 'org.jboss.marshalling:jboss-marshalling-river:1.3.17.GA'
+  runtimeOnly 'org.jboss:jandex:1.1.0.Final'
+  runtimeOnly 'org.jboss:jboss-common-core:2.2.20.GA'
+  runtimeOnly 'org.jboss.spec.javax.transaction:jboss-transaction-api_1.2_spec:1.0.0.Final'
+  api 'org.jgroups:jgroups:3.2.9.Final'
+  api 'org.jibx:jibx-bind:1.3.1'
+  api 'org.jibx:jibx-extras:1.3.1'
+  api 'org.jibx:jibx-run:1.3.1'
+  api 'org.jibx:jibx-schema:1.3.1'
+  api('org.jibx:jibx-tools:1.3.1') {
+    exclude group: 'org.jibx.config.3rdparty.org.eclipse'
+  }
+  runtimeOnly 'org.postgresql:postgresql:9.4.1212'
+  api('org.quartz-scheduler:quartz:2.1.7') {
+    exclude module: 'c3p0' // optional dependency
+  }
+  api 'org.slf4j:jcl-over-slf4j:1.7.21'
+  api 'org.slf4j:jul-to-slf4j:1.7.21'
+  api 'org.slf4j:slf4j-api:1.7.21'
+  api 'org.slf4j:slf4j-log4j12:1.7.21'
+  api 'org.springframework.integration:spring-integration-core:4.3.7.RELEASE'
+  api 'org.springframework:spring-aop:4.3.6.RELEASE'
+  api 'org.springframework:spring-beans:4.3.6.RELEASE'
+  api 'org.springframework:spring-context:4.3.6.RELEASE'
+  api 'org.springframework:spring-core:4.3.6.RELEASE'
+  api 'org.springframework:spring-expression:4.3.6.RELEASE'
+  api 'org.springframework:spring-messaging:4.3.6.RELEASE'
+  api 'org.springframework:spring-tx:4.3.6.RELEASE'
+  api 'org.springframework:spring-web:4.3.6.RELEASE'
+  api 'org.springframework.retry:spring-retry:1.1.3.RELEASE'
+  api('redis.clients:jedis:2.8.1') {
+    exclude module: 'commons-pool2'
+  }
+  runtimeOnly 'software.amazon.ion:ion-java:1.0.1'
+  api 'xalan:serializer:2.7.1'
+  api 'xalan:xalan:2.7.1'
+  api 'xerces:xercesImpl:2.11.0'
+  api 'xml-apis:xml-apis:1.4.01'
+  api 'xpp3:xpp3:1.1.4c'
+}

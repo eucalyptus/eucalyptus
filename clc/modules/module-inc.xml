@@ -99,7 +99,7 @@
 	<property name="groovyc.fork" value="false"/>
 	<property name="groovyc.includeantruntime" value="true"/>
 	<!--================================== other properties  ===================================-->
-	<property name="euca.junit.jvmargs" value=""/>
+	<property name="euca.junit.jvmargs" value="-ea"/>
 	<!--================================== dependencies  ===================================-->
 	<!-- Fix for RHEL bug 810067 -->
 	<taskdef uri="antlib:org.apache.ivy.ant" classpath="${ivy.jar}" />
@@ -224,7 +224,7 @@
 		<javac classpathref="classpath" destdir="${build.classes.dir}" deprecation="false" failonerror="true" debug="${javac.debug}" sourcepathref="srcpath" source="${javac.source}" target="${javac.target}" encoding="utf-8" listfiles="true"  includeantruntime="${javac.includeantruntime}">
 			<src path="${src.dir}"/>
 			<src path="${generated.src.dir}"/>
-		</javac>	
+		</javac>
 	</target>
 	<target name="should-build-groovy">
 		<mkdir dir="${build.classes.dir}" />
@@ -269,10 +269,14 @@
                                 <path refid="resources-classpath"/>
                                 <path refid="test-classpath"/>
                         </classpath>
+                        <!-- TODO use skipNonTests=true and remove includes/excludes once we can use ant 1.9.3 -->
                         <batchtest todir="${junit.reports.dir}">
                                 <fileset dir="${build.test.dir}">
-                                        <include name="**/*Test.class"/>
-                                        <include name="**/*Specification.class"/>
+                                        <include name="**/*Test*"/>
+                                        <include name="**/*Specification*"/>
+                                        <exclude name="**/*$*"/>
+                                        <exclude name="**/Test*"/>
+                                        <exclude name="**/*TestSupport.class"/>
                                 </fileset>
                         </batchtest>
                 </junit>

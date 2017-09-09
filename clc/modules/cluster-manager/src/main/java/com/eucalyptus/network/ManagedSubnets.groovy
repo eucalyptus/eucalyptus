@@ -68,7 +68,7 @@ class ManagedSubnets {
   ) {
     Math.min(
         (int) segmentId,
-        (int) ( IPRange.fromSubnet( subnet, netmask ).size( ) + 2 ) / segmentSize )
+        (int) ( ( IPRange.fromSubnet( subnet, netmask ).size( ) + 2 ) / segmentSize ) )
   }
 
   /**

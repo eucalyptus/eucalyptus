@@ -110,6 +110,7 @@ import org.jboss.netty.handler.stream.ChunkedWriteHandler
 import org.jboss.netty.util.CharsetUtil
 import org.jibx.binding.Loader
 import org.jibx.runtime.BindingDirectory
+import org.junit.Assume
 import org.junit.BeforeClass
 import org.junit.Test
 
@@ -141,16 +142,20 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     return Base64.encode(byteBuffer.array());
   }
 
-  static Loader loader;
+  static bindingsAvailable = false // change to true to test response binding
+  static Loader loader
   public static final String QUEUE_URL = 'http://localhost:10000/0000000/myqueue'
   public static final int NETTY_PORT = 10000
   public static final String NETTY_ENDPOINT = "http://localhost:10000"
 
   @BeforeClass
   static void setup() {
-    loader = new Loader();
-    loader.loadBinding("simplequeue-binding.xml", "simplequeue-binding", SimpleQueueQueryBindingTest.class.getResource('/simplequeue-binding.xml').openStream(), null);
-    loader.processBindings();
+    QueryBindingTestSupport.setup( )
+    if ( bindingsAvailable ) {
+      loader = new Loader();
+      loader.loadBinding("simplequeue-binding.xml", "simplequeue-binding", SimpleQueueQueryBindingTest.class.getResource('/simplequeue-binding.xml').openStream(), null);
+      loader.processBindings();
+    }
   }
 
   @Test
@@ -172,7 +177,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     Map<String, String> parameterMap;
     // AddPermission
     bean = new AddPermissionType(
-      queueUrl: QUEUE_URL, 
+      queueUrl: QUEUE_URL,
       label: 'testLabel',
       awsAccountId: ['00000000', '00000001'],
       actionName: ['Action1', 'Action2']
@@ -190,6 +195,8 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     bindAndAssertObject(mb, AddPermissionType.class, "AddPermission", bean, parameterMap.size());
     bindAndAssertParameters(mb, AddPermissionType.class, "AddPermission", bean, parameterMap);
 
+    Assume.assumeTrue( bindingsAvailable )
+
     //now test response
     def response = loadClass(AddPermissionResponseType.class).newInstance(
       responseMetadata: loadClass(ResponseMetadata.class).newInstance( requestId: UUID.randomUUID().toString())
@@ -199,7 +206,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     AmazonSQSClient sqs = new AmazonSQSClient(new BasicAWSCredentials("", ""));
     sqs.setEndpoint(NETTY_ENDPOINT);
     AddPermissionRequest addPermissionRequest = new AddPermissionRequest(
-      queueUrl: QUEUE_URL, 
+      queueUrl: QUEUE_URL,
       label: 'testLabel',
       aWSAccountIds: ['00000000', '00000001'],
       actions: ['Action1', 'Action2']
@@ -215,7 +222,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     Map<String, String> parameterMap;
     // ChangeMessageVisibility
     bean = new ChangeMessageVisibilityType(
-      queueUrl: QUEUE_URL, 
+      queueUrl: QUEUE_URL,
       receiptHandle: 'boo',
       visibilityTimeout: 5
     );
@@ -228,6 +235,8 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     bindAndAssertObject(mb, ChangeMessageVisibilityType.class, "ChangeMessageVisibility", bean, parameterMap.size());
     bindAndAssertParameters(mb, ChangeMessageVisibilityType.class, "ChangeMessageVisibility", bean, parameterMap);
 
+    Assume.assumeTrue( bindingsAvailable )
+
     //now test response
     def response = loadClass(ChangeMessageVisibilityResponseType.class).newInstance(
       responseMetadata: loadClass(ResponseMetadata.class).newInstance(requestId: UUID.randomUUID().toString())
@@ -237,7 +246,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     AmazonSQSClient sqs = new AmazonSQSClient(new BasicAWSCredentials("", ""));
     sqs.setEndpoint(NETTY_ENDPOINT);
     ChangeMessageVisibilityRequest changeMessageVisibilityRequest = new ChangeMessageVisibilityRequest(
-      queueUrl: QUEUE_URL, 
+      queueUrl: QUEUE_URL,
       receiptHandle: 'boo',
       visibilityTimeout: 5
     );
@@ -253,7 +262,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
 
     // ChangeMessageVisibilityBatch
     bean = new ChangeMessageVisibilityBatchType(
-      queueUrl: QUEUE_URL, 
+      queueUrl: QUEUE_URL,
       changeMessageVisibilityBatchRequestEntry: [
         new ChangeMessageVisibilityBatchRequestEntry(
           id: 'myId 1',
@@ -288,6 +297,8 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     bindAndAssertObject(mb, ChangeMessageVisibilityBatchType.class, "ChangeMessageVisibilityBatch", bean, parameterMap.size());
     bindAndAssertParameters(mb, ChangeMessageVisibilityBatchType.class, "ChangeMessageVisibilityBatch", bean, parameterMap);
 
+    Assume.assumeTrue( bindingsAvailable )
+
     //now test response
     def response = loadClass(ChangeMessageVisibilityBatchResponseType.class).newInstance(
       responseMetadata: loadClass(ResponseMetadata.class).newInstance(requestId: UUID.randomUUID().toString()),
@@ -311,7 +322,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     AmazonSQSClient sqs = new AmazonSQSClient(new BasicAWSCredentials("", ""));
     sqs.setEndpoint(NETTY_ENDPOINT);
     ChangeMessageVisibilityBatchRequest changeMessageVisibilityBatchRequest = new ChangeMessageVisibilityBatchRequest(
-      queueUrl: QUEUE_URL, 
+      queueUrl: QUEUE_URL,
       entries: [
         new com.amazonaws.services.sqs.model.ChangeMessageVisibilityBatchRequestEntry(
           id: 'myId 1',
@@ -377,11 +388,13 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     bindAndAssertObject(mb, CreateQueueType.class, "CreateQueue", bean, parameterMap.size());
     bindAndAssertParameters(mb, CreateQueueType.class, "CreateQueue", bean, parameterMap);
 
+    Assume.assumeTrue( bindingsAvailable )
+
     //now test response
     def response = loadClass(CreateQueueResponseType.class).newInstance(
       responseMetadata: loadClass(ResponseMetadata.class).newInstance(requestId: UUID.randomUUID().toString()),
       createQueueResult: loadClass(CreateQueueResult.class).newInstance(
-        queueUrl: QUEUE_URL, 
+        queueUrl: QUEUE_URL,
       )
     )
     NettyHttpServer nettyHttpServer = new NettyHttpServer(NETTY_PORT, getXMLString(response));
@@ -407,7 +420,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
 
     //DeleteMessage
     bean = new DeleteMessageType(
-      queueUrl: QUEUE_URL, 
+      queueUrl: QUEUE_URL,
       receiptHandle: 'receiptHandle'
     );
     parameterMap =
@@ -418,6 +431,8 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     bindAndAssertObject(mb, DeleteMessageType.class, "DeleteMessage", bean, parameterMap.size());
     bindAndAssertParameters(mb, DeleteMessageType.class, "DeleteMessage", bean, parameterMap);
 
+    Assume.assumeTrue( bindingsAvailable )
+
     //now test response
     def response = loadClass(DeleteMessageResponseType.class).newInstance(
       responseMetadata: loadClass(ResponseMetadata.class).newInstance(requestId: UUID.randomUUID().toString())
@@ -427,7 +442,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     AmazonSQSClient sqs = new AmazonSQSClient(new BasicAWSCredentials("", ""));
     sqs.setEndpoint(NETTY_ENDPOINT);
     DeleteMessageRequest deleteMessageRequest = new DeleteMessageRequest(
-      queueUrl: QUEUE_URL, 
+      queueUrl: QUEUE_URL,
       receiptHandle: 'receiptHandle'
     );
     sqs.deleteMessage(deleteMessageRequest);
@@ -443,7 +458,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
 
     //DeleteMessageBatch
     bean = new DeleteMessageBatchType(
-      queueUrl: QUEUE_URL, 
+      queueUrl: QUEUE_URL,
       deleteMessageBatchRequestEntry: [
         new DeleteMessageBatchRequestEntry(id: 'del id 1', receiptHandle: 'receiptHandle1'),
         new DeleteMessageBatchRequestEntry(id: 'del id 2', receiptHandle: 'receiptHandle2'),
@@ -452,7 +467,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     );
     parameterMap =
       [
-        'QueueUrl'                                      : QUEUE_URL, 
+        'QueueUrl'                                      : QUEUE_URL,
         'DeleteMessageBatchRequestEntry.1.Id'           : 'del id 1',
         'DeleteMessageBatchRequestEntry.1.ReceiptHandle': 'receiptHandle1',
         'DeleteMessageBatchRequestEntry.2.Id'           : 'del id 2',
@@ -462,6 +477,8 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
       ];
     bindAndAssertObject(mb, DeleteMessageBatchType.class, "DeleteMessageBatch", bean, parameterMap.size());
     bindAndAssertParameters(mb, DeleteMessageBatchType.class, "DeleteMessageBatch", bean, parameterMap);
+
+    Assume.assumeTrue( bindingsAvailable )
 
     //now test response
     def response = loadClass(DeleteMessageBatchResponseType.class).newInstance(
@@ -486,7 +503,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     AmazonSQSClient sqs = new AmazonSQSClient(new BasicAWSCredentials("", ""));
     sqs.setEndpoint(NETTY_ENDPOINT);
     DeleteMessageBatchRequest deleteMessageBatchRequest = new DeleteMessageBatchRequest(
-      queueUrl: QUEUE_URL, 
+      queueUrl: QUEUE_URL,
       entries: [
         new com.amazonaws.services.sqs.model.DeleteMessageBatchRequestEntry(
           id: 'myId 1',
@@ -533,7 +550,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
 
     // DeleteQueue
     bean = new DeleteQueueType(
-      queueUrl: QUEUE_URL 
+      queueUrl: QUEUE_URL
     );
     parameterMap =
       [
@@ -542,6 +559,8 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
 
     bindAndAssertObject(mb, DeleteQueueType.class, "DeleteQueue", bean, parameterMap.size());
     bindAndAssertParameters(mb, DeleteQueueType.class, "DeleteQueue", bean, parameterMap);
+
+    Assume.assumeTrue( bindingsAvailable )
 
     //now test response
     def response = loadClass(DeleteQueueResponseType.class).newInstance(
@@ -552,7 +571,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     AmazonSQSClient sqs = new AmazonSQSClient(new BasicAWSCredentials("", ""));
     sqs.setEndpoint(NETTY_ENDPOINT);
     DeleteQueueRequest deleteQueueRequest = new DeleteQueueRequest(
-      queueUrl: QUEUE_URL 
+      queueUrl: QUEUE_URL
     );
     sqs.deleteQueue(deleteQueueRequest);
     nettyHttpServer.shutdown();
@@ -568,7 +587,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     // GetQueueAttributes
     bean = new GetQueueAttributesType(
       attributeName: ['A1', 'A2', 'A3'],
-      queueUrl: QUEUE_URL 
+      queueUrl: QUEUE_URL
     );
     parameterMap =
       [
@@ -579,6 +598,8 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
       ];
     bindAndAssertObject(mb, GetQueueAttributesType.class, "GetQueueAttributes", bean, parameterMap.size());
     bindAndAssertParameters(mb, GetQueueAttributesType.class, "GetQueueAttributes", bean, parameterMap);
+
+    Assume.assumeTrue( bindingsAvailable )
 
     //now test response
     def response = loadClass(GetQueueAttributesResponseType.class).newInstance(
@@ -596,7 +617,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     AmazonSQSClient sqs = new AmazonSQSClient(new BasicAWSCredentials("", ""));
     sqs.setEndpoint(NETTY_ENDPOINT);
     GetQueueAttributesRequest getQueueAttributesRequest = new GetQueueAttributesRequest(
-      queueUrl: QUEUE_URL, 
+      queueUrl: QUEUE_URL,
       attributeNames: ['A1', 'A2', 'A3']
     );
     com.amazonaws.services.sqs.model.GetQueueAttributesResult getQueueAttributesResult =
@@ -628,11 +649,13 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     bindAndAssertObject(mb, GetQueueUrlType.class, "GetQueueUrl", bean, parameterMap.size());
     bindAndAssertParameters(mb, GetQueueUrlType.class, "GetQueueUrl", bean, parameterMap);
 
+    Assume.assumeTrue( bindingsAvailable )
+
     //now test response
     def response = loadClass(GetQueueUrlResponseType.class).newInstance(
       responseMetadata: loadClass(ResponseMetadata.class).newInstance(requestId: UUID.randomUUID().toString()),
       getQueueUrlResult: loadClass(GetQueueUrlResult.class).newInstance(
-        queueUrl: QUEUE_URL, 
+        queueUrl: QUEUE_URL,
       )
     )
     NettyHttpServer nettyHttpServer = new NettyHttpServer(NETTY_PORT, getXMLString(response));
@@ -658,7 +681,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
 
     // ListDeadLetterSourceQueues
     bean = new ListDeadLetterSourceQueuesType(
-      queueUrl: QUEUE_URL, 
+      queueUrl: QUEUE_URL,
     );
     parameterMap =
       [
@@ -666,6 +689,8 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
       ];
     bindAndAssertObject(mb, ListDeadLetterSourceQueuesType.class, "ListDeadLetterSourceQueues", bean, parameterMap.size());
     bindAndAssertParameters(mb, ListDeadLetterSourceQueuesType.class, "ListDeadLetterSourceQueues", bean, parameterMap);
+
+    Assume.assumeTrue( bindingsAvailable )
 
     //now test response
     def response = loadClass(ListDeadLetterSourceQueuesResponseType.class).newInstance(
@@ -679,7 +704,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     AmazonSQSClient sqs = new AmazonSQSClient(new BasicAWSCredentials("", ""));
     sqs.setEndpoint(NETTY_ENDPOINT);
     ListDeadLetterSourceQueuesRequest listDeadLetterSourceQueuesRequest = new ListDeadLetterSourceQueuesRequest(
-      queueUrl: QUEUE_URL 
+      queueUrl: QUEUE_URL
     );
     com.amazonaws.services.sqs.model.ListDeadLetterSourceQueuesResult listDeadLetterSourceQueuesResult = sqs.listDeadLetterSourceQueues(listDeadLetterSourceQueuesRequest);
     nettyHttpServer.shutdown();
@@ -704,6 +729,8 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     ];
     bindAndAssertObject(mb, ListQueuesType.class, "ListQueues", bean, parameterMap.size());
     bindAndAssertParameters(mb, ListQueuesType.class, "ListQueues", bean, parameterMap);
+
+    Assume.assumeTrue( bindingsAvailable )
 
     //now test response
     def response = loadClass(ListQueuesResponseType.class).newInstance(
@@ -735,7 +762,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
 
     // PurgeQueue
     bean = new PurgeQueueType(
-      queueUrl: QUEUE_URL, 
+      queueUrl: QUEUE_URL,
     );
     parameterMap =
       [
@@ -744,6 +771,8 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     Maps.newHashMap();
     bindAndAssertObject(mb, PurgeQueueType.class, "PurgeQueue", bean, parameterMap.size());
     bindAndAssertParameters(mb, PurgeQueueType.class, "PurgeQueue", bean, parameterMap);
+
+    Assume.assumeTrue( bindingsAvailable )
 
     //now test response
     def response = loadClass(PurgeQueueResponseType.class).newInstance(
@@ -754,7 +783,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     AmazonSQSClient sqs = new AmazonSQSClient(new BasicAWSCredentials("", ""));
     sqs.setEndpoint(NETTY_ENDPOINT);
 //TODO: AWS SDK update     PurgeQueueRequest purgeQueueRequest = new PurgeQueueRequest(
-//TODO: AWS SDK update       queueUrl: QUEUE_URL 
+//TODO: AWS SDK update       queueUrl: QUEUE_URL
 //TODO: AWS SDK update     );
 //TODO: AWS SDK update     sqs.purgeQueue(purgeQueueRequest);
     nettyHttpServer.shutdown();
@@ -771,7 +800,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
         attributeName: ['A1' ,'A2', 'A3', 'A4', 'A5'],
         maxNumberOfMessages : 5,
         messageAttributeName: ['MA1' ,'MA2', 'MA3', 'MA4', 'MA5'],
-        queueUrl: QUEUE_URL, 
+        queueUrl: QUEUE_URL,
         visibilityTimeout : 4,
         waitTimeSeconds : 3
     );
@@ -793,6 +822,8 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     ];
     bindAndAssertObject(mb, ReceiveMessageType.class, "ReceiveMessage", bean, parameterMap.size());
     bindAndAssertParameters(mb, ReceiveMessageType.class, "ReceiveMessage", bean, parameterMap);
+
+    Assume.assumeTrue( bindingsAvailable )
 
     //now test response
     // first some helper methods
@@ -898,7 +929,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
       attributeNames: ['A1' ,'A2', 'A3', 'A4', 'A5'],
       maxNumberOfMessages : 5,
 //TODO: AWS SDK update       messageAttributeNames: ['MA1' ,'MA2', 'MA3', 'MA4', 'MA5'],
-      queueUrl: QUEUE_URL, 
+      queueUrl: QUEUE_URL,
       visibilityTimeout : 4,
       waitTimeSeconds : 3
     );
@@ -968,7 +999,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     Map<String, String> parameterMap;
     // RemovePermission
     bean = new RemovePermissionType(
-      queueUrl: QUEUE_URL, 
+      queueUrl: QUEUE_URL,
       label: 'testLabel'
     );
 
@@ -980,6 +1011,8 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     bindAndAssertObject(mb, RemovePermissionType.class, "RemovePermission", bean, parameterMap.size());
     bindAndAssertParameters(mb, RemovePermissionType.class, "RemovePermission", bean, parameterMap);
 
+    Assume.assumeTrue( bindingsAvailable )
+
     //now test response
     def response = loadClass(RemovePermissionResponseType.class).newInstance(
       responseMetadata: loadClass(ResponseMetadata.class).newInstance( requestId: UUID.randomUUID().toString())
@@ -989,7 +1022,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     AmazonSQSClient sqs = new AmazonSQSClient(new BasicAWSCredentials("", ""));
     sqs.setEndpoint(NETTY_ENDPOINT);
     RemovePermissionRequest removePermissionRequest = new RemovePermissionRequest(
-      queueUrl: QUEUE_URL, 
+      queueUrl: QUEUE_URL,
       label: 'testLabel'    )
     sqs.removePermission(removePermissionRequest);
     nettyHttpServer.shutdown();
@@ -1134,7 +1167,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     bean = new SendMessageType(
       delaySeconds: 5,
       messageBody: 'This is the body of the message',
-      queueUrl: QUEUE_URL, 
+      queueUrl: QUEUE_URL,
       messageAttribute: [
         new MessageAttribute(name: 'MA1', value: SendHelper.binaryMessageAttributeValue(0, "Type")),
         new MessageAttribute(name: 'MA2', value: SendHelper.stringMessageAttributeValue(0, "Type")),
@@ -1151,6 +1184,8 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     parameterMap.putAll(SendHelper.paramMessageAttributes('', bean.messageAttribute));
     bindAndAssertObject(mb, SendMessageType.class, "SendMessage", bean, parameterMap.size());
     bindAndAssertParameters(mb, SendMessageType.class, "SendMessage", bean, parameterMap);
+
+    Assume.assumeTrue( bindingsAvailable )
 
     //now test response
     def response = loadClass(SendMessageResponseType.class).newInstance(
@@ -1171,7 +1206,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     SendMessageRequest sendMessageRequest = new SendMessageRequest(
       delaySeconds: 5,
       messageBody: 'This is the body of the message',
-      queueUrl: QUEUE_URL, 
+      queueUrl: QUEUE_URL,
 //TODO: AWS SDK update       messageAttributes: [
 //TODO: AWS SDK update         'MA1': SendHelper.binaryMessageAttributeValue(0, "Request"),
 //TODO: AWS SDK update         'MA2': SendHelper.stringMessageAttributeValue(0, "Request"),
@@ -1196,7 +1231,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
 
     // SendMessageBatch
     bean = new SendMessageBatchType(
-      queueUrl: QUEUE_URL, 
+      queueUrl: QUEUE_URL,
       sendMessageBatchRequestEntry: []
     );
     for (int i = 1; i <= 5; i++) {
@@ -1226,6 +1261,8 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     }
     bindAndAssertObject(mb, SendMessageBatchType.class, "SendMessageBatch", bean, parameterMap.size());
     bindAndAssertParameters(mb, SendMessageBatchType.class, "SendMessageBatch", bean, parameterMap);
+
+    Assume.assumeTrue( bindingsAvailable )
 
     //now test response
     def response = loadClass(SendMessageBatchResponseType.class).newInstance(
@@ -1277,7 +1314,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     AmazonSQSClient sqs = new AmazonSQSClient(new BasicAWSCredentials("", ""));
     sqs.setEndpoint(NETTY_ENDPOINT);
     SendMessageBatchRequest sendMessageBatchRequest = new SendMessageBatchRequest(
-      queueUrl: QUEUE_URL, 
+      queueUrl: QUEUE_URL,
       entries: []
     );
     for (int i = 1; i <= 5; i++) {
@@ -1338,7 +1375,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     Map<String, String> parameterMap;
     // SetQueueAttributes
     bean = new SetQueueAttributesType(
-      queueUrl: QUEUE_URL, 
+      queueUrl: QUEUE_URL,
       attribute: [
         new Attribute( name: 'A', value: 'B'),
         new Attribute( name: 'C', value: 'D')
@@ -1355,6 +1392,8 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     bindAndAssertObject(mb, SetQueueAttributesType.class, "SetQueueAttributes", bean, parameterMap.size());
     bindAndAssertParameters(mb, SetQueueAttributesType.class, "SetQueueAttributes", bean, parameterMap);
 
+    Assume.assumeTrue( bindingsAvailable )
+
     //now test response
     def response = loadClass(SetQueueAttributesResponseType.class).newInstance(
       responseMetadata: loadClass(ResponseMetadata.class).newInstance( requestId: UUID.randomUUID().toString())
@@ -1364,7 +1403,7 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
     AmazonSQSClient sqs = new AmazonSQSClient(new BasicAWSCredentials("", ""));
     sqs.setEndpoint(NETTY_ENDPOINT);
     SetQueueAttributesRequest setQueueAttributesRequest = new SetQueueAttributesRequest(
-      queueUrl: QUEUE_URL, 
+      queueUrl: QUEUE_URL,
       attributes: ['A':'B', 'C':'D']
     )
     sqs.setQueueAttributes(setQueueAttributesRequest);

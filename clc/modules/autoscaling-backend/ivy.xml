@@ -7,6 +7,7 @@
         <dependency name="eucalyptus-compute-common" rev="latest.integration"/>
         <dependency name="eucalyptus-cluster-common" rev="latest.integration"/>
         <dependency name="eucalyptus-loadbalancing-common" rev="latest.integration"/>
+        <dependency name="eucalyptus-msgs" rev="latest.integration"/>
         <dependency name="eucalyptus-ws" rev="latest.integration"/>
     </dependencies>
 </ivy-module>

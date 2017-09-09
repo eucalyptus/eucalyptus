@@ -32,6 +32,7 @@
     <dependencies>
         <dependency org="com.eucalyptus" name="eucalyptus-imaging-common" rev="latest.integration"/>
         <dependency org="com.eucalyptus" name="eucalyptus-imaging-backend" rev="latest.integration"/>
+        <dependency org="com.eucalyptus" name="eucalyptus-msgs" rev="latest.integration"/>
         <dependency org="com.eucalyptus" name="eucalyptus-ws" rev="latest.integration"/>
     </dependencies>
 </ivy-module>

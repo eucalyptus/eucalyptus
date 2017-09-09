@@ -1,0 +1,188 @@
+/*************************************************************************
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ ************************************************************************/
+apply plugin: 'idea'
+apply plugin: 'eclipse'
+
+def libFileTree = fileTree(dir: 'lib')
+
+subprojects {
+  if ( it.name == 'modules' ) return
+
+  apply plugin: 'eclipse'
+  apply plugin: 'groovy'
+  apply plugin: 'idea'
+  apply plugin: 'java'
+  apply plugin: 'java-library'
+
+  version = '5.0.0'
+  targetCompatibility = 1.8
+  sourceCompatibility = 1.8
+
+  sourceSets.main.java.srcDirs = []
+  sourceSets.main.groovy.srcDirs += ['src/main/java', 'src/generated/java', 'build/src/main/java']
+
+  sourceSets.test.java.srcDirs = []
+  sourceSets.test.groovy.srcDirs += ['src/test/java', 'build/src/test/java']
+
+  task testJar(type: Jar, dependsOn: testClasses) {
+    description 'Assembles a jar archive containing the test classes.'
+    group 'Build'
+    baseName = "test-${project.archivesBaseName}"
+    from sourceSets.test.output
+  }
+
+  repositories {
+    jcenter( )
+  }
+
+  configurations {
+    tests
+
+    apiElements { // known issue, configure the groovy plugin to work with java library plugin
+      outgoing.variants.getByName('classes').artifact(
+          file: compileGroovy.destinationDir,
+          type: ArtifactTypeDefinition.JVM_CLASS_DIRECTORY,
+          builtBy: compileGroovy)
+    }
+  }
+
+  artifacts {
+    tests testJar
+  }
+
+  dependencies {
+    if ( file('ivy.xml').exists( ) ) {
+      def module = new XmlParser().parse( file('ivy.xml') )
+      module.dependencies.dependency.each {
+        api project(":modules:${it.'@name'}")
+      }
+      module.dependencies.dependency.each {
+        testImplementation project(path: ":modules:${it.'@name'}", configuration: 'tests')
+      }
+    }
+
+    testImplementation 'org.hamcrest:hamcrest-integration:1.3' // 1.2
+    testImplementation 'junit:junit:4.11'
+    testImplementation 'org.apache.derby:derby:10.8.3.0'
+    testImplementation 'org.jmock:jmock:2.6.0'
+    testImplementation 'org.jmock:jmock-junit4:2.6.0'
+    testImplementation('org.spockframework:spock-core:0.7-groovy-2.0') {
+      exclude module: 'groovy-all' // we include the indy variant
+    }
+  }
+
+  test {
+    systemProperty 'log4j.configuration', 'log4j-test.xml'
+  }
+
+  idea {
+    module {
+      name -= ~/^eucalyptus-/
+
+      excludeDirs = [
+        file( "$buildDir/classes" ),
+        file( "$buildDir/test-classes" )
+      ]
+
+      iml {
+        beforeMerged { module ->
+          module.excludeFolders.clear( )
+        }
+
+        whenMerged { module ->
+          if ( name != 'msgs' ) {
+            def remove = module.dependencies.findAll{
+                it instanceof org.gradle.plugins.ide.idea.model.ModuleLibrary
+              }.findAll{ moduleLibrary ->
+                moduleLibrary.classes.find{ it.url.startsWith('jar:') }
+              }
+
+            module.dependencies.removeAll( remove )
+          }
+          module.dependencies*.exported = true
+        }
+      }
+    }
+  }
+}
+
+task copyJars(type: Copy) {
+  description 'Copies jar build artifacts to target directory.'
+  group 'Output'
+  from subprojects.collect{ it.tasks.withType(Jar) }
+  into "target"
+  exclude '**/test-eucalyptus-*.jar'
+}
+
+task copyDependencies(type: Copy) {
+  description 'Copies jar dependencies to target/lib directory.'
+  group 'Output'
+  from subprojects
+      .findAll{ it.name != 'modules' }
+      .collect{ it.configurations.runtimeClasspath }
+  into 'target/lib'
+  exclude '**/eucalyptus-*.jar'
+}
+
+task copyTestDependencies(type: Copy) {
+  description 'Copies test jar dependencies to target/lib/tests directory.'
+  group 'Output'
+  from subprojects
+      .findAll{ it.name != 'modules' }
+      .collect{ it.configurations.testRuntimeClasspath - it.configurations.runtimeClasspath }
+  into 'target/lib/tests'
+  exclude '**/eucalyptus-*.jar'
+  exclude '**/test-eucalyptus-*.jar'
+}
+
+task copyAllDependencies(dependsOn: [ 'copyDependencies', 'copyTestDependencies' ] ) {
+  description 'Copies main and test jar dependencies under target/lib directory.'
+  group 'Output'
+}
+
+idea {
+  project {
+    jdkName = '1.8'
+    languageLevel = '1.8'
+    modules = allprojects
+                .findAll{ it.name != 'clc' }
+                .collect{ it.idea.module }
+
+    ipr {
+      withXml {
+        def projectNode = it.asNode( )
+        def componentNode = projectNode?.component?.getAt(0)
+        def annotationProcessingNode = componentNode?.annotationProcessing?.getAt(0)
+        if ( componentNode && componentNode['@name'] == 'CompilerConfiguration' &&
+            ( !annotationProcessingNode || annotationProcessingNode['@enabled'] == 'false' ) ) {
+          if ( annotationProcessingNode ) {
+            componentNode.remove( annotationProcessingNode )
+          }
+          componentNode.append( new groovy.util.XmlParser( ).parseText(
+            '''<annotationProcessing>
+                  <profile default="true" name="Default" enabled="true">
+                    <sourceOutputDir name="build/src/main/java" />
+                    <sourceTestOutputDir name="build/src/test/java" />
+                    <outputRelativeToContentRoot value="true" />
+                    <processorPath useClasspath="true" />
+                  </profile>
+                </annotationProcessing>'''
+          ) )
+        }
+      }
+    }
+  }
+}

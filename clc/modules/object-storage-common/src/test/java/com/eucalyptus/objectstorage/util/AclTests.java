@@ -37,6 +37,7 @@ import java.util.Iterator;
 
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.eucalyptus.auth.Accounts;
@@ -55,6 +56,7 @@ import com.eucalyptus.storage.msgs.s3.Grantee;
 import com.eucalyptus.storage.msgs.s3.Group;
 import com.google.common.base.Strings;
 
+@Ignore
 public class AclTests {
   public static Grant PUBLIC_READ_GRANT = null;
   public static Grant PUBLIC_READ_WRITE_GRANT = null;
@@ -211,7 +213,7 @@ public class AclTests {
 
   /**
    * Check using permission check, not structure itself
-   * 
+   *
    * @return
    */
   boolean checkExpansion(AccessControlList test, AccessControlList expected) {

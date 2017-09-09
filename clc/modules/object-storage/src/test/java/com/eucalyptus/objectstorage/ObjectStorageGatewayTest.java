@@ -46,6 +46,7 @@ import java.util.Collections;
 import org.jmock.Expectations;
 import org.jmock.integration.junit4.JUnitRuleMockery;
 import org.junit.AfterClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -105,6 +106,7 @@ public class ObjectStorageGatewayTest {
     BucketMetadataManagers.setInstance(null);
   }
 
+  @Ignore
   @Test
   public void testCheckBucketName() {
     assert (ObjectStorageGateway.checkBucketNameValidity("bucket"));

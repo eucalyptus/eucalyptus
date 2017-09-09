@@ -32,6 +32,7 @@
     <info organisation="com.eucalyptus" module="eucalyptus-cluster"/>
     <dependencies>
         <dependency name="eucalyptus-cluster-common" rev="latest.integration"/>
+        <dependency name="eucalyptus-msgs" rev="latest.integration"/>
         <dependency name="eucalyptus-ws" rev="latest.integration"/>
     </dependencies>
 </ivy-module>
