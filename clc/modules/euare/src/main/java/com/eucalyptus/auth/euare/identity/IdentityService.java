@@ -42,6 +42,7 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.xml.namespace.QName;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMOutputFormat;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
@@ -52,6 +53,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.InvalidAccessKeyAuthException;
 import com.eucalyptus.auth.api.PrincipalProvider;
 import com.eucalyptus.auth.euare.EuareException;
+import com.eucalyptus.auth.euare.EuareMessage;
 import com.eucalyptus.auth.euare.EuareServerCertificateUtil;
 import com.eucalyptus.auth.euare.UserPrincipalImpl;
 import com.eucalyptus.auth.euare.common.identity.Account;
@@ -100,8 +102,6 @@ import com.eucalyptus.auth.principal.PolicyVersions;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.SecurityTokenContent;
 import com.eucalyptus.auth.principal.UserPrincipal;
-import com.eucalyptus.binding.Binding;
-import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.component.auth.SystemCredentials;
@@ -120,6 +120,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessages;
 
 /**
  *
@@ -405,18 +406,22 @@ public class IdentityService {
 
     try {
       final String content = request.getContent( );
-      final Binding binding = BindingManager.getDefaultBinding( );
-      final BaseMessage euareRequest;
+      final EuareMessage euareRequest;
       try ( final LockResource lock = LockResource.lock( HoldMe.canHas ) ) {
         final StAXOMBuilder omBuilder = HoldMe.getStAXOMBuilder( HoldMe.getXMLStreamReader( content ) );
         final OMElement message = omBuilder.getDocumentElement( );
-        final Class<?> messageType = binding.getElementClass( message.getLocalName() );
-        euareRequest = (BaseMessage) binding.fromOM( message, messageType ); //TODO:STEVE: allow for (subminor?) version differences
+        final String messageTypeName = message.getAttributeValue( new QName( "type" ) );
+        final Class<?> messageType = getClass( ).getClassLoader( ).loadClass( messageTypeName );
+        if ( !EuareMessage.class.isAssignableFrom( messageType ) ) {
+          throw new IllegalArgumentException( "Unsupported type: " + messageTypeName );
+        }
+        euareRequest = (EuareMessage) BaseMessages.fromOm( message, messageType );
       }
       final BaseMessage euareResponse = AsyncRequests.sendSync( Euare.class, euareRequest );
       final StringWriter writer = new StringWriter( );
       try ( final LockResource lock = LockResource.lock( HoldMe.canHas ) ) {
-        final OMElement message = binding.toOM( euareResponse );
+        final OMElement message = BaseMessages.toOm( euareResponse );
+        message.addAttribute( "type", euareResponse.getClass( ).getName( ), null );
         final OMOutputFormat format = new OMOutputFormat( );
         format.setIgnoreXMLDeclaration( true );
         message.serialize( writer );

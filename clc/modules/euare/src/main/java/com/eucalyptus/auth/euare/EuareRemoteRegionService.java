@@ -31,6 +31,7 @@ package com.eucalyptus.auth.euare;
 import java.io.StringWriter;
 import java.net.URI;
 import java.util.Set;
+import javax.xml.namespace.QName;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMOutputFormat;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
@@ -41,8 +42,6 @@ import com.eucalyptus.auth.euare.common.identity.IdentityMessage;
 import com.eucalyptus.auth.euare.common.identity.TunnelActionResponseType;
 import com.eucalyptus.auth.euare.common.identity.TunnelActionType;
 import com.eucalyptus.auth.euare.identity.region.RegionInfo;
-import com.eucalyptus.binding.Binding;
-import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.EphemeralConfiguration;
@@ -56,6 +55,7 @@ import com.eucalyptus.util.async.AsyncExceptions.AsyncWebServiceError;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
+import edu.ucsb.eucalyptus.msgs.BaseMessages;
 
 /**
  *
@@ -67,12 +67,12 @@ public class EuareRemoteRegionService {
   public EuareMessage callRemote( final EuareMessage euareRequest ) throws EucalyptusCloudException {
     final Optional<RegionInfo> regionInfo = EuareRemoteRegionFilter.getRegion( euareRequest );
     final String previousUserId = euareRequest.getUserId( );
-    final Binding binding = BindingManager.getDefaultBinding( );
     try {
       euareRequest.setUserId( Contexts.lookup( ).getUser( ).getAuthenticatedId( ) );
       final StringWriter writer = new StringWriter();
       try ( final LockResource lock = LockResource.lock( HoldMe.canHas ) ) {
-        final OMElement message = binding.toOM( euareRequest );
+        final OMElement message = BaseMessages.toOm( euareRequest );
+        message.addAttribute( "type", euareRequest.getClass( ).getName( ), null );
         final OMOutputFormat format = new OMOutputFormat();
         format.setIgnoreXMLDeclaration( true );
         message.serialize( writer );
@@ -87,8 +87,12 @@ public class EuareRemoteRegionService {
       try ( final LockResource lock = LockResource.lock( HoldMe.canHas ) ) {
         final StAXOMBuilder omBuilder = HoldMe.getStAXOMBuilder( HoldMe.getXMLStreamReader( responseContent ) );
         final OMElement message = omBuilder.getDocumentElement( );
-        final Class<?> messageType = binding.getElementClass( message.getLocalName( ) );
-        euareResponse = (EuareMessage) binding.fromOM( message, messageType ); //TODO:STEVE: allow for (subminor?) version differences
+        final String messageTypeName = message.getAttributeValue( new QName( "type" ) ); 
+        final Class<?> messageType = getClass( ).getClassLoader( ).loadClass( messageTypeName );
+        if ( !EuareMessage.class.isAssignableFrom( messageType ) ) {
+          throw new IllegalArgumentException( "Unsupported type: " + messageTypeName );
+        }
+        euareResponse = (EuareMessage) BaseMessages.fromOm( message, messageType );
       }
       euareResponse.setCorrelationId( euareRequest.getCorrelationId( ) );
       return euareResponse;
