@@ -40,7 +40,7 @@ public class BaseMessages {
 
   private static final ObjectMapper mapper = new ObjectMapper( );
   static {
-    mapper.addMixInAnnotations( BaseMessage.class, BaseMessageMixIn.class);
+    mapper.addMixIn( BaseMessage.class, BaseMessageMixIn.class);
     mapper.configure( SerializationFeature.FAIL_ON_EMPTY_BEANS, false );
   }
 
