@@ -38,7 +38,10 @@
   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
 -->
 
-<binding force-classes="true" add-constructors="true">
+
+<binding force-classes="true" add-constructors="true" name="s3_2006_03_01_common_binding" package="com.eucalyptus.storage.msgs.s3">
+    <namespace uri="http://s3.amazonaws.com/doc/2006-03-01/"
+             default="elements" />
 
     <mapping class="com.eucalyptus.storage.msgs.s3.ListAllMyBucketsList"
              abstract="true">
@@ -246,7 +249,7 @@
         </collection>
     </mapping>
 
-    <!-- Java field names for arrays are plural, but XML values must be singular --> 
+    <!-- Java field names for arrays are plural, but XML values must be singular -->
     <mapping class="com.eucalyptus.storage.msgs.s3.CorsRule" abstract="true">
         <value name="ID" field="id" usage="optional"/>
         <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="allowedOrigins" usage="optional">

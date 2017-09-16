@@ -98,11 +98,10 @@
 	<property name="javac.includeantruntime" value="false"/>
 	<property name="groovyc.fork" value="false"/>
 	<property name="groovyc.includeantruntime" value="true"/>
+	<property name="bind.load" value="true"/>
+	<property name="bind.verbose" value="false"/>
 	<!--================================== other properties  ===================================-->
 	<property name="euca.junit.jvmargs" value="-ea"/>
-	<!--================================== dependencies  ===================================-->
-	<!-- Fix for RHEL bug 810067 -->
-	<taskdef uri="antlib:org.apache.ivy.ant" classpath="${ivy.jar}" />
 	<!--================================== classpaths ==================================-->
 	<path id="runtimeclasspath">
 		<pathelement path="${euca.conf.dir}" />
@@ -125,6 +124,24 @@
 			<include name="**/src/test/resources" />
 		</dirset>
 	</path>
+	<path id="jibx-classpath">
+		<fileset dir="${lib.dir}">
+			<include name="bcel-*.jar" />
+			<include name="dom4j-*.jar" />
+			<include name="jibx-*.jar" />
+			<include name="joda-time-*.jar" />
+			<include name="log4j-*.jar" />
+			<include name="xpp3-*.jar" />
+		</fileset>
+	</path>
+	<!--================================== dependencies  ===================================-->
+	<!-- Fix for RHEL bug 810067 -->
+	<taskdef uri="antlib:org.apache.ivy.ant" classpath="${ivy.jar}" />
+	<taskdef name="bind" classname="org.jibx.binding.ant.CompileTask">
+		<classpath>
+			<path refid="jibx-classpath"/>
+		</classpath>
+	</taskdef>
 	<!--================================== copy conf ==================================-->
 	<target name="copy-conf">
 		<copy todir="${DESTDIR}${euca.conf.dir}">
@@ -225,6 +242,7 @@
 			<src path="${src.dir}"/>
 			<src path="${generated.src.dir}"/>
 		</javac>
+		<antcall target="build-bindings" />
 	</target>
 	<target name="should-build-groovy">
 		<mkdir dir="${build.classes.dir}" />
@@ -242,7 +260,25 @@
 			<javac source="${javac.source}" target="${javac.target}" encoding="utf-8" debug="${javac.debug}" >
 				<compilerarg value="-Js=${build.src.dir}/main/java"/>
 			</javac>
-		</groovyc>
+		</groovyc><antcall target="build-bindings" />
+	</target>
+	<target name="build-bindings" depends="classpaths">
+		<echo message="[COMPILE] bindings for ${ant.project.name}" />
+		<bind verbose="${bind.verbose}" load="${bind.load}">
+			<bindingfileset dir="${rsrc.dir}">
+				<include name="**/*-binding.xml" />
+			</bindingfileset>
+			<classpath>
+				<pathelement path="${build.classes.dir}"/>
+				<pathelement path="${rsrc.dir}"/>
+				<path refid="classpath"/>
+			</classpath>
+		</bind>
+		<copy todir="${build.classes.dir}"> <!-- copy for inclusion in other bindings -->
+			<fileset dir="${rsrc.dir}">
+				<include name="**/*-binding.xml" />
+			</fileset>
+		</copy>
 	</target>
 	<target name="builder-test" depends="classpaths,build-groovy">
 		<antcall target="build-mkdirs" inheritall="true" inheritrefs="true" />

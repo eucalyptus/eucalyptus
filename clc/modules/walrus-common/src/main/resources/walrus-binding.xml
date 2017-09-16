@@ -46,7 +46,7 @@
 		default="attributes" />
 
 	<!-- include the common s3 bindings -->
-	<include path="classpath:s3-2006-03-01-common-binding.xml" />
+	<include path="classpath:s3-2006-03-01-common-binding.xml" precompiled="true"/>
 
 	<mapping class="com.eucalyptus.walrus.msgs.WalrusRequestType"
 		abstract="true">
@@ -134,7 +134,7 @@
             <structure type="com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry"/>
         </collection>
     </mapping>
-    
+
 
 	<mapping name="PutObjectResponse"
 		class="com.eucalyptus.walrus.msgs.PutObjectResponseType">

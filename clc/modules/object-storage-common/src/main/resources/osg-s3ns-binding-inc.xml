@@ -46,7 +46,7 @@
              default="elements"/>
 
   <!-- include the common s3 bindings -->
-  <include path="classpath:s3-2006-03-01-common-binding.xml"/>
+  <include path="classpath:s3-2006-03-01-common-binding.xml" precompiled="true"/>
 
   <mapping class="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
            abstract="true">

@@ -135,16 +135,16 @@ build: deps
 	@# we need JAVA_HOME
 	@if test -z "${JAVA_HOME}" ; then \
 		echo "You need to define JAVA_HOME!"; exit 1; fi
-	ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) build-all
-	ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) jar
+	ANT_OPTS="-Xmx2g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) build-all
+	ANT_OPTS="-Xmx2g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) jar
 	make -C eucadmin
 
 build-test: deps
 	@# we need JAVA_HOME
 	@if test -z "${JAVA_HOME}" ; then \
 		echo "You need to define JAVA_HOME!"; exit 1; fi
-	ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) build-test
-	ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) jar
+	ANT_OPTS="-Xmx2g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) build-test
+	ANT_OPTS="-Xmx2g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) jar
 	make -C eucadmin
 
 indent:
