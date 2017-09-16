@@ -47,7 +47,7 @@ public class EmpyreanPipeline extends QueryPipeline {
   @ComponentPart(Empyrean.class)
   private static class EmpyreanQueryBinding extends BaseQueryBinding<OperationParameter> implements ChannelHandler {
     private EmpyreanQueryBinding( ) {
-      super( "http://www.eucalyptus.com/ns/msgs/%s/", "2017-05-04", OperationParameter.Action, OperationParameter.Operation );
+      super( "http://www.eucalyptus.com/ns/bootstrap/%s/", "2017-05-04", OperationParameter.Action, OperationParameter.Operation );
     }
   }
 }

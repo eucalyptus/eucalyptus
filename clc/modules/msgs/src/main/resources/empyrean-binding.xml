@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+  -->
+<binding name="www_eucalyptus_com_ns_properties_2017_05_04">
+  <namespace uri="http://www.eucalyptus.com/ns/bootstrap/2017-05-04/" default="elements"/>
+
+  <mapping name="DeregisterServiceType" extends="com.eucalyptus.empyrean.configuration.ServiceRegistrationMessage"
+           class="com.eucalyptus.empyrean.configuration.DeregisterServiceType">
+    <structure map-as="com.eucalyptus.empyrean.configuration.ServiceRegistrationMessage"/>
+    <value name="type" field="type" usage="optional" style="element"/>
+    <value name="name" field="name" usage="optional" style="element"/>
+  </mapping>
+  <mapping abstract="true" class="com.eucalyptus.empyrean.Filter">
+    <value name="name" field="name" usage="optional" style="element"/>
+    <structure name="values" usage="optional">
+      <collection factory="com.eucalyptus.binding.Binding.listFactory" field="values" item-type="java.lang.String"
+                  usage="required">
+        <structure name="item">
+          <value name="entry"/>
+        </structure>
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="DestroyServiceType" extends="com.eucalyptus.empyrean.ServiceTransitionType"
+           class="com.eucalyptus.empyrean.DestroyServiceType">
+    <structure map-as="com.eucalyptus.empyrean.ServiceTransitionType"/>
+  </mapping>
+  <mapping name="DeregisterServiceResponseType"
+           extends="com.eucalyptus.empyrean.configuration.ServiceRegistrationMessage"
+           class="com.eucalyptus.empyrean.configuration.DeregisterServiceResponseType">
+    <structure map-as="com.eucalyptus.empyrean.configuration.ServiceRegistrationMessage"/>
+    <structure name="deregisteredServices" usage="optional">
+      <collection factory="com.eucalyptus.binding.Binding.listFactory" field="deregisteredServices" usage="required">
+        <structure name="item" map-as="com.eucalyptus.empyrean.ServiceId"/>
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="ModifyServiceType" extends="com.eucalyptus.empyrean.EmpyreanMessage"
+           class="com.eucalyptus.empyrean.ModifyServiceType">
+    <structure map-as="com.eucalyptus.empyrean.EmpyreanMessage"/>
+    <value name="name" field="name" usage="optional" style="element"/>
+    <value name="state" field="state" usage="optional" style="element"/>
+  </mapping>
+  <mapping name="StopServiceResponseType" extends="com.eucalyptus.empyrean.ServiceTransitionType"
+           class="com.eucalyptus.empyrean.StopServiceResponseType">
+    <structure map-as="com.eucalyptus.empyrean.ServiceTransitionType"/>
+  </mapping>
+  <mapping name="StartServiceType" extends="com.eucalyptus.empyrean.ServiceTransitionType"
+           class="com.eucalyptus.empyrean.StartServiceType">
+    <structure map-as="com.eucalyptus.empyrean.ServiceTransitionType"/>
+  </mapping>
+  <mapping name="ModifyServiceResponseType" extends="com.eucalyptus.empyrean.EmpyreanMessage"
+           class="com.eucalyptus.empyrean.ModifyServiceResponseType">
+    <structure map-as="com.eucalyptus.empyrean.EmpyreanMessage"/>
+  </mapping>
+  <mapping abstract="true" class="com.eucalyptus.empyrean.ServiceCertificateType">
+    <value name="serviceType" field="serviceType" usage="optional" style="element"/>
+    <value name="certificateUsage" field="certificateUsage" usage="optional" style="element"/>
+    <value name="certificateFormat" field="certificateFormat" usage="optional" style="element"/>
+    <value name="certificate" field="certificate" usage="optional" style="element"/>
+    <value name="certificateFingerprint" field="certificateFingerprint" usage="optional" style="element"/>
+    <value name="certificateFingerprintDigest" field="certificateFingerprintDigest" usage="optional" style="element"/>
+  </mapping>
+  <mapping name="StopServiceType" extends="com.eucalyptus.empyrean.ServiceTransitionType"
+           class="com.eucalyptus.empyrean.StopServiceType">
+    <structure map-as="com.eucalyptus.empyrean.ServiceTransitionType"/>
+  </mapping>
+  <mapping name="RegisterServiceResponseType" extends="com.eucalyptus.empyrean.configuration.ServiceRegistrationMessage"
+           class="com.eucalyptus.empyrean.configuration.RegisterServiceResponseType">
+    <structure map-as="com.eucalyptus.empyrean.configuration.ServiceRegistrationMessage"/>
+    <structure name="registeredServices" usage="optional">
+      <collection factory="com.eucalyptus.binding.Binding.listFactory" field="registeredServices" usage="required">
+        <structure name="item" map-as="com.eucalyptus.empyrean.ServiceId"/>
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="DescribeAvailableServiceTypesResponseType"
+           extends="com.eucalyptus.empyrean.configuration.ServiceRegistrationMessage"
+           class="com.eucalyptus.empyrean.configuration.DescribeAvailableServiceTypesResponseType">
+    <structure map-as="com.eucalyptus.empyrean.configuration.ServiceRegistrationMessage"/>
+    <structure name="available" usage="optional">
+      <collection factory="com.eucalyptus.binding.Binding.listFactory" field="available" usage="required">
+        <structure name="item" map-as="com.eucalyptus.empyrean.configuration.AvailableComponentInfo"/>
+      </collection>
+    </structure>
+  </mapping>
+  <mapping abstract="true" class="com.eucalyptus.empyrean.ServiceStatusType">
+    <structure name="serviceId" field="serviceId" map-as="com.eucalyptus.empyrean.ServiceId" usage="optional"/>
+    <value name="localState" field="localState" usage="optional" style="element"/>
+    <value name="localEpoch" field="localEpoch" usage="optional" style="element"/>
+    <structure name="details" usage="optional">
+      <collection factory="com.eucalyptus.binding.Binding.listFactory" field="details" item-type="java.lang.String"
+                  usage="required">
+        <structure name="item">
+          <value name="entry"/>
+        </structure>
+      </collection>
+    </structure>
+    <structure name="statusDetails" usage="optional">
+      <collection factory="com.eucalyptus.binding.Binding.listFactory" field="statusDetails" usage="required">
+        <structure name="item" map-as="com.eucalyptus.empyrean.ServiceStatusDetail"/>
+      </collection>
+    </structure>
+    <structure name="serviceAccounts" usage="optional">
+      <collection factory="com.eucalyptus.binding.Binding.listFactory" field="serviceAccounts" usage="required">
+        <structure name="item" map-as="com.eucalyptus.empyrean.ServiceAccount"/>
+      </collection>
+    </structure>
+  </mapping>
+  <mapping abstract="true" class="com.eucalyptus.empyrean.ServiceStatusDetail">
+    <value name="severity" field="severity" usage="optional" style="element"/>
+    <value name="uuid" field="uuid" usage="optional" style="element"/>
+    <value name="message" field="message" usage="optional" style="element"/>
+    <value name="serviceFullName" field="serviceFullName" usage="optional" style="element"/>
+    <value name="serviceName" field="serviceName" usage="optional" style="element"/>
+    <value name="serviceHost" field="serviceHost" usage="optional" style="element"/>
+    <value name="stackTrace" field="stackTrace" usage="optional" style="element"/>
+    <value name="timestamp" field="timestamp" usage="optional" style="element"/>
+  </mapping>
+  <mapping name="DescribeServiceAttributesType"
+           extends="com.eucalyptus.empyrean.configuration.ServiceRegistrationMessage"
+           class="com.eucalyptus.empyrean.configuration.DescribeServiceAttributesType">
+    <structure map-as="com.eucalyptus.empyrean.configuration.ServiceRegistrationMessage"/>
+    <value name="verbose" field="verbose" usage="optional" style="element"/>
+    <value name="reset" field="reset" usage="optional" style="element"/>
+    <value name="type" field="type" usage="optional" style="element"/>
+    <value name="partition" field="partition" usage="optional" style="element"/>
+    <value name="name" field="name" usage="optional" style="element"/>
+  </mapping>
+  <mapping name="DescribeServicesType" extends="com.eucalyptus.empyrean.ServiceTransitionType"
+           class="com.eucalyptus.empyrean.DescribeServicesType">
+    <structure map-as="com.eucalyptus.empyrean.ServiceTransitionType"/>
+    <value name="listAll" field="listAll" usage="optional" style="element"/>
+    <value name="listInternal" field="listInternal" usage="optional" style="element"/>
+    <value name="listUserServices" field="listUserServices" usage="optional" style="element"/>
+    <value name="showEvents" field="showEvents" usage="optional" style="element"/>
+    <value name="showEventStacks" field="showEventStacks" usage="optional" style="element"/>
+    <value name="byServiceType" field="byServiceType" usage="optional" style="element"/>
+    <value name="byHost" field="byHost" usage="optional" style="element"/>
+    <value name="byState" field="byState" usage="optional" style="element"/>
+    <value name="byPartition" field="byPartition" usage="optional" style="element"/>
+    <structure name="serviceNames" usage="optional">
+      <collection factory="com.eucalyptus.binding.Binding.listFactory" field="serviceNames" item-type="java.lang.String"
+                  usage="required">
+        <structure name="item">
+          <value name="entry"/>
+        </structure>
+      </collection>
+    </structure>
+    <structure name="filters" usage="optional">
+      <collection factory="com.eucalyptus.binding.Binding.listFactory" field="filters" usage="required">
+        <structure name="item" map-as="com.eucalyptus.empyrean.Filter"/>
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="DescribeAvailableServiceTypesType"
+           extends="com.eucalyptus.empyrean.configuration.ServiceRegistrationMessage"
+           class="com.eucalyptus.empyrean.configuration.DescribeAvailableServiceTypesType">
+    <structure map-as="com.eucalyptus.empyrean.configuration.ServiceRegistrationMessage"/>
+    <value name="verbose" field="verbose" usage="optional" style="element"/>
+  </mapping>
+  <mapping name="ServiceRegistrationMessage" extends="com.eucalyptus.empyrean.EmpyreanMessage"
+           class="com.eucalyptus.empyrean.configuration.ServiceRegistrationMessage">
+    <structure map-as="com.eucalyptus.empyrean.EmpyreanMessage"/>
+    <structure name="statusMessages" usage="optional">
+      <collection factory="com.eucalyptus.binding.Binding.listFactory" field="statusMessages"
+                  item-type="java.lang.String" usage="required">
+        <structure name="item">
+          <value name="entry"/>
+        </structure>
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="DisableServiceType" extends="com.eucalyptus.empyrean.ServiceTransitionType"
+           class="com.eucalyptus.empyrean.DisableServiceType">
+    <structure map-as="com.eucalyptus.empyrean.ServiceTransitionType"/>
+  </mapping>
+  <mapping name="EnableServiceResponseType" extends="com.eucalyptus.empyrean.ServiceTransitionType"
+           class="com.eucalyptus.empyrean.EnableServiceResponseType">
+    <structure map-as="com.eucalyptus.empyrean.ServiceTransitionType"/>
+  </mapping>
+  <mapping abstract="true" class="com.eucalyptus.empyrean.configuration.AvailableComponentInfo">
+    <value name="componentName" field="componentName" usage="optional" style="element"/>
+    <value name="componentCapitalizedName" field="componentCapitalizedName" usage="optional" style="element"/>
+    <value name="description" field="description" usage="optional" style="element"/>
+    <value name="hasCredentials" field="hasCredentials" usage="optional" style="element"/>
+    <value name="registerable" field="registerable" usage="optional" style="element"/>
+    <value name="requiresName" field="requiresName" usage="optional" style="element"/>
+    <value name="partitioned" field="partitioned" usage="optional" style="element"/>
+    <value name="publicApiService" field="publicApiService" usage="optional" style="element"/>
+    <structure name="serviceGroups" usage="optional">
+      <collection factory="com.eucalyptus.binding.Binding.listFactory" field="serviceGroups"
+                  item-type="java.lang.String" usage="required">
+        <structure name="item">
+          <value name="entry"/>
+        </structure>
+      </collection>
+    </structure>
+    <structure name="serviceGroupMembers" usage="optional">
+      <collection factory="com.eucalyptus.binding.Binding.listFactory" field="serviceGroupMembers"
+                  item-type="java.lang.String" usage="required">
+        <structure name="item">
+          <value name="entry"/>
+        </structure>
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="DescribeServiceAttributesResponseType"
+           extends="com.eucalyptus.empyrean.configuration.ServiceRegistrationMessage"
+           class="com.eucalyptus.empyrean.configuration.DescribeServiceAttributesResponseType">
+    <structure map-as="com.eucalyptus.empyrean.configuration.ServiceRegistrationMessage"/>
+    <structure name="attributes" usage="optional">
+      <collection factory="com.eucalyptus.binding.Binding.listFactory" field="attributes" usage="required">
+        <structure name="item" map-as="com.eucalyptus.empyrean.configuration.ServiceAttribute"/>
+      </collection>
+    </structure>
+  </mapping>
+  <mapping abstract="true" class="com.eucalyptus.empyrean.ServiceId">
+    <value name="uuid" field="uuid" usage="optional" style="element"/>
+    <value name="partition" field="partition" usage="optional" style="element"/>
+    <value name="name" field="name" usage="optional" style="element"/>
+    <value name="type" field="type" usage="optional" style="element"/>
+    <value name="fullName" field="fullName" usage="optional" style="element"/>
+    <structure name="uris" usage="optional">
+      <collection factory="com.eucalyptus.binding.Binding.listFactory" field="uris" item-type="java.lang.String"
+                  usage="required">
+        <structure name="item">
+          <value name="entry"/>
+        </structure>
+      </collection>
+    </structure>
+    <value name="uri" field="uri" usage="optional" style="element"/>
+    <value name="host" field="host" usage="optional" style="element"/>
+  </mapping>
+  <mapping name="DescribeServicesResponseType" extends="com.eucalyptus.empyrean.EmpyreanMessage"
+           class="com.eucalyptus.empyrean.DescribeServicesResponseType">
+    <structure map-as="com.eucalyptus.empyrean.EmpyreanMessage"/>
+    <structure name="serviceStatuses" usage="optional">
+      <collection factory="com.eucalyptus.binding.Binding.listFactory" field="serviceStatuses" usage="required">
+        <structure name="item" map-as="com.eucalyptus.empyrean.ServiceStatusType"/>
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="DescribeServiceCertificatesType" extends="com.eucalyptus.empyrean.EmpyreanMessage"
+           class="com.eucalyptus.empyrean.DescribeServiceCertificatesType">
+    <structure map-as="com.eucalyptus.empyrean.EmpyreanMessage"/>
+    <structure name="filters" usage="optional">
+      <collection factory="com.eucalyptus.binding.Binding.listFactory" field="filters" usage="required">
+        <structure name="item" map-as="com.eucalyptus.empyrean.Filter"/>
+      </collection>
+    </structure>
+    <value name="format" field="format" usage="optional" style="element"/>
+    <value name="fingerprintDigest" field="fingerprintDigest" usage="optional" style="element"/>
+  </mapping>
+  <mapping name="StartServiceResponseType" extends="com.eucalyptus.empyrean.ServiceTransitionType"
+           class="com.eucalyptus.empyrean.StartServiceResponseType">
+    <structure map-as="com.eucalyptus.empyrean.ServiceTransitionType"/>
+  </mapping>
+  <mapping name="RegisterServiceType" extends="com.eucalyptus.empyrean.configuration.ServiceRegistrationMessage"
+           class="com.eucalyptus.empyrean.configuration.RegisterServiceType">
+    <structure map-as="com.eucalyptus.empyrean.configuration.ServiceRegistrationMessage"/>
+    <value name="type" field="type" usage="optional" style="element"/>
+    <value name="partition" field="partition" usage="optional" style="element"/>
+    <value name="name" field="name" usage="optional" style="element"/>
+    <value name="host" field="host" usage="optional" style="element"/>
+    <value name="port" field="port" usage="optional" style="element"/>
+  </mapping>
+  <mapping name="ModifyServiceAttributeResponseType"
+           extends="com.eucalyptus.empyrean.configuration.ServiceRegistrationMessage"
+           class="com.eucalyptus.empyrean.configuration.ModifyServiceAttributeResponseType">
+    <structure map-as="com.eucalyptus.empyrean.configuration.ServiceRegistrationMessage"/>
+  </mapping>
+  <mapping name="DestroyServiceResponseType" extends="com.eucalyptus.empyrean.ServiceTransitionType"
+           class="com.eucalyptus.empyrean.DestroyServiceResponseType">
+    <structure map-as="com.eucalyptus.empyrean.ServiceTransitionType"/>
+  </mapping>
+  <mapping name="EmpyreanMessage"
+           class="com.eucalyptus.empyrean.EmpyreanMessage">
+    <value name="correlationId" get-method="getCorrelationId" set-method="setCorrelationId" usage="optional" style="element"/>
+    <value name="_return" get-method="get_return" set-method="set_return" usage="optional" style="element"/>-->
+  </mapping>
+  <mapping name="DisableServiceResponseType" extends="com.eucalyptus.empyrean.ServiceTransitionType"
+           class="com.eucalyptus.empyrean.DisableServiceResponseType">
+    <structure map-as="com.eucalyptus.empyrean.ServiceTransitionType"/>
+  </mapping>
+  <mapping name="ServiceTransitionType" extends="com.eucalyptus.empyrean.EmpyreanMessage"
+           class="com.eucalyptus.empyrean.ServiceTransitionType">
+    <structure map-as="com.eucalyptus.empyrean.EmpyreanMessage"/>
+    <structure name="services" usage="optional">
+      <collection factory="com.eucalyptus.binding.Binding.listFactory" field="services" usage="required">
+        <structure name="item" map-as="com.eucalyptus.empyrean.ServiceId"/>
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="EnableServiceType" extends="com.eucalyptus.empyrean.ServiceTransitionType"
+           class="com.eucalyptus.empyrean.EnableServiceType">
+    <structure map-as="com.eucalyptus.empyrean.ServiceTransitionType"/>
+  </mapping>
+  <mapping name="ModifyServiceAttributeType" extends="com.eucalyptus.empyrean.configuration.ServiceRegistrationMessage"
+           class="com.eucalyptus.empyrean.configuration.ModifyServiceAttributeType">
+    <structure map-as="com.eucalyptus.empyrean.configuration.ServiceRegistrationMessage"/>
+    <value name="name" field="name" usage="optional" style="element"/>
+    <value name="partition" field="partition" usage="optional" style="element"/>
+    <value name="attribute" field="attribute" usage="optional" style="element"/>
+    <value name="value" field="value" usage="optional" style="element"/>
+  </mapping>
+  <mapping name="DescribeServiceCertificatesResponseType" extends="com.eucalyptus.empyrean.EmpyreanMessage"
+           class="com.eucalyptus.empyrean.DescribeServiceCertificatesResponseType">
+    <structure map-as="com.eucalyptus.empyrean.EmpyreanMessage"/>
+    <structure name="serviceCertificates" usage="optional">
+      <collection factory="com.eucalyptus.binding.Binding.listFactory" field="serviceCertificates" usage="required">
+        <structure name="item" map-as="com.eucalyptus.empyrean.ServiceCertificateType"/>
+      </collection>
+    </structure>
+  </mapping>
+  <mapping abstract="true" class="com.eucalyptus.empyrean.ServiceAccount">
+    <value name="accountName" field="accountName" usage="optional" style="element"/>
+    <value name="accountNumber" field="accountNumber" usage="optional" style="element"/>
+    <value name="accountCanonicalId" field="accountCanonicalId" usage="optional" style="element"/>
+  </mapping>
+  <mapping abstract="true" class="com.eucalyptus.empyrean.configuration.ServiceAttribute">
+    <value name="name" field="name" usage="optional" style="element"/>
+    <value name="value" field="value" usage="optional" style="element"/>
+    <value name="description" field="description" usage="optional" style="element"/>
+    <value name="readOnly" field="readOnly" usage="optional" style="element"/>
+    <value name="required" field="required" usage="optional" style="element"/>
+    <value name="defaultValue" field="defaultValue" usage="optional" style="element"/>
+    <value name="scope" field="scope" usage="optional" style="element"/>
+  </mapping>
+</binding>

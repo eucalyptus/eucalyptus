@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+  -->
+<binding name="www_eucalyptus_com_ns_properties_2017_05_04">
+  <namespace uri="http://www.eucalyptus.com/ns/properties/2017-05-04/" default="elements"/>
+
+  <mapping name="DescribePropertiesResponseType" extends="com.eucalyptus.config.PropertiesMessage"
+           class="com.eucalyptus.config.DescribePropertiesResponseType">
+    <structure map-as="com.eucalyptus.config.PropertiesMessage"/>
+    <structure name="properties" usage="optional">
+      <collection factory="com.eucalyptus.binding.Binding.listFactory" field="properties" usage="required">
+        <structure name="item" map-as="com.eucalyptus.config.Property"/>
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="PropertiesMessage"
+           class="com.eucalyptus.config.PropertiesMessage">
+    <value name="correlationId" get-method="getCorrelationId" set-method="setCorrelationId" usage="optional" style="element"/>
+    <value name="_return" get-method="get_return" set-method="set_return" usage="optional" style="element"/>-->
+  </mapping>
+  <mapping abstract="true" class="com.eucalyptus.config.Property">
+    <value name="name" field="name" usage="optional" style="element"/>
+    <value name="value" field="value" usage="optional" style="element"/>
+    <value name="description" field="description" usage="optional" style="element"/>
+    <value name="defaultValue" field="defaultValue" usage="optional" style="element"/>
+    <value name="readOnly" field="readOnly" usage="optional" style="element"/>
+  </mapping>
+  <mapping name="ModifyPropertyValueResponseType" extends="com.eucalyptus.config.PropertiesMessage"
+           class="com.eucalyptus.config.ModifyPropertyValueResponseType">
+    <structure map-as="com.eucalyptus.config.PropertiesMessage"/>
+    <value name="name" field="name" usage="optional" style="element"/>
+    <value name="value" field="value" usage="optional" style="element"/>
+    <value name="oldValue" field="oldValue" usage="optional" style="element"/>
+  </mapping>
+  <mapping name="DescribePropertiesType" extends="com.eucalyptus.config.PropertiesMessage"
+           class="com.eucalyptus.config.DescribePropertiesType">
+    <structure map-as="com.eucalyptus.config.PropertiesMessage"/>
+    <structure name="properties" usage="optional">
+      <collection factory="com.eucalyptus.binding.Binding.listFactory" field="properties" item-type="java.lang.String"
+                  usage="required">
+        <structure name="item">
+          <value name="entry"/>
+        </structure>
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="ModifyPropertyValueType" extends="com.eucalyptus.config.PropertiesMessage"
+           class="com.eucalyptus.config.ModifyPropertyValueType">
+    <structure map-as="com.eucalyptus.config.PropertiesMessage"/>
+    <value name="name" field="name" usage="optional" style="element"/>
+    <value name="value" field="value" usage="optional" style="element"/>
+    <value name="reset" field="reset" usage="optional" style="element"/>
+  </mapping>
+</binding>

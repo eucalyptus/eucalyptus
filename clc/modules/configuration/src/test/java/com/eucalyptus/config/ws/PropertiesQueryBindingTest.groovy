@@ -13,34 +13,19 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  ************************************************************************/
-package edu.ucsb.eucalyptus.msgs
+package com.eucalyptus.config.ws
 
-import com.eucalyptus.empyrean.DescribeServicesType
-import org.hamcrest.Matchers
-
-import static org.junit.Assert.*
+import com.eucalyptus.ws.protocol.QueryBindingTestSupport
 import org.junit.Test
 
 /**
  *
  */
-class BaseMessagesTest {
+class PropertiesQueryBindingTest extends QueryBindingTestSupport {
 
   @Test
-  void testXmlRoundTrip( ) {
-    BaseMessage message = BaseMessages.fromOm( BaseMessages.toOm( new BaseMessage( ).markFailed( ) ), BaseMessage )
-    assertFalse( 'return', message.get_return( ) )
-  }
-
-  @Test
-  void testXmlNullElements( ) {
-    DescribeServicesType message = BaseMessages.fromOm( BaseMessages.toOm( new DescribeServicesType( ) ), DescribeServicesType )
-    assertNotNull( 'services list empty not null', message.services )
-  }
-
-  @Test
-  void testToString( ) {
-    String text = new BaseMessage( ).markFailed( ).toString( )
-    assertThat( 'contains failed', text, Matchers.containsString( 'false' ) )
+  void testValidBinding() {
+    URL resource = PropertiesQueryBindingTest.getResource('/properties-binding.xml')
+    assertValidBindingXml(resource)
   }
 }
