@@ -32,7 +32,7 @@ import java.util.Map;
 import javax.xml.namespace.NamespaceContext;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 /**
  * Delegating XMLStreamWriter that maps namespaces.
@@ -51,7 +51,7 @@ public class NamespaceMappingXMLStreamWriter implements XMLStreamWriter {
   }
 
   private String mapNs( final String namespaceUri ) {
-    return Objects.firstNonNull( namespaceMappings.get(namespaceUri), namespaceUri );
+    return MoreObjects.firstNonNull( namespaceMappings.get(namespaceUri), namespaceUri );
   }
 
   @Override

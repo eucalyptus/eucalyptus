@@ -45,7 +45,6 @@ clc/modules/bootstrap/src/main/native/eucalyptus-opts.h
 clc/modules/bootstrap/src/main/native/eucalyptus-opts.c
 clc/modules/bootstrap/src/main/resources/version.properties
 clc/modules/*/build
-clc/modules/msgs/src/main/resources/msgs-binding.xml
 clc/modules/postgresql/src/main/resources/postgresql-binaries.properties
 clc/modules/storage-san-common
 clc/modules/storage-san-threepar

@@ -181,7 +181,6 @@ public class Pipelines {
     @Override
     public boolean load( ) throws Exception {
       for ( final ComponentId comp : ComponentIds.list( ) ) {
-        Pipelines.internalPipelines.add( new InternalQueryPipeline( comp ) );
         Pipelines.internalPipelines.add( new InternalSoapPipeline( comp ) );
       }
       return true;
@@ -281,99 +280,5 @@ public class Pipelines {
     public String toString( ) {
       return String.format( "InternalSoapPipeline:servicePath=%s:serviceName=%s:toString()=%s", this.servicePath, this.serviceName, super.toString( ) );
     }
-
   }
-
-  private static class InternalQueryPipeline extends FilteredPipeline.InternalPipeline {
-    public enum RequiredQueryParams {
-      Version
-    }
-
-    private final String servicePath;
-    private final String internalServicePath;
-    private final String serviceName;
-
-    public InternalQueryPipeline( final ComponentId componentId ) {
-      super( componentId );
-      this.servicePath = componentId.getServicePath( );
-      this.internalServicePath = componentId.getInternalServicePath( );
-      this.serviceName = componentId.getFullName( ).toString( );
-    }
-
-    @Override
-    public boolean checkAccepts( final HttpRequest message ) {
-      if ( message instanceof MappingHttpRequest ) {
-        final MappingHttpRequest httpRequest = ( MappingHttpRequest ) message;
-        final boolean noPath = message.getUri( ).isEmpty( ) || message.getUri( ).equals( "/" ) || message.getUri( ).startsWith( "/?" );
-        if ( !( message.getUri( ).startsWith( this.servicePath ) || message.getUri( ).startsWith( this.internalServicePath ) ) &&
-             !(noPath && resolvesByHost( message.getHeader( HttpHeaders.Names.HOST ) ) ) ) {
-          return false;
-        }
-        if ( httpRequest.getMethod( ).equals( HttpMethod.POST ) && !message.getHeaderNames().contains( "SOAPAction" ) ) {
-          final Map<String, String> parameters = new HashMap<>( httpRequest.getParameters( ) );
-          final Set<String> nonQueryParameters = Sets.newHashSet( );
-          final String query = httpRequest.getContentAsString( );
-          for ( final String p : query.split( "&" ) ) {
-            final String[] splitParam = p.split( "=" );
-            String lhs = splitParam[0];
-            String rhs = splitParam.length == 2
-              ? splitParam[1]
-              : null;
-            try {
-              if ( lhs != null ) lhs = new URLCodec( ).decode( lhs );
-            } catch ( final DecoderException e ) {}
-            try {
-              if ( rhs != null ) rhs = new URLCodec( ).decode( rhs );
-            } catch ( final DecoderException e ) {}
-            parameters.put( lhs, rhs );
-            nonQueryParameters.add( lhs );
-          }
-          for ( final RequiredQueryParams p : RequiredQueryParams.values( ) ) {
-            if ( !parameters.containsKey( p.toString( ) ) ) {
-              return false;
-            }
-          }
-          httpRequest.getParameters( ).putAll( parameters );
-          httpRequest.addNonQueryParameterKeys( nonQueryParameters );
-        } else {
-          for ( final RequiredQueryParams p : RequiredQueryParams.values( ) ) {
-            if ( !httpRequest.getParameters( ).containsKey( p.toString( ) ) ) {
-              return false;
-            }
-          }
-        }
-        return true;
-      }
-      return false;
-    }
-
-    @Override
-    public String getName( ) {
-      return "internal-query-pipeline-" + this.serviceName.toLowerCase( ) + "-" + this.servicePath;
-    }
-
-    @Override
-    public ChannelPipeline addHandlers( final ChannelPipeline pipeline ) {
-      pipeline.addLast( "hmac-verify",  new HmacHandler( EnumSet.of(TemporaryKeyType.Role, TemporaryKeyType.Access, TemporaryKeyType.Session) ) );
-      pipeline.addLast( "timestamp-verify", Handlers.queryTimestamphandler() );
-      pipeline.addLast( "restful-binding", new InternalQueryBinding( ) );
-      return pipeline;
-    }
-
-    @Override
-    public String toString( ) {
-      return String.format( "InternalQueryPipeline:servicePath=%s:serviceName=%s:toString()=%s", this.servicePath, this.serviceName, super.toString( ) );
-    }
-
-  }
-
-  static class InternalQueryBinding extends BaseQueryBinding<OperationParameter> implements ChannelHandler {
-
-    public InternalQueryBinding( ) {
-      super( "http://ec2.amazonaws.com/doc/%s/", "2009-04-04", OperationParameter.Action, OperationParameter.Operation );
-    }
-
-  }
-
-
 }

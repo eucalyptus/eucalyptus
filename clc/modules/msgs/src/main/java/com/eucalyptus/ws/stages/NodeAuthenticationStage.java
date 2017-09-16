@@ -33,7 +33,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 
 import com.eucalyptus.ws.handlers.NodeWsSecHandler;
 
-public class ExternalSCAuthenticationStage implements UnrollableStage {
+public class NodeAuthenticationStage implements UnrollableStage {
 
 	@Override
 	public int compareTo(UnrollableStage o) {
@@ -47,7 +47,7 @@ public class ExternalSCAuthenticationStage implements UnrollableStage {
 
 	@Override
 	public String getName() {
-		return "external-sc-soap-authentication";
+		return "node-soap-authentication-stage";
 	}
 
 }

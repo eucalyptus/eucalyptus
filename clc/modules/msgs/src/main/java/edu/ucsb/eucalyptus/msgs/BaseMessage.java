@@ -40,6 +40,7 @@
 package edu.ucsb.eucalyptus.msgs;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.UUID;
 
@@ -259,7 +260,11 @@ public class BaseMessage implements BaseMessageMarker {
   }
     
   public String toString( ) {
-    String str = this.toString( BindingManager.defaultBindingName( ) );
+    String str = null;
+    try {
+      str = BaseMessages.toString( this );
+    } catch ( IOException e ) {
+    }
     str = ( str != null )
       ? str
       : this.toString( "eucalyptus_ucsb_edu" );

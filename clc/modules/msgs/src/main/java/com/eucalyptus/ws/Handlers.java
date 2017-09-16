@@ -51,6 +51,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.annotation.Nullable;
 
+import com.eucalyptus.ws.handlers.InternalXmlBindingHandler;
 import com.google.common.base.*;
 import com.google.common.base.Objects;
 import org.apache.log4j.Logger;
@@ -116,7 +117,7 @@ public class Handlers {
   private static final ChannelHandler                        internalWsSecHandler     = new InternalWsSecHandler( );
   private static final ChannelHandler                        soapHandler              = new SoapHandler( );
   private static final ChannelHandler                        addressingHandler        = new AddressingHandler( );
-  private static final ChannelHandler                        bindingHandler           = new BindingHandler( BindingHandler.context( BindingManager.getDefaultBinding( ) ) );
+  private static final ChannelHandler                        bindingHandler           = new InternalXmlBindingHandler( );
   private static final HashedWheelTimer                      timer                    = new HashedWheelTimer( )  { { this.start( ); } };   //TODO:GRZE: configurable
 
   enum ServerPipelineFactory implements ChannelPipelineFactory {
@@ -244,10 +245,6 @@ public class Handlers {
 
   public static ChannelHandler bindingHandler( ) {
     return bindingHandler;
-  }
-
-  public static ChannelHandler bindingHandler( final String bindingName ) {
-    return bindingHandlers.getUnchecked( bindingName );
   }
 
   public static ChannelHandler soapMarshalling( ) {

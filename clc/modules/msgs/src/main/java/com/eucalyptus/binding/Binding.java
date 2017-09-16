@@ -125,21 +125,6 @@ public class Binding {
     return this.bindingFactory;
   }
   
-  public String toString( final Object param ) {
-    StringWriter out = new StringWriter( );
-    try {
-      IBindingFactory bindingFactory = BindingDirectory.getFactory( BindingManager.defaultBindingName( ), param.getClass( ) );
-      IMarshallingContext mctx = bindingFactory.createMarshallingContext( );
-      mctx.setIndent( 2 );
-      mctx.marshalDocument( this, "UTF-8", null, out );
-    } catch ( JiBXException e ) {
-      Logger.getLogger( BaseMessage.class ).debug( e, e );
-    } catch ( Exception e ) {
-      Logger.getLogger( BaseMessage.class ).error( e, e );
-    }
-    return out.toString( );
-  }
-
   public String toStream( final OutputStream outputStream, final Object param ) throws BindingException {
     return toStream( outputStream, param, null );
   }
