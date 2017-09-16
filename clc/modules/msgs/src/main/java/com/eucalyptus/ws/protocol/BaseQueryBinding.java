@@ -214,11 +214,9 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
     Binding binding = null;
     if ( this.getBinding( ).hasElementClass( operationName ) ) {
       binding = this.getBinding( );
-    } else if ( this.getDefaultBinding().hasElementClass( operationName ) ) {
+    } else if ( this.getDefaultBinding() != null && this.getDefaultBinding().hasElementClass( operationName ) ) {
       binding = this.getDefaultBinding();
-    } else if ( BindingManager.getDefaultBinding().hasElementClass( operationName ) ) {
-      binding = BindingManager.getDefaultBinding();
-    }
+    } 
     return binding;
   }
 
@@ -231,10 +229,14 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
     } catch ( final RuntimeException e ) {
       LOG.error( "Falling back to default (unvalidated) binding for: " + operationName + " with params=" + params );
       LOG.error( "Failed to build a valid message: " + e.getMessage( ), e );
-      try {
-        BindingManager.getDefaultBinding().toOM( eucaMsg, BindingManager.defaultBindingNamespace( ) );
-      } catch ( final RuntimeException ex ) {
-        throw new BindingException( "Default binding failed to build a valid message: " + ex.getMessage( ), ex );
+      if ( getDefaultBinding( ) != null ) {
+        try {
+          getDefaultBinding( ).toOM( eucaMsg, this.getNamespace( ) );
+        } catch ( final RuntimeException ex ) {
+          throw new BindingException( "Failed to build a valid message: " + ex.getMessage( ), ex );
+        }
+      } else {
+        throw new BindingException( "Failed to build a valid message: " + e.getMessage( ), e );
       }
     }
   }

@@ -90,7 +90,7 @@ public class BaseQueryJsonBinding<T extends Enum<T>> extends BaseQueryBinding<T>
       final T... alternativeOperationParam
   ) {
     super(
-        BindingManager.defaultBindingNamespace( ),
+        "http://www.eucalyptus.com/ns/msgs/2017-05-04/",
         null,
         unknownParameterStrategy,
         operationParam,

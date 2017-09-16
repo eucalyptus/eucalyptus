@@ -139,8 +139,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import groovy.lang.GroovyObject;
 import javaslang.Tuple2;
 
@@ -216,16 +214,10 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     if (event.getMessage() instanceof MappingHttpResponse) {
       MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
       BaseMessage msg = (BaseMessage) httpResponse.getMessage();
-      Binding binding;
-
-      String contentType;
-      if (!(msg instanceof EucalyptusErrorMessageType) && !(msg instanceof ExceptionResponseType)) {
-        binding = BindingManager.getBinding(super.getNamespace());
-      } else {
-        binding = BindingManager.getDefaultBinding();
-      }
+      Binding binding = BindingManager.getBinding(super.getNamespace());
       if (msg != null) {
         final Tuple2<String,byte[]> encoded = S3ResponseEncoders.encode( msg );
+        String contentType;
         ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
         if ( encoded != null ) {
           contentType = encoded._1( );

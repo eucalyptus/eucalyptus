@@ -61,6 +61,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.WebServicesException;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessages;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
@@ -271,7 +272,7 @@ public class BindingHandler extends MessageStackHandler {
         try {
           omElem = this.context.getBinding( ).toOM( httpMessage.getMessage( ), this.context.getNamespace( ) );
         } catch ( BindingException ex ) {
-          omElem = BindingManager.getDefaultBinding( ).toOM( httpMessage.getMessage( ) );
+          omElem = BaseMessages.toOm( (BaseMessage) httpMessage.getMessage( ) );
         } catch ( Exception ex ) {
           Logs.exhaust( ).debug( ex, ex );
           throw ex;

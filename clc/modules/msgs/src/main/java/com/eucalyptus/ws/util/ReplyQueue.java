@@ -99,12 +99,6 @@ public class ReplyQueue {
       ret = ( BaseMessage ) payload;
     } else if ( payload instanceof HasRequest ) {
       ret = ( ( HasRequest ) payload ).getRequest( );
-    } else if ( payload instanceof String ) {
-      if ( !( (String) payload ).isEmpty( ) ) try {
-        ret = ( BaseMessage ) BindingManager.getDefaultBinding( ).fromOM( ( String ) payload );
-      } catch ( Exception ex ) {
-        LOG.error( ex , ex );
-      }
     }
     return ret;
   }

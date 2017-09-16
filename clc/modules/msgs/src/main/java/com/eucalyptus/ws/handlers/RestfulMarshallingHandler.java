@@ -82,6 +82,7 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessages;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
@@ -89,7 +90,8 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   private static Logger        LOG                     = Logger.getLogger( RestfulMarshallingHandler.class );
   private String               namespace;
   private final String         namespacePattern;
-  private Binding              defaultBinding          = BindingManager.getDefaultBinding( );
+  @Nullable
+  private Binding              defaultBinding;
   private String               defaultVersion;
   private Binding              binding;
   private final Class<? extends ComponentId> component;
@@ -121,7 +123,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       } else if ( bindingVersion != null && bindingVersion.matches( "\\d\\d\\d\\d-\\d\\d-\\d\\d" ) ) {
         this.setNamespaceVersion( bindingVersion );
       } else {
-        this.setNamespace( BindingManager.defaultBindingName() );
+        this.setNamespaceVersion( defaultVersion );
       }
       try {
         BaseMessage msg = ( BaseMessage ) this.bind( httpRequest );
@@ -191,11 +193,19 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
           } catch ( BindingException ex ) {
             Logs.extreme( ).error( ex, ex );
             byteOut.reset();
-            try {//use default binding with request namespace
-              getDefaultBinding( ).toStream( byteOut, message, getNamespaceOverride( message, this.namespace ) );
-            } catch ( BindingException ex1 ) {//use default binding
-              byteOut.reset();
-              BindingManager.getDefaultBinding( ).toStream( byteOut, message );
+            if ( getDefaultBinding( ) != null ) {
+              try {//use default binding with request namespace
+                getDefaultBinding( ).toStream( byteOut, message, getNamespaceOverride( message, this.namespace ) );
+              } catch ( BindingException ex1 ) {//use default binding
+                if ( message instanceof BaseMessage ) {
+                  byteOut.reset();
+                  BaseMessages.toStream( (BaseMessage) message, byteOut );
+                } else {
+                  throw ex1;
+                }
+              }
+            } else {
+              throw ex;
             }
           } catch ( Exception e ) {
             LOG.debug( e );
@@ -210,46 +220,6 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       } finally {
         HoldMe.canHas.unlock( );
       }
-    }
-  }
-
-  public static void streamResponse( final Object message ) {
-    final Context context = Contexts.lookup();
-    final Channel channel = context.getChannel();
-    final RestfulMarshallingHandler handler =
-        channel.getPipeline().get(RestfulMarshallingHandler.class);
-
-    final DefaultHttpResponse httpResponse =
-        new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-    final EncodingWrapper wrapper = getEncodingWrapper();
-    wrapper.writeHeaders( httpResponse );
-    try {
-      httpResponse.addHeader( HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED );
-      httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "application/xml; charset=UTF-8" );
-      final OutputStream outputStream = wrapper.wrapOutput(
-          new BufferedOutputStream( new OutputStream() {
-            @Override
-            public void write( final int b ) throws IOException {
-              write( new byte[]{ (byte)b }, 0, 1 );
-            }
-            @Override
-            public void write( final byte[] b, final int off, final int len ) throws IOException {
-              final ChannelFuture future = Channels.write( channel,
-                  new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(b, off, len)));
-              if ( !future.awaitUninterruptibly().isSuccess() ) {
-                throw new IOException( future.getCause() );
-              }
-            }
-            @Override
-            public void flush() throws IOException {
-            }
-      } ) );
-      Channels.write( channel, httpResponse );
-      handler.binding.toStream( outputStream, message );
-      outputStream.close(); // the implementations used flush/complete on close
-      Channels.write( channel, HttpChunk.LAST_CHUNK );
-    } catch ( final Exception e ) {
-      LOG.error( "Error streaming response", e );
     }
   }
 
@@ -359,6 +329,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
     return this.binding;
   }
 
+  @Nullable
   public Binding getDefaultBinding( ) {
     return this.defaultBinding;
   }

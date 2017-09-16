@@ -52,7 +52,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import net.sf.json.JSONArray;
@@ -91,7 +90,6 @@ import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.storage.msgs.BucketLogData;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
@@ -121,8 +119,6 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import groovy.lang.GroovyObject;
 
 public class WalrusRESTBinding extends RestfulMarshallingHandler {
@@ -212,19 +208,8 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
     if (event.getMessage() instanceof MappingHttpResponse) {
       MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
       BaseMessage msg = (BaseMessage) httpResponse.getMessage();
-      Binding binding;
-
-      if (!(msg instanceof EucalyptusErrorMessageType) && !(msg instanceof ExceptionResponseType)) {
-        binding = BindingManager.getBinding(super.getNamespace());
-        if (putQueue != null) {
-          putQueue = null;
-        }
-      } else {
-        binding = BindingManager.getDefaultBinding();
-        if (putQueue != null) {
-          putQueue = null;
-        }
-      }
+      Binding binding = BindingManager.getBinding(super.getNamespace());
+      putQueue = null;
       if (msg != null) {
         ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
         binding.toStream(byteOut, msg);

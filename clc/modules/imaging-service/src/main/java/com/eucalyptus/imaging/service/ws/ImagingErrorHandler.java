@@ -47,7 +47,7 @@ public class ImagingErrorHandler extends ErrorHandlerSupport {
   private static final String INTERNAL_FAILURE = "InternalFailure";  //TODO:GEN2OOLS: Verify / replace default error code for service
 
   public ImagingErrorHandler( ) {
-    super( LOG, BindingManager.defaultBindingNamespace( ), INTERNAL_FAILURE );
+    super( LOG, ImagingQueryBinding.IMAGING_DEFAULT_NAMESPACE, INTERNAL_FAILURE );
   }
 
   @Override

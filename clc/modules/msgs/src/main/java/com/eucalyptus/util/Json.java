@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.StringReader;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -70,6 +71,13 @@ public class Json {
       @Override
       ObjectMapper config( final ObjectMapper objectMapper ) {
         objectMapper.addMixIn( GroovyObject.class, GroovyMixin.class );
+        return objectMapper;
+      }
+    },
+    IgnoreBaseMinimalMessage {
+      @Override
+      ObjectMapper config( final ObjectMapper objectMapper ) {
+        objectMapper.addMixIn( BaseMessage.class, BaseMessageMinimalMixin.class );
         return objectMapper;
       }
     },
@@ -150,6 +158,14 @@ public class Json {
    */
   public static ObjectMapper mapper( final Iterable<JsonOption> options ) {
     return JsonOption.config( options, new ObjectMapper( ) );
+  }
+
+  /**
+   * Get a mapper configured with the given options.
+   */
+  public static <O extends ObjectMapper> O mapper( final O mapper, JsonOption... options ) {
+    JsonOption.config( Arrays.asList( options ), mapper );
+    return mapper;
   }
 
   public static boolean isText( final JsonNode parent, final String fieldName ) throws IOException {
@@ -258,6 +274,10 @@ public class Json {
     @JsonIgnore
     void setMetaClass( MetaClass var1);
     @JsonIgnore MetaClass getMetaClass( );
+  }
+
+  @JsonIgnoreProperties( "reply" )
+  private interface BaseMessageMinimalMixin {
   }
 
   @JsonIgnoreProperties( { "correlationId", "effectiveUserId", "reply", "statusMessage", "userId",

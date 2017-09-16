@@ -44,8 +44,6 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.BillOfMaterials;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.ComponentMessage;
@@ -60,30 +58,14 @@ import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class BindingManager {
-  
-  private static Logger               LOG                       = Logger.getLogger( BindingManager.class );
-  private static Map<BindingKey, Binding> bindingMap            = Maps.newConcurrentMap( );
-  private static final String         DEFAULT_BINDING_NAMESPACE = "http://msgs.eucalyptus.com/" + BillOfMaterials.getVersion( );
-  private static final String         DEFAULT_BINDING_NAME      = BindingManager.sanitizeNamespace( defaultBindingNamespace( ) );
-  private static volatile Binding     DEFAULT;
-  private static Map<BindingKey,Future<Boolean>> bindingSeedMap = Maps.newConcurrentMap( );
-  
-  public static Binding getDefaultBinding( ) {
-    if (DEFAULT == null) {
-      synchronized (BindingManager.class) {
-        if (DEFAULT == null) {
-          DEFAULT = BindingManager.getBinding( BindingManager.sanitizeNamespace( BindingManager.defaultBindingName( ) ) );
-        }
-      }
-    }
 
-    return DEFAULT;
-  }
-  
+  private static Map<BindingKey, Binding> bindingMap            = Maps.newConcurrentMap( );
+  private static Map<BindingKey,Future<Boolean>> bindingSeedMap = Maps.newConcurrentMap( );
+
   public static String sanitizeNamespace( String namespace ) {
     return namespace.replaceAll( "(https?://)|(/$)", "" ).replaceAll( "[./-]", "_" );
   }
-  
+
   public static boolean seedBinding( final String bindingName,
                                      final Class seedClass ) {
     boolean foundComponent = false;
@@ -139,14 +121,6 @@ public class BindingManager {
 
   public static Binding getBinding( final String bindingName ) {
     return getBinding( key( bindingName ) );
-  }
-
-  public static String defaultBindingName( ) {
-    return DEFAULT_BINDING_NAME;
-  }
-  
-  public static String defaultBindingNamespace( ) {
-    return DEFAULT_BINDING_NAMESPACE;
   }
 
   private static BindingKey key( final String bindingName ) {

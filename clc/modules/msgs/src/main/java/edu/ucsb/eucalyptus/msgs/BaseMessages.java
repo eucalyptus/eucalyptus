@@ -29,17 +29,38 @@
 package edu.ucsb.eucalyptus.msgs;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.util.Collections;
+import javax.xml.stream.XMLStreamReader;
+import javax.xml.stream.XMLStreamWriter;
+import org.apache.axiom.om.OMDocument;
+import org.apache.axiom.om.OMElement;
+import org.apache.axiom.om.OMFactory;
+import com.eucalyptus.binding.HoldMe;
+import com.eucalyptus.bootstrap.BillOfMaterials;
+import com.eucalyptus.util.Json;
+import com.eucalyptus.util.NamespaceMappingXMLStreamReader;
+import com.eucalyptus.util.NamespaceMappingXMLStreamWriter;
+import com.eucalyptus.util.OMXMLStreamWriter;
+import com.eucalyptus.util.XmlDataBindingModule;
+import com.eucalyptus.ws.WebServiceError;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 
 /**
  *
  */
 public class BaseMessages {
 
+  private static final XmlMapper xmlMapper = Json.mapper( new XmlMapper( ), Json.JsonOption.IgnoreBaseMinimalMessage );
+  private static final String xmlNamespace = "http://msgs.eucalyptus.com/" + BillOfMaterials.getVersion( );
   private static final ObjectMapper mapper = new ObjectMapper( );
   static {
+    xmlMapper.registerModule( new XmlDataBindingModule( ) );
+    xmlMapper.addMixIn( WebServiceError.class, WebServiceErrorMixIn.class );
+
     mapper.addMixIn( BaseMessage.class, BaseMessageMixIn.class);
     mapper.configure( SerializationFeature.FAIL_ON_EMPTY_BEANS, false );
   }
@@ -56,6 +77,39 @@ public class BaseMessages {
     return (R) mapper.treeToValue( mapper.valueToTree( message ), resultType );
   }
 
+  public static String toString( final BaseMessage message ) throws IOException {
+    return xmlMapper.writeValueAsString( message );
+  }
+
+  public static void toStream( final BaseMessage message, final OutputStream out ) throws IOException {
+    xmlMapper.writeValue( out, message );
+  }
+
+  public static OMElement toOm( final BaseMessage message ) throws IOException {
+    HoldMe.canHas.lock( );
+    try {
+      final OMFactory factory = HoldMe.getOMFactory( );
+      final OMDocument document = factory.createOMDocument( );
+      final XMLStreamWriter wrtr = new NamespaceMappingXMLStreamWriter(
+          new OMXMLStreamWriter( factory, document ),
+          Collections.singletonMap( "", xmlNamespace ) );
+      xmlMapper.writeValue( wrtr, message );
+      return document.getOMDocumentElement( );
+    } finally {
+      HoldMe.canHas.unlock( );
+    }
+  }
+
+  public static <T> T fromOm( final OMElement object, final Class<T> type ) throws IOException {
+    final XMLStreamReader reader = new NamespaceMappingXMLStreamReader(
+        object.getXMLStreamReader( ),
+        Collections.singletonMap( xmlNamespace, "" ) );
+    return xmlMapper.readValue( reader, type );
+  }
+
   @JsonIgnoreProperties( { "correlationId", "effectiveUserId", "reply", "statusMessage", "userId" } )
   private static final class BaseMessageMixIn { }
+
+  @JsonIgnoreProperties( { "webServiceErrorCode", "webServiceErrorMessage" } )
+  private static final class WebServiceErrorMixIn { }
 }
