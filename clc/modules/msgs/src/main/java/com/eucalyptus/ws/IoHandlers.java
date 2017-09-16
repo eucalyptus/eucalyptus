@@ -40,6 +40,7 @@ import com.eucalyptus.ws.handlers.IoAddressingHandler;
 import com.eucalyptus.ws.handlers.IoBindingHandler;
 import com.eucalyptus.ws.handlers.IoInternalHmacHandler;
 import com.eucalyptus.ws.handlers.IoInternalWsSecHandler;
+import com.eucalyptus.ws.handlers.IoInternalXmlBindingHandler;
 import com.eucalyptus.ws.handlers.IoMessageWrapperHandler;
 import com.eucalyptus.ws.handlers.IoSoapMarshallingHandler;
 import com.eucalyptus.ws.handlers.IoSoapHandler;
@@ -73,7 +74,7 @@ public class IoHandlers {
   private static final ChannelHandler internalHmacHandler = new IoInternalHmacHandler( );
   private static final ChannelHandler addressingHandler = new IoAddressingHandler( );
   private static final ChannelHandler ioMessageHandler = new IoMessageWrapperHandler( );
-  private static final ChannelHandler bindingHandler = new IoBindingHandler( IoBindingHandler.context( BindingManager.getDefaultBinding( ) ) );
+  private static final ChannelHandler bindingHandler = new IoInternalXmlBindingHandler( );
 
   public static ChannelHandler internalHttpsHandler( ) { return new SslHandler( SslSetup.getClientEngine( ) ); };
 

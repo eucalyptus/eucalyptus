@@ -20,9 +20,13 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.ComponentMessages;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpMessage;
+import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
@@ -76,9 +80,16 @@ public class InternalXmlBindingHandler extends MessageStackHandler {
   public void incomingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpMessage ) {
       final MappingHttpMessage httpMessage = (MappingHttpMessage) event.getMessage( );
-      final String type = httpMessage.getHeader( "X-Euca-Type" );
+      String type = httpMessage.getHeader( "X-Euca-Type" );
       BaseMessage msg;
       try {
+        //TODO:STEVE: get component by path?
+        if ( type==null && httpMessage instanceof MappingHttpRequest ) {
+          String servicePath = ((MappingHttpRequest)httpMessage).getServicePath( );
+          String simpleType = httpMessage.getSoapEnvelope( ).getSOAPBodyFirstElementLocalName( );
+          ComponentId componentId = ComponentIds.list( ).stream( ).filter( cid -> servicePath.equals( cid.getServicePath(  ) ) ).findFirst( ).get( );
+          type = ComponentMessages.forComponent( componentId ).stream( ).filter( c -> simpleType.equals( c.getSimpleName( ) ) ).findFirst( ).get( ).getName( );
+        }
         final Class<?> typeClass = getClass( ).getClassLoader( ).loadClass( type );
         if ( !BaseMessage.class.isAssignableFrom( typeClass ) ) {
           throw new IllegalArgumentException( "Unsupported type: " + type );
@@ -106,6 +117,7 @@ public class InternalXmlBindingHandler extends MessageStackHandler {
         }
       }
       msg.setCorrelationId( httpMessage.getCorrelationId( ) );
-      httpMessage.setMessage( msg );    }
+      httpMessage.setMessage( msg );
+    }
   }
 }
