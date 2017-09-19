@@ -28,10 +28,19 @@
  ************************************************************************/
 package com.eucalyptus.cluster.common
 
+import com.eucalyptus.binding.Binding
+import com.eucalyptus.binding.BindingManager
+import com.eucalyptus.cluster.common.msgs.BroadcastNetworkInfoType
+import com.eucalyptus.cluster.common.msgs.ClusterDescribeServicesType
+import com.eucalyptus.cluster.common.msgs.DescribeResourcesType
+import com.eucalyptus.cluster.common.msgs.NcDescribeInstancesType
+import com.eucalyptus.cluster.common.msgs.VmDescribeType
+import org.apache.axiom.om.OMElement
 import org.jibx.binding.classes.BoundClass
 import org.jibx.binding.classes.ClassCache
 import org.jibx.binding.classes.ClassFile
 import org.jibx.binding.classes.MungedClass
+import org.jibx.binding.def.BindingDefinition
 import org.jibx.binding.model.BindingElement
 import org.jibx.binding.model.ValidationContext
 import org.jibx.util.ClasspathUrlExtender
@@ -52,7 +61,7 @@ class ClusterBindingTest {
     ClasspathUrlExtender.setClassLoader( ClassFile.getClassLoader( ) )
     BoundClass.reset( );
     MungedClass.reset( );
-    org.jibx.binding.def.BindingDefinition.reset( );
+    BindingDefinition.reset( );
   }
 
   void assertValidBindingXml( URL resource, int expectedWarnings=0 ) {
@@ -70,5 +79,48 @@ class ClusterBindingTest {
   void testClusterBinding( ) {
     URL resource = ClusterBindingTest.getResource('/cluster-binding.xml')
     assertValidBindingXml( resource )
+  }
+
+  @Test
+  void testClusterDescribeServicesBinding( ) {
+    BindingManager.seedBinding( 'eucalyptus_ucsb_edu', ClusterDescribeServicesType )
+    Binding binding = BindingManager.getBinding( 'eucalyptus_ucsb_edu' )
+    OMElement messageOm = binding.toOM( new ClusterDescribeServicesType( ) )
+    println binding.fromOM( messageOm )
+  }
+
+  @Test
+  void testClusterBroadcastNetworkInfo( ) {
+    BindingManager.seedBinding( 'eucalyptus_ucsb_edu', BroadcastNetworkInfoType )
+    Binding binding = BindingManager.getBinding( 'eucalyptus_ucsb_edu' )
+    OMElement messageOm = binding.toOM( new BroadcastNetworkInfoType(
+        version: '1',
+        networkInfo: ''
+    ) )
+    println binding.fromOM( messageOm )
+  }
+
+  @Test
+  void testClusterDescribeResources( ) {
+    BindingManager.seedBinding( 'eucalyptus_ucsb_edu', DescribeResourcesType )
+    Binding binding = BindingManager.getBinding( 'eucalyptus_ucsb_edu' )
+    OMElement messageOm = binding.toOM( new DescribeResourcesType( ) )
+    println binding.fromOM( messageOm )
+  }
+
+  @Test
+  void testClusterDescribeInstances( ) {
+    BindingManager.seedBinding( 'eucalyptus_ucsb_edu', VmDescribeType )
+    Binding binding = BindingManager.getBinding( 'eucalyptus_ucsb_edu' )
+    OMElement messageOm = binding.toOM( new VmDescribeType( ) )
+    println binding.fromOM( messageOm )
+  }
+
+  @Test
+  void testNodeDescribeInstances( ) {
+    BindingManager.seedBinding( 'eucalyptus_ucsb_edu', NcDescribeInstancesType )
+    Binding binding = BindingManager.getBinding( 'eucalyptus_ucsb_edu' )
+    OMElement messageOm = binding.toOM( new NcDescribeInstancesType( ) )
+    println binding.fromOM( messageOm )
   }
 }
