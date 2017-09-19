@@ -42,6 +42,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod
 import org.jboss.netty.handler.codec.http.HttpVersion
 
 import java.lang.reflect.Field
+import java.lang.reflect.Modifier
 import java.text.SimpleDateFormat
 
 import static org.junit.Assert.*
@@ -132,7 +133,7 @@ class QueryRequestBindingTestSupport {
   }
 
   boolean isBoundField( Field field ) {
-    !field.getName().startsWith( '$' ) && !field.getName().startsWith('_')
+    !field.getName().startsWith( '$' ) && !field.getName().startsWith('_') && !Modifier.isStatic(field.getModifiers())
   }
 
   void putParameters( String prefix, Object bean, Map<String,String> parameters ) {

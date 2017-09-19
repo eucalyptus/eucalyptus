@@ -39,6 +39,7 @@
 
 <project name="eucalyptus-module-import" xmlns:ivy="antlib:org.apache.ivy.ant">
 	<!--================================== euca defines ==================================-->
+	<property name="project.basedir" value="${basedir}/../../" />
 	<property file="${basedir}/../../local.module.properties" />
 	<property environment="localenv" />
 	<property name="euca.home.0" value="${localenv.EUCALYPTUS}" />
@@ -49,7 +50,6 @@
 	<condition property="DESTDIR" value="/" else="${localenv.DESTDIR}">
 		<contains string="${DESTDIR.0}" substring="localenv" />
 	</condition>
-	<property name="project.basedir" value="${basedir}/../../" />
 	<loadfile srcfile="${project.basedir}/../VERSION" property="euca.version">
 		<filterchain>
 			<filterreader classname="org.apache.tools.ant.filters.StripLineBreaks" />
@@ -260,7 +260,8 @@
 			<javac source="${javac.source}" target="${javac.target}" encoding="utf-8" debug="${javac.debug}" >
 				<compilerarg value="-Js=${build.src.dir}/main/java"/>
 			</javac>
-		</groovyc><antcall target="build-bindings" />
+		</groovyc>
+		<antcall target="build-bindings" />
 	</target>
 	<target name="build-bindings" depends="classpaths">
 		<echo message="[COMPILE] bindings for ${ant.project.name}" />

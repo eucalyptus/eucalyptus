@@ -13,15 +13,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  ************************************************************************/
-apply plugin: 'idea'
-apply plugin: 'eclipse'
-
-def libFileTree = fileTree(dir: 'lib')
+plugins {
+  id 'idea'
+}
 
 subprojects {
   if ( it.name == 'modules' ) return
 
-  apply plugin: 'eclipse'
   apply plugin: 'groovy'
   apply plugin: 'idea'
   apply plugin: 'java'
@@ -32,6 +30,7 @@ subprojects {
   sourceCompatibility = 1.8
 
   sourceSets.main.java.srcDirs = []
+  sourceSets.main.java.outputDir = file('build/classes/groovy/main')
   sourceSets.main.groovy.srcDirs += ['src/main/java', 'src/generated/java', 'build/src/main/java']
 
   sourceSets.test.java.srcDirs = []
@@ -44,18 +43,53 @@ subprojects {
     from sourceSets.test.output
   }
 
+  task compileBindings {
+    description 'Compiles JiBX bindings.'
+    group 'Build'
+    dependsOn compileGroovy
+    dependsOn processResources
+    inputs.files( fileTree(sourceSets.main.output.resourcesDir){ include '**/*-binding.xml' } ).skipWhenEmpty()
+    doLast {
+      ant.taskdef(
+          name: 'bind',
+          classname: 'org.jibx.binding.ant.CompileTask',
+          classpath: configurations.jibx.asPath ) {
+      }
+      ant.bind( verbose: false, load: project.name != 'eucalyptus-compute-common' ) {  //TODO load fails for compute common
+        bindingfileset( dir: sourceSets.main.output.resourcesDir ) {
+          include( name: '**/*-binding.xml' )
+        }
+        classpath {
+          pathelement( path: sourceSets.main.output.classesDirs.asPath )
+          pathelement( path: sourceSets.main.output.resourcesDir )
+          pathelement( path: sourceSets.main.compileClasspath.asPath )
+        }
+      }
+    }
+  }
+
+  classes {
+    dependsOn compileBindings
+  }
+
   repositories {
     jcenter( )
   }
 
   configurations {
+    jibx
+
     tests
 
     apiElements { // known issue, configure the groovy plugin to work with java library plugin
       outgoing.variants.getByName('classes').artifact(
           file: compileGroovy.destinationDir,
           type: ArtifactTypeDefinition.JVM_CLASS_DIRECTORY,
-          builtBy: compileGroovy)
+          builtBy: compileBindings)
+      outgoing.variants.getByName('classes').artifact(
+          file: processResources.destinationDir,
+          type: ArtifactTypeDefinition.JVM_RESOURCES_DIRECTORY,
+          builtBy: compileBindings)
     }
   }
 
@@ -82,6 +116,24 @@ subprojects {
     testImplementation('org.spockframework:spock-core:0.7-groovy-2.0') {
       exclude module: 'groovy-all' // we include the indy variant
     }
+
+    jibx 'org.apache.bcel:bcel:6.0'
+    jibx 'dom4j:dom4j:1.6.1'
+    jibx 'org.jibx:jibx-bind:1.3.1'
+    jibx 'org.jibx:jibx-extras:1.3.1'
+    jibx 'org.jibx:jibx-run:1.3.1'
+    jibx 'org.jibx:jibx-schema:1.3.1'
+    jibx('org.jibx:jibx-tools:1.3.1') {
+      exclude group: 'org.jibx.config.3rdparty.org.eclipse'
+    }
+    jibx 'joda-time:joda-time:2.9.6'
+    jibx 'log4j:log4j:1.2.17'
+    jibx 'xml-apis:xml-apis:1.4.01'
+    jibx 'xpp3:xpp3:1.1.4c'
+  }
+
+  compileGroovy {
+    options.compilerArgs << '-implicit:class'
   }
 
   test {
