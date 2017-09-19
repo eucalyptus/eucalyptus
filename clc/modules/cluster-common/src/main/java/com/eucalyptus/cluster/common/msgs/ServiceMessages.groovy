@@ -43,17 +43,50 @@ import com.eucalyptus.empyrean.StopServiceResponseType
 import com.eucalyptus.empyrean.StopServiceType
 import edu.ucsb.eucalyptus.msgs.BaseMessageMarker
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
+import org.jibx.runtime.IMarshallable
+import org.jibx.runtime.IMarshallingContext
+import org.jibx.runtime.IUnmarshallable
+import org.jibx.runtime.IUnmarshallingContext
+import org.jibx.runtime.JiBXException
 
 @ComponentMessage( ClusterController )
-interface ClusterServiceMessage extends BaseMessageMarker { }
+interface ClusterServiceMessage extends BaseMessageMarker {
+}
 
-class ClusterDescribeServicesResponseType extends DescribeServicesResponseType implements ClusterServiceMessage { }
-class ClusterDescribeServicesType extends DescribeServicesType implements ClusterServiceMessage { }
-class ClusterDisableServiceResponseType extends DisableServiceResponseType implements ClusterServiceMessage { }
-class ClusterDisableServiceType extends DisableServiceType implements ClusterServiceMessage { }
-class ClusterEnableServiceResponseType extends EnableServiceResponseType implements ClusterServiceMessage { }
-class ClusterEnableServiceType extends EnableServiceType implements ClusterServiceMessage { }
-class ClusterStartServiceResponseType extends StartServiceResponseType implements ClusterServiceMessage { }
-class ClusterStartServiceType extends StartServiceType implements ClusterServiceMessage { }
-class ClusterStopServiceResponseType extends StopServiceResponseType implements ClusterServiceMessage { }
-class ClusterStopServiceType extends StopServiceType implements ClusterServiceMessage { }
+class ClusterServiceMessageJibxMixin implements IMarshallable, IUnmarshallable {
+  @Override String JiBX_className( ) { null }
+  @Override String JiBX_getName( ) { null }
+  @Override void marshal(final IMarshallingContext ctx) throws JiBXException { }
+  @Override void unmarshal(final IUnmarshallingContext ctx) throws JiBXException { }
+}
+
+class ClusterDescribeServicesResponseType extends DescribeServicesResponseType implements ClusterServiceMessage {
+  @Delegate ClusterServiceMessageJibxMixin jibxMixin = new ClusterServiceMessageJibxMixin();
+}
+class ClusterDescribeServicesType extends DescribeServicesType implements ClusterServiceMessage {
+  @Delegate ClusterServiceMessageJibxMixin jibxMixin = new ClusterServiceMessageJibxMixin();
+}
+class ClusterDisableServiceResponseType extends DisableServiceResponseType implements ClusterServiceMessage {
+  @Delegate ClusterServiceMessageJibxMixin jibxMixin = new ClusterServiceMessageJibxMixin();
+}
+class ClusterDisableServiceType extends DisableServiceType implements ClusterServiceMessage {
+  @Delegate ClusterServiceMessageJibxMixin jibxMixin = new ClusterServiceMessageJibxMixin();
+}
+class ClusterEnableServiceResponseType extends EnableServiceResponseType implements ClusterServiceMessage {
+  @Delegate ClusterServiceMessageJibxMixin jibxMixin = new ClusterServiceMessageJibxMixin();
+}
+class ClusterEnableServiceType extends EnableServiceType implements ClusterServiceMessage {
+  @Delegate ClusterServiceMessageJibxMixin jibxMixin = new ClusterServiceMessageJibxMixin();
+}
+class ClusterStartServiceResponseType extends StartServiceResponseType implements ClusterServiceMessage {
+  @Delegate ClusterServiceMessageJibxMixin jibxMixin = new ClusterServiceMessageJibxMixin();
+}
+class ClusterStartServiceType extends StartServiceType implements ClusterServiceMessage {
+  @Delegate ClusterServiceMessageJibxMixin jibxMixin = new ClusterServiceMessageJibxMixin();
+}
+class ClusterStopServiceResponseType extends StopServiceResponseType implements ClusterServiceMessage {
+  @Delegate ClusterServiceMessageJibxMixin jibxMixin = new ClusterServiceMessageJibxMixin();
+}
+class ClusterStopServiceType extends StopServiceType implements ClusterServiceMessage {
+  @Delegate ClusterServiceMessageJibxMixin jibxMixin = new ClusterServiceMessageJibxMixin();
+}
