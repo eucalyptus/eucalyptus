@@ -28,8 +28,24 @@
   POSSIBILITY OF SUCH DAMAGE.
 -->
 <binding force-classes="true" add-constructors="true">
-  <mapping class="com.eucalyptus.cluster.common.msgs.CloudNodeMessage" abstract="true" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  <mapping class="com.eucalyptus.cluster.common.msgs.CloudNodeMessage" abstract="true">
+    <value name="correlationId" get-method="getCorrelationId" set-method="setCorrelationId" usage="optional"/>
+    <value name="userId" get-method="getUserId" set-method="setUserId" usage="optional" />
+    <value name="statusMessage" get-method="getStatusMessage" set-method="setStatusMessage" usage="optional" />
+    <value name="return" get-method="get_return" set-method="set_return" usage="optional" />
+    <value name="epoch" get-method="get_epoch" set-method="set_epoch" usage="optional" />
+    <collection get-method="get_services" set-method="set_services"
+                factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="services" map-as="com.eucalyptus.empyrean.ServiceId" />
+    </collection>
+    <collection get-method="get_disabledServices" set-method="set_disabledServices"
+                factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="disabledServices" map-as="com.eucalyptus.empyrean.ServiceId" />
+    </collection>
+    <collection get-method="get_notreadyServices" set-method="set_notreadyServices"
+                factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="notreadyServices" map-as="com.eucalyptus.empyrean.ServiceId" />
+    </collection>
     <value name="nodeName" field="nodeName" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.cluster.common.msgs.VirtualMachineType" abstract="true">

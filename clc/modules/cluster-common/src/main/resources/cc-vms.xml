@@ -106,8 +106,8 @@
       </collection>
     </structure>
   </mapping>
-  <mapping name="RunInstances" class="com.eucalyptus.cluster.common.msgs.VmRunType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  <mapping name="RunInstances" class="com.eucalyptus.cluster.common.msgs.VmRunType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
     <structure name="instanceType" field="vmTypeInfo" map-as="com.eucalyptus.cluster.common.msgs.VmTypeInfo" />
     <structure usage="optional">
       <structure field="keyInfo" map-as="com.eucalyptus.cluster.common.msgs.VmKeyInfo" />
@@ -141,52 +141,52 @@
       </collection>
     </structure>
   </mapping>
-  <mapping name="RunInstancesResponse" class="com.eucalyptus.cluster.common.msgs.VmRunResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  <mapping name="RunInstancesResponse" class="com.eucalyptus.cluster.common.msgs.VmRunResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
     <structure usage="optional">
       <collection field="vms" factory="org.jibx.runtime.Utility.arrayListFactory">
         <structure name="instances" map-as="com.eucalyptus.cluster.common.msgs.VmInfo" />
       </collection>
     </structure>
   </mapping>
-  <mapping name="DescribeInstances" class="com.eucalyptus.cluster.common.msgs.VmDescribeType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  <mapping name="DescribeInstances" class="com.eucalyptus.cluster.common.msgs.VmDescribeType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
     <structure usage="optional">
       <collection field="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory">
         <value name="instancesSet" type="java.lang.String" />
       </collection>
     </structure>
   </mapping>
-  <mapping name="DescribeInstancesResponse" class="com.eucalyptus.cluster.common.msgs.VmDescribeResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  <mapping name="DescribeInstancesResponse" class="com.eucalyptus.cluster.common.msgs.VmDescribeResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
     <structure usage="optional">
       <collection field="vms" factory="org.jibx.runtime.Utility.arrayListFactory">
         <structure name="instances" map-as="com.eucalyptus.cluster.common.msgs.VmInfo" />
       </collection>
     </structure>
   </mapping>
-  <mapping name="TerminateInstances" class="com.eucalyptus.cluster.common.msgs.ClusterTerminateInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  <mapping name="TerminateInstances" class="com.eucalyptus.cluster.common.msgs.ClusterTerminateInstancesType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
     <collection field="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory">
       <value name="instanceIds" type="java.lang.String" />
     </collection>
   </mapping>
   <mapping name="TerminateInstancesResponse" class="com.eucalyptus.cluster.common.msgs.ClusterTerminateInstancesResponseType"
-    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
     <value name="isTerminated" field="terminated" type="boolean" />
   </mapping>
-  <mapping name="RebootInstances" class="com.eucalyptus.cluster.common.msgs.ClusterRebootInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  <mapping name="RebootInstances" class="com.eucalyptus.cluster.common.msgs.ClusterRebootInstancesType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
     <collection field="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory">
       <value name="instanceIds" type="java.lang.String" />
     </collection>
   </mapping>
-  <mapping name="RebootInstancesResponse" class="com.eucalyptus.cluster.common.msgs.ClusterRebootInstancesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  <mapping name="RebootInstancesResponse" class="com.eucalyptus.cluster.common.msgs.ClusterRebootInstancesResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
   </mapping>
-  <mapping name="BundleInstance" class="com.eucalyptus.cluster.common.msgs.ClusterBundleInstanceType" extends="edu.ucsb.eucalyptus.msgs.BaseMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
+  <mapping name="BundleInstance" class="com.eucalyptus.cluster.common.msgs.ClusterBundleInstanceType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
     <value name="instanceId" get-method="getInstanceId" set-method="setInstanceId" usage="required" />
     <value name="bucketName" get-method="getBucket" set-method="setBucket" usage="required" />
     <value name="filePrefix" get-method="getPrefix" set-method="setPrefix" usage="required" />
@@ -196,42 +196,42 @@
     <value name="S3PolicySig" get-method="getUploadPolicySignature" set-method="setUploadPolicySignature" usage="required" />
     <value name="architecture" get-method="getArchitecture" set-method="setArchitecture" usage="required" />
   </mapping>
-  <mapping name="BundleInstanceResponse" class="com.eucalyptus.cluster.common.msgs.ClusterBundleInstanceResponseType" extends="edu.ucsb.eucalyptus.msgs.BaseMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
+  <mapping name="BundleInstanceResponse" class="com.eucalyptus.cluster.common.msgs.ClusterBundleInstanceResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
   </mapping>
-  <mapping name="BundleRestartInstance" class="com.eucalyptus.cluster.common.msgs.ClusterBundleRestartInstanceType" extends="edu.ucsb.eucalyptus.msgs.BaseMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
+  <mapping name="BundleRestartInstance" class="com.eucalyptus.cluster.common.msgs.ClusterBundleRestartInstanceType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
     <value name="instanceId" get-method="getInstanceId" set-method="setInstanceId" usage="required" />
   </mapping>
-  <mapping name="BundleRestartInstanceResponse" class="com.eucalyptus.cluster.common.msgs.ClusterBundleRestartInstanceResponseType" extends="edu.ucsb.eucalyptus.msgs.BaseMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
+  <mapping name="BundleRestartInstanceResponse" class="com.eucalyptus.cluster.common.msgs.ClusterBundleRestartInstanceResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
   </mapping>
-  <mapping name="CancelBundleTask" class="com.eucalyptus.cluster.common.msgs.ClusterCancelBundleTaskType" extends="edu.ucsb.eucalyptus.msgs.BaseMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
+  <mapping name="CancelBundleTask" class="com.eucalyptus.cluster.common.msgs.ClusterCancelBundleTaskType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
     <value name="instanceId" get-method="getInstanceId" set-method="setInstanceId" usage="required" />
   </mapping>
-  <mapping name="CancelBundleTaskResponse" class="com.eucalyptus.cluster.common.msgs.ClusterCancelBundleTaskResponseType" extends="edu.ucsb.eucalyptus.msgs.BaseMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
+  <mapping name="CancelBundleTaskResponse" class="com.eucalyptus.cluster.common.msgs.ClusterCancelBundleTaskResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
   </mapping>
-  <mapping name="StartInstance" class="com.eucalyptus.cluster.common.msgs.ClusterStartInstanceType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="StartInstance" class="com.eucalyptus.cluster.common.msgs.ClusterStartInstanceType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
     <value name="instanceId" field="instanceId" usage="required" />
   </mapping>
-  <mapping name="StartInstanceResponse" class="com.eucalyptus.cluster.common.msgs.ClusterStartInstanceResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  <mapping name="StartInstanceResponse" class="com.eucalyptus.cluster.common.msgs.ClusterStartInstanceResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
   </mapping>
-  <mapping name="StopInstance" class="com.eucalyptus.cluster.common.msgs.ClusterStopInstanceType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+  <mapping name="StopInstance" class="com.eucalyptus.cluster.common.msgs.ClusterStopInstanceType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
     <value name="instanceId" field="instanceId" usage="required" />
   </mapping>
-  <mapping name="StopInstanceResponse" class="com.eucalyptus.cluster.common.msgs.ClusterStopInstanceResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  <mapping name="StopInstanceResponse" class="com.eucalyptus.cluster.common.msgs.ClusterStopInstanceResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
   </mapping>
-  <mapping name="GetConsoleOutput" class="com.eucalyptus.cluster.common.msgs.ClusterGetConsoleOutputType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  <mapping name="GetConsoleOutput" class="com.eucalyptus.cluster.common.msgs.ClusterGetConsoleOutputType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
     <value name="instanceId" field="instanceId" />
   </mapping>
   <mapping name="GetConsoleOutputResponse" class="com.eucalyptus.cluster.common.msgs.ClusterGetConsoleOutputResponseType"
-    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
     <value name="consoleOutput" field="output" usage="optional" />
   </mapping>
 </binding>

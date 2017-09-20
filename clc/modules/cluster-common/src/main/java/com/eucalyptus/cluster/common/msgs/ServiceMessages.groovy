@@ -37,6 +37,7 @@ import com.eucalyptus.empyrean.DisableServiceResponseType
 import com.eucalyptus.empyrean.DisableServiceType
 import com.eucalyptus.empyrean.EnableServiceResponseType
 import com.eucalyptus.empyrean.EnableServiceType
+import com.eucalyptus.empyrean.ServiceId
 import com.eucalyptus.empyrean.StartServiceResponseType
 import com.eucalyptus.empyrean.StartServiceType
 import com.eucalyptus.empyrean.StopServiceResponseType
@@ -51,6 +52,27 @@ import org.jibx.runtime.JiBXException
 
 @ComponentMessage( ClusterController )
 interface ClusterServiceMessage extends BaseMessageMarker {
+  String getCorrelationId( )
+  void setCorrelationId( String correlationId )
+  String getUserId( )
+  void setUserId( String userId )
+  String getStatusMessage( )
+  void setStatusMessage( String statusMessage )
+  Boolean get_return( )
+  void set_return( Boolean returnValue )
+  Integer get_epoch( )
+  void set_epoch( Integer epoch )
+  ArrayList<ServiceId> get_services( )
+  void set_services( ArrayList<ServiceId> services )
+  ArrayList<ServiceId> get_disabledServices( )
+  void set_disabledServices( ArrayList<ServiceId> services )
+  ArrayList<ServiceId> get_notreadyServices( )
+  void set_notreadyServices( ArrayList<ServiceId> services )
+}
+
+interface ClusterServiceTransitionMessage extends ClusterServiceMessage {
+  ArrayList<ServiceId> getServices( )
+  void setServices( ArrayList<ServiceId> services )
 }
 
 class ClusterServiceMessageJibxMixin implements IMarshallable, IUnmarshallable {
@@ -63,30 +85,30 @@ class ClusterServiceMessageJibxMixin implements IMarshallable, IUnmarshallable {
 class ClusterDescribeServicesResponseType extends DescribeServicesResponseType implements ClusterServiceMessage {
   @Delegate ClusterServiceMessageJibxMixin jibxMixin = new ClusterServiceMessageJibxMixin();
 }
-class ClusterDescribeServicesType extends DescribeServicesType implements ClusterServiceMessage {
+class ClusterDescribeServicesType extends DescribeServicesType implements ClusterServiceTransitionMessage {
   @Delegate ClusterServiceMessageJibxMixin jibxMixin = new ClusterServiceMessageJibxMixin();
 }
-class ClusterDisableServiceResponseType extends DisableServiceResponseType implements ClusterServiceMessage {
+class ClusterDisableServiceResponseType extends DisableServiceResponseType implements ClusterServiceTransitionMessage {
   @Delegate ClusterServiceMessageJibxMixin jibxMixin = new ClusterServiceMessageJibxMixin();
 }
-class ClusterDisableServiceType extends DisableServiceType implements ClusterServiceMessage {
+class ClusterDisableServiceType extends DisableServiceType implements ClusterServiceTransitionMessage {
   @Delegate ClusterServiceMessageJibxMixin jibxMixin = new ClusterServiceMessageJibxMixin();
 }
-class ClusterEnableServiceResponseType extends EnableServiceResponseType implements ClusterServiceMessage {
+class ClusterEnableServiceResponseType extends EnableServiceResponseType implements ClusterServiceTransitionMessage {
   @Delegate ClusterServiceMessageJibxMixin jibxMixin = new ClusterServiceMessageJibxMixin();
 }
-class ClusterEnableServiceType extends EnableServiceType implements ClusterServiceMessage {
+class ClusterEnableServiceType extends EnableServiceType implements ClusterServiceTransitionMessage {
   @Delegate ClusterServiceMessageJibxMixin jibxMixin = new ClusterServiceMessageJibxMixin();
 }
-class ClusterStartServiceResponseType extends StartServiceResponseType implements ClusterServiceMessage {
+class ClusterStartServiceResponseType extends StartServiceResponseType implements ClusterServiceTransitionMessage {
   @Delegate ClusterServiceMessageJibxMixin jibxMixin = new ClusterServiceMessageJibxMixin();
 }
-class ClusterStartServiceType extends StartServiceType implements ClusterServiceMessage {
+class ClusterStartServiceType extends StartServiceType implements ClusterServiceTransitionMessage {
   @Delegate ClusterServiceMessageJibxMixin jibxMixin = new ClusterServiceMessageJibxMixin();
 }
-class ClusterStopServiceResponseType extends StopServiceResponseType implements ClusterServiceMessage {
+class ClusterStopServiceResponseType extends StopServiceResponseType implements ClusterServiceTransitionMessage {
   @Delegate ClusterServiceMessageJibxMixin jibxMixin = new ClusterServiceMessageJibxMixin();
 }
-class ClusterStopServiceType extends StopServiceType implements ClusterServiceMessage {
+class ClusterStopServiceType extends StopServiceType implements ClusterServiceTransitionMessage {
   @Delegate ClusterServiceMessageJibxMixin jibxMixin = new ClusterServiceMessageJibxMixin();
 }

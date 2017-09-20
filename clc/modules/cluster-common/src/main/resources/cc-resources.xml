@@ -49,15 +49,15 @@
     <value name="iqn" field="iqn" usage="optional" />
     <value name="hypervisor" field="hypervisor" usage="optional" />
   </mapping>
-  <mapping name="DescribeResources" class="com.eucalyptus.cluster.common.msgs.DescribeResourcesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  <mapping name="DescribeResources" class="com.eucalyptus.cluster.common.msgs.DescribeResourcesType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
     <collection field="instanceTypes" factory="org.jibx.runtime.Utility.arrayListFactory">
       <structure name="instanceTypes" type="com.eucalyptus.cluster.common.msgs.VmTypeInfo" />
     </collection>
   </mapping>
   <mapping name="DescribeResourcesResponse" class="com.eucalyptus.cluster.common.msgs.DescribeResourcesResponseType"
-    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
     <collection field="resources" factory="org.jibx.runtime.Utility.arrayListFactory">
       <structure name="resources" type="com.eucalyptus.cluster.common.msgs.ResourceType" />
     </collection>

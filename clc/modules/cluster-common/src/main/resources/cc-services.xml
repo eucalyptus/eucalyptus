@@ -39,57 +39,62 @@
 -->
 
 <binding force-classes="true" add-constructors="true">
-  <mapping class="com.eucalyptus.empyrean.EmpyreanMessage" abstract="true" extends="edu.ucsb.eucalyptus.msgs.BaseMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
-  </mapping>
-  <mapping class="com.eucalyptus.empyrean.ServiceStatusType" abstract="true">
-    <structure name="serviceId" field="serviceId" map-as="com.eucalyptus.empyrean.ServiceId" />
-    <value name="localState" field="localState" usage="required" />
-    <value name="localEpoch" field="localEpoch" usage="required" />
-    <collection field="details" factory="org.jibx.runtime.Utility.arrayListFactory">
-      <value name="details" type="java.lang.String" />
+  <mapping class="com.eucalyptus.cluster.common.msgs.ClusterServiceMessage" abstract="true">
+    <value name="correlationId" get-method="getCorrelationId" set-method="setCorrelationId" usage="optional"/>
+    <value name="userId" get-method="getUserId" set-method="setUserId" usage="optional" />
+    <value name="statusMessage" get-method="getStatusMessage" set-method="setStatusMessage" usage="optional" />
+    <value name="return" get-method="get_return" set-method="set_return" usage="optional" />
+    <value name="epoch" get-method="get_epoch" set-method="set_epoch" usage="optional" />
+    <collection get-method="get_services" set-method="set_services"
+                factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="services" map-as="com.eucalyptus.empyrean.ServiceId" />
+    </collection>
+    <collection get-method="get_disabledServices" set-method="set_disabledServices"
+                factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="disabledServices" map-as="com.eucalyptus.empyrean.ServiceId" />
+    </collection>
+    <collection get-method="get_notreadyServices" set-method="set_notreadyServices"
+                factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="notreadyServices" map-as="com.eucalyptus.empyrean.ServiceId" />
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.empyrean.ServiceTransitionType" abstract="true" extends="com.eucalyptus.empyrean.EmpyreanMessage">
-    <structure map-as="com.eucalyptus.empyrean.EmpyreanMessage" />
-    <collection field="services" factory="org.jibx.runtime.Utility.arrayListFactory">
+  <mapping class="com.eucalyptus.cluster.common.msgs.ClusterServiceTransitionMessage" abstract="true">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.ClusterServiceMessage"/>
+    <collection get-method="getServices" set-method="setServices" factory="org.jibx.runtime.Utility.arrayListFactory">
       <structure name="serviceIds" map-as="com.eucalyptus.empyrean.ServiceId" />
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.empyrean.DescribeServicesResponseType" abstract="true" extends="com.eucalyptus.empyrean.EmpyreanMessage">
-    <structure map-as="com.eucalyptus.empyrean.EmpyreanMessage"/>
-    <collection field="serviceStatuses" factory="org.jibx.runtime.Utility.arrayListFactory">
+  <mapping name="DescribeServices" class="com.eucalyptus.cluster.common.msgs.ClusterDescribeServicesType">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.ClusterServiceTransitionMessage"/>
+  </mapping>
+  <mapping name="DescribeServicesResponse" class="com.eucalyptus.cluster.common.msgs.ClusterDescribeServicesResponseType">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.ClusterServiceMessage"/>
+    <collection get-method="getServiceStatuses" set-method="setServiceStatuses" factory="org.jibx.runtime.Utility.arrayListFactory">
       <structure name="serviceStatuses" map-as="com.eucalyptus.empyrean.ServiceStatusType" />
     </collection>
   </mapping>
-  <mapping name="DescribeServices" class="com.eucalyptus.cluster.common.msgs.ClusterDescribeServicesType" extends="com.eucalyptus.empyrean.ServiceTransitionType">
-    <structure map-as="com.eucalyptus.empyrean.ServiceTransitionType"/>
+  <mapping name="StartService" class="com.eucalyptus.cluster.common.msgs.ClusterStartServiceType">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.ClusterServiceTransitionMessage"/>
   </mapping>
-  <mapping name="DescribeServicesResponse" class="com.eucalyptus.cluster.common.msgs.ClusterDescribeServicesResponseType" extends="com.eucalyptus.empyrean.DescribeServicesResponseType">
-    <structure map-as="com.eucalyptus.empyrean.DescribeServicesResponseType"/>
+  <mapping name="StartServiceResponse" class="com.eucalyptus.cluster.common.msgs.ClusterStartServiceResponseType">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.ClusterServiceTransitionMessage"/>
   </mapping>
-  <mapping name="StartService" class="com.eucalyptus.cluster.common.msgs.ClusterStartServiceType" extends="com.eucalyptus.empyrean.ServiceTransitionType">
-    <structure map-as="com.eucalyptus.empyrean.ServiceTransitionType"/>
+  <mapping name="StopService" class="com.eucalyptus.cluster.common.msgs.ClusterStopServiceType">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.ClusterServiceTransitionMessage"/>
   </mapping>
-  <mapping name="StartServiceResponse" class="com.eucalyptus.cluster.common.msgs.ClusterStartServiceResponseType" extends="com.eucalyptus.empyrean.ServiceTransitionType">
-    <structure map-as="com.eucalyptus.empyrean.ServiceTransitionType"/>
+  <mapping name="StopServiceResponse" class="com.eucalyptus.cluster.common.msgs.ClusterStopServiceResponseType">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.ClusterServiceTransitionMessage"/>
   </mapping>
-  <mapping name="StopService" class="com.eucalyptus.cluster.common.msgs.ClusterStopServiceType" extends="com.eucalyptus.empyrean.ServiceTransitionType">
-    <structure map-as="com.eucalyptus.empyrean.ServiceTransitionType"/>
+    <mapping name="EnableService" class="com.eucalyptus.cluster.common.msgs.ClusterEnableServiceType">
+      <structure map-as="com.eucalyptus.cluster.common.msgs.ClusterServiceTransitionMessage"/>
   </mapping>
-  <mapping name="StopServiceResponse" class="com.eucalyptus.cluster.common.msgs.ClusterStopServiceResponseType" extends="com.eucalyptus.empyrean.ServiceTransitionType">
-    <structure map-as="com.eucalyptus.empyrean.ServiceTransitionType"/>
+  <mapping name="EnableServiceResponse" class="com.eucalyptus.cluster.common.msgs.ClusterEnableServiceResponseType">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.ClusterServiceTransitionMessage"/>
   </mapping>
-    <mapping name="EnableService" class="com.eucalyptus.cluster.common.msgs.ClusterEnableServiceType" extends="com.eucalyptus.empyrean.ServiceTransitionType">
-    <structure map-as="com.eucalyptus.empyrean.ServiceTransitionType"/>
+    <mapping name="DisableService" class="com.eucalyptus.cluster.common.msgs.ClusterDisableServiceType">
+      <structure map-as="com.eucalyptus.cluster.common.msgs.ClusterServiceTransitionMessage"/>
   </mapping>
-  <mapping name="EnableServiceResponse" class="com.eucalyptus.cluster.common.msgs.ClusterEnableServiceResponseType" extends="com.eucalyptus.empyrean.ServiceTransitionType">
-    <structure map-as="com.eucalyptus.empyrean.ServiceTransitionType"/>
-  </mapping>
-    <mapping name="DisableService" class="com.eucalyptus.cluster.common.msgs.ClusterDisableServiceType" extends="com.eucalyptus.empyrean.ServiceTransitionType">
-    <structure map-as="com.eucalyptus.empyrean.ServiceTransitionType"/>
-  </mapping>
-  <mapping name="DisableServiceResponse" class="com.eucalyptus.cluster.common.msgs.ClusterDisableServiceResponseType" extends="com.eucalyptus.empyrean.ServiceTransitionType">
-    <structure map-as="com.eucalyptus.empyrean.ServiceTransitionType"/>
+  <mapping name="DisableServiceResponse" class="com.eucalyptus.cluster.common.msgs.ClusterDisableServiceResponseType">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.ClusterServiceTransitionMessage"/>
   </mapping>
 </binding>

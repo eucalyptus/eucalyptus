@@ -40,12 +40,12 @@
 
 <binding force-classes="true" add-constructors="true">
 
-    <mapping name="GetLogs" class="com.eucalyptus.cluster.common.msgs.GetLogsType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+    <mapping name="GetLogs" class="com.eucalyptus.cluster.common.msgs.GetLogsType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+        <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage"/>
         <value name="serviceTag" field="serviceTag"/>
     </mapping>
-    <mapping name="GetLogsResponse" class="com.eucalyptus.cluster.common.msgs.GetLogsResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+    <mapping name="GetLogsResponse" class="com.eucalyptus.cluster.common.msgs.GetLogsResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+        <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage"/>
         <structure usage="optional">
             <structure field="logs" map-as="com.eucalyptus.cluster.common.msgs.NodeLogInfo"/>
         </structure>
@@ -58,12 +58,12 @@
         <value name="axis2Log" field="axis2Log" usage="optional"/>
     </mapping>
 
-    <mapping name="GetKeys" class="com.eucalyptus.cluster.common.msgs.GetKeysType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+    <mapping name="GetKeys" class="com.eucalyptus.cluster.common.msgs.GetKeysType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+        <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage"/>
         <value name="serviceTag" field="serviceTag"/>
     </mapping>
-    <mapping name="GetKeysResponse" class="com.eucalyptus.cluster.common.msgs.GetKeysResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+    <mapping name="GetKeysResponse" class="com.eucalyptus.cluster.common.msgs.GetKeysResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+        <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage"/>
         <structure usage="optional">
             <structure field="certs" map-as="com.eucalyptus.cluster.common.msgs.NodeCertInfo"/>
         </structure>

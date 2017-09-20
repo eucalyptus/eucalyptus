@@ -51,15 +51,15 @@
     <value name="attachmentId" field="attachmentId" usage="optional" />
   </mapping>
 
-  <mapping name="BroadcastNetworkInfo" class="com.eucalyptus.cluster.common.msgs.BroadcastNetworkInfoType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  <mapping name="BroadcastNetworkInfo" class="com.eucalyptus.cluster.common.msgs.BroadcastNetworkInfoType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
     <value name="version" field="version" usage="required" />
     <value name="appliedVersion" field="appliedVersion" usage="optional" />
     <value name="networkInfo" field="networkInfo" usage="required" />
   </mapping>
 
-  <mapping name="BroadcastNetworkInfoResponse" class="com.eucalyptus.cluster.common.msgs.BroadcastNetworkInfoResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  <mapping name="BroadcastNetworkInfoResponse" class="com.eucalyptus.cluster.common.msgs.BroadcastNetworkInfoResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
   </mapping>
 
 </binding>

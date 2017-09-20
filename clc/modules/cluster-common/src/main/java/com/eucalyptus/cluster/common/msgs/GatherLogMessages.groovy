@@ -36,7 +36,7 @@ import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 /**
  *
  */
-class CloudGatherLogMessage extends EucalyptusMessage {
+class CloudGatherLogMessage extends CloudClusterMessage {
 
   CloudGatherLogMessage() {
     super();

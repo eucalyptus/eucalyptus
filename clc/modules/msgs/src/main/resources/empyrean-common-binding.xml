@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+  -->
+<binding name="empyrean_common_binding" force-classes="true" add-constructors="true" package="com.eucalyptus.empyrean">
+  <namespace uri="http://eucalyptus.ucsb.edu/" default="elements" />
+
+  <mapping class="com.eucalyptus.empyrean.ServiceId" abstract="true">
+    <value name="partition" field="partition" usage="optional"/>
+    <value name="type" field="type" usage="required" />
+    <value name="name" field="name" usage="required" />
+    <collection field="uris" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <value name="uris" type="java.lang.String" />
+    </collection>
+  </mapping>
+
+  <mapping class="com.eucalyptus.empyrean.ServiceStatusType" abstract="true">
+    <structure name="serviceId" field="serviceId" map-as="com.eucalyptus.empyrean.ServiceId" />
+    <value name="localState" field="localState" usage="required" />
+    <value name="localEpoch" field="localEpoch" usage="required" />
+    <collection field="details" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <value name="details" type="java.lang.String" />
+    </collection>
+  </mapping>
+
+</binding>

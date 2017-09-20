@@ -29,32 +29,22 @@
 -->
 <binding name="eucalyptus_ucsb_edu" force-classes="true" add-constructors="true">
 
-  <mapping class="com.eucalyptus.empyrean.ServiceId" abstract="true">
-    <value name="partition" field="partition" usage="optional"/>
-    <value name="type" field="type" usage="required" />
-    <value name="name" field="name" usage="required" />
-    <collection field="uris" factory="org.jibx.runtime.Utility.arrayListFactory">
-      <value name="uris" type="java.lang.String" />
-    </collection>
-  </mapping>
-
-  <mapping class="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" abstract="true" extends="edu.ucsb.eucalyptus.msgs.BaseMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
-  </mapping>
-
-  <mapping class="edu.ucsb.eucalyptus.msgs.BaseMessage" abstract="true">
-    <value name="correlationId" field="correlationId" usage="optional" />
-    <value name="userId" field="userId" usage="optional" />
-    <value name="statusMessage" field="statusMessage" usage="optional" />
-    <value name="return" field="_return" usage="optional" />
-    <value name="epoch" field="_epoch" usage="optional" />
-    <collection field="_services" factory="org.jibx.runtime.Utility.arrayListFactory">
+  <mapping class="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" abstract="true">
+    <value name="correlationId" get-method="getCorrelationId" set-method="setCorrelationId" usage="optional"/>
+    <value name="userId" get-method="getUserId" set-method="setUserId" usage="optional" />
+    <value name="statusMessage" get-method="getStatusMessage" set-method="setStatusMessage" usage="optional" />
+    <value name="return" get-method="get_return" set-method="set_return" usage="optional" />
+    <value name="epoch" get-method="get_epoch" set-method="set_epoch" usage="optional" />
+    <collection get-method="get_services" set-method="set_services"
+                factory="org.jibx.runtime.Utility.arrayListFactory">
       <structure name="services" map-as="com.eucalyptus.empyrean.ServiceId" />
     </collection>
-    <collection field="_disabledServices" factory="org.jibx.runtime.Utility.arrayListFactory">
+    <collection get-method="get_disabledServices" set-method="set_disabledServices"
+                factory="org.jibx.runtime.Utility.arrayListFactory">
       <structure name="disabledServices" map-as="com.eucalyptus.empyrean.ServiceId" />
     </collection>
-    <collection field="_notreadyServices" factory="org.jibx.runtime.Utility.arrayListFactory">
+    <collection get-method="get_notreadyServices" set-method="set_notreadyServices"
+                factory="org.jibx.runtime.Utility.arrayListFactory">
       <structure name="notreadyServices" map-as="com.eucalyptus.empyrean.ServiceId" />
     </collection>
   </mapping>

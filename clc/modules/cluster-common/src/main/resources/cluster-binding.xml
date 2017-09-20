@@ -37,12 +37,10 @@
   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
 -->
-<!--
-  This binding includes bindings not available at build time
--->
 <binding name="eucalyptus_ucsb_edu" force-classes="true" add-constructors="true">
   <namespace uri="http://eucalyptus.ucsb.edu/" default="elements" />
 
+  <include path="classpath:empyrean-common-binding.xml" precompiled="true"/>
   <include path="classpath:cluster-binding-base.xml"/>
   <include path="classpath:cluster-binding-sensors.xml"/>
   <include path="classpath:cc-binding-core.xml" />

@@ -39,8 +39,8 @@
 -->
 
 <binding force-classes="true" add-constructors="true">
-    <mapping name="MigrateInstances" class="com.eucalyptus.cluster.common.msgs.ClusterMigrateInstancesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <mapping name="MigrateInstances" class="com.eucalyptus.cluster.common.msgs.ClusterMigrateInstancesType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+        <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
         <value name="sourceHost" field="sourceHost" usage="optional" />
         <value name="instanceId" field="instanceId" usage="optional" />
       <collection field="destinationHosts" factory="org.jibx.runtime.Utility.arrayListFactory">
@@ -51,7 +51,7 @@
       </collection>
     <value name="allowHosts" field="allowHosts" usage="optional" />
   </mapping>
-  <mapping name="MigrateInstancesResponse" class="com.eucalyptus.cluster.common.msgs.ClusterMigrateInstancesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  <mapping name="MigrateInstancesResponse" class="com.eucalyptus.cluster.common.msgs.ClusterMigrateInstancesResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
   </mapping>
 </binding>
