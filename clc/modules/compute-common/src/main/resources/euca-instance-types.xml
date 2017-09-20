@@ -28,9 +28,9 @@
   POSSIBILITY OF SUCH DAMAGE.
 -->
 <binding force-classes="true" add-constructors="true">
-    <mapping name="VmTypeMessage" extends="edu.ucsb.eucalyptus.msgs.BaseMessage"
+    <mapping name="VmTypeMessage" extends="com.eucalyptus.compute.common.ComputeMessage"
              class="com.eucalyptus.compute.common.VmTypeMessage">
-        <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage"/>
+        <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     </mapping>
     <mapping abstract="true" class="com.eucalyptus.compute.common.VmTypeDetails">
         <value name="name" field="name" usage="optional" style="element"/>

@@ -34,12 +34,8 @@
           deserializer="org.jibx.runtime.Utility.deserializeDateTime"
           serializer="com.eucalyptus.ws.util.SerializationUtils.serializeDateTime"/>
 
-  <mapping class="edu.ucsb.eucalyptus.msgs.BaseMessage" abstract="true">
-    <value name="requestId" get-method="getCorrelationId" field="correlationId" usage="optional" />
-  </mapping>
-  <mapping class="com.eucalyptus.compute.common.ComputeMessage" extends="edu.ucsb.eucalyptus.msgs.BaseMessage"
-    abstract="true">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
+  <mapping class="com.eucalyptus.compute.common.ComputeMessage" abstract="true">
+    <value name="requestId" get-method="getCorrelationId" set-method="setCorrelationId" usage="optional" />
   </mapping>
   <mapping class="com.eucalyptus.compute.common.EmptyElementType" abstract="true"/>
   <mapping class="com.eucalyptus.compute.common.NullableAttributeValueType" abstract="true">
