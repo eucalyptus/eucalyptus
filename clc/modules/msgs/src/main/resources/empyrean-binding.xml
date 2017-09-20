@@ -14,7 +14,7 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see http://www.gnu.org/licenses/.
   -->
-<binding name="www_eucalyptus_com_ns_properties_2017_05_04">
+<binding name="www_eucalyptus_com_ns_bootstrap_2017_05_04" force-classes="true" add-constructors="true">
   <namespace uri="http://www.eucalyptus.com/ns/bootstrap/2017-05-04/" default="elements"/>
 
   <mapping name="DeregisterServiceType" extends="com.eucalyptus.empyrean.configuration.ServiceRegistrationMessage"
