@@ -46,6 +46,7 @@
 
 	<!-- include the common s3 bindings -->
 	<include path="classpath:s3-2006-03-01-common-binding.xml" precompiled="true"/>
+	<include path="classpath:error-binding.xml" precompiled="true"/>
 
 	<mapping class="com.eucalyptus.walrus.msgs.WalrusRequestType"
 		abstract="true">
@@ -84,19 +85,6 @@
 		<value name="Message" field="message" />
 		<value name="Resource" field="resource" />
 		<value name="RequestId" field="requestId" />
-	</mapping>
-
-	<mapping name="ExceptionMessage" class="edu.ucsb.eucalyptus.msgs.ExceptionResponseType" >
-		<value name="source" field="source" usage="optional" style="element" />
-		<value name="message" field="message" usage="optional" style="element" />
-		<value name="requestType" field="requestType" usage="optional" style="element" />
-		<value name="error" field="error" usage="optional" style="element" />
-	</mapping>
-
-	<mapping name="ErrorMessage" class="edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType" >
-		<value name="source" field="source" usage="optional" style="element" />
-		<value name="message" field="message" usage="optional" style="element" />
-		<value name="requestType" field="requestType" usage="optional" style="element" />
 	</mapping>
 
     <mapping name="ListAllMyBuckets"

@@ -57,17 +57,6 @@
     <value name="RequestId" field="requestId" usage="optional"/>
   </mapping>
 
-  <mapping name="ExceptionResponse" class="edu.ucsb.eucalyptus.msgs.ExceptionResponseType" >
-    <value name="source" field="source" usage="optional" style="element" />
-    <value name="message" field="message" usage="optional" style="element" />
-    <value name="requestType" field="requestType" usage="optional" style="element" />
-    <value name="error" field="error" usage="optional" style="element" />
-  </mapping>
 
-  <mapping name="ErrorMessage" class="edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType" >
-    <value name="source" field="source" usage="optional" style="element" />
-    <value name="message" field="message" usage="optional" style="element" />
-    <value name="requestType" field="requestType" usage="optional" style="element" />
-  </mapping>
 
 </binding>

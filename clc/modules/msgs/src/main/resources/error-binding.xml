@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+  -->
+<binding name="error_binding" force-classes="true" add-constructors="true" package="edu.ucsb.eucalyptus.msgs">
+
+  <mapping name="ExceptionResponse" class="edu.ucsb.eucalyptus.msgs.ExceptionResponseType" >
+    <value name="source" field="source" usage="optional" style="element" />
+    <value name="message" field="message" usage="optional" style="element" />
+    <value name="requestType" field="requestType" usage="optional" style="element" />
+    <value name="error" field="error" usage="optional" style="element" />
+  </mapping>
+
+  <mapping name="ErrorMessage" class="edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType" >
+  <value name="source" field="source" usage="optional" style="element" />
+  <value name="message" field="message" usage="optional" style="element" />
+  <value name="requestType" field="requestType" usage="optional" style="element" />
+  </mapping>
+
+</binding>
