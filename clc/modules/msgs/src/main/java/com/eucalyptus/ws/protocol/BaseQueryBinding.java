@@ -39,6 +39,7 @@
 
 package com.eucalyptus.ws.protocol;
 
+import java.beans.Beans;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -55,6 +56,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
+import org.springframework.beans.BeanUtils;
+import org.springframework.util.ReflectionUtils;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingElementNotFoundException;
 import com.eucalyptus.binding.BindingException;
@@ -194,7 +197,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
       throw new BindingException( "Failed to construct message of type " + operationName, e );
     }
     
-    final List<String> failedMappings = this.populateObject( ( GroovyObject ) eucaMsg, fieldMap, params );
+    final List<String> failedMappings = this.populateObject( eucaMsg, fieldMap, params );
     
     if ( isStrictBinding( ) && ( !failedMappings.isEmpty( ) || !params.isEmpty( ) ) ) {
       final StringBuilder errMsg = new StringBuilder( "Failed to bind the following fields:\n" );
@@ -263,7 +266,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
     throw e;
   }
   
-  private List<String> populateObject( final GroovyObject obj, final Map<String, String> paramFieldMap, final Map<String, String> params ) {
+  private List<String> populateObject( final Object obj, final Map<String, String> paramFieldMap, final Map<String, String> params ) {
     final List<String> failedMappings = new ArrayList<String>( );
     for ( final Map.Entry<String, String> e : paramFieldMap.entrySet( ) ) {
       try {
@@ -315,8 +318,8 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
           if ( !subParams.isEmpty( ) ) {
             if ( httpEmbedded == null && subParams.size( ) == 1 && subParams.keySet( ).contains( e.getKey( ) ) ) {
               try {
-                if ( populateValue( declaredType, (GroovyObject) newInstance, Iterables.getOnlyElement( subParams.values( ) ) ).isEmpty( ) ) {
-                  obj.setProperty( e.getValue( ), newInstance );
+                if ( populateValue( declaredType, newInstance, Iterables.getOnlyElement( subParams.values( ) ) ).isEmpty( ) ) {
+                  setObjectProperty( obj, e.getValue(), newInstance );
                   subParams.clear( );
                 }
               } catch ( final IllegalArgumentException e2 ) { /*param not bound error occurs for this failure*/ }
@@ -324,14 +327,14 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
                 params.put( entry.getKey( ), entry.getValue( ) );
               }
             } else {
-              this.populateObject( (GroovyObject) newInstance, fieldMap, subParams );
-              obj.setProperty( e.getValue( ), newInstance );
+              this.populateObject( newInstance, fieldMap, subParams );
+              setObjectProperty( obj, e.getValue(), newInstance );
               if ( subParams != params ) for ( Map.Entry<String, String> entry : subParams.entrySet( ) ) {
                 params.put( e.getKey( ) + "." + entry.getKey( ), entry.getValue( ) );
               }
             }
           } else if ( params.containsKey( e.getKey( ) ) ) {
-            obj.setProperty( e.getValue(), newInstance );
+            setObjectProperty( obj, e.getValue(), newInstance );
           }
         } catch ( final Exception e1 ) {
           LOG.debug( "Error binding object", e1 );
@@ -345,7 +348,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
   }
   
   @SuppressWarnings( "unchecked" )
-  private boolean populateObjectField( final GroovyObject obj, final Map.Entry<String, String> paramFieldPair, final Map<String, String> params ) {
+  private boolean populateObjectField( final Object obj, final Map.Entry<String, String> paramFieldPair, final Map<String, String> params ) {
     try {
       final Class<?> declaredType = getRecursiveField( obj.getClass( ), paramFieldPair.getValue( ) ).getType( );
       final Object value = convertToType( new Supplier<String>(){
@@ -356,8 +359,8 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
       }, declaredType );
 
       if ( value != null )
-        obj.setProperty( paramFieldPair.getValue( ), value );
-      
+        setObjectProperty( obj, paramFieldPair.getValue( ), value );
+
       return !params.containsKey( paramFieldPair.getKey() );
     } catch ( final Exception e1 ) {
       return false;
@@ -390,11 +393,11 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
   }
   
   @SuppressWarnings( "rawtypes" )
-  private List<String> populateObjectList( final GroovyObject obj, final Map.Entry<String, String> paramFieldPair, final Map<String, String> params, final int paramSize ) {
+  private List<String> populateObjectList( final Object obj, final Map.Entry<String, String> paramFieldPair, final Map<String, String> params, final int paramSize ) {
     final List<String> failedMappings = new ArrayList<String>( );
     try {
       final Field declaredField = getRecursiveField( obj.getClass( ), paramFieldPair.getValue( ) );
-      final ArrayList theList = ( ArrayList ) obj.getProperty( paramFieldPair.getValue( ) );
+      final ArrayList theList = ( ArrayList ) getObjectProperty( obj, paramFieldPair.getValue( ) );
       final Class genericType = ( Class ) ( ( ParameterizedType ) declaredField.getGenericType( ) ).getActualTypeArguments( )[0];
       // :: simple case: FieldName.# :://
       if ( String.class.equals( genericType ) ||
@@ -466,7 +469,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
   }
 
   private List<String> populateEmbedded( final Class<?> genericType, final Map<String, String> params, @SuppressWarnings( "rawtypes" ) final ArrayList theList ) throws InstantiationException, IllegalAccessException {
-    final GroovyObject embedded = ( GroovyObject ) genericType.newInstance( );
+    final Object embedded = genericType.newInstance( );
     final Map<String, String> embeddedFields = this.buildFieldMap( genericType );
     final int startSize = params.size( );
     final List<String> embeddedFailures = this.populateObject( embedded, embeddedFields, params );
@@ -477,7 +480,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
   }
 
   private List<String> populateEmbedded( final Class<?> genericType, final String value, @SuppressWarnings( "rawtypes" ) final ArrayList theList ) throws InstantiationException, IllegalAccessException {
-    final GroovyObject embedded = ( GroovyObject ) genericType.newInstance( );
+    final Object embedded = genericType.newInstance( );
     final List<String> embeddedFailures = populateValue( genericType, embedded, value );
     if ( embeddedFailures.isEmpty( ) ) {
       theList.add( embedded );
@@ -485,7 +488,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
     return embeddedFailures;
   }
 
-  private List<String> populateValue( final Class<?> genericType, final GroovyObject targetObject, final String value ) throws InstantiationException, IllegalAccessException {
+  private List<String> populateValue( final Class<?> genericType, final Object targetObject, final String value ) throws InstantiationException, IllegalAccessException {
     final Field valueField = this.findValueField( genericType );
     if ( valueField == null ) {
       throw new IllegalArgumentException( "Simple type cannot be mapped for " + genericType.getSimpleName( ) );
@@ -538,6 +541,27 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
       targetType = targetType.getSuperclass( );
     }
     return fieldMap;
+  }
+
+  private void setObjectProperty( final Object target, final String property, final Object value ) {
+    if ( target instanceof GroovyObject ) {
+      ((GroovyObject)target).setProperty( property, value );
+    } else {
+      ReflectionUtils.invokeMethod(
+          BeanUtils.getPropertyDescriptor( target.getClass( ), property ).getWriteMethod( ),
+          target,
+          value );
+    }
+  }
+
+  private Object getObjectProperty( final Object target, final String property ) {
+    if ( target instanceof GroovyObject ) {
+      return ((GroovyObject)target).getProperty( property );
+    } else {
+      return ReflectionUtils.invokeMethod(
+          BeanUtils.getPropertyDescriptor( target.getClass( ), property ).getReadMethod( ),
+          target );
+    }
   }
 
   private HttpEmbedded getHttpEmbeddedAnnotation( final Field field ) {
