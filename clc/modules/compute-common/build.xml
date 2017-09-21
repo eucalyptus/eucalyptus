@@ -33,6 +33,4 @@
 		<srcfiles dir="${src.dir}" includes="**/*" />
 	</uptodate>
 	<import file="../module-inc.xml" />
-	<target name="indent-module">
-	</target>
 </project>

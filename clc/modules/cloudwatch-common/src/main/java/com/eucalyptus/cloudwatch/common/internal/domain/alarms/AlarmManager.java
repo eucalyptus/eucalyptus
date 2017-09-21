@@ -355,6 +355,7 @@ public class AlarmManager {
       criteria.add( disjunction );
       criteria.addOrder( Order.asc( "creationTimestamp" ) );
       criteria.addOrder( Order.asc( "naturalId" ) );
+      @SuppressWarnings( "unchecked" )
       final Collection<AlarmEntity> alarmEntities = (Collection<AlarmEntity>) criteria.list();
       if ( !Iterables.all( alarmEntities, filter ) ) {
         return false;
@@ -467,6 +468,7 @@ public class AlarmManager {
         }
         NextTokenUtils.addNextTokenConstraints(
           maxRecords == null ? null : maxRecords - results.size( ), token, nextTokenCreatedTime, criteria);
+        @SuppressWarnings( "unchecked" )
         final List<AlarmEntity> alarmEntities = (List<AlarmEntity>) criteria.list();
         Iterables.addAll( results, Iterables.filter( alarmEntities, filter ) );
         token = maxRecords==null || ( maxRecords!=null && ( results.size() >= maxRecords || alarmEntities.size() < maxRecords ) )  ?
@@ -529,6 +531,7 @@ public class AlarmManager {
       if (unit != null) {
         criteria.add( Restrictions.eq( "unit" , unit ) );
       }
+      @SuppressWarnings( "unchecked" )
       final List<AlarmEntity> alarmEntities = (List<AlarmEntity>) criteria.list();
       Iterables.addAll( results, Iterables.filter( alarmEntities, filter ) );
       db.commit();
@@ -575,6 +578,7 @@ public class AlarmManager {
         }
         NextTokenUtils.addNextTokenConstraints(
           maxRecords == null ? null : maxRecords - results.size( ), token, nextTokenCreatedTime, criteria);
+        @SuppressWarnings( "unchecked" )
         final List<AlarmHistory> alarmHistoryEntities = (List<AlarmHistory>) criteria.list();
         Iterables.addAll( results, Iterables.filter( alarmHistoryEntities, filter ) );
         token = maxRecords==null || ( maxRecords!=null && ( results.size() >= maxRecords || alarmHistoryEntities.size() < maxRecords ) ) ?
@@ -754,6 +758,7 @@ public class AlarmManager {
     try (final TransactionResource db = Entities.transactionFor(AlarmEntity.class)) {
       Criteria criteria = Entities.createCriteria(AlarmEntity.class);
       criteria = criteria.add(Restrictions.in("naturalId", statesToUpdate.keySet()));
+      @SuppressWarnings( "unchecked" )
       List<AlarmEntity> result = criteria.list();
       for (AlarmEntity alarmEntity: result) {
         AlarmState newState = statesToUpdate.get(alarmEntity.getNaturalId());

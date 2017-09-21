@@ -96,8 +96,13 @@
 	<property name="javac.target" value="${javac.source}"/>
 	<property name="javac.debug" value="true"/>
 	<property name="javac.includeantruntime" value="false"/>
+	<property name="javac.extraargs.xlint.unchecked" value="unchecked"/>
+	<property name="javac.extraargs.xlint" value="-Xlint:divzero,finally,overrides,-deprecation,${javac.extraargs.xlint.unchecked}"/>
+	<property name="javac.extraargs.werror" value="-Werror"/>
 	<property name="groovyc.fork" value="false"/>
 	<property name="groovyc.includeantruntime" value="true"/>
+	<property name="groovyc.extraargs.werror" value="${javac.extraargs.werror}"/>
+	<property name="groovyc.extraargs.xlint" value="-FXlint:divzero,finally,overrides,-deprecation,${javac.extraargs.xlint.unchecked}"/>
 	<property name="bind.load" value="true"/>
 	<property name="bind.verbose" value="false"/>
 	<!--================================== other properties  ===================================-->
@@ -125,7 +130,7 @@
 		</dirset>
 	</path>
 	<path id="jibx-classpath">
-		<fileset dir="${lib.dir}">
+		<fileset dir="${lib.dir}" erroronmissingdir="false">
 			<include name="bcel-*.jar" />
 			<include name="dom4j-*.jar" />
 			<include name="jibx-*.jar" />
@@ -137,7 +142,7 @@
 	<!--================================== dependencies  ===================================-->
 	<!-- Fix for RHEL bug 810067 -->
 	<taskdef uri="antlib:org.apache.ivy.ant" classpath="${ivy.jar}" />
-	<taskdef name="bind" classname="org.jibx.binding.ant.CompileTask">
+	<taskdef name="bind" classname="org.jibx.binding.ant.CompileTask" onerror="ignore">
 		<classpath>
 			<path refid="jibx-classpath"/>
 		</classpath>
@@ -241,6 +246,9 @@
 		<javac classpathref="classpath" destdir="${build.classes.dir}" deprecation="false" failonerror="true" debug="${javac.debug}" sourcepathref="srcpath" source="${javac.source}" target="${javac.target}" encoding="utf-8" listfiles="true"  includeantruntime="${javac.includeantruntime}">
 			<src path="${src.dir}"/>
 			<src path="${generated.src.dir}"/>
+			<compilerarg value="${javac.extraargs.xlint}"/>
+			<compilerarg value="${javac.extraargs.werror}"/>
+			<compilerarg value="-implicit:class"/>
 		</javac>
 		<antcall target="build-bindings" />
 	</target>
@@ -259,6 +267,9 @@
 		<groovyc srcdir="${src.dir}:${generated.src.dir}:${build.classes.dir}" classpathref="classpath" includeantruntime="${groovyc.includeantruntime}" fork="${groovyc.fork}" destdir="${build.classes.dir}" verbose="true" listfiles="true" configscript="${project.basedir}/config.groovy">
 			<javac source="${javac.source}" target="${javac.target}" encoding="utf-8" debug="${javac.debug}" >
 				<compilerarg value="-Js=${build.src.dir}/main/java"/>
+				<compilerarg value="${groovyc.extraargs.xlint}"/>
+				<compilerarg value="${groovyc.extraargs.werror}"/>
+				<compilerarg value="-Fimplicit:class"/>
 			</javac>
 		</groovyc>
 		<antcall target="build-bindings" />

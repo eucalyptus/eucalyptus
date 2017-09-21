@@ -39,8 +39,7 @@
 
 <project name="eucalyptus-bootstrap" basedir=".">
 	<property name="builder.suffix" value="module" />
-
-    <import file="../module-inc.xml"/>
+	<import file="../module-inc.xml"/>
 	<!--================================== BUILD TARGETS ==================================-->
 	<target name="indent-module">
 		<native-make dir="src/main/native" target="indent" />

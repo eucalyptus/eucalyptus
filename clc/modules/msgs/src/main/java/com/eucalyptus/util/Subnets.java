@@ -46,6 +46,7 @@ import java.lang.annotation.Target;
 import java.lang.reflect.Modifier;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Objects;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
@@ -59,7 +60,7 @@ import com.google.common.net.InetAddresses;
 public class Subnets extends ServiceJarDiscovery {
   private static Logger                                           LOG            = Logger.getLogger( Subnets.class );
   private static final ClassToInstanceMap<Predicate<InetAddress>> subnetCheckers = MutableClassToInstanceMap.create( );
-  
+
   /**
    * A Predicate<InetAddress> which returns true if the system is responsible for the source
    * address.
@@ -68,11 +69,11 @@ public class Subnets extends ServiceJarDiscovery {
       ElementType.FIELD } )
   @Retention( RetentionPolicy.RUNTIME )
   public @interface SystemSubnetPredicate {}
-  
+
   /**
    * Determines if {@code addr} is from a subnet under the system's control (or possibly a public
    * address under the systems control).
-   * 
+   *
    * @param addr
    * @return
    */
@@ -88,12 +89,12 @@ public class Subnets extends ServiceJarDiscovery {
     }
     return false;
   }
-  
+
 
   /**
    * Determines if {@code addr} is a host under the system's control (or possibly a public
    * address under the systems control).
-   * 
+   *
    * @param addr
    * @return
    */
@@ -107,17 +108,17 @@ public class Subnets extends ServiceJarDiscovery {
       public boolean apply( Host arg0 ) {
         return arg0.getHostAddresses( ).contains( addr );
       }
-      
+
     };
     return !Hosts.list( filter ).isEmpty( );
   }
 
-  
-  
+
+
   /**
    * Constructs a predicate which can test for address membership in the subnet defined by the given
    * {@code subnet} address and {@code netmask}.
-   * 
+   *
    * @param subnet
    * @param netmask
    * @return
@@ -126,7 +127,7 @@ public class Subnets extends ServiceJarDiscovery {
   public static Predicate<InetAddress> internalPredicate( final String subnet, final String netmask ) throws UnknownHostException {
     return Subnets.create( subnet, netmask ).getPredicate( );
   }
-  
+
   public static Subnet create( String subnet, String netmask ) throws UnknownHostException {
     return new Subnet( InetAddress.getByName( subnet ), InetAddress.getByName( netmask ) );
   }
@@ -134,40 +135,40 @@ public class Subnets extends ServiceJarDiscovery {
   public static Cidr cidr( String subnet, String netmask ) throws UnknownHostException {
     return new Subnet( InetAddress.getByName( subnet ), InetAddress.getByName( netmask ) ).toCidr( );
   }
-  
+
   private static class Subnet {
     private final InetAddress            subnet;
     private final int                    networkId;
     private final int                    subnetMask;
     private final int                    prefix;
     private final Predicate<InetAddress> predicate = new Predicate<InetAddress>( ) {
-                                                     
+
                                                      @Override
                                                      public boolean apply( InetAddress arg0 ) {
                                                        return Subnet.this.inSubnet( arg0 );
                                                      }
                                                    };
-    
+
     Subnet( InetAddress address, InetAddress netmask ) {
       this.subnetMask = InetAddresses.coerceToInteger( netmask );
       this.networkId = InetAddresses.coerceToInteger( address ) & this.subnetMask;
       this.subnet = InetAddresses.fromInteger( networkId );
       this.prefix = ( int ) Math.round( Math.log( Integer.lowestOneBit( this.subnetMask ) ) / Math.log( 2 ) );
     }
-    
+
     Subnet( InetAddress subnet, int prefix ) throws UnknownHostException {
       this( subnet, InetAddresses.fromInteger( ( int ) -1 << ( 32 - prefix ) ) );
     }
-    
+
     public boolean inSubnet( InetAddress address ) {
       return ( InetAddresses.coerceToInteger( address ) & this.subnetMask ) == this.networkId;
     }
-    
+
     @Override
     public String toString( ) {
       return this.subnet.getHostAddress( ) + "/" + this.prefix;
     }
-    
+
     @Override
     public boolean equals( Object obj ) {
       if ( !( obj instanceof Subnet ) ) {
@@ -176,23 +177,28 @@ public class Subnets extends ServiceJarDiscovery {
         return ( ( Subnet ) obj ).networkId == this.networkId;
       }
     }
-    
+
+    @Override
+    public int hashCode() {
+      return Objects.hash( getNetworkId( ) );
+    }
+
     public InetAddress getSubnet( ) {
       return this.subnet;
     }
-    
+
     public InetAddress getNetworkId( ) {
       return InetAddresses.fromInteger( this.networkId );
     }
-    
+
     public int getSubnetMask( ) {
       return this.subnetMask;
     }
-    
+
     public int getPrefix( ) {
       return this.prefix;
     }
-    
+
     public Predicate<InetAddress> getPredicate( ) {
       return this.predicate;
     }
@@ -201,7 +207,7 @@ public class Subnets extends ServiceJarDiscovery {
       return Cidr.of( networkId, prefix );
     }
   }
-  
+
   @SuppressWarnings( "unchecked" )
   @Override
   public boolean processClass( Class candidate ) throws Exception {
@@ -218,7 +224,7 @@ public class Subnets extends ServiceJarDiscovery {
     }
     return false;
   }
-  
+
   @Override
   public Double getPriority( ) {
     return 0.5d;

@@ -154,6 +154,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -393,7 +394,7 @@ public class ComputeService {
     final Filter persistenceFilter = getPersistenceFilter( NetworkGroup.class, normalizedIds, "group-id", filter );
     final Predicate<? super NetworkGroup> requestedAndAccessible =
         CloudMetadatas.filteringFor( NetworkGroup.class )
-            .byPredicate( Predicates.or(
+            .byPredicate( Predicates.or( ImmutableList.of(
                 request.getSecurityGroupSet( ).isEmpty() && request.getSecurityGroupIdSet( ).isEmpty() ?
                     Predicates.<NetworkGroup>alwaysTrue() :
                     Predicates.<NetworkGroup>alwaysFalse(),
@@ -402,7 +403,7 @@ public class ComputeService {
                     CloudMetadatas.<NetworkGroup>filterById( request.getSecurityGroupSet( ) ),
                 request.getSecurityGroupIdSet( ).isEmpty() ?
                     Predicates.<NetworkGroup>alwaysFalse() :
-                    CloudMetadatas.filterByProperty( normalizeGroupIdentifiers( request.getSecurityGroupIdSet( ) ), NetworkGroup.groupId() ) ) )
+                    CloudMetadatas.filterByProperty( normalizeGroupIdentifiers( request.getSecurityGroupIdSet( ) ), NetworkGroup.groupId() ) ) ) )
             .byPredicate( filter.asPredicate( ) )
             .byPrivileges()
             .buildPredicate();
@@ -1659,6 +1660,7 @@ public class ComputeService {
   public ComputeMessage proxy( final ComputeMessage request ) throws EucalyptusCloudException {
     // Dispatch
     try {
+      @SuppressWarnings( "unchecked" )
       BaseMessage backendRequest = BaseMessages.deepCopy( request, getBackendMessageClass( request ) );
       final BaseMessage backendResponse = send( backendRequest );
       final ComputeMessage response =

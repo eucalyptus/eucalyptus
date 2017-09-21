@@ -476,6 +476,7 @@ public class AutoScalingService {
 
     // Dispatch
     try {
+      @SuppressWarnings( "unchecked" )
       final AutoScalingMessage backendRequest = (AutoScalingMessage) BaseMessages.deepCopy( request, getBackendMessageClass( request ) );
       final BaseMessage backendResponse = send( backendRequest );
       final AutoScalingMessage response = (AutoScalingMessage) BaseMessages.deepCopy( backendResponse, request.getReply().getClass() );

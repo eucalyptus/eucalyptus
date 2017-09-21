@@ -111,7 +111,7 @@ public class ConnectionHandler extends Thread {
 
 		TSIGRecord queryTSIG = query.getTSIG();
 		TSIG tsig = null;
-	
+
 		OPTRecord queryOPT = query.getOPT();
 		if (queryOPT != null && queryOPT.getVersion() > 0)
 			badversion = true;
@@ -206,7 +206,7 @@ public class ConnectionHandler extends Thread {
 		        addRRset(name, response, rrset, Section.ANSWER, flags);
 		      }
 		    }
-		    
+
 		    if ( sr.isSuccessful( ) ) {
 		      if (type == Type.AAAA)
 	          response.getHeader().setFlag(Flags.AA);
@@ -283,6 +283,7 @@ public class ConnectionHandler extends Thread {
 		return buildErrorMessage(header, Rcode.FORMERR, null);
 	}
 
+	@SuppressWarnings( "unchecked" )
 	public Cache
 	getCache(int dclass) {
 		Cache c = (Cache) caches.get(new Integer(dclass));
@@ -292,7 +293,7 @@ public class ConnectionHandler extends Thread {
 		}
 		return c;
 	}
-	
+
 private static final ThreadLocal<Pair<InetAddress,InetAddress>> localAndRemoteInetAddresses = new ThreadLocal<>();
 	private static InetAddress getInetAddress( final Function<Pair<InetAddress,InetAddress>,InetAddress> extractor ) {
 		return Optional.fromNullable( localAndRemoteInetAddresses.get( ) ).transform( extractor ).orNull( );

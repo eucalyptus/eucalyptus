@@ -39,8 +39,8 @@
 
 <project name="eucalyptus-block-storage" basedir=".">
         <property name="builder.suffix" value="groovy" />
+	<property name="javac.extraargs.xlint.unchecked" value="-unchecked"/>
 	<import file="../module-inc.xml" />
-	<target name="indent-module"></target>
 	<!--================================== BUILD TARGETS ==================================-->
 	<!--================================== install target ==================================-->
 	<target name="install">

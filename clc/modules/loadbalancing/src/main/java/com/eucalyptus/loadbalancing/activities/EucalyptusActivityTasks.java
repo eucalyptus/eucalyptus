@@ -1510,7 +1510,7 @@ public class EucalyptusActivityTasks {
 			req.setSubnetId(this.subnetId);
 			if(this.securityGroupIds!=null && ! this.securityGroupIds.isEmpty()) {
 				final SecurityGroupIdSetType groupIds = new SecurityGroupIdSetType();
-				groupIds.setItem(new ArrayList(
+				groupIds.setItem(new ArrayList<>(
 						this.securityGroupIds.stream()
 						.map(id -> {
 							final SecurityGroupIdSetItemType item =
@@ -1584,7 +1584,7 @@ public class EucalyptusActivityTasks {
 			req.setNetworkInterfaceId(this.networkInterfaceId);
 			if(this.securityGroupIds!=null) {
 				final SecurityGroupIdSetType groupIds = new SecurityGroupIdSetType();
-				groupIds.setItem(new ArrayList(
+				groupIds.setItem(new ArrayList<>(
 						this.securityGroupIds.stream()
 								.map(id -> {
 									final SecurityGroupIdSetItemType item =
@@ -1726,7 +1726,7 @@ public class EucalyptusActivityTasks {
 							return item;
 						}).collect(Collectors.toList());
 				req.setVpcSet( new VpcIdSetType() );
-				req.getVpcSet().setItem(new ArrayList(idItems));
+				req.getVpcSet().setItem(new ArrayList<>(idItems));
 			}
 			return req;
 		}

@@ -105,7 +105,7 @@ import com.google.common.collect.Iterables;
 @SuppressWarnings( { "UnusedDeclaration", "Guava" } )
 @ComponentNamed
 public class EuareService {
-  
+
   private static final Logger LOG = Logger.getLogger( EuareService.class );
 
   private static final boolean ENCODE_POLICIES =
@@ -162,7 +162,7 @@ public class EuareService {
     }
     return reply;
   }
-  
+
   public DeleteAccountResponseType deleteAccount(DeleteAccountType request) throws EucalyptusCloudException {
     DeleteAccountResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
@@ -189,7 +189,7 @@ public class EuareService {
     }
     return reply;
   }
-  
+
   public ListAccountsResponseType listAccounts(ListAccountsType request) throws EucalyptusCloudException {
     ListAccountsResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
@@ -211,7 +211,7 @@ public class EuareService {
     }
     return reply;
   }
-  
+
   public ListGroupsResponseType listGroups(ListGroupsType request) throws EucalyptusCloudException {
     ListGroupsResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
@@ -334,7 +334,7 @@ public class EuareService {
         } else if ( AuthException.QUOTA_EXCEEDED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Signing certificate limit exceeded" );
         } else if ( AuthException.CONFLICT.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.DUPLICATE_CERTIFICATE, "Trying to upload duplicate certificate" );          
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.DUPLICATE_CERTIFICATE, "Trying to upload duplicate certificate" );
         } else if ( AuthException.INVALID_CERT.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_CERTIFICATE, "Invalid certificate " + request.getCertificateBody( ) );
         } else if ( AuthException.EMPTY_CERT.equals( e.getMessage( ) ) ) {
@@ -363,7 +363,7 @@ public class EuareService {
         } else if ( AuthException.EMPTY_POLICY_NAME.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
         }
-      }     
+      }
       LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
@@ -405,7 +405,7 @@ public class EuareService {
     String pathPrefix = request.getPathPrefix();
     if(pathPrefix == null || pathPrefix.isEmpty())
       pathPrefix = "/";
-    
+
     try{
       final List<ServerCertificate> certs = Privileged.listServerCertificate( requestUser, account, pathPrefix );
       final ListServerCertificatesResultType result = new ListServerCertificatesResultType();
@@ -417,7 +417,7 @@ public class EuareService {
       result.setServerCertificateMetadataList(lists);
       reply.setListServerCertificatesResult(result);
     }catch(final AuthException ex){
-      if ( AuthException.ACCESS_DENIED.equals( ex.getMessage( ) ) ) 
+      if ( AuthException.ACCESS_DENIED.equals( ex.getMessage( ) ) )
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list server certificates by " + ctx.getUser( ).getName( ) );
       else {
         LOG.error("failed to list server certificates", ex);
@@ -425,7 +425,7 @@ public class EuareService {
       }
     }catch(final Exception ex){
       LOG.error("failed to list server certificates", ex);
-      throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE); 
+      throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
     }
     reply.set_return(true);
     return reply;
@@ -498,14 +498,14 @@ public class EuareService {
     final String certName = request.getServerCertificateName();
     if(certName == null || certName.length()<=0)
       throw new EuareException(HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Certificate name is empty");
-    
+
     try{
       final String newCertName = request.getNewServerCertificateName();
       final String newPath = request.getNewPath();
       if( (newCertName!=null&&newCertName.length()>0) || (newPath!=null&&newPath.length()>0))
         Privileged.updateServerCertificate( requestUser, account, certName, newCertName, newPath);
     }catch(final AuthException ex){
-      if ( AuthException.ACCESS_DENIED.equals( ex.getMessage( ) ) ) 
+      if ( AuthException.ACCESS_DENIED.equals( ex.getMessage( ) ) )
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update server certificates by " + ctx.getUser( ).getName( ) );
       else if (AuthException.SERVER_CERT_NO_SUCH_ENTITY.equals(ex.getMessage()))
         throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Server certificate "+certName+" does not exist");
@@ -517,9 +517,9 @@ public class EuareService {
       }
     }catch(final Exception ex){
       LOG.error("failed to update server certificate", ex);
-      throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE); 
+      throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
     }
-    
+
     reply.set_return(true);
     return reply;
   }
@@ -548,8 +548,8 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid new name " + request.getNewUserName( ) );
         } else if ( AuthException.INVALID_PATH.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid new path " + request.getNewPath( ) );
-        }        
-      }      
+        }
+      }
       LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
@@ -682,8 +682,8 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid new name " + request.getNewGroupName( ) );
         } else if ( AuthException.INVALID_PATH.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid new path " + request.getNewPath( ) );
-        }        
-      }   
+        }
+      }
       LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
@@ -699,7 +699,7 @@ public class EuareService {
     final String certName = request.getServerCertificateName();
     if(certName == null || certName.length()<=0)
       throw new EuareException(HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Certificate name is empty");
-    
+
     try{
       final ServerCertificate cert = Privileged.getServerCertificate(requestUser, account, certName);
       final GetServerCertificateResultType result = new GetServerCertificateResultType();
@@ -710,7 +710,7 @@ public class EuareService {
       result.setServerCertificate(certType);
       reply.setGetServerCertificateResult(result);
     }catch(final AuthException ex){
-      if ( AuthException.ACCESS_DENIED.equals( ex.getMessage( ) ) ) 
+      if ( AuthException.ACCESS_DENIED.equals( ex.getMessage( ) ) )
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get server certificate by " + ctx.getUser( ).getName( ) );
       else if (AuthException.SERVER_CERT_NO_SUCH_ENTITY.equals(ex.getMessage()))
         throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Server certificate "+certName+" does not exist");
@@ -720,7 +720,7 @@ public class EuareService {
       }
     }catch(final Exception ex){
       LOG.error("failed to get server certificate", ex);
-      throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE); 
+      throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
     }
     reply.set_return(true);
     return reply;
@@ -774,7 +774,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid user name " + request.getUserName( ) );
         } else if ( AuthException.INVALID_PATH.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid user path " + request.getPath( ) );
-        }        
+        }
       }
       LOG.error( e, e );
       throw new EucalyptusCloudException( e );
@@ -888,7 +888,7 @@ public class EuareService {
     try {
       if ( !Privileged.allowReadLoginProfile( requestUser, account, userFound ) ) {
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
-                                  "Not authorized to get login profile for " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );        
+                                  "Not authorized to get login profile for " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
       }
       reply.getGetLoginProfileResult( ).getLoginProfile( ).setUserName( request.getUserName( ) );
       return reply;
@@ -950,7 +950,7 @@ public class EuareService {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid group name " + request.getGroupName( ) );
         } else if ( AuthException.INVALID_PATH.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid group path " + request.getPath( ) );
-        }        
+        }
       }
       LOG.error( e, e );
       throw new EucalyptusCloudException( e );
@@ -994,7 +994,7 @@ public class EuareService {
     }
     try{
       final UploadServerCertificateResultType result = new UploadServerCertificateResultType();
-      final ServerCertificateMetadataType metadata = 
+      final ServerCertificateMetadataType metadata =
           getServerCertificateMetadata(account.lookupServerCertificate(certName));
       result.setServerCertificateMetadata(metadata);
       reply.setUploadServerCertificateResult(result);
@@ -1099,11 +1099,11 @@ public class EuareService {
     String certName = request.getServerCertificateName();
     if(certName == null || certName.length()<=0)
       throw new EuareException(HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Certificate name is empty");
-    
+
     try{
       Privileged.deleteServerCertificate( requestUser, account, certName );
     }catch(final AuthException ex){
-      if ( AuthException.ACCESS_DENIED.equals( ex.getMessage( ) ) ) 
+      if ( AuthException.ACCESS_DENIED.equals( ex.getMessage( ) ) )
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete server certificates by " + ctx.getUser( ).getName( ) );
       else if (AuthException.SERVER_CERT_NO_SUCH_ENTITY.equals(ex.getMessage()))
         throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Server ceritifcate "+certName+" does not exist");
@@ -1115,7 +1115,7 @@ public class EuareService {
       }
     }catch(final Exception ex){
       LOG.error("failed to delete server certificate", ex);
-      throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE); 
+      throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
     }
     reply.set_return(true);
 
@@ -1350,7 +1350,7 @@ public class EuareService {
     }
     return reply;
   }
-  
+
   public CreateAccountAliasResponseType createAccountAlias(CreateAccountAliasType request) throws EucalyptusCloudException {
     CreateAccountAliasResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
@@ -1371,12 +1371,12 @@ public class EuareService {
         } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.VALIDATION_ERROR, "Invalid account alias " + request.getAccountAlias( ) );
         }
-      }    
+      }
       LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
   }
-  
+
   public DeleteAccountAliasResponseType deleteAccountAlias(DeleteAccountAliasType request) throws EucalyptusCloudException {
     DeleteAccountAliasResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
@@ -1389,7 +1389,7 @@ public class EuareService {
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete account alias by " + ctx.getUser( ).getName( ) );          
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete account alias by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.EMPTY_ACCOUNT_NAME.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "Empty account alias" );
         }
@@ -1411,14 +1411,14 @@ public class EuareService {
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list account aliases by " + ctx.getUser( ).getName( ) );          
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list account aliases by " + ctx.getUser( ).getName( ) );
         }
       }
       LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
   }
-  
+
   public GetAccountSummaryResponseType getAccountSummary(GetAccountSummaryType request) throws EucalyptusCloudException {
     GetAccountSummaryResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
@@ -1444,14 +1444,14 @@ public class EuareService {
     } catch ( Exception e ) {
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get account summary by " + ctx.getUser( ).getName( ) );          
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get account summary by " + ctx.getUser( ).getName( ) );
         }
       }
       LOG.error( e, e );
       throw new EucalyptusCloudException( e );
     }
   }
-  
+
   public CreateSigningCertificateResponseType createSigningCertificate(CreateSigningCertificateType request) throws EucalyptusCloudException {
     CreateSigningCertificateResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
@@ -1485,7 +1485,7 @@ public class EuareService {
     }
     return reply;
   }
-  
+
   public GetUserInfoResponseType getUserInfo(GetUserInfoType request) throws EucalyptusCloudException {
     GetUserInfoResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
@@ -1525,7 +1525,7 @@ public class EuareService {
     }
     return reply;
   }
-  
+
   public UpdateUserInfoResponseType updateUserInfo(UpdateUserInfoType request) throws EucalyptusCloudException {
     UpdateUserInfoResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
@@ -1549,7 +1549,7 @@ public class EuareService {
     }
     return reply;
   }
-  
+
   public PutAccountPolicyResponseType putAccountPolicy(PutAccountPolicyType request) throws EucalyptusCloudException {
     PutAccountPolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
@@ -1574,7 +1574,7 @@ public class EuareService {
     }
     return reply;
   }
-  
+
   public ListAccountPoliciesResponseType listAccountPolicies(ListAccountPoliciesType request) throws EucalyptusCloudException {
     ListAccountPoliciesResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
@@ -1599,7 +1599,7 @@ public class EuareService {
     }
     return reply;
   }
-  
+
   public GetAccountPolicyResponseType getAccountPolicy(GetAccountPolicyType request) throws EucalyptusCloudException {
     GetAccountPolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
@@ -1631,7 +1631,7 @@ public class EuareService {
     }
     return reply;
   }
-  
+
   public DeleteAccountPolicyResponseType deleteAccountPolicy(DeleteAccountPolicyType request) throws EucalyptusCloudException {
     DeleteAccountPolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
@@ -2049,7 +2049,7 @@ public class EuareService {
     reply.getListInstanceProfilesResult().setIsTruncated( false );
     final ArrayList<InstanceProfileType> instanceProfiles = reply.getListInstanceProfilesResult( ).getInstanceProfiles().getMember();
     try ( final AutoCloseable euareTx = readonlyTx( ) ) {
-      for ( final EuareInstanceProfile instanceProfile : (List<EuareInstanceProfile>)(List)account.getInstanceProfiles() ) {
+      for ( final EuareInstanceProfile instanceProfile : account.getInstanceProfiles() ) {
         if ( instanceProfile.getPath( ).startsWith( path ) ) {
           if ( Privileged.allowListInstanceProfile( requestUser, account, instanceProfile ) ) {
             instanceProfiles.add( fillInstanceProfileResult( new InstanceProfileType(), instanceProfile ) );
@@ -2075,18 +2075,18 @@ public class EuareService {
     reply.getGetLdapSyncStatusResult( ).setInSync( LdapSync.inSync( ) );
     return reply;
   }
-  
+
   /* Euca-only API for ELB SSL termination */
   public DownloadServerCertificateResponseType downloadCertificate(DownloadServerCertificateType request) throws EucalyptusCloudException {
     final DownloadServerCertificateResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup( );
     final AuthContext requestUser = getAuthContext( ctx );
-    
+
     /// For now, the users (role) that can download server cert should belong to eucalyptus account
     if( !requestUser.isSystemUser( ) ){
       throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,"The user not authorized to perform action");
     }
-    
+
     final String sigB64 = request.getSignature();
     final Date ts = request.getTimestamp();
     final String certPem = request.getDelegationCertificate();
@@ -2094,7 +2094,7 @@ public class EuareService {
     final String certArn = request.getCertificateArn();
     boolean oldCertType = false;
     try{
-      if(!EuareServerCertificateUtil.verifyCertificate(certPem, true)) {       
+      if(!EuareServerCertificateUtil.verifyCertificate(certPem, true)) {
         // must be certificate type prior 4.1
         oldCertType = true;
         if( !EuareServerCertificateUtil.verifyCertificate(certPem, false))
@@ -2105,10 +2105,10 @@ public class EuareService {
     }catch(final Exception ex) {
       throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,"Invalid VM certificate (certificate may have been expired)");
     }
-    
+
     if(sigB64 == null || ts == null)
       throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Signature and timestamp are required");
-    
+
     final Date now = new Date();
     long tsDiff = now.getTime() - ts.getTime();
     final long TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
@@ -2117,8 +2117,8 @@ public class EuareService {
     final TimeZone tz = TimeZone.getTimeZone("UTC");
     final DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
     df.setTimeZone(tz);
-    String tsAsIso = df.format(ts); 
-    
+    String tsAsIso = df.format(ts);
+
     // verify signature of the request
     final String payload = String.format("%s&%s", certArn, tsAsIso);
     try{
@@ -2126,11 +2126,11 @@ public class EuareService {
           throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Invalid signature");
     }catch(final EuareException ex){
       throw ex;
-    }catch(final Exception ex){       
+    }catch(final Exception ex){
       LOG.error("failed to verify signature", ex);
       throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
     }
-   
+
     // No longer the case after EUCA-8651. verifyCertificate() will validate the cert. Left here for backward-compatibility
     if (oldCertType) {
       // verify signature issued by EUARE
@@ -2149,19 +2149,19 @@ public class EuareService {
       // access control based on iam policy
       final ServerCertificateEntity cert = RestrictedTypes.doPrivilegedWithoutOwner(certArn, ServerCertificates.Lookup.INSTANCE);
     }catch(final AuthException ex){
-      throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,"The user not authorized to download certificate"); 
+      throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,"The user not authorized to download certificate");
     }catch(final NoSuchElementException ex){
       throw new EuareException(HttpResponseStatus.BAD_REQUEST, EuareException.NO_SUCH_ENTITY,"Server certificate is not found");
     }catch(final Exception ex){
       throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
     }
-  
+
     final DownloadServerCertificateResultType result = new DownloadServerCertificateResultType();
     try{
       result.setCertificateArn(certArn);
       final String serverCertPem = B64.standard.encString(EuareServerCertificateUtil.getServerCertificate(certArn));
       result.setServerCertificate( serverCertPem);
-      
+
       final String pk = EuareServerCertificateUtil.getEncryptedKey(certArn, certPem);
       result.setServerPk(pk);
       final String msg = String.format("%s&%s", serverCertPem, pk);
@@ -2769,12 +2769,12 @@ public class EuareService {
     u.setArn( ( new EuareResourceName( account.getAccountNumber( ), IamPolicySpec.IAM_RESOURCE_USER, userFound.getPath( ), userFound.getName( ) ) ).toString( ) );
     u.setCreateDate( userFound.getCreateDate( ) );
   }
-  
+
   private void fillUserResultExtra( UserType u, EuareUser userFound ) {
     u.setEnabled( String.valueOf( userFound.isEnabled() ) );
     u.setPasswordExpiration( new Date( userFound.getPasswordExpires() ).toString() );
   }
-  
+
   private void fillGroupResult( GroupType g, EuareGroup groupFound, EuareAccount account ) {
     g.setPath( groupFound.getPath( ) );
     g.setGroupName( groupFound.getName() );
@@ -2871,7 +2871,7 @@ public class EuareService {
           }
         } catch ( AuthException e ) {
           throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Can not find delegation account " + delegateAccount );
-        }        
+        }
       }
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Delegation access not authorized for " + delegateAccount );
     } else {
@@ -2924,7 +2924,7 @@ public class EuareService {
     try {
       return account.lookupUserByName( userName );
     } catch ( Exception e ) {
-      if ( e instanceof AuthException ) { 
+      if ( e instanceof AuthException ) {
         if ( AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find user " + userName );
         } else if ( AuthException.EMPTY_USER_NAME.equals( e.getMessage( ) ) ) {
@@ -3043,7 +3043,7 @@ public class EuareService {
   }
 
   private static ServerCertificateMetadataType getServerCertificateMetadata(final ServerCertificate cert){
-    final ServerCertificateMetadataType metadata = 
+    final ServerCertificateMetadataType metadata =
         new ServerCertificateMetadataType();
     metadata.setArn(cert.getArn());
     metadata.setServerCertificateId(cert.getCertificateId());
@@ -3053,7 +3053,7 @@ public class EuareService {
     metadata.setExpiration(cert.getExpiration());
     return metadata;
   }
- 
+
   private String encodePolicy( final String policy ) {
     try {
       return ENCODE_POLICIES && policy != null ?
@@ -3063,7 +3063,7 @@ public class EuareService {
       throw Exceptions.toUndeclared( e );
     }
   }
-  
+
   protected AutoCloseable readonlyTx( ) {
     return Entities.readOnlyDistinctTransactionFor( UserEntity.class );
   }

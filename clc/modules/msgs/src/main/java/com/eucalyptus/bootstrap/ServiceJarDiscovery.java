@@ -40,6 +40,7 @@
 package com.eucalyptus.bootstrap;
 
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -68,6 +69,7 @@ import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
@@ -78,15 +80,15 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
   private static Logger                         LOG       = Logger.getLogger( ServiceJarDiscovery.class );
   private static SortedSet<ServiceJarDiscovery> discovery = Sets.newTreeSet( );
   private static Multimap<Class, String>        classList = ArrayListMultimap.create( );
-  
+
   public static void doSingleDiscovery( final ServiceJarDiscovery s ) {
     processClasspath( );
     ServiceJarDiscovery.runDiscovery( s );
   }
-  
+
   private static void checkUniqueness( final Class c ) {
     if ( classList.get( c ).size( ) > 1 ) {
-      
+
       LOG.fatal( "Duplicate bootstrap class registration: " + c.getName( ) );
       for ( final String fileName : classList.get( c ) ) {
         LOG.fatal( "\n==> Defined in: " + fileName );
@@ -94,7 +96,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
       System.exit( 1 );//GRZE: special case, broken installation
     }
   }
-  
+
   @SuppressWarnings( "WeakerAccess" )
   public static void runDiscovery( ) {
     for ( final ServiceJarDiscovery s : discovery ) {
@@ -102,7 +104,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
     }
     discovery.forEach( ServiceJarDiscovery::runDiscovery );
   }
-  
+
   public static void runDiscovery( final ServiceJarDiscovery s ) {
     LOG.info( LogUtil.subheader( s.getClass( ).getSimpleName( ) ) );
     for ( final Class c : classList.keySet( ) ) {
@@ -113,7 +115,7 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
       }
     }
   }
-  
+
   private void checkClass( final Class candidate ) {
     try {
       if ( this.processClass( candidate ) ) {
@@ -126,28 +128,28 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
       }
     }
   }
-  
+
   /**
    * Process the potential bootstrap-related class. Return false or throw an exception if the class
    * is rejected.
-   * 
+   *
    * @param candidate The candidate class
    * @return true if the candidate is accepted.
    */
   public abstract boolean processClass( Class candidate ) throws Exception;
-  
+
   @SuppressWarnings( "WeakerAccess" )
   public Double getDistinctPriority( ) {
     return this.getPriority( ) + ( .1d / this.getClass( ).hashCode( ) );
   }
-  
+
   public abstract Double getPriority( );
-  
+
   @Override
   public int compareTo( @Nonnull final ServiceJarDiscovery that ) {
     return this.getDistinctPriority( ).compareTo( that.getDistinctPriority( ) );
   }
-  
+
   public static void processLibraries( ) {
     processClasspath( );
   }
@@ -255,8 +257,9 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
         boolean classFiltered =
             this.annote.value( ).length == 0 || Iterables.any( Arrays.asList( this.annote.value( ) ), Classes.assignableTo( discoveryCandidate ) );
         if ( classFiltered ) {
+          @SuppressWarnings( "unchecked" )
           boolean annotationFiltered =
-              this.annote.annotations( ).length == 0 || Iterables.any( Arrays.asList( this.annote.annotations( ) ), Ats.from( discoveryCandidate ) );
+              this.annote.annotations( ).length == 0 || Iterables.any( Lists.<Class<? extends Annotation>>newArrayList( this.annote.annotations( ) ), Ats.from( discoveryCandidate ) );
           return annotationFiltered && this.instance.apply( discoveryCandidate );
         } else {
           return false;

@@ -52,6 +52,7 @@ import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -453,7 +454,7 @@ public class LoadBalancingSystemVpcs {
 
         final Optional<String> optPublicIp = publicIp!=null ? Optional.of(publicIp)  : Optional.empty();
         final Optional<String> optPrivateIp = privateIp!=null ? Optional.of(privateIp) : Optional.empty();
-        return Lists.newArrayList(optPublicIp, optPrivateIp);
+        return ImmutableList.of(optPublicIp, optPrivateIp);
     }
 
     // if the primary interface is for system VPC, the secondary interface is attached to user VPC
@@ -873,6 +874,7 @@ public class LoadBalancingSystemVpcs {
             Listeners.register(ClockTick.class, new AvailabilityZoneChecker());
         }
 
+        @SuppressWarnings( { "finally", "ContinueOrBreakFromFinallyBlock" } )
         @Override
         public void fireEvent(ClockTick event) {
             if (Bootstrap.isOperational() &&
@@ -899,7 +901,7 @@ public class LoadBalancingSystemVpcs {
                             LOG.error("System VPC setup failed", ex);
                         }finally{
                             KnownAvailabilityZones.add(az); // try only once
-                            break;
+                          break;
                         }
                     }
                 }

@@ -55,20 +55,20 @@ public class MetricEntityFactory {
     return delegate.getNewMetricEntity(metricType, hash);
   }
 
-  public static Class getClassForEntitiesGet(MetricType metricType, String hash) {
+  public static Class<?> getClassForEntitiesGet(MetricType metricType, String hash) {
     return delegate.getClassForEntitiesGet(metricType, hash);
   }
 
-  public static Collection<Class> getAllClassesForEntitiesGet() {
+  public static Collection<Class<?>> getAllClassesForEntitiesGet() {
     return delegate.getAllClassesForEntitiesGet();
   }
 
   public interface MetricFactoryDelegate {
     public MetricEntity getNewMetricEntity(MetricType metricType, String hash);
 
-    public Class getClassForEntitiesGet(MetricType metricType, String hash);
+    public Class<?> getClassForEntitiesGet(MetricType metricType, String hash);
 
-    public Collection<Class> getAllClassesForEntitiesGet();
+    public Collection<Class<?>> getAllClassesForEntitiesGet();
   }
 
   @Entity
@@ -96,8 +96,8 @@ public class MetricEntityFactory {
     }
 
     @Override
-    public Collection<Class> getAllClassesForEntitiesGet() {
-      return ImmutableSet.<Class> of(MetricEntitySingle.class);
+    public Collection<Class<?>> getAllClassesForEntitiesGet() {
+      return ImmutableSet.of(MetricEntitySingle.class);
     }
   }
 
@@ -304,9 +304,8 @@ public class MetricEntityFactory {
     }
 
     @Override
-    public Collection<Class> getAllClassesForEntitiesGet() {
-      // TODO Auto-generated method stub
-      return ImmutableSet.<Class> of(SystemMetricEntity0.class,
+    public Collection<Class<?>> getAllClassesForEntitiesGet() {
+      return ImmutableSet.of(SystemMetricEntity0.class,
           SystemMetricEntity1.class, SystemMetricEntity2.class,
           SystemMetricEntity3.class, SystemMetricEntity4.class,
           SystemMetricEntity5.class, SystemMetricEntity6.class,

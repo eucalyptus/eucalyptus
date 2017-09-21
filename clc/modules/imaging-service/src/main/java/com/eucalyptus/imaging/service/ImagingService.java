@@ -65,9 +65,10 @@ public class ImagingService {
     // Authorization
     final Context ctx = Contexts.lookup( );
     final AuthContextSupplier user = ctx.getAuthContext( );
-   
+
     // Dispatch
     try {
+      @SuppressWarnings( "unchecked" )
       final ImagingBackendMessage backendRequest = (ImagingBackendMessage) BaseMessages.deepCopy( request, getBackendMessageClass( request ) );
       final InetSocketAddress remoteAddr = ( ( InetSocketAddress ) ctx.getChannel( ).getRemoteAddress( ) );
       if (remoteAddr != null) {

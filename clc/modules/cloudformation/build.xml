@@ -29,11 +29,11 @@
 -->
 
 <project name="eucalyptus-cloudformation" basedir=".">
-    <property name="builder.suffix" value="groovy" />
-    <uptodate property="groovyc.notRequired" targetfile="${jar.file}">
-      <srcfiles dir="${src.dir}" includes="**/*" />
-    </uptodate>
-    <import file="../module-inc.xml"/>
-	<target name="indent-module" />
+	<property name="javac.extraargs.xlint.unchecked" value="-unchecked"/>
+	<property name="builder.suffix" value="groovy" />
+	<uptodate property="groovyc.notRequired" targetfile="${jar.file}">
+		<srcfiles dir="${src.dir}" includes="**/*" />
+	</uptodate>
+	<import file="../module-inc.xml"/>
 </project>
 

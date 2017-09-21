@@ -260,12 +260,13 @@ public class Cache {
 		data.remove(name);
 	}
 
-	private synchronized Element []
+	@SuppressWarnings( "unchecked" )
+  private synchronized Element []
 	                              allElements(Object types) {
 		if (types instanceof List) {
-			List typelist = (List) types;
+			List<Element> typelist = (List<Element>) types;
 			int size = typelist.size();
-			return (Element []) typelist.toArray(new Element[size]);
+			return typelist.toArray(new Element[size]);
 		} else {
 			Element set = (Element) types;
 			return new Element[] {set};
@@ -311,7 +312,8 @@ public class Cache {
 		return oneElement(name, types, type, minCred);
 	}
 
-	private synchronized void
+	@SuppressWarnings( "unchecked" )
+  private synchronized void
 	addElement(Name name, Element element) {
 		Object types = data.get(name);
 		if (types == null) {
@@ -625,7 +627,8 @@ public class Cache {
 			throw new IllegalArgumentException("getCred: invalid section");
 	}
 
-	private static void
+	@SuppressWarnings( "unchecked" )
+  private static void
 	markAdditional(RRset rrset, Set names) {
 		Record first = rrset.first();
 		if (first.getAdditionalName() == null)
@@ -886,7 +889,7 @@ public class Cache {
 
 	/**
 	 * Returns the contents of the Cache as a string.
-	 */ 
+	 */
 	public String
 	toString() {
 		StringBuffer sb = new StringBuffer();

@@ -73,7 +73,7 @@ import com.google.common.collect.Sets;
  */
 public abstract class FilterSupport<RT> {
 
-  private static final ConcurrentMap<SupportKey,FilterSupport> supportMap = Maps.newConcurrentMap();
+  private static final ConcurrentMap<SupportKey,FilterSupport<?>> supportMap = Maps.newConcurrentMap();
 
   private final Class<RT> resourceClass;
   private final String qualifier;
@@ -363,11 +363,11 @@ public abstract class FilterSupport<RT> {
     public Builder<RT> withLikeExplodedProperty( final String filterName,
                                                  final Function<? super RT, ?> extractor,
                                                  final Function<String, Collection> explodeFunction ) {
-      predicateFunctions.put( filterName, 
+      predicateFunctions.put( filterName,
           FilterSupport.<RT>explodedLiteralFilter( extractor, likeWildFunction( explodeFunction ) ) );
       return this;
     }
-    
+
     /**
      * Declare a constant valued string property.
      *
@@ -529,7 +529,7 @@ public abstract class FilterSupport<RT> {
      * <p>The given function will be passed a expression containing like
      * wildcards and is expected to explode to a collection of literal values
      * to match.</p>
-     * 
+     *
      * @param filterName The name of the filter
      * @param fieldName The path to the field (dot separated)
      * @param explodeFunction Function to expand a given like expression
@@ -538,13 +538,13 @@ public abstract class FilterSupport<RT> {
     public Builder<RT> withLikeExplodingPersistenceFilter( final String filterName,
                                                            final String fieldName,
                                                            final Function<String, Collection> explodeFunction ) {
-      persistenceFilters.put( filterName, persistenceFilter( 
-          fieldName, 
-          aliases( fieldName ), 
+      persistenceFilters.put( filterName, persistenceFilter(
+          fieldName,
+          aliases( fieldName ),
           likeWildFunction( explodeFunction ) ) );
       return this;
     }
-    
+
     private Set<String> aliases( final String fieldPath ) {
       final Set<String> aliases = Sets.newHashSet();
       final Iterator<String> aliasIterator = Splitter.on( "." ).split( fieldPath ).iterator();
@@ -681,19 +681,19 @@ public abstract class FilterSupport<RT> {
     return new Filter( aliases, conjunction, Predicates.and( and ), tagPresent );
   }
 
-  public static FilterSupport forResource( @Nonnull final Class<?> metadataClass,
+  public static FilterSupport<?> forResource( @Nonnull final Class<?> metadataClass,
                                            @Nonnull final String qualifier ) {
     return supportMap.get( supportKey( metadataClass, qualifier ) );
   }
 
   /**
    * Will the given like expression match any value?
-   * 
+   *
    * @param expression The expression to test
    * @return True if fully wild
    */
   public static boolean isTotallyWildLikeExpression( final String expression ) {
-    return expression.replace("%","").isEmpty();  
+    return expression.replace("%","").isEmpty();
   }
 
   protected static Function<String,String> ignoredValueFunction( final String... ignored ) {
@@ -715,11 +715,11 @@ public abstract class FilterSupport<RT> {
       @SuppressWarnings( "unchecked" )
       @Override
       public Predicate<T> apply( final String filterValue ) {
-        Collection values = explodeFunction.apply( filterValue );        
+        Collection values = explodeFunction.apply( filterValue );
         return values == null ?
             Predicates.<T>alwaysTrue() :
-            Predicates.compose( 
-              Predicates.<Object>in( values ), 
+            Predicates.compose(
+              Predicates.<Object>in( values ),
               Functions.compose( extractor, Functions.<T>identity() ) );
       }
     };
@@ -861,7 +861,7 @@ public abstract class FilterSupport<RT> {
         }
       }
     };
-  }  
+  }
 
   private boolean isTagFilter( final String filter ) {
     return isTagFilteringEnabled() && (
@@ -987,11 +987,11 @@ public abstract class FilterSupport<RT> {
       final StringBuilder likeValueBuilder = new StringBuilder();
       translateWildcards( value, likeValueBuilder, "_", "%", SyntaxEscape.Like );
       final String likeValue = likeValueBuilder.toString();
-      
+
       if ( !value.equals( likeValue ) ) { // even if no regex, may contain \ escapes that must be removed
         return Restrictions.like( property, likeValue );
       }
-      
+
       valueObject = persistentValue;
     } else {
       valueObject = persistentValue;
@@ -1003,7 +1003,7 @@ public abstract class FilterSupport<RT> {
       } else {
         return Restrictions.in( property, (Collection) persistentValue );
       }
-    } else {    
+    } else {
       return Restrictions.eq( property, valueObject );
     }
   }
@@ -1022,7 +1022,7 @@ public abstract class FilterSupport<RT> {
   private Criterion tagCriterion( final String accountId,
                                   final List<Junction> junctions ) {
     final Junction conjunction = Restrictions.conjunction();
-    
+
     for ( final Junction criterion : junctions ) {
       final DetachedCriteria criteria = DetachedCriteria.forClass( tagClass )
           .add( Restrictions.eq( "ownerAccountNumber", accountId ) )
@@ -1030,7 +1030,7 @@ public abstract class FilterSupport<RT> {
           .setProjection( Projections.property( resourceFieldName ) );
       conjunction.add( Property.forName( tagFieldName ).in( criteria ) );
     }
-    
+
     return conjunction;
   }
 

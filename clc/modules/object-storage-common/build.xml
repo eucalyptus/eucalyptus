@@ -54,6 +54,4 @@
 			<fileset file="${jar.file}" />
 		</copy>
 	</target>
-    <target name="indent-module">
-    </target>
 </project>

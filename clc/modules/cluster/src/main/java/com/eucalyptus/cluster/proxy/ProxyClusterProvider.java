@@ -713,7 +713,7 @@ public class ProxyClusterProvider implements ClusterProvider, EventListener, Has
     public void fire( ProxyClusterProvider input ) {
       final SubjectRemoteCallbackFactory<? extends RemoteCallback<?,?>, Cluster> factory = newSubjectMessageFactory( this.refresh, input );
       try {
-        RemoteCallback messageCallback = factory.newInstance( );
+        RemoteCallback<?,?> messageCallback = factory.newInstance( );
         BaseMessage baseMessage = AsyncRequests.newRequest( messageCallback ).sendSync( input.getConfiguration( ) );
         if ( Logs.extreme( ).isDebugEnabled( ) ) {
           Logs.extreme( ).debug( "Response to " + messageCallback + ": " + baseMessage );
@@ -742,7 +742,7 @@ public class ProxyClusterProvider implements ClusterProvider, EventListener, Has
                                     final boolean doCoordinatorCheck,
                                     final SubjectRemoteCallbackFactory<? extends RemoteCallback<?,?>, Cluster> factory,
                                     final Callback.Completion transitionCallback ) {
-    RemoteCallback messageCallback = null;
+    RemoteCallback<?,?> messageCallback = null;
     try {
       if ( !doCoordinatorCheck || checkCoordinator( transitionCallback ) ) {
         try {

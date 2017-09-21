@@ -172,7 +172,7 @@ public class Filters {
     public Filter generate() throws InvalidFilterException {
       Filter filter;
 
-      final FilterSupport support = FilterSupport.forResource( resourceType, qualifier );
+      final FilterSupport<?> support = FilterSupport.forResource( resourceType, qualifier );
       if ( support == null ) {
         filter = Filter.alwaysTrue();
       } else {

@@ -52,6 +52,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -225,11 +226,12 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
   }
 
   public Pair<String,Date> calculateNextTimeout( ) {
+    @SuppressWarnings( "unchecked" )
     final Iterable<Pair<String,Optional<Long>>> taggedTimeouts = Iterables.filter( Lists.newArrayList(
         Pair.ropair( "SCHEDULE_TO_CLOSE", toTimeout( getCreationTimestamp( ), getScheduleToCloseTimeout( ) ) ),
         Pair.ropair( "SCHEDULE_TO_START", toTimeout( getCreationTimestamp( ), getScheduleToStartTimeout( ) ) ),
         getState( ) == State.Active ? Pair.ropair( "START_TO_CLOSE", toTimeout( getStartedTimestamp( ), getStartToCloseTimeout( ) ) ) : null,
-        getState( ) == State.Active ? Pair.ropair( "HEARTBEAT",  toTimeout( getLastUpdateTimestamp( ), getHeartbeatTimeout( ) ) ) : null
+        getState( ) == State.Active ? Pair.ropair( "HEARTBEAT", toTimeout( getLastUpdateTimestamp( ), getHeartbeatTimeout( ) ) ) : null
     ), Predicates.notNull( ) );
     final Function<Pair<String,Optional<Long>>,Long> timeExtractor = Functions.compose(
         CollectionUtils.<Long>optionalOrNull( ),

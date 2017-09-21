@@ -126,7 +126,7 @@ public class ListMetricManager {
       Entities.persist(metric);
     }
   }
-  
+
   public static void deleteAllMetrics() {
     try (final TransactionResource db = Entities.transactionFor(ListMetric.class)) {
       Entities.deleteAll(ListMetric.class);
@@ -146,7 +146,7 @@ public class ListMetricManager {
       db.commit();
     }
   }
-   
+
   /**
    * Returns the metrics that are associated with the applied parameters
    * @param accountId the account Id.  If null, this filter will not be used.
@@ -183,7 +183,7 @@ public class ListMetricManager {
         criteria = criteria.add(Restrictions.ge("lastUpdateTimestamp", after));
       }
       if (dimensionMap != null && !dimensionMap.isEmpty()) {
-        // sort the map 
+        // sort the map
         sortedDimensionMap.putAll(dimensionMap);
         // now we are going to add a bunch of restrictions to the criteria...
         // note though there are certain dimensions we don't need to check.
@@ -205,6 +205,7 @@ public class ListMetricManager {
         }
       }
       criteria = NextTokenUtils.addNextTokenConstraints(maxRecords, nextToken, nextTokenCreatedTime, criteria);
+      @SuppressWarnings( "unchecked" )
       List<ListMetric> dbResult = (List<ListMetric>) criteria.list();
       db.commit();
       return dbResult;
@@ -332,6 +333,7 @@ public class ListMetricManager {
             .add(Restrictions.eq("accountId", prefetchFields.getAccountId()))
             .add(Restrictions.eq("namespace", prefetchFields.getNamespace()))
             .add(Restrictions.eq("metricName", prefetchFields.getMetricName()));
+          @SuppressWarnings( "unchecked" )
           List<ListMetric> results = (List<ListMetric>) criteria.list();
           for (ListMetric result : results) {
             dataCache.put(new NonPrefetchFields(result.getMetricType(), result.getDimensionMap()), result);

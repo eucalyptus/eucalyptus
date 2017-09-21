@@ -1072,7 +1072,8 @@ public class ActivityManager {
     for ( final Map.Entry<K,V> currentEntry : map.entrySet() ) {
       if ( entryList.isEmpty( ) || valueComparator.compare( entryValue, currentEntry.getValue() ) > 0) {
         entryValue = currentEntry.getValue( );
-        entryList = Lists.newArrayList( currentEntry );
+        entryList = Lists.newArrayList( );
+        entryList.add( currentEntry );
       } else if ( valueComparator.compare( entryValue, currentEntry.getValue() ) == 0 ) {
         entryList.add( currentEntry );
       }

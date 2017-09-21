@@ -57,8 +57,9 @@ import static org.hamcrest.Matchers.not;
 public class Automata {
   public interface EnumMappable {
     Mapper asEnum = new Mapper( );
-    
+
     class Mapper {
+      @SuppressWarnings( "unchecked" )
       public static <E> E[] getEnumConstants( final E input ) {
         if ( Enum.class.isAssignableFrom( input.getClass( ) ) ) {
           return ( E[] ) ( ( Enum ) input ).getDeclaringClass( ).getEnumConstants( );
@@ -66,17 +67,18 @@ public class Automata {
           throw new RuntimeException( "Failed to produce Enum constants because underlying class does not extend Enum:  "
                                                                   + input.getClass( ) );
         }
-        
+
       }
     }
   }
-  
+
   public interface Transition<T extends Enum<T>> extends EnumMappable, Comparable<T> {}
-  
+
   public interface State<S extends Enum<S>> extends EnumMappable, Comparable<S> {}
-  
+
   public static Logger LOG = Logger.getLogger( Automata.class );
-  
+
+  @SafeVarargs
   public static <S extends Automata.State, P extends HasFullName<P>> Callable<CheckedListenableFuture<P>> sequenceTransitions( final HasStateMachine<P, S, ?> hasFsm, final S... toStates ) {
     checkParam( toStates, not( emptyArray() ) );
     //TODO:GRZE: enforce that the sequence of states denotes a valid transition path
@@ -94,7 +96,7 @@ public class Automata {
     final List<Callable<CheckedListenableFuture<P>>> callables = makeTransitionCallables( hasFsm, actualStates );
     return Futures.sequence( callables.toArray( new Callable[] {} ) );
   }
-  
+
   private static <S extends Automata.State, P extends HasFullName<P>> List<Callable<CheckedListenableFuture<P>>> makeTransitionCallables( final HasStateMachine<P, S, ?> hasFsm, final S... toStates ) {
     final List<Callable<CheckedListenableFuture<P>>> callables = Lists.newArrayList( );
     final StateMachine<P, S, ?> fsm = hasFsm.getStateMachine( );
@@ -110,7 +112,7 @@ public class Automata {
                    + "->"
                    + toState;
           }
-          
+
           @Override
           public CheckedListenableFuture<P> call( ) {
             S fromState = fsm.getState( );
@@ -148,7 +150,7 @@ public class Automata {
                  + ":"
                  + fsm.getState( );
         }
-        
+
         @Override
         public CheckedListenableFuture<P> call( ) {
           CheckedListenableFuture<P> ret = Futures.predestinedFuture( hasFsm.getStateMachine( ).getParent( ) );

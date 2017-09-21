@@ -60,9 +60,9 @@ import javaslang.control.Option;
  * of {@link AnnotatedElement}s.
  * TODO:GRZE: wrong package: should be .util
  */
-public class Ats implements Predicate<Class> {
+public class Ats implements Predicate<Class<? extends Annotation>> {
   private final List<AnnotatedElement> ancestry = Lists.newArrayList( );
-  
+
   private Ats( AnnotatedElement... ancestry ) {
     for ( AnnotatedElement c : ancestry ) {
       if ( c instanceof AnnotatedElement ) {
@@ -70,7 +70,7 @@ public class Ats implements Predicate<Class> {
       }
     }
   }
-  
+
   public <A extends Annotation> boolean has( Class<A> annotation ) {
     for ( AnnotatedElement a : this.ancestry ) {
       if ( a.isAnnotationPresent( annotation ) ) {
@@ -85,7 +85,7 @@ public class Ats implements Predicate<Class> {
     }
     return false;
   }
-  
+
   public <A extends Annotation> A get( Class<A> annotation ) {
     AnnotatedElement decl = find( annotation );
     return decl == null
@@ -103,15 +103,16 @@ public class Ats implements Predicate<Class> {
    * @return Class which is annotated with {@link annotation} and is closest in terms of sub-typing to {@link #getRootClass()}
    * @throws NoSuchElementException if no such class is found
    */
+  @SuppressWarnings( "unchecked" )
   public <A extends Annotation,T> Class<T> findAncestor( final Class<A> annotation ) {
     for ( final AnnotatedElement a : this.ancestry ) {
       if ( a instanceof Class && a.isAnnotationPresent( annotation ) ) {
         return ( Class<T> ) a;
-      }    
+      }
     }
     throw new NoSuchElementException( "Failed to find ancestor with @" + annotation.getSimpleName( ) + " for root class " + getRootClass( ).getSimpleName( ) );
   }
-  
+
   /**
    * Find the nearest conformant AnnotatedElement to the root of the Ats hierarcy that has the argument annotation.
    * @param annotation
@@ -140,7 +141,7 @@ public class Ats implements Predicate<Class> {
     AnnotatedElement a = this.ancestry.get( 0 );
     return a instanceof Class ? ( Class ) a : null;
   }
-  
+
   private static final LoadingCache<Object, Ats> atsCache = CacheBuilder.newBuilder().build(
     new CacheLoader<Object, Ats>() {
       @Override
@@ -154,7 +155,7 @@ public class Ats implements Predicate<Class> {
         }
       }
     });
-  
+
   private static final LoadingCache<Object, Ats> atsHierarchyCache = CacheBuilder.newBuilder().build(
     new CacheLoader<Object, Ats>() {
       @Override
@@ -166,7 +167,7 @@ public class Ats implements Predicate<Class> {
         }
       }
     });
-  
+
   public static Ats from( Object o ) {
     if ( o instanceof AccessibleObject ) {
       return atsCache.getUnchecked( o );
@@ -174,7 +175,7 @@ public class Ats implements Predicate<Class> {
       return atsCache.getUnchecked( Classes.typeOf( o ) );
     }
   }
-  
+
   public static Ats inClassHierarchy( Object o ) {
     if ( o instanceof AccessibleObject ) {
       return atsHierarchyCache.getUnchecked( o );
@@ -182,20 +183,20 @@ public class Ats implements Predicate<Class> {
       return atsHierarchyCache.getUnchecked( Classes.typeOf( o ) );
     }
   }
-  
+
   List<AnnotatedElement> getAncestry( ) {
     return this.ancestry;
   }
-  
+
   enum AnnotatedElementToString implements Function<AnnotatedElement, String> {
     INSTANCE;
-    
+
     @Override
     public String apply( AnnotatedElement input ) {
       return input.toString( ) + ":" + "[" + Joiner.on( "," ).join( input.getAnnotations( ) ) + "]";
     }
   }
-  
+
   @Override
   public String toString( ) {
     return String.format( "Ats:class=%s\nAts:ancestor=%s", getRootClass( ),
@@ -203,7 +204,7 @@ public class Ats implements Predicate<Class> {
   }
 
   @Override
-  public boolean apply( Class input ) {
+  public boolean apply( Class<? extends Annotation> input ) {
     return this.has( input );
   }
 }

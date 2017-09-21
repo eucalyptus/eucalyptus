@@ -230,6 +230,7 @@ public class CloudWatchService {
     }
 
     try {
+      @SuppressWarnings( "unchecked" )
       final CloudWatchBackendMessage backendRequest = (CloudWatchBackendMessage) BaseMessages.deepCopy( request, getBackendMessageClass( request ) );
       final BaseMessage backendResponse = send( backendRequest );
       final CloudWatchMessage response = (CloudWatchMessage) BaseMessages.deepCopy( backendResponse, request.getReply().getClass() );

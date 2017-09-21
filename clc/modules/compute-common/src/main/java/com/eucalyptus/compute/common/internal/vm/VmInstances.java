@@ -64,6 +64,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -218,11 +219,11 @@ public class VmInstances {
       public List<VmInstance> get() {
         return Entities.query( VmInstance.withToken( ownerFullName, clientToken ) );
       }
-    }, Predicates.and(
+    }, Predicates.and( ImmutableList.of(
         CollectionUtils.propertyPredicate( clientToken, VmInstance.clientToken( ) ),
         RestrictedTypes.filterByOwner( ownerFullName ),
         checkPredicate( predicate )
-    ) );
+    ) ) );
   }
 
   private static List<VmInstance> list( @Nonnull Supplier<List<VmInstance>> instancesSupplier,
@@ -276,9 +277,9 @@ public class VmInstances {
     },
     ;
 
+    @SuppressWarnings( "unchecked" )
     @Override
     public List<String> results( final List<?> listing ) {
-      //noinspection unchecked
       return ( List<String> ) listing;
     }
   }

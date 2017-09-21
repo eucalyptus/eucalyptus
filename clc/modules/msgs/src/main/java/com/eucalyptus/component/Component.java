@@ -86,7 +86,7 @@ public class Component implements HasName<Component> {
   public final ComponentId            identity;
   private final ServiceRegistry       serviceRegistry;
   private final ComponentBootstrapper bootstrapper;
-  
+
   public enum State implements Automata.State<State>, Predicate<ServiceConfiguration> {
     BROKEN,
     PRIMORDIAL,
@@ -96,13 +96,13 @@ public class Component implements HasName<Component> {
     NOTREADY,
     DISABLED,
     ENABLED;
-    
+
     @Override
     public boolean apply( ServiceConfiguration input ) {
       return this.equals( input.lookupState( ) );
     }
   }
-  
+
   public enum Transition implements Automata.Transition<Transition> {
     INITIALIZING,
     LOAD,
@@ -120,71 +120,71 @@ public class Component implements HasName<Component> {
     RELOAD,
     REMOVING;
   }
-  
+
   Component( ComponentId componentId ) throws ServiceRegistrationException {
     this.identity = componentId;
     this.serviceRegistry = new ServiceRegistry( );
     this.bootstrapper = new ComponentBootstrapper( this );
   }
-  
+
   /**
    * @return the identity
    */
   public ComponentId getComponentId( ) {
     return this.identity;
   }
-  
+
   public State getState( ) {
     return this.hasLocalService( )
       ? this.getLocalServiceConfiguration( ).lookupState( )
       : State.PRIMORDIAL;
   }
-  
+
   /**
    * Get the name of this component. This is the proper short name; e.g., 'eucalyptus', 'walrus',
    * etc, as used in the META-INF descriptor file.
-   * 
+   *
    * @return Component name
    */
   public String getName( ) {
     return this.identity.name( );
   }
-  
+
   public ServiceBuilder<? extends ServiceConfiguration> getBuilder( ) {
     return ServiceBuilders.lookup( this.identity.getClass( ) );
   }
-  
+
   public NavigableSet<ServiceConfiguration> services( ) {
     return this.serviceRegistry.getServices( );
   }
-  
+
   public Boolean hasLocalService( ) {
     return this.serviceRegistry.hasLocalService( );
   }
-  
+
   public Boolean isEnabledLocally( ) {
     return this.serviceRegistry.hasLocalService( ) && State.ENABLED.equals( this.getLocalServiceConfiguration( ).lookupState( ) );
   }
-  
+
   public Boolean isRunningLocally( ) {
     return this.isEnabledLocally( );
   }
-  
+
   /**
    * @return the bootstrapper
    */
   public CanBootstrap getBootstrapper( ) {
     return this.bootstrapper;
   }
-  
+
   public ServiceConfiguration lookup( String name ) {
     return this.serviceRegistry.getService( name );
   }
-  
+
   /**
    * Builds a BasicService instance for this component using the local default
    * values.
-   * 
+   *
    * @return BasicService instance of the service
    * @throws ServiceRegistrationException
    */
@@ -195,10 +195,10 @@ public class Component implements HasName<Component> {
       return initRemoteService( Internets.localHostInetAddress( ) );
     }
   }
-  
+
   /**
    * Builds a BasicService instance for this cloudLocal component when Eucalyptus is remote.
-   * 
+   *
    * @return BasicService instance of the service
    * @throws ServiceRegistrationException
    */
@@ -211,7 +211,7 @@ public class Component implements HasName<Component> {
                + config );
     return config;
   }
-  
+
   void destroy( final ServiceConfiguration configuration ) throws ServiceRegistrationException {
     try {
       BasicService service = null;
@@ -231,11 +231,11 @@ public class Component implements HasName<Component> {
       throw new ServiceRegistrationException( "Failed to find service corresponding to: " + configuration, ex );
     }
   }
-  
+
   /**
    * Builds a BasicService instance for this component using the provided service
    * configuration.
-   * 
+   *
    * @throws ServiceRegistrationException
    */
   public void setup( final ServiceConfiguration config ) throws IllegalStateException {
@@ -247,7 +247,7 @@ public class Component implements HasName<Component> {
       this.serviceRegistry.register( config );
     }
   }
-  
+
   public boolean hasService( ServiceConfiguration config ) {
     return this.serviceRegistry.hasService( config );
   }
@@ -275,17 +275,17 @@ public class Component implements HasName<Component> {
                             ? this.serviceRegistry.getLocalService( )
                             : "not-local" ) );
   }
-  
+
   /**
    * Components are ordered by the lexicographic ordering of the name.
-   * 
+   *
    * @see java.lang.Comparable#compareTo(java.lang.Object)
    */
   @Override
   public int compareTo( Component that ) {
     return this.getName( ).compareTo( that.getName( ) );
   }
-  
+
   /**
    * @see java.lang.Object#hashCode()
    * @return
@@ -300,7 +300,7 @@ public class Component implements HasName<Component> {
                : this.identity.hashCode( ) );
     return result;
   }
-  
+
   /**
    * @see java.lang.Object#equals(java.lang.Object)
    * @param obj
@@ -327,15 +327,15 @@ public class Component implements HasName<Component> {
     }
     return true;
   }
-  
+
   class ServiceRegistry {
-    private final AtomicReference<BasicService>                     localService = new AtomicReference( null );
+    private final AtomicReference<BasicService>                     localService = new AtomicReference<>( null );
     private final ConcurrentMap<ServiceConfiguration, BasicService> services     = Maps.newConcurrentMap( );
-    
+
     public boolean hasLocalService( ) {
       return this.localService.get( ) != null;
     }
-    
+
     public BasicService getLocalService( ) {
       BasicService ret = this.localService.get( );
       if ( ret == null ) {
@@ -344,21 +344,21 @@ public class Component implements HasName<Component> {
         return ret;
       }
     }
-    
+
     /**
      * Obtain a snapshot of the current service state. Note that this method creates a new set and
      * changes to the returned set will not be reflected in the underlying services set.
-     * 
+     *
      * @return {@link NavigableSet<Service>} of the registered service of this {@link Component}
      *         type.
      */
     public NavigableSet<ServiceConfiguration> getServices( ) {
       return Sets.newTreeSet( this.services.keySet( ) );
     }
-    
+
     /**
      * Deregisters the service with the provided {@link FullName}.
-     * 
+     *
      * @param fullName
      * @return {@link Service} instance of the deregistered service.
      * @throws NoSuchElementException if no {@link Service} is registered with the provided
@@ -379,13 +379,13 @@ public class Component implements HasName<Component> {
       }
       return ret;
     }
-    
+
     /**
      * Returns the {@link Service} instance which was registered with the provided
      * {@link ServiceConfiguration}, if it exists. If a service with the given name
      * does not exist a
      * NoSuchElementException is thrown.
-     * 
+     *
      * @see #lookup(FullName)
      * @param configuration
      * @return {@link Service} corresponding to provided the {@link ServiceConfiguration}
@@ -398,10 +398,10 @@ public class Component implements HasName<Component> {
         return this.services.get( config );
       }
     }
-    
+
     /**
      * Register the given {@link Service} with the registry. Only used internally.
-     * 
+     *
      * @param service
      * @throws ServiceRegistrationException
      */
@@ -442,12 +442,12 @@ public class Component implements HasName<Component> {
       }
       return ret;
     }
-    
+
     /**
      * Returns the {@link Service} instance which was registered with the provided service name if
      * it
      * exists. If a service with the given name does not exist a NoSuchElementException is thrown.
-     * 
+     *
      * @param name - the name used to register the specific service.
      * @return
      * @throws NoSuchElementException
@@ -464,10 +464,10 @@ public class Component implements HasName<Component> {
                                         + " for component: "
                                         + Component.this.getName( ) );
     }
-    
+
     /**
      * TODO: DOCUMENT Component.java
-     * 
+     *
      * @param config
      * @return
      */
@@ -475,11 +475,11 @@ public class Component implements HasName<Component> {
       return this.services.containsKey( config );
     }
   }
-  
+
   public ServiceConfiguration getLocalServiceConfiguration( ) {
     return this.serviceRegistry.getLocalService( ).getServiceConfiguration( );
   }
-  
+
   /**
    * @param componentConfiguration
    * @return
@@ -487,39 +487,39 @@ public class Component implements HasName<Component> {
   public StateMachine<ServiceConfiguration, State, Transition> getStateMachine( ServiceConfiguration conf ) {
     return this.serviceRegistry.lookup( conf ).getStateMachine( );
   }
-  
+
   public void addBootstrapper( Bootstrapper bootstrapper ) {
     this.bootstrapper.addBootstrapper( bootstrapper );
   }
-  
+
   public boolean load( ) {
     return this.bootstrapper.load( );
   }
-  
+
   public boolean start( ) {
     return this.bootstrapper.start( );
   }
-  
+
   public boolean enable( ) {
     return this.bootstrapper.enable( );
   }
-  
+
   public boolean stop( ) {
     return this.bootstrapper.stop( );
   }
-  
+
   public void destroy( ) {
     this.bootstrapper.destroy( );
   }
-  
+
   public boolean disable( ) {
     return this.bootstrapper.disable( );
   }
-  
+
   public boolean check( ) {
     return this.bootstrapper.check( );
   }
-  
+
   public List<Bootstrapper> getBootstrappers( ) {
     return this.bootstrapper.getBootstrappers( );
   }
@@ -537,12 +537,12 @@ public class Component implements HasName<Component> {
       }
     }
   }
-  
+
   static class ComponentBootstrapper implements CanBootstrap {
     private final Multimap<Bootstrap.Stage, Bootstrapper> bootstrappers;
     private final Multimap<Bootstrap.Stage, Bootstrapper> disabledBootstrappers;
     private final Component                               component;
-    
+
     ComponentBootstrapper( Component component ) {
       super( );
       this.component = component;
@@ -551,7 +551,7 @@ public class Component implements HasName<Component> {
       Multimap<Bootstrap.Stage, Bootstrapper> b = ArrayListMultimap.create( );
       this.disabledBootstrappers = Multimaps.synchronizedMultimap( b );
     }
-    
+
     public void addBootstrapper( Bootstrapper bootstrapper ) {
       if ( Stage.PrivilegedConfiguration.equals( bootstrapper.getBootstrapStage( ) ) ) {
         EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_SKIPPED, "stage:" + bootstrapper.getBootstrapStage( ).toString( ),
@@ -566,7 +566,7 @@ public class Component implements HasName<Component> {
         this.bootstrappers.put( bootstrapper.getBootstrapStage( ), bootstrapper );
       }
     }
-    
+
     private synchronized void updateBootstrapDependencies( ) {
       Iterable<Bootstrapper> currBootstrappers = Iterables.concat( Lists.newArrayList( this.bootstrappers.values( ) ),
                                                                                    Lists.newArrayList( this.disabledBootstrappers.values( ) ) );
@@ -585,25 +585,25 @@ public class Component implements HasName<Component> {
         }
       }
     }
-    
+
     private void enableBootstrapper( Bootstrap.Stage stage, Bootstrapper bootstrapper ) {
       EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_MARK_ENABLED, "stage:", stage.toString( ), this.component.getComponentId( ).name( ),
                         bootstrapper.getClass( ).getName( ), "component=" + this.component.getComponentId( ).name( ) ).exhaust( );
       this.disabledBootstrappers.remove( stage, bootstrapper );
       this.bootstrappers.put( stage, bootstrapper );
     }
-    
+
     private void disableBootstrapper( Bootstrap.Stage stage, Bootstrapper bootstrapper ) {
       EventRecord.here( Bootstrap.class, EventType.BOOTSTRAPPER_MARK_DISABLED, "stage:" + stage.toString( ), this.component.getComponentId( ).name( ),
                         bootstrapper.getClass( ).getName( ), "component=" + this.component.getComponentId( ).name( ) ).exhaust( );
       this.bootstrappers.remove( stage, bootstrapper );
       this.disabledBootstrappers.put( stage, bootstrapper );
     }
-    
+
     private boolean doTransition( EventType transition, Function<Bootstrapper, Boolean> checkedFunction ) {
-      return doTransition( transition, checkedFunction, Functions.forPredicate( ( Predicate ) Predicates.alwaysTrue( ) ) );
+      return doTransition( transition, checkedFunction, Functions.forPredicate( Predicates.alwaysTrue( ) ) );
     }
-    
+
     private boolean doTransition( EventType transition, Function<Bootstrapper, Boolean> checkedFunction, Function<Bootstrapper, Boolean> rollbackFunction ) {
       String name = transition.name( ).replaceAll( ".*_", "" ).toLowerCase( );
       List<Bootstrapper> rollbackBootstrappers = Lists.newArrayList( );
@@ -658,7 +658,7 @@ public class Component implements HasName<Component> {
       }
       return true;
     }
-    
+
     enum BootstrapperTransition implements Function<Bootstrapper, Boolean> {
       LOAD {
         @Override
@@ -712,9 +712,9 @@ public class Component implements HasName<Component> {
           return arg0.check( );
         }
       };
-      
+
       public abstract Boolean runBootstrapper( Bootstrapper arg0 ) throws Exception;
-      
+
       @Override
       public Boolean apply( Bootstrapper input ) {
         try {
@@ -724,37 +724,37 @@ public class Component implements HasName<Component> {
         }
       }
     }
-    
+
     @Override
     public boolean load( ) {
       return this.doTransition( EventType.BOOTSTRAPPER_LOAD, BootstrapperTransition.LOAD, BootstrapperTransition.DESTROY );
     }
-    
+
     @Override
     public boolean start( ) {
       return this.doTransition( EventType.BOOTSTRAPPER_START, BootstrapperTransition.START, BootstrapperTransition.STOP );
     }
-    
+
     @Override
     public boolean enable( ) {
       return this.doTransition( EventType.BOOTSTRAPPER_ENABLE, BootstrapperTransition.ENABLE, BootstrapperTransition.DISABLE );
     }
-    
+
     @Override
     public boolean stop( ) {
       return this.doTransition( EventType.BOOTSTRAPPER_ENABLE, BootstrapperTransition.STOP );
     }
-    
+
     @Override
     public void destroy( ) {
       this.doTransition( EventType.BOOTSTRAPPER_ENABLE, BootstrapperTransition.DESTROY );
     }
-    
+
     @Override
     public boolean disable( ) {
       return this.doTransition( EventType.BOOTSTRAPPER_ENABLE, BootstrapperTransition.DISABLE );
     }
-    
+
     @Override
     public boolean check( ) {
       return this.doTransition( EventType.BOOTSTRAPPER_ENABLE, BootstrapperTransition.CHECK );
@@ -763,11 +763,11 @@ public class Component implements HasName<Component> {
     public List<Bootstrapper> getBootstrappers( ) {
       return Lists.newArrayList( this.bootstrappers.values( ) );
     }
-    
+
     @Override
     public String toString( ) {
       return Joiner.on( "\n" ).join( this.bootstrappers.values( ) );
     }
-    
+
   }
 }

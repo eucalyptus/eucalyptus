@@ -39,6 +39,4 @@
 
 <project name="eucalyptus-ws" basedir=".">
 	<import file="../module-inc.xml" />
-	<target name="indent-module">
-	</target>
 </project>

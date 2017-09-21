@@ -40,8 +40,4 @@
 <project name="eucalyptus-storage-common" basedir=".">
         <property name="builder.suffix" value="groovy" />
 	<import file="../module-inc.xml"/>
-	<target name="indent-module">
-	</target>
-	<target name="install-module">
-	</target>
 </project>

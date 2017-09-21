@@ -242,7 +242,7 @@ public class PostgresqlQueuePersistence implements QueuePersistence {
     if (SimpleQueueProperties.ENABLE_METRICS_COLLECTION) {
       return partitionTokens;
     } else {
-      return Collections.EMPTY_LIST;
+      return Collections.emptyList( );
     }
   }
 
@@ -255,7 +255,7 @@ public class PostgresqlQueuePersistence implements QueuePersistence {
   }
 
   @Override
-  public Collection<Queue.Key> listActiveQueues(String partitionToken) {  
+  public Collection<Queue.Key> listActiveQueues(String partitionToken) {
     try (TransactionResource db =
            Entities.transactionFor(QueueEntity.class)) {
       long nowSecs = SimpleQueueService.currentTimeSeconds();
