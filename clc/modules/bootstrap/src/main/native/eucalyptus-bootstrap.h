@@ -130,7 +130,6 @@ static int debug = 0;
 #define EUCALYPTUS_ETC_DIR         EUCALYPTUS_CONF_DIR "/cloud.d"
 #define EUCALYPTUS_SCRIPT_DIR      EUCALYPTUS_ETC_DIR "/scripts"
 #define EUCALYPTUS_JAVA_LIB_DIR    EUCALYPTUS_DATA_DIR
-#define EUCALYPTUS_CLASSCACHE_DIR  EUCALYPTUS_RUN_DIR "/classcache"
 #define java_load_bootstrapper euca_load_bootstrapper
 #define GIG  1073741824.0
 
@@ -207,7 +206,7 @@ static struct stat home;
 static int stopping = 0;
 static int doreload = 0;
 
-#define TS_BUFF_MAX 24 
+#define TS_BUFF_MAX 24
 char ts_buff[TS_BUFF_MAX]; // Time stamp string buffer
 
 static int get_timestamp(char *buff, int buff_len); // copies the current timestamp into the buffer

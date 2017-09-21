@@ -124,7 +124,6 @@
 #define EUCA_ETC_DIR                             EUCALYPTUS_CONF_DIR "/cloud.d"
 #define EUCA_SCRIPT_DIR                          EUCA_ETC_DIR "/scripts"
 #define EUCALYPTUS_JAVA_LIB_DIR                  EUCALYPTUS_DATA_DIR
-#define EUCA_CLASSCACHE_DIR                      EUCALYPTUS_RUN_DIR "/classcache"
 
 //! @}
 

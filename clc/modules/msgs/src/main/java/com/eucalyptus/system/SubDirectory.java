@@ -81,7 +81,6 @@ public enum SubDirectory {
       }
     }
   },
-  CLASSCACHE( BaseDirectory.RUN, "classcache" ),
   KEYS( BaseDirectory.STATE, "keys" ) {
     @Override
     protected void assertPermissions( ) {
@@ -125,7 +124,7 @@ public enum SubDirectory {
       }
     }
   };
-  
+
   private static Logger LOG = Logger.getLogger( SubDirectory.class );
   private final BaseDirectory         parent;
   private final String                dir;
@@ -140,12 +139,12 @@ public enum SubDirectory {
     this.dir = dir;
     this.assertPermissions = assertPermissions;
   }
-  
+
   @Override
   public String toString( ) {
     return this.parent.toString( ) + File.separator + this.dir;
   }
-  
+
   public File getFile( ) {
     return new File( this.toString( ) );
   }
@@ -163,19 +162,19 @@ public enum SubDirectory {
       }
     }
   }
-  
+
   public File getChildFile( String... path ) {
     return new File( getChildPath( path ) );
   }
-  
+
   public boolean hasChild( String... path ) {
     return getChildFile( path ).exists( );
   }
-  
+
   public String getChildPath( String... path ) {
     return Directories.getChildPath( this.toString( ), path );
   }
-  
+
   protected void assertPermissions( ) {
     try {
       Directories.execPermissions( "chown -R  " + System.getProperty( "euca.user" ) + " " + this.toString( ) );

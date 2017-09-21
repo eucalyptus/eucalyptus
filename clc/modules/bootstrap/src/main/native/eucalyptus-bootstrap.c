@@ -697,18 +697,16 @@ void euca_load_bootstrapper(void)
 char *java_library_path(euca_opts * args)
 {
 #define JAVA_PATH_LEN 65536
-    char lib_dir[256], etc_dir[256], script_dir[256], class_cache_dir[256], *jar_list = (char *)malloc(JAVA_PATH_LEN * sizeof(char));
+    char lib_dir[256], etc_dir[256], script_dir[256], *jar_list = (char *)malloc(JAVA_PATH_LEN * sizeof(char));
     __die((strlen(GETARG(args, home)) + strlen(EUCALYPTUS_JAVA_LIB_DIR) >= 256), "Directory path too long: " EUCALYPTUS_JAVA_LIB_DIR,
           GETARG(args, home));
     snprintf(lib_dir, 255, EUCALYPTUS_JAVA_LIB_DIR, GETARG(args, home));
     snprintf(etc_dir, 255, EUCALYPTUS_ETC_DIR, GETARG(args, home));
-    snprintf(class_cache_dir, 255, EUCALYPTUS_CLASSCACHE_DIR, GETARG(args, home));
     snprintf(script_dir, 255, EUCALYPTUS_SCRIPT_DIR, GETARG(args, home));
     if (!CHECK_ISDIR(lib_dir))
         __die(1, "Can't find library directory %s", lib_dir);
     int wb = 0;
     wb += snprintf(jar_list + wb, JAVA_PATH_LEN - wb, "-Djava.class.path=%s:", etc_dir);
-    wb += snprintf(jar_list + wb, JAVA_PATH_LEN - wb, "%s:", class_cache_dir);
     wb += snprintf(jar_list + wb, JAVA_PATH_LEN - wb, "%s", script_dir);
     DIR *lib_dir_p = opendir(lib_dir);
     if (!lib_dir_p)

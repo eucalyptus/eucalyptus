@@ -48,7 +48,7 @@
  * one or more binding definitions, caching the binary classes modified by the
  * bindings. It then uses these modified forms of the classes when they're
  * requested for loading.
- * 
+ *
  * @author Dennis M. Sosnoski
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
@@ -83,7 +83,6 @@ import org.jibx.binding.model.ValidationContext;
 import org.jibx.runtime.JiBXException;
 import org.jibx.runtime.impl.UnmarshallingContext;
 import org.jibx.util.ClasspathUrlExtender;
-import com.eucalyptus.system.SubDirectory;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteSource;
@@ -92,18 +91,10 @@ import com.google.common.io.Resources;
 public class BootstrapClassLoader extends URLClassLoader {
   private static Logger               LOG       = Logger.getLogger( BootstrapClassLoader.class );
   private static volatile BootstrapClassLoader singleton;
-  
+
   public static BootstrapClassLoader init( ) {
     try {
       if ( singleton == null ) {
-        if ( SubDirectory.CLASSCACHE.getFile( ).exists( ) ) {
-          try {
-            FileUtils.deleteDirectory( SubDirectory.CLASSCACHE.getFile( ) );
-          } catch ( IOException ex ) {
-            LOG.error( ex, ex );
-          }
-        }
-        SubDirectory.CLASSCACHE.check( );
         String[] paths = Utility.getClassPaths( );
         URL[] urls = new URL[paths.length];
         for ( int i = 0; i < urls.length; i++ ) {
@@ -118,15 +109,15 @@ public class BootstrapClassLoader extends URLClassLoader {
       return null;
     }
   }
-  
+
   private final List<BindingDefinition> bindings = Lists.newArrayList( );
   private boolean                       isBound;
   private final Map<String, ClassFile>  classMap = Maps.newHashMap( );
-  
+
   public static BootstrapClassLoader getInstance( ) {
     return init( );
   }
-  
+
   private BootstrapClassLoader( URL[] urls ) throws MalformedURLException {
     super( urls, ClassLoader.getSystemClassLoader( ) );
     List<String> fpaths = Lists.newArrayList( );
@@ -146,7 +137,7 @@ public class BootstrapClassLoader extends URLClassLoader {
     MungedClass.reset( );
     BindingDefinition.reset( );
   }
-  
+
   public void reset( ) {
     this.bindings.clear( );
     this.classMap.clear( );
@@ -155,7 +146,7 @@ public class BootstrapClassLoader extends URLClassLoader {
     MungedClass.reset( );
     BindingDefinition.reset( );
   }
-  
+
   public static URL[] getClassPaths( ) throws MalformedURLException {
     String[] paths = Utility.getClassPaths( );
     URL[] urls = new URL[paths.length];
@@ -164,15 +155,15 @@ public class BootstrapClassLoader extends URLClassLoader {
     }
     return urls;
   }
-  
+
   public void loadBinding( String fname, String sname, InputStream is, URL url ) throws JiBXException, IOException {
     throw new IllegalStateException( "Call not allowed: only resources can currently be loaded." );
   }
-  
+
   public void loadFileBinding( String path ) throws JiBXException, IOException {
     throw new IllegalStateException( "Call not allowed: only resources can currently be loaded." );
   }
-  
+
   public void loadResourceBinding( String path ) throws JiBXException, IOException {
     if ( this.isBound ) {
       throw new IllegalStateException( "Call not allowed after bindings compiled" );
@@ -229,25 +220,25 @@ public class BootstrapClassLoader extends URLClassLoader {
       }
     }
   }
-  
+
   private static ClassFile findMappedClass( BindingElement root ) {
     ArrayList childs = root.topChildren( );
     if ( childs != null ) {
-      
+
       // recursively search for modifiable mapped class
       for ( int i = childs.size( ) - 1; i >= 0; i-- ) {
         Object child = childs.get( i );
         if ( child instanceof MappingElement ) {
-          
+
           // end scan if a real mapping is found
           MappingElementBase map = ( MappingElementBase ) child;
           ClassFile cf = map.getHandledClass( ).getClassFile( );
           if ( !cf.isInterface( ) && cf.isModifiable( ) ) {
             return cf;
           }
-          
+
         } else if ( child instanceof IncludeElement ) {
-          
+
           // recurse on included binding
           BindingElement bind = ( ( IncludeElement ) child ).getBinding( );
           if ( bind != null ) {
@@ -261,7 +252,7 @@ public class BootstrapClassLoader extends URLClassLoader {
     }
     return null;
   }
-  
+
   public void processBindings( ) throws JiBXException {
     if ( !this.isBound ) {
       for ( BindingDefinition binding : this.bindings ) {
@@ -278,7 +269,7 @@ public class BootstrapClassLoader extends URLClassLoader {
       this.isBound = true;
     }
   }
-  
+
   protected boolean isBoundClass( String name ) {
 //    if ( !this.isBound ) {
 //      try {
@@ -289,7 +280,7 @@ public class BootstrapClassLoader extends URLClassLoader {
 //    }
     return this.classMap.containsKey( name );
   }
-  
+
   protected Class findClass( String name ) throws ClassNotFoundException {
     if ( isBoundClass( name ) ) {
       try {
@@ -303,8 +294,8 @@ public class BootstrapClassLoader extends URLClassLoader {
       }
     } else {
       return super.findClass( name );
-      
+
     }
   }
-  
+
 }
