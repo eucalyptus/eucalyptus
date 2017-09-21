@@ -38,13 +38,15 @@ import com.eucalyptus.component.annotation.ComponentMessage
 import com.google.common.collect.Lists
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
-import java.lang.reflect.Field
+import java.lang.reflect.Field //TODO:STEVE: rmeove
 import javax.annotation.Nonnull
 import com.google.common.collect.Maps
 import com.google.common.base.Function
 import com.eucalyptus.util.CollectionUtils
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 import com.google.common.base.Predicate
+
+import java.lang.reflect.Method
 
 import static com.eucalyptus.util.MessageValidation.validateRecursively
 
@@ -84,9 +86,8 @@ class AutoScalingMessage extends BaseMessage {
 
   static ResponseMetadata getResponseMetadata( final BaseMessage message ) {
     try {
-      Field responseMetadataField = message.class.getDeclaredField("responseMetadata")
-      responseMetadataField.setAccessible( true )
-      return ((ResponseMetadata) responseMetadataField.get( message ))
+      Method responseMetadataMethod = message.class.getMethod("getResponseMetadata")
+      return ((ResponseMetadata) responseMetadataMethod.invoke( message ))
     } catch ( Exception e ) {
     }
     null
@@ -303,7 +304,7 @@ class InstanceMonitoring extends EucalyptusData {
   Boolean enabled
   InstanceMonitoring() {  }
   InstanceMonitoring( Boolean enabled ) {
-    this.enabled = enabled  
+    this.enabled = enabled
   }
 }
 class DescribeScheduledActionsType extends AutoScalingMessage {
@@ -355,7 +356,7 @@ class DescribeLaunchConfigurationsType extends AutoScalingMessage {
   List<String> launchConfigurationNames() {
     List<String> names = Lists.newArrayList()
     if ( launchConfigurationNames != null ) {
-      names = launchConfigurationNames.getMember()  
+      names = launchConfigurationNames.getMember()
     }
     return names
   }
@@ -534,7 +535,7 @@ class SuspendedProcessType extends EucalyptusData {
 class SecurityGroups extends EucalyptusData {
   SecurityGroups() {  }
   SecurityGroups( Collection<String> groups ) {
-    member.addAll( groups )  
+    member.addAll( groups )
   }
   @Nonnull @AutoScalingMessageValidation.FieldRegex(AutoScalingMessageValidation.FieldRegexValue.EC2_NAME)
   @HttpParameterMapping(parameter="member")
@@ -790,7 +791,7 @@ class BlockDeviceMappingType extends EucalyptusData {
     this.deviceName = deviceName
     this.virtualName = virtualName
     if ( snapshotId != null || volumeSize != null ) {
-      this.ebs = new Ebs( snapshotId: snapshotId, volumeSize: volumeSize )  
+      this.ebs = new Ebs( snapshotId: snapshotId, volumeSize: volumeSize )
     }
   }
 }
@@ -952,7 +953,7 @@ class DescribeAutoScalingGroupsType extends AutoScalingMessage {
       names = autoScalingGroupNames.getMember()
     }
     return names
-  }  
+  }
 }
 class CreateLaunchConfigurationType extends AutoScalingMessage {
   Boolean associatePublicIpAddress
@@ -986,9 +987,9 @@ class CreateLaunchConfigurationType extends AutoScalingMessage {
     Map<String,String> errors = super.validate()
     // Validate security group identifiers or names used consistently
     if ( securityGroups != null && securityGroups.member != null ) {
-      int idCount = CollectionUtils.reduce( 
-          securityGroups.member, 
-          0, 
+      int idCount = CollectionUtils.reduce(
+          securityGroups.member,
+          0,
           CollectionUtils.count( { String group -> group.matches( "sg-[0-9A-Fa-f]{8}" ) } as Predicate<String> ) )
       if ( idCount != 0 && idCount != securityGroups.member.size() ) {
         errors.put(
