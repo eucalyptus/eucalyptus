@@ -54,7 +54,6 @@ import org.apache.log4j.Logger;
 import com.ceph.rbd.Rbd;
 
 import com.eucalyptus.blockstorage.FileResource;
-import com.eucalyptus.blockstorage.SnapPointsUpdater;
 import com.eucalyptus.blockstorage.StorageManagers.StorageManagerProperty;
 import com.eucalyptus.blockstorage.StorageResource;
 import com.eucalyptus.blockstorage.ceph.entities.CephRbdImageToBeDeleted;
@@ -92,7 +91,7 @@ import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
 
 /**
  * CephProvider implements the Eucalyptus Storage Controller plug-in for interacting with a Ceph cluster
- * 
+ *
  */
 @StorageManagerProperty(value = "ceph-rbd", manager = SANManager.class)
 public class CephRbdProvider implements SANProvider {
@@ -142,10 +141,6 @@ public class CephRbdProvider implements SANProvider {
     accessiblePools = Sets.newHashSet();
     accessiblePools.addAll(COMMA_SPLITTER.splitToList(cachedConfig.getCephVolumePools()));
     accessiblePools.addAll(COMMA_SPLITTER.splitToList(cachedConfig.getCephSnapshotPools()));
-    
-    // For Euca v4.4.x only, check for missing snapshot points and attempt to fill them in.
-    //TODO To be removed in v5.0
-    SnapPointsUpdater.updateSnapPoints();
   }
 
   @Override
@@ -263,10 +258,10 @@ public class CephRbdProvider implements SANProvider {
         Transactions.save(new CephRbdSnapshotToBeDeleted(snapParent.getPool(), snapParent.getImage(), snapParent.getSnapshot()));
       } else {
         // If the snapshot was created before Euca v4.4.0, then there would be
-        // no snapshot point ID, but the PopulateSnapPoints groovy script 
+        // no snapshot point ID, but the PopulateSnapPoints groovy script
         // (existing only in v4.4.x) should have found it and filled in the
         // snapshot point ID during Ceph provider initialization.
-        LOG.debug("Cannot delete RBD snapshot for " + snapshotId + " due to an invalid snapshot point ID " + 
+        LOG.debug("Cannot delete RBD snapshot for " + snapshotId + " due to an invalid snapshot point ID " +
             snapshotPointId + ". If this EBS snapshot originated in another AZ, then this is normal. " +
             "Otherwise, you may have to delete the Ceph RBD snapshot manually.");
       }
@@ -388,7 +383,7 @@ public class CephRbdProvider implements SANProvider {
     if (parent != null && !Strings.isNullOrEmpty(parent.getPool())) {
       String snapshotPoint = CephRbdInfo.SNAPSHOT_FOR_PREFIX + snapshotId;
       String snapshotPointId = null;
-      // Don't allow >1 concurrent snapshot operation on the same volume, 
+      // Don't allow >1 concurrent snapshot operation on the same volume,
       // because Ceph sometimes has failures, see EUCA-13114
       EucaSemaphore semaphore = EucaSemaphoreDirectory.getSolitarySemaphore(SEMAPHORE_PREFIX + parentVolumeId);
       try {
@@ -485,9 +480,9 @@ public class CephRbdProvider implements SANProvider {
             // Get the images that were marked for deletion from the database
             final List<String> imagesToBeCleaned = Transactions.transform(search, IMAGE_NAME_FUNCTION);
             LOG.trace("List of images to be cleaned up for pool " + pool + ": " + imagesToBeCleaned);
-            
+
             // Invoke clean up
-            List<String> imageSnapshotsDeleted = 
+            List<String> imageSnapshotsDeleted =
                 rbdService.cleanUpImages(pool, cachedConfig.getDeletedImagePrefix(), imagesToBeCleaned);
             if (imageSnapshotsDeleted != null && !imageSnapshotsDeleted.isEmpty()) {
               LOG.debug("List of snapshots (on images) that were cleaned up for pool " + pool + ": " + imageSnapshotsDeleted);
@@ -521,7 +516,7 @@ public class CephRbdProvider implements SANProvider {
       } catch (Exception e) {
         LOG.debug("Ignoring exception during clean up of images marked for deletion", e);
       }
-      
+
     }
   }
 
@@ -540,7 +535,7 @@ public class CephRbdProvider implements SANProvider {
         LOG.trace("Starting Ceph RBD snapshot cleanup process");
         for (final String pool : accessiblePools) { // Cycle through all pools
           try {
-            // Get the snapshots that were marked for deletion from the database, 
+            // Get the snapshots that were marked for deletion from the database,
             // in reverse time order so we never try to delete a parent before a child
             List<CephRbdSnapshotToBeDeleted> listToBeDeleted = null;
             try (TransactionResource tr = Entities.transactionFor(CephRbdSnapshotToBeDeleted.class)) {
@@ -571,7 +566,7 @@ public class CephRbdProvider implements SANProvider {
               LOG.trace("List of snapshots to be cleaned up for pool " + pool + ": " + toBeDeleted.values());
 
               // Invoke clean up
-              SetMultimap<String, String> cantBeDeleted = 
+              SetMultimap<String, String> cantBeDeleted =
                   rbdService.cleanUpSnapshots(pool, cachedConfig.getDeletedImagePrefix(), toBeDeleted);
               LOG.trace("List of snapshots that can't be cleaned up for pool " + pool + ": " + cantBeDeleted.values());
 
