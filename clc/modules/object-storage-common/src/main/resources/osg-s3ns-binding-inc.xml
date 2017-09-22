@@ -151,10 +151,7 @@
     <value name="Delimiter" field="delimiter" usage="optional"/>
     <value name="IsTruncated" field="isTruncated"/>
     <collection field="keyEntries"
-                factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
-      <structure map-as="com.eucalyptus.storage.msgs.s3.KeyEntry"/>
-    </collection>
-
+                factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional"/>
     <collection field="commonPrefixesList"
                 factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
       <structure type="com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry"/>
