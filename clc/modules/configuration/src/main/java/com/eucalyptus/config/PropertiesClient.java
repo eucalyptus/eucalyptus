@@ -16,6 +16,10 @@
 package com.eucalyptus.config;
 
 import com.eucalyptus.component.annotation.ComponentPart;
+import com.eucalyptus.config.msgs.DescribePropertiesResponseType;
+import com.eucalyptus.config.msgs.DescribePropertiesType;
+import com.eucalyptus.config.msgs.ModifyPropertyValueResponseType;
+import com.eucalyptus.config.msgs.ModifyPropertyValueType;
 import com.eucalyptus.empyrean.PropertiesService;
 
 /**
