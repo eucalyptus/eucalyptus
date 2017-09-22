@@ -38,7 +38,6 @@
 -->
 
 <project name="eucalyptus-walrus-common" basedir=".">
-	<property name="builder.suffix" value="groovy" />
 	<import file="../module-inc.xml"/>
 	<target name="install">
 		<copy todir="${DESTDIR}${euca.conf.dir}" overwrite="true">

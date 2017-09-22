@@ -37,7 +37,7 @@
  * NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.walrus.msgs;
+package com.eucalyptus.walrus;
 
 import java.nio.ByteBuffer;
 

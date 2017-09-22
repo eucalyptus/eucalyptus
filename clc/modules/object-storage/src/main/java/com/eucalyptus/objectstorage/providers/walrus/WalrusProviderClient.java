@@ -212,14 +212,14 @@ public class WalrusProviderClient extends S3ProviderClient {
    * Walrus provider mapping maps all requests to the single ObjectStorage account used for interaction with Walrus
    */
   @Override
-  protected BasicAWSCredentials mapCredentials(User requestUser) throws AuthException, IllegalArgumentException {
+  protected BasicAWSCredentials getCredentials( ) throws AuthException, IllegalArgumentException {
     List<AccessKey> eucaAdminKeys = osgUser.getKeys();
     if (eucaAdminKeys != null && eucaAdminKeys.size() > 0) {
       return new BasicAWSCredentials(eucaAdminKeys.get(0).getAccessKey(), eucaAdminKeys.get(0).getSecretKey());
     } else {
       LOG.error(
-          "No key found for user " + requestUser.getUserId() + " . Cannot map credentials for call to WalrusBackend backend for data operation");
-      throw new AuthException("No access key found for backend call to WalrusBackend for UserId: " + requestUser.getUserId());
+          "No key found for osg user " + osgUser.getUserId() + " . Cannot map credentials for call to WalrusBackend backend for data operation");
+      throw new AuthException("No access key found for backend call to WalrusBackend for UserId: " + osgUser.getUserId());
     }
   }
 

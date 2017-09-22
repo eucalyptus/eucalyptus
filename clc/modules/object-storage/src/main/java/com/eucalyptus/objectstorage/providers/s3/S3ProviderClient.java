@@ -88,6 +88,7 @@ import com.amazonaws.services.s3.model.SetBucketVersioningConfigurationRequest;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.model.VersionListing;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.objectstorage.client.OsgInternalS3Client;
@@ -200,18 +201,18 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 
   /**
    * Returns a usable S3 Client configured to send requests to the currently configured endpoint with the currently configured credentials.
-   * 
+   *
    * @return
    */
   protected OsgInternalS3Client getS3Client(User requestUser) throws InternalErrorException {
     S3ProviderConfiguration providerConfig = ConfigurationCache.getConfiguration(S3ProviderConfiguration.class);
     AWSCredentials credentials;
     try {
-      credentials = mapCredentials(requestUser);
+      credentials = getCredentials( );
     } catch (Exception e) {
-      LOG.error("Error mapping credentials for user " + (requestUser != null ? requestUser.getUserId() : "null") + " for walrus backend call.", e);
+      LOG.error("Error getting credentials for walrus backend call.", e);
       throw new InternalErrorException(
-          "Cannot construct s3client due to inability to map credentials for user: " + (requestUser != null ? requestUser.getUserId() : "null"), e);
+          "Cannot construct s3client due to inability to get credentials", e);
     }
 
     if (this.backendClient == null) {
@@ -252,7 +253,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 
   /**
    * Returns valid URI with port, will assign 80 if not specified explicitly and will add a 'http' scheme if none found.
-   * 
+   *
    * @param raw
    * @return
    */
@@ -299,7 +300,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 
   /**
    * Returns the S3 ACL in euca object form. Does not modify the results, so owner information will be preserved.
-   * 
+   *
    * @param s3Acl
    * @return
    */
@@ -334,13 +335,13 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
   /**
    * Maps the request credentials to another set of credentials. This implementation maps all Eucalyptus credentials to a single s3/backend
    * credential.
-   * 
+   *
    * @param requestUser The Eucalyptus user that generated the request
    * @return a BasicAWSCredentials object initialized with the credentials to use
    * @throws NoSuchElementException
    * @throws IllegalArgumentException
    */
-  protected BasicAWSCredentials mapCredentials(User requestUser) throws Exception {
+  protected BasicAWSCredentials getCredentials( ) throws Exception {
     return new BasicAWSCredentials(ConfigurationCache.getConfiguration(S3ProviderConfiguration.class).getS3AccessKey(),
         ConfigurationCache.getConfiguration(S3ProviderConfiguration.class).getS3SecretKey());
   }
@@ -503,7 +504,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
   /*
    * TODO: add multi-account support on backend and then this can be a pass-thru to backend for bucket listing. Multiplexing a single eucalyptus
    * account on the backend means we have to track all of the user buckets ourselves (non-Javadoc)
-   * 
+   *
    * @see com.eucalyptus.objectstorage.ObjectStorageProviderClient#listAllMyBuckets(com.eucalyptus.objectstorage.msgs.ListAllMyBucketsType)
    */
   @Override
@@ -539,7 +540,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
   /**
    * Handles a HEAD request to the bucket. Just returns 200ok if bucket exists and user has access. Otherwise returns 404 if not found or 403 if no
    * accesss.
-   * 
+   *
    * @param request
    * @return
    * @throws S3Exception
@@ -602,12 +603,12 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 
   /**
    * Should remove this, mostly pointless
-   * 
+   *
    * @param request
    * @return
    */
   private static UserPrincipal getRequestUser(ObjectStorageRequestType request) {
-    return request.getUser();
+    return Principals.nobodyUser();
   }
 
   @Override
@@ -904,9 +905,9 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
   /*
    * NOTE: bucket logging grants don't work because there is no way to specify them via the S3 Java SDK. Need to add that functionality ourselves if
    * we want it on the backend directly
-   * 
+   *
    * (non-Javadoc)
-   * 
+   *
    * @see
    * com.eucalyptus.objectstorage.ObjectStorageProviderClient#setBucketLoggingStatus(com.eucalyptus.objectstorage.msgs.SetBucketLoggingStatusType)
    */

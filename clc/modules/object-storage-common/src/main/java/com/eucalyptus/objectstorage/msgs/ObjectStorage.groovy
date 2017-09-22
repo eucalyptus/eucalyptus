@@ -34,8 +34,6 @@ import com.eucalyptus.binding.BindingReplace
 import com.eucalyptus.objectstorage.policy.S3PolicySpec
 import org.jboss.netty.channel.Channel
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
-import com.eucalyptus.auth.principal.Principals
-import com.eucalyptus.auth.principal.UserPrincipal
 import com.eucalyptus.component.annotation.ComponentMessage
 import com.eucalyptus.objectstorage.ObjectStorage
 import com.eucalyptus.objectstorage.policy.AdminOverrideAllowed
@@ -121,7 +119,7 @@ implements ObjectStorageCommonResponseType {
   protected String maxAgeSeconds;
   protected String allowCredentials;
   protected String vary;
-  
+
   def ObjectStorageResponseType() {}
 
   public void setBucketName(String bucketName) {
@@ -255,10 +253,6 @@ public class ObjectStorageRequestType extends BaseMessage {
 
   public void setVersionId(String versionId) {
     this.versionId = versionId;
-  }
-
-  public UserPrincipal getUser() {
-    return Principals.nobodyUser();
   }
 
   public String getFullResource() {

@@ -53,7 +53,13 @@ import static org.junit.Assert.*
 class QueryRequestBindingTestSupport {
 
   void assertAnnotationsRecursively( Class target ) {
-    target.getDeclaredFields().findAll{ Field field -> !field.getName().startsWith('_') && !field.getName().startsWith('$') && !field.getName().equals("metaClass") }.each{ Field field ->
+    target.getDeclaredFields().findAll{
+      Field field ->
+            !field.getName().startsWith('_') &&
+            !field.getName().startsWith('$') &&
+            !field.getName().equals("metaClass") &&
+            !Modifier.isStatic( field.getModifiers( ) )
+    }.each{ Field field ->
       Class classToAssert = ArrayList.equals( field.getType() ) ?
           field.getGenericType( ).getActualTypeArguments( )[0] :
           field.getType()

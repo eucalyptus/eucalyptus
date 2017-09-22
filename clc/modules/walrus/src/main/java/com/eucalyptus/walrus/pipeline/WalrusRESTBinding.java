@@ -54,9 +54,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import net.sf.json.JSONArray;
-import net.sf.json.JSONObject;
-
 import org.apache.axiom.om.OMElement;
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
@@ -105,9 +102,9 @@ import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.walrus.WalrusBackend;
 import com.eucalyptus.walrus.exceptions.NotImplementedException;
 import com.eucalyptus.walrus.msgs.WalrusDataGetRequestType;
-import com.eucalyptus.walrus.msgs.WalrusDataMessage;
-import com.eucalyptus.walrus.msgs.WalrusDataMessenger;
-import com.eucalyptus.walrus.msgs.WalrusDataQueue;
+import com.eucalyptus.walrus.WalrusDataMessage;
+import com.eucalyptus.walrus.WalrusDataMessenger;
+import com.eucalyptus.walrus.WalrusDataQueue;
 import com.eucalyptus.walrus.msgs.WalrusDataRequestType;
 import com.eucalyptus.walrus.msgs.WalrusRequestType;
 import com.eucalyptus.walrus.util.WalrusProperties;
