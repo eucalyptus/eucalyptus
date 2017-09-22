@@ -16,6 +16,7 @@
 package edu.ucsb.eucalyptus.msgs
 
 import com.eucalyptus.empyrean.DescribeServicesType
+import com.google.common.collect.Lists
 import org.hamcrest.Matchers
 
 import static org.junit.Assert.*
@@ -42,5 +43,29 @@ class BaseMessagesTest {
   void testToString( ) {
     String text = new BaseMessage( ).markFailed( ).toString( )
     assertThat( 'contains failed', text, Matchers.containsString( 'false' ) )
+  }
+
+  @Test
+  void testReadOnlyConvenienceGetters( ) {
+    FooMessage message = BaseMessages.fromOm( BaseMessages.toOm( new FooMessage(
+        bars: [
+            new BarData( barValue: 'value 1' ),
+            new BarData( barValue: 'value 2' ),
+        ]
+    ) ), FooMessage )
+    assertNotNull( 'bars not null', message.bars )
+    assertEquals( 'bars length 2', 2, message.bars.size( ) )
+    assertEquals( 'convenience bars length 2', 2, message.barValues.size( ) )
+  }
+
+  static class FooMessage extends BaseMessage {
+    ArrayList<BarData> bars = Lists.newArrayList( )
+    ArrayList<String> getBarValues( ) {
+      Lists.newArrayList( bars*.barValue )
+    }
+  }
+
+  static class BarData {
+    String barValue
   }
 }

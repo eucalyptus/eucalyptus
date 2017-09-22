@@ -45,6 +45,7 @@ import com.eucalyptus.util.OMXMLStreamWriter;
 import com.eucalyptus.util.XmlDataBindingModule;
 import com.eucalyptus.ws.WebServiceError;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
@@ -60,6 +61,8 @@ public class BaseMessages {
   static {
     xmlMapper.registerModule( new XmlDataBindingModule( ) );
     xmlMapper.addMixIn( WebServiceError.class, WebServiceErrorMixIn.class );
+    xmlMapper.configure( MapperFeature.AUTO_DETECT_IS_GETTERS, false );
+    xmlMapper.configure( MapperFeature.REQUIRE_SETTERS_FOR_GETTERS, true );
 
     mapper.addMixIn( BaseMessage.class, BaseMessageMixIn.class);
     mapper.configure( SerializationFeature.FAIL_ON_EMPTY_BEANS, false );
