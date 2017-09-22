@@ -1,0 +1,37 @@
+/*************************************************************************
+ * (c) Copyright 2017 Hewlett Packard Enterprise Development Company LP
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ ************************************************************************/
+package com.eucalyptus.blockstorage.msgs;
+
+import java.util.ArrayList;
+
+public class DescribeStorageSnapshotsType extends StorageRequestType {
+
+  private ArrayList<String> snapshotSet = new ArrayList<String>( );
+
+  public DescribeStorageSnapshotsType( ) { }
+
+  public DescribeStorageSnapshotsType( ArrayList<String> snapshotSet ) {
+    this.snapshotSet = snapshotSet;
+  }
+
+  public ArrayList<String> getSnapshotSet( ) {
+    return snapshotSet;
+  }
+
+  public void setSnapshotSet( ArrayList<String> snapshotSet ) {
+    this.snapshotSet = snapshotSet;
+  }
+}
