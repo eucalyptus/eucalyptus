@@ -13,18 +13,45 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  ************************************************************************/
-package com.eucalyptus.ws.protocol
+package com.eucalyptus.tokens.common.msgs;
 
-import org.junit.Test
+import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
-/**
- *
- */
-class EmpyreanQueryBindingTest extends QueryBindingTestSupport {
+public class TokensErrorType extends EucalyptusData {
+  private String type;
+  private String code;
+  private String message;
+  private TokensErrorDetailType detail = new TokensErrorDetailType( );
 
-  @Test
-  void testValidBinding() {
-    URL resource = EmpyreanQueryBindingTest.getResource('/empyrean-binding.xml')
-    assertValidBindingXml(resource)
+  public String getType() {
+    return type;
+  }
+
+  public void setType( String type ) {
+    this.type = type;
+  }
+
+  public String getCode() {
+    return code;
+  }
+
+  public void setCode( String code ) {
+    this.code = code;
+  }
+
+  public String getMessage() {
+    return message;
+  }
+
+  public void setMessage( String message ) {
+    this.message = message;
+  }
+
+  public TokensErrorDetailType getDetail() {
+    return detail;
+  }
+
+  public void setDetail( TokensErrorDetailType detail ) {
+    this.detail = detail;
   }
 }

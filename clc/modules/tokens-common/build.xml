@@ -28,10 +28,6 @@
   POSSIBILITY OF SUCH DAMAGE.
 -->
 <project name="eucalyptus-tokens-common" basedir=".">
-	<property name="builder.suffix" value="groovy" />
-	<uptodate property="groovyc.notRequired" targetfile="${jar.file}">
-		<srcfiles dir="${src.dir}" includes="**/*" />
-	</uptodate>
 	<import file="../module-inc.xml" />
 </project>
 

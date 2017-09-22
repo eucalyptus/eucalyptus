@@ -13,18 +13,25 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  ************************************************************************/
-package com.eucalyptus.ws.protocol
+package com.eucalyptus.tokens.common.msgs;
 
-import org.junit.Test
+public class GetSessionTokenResponseType extends TokenMessage {
+  private GetSessionTokenResultType result;
+  private TokensResponseMetadataType responseMetadata = new TokensResponseMetadataType( );
 
-/**
- *
- */
-class EmpyreanQueryBindingTest extends QueryBindingTestSupport {
+  public GetSessionTokenResultType getResult() {
+    return result;
+  }
 
-  @Test
-  void testValidBinding() {
-    URL resource = EmpyreanQueryBindingTest.getResource('/empyrean-binding.xml')
-    assertValidBindingXml(resource)
+  public void setResult( GetSessionTokenResultType result ) {
+    this.result = result;
+  }
+
+  public TokensResponseMetadataType getResponseMetadata() {
+    return responseMetadata;
+  }
+
+  public void setResponseMetadata( TokensResponseMetadataType responseMetadata ) {
+    this.responseMetadata = responseMetadata;
   }
 }

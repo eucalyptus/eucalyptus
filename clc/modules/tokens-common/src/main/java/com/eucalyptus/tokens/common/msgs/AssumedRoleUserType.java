@@ -13,18 +13,35 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  ************************************************************************/
-package com.eucalyptus.ws.protocol
+package com.eucalyptus.tokens.common.msgs;
 
-import org.junit.Test
+import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
-/**
- *
- */
-class EmpyreanQueryBindingTest extends QueryBindingTestSupport {
+public class AssumedRoleUserType extends EucalyptusData {
+  private String assumedRoleId;
+  private String arn;
 
-  @Test
-  void testValidBinding() {
-    URL resource = EmpyreanQueryBindingTest.getResource('/empyrean-binding.xml')
-    assertValidBindingXml(resource)
+  public AssumedRoleUserType() {
+  }
+
+  public AssumedRoleUserType( String assumedRoleId, String arn ) {
+    this.assumedRoleId = assumedRoleId;
+    this.arn = arn;
+  }
+
+  public String getAssumedRoleId() {
+    return assumedRoleId;
+  }
+
+  public void setAssumedRoleId( String assumedRoleId ) {
+    this.assumedRoleId = assumedRoleId;
+  }
+
+  public String getArn() {
+    return arn;
+  }
+
+  public void setArn( String arn ) {
+    this.arn = arn;
   }
 }

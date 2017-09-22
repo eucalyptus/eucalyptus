@@ -13,18 +13,36 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  ************************************************************************/
-package com.eucalyptus.ws.protocol
+package com.eucalyptus.tokens.common.msgs;
 
-import org.junit.Test
+import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
-/**
- *
- */
-class EmpyreanQueryBindingTest extends QueryBindingTestSupport {
+public class GetFederationTokenResultType extends EucalyptusData {
+  private CredentialsType credentials;
+  private FederatedUserType federatedUser;
+  private int packedPolicySize;
 
-  @Test
-  void testValidBinding() {
-    URL resource = EmpyreanQueryBindingTest.getResource('/empyrean-binding.xml')
-    assertValidBindingXml(resource)
+  public CredentialsType getCredentials() {
+    return credentials;
+  }
+
+  public void setCredentials( CredentialsType credentials ) {
+    this.credentials = credentials;
+  }
+
+  public FederatedUserType getFederatedUser() {
+    return federatedUser;
+  }
+
+  public void setFederatedUser( FederatedUserType federatedUser ) {
+    this.federatedUser = federatedUser;
+  }
+
+  public int getPackedPolicySize() {
+    return packedPolicySize;
+  }
+
+  public void setPackedPolicySize( int packedPolicySize ) {
+    this.packedPolicySize = packedPolicySize;
   }
 }

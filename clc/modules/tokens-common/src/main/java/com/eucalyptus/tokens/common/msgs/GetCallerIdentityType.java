@@ -13,18 +13,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  ************************************************************************/
-package com.eucalyptus.ws.protocol
+package com.eucalyptus.tokens.common.msgs;
 
-import org.junit.Test
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.policy.annotation.PolicyAction;
 
-/**
- *
- */
-class EmpyreanQueryBindingTest extends QueryBindingTestSupport {
-
-  @Test
-  void testValidBinding() {
-    URL resource = EmpyreanQueryBindingTest.getResource('/empyrean-binding.xml')
-    assertValidBindingXml(resource)
-  }
+@PolicyAction( vendor = PolicySpec.VENDOR_STS, action = PolicySpec.STS_GETCALLERIDENTITY )
+public class GetCallerIdentityType extends TokenMessage {
 }

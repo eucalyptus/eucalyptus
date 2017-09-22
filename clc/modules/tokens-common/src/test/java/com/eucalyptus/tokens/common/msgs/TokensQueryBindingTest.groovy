@@ -13,18 +13,19 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  ************************************************************************/
-package com.eucalyptus.ws.protocol
+package com.eucalyptus.tokens.common.msgs
 
+import com.eucalyptus.ws.protocol.QueryBindingTestSupport
 import org.junit.Test
 
 /**
  *
  */
-class EmpyreanQueryBindingTest extends QueryBindingTestSupport {
+class TokensQueryBindingTest extends QueryBindingTestSupport {
 
   @Test
   void testValidBinding() {
-    URL resource = EmpyreanQueryBindingTest.getResource('/empyrean-binding.xml')
+    URL resource = TokensQueryBindingTest.getResource('/tokens-binding.xml')
     assertValidBindingXml(resource)
   }
 }
