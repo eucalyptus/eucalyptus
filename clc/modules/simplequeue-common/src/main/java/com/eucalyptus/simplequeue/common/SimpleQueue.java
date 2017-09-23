@@ -27,30 +27,25 @@
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
 
-package com.eucalyptus.simplequeue;
+package com.eucalyptus.simplequeue.common;
 
-import java.util.Set;
-import com.eucalyptus.auth.policy.annotation.PolicyResourceType;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
-import com.eucalyptus.auth.type.RestrictedType;
-import com.eucalyptus.simplequeue.common.policy.SimpleQueuePolicySpec;
-import com.eucalyptus.system.Ats;
-import com.eucalyptus.util.Strings;
-import javaslang.collection.Stream;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.AwsServiceName;
+import com.eucalyptus.component.annotation.Description;
+import com.eucalyptus.component.annotation.Partition;
+import com.eucalyptus.component.annotation.PublicService;
+import com.eucalyptus.util.techpreview.TechPreview;
 
 /**
- * Created by ethomas on 10/22/14.
+ * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
-@PolicyVendor( SimpleQueuePolicySpec.VENDOR_SIMPLEQUEUE)
-public interface SimpleQueueMetadata extends RestrictedType {
-  @PolicyResourceType(value = "queue", resourcePolicyActions = {"sqs:sendmessage", "sqs:receivemessage",
-      "sqs:deletemessage", "sqs:changemessagevisibility", "sqs:getqueueattributes", "sqs:getqueueurl",
-      "sqs:listdeadlettersourcequeues", "sqs:purgequeue" } )
-  public interface QueueMetadata extends SimpleQueueMetadata, PolicyRestrictedType {}
-
-  static Set<String> sharedQueueActions( ) {
-    return Stream.of( Ats.from( QueueMetadata.class ).get( PolicyResourceType.class ).resourcePolicyActions( ) )
-        .map( Strings.substringAfter( "sqs:" ) )
-        .toJavaSet( );
-  }
+@PublicService
+@AwsServiceName( "sqs" )
+@PolicyVendor( "sqs" )
+@Partition( value = SimpleQueue.class, manyToOne = true )
+@Description( "Simple Queue API service" )
+@TechPreview(enableByDefaultProperty = "enable.sqs.tech.preview")
+public class SimpleQueue extends ComponentId {
+  private static final long serialVersionUID = 1L;
 }

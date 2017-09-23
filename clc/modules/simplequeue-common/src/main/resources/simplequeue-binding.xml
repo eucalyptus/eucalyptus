@@ -29,102 +29,102 @@
 -->
 <binding name="queue_amazonaws_com_doc_2012_11_05" force-classes="true" add-constructors="true">
   <namespace uri="http://queue.amazonaws.com/doc/2012-11-05/" default="elements"/>
-  <mapping name="CreateQueue" class="com.eucalyptus.simplequeue.CreateQueueType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+  <mapping name="CreateQueue" class="com.eucalyptus.simplequeue.common.msgs.CreateQueueType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
     <value name="QueueName" field="queueName" usage="required"/>
     <collection field="attribute">
-      <structure name="Attribute" type="com.eucalyptus.simplequeue.Attribute"/>
+      <structure name="Attribute" type="com.eucalyptus.simplequeue.common.msgs.Attribute"/>
     </collection>
   </mapping>
-  <mapping name="CreateQueueResponse" class="com.eucalyptus.simplequeue.CreateQueueResponseType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
-    <structure name="CreateQueueResult" field="createQueueResult" usage="required" type="com.eucalyptus.simplequeue.CreateQueueResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.ResponseMetadata"/>
+  <mapping name="CreateQueueResponse" class="com.eucalyptus.simplequeue.common.msgs.CreateQueueResponseType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
+    <structure name="CreateQueueResult" field="createQueueResult" usage="required" type="com.eucalyptus.simplequeue.common.msgs.CreateQueueResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="GetQueueUrl" class="com.eucalyptus.simplequeue.GetQueueUrlType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+  <mapping name="GetQueueUrl" class="com.eucalyptus.simplequeue.common.msgs.GetQueueUrlType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
     <value name="QueueName" field="queueName" usage="required"/>
     <value name="QueueOwnerAWSAccountId" field="queueOwnerAWSAccountId" usage="optional"/>
   </mapping>
-  <mapping name="GetQueueUrlResponse" class="com.eucalyptus.simplequeue.GetQueueUrlResponseType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
-    <structure name="GetQueueUrlResult" field="getQueueUrlResult" usage="required" type="com.eucalyptus.simplequeue.GetQueueUrlResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.ResponseMetadata"/>
+  <mapping name="GetQueueUrlResponse" class="com.eucalyptus.simplequeue.common.msgs.GetQueueUrlResponseType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
+    <structure name="GetQueueUrlResult" field="getQueueUrlResult" usage="required" type="com.eucalyptus.simplequeue.common.msgs.GetQueueUrlResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="ListQueues" class="com.eucalyptus.simplequeue.ListQueuesType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+  <mapping name="ListQueues" class="com.eucalyptus.simplequeue.common.msgs.ListQueuesType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
     <value name="QueueNamePrefix" field="queueNamePrefix" usage="optional"/>
     <collection field="attribute">
-      <structure name="Attribute" type="com.eucalyptus.simplequeue.Attribute"/>
+      <structure name="Attribute" type="com.eucalyptus.simplequeue.common.msgs.Attribute"/>
     </collection>
   </mapping>
-  <mapping name="ListQueuesResponse" class="com.eucalyptus.simplequeue.ListQueuesResponseType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
-    <structure name="ListQueuesResult" field="listQueuesResult" usage="required" type="com.eucalyptus.simplequeue.ListQueuesResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.ResponseMetadata"/>
+  <mapping name="ListQueuesResponse" class="com.eucalyptus.simplequeue.common.msgs.ListQueuesResponseType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
+    <structure name="ListQueuesResult" field="listQueuesResult" usage="required" type="com.eucalyptus.simplequeue.common.msgs.ListQueuesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="ChangeMessageVisibility" class="com.eucalyptus.simplequeue.ChangeMessageVisibilityType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+  <mapping name="ChangeMessageVisibility" class="com.eucalyptus.simplequeue.common.msgs.ChangeMessageVisibilityType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
     <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <value name="ReceiptHandle" field="receiptHandle" usage="required"/>
     <value name="VisibilityTimeout" field="visibilityTimeout" usage="required"/>
     <collection field="attribute">
-      <structure name="Attribute" type="com.eucalyptus.simplequeue.Attribute"/>
+      <structure name="Attribute" type="com.eucalyptus.simplequeue.common.msgs.Attribute"/>
     </collection>
   </mapping>
-  <mapping name="ChangeMessageVisibilityResponse" class="com.eucalyptus.simplequeue.ChangeMessageVisibilityResponseType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.ResponseMetadata"/>
+  <mapping name="ChangeMessageVisibilityResponse" class="com.eucalyptus.simplequeue.common.msgs.ChangeMessageVisibilityResponseType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="DeleteMessage" class="com.eucalyptus.simplequeue.DeleteMessageType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+  <mapping name="DeleteMessage" class="com.eucalyptus.simplequeue.common.msgs.DeleteMessageType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
     <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <value name="ReceiptHandle" field="receiptHandle" usage="required"/>
     <collection field="attribute">
-      <structure name="Attribute" type="com.eucalyptus.simplequeue.Attribute"/>
+      <structure name="Attribute" type="com.eucalyptus.simplequeue.common.msgs.Attribute"/>
     </collection>
   </mapping>
-  <mapping name="DeleteMessageResponse" class="com.eucalyptus.simplequeue.DeleteMessageResponseType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.ResponseMetadata"/>
+  <mapping name="DeleteMessageResponse" class="com.eucalyptus.simplequeue.common.msgs.DeleteMessageResponseType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="DeleteQueue" class="com.eucalyptus.simplequeue.DeleteQueueType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+  <mapping name="DeleteQueue" class="com.eucalyptus.simplequeue.common.msgs.DeleteQueueType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
     <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <collection field="attribute">
-      <structure name="Attribute" type="com.eucalyptus.simplequeue.Attribute"/>
+      <structure name="Attribute" type="com.eucalyptus.simplequeue.common.msgs.Attribute"/>
     </collection>
   </mapping>
-  <mapping name="DeleteQueueResponse" class="com.eucalyptus.simplequeue.DeleteQueueResponseType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.ResponseMetadata"/>
+  <mapping name="DeleteQueueResponse" class="com.eucalyptus.simplequeue.common.msgs.DeleteQueueResponseType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="PurgeQueue" class="com.eucalyptus.simplequeue.PurgeQueueType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+  <mapping name="PurgeQueue" class="com.eucalyptus.simplequeue.common.msgs.PurgeQueueType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
     <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <collection field="attribute">
-      <structure name="Attribute" type="com.eucalyptus.simplequeue.Attribute"/>
+      <structure name="Attribute" type="com.eucalyptus.simplequeue.common.msgs.Attribute"/>
     </collection>
   </mapping>
-  <mapping name="PurgeQueueResponse" class="com.eucalyptus.simplequeue.PurgeQueueResponseType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.ResponseMetadata"/>
+  <mapping name="PurgeQueueResponse" class="com.eucalyptus.simplequeue.common.msgs.PurgeQueueResponseType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="GetQueueAttributes" class="com.eucalyptus.simplequeue.GetQueueAttributesType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+  <mapping name="GetQueueAttributes" class="com.eucalyptus.simplequeue.common.msgs.GetQueueAttributesType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
     <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <collection field="attributeName">
       <value name="AttributeName" type="java.lang.String"/>
     </collection>
     <value name="Unused" field="unused" usage="optional"/>
   </mapping>
-  <mapping name="GetQueueAttributesResponse" class="com.eucalyptus.simplequeue.GetQueueAttributesResponseType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
-    <structure name="GetQueueAttributesResult" field="getQueueAttributesResult" usage="required" type="com.eucalyptus.simplequeue.GetQueueAttributesResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.ResponseMetadata"/>
+  <mapping name="GetQueueAttributesResponse" class="com.eucalyptus.simplequeue.common.msgs.GetQueueAttributesResponseType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
+    <structure name="GetQueueAttributesResult" field="getQueueAttributesResult" usage="required" type="com.eucalyptus.simplequeue.common.msgs.GetQueueAttributesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="ReceiveMessage" class="com.eucalyptus.simplequeue.ReceiveMessageType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+  <mapping name="ReceiveMessage" class="com.eucalyptus.simplequeue.common.msgs.ReceiveMessageType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
     <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <value name="MaxNumberOfMessages" field="maxNumberOfMessages" usage="optional"/>
     <value name="VisibilityTimeout" field="visibilityTimeout" usage="optional"/>
@@ -137,136 +137,136 @@
     </collection>
     <value name="Unused" field="unused" usage="optional"/>
   </mapping>
-  <mapping name="ReceiveMessageResponse" class="com.eucalyptus.simplequeue.ReceiveMessageResponseType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
-    <structure name="ReceiveMessageResult" field="receiveMessageResult" usage="required" type="com.eucalyptus.simplequeue.ReceiveMessageResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.ResponseMetadata"/>
+  <mapping name="ReceiveMessageResponse" class="com.eucalyptus.simplequeue.common.msgs.ReceiveMessageResponseType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
+    <structure name="ReceiveMessageResult" field="receiveMessageResult" usage="required" type="com.eucalyptus.simplequeue.common.msgs.ReceiveMessageResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="SendMessage" class="com.eucalyptus.simplequeue.SendMessageType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+  <mapping name="SendMessage" class="com.eucalyptus.simplequeue.common.msgs.SendMessageType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
     <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <value name="MessageBody" field="messageBody" usage="required"/>
     <value name="DelaySeconds" field="delaySeconds" usage="optional"/>
     <collection field="attribute">
-      <structure name="Attribute" type="com.eucalyptus.simplequeue.Attribute"/>
+      <structure name="Attribute" type="com.eucalyptus.simplequeue.common.msgs.Attribute"/>
     </collection>
     <collection field="messageAttribute">
-      <structure name="MessageAttribute" type="com.eucalyptus.simplequeue.MessageAttribute"/>
+      <structure name="MessageAttribute" type="com.eucalyptus.simplequeue.common.msgs.MessageAttribute"/>
     </collection>
   </mapping>
-  <mapping name="SendMessageResponse" class="com.eucalyptus.simplequeue.SendMessageResponseType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
-    <structure name="SendMessageResult" field="sendMessageResult" usage="required" type="com.eucalyptus.simplequeue.SendMessageResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.ResponseMetadata"/>
+  <mapping name="SendMessageResponse" class="com.eucalyptus.simplequeue.common.msgs.SendMessageResponseType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
+    <structure name="SendMessageResult" field="sendMessageResult" usage="required" type="com.eucalyptus.simplequeue.common.msgs.SendMessageResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="SetQueueAttributes" class="com.eucalyptus.simplequeue.SetQueueAttributesType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+  <mapping name="SetQueueAttributes" class="com.eucalyptus.simplequeue.common.msgs.SetQueueAttributesType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
     <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <collection field="attribute">
-      <structure name="Attribute" type="com.eucalyptus.simplequeue.Attribute"/>
+      <structure name="Attribute" type="com.eucalyptus.simplequeue.common.msgs.Attribute"/>
     </collection>
   </mapping>
-  <mapping name="SetQueueAttributesResponse" class="com.eucalyptus.simplequeue.SetQueueAttributesResponseType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.ResponseMetadata"/>
+  <mapping name="SetQueueAttributesResponse" class="com.eucalyptus.simplequeue.common.msgs.SetQueueAttributesResponseType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping class="com.eucalyptus.simplequeue.BatchResultErrorEntry" abstract="true">
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.BatchResultErrorEntry" abstract="true">
     <value name="Id" field="id" usage="required"/>
     <value name="Code" field="code" usage="required"/>
     <value name="Message" field="message" usage="required"/>
     <value name="SenderFault" field="senderFault" usage="required"/>
   </mapping>
-  <mapping class="com.eucalyptus.simplequeue.ChangeMessageVisibilityBatchRequestEntry" abstract="true">
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.ChangeMessageVisibilityBatchRequestEntry" abstract="true">
     <value name="Id" field="id" usage="required"/>
     <value name="ReceiptHandle" field="receiptHandle" usage="required"/>
     <value name="VisibilityTimeout" field="visibilityTimeout" usage="optional"/>
   </mapping>
-  <mapping name="ChangeMessageVisibilityBatch" class="com.eucalyptus.simplequeue.ChangeMessageVisibilityBatchType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+  <mapping name="ChangeMessageVisibilityBatch" class="com.eucalyptus.simplequeue.common.msgs.ChangeMessageVisibilityBatchType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
     <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <collection field="changeMessageVisibilityBatchRequestEntry">
-      <structure name="ChangeMessageVisibilityBatchRequestEntry" type="com.eucalyptus.simplequeue.ChangeMessageVisibilityBatchRequestEntry"/>
+      <structure name="ChangeMessageVisibilityBatchRequestEntry" type="com.eucalyptus.simplequeue.common.msgs.ChangeMessageVisibilityBatchRequestEntry"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.simplequeue.ChangeMessageVisibilityBatchResultEntry" abstract="true">
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.ChangeMessageVisibilityBatchResultEntry" abstract="true">
     <value name="Id" field="id" usage="required"/>
   </mapping>
-  <mapping class="com.eucalyptus.simplequeue.ChangeMessageVisibilityBatchResult" abstract="true">
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.ChangeMessageVisibilityBatchResult" abstract="true">
     <collection field="changeMessageVisibilityBatchResultEntry">
-      <structure name="ChangeMessageVisibilityBatchResultEntry" type="com.eucalyptus.simplequeue.ChangeMessageVisibilityBatchResultEntry"/>
+      <structure name="ChangeMessageVisibilityBatchResultEntry" type="com.eucalyptus.simplequeue.common.msgs.ChangeMessageVisibilityBatchResultEntry"/>
     </collection>
     <collection field="batchResultErrorEntry">
-      <structure name="BatchResultErrorEntry" type="com.eucalyptus.simplequeue.BatchResultErrorEntry"/>
+      <structure name="BatchResultErrorEntry" type="com.eucalyptus.simplequeue.common.msgs.BatchResultErrorEntry"/>
     </collection>
   </mapping>
-  <mapping name="ChangeMessageVisibilityBatchResponse" class="com.eucalyptus.simplequeue.ChangeMessageVisibilityBatchResponseType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
-    <structure name="ChangeMessageVisibilityBatchResult" field="changeMessageVisibilityBatchResult" usage="required" type="com.eucalyptus.simplequeue.ChangeMessageVisibilityBatchResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.ResponseMetadata"/>
+  <mapping name="ChangeMessageVisibilityBatchResponse" class="com.eucalyptus.simplequeue.common.msgs.ChangeMessageVisibilityBatchResponseType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
+    <structure name="ChangeMessageVisibilityBatchResult" field="changeMessageVisibilityBatchResult" usage="required" type="com.eucalyptus.simplequeue.common.msgs.ChangeMessageVisibilityBatchResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping class="com.eucalyptus.simplequeue.DeleteMessageBatchRequestEntry" abstract="true">
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.DeleteMessageBatchRequestEntry" abstract="true">
     <value name="Id" field="id" usage="required"/>
     <value name="ReceiptHandle" field="receiptHandle" usage="required"/>
   </mapping>
-  <mapping name="DeleteMessageBatch" class="com.eucalyptus.simplequeue.DeleteMessageBatchType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+  <mapping name="DeleteMessageBatch" class="com.eucalyptus.simplequeue.common.msgs.DeleteMessageBatchType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
     <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <collection field="deleteMessageBatchRequestEntry">
-      <structure name="DeleteMessageBatchRequestEntry" type="com.eucalyptus.simplequeue.DeleteMessageBatchRequestEntry"/>
+      <structure name="DeleteMessageBatchRequestEntry" type="com.eucalyptus.simplequeue.common.msgs.DeleteMessageBatchRequestEntry"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.simplequeue.DeleteMessageBatchResultEntry" abstract="true">
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.DeleteMessageBatchResultEntry" abstract="true">
     <value name="Id" field="id" usage="required"/>
   </mapping>
-  <mapping class="com.eucalyptus.simplequeue.DeleteMessageBatchResult" abstract="true">
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.DeleteMessageBatchResult" abstract="true">
     <collection field="deleteMessageBatchResultEntry">
-      <structure name="DeleteMessageBatchResultEntry" type="com.eucalyptus.simplequeue.DeleteMessageBatchResultEntry"/>
+      <structure name="DeleteMessageBatchResultEntry" type="com.eucalyptus.simplequeue.common.msgs.DeleteMessageBatchResultEntry"/>
     </collection>
     <collection field="batchResultErrorEntry">
-      <structure name="BatchResultErrorEntry" type="com.eucalyptus.simplequeue.BatchResultErrorEntry"/>
+      <structure name="BatchResultErrorEntry" type="com.eucalyptus.simplequeue.common.msgs.BatchResultErrorEntry"/>
     </collection>
   </mapping>
-  <mapping name="DeleteMessageBatchResponse" class="com.eucalyptus.simplequeue.DeleteMessageBatchResponseType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
-    <structure name="DeleteMessageBatchResult" field="deleteMessageBatchResult" usage="required" type="com.eucalyptus.simplequeue.DeleteMessageBatchResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.ResponseMetadata"/>
+  <mapping name="DeleteMessageBatchResponse" class="com.eucalyptus.simplequeue.common.msgs.DeleteMessageBatchResponseType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
+    <structure name="DeleteMessageBatchResult" field="deleteMessageBatchResult" usage="required" type="com.eucalyptus.simplequeue.common.msgs.DeleteMessageBatchResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping class="com.eucalyptus.simplequeue.SendMessageBatchRequestEntry" abstract="true">
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.SendMessageBatchRequestEntry" abstract="true">
     <value name="Id" field="id" usage="required"/>
     <value name="MessageBody" field="messageBody" usage="required"/>
     <value name="DelaySeconds" field="delaySeconds" usage="optional"/>
     <collection field="messageAttribute">
-      <structure name="MessageAttribute" type="com.eucalyptus.simplequeue.MessageAttribute"/>
+      <structure name="MessageAttribute" type="com.eucalyptus.simplequeue.common.msgs.MessageAttribute"/>
     </collection>
   </mapping>
-  <mapping name="SendMessageBatch" class="com.eucalyptus.simplequeue.SendMessageBatchType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+  <mapping name="SendMessageBatch" class="com.eucalyptus.simplequeue.common.msgs.SendMessageBatchType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
     <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <collection field="sendMessageBatchRequestEntry">
-      <structure name="SendMessageBatchRequestEntry" type="com.eucalyptus.simplequeue.SendMessageBatchRequestEntry"/>
+      <structure name="SendMessageBatchRequestEntry" type="com.eucalyptus.simplequeue.common.msgs.SendMessageBatchRequestEntry"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.simplequeue.SendMessageBatchResultEntry" abstract="true">
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.SendMessageBatchResultEntry" abstract="true">
     <value name="Id" field="id" usage="required"/>
     <value name="MessageId" field="messageId" usage="required"/>
     <value name="MD5OfMessageBody" field="mD5OfMessageBody" usage="required"/>
     <value name="MD5OfMessageAttributes" field="mD5OfMessageAttributes" usage="required"/>
   </mapping>
-  <mapping class="com.eucalyptus.simplequeue.SendMessageBatchResult" abstract="true">
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.SendMessageBatchResult" abstract="true">
     <collection field="sendMessageBatchResultEntry">
-      <structure name="SendMessageBatchResultEntry" type="com.eucalyptus.simplequeue.SendMessageBatchResultEntry"/>
+      <structure name="SendMessageBatchResultEntry" type="com.eucalyptus.simplequeue.common.msgs.SendMessageBatchResultEntry"/>
     </collection>
     <collection field="batchResultErrorEntry">
-      <structure name="BatchResultErrorEntry" type="com.eucalyptus.simplequeue.BatchResultErrorEntry"/>
+      <structure name="BatchResultErrorEntry" type="com.eucalyptus.simplequeue.common.msgs.BatchResultErrorEntry"/>
     </collection>
   </mapping>
-  <mapping name="SendMessageBatchResponse" class="com.eucalyptus.simplequeue.SendMessageBatchResponseType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
-    <structure name="SendMessageBatchResult" field="sendMessageBatchResult" usage="required" type="com.eucalyptus.simplequeue.SendMessageBatchResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.ResponseMetadata"/>
+  <mapping name="SendMessageBatchResponse" class="com.eucalyptus.simplequeue.common.msgs.SendMessageBatchResponseType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
+    <structure name="SendMessageBatchResult" field="sendMessageBatchResult" usage="required" type="com.eucalyptus.simplequeue.common.msgs.SendMessageBatchResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="AddPermission" class="com.eucalyptus.simplequeue.AddPermissionType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+  <mapping name="AddPermission" class="com.eucalyptus.simplequeue.common.msgs.AddPermissionType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
     <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <value name="Label" field="label" usage="required"/>
     <collection field="awsAccountId">
@@ -276,49 +276,49 @@
       <value name="ActionName" type="java.lang.String"/>
     </collection>
   </mapping>
-  <mapping name="AddPermissionResponse" class="com.eucalyptus.simplequeue.AddPermissionResponseType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.ResponseMetadata"/>
+  <mapping name="AddPermissionResponse" class="com.eucalyptus.simplequeue.common.msgs.AddPermissionResponseType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="RemovePermission" class="com.eucalyptus.simplequeue.RemovePermissionType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+  <mapping name="RemovePermission" class="com.eucalyptus.simplequeue.common.msgs.RemovePermissionType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
     <value name="QueueUrl" field="queueUrl" usage="optional"/>
     <value name="Label" field="label" usage="required"/>
   </mapping>
-  <mapping name="RemovePermissionResponse" class="com.eucalyptus.simplequeue.RemovePermissionResponseType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.ResponseMetadata"/>
+  <mapping name="RemovePermissionResponse" class="com.eucalyptus.simplequeue.common.msgs.RemovePermissionResponseType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="ListDeadLetterSourceQueues" class="com.eucalyptus.simplequeue.ListDeadLetterSourceQueuesType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
+  <mapping name="ListDeadLetterSourceQueues" class="com.eucalyptus.simplequeue.common.msgs.ListDeadLetterSourceQueuesType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
     <value name="QueueUrl" field="queueUrl" usage="optional"/>
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
   </mapping>
-  <mapping name="ListDeadLetterSourceQueuesResponse" class="com.eucalyptus.simplequeue.ListDeadLetterSourceQueuesResponseType" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
-    <structure map-as="com.eucalyptus.simplequeue.SimpleQueueMessage"/>
-    <structure name="ListDeadLetterSourceQueuesResult" field="listDeadLetterSourceQueuesResult" usage="required" type="com.eucalyptus.simplequeue.ListDeadLetterSourceQueuesResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.ResponseMetadata"/>
+  <mapping name="ListDeadLetterSourceQueuesResponse" class="com.eucalyptus.simplequeue.common.msgs.ListDeadLetterSourceQueuesResponseType" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
+    <structure map-as="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage"/>
+    <structure name="ListDeadLetterSourceQueuesResult" field="listDeadLetterSourceQueuesResult" usage="required" type="com.eucalyptus.simplequeue.common.msgs.ListDeadLetterSourceQueuesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.simplequeue.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping class="com.eucalyptus.simplequeue.CreateQueueResult" abstract="true">
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.CreateQueueResult" abstract="true">
     <value name="QueueUrl" field="queueUrl" usage="required"/>
   </mapping>
-  <mapping class="com.eucalyptus.simplequeue.GetQueueUrlResult" abstract="true">
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.GetQueueUrlResult" abstract="true">
     <value name="QueueUrl" field="queueUrl" usage="required"/>
   </mapping>
-  <mapping class="com.eucalyptus.simplequeue.ListQueuesResult" abstract="true">
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.ListQueuesResult" abstract="true">
     <collection field="queueUrl">
       <value name="QueueUrl" type="java.lang.String"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.simplequeue.ListDeadLetterSourceQueuesResult" abstract="true">
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.ListDeadLetterSourceQueuesResult" abstract="true">
     <collection field="queueUrl">
       <value name="QueueUrl" type="java.lang.String"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.simplequeue.Attribute" abstract="true">
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.Attribute" abstract="true">
     <value name="Name" field="name" usage="required"/>
     <value name="Value" field="value" usage="required"/>
   </mapping>
-  <mapping class="com.eucalyptus.simplequeue.MessageAttributeValue" abstract="true">
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.MessageAttributeValue" abstract="true">
     <collection field="binaryListValue">
       <value name="BinaryListValue" type="java.lang.String"/>
     </collection>
@@ -329,53 +329,53 @@
     <value name="BinaryValue" field="binaryValue" usage="optional"/>
     <value name="DataType" field="dataType" usage="required"/>
   </mapping>
-  <mapping class="com.eucalyptus.simplequeue.MessageAttribute" abstract="true">
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.MessageAttribute" abstract="true">
     <value name="Name" field="name" usage="required"/>
-    <structure name="Value" field="value" usage="required" type="com.eucalyptus.simplequeue.MessageAttributeValue"/>
+    <structure name="Value" field="value" usage="required" type="com.eucalyptus.simplequeue.common.msgs.MessageAttributeValue"/>
   </mapping>
-  <mapping class="com.eucalyptus.simplequeue.GetQueueAttributesResult" abstract="true">
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.GetQueueAttributesResult" abstract="true">
     <collection field="attribute">
-      <structure name="Attribute" type="com.eucalyptus.simplequeue.Attribute"/>
+      <structure name="Attribute" type="com.eucalyptus.simplequeue.common.msgs.Attribute"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.simplequeue.Message" abstract="true">
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.Message" abstract="true">
     <value name="MessageId" field="messageId" usage="required"/>
     <value name="ReceiptHandle" field="receiptHandle" usage="required"/>
     <value name="MD5OfBody" field="mD5OfBody" usage="required"/>
     <value name="MD5OfMessageAttributes" field="mD5OfMessageAttributes" usage="required"/>
     <value name="Body" field="body" usage="required"/>
     <collection field="attribute">
-      <structure name="Attribute" type="com.eucalyptus.simplequeue.Attribute"/>
+      <structure name="Attribute" type="com.eucalyptus.simplequeue.common.msgs.Attribute"/>
     </collection>
     <collection field="messageAttribute">
-      <structure name="MessageAttribute" type="com.eucalyptus.simplequeue.MessageAttribute"/>
+      <structure name="MessageAttribute" type="com.eucalyptus.simplequeue.common.msgs.MessageAttribute"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.simplequeue.ReceiveMessageResult" abstract="true">
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.ReceiveMessageResult" abstract="true">
     <collection field="message">
-      <structure name="Message" type="com.eucalyptus.simplequeue.Message"/>
+      <structure name="Message" type="com.eucalyptus.simplequeue.common.msgs.Message"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.simplequeue.SendMessageResult" abstract="true">
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.SendMessageResult" abstract="true">
     <value name="MessageId" field="messageId" usage="required"/>
     <value name="MD5OfMessageBody" field="mD5OfMessageBody" usage="required"/>
     <value name="MD5OfMessageAttributes" field="mD5OfMessageAttributes" usage="required"/>
   </mapping>
-  <mapping class="com.eucalyptus.simplequeue.ResponseMetadata" abstract="true">
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.ResponseMetadata" abstract="true">
     <value name="RequestId" field="requestId" usage="required"/>
   </mapping>
-  <mapping name="ErrorResponse" class="com.eucalyptus.simplequeue.SimpleQueueErrorResponse" extends="com.eucalyptus.simplequeue.SimpleQueueMessage">
+  <mapping name="ErrorResponse" class="com.eucalyptus.simplequeue.common.msgs.SimpleQueueErrorResponse" extends="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage">
     <collection field="error">
-      <structure name="Error" type="com.eucalyptus.simplequeue.Error"/>
+      <structure name="Error" type="com.eucalyptus.simplequeue.common.msgs.Error"/>
     </collection>
     <value name="RequestId" field="requestId" usage="required"/>
   </mapping>
-  <mapping class="com.eucalyptus.simplequeue.Error" abstract="true">
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.Error" abstract="true">
     <value name="Type" field="type" usage="required"/>
     <value name="Code" field="code" usage="required"/>
     <value name="Message" field="message" usage="required"/>
-    <structure name="Detail" field="detail" usage="required" type="com.eucalyptus.simplequeue.ErrorDetail"/>
+    <structure name="Detail" field="detail" usage="required" type="com.eucalyptus.simplequeue.common.msgs.ErrorDetail"/>
   </mapping>
-  <mapping class="com.eucalyptus.simplequeue.ErrorDetail" abstract="true"/>
-  <mapping class="com.eucalyptus.simplequeue.SimpleQueueMessage" abstract="true"/>
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.ErrorDetail" abstract="true"/>
+  <mapping class="com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage" abstract="true"/>
 </binding>

@@ -34,7 +34,7 @@ import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.simplequeue.SimpleQueue;
+import com.eucalyptus.simplequeue.common.SimpleQueue;
 import com.eucalyptus.simplequeue.workflow.SimpleQueueWorkflows;
 import com.eucalyptus.simplequeue.workflow.WorkflowClientManager;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;

@@ -65,6 +65,54 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.simplequeue.async.CloudWatchClient;
 import com.eucalyptus.simplequeue.async.NotifyClient;
+import com.eucalyptus.simplequeue.common.SimpleQueue;
+import com.eucalyptus.simplequeue.common.SimpleQueueMetadata;
+import com.eucalyptus.simplequeue.common.msgs.AddPermissionResponseType;
+import com.eucalyptus.simplequeue.common.msgs.AddPermissionType;
+import com.eucalyptus.simplequeue.common.msgs.Attribute;
+import com.eucalyptus.simplequeue.common.msgs.BatchResultErrorEntry;
+import com.eucalyptus.simplequeue.common.msgs.ChangeMessageVisibilityBatchRequestEntry;
+import com.eucalyptus.simplequeue.common.msgs.ChangeMessageVisibilityBatchResponseType;
+import com.eucalyptus.simplequeue.common.msgs.ChangeMessageVisibilityBatchResultEntry;
+import com.eucalyptus.simplequeue.common.msgs.ChangeMessageVisibilityBatchType;
+import com.eucalyptus.simplequeue.common.msgs.ChangeMessageVisibilityResponseType;
+import com.eucalyptus.simplequeue.common.msgs.ChangeMessageVisibilityType;
+import com.eucalyptus.simplequeue.common.msgs.CreateQueueResponseType;
+import com.eucalyptus.simplequeue.common.msgs.CreateQueueType;
+import com.eucalyptus.simplequeue.common.msgs.DeleteMessageBatchRequestEntry;
+import com.eucalyptus.simplequeue.common.msgs.DeleteMessageBatchResponseType;
+import com.eucalyptus.simplequeue.common.msgs.DeleteMessageBatchResultEntry;
+import com.eucalyptus.simplequeue.common.msgs.DeleteMessageBatchType;
+import com.eucalyptus.simplequeue.common.msgs.DeleteMessageResponseType;
+import com.eucalyptus.simplequeue.common.msgs.DeleteMessageType;
+import com.eucalyptus.simplequeue.common.msgs.DeleteQueueResponseType;
+import com.eucalyptus.simplequeue.common.msgs.DeleteQueueType;
+import com.eucalyptus.simplequeue.common.msgs.GetQueueAttributesResponseType;
+import com.eucalyptus.simplequeue.common.msgs.GetQueueAttributesType;
+import com.eucalyptus.simplequeue.common.msgs.GetQueueUrlResponseType;
+import com.eucalyptus.simplequeue.common.msgs.GetQueueUrlType;
+import com.eucalyptus.simplequeue.common.msgs.ListDeadLetterSourceQueuesResponseType;
+import com.eucalyptus.simplequeue.common.msgs.ListDeadLetterSourceQueuesType;
+import com.eucalyptus.simplequeue.common.msgs.ListQueuesResponseType;
+import com.eucalyptus.simplequeue.common.msgs.ListQueuesType;
+import com.eucalyptus.simplequeue.common.msgs.Message;
+import com.eucalyptus.simplequeue.common.msgs.MessageAttribute;
+import com.eucalyptus.simplequeue.common.msgs.MessageAttributeValue;
+import com.eucalyptus.simplequeue.common.msgs.PurgeQueueResponseType;
+import com.eucalyptus.simplequeue.common.msgs.PurgeQueueType;
+import com.eucalyptus.simplequeue.common.msgs.ReceiveMessageResponseType;
+import com.eucalyptus.simplequeue.common.msgs.ReceiveMessageResult;
+import com.eucalyptus.simplequeue.common.msgs.ReceiveMessageType;
+import com.eucalyptus.simplequeue.common.msgs.RemovePermissionResponseType;
+import com.eucalyptus.simplequeue.common.msgs.RemovePermissionType;
+import com.eucalyptus.simplequeue.common.msgs.SendMessageBatchRequestEntry;
+import com.eucalyptus.simplequeue.common.msgs.SendMessageBatchResponseType;
+import com.eucalyptus.simplequeue.common.msgs.SendMessageBatchResultEntry;
+import com.eucalyptus.simplequeue.common.msgs.SendMessageBatchType;
+import com.eucalyptus.simplequeue.common.msgs.SendMessageResponseType;
+import com.eucalyptus.simplequeue.common.msgs.SendMessageType;
+import com.eucalyptus.simplequeue.common.msgs.SetQueueAttributesResponseType;
+import com.eucalyptus.simplequeue.common.msgs.SetQueueAttributesType;
 import com.eucalyptus.simplequeue.common.policy.SimpleQueuePolicySpec;
 import com.eucalyptus.simplequeue.config.SimpleQueueProperties;
 import com.eucalyptus.simplequeue.exceptions.AccessDeniedException;
@@ -144,7 +192,7 @@ public class SimpleQueueService {
 
   static final Logger LOG = Logger.getLogger(SimpleQueueService.class);
 
-  private static int checkAttributeIntMinMax(Attribute attribute, int min, int max) throws InvalidParameterValueException {
+  private static int checkAttributeIntMinMax( Attribute attribute, int min, int max) throws InvalidParameterValueException {
     int value;
     try {
       value = Integer.parseInt(attribute.getValue());
@@ -158,7 +206,7 @@ public class SimpleQueueService {
     return value;
   }
 
-  public CreateQueueResponseType createQueue(CreateQueueType request) throws SimpleQueueException {
+  public CreateQueueResponseType createQueue( CreateQueueType request) throws SimpleQueueException {
     CreateQueueResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
@@ -513,7 +561,7 @@ public class SimpleQueueService {
     return queueUrlParts;
   }
 
-  public GetQueueUrlResponseType getQueueUrl(GetQueueUrlType request) throws EucalyptusCloudException {
+  public GetQueueUrlResponseType getQueueUrl( GetQueueUrlType request) throws EucalyptusCloudException {
     GetQueueUrlResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
@@ -533,7 +581,7 @@ public class SimpleQueueService {
     return reply;
   }
 
-  public ListQueuesResponseType listQueues(ListQueuesType request) throws EucalyptusCloudException {
+  public ListQueuesResponseType listQueues( ListQueuesType request) throws EucalyptusCloudException {
     ListQueuesResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
@@ -558,7 +606,7 @@ public class SimpleQueueService {
     return reply;
   }
 
-  public AddPermissionResponseType addPermission(AddPermissionType request) throws EucalyptusCloudException {
+  public AddPermissionResponseType addPermission( AddPermissionType request) throws EucalyptusCloudException {
     AddPermissionResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
@@ -694,7 +742,7 @@ public class SimpleQueueService {
     statementNode.put("Resource", resourceId);
   }
 
-  public ChangeMessageVisibilityResponseType changeMessageVisibility(ChangeMessageVisibilityType request)
+  public ChangeMessageVisibilityResponseType changeMessageVisibility( ChangeMessageVisibilityType request)
     throws EucalyptusCloudException {
     ChangeMessageVisibilityResponseType reply = request.getReply();
 
@@ -725,7 +773,7 @@ public class SimpleQueueService {
     PersistenceFactory.getMessagePersistence().changeMessageVisibility(queue.getKey(), receiptHandle, visibilityTimeout);
   }
 
-  public DeleteMessageResponseType deleteMessage(DeleteMessageType request) throws EucalyptusCloudException {
+  public DeleteMessageResponseType deleteMessage( DeleteMessageType request) throws EucalyptusCloudException {
     DeleteMessageResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
@@ -744,7 +792,7 @@ public class SimpleQueueService {
     return reply;
   }
 
-  public DeleteQueueResponseType deleteQueue(DeleteQueueType request) throws EucalyptusCloudException {
+  public DeleteQueueResponseType deleteQueue( DeleteQueueType request) throws EucalyptusCloudException {
     DeleteQueueResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
@@ -788,7 +836,7 @@ public class SimpleQueueService {
     }
   }
 
-  public PurgeQueueResponseType purgeQueue(PurgeQueueType request) throws EucalyptusCloudException {
+  public PurgeQueueResponseType purgeQueue( PurgeQueueType request) throws EucalyptusCloudException {
     PurgeQueueResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
@@ -800,7 +848,7 @@ public class SimpleQueueService {
     return reply;
   }
 
-  public GetQueueAttributesResponseType getQueueAttributes(GetQueueAttributesType request) throws EucalyptusCloudException {
+  public GetQueueAttributesResponseType getQueueAttributes( GetQueueAttributesType request) throws EucalyptusCloudException {
     GetQueueAttributesResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
@@ -840,7 +888,7 @@ public class SimpleQueueService {
     return reply;
   }
 
-  public RemovePermissionResponseType removePermission(RemovePermissionType request) throws EucalyptusCloudException {
+  public RemovePermissionResponseType removePermission( RemovePermissionType request) throws EucalyptusCloudException {
     RemovePermissionResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
@@ -915,7 +963,7 @@ public class SimpleQueueService {
     return reply;
   }
 
-  public ReceiveMessageResponseType receiveMessage(ReceiveMessageType request) throws EucalyptusCloudException {
+  public ReceiveMessageResponseType receiveMessage( ReceiveMessageType request) throws EucalyptusCloudException {
     ReceiveMessageResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
@@ -1098,7 +1146,7 @@ public class SimpleQueueService {
     return name.getBytes(UTF8).length;
   }
 
-  private static int validateMessageAttributeValueAndCalculateLength(MessageAttributeValue value, String name) throws com.eucalyptus.simplequeue.exceptions.UnsupportedOperationException, InvalidParameterValueException {
+  private static int validateMessageAttributeValueAndCalculateLength( MessageAttributeValue value, String name) throws com.eucalyptus.simplequeue.exceptions.UnsupportedOperationException, InvalidParameterValueException {
     int attributeValueLength = 0;
 
     if (value == null) {
@@ -1305,7 +1353,7 @@ public class SimpleQueueService {
     }
   }
 
-  public SendMessageResponseType sendMessage(SendMessageType request) throws EucalyptusCloudException {
+  public SendMessageResponseType sendMessage( SendMessageType request) throws EucalyptusCloudException {
     SendMessageResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
@@ -1336,7 +1384,7 @@ public class SimpleQueueService {
     return reply;
   }
 
-  public SetQueueAttributesResponseType setQueueAttributes(SetQueueAttributesType request) throws EucalyptusCloudException {
+  public SetQueueAttributesResponseType setQueueAttributes( SetQueueAttributesType request) throws EucalyptusCloudException {
     SetQueueAttributesResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
@@ -1352,7 +1400,7 @@ public class SimpleQueueService {
     return reply;
   }
 
-  public ChangeMessageVisibilityBatchResponseType changeMessageVisibilityBatch(ChangeMessageVisibilityBatchType request)
+  public ChangeMessageVisibilityBatchResponseType changeMessageVisibilityBatch( ChangeMessageVisibilityBatchType request)
     throws EucalyptusCloudException {
     ChangeMessageVisibilityBatchResponseType reply = request.getReply();
     try {
@@ -1408,7 +1456,7 @@ public class SimpleQueueService {
     return reply;
   }
 
-  public DeleteMessageBatchResponseType deleteMessageBatch(DeleteMessageBatchType request) throws EucalyptusCloudException {
+  public DeleteMessageBatchResponseType deleteMessageBatch( DeleteMessageBatchType request) throws EucalyptusCloudException {
     DeleteMessageBatchResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
@@ -1475,7 +1523,7 @@ public class SimpleQueueService {
     return reply;
   }
 
-  public SendMessageBatchResponseType sendMessageBatch(SendMessageBatchType request) throws EucalyptusCloudException {
+  public SendMessageBatchResponseType sendMessageBatch( SendMessageBatchType request) throws EucalyptusCloudException {
     SendMessageBatchResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
@@ -1568,7 +1616,7 @@ public class SimpleQueueService {
     return reply;
   }
 
-  public ListDeadLetterSourceQueuesResponseType listDeadLetterSourceQueues(ListDeadLetterSourceQueuesType request)
+  public ListDeadLetterSourceQueuesResponseType listDeadLetterSourceQueues( ListDeadLetterSourceQueuesType request)
     throws EucalyptusCloudException {
     ListDeadLetterSourceQueuesResponseType reply = request.getReply();
     try {

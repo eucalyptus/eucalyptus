@@ -29,14 +29,10 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.eucalyptus.cloudformation.ValidationErrorException;
-import com.eucalyptus.cloudformation.resources.IAMHelper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
-import com.eucalyptus.cloudformation.resources.standard.info.AWSIAMUserToGroupAdditionResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSSQSQueuePolicyResourceInfo;
-import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSIAMUserToGroupAdditionProperties;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSSQSQueuePolicyProperties;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
@@ -46,9 +42,9 @@ import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.simplequeue.Attribute;
-import com.eucalyptus.simplequeue.SetQueueAttributesType;
-import com.eucalyptus.simplequeue.SimpleQueue;
+import com.eucalyptus.simplequeue.common.msgs.Attribute;
+import com.eucalyptus.simplequeue.common.msgs.SetQueueAttributesType;
+import com.eucalyptus.simplequeue.common.SimpleQueue;
 import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
@@ -57,7 +53,6 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 
 import javax.annotation.Nullable;
-import java.util.Collection;
 import java.util.Objects;
 import java.util.Set;
 

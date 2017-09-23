@@ -29,7 +29,7 @@
 package com.eucalyptus.simplequeue.ws;
 
 import com.eucalyptus.component.annotation.ComponentPart;
-import com.eucalyptus.simplequeue.SimpleQueue;
+import com.eucalyptus.simplequeue.common.SimpleQueue;
 import com.eucalyptus.simplequeue.config.SimpleQueueConfiguration;
 import com.eucalyptus.ws.server.SoapPipeline;
 

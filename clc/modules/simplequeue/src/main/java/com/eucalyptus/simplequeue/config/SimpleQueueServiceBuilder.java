@@ -34,7 +34,7 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.annotation.ComponentPart;
-import com.eucalyptus.simplequeue.SimpleQueue;
+import com.eucalyptus.simplequeue.common.SimpleQueue;
 import org.apache.log4j.Logger;
 
 /**

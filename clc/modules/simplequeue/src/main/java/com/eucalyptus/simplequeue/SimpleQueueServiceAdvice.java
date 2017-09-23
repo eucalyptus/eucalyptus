@@ -30,17 +30,13 @@ package com.eucalyptus.simplequeue;
 
 import static com.eucalyptus.simplequeue.common.policy.SimpleQueuePolicySpec.*;
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
-import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nonnull;
-import com.eucalyptus.auth.AuthContextSupplier;
-import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage;
-import com.eucalyptus.autoscaling.common.policy.AutoScalingPolicySpec;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceAdvice;
+import com.eucalyptus.simplequeue.common.msgs.SimpleQueueMessage;
 import com.eucalyptus.simplequeue.exceptions.AccessDeniedException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.collect.ImmutableSet;
