@@ -29,9 +29,9 @@
 package com.eucalyptus.imaging.service.ws;
 
 import com.eucalyptus.component.annotation.ComponentNamed;
+import com.eucalyptus.imaging.common.msgs.Error;
 import com.eucalyptus.ws.Role;
-import com.eucalyptus.binding.BindingManager;
-import com.eucalyptus.imaging.common.ErrorResponse;
+import com.eucalyptus.imaging.common.msgs.ErrorResponse;
 import com.eucalyptus.ws.util.ErrorHandlerSupport;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -58,8 +58,8 @@ public class ImagingErrorHandler extends ErrorHandlerSupport {
     final ErrorResponse errorResp = new ErrorResponse( ); //TODO:GEN2OOLS: Ensure this is a message and has appropriate binding
     errorResp.setCorrelationId( correlationId );
     errorResp.setRequestId( correlationId );
-    final com.eucalyptus.imaging.common.Error error = 
-        new com.eucalyptus.imaging.common.Error( );
+    final Error error =
+        new Error( );
     error.setType( role == Role.Receiver ? "Receiver" : "Sender" ); //TODO:GEN2OOLS: Customize type for service
     error.setCode( code );
     error.setMessage( message );

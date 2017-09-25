@@ -28,8 +28,8 @@
  ************************************************************************/
 package com.eucalyptus.imaging.service.ws
 
-import com.eucalyptus.imaging.common.GetInstanceImportTaskType
-import com.eucalyptus.imaging.common.PutInstanceImportTaskStatusType
+import com.eucalyptus.imaging.common.msgs.GetInstanceImportTaskType
+import com.eucalyptus.imaging.common.msgs.PutInstanceImportTaskStatusType
 import com.eucalyptus.ws.protocol.QueryBindingTestSupport
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage
@@ -72,7 +72,7 @@ class ImagingQueryBindingTest extends QueryBindingTestSupport {
 
     // Get task
     bindAndAssertObject( iqb, GetInstanceImportTaskType.class, "GetInstanceImportTaskType", new GetInstanceImportTaskType( ), 0 );
-  
+
     // Put status
     bindAndAssertObject( iqb, PutInstanceImportTaskStatusType.class, "PutInstanceImportTaskStatus", new PutInstanceImportTaskStatusType(
       importTaskId : 'import-vol-123',
@@ -81,7 +81,7 @@ class ImagingQueryBindingTest extends QueryBindingTestSupport {
       message: 'Done',
       bytesConverted: 10L), 5
     );
-  
+
     bindAndAssertParameters( iqb, PutInstanceImportTaskStatusType.class, "PutInstanceImportTaskStatus", new PutInstanceImportTaskStatusType(
       importTaskId : 'import-vol-123',
       status: 'DONE',

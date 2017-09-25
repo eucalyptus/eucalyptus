@@ -37,9 +37,9 @@ import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.imaging.common.GetInstanceImportTaskType;
-import com.eucalyptus.imaging.common.ImagingMessage;
-import com.eucalyptus.imaging.common.PutInstanceImportTaskStatusType;
+import com.eucalyptus.imaging.common.msgs.GetInstanceImportTaskType;
+import com.eucalyptus.imaging.common.msgs.ImagingMessage;
+import com.eucalyptus.imaging.common.msgs.PutInstanceImportTaskStatusType;
 import com.eucalyptus.imaging.common.backend.msgs.ImagingBackendMessage;
 import com.eucalyptus.imaging.common.ImagingBackend;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -91,7 +91,7 @@ public class ImagingService {
   }
 
   private static Class getBackendMessageClass( final BaseMessage request ) throws ClassNotFoundException {
-    return Class.forName( request.getClass( ).getName( ).replace( ".common.", ".common.backend.msgs." ) );
+    return Class.forName( request.getClass( ).getName( ).replace( ".common.msgs.", ".common.backend.msgs." ) );
   }
 
   private static BaseMessage send( final ImagingBackendMessage request ) throws Exception {
