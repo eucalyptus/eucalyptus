@@ -43,41 +43,41 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.euare.common.identity.DescribeCertificateResponseType;
-import com.eucalyptus.auth.euare.common.identity.DescribeCertificateResult;
-import com.eucalyptus.auth.euare.common.identity.DescribeCertificateType;
-import com.eucalyptus.auth.euare.common.identity.DescribeOidcProviderResponseType;
-import com.eucalyptus.auth.euare.common.identity.DescribeOidcProviderResult;
-import com.eucalyptus.auth.euare.common.identity.DescribeOidcProviderType;
-import com.eucalyptus.auth.euare.common.identity.OidcProvider;
-import com.eucalyptus.auth.euare.common.identity.ReserveNameType;
-import com.eucalyptus.auth.euare.common.identity.SecurityTokenAttribute;
-import com.eucalyptus.auth.euare.common.identity.SignCertificateResponseType;
-import com.eucalyptus.auth.euare.common.identity.SignCertificateResult;
-import com.eucalyptus.auth.euare.common.identity.SignCertificateType;
+import com.eucalyptus.auth.euare.common.identity.msgs.DescribeCertificateResponseType;
+import com.eucalyptus.auth.euare.common.identity.msgs.DescribeCertificateResult;
+import com.eucalyptus.auth.euare.common.identity.msgs.DescribeCertificateType;
+import com.eucalyptus.auth.euare.common.identity.msgs.DescribeOidcProviderResponseType;
+import com.eucalyptus.auth.euare.common.identity.msgs.DescribeOidcProviderResult;
+import com.eucalyptus.auth.euare.common.identity.msgs.DescribeOidcProviderType;
+import com.eucalyptus.auth.euare.common.identity.msgs.OidcProvider;
+import com.eucalyptus.auth.euare.common.identity.msgs.ReserveNameType;
+import com.eucalyptus.auth.euare.common.identity.msgs.SecurityTokenAttribute;
+import com.eucalyptus.auth.euare.common.identity.msgs.SignCertificateResponseType;
+import com.eucalyptus.auth.euare.common.identity.msgs.SignCertificateResult;
+import com.eucalyptus.auth.euare.common.identity.msgs.SignCertificateType;
 import com.eucalyptus.auth.euare.common.oidc.OIDCIssuerIdentifier;
 import com.eucalyptus.auth.euare.common.oidc.OIDCUtils;
 import com.eucalyptus.auth.euare.persist.DatabaseAuthUtils;
 import com.eucalyptus.auth.api.PrincipalProvider;
-import com.eucalyptus.auth.euare.common.identity.Account;
-import com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenResponseType;
-import com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenResult;
-import com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenType;
-import com.eucalyptus.auth.euare.common.identity.DescribeAccountsResponseType;
-import com.eucalyptus.auth.euare.common.identity.DescribeAccountsType;
-import com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResponseType;
-import com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResult;
-import com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileType;
-import com.eucalyptus.auth.euare.common.identity.DescribePrincipalResponseType;
-import com.eucalyptus.auth.euare.common.identity.DescribePrincipalType;
-import com.eucalyptus.auth.euare.common.identity.DescribeRoleResponseType;
-import com.eucalyptus.auth.euare.common.identity.DescribeRoleResult;
-import com.eucalyptus.auth.euare.common.identity.DescribeRoleType;
+import com.eucalyptus.auth.euare.common.identity.msgs.Account;
+import com.eucalyptus.auth.euare.common.identity.msgs.DecodeSecurityTokenResponseType;
+import com.eucalyptus.auth.euare.common.identity.msgs.DecodeSecurityTokenResult;
+import com.eucalyptus.auth.euare.common.identity.msgs.DecodeSecurityTokenType;
+import com.eucalyptus.auth.euare.common.identity.msgs.DescribeAccountsResponseType;
+import com.eucalyptus.auth.euare.common.identity.msgs.DescribeAccountsType;
+import com.eucalyptus.auth.euare.common.identity.msgs.DescribeInstanceProfileResponseType;
+import com.eucalyptus.auth.euare.common.identity.msgs.DescribeInstanceProfileResult;
+import com.eucalyptus.auth.euare.common.identity.msgs.DescribeInstanceProfileType;
+import com.eucalyptus.auth.euare.common.identity.msgs.DescribePrincipalResponseType;
+import com.eucalyptus.auth.euare.common.identity.msgs.DescribePrincipalType;
+import com.eucalyptus.auth.euare.common.identity.msgs.DescribeRoleResponseType;
+import com.eucalyptus.auth.euare.common.identity.msgs.DescribeRoleResult;
+import com.eucalyptus.auth.euare.common.identity.msgs.DescribeRoleType;
 import com.eucalyptus.auth.euare.common.identity.Identity;
-import com.eucalyptus.auth.euare.common.identity.IdentityMessage;
-import com.eucalyptus.auth.euare.common.identity.Policy;
-import com.eucalyptus.auth.euare.common.identity.Principal;
-import com.eucalyptus.auth.euare.common.identity.SecurityToken;
+import com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage;
+import com.eucalyptus.auth.euare.common.identity.msgs.Policy;
+import com.eucalyptus.auth.euare.common.identity.msgs.Principal;
+import com.eucalyptus.auth.euare.common.identity.msgs.SecurityToken;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccessKey;
@@ -592,13 +592,13 @@ public class RemotePrincipalProvider implements PrincipalProvider {
     }
   }
 
-  private static NonNullFunction<com.eucalyptus.auth.euare.common.identity.AccessKey,AccessKey> accessKeyTransform(
+  private static NonNullFunction<com.eucalyptus.auth.euare.common.identity.msgs.AccessKey,AccessKey> accessKeyTransform(
     final Supplier<UserPrincipal> userPrincipalSupplier
   ) {
-    return new NonNullFunction<com.eucalyptus.auth.euare.common.identity.AccessKey,AccessKey>( ) {
+    return new NonNullFunction<com.eucalyptus.auth.euare.common.identity.msgs.AccessKey,AccessKey>( ) {
       @Nonnull
       @Override
-      public AccessKey apply( final com.eucalyptus.auth.euare.common.identity.AccessKey accessKey ) {
+      public AccessKey apply( final com.eucalyptus.auth.euare.common.identity.msgs.AccessKey accessKey ) {
         return new AccessKey( ) {
               @Override public Boolean isActive( ) { return true; }
               @Override public String getAccessKey( ) { return accessKey.getAccessKeyId( ); }
@@ -610,13 +610,13 @@ public class RemotePrincipalProvider implements PrincipalProvider {
     };
   }
 
-  private static NonNullFunction<com.eucalyptus.auth.euare.common.identity.Certificate,Certificate> certificateTransform(
+  private static NonNullFunction<com.eucalyptus.auth.euare.common.identity.msgs.Certificate,Certificate> certificateTransform(
       final Supplier<UserPrincipal> userPrincipalSupplier
   ) {
-    return new NonNullFunction<com.eucalyptus.auth.euare.common.identity.Certificate,Certificate>( ) {
+    return new NonNullFunction<com.eucalyptus.auth.euare.common.identity.msgs.Certificate,Certificate>( ) {
       @Nonnull
       @Override
-      public Certificate apply( final com.eucalyptus.auth.euare.common.identity.Certificate certificate ) {
+      public Certificate apply( final com.eucalyptus.auth.euare.common.identity.msgs.Certificate certificate ) {
         return new Certificate( ) {
           @Override public String getCertificateId( ) { return certificate.getCertificateBody( ); }
           @Override public Boolean isActive( ) { return true; }
@@ -645,12 +645,12 @@ public class RemotePrincipalProvider implements PrincipalProvider {
   }
 
   @TypeMapper
-  public enum RoleToRoleTransform implements Function<com.eucalyptus.auth.euare.common.identity.Role,Role> {
+  public enum RoleToRoleTransform implements Function<com.eucalyptus.auth.euare.common.identity.msgs.Role,Role> {
     INSTANCE;
 
     @Nullable
     @Override
-    public Role apply( final com.eucalyptus.auth.euare.common.identity.Role role ) {
+    public Role apply( final com.eucalyptus.auth.euare.common.identity.msgs.Role role ) {
       final EuareResourceName roleErn = (EuareResourceName) Ern.parse( role.getRoleArn( ) );
       final PolicyVersion rolePolicy = TypeMappers.transform( role.getAssumeRolePolicy( ), PolicyVersion.class );
       return new Role( ) {

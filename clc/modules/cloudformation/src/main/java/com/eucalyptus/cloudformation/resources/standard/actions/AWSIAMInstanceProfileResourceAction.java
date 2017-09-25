@@ -29,17 +29,17 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.eucalyptus.auth.euare.AddRoleToInstanceProfileResponseType;
-import com.eucalyptus.auth.euare.AddRoleToInstanceProfileType;
-import com.eucalyptus.auth.euare.CreateInstanceProfileResponseType;
-import com.eucalyptus.auth.euare.CreateInstanceProfileType;
-import com.eucalyptus.auth.euare.DeleteInstanceProfileResponseType;
-import com.eucalyptus.auth.euare.DeleteInstanceProfileType;
-import com.eucalyptus.auth.euare.GetInstanceProfileResponseType;
-import com.eucalyptus.auth.euare.GetInstanceProfileType;
-import com.eucalyptus.auth.euare.RemoveRoleFromInstanceProfileResponseType;
-import com.eucalyptus.auth.euare.RemoveRoleFromInstanceProfileType;
-import com.eucalyptus.auth.euare.RoleType;
+import com.eucalyptus.auth.euare.common.msgs.AddRoleToInstanceProfileResponseType;
+import com.eucalyptus.auth.euare.common.msgs.AddRoleToInstanceProfileType;
+import com.eucalyptus.auth.euare.common.msgs.CreateInstanceProfileResponseType;
+import com.eucalyptus.auth.euare.common.msgs.CreateInstanceProfileType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteInstanceProfileResponseType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteInstanceProfileType;
+import com.eucalyptus.auth.euare.common.msgs.GetInstanceProfileResponseType;
+import com.eucalyptus.auth.euare.common.msgs.GetInstanceProfileType;
+import com.eucalyptus.auth.euare.common.msgs.RemoveRoleFromInstanceProfileResponseType;
+import com.eucalyptus.auth.euare.common.msgs.RemoveRoleFromInstanceProfileType;
+import com.eucalyptus.auth.euare.common.msgs.RoleType;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.IAMHelper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;

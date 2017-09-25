@@ -29,8 +29,8 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.eucalyptus.auth.euare.AddUserToGroupResponseType;
-import com.eucalyptus.auth.euare.AddUserToGroupType;
+import com.eucalyptus.auth.euare.common.msgs.AddUserToGroupResponseType;
+import com.eucalyptus.auth.euare.common.msgs.AddUserToGroupType;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.IAMHelper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;

@@ -29,12 +29,12 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.eucalyptus.auth.euare.CreateAccessKeyResponseType;
-import com.eucalyptus.auth.euare.CreateAccessKeyType;
-import com.eucalyptus.auth.euare.DeleteAccessKeyResponseType;
-import com.eucalyptus.auth.euare.DeleteAccessKeyType;
-import com.eucalyptus.auth.euare.UpdateAccessKeyResponseType;
-import com.eucalyptus.auth.euare.UpdateAccessKeyType;
+import com.eucalyptus.auth.euare.common.msgs.CreateAccessKeyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.CreateAccessKeyType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteAccessKeyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteAccessKeyType;
+import com.eucalyptus.auth.euare.common.msgs.UpdateAccessKeyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.UpdateAccessKeyType;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.IAMHelper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;

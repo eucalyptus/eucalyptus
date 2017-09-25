@@ -38,9 +38,10 @@ import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.euare.common.identity.Identity;
-import com.eucalyptus.auth.euare.common.identity.IdentityMessage;
-import com.eucalyptus.auth.euare.common.identity.TunnelActionResponseType;
-import com.eucalyptus.auth.euare.common.identity.TunnelActionType;
+import com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage;
+import com.eucalyptus.auth.euare.common.identity.msgs.TunnelActionResponseType;
+import com.eucalyptus.auth.euare.common.identity.msgs.TunnelActionType;
+import com.eucalyptus.auth.euare.common.msgs.EuareMessage;
 import com.eucalyptus.auth.euare.identity.region.RegionInfo;
 import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.component.ComponentIds;
@@ -87,7 +88,7 @@ public class EuareRemoteRegionService {
       try ( final LockResource lock = LockResource.lock( HoldMe.canHas ) ) {
         final StAXOMBuilder omBuilder = HoldMe.getStAXOMBuilder( HoldMe.getXMLStreamReader( responseContent ) );
         final OMElement message = omBuilder.getDocumentElement( );
-        final String messageTypeName = message.getAttributeValue( new QName( "type" ) ); 
+        final String messageTypeName = message.getAttributeValue( new QName( "type" ) );
         final Class<?> messageType = getClass( ).getClassLoader( ).loadClass( messageTypeName );
         if ( !EuareMessage.class.isAssignableFrom( messageType ) ) {
           throw new IllegalArgumentException( "Unsupported type: " + messageTypeName );

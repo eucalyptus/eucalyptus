@@ -31,7 +31,7 @@ package com.eucalyptus.tokens.oidc;
 import java.io.IOException;
 import java.util.List;
 import javax.annotation.Nonnull;
-import com.eucalyptus.auth.euare.common.identity.OidcProvider;
+import com.eucalyptus.auth.euare.common.identity.msgs.OidcProvider;
 import com.eucalyptus.auth.euare.common.oidc.OIDCUtils;
 import com.eucalyptus.auth.principal.OpenIdConnectProvider;
 import com.eucalyptus.util.Json;

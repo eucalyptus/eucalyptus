@@ -28,6 +28,7 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare
 
+import com.eucalyptus.auth.euare.common.msgs.EuareMessage
 import com.google.common.collect.Lists
 import com.google.common.collect.Sets
 import org.junit.Ignore
@@ -49,46 +50,46 @@ class EuareBindingGenerator {
     ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider( false )
     scanner.addIncludeFilter( new AssignableTypeFilter( EuareMessage ) );
     Set<String> messageClasses = Sets.newTreeSet( scanner.findCandidateComponents( EuareMessage.package.name )*.beanClassName )
-    messageClasses.removeAll( [ 'com.eucalyptus.auth.euare.EuareMessage' ] )
+    messageClasses.removeAll( [ 'com.eucalyptus.auth.euare.common.msgs.EuareMessage' ] )
     messageClasses.retainAll( [
-      'com.eucalyptus.auth.euare.AttachGroupPolicyResponseType',
-      'com.eucalyptus.auth.euare.AttachGroupPolicyType',
-      'com.eucalyptus.auth.euare.AttachRolePolicyResponseType',
-      'com.eucalyptus.auth.euare.AttachRolePolicyType',
-      'com.eucalyptus.auth.euare.AttachUserPolicyResponseType',
-      'com.eucalyptus.auth.euare.AttachUserPolicyType',
-      'com.eucalyptus.auth.euare.CreatePolicyResponseType',
-      'com.eucalyptus.auth.euare.CreatePolicyType',
-      'com.eucalyptus.auth.euare.CreatePolicyVersionResponseType',
-      'com.eucalyptus.auth.euare.CreatePolicyVersionType',
-      'com.eucalyptus.auth.euare.DeletePolicyResponseType',
-      'com.eucalyptus.auth.euare.DeletePolicyType',
-      'com.eucalyptus.auth.euare.DeletePolicyVersionResponseType',
-      'com.eucalyptus.auth.euare.DeletePolicyVersionType',
-      'com.eucalyptus.auth.euare.DetachGroupPolicyResponseType',
-      'com.eucalyptus.auth.euare.DetachGroupPolicyType',
-      'com.eucalyptus.auth.euare.DetachRolePolicyResponseType',
-      'com.eucalyptus.auth.euare.DetachRolePolicyType',
-      'com.eucalyptus.auth.euare.DetachUserPolicyResponseType',
-      'com.eucalyptus.auth.euare.DetachUserPolicyType',
-      'com.eucalyptus.auth.euare.GetPolicyResponseType',
-      'com.eucalyptus.auth.euare.GetPolicyType',
-      'com.eucalyptus.auth.euare.GetPolicyVersionResponseType',
-      'com.eucalyptus.auth.euare.GetPolicyVersionType',
-      'com.eucalyptus.auth.euare.ListAttachedGroupPoliciesResponseType',
-      'com.eucalyptus.auth.euare.ListAttachedGroupPoliciesType',
-      'com.eucalyptus.auth.euare.ListAttachedRolePoliciesResponseType',
-      'com.eucalyptus.auth.euare.ListAttachedRolePoliciesType',
-      'com.eucalyptus.auth.euare.ListAttachedUserPoliciesResponseType',
-      'com.eucalyptus.auth.euare.ListAttachedUserPoliciesType',
-      'com.eucalyptus.auth.euare.ListEntitiesForPolicyResponseType',
-      'com.eucalyptus.auth.euare.ListEntitiesForPolicyType',
-      'com.eucalyptus.auth.euare.ListPoliciesResponseType',
-      'com.eucalyptus.auth.euare.ListPoliciesType',
-      'com.eucalyptus.auth.euare.ListPolicyVersionsResponseType',
-      'com.eucalyptus.auth.euare.ListPolicyVersionsType',
-      'com.eucalyptus.auth.euare.SetDefaultPolicyVersionResponseType',
-      'com.eucalyptus.auth.euare.SetDefaultPolicyVersionType'
+      'com.eucalyptus.auth.euare.common.msgs.AttachGroupPolicyResponseType',
+      'com.eucalyptus.auth.euare.common.msgs.AttachGroupPolicyType',
+      'com.eucalyptus.auth.euare.common.msgs.AttachRolePolicyResponseType',
+      'com.eucalyptus.auth.euare.common.msgs.AttachRolePolicyType',
+      'com.eucalyptus.auth.euare.common.msgs.AttachUserPolicyResponseType',
+      'com.eucalyptus.auth.euare.common.msgs.AttachUserPolicyType',
+      'com.eucalyptus.auth.euare.common.msgs.CreatePolicyResponseType',
+      'com.eucalyptus.auth.euare.common.msgs.CreatePolicyType',
+      'com.eucalyptus.auth.euare.common.msgs.CreatePolicyVersionResponseType',
+      'com.eucalyptus.auth.euare.common.msgs.CreatePolicyVersionType',
+      'com.eucalyptus.auth.euare.common.msgs.DeletePolicyResponseType',
+      'com.eucalyptus.auth.euare.common.msgs.DeletePolicyType',
+      'com.eucalyptus.auth.euare.common.msgs.DeletePolicyVersionResponseType',
+      'com.eucalyptus.auth.euare.common.msgs.DeletePolicyVersionType',
+      'com.eucalyptus.auth.euare.common.msgs.DetachGroupPolicyResponseType',
+      'com.eucalyptus.auth.euare.common.msgs.DetachGroupPolicyType',
+      'com.eucalyptus.auth.euare.common.msgs.DetachRolePolicyResponseType',
+      'com.eucalyptus.auth.euare.common.msgs.DetachRolePolicyType',
+      'com.eucalyptus.auth.euare.common.msgs.DetachUserPolicyResponseType',
+      'com.eucalyptus.auth.euare.common.msgs.DetachUserPolicyType',
+      'com.eucalyptus.auth.euare.common.msgs.GetPolicyResponseType',
+      'com.eucalyptus.auth.euare.common.msgs.GetPolicyType',
+      'com.eucalyptus.auth.euare.common.msgs.GetPolicyVersionResponseType',
+      'com.eucalyptus.auth.euare.common.msgs.GetPolicyVersionType',
+      'com.eucalyptus.auth.euare.common.msgs.ListAttachedGroupPoliciesResponseType',
+      'com.eucalyptus.auth.euare.common.msgs.ListAttachedGroupPoliciesType',
+      'com.eucalyptus.auth.euare.common.msgs.ListAttachedRolePoliciesResponseType',
+      'com.eucalyptus.auth.euare.common.msgs.ListAttachedRolePoliciesType',
+      'com.eucalyptus.auth.euare.common.msgs.ListAttachedUserPoliciesResponseType',
+      'com.eucalyptus.auth.euare.common.msgs.ListAttachedUserPoliciesType',
+      'com.eucalyptus.auth.euare.common.msgs.ListEntitiesForPolicyResponseType',
+      'com.eucalyptus.auth.euare.common.msgs.ListEntitiesForPolicyType',
+      'com.eucalyptus.auth.euare.common.msgs.ListPoliciesResponseType',
+      'com.eucalyptus.auth.euare.common.msgs.ListPoliciesType',
+      'com.eucalyptus.auth.euare.common.msgs.ListPolicyVersionsResponseType',
+      'com.eucalyptus.auth.euare.common.msgs.ListPolicyVersionsType',
+      'com.eucalyptus.auth.euare.common.msgs.SetDefaultPolicyVersionResponseType',
+      'com.eucalyptus.auth.euare.common.msgs.SetDefaultPolicyVersionType'
      ] )
 
     Set<String> beanClasses = Sets.newTreeSet( )
@@ -97,8 +98,8 @@ class EuareBindingGenerator {
       String simpleName = messageclass.substring( messageclass.lastIndexOf( '.' ) + 1 )
 
       if ( messageclass.endsWith( "Type" ) ) {
-        println """  <mapping name="${simpleName.substring(0,simpleName.length()-4)}" class="${messageclass}" extends="com.eucalyptus.auth.euare.EuareMessage">"""
-        println """    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>"""
+        println """  <mapping name="${simpleName.substring(0,simpleName.length()-4)}" class="${messageclass}" extends="com.eucalyptus.auth.euare.common.msgs.EuareMessage">"""
+        println """    <structure map-as="com.eucalyptus.auth.euare.common.msgs.EuareMessage"/>"""
         printFields( messageclass, beanClasses )
         println """  </mapping>"""
       } else {

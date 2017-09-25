@@ -28,8 +28,8 @@
  ************************************************************************/
 package com.eucalyptus.auth.ws
 
-import com.eucalyptus.auth.euare.CreateOpenIdConnectProviderType
-import com.eucalyptus.auth.euare.DeleteOpenIdConnectProviderType
+import com.eucalyptus.auth.euare.common.msgs.CreateOpenIdConnectProviderType
+import com.eucalyptus.auth.euare.common.msgs.DeleteOpenIdConnectProviderType
 import com.eucalyptus.ws.protocol.QueryBindingTestSupport
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import org.junit.Test

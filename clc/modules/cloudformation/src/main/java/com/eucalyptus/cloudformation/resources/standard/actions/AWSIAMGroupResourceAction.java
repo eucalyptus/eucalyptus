@@ -29,22 +29,22 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.eucalyptus.auth.euare.AttachGroupPolicyType;
-import com.eucalyptus.auth.euare.AttachedPolicyType;
-import com.eucalyptus.auth.euare.CreateGroupResponseType;
-import com.eucalyptus.auth.euare.CreateGroupType;
-import com.eucalyptus.auth.euare.DeleteGroupPolicyResponseType;
-import com.eucalyptus.auth.euare.DeleteGroupPolicyType;
-import com.eucalyptus.auth.euare.DeleteGroupResponseType;
-import com.eucalyptus.auth.euare.DeleteGroupType;
-import com.eucalyptus.auth.euare.DetachGroupPolicyType;
-import com.eucalyptus.auth.euare.GroupType;
-import com.eucalyptus.auth.euare.ListAttachedGroupPoliciesResponseType;
-import com.eucalyptus.auth.euare.ListAttachedGroupPoliciesType;
-import com.eucalyptus.auth.euare.PutGroupPolicyResponseType;
-import com.eucalyptus.auth.euare.PutGroupPolicyType;
-import com.eucalyptus.auth.euare.UpdateGroupResponseType;
-import com.eucalyptus.auth.euare.UpdateGroupType;
+import com.eucalyptus.auth.euare.common.msgs.AttachGroupPolicyType;
+import com.eucalyptus.auth.euare.common.msgs.AttachedPolicyType;
+import com.eucalyptus.auth.euare.common.msgs.CreateGroupResponseType;
+import com.eucalyptus.auth.euare.common.msgs.CreateGroupType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteGroupPolicyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteGroupPolicyType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteGroupResponseType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteGroupType;
+import com.eucalyptus.auth.euare.common.msgs.DetachGroupPolicyType;
+import com.eucalyptus.auth.euare.common.msgs.GroupType;
+import com.eucalyptus.auth.euare.common.msgs.ListAttachedGroupPoliciesResponseType;
+import com.eucalyptus.auth.euare.common.msgs.ListAttachedGroupPoliciesType;
+import com.eucalyptus.auth.euare.common.msgs.PutGroupPolicyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.PutGroupPolicyType;
+import com.eucalyptus.auth.euare.common.msgs.UpdateGroupResponseType;
+import com.eucalyptus.auth.euare.common.msgs.UpdateGroupType;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.IAMHelper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
@@ -369,7 +369,7 @@ public class AWSIAMGroupResourceAction extends StepBasedResourceAction {
     }
   }
 
-  
+
 }
 
 

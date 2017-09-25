@@ -65,6 +65,7 @@ import com.eucalyptus.auth.AuthenticationLimitProvider;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.ServerCertificate;
+import com.eucalyptus.auth.euare.common.msgs.*;
 import com.eucalyptus.auth.euare.common.policy.IamPolicySpec;
 import com.eucalyptus.auth.euare.persist.entities.ServerCertificateEntity;
 import com.eucalyptus.auth.euare.ldap.LdapSync;
@@ -212,7 +213,7 @@ public class EuareService {
     return reply;
   }
 
-  public ListGroupsResponseType listGroups(ListGroupsType request) throws EucalyptusCloudException {
+  public ListGroupsResponseType listGroups( ListGroupsType request) throws EucalyptusCloudException {
     ListGroupsResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -244,7 +245,7 @@ public class EuareService {
     return reply;
   }
 
-  public DeleteAccessKeyResponseType deleteAccessKey(DeleteAccessKeyType request) throws EucalyptusCloudException {
+  public DeleteAccessKeyResponseType deleteAccessKey( DeleteAccessKeyType request) throws EucalyptusCloudException {
     DeleteAccessKeyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -272,7 +273,7 @@ public class EuareService {
     return reply;
   }
 
-  public ListSigningCertificatesResponseType listSigningCertificates(ListSigningCertificatesType request) throws EucalyptusCloudException {
+  public ListSigningCertificatesResponseType listSigningCertificates( ListSigningCertificatesType request) throws EucalyptusCloudException {
     ListSigningCertificatesResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -309,7 +310,7 @@ public class EuareService {
     return reply;
   }
 
-  public UploadSigningCertificateResponseType uploadSigningCertificate(UploadSigningCertificateType request) throws EucalyptusCloudException {
+  public UploadSigningCertificateResponseType uploadSigningCertificate( UploadSigningCertificateType request) throws EucalyptusCloudException {
     UploadSigningCertificateResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -347,7 +348,7 @@ public class EuareService {
     return reply;
   }
 
-  public DeleteUserPolicyResponseType deleteUserPolicy(DeleteUserPolicyType request) throws EucalyptusCloudException {
+  public DeleteUserPolicyResponseType deleteUserPolicy( DeleteUserPolicyType request) throws EucalyptusCloudException {
     DeleteUserPolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -370,7 +371,7 @@ public class EuareService {
     return reply;
   }
 
-  public PutUserPolicyResponseType putUserPolicy(PutUserPolicyType request) throws EucalyptusCloudException {
+  public PutUserPolicyResponseType putUserPolicy( PutUserPolicyType request) throws EucalyptusCloudException {
     PutUserPolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -396,7 +397,7 @@ public class EuareService {
     return reply;
   }
 
-  public ListServerCertificatesResponseType listServerCertificates(ListServerCertificatesType request) throws EucalyptusCloudException {
+  public ListServerCertificatesResponseType listServerCertificates( ListServerCertificatesType request) throws EucalyptusCloudException {
     final ListServerCertificatesResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
@@ -431,7 +432,7 @@ public class EuareService {
     return reply;
   }
 
-  public GetUserPolicyResponseType getUserPolicy(GetUserPolicyType request) throws EucalyptusCloudException {
+  public GetUserPolicyResponseType getUserPolicy( GetUserPolicyType request) throws EucalyptusCloudException {
     GetUserPolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -464,7 +465,7 @@ public class EuareService {
     return reply;
   }
 
-  public UpdateLoginProfileResponseType updateLoginProfile(UpdateLoginProfileType request) throws EucalyptusCloudException {
+  public UpdateLoginProfileResponseType updateLoginProfile( UpdateLoginProfileType request) throws EucalyptusCloudException {
     UpdateLoginProfileResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -489,7 +490,7 @@ public class EuareService {
     return reply;
   }
 
-  public UpdateServerCertificateResponseType updateServerCertificate(UpdateServerCertificateType request) throws EucalyptusCloudException {
+  public UpdateServerCertificateResponseType updateServerCertificate( UpdateServerCertificateType request) throws EucalyptusCloudException {
     final UpdateServerCertificateResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
@@ -524,7 +525,7 @@ public class EuareService {
     return reply;
   }
 
-  public UpdateUserResponseType updateUser(UpdateUserType request) throws EucalyptusCloudException {
+  public UpdateUserResponseType updateUser( UpdateUserType request) throws EucalyptusCloudException {
     UpdateUserResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -556,7 +557,7 @@ public class EuareService {
     return reply;
   }
 
-  public DeleteLoginProfileResponseType deleteLoginProfile(DeleteLoginProfileType request) throws EucalyptusCloudException {
+  public DeleteLoginProfileResponseType deleteLoginProfile( DeleteLoginProfileType request) throws EucalyptusCloudException {
     DeleteLoginProfileResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -577,7 +578,7 @@ public class EuareService {
     return reply;
   }
 
-  public UpdateSigningCertificateResponseType updateSigningCertificate(UpdateSigningCertificateType request) throws EucalyptusCloudException {
+  public UpdateSigningCertificateResponseType updateSigningCertificate( UpdateSigningCertificateType request) throws EucalyptusCloudException {
     UpdateSigningCertificateResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -607,7 +608,7 @@ public class EuareService {
     return reply;
   }
 
-  public DeleteGroupPolicyResponseType deleteGroupPolicy(DeleteGroupPolicyType request) throws EucalyptusCloudException {
+  public DeleteGroupPolicyResponseType deleteGroupPolicy( DeleteGroupPolicyType request) throws EucalyptusCloudException {
     DeleteGroupPolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -630,7 +631,7 @@ public class EuareService {
     return reply;
   }
 
-  public ListUsersResponseType listUsers(ListUsersType request) throws EucalyptusCloudException {
+  public ListUsersResponseType listUsers( ListUsersType request) throws EucalyptusCloudException {
     ListUsersResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -663,7 +664,7 @@ public class EuareService {
     return reply;
   }
 
-  public UpdateGroupResponseType updateGroup(UpdateGroupType request) throws EucalyptusCloudException {
+  public UpdateGroupResponseType updateGroup( UpdateGroupType request) throws EucalyptusCloudException {
     UpdateGroupResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -690,7 +691,7 @@ public class EuareService {
     return reply;
   }
 
-  public GetServerCertificateResponseType getServerCertificate(GetServerCertificateType request) throws EucalyptusCloudException {
+  public GetServerCertificateResponseType getServerCertificate( GetServerCertificateType request) throws EucalyptusCloudException {
     final GetServerCertificateResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
@@ -726,7 +727,7 @@ public class EuareService {
     return reply;
   }
 
-  public PutGroupPolicyResponseType putGroupPolicy(PutGroupPolicyType request) throws EucalyptusCloudException {
+  public PutGroupPolicyResponseType putGroupPolicy( PutGroupPolicyType request) throws EucalyptusCloudException {
     PutGroupPolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -752,7 +753,7 @@ public class EuareService {
     return reply;
   }
 
-  public CreateUserResponseType createUser(CreateUserType request) throws EucalyptusCloudException {
+  public CreateUserResponseType createUser( CreateUserType request) throws EucalyptusCloudException {
     CreateUserResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -782,7 +783,7 @@ public class EuareService {
     return reply;
   }
 
-  public DeleteSigningCertificateResponseType deleteSigningCertificate(DeleteSigningCertificateType request) throws EucalyptusCloudException {
+  public DeleteSigningCertificateResponseType deleteSigningCertificate( DeleteSigningCertificateType request) throws EucalyptusCloudException {
     DeleteSigningCertificateResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -808,13 +809,13 @@ public class EuareService {
     }
   }
 
-  public EnableMFADeviceResponseType enableMFADevice(EnableMFADeviceType request) throws EucalyptusCloudException {
+  public EnableMFADeviceResponseType enableMFADevice( EnableMFADeviceType request) throws EucalyptusCloudException {
     //EnableMFADeviceResponseType reply = request.getReply( );
     throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.NOT_IMPLEMENTED, "Operation not implemented" );
     //return reply;
   }
 
-  public ListUserPoliciesResponseType listUserPolicies(ListUserPoliciesType request) throws EucalyptusCloudException {
+  public ListUserPoliciesResponseType listUserPolicies( ListUserPoliciesType request) throws EucalyptusCloudException {
     ListUserPoliciesResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -840,7 +841,7 @@ public class EuareService {
     return reply;
   }
 
-  public ListAccessKeysResponseType listAccessKeys(ListAccessKeysType request) throws EucalyptusCloudException {
+  public ListAccessKeysResponseType listAccessKeys( ListAccessKeysType request) throws EucalyptusCloudException {
     ListAccessKeysResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -875,7 +876,7 @@ public class EuareService {
     return reply;
   }
 
-  public GetLoginProfileResponseType getLoginProfile(GetLoginProfileType request) throws EucalyptusCloudException {
+  public GetLoginProfileResponseType getLoginProfile( GetLoginProfileType request) throws EucalyptusCloudException {
     GetLoginProfileResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -928,7 +929,7 @@ public class EuareService {
     return reply;
   }
 
-  public CreateGroupResponseType createGroup(CreateGroupType request) throws EucalyptusCloudException {
+  public CreateGroupResponseType createGroup( CreateGroupType request) throws EucalyptusCloudException {
     CreateGroupResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -958,7 +959,7 @@ public class EuareService {
     return reply;
   }
 
-  public UploadServerCertificateResponseType uploadServerCertificate(UploadServerCertificateType request) throws EucalyptusCloudException {
+  public UploadServerCertificateResponseType uploadServerCertificate( UploadServerCertificateType request) throws EucalyptusCloudException {
     final UploadServerCertificateResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
@@ -1005,7 +1006,7 @@ public class EuareService {
     return reply;
   }
 
-  public GetGroupPolicyResponseType getGroupPolicy(GetGroupPolicyType request) throws EucalyptusCloudException {
+  public GetGroupPolicyResponseType getGroupPolicy( GetGroupPolicyType request) throws EucalyptusCloudException {
     GetGroupPolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -1038,7 +1039,7 @@ public class EuareService {
     return reply;
   }
 
-  public DeleteUserResponseType deleteUser(DeleteUserType request) throws EucalyptusCloudException {
+  public DeleteUserResponseType deleteUser( DeleteUserType request) throws EucalyptusCloudException {
     DeleteUserResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -1062,13 +1063,13 @@ public class EuareService {
     return reply;
   }
 
-  public DeactivateMFADeviceResponseType deactivateMFADevice(DeactivateMFADeviceType request) throws EucalyptusCloudException {
+  public DeactivateMFADeviceResponseType deactivateMFADevice( DeactivateMFADeviceType request) throws EucalyptusCloudException {
     //DeactivateMFADeviceResponseType reply = request.getReply( );
     throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.NOT_IMPLEMENTED, "Operation not implemented" );
     //return reply;
   }
 
-  public RemoveUserFromGroupResponseType removeUserFromGroup(RemoveUserFromGroupType request) throws EucalyptusCloudException {
+  public RemoveUserFromGroupResponseType removeUserFromGroup( RemoveUserFromGroupType request) throws EucalyptusCloudException {
     RemoveUserFromGroupResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -1090,7 +1091,7 @@ public class EuareService {
     return reply;
   }
 
-  public DeleteServerCertificateResponseType deleteServerCertificate(DeleteServerCertificateType request) throws EucalyptusCloudException {
+  public DeleteServerCertificateResponseType deleteServerCertificate( DeleteServerCertificateType request) throws EucalyptusCloudException {
     final DeleteServerCertificateResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
@@ -1122,7 +1123,7 @@ public class EuareService {
     return reply;
   }
 
-  public ListGroupPoliciesResponseType listGroupPolicies(ListGroupPoliciesType request) throws EucalyptusCloudException {
+  public ListGroupPoliciesResponseType listGroupPolicies( ListGroupPoliciesType request) throws EucalyptusCloudException {
     ListGroupPoliciesResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -1148,7 +1149,7 @@ public class EuareService {
     return reply;
   }
 
-  public CreateLoginProfileResponseType createLoginProfile(CreateLoginProfileType request) throws EucalyptusCloudException {
+  public CreateLoginProfileResponseType createLoginProfile( CreateLoginProfileType request) throws EucalyptusCloudException {
     CreateLoginProfileResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -1175,7 +1176,7 @@ public class EuareService {
     }
   }
 
-  public CreateAccessKeyResponseType createAccessKey(CreateAccessKeyType request) throws EucalyptusCloudException {
+  public CreateAccessKeyResponseType createAccessKey( CreateAccessKeyType request) throws EucalyptusCloudException {
     CreateAccessKeyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -1207,7 +1208,7 @@ public class EuareService {
     return reply;
   }
 
-  public GetUserResponseType getUser(GetUserType request) throws EucalyptusCloudException {
+  public GetUserResponseType getUser( GetUserType request) throws EucalyptusCloudException {
     GetUserResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -1235,19 +1236,19 @@ public class EuareService {
     }
   }
 
-  public ResyncMFADeviceResponseType resyncMFADevice(ResyncMFADeviceType request) throws EucalyptusCloudException {
+  public ResyncMFADeviceResponseType resyncMFADevice( ResyncMFADeviceType request) throws EucalyptusCloudException {
     //ResyncMFADeviceResponseType reply = request.getReply( );
     throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.NOT_IMPLEMENTED, "Operation not implemented" );
     //return reply;
   }
 
-  public ListMFADevicesResponseType listMFADevices(ListMFADevicesType request) throws EucalyptusCloudException {
+  public ListMFADevicesResponseType listMFADevices( ListMFADevicesType request) throws EucalyptusCloudException {
     //ListMFADevicesResponseType reply = request.getReply( );
     throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.NOT_IMPLEMENTED, "Operation not implemented" );
     //return reply;
   }
 
-  public UpdateAccessKeyResponseType updateAccessKey(UpdateAccessKeyType request) throws EucalyptusCloudException {
+  public UpdateAccessKeyResponseType updateAccessKey( UpdateAccessKeyType request) throws EucalyptusCloudException {
     UpdateAccessKeyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -1275,7 +1276,7 @@ public class EuareService {
     return reply;
   }
 
-  public AddUserToGroupResponseType addUserToGroup(AddUserToGroupType request) throws EucalyptusCloudException {
+  public AddUserToGroupResponseType addUserToGroup( AddUserToGroupType request) throws EucalyptusCloudException {
     AddUserToGroupResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -1298,7 +1299,7 @@ public class EuareService {
     return reply;
   }
 
-  public GetGroupResponseType getGroup(GetGroupType request) throws EucalyptusCloudException {
+  public GetGroupResponseType getGroup( GetGroupType request) throws EucalyptusCloudException {
     GetGroupResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
@@ -1327,7 +1328,7 @@ public class EuareService {
     return reply;
   }
 
-  public DeleteGroupResponseType deleteGroup(DeleteGroupType request) throws EucalyptusCloudException {
+  public DeleteGroupResponseType deleteGroup( DeleteGroupType request) throws EucalyptusCloudException {
     DeleteGroupResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );

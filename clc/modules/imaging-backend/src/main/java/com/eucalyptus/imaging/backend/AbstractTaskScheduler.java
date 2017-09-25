@@ -28,10 +28,8 @@
  ************************************************************************/
 package com.eucalyptus.imaging.backend;
 
-import java.net.URI;
 import java.security.PublicKey;
 import java.security.cert.X509Certificate;
-import java.util.List;
 
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.resources.client.EuareClient;
@@ -39,26 +37,19 @@ import com.eucalyptus.resources.client.EuareClient;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.euare.ServerCertificateType;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.Topology;
+import com.eucalyptus.auth.euare.common.msgs.ServerCertificateType;
 import com.eucalyptus.compute.common.ImportInstanceVolumeDetail;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.images.ImageConfiguration;
-import com.eucalyptus.imaging.common.DiskImageConversionTask;
 import com.eucalyptus.imaging.common.ImageManifest;
-import com.eucalyptus.imaging.common.ImportDiskImageDetail;
 import com.eucalyptus.imaging.common.InstanceStoreTask;
 import com.eucalyptus.imaging.common.VolumeTask;
-import com.eucalyptus.imaging.manifest.BundleImageManifest;
 import com.eucalyptus.imaging.manifest.DownloadManifestFactory;
 import com.eucalyptus.imaging.manifest.ImageManifestFile;
 import com.eucalyptus.imaging.manifest.ImportImageManifest;
 import com.eucalyptus.imaging.manifest.InvalidBaseManifestException;
 import com.eucalyptus.imaging.worker.ImagingServiceLaunchers;
-import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 
@@ -70,9 +61,9 @@ public abstract class AbstractTaskScheduler {
   private static Logger LOG = Logger.getLogger( AbstractTaskScheduler.class );
   private PublicKey imagingServiceKey = null;
   private String imagingServiceCertArn = null;
-  
+
   public enum WorkerTaskType { import_volume, convert_image }
-  
+
   public static class WorkerTask {
     String importTaskId = null;
     WorkerTaskType importTaskType = null;
@@ -88,33 +79,33 @@ public abstract class AbstractTaskScheduler {
     public String getImportTaskId(){
       return this.importTaskId;
     }
-    
+
     public WorkerTaskType getImportTaskType(){
       return this.importTaskType;
     }
-    
+
     public void setVolumeTask( final VolumeTask volumeTask ){
       this.volumeTask = volumeTask;
     }
-    
+
     public VolumeTask getVolumeTask(){
       return this.volumeTask;
     }
-    
+
     public void setInstanceStoreTask(final InstanceStoreTask task){
       this.instanceStoreTask = task;
     }
-    
+
     public InstanceStoreTask getInstanceStoreTask(){
       return this.instanceStoreTask;
     }
   }
 
   protected abstract ImagingTask getNext(String availabilityZone);
-  
+
   private void loadImagingServiceKey() throws Exception{
     try{
-      final ServerCertificateType cert = 
+      final ServerCertificateType cert =
           EuareClient.getInstance().getServerCertificate(
               Accounts.lookupSystemAccountByAlias( AccountIdentifiers.IMAGING_SYSTEM_ACCOUNT ).getUserId( ),
               ImagingServiceLaunchers.SERVER_CERTIFICATE_NAME);
@@ -138,7 +129,7 @@ public abstract class AbstractTaskScheduler {
     }
     if(nextTask==null)
       return null;
- 
+
     this.imagingServiceKey = null;
     this.imagingServiceCertArn = null;
     loadImagingServiceKey();
@@ -179,7 +170,7 @@ public abstract class AbstractTaskScheduler {
         for(final ImportInstanceVolumeDetail volume : instanceTask.getVolumes()){
           final String importManifestUrl = volume.getImage().getImportManifestUrl();
           // that this task has not been fully processed by worker and the zone matches
-          if(! instanceTask.hasDownloadManifestUrl(importManifestUrl) && 
+          if(! instanceTask.hasDownloadManifestUrl(importManifestUrl) &&
               availabilityZone.equals(volume.getAvailabilityZone())){
             String manifestLocation = null;
             manifestLocation = instanceTask.getDownloadManifestUrl(importManifestUrl);
@@ -198,7 +189,7 @@ public abstract class AbstractTaskScheduler {
               }catch(final InvalidBaseManifestException ex){
                 ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, ImportTaskState.STATE_MSG_DOWNLOAD_MANIFEST);
                 throw new EucalyptusCloudException("Failed to generate download manifest", ex);
-              }       
+              }
             }
             newTask = new WorkerTask(instanceTask.getDisplayName(), WorkerTaskType.import_volume);
             final VolumeTask vt = new VolumeTask();

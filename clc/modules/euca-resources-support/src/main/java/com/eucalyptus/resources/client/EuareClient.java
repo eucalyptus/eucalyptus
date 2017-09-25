@@ -31,7 +31,44 @@ package com.eucalyptus.resources.client;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.eucalyptus.auth.euare.*;
+import com.eucalyptus.auth.euare.common.msgs.AddRoleToInstanceProfileResponseType;
+import com.eucalyptus.auth.euare.common.msgs.AddRoleToInstanceProfileType;
+import com.eucalyptus.auth.euare.common.msgs.CreateInstanceProfileResponseType;
+import com.eucalyptus.auth.euare.common.msgs.CreateInstanceProfileType;
+import com.eucalyptus.auth.euare.common.msgs.CreateRoleResponseType;
+import com.eucalyptus.auth.euare.common.msgs.CreateRoleType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteInstanceProfileResponseType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteInstanceProfileType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteRolePolicyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteRolePolicyType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteRoleResponseType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteRoleType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteServerCertificateResponseType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteServerCertificateType;
+import com.eucalyptus.auth.euare.common.msgs.EuareMessage;
+import com.eucalyptus.auth.euare.common.msgs.GetRolePolicyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.GetRolePolicyResult;
+import com.eucalyptus.auth.euare.common.msgs.GetRolePolicyType;
+import com.eucalyptus.auth.euare.common.msgs.GetServerCertificateResponseType;
+import com.eucalyptus.auth.euare.common.msgs.GetServerCertificateType;
+import com.eucalyptus.auth.euare.common.msgs.InstanceProfileType;
+import com.eucalyptus.auth.euare.common.msgs.ListInstanceProfilesResponseType;
+import com.eucalyptus.auth.euare.common.msgs.ListInstanceProfilesType;
+import com.eucalyptus.auth.euare.common.msgs.ListRolePoliciesResponseType;
+import com.eucalyptus.auth.euare.common.msgs.ListRolePoliciesType;
+import com.eucalyptus.auth.euare.common.msgs.ListRolesResponseType;
+import com.eucalyptus.auth.euare.common.msgs.ListRolesType;
+import com.eucalyptus.auth.euare.common.msgs.ListServerCertificatesResponseType;
+import com.eucalyptus.auth.euare.common.msgs.ListServerCertificatesType;
+import com.eucalyptus.auth.euare.common.msgs.PutRolePolicyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.PutRolePolicyType;
+import com.eucalyptus.auth.euare.common.msgs.RemoveRoleFromInstanceProfileResponseType;
+import com.eucalyptus.auth.euare.common.msgs.RemoveRoleFromInstanceProfileType;
+import com.eucalyptus.auth.euare.common.msgs.RoleType;
+import com.eucalyptus.auth.euare.common.msgs.ServerCertificateMetadataType;
+import com.eucalyptus.auth.euare.common.msgs.ServerCertificateType;
+import com.eucalyptus.auth.euare.common.msgs.UploadServerCertificateResponseType;
+import com.eucalyptus.auth.euare.common.msgs.UploadServerCertificateType;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.resources.EucalyptusActivityException;
 import com.eucalyptus.util.DispatchingClient;
@@ -54,13 +91,13 @@ public class EuareClient {
       _instance = new EuareClient();
     return _instance;
   }
-  
+
   private class EuareContext extends AbstractClientContext<EuareMessage, Euare> {
     private EuareContext(final String userId){
       super(userId, Euare.class);
     }
   }
-  
+
   private class EuareGetServerCertificateTask extends
   EucalyptusClientTask<EuareMessage, Euare> {
     private String certName = null;
@@ -533,7 +570,7 @@ public class EuareClient {
       final DeleteRolePolicyResponseType resp = (DeleteRolePolicyResponseType) response;
     }
   }
-  
+
   private class UploadServerCertificateTask extends EucalyptusClientTask<EuareMessage, Euare> {
     private String certName = null;
     private String certPath = "/";
@@ -541,7 +578,7 @@ public class EuareClient {
     private String pkPem = null;
     private String certChain = null;
     private ServerCertificateMetadataType serverCertificateMetadata = null;
-    
+
     private UploadServerCertificateTask(final String certName, final String certPath,
         final String certPem, final String pkPem, final String certChain ){
      this.certName = certName;
@@ -551,7 +588,7 @@ public class EuareClient {
      this.pkPem = pkPem;
      this.certChain = certChain;
     }
-    
+
     private UploadServerCertificateType uploadServerCertificate(){
         final UploadServerCertificateType req = new UploadServerCertificateType();
         req.setServerCertificateName(this.certName);
@@ -562,12 +599,12 @@ public class EuareClient {
           req.setCertificateChain(this.certChain);
         return req;
     }
-    
+
     @Override
     void dispatchInternal(ClientContext<EuareMessage, Euare> context,
         Checked<EuareMessage> callback) {
       final DispatchingClient<EuareMessage, Euare> client = context.getClient();
-      client.dispatch(uploadServerCertificate(), callback);        
+      client.dispatch(uploadServerCertificate(), callback);
     }
 
     @Override
@@ -581,13 +618,13 @@ public class EuareClient {
       return serverCertificateMetadata;
     }
   }
-  
+
   private class DeleteServerCertificateTask extends EucalyptusClientTask<EuareMessage, Euare> {
     private String certName = null;
     private DeleteServerCertificateTask(final String certName){
       this.certName = certName;
     }
-    
+
     private DeleteServerCertificateType deleteServerCertificate(){
       final DeleteServerCertificateType req = new DeleteServerCertificateType();
       req.setServerCertificateName(this.certName);
@@ -598,7 +635,7 @@ public class EuareClient {
     void dispatchInternal(ClientContext<EuareMessage, Euare> context,
         Checked<EuareMessage> callback) {
       final DispatchingClient<EuareMessage, Euare> client = context.getClient();
-      client.dispatch(deleteServerCertificate(), callback);              
+      client.dispatch(deleteServerCertificate(), callback);
     }
 
     @Override
@@ -863,10 +900,10 @@ public class EuareClient {
       throw Exceptions.toUndeclared(ex);
     }
   }
-  
+
   public ServerCertificateMetadataType uploadServerCertificate(final String userId, final String certName, final String certPath, final String certBodyPem,
       final String pkPem, final String certChainPem){
-    final UploadServerCertificateTask task = 
+    final UploadServerCertificateTask task =
         new UploadServerCertificateTask(certName, certPath, certBodyPem, pkPem, certChainPem );
     final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareContext(userId));
     try{
@@ -878,7 +915,7 @@ public class EuareClient {
       throw Exceptions.toUndeclared(ex);
     }
   }
-  
+
   public void deleteServerCertificate(final String userId, final String certName){
     final DeleteServerCertificateTask task =
         new DeleteServerCertificateTask(certName);

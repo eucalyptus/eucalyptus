@@ -29,18 +29,18 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.eucalyptus.auth.euare.DeleteGroupPolicyResponseType;
-import com.eucalyptus.auth.euare.DeleteGroupPolicyType;
-import com.eucalyptus.auth.euare.DeleteRolePolicyResponseType;
-import com.eucalyptus.auth.euare.DeleteRolePolicyType;
-import com.eucalyptus.auth.euare.DeleteUserPolicyResponseType;
-import com.eucalyptus.auth.euare.DeleteUserPolicyType;
-import com.eucalyptus.auth.euare.PutGroupPolicyResponseType;
-import com.eucalyptus.auth.euare.PutGroupPolicyType;
-import com.eucalyptus.auth.euare.PutRolePolicyResponseType;
-import com.eucalyptus.auth.euare.PutRolePolicyType;
-import com.eucalyptus.auth.euare.PutUserPolicyResponseType;
-import com.eucalyptus.auth.euare.PutUserPolicyType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteGroupPolicyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteGroupPolicyType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteRolePolicyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteRolePolicyType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteUserPolicyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteUserPolicyType;
+import com.eucalyptus.auth.euare.common.msgs.PutGroupPolicyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.PutGroupPolicyType;
+import com.eucalyptus.auth.euare.common.msgs.PutRolePolicyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.PutRolePolicyType;
+import com.eucalyptus.auth.euare.common.msgs.PutUserPolicyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.PutUserPolicyType;
 import com.eucalyptus.cloudformation.resources.IAMHelper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
