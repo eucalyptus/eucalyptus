@@ -38,6 +38,5 @@
 -->
 
 <project name="eucalyptus-storage-common" basedir=".">
-        <property name="builder.suffix" value="groovy" />
 	<import file="../module-inc.xml"/>
 </project>

@@ -1458,7 +1458,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         }
       }
 
-      List<String> corsAllowedMethods = extractCorsElementList(parser, node, "AllowedMethod");
+      ArrayList<String> corsAllowedMethods = extractCorsElementList(parser, node, "AllowedMethod");
       if (corsAllowedMethods != null) {
         for (String corsAllowedMethod : corsAllowedMethods) {
           if (!AllowedCorsMethods.methodList.contains(HttpMethod.valueOf(corsAllowedMethod))) {
@@ -1486,8 +1486,8 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     return corsRule;
   }
 
-  private List<String> extractCorsElementList(XMLParser parser, Node node, String element) throws S3Exception {
-      List<String> elementList = new ArrayList<String>();
+  private ArrayList<String> extractCorsElementList(XMLParser parser, Node node, String element) throws S3Exception {
+    ArrayList<String> elementList = new ArrayList<String>();
       try {
 
         DTMNodeList elementNodes = parser.getNodes(node, element);
@@ -1521,7 +1521,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
       String requestHeadersFromRequest = httpRequest.getHeader(HttpHeaders.Names.ACCESS_CONTROL_REQUEST_HEADERS);
       if (requestHeadersFromRequest != null) {
         String[] requestHeadersArrayFromRequest = requestHeadersFromRequest.split(",");
-        List<String> requestHeaders = new ArrayList<String>();
+        ArrayList<String> requestHeaders = new ArrayList<String>();
         for (int idx = 0; idx < requestHeadersArrayFromRequest.length; idx++) {
           requestHeaders.add(requestHeadersArrayFromRequest[idx].trim());
         }
@@ -1546,7 +1546,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         if (deletes == null) {
           throw new MalformedXMLException("/Delete/Object");
         }
-        List<DeleteMultipleObjectsEntry> deleteObjList = Lists.newArrayList();
+        ArrayList<DeleteMultipleObjectsEntry> deleteObjList = Lists.newArrayList();
         for (int idx = 0; idx < deletes.getLength(); idx++) {
           // lifecycleConfigurationType.getRules().add( extractLifecycleRule( xmlParser, deletes.item(idx) ) );
           deleteObjList.add(extractDeleteObjectEntry(xmlParser, deletes.item(idx)));
