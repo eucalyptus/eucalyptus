@@ -28,24 +28,20 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.entity
 
-import com.eucalyptus.cloudformation.CloudFormation
+import com.eucalyptus.cloudformation.common.CloudFormation
 import com.eucalyptus.cloudformation.config.CloudFormationConfiguration
 import com.eucalyptus.component.ComponentIds
 import com.eucalyptus.component.ServiceBuilder
 import com.eucalyptus.component.ServiceBuilders
 import com.eucalyptus.component.ServiceConfiguration
 import com.eucalyptus.component.ServiceConfigurations
-import com.eucalyptus.empyrean.Empyrean
-import com.eucalyptus.entities.Entities
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflow
 import com.eucalyptus.upgrade.Upgrades
-import com.eucalyptus.util.Exceptions
 import com.google.common.base.Predicate
 import groovy.sql.Sql
 import org.apache.log4j.Logger
 
 import javax.annotation.Nullable
-import javax.persistence.EntityTransaction
 import java.sql.SQLException
 import java.util.concurrent.Callable
 

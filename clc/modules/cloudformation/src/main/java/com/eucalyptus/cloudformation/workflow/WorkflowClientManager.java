@@ -33,7 +33,7 @@ import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow;
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflowClient;
-import com.eucalyptus.cloudformation.CloudFormation;
+import com.eucalyptus.cloudformation.common.CloudFormation;
 import com.eucalyptus.cloudformation.bootstrap.CloudFormationAWSCredentialsProvider;
 import com.eucalyptus.simpleworkflow.common.client.Config;
 import com.eucalyptus.simpleworkflow.common.client.WorkflowClient;

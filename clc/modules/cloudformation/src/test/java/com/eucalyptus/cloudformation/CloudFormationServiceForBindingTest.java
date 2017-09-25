@@ -35,20 +35,82 @@ import org.junit.Ignore;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import com.eucalyptus.cloudformation.common.msgs.CancelUpdateStackResponseType;
+import com.eucalyptus.cloudformation.common.msgs.CancelUpdateStackType;
+import com.eucalyptus.cloudformation.common.msgs.CreateStackResponseType;
+import com.eucalyptus.cloudformation.common.msgs.CreateStackResult;
+import com.eucalyptus.cloudformation.common.msgs.CreateStackType;
+import com.eucalyptus.cloudformation.common.msgs.DeleteStackResponseType;
+import com.eucalyptus.cloudformation.common.msgs.DeleteStackType;
+import com.eucalyptus.cloudformation.common.msgs.DescribeStackEventsResponseType;
+import com.eucalyptus.cloudformation.common.msgs.DescribeStackEventsResult;
+import com.eucalyptus.cloudformation.common.msgs.DescribeStackEventsType;
+import com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceResponseType;
+import com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceResult;
+import com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceType;
+import com.eucalyptus.cloudformation.common.msgs.DescribeStackResourcesResponseType;
+import com.eucalyptus.cloudformation.common.msgs.DescribeStackResourcesResult;
+import com.eucalyptus.cloudformation.common.msgs.DescribeStackResourcesType;
+import com.eucalyptus.cloudformation.common.msgs.DescribeStacksResponseType;
+import com.eucalyptus.cloudformation.common.msgs.DescribeStacksResult;
+import com.eucalyptus.cloudformation.common.msgs.DescribeStacksType;
+import com.eucalyptus.cloudformation.common.msgs.EstimateTemplateCostResponseType;
+import com.eucalyptus.cloudformation.common.msgs.EstimateTemplateCostResult;
+import com.eucalyptus.cloudformation.common.msgs.EstimateTemplateCostType;
+import com.eucalyptus.cloudformation.common.msgs.GetStackPolicyResponseType;
+import com.eucalyptus.cloudformation.common.msgs.GetStackPolicyResult;
+import com.eucalyptus.cloudformation.common.msgs.GetStackPolicyType;
+import com.eucalyptus.cloudformation.common.msgs.GetTemplateResponseType;
+import com.eucalyptus.cloudformation.common.msgs.GetTemplateResult;
+import com.eucalyptus.cloudformation.common.msgs.GetTemplateType;
+import com.eucalyptus.cloudformation.common.msgs.ListStackResourcesResponseType;
+import com.eucalyptus.cloudformation.common.msgs.ListStackResourcesResult;
+import com.eucalyptus.cloudformation.common.msgs.ListStackResourcesType;
+import com.eucalyptus.cloudformation.common.msgs.ListStacksResponseType;
+import com.eucalyptus.cloudformation.common.msgs.ListStacksResult;
+import com.eucalyptus.cloudformation.common.msgs.ListStacksType;
+import com.eucalyptus.cloudformation.common.msgs.Output;
+import com.eucalyptus.cloudformation.common.msgs.Outputs;
+import com.eucalyptus.cloudformation.common.msgs.Parameter;
+import com.eucalyptus.cloudformation.common.msgs.Parameters;
+import com.eucalyptus.cloudformation.common.msgs.ResourceList;
+import com.eucalyptus.cloudformation.common.msgs.SetStackPolicyResponseType;
+import com.eucalyptus.cloudformation.common.msgs.SetStackPolicyType;
+import com.eucalyptus.cloudformation.common.msgs.Stack;
+import com.eucalyptus.cloudformation.common.msgs.StackEvent;
+import com.eucalyptus.cloudformation.common.msgs.StackEvents;
+import com.eucalyptus.cloudformation.common.msgs.StackResource;
+import com.eucalyptus.cloudformation.common.msgs.StackResourceDetail;
+import com.eucalyptus.cloudformation.common.msgs.StackResourceSummaries;
+import com.eucalyptus.cloudformation.common.msgs.StackResourceSummary;
+import com.eucalyptus.cloudformation.common.msgs.StackResources;
+import com.eucalyptus.cloudformation.common.msgs.StackSummaries;
+import com.eucalyptus.cloudformation.common.msgs.StackSummary;
+import com.eucalyptus.cloudformation.common.msgs.Stacks;
+import com.eucalyptus.cloudformation.common.msgs.Tag;
+import com.eucalyptus.cloudformation.common.msgs.Tags;
+import com.eucalyptus.cloudformation.common.msgs.TemplateParameter;
+import com.eucalyptus.cloudformation.common.msgs.TemplateParameters;
+import com.eucalyptus.cloudformation.common.msgs.UpdateStackResponseType;
+import com.eucalyptus.cloudformation.common.msgs.UpdateStackResult;
+import com.eucalyptus.cloudformation.common.msgs.UpdateStackType;
+import com.eucalyptus.cloudformation.common.msgs.ValidateTemplateResponseType;
+import com.eucalyptus.cloudformation.common.msgs.ValidateTemplateResult;
+import com.eucalyptus.cloudformation.common.msgs.ValidateTemplateType;
 
 @Ignore("Not a JUnit test")
 public class CloudFormationServiceForBindingTest {
   private static int NUM_PARAMS = 2;
   private static final Logger LOG = Logger.getLogger(CloudFormationService.class);
 
-  public CancelUpdateStackResponseType cancelUpdateStack(CancelUpdateStackType request)
+  public CancelUpdateStackResponseType cancelUpdateStack( CancelUpdateStackType request)
       throws CloudFormationException {
     LOG.fatal("request.getStackName()="+request.getStackName());
     CancelUpdateStackResponseType reply = request.getReply();
     return reply;
   }
 
-  public CreateStackResponseType createStack(CreateStackType request)
+  public CreateStackResponseType createStack( CreateStackType request)
       throws CloudFormationException {
     for (String capability: request.getCapabilities().getMember()) {
       LOG.fatal("capability="+capability);
@@ -79,14 +141,14 @@ public class CloudFormationServiceForBindingTest {
     return reply;
   }
 
-  public DeleteStackResponseType deleteStack(DeleteStackType request)
+  public DeleteStackResponseType deleteStack( DeleteStackType request)
       throws CloudFormationException {
     LOG.fatal("request.getStackName()="+request.getStackName());
     DeleteStackResponseType reply = request.getReply();
     return reply;
   }
 
-  public DescribeStackEventsResponseType describeStackEvents(DescribeStackEventsType request)
+  public DescribeStackEventsResponseType describeStackEvents( DescribeStackEventsType request)
       throws CloudFormationException {
     LOG.fatal("request.getNextToken()="+request.getNextToken());
     LOG.fatal("request.getStackName()="+request.getStackName());
@@ -125,7 +187,7 @@ public class CloudFormationServiceForBindingTest {
     return stackEvent;
   }
 
-  public DescribeStackResourceResponseType describeStackResource(DescribeStackResourceType request)
+  public DescribeStackResourceResponseType describeStackResource( DescribeStackResourceType request)
       throws CloudFormationException {
     LOG.fatal("request.getLogicalResourceId()="+request.getLogicalResourceId());
     LOG.fatal("request.getStackName()="+request.getStackName());
@@ -152,7 +214,7 @@ public class CloudFormationServiceForBindingTest {
     return reply;
   }
 
-  public DescribeStackResourcesResponseType describeStackResources(DescribeStackResourcesType request)
+  public DescribeStackResourcesResponseType describeStackResources( DescribeStackResourcesType request)
       throws CloudFormationException {
     LOG.fatal("request.getLogicalResourceId()="+request.getLogicalResourceId());
     LOG.fatal("request.getPhysicalResourceId()="+request.getPhysicalResourceId());
@@ -190,7 +252,7 @@ public class CloudFormationServiceForBindingTest {
     return stackResource;
   }
 
-  public DescribeStacksResponseType describeStacks(DescribeStacksType request)
+  public DescribeStacksResponseType describeStacks( DescribeStacksType request)
       throws CloudFormationException {
     LOG.fatal("request.getNextToken()="+request.getNextToken());
     LOG.fatal("request.getStackName()="+request.getStackName());
@@ -278,7 +340,7 @@ public class CloudFormationServiceForBindingTest {
     return stack;
   }
 
-  public EstimateTemplateCostResponseType estimateTemplateCost(EstimateTemplateCostType request)
+  public EstimateTemplateCostResponseType estimateTemplateCost( EstimateTemplateCostType request)
       throws CloudFormationException {
     LOG.fatal("request.getTemplateBody()="+request.getTemplateBody());
     LOG.fatal("request.getTemplateURL()="+request.getTemplateURL());
@@ -287,14 +349,14 @@ public class CloudFormationServiceForBindingTest {
       LOG.fatal("parameter.getParameterValue()="+parameter.getParameterValue());
     }
     EstimateTemplateCostResponseType reply = request.getReply();
-    
+
     EstimateTemplateCostResult estimateTemplateCostResult = new EstimateTemplateCostResult();
     estimateTemplateCostResult.setUrl("url");
     reply.setEstimateTemplateCostResult(estimateTemplateCostResult );
     return reply;
   }
 
-  public GetStackPolicyResponseType getStackPolicy(GetStackPolicyType request)
+  public GetStackPolicyResponseType getStackPolicy( GetStackPolicyType request)
       throws CloudFormationException {
     LOG.fatal("request.getStackName()="+request.getStackName());
     GetStackPolicyResponseType reply = request.getReply();
@@ -304,7 +366,7 @@ public class CloudFormationServiceForBindingTest {
     return reply;
   }
 
-  public GetTemplateResponseType getTemplate(GetTemplateType request)
+  public GetTemplateResponseType getTemplate( GetTemplateType request)
       throws CloudFormationException {
     LOG.fatal("request.getStackName()="+request.getStackName());
     GetTemplateResponseType reply = request.getReply();
@@ -314,7 +376,7 @@ public class CloudFormationServiceForBindingTest {
     return reply;
   }
 
-  public ListStackResourcesResponseType listStackResources(ListStackResourcesType request)
+  public ListStackResourcesResponseType listStackResources( ListStackResourcesType request)
       throws CloudFormationException {
     LOG.fatal("request.getNextToken()="+request.getNextToken());
     LOG.fatal("request.getStackName()="+request.getStackName());
@@ -332,7 +394,7 @@ public class CloudFormationServiceForBindingTest {
     reply.setListStackResourcesResult(listStackResourcesResult );
     return reply;
   }
-  
+
   private StackResourceSummary getStackResourceSummary(int i) {
     StackResourceSummary stackResourceSummary = new StackResourceSummary();
     try {
@@ -349,7 +411,7 @@ public class CloudFormationServiceForBindingTest {
     return stackResourceSummary;
   }
 
-  public ListStacksResponseType listStacks(ListStacksType request)
+  public ListStacksResponseType listStacks( ListStacksType request)
       throws CloudFormationException {
     LOG.fatal("request.getNextToken()="+request.getNextToken());
     for (String stackStatusFilter: request.getStackStatusFilter().getMember()) {
@@ -398,7 +460,7 @@ public class CloudFormationServiceForBindingTest {
     return stackSummary;
   }
 
-  public SetStackPolicyResponseType setStackPolicy(SetStackPolicyType request)
+  public SetStackPolicyResponseType setStackPolicy( SetStackPolicyType request)
       throws CloudFormationException {
     LOG.fatal("request.getStackName()="+request.getStackName());
     LOG.fatal("request.getStackPolicyBody()="+request.getStackPolicyBody());
@@ -407,7 +469,7 @@ public class CloudFormationServiceForBindingTest {
     return reply;
   }
 
-  public UpdateStackResponseType updateStack(UpdateStackType request)
+  public UpdateStackResponseType updateStack( UpdateStackType request)
       throws CloudFormationException {
     for (String capability: request.getCapabilities().getMember()) {
       LOG.fatal("capability="+capability);
@@ -431,7 +493,7 @@ public class CloudFormationServiceForBindingTest {
     return reply;
   }
 
-  public ValidateTemplateResponseType validateTemplate(ValidateTemplateType request)
+  public ValidateTemplateResponseType validateTemplate( ValidateTemplateType request)
       throws CloudFormationException {
     LOG.fatal("request.getTemplateBody()="+request.getTemplateBody());
     LOG.fatal("request.getTemplateURL()="+request.getTemplateURL());

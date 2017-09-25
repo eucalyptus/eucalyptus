@@ -29,7 +29,7 @@
 
 package com.eucalyptus.cloudformation.workflow
 
-import com.eucalyptus.cloudformation.CloudFormation
+import com.eucalyptus.cloudformation.common.CloudFormation
 import com.eucalyptus.cloudformation.entity.StackWorkflowEntity
 import com.eucalyptus.cloudformation.entity.Status
 import com.eucalyptus.component.annotation.ComponentPart

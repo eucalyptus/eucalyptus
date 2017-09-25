@@ -28,7 +28,8 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.ws;
 
-import com.eucalyptus.cloudformation.CloudFormationErrorResponse;
+import com.eucalyptus.cloudformation.common.msgs.CloudFormationErrorResponse;
+import com.eucalyptus.cloudformation.common.msgs.Error;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.util.ErrorHandlerSupport;
@@ -38,7 +39,7 @@ import org.apache.log4j.Logger;
 @ComponentNamed
 public class CloudFormationErrorHandler extends ErrorHandlerSupport {
   private static final Logger LOG = Logger.getLogger( CloudFormationErrorHandler.class );
-  private static final String INTERNAL_FAILURE = "InternalFailure";  
+  private static final String INTERNAL_FAILURE = "InternalFailure";
 
   public CloudFormationErrorHandler( ) {
     super( LOG, CloudFormationQueryBinding.CLOUDFORMATION_DEFAULT_NAMESPACE, INTERNAL_FAILURE );
@@ -49,10 +50,10 @@ public class CloudFormationErrorHandler extends ErrorHandlerSupport {
                                             final Role role,
                                             final String code,
                                             final String message ) {
-    final CloudFormationErrorResponse errorResp = new CloudFormationErrorResponse( ); 
+    final CloudFormationErrorResponse errorResp = new CloudFormationErrorResponse( );
     errorResp.setCorrelationId( correlationId );
     errorResp.setRequestId( correlationId );
-    final com.eucalyptus.cloudformation.Error error = new com.eucalyptus.cloudformation.Error( );
+    final Error error = new Error( );
     error.setType( role == Role.Receiver ? "Receiver" : "Sender" );
     error.setCode( code );
     error.setMessage( message );

@@ -29,6 +29,15 @@
 package com.eucalyptus.cloudformation.template;
 
 import com.eucalyptus.cloudformation.*;
+import com.eucalyptus.cloudformation.common.msgs.GetTemplateSummaryResult;
+import com.eucalyptus.cloudformation.common.msgs.Parameter;
+import com.eucalyptus.cloudformation.common.msgs.ParameterConstraints;
+import com.eucalyptus.cloudformation.common.msgs.ParameterDeclaration;
+import com.eucalyptus.cloudformation.common.msgs.ParameterDeclarations;
+import com.eucalyptus.cloudformation.common.msgs.ResourceList;
+import com.eucalyptus.cloudformation.common.msgs.TemplateParameter;
+import com.eucalyptus.cloudformation.common.msgs.TemplateParameters;
+import com.eucalyptus.cloudformation.common.msgs.ValidateTemplateResult;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceResolverManager;
@@ -201,7 +210,7 @@ public class TemplateParser {
     template.setMetadataJSON(JsonHelper.getStringFromJsonNode(metadataResourcesJsonNode));
   }
 
-  public ValidateTemplateResult validateTemplate(String templateBody, List<Parameter> userParameters, PseudoParameterValues pseudoParameterValues, String effectiveUserId, boolean enforceStrictResourceProperties) throws CloudFormationException {
+  public ValidateTemplateResult validateTemplate( String templateBody, List<Parameter> userParameters, PseudoParameterValues pseudoParameterValues, String effectiveUserId, boolean enforceStrictResourceProperties) throws CloudFormationException {
     GetTemplateSummaryResult getTemplateSummaryResult = getTemplateSummary(templateBody, userParameters, pseudoParameterValues, effectiveUserId, enforceStrictResourceProperties);
     ValidateTemplateResult validateTemplateResult = new ValidateTemplateResult();
     validateTemplateResult.setDescription(getTemplateSummaryResult.getDescription());
@@ -414,13 +423,13 @@ public class TemplateParser {
   static class ParameterParser {
 
     static void parseParameters(Template template, JsonNode templateJsonNode,
-                                List<com.eucalyptus.cloudformation.Parameter> userParameters,
+                                List<com.eucalyptus.cloudformation.common.msgs.Parameter> userParameters,
                                 boolean onlyEvaluateTemplate) throws CloudFormationException {
       JsonNode parametersJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateParser.TemplateSection.Parameters.toString());
       if (parametersJsonNode != null) {
         Map<String, String> userParameterMap = Maps.newHashMap();
         if (userParameters != null) {
-          for (com.eucalyptus.cloudformation.Parameter userParameter : userParameters) {
+          for ( com.eucalyptus.cloudformation.common.msgs.Parameter userParameter : userParameters) {
             userParameterMap.put(userParameter.getParameterKey(), userParameter.getParameterValue());
           }
         }

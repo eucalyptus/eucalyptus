@@ -35,7 +35,7 @@ import com.amazonaws.services.simpleworkflow.model.RequestCancelWorkflowExecutio
 import com.amazonaws.services.simpleworkflow.model.UnknownResourceException
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionDetail
-import com.eucalyptus.cloudformation.CloudFormation
+import com.eucalyptus.cloudformation.common.CloudFormation
 import com.eucalyptus.cloudformation.InternalFailureException
 import com.eucalyptus.cloudformation.ValidationErrorException
 import com.eucalyptus.cloudformation.config.CloudFormationProperties

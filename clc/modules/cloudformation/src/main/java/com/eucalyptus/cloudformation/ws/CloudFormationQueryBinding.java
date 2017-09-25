@@ -31,7 +31,7 @@ package com.eucalyptus.cloudformation.ws;
 
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.HoldMe;
-import com.eucalyptus.cloudformation.CloudFormationErrorResponse;
+import com.eucalyptus.cloudformation.common.msgs.CloudFormationErrorResponse;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpResponse;
@@ -71,8 +71,8 @@ import java.util.Date;
 
 public class CloudFormationQueryBinding extends BaseQueryBinding<OperationParameter> {
   // TODO: This is a best guess
-  static final String CLOUDFORMATION_NAMESPACE_PATTERN = "http://cloudformation.amazonaws.com/doc/%s/"; 
-  static final String CLOUDFORMATION_DEFAULT_VERSION = "2010-05-15";              
+  static final String CLOUDFORMATION_NAMESPACE_PATTERN = "http://cloudformation.amazonaws.com/doc/%s/";
+  static final String CLOUDFORMATION_DEFAULT_VERSION = "2010-05-15";
   static final String CLOUDFORMATION_DEFAULT_NAMESPACE = String.format( CLOUDFORMATION_NAMESPACE_PATTERN, CLOUDFORMATION_DEFAULT_VERSION );
   private static final Logger LOG = Logger.getLogger(CloudFormationQueryBinding.class);
   public CloudFormationQueryBinding() {

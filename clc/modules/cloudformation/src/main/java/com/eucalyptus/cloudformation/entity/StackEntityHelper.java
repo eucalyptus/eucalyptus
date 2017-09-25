@@ -30,7 +30,7 @@
 package com.eucalyptus.cloudformation.entity;
 
 import com.eucalyptus.cloudformation.CloudFormationException;
-import com.eucalyptus.cloudformation.Tag;
+import com.eucalyptus.cloudformation.common.msgs.Tag;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.template.Template;
 import com.eucalyptus.cloudformation.template.dependencies.DependencyManager;
@@ -163,7 +163,7 @@ public class StackEntityHelper {
     }
   }
 
-  
+
   public static Map<String, Boolean> jsonToConditionMap(String conditionMapJson) throws CloudFormationException {
     try {
       return conditionMapJson == null ? Maps.<String, Boolean>newLinkedHashMap() :
@@ -184,7 +184,7 @@ public class StackEntityHelper {
   public static Map<String, Map<String, Map<String, String>>> jsonToMapping(String mappingJson) throws CloudFormationException {
     try {
       return mappingJson == null ? Maps.<String, Map<String, Map<String, String>>>newLinkedHashMap() :
-        (Map<String, Map<String, Map<String, String>>>) 
+        (Map<String, Map<String, Map<String, String>>>)
           mapper.readValue(mappingJson, new TypeReference<LinkedHashMap<String, Map<String, Map<String, String>>>>(){});
     } catch (IOException e) {
       throw new ValidationErrorException(e.getMessage());

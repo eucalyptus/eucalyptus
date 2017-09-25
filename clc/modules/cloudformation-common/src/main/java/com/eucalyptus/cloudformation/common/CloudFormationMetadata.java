@@ -26,21 +26,19 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
-package com.eucalyptus.cloudformation;
+package com.eucalyptus.cloudformation.common;
 
+import com.eucalyptus.auth.policy.annotation.PolicyResourceType;
 import com.eucalyptus.cloudformation.common.policy.CloudFormationPolicySpec;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.annotation.AwsServiceName;
-import com.eucalyptus.component.annotation.Description;
-import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
-import com.eucalyptus.component.annotation.PublicService;
+import com.eucalyptus.auth.type.RestrictedType;
 
-@PublicService
-@AwsServiceName( "cloudformation" )
+/**
+ * Created by ethomas on 10/22/14.
+ */
 @PolicyVendor( CloudFormationPolicySpec.VENDOR_CLOUDFORMATION )
-@Partition( value = CloudFormation.class, manyToOne = true )
-@Description( "Cloudformation API service" )
-public class CloudFormation extends ComponentId {
-  private static final long serialVersionUID = 1L;
+public interface CloudFormationMetadata extends RestrictedType {
+  @PolicyResourceType("stack")
+  public interface StackMetadata extends CloudFormationMetadata {}
+
 }

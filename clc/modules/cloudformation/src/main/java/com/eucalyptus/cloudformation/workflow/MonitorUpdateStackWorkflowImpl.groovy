@@ -30,7 +30,7 @@
 package com.eucalyptus.cloudformation.workflow
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
-import com.eucalyptus.cloudformation.CloudFormation
+import com.eucalyptus.cloudformation.common.CloudFormation
 import com.eucalyptus.cloudformation.InternalFailureException
 import com.eucalyptus.cloudformation.entity.StackWorkflowEntity
 import com.eucalyptus.cloudformation.entity.Status

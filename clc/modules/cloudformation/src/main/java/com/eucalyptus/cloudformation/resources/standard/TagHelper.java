@@ -29,7 +29,7 @@
 package com.eucalyptus.cloudformation.resources.standard;
 
 import com.eucalyptus.cloudformation.CloudFormationException;
-import com.eucalyptus.cloudformation.Tag;
+import com.eucalyptus.cloudformation.common.msgs.Tag;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.entity.StackEntityHelper;
 import com.eucalyptus.cloudformation.entity.VersionedStackEntity;

@@ -30,26 +30,26 @@ package com.eucalyptus.resources.client;
 
 import java.util.ArrayList;
 
-import com.eucalyptus.cloudformation.CloudFormation;
-import com.eucalyptus.cloudformation.CreateStackType;
-import com.eucalyptus.cloudformation.DeleteStackType;
-import com.eucalyptus.cloudformation.DescribeStackResourcesResponseType;
-import com.eucalyptus.cloudformation.DescribeStackResourcesType;
-import com.eucalyptus.cloudformation.DescribeStacksResponseType;
-import com.eucalyptus.cloudformation.DescribeStacksType;
-import com.eucalyptus.cloudformation.Parameter;
-import com.eucalyptus.cloudformation.Parameters;
-import com.eucalyptus.cloudformation.ResourceList;
-import com.eucalyptus.cloudformation.Stack;
-import com.eucalyptus.cloudformation.StackResource;
-import com.eucalyptus.cloudformation.StackResources;
-import com.eucalyptus.cloudformation.Stacks;
+import com.eucalyptus.cloudformation.common.CloudFormation;
+import com.eucalyptus.cloudformation.common.msgs.CreateStackType;
+import com.eucalyptus.cloudformation.common.msgs.DeleteStackType;
+import com.eucalyptus.cloudformation.common.msgs.DescribeStackResourcesResponseType;
+import com.eucalyptus.cloudformation.common.msgs.DescribeStackResourcesType;
+import com.eucalyptus.cloudformation.common.msgs.DescribeStacksResponseType;
+import com.eucalyptus.cloudformation.common.msgs.DescribeStacksType;
+import com.eucalyptus.cloudformation.common.msgs.Parameter;
+import com.eucalyptus.cloudformation.common.msgs.Parameters;
+import com.eucalyptus.cloudformation.common.msgs.ResourceList;
+import com.eucalyptus.cloudformation.common.msgs.Stack;
+import com.eucalyptus.cloudformation.common.msgs.StackResource;
+import com.eucalyptus.cloudformation.common.msgs.StackResources;
+import com.eucalyptus.cloudformation.common.msgs.Stacks;
 import com.eucalyptus.resources.EucalyptusActivityException;
 import com.eucalyptus.util.DispatchingClient;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Callback.Checked;
 import com.eucalyptus.util.async.CheckedListenableFuture;
-import com.eucalyptus.cloudformation.CloudFormationMessage;
+import com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage;
 
 public class CloudFormationClient {
 
@@ -60,32 +60,32 @@ public class CloudFormationClient {
       _instance = new CloudFormationClient();
     return _instance;
   }
-  
+
   private class CloudFormationContext extends AbstractClientContext<CloudFormationMessage, CloudFormation> {
     private CloudFormationContext(final String userId){
       super(userId, CloudFormation.class);
     }
   }
-  
+
   private abstract class CloudFormationStackTask<T extends CloudFormationMessage> extends
     EucalyptusClientTask<CloudFormationMessage, CloudFormation> {
-  
+
     abstract T getRequest();
-  
+
     @Override
     void dispatchInternal(ClientContext<CloudFormationMessage, CloudFormation> context,
         Checked<CloudFormationMessage> callback) {
-    
+
       final DispatchingClient<CloudFormationMessage, CloudFormation> client = context.getClient();
       client.dispatch(getRequest(), callback);
     }
-    
+
     @Override
     void dispatchSuccess(ClientContext<CloudFormationMessage, CloudFormation> context,
         CloudFormationMessage response) {
     }
   }
-  
+
   private class CloudFormationCreateStackTask extends CloudFormationStackTask<CreateStackType> {
     private String templateBody = null;
     private String name = null;
@@ -117,45 +117,45 @@ public class CloudFormationClient {
 
   private class CloudFormationDeleteStackTask extends CloudFormationStackTask<DeleteStackType> {
     private String name = null;
-    
+
     CloudFormationDeleteStackTask(final String name) {
       this.name = name;
     }
-    
+
     DeleteStackType getRequest() {
       final DeleteStackType req = new DeleteStackType();
       req.setStackName(name);
       return req;
     }
   }
-  
+
   private class CloudFormationDescribeStackTask extends CloudFormationStackTask<DescribeStacksType> {
     private String name = null;
     private DescribeStacksResponseType result = null;
-    
+
     CloudFormationDescribeStackTask(final String name) {
       this.name = name;
     }
-    
+
     DescribeStacksType getRequest() {
       final DescribeStacksType req = new DescribeStacksType();
       req.setStackName(name);
       return req;
     }
-    
+
     @Override
     void dispatchSuccess(ClientContext<CloudFormationMessage, CloudFormation> context,
         CloudFormationMessage response) {
       result = (DescribeStacksResponseType) response;
     }
-    
+
     Stack getResult() {
-      Stacks stacks = result.getDescribeStacksResult() != null ? 
+      Stacks stacks = result.getDescribeStacksResult() != null ?
           result.getDescribeStacksResult().getStacks() : null;
       if (stacks == null || stacks.getMember().isEmpty())
         return null;
       else
-        return stacks.getMember().get(0); 
+        return stacks.getMember().get(0);
     }
   }
 
@@ -212,7 +212,7 @@ public class CloudFormationClient {
       throw Exceptions.toUndeclared(ex);
     }
   }
-  
+
   /*
    * Return stack resources or one resource by its logical.
    * Return null if stack or resource can't be found
@@ -252,7 +252,7 @@ public class CloudFormationClient {
       throw Exceptions.toUndeclared(ex);
     }
   }
-  
+
   public void createStack(final String userId, String name, String templateBody,
       ArrayList<Parameter> parameters) {
     final CloudFormationCreateStackTask task = new CloudFormationCreateStackTask(

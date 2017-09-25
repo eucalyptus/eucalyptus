@@ -33,9 +33,7 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.cloudformation.CloudFormation;
-import com.eucalyptus.component.ServiceDependencyException;
-import com.eucalyptus.component.Topology;
+import com.eucalyptus.cloudformation.common.CloudFormation;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
 
 /**

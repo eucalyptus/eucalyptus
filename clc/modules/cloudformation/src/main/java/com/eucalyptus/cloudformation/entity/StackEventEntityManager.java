@@ -28,7 +28,7 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.entity;
 
-import com.eucalyptus.cloudformation.StackEvent;
+import com.eucalyptus.cloudformation.common.msgs.StackEvent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.google.common.collect.Lists;

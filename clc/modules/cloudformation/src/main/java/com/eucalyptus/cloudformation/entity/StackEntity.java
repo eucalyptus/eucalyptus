@@ -30,7 +30,7 @@ package com.eucalyptus.cloudformation.entity;
 
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
-import com.eucalyptus.cloudformation.CloudFormationMetadata;
+import com.eucalyptus.cloudformation.common.CloudFormationMetadata;
 
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;

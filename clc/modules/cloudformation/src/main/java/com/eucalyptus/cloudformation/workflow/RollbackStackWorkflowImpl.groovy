@@ -31,7 +31,7 @@ package com.eucalyptus.cloudformation.workflow
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
 import com.amazonaws.services.simpleworkflow.flow.interceptors.ExponentialRetryPolicy
-import com.eucalyptus.cloudformation.CloudFormation
+import com.eucalyptus.cloudformation.common.CloudFormation
 import com.eucalyptus.cloudformation.entity.Status
 import com.eucalyptus.component.annotation.ComponentPart
 import com.netflix.glisten.WorkflowOperations

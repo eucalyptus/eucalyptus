@@ -28,7 +28,7 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.ws;
 
-import com.eucalyptus.cloudformation.CloudFormation;
+import com.eucalyptus.cloudformation.common.CloudFormation;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.server.QueryPipeline;
@@ -51,8 +51,8 @@ public class CloudFormationQueryPipeline extends QueryPipeline {
 
   public CloudFormationQueryPipeline( ) {
     this( "cloudformation-query-pipeline"  );
-  } 
-    
+  }
+
   @Override
   public ChannelPipeline addHandlers( final ChannelPipeline pipeline ) {
     super.addHandlers( pipeline );

@@ -32,7 +32,7 @@ package com.eucalyptus.cloudformation.workflow
 import com.amazonaws.services.simpleworkflow.flow.core.AndPromise
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
 import com.amazonaws.services.simpleworkflow.flow.core.Settable
-import com.eucalyptus.cloudformation.CloudFormation
+import com.eucalyptus.cloudformation.common.CloudFormation
 import com.eucalyptus.cloudformation.entity.StackEntityHelper
 import com.eucalyptus.cloudformation.entity.Status
 import com.eucalyptus.cloudformation.template.dependencies.DependencyManager

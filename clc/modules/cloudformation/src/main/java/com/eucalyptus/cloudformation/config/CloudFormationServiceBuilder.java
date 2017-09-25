@@ -29,7 +29,7 @@
 package com.eucalyptus.cloudformation.config;
 
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.cloudformation.CloudFormation;
+import com.eucalyptus.cloudformation.common.CloudFormation;
 import com.eucalyptus.cloudformation.workflow.WorkflowClientManager;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
