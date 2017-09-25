@@ -61,6 +61,7 @@ import com.eucalyptus.cloudwatch.common.msgs.Metrics;
 import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataResponseType;
 import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataType;
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricEntity.MetricType;
+import com.eucalyptus.cloudwatch.common.msgs.ResponseMetadata;
 import com.eucalyptus.cloudwatch.common.msgs.Statistics;
 import com.eucalyptus.cloudwatch.common.policy.CloudWatchPolicySpec;
 import com.eucalyptus.cloudwatch.service.queue.metricdata.MetricDataQueue;
@@ -74,19 +75,15 @@ import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.cloudwatch.common.CloudWatchBackend;
-import com.eucalyptus.cloudwatch.common.backend.msgs.CloudWatchBackendMessage;
 import com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.FailedRequestException;
-import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.eucalyptus.ws.Role;
-import com.google.common.base.Objects;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.BaseMessages;
 
@@ -231,9 +228,13 @@ public class CloudWatchService {
 
     try {
       @SuppressWarnings( "unchecked" )
-      final CloudWatchBackendMessage backendRequest = (CloudWatchBackendMessage) BaseMessages.deepCopy( request, getBackendMessageClass( request ) );
+      final CloudWatchMessage backendRequest = (CloudWatchMessage) BaseMessages.deepCopy( request, getBackendMessageClass( request ) );
       final BaseMessage backendResponse = send( backendRequest );
       final CloudWatchMessage response = (CloudWatchMessage) BaseMessages.deepCopy( backendResponse, request.getReply().getClass() );
+      final ResponseMetadata metadata = CloudWatchMessage.getResponseMetadata( response );
+      if ( metadata != null ) {
+        metadata.setRequestId( request.getCorrelationId( ) );
+      }
       response.setCorrelationId( request.getCorrelationId( ) );
       return response;
     } catch ( Exception e ) {
@@ -287,7 +288,6 @@ public class CloudWatchService {
   private static final int DISABLED_SERVICE_FAULT_ID = 1500;
   private boolean alreadyFaulted = false;
   private void faultDisableCloudWatchServiceIfNecessary() {
-    // TODO Auto-generated method stub
     if (!alreadyFaulted) {
       Faults.forComponent(CloudWatch.class).havingId(DISABLED_SERVICE_FAULT_ID).withVar("component", "cloudwatch").log();
       alreadyFaulted = true;

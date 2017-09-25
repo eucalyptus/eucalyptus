@@ -28,35 +28,21 @@
  ************************************************************************/
 package com.eucalyptus.cloudwatch.backend;
 
-import com.eucalyptus.cloudwatch.common.backend.msgs.AlarmNames;
-import com.eucalyptus.cloudwatch.common.backend.msgs.Datapoint;
-import com.eucalyptus.cloudwatch.common.backend.msgs.Dimension;
-import com.eucalyptus.cloudwatch.common.backend.msgs.DimensionFilter;
-import com.eucalyptus.cloudwatch.common.backend.msgs.DimensionFilters;
-import com.eucalyptus.cloudwatch.common.backend.msgs.Dimensions;
-import com.eucalyptus.cloudwatch.common.backend.msgs.MetricData;
-import com.eucalyptus.cloudwatch.common.backend.msgs.MetricDatum;
-import com.eucalyptus.cloudwatch.common.backend.msgs.ResourceList;
-import com.eucalyptus.cloudwatch.common.backend.msgs.StatisticSet;
-import com.eucalyptus.cloudwatch.common.backend.msgs.Statistics;
+import com.eucalyptus.cloudwatch.common.msgs.AlarmNames;
+import com.eucalyptus.cloudwatch.common.msgs.Dimension;
+import com.eucalyptus.cloudwatch.common.msgs.Dimensions;
+import com.eucalyptus.cloudwatch.common.msgs.ResourceList;
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.Units;
 import com.eucalyptus.cloudwatch.common.internal.domain.alarms.AlarmEntity;
 import com.eucalyptus.cloudwatch.common.internal.domain.alarms.AlarmHistory;
 import com.eucalyptus.cloudwatch.common.internal.domain.alarms.AlarmManager;
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricEntity;
-import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricStatistics;
-import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricUtils;
-import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.MetricEntity.MetricType;
-import com.google.common.collect.Lists;
 import net.sf.json.JSONException;
 import net.sf.json.JSONSerializer;
 
-import java.text.NumberFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 
 public class CloudWatchBackendServiceFieldValidator {

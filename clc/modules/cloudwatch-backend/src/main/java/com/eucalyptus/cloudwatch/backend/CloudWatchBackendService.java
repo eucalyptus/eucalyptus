@@ -33,8 +33,6 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.cloudwatch.common.CloudWatchBackend;
 import com.eucalyptus.cloudwatch.common.CloudWatchMetadata;
-import com.eucalyptus.cloudwatch.common.backend.msgs.AlarmHistoryItem;
-import com.eucalyptus.cloudwatch.common.backend.msgs.AlarmHistoryItems;
 import com.eucalyptus.cloudwatch.common.backend.msgs.DeleteAlarmsResponseType;
 import com.eucalyptus.cloudwatch.common.backend.msgs.DeleteAlarmsType;
 import com.eucalyptus.cloudwatch.common.backend.msgs.DescribeAlarmHistoryResponseType;
@@ -43,13 +41,10 @@ import com.eucalyptus.cloudwatch.common.backend.msgs.DescribeAlarmsForMetricResp
 import com.eucalyptus.cloudwatch.common.backend.msgs.DescribeAlarmsForMetricType;
 import com.eucalyptus.cloudwatch.common.backend.msgs.DescribeAlarmsResponseType;
 import com.eucalyptus.cloudwatch.common.backend.msgs.DescribeAlarmsType;
-import com.eucalyptus.cloudwatch.common.backend.msgs.Dimension;
 import com.eucalyptus.cloudwatch.common.backend.msgs.DisableAlarmActionsResponseType;
 import com.eucalyptus.cloudwatch.common.backend.msgs.DisableAlarmActionsType;
 import com.eucalyptus.cloudwatch.common.backend.msgs.EnableAlarmActionsResponseType;
 import com.eucalyptus.cloudwatch.common.backend.msgs.EnableAlarmActionsType;
-import com.eucalyptus.cloudwatch.common.backend.msgs.MetricAlarm;
-import com.eucalyptus.cloudwatch.common.backend.msgs.MetricAlarms;
 import com.eucalyptus.cloudwatch.common.backend.msgs.PutMetricAlarmResponseType;
 import com.eucalyptus.cloudwatch.common.backend.msgs.PutMetricAlarmType;
 import com.eucalyptus.cloudwatch.common.backend.msgs.SetAlarmStateResponseType;
@@ -65,6 +60,11 @@ import com.eucalyptus.cloudwatch.common.internal.domain.alarms.AlarmHistory.Hist
 import com.eucalyptus.cloudwatch.common.internal.domain.alarms.AlarmManager;
 import com.eucalyptus.cloudwatch.common.internal.domain.alarms.AlarmNotFoundException;
 import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.Units;
+import com.eucalyptus.cloudwatch.common.msgs.AlarmHistoryItem;
+import com.eucalyptus.cloudwatch.common.msgs.AlarmHistoryItems;
+import com.eucalyptus.cloudwatch.common.msgs.Dimension;
+import com.eucalyptus.cloudwatch.common.msgs.MetricAlarm;
+import com.eucalyptus.cloudwatch.common.msgs.MetricAlarms;
 import com.eucalyptus.cloudwatch.common.policy.CloudWatchPolicySpec;
 import com.eucalyptus.cloudwatch.workflow.DBCleanupService;
 import com.eucalyptus.cloudwatch.workflow.alarms.AlarmStateEvaluationDispatcher;
@@ -414,7 +414,7 @@ public class CloudWatchBackendService {
       Faults.forComponent(CloudWatchBackend.class).havingId(DISABLED_SERVICE_FAULT_ID).withVar("component", "cloudwatch").log();
       alreadyFaulted = true;
     }
-    
+
   }
 
 
