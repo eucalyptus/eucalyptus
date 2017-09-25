@@ -26,22 +26,13 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
-
-package com.eucalyptus.objectstorage
+package com.eucalyptus.objectstorage;
 
 public class OsgBucketFactory {
-  private static final BucketFactory factory = new BucketFactoryImpl();
 
-  public static BucketFactory getFactory() {
+  public static BucketFactory getFactory( ) {
     return factory;
   }
+
+  private static final BucketFactory factory = new BucketFactoryImpl( );
 }
-
-public class OsgObjectFactory {
-  private static final ObjectFactory factory = new ObjectFactoryImpl();
-
-  public static ObjectFactory getFactory() {
-    return factory;
-  }
-}
-
