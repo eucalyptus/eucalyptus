@@ -29,6 +29,7 @@
 -->
 <project name="eucalyptus-compute-common" basedir=".">
 	<property name="builder.suffix" value="groovy" />
+	<property name="bind.load" value="false" />
 	<uptodate property="groovyc.notRequired" targetfile="${jar.file}">
 		<srcfiles dir="${src.dir}" includes="**/*" />
 	</uptodate>

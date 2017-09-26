@@ -97,6 +97,15 @@ public class CollectionUtils {
   }
 
   /**
+   * Predicate for null checking.
+   *
+   * @return A non-null matching predicate
+   */
+  public static <T> CompatPredicate<T> isNotNull( ) {
+    return item -> item != null;
+  }
+
+  /**
    * Predicate for collections containing the given item.
    *
    * @param item The required item
@@ -163,11 +172,11 @@ public class CollectionUtils {
       @SuppressWarnings( "unchecked" )
       @Override
       public List<T> apply( final T t ) {
-        return t == null ? 
-            Lists.<T>newArrayList() : 
+        return t == null ?
+            Lists.<T>newArrayList() :
             Lists.newArrayList( t );
       }
-    };    
+    };
   }
 
   public static <T> CompatFunction<List<List<T>>,List<T>> listJoin() {
@@ -232,7 +241,7 @@ public class CollectionUtils {
 
   /**
    * Reduce a collection using an initial value and a reduction function.
-   * 
+   *
    * @param iterable The iterable to be reduced
    * @param initialValue The initial value
    * @param reducer The reduction function
@@ -241,12 +250,12 @@ public class CollectionUtils {
    * @return The final value
    */
   public static <T,I> T reduce( final Iterable<? extends I> iterable,
-                                final T initialValue, 
+                                final T initialValue,
                                 final Function<T,Function<I,T>> reducer ) {
     T value = initialValue;
     for ( I item : iterable ) {
-      value = reducer.apply( value ).apply( item );      
-    }    
+      value = reducer.apply( value ).apply( item );
+    }
     return value;
   }
 
@@ -362,7 +371,7 @@ public class CollectionUtils {
 
   /**
    * Count function suitable for use with reduce.
-   * 
+   *
    * @param evaluator Predicate matching items to be counted.
    * @param <I> The evaluated type
    * @return The count function.
@@ -474,7 +483,7 @@ public class CollectionUtils {
    * Comparator function suitable for use with reduce.
    *
    * <p>Use with reduce to obtain a min or max value.</p>
-   * 
+   *
    * @param comparator The comparator to use
    * @param <T> The compared type
    * @return The comparator function.
@@ -488,7 +497,7 @@ public class CollectionUtils {
           @Override
           public T apply( final T t2 ) {
             return comparator.compare( t1, t2 ) < 0 ?
-                t1 : 
+                t1 :
                 t2;
           }
         };

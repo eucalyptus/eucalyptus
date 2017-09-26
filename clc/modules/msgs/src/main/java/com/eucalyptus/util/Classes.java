@@ -66,13 +66,13 @@ public class Classes {
    * method returns true if the specified Class parameter is exactly this Class object; otherwise it
    * returns
    * false.
-   * 
+   *
    * @param type
    * @return
    */
   public static Predicate<Class> assignableTo( final Class<?> type ) {
     return new Predicate<Class>( ) {
-      
+
       @Override
       public boolean apply( Class input ) {
         return input.isAssignableFrom( type );
@@ -95,7 +95,7 @@ public class Classes {
       return WhateverAsClass.INSTANCE.apply( arg0 ).getSimpleName( );
     }
   }
-  
+
   enum ClassNameToCanonicalName implements Function<Object, String> {
     INSTANCE;
     @Override
@@ -108,10 +108,18 @@ public class Classes {
     return ClassNameToName.INSTANCE;
   }
 
+  public static String simpleName( final Object object ) {
+    return simpleName( object, null );
+  }
+
+  public static String simpleName( final Object object, final String nullDefault ) {
+    return object == nullDefault ? null : simpleNameFunction().apply( object );
+  }
+
   public static Function<Object, String> simpleNameFunction( ) {
     return ClassNameToSimpleName.INSTANCE;
   }
-  
+
   public static Function<Object, String> canonicalNameFunction( ) {
     return ClassNameToCanonicalName.INSTANCE;
   }
@@ -122,9 +130,9 @@ public class Classes {
       public boolean apply( final Class<?> value ) {
         return value != null && target.isAssignableFrom( value );
       }
-    };  
+    };
   }
-  
+
   @ErrorMessages( Classes.class )
   enum ErrorMessageMap implements Function<Class, String> {
     INSTANCE;
@@ -146,23 +154,23 @@ public class Classes {
                                          this.put( IllegalArgumentException.class, "" );
                                        }
                                      }.build( );
-    
+
     @Override
     public String apply( Class input ) {
       return errorMessages.get( input );
     }
-    
+
   }
-  
+
   public static class InstanceBuilder<T> {
     private final Class<T>     type;
     private final List<Class>  argTypes = Lists.newArrayList( );
     private final List<Object> args     = Lists.newArrayList( );
-    
+
     public InstanceBuilder( Class<T> type ) {
       this.type = type;
     }
-    
+
     public InstanceBuilder<T> arg( Object arg ) {
       if ( arg == null ) {
         throw new IllegalArgumentException( "Cannot supply a null value argument w/o specifying the type." );
@@ -170,13 +178,13 @@ public class Classes {
         return arg( arg, arg.getClass( ) );
       }
     }
-    
+
     public InstanceBuilder<T> arg( Object arg, Class type ) {
       this.argTypes.add( type );
       this.args.add( arg );
       return this;
     }
-    
+
     /**
      * @return
      * @throws UndeclaredThrowableException if the called constructor throws either:
@@ -207,24 +215,24 @@ public class Classes {
         }
       }
     }
-    
+
     private String errorMessage( final InvocationTargetException ex ) {
       return errorMessage( ex.getCause( ), errFstring, this.type.getClass( ), this.args, this.argTypes );
     }
-    
+
     private static final String errFstring = "Failed to create new instance of type %s with arguments %s (of types: %s) because of: ";
-    
+
     public static String errorMessage( Throwable ex, String message, Object... formatArgs ) {
       return Exceptions.builder( Classes.class ).exception( ex ).unknownException( "An unexpected error: " ).context( errFstring, formatArgs ).append(
         " because of: " ).build( );
     }
-    
+
   }
-  
+
   public static <T> InstanceBuilder<T> builder( Class<T> type ) {
     return new InstanceBuilder<T>( type );
   }
-  
+
   public static <T> T newInstance( final Class<T> type, final Object... args ) {
     try {
       return new InstanceBuilder<T>( type ) {
@@ -238,7 +246,7 @@ public class Classes {
       throw ex;
     }
   }
-  
+
   enum WhateverAsClass implements Function<Object, Class> {
     INSTANCE;
     @Override
@@ -250,7 +258,7 @@ public class Classes {
                                               : null ) );
     }
   }
-  
+
   enum ParentClass implements Function<Class, Class> {
     INSTANCE;
     @Override
@@ -258,7 +266,7 @@ public class Classes {
       return type.getSuperclass( );
     }
   }
-  
+
   enum TransitiveClosureImplementedInterfaces implements Function<Class[], List<Class>> {
     INSTANCE;
     @Override
@@ -284,10 +292,10 @@ public class Classes {
       }
     }
   }
-  
+
   enum BreadthFirstTransitiveClosure implements Function<Object, List<Class>> {
     INSTANCE;
-    
+
     @Override
     public List<Class> apply( final Object input ) {
       final List<Class> ret = Lists.newArrayList( );
@@ -308,34 +316,34 @@ public class Classes {
         return ret;
       }
     }
-    
+
   }
-  
+
   /**
    * Function for geting a linearized breadth-first list of classes which belong to the
    * transitive-closure of classes and interfaces implemented by {@code Object o}.
-   * 
+   *
    * @param o
    * @return
    */
   public static Function<Object, List<Class>> ancestors( ) {
     return BreadthFirstTransitiveClosure.INSTANCE;
   }
-  
+
   /**
    * Get a linearized breadth-first list of classes which belong to the transitive-closure of
    * classes and interfaces implemented by {@code Object o}.
-   * 
+   *
    * @param o
    * @return
    */
   public static List<Class> ancestors( final Object o ) {
     return ancestors( ).apply( o );
   }
-  
+
   enum ClassBreadthFirstTransitiveClosure implements Function<Object, List<Class>> {
     INSTANCE;
-    
+
     @Override
     public List<Class> apply( final Object input ) {
       final List<Class> ret = Lists.newArrayList( );
@@ -351,35 +359,35 @@ public class Classes {
         return ret;
       }
     }
-    
+
   }
-  
+
   /**
    * Function for geting a linearized breadth-first list of classes which belong to the
    * transitive-closure of
    * classes implemented by {@code Object o}.
-   * 
+   *
    * @param o
    * @return
    */
   public static Function<Object, List<Class>> classAncestors( ) {
     return ClassBreadthFirstTransitiveClosure.INSTANCE;
   }
-  
+
   /**
    * Get a linearized breadth-first list of classes which belong to the transitive-closure of
    * classes implemented by {@code Object o}.
-   * 
+   *
    * @param o
    * @return
    */
   public static List<Class> classAncestors( final Object o ) {
     return ClassBreadthFirstTransitiveClosure.INSTANCE.apply( o );
   }
-  
+
   enum InterfaceBreadthFirstTransitiveClosure implements Function<Object, List<Class>> {
     INSTANCE;
-    
+
     @Override
     public List<Class> apply( final Object input ) {
       final List<Class> ret = Lists.newArrayList( );
@@ -394,40 +402,40 @@ public class Classes {
         return ret;
       }
     }
-    
+
   }
-  
+
   @SuppressWarnings( "unchecked" )
   public static <T> Class<T> typeOf( final Object obj ) {
     return ( Class<T> ) WhateverAsClass.INSTANCE.apply( obj );
   }
-  
+
   /**
    * Function for getting a linearized breadth-first list of classes which belong to the
    * transitive-closure of
    * interfaces implemented by {@code Object o}.
-   * 
+   *
    * @param o
    * @return
    */
   public static Function<Object, List<Class>> interfaceAncestors( ) {
     return InterfaceBreadthFirstTransitiveClosure.INSTANCE;
   }
-  
+
   /**
    * Get a linearized breadth-first list of classes which belong to the transitive-closure of
    * interfaces implemented by {@code Object o}.
-   * 
+   *
    * @param o
    * @return
    */
   public static List<Class> interfaceAncestors( final Object o ) {
     return interfaceAncestors( ).apply( o );
   }
-  
+
   enum GenericsBreadthFirstTransitiveClosure implements Function<Object, List<Class>> {
     INSTANCE;
-    
+
     @Override
     public List<Class> apply( final Object input ) {
       final List<Class> ret = Lists.newArrayList( );
@@ -438,7 +446,7 @@ public class Classes {
       ret.addAll( processTypeForGenerics( inputClass.getGenericInterfaces( ) ) );
       return ret;
     }
-    
+
     private static List<Class> processTypeForGenerics( final Type... types ) {
       final List<Class> ret = Lists.newArrayList( );
       for ( final Type t : types ) {
@@ -457,29 +465,29 @@ public class Classes {
       }
       return ret;
     }
-    
+
   }
-  
+
   /**
    * Get a list of the classes corresponding to the actual generic parameters for the given
    * {@code Object o}.
-   * 
+   *
    * @param o
    * @return
    */
   public static List<Class> genericsToClasses( final Object o ) {
     return genericsToClasses( ).apply( o );
   }
-  
+
   /**
    * Function for getting a list of the classes corresponding to the actual generic parameters for
    * the given {@code Object o}.
-   * 
+   *
    * @param o
    * @return
    */
   private static Function<Object, List<Class>> genericsToClasses( ) {
     return GenericsBreadthFirstTransitiveClosure.INSTANCE;
   }
-  
+
 }

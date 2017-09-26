@@ -683,7 +683,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
             resetInstanceAttribute(configuration, newAction, "disableApiTermination");
           }
         }
-        if (!Objects.equals(BoolToString(runningInstancesItemType.getInstanceInitiatedShutdownBehavior()), newAction.properties.getInstanceInitiatedShutdownBehavior())) {
+        if (!Objects.equals(runningInstancesItemType.getInstanceInitiatedShutdownBehavior(), newAction.properties.getInstanceInitiatedShutdownBehavior())) {
           if (newAction.properties.getInstanceInitiatedShutdownBehavior() != null) {
             ModifyInstanceAttributeType modifyInstanceAttributeType = MessageHelper.createMessage(ModifyInstanceAttributeType.class, newAction.info.getEffectiveUserId());
             modifyInstanceAttributeType.setInstanceId(newAction.info.getPhysicalResourceId());

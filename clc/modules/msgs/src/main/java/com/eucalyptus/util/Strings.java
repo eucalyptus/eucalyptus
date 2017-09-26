@@ -212,8 +212,8 @@ public class Strings {
    * @return The predicate
    * @see String#startsWith(String)
    */
-  public static Predicate<String> startsWith( final String prefix ) {
-    return new Predicate<String>() {
+  public static CompatPredicate<String> startsWith( final String prefix ) {
+    return new CompatPredicate<String>() {
       @Override
       public boolean apply( @Nullable final String text ) {
         return text != null && text.startsWith( prefix );
@@ -246,8 +246,8 @@ public class Strings {
    * @return The predicate
    * @see String#endsWith(String)
    */
-  public static Predicate<String> endsWith( final String suffix ) {
-    return new Predicate<String>() {
+  public static CompatPredicate<String> endsWith( final String suffix ) {
+    return new CompatPredicate<String>() {
       @Override
       public boolean apply( @Nullable final String text ) {
         return text != null && text.endsWith( suffix );
@@ -348,7 +348,7 @@ public class Strings {
    * Convert an object to a string.
    *
    * <P>The returned function will pass through null values.</P>
-   * 
+   *
    * @return The toString function
    * @see #toString(Object)
    */
@@ -439,7 +439,7 @@ public class Strings {
       }
     }
   }
-  
+
   private enum StringerFunctions implements CompatFunction<Object,String> {
     TOSTRING {
       @Override
