@@ -26,12 +26,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
-
-package com.eucalyptus.objectstorage
-
-public enum BucketState {
-  creating, extant, deleting
-}
+package com.eucalyptus.objectstorage;
 
 /**
  * creating - The metadata is in a transitional state. The resource is being created. Records in this state for too long
@@ -42,5 +37,5 @@ public enum BucketState {
  * deleting - The object is logically ready for removal. It may be GCd at any time in the future.
  */
 public enum ObjectState {
-  creating, mpu_pending, extant, deleting
+  creating, mpu_pending, extant, deleting;
 }
