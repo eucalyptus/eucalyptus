@@ -38,12 +38,7 @@
 -->
 
 <project name="eucalyptus-object-storage-common" basedir=".">
-	<property name="builder.suffix" value="groovy" />
-        <uptodate property="groovyc.notRequired" targetfile="${jar.file}">
-          <srcfiles dir="${src.dir}" includes="**/*" />
-        </uptodate>
-
-        <import file="../module-inc.xml"/>
+	<import file="../module-inc.xml"/>
 	<target name="install">
 		<copy todir="${DESTDIR}${euca.conf.dir}" overwrite="true">
 			<fileset dir="conf">

@@ -94,6 +94,7 @@ import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -320,7 +321,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
       putRequest.setKey(uploadingObject.getObjectUuid());
       putRequest.setUser(requestUser);
       putRequest.setContentLength(entity.getSize().toString());
-      putRequest.setMetaData(userMetadata);
+      putRequest.setMetaData(userMetadata==null ? null : Lists.newArrayList(userMetadata));
 
       Callable<PutObjectResponseType> putCallable = new Callable<PutObjectResponseType>() {
 
@@ -586,7 +587,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
   /**
    * Create a multipart Upload (get an Id from the backend and initialize the metadata. Returns a persisted uploadId record as an ObjectEntity with
    * the uploadId in state 'mpu-pending'
-   * 
+   *
    * @param provider
    * @param upload
    * @param requestUser
@@ -649,7 +650,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
 
   /**
    * Create the named object part in metadata and on the backend.
-   * 
+   *
    * @return the ObjectEntity object representing the successfully created object
    */
   @Override
@@ -749,7 +750,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
 
   /**
    * Commits a Multipart Upload into an extant object entity.
-   * 
+   *
    * @param provider
    * @param mpuEntity the ObjectEntity that is the upload parent record, as supplied by the ObjectMetadataManager.lookupUpload()
    * @param requestUser
@@ -811,7 +812,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
 
   /**
    * Flushes the mulitpart upload and all artifacts that are not committed.
-   * 
+   *
    * @param entity ObjectEntity record for object to delete
    */
   @Override

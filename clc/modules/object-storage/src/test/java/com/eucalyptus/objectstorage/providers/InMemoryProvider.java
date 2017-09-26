@@ -129,6 +129,7 @@ import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.storage.msgs.s3.Upload;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 
 /**
  * This is a fake provider for testing-purposes only. This is a stateful in-memory provider that will respond like a regular provider but with no
@@ -622,7 +623,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
     response.setVersionId(obj.versionId);
     response.setDataInputStream(new ByteArrayInputStream(obj.content));
     response.setStatusMessage("OK");
-    response.setMetaData(obj.userMetadata);
+    response.setMetaData(obj.userMetadata==null?null: Lists.newArrayList(obj.userMetadata));
     return response;
   }
 
@@ -649,7 +650,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
     response.setSize(obj.size);
     response.setVersionId(obj.versionId);
     response.setStatusMessage("OK");
-    response.setMetaData(obj.userMetadata);
+    response.setMetaData(obj.userMetadata==null?null:Lists.newArrayList(obj.userMetadata));
     return response;
   }
 
