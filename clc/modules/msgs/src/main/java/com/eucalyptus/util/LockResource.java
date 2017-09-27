@@ -26,41 +26,73 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
-package com.eucalyptus.util
+package com.eucalyptus.util;
 
-import com.google.common.base.Supplier
-import com.google.common.base.Suppliers
-import groovy.transform.CompileStatic
-import groovy.transform.ToString
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import groovy.lang.Closure;
 
 /**
- *
+ * Lock helper supporting try-with-resources and Groovy approaches
  */
-@CompileStatic
-@ToString( includes='description' )
-final class TypedKey<T> {
-  final String description;
-  private final Supplier<? extends T> initialValue;
+public class LockResource implements AutoCloseable {
 
-  private TypedKey( final String description,
-                    final Supplier<? extends T> initialValue ) {
-    this.description = description
-    this.initialValue = initialValue
+  private final Lock lock;
+  private boolean locked;
+
+  private LockResource( final Lock lock, final boolean locked ) {
+    this.lock = lock;
+    this.locked = locked;
   }
 
-  static <T> TypedKey<T> create( String description ) {
-    new TypedKey<T>( description, Suppliers.ofInstance( null ) )
+  public static LockResource lock( Lock lock ) {
+    lock.lock( );
+    return new LockResource( lock, true );
   }
 
-  static <T, V extends T> TypedKey<T> create( String description, V initialValue ) {
-    new TypedKey<T>( description, Suppliers.ofInstance( (T)initialValue ) )
+  /**
+   * Try to acquire lock for the given time.
+   *
+   * <p>WARNING: Caller must check if lock was acquired</p>
+   *
+   * @see #isLocked()
+   */
+  public static LockResource tryLock( Lock lock, long time, TimeUnit unit ) throws InterruptedException {
+    boolean locked = lock.tryLock( time, unit );
+    return new LockResource( lock, locked );
   }
 
-  static <T, V extends T> TypedKey<T> create( String description, Supplier<V> initialValue ) {
-    new TypedKey<T>( description, initialValue )
+  /**
+   * Try to acquire lock.
+   *
+   * <p>WARNING: Caller must check if lock was acquired</p>
+   *
+   * @see #isLocked()
+   */
+  public static LockResource tryLock( Lock lock ) {
+    boolean locked = lock.tryLock( );
+    return new LockResource( lock, locked );
   }
 
-  T initialValue( ) {
-    initialValue.get( )
+  public static <V> V withLock( Lock lock, Closure<V> closure ) {
+    lock.lock( );
+    try {
+      return closure.call( );
+    } finally {
+      lock.unlock( );
+    }
+
+  }
+
+  public boolean isLocked( ) {
+    return locked;
+  }
+
+  @Override
+  public void close( ) {
+    if ( isLocked( ) ) {
+      lock.unlock( );
+      locked = false;
+    }
   }
 }

@@ -38,7 +38,6 @@
 -->
 
 <project name="eucalyptus-msgs" basedir=".">
-	<property name="builder.suffix" value="groovy" />
 	<property name="javac.extraargs.xlint.unchecked" value="-unchecked"/>
 	<import file="../module-inc.xml"/>
 </project>

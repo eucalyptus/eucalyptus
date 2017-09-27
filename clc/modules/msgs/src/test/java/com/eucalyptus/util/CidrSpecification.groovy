@@ -28,7 +28,6 @@
  ************************************************************************/
 package com.eucalyptus.util
 
-import com.eucalyptus.scripting.Groovyness
 import com.google.common.base.Functions
 import com.google.common.collect.Iterables
 import com.google.common.collect.Lists
@@ -46,7 +45,7 @@ class CidrSpecification extends Specification {
 
   def 'should support full range of prefix values'() {
     expect: 'parsed cidr equals specified cidr'
-    Groovyness.expandoMetaClass( parse( cidr ) ) == cidr( ip, prefix )
+    parse( cidr ) == cidr( ip, prefix )
 
     where:
     cidr         | ip       | prefix
@@ -57,7 +56,7 @@ class CidrSpecification extends Specification {
 
   def 'should support lax parsing'() {
     expect: 'parsed and normalized cidr equals specified cidr'
-    Groovyness.expandoMetaClass( parse( cidr, true ) ) == cidr( ip, prefix )
+    parse( cidr, true ) == cidr( ip, prefix )
 
     where:
     cidr                 | ip         | prefix
@@ -70,7 +69,7 @@ class CidrSpecification extends Specification {
 
   def 'should reject invalid cidrs with IllegalArgumentException'() {
     when: 'parsing invalid cidr'
-    Groovyness.expandoMetaClass( parse( cidr ) )
+    parse( cidr )
 
     then:
     thrown(IllegalArgumentException)
@@ -100,7 +99,7 @@ class CidrSpecification extends Specification {
 
   def 'should be able to check for contained ips'(){
     expect: 'parsed cidr containment check has expected result'
-    Groovyness.expandoMetaClass( parse( cidr ) ).contains( perhapsContains ) == result
+    parse( cidr ).contains( perhapsContains ) == result
 
     where:
     cidr                | perhapsContains   | result
@@ -114,7 +113,7 @@ class CidrSpecification extends Specification {
 
   def 'should be able to check for contained cidrs'(){
     expect: 'parsed cidr containment check has expected result'
-    Groovyness.expandoMetaClass( parse( cidr ) ).contains( Groovyness.expandoMetaClass( parse( perhapsContains ) ) ) == result
+    parse( cidr ).contains( parse( perhapsContains ) ) == result
 
     where:
     cidr                | perhapsContains   | result
@@ -133,7 +132,7 @@ class CidrSpecification extends Specification {
 
   def 'should have a string representation'(){
     expect: 'parsed cidr string conversion check'
-    Groovyness.expandoMetaClass( parse( cidr, true ) ).toString( ) == result
+    parse( cidr, true ).toString( ) == result
 
     where:
     cidr                | result
@@ -174,7 +173,7 @@ class CidrSpecification extends Specification {
 
   def 'should be able to create CIDR for an address and prefix'(){
     expect: 'parsed cidr containment check has expected result'
-    Groovyness.expandoMetaClass( fromAddress( InetAddresses.forString( address ), prefix ) ) == parse( result )
+    fromAddress( InetAddresses.forString( address ), prefix ) == parse( result )
 
     where:
     address           | prefix    | result
@@ -192,7 +191,7 @@ class CidrSpecification extends Specification {
 
   def 'should be able to split a CIDR'(){
     expect: 'cidr split has expected result'
-    Lists.newArrayList( Iterables.transform( Groovyness.expandoMetaClass( parse( cidr ) ).split( split ), Functions.toStringFunction( ) ) ) == result
+    Lists.newArrayList( Iterables.transform( parse( cidr ).split( split ), Functions.toStringFunction( ) ) ) == result
 
     where:
     cidr              | split     | result

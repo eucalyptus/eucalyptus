@@ -36,35 +36,56 @@
  * IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  * NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
+package com.eucalyptus.component;
 
-package com.eucalyptus.component
+import java.net.MalformedURLException;
+import java.net.URI;
+import com.eucalyptus.config.ComponentConfiguration;
+import com.eucalyptus.util.Exceptions;
 
-import com.eucalyptus.config.ComponentConfiguration
+public class EphemeralConfiguration extends ComponentConfiguration {
 
-class EphemeralConfiguration extends ComponentConfiguration {
   private static final long serialVersionUID = 1;
-  URI         uri;
-  ComponentId c;
-  
+  private URI uri;
+  private ComponentId c;
+
   public EphemeralConfiguration( ComponentId c, String partition, String name, URI uri ) {
     super( partition, name, uri.getHost( ), getPortFromUri( uri ), uri.getPath( ) );
     this.uri = uri;
     this.c = c;
   }
-  
+
+  private static Integer getPortFromUri( final URI uri ) {
+    final int port = uri.getPort( );
+    try {
+      return ( (Integer) ( port == -1 ? uri.toURL( ).getDefaultPort( ) : port ) );
+    } catch ( MalformedURLException e ) {
+      throw Exceptions.toUndeclared( e );
+    }
+  }
+
   public ComponentId lookupComponentId( ) {
     return c;
   }
-  
+
   public URI getUri( ) {
     return this.uri;
   }
-  
+
+  public void setUri( URI uri ) {
+    this.uri = uri;
+  }
+
   @Override
   public String getName( ) {
     return super.getName( );
   }
-  
+
+  @Override
+  public void setName( String name ) {
+    super.setName( name );
+  }
+
   @Override
   public Boolean isVmLocal( ) {
     return super.isVmLocal( );
@@ -79,81 +100,70 @@ class EphemeralConfiguration extends ComponentConfiguration {
   public int compareTo( ServiceConfiguration that ) {
     return super.compareTo( that );
   }
-  
+
   @Override
   public String toString( ) {
     return super.toString( );
   }
-  
+
   @Override
   public int hashCode( ) {
     return super.hashCode( );
   }
-  
+
   @Override
   public boolean equals( Object that ) {
-    return super.equals(that) &&
-    that instanceof ServiceConfiguration &&
-    this.getComponentId().equals(((ServiceConfiguration) that).getComponentId());
     //NOTE: these additional tests are necessary as the super.equals method
     // expects Class type differences between different components
+    return super.equals( that ) &&
+        that instanceof ServiceConfiguration &&
+        this.getComponentId( ).equals( ( (ServiceConfiguration) that ).getComponentId( ) );
   }
-  
+
   @Override
   public String getPartition( ) {
     return super.getPartition( );
   }
-  
+
   @Override
   public void setPartition( String partition ) {
     super.setPartition( partition );
   }
-  
+
   @Override
   public String getHostName( ) {
     return super.getHostName( );
   }
-  
+
   @Override
   public void setHostName( String hostName ) {
     super.setHostName( hostName );
   }
-  
+
   @Override
   public Integer getPort( ) {
     return super.getPort( );
   }
-  
+
   @Override
   public void setPort( Integer port ) {
     super.setPort( port );
   }
-  
+
   @Override
   public String getServicePath( ) {
     return super.getServicePath( );
   }
-  
+
   @Override
   public void setServicePath( String servicePath ) {
     super.setServicePath( servicePath );
-  }
-  
-  @Override
-  public void setName( String name ) {
-    super.setName( name );
   }
 
   public String getSourceHostName( ) {
     return null;
   }
 
-  public void setSourceHostName( String aliasHostName ) {}
-
-  private static Integer getPortFromUri( final URI uri ) {
-    final int port = uri.getPort( );
-    return port == -1 ?
-        uri.toURL( ).getDefaultPort( ) :
-        port;
+  public void setSourceHostName( String aliasHostName ) {
   }
 }

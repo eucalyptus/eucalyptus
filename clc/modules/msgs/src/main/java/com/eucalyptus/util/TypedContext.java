@@ -26,75 +26,54 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
-package com.eucalyptus.util
+package com.eucalyptus.util;
 
-import groovy.transform.CompileStatic
-
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.locks.Lock
+import java.util.Map;
+import com.google.common.collect.Maps;
 
 /**
- * Lock helper supporting try-with-resources and Groovy approaches
+ *
  */
-@CompileStatic
-class LockResource implements AutoCloseable {
+public class TypedContext {
+  private final Map<TypedKey<?>, Object> delegate;
 
-  private final Lock lock
-  private boolean locked
-
-  private LockResource( final Lock lock,
-                        final boolean locked ) {
-    this.lock = lock
-    this.locked = locked
+  private TypedContext( final Map<TypedKey<?>, Object> wrapped ) {
+    this.delegate = wrapped;
   }
 
-  static LockResource lock( Lock lock ) {
-    lock.lock()
-    new LockResource( lock, true );
+  public static TypedContext newTypedContext( ) {
+    return newTypedContext( Maps.newHashMap( ) );
   }
 
-  /**
-   * Try to acquire lock for the given time.
-   *
-   * <p>WARNING: Caller must check if lock was acquired</p>
-   *
-   * @see #isLocked()
-   */
-  static LockResource tryLock( Lock lock, long time, TimeUnit unit ) {
-    boolean locked = lock.tryLock( time, unit )
-    new LockResource( lock, locked );
+  public static TypedContext newTypedContext( final Map<TypedKey<?>, Object> wrapped ) {
+    return new TypedContext( wrapped );
   }
 
-  /**
-   * Try to acquire lock.
-   *
-   * <p>WARNING: Caller must check if lock was acquired</p>
-   *
-   * @see #isLocked()
-   */
-  static LockResource tryLock( Lock lock ) {
-    boolean locked = lock.tryLock( )
-    new LockResource( lock, locked );
-  }
-
-  static <V> V withLock( Lock lock, Closure<V> closure ) {
-    lock.lock( )
-    try {
-      closure.call( )
-    } finally {
-      lock.unlock( )
+  @SuppressWarnings( "unchecked" )
+  public <T> T get( TypedKey<T> key ) {
+    T value = (T) delegate.get( key );
+    if ( value == null && ( value = key.initialValue( ) ) != null ) {
+      delegate.put( key, value );
     }
+
+    return value;
   }
 
-  boolean isLocked( ) {
-    return locked;
+  @SuppressWarnings( "unchecked" )
+  public <T> T put( TypedKey<T> key, T value ) {
+    return (T) delegate.put( key, value );
   }
-  
-  @Override
-  void close( ) {
-    if ( isLocked( ) ) {
-      lock.unlock( )
-      locked = false
-    }
+
+  @SuppressWarnings( "unchecked" )
+  public <T> T remove( TypedKey<T> key ) {
+    return (T) delegate.remove( key );
+  }
+
+  public <T> boolean containsKey( TypedKey<T> key ) {
+    return delegate.containsKey( key );
+  }
+
+  public String toString( ) {
+    return "TypedContext:" + String.valueOf( delegate );
   }
 }

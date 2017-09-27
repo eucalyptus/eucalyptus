@@ -36,51 +36,40 @@
  * IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  * NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
-
 package com.eucalyptus.util;
 import org.apache.log4j.Logger;
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 
 public class LogUtil {
   private static Logger LOG = Logger.getLogger( LogUtil.class );
   private static String LONG_BAR = "=============================================================================================================================================================================================================";
   private static String MINI_BAR = "-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------";
-  public static String FAIL = "FAIL"
+  public static String FAIL = "FAIL";
   public static LogUtil singleton = new LogUtil();
 
   public static String header( String message ) {
-    return String.format( "%80.80s\n%s\n%1\$80.80s", LONG_BAR, message );
+    return String.format( "%80.80s\n%s\n%1$80.80s", LONG_BAR, message );
   }
-  
-  public static String errorheader( String message, Exception e ) {
-    String.format( "%80.80s\n%s\n%1\$80.80s", MINI_BAR, message ).replaceAll("-","*");
-  }
+
   public static String subheader( String message ) {
-    return String.format( "%80.80s\n%s\n%1\$80.80s", MINI_BAR, message );
+    return String.format( "%80.80s\n%s\n%1$80.80s", MINI_BAR, message );
   }
 
   public static String dumpObject( Object o ) {
     try {
-      return o.dump()
+      return DefaultGroovyMethods.dump(o)
           .replace("<","[")
           .replace(">","]")
-          .replaceAll("[\\w\\.]+\\.(\\w+)@\\w*", '$1')
-          .replaceAll("class:class [\\w\\.]+\\.(\\w+),", '$1');
-    } catch( Exception e ) {
-      LOG.error( e, e )
-      return ""+o;
+          .replaceAll("[\\w\\.]+\\.(\\w+)@\\w*", "$1")
+          .replaceAll("class:class [\\w\\.]+\\.(\\w+),", "$1");
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+      return "" + o;
     }
   }
-  
-  public static String lineObject( Object o ) {
-    return String.format("%-200.200s",o.dump().replaceFirst("<\\w*.\\w*@","<"));
-  }
-  
+
   public static LogUtil log( Object message ) {
     LOG.info( message );
-    return singleton;
-  }
-  public static LogUtil logHeader( String message ) {
-    LOG.info( LogUtil.subheader( message ) );
     return singleton;
   }
 }
