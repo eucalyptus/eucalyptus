@@ -28,6 +28,5 @@
   POSSIBILITY OF SUCH DAMAGE.
 -->
 <project name="eucalyptus-compute-common" basedir=".">
-	<property name="bind.load" value="false" />
 	<import file="../module-inc.xml" />
 </project>
