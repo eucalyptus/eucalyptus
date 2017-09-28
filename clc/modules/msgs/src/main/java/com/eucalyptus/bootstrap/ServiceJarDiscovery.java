@@ -52,6 +52,9 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.ClassMetadata;
 import org.springframework.core.type.classreading.MetadataReader;
@@ -200,6 +203,18 @@ public abstract class ServiceJarDiscovery implements Comparable<ServiceJarDiscov
 
     private ComponentClassScanner() {
       super(false);
+      setResourceLoader( jibxSafe( getResourceLoader( ) ) );
+    }
+
+    private static ResourceLoader jibxSafe( final ResourceLoader resourceLoader ) {
+      return new DelegatingResourcePatternResolver( (ResourcePatternResolver) resourceLoader ) {
+        @Override
+        public Resource[] getResources( final String locationPattern ) throws IOException {
+          return Stream.of( super.getResources( locationPattern ) )
+              .filter( resource -> resource.getFilename( ) == null || !resource.getFilename( ).startsWith( "JiBX_" ) )
+              .toArray( Resource[]::new );
+        }
+      };
     }
 
     @Override

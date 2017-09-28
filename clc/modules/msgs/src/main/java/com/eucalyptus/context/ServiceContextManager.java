@@ -39,6 +39,7 @@
 
 package com.eucalyptus.context;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Set;
@@ -47,14 +48,17 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Stream;
 import org.apache.log4j.Logger;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.ResourcePatternResolver;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
+import com.eucalyptus.bootstrap.DelegatingResourcePatternResolver;
 import com.eucalyptus.bootstrap.OrderedShutdown;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
@@ -82,9 +86,9 @@ public class ServiceContextManager {
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.RemoteServicesInit )
   public static class ServiceContextBootstrapper extends Bootstrapper.Simple {
-    
+
     public ServiceContextBootstrapper( ) {}
-    
+
     @Override
     public boolean start( ) throws Exception {
       new Thread(() -> {
@@ -97,11 +101,11 @@ public class ServiceContextManager {
       return true;
     }
   }
-  
+
   private static Logger                                CONFIG_LOG        = Logger.getLogger( "Configs" );
   private static Logger                                LOG               = Logger.getLogger( ServiceContextManager.class );
   private static ServiceContextManager                 singleton         = new ServiceContextManager( );
-  
+
   private final List<ComponentId>                      enabledCompIds    = Lists.newArrayList( );
   private final AtomicBoolean                          running           = new AtomicBoolean( true );
   private final Lock                                   canHasWrite;
@@ -115,7 +119,7 @@ public class ServiceContextManager {
     this.canHasWrite = canHas.writeLock( );
     OrderedShutdown.registerPostShutdownHook(ServiceContextManager::shutdown);
   }
-  
+
   public static void restartSync( ) {
     if ( singleton.canHasWrite.tryLock( ) ) {
       try {
@@ -128,7 +132,7 @@ public class ServiceContextManager {
       }
     }
   }
-  
+
   private void update( ) {
     if (context == null) {
       try ( final LockResource lock = LockResource.lock( canHasWrite ) ){
@@ -145,17 +149,17 @@ public class ServiceContextManager {
       }
     }
   }
-                                 
+
   private static final String EMPTY_CONTEXT = "<beans xmlns=\"http://www.springframework.org/schema/beans\" " +
       "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" " +
       "xsi:schemaLocation=\"http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd\"/>";
-  
+
   private ConfigurableApplicationContext createContext( ) {
     // Many-to-one services must be ordered last so they do not receive messages
     // for backend components that use sub-classes of the frontend components.
     final List<ComponentId> currentComponentIds = Lists.newArrayList( Ordering.natural( )
         .onResultOf( Functions.forPredicate( ComponentIds.manyToOne( ) ) )
-        .compound( Ordering.natural( ).onResultOf( 
+        .compound( Ordering.natural( ).onResultOf(
             Functions.compose( Classes.canonicalNameFunction( ), Functions.<ComponentId>identity( ) ) ) )
         .sortedCopy( ComponentIds.list( ) ) );
     LOG.info( "Restarting service context with these enabled services: " + currentComponentIds );
@@ -185,6 +189,19 @@ public class ServiceContextManager {
         protected Resource[] getConfigResources( ) {
           return configResources;
         }
+
+        @Override
+        protected ResourcePatternResolver getResourcePatternResolver( ) {
+          return new DelegatingResourcePatternResolver( super.getResourcePatternResolver( ) ) {
+            @Override
+            public Resource[] getResources( final String locationPattern ) throws IOException {
+              return Stream.of( super.getResources( locationPattern ) )
+                  .filter( resource ->
+                      resource.getFilename( ) == null || !resource.getFilename( ).startsWith( "JiBX_" ) )
+                  .toArray( Resource[]::new );
+            }
+          };
+        }
       };
       context.refresh( );
       this.enabledCompIds.clear( );
@@ -194,7 +211,7 @@ public class ServiceContextManager {
     }
     return context;
   }
-  
+
   private String loadModel( final ComponentId componentId ) {
     try {
       return Resources.toString( Resources.getResource( componentId.getServiceModelFileName( ) ), StandardCharsets.UTF_8 );
@@ -202,21 +219,21 @@ public class ServiceContextManager {
       return EMPTY_CONTEXT;
     }
   }
-  
+
   private static Resource createConfigResource( final ComponentId componentId, final String outString ) {
     Logs.extreme( ).trace( "===================================" );
     Logs.extreme( ).trace( outString );
     Logs.extreme( ).trace( "===================================" );
     return new ByteArrayResource( outString.getBytes( ), componentId.getServiceModelFileName( ) );
   }
-  
+
   private static String FAIL_MSG = "ESB client not ready because the service bus has not been started.";
-  
+
   static ApplicationContext getContext( ) {
     singleton.update( );
     return singleton.context;
   }
-  
+
   private void stop( ) {
     try ( final LockResource lock = LockResource.lock( this.canHasWrite ) ) {
       if ( this.context != null ) {
@@ -233,9 +250,9 @@ public class ServiceContextManager {
       }
     }
   }
-  
+
   public static void shutdown( ) {
     singleton.stop( );
   }
-  
+
 }
