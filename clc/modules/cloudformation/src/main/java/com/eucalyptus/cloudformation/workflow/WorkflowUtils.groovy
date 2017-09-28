@@ -26,7 +26,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
-package com.eucalyptus.simpleworkflow.common.workflow
+package com.eucalyptus.cloudformation.workflow
 
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
 import com.amazonaws.services.simpleworkflow.flow.core.Settable

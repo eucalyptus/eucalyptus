@@ -40,7 +40,6 @@ import com.eucalyptus.cloudformation.template.dependencies.DependencyManager
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection
 import com.eucalyptus.component.annotation.ComponentPart
-import com.eucalyptus.simpleworkflow.common.workflow.WorkflowUtils
 import com.google.common.base.Throwables
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps

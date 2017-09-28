@@ -33,7 +33,6 @@ import com.amazonaws.services.simpleworkflow.flow.core.Promise
 import com.eucalyptus.cloudformation.common.CloudFormation
 import com.eucalyptus.cloudformation.entity.StackWorkflowEntity
 import com.eucalyptus.component.annotation.ComponentPart
-import com.eucalyptus.simpleworkflow.common.workflow.WorkflowUtils
 import com.netflix.glisten.WorkflowOperations
 import com.netflix.glisten.impl.swf.SwfWorkflowOperations
 import groovy.transform.CompileStatic

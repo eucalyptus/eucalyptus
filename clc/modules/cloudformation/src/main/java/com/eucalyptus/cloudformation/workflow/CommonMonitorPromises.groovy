@@ -28,18 +28,8 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.workflow
 
-import com.amazonaws.services.simpleworkflow.flow.core.AndPromise
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
-import com.amazonaws.services.simpleworkflow.flow.core.Settable
 import com.amazonaws.services.simpleworkflow.flow.interceptors.ExponentialRetryPolicy
-import com.eucalyptus.cloudformation.entity.StackEntityHelper
-import com.eucalyptus.cloudformation.resources.ResourceAction
-import com.eucalyptus.cloudformation.resources.ResourceResolverManager
-import com.eucalyptus.cloudformation.template.dependencies.DependencyManager
-import com.eucalyptus.simpleworkflow.common.workflow.WorkflowUtils
-import com.google.common.base.Throwables
-import com.google.common.collect.Lists
-import com.google.common.collect.Maps
 import com.netflix.glisten.WorkflowOperations
 import com.netflix.glisten.impl.swf.SwfWorkflowOperations
 import groovy.transform.CompileStatic
