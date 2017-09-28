@@ -78,6 +78,13 @@ public class WalrusRequestType extends BaseMessage {
     this.key = key;
   }
 
+  public Date getTimestamp( ) {
+    return this.timeStamp;
+  }
+
+  public void setTimestamp( Date stamp ) {
+    this.timeStamp = stamp;
+  }
   public BucketLogData getLogData( ) {
     return logData;
   }

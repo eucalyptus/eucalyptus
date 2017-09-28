@@ -39,7 +39,6 @@
 
 package com.eucalyptus.ws.protocol;
 
-import java.beans.Beans;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -56,12 +55,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
-import org.springframework.beans.BeanUtils;
-import org.springframework.util.ReflectionUtils;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingElementNotFoundException;
 import com.eucalyptus.binding.BindingException;
-import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.binding.HttpEmbeddeds;
 import com.eucalyptus.binding.HttpParameterMapping;
@@ -69,6 +65,7 @@ import com.eucalyptus.binding.HttpParameterMappings;
 import com.eucalyptus.binding.HttpValue;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.util.Beans;
 import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.google.common.base.Function;
@@ -84,7 +81,6 @@ import edu.ucsb.eucalyptus.msgs.BaseData;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import groovy.lang.GroovyObject;
 
 public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandler {
   private static Logger LOG = Logger.getLogger( BaseQueryBinding.class );
@@ -148,7 +144,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
     this.altOperationParams = Arrays.asList( alternativeOperationParam );
     this.possibleParams = Arrays.asList( operationParam.getDeclaringClass( ).getEnumConstants( ) );
   }
-  
+
   private String extractOperationName( final MappingHttpRequest httpRequest ) {
     if ( httpRequest.getParameters( ).containsKey( this.operationParam.toString( ) ) ) {
       return httpRequest.getParameters( ).get( this.operationParam.toString( ) );
@@ -171,7 +167,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
     for ( final T op : this.possibleParams )
       httpRequest.getParameters( ).remove( op.name( ) );
     final Map<String, String> params = httpRequest.getParameters( );
-    
+
     BaseMessage eucaMsg;
     Map<String, String> fieldMap;
     Binding currentBinding;
@@ -196,9 +192,9 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
     } catch ( final Exception e ) {
       throw new BindingException( "Failed to construct message of type " + operationName, e );
     }
-    
+
     final List<String> failedMappings = this.populateObject( eucaMsg, fieldMap, params );
-    
+
     if ( isStrictBinding( ) && ( !failedMappings.isEmpty( ) || !params.isEmpty( ) ) ) {
       final StringBuilder errMsg = new StringBuilder( "Failed to bind the following fields:\n" );
       for ( final String f : failedMappings )
@@ -209,7 +205,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
     }
 
     validateBinding( currentBinding, operationName, params, eucaMsg );
-    
+
     return eucaMsg;
   }
 
@@ -219,13 +215,13 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
       binding = this.getBinding( );
     } else if ( this.getDefaultBinding() != null && this.getDefaultBinding().hasElementClass( operationName ) ) {
       binding = this.getDefaultBinding();
-    } 
+    }
     return binding;
   }
 
-  protected void validateBinding( final Binding currentBinding, 
+  protected void validateBinding( final Binding currentBinding,
                                   final String operationName,
-                                  final Map<String, String> params, 
+                                  final Map<String, String> params,
                                   final BaseMessage eucaMsg ) throws BindingException {
     try {
       currentBinding.toOM( eucaMsg, this.getNamespace( ) );
@@ -258,14 +254,14 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
       try {
         return clazz.getDeclaredField( fieldName );
       } catch ( final Exception e1 ) {
-        e = e1;        
+        e = e1;
       }
       clazz = clazz.getSuperclass( );
     }
     if ( e == null ) throw new Exception("Class not supported: " + clazz);
     throw e;
   }
-  
+
   private List<String> populateObject( final Object obj, final Map<String, String> paramFieldMap, final Map<String, String> params ) {
     final List<String> failedMappings = new ArrayList<String>( );
     for ( final Map.Entry<String, String> e : paramFieldMap.entrySet( ) ) {
@@ -278,7 +274,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
         failedMappings.add( e.getKey( ) );
       }
     }
-    
+
     for ( final Map.Entry<String, String> e : paramFieldMap.entrySet( ) ) {
       Field field = null;
       Class<?> declaredType = null;
@@ -288,7 +284,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
       } catch ( final Exception e2 ) {
         LOG.debug( "Field not found: " + e.getValue(), e2 );
       }
-      
+
       if ( params.containsKey( e.getKey( ) )
            && ( declaredType == null || !EucalyptusData.class.isAssignableFrom( declaredType ) )
            && !this.populateObjectField( obj, e, params ) ) {
@@ -342,11 +338,11 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
       } else {
         failedMappings.remove( e.getKey( ) );
       }
-      
+
     }
     return failedMappings;
   }
-  
+
   @SuppressWarnings( "unchecked" )
   private boolean populateObjectField( final Object obj, final Map.Entry<String, String> paramFieldPair, final Map<String, String> params ) {
     try {
@@ -366,7 +362,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
       return false;
     }
   }
-  
+
   private Object convertToType( final Supplier<String> value, final Class<?> targetType ) throws Exception {
     if ( targetType.equals( String.class ) )
       return value.get();
@@ -388,10 +384,10 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
       return Double.valueOf( value.get() );
     else if ( targetType.equals( Date.class ) )
       return Timestamps.parseIso8601Timestamp( value.get() );
-    else 
+    else
       return null;
   }
-  
+
   @SuppressWarnings( "rawtypes" )
   private List<String> populateObjectList( final Object obj, final Map.Entry<String, String> paramFieldPair, final Map<String, String> params, final int paramSize ) {
     final List<String> failedMappings = new ArrayList<String>( );
@@ -412,7 +408,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
           final List<String> keys = Lists.newArrayList( params.keySet( ) );
           final Pattern paramPattern = Pattern.compile( Pattern.quote(paramFieldPair.getKey( )) + "\\.([0-9]{1,7})" );
           final Map<String,Object> indexToValueMap = new TreeMap<String,Object>( Ordering.natural().onResultOf( FunctionToInteger.INSTANCE ) );
-          for ( final String k : keys ) {    
+          for ( final String k : keys ) {
             final Matcher matcher = paramPattern.matcher( k );
             if ( matcher.matches() ) {
               indexToValueMap.put( matcher.group(1), convertToType( Suppliers.ofInstance(params.remove( k )), genericType )  );
@@ -475,7 +471,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
     final List<String> embeddedFailures = this.populateObject( embedded, embeddedFields, params );
     if ( embeddedFailures.isEmpty( ) && !( params.size( ) - startSize == 0 ) )
       theList.add( embedded );
-    
+
     return embeddedFailures;
   }
 
@@ -544,24 +540,11 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
   }
 
   private void setObjectProperty( final Object target, final String property, final Object value ) {
-    if ( target instanceof GroovyObject ) {
-      ((GroovyObject)target).setProperty( property, value );
-    } else {
-      ReflectionUtils.invokeMethod(
-          BeanUtils.getPropertyDescriptor( target.getClass( ), property ).getWriteMethod( ),
-          target,
-          value );
-    }
+    Beans.setObjectProperty( target, property, value );
   }
 
   private Object getObjectProperty( final Object target, final String property ) {
-    if ( target instanceof GroovyObject ) {
-      return ((GroovyObject)target).getProperty( property );
-    } else {
-      return ReflectionUtils.invokeMethod(
-          BeanUtils.getPropertyDescriptor( target.getClass( ), property ).getReadMethod( ),
-          target );
-    }
+    return Beans.getObjectProperty( target, property );
   }
 
   private HttpEmbedded getHttpEmbeddedAnnotation( final Field field ) {

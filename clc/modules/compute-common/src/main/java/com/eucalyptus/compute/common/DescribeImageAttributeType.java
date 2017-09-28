@@ -15,9 +15,7 @@
  ************************************************************************/
 package com.eucalyptus.compute.common;
 
-import java.beans.PropertyDescriptor;
-import org.springframework.beans.BeanUtils;
-import org.springframework.util.ReflectionUtils;
+import com.eucalyptus.util.Beans;
 
 public class DescribeImageAttributeType extends VmImageMessage {
 
@@ -37,11 +35,7 @@ public class DescribeImageAttributeType extends VmImageMessage {
     this.ramdisk = null;
     this.blockDeviceMapping = null;
     this.description = null;
-    PropertyDescriptor property = BeanUtils.getPropertyDescriptor( DescribeImageAttributeType.class, attribute );
-    if ( property != null ) {
-      ReflectionUtils.invokeMethod( property.getWriteMethod( ), this, "hi" );
-    }
-
+    Beans.setObjectProperty( this, attribute, "hi" );
   }
 
   public String getImageId( ) {

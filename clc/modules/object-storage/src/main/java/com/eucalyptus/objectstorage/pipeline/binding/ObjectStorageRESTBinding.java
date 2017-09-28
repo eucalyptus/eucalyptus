@@ -129,6 +129,7 @@ import com.eucalyptus.storage.msgs.s3.PreflightRequest;
 import com.eucalyptus.storage.msgs.s3.TaggingConfiguration;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.storage.msgs.s3.Transition;
+import com.eucalyptus.util.Beans;
 import com.eucalyptus.util.ChannelBufferStreamingInputStream;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.XMLParser;
@@ -139,7 +140,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import groovy.lang.GroovyObject;
 import javaslang.Tuple2;
 
 public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
@@ -259,31 +259,31 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
 
     OMElement msg;
 
-    GroovyObject groovyMsg;
+    ObjectStorageRequestType msgObject;
     Map<String, String> fieldMap;
     Class targetType;
     try {
       // :: try to create the target class :://
       targetType = ClassLoader.getSystemClassLoader().loadClass("com.eucalyptus.objectstorage.msgs.".concat(operationName).concat("Type"));
-      if (!GroovyObject.class.isAssignableFrom(targetType)) {
+      if (!ObjectStorageRequestType.class.isAssignableFrom(targetType)) {
         throw new Exception();
       }
       // :: get the map of parameters to fields :://
       fieldMap = this.buildFieldMap(targetType);
       // :: get an instance of the message :://
-      groovyMsg = (GroovyObject) targetType.newInstance();
+      msgObject = (ObjectStorageRequestType)targetType.newInstance();
     } catch (Exception e) {
-      throw new BindingException("Failed to construct message of type " + operationName);
+      throw new BindingException("Failed to construct message of type " + operationName, e);
     }
 
-    addLogData((BaseMessage) groovyMsg, bindingArguments);
+    addLogData((BaseMessage) msgObject, bindingArguments);
 
     // TODO: Refactor this to be more general
-    List<String> failedMappings = populateObject(groovyMsg, fieldMap, params);
-    populateObjectFromBindingMap(groovyMsg, fieldMap, httpRequest, bindingArguments);
+    List<String> failedMappings = populateObject(msgObject, fieldMap, params);
+    populateObjectFromBindingMap(msgObject, fieldMap, httpRequest, bindingArguments);
 
     User user = Contexts.lookup(httpRequest.getCorrelationId()).getUser();
-    setRequiredParams(groovyMsg, user);
+    setRequiredParams(msgObject, user);
 
     if (!params.isEmpty()) {
       // ignore params that are not consumed, EUCA-4840
@@ -300,10 +300,10 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     }
 
     if (Logs.extreme().isTraceEnabled()) {
-      Logs.extreme().trace(groovyMsg.toString());
+      Logs.extreme().trace(msgObject.toString());
     }
 
-    return groovyMsg;
+    return msgObject;
 
   }
 
@@ -319,8 +319,8 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     }
   }
 
-  protected void setRequiredParams(final GroovyObject msg, User user) throws Exception {
-    msg.setProperty("timeStamp", new Date());
+  protected void setRequiredParams(final ObjectStorageRequestType msg, User user) throws Exception {
+    msg.setTimestamp(new Date());
   }
 
   protected String getOperation(MappingHttpRequest httpRequest, Map operationParams) throws Exception {
@@ -984,7 +984,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     return locationConstraint;
   }
 
-  protected List<String> populateObject(final GroovyObject obj, final Map<String, String> paramFieldMap, final Map<String, String> params) {
+  protected List<String> populateObject(final Object obj, final Map<String, String> paramFieldMap, final Map<String, String> params) {
     List<String> failedMappings = new ArrayList<String>();
     for (Map.Entry<String, String> e : paramFieldMap.entrySet()) {
       try {
@@ -1001,7 +1001,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     return failedMappings;
   }
 
-  protected void populateObjectFromBindingMap(final GroovyObject obj, final Map<String, String> paramFieldMap, final MappingHttpRequest httpRequest,
+  protected void populateObjectFromBindingMap(final Object obj, final Map<String, String> paramFieldMap, final MappingHttpRequest httpRequest,
       final Map bindingMap) throws S3Exception, BindingException {
     // process headers
     // String aclString = httpRequest.getAndRemoveHeader(ObjectStorageProperties.AMZ_ACL);
@@ -1009,7 +1009,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     // addAccessControlList(obj, paramFieldMap, bindingMap, aclString);
     // }
     // above logic only accounts for x-amz-acl. x-amz-grant-* headers are dropped
-    processHeaderGrants(obj, paramFieldMap, bindingMap, httpRequest);
+    processHeaderGrants(paramFieldMap, bindingMap, httpRequest);
 
     // add meta data
     String metaDataString = paramFieldMap.remove("MetaData");
@@ -1024,34 +1024,34 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
           metaData.add(metaDataEntry);
         }
       }
-      obj.setProperty(metaDataString, metaData);
+      Beans.setObjectProperty( obj, metaDataString, metaData);
     }
 
     // populate from binding map (required params)
     Iterator bindingMapIterator = bindingMap.keySet().iterator();
     while (bindingMapIterator.hasNext()) {
       String key = (String) bindingMapIterator.next();
-      obj.setProperty(key.substring(0, 1).toLowerCase().concat(key.substring(1)), bindingMap.get(key));
+      Beans.setObjectProperty( obj, key.substring(0, 1).toLowerCase().concat(key.substring(1)), bindingMap.get(key));
     }
   }
 
-  protected boolean populateObjectField(final GroovyObject obj, final Map.Entry<String, String> paramFieldPair, final Map<String, String> params) {
+  protected boolean populateObjectField(final Object obj, final Map.Entry<String, String> paramFieldPair, final Map<String, String> params) {
     try {
       Class declaredType = obj.getClass().getDeclaredField(paramFieldPair.getValue()).getType();
       if (declaredType.equals(String.class))
-        obj.setProperty(paramFieldPair.getValue(), params.remove(paramFieldPair.getKey()));
+        Beans.setObjectProperty( obj, paramFieldPair.getValue(), params.remove(paramFieldPair.getKey()));
       else if (declaredType.getName().equals("int"))
-        obj.setProperty(paramFieldPair.getValue(), Integer.parseInt(params.remove(paramFieldPair.getKey())));
+        Beans.setObjectProperty( obj, paramFieldPair.getValue(), Integer.parseInt(params.remove(paramFieldPair.getKey())));
       else if (declaredType.equals(Integer.class))
-        obj.setProperty(paramFieldPair.getValue(), new Integer(params.remove(paramFieldPair.getKey())));
+        Beans.setObjectProperty( obj, paramFieldPair.getValue(), new Integer(params.remove(paramFieldPair.getKey())));
       else if (declaredType.getName().equals("boolean"))
-        obj.setProperty(paramFieldPair.getValue(), Boolean.parseBoolean(params.remove(paramFieldPair.getKey())));
+        Beans.setObjectProperty( obj, paramFieldPair.getValue(), Boolean.parseBoolean(params.remove(paramFieldPair.getKey())));
       else if (declaredType.equals(Boolean.class))
-        obj.setProperty(paramFieldPair.getValue(), new Boolean(params.remove(paramFieldPair.getKey())));
+        Beans.setObjectProperty( obj, paramFieldPair.getValue(), new Boolean(params.remove(paramFieldPair.getKey())));
       else if (declaredType.getName().equals("long"))
-        obj.setProperty(paramFieldPair.getValue(), Long.parseLong(params.remove(paramFieldPair.getKey())));
+        Beans.setObjectProperty( obj, paramFieldPair.getValue(), Long.parseLong(params.remove(paramFieldPair.getKey())));
       else if (declaredType.equals(Long.class))
-        obj.setProperty(paramFieldPair.getValue(), new Long(params.remove(paramFieldPair.getKey())));
+        Beans.setObjectProperty( obj, paramFieldPair.getValue(), new Long(params.remove(paramFieldPair.getKey())));
       else
         return false;
       return true;
@@ -1060,12 +1060,12 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     }
   }
 
-  protected List<String> populateObjectList(final GroovyObject obj, final Map.Entry<String, String> paramFieldPair, final Map<String, String> params,
+  protected List<String> populateObjectList(final Object obj, final Map.Entry<String, String> paramFieldPair, final Map<String, String> params,
       final int paramSize) {
     List<String> failedMappings = new ArrayList<String>();
     try {
       Field declaredField = obj.getClass().getDeclaredField(paramFieldPair.getValue());
-      ArrayList theList = (ArrayList) obj.getProperty(paramFieldPair.getValue());
+      ArrayList theList = (ArrayList) Beans.getObjectProperty(obj,paramFieldPair.getValue());
       Class genericType = (Class) ((ParameterizedType) declaredField.getGenericType()).getActualTypeArguments()[0];
       // :: simple case: FieldName.# :://
       if (String.class.equals(genericType)) {
@@ -1115,7 +1115,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
 
   protected List<String> populateEmbedded(final Class genericType, final Map<String, String> params, final ArrayList theList)
       throws InstantiationException, IllegalAccessException {
-    GroovyObject embedded = (GroovyObject) genericType.newInstance();
+    Object embedded = genericType.newInstance();
     Map<String, String> embeddedFields = buildFieldMap(genericType);
     int startSize = params.size();
     List<String> embeddedFailures = populateObject(embedded, embeddedFields, params);
@@ -1145,7 +1145,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     }
   }
 
-  protected static void processHeaderGrants(final GroovyObject obj, final Map<String, String> paramFieldMap, Map bindingMap,
+  protected static void processHeaderGrants(final Map<String, String> paramFieldMap, Map bindingMap,
       MappingHttpRequest httpRequest) throws S3Exception {
 
     if (paramFieldMap.containsKey("AccessControlList") || paramFieldMap.containsKey("AccessControlPolicy")) {
