@@ -46,6 +46,7 @@ import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.CreateDhcpOptionsResponseType;
 import com.eucalyptus.compute.common.CreateDhcpOptionsType;
@@ -63,7 +64,6 @@ import com.eucalyptus.compute.common.DhcpConfigurationItemSetType;
 import com.eucalyptus.compute.common.DhcpConfigurationItemType;
 import com.eucalyptus.compute.common.DhcpValueSetType;
 import com.eucalyptus.compute.common.DhcpValueType;
-import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.TagInfo;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
@@ -192,7 +192,7 @@ public class AWSEC2DHCPOptionsResourceAction extends StepBasedResourceAction {
         if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
         // Check dhcp options (return if gone)
         DescribeDhcpOptionsType describeDhcpOptionsType = MessageHelper.createMessage(DescribeDhcpOptionsType.class, action.info.getEffectiveUserId());
-        describeDhcpOptionsType.getFilterSet( ).add(Filter.filter("dhcp-options-id", action.info.getPhysicalResourceId()));
+        describeDhcpOptionsType.getFilterSet( ).add( CloudFilters.filter("dhcp-options-id", action.info.getPhysicalResourceId()));
         DescribeDhcpOptionsResponseType describeDhcpOptionsResponseType = AsyncRequests.sendSync(configuration, describeDhcpOptionsType);
         if (describeDhcpOptionsResponseType.getDhcpOptionsSet() == null ||
             describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem() == null ||
@@ -221,7 +221,7 @@ public class AWSEC2DHCPOptionsResourceAction extends StepBasedResourceAction {
         AWSEC2DHCPOptionsResourceAction newAction = (AWSEC2DHCPOptionsResourceAction) newResourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         DescribeTagsType describeTagsType = MessageHelper.createMessage(DescribeTagsType.class, newAction.info.getEffectiveUserId());
-        describeTagsType.setFilterSet(Lists.newArrayList(Filter.filter("resource-id", newAction.info.getPhysicalResourceId())));
+        describeTagsType.setFilterSet(Lists.newArrayList( CloudFilters.filter("resource-id", newAction.info.getPhysicalResourceId())));
         DescribeTagsResponseType describeTagsResponseType = AsyncRequests.sendSync(configuration, describeTagsType);
         Set<EC2Tag> existingTags = Sets.newLinkedHashSet();
         if (describeTagsResponseType != null && describeTagsResponseType.getTagSet() != null) {

@@ -109,6 +109,7 @@ import com.eucalyptus.cloudwatch.common.msgs.ResourceList;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.ClusterInfoType;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.DescribeImagesResponseType;
@@ -1008,7 +1009,7 @@ public class ActivityManager {
   }
 
   private Filter filter( final String name, final Collection<String> values ) {
-    return Filter.filter( name, values );
+    return CloudFilters.filter( name, values );
   }
 
   private void transitionToRegistered( final AutoScalingGroupMetadata group, final List<String> instanceIds ) {
@@ -2751,7 +2752,7 @@ public class ActivityManager {
       subnetIdSetType.setItem( subnetIdItems );
       final DescribeSubnetsType describeSubnetsType = new DescribeSubnetsType( );
       describeSubnetsType.setSubnetSet( subnetIdSetType );
-      describeSubnetsType.getFilterSet( ).add( Filter.filter( "subnet-id", this.subnetIds ) );
+      describeSubnetsType.getFilterSet( ).add( CloudFilters.filter( "subnet-id", this.subnetIds ) );
       client.dispatch( describeSubnetsType, callback );
     }
 

@@ -47,6 +47,7 @@ import com.eucalyptus.compute.common.AttachInternetGatewayResponseType;
 import com.eucalyptus.compute.common.AttachInternetGatewayType;
 import com.eucalyptus.compute.common.AttachVpnGatewayResponseType;
 import com.eucalyptus.compute.common.AttachVpnGatewayType;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.DescribeInternetGatewaysResponseType;
 import com.eucalyptus.compute.common.DescribeInternetGatewaysType;
@@ -58,7 +59,6 @@ import com.eucalyptus.compute.common.DetachInternetGatewayResponseType;
 import com.eucalyptus.compute.common.DetachInternetGatewayType;
 import com.eucalyptus.compute.common.DetachVpnGatewayResponseType;
 import com.eucalyptus.compute.common.DetachVpnGatewayType;
-import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.VpnGatewayIdSetItemType;
 import com.eucalyptus.compute.common.VpnGatewayIdSetType;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -145,7 +145,7 @@ public class AWSEC2VPCGatewayAttachmentResourceAction extends StepBasedResourceA
 
         // Check vpc (return if gone)
         DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, action.info.getEffectiveUserId());
-        describeVpcsType.getFilterSet( ).add( Filter.filter( "vpc-id", action.properties.getVpcId( ) ) );
+        describeVpcsType.getFilterSet( ).add( CloudFilters.filter( "vpc-id", action.properties.getVpcId( ) ) );
         DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.sendSync(configuration, describeVpcsType);
         if (describeVpcsResponseType.getVpcSet() == null ||
           describeVpcsResponseType.getVpcSet().getItem() == null ||
@@ -155,7 +155,7 @@ public class AWSEC2VPCGatewayAttachmentResourceAction extends StepBasedResourceA
         if (action.properties.getInternetGatewayId() != null) {
           // Check gateway (return if gone)
           DescribeInternetGatewaysType describeInternetGatewaysType = MessageHelper.createMessage(DescribeInternetGatewaysType.class, action.info.getEffectiveUserId());
-          describeInternetGatewaysType.getFilterSet( ).add( Filter.filter( "internet-gateway-id", action.properties.getInternetGatewayId( ) ) );
+          describeInternetGatewaysType.getFilterSet( ).add( CloudFilters.filter( "internet-gateway-id", action.properties.getInternetGatewayId( ) ) );
           DescribeInternetGatewaysResponseType describeInternetGatewaysResponseType = AsyncRequests.sendSync(configuration, describeInternetGatewaysType);
           if (describeInternetGatewaysResponseType.getInternetGatewaySet() == null || describeInternetGatewaysResponseType.getInternetGatewaySet().getItem() == null || describeInternetGatewaysResponseType.getInternetGatewaySet().getItem().isEmpty()) {
             return action; // already deleted

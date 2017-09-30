@@ -51,6 +51,7 @@ import com.eucalyptus.compute.common.AllocateAddressResponseType;
 import com.eucalyptus.compute.common.AllocateAddressType;
 import com.eucalyptus.compute.common.AssociateAddressResponseType;
 import com.eucalyptus.compute.common.AssociateAddressType;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.DescribeAddressesResponseType;
 import com.eucalyptus.compute.common.DescribeAddressesType;
@@ -58,7 +59,6 @@ import com.eucalyptus.compute.common.DescribeInstancesResponseType;
 import com.eucalyptus.compute.common.DescribeInstancesType;
 import com.eucalyptus.compute.common.DisassociateAddressResponseType;
 import com.eucalyptus.compute.common.DisassociateAddressType;
-import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.ReleaseAddressResponseType;
 import com.eucalyptus.compute.common.ReleaseAddressType;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -145,7 +145,7 @@ public class AWSEC2EIPResourceAction extends StepBasedResourceAction {
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         if (action.properties.getInstanceId() != null) {
           DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
-          describeInstancesType.getFilterSet( ).add( Filter.filter( "instance-id", action.properties.getInstanceId( ) ) );
+          describeInstancesType.getFilterSet( ).add( CloudFilters.filter( "instance-id", action.properties.getInstanceId( ) ) );
           DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
           if (describeInstancesResponseType.getReservationSet() == null || describeInstancesResponseType.getReservationSet().isEmpty()) {
             throw new ValidationErrorException("No such instance " + action.properties.getInstanceId());
@@ -281,7 +281,7 @@ public class AWSEC2EIPResourceAction extends StepBasedResourceAction {
         if (!Objects.equals(oldInstanceId, newAction.properties.getInstanceId())) {
           if (newAction.properties.getInstanceId() != null) {
             DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, newAction.info.getEffectiveUserId());
-            describeInstancesType.getFilterSet().add(Filter.filter("instance-id", newAction.properties.getInstanceId()));
+            describeInstancesType.getFilterSet().add( CloudFilters.filter("instance-id", newAction.properties.getInstanceId()));
             DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync(configuration, describeInstancesType);
             if (describeInstancesResponseType.getReservationSet() == null || describeInstancesResponseType.getReservationSet().isEmpty()) {
               throw new ValidationErrorException("No such instance " + newAction.properties.getInstanceId());

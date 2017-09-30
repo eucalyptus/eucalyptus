@@ -30,6 +30,7 @@
 <ivy-module version="2.0">
     <info organisation="com.eucalyptus" module="eucalyptus-compute-common"/>
     <dependencies>
+        <dependency org="com.eucalyptus" name="eucalyptus-compute-common-msgs" rev="latest.integration"/>
         <dependency org="com.eucalyptus" name="eucalyptus-configuration" rev="latest.integration"/>
     </dependencies>
 </ivy-module>

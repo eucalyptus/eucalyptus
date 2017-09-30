@@ -45,6 +45,7 @@ import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.CreateInternetGatewayResponseType;
 import com.eucalyptus.compute.common.CreateInternetGatewayType;
@@ -58,7 +59,6 @@ import com.eucalyptus.compute.common.DescribeInternetGatewaysResponseType;
 import com.eucalyptus.compute.common.DescribeInternetGatewaysType;
 import com.eucalyptus.compute.common.DescribeTagsResponseType;
 import com.eucalyptus.compute.common.DescribeTagsType;
-import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.TagInfo;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
@@ -147,7 +147,7 @@ public class AWSEC2InternetGatewayResourceAction extends StepBasedResourceAction
         if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
         // Check gateway (return if gone)
         DescribeInternetGatewaysType describeInternetGatewaysType = MessageHelper.createMessage(DescribeInternetGatewaysType.class, action.info.getEffectiveUserId());
-        describeInternetGatewaysType.getFilterSet( ).add( Filter.filter( "internet-gateway-id", action.info.getPhysicalResourceId() ) );
+        describeInternetGatewaysType.getFilterSet( ).add( CloudFilters.filter( "internet-gateway-id", action.info.getPhysicalResourceId() ) );
         DescribeInternetGatewaysResponseType describeInternetGatewaysResponseType = AsyncRequests.sendSync(configuration, describeInternetGatewaysType);
         if (describeInternetGatewaysResponseType.getInternetGatewaySet() == null ||
             describeInternetGatewaysResponseType.getInternetGatewaySet().getItem() == null ||
@@ -175,7 +175,7 @@ public class AWSEC2InternetGatewayResourceAction extends StepBasedResourceAction
         AWSEC2InternetGatewayResourceAction newAction = (AWSEC2InternetGatewayResourceAction) newResourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         DescribeTagsType describeTagsType = MessageHelper.createMessage(DescribeTagsType.class, newAction.info.getEffectiveUserId());
-        describeTagsType.setFilterSet(Lists.newArrayList(Filter.filter("resource-id", newAction.info.getPhysicalResourceId())));
+        describeTagsType.setFilterSet(Lists.newArrayList( CloudFilters.filter("resource-id", newAction.info.getPhysicalResourceId())));
         DescribeTagsResponseType describeTagsResponseType = AsyncRequests.sendSync(configuration, describeTagsType);
         Set<EC2Tag> existingTags = Sets.newLinkedHashSet();
         if (describeTagsResponseType != null && describeTagsResponseType.getTagSet() != null) {

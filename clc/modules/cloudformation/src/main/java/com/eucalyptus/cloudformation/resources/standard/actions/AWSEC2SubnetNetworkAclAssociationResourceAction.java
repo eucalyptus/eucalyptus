@@ -42,6 +42,7 @@ import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.DescribeNetworkAclsResponseType;
 import com.eucalyptus.compute.common.DescribeNetworkAclsType;
@@ -175,7 +176,7 @@ public class AWSEC2SubnetNetworkAclAssociationResourceAction extends StepBasedRe
 
   private void checkSubnetExists(ServiceConfiguration configuration) throws Exception {
     DescribeSubnetsType describeSubnetsType = MessageHelper.createMessage(DescribeSubnetsType.class, info.getEffectiveUserId());
-    describeSubnetsType.getFilterSet( ).add( Filter.filter( "subnet-id", properties.getSubnetId( ) ) );
+    describeSubnetsType.getFilterSet( ).add( CloudFilters.filter( "subnet-id", properties.getSubnetId( ) ) );
     DescribeSubnetsResponseType describeSubnetsResponseType = AsyncRequests.sendSync( configuration, describeSubnetsType );
     if (describeSubnetsResponseType.getSubnetSet() == null || describeSubnetsResponseType.getSubnetSet().getItem() == null ||
       describeSubnetsResponseType.getSubnetSet().getItem().isEmpty()) {
@@ -185,7 +186,7 @@ public class AWSEC2SubnetNetworkAclAssociationResourceAction extends StepBasedRe
 
   private void checkNetworkAclExists(ServiceConfiguration configuration) throws Exception {
     DescribeNetworkAclsType describeNetworkAclsType = MessageHelper.createMessage(DescribeNetworkAclsType.class, info.getEffectiveUserId());
-    describeNetworkAclsType.getFilterSet( ).add( Filter.filter( "network-acl-id", properties.getNetworkAclId( ) ) );
+    describeNetworkAclsType.getFilterSet( ).add( CloudFilters.filter( "network-acl-id", properties.getNetworkAclId( ) ) );
     DescribeNetworkAclsResponseType describeNetworkAclsResponseType = AsyncRequests.sendSync( configuration, describeNetworkAclsType );
     if (describeNetworkAclsResponseType.getNetworkAclSet() == null || describeNetworkAclsResponseType.getNetworkAclSet().getItem() == null ||
       describeNetworkAclsResponseType.getNetworkAclSet().getItem().isEmpty()) {
@@ -245,7 +246,7 @@ public class AWSEC2SubnetNetworkAclAssociationResourceAction extends StepBasedRe
 
   private String checkSubnetIdAndGetVpcIdForDelete(ServiceConfiguration configuration) throws Exception {
     DescribeSubnetsType describeSubnetsType = MessageHelper.createMessage(DescribeSubnetsType.class, info.getEffectiveUserId());
-    describeSubnetsType.getFilterSet( ).add( Filter.filter( "subnet-id", properties.getSubnetId( ) ) );
+    describeSubnetsType.getFilterSet( ).add( CloudFilters.filter( "subnet-id", properties.getSubnetId( ) ) );
     DescribeSubnetsResponseType describeSubnetsResponseType = AsyncRequests.sendSync( configuration, describeSubnetsType );
     if (describeSubnetsResponseType.getSubnetSet() == null || describeSubnetsResponseType.getSubnetSet().getItem() == null ||
       describeSubnetsResponseType.getSubnetSet().getItem().isEmpty()) {
@@ -256,7 +257,7 @@ public class AWSEC2SubnetNetworkAclAssociationResourceAction extends StepBasedRe
 
   private boolean networkAclExistsForDelete(ServiceConfiguration configuration) throws Exception {
     DescribeNetworkAclsType describeNetworkAclsType = MessageHelper.createMessage(DescribeNetworkAclsType.class, info.getEffectiveUserId());
-    describeNetworkAclsType.getFilterSet( ).add( Filter.filter( "network-acl-id", properties.getNetworkAclId( ) ) );
+    describeNetworkAclsType.getFilterSet( ).add( CloudFilters.filter( "network-acl-id", properties.getNetworkAclId( ) ) );
     DescribeNetworkAclsResponseType describeNetworkAclsResponseType = AsyncRequests.sendSync( configuration, describeNetworkAclsType );
     if (describeNetworkAclsResponseType.getNetworkAclSet() == null || describeNetworkAclsResponseType.getNetworkAclSet().getItem() == null ||
       describeNetworkAclsResponseType.getNetworkAclSet().getItem().isEmpty()) {

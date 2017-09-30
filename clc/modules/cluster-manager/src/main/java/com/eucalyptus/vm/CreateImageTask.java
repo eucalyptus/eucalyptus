@@ -47,12 +47,12 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.ComputeMessage;
 import com.eucalyptus.compute.common.DescribeSnapshotsResponseType;
 import com.eucalyptus.compute.common.DescribeSnapshotsType;
 import com.eucalyptus.compute.common.EbsDeviceMapping;
-import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.cluster.callback.StartInstanceCallback;
 import com.eucalyptus.cluster.callback.StopInstanceCallback;
@@ -102,16 +102,16 @@ import com.eucalyptus.cluster.common.msgs.ClusterStopInstanceResponseType;
  */
 public class CreateImageTask {
 	private static Logger LOG = Logger.getLogger( CreateImageTask.class );
-	private static Map<String, CreateImageTask> createImageTasks = 
+	private static Map<String, CreateImageTask> createImageTasks =
 			new ConcurrentHashMap<String, CreateImageTask>();
-	
+
 	/* from CreateImage request */
 	private String accountNumber = null;
 	private String instanceId = null;
 	private String imageId = null;
 	private Boolean noReboot = null;
 	private List<BlockDeviceMappingItemType> blockDevices = null;
-	
+
 	public CreateImageTask(final String accountNumber, final String instanceId, final String imageId, final Boolean noReboot, List<BlockDeviceMappingItemType> blockDevices){
 		this.accountNumber = accountNumber;
 		this.instanceId = instanceId;
@@ -119,7 +119,7 @@ public class CreateImageTask {
 		this.noReboot = noReboot;
 		this.blockDevices  = blockDevices;
 	}
-	
+
 	//restore CreateImageTask object from VmInstance (DB record)
 	static Function<VmInstance, CreateImageTask> RESTORE = new Function<VmInstance, CreateImageTask>(){
 		@Override
@@ -128,11 +128,11 @@ public class CreateImageTask {
 			final String instanceId = input.getDisplayName();
 			Boolean noReboot =null;
 			List<BlockDeviceMappingItemType> deviceMaps = null;
-			
+
 			final VmCreateImageTask vmTask = input.getRuntimeState().getVmCreateImageTask();
 			if(vmTask==null)
 				throw Exceptions.toUndeclared("Failed to find the VmCreateImageTask");
-			
+
 			if(vmTask.getImageId()!=null){
 				try{
 					deviceMaps = getDeviceMappingsFromImage(vmTask.getImageId());
@@ -140,12 +140,12 @@ public class CreateImageTask {
 					LOG.error("failed to pull device mapping information from the image", ex);
 				}
 			}
-			
+
 			noReboot = vmTask.getNoReboot();
 			final CreateImageTask newTask = new CreateImageTask(input.getOwnerAccountNumber(), instanceId, vmTask.getImageId(), noReboot, deviceMaps);
 			try{
 				final String partition = input.getPartition();
-				final ServiceConfiguration sc = Topology.lookup(Storage.class, 
+				final ServiceConfiguration sc = Topology.lookup(Storage.class,
 						Partitions.lookupByName(partition));
 				final Collection<ServiceConfiguration> enabledSCs = Topology.enabledServices(Storage.class);
 				if(enabledSCs.contains(sc))
@@ -158,7 +158,7 @@ public class CreateImageTask {
 			}
 		}
 	};
-		
+
 	/* For each CreateImageTask, check its latest state and take appropriate action */
 	public static class CreateImageTasksManager implements EventListener<ClockTick> {
 		public static void register( ) {
@@ -170,7 +170,7 @@ public class CreateImageTask {
 			if (!( Bootstrap.isOperational() &&
 			          Topology.isEnabledLocally( Eucalyptus.class ) ) )
 			          return;
-			
+
 			/*
 			 * Check if CreateImageTask is held in memory.
 			 * If not, restore from VmInstance (i.e., when service restarts)
@@ -186,14 +186,14 @@ public class CreateImageTask {
 				@Override
 				public boolean apply(@Nullable VmInstance input) {
 					if((VmState.RUNNING.equals(input.getState()) || VmState.STOPPED.equals(input.getState()))
-							&& input.isBlockStorage() 
+							&& input.isBlockStorage()
 							&& input.getRuntimeState().isCreatingImage())
 						return true;
 					else
 						return false;
 				}
 			});
-			
+
 			try{
 				for(final VmInstance candidate : candidates){
 					if(!createImageTasks.containsKey(candidate.getInstanceId())){
@@ -208,10 +208,10 @@ public class CreateImageTask {
 			}catch(final Exception ex){
 				LOG.error("unable to retore create-image task", ex);
 			}
-			
-			final Map<VmCreateImageTask.CreateImageState, List<CreateImageTask>> taskByState = 
+
+			final Map<VmCreateImageTask.CreateImageState, List<CreateImageTask>> taskByState =
 					new HashMap<VmCreateImageTask.CreateImageState, List<CreateImageTask> >();
-					
+
 			for (final String instId : createImageTasks.keySet()){
 				final CreateImageTask task = createImageTasks.get(instId);
 				final CreateImageState taskState = task.getVmCreateImageTaskState();
@@ -220,7 +220,7 @@ public class CreateImageTask {
 				}
 				taskByState.get(taskState).add(task);
 			}
-			
+
 			if(taskByState.containsKey(CreateImageState.pending)){
 				try{
 					this.processPendingTasks(taskByState.get(VmCreateImageTask.CreateImageState.pending));
@@ -264,7 +264,7 @@ public class CreateImageTask {
 				}
 			}
 		}
-		
+
 		private void processPendingTasks(final List<CreateImageTask> tasks){
 			/*
 			 * for each pending task, stop instance if !noReboot;
@@ -290,7 +290,7 @@ public class CreateImageTask {
 				}
 			}
 		}
-		
+
 		private void processStoppingTasks(final List<CreateImageTask> tasks){
 			/*
 			 * for each stopping instance, check the latest guestState
@@ -315,24 +315,24 @@ public class CreateImageTask {
 				} /// TODO: spark: should timeout?
 			}
 		}
-		
+
 		private void processSnapshottingTasks(final List<CreateImageTask> tasks){
 			/*
 			 * for each instance for which the snapshot is created from the root volume;
 			 *     describe snapshot;
 			 *     if snapshot is available:
 			 *    	   register image with the snapshot id
-			 *         if !noReboot: 
+			 *         if !noReboot:
 			 *             start instance;
 			 *         else
-			 *             mark complete	   
-			 */	
-			
+			 *             mark complete
+			 */
+
 			for(final CreateImageTask task : tasks){
 				try{
 					final List<String> status = task.getSnapshotStatus();
 					boolean allDone = true;
-					
+
 					for(final String s : status){
 						if("completed".equals(s)){
 							;
@@ -341,7 +341,7 @@ public class CreateImageTask {
 						}else
 							allDone=false;
 					}
-					
+
 					if(allDone){
 						task.registerImage();
 						LOG.debug(String.format("Image %s is available", task.getImageId()));
@@ -367,7 +367,7 @@ public class CreateImageTask {
 				}
 			}
 		}
-		
+
 		private void processStartingTasks(final List<CreateImageTask> tasks){
 			/*
 			 * for each starting instance, check the guestState;
@@ -386,14 +386,14 @@ public class CreateImageTask {
 				}
 			}
 		}
-		
+
 		private void processCompleteTasks(final List<CreateImageTask> tasks){
 			for(final CreateImageTask task : tasks){
 				LOG.info(String.format("CreateImage is done for instance %s; Image %s registered", task.instanceId, task.getImageId()));
 				createImageTasks.remove(task.instanceId);
 			}
 		}
-		
+
 		private void processFailedTasks(final List<CreateImageTask> tasks){
 			for(final CreateImageTask task : tasks){
 				LOG.error(String.format("CreateImage has failed for instance %s", task.instanceId));
@@ -406,7 +406,7 @@ public class CreateImageTask {
 			}
 		}
 	}
-	
+
 	private void setVmCreateImageTaskState(final VmCreateImageTask.CreateImageState state){
 		try ( TransactionResource db =
 		          Entities.transactionFor( VmInstance.class ) ) {
@@ -424,7 +424,7 @@ public class CreateImageTask {
 	/*
 	 * Finds VmInstance. Throws NoSuchElementException if instance can't be found
 	 */
-	
+
 	private VmInstance getVmInstance() throws NoSuchElementException {
 	  try ( TransactionResource db =
         Entities.transactionFor( VmInstance.class ) ) {
@@ -445,7 +445,7 @@ public class CreateImageTask {
       throw Exceptions.toUndeclared(ex);
     }
 	}
-	
+
 	private static List<BlockDeviceMappingItemType> getDeviceMappingsFromImage(final String imageId){
 		List<BlockDeviceMappingItemType> deviceMaps = Lists.newArrayList();
 		try ( TransactionResource db =
@@ -462,7 +462,7 @@ public class CreateImageTask {
 			throw Exceptions.toUndeclared(ex);
 		}
 	}
-	
+
 	private VmCreateImageTask.CreateImageState getVmCreateImageTaskState(){
 		final VmInstance vm = getVmInstance();
 		 if(vm.getRuntimeState()!=null){
@@ -471,7 +471,7 @@ public class CreateImageTask {
 			 throw Exceptions.toUndeclared(
 					 new EucalyptusCloudException("No Runtime state found for the instance"));
 	}
-	
+
 	private void validateVmInstance() throws Exception{
 		final VmInstance vm = this.getVmInstance();
 		if(vm==null)
@@ -487,7 +487,7 @@ public class CreateImageTask {
 		if(createImageTasks.containsKey(this.instanceId))
 			throw new EucalyptusCloudException("Existing CreateImageTask is found");
 	}
-	
+
 	public void create(final String imageId) throws Exception{
 		try{
 			LOG.info( String.format( "Starting create image task for %s : %s", this.instanceId, imageId ) );
@@ -514,18 +514,18 @@ public class CreateImageTask {
 			throw ex;
 		}
 	}
-  
+
 	private String getInstanceImageId(){
 		return this.getVmInstance().getImageId();
 	}
-	
+
 	/*
 	 * @return key-value pair of device - volumeId mapping
 	 */
 	private Map.Entry<String, String> getInstanceRootVolume(){
 		final VmInstance vm = this.getVmInstance();
-		final List<Map.Entry<String, String>> rootVolumes = Lists.newArrayList();		
-		
+		final List<Map.Entry<String, String>> rootVolumes = Lists.newArrayList();
+
 		vm.eachVolumeAttachment(new Predicate<VmVolumeAttachment>(){
 			@Override
 			public boolean apply(@Nullable VmVolumeAttachment input) {
@@ -539,10 +539,10 @@ public class CreateImageTask {
 		else
 			throw Exceptions.toUndeclared(new EucalyptusCloudException("Root volume is not found"));
 	}
-	
+
 	private List<Map.Entry<String, String>> getInstanceNonRootVolumes(){
 		final VmInstance vm = this.getVmInstance();
-		final List<Map.Entry<String, String>> volumes = Lists.newArrayList();	
+		final List<Map.Entry<String, String>> volumes = Lists.newArrayList();
 		vm.eachVolumeAttachment(new Predicate<VmVolumeAttachment>(){
 			@Override
 			public boolean apply(@Nullable VmVolumeAttachment input) {
@@ -553,11 +553,11 @@ public class CreateImageTask {
 		});
 		return volumes;
 	}
-	
+
 	private Boolean isDeleteOnTerminate(final String volumeId){
 		final VmInstance vm = this.getVmInstance();
 		final List<String> deleteOnTerminates = Lists.newArrayList();
-		
+
 		vm.eachVolumeAttachment(new Predicate<VmVolumeAttachment>(){
 			@Override
 			public boolean apply(@Nullable VmVolumeAttachment input) {
@@ -568,17 +568,17 @@ public class CreateImageTask {
 		});
 		return deleteOnTerminates.contains(volumeId);
 	}
-	
+
 	private String getImageId(){
 		return this.imageId;
 	}
-	
+
 	private List<String> getSnapshotIds(){
 		List<String> snapshots = null;
 		try ( TransactionResource db =
 		          Entities.transactionFor( VmInstance.class ) ) {
 			 final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
-			 snapshots = Lists.transform(Lists.newArrayList(vm.getRuntimeState().getVmCreateImageTask().getSnapshots()), 
+			 snapshots = Lists.transform(Lists.newArrayList(vm.getRuntimeState().getVmCreateImageTask().getSnapshots()),
 					 new Function<VmCreateImageSnapshot, String>(){
 						@Override
 						@Nullable
@@ -613,13 +613,13 @@ public class CreateImageTask {
 			throw Exceptions.toUndeclared(ex);
 		}
 	}
-	
-	private void createSnapshot(){ 
-		/* 
+
+	private void createSnapshot(){
+		/*
 		 * take the snapshot of root device always
 		 * if block-device-mapping is not requested explicitly, take snapshots of all attached volumes
 		 */
-		final List<Map.Entry<String, String>> volumesToSnapshot = 
+		final List<Map.Entry<String, String>> volumesToSnapshot =
 				Lists.newArrayList();
 		volumesToSnapshot.add(this.getInstanceRootVolume());
 		// blockDevices might have devices that should be suppressed as well as ephemeral devices
@@ -666,7 +666,7 @@ public class CreateImageTask {
 			}
 		}
 	}
-	
+
 	private List<VmCreateImageSnapshot> getSnapshots(){
 		try ( TransactionResource db =
 		          Entities.transactionFor( VmInstance.class ) ) {
@@ -680,7 +680,7 @@ public class CreateImageTask {
 			throw Exceptions.toUndeclared(ex);
 		}
 	}
-	
+
 	private class CreateImageStopInstanceCallback extends StopInstanceCallback{
 		@Override
 		public void fire(ClusterStopInstanceResponseType msg) {
@@ -690,9 +690,9 @@ public class CreateImageTask {
 			}else{
 				CreateImageTask.this.setVmCreateImageTaskState(CreateImageState.guest_stopping);
 			}
-		}		
+		}
 	}
-	
+
 	private class CreateImageStartInstanceCallback extends StartInstanceCallback{
 		@Override
 		public void fire(ClusterStartInstanceResponseType msg) {
@@ -706,12 +706,12 @@ public class CreateImageTask {
 			}
 		}
 	}
-	
+
 	private void stopInstance() {
 		final VmInstance vm = this.getVmInstance( );
 		VmInstances.stopVmInstance( vm, new CreateImageStopInstanceCallback( ) );
 	}
-	
+
 	private void startInstance() {
 		final VmInstance vm = this.getVmInstance( );
     VmInstances.startVmInstance( vm, new CreateImageStartInstanceCallback( ) );
@@ -739,30 +739,30 @@ public class CreateImageTask {
 			}
 
 			final AccountFullName accountFullName = AccountFullName.getInstance(this.accountNumber);
-			final ImageInfo updatedImage = 
+			final ImageInfo updatedImage =
 					Images.updateWithDeviceMapping(imageId, accountFullName, rootDeviceName, devices );
 		}catch(final Exception ex){
 			throw Exceptions.toUndeclared(ex);
 		}
 	}
-		
+
 	private class EucalyptusDescribeSnapshotTask extends EucalyptusActivityTask<ComputeMessage, Eucalyptus> {
 		private List<Snapshot> snapshots = null;
 		private List<String> snapshotIds = null;
 		private EucalyptusDescribeSnapshotTask(final List<String> snapshotIds){
 			this.snapshotIds = snapshotIds;
 		}
-		
+
 		private DescribeSnapshotsType describeSnapshots(){
 			final DescribeSnapshotsType req = new DescribeSnapshotsType();
-			req.getFilterSet( ).add( Filter.filter( "snapshot-id", this.snapshotIds ) );
+			req.getFilterSet( ).add( CloudFilters.filter( "snapshot-id", this.snapshotIds ) );
 			return req;
 		}
-		
+
 		@Override
 		void dispatchInternal(Checked<ComputeMessage> callback) {
 			final DispatchingClient<ComputeMessage, Compute> client = this.getClient(Compute.class);
-			client.dispatch(describeSnapshots(), callback);				
+			client.dispatch(describeSnapshots(), callback);
 		}
 
 		@Override
@@ -770,7 +770,7 @@ public class CreateImageTask {
 			final DescribeSnapshotsResponseType resp = (DescribeSnapshotsResponseType) response;
 			this.snapshots = resp.getSnapshotSet();
 		}
-		
+
 		public  List<Snapshot>  getSnapshots(){
 			return this.snapshots;
 		}
@@ -790,11 +790,11 @@ public class CreateImageTask {
 			req.setDescription(description);
 			return req;
 		}
-		
+
 		@Override
 		void dispatchInternal(Checked<ComputeMessage> callback) {
 			final DispatchingClient<ComputeMessage, Eucalyptus> client = this.getClient(Eucalyptus.class);
-			client.dispatch(createSnapshot(), callback);				
+			client.dispatch(createSnapshot(), callback);
 		}
 
 		@Override
@@ -802,15 +802,15 @@ public class CreateImageTask {
 			final CreateSnapshotResponseType resp = (CreateSnapshotResponseType) response;
 			this.snapshotId = resp.getSnapshot().getSnapshotId();
 		}
-		
+
 		public String getSnapshotId(){
 			return this.snapshotId;
 		}
 	}
-	
+
 	private abstract class EucalyptusActivityTask <TM extends BaseMessage, TC extends ComponentId>{
 	    protected EucalyptusActivityTask(){}
-	
+
 	    final CheckedListenableFuture<Boolean> dispatch( ) {
 	      try {
 	        final CheckedListenableFuture<Boolean> future = Futures.newGenericeFuture();
@@ -823,7 +823,7 @@ public class CreateImageTask {
 	              future.set( false );
 	            }
 	          }
-	
+
 	          @Override
 	          public void fire( final TM response ) {
 	            try {
@@ -839,15 +839,15 @@ public class CreateImageTask {
 	      }
 	      return Futures.predestinedFuture( false );
 	    }
-	
+
 	    abstract void dispatchInternal( Callback.Checked<TM> callback );
-	
+
 	    void dispatchFailure( Throwable throwable ) {
 	      LOG.error( "CreateImage task error", throwable );
 	    }
-	
+
 	    abstract void dispatchSuccess(TM response );
-	    
+
 	    protected <T extends ComponentId> DispatchingClient<ComputeMessage, T> getClient( final Class<T> component ) {
 			try{
 				final DispatchingClient<ComputeMessage, T> client =

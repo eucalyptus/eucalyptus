@@ -47,6 +47,7 @@ import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AttributeBooleanValueType;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.CreateSubnetResponseType;
 import com.eucalyptus.compute.common.CreateSubnetType;
@@ -62,7 +63,6 @@ import com.eucalyptus.compute.common.DescribeTagsResponseType;
 import com.eucalyptus.compute.common.DescribeTagsType;
 import com.eucalyptus.compute.common.DescribeVpcsResponseType;
 import com.eucalyptus.compute.common.DescribeVpcsType;
-import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.ModifySubnetAttributeResponseType;
 import com.eucalyptus.compute.common.ModifySubnetAttributeType;
 import com.eucalyptus.compute.common.TagInfo;
@@ -197,7 +197,7 @@ public class AWSEC2SubnetResourceAction extends StepBasedResourceAction {
 
         // Check vpc (return if gone)
         DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, action.info.getEffectiveUserId());
-        describeVpcsType.getFilterSet( ).add( Filter.filter( "vpc-id", action.properties.getVpcId( ) ) );
+        describeVpcsType.getFilterSet( ).add( CloudFilters.filter( "vpc-id", action.properties.getVpcId( ) ) );
         DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.sendSync(configuration, describeVpcsType);
         if (describeVpcsResponseType.getVpcSet() == null ||
             describeVpcsResponseType.getVpcSet().getItem() == null ||
@@ -206,7 +206,7 @@ public class AWSEC2SubnetResourceAction extends StepBasedResourceAction {
         }
         // check subnet (return if gone)
         DescribeSubnetsType describeSubnetsType = MessageHelper.createMessage(DescribeSubnetsType.class, action.info.getEffectiveUserId());
-        describeSubnetsType.getFilterSet( ).add( Filter.filter( "subnet-id", action.info.getPhysicalResourceId( ) ) );
+        describeSubnetsType.getFilterSet( ).add( CloudFilters.filter( "subnet-id", action.info.getPhysicalResourceId( ) ) );
         DescribeSubnetsResponseType describeSubnetsResponseType = AsyncRequests.sendSync( configuration, describeSubnetsType);
         if (describeSubnetsResponseType.getSubnetSet() == null ||
             describeSubnetsResponseType.getSubnetSet().getItem() == null ||
@@ -255,7 +255,7 @@ public class AWSEC2SubnetResourceAction extends StepBasedResourceAction {
         AWSEC2SubnetResourceAction newAction = (AWSEC2SubnetResourceAction) newResourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         DescribeTagsType describeTagsType = MessageHelper.createMessage(DescribeTagsType.class, newAction.info.getEffectiveUserId());
-        describeTagsType.setFilterSet(Lists.newArrayList(Filter.filter("resource-id", newAction.info.getPhysicalResourceId())));
+        describeTagsType.setFilterSet(Lists.newArrayList( CloudFilters.filter("resource-id", newAction.info.getPhysicalResourceId())));
         DescribeTagsResponseType describeTagsResponseType = AsyncRequests.sendSync(configuration, describeTagsType);
         Set<EC2Tag> existingTags = Sets.newLinkedHashSet();
         if (describeTagsResponseType != null && describeTagsResponseType.getTagSet() != null) {

@@ -56,7 +56,7 @@ import com.google.common.collect.Lists;
 
 /**
  * @author Sang-Min Park
- * 
+ *
  */
 public class Ec2Client {
   private static final Logger LOG = Logger.getLogger(Ec2Client.class);
@@ -95,7 +95,7 @@ public class Ec2Client {
       }
 
       if ( this.instanceIds != null ) {
-        req.getFilterSet().add(Filter.filter("instance-id",
+        req.getFilterSet().add(CloudFilters.filter("instance-id",
                 this.instanceIds.stream()
                         .filter( s -> !"verbose".equals(s))
                         .collect(Collectors.toList())
@@ -320,24 +320,24 @@ public class Ec2Client {
     List<String> groupNames = null;
     List<String> groupIds = null;
     ComputeDescribeGroupsTask() { }
-    
+
     private DescribeSecurityGroupsType describeSecurityGroups() {
       final DescribeSecurityGroupsType req = new DescribeSecurityGroupsType();
       if(groupNames != null && groupNames.size() > 0)
         req.setSecurityGroupSet((ArrayList<String>) groupNames);
-      if(groupIds != null && groupIds.size() > 0) 
+      if(groupIds != null && groupIds.size() > 0)
         req.setSecurityGroupIdSet((ArrayList<String>) groupIds);
       return req;
     }
-    
+
     public void setGroupsNames(final List<String> groupNames) {
       this.groupNames = Lists.newArrayList(groupNames);
     }
-    
+
     public void setGroupIds(final List<String> groupIds) {
       this.groupIds = Lists.newArrayList(groupIds);
     }
-    
+
     @Override
     void dispatchInternal(ClientContext<ComputeMessage, Compute> context,
         Checked<ComputeMessage> callback) {
@@ -352,7 +352,7 @@ public class Ec2Client {
      final DescribeSecurityGroupsResponseType resp = (DescribeSecurityGroupsResponseType) response;
      groups = resp.getSecurityGroupInfo();
     }
-    
+
     public List<SecurityGroupItemType> getGroups() {
       return this.groups;
     }
@@ -512,7 +512,7 @@ public class Ec2Client {
     private DescribeImagesType describeImages() {
       final DescribeImagesType req = new DescribeImagesType();
       if (this.imageIds != null && this.imageIds.size() > 0) {
-        req.setFilterSet(Lists.newArrayList(Filter.filter("image-id",
+        req.setFilterSet(Lists.newArrayList(CloudFilters.filter("image-id",
             this.imageIds)));
       }
       return req;
@@ -737,7 +737,7 @@ public class Ec2Client {
       return this.snapshotId;
     }
   }
-  
+
 
   private class ComputeDeleteSnapshotTask extends
       EucalyptusClientTask<ComputeMessage, Compute> {
@@ -746,7 +746,7 @@ public class Ec2Client {
     private ComputeDeleteSnapshotTask( final String snapshotId ) {
       this.snapshotId = snapshotId;
     }
-    
+
     private DeleteSnapshotType deleteSnapshot() {
      final DeleteSnapshotType req = new  DeleteSnapshotType();
      req.setSnapshotId(this.snapshotId);
@@ -836,26 +836,26 @@ public class Ec2Client {
       return this.imageId;
     }
   }
-  
+
   private class ComputeDeregisterImageTask extends
   EucalyptusClientTask<ComputeMessage, Compute> {
     private String imageId = null;
     private ComputeDeregisterImageTask(final String imageId) {
       this.imageId = imageId;
     }
-    
+
     private DeregisterImageType deregister() {
       final DeregisterImageType req = new DeregisterImageType();
       req.setImageId(this.imageId);
       return req;
     }
-    
+
     @Override
     void dispatchInternal(ClientContext<ComputeMessage, Compute> context,
         Checked<ComputeMessage> callback) {
       final DispatchingClient<ComputeMessage, Compute> client = context
           .getClient();
-      client.dispatch(deregister(), callback);      
+      client.dispatch(deregister(), callback);
     }
 
     @Override
@@ -961,7 +961,7 @@ public class Ec2Client {
         req.setVolumeSet(Lists.newArrayList("verbose"));
       }
       if (this.volumeIds != null && this.volumeIds.size() > 0) {
-        req.getFilterSet().add(Filter.filter("volume-id", volumeIds));
+        req.getFilterSet().add(CloudFilters.filter("volume-id", volumeIds));
       }
       return req;
     }
@@ -1016,7 +1016,7 @@ public class Ec2Client {
       if (verbose) {
         req.setSnapshotSet(Lists.newArrayList("verbose"));
       }
-      req.getFilterSet().add(Filter.filter("snapshot-id", this.snapshots));
+      req.getFilterSet().add(CloudFilters.filter("snapshot-id", this.snapshots));
 
       return req;
     }
@@ -1116,7 +1116,7 @@ public class Ec2Client {
 
     private DescribeVpcsType describeDefaultVPC() {
       final DescribeVpcsType req = new DescribeVpcsType();
-      req.getFilterSet().add( Filter.filter( "isDefault", Collections.singleton(Boolean.TRUE.toString()) ) );
+      req.getFilterSet().add(CloudFilters.filter( "isDefault", Collections.singleton(Boolean.TRUE.toString()) ) );
       return req;
     }
 
@@ -1171,7 +1171,7 @@ public class Ec2Client {
 
     public VpcType getVpc() { return result; }
   }
-  
+
   public List<String> runInstances(final String userId, final String imageId,
       final ArrayList<String> groupNames, final String userData,
       final String instanceType, final String availabilityZone,
@@ -1523,7 +1523,7 @@ public class Ec2Client {
     }
   }
 
-  public void deleteSnapshot(final String userId, final String snapshotId) 
+  public void deleteSnapshot(final String userId, final String snapshotId)
       throws EucalyptusActivityException {
     final ComputeDeleteSnapshotTask task = new ComputeDeleteSnapshotTask(snapshotId);
 
@@ -1537,7 +1537,7 @@ public class Ec2Client {
       }
     } catch (Exception ex) {
       throw Exceptions.toUndeclared(ex);
-    }  
+    }
   }
   public String registerEBSImage(final String userId, final String snapshotId,
       final String imageName, String architecture, final String platform,
@@ -1572,13 +1572,13 @@ public class Ec2Client {
       throw Exceptions.toUndeclared(ex);
     }
   }
-  
+
   public void deregisterImage(final String userId, final String imageId) {
     if (userId == null || userId.length() <= 0)
       throw new IllegalArgumentException("User ID is required");
     if (imageId == null || imageId.length() <= 0)
       throw new IllegalArgumentException("Image ID is required");
- 
+
     final ComputeDeregisterImageTask task = new ComputeDeregisterImageTask(imageId);
     final CheckedListenableFuture<Boolean> result = task
         .dispatch(new Ec2Context(userId));
@@ -1586,7 +1586,7 @@ public class Ec2Client {
       if (!result.get())
         throw new EucalyptusActivityException(
             task.getErrorMessage() != null ? task.getErrorMessage()
-                : "failed to deregister image");    
+                : "failed to deregister image");
       }catch(final Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }
@@ -1666,8 +1666,8 @@ public class Ec2Client {
       throw Exceptions.toUndeclared(ex);
     }
   }
-  
-  public List<VmTypeDetails> describeInstanceTypes(final String userId) 
+
+  public List<VmTypeDetails> describeInstanceTypes(final String userId)
       throws EucalyptusActivityException {
     final DescribeInstanceTypesTask task = new DescribeInstanceTypesTask();
     final CheckedListenableFuture<Boolean> result = task
@@ -1683,8 +1683,8 @@ public class Ec2Client {
       throw Exceptions.toUndeclared(ex);
     }
   }
-  
-  public List<SecurityGroupItemType> describeSecurityGroups(final String userId, final List<String> groupNames) 
+
+  public List<SecurityGroupItemType> describeSecurityGroups(final String userId, final List<String> groupNames)
       throws EucalyptusActivityException {
     final ComputeDescribeGroupsTask task = new ComputeDescribeGroupsTask();
     if(groupNames != null)

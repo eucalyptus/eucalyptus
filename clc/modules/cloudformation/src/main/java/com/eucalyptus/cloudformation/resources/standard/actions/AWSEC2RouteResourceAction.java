@@ -43,6 +43,7 @@ import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.CreateRouteResponseType;
 import com.eucalyptus.compute.common.CreateRouteType;
@@ -50,7 +51,6 @@ import com.eucalyptus.compute.common.DeleteRouteResponseType;
 import com.eucalyptus.compute.common.DeleteRouteType;
 import com.eucalyptus.compute.common.DescribeRouteTablesResponseType;
 import com.eucalyptus.compute.common.DescribeRouteTablesType;
-import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.ReplaceRouteResponseType;
 import com.eucalyptus.compute.common.ReplaceRouteType;
 import com.eucalyptus.compute.common.RouteTableType;
@@ -116,7 +116,7 @@ public class AWSEC2RouteResourceAction extends StepBasedResourceAction {
           throw new ValidationErrorException("RouteTableId is a required field");
         }
         DescribeRouteTablesType describeRouteTablesType = MessageHelper.createMessage(DescribeRouteTablesType.class, action.info.getEffectiveUserId());
-        describeRouteTablesType.getFilterSet( ).add( Filter.filter( "route-table-id", action.properties.getRouteTableId( ) ) );
+        describeRouteTablesType.getFilterSet( ).add( CloudFilters.filter( "route-table-id", action.properties.getRouteTableId( ) ) );
         DescribeRouteTablesResponseType describeRouteTablesResponseType = AsyncRequests.sendSync(configuration, describeRouteTablesType);
         if (describeRouteTablesResponseType.getRouteTableSet() == null || describeRouteTablesResponseType.getRouteTableSet().getItem() == null ||
           describeRouteTablesResponseType.getRouteTableSet().getItem().isEmpty()) {
@@ -164,7 +164,7 @@ public class AWSEC2RouteResourceAction extends StepBasedResourceAction {
         if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
 
         DescribeRouteTablesType describeRouteTablesType = MessageHelper.createMessage(DescribeRouteTablesType.class, action.info.getEffectiveUserId());
-        describeRouteTablesType.getFilterSet( ).add( Filter.filter( "route-table-id", action.properties.getRouteTableId( ) ) );
+        describeRouteTablesType.getFilterSet( ).add( CloudFilters.filter( "route-table-id", action.properties.getRouteTableId( ) ) );
         DescribeRouteTablesResponseType describeRouteTablesResponseType = AsyncRequests.sendSync(configuration, describeRouteTablesType);
         if (describeRouteTablesResponseType.getRouteTableSet() == null || describeRouteTablesResponseType.getRouteTableSet().getItem() == null ||
           describeRouteTablesResponseType.getRouteTableSet().getItem().isEmpty()) {
@@ -215,7 +215,7 @@ public class AWSEC2RouteResourceAction extends StepBasedResourceAction {
           throw new ValidationErrorException("RouteTableId is a required field");
         }
         DescribeRouteTablesType describeRouteTablesType = MessageHelper.createMessage(DescribeRouteTablesType.class, newAction.info.getEffectiveUserId());
-        describeRouteTablesType.getFilterSet( ).add( Filter.filter( "route-table-id", newAction.properties.getRouteTableId( ) ) );
+        describeRouteTablesType.getFilterSet( ).add( CloudFilters.filter( "route-table-id", newAction.properties.getRouteTableId( ) ) );
         DescribeRouteTablesResponseType describeRouteTablesResponseType = AsyncRequests.sendSync(configuration, describeRouteTablesType);
         if (describeRouteTablesResponseType.getRouteTableSet() == null || describeRouteTablesResponseType.getRouteTableSet().getItem() == null ||
           describeRouteTablesResponseType.getRouteTableSet().getItem().isEmpty()) {

@@ -44,10 +44,10 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressResponseType;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressType;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
-import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.IpPermissionType;
 import com.eucalyptus.compute.common.RevokeSecurityGroupIngressResponseType;
 import com.eucalyptus.compute.common.RevokeSecurityGroupIngressType;
@@ -131,7 +131,7 @@ public class AWSEC2SecurityGroupIngressResourceAction extends StepBasedResourceA
         // Make sure security group exists.
         if (!Strings.isNullOrEmpty(action.properties.getGroupId())) {
           DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, action.info.getEffectiveUserId());
-          describeSecurityGroupsType.setFilterSet( Lists.newArrayList( Filter.filter( "group-id", action.properties.getGroupId( ) ) ) );
+          describeSecurityGroupsType.setFilterSet( Lists.newArrayList( CloudFilters.filter( "group-id", action.properties.getGroupId( ) ) ) );
           DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.sendSync(configuration, describeSecurityGroupsType);
           ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
           if (securityGroupItemTypeArrayList == null || securityGroupItemTypeArrayList.isEmpty()) {
@@ -141,7 +141,7 @@ public class AWSEC2SecurityGroupIngressResourceAction extends StepBasedResourceA
         if (!Strings.isNullOrEmpty(action.properties.getGroupName())) {
           DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, action.info.getEffectiveUserId());
           describeSecurityGroupsType.setSecurityGroupSet(Lists.newArrayList(action.properties.getGroupName()));
-          describeSecurityGroupsType.setFilterSet( Lists.newArrayList( Filter.filter( "group-name", action.properties.getGroupName( ) ) ) );
+          describeSecurityGroupsType.setFilterSet( Lists.newArrayList( CloudFilters.filter( "group-name", action.properties.getGroupName( ) ) ) );
           DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.sendSync(configuration, describeSecurityGroupsType);
           ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
           if (securityGroupItemTypeArrayList == null || securityGroupItemTypeArrayList.isEmpty()) {
@@ -217,7 +217,7 @@ public class AWSEC2SecurityGroupIngressResourceAction extends StepBasedResourceA
         // Make sure security group exists.
         if (!Strings.isNullOrEmpty(action.properties.getGroupId())) {
           DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, action.info.getEffectiveUserId());
-          describeSecurityGroupsType.setFilterSet( Lists.newArrayList( Filter.filter( "group-id", action.properties.getGroupId( ) ) ) );
+          describeSecurityGroupsType.setFilterSet( Lists.newArrayList( CloudFilters.filter( "group-id", action.properties.getGroupId( ) ) ) );
           DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.sendSync(configuration, describeSecurityGroupsType);
           ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
           if (securityGroupItemTypeArrayList == null || securityGroupItemTypeArrayList.isEmpty()) {
@@ -226,7 +226,7 @@ public class AWSEC2SecurityGroupIngressResourceAction extends StepBasedResourceA
         }
         if (!Strings.isNullOrEmpty(action.properties.getGroupName())) {
           DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, action.info.getEffectiveUserId());
-          describeSecurityGroupsType.setFilterSet( Lists.newArrayList( Filter.filter( "group-name", action.properties.getGroupName( ) ) ) );
+          describeSecurityGroupsType.setFilterSet( Lists.newArrayList( CloudFilters.filter( "group-name", action.properties.getGroupName( ) ) ) );
           DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.sendSync(configuration, describeSecurityGroupsType);
           ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
           if (securityGroupItemTypeArrayList == null || securityGroupItemTypeArrayList.isEmpty()) {

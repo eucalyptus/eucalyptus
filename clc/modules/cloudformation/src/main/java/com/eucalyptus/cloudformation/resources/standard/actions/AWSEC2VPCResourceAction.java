@@ -48,6 +48,7 @@ import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AttributeBooleanValueType;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.CreateTagsResponseType;
 import com.eucalyptus.compute.common.CreateTagsType;
@@ -64,7 +65,6 @@ import com.eucalyptus.compute.common.DescribeTagsResponseType;
 import com.eucalyptus.compute.common.DescribeTagsType;
 import com.eucalyptus.compute.common.DescribeVpcsResponseType;
 import com.eucalyptus.compute.common.DescribeVpcsType;
-import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.ModifyVpcAttributeResponseType;
 import com.eucalyptus.compute.common.ModifyVpcAttributeType;
 import com.eucalyptus.compute.common.TagInfo;
@@ -192,14 +192,14 @@ public class AWSEC2VPCResourceAction extends StepBasedResourceAction {
         // Describe groups to find the default
         final DescribeSecurityGroupsType groupsRequest = MessageHelper.createMessage(DescribeSecurityGroupsType.class, action.info.getEffectiveUserId());
         groupsRequest.setSecurityGroupSet( Lists.newArrayList( "default" ) );
-        groupsRequest.setFilterSet( Lists.newArrayList( Filter.filter( "vpc-id", action.info.getPhysicalResourceId( ) ) ) );
+        groupsRequest.setFilterSet( Lists.newArrayList( CloudFilters.filter( "vpc-id", action.info.getPhysicalResourceId( ) ) ) );
         final CheckedListenableFuture<DescribeSecurityGroupsResponseType> groupsFuture =
             AsyncRequests.dispatch( configuration, groupsRequest );
         // Describe network acls to find the default
         final DescribeNetworkAclsType networkAclsRequest = MessageHelper.createMessage(DescribeNetworkAclsType.class, action.info.getEffectiveUserId());
         networkAclsRequest.setFilterSet( Lists.newArrayList(
-            Filter.filter( "vpc-id", action.info.getPhysicalResourceId( ) ),
-            Filter.filter( "default", "true" )
+            CloudFilters.filter( "vpc-id", action.info.getPhysicalResourceId( ) ),
+            CloudFilters.filter( "default", "true" )
         ) );
         final CheckedListenableFuture<DescribeNetworkAclsResponseType> networkAclsFuture =
             AsyncRequests.dispatch( configuration, networkAclsRequest );
@@ -230,7 +230,7 @@ public class AWSEC2VPCResourceAction extends StepBasedResourceAction {
         if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
 
         DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, action.info.getEffectiveUserId());
-        describeVpcsType.getFilterSet( ).add( Filter.filter( "vpc-id", action.info.getPhysicalResourceId( ) ) );
+        describeVpcsType.getFilterSet( ).add( CloudFilters.filter( "vpc-id", action.info.getPhysicalResourceId( ) ) );
         DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.sendSync( configuration, describeVpcsType );
         if (describeVpcsResponseType.getVpcSet() == null ||
             describeVpcsResponseType.getVpcSet().getItem() == null ||
@@ -282,7 +282,7 @@ public class AWSEC2VPCResourceAction extends StepBasedResourceAction {
         AWSEC2VPCResourceAction newAction = (AWSEC2VPCResourceAction) newResourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         DescribeTagsType describeTagsType = MessageHelper.createMessage(DescribeTagsType.class, newAction.info.getEffectiveUserId());
-        describeTagsType.setFilterSet(Lists.newArrayList(Filter.filter("resource-id", newAction.info.getPhysicalResourceId())));
+        describeTagsType.setFilterSet(Lists.newArrayList( CloudFilters.filter("resource-id", newAction.info.getPhysicalResourceId())));
         DescribeTagsResponseType describeTagsResponseType = AsyncRequests.sendSync(configuration, describeTagsType);
         Set<EC2Tag> existingTags = Sets.newLinkedHashSet();
         if (describeTagsResponseType != null && describeTagsResponseType.getTagSet() != null) {
@@ -340,14 +340,14 @@ public class AWSEC2VPCResourceAction extends StepBasedResourceAction {
         // Describe groups to find the default
         final DescribeSecurityGroupsType groupsRequest = MessageHelper.createMessage(DescribeSecurityGroupsType.class, newAction.info.getEffectiveUserId());
         groupsRequest.setSecurityGroupSet(Lists.newArrayList("default"));
-        groupsRequest.setFilterSet(Lists.newArrayList(Filter.filter("vpc-id", newAction.info.getPhysicalResourceId())));
+        groupsRequest.setFilterSet(Lists.newArrayList( CloudFilters.filter("vpc-id", newAction.info.getPhysicalResourceId())));
         final CheckedListenableFuture<DescribeSecurityGroupsResponseType> groupsFuture =
           AsyncRequests.dispatch(configuration, groupsRequest);
         // Describe network acls to find the default
         final DescribeNetworkAclsType networkAclsRequest = MessageHelper.createMessage(DescribeNetworkAclsType.class, newAction.info.getEffectiveUserId());
         networkAclsRequest.setFilterSet(Lists.newArrayList(
-          Filter.filter("vpc-id", newAction.info.getPhysicalResourceId()),
-          Filter.filter("default", "true")
+          CloudFilters.filter("vpc-id", newAction.info.getPhysicalResourceId()),
+          CloudFilters.filter("default", "true")
         ));
         final CheckedListenableFuture<DescribeNetworkAclsResponseType> networkAclsFuture =
           AsyncRequests.dispatch(configuration, networkAclsRequest);

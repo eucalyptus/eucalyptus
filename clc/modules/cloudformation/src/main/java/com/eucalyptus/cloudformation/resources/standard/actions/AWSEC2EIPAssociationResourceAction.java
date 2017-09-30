@@ -48,6 +48,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AssociateAddressResponseType;
 import com.eucalyptus.compute.common.AssociateAddressType;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.DescribeAddressesResponseType;
 import com.eucalyptus.compute.common.DescribeAddressesType;
@@ -57,7 +58,6 @@ import com.eucalyptus.compute.common.DescribeNetworkInterfacesResponseType;
 import com.eucalyptus.compute.common.DescribeNetworkInterfacesType;
 import com.eucalyptus.compute.common.DisassociateAddressResponseType;
 import com.eucalyptus.compute.common.DisassociateAddressType;
-import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.NetworkInterfaceType;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
@@ -157,7 +157,7 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
         }
         if (action.properties.getInstanceId() != null) {
           DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
-          describeInstancesType.getFilterSet( ).add( Filter.filter( "instance-id", action.properties.getInstanceId() ) );
+          describeInstancesType.getFilterSet( ).add( CloudFilters.filter( "instance-id", action.properties.getInstanceId() ) );
           DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
           if (describeInstancesResponseType.getReservationSet() == null || describeInstancesResponseType.getReservationSet().isEmpty()) {
             throw new ValidationErrorException("No such instance " + action.properties.getInstanceId());
@@ -205,7 +205,7 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
         // Update the instance info (if network id exists)
         if (action.properties.getNetworkInterfaceId() != null) {
           DescribeNetworkInterfacesType describeNetworkInterfacesType = MessageHelper.createMessage(DescribeNetworkInterfacesType.class, action.info.getEffectiveUserId());
-          describeNetworkInterfacesType.getFilterSet( ).add( Filter.filter( "network-interface-id", action.properties.getNetworkInterfaceId() ) );
+          describeNetworkInterfacesType.getFilterSet( ).add( CloudFilters.filter( "network-interface-id", action.properties.getNetworkInterfaceId() ) );
           DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.sendSync( configuration, describeNetworkInterfacesType);
           if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet() != null &&
             describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem() != null &&
@@ -268,7 +268,7 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
         // Update the instance info (if network id exists)
         if (action.properties.getNetworkInterfaceId() != null) {
           DescribeNetworkInterfacesType describeNetworkInterfacesType = MessageHelper.createMessage(DescribeNetworkInterfacesType.class, action.info.getEffectiveUserId());
-          describeNetworkInterfacesType.getFilterSet( ).add( Filter.filter( "network-interface-id", action.properties.getNetworkInterfaceId() ) );
+          describeNetworkInterfacesType.getFilterSet( ).add( CloudFilters.filter( "network-interface-id", action.properties.getNetworkInterfaceId() ) );
           DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.sendSync(configuration, describeNetworkInterfacesType);
           if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet() != null &&
             describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem() != null &&
@@ -309,7 +309,7 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
         }
         if (newAction.properties.getInstanceId() != null) {
           DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, newAction.info.getEffectiveUserId());
-          describeInstancesType.getFilterSet( ).add( Filter.filter( "instance-id", newAction.properties.getInstanceId() ) );
+          describeInstancesType.getFilterSet( ).add( CloudFilters.filter( "instance-id", newAction.properties.getInstanceId() ) );
           DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
           if (describeInstancesResponseType.getReservationSet() == null || describeInstancesResponseType.getReservationSet().isEmpty()) {
             throw new ValidationErrorException("No such instance " + newAction.properties.getInstanceId());
@@ -357,7 +357,7 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
         // Update the instance info (if network id exists)
         if (newAction.properties.getNetworkInterfaceId() != null) {
           DescribeNetworkInterfacesType describeNetworkInterfacesType = MessageHelper.createMessage(DescribeNetworkInterfacesType.class, newAction.info.getEffectiveUserId());
-          describeNetworkInterfacesType.getFilterSet( ).add( Filter.filter( "network-interface-id", newAction.properties.getNetworkInterfaceId() ) );
+          describeNetworkInterfacesType.getFilterSet( ).add( CloudFilters.filter( "network-interface-id", newAction.properties.getNetworkInterfaceId() ) );
           DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.sendSync( configuration, describeNetworkInterfacesType);
           if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet() != null &&
             describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem() != null &&

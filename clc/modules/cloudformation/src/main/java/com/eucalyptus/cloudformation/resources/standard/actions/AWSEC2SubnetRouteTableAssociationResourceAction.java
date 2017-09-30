@@ -45,6 +45,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AssociateRouteTableResponseType;
 import com.eucalyptus.compute.common.AssociateRouteTableType;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.DescribeRouteTablesResponseType;
 import com.eucalyptus.compute.common.DescribeRouteTablesType;
@@ -198,7 +199,7 @@ public class AWSEC2SubnetRouteTableAssociationResourceAction extends StepBasedRe
 
   private void checkSubnetExists(ServiceConfiguration configuration) throws Exception {
     DescribeSubnetsType describeSubnetsType = MessageHelper.createMessage(DescribeSubnetsType.class, info.getEffectiveUserId());
-    describeSubnetsType.getFilterSet( ).add( Filter.filter( "subnet-id", properties.getSubnetId( ) ) );
+    describeSubnetsType.getFilterSet( ).add( CloudFilters.filter( "subnet-id", properties.getSubnetId( ) ) );
     DescribeSubnetsResponseType describeSubnetsResponseType = AsyncRequests.sendSync( configuration, describeSubnetsType );
     if (describeSubnetsResponseType.getSubnetSet() == null || describeSubnetsResponseType.getSubnetSet().getItem() == null ||
       describeSubnetsResponseType.getSubnetSet().getItem().isEmpty()) {
@@ -208,7 +209,7 @@ public class AWSEC2SubnetRouteTableAssociationResourceAction extends StepBasedRe
 
   private void checkRouteTableExists(ServiceConfiguration configuration) throws Exception {
     DescribeRouteTablesType describeRouteTablesType = MessageHelper.createMessage(DescribeRouteTablesType.class, info.getEffectiveUserId());
-    describeRouteTablesType.getFilterSet( ).add( Filter.filter( "route-table-id", properties.getRouteTableId( ) ) );
+    describeRouteTablesType.getFilterSet( ).add( CloudFilters.filter( "route-table-id", properties.getRouteTableId( ) ) );
     DescribeRouteTablesResponseType describeRouteTablesResponseType = AsyncRequests.sendSync( configuration, describeRouteTablesType );
     if (describeRouteTablesResponseType.getRouteTableSet() == null || describeRouteTablesResponseType.getRouteTableSet().getItem() == null ||
       describeRouteTablesResponseType.getRouteTableSet().getItem().isEmpty()) {
@@ -224,7 +225,7 @@ public class AWSEC2SubnetRouteTableAssociationResourceAction extends StepBasedRe
 
   private boolean subnetExistsForDelete(ServiceConfiguration configuration) throws Exception {
     DescribeSubnetsType describeSubnetsType = MessageHelper.createMessage(DescribeSubnetsType.class, info.getEffectiveUserId());
-    describeSubnetsType.getFilterSet( ).add( Filter.filter( "subnet-id", properties.getSubnetId( ) ) );
+    describeSubnetsType.getFilterSet( ).add( CloudFilters.filter( "subnet-id", properties.getSubnetId( ) ) );
     DescribeSubnetsResponseType describeSubnetsResponseType = AsyncRequests.sendSync( configuration, describeSubnetsType );
     if (describeSubnetsResponseType.getSubnetSet() == null || describeSubnetsResponseType.getSubnetSet().getItem() == null ||
       describeSubnetsResponseType.getSubnetSet().getItem().isEmpty()) {
@@ -235,7 +236,7 @@ public class AWSEC2SubnetRouteTableAssociationResourceAction extends StepBasedRe
 
   private boolean routeTableExistsForDelete(ServiceConfiguration configuration) throws Exception {
     DescribeRouteTablesType describeRouteTablesType = MessageHelper.createMessage(DescribeRouteTablesType.class, info.getEffectiveUserId());
-    describeRouteTablesType.getFilterSet( ).add( Filter.filter( "route-table-id", properties.getRouteTableId( ) ) );
+    describeRouteTablesType.getFilterSet( ).add( CloudFilters.filter( "route-table-id", properties.getRouteTableId( ) ) );
     DescribeRouteTablesResponseType describeRouteTablesResponseType = AsyncRequests.sendSync( configuration, describeRouteTablesType );
     if (describeRouteTablesResponseType.getRouteTableSet() == null || describeRouteTablesResponseType.getRouteTableSet().getItem() == null ||
       describeRouteTablesResponseType.getRouteTableSet().getItem().isEmpty()) {

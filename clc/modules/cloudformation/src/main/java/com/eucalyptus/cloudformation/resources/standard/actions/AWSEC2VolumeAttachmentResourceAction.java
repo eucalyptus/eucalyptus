@@ -46,6 +46,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AttachVolumeResponseType;
 import com.eucalyptus.compute.common.AttachVolumeType;
 import com.eucalyptus.compute.common.AttachedVolume;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.DescribeInstancesResponseType;
 import com.eucalyptus.compute.common.DescribeInstancesType;
@@ -53,7 +54,6 @@ import com.eucalyptus.compute.common.DescribeVolumesResponseType;
 import com.eucalyptus.compute.common.DescribeVolumesType;
 import com.eucalyptus.compute.common.DetachVolumeResponseType;
 import com.eucalyptus.compute.common.DetachVolumeType;
-import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -111,13 +111,13 @@ public class AWSEC2VolumeAttachmentResourceAction extends StepBasedResourceActio
         AWSEC2VolumeAttachmentResourceAction action = (AWSEC2VolumeAttachmentResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
-        describeInstancesType.getFilterSet( ).add( Filter.filter( "instance-id", action.properties.getInstanceId( ) ) );
+        describeInstancesType.getFilterSet( ).add( CloudFilters.filter( "instance-id", action.properties.getInstanceId( ) ) );
         DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
         if (describeInstancesResponseType.getReservationSet() == null || describeInstancesResponseType.getReservationSet().isEmpty()) {
           throw new ValidationErrorException("No such instance " + action.properties.getInstanceId());
         }
         DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
-        describeVolumesType.getFilterSet( ).add( Filter.filter( "volume-id", action.properties.getVolumeId( ) ) );
+        describeVolumesType.getFilterSet( ).add( CloudFilters.filter( "volume-id", action.properties.getVolumeId( ) ) );
         DescribeVolumesResponseType describeVolumesResponseType;
         try {
           describeVolumesResponseType = AsyncRequests.sendSync( configuration, describeVolumesType );
@@ -143,7 +143,7 @@ public class AWSEC2VolumeAttachmentResourceAction extends StepBasedResourceActio
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         boolean attached = false;
         DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
-        describeVolumesType.getFilterSet( ).add( Filter.filter( "volume-id", action.properties.getVolumeId( ) ) );
+        describeVolumesType.getFilterSet( ).add( CloudFilters.filter( "volume-id", action.properties.getVolumeId( ) ) );
         DescribeVolumesResponseType describeVolumesResponseType;
         try {
           describeVolumesResponseType = AsyncRequests.sendSync( configuration, describeVolumesType );
@@ -220,7 +220,7 @@ public class AWSEC2VolumeAttachmentResourceAction extends StepBasedResourceActio
         if (notCreatedOrNoInstanceOrNoVolume(action, configuration)) return action;
         boolean detached = false;
         DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
-        describeVolumesType.getFilterSet( ).add( Filter.filter( "volume-id", action.properties.getVolumeId( ) ) );
+        describeVolumesType.getFilterSet( ).add( CloudFilters.filter( "volume-id", action.properties.getVolumeId( ) ) );
         DescribeVolumesResponseType describeVolumesResponseType;
         try {
           describeVolumesResponseType = AsyncRequests.sendSync( configuration, describeVolumesType );
@@ -259,13 +259,13 @@ public class AWSEC2VolumeAttachmentResourceAction extends StepBasedResourceActio
     private static boolean notCreatedOrNoInstanceOrNoVolume(AWSEC2VolumeAttachmentResourceAction action, ServiceConfiguration configuration) throws Exception {
       if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return true;
       DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
-      describeInstancesType.getFilterSet( ).add( Filter.filter( "instance-id", action.properties.getInstanceId( ) ) );
+      describeInstancesType.getFilterSet( ).add( CloudFilters.filter( "instance-id", action.properties.getInstanceId( ) ) );
       DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
       if (describeInstancesResponseType.getReservationSet() == null || describeInstancesResponseType.getReservationSet().isEmpty()) {
         return true; // can't be attached to a nonexistent instance;
       }
       DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
-      describeVolumesType.getFilterSet( ).add( Filter.filter( "volume-id", action.properties.getVolumeId( ) ) );
+      describeVolumesType.getFilterSet( ).add( CloudFilters.filter( "volume-id", action.properties.getVolumeId( ) ) );
       DescribeVolumesResponseType describeVolumesResponseType;
       try {
         describeVolumesResponseType = AsyncRequests.sendSync( configuration, describeVolumesType );

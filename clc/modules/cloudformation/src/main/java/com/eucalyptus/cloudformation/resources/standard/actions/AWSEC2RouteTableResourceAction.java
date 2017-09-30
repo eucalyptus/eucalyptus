@@ -45,6 +45,7 @@ import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.CreateRouteTableResponseType;
 import com.eucalyptus.compute.common.CreateRouteTableType;
@@ -58,7 +59,6 @@ import com.eucalyptus.compute.common.DescribeRouteTablesResponseType;
 import com.eucalyptus.compute.common.DescribeRouteTablesType;
 import com.eucalyptus.compute.common.DescribeTagsResponseType;
 import com.eucalyptus.compute.common.DescribeTagsType;
-import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.TagInfo;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
@@ -154,7 +154,7 @@ public class AWSEC2RouteTableResourceAction extends StepBasedResourceAction {
 
         // See if route table is there
         DescribeRouteTablesType describeRouteTablesType = MessageHelper.createMessage(DescribeRouteTablesType.class, action.info.getEffectiveUserId());
-        describeRouteTablesType.getFilterSet( ).add(Filter.filter("route-table-id", action.info.getPhysicalResourceId()));
+        describeRouteTablesType.getFilterSet( ).add( CloudFilters.filter("route-table-id", action.info.getPhysicalResourceId()));
         DescribeRouteTablesResponseType describeRouteTablesResponseType = AsyncRequests.sendSync(configuration, describeRouteTablesType);
         if (describeRouteTablesResponseType.getRouteTableSet() == null || describeRouteTablesResponseType.getRouteTableSet().getItem() == null ||
           describeRouteTablesResponseType.getRouteTableSet().getItem().isEmpty()) {
@@ -182,7 +182,7 @@ public class AWSEC2RouteTableResourceAction extends StepBasedResourceAction {
         AWSEC2RouteTableResourceAction newAction = (AWSEC2RouteTableResourceAction) newResourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         DescribeTagsType describeTagsType = MessageHelper.createMessage(DescribeTagsType.class, newAction.info.getEffectiveUserId());
-        describeTagsType.setFilterSet(Lists.newArrayList(Filter.filter("resource-id", newAction.info.getPhysicalResourceId())));
+        describeTagsType.setFilterSet(Lists.newArrayList( CloudFilters.filter("resource-id", newAction.info.getPhysicalResourceId())));
         DescribeTagsResponseType describeTagsResponseType = AsyncRequests.sendSync(configuration, describeTagsType);
         Set<EC2Tag> existingTags = Sets.newLinkedHashSet();
         if (describeTagsResponseType != null && describeTagsResponseType.getTagSet() != null) {

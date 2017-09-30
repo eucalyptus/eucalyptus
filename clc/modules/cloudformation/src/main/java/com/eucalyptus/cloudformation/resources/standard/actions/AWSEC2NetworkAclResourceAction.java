@@ -45,6 +45,7 @@ import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.CreateNetworkAclResponseType;
 import com.eucalyptus.compute.common.CreateNetworkAclType;
@@ -58,7 +59,6 @@ import com.eucalyptus.compute.common.DescribeNetworkAclsResponseType;
 import com.eucalyptus.compute.common.DescribeNetworkAclsType;
 import com.eucalyptus.compute.common.DescribeTagsResponseType;
 import com.eucalyptus.compute.common.DescribeTagsType;
-import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.TagInfo;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
@@ -154,7 +154,7 @@ public class AWSEC2NetworkAclResourceAction extends StepBasedResourceAction {
 
         // See if network ACL is there
         DescribeNetworkAclsType describeNetworkAclsType = MessageHelper.createMessage(DescribeNetworkAclsType.class, action.info.getEffectiveUserId());
-        describeNetworkAclsType.getFilterSet( ).add( Filter.filter( "network-acl-id", action.info.getPhysicalResourceId( ) ) );
+        describeNetworkAclsType.getFilterSet( ).add( CloudFilters.filter( "network-acl-id", action.info.getPhysicalResourceId( ) ) );
         DescribeNetworkAclsResponseType describeNetworkAclsResponseType = AsyncRequests.sendSync( configuration, describeNetworkAclsType );
         if (describeNetworkAclsResponseType.getNetworkAclSet() == null ||
             describeNetworkAclsResponseType.getNetworkAclSet().getItem() == null ||
@@ -183,7 +183,7 @@ public class AWSEC2NetworkAclResourceAction extends StepBasedResourceAction {
         AWSEC2NetworkAclResourceAction newAction = (AWSEC2NetworkAclResourceAction) newResourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         DescribeTagsType describeTagsType = MessageHelper.createMessage(DescribeTagsType.class, newAction.info.getEffectiveUserId());
-        describeTagsType.setFilterSet(Lists.newArrayList(Filter.filter("resource-id", newAction.info.getPhysicalResourceId())));
+        describeTagsType.setFilterSet(Lists.newArrayList( CloudFilters.filter("resource-id", newAction.info.getPhysicalResourceId())));
         DescribeTagsResponseType describeTagsResponseType = AsyncRequests.sendSync(configuration, describeTagsType);
         Set<EC2Tag> existingTags = Sets.newLinkedHashSet();
         if (describeTagsResponseType != null && describeTagsResponseType.getTagSet() != null) {

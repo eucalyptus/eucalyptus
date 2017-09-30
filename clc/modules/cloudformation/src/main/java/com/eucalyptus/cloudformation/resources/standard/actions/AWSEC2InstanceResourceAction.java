@@ -29,7 +29,6 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.entity.SignalEntity;
 import com.eucalyptus.cloudformation.entity.SignalEntityManager;
@@ -65,6 +64,7 @@ import com.eucalyptus.compute.common.AttributeBooleanFlatValueType;
 import com.eucalyptus.compute.common.AttributeBooleanValueType;
 import com.eucalyptus.compute.common.AttributeValueType;
 import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.CreateTagsResponseType;
 import com.eucalyptus.compute.common.CreateTagsType;
@@ -82,7 +82,6 @@ import com.eucalyptus.compute.common.DescribeVolumesResponseType;
 import com.eucalyptus.compute.common.DescribeVolumesType;
 import com.eucalyptus.compute.common.DetachVolumeType;
 import com.eucalyptus.compute.common.EbsDeviceMapping;
-import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.GroupIdSetType;
 import com.eucalyptus.compute.common.GroupItemType;
 import com.eucalyptus.compute.common.InstanceBlockDeviceMapping;
@@ -170,7 +169,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
     }
     ServiceConfiguration configuration = Topology.lookup(Compute.class);
     DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, info.getEffectiveUserId());
-    describeInstancesType.getFilterSet( ).add( Filter.filter("instance-id", info.getPhysicalResourceId()) );
+    describeInstancesType.getFilterSet( ).add( CloudFilters.filter("instance-id", info.getPhysicalResourceId()) );
     DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
     if (describeInstancesResponseType.getReservationSet().size() == 0) {
       throw new ValidationErrorException("Instance " + info.getPhysicalResourceId( ) + " does not exist");
@@ -346,7 +345,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
           for (EC2MountPoint ec2MountPoint : action.properties.getVolumes()) {
             volumeIds.add(ec2MountPoint.getVolumeId());
           }
-          describeVolumesType.getFilterSet( ).add( Filter.filter( "volume-id", volumeIds ) );
+          describeVolumesType.getFilterSet( ).add( CloudFilters.filter( "volume-id", volumeIds ) );
           DescribeVolumesResponseType describeVolumesResponseType;
           try {
             describeVolumesResponseType = AsyncRequests.sendSync( configuration, describeVolumesType );
@@ -405,7 +404,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
         AWSEC2InstanceResourceAction action = (AWSEC2InstanceResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
-        describeInstancesType.getFilterSet( ).add( Filter.filter( "instance-id", action.info.getPhysicalResourceId( ) ) );
+        describeInstancesType.getFilterSet( ).add( CloudFilters.filter( "instance-id", action.info.getPhysicalResourceId( ) ) );
         DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
         if (describeInstancesResponseType.getReservationSet().size() == 0) {
           throw new RetryAfterConditionCheckFailedException("Instance " + action.info.getPhysicalResourceId( ) + " does not yet exist");
@@ -488,7 +487,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
             deviceMap.put(ec2MountPoint.getVolumeId(), ec2MountPoint.getDevice());
           }
           DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
-          describeVolumesType.getFilterSet( ).add( Filter.filter( "volume-id", volumeIds ) );
+          describeVolumesType.getFilterSet( ).add( CloudFilters.filter( "volume-id", volumeIds ) );
           DescribeVolumesResponseType describeVolumesResponseType;
           try {
             describeVolumesResponseType = AsyncRequests.sendSync( configuration, describeVolumesType );
@@ -580,7 +579,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
         if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
         // First see if instance exists or has been terminated
         DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
-        describeInstancesType.getFilterSet().add(Filter.filter("instance-id", action.info.getPhysicalResourceId()));
+        describeInstancesType.getFilterSet().add( CloudFilters.filter("instance-id", action.info.getPhysicalResourceId()));
         DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync(configuration, describeInstancesType);
         if (describeInstancesResponseType.getReservationSet().size() == 0) return action; // already terminated
         if ("terminated".equals(describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0).getStateName())) {
@@ -601,7 +600,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
         // See if instance was ever populated
         if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return action;
         DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, action.info.getEffectiveUserId());
-        describeInstancesType.getFilterSet( ).add( Filter.filter( "instance-id", action.info.getPhysicalResourceId( ) ) );
+        describeInstancesType.getFilterSet( ).add( CloudFilters.filter( "instance-id", action.info.getPhysicalResourceId( ) ) );
         DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
         if (describeInstancesResponseType.getReservationSet().size() == 0) return action; // already terminated
         if ("terminated".equals(describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0).getStateName())) {
@@ -647,7 +646,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
         }
         // first lookup existing attributes
         DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, newAction.info.getEffectiveUserId());
-        describeInstancesType.getFilterSet().add(Filter.filter("instance-id", newAction.info.getPhysicalResourceId()));
+        describeInstancesType.getFilterSet().add( CloudFilters.filter("instance-id", newAction.info.getPhysicalResourceId()));
         DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync(configuration, describeInstancesType);
         if (describeInstancesResponseType.getReservationSet().size() == 0) {
           throw new ValidationErrorException("Instance " + newAction.info.getPhysicalResourceId() + " does not exist");
@@ -751,7 +750,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
         AWSEC2InstanceResourceAction newAction = (AWSEC2InstanceResourceAction) newResourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         DescribeTagsType describeTagsType = MessageHelper.createMessage(DescribeTagsType.class, newAction.info.getEffectiveUserId());
-        describeTagsType.setFilterSet(Lists.newArrayList(Filter.filter("resource-id", newAction.info.getPhysicalResourceId())));
+        describeTagsType.setFilterSet(Lists.newArrayList( CloudFilters.filter("resource-id", newAction.info.getPhysicalResourceId())));
         DescribeTagsResponseType describeTagsResponseType = AsyncRequests.sendSync(configuration, describeTagsType);
         Set<EC2Tag> existingTags = Sets.newLinkedHashSet();
         if (describeTagsResponseType != null && describeTagsResponseType.getTagSet() != null) {
@@ -811,7 +810,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
         Map<String, String> newVolumeDeviceMap = getVolumeDeviceMap(newAction);
         Map<String, String> detachingVolumeDeviceMap = getDetachingVolumeDeviceMap(oldVolumeDeviceMap, newVolumeDeviceMap);
         DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, newAction.info.getEffectiveUserId());
-        describeVolumesType.getFilterSet( ).add( Filter.filter( "volume-id", detachingVolumeDeviceMap.keySet() ) );
+        describeVolumesType.getFilterSet( ).add( CloudFilters.filter( "volume-id", detachingVolumeDeviceMap.keySet() ) );
         DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.sendSync( configuration, describeVolumesType );
         if (describeVolumesResponseType != null && describeVolumesResponseType.getVolumeSet() != null) {
           for (Volume volume : describeVolumesResponseType.getVolumeSet()) {
@@ -853,7 +852,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
         boolean stillAttached = false;
         DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, newAction.info.getEffectiveUserId());
         if (!detachingVolumeDeviceMap.isEmpty()) {
-          describeVolumesType.getFilterSet().add(Filter.filter("volume-id", detachingVolumeDeviceMap.keySet()));
+          describeVolumesType.getFilterSet().add( CloudFilters.filter("volume-id", detachingVolumeDeviceMap.keySet()));
           DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.sendSync(configuration, describeVolumesType);
           if (describeVolumesResponseType != null && describeVolumesResponseType.getVolumeSet() != null) {
             for (Volume volume : describeVolumesResponseType.getVolumeSet()) {
@@ -917,7 +916,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
           Map<String, String> volumeStatusMap = Maps.newHashMap();
           Collection<String> volumeIds = attachingVolumeDeviceMap.keySet();
           DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, newAction.info.getEffectiveUserId());
-          describeVolumesType.getFilterSet( ).add( Filter.filter( "volume-id", volumeIds ) );
+          describeVolumesType.getFilterSet( ).add( CloudFilters.filter( "volume-id", volumeIds ) );
           DescribeVolumesResponseType describeVolumesResponseType = AsyncRequests.sendSync( configuration, describeVolumesType );
           for (Volume volume : describeVolumesResponseType.getVolumeSet()) {
             for (AttachedVolume attachedVolume : volume.getAttachmentSet()) {
@@ -1035,7 +1034,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
         AWSEC2InstanceResourceAction newAction = (AWSEC2InstanceResourceAction) newResourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, newAction.info.getEffectiveUserId());
-        describeInstancesType.getFilterSet().add(Filter.filter("instance-id", newAction.info.getPhysicalResourceId()));
+        describeInstancesType.getFilterSet().add( CloudFilters.filter("instance-id", newAction.info.getPhysicalResourceId()));
         DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync(configuration, describeInstancesType);
         if (describeInstancesResponseType.getReservationSet().size() == 0) throw new ValidationErrorException("Instance " + newAction.info.getPhysicalResourceId() + " not found.");
         if ("terminated".equals(describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0).getStateName())) {
@@ -1058,7 +1057,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         // first lookup existing attributes
         DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, newAction.info.getEffectiveUserId());
-        describeInstancesType.getFilterSet().add(Filter.filter("instance-id", newAction.info.getPhysicalResourceId()));
+        describeInstancesType.getFilterSet().add( CloudFilters.filter("instance-id", newAction.info.getPhysicalResourceId()));
         DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync(configuration, describeInstancesType);
         if (describeInstancesResponseType.getReservationSet().size() == 0) {
           throw new ValidationErrorException("Instance " + newAction.info.getPhysicalResourceId() + " does not exist");
@@ -1301,7 +1300,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
     // This assumes everything is set, propertywise and attributewise
     ServiceConfiguration configuration = Topology.lookup(Compute.class);
     DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, info.getEffectiveUserId());
-    describeInstancesType.getFilterSet( ).add( Filter.filter( "instance-id", info.getPhysicalResourceId( ) ) );
+    describeInstancesType.getFilterSet( ).add( CloudFilters.filter( "instance-id", info.getPhysicalResourceId( ) ) );
     DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync( configuration, describeInstancesType );
     if (describeInstancesResponseType.getReservationSet().size() == 0) {
       return;
@@ -1456,8 +1455,8 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
   private static List<String> defaultSecurityGroupInVpcIfNullOrEmpty(ServiceConfiguration configuration, String vpcId, String effectiveUserId, List<String> groupIds) throws Exception {
     if (groupIds != null && !groupIds.isEmpty()) return groupIds;
     DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, effectiveUserId);
-    describeSecurityGroupsType.getFilterSet().add(Filter.filter("vpc-id", vpcId));
-    describeSecurityGroupsType.getFilterSet().add(Filter.filter("group-name", "default"));
+    describeSecurityGroupsType.getFilterSet().add( CloudFilters.filter("vpc-id", vpcId));
+    describeSecurityGroupsType.getFilterSet().add( CloudFilters.filter("group-name", "default"));
     DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.sendSync(configuration, describeSecurityGroupsType);
     if (describeSecurityGroupsResponseType == null || describeSecurityGroupsResponseType.getSecurityGroupInfo() == null ||
             describeSecurityGroupsResponseType.getSecurityGroupInfo().size() != 1) {

@@ -93,6 +93,7 @@ import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.DescribeInstancesResponseType;
 import com.eucalyptus.compute.common.DescribeInstancesType;
@@ -153,7 +154,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
   private static Map<String, String> getSubnetMap(Collection<String> instanceIds, String effectiveUserId) throws Exception {
     ServiceConfiguration configuration = Topology.lookup(Compute.class);
     DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, effectiveUserId);
-    describeInstancesType.getFilterSet( ).add( com.eucalyptus.compute.common.Filter.filter("instance-id", instanceIds));
+    describeInstancesType.getFilterSet( ).add( CloudFilters.filter("instance-id", instanceIds));
     DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync(configuration, describeInstancesType);
     Map<String, String> subnetMap = Maps.newHashMap();
     if (describeInstancesResponseType.getReservationSet() != null) {
@@ -335,18 +336,18 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
     UPDATE_CAPACITY {
       @Override
       public ResourceAction perform(final ResourceAction resourceAction) throws Exception {
-        final AWSAutoScalingAutoScalingGroupResourceAction action = 
+        final AWSAutoScalingAutoScalingGroupResourceAction action =
             (AWSAutoScalingAutoScalingGroupResourceAction) resourceAction;
         final ServiceConfiguration configuration = Topology.lookup(AutoScaling.class);
-        final UpdateAutoScalingGroupType updateAutoScalingGroupType = 
+        final UpdateAutoScalingGroupType updateAutoScalingGroupType =
             MessageHelper.createMessage(UpdateAutoScalingGroupType.class, action.info.getEffectiveUserId());
         updateAutoScalingGroupType.setAutoScalingGroupName(action.info.getPhysicalResourceId());
         updateAutoScalingGroupType.setDesiredCapacity(action.properties.getDesiredCapacity());
         updateAutoScalingGroupType.setMaxSize(action.properties.getMaxSize());
         updateAutoScalingGroupType.setMinSize(action.properties.getMinSize());
         sendSyncWithRetryOnScalingEvent(configuration, updateAutoScalingGroupType);
-        return action;      
-      }      
+        return action;
+      }
     },
     CHECK_SIGNALS {
       @Override
@@ -1294,7 +1295,7 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
       Map<String, String> stateMap = Maps.newHashMap();
       ServiceConfiguration configuration = Topology.lookup(Compute.class);
       DescribeInstancesType describeInstancesType = MessageHelper.createMessage(DescribeInstancesType.class, effectiveUserId);
-      describeInstancesType.getFilterSet( ).add( com.eucalyptus.compute.common.Filter.filter("instance-id", instanceIds));
+      describeInstancesType.getFilterSet( ).add( CloudFilters.filter("instance-id", instanceIds));
       DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.sendSync(configuration, describeInstancesType);
       if (describeInstancesResponseType.getReservationSet() != null) {
         for (ReservationInfoType reservationInfoType: describeInstancesResponseType.getReservationSet()) {

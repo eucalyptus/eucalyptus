@@ -1134,7 +1134,7 @@ public class EucalyptusActivityTasks {
 		DescribeImagesType getRequest(){
 			final DescribeImagesType req = new DescribeImagesType();
 			if(this.imageIds!=null && this.imageIds.size()>0){
-				req.setFilterSet( Lists.newArrayList( Filter.filter( "image-id", this.imageIds ) ) );
+				req.setFilterSet( Lists.newArrayList( CloudFilters.filter( "image-id", this.imageIds ) ) );
 			}
 			return req;
 		}
@@ -2661,7 +2661,7 @@ public class EucalyptusActivityTasks {
 	}
 
 	private static Filter filter( final String name, final Iterable<String> values ) {
-		return Filter.filter( name, values );
+		return CloudFilters.filter( name, values );
 	}
 
 	private abstract class EucalyptusActivityTask <TM extends BaseMessage, TC extends ComponentId>{

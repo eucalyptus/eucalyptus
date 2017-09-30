@@ -45,12 +45,12 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AssociateDhcpOptionsResponseType;
 import com.eucalyptus.compute.common.AssociateDhcpOptionsType;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.DescribeDhcpOptionsResponseType;
 import com.eucalyptus.compute.common.DescribeDhcpOptionsType;
 import com.eucalyptus.compute.common.DescribeVpcsResponseType;
 import com.eucalyptus.compute.common.DescribeVpcsType;
-import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 
@@ -91,7 +91,7 @@ public class AWSEC2VPCDHCPOptionsAssociationResourceAction extends StepBasedReso
         // Check dhcp options (if not "default")
         if (!"default".equals(action.properties.getDhcpOptionsId())) {
           DescribeDhcpOptionsType describeDhcpOptionsType = MessageHelper.createMessage(DescribeDhcpOptionsType.class, action.info.getEffectiveUserId());
-          describeDhcpOptionsType.getFilterSet( ).add( Filter.filter( "dhcp-options-id", action.properties.getDhcpOptionsId( ) ) );
+          describeDhcpOptionsType.getFilterSet( ).add( CloudFilters.filter( "dhcp-options-id", action.properties.getDhcpOptionsId( ) ) );
           DescribeDhcpOptionsResponseType describeDhcpOptionsResponseType = AsyncRequests.sendSync( configuration, describeDhcpOptionsType );
           if (describeDhcpOptionsResponseType.getDhcpOptionsSet() == null ||
               describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem() == null ||
@@ -101,7 +101,7 @@ public class AWSEC2VPCDHCPOptionsAssociationResourceAction extends StepBasedReso
         }
         // check vpc
         DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, action.info.getEffectiveUserId());
-        describeVpcsType.getFilterSet( ).add( Filter.filter( "vpc-id", action.properties.getVpcId( ) ) );
+        describeVpcsType.getFilterSet( ).add( CloudFilters.filter( "vpc-id", action.properties.getVpcId( ) ) );
         DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.sendSync( configuration, describeVpcsType );
         if (describeVpcsResponseType.getVpcSet() == null ||
             describeVpcsResponseType.getVpcSet().getItem() == null ||
@@ -137,7 +137,7 @@ public class AWSEC2VPCDHCPOptionsAssociationResourceAction extends StepBasedReso
         // Check dhcp options (if not "default")
         if (!"default".equals(action.properties.getDhcpOptionsId())) {
           DescribeDhcpOptionsType describeDhcpOptionsType = MessageHelper.createMessage(DescribeDhcpOptionsType.class, action.info.getEffectiveUserId());
-          describeDhcpOptionsType.getFilterSet( ).add( Filter.filter( "dhcp-options-id", action.properties.getDhcpOptionsId() ) );
+          describeDhcpOptionsType.getFilterSet( ).add( CloudFilters.filter( "dhcp-options-id", action.properties.getDhcpOptionsId() ) );
           DescribeDhcpOptionsResponseType describeDhcpOptionsResponseType = AsyncRequests.sendSync( configuration, describeDhcpOptionsType);
           if (describeDhcpOptionsResponseType.getDhcpOptionsSet() == null ||
               describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem() == null ||
@@ -147,7 +147,7 @@ public class AWSEC2VPCDHCPOptionsAssociationResourceAction extends StepBasedReso
         }
         // check vpc
         DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, action.info.getEffectiveUserId());
-        describeVpcsType.getFilterSet( ).add( Filter.filter( "vpc-id", action.properties.getVpcId( ) ) );
+        describeVpcsType.getFilterSet( ).add( CloudFilters.filter( "vpc-id", action.properties.getVpcId( ) ) );
         DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.sendSync(configuration, describeVpcsType);
         if (describeVpcsResponseType.getVpcSet() == null ||
             describeVpcsResponseType.getVpcSet().getItem() == null ||
@@ -179,7 +179,7 @@ public class AWSEC2VPCDHCPOptionsAssociationResourceAction extends StepBasedReso
         // Check dhcp options (if not "default")
         if (!"default".equals(newAction.properties.getDhcpOptionsId())) {
           DescribeDhcpOptionsType describeDhcpOptionsType = MessageHelper.createMessage(DescribeDhcpOptionsType.class, newAction.info.getEffectiveUserId());
-          describeDhcpOptionsType.getFilterSet( ).add( Filter.filter( "dhcp-options-id", newAction.properties.getDhcpOptionsId( ) ) );
+          describeDhcpOptionsType.getFilterSet( ).add( CloudFilters.filter( "dhcp-options-id", newAction.properties.getDhcpOptionsId( ) ) );
           DescribeDhcpOptionsResponseType describeDhcpOptionsResponseType = AsyncRequests.sendSync( configuration, describeDhcpOptionsType );
           if (describeDhcpOptionsResponseType.getDhcpOptionsSet() == null ||
             describeDhcpOptionsResponseType.getDhcpOptionsSet().getItem() == null ||
@@ -189,7 +189,7 @@ public class AWSEC2VPCDHCPOptionsAssociationResourceAction extends StepBasedReso
         }
         // check vpc
         DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, newAction.info.getEffectiveUserId());
-        describeVpcsType.getFilterSet( ).add( Filter.filter( "vpc-id", newAction.properties.getVpcId( ) ) );
+        describeVpcsType.getFilterSet( ).add( CloudFilters.filter( "vpc-id", newAction.properties.getVpcId( ) ) );
         DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.sendSync( configuration, describeVpcsType );
         if (describeVpcsResponseType.getVpcSet() == null ||
           describeVpcsResponseType.getVpcSet().getItem() == null ||

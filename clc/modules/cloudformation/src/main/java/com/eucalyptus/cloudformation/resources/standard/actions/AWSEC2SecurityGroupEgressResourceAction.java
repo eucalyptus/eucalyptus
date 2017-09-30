@@ -44,10 +44,10 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupEgressResponseType;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupEgressType;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
-import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.IpPermissionType;
 import com.eucalyptus.compute.common.RevokeSecurityGroupEgressResponseType;
 import com.eucalyptus.compute.common.RevokeSecurityGroupEgressType;
@@ -116,7 +116,7 @@ public class AWSEC2SecurityGroupEgressResourceAction extends StepBasedResourceAc
         action.validateProperties();
         // Make sure security group exists.
         DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, action.info.getEffectiveUserId());
-        describeSecurityGroupsType.setFilterSet( Lists.newArrayList( Filter.filter( "group-id", action.properties.getGroupId( ) ) ) );
+        describeSecurityGroupsType.setFilterSet( Lists.newArrayList( CloudFilters.filter( "group-id", action.properties.getGroupId( ) ) ) );
         DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.sendSync(configuration, describeSecurityGroupsType);
         ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
         boolean hasDefaultEgressRule = false;
@@ -185,7 +185,7 @@ public class AWSEC2SecurityGroupEgressResourceAction extends StepBasedResourceAc
         action.validateProperties();
         // Make sure security group exists.
         DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, action.info.getEffectiveUserId());
-        describeSecurityGroupsType.setFilterSet( Lists.newArrayList( Filter.filter( "group-id", action.properties.getGroupId( ) ) ) );
+        describeSecurityGroupsType.setFilterSet( Lists.newArrayList( CloudFilters.filter( "group-id", action.properties.getGroupId( ) ) ) );
         DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.sendSync(configuration, describeSecurityGroupsType);
         ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
         if (securityGroupItemTypeArrayList == null || securityGroupItemTypeArrayList.isEmpty()) {
@@ -210,7 +210,7 @@ public class AWSEC2SecurityGroupEgressResourceAction extends StepBasedResourceAc
         RevokeSecurityGroupEgressResponseType revokeSecurityGroupEgressResponseType = AsyncRequests.<RevokeSecurityGroupEgressType, RevokeSecurityGroupEgressResponseType> sendSync(configuration, revokeSecurityGroupEgressType);
         // do one last check, if there and no egress rules, re-add default rule
         DescribeSecurityGroupsType describeSecurityGroupsType2 = MessageHelper.createMessage(DescribeSecurityGroupsType.class, action.info.getEffectiveUserId());
-        describeSecurityGroupsType2.setFilterSet( Lists.newArrayList( Filter.filter( "group-id", action.properties.getGroupId( ) ) ) );
+        describeSecurityGroupsType2.setFilterSet( Lists.newArrayList( CloudFilters.filter( "group-id", action.properties.getGroupId( ) ) ) );
         DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType2 = AsyncRequests.sendSync(configuration, describeSecurityGroupsType);
         ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList2 = describeSecurityGroupsResponseType2.getSecurityGroupInfo();
         if (securityGroupItemTypeArrayList2 == null || securityGroupItemTypeArrayList2.isEmpty()) {

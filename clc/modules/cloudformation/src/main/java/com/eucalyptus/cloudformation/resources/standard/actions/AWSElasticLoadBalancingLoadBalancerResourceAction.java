@@ -52,12 +52,12 @@ import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
 import com.eucalyptus.compute.common.DescribeVpcsResponseType;
 import com.eucalyptus.compute.common.DescribeVpcsType;
-import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
 import com.eucalyptus.loadbalancing.common.msgs.AccessLog;
 import com.eucalyptus.loadbalancing.common.msgs.AddTagsResponseType;
@@ -868,7 +868,7 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends StepBased
       ServiceConfiguration ec2Configuration = Topology.lookup(Compute.class);
       if (loadBalancerDescription.getVpcId() == null) throw new ValidationErrorException("Can not set Security Groups in non-vpc mode");
       DescribeVpcsType describeVpcsType = MessageHelper.createMessage(DescribeVpcsType.class, newAction.info.getEffectiveUserId());
-      describeVpcsType.setFilterSet(Lists.newArrayList(Filter.filter("vpc-id", loadBalancerDescription.getVpcId())));
+      describeVpcsType.setFilterSet(Lists.newArrayList( CloudFilters.filter("vpc-id", loadBalancerDescription.getVpcId())));
       DescribeVpcsResponseType describeVpcsResponseType = AsyncRequests.sendSync(ec2Configuration, describeVpcsType);
       if (describeVpcsResponseType == null || describeVpcsResponseType.getVpcSet() == null || describeVpcsResponseType.getVpcSet().getItem() == null ||
               describeVpcsResponseType.getVpcSet().getItem().isEmpty()) {
@@ -880,8 +880,8 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends StepBased
         // value stolen from com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.SecurityGroupSetup.generateDefaultVPCSecurityGroupName
         String defaultVpcSecurityGroupName = String.format("default_elb_%s", UUID.nameUUIDFromBytes(loadBalancerDescription.getVpcId().getBytes(StandardCharsets.UTF_8)).toString());
         DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, newAction.info.getEffectiveUserId());
-        describeSecurityGroupsType.getFilterSet().add(Filter.filter("vpc-id", loadBalancerDescription.getVpcId()));
-        describeSecurityGroupsType.getFilterSet().add(Filter.filter("group-name", defaultVpcSecurityGroupName));
+        describeSecurityGroupsType.getFilterSet().add( CloudFilters.filter("vpc-id", loadBalancerDescription.getVpcId()));
+        describeSecurityGroupsType.getFilterSet().add( CloudFilters.filter("group-name", defaultVpcSecurityGroupName));
         DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.sendSync(ec2Configuration, describeSecurityGroupsType);
         if (describeSecurityGroupsResponseType != null && describeSecurityGroupsResponseType.getSecurityGroupInfo() != null &&
                 !describeSecurityGroupsResponseType.getSecurityGroupInfo().isEmpty()) {
@@ -896,8 +896,8 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends StepBased
       }
       if (!inDefaultVpcAndFoundElbSpecificGroup) {
         DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, newAction.info.getEffectiveUserId());
-        describeSecurityGroupsType.getFilterSet().add(Filter.filter("vpc-id", loadBalancerDescription.getVpcId()));
-        describeSecurityGroupsType.getFilterSet().add(Filter.filter("group-name", "default"));
+        describeSecurityGroupsType.getFilterSet().add( CloudFilters.filter("vpc-id", loadBalancerDescription.getVpcId()));
+        describeSecurityGroupsType.getFilterSet().add( CloudFilters.filter("group-name", "default"));
         DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.sendSync(ec2Configuration, describeSecurityGroupsType);
         if (describeSecurityGroupsResponseType != null && describeSecurityGroupsResponseType.getSecurityGroupInfo() != null &&
                 !describeSecurityGroupsResponseType.getSecurityGroupInfo().isEmpty()) {
@@ -1388,7 +1388,7 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends StepBased
                 }
               }
             }
-            
+
             Map<String, String> existingAttributes = Maps.newHashMap();
             if (existingPolicyDescription.getPolicyAttributeDescriptions() != null && existingPolicyDescription.getPolicyAttributeDescriptions().getMember() != null) {
               for (PolicyAttributeDescription policyAttributeDescription : existingPolicyDescription.getPolicyAttributeDescriptions().getMember()) {
