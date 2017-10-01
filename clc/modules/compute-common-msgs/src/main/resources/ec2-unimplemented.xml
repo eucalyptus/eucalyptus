@@ -27,7 +27,7 @@
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE.
 -->
-<binding force-classes="true" add-constructors="true">
+<binding>
   <mapping class="com.eucalyptus.compute.common.ReservedInstanceMessage" extends="com.eucalyptus.compute.common.ComputeMessage"
     abstract="true">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
@@ -105,13 +105,13 @@
     </structure>
   </mapping>
 
-  <mapping name="DescribeReservedInstancesModificationsResponse" 
+  <mapping name="DescribeReservedInstancesModificationsResponse"
            class="com.eucalyptus.compute.common.DescribeReservedInstancesModificationsResponseType"
            extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
     <structure name="reservedInstancesModificationsSet"/>
   </mapping>
 
-  <mapping name="DescribeReservedInstancesModifications" 
+  <mapping name="DescribeReservedInstancesModifications"
            class="com.eucalyptus.compute.common.DescribeReservedInstancesModificationsType"
            extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
     <structure name="reservedInstancesModificationIds" usage="optional">

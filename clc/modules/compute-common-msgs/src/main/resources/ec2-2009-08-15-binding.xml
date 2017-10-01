@@ -27,7 +27,7 @@
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE.
 -->
-<binding force-classes="true" add-constructors="true" xmlns:tns="http://ec2.amazonaws.com/doc/2009-08-15/" name="ec2_amazonaws_com_doc_2009_08_15">
+<binding xmlns:tns="http://ec2.amazonaws.com/doc/2009-08-15/" name="ec2_amazonaws_com_doc_2009_08_15">
   <namespace uri="http://ec2.amazonaws.com/doc/2009-08-15/" default="elements" />
   <include path="classpath:ec2-base.xml" />
   <include path="classpath:ec2-instances.xml" />

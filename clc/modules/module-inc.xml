@@ -348,7 +348,7 @@
 	<target name="do-jar" unless="jar.notRequired">
 		<echo message="[JARFILE] target/${ant.project.name}-${euca.version}.jar" />
 		<delete file="${jar.file}" />
-		<jar destfile="${jar.file}">
+		<jar destfile="${jar.file}" duplicate="preserve" level="9">
 			<fileset dir="${build.classes.dir}">
 				<include name="${jar.build.includes}" />
 				<exclude name="${jar.build.excludes}" />

@@ -27,7 +27,7 @@
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE.
 -->
-<binding force-classes="true" add-constructors="true">
+<binding>
 
   <mapping name="DeleteSecurityGroupResponse" class="com.eucalyptus.compute.common.DeleteSecurityGroupResponseType"
     extends="com.eucalyptus.compute.common.ComputeMessage">

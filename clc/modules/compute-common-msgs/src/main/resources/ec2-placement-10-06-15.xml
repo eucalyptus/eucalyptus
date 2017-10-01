@@ -27,7 +27,7 @@
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE.
 -->
-<binding force-classes="true" add-constructors="true">
+<binding>
   <mapping name="CreatePlacementGroup" class="com.eucalyptus.compute.common.CreatePlacementGroupType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
     <value name="groupName" field="groupName" usage="required" />

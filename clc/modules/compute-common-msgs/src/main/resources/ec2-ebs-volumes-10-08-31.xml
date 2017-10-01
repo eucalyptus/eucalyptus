@@ -27,7 +27,7 @@
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE.
 -->
-<binding force-classes="true" add-constructors="true">
+<binding>
     <!--2008-05-05-->
   <mapping abstract="true" class="com.eucalyptus.compute.common.Volume" ordered="false">
     <value name="volumeId" field="volumeId" usage="required" />
