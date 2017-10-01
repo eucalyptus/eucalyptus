@@ -60,7 +60,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import javaslang.collection.Stream;
+import io.vavr.collection.Stream;
 
 public class Components {
   private static Logger                                                 LOG        = Logger.getLogger( Components.class );

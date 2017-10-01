@@ -63,7 +63,7 @@ import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 /**
  *

@@ -29,12 +29,12 @@
 
 package com.eucalyptus.testing;
 
-import javaslang.control.Try.CheckedRunnable;
 
 import static org.junit.Assert.*;
 
 import java.util.Arrays;
 import java.util.function.Consumer;
+import io.vavr.CheckedRunnable;
 
 /**
  * Test assertion utilities.

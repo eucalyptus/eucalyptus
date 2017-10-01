@@ -25,7 +25,7 @@ import com.eucalyptus.cluster.common.msgs.VirtualBootRecord;
 import com.eucalyptus.cluster.common.msgs.VirtualBootRecordType;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-import javaslang.collection.Stream;
+import io.vavr.collection.Stream;
 
 /**
  * Track the root volume and any additional ephemeral/swap disks

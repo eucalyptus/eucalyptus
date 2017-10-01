@@ -59,9 +59,9 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheBuilderSpec;
 import com.google.common.io.BaseEncoding;
-import javaslang.Tuple;
-import javaslang.Tuple2;
-import javaslang.control.Option;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
+import io.vavr.control.Option;
 
 /**
  *

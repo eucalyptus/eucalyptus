@@ -39,7 +39,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 /**
  *

@@ -28,9 +28,9 @@ import com.eucalyptus.crypto.util.Timestamps;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
-import javaslang.Tuple;
-import javaslang.Tuple2;
-import javaslang.control.Option;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
+import io.vavr.control.Option;
 
 /**
  * 

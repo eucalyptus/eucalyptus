@@ -30,8 +30,8 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.util.Assert;
 import com.google.common.base.MoreObjects;
-import javaslang.collection.Stream;
-import javaslang.control.Option;
+import io.vavr.collection.Stream;
+import io.vavr.control.Option;
 
 /**
  *

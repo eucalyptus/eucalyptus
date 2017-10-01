@@ -253,7 +253,7 @@ import com.google.common.net.HttpHeaders;
 
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.SystemUtil;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 /**
  * Operation handler for the ObjectStorageGateway. Main point of entry This class handles user and system requests.

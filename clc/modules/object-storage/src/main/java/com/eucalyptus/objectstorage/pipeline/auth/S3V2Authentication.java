@@ -39,8 +39,6 @@ import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.google.common.base.Strings;
 
-import javaslang.control.Try.CheckedFunction;
-
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -48,6 +46,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import javax.security.auth.login.LoginException;
 
 import java.util.*;
+import io.vavr.CheckedFunction1;
 
 /**
  * S3 V2 specific authentication utilities.
@@ -72,7 +71,7 @@ final class S3V2Authentication {
     });
   }
 
-  static ObjectStorageWrappedCredentials credentialsFor(CheckedFunction<ExcludeFromSignature, ObjectStorageWrappedCredentials> credsFn,
+  static ObjectStorageWrappedCredentials credentialsFor(CheckedFunction1<ExcludeFromSignature, ObjectStorageWrappedCredentials> credsFn,
       ExcludeFromSignature exclude) throws S3Exception {
     try {
       return credsFn.apply(exclude);
@@ -86,7 +85,7 @@ final class S3V2Authentication {
    * Attempts a login and retries sign a signed string that does not contain a path or Content-Type if the initial attempt fails.
    */
   private static void login(MappingHttpRequest request, String accessKeyId,
-      CheckedFunction<ExcludeFromSignature, ObjectStorageWrappedCredentials> credsFn) throws S3Exception {
+                            CheckedFunction1<ExcludeFromSignature, ObjectStorageWrappedCredentials> credsFn) throws S3Exception {
     // Build credentials that includes path
     ObjectStorageWrappedCredentials creds = credentialsFor(credsFn, ExcludeFromSignature.NONE);
 

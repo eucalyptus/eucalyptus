@@ -118,8 +118,8 @@ import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.io.BaseEncoding;
-import javaslang.collection.Stream;
-import javaslang.control.Option;
+import io.vavr.collection.Stream;
+import io.vavr.control.Option;
 import org.apache.log4j.Logger;
 
 /**

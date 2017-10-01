@@ -54,7 +54,7 @@ import com.google.common.base.Function;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
-import javaslang.collection.Stream;
+import io.vavr.collection.Stream;
 
 /**
  *

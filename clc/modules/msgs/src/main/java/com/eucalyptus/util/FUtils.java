@@ -37,9 +37,9 @@ import javax.annotation.Nullable;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
-import javaslang.Tuple2;
-import javaslang.collection.Stream;
-import javaslang.Tuple;
+import io.vavr.Tuple2;
+import io.vavr.collection.Stream;
+import io.vavr.Tuple;
 
 /**
  * Functional utility methods

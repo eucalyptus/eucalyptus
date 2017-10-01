@@ -32,7 +32,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import com.eucalyptus.cluster.service.node.ClusterNode;
 import com.google.common.collect.Sets;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 /**
  *

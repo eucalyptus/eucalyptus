@@ -55,8 +55,8 @@ import javax.security.auth.callback.CallbackHandler;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.TimeUnit;
-import javaslang.Tuple;
-import javaslang.Tuple2;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 
 public class CredentialProxy implements Crypto {
 

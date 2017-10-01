@@ -32,8 +32,8 @@ import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Sets;
 import com.google.common.net.InetAddresses;
-import javaslang.Tuple;
-import javaslang.collection.Stream;
+import io.vavr.Tuple;
+import io.vavr.collection.Stream;
 
 /**
  *

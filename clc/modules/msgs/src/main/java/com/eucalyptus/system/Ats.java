@@ -53,7 +53,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 /**
  * A builder-like utility for interrogating the {@link Annotation}s that may be present on instances

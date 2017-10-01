@@ -55,7 +55,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Pair;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 @ChannelHandler.Sharable
 public class SoapHandler extends MessageStackHandler {

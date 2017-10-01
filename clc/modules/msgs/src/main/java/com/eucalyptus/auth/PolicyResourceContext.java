@@ -38,8 +38,8 @@ import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
-import javaslang.Tuple;
-import javaslang.Tuple2;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 
 /**
  *

@@ -40,7 +40,7 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.util.async.AsyncProxy;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import javaslang.collection.Stream;
+import io.vavr.collection.Stream;
 
 /**
  *

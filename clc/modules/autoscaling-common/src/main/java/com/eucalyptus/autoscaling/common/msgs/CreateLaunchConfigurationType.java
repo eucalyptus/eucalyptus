@@ -18,7 +18,7 @@ package com.eucalyptus.autoscaling.common.msgs;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import com.eucalyptus.autoscaling.common.AutoScalingMessageValidation;
-import javaslang.collection.Stream;
+import io.vavr.collection.Stream;
 
 public class CreateLaunchConfigurationType extends AutoScalingMessage {
 

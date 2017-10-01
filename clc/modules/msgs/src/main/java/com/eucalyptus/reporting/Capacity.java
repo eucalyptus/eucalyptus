@@ -45,7 +45,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
-import javaslang.collection.Stream;
+import io.vavr.collection.Stream;
 
 /**
  * Track the latest capacity information from events preserving dimensions.

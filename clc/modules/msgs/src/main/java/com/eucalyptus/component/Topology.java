@@ -111,7 +111,7 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import javaslang.collection.Stream;
+import io.vavr.collection.Stream;
 
 
 @ConfigurableClass( root = "bootstrap.topology",

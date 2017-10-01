@@ -49,10 +49,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import groovy.lang.GroovyObject;
 import groovy.lang.MetaClass;
-import javaslang.Function1;
-import javaslang.Predicates;
-import javaslang.collection.Stream;
-import javaslang.control.Option;
+import io.vavr.Function1;
+import io.vavr.Predicates;
+import io.vavr.collection.Stream;
+import io.vavr.control.Option;
 
 /**
  * Utility class for JSON processing with Jackson.

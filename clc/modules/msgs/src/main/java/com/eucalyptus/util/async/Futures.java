@@ -80,7 +80,7 @@ import com.google.common.collect.Maps;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.emptyArray;
 import static org.hamcrest.Matchers.not;
-import javaslang.control.Either;
+import io.vavr.control.Either;
 
 public class Futures {
   private static Logger LOG = Logger.getLogger( Futures.class );

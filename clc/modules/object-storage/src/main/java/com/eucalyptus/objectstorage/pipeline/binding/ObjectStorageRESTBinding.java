@@ -140,7 +140,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import javaslang.Tuple2;
+import io.vavr.Tuple2;
 
 public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
   protected static Logger LOG = Logger.getLogger(ObjectStorageRESTBinding.class);

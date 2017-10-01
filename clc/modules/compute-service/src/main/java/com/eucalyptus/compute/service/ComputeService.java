@@ -166,7 +166,7 @@ import com.google.common.collect.TreeMultimap;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.BaseMessages;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 
 /**

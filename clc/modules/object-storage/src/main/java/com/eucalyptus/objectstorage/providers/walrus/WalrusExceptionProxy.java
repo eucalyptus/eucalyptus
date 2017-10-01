@@ -4,7 +4,7 @@ import java.beans.PropertyDescriptor;
 import java.util.List;
 import org.springframework.beans.BeanUtils;
 import com.eucalyptus.BaseException;
-import javaslang.collection.Stream;
+import io.vavr.collection.Stream;
 
 /**
  * Based on CompositeHelper

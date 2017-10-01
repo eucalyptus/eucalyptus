@@ -30,7 +30,7 @@ package com.eucalyptus.tokens.oidc
 
 import static org.junit.Assert.*
 
-import javaslang.control.Option
+import io.vavr.control.Option
 import org.junit.Test
 
 /**

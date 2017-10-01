@@ -36,7 +36,7 @@ import com.eucalyptus.util.Parameters;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 /**
  * The body for an OIDC id token.

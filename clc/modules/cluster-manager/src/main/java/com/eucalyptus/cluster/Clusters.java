@@ -44,7 +44,7 @@ import java.util.NoSuchElementException;
 import com.eucalyptus.cluster.common.Cluster;
 import com.eucalyptus.cluster.common.ClusterRegistry;
 import com.eucalyptus.component.ServiceConfiguration;
-import javaslang.collection.Stream;
+import io.vavr.collection.Stream;
 
 /**
  *

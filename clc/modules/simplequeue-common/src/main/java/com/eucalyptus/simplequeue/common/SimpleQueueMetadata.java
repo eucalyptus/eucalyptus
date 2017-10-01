@@ -36,7 +36,7 @@ import com.eucalyptus.auth.type.RestrictedType;
 import com.eucalyptus.simplequeue.common.policy.SimpleQueuePolicySpec;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Strings;
-import javaslang.collection.Stream;
+import io.vavr.collection.Stream;
 
 /**
  * Created by ethomas on 10/22/14.

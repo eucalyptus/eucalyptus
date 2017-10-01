@@ -22,7 +22,7 @@ import javax.annotation.Nullable;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.util.Assert;
 import com.google.common.base.MoreObjects;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 /**
  *

@@ -40,8 +40,8 @@
 package com.eucalyptus.cluster.common;
 
 import com.eucalyptus.event.AbstractNamedRegistry;
-import javaslang.collection.Stream;
-import javaslang.control.Option;
+import io.vavr.collection.Stream;
+import io.vavr.control.Option;
 
 public class ClusterRegistry extends AbstractNamedRegistry<Cluster> {
   private static ClusterRegistry singleton = getInstance( );

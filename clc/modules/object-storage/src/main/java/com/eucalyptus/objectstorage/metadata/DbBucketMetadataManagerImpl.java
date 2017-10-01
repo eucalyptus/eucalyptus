@@ -65,7 +65,7 @@ import com.eucalyptus.objectstorage.util.ObjectStorageProperties.VersioningStatu
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 /**
  * Three types of failures on a metadata operation: IllegalResourceState - entity is not in a state where the update is a valid change (e.g.

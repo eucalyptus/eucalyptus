@@ -19,7 +19,7 @@ import java.util.ArrayList;
 import java.util.NoSuchElementException;
 import com.eucalyptus.binding.HttpEmbedded;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
-import javaslang.collection.Stream;
+import io.vavr.collection.Stream;
 
 public class VmTypeInfo extends EucalyptusData implements Cloneable {
 

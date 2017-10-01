@@ -54,7 +54,7 @@ import javax.crypto.spec.SecretKeySpec;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.CompatFunction;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import com.eucalyptus.auth.login.AuthenticationException;

@@ -103,9 +103,9 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.ObjectArrays;
-import javaslang.Tuple;
-import javaslang.Tuple2;
-import javaslang.collection.Stream;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
+import io.vavr.collection.Stream;
 
 public class ServiceTransitions {
   static Logger                                     LOG   = Logger.getLogger( ServiceTransitions.class );

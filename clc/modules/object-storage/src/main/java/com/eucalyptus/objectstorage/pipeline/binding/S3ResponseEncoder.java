@@ -30,7 +30,7 @@ package com.eucalyptus.objectstorage.pipeline.binding;
 
 import java.io.IOException;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageResponseType;
-import javaslang.Tuple2;
+import io.vavr.Tuple2;
 
 /**
  *

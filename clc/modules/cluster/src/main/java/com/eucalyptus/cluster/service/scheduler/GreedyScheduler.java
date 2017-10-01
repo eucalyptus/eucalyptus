@@ -30,8 +30,8 @@ package com.eucalyptus.cluster.service.scheduler;
 
 import com.eucalyptus.cluster.service.node.ClusterNode;
 import com.eucalyptus.cluster.service.vm.ClusterVmType;
-import javaslang.collection.Stream;
-import javaslang.control.Option;
+import io.vavr.collection.Stream;
+import io.vavr.control.Option;
 
 /**
  *

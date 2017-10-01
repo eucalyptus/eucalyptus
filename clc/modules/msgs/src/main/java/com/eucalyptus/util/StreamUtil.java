@@ -15,7 +15,7 @@
  ************************************************************************/
 package com.eucalyptus.util;
 
-import javaslang.collection.Stream;
+import io.vavr.collection.Stream;
 
 /**
  *

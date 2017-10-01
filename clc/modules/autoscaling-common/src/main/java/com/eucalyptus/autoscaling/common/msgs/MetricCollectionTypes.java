@@ -18,7 +18,7 @@ package com.eucalyptus.autoscaling.common.msgs;
 import java.util.ArrayList;
 import java.util.Collection;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
-import javaslang.collection.Stream;
+import io.vavr.collection.Stream;
 
 public class MetricCollectionTypes extends EucalyptusData {
 

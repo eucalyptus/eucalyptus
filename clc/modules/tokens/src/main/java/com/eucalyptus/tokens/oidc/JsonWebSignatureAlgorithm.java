@@ -52,7 +52,7 @@ import org.apache.xml.security.algorithms.implementations.SignatureECDSA;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.google.common.collect.Maps;
 import com.google.common.io.BaseEncoding;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 /**
  *

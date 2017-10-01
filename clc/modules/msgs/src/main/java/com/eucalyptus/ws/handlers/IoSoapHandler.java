@@ -56,7 +56,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 /**
  * SOAP object model handler

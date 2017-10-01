@@ -39,10 +39,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import javaslang.collection.Seq;
-import javaslang.collection.Stream;
-import javaslang.control.Option;
-import javaslang.control.Try;
+import io.vavr.collection.Seq;
+import io.vavr.collection.Stream;
+import io.vavr.control.Option;
+import io.vavr.control.Try;
 
 /**
  * JSON Web Key (JWK)
@@ -59,9 +59,11 @@ public class JsonWebKeySet {
       return new JsonWebKeySet(
           Try.sequence( Stream.ofAll( Json.objectList( keys, "keys" ) ).map( JsonWebKeySet::fromJson ) ).get( )
       );
-    } catch ( final Try.NonFatalException e ) {
-      throw new OidcParseException( "Invalid json web key set: " + e.getCause( ).getMessage( ), e.getCause( ) );
-    } catch ( final IOException e ) {
+//TODO: restore this once vavr change reverted : https://github.com/vavr-io/vavr/issues/2049
+//    } catch ( final Try.NonFatalException e ) {
+//      throw new OidcParseException( "Invalid json web key set: " + e.getCause( ).getMessage( ), e.getCause( ) );
+//    } catch ( final IOException e ) {
+    } catch ( final Throwable e ) {
       throw new OidcParseException( "Invalid json web key set: " + e.getMessage( ), e );
     }
   }

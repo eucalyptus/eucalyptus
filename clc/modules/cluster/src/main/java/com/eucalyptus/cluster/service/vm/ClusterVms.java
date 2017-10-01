@@ -26,8 +26,8 @@ import com.eucalyptus.cluster.common.msgs.VmInfo;
 import com.eucalyptus.cluster.common.msgs.VmTypeInfo;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import javaslang.Tuple2;
-import javaslang.collection.Stream;
+import io.vavr.Tuple2;
+import io.vavr.collection.Stream;
 
 /**
  *

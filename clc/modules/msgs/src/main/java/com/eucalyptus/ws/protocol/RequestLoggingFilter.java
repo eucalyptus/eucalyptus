@@ -33,7 +33,7 @@ import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.Strings;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
-import javaslang.collection.List;
+import io.vavr.collection.List;
 
 /**
  *

@@ -67,9 +67,6 @@ dependencies {
   api 'commons-pool:commons-pool:1.6'
   api 'dnsjava:dnsjava:2.1.8' // 2.1.4
   runtimeOnly 'dom4j:dom4j:1.6.1'
-  api('io.javaslang:javaslang:2.0.2') {
-    exclude module: 'javaslang-match' // optional dependency
-  }
   api 'io.netty:netty-buffer:4.0.37.Final'
   api 'io.netty:netty-codec-http:4.0.37.Final'
   api 'io.netty:netty-codec:4.0.37.Final'
@@ -77,6 +74,9 @@ dependencies {
   api 'io.netty:netty-handler:4.0.37.Final'
   api 'io.netty:netty:3.6.6.Final'
   api 'io.netty:netty-transport:4.0.37.Final'
+  api('io.vavr:vavr:0.9.0') {
+    exclude module: 'vavr-match' // optional dependency
+  }
   api 'javax.inject:javax.inject:1'
   api 'jaxen:jaxen:1.1.4'
   api 'joda-time:joda-time:2.9.6'

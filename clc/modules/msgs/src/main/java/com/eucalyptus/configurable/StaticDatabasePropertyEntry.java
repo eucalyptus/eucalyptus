@@ -64,8 +64,8 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import javaslang.Tuple;
-import javaslang.Tuple3;
+import io.vavr.Tuple;
+import io.vavr.Tuple3;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_config" )

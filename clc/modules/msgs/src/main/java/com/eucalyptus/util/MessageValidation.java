@@ -27,8 +27,8 @@ import javax.annotation.Nonnull;
 import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.system.Ats;
 import com.google.common.base.CaseFormat;
-import javaslang.Tuple2;
-import javaslang.collection.Stream;
+import io.vavr.Tuple2;
+import io.vavr.collection.Stream;
 
 /**
  *
@@ -63,9 +63,9 @@ public class MessageValidation {
           !( value instanceof Iterable ) && !regex.matcher( String.valueOf( value ) ).matches( ) ) {
         errorMap.put( displayName, "'" + String.valueOf( value ) + "' for parameter " + displayName + " is invalid" );
       } else if ( regex != null && value instanceof Iterable ) {
-        for ( final Tuple2<?, Long> itemAndIndex : Stream.ofAll( (Iterable<?>) value ).zipWithIndex( ) ) {
+        for ( final Tuple2<?, Integer> itemAndIndex : Stream.ofAll( (Iterable<?>) value ).zipWithIndex( ) ) {
           Object item = itemAndIndex._1;
-          long index = itemAndIndex._2;
+          int index = itemAndIndex._2;
           if ( !regex.matcher( String.valueOf( item ) ).matches( ) ) {
             errorMap.put(
                 displayName + "." + ( index + 1 ),
@@ -98,9 +98,9 @@ public class MessageValidation {
       if ( validationAssistant.validate( value ) ) {
         validateRecursively( errorMap, validationAssistant, displayName + ".", value );
       } else if ( value instanceof Iterable ) {
-        for ( final Tuple2<?, Long> itemAndIndex : Stream.ofAll( (Iterable<?>) value ).zipWithIndex( ) ) {
+        for ( final Tuple2<?, Integer> itemAndIndex : Stream.ofAll( (Iterable<?>) value ).zipWithIndex( ) ) {
           Object item = itemAndIndex._1;
-          long index = itemAndIndex._2;
+          int index = itemAndIndex._2;
           if ( validationAssistant.validate( item ) ) {
             validateRecursively( errorMap, validationAssistant, displayName + "." + ( index + 1 ) + ".", item );
           }

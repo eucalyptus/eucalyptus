@@ -73,8 +73,8 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
-import javaslang.collection.Stream;
-import javaslang.control.Option;
+import io.vavr.collection.Stream;
+import io.vavr.control.Option;
 
 @ConfigurableClass( root = "dns.ns",
                     description = "Options controlling DNS name resolution for the system's nameservers." )

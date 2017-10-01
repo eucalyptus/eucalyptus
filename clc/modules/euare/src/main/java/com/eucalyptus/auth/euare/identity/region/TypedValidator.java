@@ -24,8 +24,8 @@ import org.springframework.validation.Validator;
 import com.google.common.base.CaseFormat;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
-import javaslang.Tuple2;
-import javaslang.collection.Stream;
+import io.vavr.Tuple2;
+import io.vavr.collection.Stream;
 
 /**
  *
@@ -91,9 +91,9 @@ abstract class TypedValidator<T> implements Validator {
 
   public void validateAll( NamedProperty<List<?>> namedProperty, Validator validator ) {
     final String field = toFieldName( namedProperty.getMethod( ) );
-    for ( Tuple2<?, Long> itemAndIndex : Stream.ofAll( MoreObjects.firstNonNull( namedProperty.get( ), Collections.emptyList( ) ) ).zipWithIndex( ) ) {
+    for ( Tuple2<?, Integer> itemAndIndex : Stream.ofAll( MoreObjects.firstNonNull( namedProperty.get( ), Collections.emptyList( ) ) ).zipWithIndex( ) ) {
       Object target = itemAndIndex._1;
-      final Long index = itemAndIndex._2;
+      final Integer index = itemAndIndex._2;
       try {
         getErrors( ).pushNestedPath( field + "[" + String.valueOf( index ) + "]" );
         ValidationUtils.invokeValidator( validator, target, getErrors( ) );

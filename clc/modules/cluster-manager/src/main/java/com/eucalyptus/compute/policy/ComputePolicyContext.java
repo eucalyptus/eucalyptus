@@ -36,8 +36,8 @@ import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.internal.blockstorage.Snapshots;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
-import javaslang.Tuple;
-import javaslang.Tuple3;
+import io.vavr.Tuple;
+import io.vavr.Tuple3;
 
 /**
  *

@@ -32,8 +32,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import com.eucalyptus.objectstorage.msgs.GetBucketPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageResponseType;
-import javaslang.Tuple;
-import javaslang.Tuple2;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 
 /**
  *

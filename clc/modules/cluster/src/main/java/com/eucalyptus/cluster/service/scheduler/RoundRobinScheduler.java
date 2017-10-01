@@ -34,8 +34,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import com.eucalyptus.cluster.service.node.ClusterNode;
 import com.eucalyptus.cluster.service.vm.ClusterVmType;
 import com.google.common.collect.Lists;
-import javaslang.collection.Stream;
-import javaslang.control.Option;
+import io.vavr.collection.Stream;
+import io.vavr.control.Option;
 
 /**
  *

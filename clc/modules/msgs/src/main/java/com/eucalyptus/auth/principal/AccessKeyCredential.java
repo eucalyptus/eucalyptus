@@ -35,7 +35,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
 import com.eucalyptus.util.Parameters;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 /**
  *

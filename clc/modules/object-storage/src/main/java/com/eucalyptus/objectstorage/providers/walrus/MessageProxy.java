@@ -8,7 +8,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.util.ReflectionUtils;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import javaslang.collection.Stream;
+import io.vavr.collection.Stream;
 
 /**
  * Based on CompositeHelper

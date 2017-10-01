@@ -34,8 +34,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import com.eucalyptus.cluster.service.vm.ClusterVm;
 import com.google.common.collect.Maps;
-import javaslang.collection.Stream;
-import javaslang.control.Option;
+import io.vavr.collection.Stream;
+import io.vavr.control.Option;
 
 /**
  *

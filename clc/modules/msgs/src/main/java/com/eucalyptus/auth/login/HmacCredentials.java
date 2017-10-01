@@ -56,7 +56,7 @@ import com.eucalyptus.ws.util.HmacUtils;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.collect.Iterables;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 public class HmacCredentials extends WrappedCredentials<String> {
   private final HmacUtils.SignatureVariant variant;    
