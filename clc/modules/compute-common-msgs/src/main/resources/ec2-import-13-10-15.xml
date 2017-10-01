@@ -167,7 +167,7 @@
   </mapping>
   <mapping class="com.eucalyptus.compute.common.DiskImageVolumeDescription" abstract="true">
     <value name="size" field="size" usage="required" />
-    <value name="id" field="id" usage="required" />
+    <value name="id" field="id" usage="optional" />
   </mapping>
   <mapping class="com.eucalyptus.compute.common.DiskImageDescription" abstract="true">
     <value name="format" field="format" usage="required" />
