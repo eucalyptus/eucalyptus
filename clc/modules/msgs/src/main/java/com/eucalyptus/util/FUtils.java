@@ -40,6 +40,7 @@ import com.google.common.base.Optional;
 import io.vavr.Tuple2;
 import io.vavr.collection.Stream;
 import io.vavr.Tuple;
+import io.vavr.control.Option;
 
 /**
  * Functional utility methods
@@ -66,6 +67,15 @@ public class FUtils {
       final java.util.function.Function<? super I, R> f2
   ) {
     return f2.compose( f1 );
+  }
+
+  /**
+   * Negate a predicate, useful for method reference inversion.
+   */
+  public static <T> java.util.function.Predicate<T> negate(
+      final java.util.function.Predicate<T> p
+  ) {
+    return p.negate( );
   }
 
   /**
@@ -174,6 +184,12 @@ public class FUtils {
         return Optional.absent( );
       }
     };
+  }
+
+  public static <T,R> CompatFunction<T,Option<R>> vOption(
+      final java.util.function.Function<T,Optional<R>> function
+  ) {
+    return t -> Option.of( function.apply( t ).orNull( ) );
   }
 
   /**

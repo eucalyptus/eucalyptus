@@ -28,8 +28,10 @@
  ************************************************************************/
 package com.eucalyptus.util;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
+import java.util.function.Supplier;
 import groovy.lang.Closure;
 
 /**
@@ -81,7 +83,15 @@ public class LockResource implements AutoCloseable {
     } finally {
       lock.unlock( );
     }
+  }
 
+  public static <V> V withLock( Lock lock, Supplier<V> supplier ) {
+    lock.lock( );
+    try {
+      return supplier.get( );
+    } finally {
+      lock.unlock( );
+    }
   }
 
   public boolean isLocked( ) {
