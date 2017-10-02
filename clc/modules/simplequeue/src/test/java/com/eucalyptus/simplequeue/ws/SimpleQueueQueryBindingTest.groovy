@@ -171,6 +171,12 @@ class SimpleQueueQueryBindingTest extends QueryBindingTestSupport {
   }
 
   @Test
+  void testInternalRoundTrip() {
+    URL resource = SimpleQueueQueryBindingTest.getResource('/simplequeue-binding.xml')
+    assertValidInternalRoundTrip( resource )
+  }
+
+  @Test
   void testAddPermission() {
     SimpleQueueQueryBinding mb = getSimpleQueueQueryBinding()
     Object bean;

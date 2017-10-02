@@ -42,4 +42,9 @@ class IdentityBindingTest extends QueryBindingTestSupport {
     assertValidBindingXml( resource )
   }
 
+  @Test
+  void testInternalRoundTrip() {
+    URL resource = IdentityBindingTest.getResource('/identity-binding.xml')
+    assertValidInternalRoundTrip( resource )
+  }
 }

@@ -53,6 +53,12 @@ class ImagingQueryBindingTest extends QueryBindingTestSupport {
   }
 
   @Test
+  void testInternalRoundTrip() {
+    URL resource = ImagingQueryBindingTest.getResource('/imaging-binding.xml')
+    assertValidInternalRoundTrip( resource )
+  }
+
+  @Test
   void testMessageQueryBindings() {
     URL resource = ImagingQueryBindingTest.class.getResource( '/imaging-binding.xml' )
     ImagingQueryBinding iqb = new ImagingQueryBinding() {

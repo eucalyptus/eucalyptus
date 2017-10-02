@@ -28,7 +28,6 @@
  ************************************************************************/
 package com.eucalyptus.cluster.service;
 
-import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.ArrayList;
@@ -36,18 +35,17 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
-import javax.xml.bind.JAXBContext;
 import org.apache.log4j.Logger;
-import com.eucalyptus.cluster.common.broadcast.NIInstance;
-import com.eucalyptus.cluster.common.broadcast.NIProperty;
-import com.eucalyptus.cluster.common.broadcast.NetworkInfo;
+import com.eucalyptus.cluster.common.broadcast.BNI;
+import com.eucalyptus.cluster.common.broadcast.BNIInstance;
+import com.eucalyptus.cluster.common.broadcast.BNIProperty;
+import com.eucalyptus.cluster.common.broadcast.BNetworkInfo;
 import com.eucalyptus.cluster.common.msgs.BroadcastNetworkInfoResponseType;
 import com.eucalyptus.cluster.common.msgs.BroadcastNetworkInfoType;
 import com.eucalyptus.cluster.common.msgs.ClusterAttachVolumeResponseType;
@@ -134,7 +132,6 @@ import com.eucalyptus.util.Assert;
 import com.eucalyptus.util.FUtils;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.vavr.Tuple;
@@ -197,26 +194,27 @@ public class ClusterServiceImpl implements ClusterService, ClusterEmpyreanServic
       if ( ( lastVersion == null || !lastVersion.equals( request.getVersion( ) ) ) &&
           lastBroadcastVersion.compareAndSet( lastVersion, request.getVersion( ) ) ) {
         final String infoText = new String( B64.standard.dec( request.getNetworkInfo( ) ), StandardCharsets.UTF_8 );
-        final JAXBContext jc = JAXBContext.newInstance( NetworkInfo.class.getPackage( ).getName( ) );
-        final NetworkInfo info = (NetworkInfo) jc.createUnmarshaller( ).unmarshal( new StringReader( infoText ) );
-        final Optional<NIProperty> property = info.getConfiguration( ).getProperties( ).stream( )
-                .filter( prop -> "mode".equals( prop.getName( ) ) )
-                .findFirst( );
-        final String networkMode = property.map( prop -> Iterables.get( prop.getValues( ), 0 ) ).orElse( "EDGE" );
+        final BNetworkInfo info = BNI.parse( infoText );
+        final String networkMode = info.configuration( ).properties( )
+                .filter( prop -> "mode".equals( prop.name( ) ) )
+                .filter( BNIProperty.class::isInstance )
+                .map( BNIProperty.class::cast )
+                .flatMap( BNIProperty::values )
+                .headOption( ).getOrElse( "EDGE" );
         for ( final ClusterNode node : nodes ) {
           final NodeService nodeService = clusterNodes.nodeServiceWithAsyncErrorHandling( node );
           for ( final ClusterVm vmInfo : node.getVms( ) ) {
-            for ( final NIInstance instance : info.getInstances( ) ) {
-              if ( vmInfo.getId( ).equals( instance.getName( ) ) ) {
+            for ( final BNIInstance instance : info.instances( ) ) {
+              if ( vmInfo.getId( ).equals( instance.name( ) ) ) {
                 if ( "EDGE".equals( networkMode ) ) {
-                  final String requestedPublicIp = MoreObjects.firstNonNull( instance.getPublicIp( ), "0.0.0.0" );
+                  final String requestedPublicIp = instance.publicIp( ).getOrElse( "0.0.0.0" );
                   final String lastSeenPublicIp = MoreObjects.firstNonNull( vmInfo.getPrimaryInterface( ).getPublicAddress( ), "0.0.0.0" );
                   if ( !requestedPublicIp.equals( lastSeenPublicIp ) ) {
-                    nodeService.assignAddressAsync( instance.getName( ), requestedPublicIp );
+                    nodeService.assignAddressAsync( instance.name( ), requestedPublicIp );
                   }
                 } else if ( "VPCMIDO".equals( networkMode ) ) {
-                  if ( vmInfo.getVpcId( ) == null && instance.getVpc( ) != null ) {
-                    vmInfo.setVpcId( instance.getVpc( ) );
+                  if ( vmInfo.getVpcId( ) == null && instance.vpc( ).isDefined( ) ) {
+                    vmInfo.setVpcId( instance.vpc( ).get( ) );
                   }
                 }
               }

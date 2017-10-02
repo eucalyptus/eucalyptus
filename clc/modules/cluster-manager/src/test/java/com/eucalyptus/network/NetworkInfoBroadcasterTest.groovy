@@ -30,30 +30,9 @@ package com.eucalyptus.network
 
 import com.eucalyptus.cluster.common.TestClusterProvider
 import com.eucalyptus.cluster.common.Cluster
-import com.eucalyptus.cluster.common.broadcast.NICluster
-import com.eucalyptus.cluster.common.broadcast.NIClusters
-import com.eucalyptus.cluster.common.broadcast.NIConfiguration
-import com.eucalyptus.cluster.common.broadcast.NIInternetGateway
-import com.eucalyptus.cluster.common.broadcast.NIMidonetGateway
-import com.eucalyptus.cluster.common.broadcast.NIMidonetGateways
-import com.eucalyptus.cluster.common.broadcast.NIInstance
-import com.eucalyptus.cluster.common.broadcast.NIManagedSubnet
-import com.eucalyptus.cluster.common.broadcast.NIManagedSubnets
-import com.eucalyptus.cluster.common.broadcast.NIMidonet
-import com.eucalyptus.cluster.common.broadcast.NINatGateway
-import com.eucalyptus.cluster.common.broadcast.NINetworkInterface
-import com.eucalyptus.cluster.common.broadcast.NINode
-import com.eucalyptus.cluster.common.broadcast.NINodes
-import com.eucalyptus.cluster.common.broadcast.NIProperty
-import com.eucalyptus.cluster.common.broadcast.NIRoute
-import com.eucalyptus.cluster.common.broadcast.NIRouteTable
-import com.eucalyptus.cluster.common.broadcast.NISecurityGroup
-import com.eucalyptus.cluster.common.broadcast.NISecurityGroupIpPermission
-import com.eucalyptus.cluster.common.broadcast.NISubnet
-import com.eucalyptus.cluster.common.broadcast.NISubnets
-import com.eucalyptus.cluster.common.broadcast.NIVpc
-import com.eucalyptus.cluster.common.broadcast.NIVpcSubnet
-import com.eucalyptus.cluster.common.broadcast.NetworkInfo
+import com.eucalyptus.cluster.common.broadcast.BNI
+import com.eucalyptus.cluster.common.broadcast.BNIMidonet
+import com.eucalyptus.cluster.common.broadcast.BNetworkInfo
 import com.eucalyptus.compute.common.config.ExtendedNetworkingConfiguration
 import com.eucalyptus.compute.common.internal.vpc.NatGateway
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaceAttachment
@@ -71,9 +50,11 @@ import com.google.common.base.Function
 import com.google.common.base.Optional
 import com.google.common.base.Supplier
 import com.eucalyptus.cluster.common.msgs.NodeInfo
+import io.vavr.control.Option
 import org.junit.BeforeClass
 import org.junit.Test
 
+import static com.eucalyptus.cluster.common.broadcast.BNI.*
 import static org.junit.Assert.*
 
 /**
@@ -97,10 +78,75 @@ class NetworkInfoBroadcasterTest {
     discovery.processClass( NetworkInfoBroadcasts.NetworkAclEntryNetworkViewToNINetworkAclRule )
     discovery.processClass( NetworkInfoBroadcasts.InternetGatewayToInternetGatewayNetworkView )
   }
+  
+  @Test
+  void testEmptyConfigurationBroadcast( ) {
+    BNetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
+      Optional.absent( ),
+      new NetworkInfoBroadcasts.NetworkInfoSource( ) {
+        @Override Iterable<NetworkInfoBroadcasts.VmInstanceNetworkView> getInstances() {
+          [ instance( 'i-00000001', 'cluster1', 'node1', '000000000002', '00:00:00:00:00:00', '2.0.0.2', '10.0.0.0' ) ]
+        }
+        @Override Iterable<NetworkInfoBroadcasts.NetworkGroupNetworkView> getSecurityGroups() {
+          [ group( 'sg-00000001', '000000000002', null, [], [] ) ]
+        }
+        @Override Iterable<NetworkInfoBroadcasts.VpcNetworkView> getVpcs() {
+          []
+        }
+        @Override Iterable<NetworkInfoBroadcasts.SubnetNetworkView> getSubnets() {
+         []
+        }
+        @Override Iterable<NetworkInfoBroadcasts.DhcpOptionSetNetworkView> getDhcpOptionSets() {
+         []
+        }
+        @Override Iterable<NetworkInfoBroadcasts.NetworkAclNetworkView> getNetworkAcls() {
+          []
+        }
+        @Override Iterable<NetworkInfoBroadcasts.RouteTableNetworkView> getRouteTables() {
+          []
+        }
+        @Override Iterable<NetworkInfoBroadcasts.InternetGatewayNetworkView> getInternetGateways() {
+          []
+        }
+        @Override Iterable<NetworkInfoBroadcasts.NetworkInterfaceNetworkView> getNetworkInterfaces() {
+          []
+        }
+        @Override Iterable<NetworkInfoBroadcasts.NatGatewayNetworkView> getNatGateways() {
+          []
+        }
+        @Override Map<String,Iterable<? extends NetworkInfoBroadcasts.VmInstanceNetworkView>> getView() {
+          [:]
+        }
+      },
+      null,
+      { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
+      { [ ] } as Supplier<List<Cluster>>,
+      { '1.1.1.1' } as Supplier<String>,
+      { [ '127.0.0.1' ] } as Function<List<String>, List<String>>,
+      [] as Set<String>,
+      [] as Set<RouteKey>
+    )
+    assertEquals( 'basic broadcast', networkInfo( )
+        .configuration( configuration( )
+            .property( property( 'enabledCLCIp', '1.1.1.1' ) )
+            .property( property( 'instanceDNSDomain', 'eucalyptus.internal' ) )
+            .property( property( 'instanceDNSServers', '127.0.0.1' ) )
+            .property( clusters( ).name( 'clusters' ).o( ) )
+            .o( ) )
+        .instance( instance( )
+            .name( 'i-00000001' )
+            .ownerId( '000000000002' )
+            .macAddress( Option.of( '00:00:00:00:00:00' ) )
+            .publicIp( Option.of( '2.0.0.2' ) )
+            .privateIp( Option.of( '10.0.0.0' ) )
+          .o( ) )
+        .o( )
+    , info )
+  }
 
   @Test
   void testBasicBroadcast( ) {
-    NetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
+    BNetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
       Optional.of( new NetworkConfiguration(
           instanceDnsDomain: 'eucalyptus.internal',
           instanceDnsServers: [ '1.2.3.4' ],
@@ -165,6 +211,7 @@ class NetworkInfoBroadcasterTest {
           [:]
         }
       },
+      null,
       { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
       { [ ] } as Supplier<List<Cluster>>,
       { '1.1.1.1' } as Supplier<String>,
@@ -172,69 +219,61 @@ class NetworkInfoBroadcasterTest {
       [] as Set<String>,
       [] as Set<RouteKey>
     )
-    assertEquals( 'basic broadcast', new NetworkInfo(
-        configuration: new NIConfiguration(
-            properties: [
-                new NIProperty( name: 'mode', values: ['EDGE'] ),
-                new NIProperty( name: 'publicIps', values: ['2.0.0.2-2.0.0.255'] ),
-                new NIProperty( name: 'enabledCLCIp', values: ['1.1.1.1'] ),
-                new NIProperty( name: 'instanceDNSDomain', values: ['eucalyptus.internal'] ),
-                new NIProperty( name: 'instanceDNSServers', values: ['1.2.3.4'] ),
-                new NIProperty( name: 'publicGateway', values: ['2.0.0.1'] ),
-            ],
-            subnets: new NISubnets( name: 'subnets', subnets: [
-                new NISubnet(
-                    name: '192.168.0.0',
-                    properties: [
-                        new NIProperty( name: 'subnet', values: ['192.168.0.0'] ),
-                        new NIProperty( name: 'netmask', values: ['255.255.0.0'] ),
-                        new NIProperty( name: 'gateway', values: ['192.168.0.1'] )
-                    ]
-                )
-            ] ),
-            clusters: new NIClusters( name: 'clusters', clusters: [
-                new NICluster(
-                    name: 'cluster1',
-                    subnet: new NISubnet(
-                        name: '10.0.0.0',
-                        properties: [
-                            new NIProperty( name: 'subnet', values: ['10.0.0.0'] ),
-                            new NIProperty( name: 'netmask', values: ['255.255.0.0'] ),
-                            new NIProperty( name: 'gateway', values: ['10.0.1.0'] )
-                        ]
-                    ),
-                    properties: [
-                        new NIProperty( name: 'enabledCCIp', values: ['6.6.6.6'] ),
-                        new NIProperty( name: 'macPrefix', values: ['d0:0d'] ),
-                        new NIProperty( name: 'privateIps', values: ['10.0.0.0-10.0.0.255'] ),
-                    ],
-                    nodes: new NINodes( name: 'nodes', nodes: [
-                      new NINode(
-                          name: 'node1',
-                          instanceIds: [ 'i-00000001' ]
-                      )
-                    ] )
-                )
-            ] ),
-        ),
-        instances: [
-          new NIInstance(
-              name: 'i-00000001',
-              ownerId: '000000000002',
-              macAddress: '00:00:00:00:00:00',
-              publicIp: '2.0.0.2',
-              privateIp: '10.0.0.0',
-              securityGroups: [],
-          )
-        ],
-        securityGroups: [ ]
-    ), info )
+    assertEquals( 'basic broadcast', networkInfo( )
+        .configuration( configuration( )
+            .property( property( 'mode', 'EDGE' ) )
+            .property( property( 'publicIps', '2.0.0.2-2.0.0.255' ) )
+            .property( property( 'enabledCLCIp', '1.1.1.1' ) )
+            .property( property( 'instanceDNSDomain', 'eucalyptus.internal' ) )
+            .property( property( 'instanceDNSServers', '1.2.3.4' ) )
+            .property( property( 'publicGateway', '2.0.0.1' ) )
+            .property( subnets( )
+                .name( 'subnets' )
+                .subnet( subnet( )
+                    .name( '192.168.0.0' )
+                    .property( property( 'subnet', '192.168.0.0' ) )
+                    .property( property( 'netmask', '255.255.0.0' ) )
+                    .property( property( 'gateway', '192.168.0.1' ) )
+                    .o( ) )
+                .o( ) )
+            .property( clusters( )
+                .name( 'clusters' )
+                .cluster( cluster( )
+                    .name( 'cluster1' )
+                    .subnet( Option.of( subnet( )
+                        .name( '10.0.0.0' )
+                        .property( property( 'subnet', '10.0.0.0' ) )
+                        .property( property( 'netmask', '255.255.0.0' ) )
+                        .property( property( 'gateway', '10.0.1.0' ) )
+                        .o( ) ) )
+                    .property( property( 'enabledCCIp', '6.6.6.6' ) )
+                    .property( property( 'macPrefix', 'd0:0d' ) )
+                    .property( property( 'privateIps', '10.0.0.0-10.0.0.255' ) )
+                    .property( nodes( )
+                        .name( 'nodes' )
+                        .node( node( )
+                            .name( 'node1' )
+                            .instanceId( 'i-00000001' )
+                            .o( ) )
+                        .o( ) )
+                    .o( ) )
+                .o( ) )
+            .o( ) )
+        .instance( instance( )
+            .name( 'i-00000001' )
+            .ownerId( '000000000002' )
+            .macAddress( Option.of( '00:00:00:00:00:00' ) )
+            .publicIp( Option.of( '2.0.0.2' ) )
+            .privateIp( Option.of( '10.0.0.0' ) )
+          .o( ) )
+        .o( )
+    , info )
   }
 
   @Test
   void testBasicBroadcastVpcInfoCleaned( ) {
     ExtendedNetworkingConfiguration.EC2_CLASSIC_ADDITIONAL_PROTOCOLS_ALLOWED = "123"
-    NetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
+    BNetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
         Optional.of( new NetworkConfiguration(
             instanceDnsDomain: 'eucalyptus.internal',
             instanceDnsServers: [ '1.2.3.4' ],
@@ -314,6 +353,7 @@ class NetworkInfoBroadcasterTest {
             [:]
           }
         },
+        null,
         { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
         { [ ] } as Supplier<List<Cluster>>,
         { '1.1.1.1' } as Supplier<String>,
@@ -321,80 +361,72 @@ class NetworkInfoBroadcasterTest {
         [] as Set<String>,
         [] as Set<RouteKey>
     )
-    assertEquals( 'basic broadcast', new NetworkInfo(
-        configuration: new NIConfiguration(
-            properties: [
-                new NIProperty( name: 'mode', values: ['EDGE'] ),
-                new NIProperty( name: 'publicIps', values: ['2.0.0.2-2.0.0.255'] ),
-                new NIProperty( name: 'enabledCLCIp', values: ['1.1.1.1'] ),
-                new NIProperty( name: 'instanceDNSDomain', values: ['eucalyptus.internal'] ),
-                new NIProperty( name: 'instanceDNSServers', values: ['1.2.3.4'] ),
-                new NIProperty( name: 'publicGateway', values: ['2.0.0.1'] ),
-            ],
-            subnets: new NISubnets( name: 'subnets', subnets: [
-                new NISubnet(
-                    name: '192.168.0.0',
-                    properties: [
-                        new NIProperty( name: 'subnet', values: ['192.168.0.0'] ),
-                        new NIProperty( name: 'netmask', values: ['255.255.0.0'] ),
-                        new NIProperty( name: 'gateway', values: ['192.168.0.1'] )
-                    ]
-                )
-            ] ),
-            clusters: new NIClusters( name: 'clusters', clusters: [
-                new NICluster(
-                    name: 'cluster1',
-                    subnet: new NISubnet(
-                        name: '10.0.0.0',
-                        properties: [
-                            new NIProperty( name: 'subnet', values: ['10.0.0.0'] ),
-                            new NIProperty( name: 'netmask', values: ['255.255.0.0'] ),
-                            new NIProperty( name: 'gateway', values: ['10.0.1.0'] )
-                        ]
-                    ),
-                    properties: [
-                        new NIProperty( name: 'enabledCCIp', values: ['6.6.6.6'] ),
-                        new NIProperty( name: 'macPrefix', values: ['d0:0d'] ),
-                        new NIProperty( name: 'privateIps', values: ['10.0.0.0-10.0.0.255'] ),
-                    ],
-                    nodes: new NINodes( name: 'nodes', nodes: [
-                        new NINode(
-                            name: 'node1',
-                            instanceIds: [ 'i-00000001' ]
-                        )
-                    ] )
-                )
-            ] ),
-        ),
-        instances: [
-            new NIInstance(
-                name: 'i-00000001',
-                ownerId: '000000000002',
-                macAddress: '00:00:00:00:00:00',
-                publicIp: '2.0.0.2',
-                privateIp: '10.0.0.0',
-                securityGroups: [ 'sg-00000001' ],
-            )
-        ],
-        securityGroups: [
-          new NISecurityGroup(
-            name: 'sg-00000001',
-            ownerId: '000000000002',
-            ingressRules: [
-                new NISecurityGroupIpPermission(
-                    groupId: 'sg-00000001',
-                    groupOwnerId: '000000000002',
-                    protocol: 123
-                )
-            ]
-          )
-        ]
-    ), info )
+    assertEquals( 'basic broadcast', networkInfo( )
+        .configuration( configuration( )
+            .property( property( 'mode', 'EDGE' ) )
+            .property( property( 'publicIps', '2.0.0.2-2.0.0.255' ) )
+            .property( property( 'enabledCLCIp', '1.1.1.1' ) )
+            .property( property( 'instanceDNSDomain', 'eucalyptus.internal' ) )
+            .property( property( 'instanceDNSServers', '1.2.3.4' ) )
+            .property( property( 'publicGateway', '2.0.0.1' ) )
+            .property( subnets( )
+                .name( 'subnets' )
+                .subnet( subnet( )
+                    .name( '192.168.0.0' )
+                    .property( property( 'subnet', '192.168.0.0' ) )
+                    .property( property( 'netmask', '255.255.0.0' ) )
+                    .property( property( 'gateway', '192.168.0.1' ) )
+                    .o( ) )
+                .o( ) )
+            .property( clusters( )
+                .name( 'clusters' )
+                .cluster( cluster( )
+                    .name( 'cluster1' )
+                    .subnet( Option.of( subnet( )
+                        .name( '10.0.0.0' )
+                        .property( property( 'subnet', '10.0.0.0' ) )
+                        .property( property( 'netmask', '255.255.0.0' ) )
+                        .property( property( 'gateway', '10.0.1.0' ) )
+                        .o( ) ) )
+                    .property( property( 'enabledCCIp', '6.6.6.6' ) )
+                    .property( property( 'macPrefix', 'd0:0d' ) )
+                    .property( property( 'privateIps', '10.0.0.0-10.0.0.255' ) )
+                    .property( nodes( )
+                        .name( 'nodes' )
+                        .node( node( )
+                            .name( 'node1' )
+                            .instanceId( 'i-00000001' )
+                            .o( ) )
+                        .o( ) )
+                    .o( ) )
+                .o( ) )
+            .o( ) )
+        .instance( instance( )
+            .name( 'i-00000001' )
+            .ownerId( '000000000002' )
+            .macAddress( Option.of( '00:00:00:00:00:00' ) )
+            .publicIp( Option.of( '2.0.0.2' ) )
+            .privateIp( Option.of( '10.0.0.0' ) )
+            .securityGroup( "sg-00000001" )
+            .o( ) )
+        .securityGroup( securityGroup( )
+            .name( "sg-00000001" )
+            .ownerId( "000000000002" )
+            .ingressRules( Option.of( securityGroupRules( )
+                .rule( securityGroupIpPermission( )
+                    .setValueGroupId( "sg-00000001" )
+                    .setValueGroupOwnerId( "000000000002" )
+                    .protocol( 123 )
+                    .o( ) )
+                .o( ) ) )
+            .egressRules( Option.of( securityGroupRules( ).o( ) ) )
+            .o( ) )
+        .o( ), info )
   }
 
   @Test
   void testBroadcastDefaults( ) {
-    NetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
+    BNetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
         Optional.of( new NetworkConfiguration(
             publicIps: [ '2.0.0.0-2.0.0.255' ],
             privateIps: [ '10.0.0.0-10.0.0.255' ],
@@ -446,6 +478,7 @@ class NetworkInfoBroadcasterTest {
             [:]
           }
         },
+        null,
         { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
         { [ ] } as Supplier<List<Cluster>>,
         { '1.1.1.1' } as Supplier<String>,
@@ -453,52 +486,45 @@ class NetworkInfoBroadcasterTest {
         [] as Set<String>,
         [] as Set<RouteKey>
     )
-    assertEquals( 'broadcast defaults', new NetworkInfo(
-        configuration: new NIConfiguration(
-            properties: [
-                new NIProperty( name: 'mode', values: ['EDGE'] ),
-                new NIProperty( name: 'publicIps', values: ['2.0.0.0-2.0.0.255'] ),
-                new NIProperty( name: 'enabledCLCIp', values: ['1.1.1.1'] ),
-                new NIProperty( name: 'instanceDNSDomain', values: ['eucalyptus.internal'] ),
-                new NIProperty( name: 'instanceDNSServers', values: ['127.0.0.1'] ),
-            ],
-            clusters: new NIClusters( name: 'clusters', clusters: [
-                new NICluster(
-                    name: 'cluster1',
-                    subnet: new NISubnet(
-                        name: '10.0.0.0',
-                        properties: [
-                            new NIProperty( name: 'subnet', values: ['10.0.0.0'] ),
-                            new NIProperty( name: 'netmask', values: ['255.255.0.0'] ),
-                            new NIProperty( name: 'gateway', values: ['10.0.1.0'] )
-                        ]
-                    ),
-                    properties: [
-                        new NIProperty( name: 'enabledCCIp', values: ['6.6.6.6'] ),
-                        new NIProperty( name: 'macPrefix', values: ['d0:0d'] ),
-                        new NIProperty( name: 'privateIps', values: ['10.0.0.0-10.0.0.255'] ),
-                    ],
-                    nodes: new NINodes( name: 'nodes', nodes: [
-                        new NINode(
-                            name: 'node1',
-                            instanceIds: [ 'i-00000001' ]
-                        )
-                    ] )
-                )
-            ] ),
-        ),
-        instances: [
-            new NIInstance(
-                name: 'i-00000001',
-                ownerId: '000000000002',
-                macAddress: '00:00:00:00:00:00',
-                publicIp: '2.0.0.0',
-                privateIp: '10.0.0.0',
-                securityGroups: [],
-            )
-        ],
-        securityGroups: [ ]
-    ), info )
+    assertEquals( 'broadcast defaults', networkInfo( )
+        .configuration( configuration( )
+            .property( property( 'mode', 'EDGE' ) )
+            .property( property( 'publicIps', '2.0.0.0-2.0.0.255' ) )
+            .property( property( 'enabledCLCIp', '1.1.1.1' ) )
+            .property( property( 'instanceDNSDomain', 'eucalyptus.internal' ) )
+            .property( property( 'instanceDNSServers', '127.0.0.1' ) )
+            .property( clusters( )
+                .name( 'clusters' )
+                .cluster( cluster( )
+                    .name( 'cluster1' )
+                    .subnet( Option.of( subnet( )
+                        .name( '10.0.0.0' )
+                        .property( property( 'subnet', '10.0.0.0' ) )
+                        .property( property( 'netmask', '255.255.0.0' ) )
+                        .property( property( 'gateway', '10.0.1.0' ) )
+                        .o( ) ) )
+                    .property( property( 'enabledCCIp', '6.6.6.6' ) )
+                    .property( property( 'macPrefix', 'd0:0d' ) )
+                    .property( property( 'privateIps', '10.0.0.0-10.0.0.255' ) )
+                    .property( nodes( )
+                        .name( 'nodes' )
+                        .node( node( )
+                            .name( 'node1' )
+                            .instanceId( 'i-00000001' )
+                            .o( ) )
+                        .o( ) )
+                    .o( ) )
+                .o( ) )
+            .o( ) )
+        .instance( instance( )
+            .name( 'i-00000001' )
+            .ownerId( '000000000002' )
+            .macAddress( Option.of( '00:00:00:00:00:00' ) )
+            .publicIp( Option.of( '2.0.0.0' ) )
+            .privateIp( Option.of( '10.0.0.0' ) )
+          .o( ) )
+        .o( )
+    , info )
   }
 
   @Test
@@ -511,26 +537,22 @@ class NetworkInfoBroadcasterTest {
         publicNetworkCidr: '10.116.0.0/17',
         publicGatewayIP: '10.116.133.67'
     )
-    NIMidonet niMidonet = new NIMidonet(
-        name: 'mido',
-        gateways: new NIMidonetGateways(
-          name: 'gateways',
-          gateways: [
-              new NIMidonetGateway(
-                  properties: [
-                    new NIProperty( name: 'gatewayHost', values: ['a-35.qa1.eucalyptus-systems.com'] ),
-                    new NIProperty( name: 'gatewayIP', values: ['10.116.133.77'] ),
-                    new NIProperty( name: 'gatewayInterface', values: ['em1.116'] ),
-                  ]
-              )
-          ]
-        ),
-        properties: [
-            new NIProperty( name: 'eucanetdHost', values: ['a-35.qa1.eucalyptus-systems.com'] ),
-            new NIProperty( name: 'publicNetworkCidr', values: ['10.116.0.0/17'] ),
-            new NIProperty( name: 'publicGatewayIP', values: ['10.116.133.67'] ),
-        ]
-    )
+
+    BNIMidonet niMidonet = BNI.midonet( )
+        .name( 'mido' )
+        .property( gateways( )
+            .name( 'gateways' )
+            .gateway( gateway( )
+                .property( property( 'gatewayHost', 'a-35.qa1.eucalyptus-systems.com' ) )
+                .property( property( 'gatewayIP', '10.116.133.77' ) )
+                .property( property( 'gatewayInterface', 'em1.116' ) )
+                .o( ) )
+            .o( ) )
+        .property( property('eucanetdHost', 'a-35.qa1.eucalyptus-systems.com' ) )
+        .property( property('publicNetworkCidr', '10.116.0.0/17' ) )
+        .property( property('publicGatewayIP', '10.116.133.67' ) )
+        .o( )
+
     vpcBroadcastTest( midonet, niMidonet )
   }
 
@@ -564,40 +586,34 @@ class NetworkInfoBroadcasterTest {
             ),
         ],
     )
-    NIMidonet niMidonet = new NIMidonet(
-        name: 'mido',
-        gateways: new NIMidonetGateways(
-            name: 'gateways',
-            gateways: [
-                new NIMidonetGateway(
-                    properties: [
-                        new NIProperty( name: 'ip', values: ['10.111.5.11'] ),
-                        new NIProperty( name: 'externalCidr', values: ['10.116.128.0/17'] ),
-                        new NIProperty( name: 'externalDevice', values: ['em1.116'] ),
-                        new NIProperty( name: 'externalIp', values: ['10.116.133.11'] ),
-                        new NIProperty( name: 'bgpPeerIp', values: ['10.116.133.173'] ),
-                        new NIProperty( name: 'bgpPeerAsn', values: ['65000'] ),
-                        new NIProperty( name: 'bgpAdRoutes', values: ['10.116.150.0/24'] ),
-                    ]
-                ),
-                new NIMidonetGateway(
-                    properties: [
-                        new NIProperty( name: 'ip', values: ['10.111.5.22'] ),
-                        new NIProperty( name: 'externalCidr', values: ['10.117.128.0/17'] ),
-                        new NIProperty( name: 'externalDevice', values: ['em1.117'] ),
-                        new NIProperty( name: 'externalIp', values: ['10.117.133.22'] ),
-                        new NIProperty( name: 'bgpPeerIp', values: ['10.117.133.173'] ),
-                        new NIProperty( name: 'bgpPeerAsn', values: ['65001'] ),
-                        new NIProperty( name: 'bgpAdRoutes', values: ['10.117.150.0/24'] ),
-                    ]
-                ),
-            ]
-        ),
-        properties: [
-            new NIProperty( name: 'eucanetdHost', values: ['a-35.qa1.eucalyptus-systems.com'] ),
-            new NIProperty( name: 'bgpAsn', values: ['64512'] ),
-        ]
-    )
+
+    BNIMidonet niMidonet = BNI.midonet( )
+        .name( 'mido' )
+        .property( gateways( )
+            .name( 'gateways' )
+            .gateway( gateway( )
+                .property( property( 'ip', '10.111.5.11' ) )
+                .property( property( 'externalCidr', '10.116.128.0/17' ) )
+                .property( property( 'externalDevice', 'em1.116' ) )
+                .property( property( 'externalIp', '10.116.133.11' ) )
+                .property( property( 'bgpPeerIp', '10.116.133.173' ) )
+                .property( property( 'bgpPeerAsn', '65000' ) )
+                .property( property( 'bgpAdRoutes', '10.116.150.0/24' ) )
+                .o( ) )
+            .gateway( gateway( )
+                .property( property( 'ip', '10.111.5.22' ) )
+                .property( property( 'externalCidr', '10.117.128.0/17' ) )
+                .property( property( 'externalDevice', 'em1.117' ) )
+                .property( property( 'externalIp', '10.117.133.22' ) )
+                .property( property( 'bgpPeerIp', '10.117.133.173' ) )
+                .property( property( 'bgpPeerAsn', '65001' ) )
+                .property( property( 'bgpAdRoutes', '10.117.150.0/24' ) )
+                .o( ) )
+            .o( ) )
+        .property( property('eucanetdHost', 'a-35.qa1.eucalyptus-systems.com' ) )
+        .property( property('bgpAsn', '64512' ) )
+        .o( )
+
     vpcBroadcastTest( midonet, niMidonet )
   }
 
@@ -621,32 +637,28 @@ class NetworkInfoBroadcasterTest {
             ),
         ],
     )
-    NIMidonet niMidonet = new NIMidonet(
-        name: 'mido',
-        gateways: new NIMidonetGateways(
-            name: 'gateways',
-            gateways: [
-                new NIMidonetGateway(
-                    properties: [
-                        new NIProperty( name: 'ip', values: ['10.111.5.11'] ),
-                        new NIProperty( name: 'externalCidr', values: ['10.116.128.0/17'] ),
-                        new NIProperty( name: 'externalDevice', values: ['em1.116'] ),
-                        new NIProperty( name: 'externalIp', values: ['10.116.133.11'] ),
-                        new NIProperty( name: 'externalRouterIp', values: ['10.116.133.173'] ),
-                    ]
-                ),
-                new NIMidonetGateway(
-                    properties: [
-                        new NIProperty( name: 'ip', values: ['10.111.5.22'] ),
-                        new NIProperty( name: 'externalCidr', values: ['10.117.128.0/17'] ),
-                        new NIProperty( name: 'externalDevice', values: ['em1.117'] ),
-                        new NIProperty( name: 'externalIp', values: ['10.117.133.22'] ),
-                        new NIProperty( name: 'externalRouterIp', values: ['10.117.133.173'] ),
-                    ]
-                ),
-            ]
-        )
-    )
+
+    BNIMidonet niMidonet = BNI.midonet( )
+        .name( 'mido' )
+        .property( gateways( )
+            .name( 'gateways' )
+            .gateway( gateway( )
+                .property( property( 'ip', '10.111.5.11' ) )
+                .property( property( 'externalCidr', '10.116.128.0/17' ) )
+                .property( property( 'externalDevice', 'em1.116' ) )
+                .property( property( 'externalIp', '10.116.133.11' ) )
+                .property( property( 'externalRouterIp', '10.116.133.173' ) )
+                .o( ) )
+            .gateway( gateway( )
+                .property( property( 'ip', '10.111.5.22' ) )
+                .property( property( 'externalCidr', '10.117.128.0/17' ) )
+                .property( property( 'externalDevice', 'em1.117' ) )
+                .property( property( 'externalIp', '10.117.133.22' ) )
+                .property( property( 'externalRouterIp', '10.117.133.173' ) )
+                .o( ) )
+            .o( ) )
+        .o( )
+
     vpcBroadcastTest( midonet, niMidonet )
   }
 
@@ -669,33 +681,27 @@ class NetworkInfoBroadcasterTest {
         publicNetworkCidr: '10.116.0.0/17',
         publicGatewayIP: '10.116.133.67'
     )
-    NIMidonet niMidonet = new NIMidonet(
-        name: 'mido',
-        gateways: new NIMidonetGateways(
-            name: 'gateways',
-            gateways: [
-                new NIMidonetGateway(
-                    properties: [
-                        new NIProperty( name: 'gatewayHost', values: ['a-35.qa1.eucalyptus-systems.com'] ),
-                        new NIProperty( name: 'gatewayIP', values: ['10.116.133.77'] ),
-                        new NIProperty( name: 'gatewayInterface', values: ['em1.116'] ),
-                    ]
-                ),
-                new NIMidonetGateway(
-                    properties: [
-                        new NIProperty( name: 'gatewayHost', values: ['a-36.qa1.eucalyptus-systems.com'] ),
-                        new NIProperty( name: 'gatewayIP', values: ['10.116.133.78'] ),
-                        new NIProperty( name: 'gatewayInterface', values: ['em1.117'] ),
-                    ]
-                ),
-            ]
-        ),
-        properties: [
-            new NIProperty( name: 'eucanetdHost', values: ['a-35.qa1.eucalyptus-systems.com'] ),
-            new NIProperty( name: 'publicNetworkCidr', values: ['10.116.0.0/17'] ),
-            new NIProperty( name: 'publicGatewayIP', values: ['10.116.133.67'] ),
-        ]
-    )
+
+    BNIMidonet niMidonet = BNI.midonet( )
+        .name( 'mido' )
+        .property( gateways( )
+            .name( 'gateways' )
+            .gateway( gateway( )
+                .property( property( 'gatewayHost', 'a-35.qa1.eucalyptus-systems.com' ) )
+                .property( property( 'gatewayIP', '10.116.133.77' ) )
+                .property( property( 'gatewayInterface', 'em1.116' ) )
+                .o( ) )
+            .gateway( gateway( )
+                .property( property( 'gatewayHost', 'a-36.qa1.eucalyptus-systems.com' ) )
+                .property( property( 'gatewayIP', '10.116.133.78' ) )
+                .property( property( 'gatewayInterface', 'em1.117' ) )
+                .o( ) )
+            .o( ) )
+        .property( property('eucanetdHost', 'a-35.qa1.eucalyptus-systems.com' ) )
+        .property( property('publicNetworkCidr', '10.116.0.0/17' ) )
+        .property( property('publicGatewayIP', '10.116.133.67' ) )
+        .o( )
+
     vpcBroadcastTest( midonet, niMidonet )
   }
 
@@ -717,31 +723,27 @@ class NetworkInfoBroadcasterTest {
         publicNetworkCidr: '10.116.0.0/17',
         publicGatewayIP: '10.116.133.67'
     )
-    NIMidonet niMidonet = new NIMidonet(
-        name: 'mido',
-        gateways: new NIMidonetGateways(
-            name: 'gateways',
-            gateways: [
-                new NIMidonetGateway(
-                    properties: [
-                        new NIProperty( name: 'gatewayHost', values: ['a-35.qa1.eucalyptus-systems.com'] ),
-                        new NIProperty( name: 'gatewayIP', values: ['10.116.133.77'] ),
-                        new NIProperty( name: 'gatewayInterface', values: ['em1.116'] ),
-                    ]
-                ),
-            ]
-        ),
-        properties: [
-            new NIProperty( name: 'eucanetdHost', values: ['a-35.qa1.eucalyptus-systems.com'] ),
-            new NIProperty( name: 'publicNetworkCidr', values: ['10.116.0.0/17'] ),
-            new NIProperty( name: 'publicGatewayIP', values: ['10.116.133.67'] ),
-        ]
-    )
+
+    BNIMidonet niMidonet = BNI.midonet( )
+        .name( 'mido' )
+        .property( gateways( )
+            .name( 'gateways' )
+            .gateway( gateway( )
+                .property( property( 'gatewayHost', 'a-35.qa1.eucalyptus-systems.com' ) )
+                .property( property( 'gatewayIP', '10.116.133.77' ) )
+                .property( property( 'gatewayInterface', 'em1.116' ) )
+                .o( ) )
+            .o( ) )
+        .property( property('eucanetdHost', 'a-35.qa1.eucalyptus-systems.com' ) )
+        .property( property('publicNetworkCidr', '10.116.0.0/17' ) )
+        .property( property('publicGatewayIP', '10.116.133.67' ) )
+        .o( )
+
     vpcBroadcastTestNatGateway( midonet, niMidonet )
   }
 
-  private void vpcBroadcastTest( final Midonet midoConfig, final NIMidonet midoNetworkInformation ) {
-    NetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
+  private void vpcBroadcastTest( final Midonet midoConfig, final BNIMidonet midoNetworkInformation ) {
+    BNetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
         Optional.of( new NetworkConfiguration(
             mode: 'VPCMIDO',
             mido: midoConfig,
@@ -785,6 +787,7 @@ class NetworkInfoBroadcasterTest {
             [:]
           }
         },
+        null,
         { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
         { [ ] } as Supplier<List<Cluster>>,
         { '1.1.1.1' } as Supplier<String>,
@@ -793,116 +796,98 @@ class NetworkInfoBroadcasterTest {
         [] as Set<RouteKey>,
     )
 
-    assertEquals( 'broadcast vpc midonet', new NetworkInfo(
-        configuration: new NIConfiguration(
-            properties: [
-                new NIProperty( name: 'mode', values: ['VPCMIDO'] ),
-                new NIProperty( name: 'publicIps', values: ['2.0.0.0-2.0.0.255'] ),
-                new NIProperty( name: 'enabledCLCIp', values: ['1.1.1.1'] ),
-                new NIProperty( name: 'instanceDNSDomain', values: ['eucalyptus.internal'] ),
-                new NIProperty( name: 'instanceDNSServers', values: ['127.0.0.1'] ),
-            ],
-            midonet: midoNetworkInformation,
-            clusters: new NIClusters( name: 'clusters', clusters: [
-                new NICluster(
-                    name: 'cluster1',
-                    subnet: new NISubnet(
-                        name: '172.31.0.0',
-                        properties: [
-                            new NIProperty( name: 'subnet', values: ['172.31.0.0'] ),
-                            new NIProperty( name: 'netmask', values: ['255.255.0.0'] ),
-                            new NIProperty( name: 'gateway', values: ['172.31.0.1'] )
-                        ]
-                    ),
-                    properties: [
-                        new NIProperty( name: 'enabledCCIp', values: ['6.6.6.6'] ),
-                        new NIProperty( name: 'macPrefix', values: ['d0:0d'] ),
-                        new NIProperty( name: 'privateIps', values: ['172.31.0.5'] ),
-                    ],
-                    nodes: new NINodes( name: 'nodes', nodes: [
-                        new NINode(
-                            name: 'node1',
-                            instanceIds: [ 'i-00000001' ]
-                        )
-                    ] )
-                )
-            ] ),
-        ),
-        vpcs: [
-            new NIVpc(
-                name: 'vpc-00000001',
-                ownerId: '000000000002',
-                cidr: '10.0.0.0/16',
-                subnets: [
-                  new NIVpcSubnet(
-                      name:  'subnet-00000001',
-                      ownerId: '000000000002',
-                      cidr: '10.0.0.0/16',
-                      cluster: 'cluster1',
-                      routeTable: 'rtb-00000001'
-                  )
-                ],
-                routeTables: [
-                    new NIRouteTable(
-                        name: 'rtb-00000001',
-                        ownerId: '000000000002',
-                        routes: [
-                          new NIRoute(
-                            destinationCidr: '192.168.0.0/16',
-                            gatewayId: 'igw-00000001',
-                          )
-                        ]
-                    )
-                ],
-                internetGateways: [ 'igw-00000001' ]
+    assertEquals( 'broadcast vpc midonet', networkInfo( )
+        .configuration( configuration( )
+            .property( property( "mode", "VPCMIDO" ) )
+            .property( property( "publicIps", "2.0.0.0-2.0.0.255" ) )
+            .property( property( "enabledCLCIp", "1.1.1.1" ) )
+            .property( property( "instanceDNSDomain", "eucalyptus.internal" ) )
+            .property( property( "instanceDNSServers", "127.0.0.1" ) )
+            .property( midoNetworkInformation )
+            .property( clusters( )
+                .name( "clusters" )
+                .cluster( cluster( )
+                    .name( "cluster1" )
+                    .setValueSubnet( subnet( )
+                        .name( "172.31.0.0" )
+                        .property( property( "subnet", "172.31.0.0" ) )
+                        .property( property( "netmask", "255.255.0.0" ) )
+                        .property( property( "gateway", "172.31.0.1" ) ).o( ) )
+                    .property( property( "enabledCCIp", "6.6.6.6" ) )
+                    .property( property( "macPrefix", "d0:0d" ) )
+                    .property( property( "privateIps", "172.31.0.5" ) )
+                    .property( nodes( )
+                        .name( "nodes" )
+                        .node( node( )
+                            .name( "node1" )
+                            .instanceId( "i-00000001" )
+                            .o( ) )
+                        .o( ) )
+                    .o( ) )
+                .o( ) )
+            .o( ) )
+        .vpc( vpc( )
+            .name( "vpc-00000001" )
+            .ownerId( "000000000002" )
+            .cidr( "10.0.0.0/16" )
+            .subnet( vpcSubnet( )
+                .name( "subnet-00000001" )
+                .ownerId( "000000000002" )
+                .cidr( "10.0.0.0/16" )
+                .cluster( "cluster1" )
+                .routeTable( "rtb-00000001" )
+                .o( ) )
+            .routeTable( routeTable( )
+                .name( "rtb-00000001" )
+                .ownerId( "000000000002" )
+                .route( route( )
+                    .destinationCidr( "192.168.0.0/16" )
+                    .setValueGatewayId( "igw-00000001" )
+                    .o( ) )
+                .o( ) )
+            .internetGateway( "igw-00000001" )
+            .o( )
+        )
+        .internetGateway( internetGateway( )
+            .name( "igw-00000001" )
+            .ownerId( "000000000002" )
+            .o( )
+        )
+        .instance( instance( )
+            .name( "i-00000001" )
+            .ownerId( "000000000002" )
+            .setValueMacAddress( "00:00:00:00:00:00" )
+            .setValuePublicIp( "2.0.0.0" )
+            .setValuePrivateIp( "10.0.0.0" )
+            .setValueVpc( "vpc-00000001" )
+            .setValueSubnet( "subnet-00000001" )
+            .networkInterface( networkInterface( )
+                .name( "eni-00000001" )
+                .ownerId( "000000000002" )
+                .deviceIndex( 0 )
+                .attachmentId( "eni-attach-00000001" )
+                .setValueMacAddress( "00:00:00:00:00:00" )
+                .setValuePublicIp( "2.0.0.0" )
+                .setValuePrivateIp( "10.0.0.0" )
+                .sourceDestCheck( true )
+                .vpc( "vpc-00000001" )
+                .subnet( "subnet-00000001" )
+                .o( )
             )
-        ],
-        internetGateways: [
-            new NIInternetGateway(
-                name: 'igw-00000001',
-                ownerId: '000000000002'
-            )
-        ],
-        instances: [
-            new NIInstance(
-                name: 'i-00000001',
-                ownerId: '000000000002',
-                macAddress: '00:00:00:00:00:00',
-                publicIp: '2.0.0.0',
-                privateIp: '10.0.0.0',
-                securityGroups: [],
-                vpc: 'vpc-00000001',
-                subnet: 'subnet-00000001',
-                networkInterfaces: [
-                    new NINetworkInterface(
-                        name: 'eni-00000001',
-                        ownerId: '000000000002',
-                        deviceIndex: 0,
-                        attachmentId: 'eni-attach-00000001',
-                        macAddress: '00:00:00:00:00:00',
-                        publicIp: '2.0.0.0',
-                        privateIp: '10.0.0.0',
-                        sourceDestCheck: true,
-                        vpc: 'vpc-00000001',
-                        subnet: 'subnet-00000001',
-                        securityGroups: []
-                    )
-                ]
-            )
-        ],
-        securityGroups: [
-          new NISecurityGroup(
-              name: 'sg-00000001',
-              ownerId: '000000000002',
-              ingressRules: [],
-              egressRules: []
-          )
-        ]
-    ), info )
+            .o( )
+        )
+        .securityGroup( securityGroup( )
+            .name( "sg-00000001" )
+            .ownerId( "000000000002" )
+            .setValueEgressRules( securityGroupRules( ).o( ) )
+            .setValueIngressRules( securityGroupRules( ).o( ) )
+            .o( )
+        )
+        .o( ), info )
   }
-
-  private void vpcBroadcastTestNatGateway( final Midonet midoConfig, final NIMidonet midoNetworkInformation ) {
-    NetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
+  
+  private void vpcBroadcastTestNatGateway( final Midonet midoConfig, final BNIMidonet midoNetworkInformation ) {
+    BNetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
         Optional.of( new NetworkConfiguration(
             mode: 'VPCMIDO',
             mido: midoConfig,
@@ -945,6 +930,7 @@ class NetworkInfoBroadcasterTest {
             [:]
           }
         },
+        null,
         { [ ] } as Supplier<List<Cluster>>,
         { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]), cluster('cluster1', '7.7.7.7', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
         { '1.1.1.1' } as Supplier<String>,
@@ -953,96 +939,77 @@ class NetworkInfoBroadcasterTest {
         [] as Set<RouteKey>
     )
 
-    assertEquals( 'broadcast vpc midonet', new NetworkInfo(
-        configuration: new NIConfiguration(
-            properties: [
-                new NIProperty( name: 'mode', values: ['VPCMIDO'] ),
-                new NIProperty( name: 'publicIps', values: ['2.0.0.0-2.0.0.255'] ),
-                new NIProperty( name: 'enabledCLCIp', values: ['1.1.1.1'] ),
-                new NIProperty( name: 'instanceDNSDomain', values: ['eucalyptus.internal'] ),
-                new NIProperty( name: 'instanceDNSServers', values: ['127.0.0.1'] ),
-            ],
-            midonet: midoNetworkInformation,
-            clusters: new NIClusters( name: 'clusters', clusters: [
-                new NICluster(
-                    name: 'cluster1',
-                    subnet: new NISubnet(
-                        name: '172.31.0.0',
-                        properties: [
-                            new NIProperty( name: 'subnet', values: ['172.31.0.0'] ),
-                            new NIProperty( name: 'netmask', values: ['255.255.0.0'] ),
-                            new NIProperty( name: 'gateway', values: ['172.31.0.1'] )
-                        ]
-                    ),
-                    properties: [
-                        new NIProperty( name: 'enabledCCIp', values: ['6.6.6.6'] ),
-                        new NIProperty( name: 'macPrefix', values: ['d0:0d'] ),
-                        new NIProperty( name: 'privateIps', values: ['172.31.0.5'] ),
-                    ],
-                    nodes: new NINodes( name: 'nodes', nodes: [
-                        new NINode(
-                            name: 'node1',
-                            instanceIds: [ ]
-                        )
-                    ] )
-                )
-            ] ),
-        ),
-        vpcs: [
-            new NIVpc(
-                name: 'vpc-00000001',
-                ownerId: '000000000002',
-                cidr: '10.0.0.0/16',
-                subnets: [
-                    new NIVpcSubnet(
-                        name:  'subnet-00000001',
-                        ownerId: '000000000002',
-                        cidr: '10.0.0.0/16',
-                        cluster: 'cluster1',
-                        routeTable: 'rtb-00000001'
-                    )
-                ],
-                routeTables: [
-                    new NIRouteTable(
-                        name: 'rtb-00000001',
-                        ownerId: '000000000002',
-                        routes: [
-                            new NIRoute(
-                                destinationCidr: '0.0.0.0/0',
-                                natGatewayId: 'nat-00000000000000001',
-                            )
-                        ]
-                    )
-                ],
-                natGateways: [
-                  new NINatGateway(
-                      name: 'nat-00000000000000001',
-                      ownerId:  '000000000002',
-                      vpc:  'vpc-00000001',
-                      subnet: 'subnet-00000001',
-                      macAddress: '00:00:00:00:00:00',
-                      publicIp: '2.0.0.0',
-                      privateIp: '10.0.0.0'
-                  )
-                ],
-                internetGateways: [ 'igw-00000001' ]
-            )
-        ],
-        internetGateways: [
-            new NIInternetGateway(
-                name: 'igw-00000001',
-                ownerId: '000000000002'
-            )
-        ],
-        instances: [
-        ],
-        securityGroups: [ ]
-    ), info )
+    assertEquals( 'broadcast vpc midonet', networkInfo( )
+        .configuration( configuration( )
+            .property( property( "mode", "VPCMIDO" ) )
+            .property( property( "publicIps", "2.0.0.0-2.0.0.255" ) )
+            .property( property( "enabledCLCIp", "1.1.1.1" ) )
+            .property( property( "instanceDNSDomain", "eucalyptus.internal" ) )
+            .property( property( "instanceDNSServers", "127.0.0.1" ) )
+            .property( midoNetworkInformation )
+            .property( clusters( )
+                .name( "clusters" )
+                .cluster( cluster( )
+                    .name( "cluster1" )
+                    .setValueSubnet( subnet( )
+                        .name( "172.31.0.0" )
+                        .property( property( "subnet", "172.31.0.0" ) )
+                        .property( property( "netmask", "255.255.0.0" ) )
+                        .property( property( "gateway", "172.31.0.1" ) ).o( ) )
+                    .property( property( "enabledCCIp", "6.6.6.6" ) )
+                    .property( property( "macPrefix", "d0:0d" ) )
+                    .property( property( "privateIps", "172.31.0.5" ) )
+                    .property( nodes( )
+                        .name( "nodes" )
+                        .node( node( )
+                            .name( "node1" )
+                            .o( ) )
+                        .o( ) )
+                    .o( ) )
+                .o( ) )
+            .o( ) )
+        .vpc( vpc( )
+            .name( "vpc-00000001" )
+            .ownerId( "000000000002" )
+            .cidr( "10.0.0.0/16" )
+            .subnet( vpcSubnet( )
+                .name( "subnet-00000001" )
+                .ownerId( "000000000002" )
+                .cidr( "10.0.0.0/16" )
+                .cluster( "cluster1" )
+                .routeTable( "rtb-00000001" )
+                .o( ) )
+            .routeTable( routeTable( )
+                .name( "rtb-00000001" )
+                .ownerId( "000000000002" )
+                .route( route( )
+                    .destinationCidr( "0.0.0.0/0" )
+                    .setValueNatGatewayId( "nat-00000000000000001" )
+                    .o( ) )
+                .o( ) )
+            .natGateway( natGateway( )
+                .name( 'nat-00000000000000001' )
+                .ownerId('000000000002')
+                .vpc('vpc-00000001')
+                .subnet('subnet-00000001')
+                .setValueMacAddress('00:00:00:00:00:00')
+                .setValuePublicIp('2.0.0.0')
+                .setValuePrivateIp('10.0.0.0')
+                .o( ) )
+            .internetGateway( "igw-00000001" )
+            .o( )
+        )
+        .internetGateway( internetGateway( )
+            .name( "igw-00000001" )
+            .ownerId( "000000000002" )
+            .o( )
+        )
+        .o( ), info )
   }
 
   @Test
   void testBroadcastManaged( ) {
-    NetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
+    BNetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
         Optional.of( new NetworkConfiguration(
             mode: 'MANAGED',
             clusters: [
@@ -1095,6 +1062,7 @@ class NetworkInfoBroadcasterTest {
             [:]
           }
         },
+        null,
         { [ cluster('cluster1', '6.6.6.6', [ 'node1' ]) ] } as Supplier<List<Cluster>>,
         { [ ] } as Supplier<List<Cluster>>,
         { '1.1.1.1' } as Supplier<String>,
@@ -1103,56 +1071,48 @@ class NetworkInfoBroadcasterTest {
         [] as Set<RouteKey>
     )
 
-    assertEquals( 'broadcast managed', new NetworkInfo(
-        configuration: new NIConfiguration(
-            properties: [
-                new NIProperty( name: 'mode', values: ['MANAGED'] ),
-                new NIProperty( name: 'publicIps', values: ['2.0.0.0-2.0.0.255'] ),
-                new NIProperty( name: 'enabledCLCIp', values: ['1.1.1.1'] ),
-                new NIProperty( name: 'instanceDNSDomain', values: ['eucalyptus.internal'] ),
-                new NIProperty( name: 'instanceDNSServers', values: ['127.0.0.1'] ),
-            ],
-            managedSubnet: new NIManagedSubnets(
-                name: 'managedSubnet',
-                managedSubnet: new NIManagedSubnet(
-                    name: "1.101.192.0",
-                    properties: [
-                        new NIProperty( name: 'subnet', values: ['1.101.192.0'] ),
-                        new NIProperty( name: 'netmask', values: ['255.255.0.0'] ),
-                        new NIProperty( name: 'minVlan', values: ['512'] ),
-                        new NIProperty( name: 'maxVlan', values: ['639'] ),
-                        new NIProperty( name: 'segmentSize', values: ['32'] )
-                    ]
-                )
-            ),
-            clusters: new NIClusters( name: 'clusters', clusters: [
-                new NICluster(
-                    name: 'cluster1',
-                    properties: [
-                        new NIProperty( name: 'enabledCCIp', values: ['6.6.6.6'] ),
-                        new NIProperty( name: 'macPrefix', values: ['d0:0d'] ),
-                    ],
-                    nodes: new NINodes( name: 'nodes', nodes: [
-                        new NINode(
-                            name: 'node1',
-                            instanceIds: [ 'i-00000001' ]
-                        )
-                    ] )
-                )
-            ] ),
-        ),
-        instances: [
-            new NIInstance(
-                name: 'i-00000001',
-                ownerId: '000000000002',
-                macAddress: '00:00:00:00:00:00',
-                publicIp: '2.0.0.0',
-                privateIp: '10.0.0.0',
-                securityGroups: [],
-            )
-        ],
-        securityGroups: [ ]
-    ), info )
+    assertEquals( 'broadcast managed', networkInfo( )
+        .configuration( configuration( )
+            .property( property( 'mode', 'MANAGED' ) )
+            .property( property( 'publicIps', '2.0.0.0-2.0.0.255' ) )
+            .property( property( 'enabledCLCIp', '1.1.1.1' ) )
+            .property( property( 'instanceDNSDomain', 'eucalyptus.internal' ) )
+            .property( property( 'instanceDNSServers', '127.0.0.1' ) )
+            .property( managedSubnets( )
+                .name( 'managedSubnet' )
+                .managedSubnet( managedSubnet( )
+                    .name( '1.101.192.0' )
+                    .property( property( 'subnet', '1.101.192.0' ) )
+                    .property( property( 'netmask', '255.255.0.0' ) )
+                    .property( property( 'minVlan', '512' ) )
+                    .property( property( 'maxVlan', '639' ) )
+                    .property( property( 'segmentSize', '32' ) )
+                    .o( ) )
+                .o( ) )
+            .property( clusters( )
+                .name( 'clusters' )
+                .cluster( cluster( )
+                    .name( 'cluster1' )
+                    .property( property( 'enabledCCIp', '6.6.6.6' ) )
+                    .property( property( 'macPrefix', 'd0:0d' ) )
+                    .property( nodes( )
+                        .name( 'nodes' )
+                        .node( node( )
+                            .name( 'node1' )
+                            .instanceId( 'i-00000001' )
+                            .o( ) )
+                        .o( ) )
+                    .o( ) )
+                .o( ) )
+            .o( ) )
+        .instance( instance( )
+            .name( 'i-00000001' )
+            .ownerId( '000000000002' )
+            .macAddress( Option.of( '00:00:00:00:00:00' ) )
+            .publicIp( Option.of( '2.0.0.0' ) )
+            .privateIp( Option.of( '10.0.0.0' ) )
+          .o( ) )
+        .o( ), info )
   }
 
   private static Cluster cluster( String partition, String host, List<String> nodes = [ ] ) {

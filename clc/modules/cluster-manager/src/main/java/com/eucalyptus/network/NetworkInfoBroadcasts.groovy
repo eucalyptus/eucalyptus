@@ -29,90 +29,43 @@
 package com.eucalyptus.network
 
 import com.eucalyptus.cluster.common.Cluster
-import com.eucalyptus.cluster.common.broadcast.NICluster
-import com.eucalyptus.cluster.common.broadcast.NIClusters
-import com.eucalyptus.cluster.common.broadcast.NIConfiguration
-import com.eucalyptus.cluster.common.broadcast.NIDhcpOptionSet
-import com.eucalyptus.cluster.common.broadcast.NIInstance
-import com.eucalyptus.cluster.common.broadcast.NIInternetGateway
-import com.eucalyptus.cluster.common.broadcast.NIManagedSubnet
-import com.eucalyptus.cluster.common.broadcast.NIManagedSubnets
-import com.eucalyptus.cluster.common.broadcast.NIMidonet
-import com.eucalyptus.cluster.common.broadcast.NIMidonetGateway
-import com.eucalyptus.cluster.common.broadcast.NIMidonetGateways
-import com.eucalyptus.cluster.common.broadcast.NINatGateway
-import com.eucalyptus.cluster.common.broadcast.NINetworkAcl
-import com.eucalyptus.cluster.common.broadcast.NINetworkAclEntry
-import com.eucalyptus.cluster.common.broadcast.NINetworkInterface
-import com.eucalyptus.cluster.common.broadcast.NINode
-import com.eucalyptus.cluster.common.broadcast.NINodes
-import com.eucalyptus.cluster.common.broadcast.NIProperty
-import com.eucalyptus.cluster.common.broadcast.NIRoute
-import com.eucalyptus.cluster.common.broadcast.NIRouteTable
-import com.eucalyptus.cluster.common.broadcast.NISecurityGroup
-import com.eucalyptus.cluster.common.broadcast.NISecurityGroupIpPermission
-import com.eucalyptus.cluster.common.broadcast.NISubnet
-import com.eucalyptus.cluster.common.broadcast.NISubnets
-import com.eucalyptus.cluster.common.broadcast.NIVpc
-import com.eucalyptus.cluster.common.broadcast.NIVpcSubnet
-import com.eucalyptus.cluster.common.broadcast.NetworkInfo
+import com.eucalyptus.cluster.common.broadcast.*
+import com.eucalyptus.cluster.common.msgs.NodeInfo
 import com.eucalyptus.compute.common.internal.network.NetworkGroup
 import com.eucalyptus.compute.common.internal.network.NetworkPeer
 import com.eucalyptus.compute.common.internal.network.NetworkRule
 import com.eucalyptus.compute.common.internal.vm.VmInstance
 import com.eucalyptus.compute.common.internal.vm.VmNetworkConfig
-import com.eucalyptus.compute.common.internal.vpc.DhcpOption
-import com.eucalyptus.compute.common.internal.vpc.DhcpOptionSet
-import com.eucalyptus.compute.common.internal.vpc.InternetGateway
-import com.eucalyptus.compute.common.internal.vpc.NatGateway
-import com.eucalyptus.compute.common.internal.vpc.NetworkAcl
-import com.eucalyptus.compute.common.internal.vpc.NetworkAclEntry
-import com.eucalyptus.compute.common.internal.vpc.NetworkAcls
-import com.eucalyptus.compute.common.internal.vpc.NetworkInterface
-import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaceAttachment
-import com.eucalyptus.compute.common.internal.vpc.Route
-import com.eucalyptus.compute.common.internal.vpc.RouteTable
-import com.eucalyptus.compute.common.internal.vpc.RouteTableAssociation
-import com.eucalyptus.compute.common.internal.vpc.Subnet
-import com.eucalyptus.compute.common.internal.vpc.Vpc
+import com.eucalyptus.compute.common.internal.vpc.*
+import com.eucalyptus.compute.common.internal.vpc.Subnet as ComputeSubnet
 import com.eucalyptus.compute.vpc.RouteKey
-import com.eucalyptus.network.config.Cluster as ConfigCluster;
-import com.eucalyptus.network.config.EdgeSubnet
-import com.eucalyptus.network.config.ManagedSubnet
-import com.eucalyptus.network.config.MidonetGateway
-import com.eucalyptus.network.config.NetworkConfiguration
-import com.eucalyptus.network.config.NetworkConfigurations
+import com.eucalyptus.network.config.*
+import com.eucalyptus.network.config.Cluster as ConfigCluster
 import com.eucalyptus.util.CollectionUtils
+import com.eucalyptus.util.CompatFunction
+import com.eucalyptus.util.CompatPredicate
+import com.eucalyptus.util.Lens
+import com.eucalyptus.util.Strings as EucaStrings
 import com.eucalyptus.util.TypeMapper
 import com.eucalyptus.util.TypeMappers
-import com.eucalyptus.util.Strings as EucaStrings;
 import com.eucalyptus.vm.VmInstances
-import com.google.common.base.Function
-import com.google.common.base.MoreObjects
-import com.google.common.base.Optional
-import com.google.common.base.Predicate
-import com.google.common.base.Strings
-import com.google.common.base.Supplier
-import com.google.common.collect.ArrayListMultimap
-import com.google.common.collect.HashMultimap
-import com.google.common.collect.ImmutableList
-import com.google.common.collect.Iterables
-import com.google.common.collect.ListMultimap
-import com.google.common.collect.Lists
-import com.google.common.collect.Maps
-import com.google.common.collect.Multimap
-import com.google.common.collect.Sets
-import com.eucalyptus.cluster.common.msgs.NodeInfo
+import com.google.common.base.*
+import com.google.common.collect.*
+import groovy.transform.CompileStatic
 import groovy.transform.Immutable
 import groovy.transform.PackageScope
+import io.vavr.collection.Array
+import io.vavr.control.Option
 import org.apache.log4j.Logger
 
 import javax.annotation.Nullable
 
+import static com.eucalyptus.cluster.common.broadcast.BNI.*
 import static com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet.TORNDOWN
 import static com.google.common.collect.Iterables.tryFind
 
 @PackageScope
+@CompileStatic
 class NetworkInfoBroadcasts {
 
   private static final Logger logger = Logger.getLogger( NetworkInfoBroadcasts )
@@ -124,14 +77,15 @@ class NetworkInfoBroadcasts {
    * All state used for building network configuration must be passed in (and be part of the fingerprint)
    */
   @PackageScope
-  static NetworkInfo buildNetworkConfiguration( final Optional<NetworkConfiguration> configuration,
-                                                final NetworkInfoSource networkInfoSource,
-                                                final Supplier<List<Cluster>> clusterSupplier,
-                                                final Supplier<List<Cluster>> otherClusterSupplier,
-                                                final Supplier<String> clcHostSupplier,
-                                                final Function<List<String>,List<String>> systemNameserverLookup,
-                                                final Set<String> dirtyPublicAddresses,
-                                                final Set<RouteKey> invalidStateRoutes /*out*/ ) {
+  static BNetworkInfo buildNetworkConfiguration( final Optional<NetworkConfiguration> configuration,
+                                                 final NetworkInfoSource networkInfoSource,
+                                                 final String version,
+                                                 final Supplier<List<Cluster>> clusterSupplier,
+                                                 final Supplier<List<Cluster>> otherClusterSupplier,
+                                                 final Supplier<String> clcHostSupplier,
+                                                 final Function<List<String>,List<String>> systemNameserverLookup,
+                                                 final Set<String> dirtyPublicAddresses,
+                                                 final Set<RouteKey> invalidStateRoutes /*out*/ ) {
     boolean vpcmido = 'VPCMIDO' == configuration.orNull()?.mode
     boolean managed = ( ( 'MANAGED' == configuration.orNull()?.mode ) || ( 'MANAGED-NOVLAN' == configuration.orNull()?.mode ) )
     Iterable<Cluster> clusters = vpcmido ?
@@ -140,71 +94,73 @@ class NetworkInfoBroadcasts {
     Optional<NetworkConfiguration> networkConfiguration = configuration.isPresent( ) ?
         Optional.of( NetworkConfigurations.explode( configuration.get( ), clusters.collect{ Cluster cluster -> cluster.partition } ) ) :
         configuration
-    NetworkInfo info = networkConfiguration
-        .transform( TypeMappers.lookup( NetworkConfiguration, NetworkInfo ) )
-        .or( new NetworkInfo( ) )
+    ImmutableBNetworkInfo.Builder info = networkConfiguration
+        .transform( TypeMappers.lookup( NetworkConfiguration, ImmutableBNetworkInfo.Builder ) )
+        .or( networkInfo( ).configuration( BNI.configuration( ).o( ) ) )
+    info.setValueVersion( version )
+    ImmutableBNIConfiguration.Builder bniConfiguration = BNI.configuration( )
+        .addAllProperties( info.o( ).configuration( ).simpleProperties( ) as Iterable<BNIPropertyBase> )
 
     // populate clusters
-    info.configuration.clusters = new NIClusters(
-        name: 'clusters',
-        clusters: clusters.findResults{ Cluster cluster ->
+    BNIClusters bniClusters = BNI.clusters()
+        .name( 'clusters' )
+        .setIterableClusters( clusters.findResults{ Cluster cluster ->
           ConfigCluster configCluster = networkConfiguration.orNull()?.clusters?.find{ ConfigCluster configCluster -> cluster.partition == configCluster.name }
           configCluster && ( vpcmido || configCluster.subnet ) ?
-              new NICluster(
-                  name: configCluster.name,
-                  subnet: vpcmido ? new NISubnet(
-                      name: '172.31.0.0',
-                      properties: [
-                          new NIProperty( name: 'subnet', values: [ '172.31.0.0' ]),
-                          new NIProperty( name: 'netmask', values: [ '255.255.0.0' ]),
-                          new NIProperty( name: 'gateway', values: [ '172.31.0.1' ])
-                      ]
-                  ) : new NISubnet(
-                      name: configCluster.subnet.subnet, // broadcast name is always the subnet value
-                      properties: [
-                          new NIProperty( name: 'subnet', values: [ configCluster.subnet.subnet ]),
-                          new NIProperty( name: 'netmask', values: [ configCluster.subnet.netmask ]),
-                          new NIProperty( name: 'gateway', values: [ configCluster.subnet.gateway ])
-                      ]
-                  ),
-                  properties: [
-                      new NIProperty( name: 'enabledCCIp', values: [ InetAddress.getByName(cluster.hostName).hostAddress ] ),
-                      new NIProperty( name: 'macPrefix', values: [ configCluster.macPrefix ] ),
-                      vpcmido ? new NIProperty( name: 'privateIps', values: [ '172.31.0.5' ] ) : new NIProperty( name: 'privateIps', values: configCluster.privateIps )
-                  ],
-                  nodes: new NINodes(
-                      name: 'nodes',
-                      nodes: cluster.nodeMap.values().collect{ NodeInfo nodeInfo -> new NINode( name: nodeInfo.name ) }
+              BNI.cluster( )
+                  .name( configCluster.name )
+                  .setValueSubnet( vpcmido ?
+                    subnet( )
+                      .name( '172.31.0.0' )
+                      .property( property( 'subnet', '172.31.0.0' ) )
+                      .property( property( 'netmask', '255.255.0.0' ) )
+                      .property( property( 'gateway', '172.31.0.1' ) )
+                      .o( ) :
+                    subnet( )
+                      .name( configCluster.subnet.subnet ) // broadcast name is always the subnet value
+                      .property( property('subnet', configCluster.subnet.subnet ) )
+                      .property( property('netmask', configCluster.subnet.netmask ) )
+                      .property( property('gateway', configCluster.subnet.gateway ) )
+                      .o( )
                   )
-              ) :
-              configCluster && managed ? new NICluster(
-                  name: configCluster.name,
-                  properties: [
-                      new NIProperty( name: 'enabledCCIp', values: [ InetAddress.getByName(cluster.hostName).hostAddress ] ),
-                      new NIProperty( name: 'macPrefix', values: [ configCluster.macPrefix ] )
-                  ],
-                  nodes: new NINodes(
-                      name: 'nodes',
-                      nodes: cluster.nodeMap.values().collect{ NodeInfo nodeInfo -> new NINode( name: nodeInfo.name ) }
-                  )
-              ) :
-                  null
-        } as List<NICluster>
-    )
+                  .property( property( 'enabledCCIp', InetAddress.getByName(cluster.hostName).hostAddress ) )
+                  .property( property( 'macPrefix', configCluster.macPrefix ) )
+                  .property( vpcmido ?
+                      property( 'privateIps', '172.31.0.5' ) :
+                      property( ).name( 'privateIps' ).setIterableValues( configCluster.privateIps ).o( ) )
+                  .property( nodes( )
+                      .name( 'nodes' )
+                      .setIterableNodes( cluster.nodeMap.values().collect{ NodeInfo nodeInfo -> node( ).name( nodeInfo.name ).o( ) } as Iterable<BNINode> )
+                      .o( ) )
+                  .o( )
+
+              :
+              configCluster && managed ? BNI.cluster( )
+                  .name( configCluster.name )
+                  .property( property('enabledCCIp', InetAddress.getByName(cluster.hostName).hostAddress ) )
+                  .property( property('macPrefix', configCluster.macPrefix ) )
+                  .property( nodes( )
+                      .name( 'nodes' )
+                      .setIterableNodes( cluster.nodeMap.values().collect{ NodeInfo nodeInfo -> node( ).name( nodeInfo.name ).o( ) } as Iterable<BNINode> )
+                      .o( ) )
+                  .o( )
+              :
+              null
+        } as List<BNICluster> )
+        .o( )
 
     // populate dynamic properties
     List<String> dnsServers = networkConfiguration.orNull()?.instanceDnsServers?:systemNameserverLookup.apply(['127.0.0.1'])
-    info.configuration.properties.addAll( [
-        new NIProperty( name: 'enabledCLCIp', values: [clcHostSupplier.get()]),
-        new NIProperty( name: 'instanceDNSDomain', values: [networkConfiguration.orNull()?.instanceDnsDomain?:EucaStrings.trimPrefix('.',"${VmInstances.INSTANCE_SUBDOMAIN}.internal")]),
-        new NIProperty( name: 'instanceDNSServers', values: dnsServers )
-    ]  )
+    bniConfiguration
+      .property( property( 'enabledCLCIp', clcHostSupplier.get() ) )
+      .property( property( 'instanceDNSDomain', networkConfiguration.orNull()?.instanceDnsDomain?:EucaStrings.trimPrefix('.',"${VmInstances.INSTANCE_SUBDOMAIN}.internal") ) )
+      .property( property( ).name('instanceDNSServers').setIterableValues(dnsServers ).o( ) )
+
 
     boolean hasEdgePublicGateway = networkConfiguration.orNull()?.publicGateway != null
     if ( hasEdgePublicGateway ) {
-      info.configuration.properties.add(
-          new NIProperty( name: 'publicGateway', values: [networkConfiguration.orNull()?.publicGateway] )
-      )
+      bniConfiguration
+          .property( property( 'publicGateway', networkConfiguration.orNull()?.publicGateway ) )
     }
 
     Iterable<VmInstanceNetworkView> instances = Iterables.filter(
@@ -212,20 +168,41 @@ class NetworkInfoBroadcasts {
         { VmInstanceNetworkView instance -> !TORNDOWN.contains(instance.state) && !instance.omit } as Predicate<VmInstanceNetworkView> )
 
     // populate nodes
-    ((Multimap<List<String>,String>) instances.inject( HashMultimap.create( ) ){
+    ImmutableBNIClusters.Builder clustersBuilder = BNI.clusters( ).name( bniClusters.name( ) )
+    Map<List<String>,Collection<String>> nodeInstanceMap = ((Multimap<List<String>,String>) instances.inject( HashMultimap.create( ) ){
       Multimap<List<String>,String> map, VmInstanceNetworkView instance ->
         map.put( [ instance.partition, instance.node ], instance.id )
         map
-    }).asMap().each{ Map.Entry<List<String>,Collection<String>> entry ->
-      info.configuration.clusters.clusters.find{ NICluster cluster -> cluster.name == entry.key[0] }?.with{
-        NINode node = nodes.nodes.find{ NINode node -> node.name == entry.key[1] }
-        if ( node ) {
-          node.instanceIds = entry.value ? entry.value as List<String> : (List<String>) null
-        } else {
-          null
-        }
+    }).asMap()
+    bniClusters.clusters( ).each { BNICluster cluster ->
+      ImmutableBNICluster.Builder clusterBuilder = BNI.cluster( )
+        .name( cluster.name( ) )
+        .subnet( cluster.subnet( ) )
+        .properties( cluster.simpleProperties( ) as Array<BNIPropertyBase> )
+      cluster.nodes( ).each { BNINodes node ->
+        clusterBuilder.property( nodes( )
+                      .name( 'nodes' )
+                      .setIterableNodes( node.nodes( ).collect{ BNINode bniNode ->
+                        Collection<String> instanceIds = nodeInstanceMap.get( [ cluster.name( ), bniNode.name( ) ] )
+                        instanceIds ?
+                          BNI.node( ).from( bniNode ).setIterableInstanceIds( instanceIds ).o( ) :
+                          bniNode
+                      } )
+                      .o( ) )
       }
+      clustersBuilder.cluster( clusterBuilder.o( ) )
     }
+    for ( BNIMidonet midonet : info.o( ).configuration( ).midonet( ) ) {
+      bniConfiguration.property( midonet )
+    }
+    for ( BNISubnets subnets : info.o( ).configuration( ).subnets( ) ) {
+      bniConfiguration.property( subnets )
+    }
+    for ( BNIManagedSubnets subnets : info.o( ).configuration( ).managedSubnets( ) ) {
+      bniConfiguration.property( subnets )
+    }
+    bniConfiguration.property( clustersBuilder.o( ) );
+    info.configuration( bniConfiguration.o( ) );
 
     // populate vpcs
     Iterable<VpcNetworkView> vpcs = networkInfoSource.vpcs
@@ -262,58 +239,59 @@ class NetworkInfoBroadcasts {
     }).asMap( )
     Predicate<RouteNetworkView> activeRoutePredicate =
         activeRoutePredicate( internetGateways, natGateways, instances, networkInterfaces, invalidStateRoutes )
-    info.vpcs.addAll( vpcs.findAll{ VpcNetworkView vpc -> activeVpcs.contains(vpc.id) }.collect{ Object vpcViewObj ->
+    info.addAllVpcs( vpcs.findAll{ VpcNetworkView vpc -> activeVpcs.contains(vpc.id) }.collect{ Object vpcViewObj ->
       final VpcNetworkView vpc = vpcViewObj as VpcNetworkView
-      new NIVpc(
-          vpc.id,
-          vpc.ownerAccountNumber,
-          vpc.cidr,
-          vpc.dhcpOptionSetId,
-          subnets.findAll{ SubnetNetworkView subnet -> subnet.vpcId == vpc.id }.collect{ Object subnetViewObj ->
+      BNI.vpc( )
+          .name( vpc.id )
+          .ownerId( vpc.ownerAccountNumber )
+          .cidr( vpc.cidr )
+          .dhcpOptionSet( Option.of( vpc.dhcpOptionSetId ) )
+          .addAllSubnets( subnets.findAll{ SubnetNetworkView subnet -> subnet.vpcId == vpc.id }.collect{ Object subnetViewObj ->
             SubnetNetworkView subnet = subnetViewObj as SubnetNetworkView
-            new NIVpcSubnet(
-                name: subnet.id,
-                ownerId: subnet.ownerAccountNumber,
-                cidr: subnet.cidr,
-                cluster: subnet.availabilityZone,
-                networkAcl: subnet.networkAcl,
-                routeTable:
+            vpcSubnet( )
+                .name( subnet.id )
+                .ownerId( subnet.ownerAccountNumber )
+                .cidr( subnet.cidr )
+                .cluster( subnet.availabilityZone )
+                .networkAcl( Option.of( subnet.networkAcl ) )
+                .routeTable(
                     tryFind( routeTables, { RouteTableNetworkView routeTable -> routeTable.subnetIds.contains( subnet.id ) } as Predicate<RouteTableNetworkView>).or(
-                        Iterables.find( routeTables, { RouteTableNetworkView routeTable -> routeTable.main && routeTable.vpcId == vpc.id } as Predicate<RouteTableNetworkView> ) ).id
-            )
-          },
-          networkAcls.findAll{ NetworkAclNetworkView networkAcl -> networkAcl.vpcId == vpc.id }.collect { Object networkAclObj ->
+                        Iterables.find( routeTables, { RouteTableNetworkView routeTable -> routeTable.main && routeTable.vpcId == vpc.id } as Predicate<RouteTableNetworkView> ) ).id )
+                .o( )
+          } as Iterable<BNIVpcSubnet> )
+          .addAllNetworkAcls( networkAcls.findAll{ NetworkAclNetworkView networkAcl -> networkAcl.vpcId == vpc.id }.collect { Object networkAclObj ->
             NetworkAclNetworkView networkAcl = networkAclObj as NetworkAclNetworkView
-            new NINetworkAcl(
-                name: networkAcl.id,
-                ownerId: networkAcl.ownerAccountNumber,
-                ingressEntries: Lists.transform( networkAcl.ingressRules, TypeMappers.lookup( NetworkAclEntryNetworkView, NINetworkAclEntry ) ) as List<NINetworkAclEntry>,
-                egressEntries: Lists.transform( networkAcl.egressRules, TypeMappers.lookup( NetworkAclEntryNetworkView, NINetworkAclEntry ) ) as List<NINetworkAclEntry>
-            )
-          },
-          routeTables.findAll{ RouteTableNetworkView routeTable -> routeTable.vpcId == vpc.id }.collect { Object routeTableObj ->
+            BNI.networkAcl( )
+                .name( networkAcl.id )
+                .ownerId( networkAcl.ownerAccountNumber )
+                .setValueIngressEntries( networkAclEntries( Lists.transform( networkAcl.ingressRules, TypeMappers.lookup( NetworkAclEntryNetworkView, BNINetworkAclEntry ) ) ) )
+                .setValueEgressEntries( networkAclEntries( Lists.transform( networkAcl.egressRules, TypeMappers.lookup( NetworkAclEntryNetworkView, BNINetworkAclEntry ) ) ) )
+                .o( )
+
+          } as Iterable<BNINetworkAcl> )
+          .addAllRouteTables( routeTables.findAll{ RouteTableNetworkView routeTable -> routeTable.vpcId == vpc.id }.collect { Object routeTableObj ->
             RouteTableNetworkView routeTable = routeTableObj as RouteTableNetworkView
-            new NIRouteTable(
-                name: routeTable.id,
-                ownerId: routeTable.ownerAccountNumber,
-                routes: Lists.newArrayList( Iterables.transform( Iterables.filter( routeTable.routes, activeRoutePredicate ), TypeMappers.lookup( RouteNetworkView, NIRoute ) ) ) as List<NIRoute>
-            )
-          },
-          natGateways.findAll{ NatGatewayNetworkView natGateway -> natGateway.vpcId == vpc.id && natGateway.state == NatGateway.State.available }.collect{ Object natGatewayObj ->
+            BNI.routeTable( )
+                .name( routeTable.id )
+                .ownerId( routeTable.ownerAccountNumber )
+                .addAllRoutes( Lists.newArrayList( Iterables.transform( Iterables.filter( routeTable.routes, activeRoutePredicate ), TypeMappers.lookup( RouteNetworkView, BNIRoute ) ) ) )
+                .o( )
+          } as Iterable<BNIRouteTable> )
+          .addAllNatGateways( natGateways.findAll{ NatGatewayNetworkView natGateway -> natGateway.vpcId == vpc.id && natGateway.state == NatGateway.State.available }.collect{ Object natGatewayObj ->
             NatGatewayNetworkView natGateway = natGatewayObj as NatGatewayNetworkView
-            new NINatGateway(
-                name: natGateway.id,
-                ownerId: natGateway.ownerAccountNumber,
-                vpc: natGateway.vpcId,
-                subnet: natGateway.subnetId,
-                macAddress: Strings.emptyToNull( natGateway.macAddress ),
-                publicIp: VmNetworkConfig.DEFAULT_IP==natGateway.publicIp||dirtyPublicAddresses.contains(natGateway.publicIp) ? null : natGateway.publicIp,
-                privateIp: natGateway.privateIp,
-            )
-          },
-          vpcIdToInternetGatewayIds.get( vpc.id ) as List<String>?:[] as List<String>
-      )
-    } )
+            BNI.natGateway( )
+                .name( natGateway.id )
+                .ownerId( natGateway.ownerAccountNumber )
+                .vpc( natGateway.vpcId )
+                .subnet( natGateway.subnetId )
+                .macAddress( Option.of( Strings.emptyToNull( natGateway.macAddress ) ) )
+                .publicIp( Option.of( VmNetworkConfig.DEFAULT_IP==natGateway.publicIp||dirtyPublicAddresses.contains(natGateway.publicIp) ? null : natGateway.publicIp ) )
+                .privateIp( Option.of( natGateway.privateIp ) )
+                .o( )
+          } as Iterable<BNINatGateway> )
+          .addAllInternetGateways( vpcIdToInternetGatewayIds.get( vpc.id ) as List<String>?:[] as List<String> )
+          .o( )
+    } as Iterable<BNIVpc> )
     vpcs.findAll{ VpcNetworkView vpc -> !activeVpcs.contains(vpc.id) }.each { Object vpcViewObj -> // processing for any inactive vpcs
       final VpcNetworkView vpc = vpcViewObj as VpcNetworkView
       routeTables.findAll{ RouteTableNetworkView routeTable -> routeTable.vpcId == vpc.id }.each { Object routeTableObj ->
@@ -334,62 +312,62 @@ class NetworkInfoBroadcasts {
         }
         map
     }).asMap( )
-    info.instances.addAll( instances.collect{ VmInstanceNetworkView instance ->
-      new NIInstance(
-          name: instance.id,
-          ownerId: instance.ownerAccountNumber,
-          vpc: instance.vpcId,
-          subnet: instance.subnetId,
-          macAddress: Strings.emptyToNull( instance.macAddress ),
-          publicIp: VmNetworkConfig.DEFAULT_IP==instance.publicAddress||dirtyPublicAddresses.contains(instance.publicAddress) ? null : instance.publicAddress,
-          privateIp: instance.privateAddress,
-          securityGroups: Lists.newArrayList(instance.securityGroupIds),
-          networkInterfaces: instanceIdToNetworkInterfaces.get( instance.id )?.collect{ NetworkInterfaceNetworkView networkInterface ->
-            new NINetworkInterface(
-                name: networkInterface.id,
-                ownerId: networkInterface.ownerAccountNumber,
-                deviceIndex: networkInterface.deviceIndex,
-                attachmentId: networkInterface.attachmentId,
-                macAddress: networkInterface.macAddress,
-                privateIp: networkInterface.privateIp,
-                publicIp: dirtyPublicAddresses.contains(networkInterface.publicIp) ? null : networkInterface.publicIp,
-                sourceDestCheck: networkInterface.sourceDestCheck,
-                vpc: networkInterface.vpcId,
-                subnet: networkInterface.subnetId,
-                securityGroups: networkInterface.securityGroupIds
-            )
-          } ?: [ ] as List<NINetworkInterface>
-      )
-    } )
+    info.addAllInstances( instances.collect{ VmInstanceNetworkView instance ->
+      BNI.instance( )
+          .name( instance.id )
+          .ownerId( instance.ownerAccountNumber )
+          .vpc( Option.of( instance.vpcId ) )
+          .subnet( Option.of( instance.subnetId ) )
+          .macAddress( Option.of(  Strings.emptyToNull( instance.macAddress ) ) )
+          .publicIp( Option.of( VmNetworkConfig.DEFAULT_IP==instance.publicAddress||dirtyPublicAddresses.contains(instance.publicAddress) ? null : instance.publicAddress ) )
+          .privateIp( Option.of( instance.privateAddress ) )
+          .addAllSecurityGroups( Lists.newArrayList(instance.securityGroupIds) )
+          .addAllNetworkInterfaces( ( instanceIdToNetworkInterfaces.get( instance.id )?.collect{ NetworkInterfaceNetworkView networkInterface ->
+            BNI.networkInterface( )
+                .name( networkInterface.id )
+                .ownerId( networkInterface.ownerAccountNumber )
+                .deviceIndex( networkInterface.deviceIndex )
+                .attachmentId( networkInterface.attachmentId )
+                .macAddress( Option.of( networkInterface.macAddress ) )
+                .privateIp( Option.of( networkInterface.privateIp ) )
+                .publicIp( Option.of( dirtyPublicAddresses.contains(networkInterface.publicIp) ? null : networkInterface.publicIp ) )
+                .sourceDestCheck( networkInterface.sourceDestCheck)
+                .vpc( networkInterface.vpcId )
+                .subnet( networkInterface.subnetId )
+                .addAllSecurityGroups( networkInterface.securityGroupIds )
+                .o( )
+          } ?: [ ] ) as List<BNINetworkInterface> )
+          .o( )
+    } as Iterable<BNIInstance> )
 
     // populate dhcp option sets
     Iterable<DhcpOptionSetNetworkView> dhcpOptionSets = networkInfoSource.dhcpOptionSets
-    info.dhcpOptionSets.addAll( dhcpOptionSets.findAll{ DhcpOptionSetNetworkView dhcpOptionSet -> activeDhcpOptionSets.contains( dhcpOptionSet.id ) }.collect { Object dhcpObj ->
+    info.addAllDhcpOptionSets( dhcpOptionSets.findAll{ DhcpOptionSetNetworkView dhcpOptionSet -> activeDhcpOptionSets.contains( dhcpOptionSet.id ) }.collect { Object dhcpObj ->
       DhcpOptionSetNetworkView dhcpOptionSet = (DhcpOptionSetNetworkView) dhcpObj
-      new NIDhcpOptionSet(
-          name: dhcpOptionSet.id,
-          ownerId: dhcpOptionSet.ownerAccountNumber,
-          properties: dhcpOptionSet.options.collect{ DhcpOptionNetworkView option ->
+      BNI.dhcpOptionSet( )
+          .name( dhcpOptionSet.id )
+          .ownerId( dhcpOptionSet.ownerAccountNumber )
+          .addAllProperties( dhcpOptionSet.options.collect{ DhcpOptionNetworkView option ->
             if ( 'domain-name-servers' == option.key && 'AmazonProvidedDNS' == option.values?.getAt( 0 ) ) {
-              new NIProperty( 'domain-name-servers', dnsServers )
+              property( ).name( 'domain-name-servers' ).addAllValues( dnsServers ).o( )
             } else {
-              new NIProperty( option.key, option.values )
+              property( ).name( option.key ).addAllValues( option.values ).o( )
             }
-          }
-      )
-    } )
+          } as Iterable<BNIPropertyBase> )
+          .o( )
+    } as Iterable<BNIDhcpOptionSet> );
 
     // populate internet gateways
-    info.internetGateways.addAll( internetGateways.findAll{ Object gatewayObj ->
+    info.addAllInternetGateways( internetGateways.findAll{ Object gatewayObj ->
       InternetGatewayNetworkView gateway = gatewayObj as InternetGatewayNetworkView
       activeVpcs.contains(gateway.vpcId)
     }.collect { Object internetGatewayObj ->
       InternetGatewayNetworkView internetGateway = internetGatewayObj as InternetGatewayNetworkView
-      new NIInternetGateway(
-          name: internetGateway.id,
-          ownerId: internetGateway.ownerAccountNumber,
-      )
-    } )
+      BNI.internetGateway( )
+          .name( internetGateway.id )
+          .ownerId( internetGateway.ownerAccountNumber )
+          .o( )
+    } as Iterable<BNIInternetGateway> )
 
     // populate security groups
     Iterable<NetworkGroupNetworkView> groups = networkInfoSource.securityGroups
@@ -415,55 +393,61 @@ class NetworkInfoBroadcasts {
       }
       activeGroups
     }
-    info.securityGroups.addAll( groups.findAll{  NetworkGroupNetworkView group -> activeSecurityGroups.contains( group.id ) }.collect{ Object groupObj ->
+    info.addAllSecurityGroups( groups.findAll{  NetworkGroupNetworkView group -> activeSecurityGroups.contains( group.id ) }.collect{ Object groupObj ->
       NetworkGroupNetworkView group = (NetworkGroupNetworkView) groupObj
-      new NISecurityGroup(
-          name: group.id,
-          ownerId: group.ownerAccountNumber,
-          ingressRules: group.ingressPermissions
-          .findAll{ IPPermissionNetworkView ipPermission ->
+      securityGroup( )
+          .name( group.id )
+          .ownerId( group.ownerAccountNumber )
+          .setValueIngressRules( securityGroupRules( )
+            .addAllRules( group.ingressPermissions
+              .findAll{ IPPermissionNetworkView ipPermission ->
                       !ipPermission.groupId || activeSecurityGroups.contains( ipPermission.groupId ) }
-          .collect{ Object ipPermissionObj ->
-              IPPermissionNetworkView ipPermission = (IPPermissionNetworkView) ipPermissionObj
-            new NISecurityGroupIpPermission(
-                ipPermission.protocol,
-                ipPermission.fromPort,
-                ipPermission.toPort,
-                ipPermission.icmpType,
-                ipPermission.icmpCode,
-                ipPermission.groupId,
-                ipPermission.groupOwnerAccountNumber,
-                ipPermission.cidr
-            )
-          } as List<NISecurityGroupIpPermission>,
-          egressRules: group.egressPermissions
-          .findAll{ IPPermissionNetworkView ipPermission ->
+              .collect{ Object ipPermissionObj ->
+                IPPermissionNetworkView ipPermission = (IPPermissionNetworkView) ipPermissionObj
+                securityGroupIpPermission( )
+                    .protocol( ipPermission.protocol )
+                    .fromPort( Option.of( ipPermission.fromPort ) )
+                    .toPort( Option.of( ipPermission.toPort ) )
+                    .icmpType( Option.of( ipPermission.icmpType ) )
+                    .icmpCode( Option.of( ipPermission.icmpCode ) )
+                    .groupId( Option.of( ipPermission.groupId ) )
+                    .groupOwnerId( Option.of( ipPermission.groupOwnerAccountNumber ) )
+                    .cidr( Option.of( ipPermission.cidr ) )
+                    .o( )
+              } as Iterable<BNISecurityGroupIpPermission> )
+            .o( ) )
+          .setValueEgressRules( securityGroupRules( )
+            .addAllRules( group.egressPermissions
+              .findAll{ IPPermissionNetworkView ipPermission ->
                       !ipPermission.groupId || activeSecurityGroups.contains( ipPermission.groupId ) }
-          .collect{ Object ipPermissionObj ->
-              IPPermissionNetworkView ipPermission = (IPPermissionNetworkView) ipPermissionObj
-            new NISecurityGroupIpPermission(
-                ipPermission.protocol,
-                ipPermission.fromPort,
-                ipPermission.toPort,
-                ipPermission.icmpType,
-                ipPermission.icmpCode,
-                ipPermission.groupId,
-                ipPermission.groupOwnerAccountNumber,
-                ipPermission.cidr
-            )
-          } as List<NISecurityGroupIpPermission>
-      )
-    } )
+              .collect{ Object ipPermissionObj ->
+                IPPermissionNetworkView ipPermission = (IPPermissionNetworkView) ipPermissionObj
+                securityGroupIpPermission( )
+                    .protocol( ipPermission.protocol )
+                    .fromPort( Option.of( ipPermission.fromPort ) )
+                    .toPort( Option.of( ipPermission.toPort ) )
+                    .icmpType( Option.of( ipPermission.icmpType ) )
+                    .icmpCode( Option.of( ipPermission.icmpCode ) )
+                    .groupId( Option.of( ipPermission.groupId ) )
+                    .groupOwnerId( Option.of( ipPermission.groupOwnerAccountNumber ) )
+                    .cidr( Option.of( ipPermission.cidr ) )
+                    .o( )
+              } as Iterable<BNISecurityGroupIpPermission> )
+            .o( ) )
+          .o( )
+    } as Iterable<BNISecurityGroup> )
+
+    BNetworkInfo bni = info.o( )
 
     if ( MODE_CLEAN ) {
-      modeClean( vpcmido, info )
+      bni = modeClean( vpcmido, bni )
     }
 
     if ( logger.isTraceEnabled( ) ) {
       logger.trace( "Constructed network information for ${Iterables.size( instances )} instance(s), ${Iterables.size( groups )} security group(s)" )
     }
 
-    info
+    bni
   }
 
   private static Predicate<RouteNetworkView> activeRoutePredicate(
@@ -551,39 +535,43 @@ class NetworkInfoBroadcasts {
         !Strings.isNullOrEmpty( VmInstances.toNodeHost( ).apply( instance ) )
   }
 
-  private static Set<String> modeClean( final boolean vpc, final NetworkInfo networkInfo ) {
-    Set<String> removedResources
+  @SuppressWarnings("GroovyUnusedDeclaration")
+  private static BNetworkInfo modeClean( final boolean vpc, final BNetworkInfo networkInfo ) {
+    BNetworkInfo info = networkInfo
+    Set<String> removedResources = Sets.newHashSet( )
     if ( vpc ) {
-      removedResources = modeCleanVpc( networkInfo )
+      info = modeCleanVpc( networkInfo, removedResources )
     } else {
-      removedResources = modeCleanEdge( networkInfo )
+      info = modeCleanEdge( networkInfo, removedResources )
     }
-    networkInfo.configuration.clusters.clusters.forEach{ NICluster cluster ->
-      cluster.nodes.nodes.forEach{ NINode node ->
-        node.instanceIds.removeAll( removedResources )
-      }
-    }
-    networkInfo.instances.forEach{ NIInstance instance ->
-      instance.securityGroups.removeAll( removedResources )
-    }
-    removedResources
+    final Lens<BNetworkInfo,Array<BNICluster>> clusterArrayLens = clusterArrayLens( );
+    final Lens<BNICluster,Array<BNINode>> nodeArrayLens = nodeArrayLens( );
+    return clusterArrayLens.modify( { Array<BNICluster> clusterArray -> clusterArray.map(
+      nodeArrayLens.modify(
+          { Array<BNINode> nodeArray -> nodeArray.map( { BNINode node -> BNI.node( ).from( node ).instanceIds( node.instanceIds( ).removeAll( removedResources ) ).o( ) } ) }
+      )
+    ) } )
+        .andThen( instancesLens( ).modify(
+            { Array<BNIInstance> instanceArray -> instanceArray.map( { BNIInstance instance -> BNI.instance( ).from( instance ).securityGroups( instance.securityGroups( ).removeAll( removedResources ) ).o( ) } ) }
+        ) )
+        .apply( info );
   }
 
   /**
+   *
    * Remove any EC2-Classic platform info:
    * - instances running without a vpc or without any network interfaces
    */
-  private static Set<String> modeCleanVpc( final NetworkInfo networkInfo ) {
-    Set<String> removedResources = Sets.newHashSet( )
-    Iterator<NIInstance> instanceIterator = networkInfo.instances.iterator( )
-    while ( instanceIterator.hasNext( ) ) {
-      NIInstance instance = instanceIterator.next( )
-      if ( !instance.vpc || !instance.networkInterfaces ) {
-        instanceIterator.remove( )
-        removedResources.add( instance.name )
-      }
-    }
-    removedResources
+  private static BNetworkInfo modeCleanVpc( final BNetworkInfo info, final Set<String> removedResources ) {
+    final CompatPredicate<BNIInstance> goodInstances =
+        { BNIInstance instance -> instance.vpc( ).isDefined( ) && !instance.networkInterfaces( ).isEmpty( ) } as CompatPredicate<BNIInstance>
+    Array<BNIInstance> removedInstances = info.instances( ).filter( goodInstances.negate( ) )
+
+    CompatFunction<BNIHasName,String> nameOf = { BNIHasName named -> named.name( ) } as CompatFunction<BNIHasName,String>
+    for ( BNIHasName named : removedInstances ) { removedResources.add( named.name( ) ) }
+
+    instancesLens( ).modify( { Array<BNIInstance> instances -> info.instances( ).filter( goodInstances ) } )
+        .apply( info )
   }
 
   /**
@@ -596,54 +584,34 @@ class NetworkInfoBroadcasts {
    * - internet gateways
    * - dhcp option sets
    */
-  private static Set<String> modeCleanEdge( final NetworkInfo networkInfo ) {
-    Set<String> removedResources = Sets.newHashSet( )
-    Iterator<NIInstance> instanceIterator = networkInfo.instances.iterator( )
-    while ( instanceIterator.hasNext( ) ) {
-      NIInstance instance = instanceIterator.next( )
-      if ( instance.vpc || instance.networkInterfaces ) {
-        instanceIterator.remove( )
-        removedResources.add( instance.name )
+  private static BNetworkInfo modeCleanEdge( final BNetworkInfo info, final Set<String> removedResources  ) {
+    CompatPredicate<BNIInstance> goodInstances =
+        { BNIInstance instance -> !instance.vpc( ).isDefined( ) && instance.networkInterfaces( ).isEmpty( ) } as CompatPredicate<BNIInstance>
+    Array<BNIInstance> removedInstances = info.instances( ).filter( goodInstances.negate( ) )
+
+    CompatPredicate<BNISecurityGroup> goodGroups = { BNISecurityGroup securityGroup ->
+      boolean good = securityGroup.egressRules( ).isEmpty( ) || securityGroup.egressRules( ).get( ).rules( ).isEmpty( )
+      if ( good && securityGroup.ingressRules( ).isDefined( ) ) {
+        good = !securityGroup.ingressRules().get().rules().exists( { BNISecurityGroupIpPermission permission ->
+          !NetworkRule.isValidProtocol( permission.protocol( ) ) } as CompatPredicate<BNISecurityGroupIpPermission> )
       }
-    }
+      good
+    } as CompatPredicate<BNISecurityGroup>
+    Array<BNISecurityGroup> removedGroups = info.securityGroups( ).filter( goodGroups.negate( ) )
 
-    Iterator<NISecurityGroup> securityGroupIterator = networkInfo.securityGroups.iterator( )
-    while ( securityGroupIterator.hasNext( ) ) {
-      NISecurityGroup securityGroup = securityGroupIterator.next()
-      boolean remove = securityGroup.egressRules
-      if ( !remove ) {
-        remove = securityGroup.ingressRules.find{ NISecurityGroupIpPermission permission ->
-          !NetworkRule.isValidProtocol( permission.protocol )
-        }
-      }
-      if ( remove ) {
-        securityGroupIterator.remove( )
-        removedResources.add( securityGroup.name )
-      }
-    }
+    CompatFunction<BNIHasName,String> nameOf = { BNIHasName named -> named.name( ) } as CompatFunction<BNIHasName,String>
+    for ( BNIHasName named : info.dhcpOptionSets( ) ) { removedResources.add( named.name( ) ) }
+    for ( BNIHasName named : info.internetGateways( ) ) { removedResources.add( named.name( ) ) }
+    for ( BNIHasName named : info.vpcs( ) ) { removedResources.add( named.name( ) ) }
+    for ( BNIHasName named : removedGroups ) { removedResources.add( named.name( ) ) }
+    for ( BNIHasName named : removedInstances ) { removedResources.add( named.name( ) ) }
 
-    Iterator<NIVpc> vpcIterator = networkInfo.vpcs.iterator( )
-    while ( vpcIterator.hasNext( ) ) {
-      NIVpc vpc = vpcIterator.next( )
-      vpcIterator.remove( )
-      removedResources.add( vpc.name )
-    }
-
-    Iterator<NIInternetGateway> internetGatewayIterator = networkInfo.internetGateways.iterator( )
-    while ( internetGatewayIterator.hasNext( ) ) {
-      NIInternetGateway internetGateway = internetGatewayIterator.next( )
-      internetGatewayIterator.remove( )
-      removedResources.add( internetGateway.name )
-    }
-
-    Iterator<NIDhcpOptionSet> dhcpOptionSetIterator = networkInfo.dhcpOptionSets.iterator( )
-    while ( dhcpOptionSetIterator.hasNext( ) ) {
-      NIDhcpOptionSet dhcpOptionSet = dhcpOptionSetIterator.next( )
-      dhcpOptionSetIterator.remove( )
-      removedResources.add( dhcpOptionSet.name )
-    }
-
-    removedResources
+    dhcpOptionSetsLens( ).modify( { Array<BNIDhcpOptionSet> dhcpOptionSets -> Array.empty( ) } )
+        .andThen( instancesLens( ).modify( { Array<BNIInstance> instances -> info.instances( ).filter( goodInstances ) } ) )
+        .andThen( internetGatewaysLens( ).modify( { Array<BNIInternetGateway> internetGateways -> Array.empty( ) } ) )
+        .andThen( securityGroupLens( ).modify( { Array<BNISecurityGroup> groups -> groups.filter( goodGroups ) } ) )
+        .andThen( vpcsLens( ).modify( { Array<BNIVpc> vpcs -> Array.empty( ) } ) )
+        .apply( info )
   }
 
   static interface NetworkInfoSource {
@@ -661,122 +629,107 @@ class NetworkInfoBroadcasts {
   }
 
   @TypeMapper
-  static enum NetworkConfigurationToNetworkInfo implements Function<NetworkConfiguration, NetworkInfo> {
+  static enum NetworkConfigurationToNetworkInfo implements Function<NetworkConfiguration, ImmutableBNetworkInfo.Builder> {
     INSTANCE;
 
     @Override
-    NetworkInfo apply( final NetworkConfiguration networkConfiguration ) {
+    ImmutableBNetworkInfo.Builder apply( final NetworkConfiguration networkConfiguration ) {
       ManagedSubnet managedSubnet = networkConfiguration.managedSubnet
-      new NetworkInfo(
-          configuration: new NIConfiguration(
-              properties: [
-                  new NIProperty( name: 'mode', values: [ networkConfiguration.mode ?: 'EDGE' ] ),
-                  networkConfiguration.publicIps ?
-                      new NIProperty( name: 'publicIps', values: networkConfiguration.publicIps ) :
+      networkInfo()
+          .configuration( configuration( )
+              .property( property("mode", networkConfiguration.mode ?: 'EDGE' ) )
+              .property( property( ).name("publicIps").addAllValues( (networkConfiguration.publicIps?:[ ]) as Iterable<String> ).o( ) )
+              .addAllProperties( [ networkConfiguration?.mido ? midonet( )
+                  .name("mido")
+                  .addAllProperties( [ networkConfiguration?.mido?.gatewayHost ? gateways( )
+                      .name("gateways")
+                      .gateway( gateway( )
+                          .addAllProperties( [
+                              networkConfiguration?.mido?.gatewayHost ?
+                                  property( 'gatewayHost', networkConfiguration.mido.gatewayHost ) :
+                                  null,
+                              networkConfiguration?.mido?.gatewayIP ?
+                                  property( 'gatewayIP',networkConfiguration.mido.gatewayIP ) :
+                                  null,
+                              networkConfiguration?.mido?.gatewayInterface ?
+                                  property('gatewayInterface', networkConfiguration.mido.gatewayInterface ) :
+                                  null,
+                          ].findAll( ) as Iterable<BNIPropertyBase> )
+                          .o( ) )
+                      .o( ) :
+                      networkConfiguration?.mido?.gateways ? gateways( )
+                      .name("gateways")
+                      .addAllGateways( networkConfiguration?.mido?.gateways?.collect{ MidonetGateway midoGateway ->
+                        gateway( )
+                            .addAllProperties( ( midoGateway.gatewayIP ?
+                            [ // legacy format
+                              property('gatewayHost', midoGateway.gatewayHost ),
+                              property('gatewayIP', midoGateway.gatewayIP ),
+                              property('gatewayInterface', midoGateway.gatewayInterface ),
+                            ] : [
+                            property( 'ip', midoGateway.ip ),
+                            property( 'externalCidr', midoGateway.externalCidr ),
+                            property( 'externalDevice', midoGateway.externalDevice ),
+                            property( 'externalIp', midoGateway.externalIp ),
+                            midoGateway.externalRouterIp ?
+                                property('externalRouterIp', midoGateway.externalRouterIp ) :
+                                null,
+                            midoGateway.bgpPeerIp ?
+                                property('bgpPeerIp', midoGateway.bgpPeerIp ) :
+                                null,
+                            midoGateway.bgpPeerAsn ?
+                                property('bgpPeerAsn', midoGateway.bgpPeerAsn ) :
+                                null,
+                            midoGateway.bgpAdRoutes ?
+                                property( ).name( 'bgpAdRoutes' ).setIterableValues( midoGateway.bgpAdRoutes ).o( ) :
+                                null,
+                            ] ).findAll( ) as Iterable<BNIPropertyBase> )
+                            .o( )
+                      } as Iterable<BNIMidonetGateway> ).o( ) :
                       null
-              ].findAll( ) as List<NIProperty>,
-              midonet: networkConfiguration?.mido ? new NIMidonet(
-                  name: "mido",
-                  gateways: networkConfiguration?.mido?.gatewayHost ?
-                      new NIMidonetGateways(
-                          name: 'gateways',
-                          gateways : [
-                              new NIMidonetGateway(
-                                  properties: [
-                                      networkConfiguration?.mido?.gatewayHost ?
-                                          new NIProperty(
-                                              name: 'gatewayHost',
-                                              values: [ networkConfiguration.mido.gatewayHost ] ) :
-                                          null,
-                                      networkConfiguration?.mido?.gatewayIP ?
-                                          new NIProperty(
-                                              name: 'gatewayIP',
-                                              values: [ networkConfiguration.mido.gatewayIP ] ) :
-                                          null,
-                                      networkConfiguration?.mido?.gatewayInterface ?
-                                          new NIProperty(
-                                              name: 'gatewayInterface',
-                                              values: [ networkConfiguration.mido.gatewayInterface ] ) :
-                                          null,
-                                  ].findAll( ) as List<NIProperty>,
-                              )
-                          ]
-                      ) :
-                      networkConfiguration?.mido?.gateways ?
-                          new NIMidonetGateways(
-                              name: 'gateways',
-                              gateways : networkConfiguration?.mido?.gateways?.collect{ MidonetGateway gateway ->
-                                new NIMidonetGateway(
-                                    properties: ( gateway.gatewayIP?
-                                    [ // legacy format
-                                        new NIProperty( name: 'gatewayHost', values: [ gateway.gatewayHost ] ),
-                                        new NIProperty( name: 'gatewayIP', values: [ gateway.gatewayIP ] ),
-                                        new NIProperty( name: 'gatewayInterface', values: [ gateway.gatewayInterface ] ),
-                                    ] : [
-                                        new NIProperty( name: 'ip', values: [ gateway.ip ] ),
-                                        new NIProperty( name: 'externalCidr', values: [ gateway.externalCidr ] ),
-                                        new NIProperty( name: 'externalDevice', values: [ gateway.externalDevice ] ),
-                                        new NIProperty( name: 'externalIp', values: [ gateway.externalIp ] ),
-                                        gateway.externalRouterIp ?
-                                            new NIProperty( name: 'externalRouterIp', values: [ gateway.externalRouterIp ] ) :
-                                            null,
-                                        gateway.bgpPeerIp ?
-                                            new NIProperty( name: 'bgpPeerIp', values: [ gateway.bgpPeerIp ] ) :
-                                            null,
-                                        gateway.bgpPeerAsn ?
-                                          new NIProperty( name: 'bgpPeerAsn', values: [ gateway.bgpPeerAsn ] ) :
-                                          null,
-                                        gateway.bgpAdRoutes ?
-                                          new NIProperty( name: 'bgpAdRoutes', values: gateway.bgpAdRoutes ) :
-                                          null,
-                                    ] ).findAll( ) as List<NIProperty>,
-                                )
-                              } as List<NIMidonetGateway>
-                          ) :
-                          null,
-                  properties: [
+                  ].findAll( ) as Iterable<BNIPropertyBase> )
+                  .addAllProperties( [
                       networkConfiguration?.mido?.eucanetdHost ?
-                          new NIProperty( name: 'eucanetdHost', values: [ networkConfiguration.mido.eucanetdHost ] ) :
+                          property('eucanetdHost', networkConfiguration.mido.eucanetdHost) :
                           null,
                       networkConfiguration?.mido?.bgpAsn ?
-                          new NIProperty( name: 'bgpAsn', values: [ networkConfiguration.mido.bgpAsn ] ) :
+                          property( 'bgpAsn', networkConfiguration.mido.bgpAsn ) :
                           null,
                       networkConfiguration?.mido?.publicNetworkCidr ?
-                          new NIProperty( name: 'publicNetworkCidr', values: [ networkConfiguration.mido.publicNetworkCidr ] ) :
+                          property( 'publicNetworkCidr', networkConfiguration.mido.publicNetworkCidr ) :
                           null,
                       networkConfiguration?.mido?.publicGatewayIP ?
-                          new NIProperty( name: 'publicGatewayIP', values: [ networkConfiguration.mido.publicGatewayIP ] ) :
+                          property( 'publicGatewayIP', networkConfiguration.mido.publicGatewayIP ) :
                           null,
-                  ].findAll( ) as List<NIProperty>,
-              ) : null,
-              subnets: networkConfiguration.subnets ? new NISubnets(
-                  name: "subnets",
-                  subnets: networkConfiguration.subnets.collect{ EdgeSubnet subnet ->
-                    new NISubnet(
-                        name: subnet.subnet,  // broadcast name is always the subnet value
-                        properties: [
-                            new NIProperty( name: 'subnet', values: [ subnet.subnet ]),
-                            new NIProperty( name: 'netmask', values: [ subnet.netmask ]),
-                            new NIProperty( name: 'gateway', values: [ subnet.gateway ])
-                        ]
-                    )
-                  }
-              ) : null,
-              managedSubnet: managedSubnet ? new NIManagedSubnets(
-                  name: "managedSubnet",
-                  managedSubnet: new NIManagedSubnet(
-                      name: managedSubnet.subnet,  // broadcast name is always the subnet value
-                      properties: [
-                          new NIProperty( name: 'subnet', values: [ managedSubnet.subnet ] ),
-                          new NIProperty( name: 'netmask', values: [ managedSubnet.netmask ] ),
-                          new NIProperty( name: 'minVlan', values: [ ( managedSubnet.minVlan ?: ManagedSubnet.MIN_VLAN )  as String ] ),
-                          new NIProperty( name: 'maxVlan', values: [ ( managedSubnet.maxVlan ?: ManagedSubnet.MAX_VLAN ) as String ] ),
-                          new NIProperty( name: 'segmentSize', values: [ ( managedSubnet.segmentSize ?: ManagedSubnet.DEF_SEGMENT_SIZE ) as String ] )
-                      ]
-                  )
-              ) : null
-          )
-      )
+                  ].findAll( ) as Iterable<BNIPropertyBase> )
+                  .o( ) :
+                  null,
+                  networkConfiguration.subnets ? subnets( )
+                      .name( 'subnets' )
+                      .addAllSubnets( networkConfiguration.subnets.collect{ EdgeSubnet edgeSubnet ->
+                          subnet( )
+                            .name( edgeSubnet.subnet )  // broadcast name is always the subnet value
+                            .property( property( 'subnet', edgeSubnet.subnet ) )
+                            .property( property( 'netmask', edgeSubnet.netmask ) )
+                            .property( property( 'gateway', edgeSubnet.gateway ) )
+                            .o( )
+                      } as Iterable<BNISubnet> )
+                      .o( ) :
+                      null,
+                  managedSubnet ? managedSubnets( )
+                      .name( 'managedSubnet' )
+                      .managedSubnet( BNI.managedSubnet( )
+                          .name( managedSubnet.subnet ) // broadcast name is always the subnet value
+                          .property( property( 'subnet', managedSubnet.subnet ) )
+                          .property( property( 'netmask', managedSubnet.netmask ) )
+                          .property( property( 'minVlan', ( managedSubnet.minVlan ?: ManagedSubnet.MIN_VLAN ) as String ) )
+                          .property( property( 'maxVlan', ( managedSubnet.maxVlan ?: ManagedSubnet.MAX_VLAN ) as String ) )
+                          .property( property( 'segmentSize', ( managedSubnet.segmentSize ?: ManagedSubnet.DEF_SEGMENT_SIZE ) as String ) )
+                          .o( ) )
+                      .o( ) :
+                      null
+              ].findAll( ) as Iterable<BNIPropertyBase> )
+              .o( ) )
     }
   }
 
@@ -954,11 +907,11 @@ class NetworkInfoBroadcasts {
   }
 
   @TypeMapper
-  static enum SubnetToSubnetNetworkView implements Function<Subnet,SubnetNetworkView> {
+  static enum SubnetToSubnetNetworkView implements Function<ComputeSubnet,SubnetNetworkView> {
     INSTANCE;
 
     @Override
-    SubnetNetworkView apply( final Subnet subnet ) {
+    SubnetNetworkView apply( final ComputeSubnet subnet ) {
       new SubnetNetworkView(
           subnet.displayName,
           subnet.version,
@@ -1071,21 +1024,21 @@ class NetworkInfoBroadcasts {
   }
 
   @TypeMapper
-  static enum NetworkAclEntryNetworkViewToNINetworkAclRule implements Function<NetworkAclEntryNetworkView,NINetworkAclEntry> {
+  static enum NetworkAclEntryNetworkViewToNINetworkAclRule implements Function<NetworkAclEntryNetworkView,BNINetworkAclEntry> {
     INSTANCE;
 
     @Override
-    NINetworkAclEntry apply(@Nullable final NetworkAclEntryNetworkView networkAclEntry ) {
-      new NINetworkAclEntry(
-          networkAclEntry.number,
-          networkAclEntry.protocol,
-          networkAclEntry.action,
-          networkAclEntry.cidr,
-          networkAclEntry.icmpCode,
-          networkAclEntry.icmpType,
-          networkAclEntry.portRangeFrom,
-          networkAclEntry.portRangeTo
-      )
+    BNINetworkAclEntry apply(@Nullable final NetworkAclEntryNetworkView networkAclEntry ) {
+      BNI.networkAclEntry( )
+        .number( networkAclEntry.number )
+        .protocol( networkAclEntry.protocol )
+        .action( networkAclEntry.action )
+        .cidr( networkAclEntry.cidr )
+        .icmpCode( networkAclEntry.icmpCode )
+        .icmpType( networkAclEntry.icmpType )
+        .portRangeFrom( networkAclEntry.portRangeFrom )
+        .portRangeTo( networkAclEntry.portRangeTo )
+        .o( )
     }
   }
 
@@ -1152,17 +1105,17 @@ class NetworkInfoBroadcasts {
   }
 
   @TypeMapper
-  static enum RouteNetworkViewToNIRoute implements Function<RouteNetworkView,NIRoute> {
+  static enum RouteNetworkViewToNIRoute implements Function<RouteNetworkView,BNIRoute> {
     INSTANCE;
 
     @Override
-    NIRoute apply(@Nullable final RouteNetworkView routeNetworkView) {
-      new NIRoute(
-          routeNetworkView.destinationCidr,
-          routeNetworkView.gatewayId?:(routeNetworkView.networkInterfaceId||routeNetworkView.natGatewayId?null:'local'),
-          routeNetworkView.networkInterfaceId,
-          routeNetworkView.natGatewayId
-      )
+    BNIRoute apply(@Nullable final RouteNetworkView routeNetworkView) {
+      route( )
+        .destinationCidr( routeNetworkView.destinationCidr )
+        .gatewayId( Option.of( routeNetworkView.gatewayId?:(routeNetworkView.networkInterfaceId||routeNetworkView.natGatewayId?null:'local') ) )
+        .networkInterfaceId( Option.of( routeNetworkView.networkInterfaceId ) )
+        .natGatewayId( Option.of( routeNetworkView.natGatewayId ) )
+        .o( )
     }
   }
 

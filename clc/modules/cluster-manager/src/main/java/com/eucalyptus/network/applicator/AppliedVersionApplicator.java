@@ -44,7 +44,8 @@ import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.OrderedShutdown;
-import com.eucalyptus.cluster.common.broadcast.NetworkInfo;
+import com.eucalyptus.cluster.common.broadcast.BNI;
+import com.eucalyptus.cluster.common.broadcast.BNetworkInfo;
 import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.util.Timestamps;
@@ -84,14 +85,18 @@ public class AppliedVersionApplicator extends ModeSpecificApplicator {
       final ApplicatorContext context,
       final ApplicatorChain chain
   ) throws ApplicatorException {
-    final NetworkInfo info = context.getNetworkInfo( );
+    final BNetworkInfo info = context.getNetworkInfo( );
     final Pair<Long,String> lastAppliedVersion = getLastAppliedVersion( );
     boolean alreadyApplied = false;
     if ( lastAppliedVersion != null ) {
-      info.setAppliedTime( Timestamps.formatIso8601Timestamp( new Date( lastAppliedVersion.getLeft( ) ) ) );
-      info.setAppliedVersion( lastAppliedVersion.getRight( ) );
+      context.setAttribute(
+          ApplicatorContext.INFO_KEY,
+          BNI.networkInfo( ).from( info )
+              .setValueAppliedTime( Timestamps.formatIso8601Timestamp( new Date( lastAppliedVersion.getLeft( ) ) ) )
+              .setValueAppliedVersion( lastAppliedVersion.getRight( ) )
+              .o( ) );
       MarshallingApplicatorHelper.clearMarshalledNetworkInfoCache( context );
-      alreadyApplied = info.getVersion( ).equals( lastAppliedVersion.getRight( ) );
+      alreadyApplied = info.version( ).get( ).equals( lastAppliedVersion.getRight( ) );
     }
 
     // initial broadcast
@@ -110,11 +115,15 @@ public class AppliedVersionApplicator extends ModeSpecificApplicator {
           if ( path.getFileName( ).equals( event.context( ) ) ) {
             try {
               final Pair<Long,String> appliedVersion = readAppliedVersion( path );
-              if ( !info.getVersion( ).equals( appliedVersion.getRight( ) ) ) {
+              if ( !info.version( ).get( ).equals( appliedVersion.getRight( ) ) ) {
                 continue waitloop; // wait until timeout
               }
-              info.setAppliedTime( Timestamps.formatIso8601Timestamp( new Date( appliedVersion.getLeft( ) ) ) );
-              info.setAppliedVersion( appliedVersion.getRight( ) );
+              context.setAttribute(
+                  ApplicatorContext.INFO_KEY,
+                  BNI.networkInfo( ).from( info )
+                      .setValueAppliedTime( Timestamps.formatIso8601Timestamp( new Date( appliedVersion.getLeft( ) ) ) )
+                      .setValueAppliedVersion( appliedVersion.getRight( ) )
+                      .o( ) );
               MarshallingApplicatorHelper.clearMarshalledNetworkInfoCache( context );
               applied = true;
               break waitloop;

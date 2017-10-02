@@ -28,17 +28,14 @@
  ************************************************************************/
 package com.eucalyptus.network.applicator;
 
-import java.util.Collection;
 import java.util.EnumSet;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
-import com.eucalyptus.cluster.common.broadcast.NIInstance;
-import com.eucalyptus.cluster.common.broadcast.NINetworkInterface;
-import com.eucalyptus.cluster.common.broadcast.NetworkInfo;
+import com.eucalyptus.cluster.common.broadcast.BNIInstance;
+import com.eucalyptus.cluster.common.broadcast.BNINetworkInterface;
+import com.eucalyptus.cluster.common.broadcast.BNetworkInfo;
 import com.eucalyptus.network.NetworkMode;
 import com.eucalyptus.network.PublicAddresses;
-import com.eucalyptus.util.FUtils;
 
 /**
  *
@@ -56,12 +53,12 @@ public class ClearDirtyPublicAddressesApplicator extends ModeSpecificApplicator 
       final ApplicatorChain chain
   ) throws ApplicatorException {
 
-    final NetworkInfo networkInfo = context.getNetworkInfo( );
-    if ( networkInfo.getVersion( ) != null && networkInfo.getVersion().equals( networkInfo.getAppliedVersion( ) ) ) {
-      final Set<String> broadcastPublicIps = networkInfo.getInstances( ).stream( )
-          .flatMap( FUtils.chain( NIInstance::getNetworkInterfaces, Collection::stream ) )
-          .map( NINetworkInterface::getPublicIp )
-          .filter( Objects::nonNull )
+    final BNetworkInfo networkInfo = context.getNetworkInfo( );
+    if ( networkInfo.version( ).isDefined( ) && networkInfo.appliedVersion( ).isDefined( ) &&
+        networkInfo.version( ).get( ).equals( networkInfo.appliedVersion( ).get( ) ) ) {
+      final Set<String> broadcastPublicIps = networkInfo.instances( )
+          .flatMap( BNIInstance::networkInterfaces )
+          .flatMap( BNINetworkInterface::publicIp )
           .collect( Collectors.toSet( ) );
 
       PublicAddresses.dirtySnapshot( ).stream( )

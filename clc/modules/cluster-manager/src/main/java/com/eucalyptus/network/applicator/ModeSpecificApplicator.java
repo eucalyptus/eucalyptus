@@ -30,11 +30,13 @@ package com.eucalyptus.network.applicator;
 
 import java.util.EnumSet;
 import java.util.Optional;
-import com.eucalyptus.cluster.common.broadcast.NIProperty;
-import com.eucalyptus.cluster.common.broadcast.NetworkInfo;
+import com.eucalyptus.cluster.common.broadcast.BNetworkInfo;
+import com.eucalyptus.cluster.common.broadcast.BNIProperty;
 import com.eucalyptus.network.NetworkMode;
 import com.eucalyptus.util.TypedKey;
 import com.google.common.collect.Iterables;
+import io.vavr.collection.Array;
+import io.vavr.control.Option;
 
 /**
  * An applicator that is active in specific network modes.
@@ -69,14 +71,16 @@ public abstract class ModeSpecificApplicator implements Applicator {
       ApplicatorChain chain
   ) throws ApplicatorException;
 
-  private NetworkMode extractMode( final NetworkInfo networkInfo ) {
-    final Optional<NIProperty> property =
-        networkInfo.getConfiguration( ).getProperties( ).stream( )
-            .filter( prop -> "mode".equals( prop.getName( ) ) )
-            .findFirst( );
+  private NetworkMode extractMode( final BNetworkInfo networkInfo ) {
+    final Option<BNIProperty> property =
+        networkInfo.configuration( ).properties( )
+            .filter( prop -> "mode".equals( prop.name( ) ) )
+            .filter( BNIProperty.class::isInstance )
+            .map( BNIProperty.class::cast )
+            .headOption( );
 
     return NetworkMode.fromString(
-        property.map( prop -> Iterables.get( prop.getValues( ), 0 ) ).orElse( null ),
+        property.map( BNIProperty::values ).flatMap( Array::headOption ).getOrNull( ),
         NetworkMode.EDGE );
   }
 }

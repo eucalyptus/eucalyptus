@@ -51,6 +51,7 @@ import groovy.lang.GroovyObject;
 import groovy.lang.MetaClass;
 import io.vavr.Function1;
 import io.vavr.Predicates;
+import io.vavr.Value;
 import io.vavr.collection.Stream;
 import io.vavr.control.Option;
 
@@ -88,6 +89,13 @@ public class Json {
         return objectMapper;
       }
     },
+    IgnoreVavr {
+      @Override
+      ObjectMapper config( final ObjectMapper objectMapper ) {
+        objectMapper.addMixIn( Value.class, VavrMixin.class );
+        return objectMapper;
+      }
+    },
     ;
 
     abstract ObjectMapper config( final ObjectMapper mapper );
@@ -118,6 +126,9 @@ public class Json {
   public static JsonNode parse( final JsonParser parser ) throws IOException {
     if ( parser == null ) throw new IOException( "Null" );
     final JsonNode node = reader.readTree( parser );
+    if ( node == null ) {
+      throw new IOException( "No content at " + parser.getCurrentLocation( ) );
+    }
     boolean trailingContent;
     try {
       trailingContent = parser.nextToken( ) != null;
@@ -284,5 +295,10 @@ public class Json {
       "_disabledServices", "_notreadyServices", "_stoppedServices", "_epoch", "_services", "_return",
       "callerContext" } )
   private interface BaseMessageMixin {
+  }
+
+  @JsonIgnoreProperties( { "async", "defined", "distinct", "empty", "lazy", "memoized", "ordered",
+      "sequential", "singleValued", "traversableAgain" } )
+  private interface VavrMixin {
   }
 }

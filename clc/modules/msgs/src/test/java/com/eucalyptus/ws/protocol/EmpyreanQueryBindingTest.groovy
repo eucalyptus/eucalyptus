@@ -27,4 +27,10 @@ class EmpyreanQueryBindingTest extends QueryBindingTestSupport {
     URL resource = EmpyreanQueryBindingTest.getResource('/empyrean-binding.xml')
     assertValidBindingXml(resource)
   }
+
+  @Test
+  void testInternalRoundTrip() {
+    URL resource = EmpyreanQueryBindingTest.getResource('/empyrean-binding.xml')
+    assertValidInternalRoundTrip( resource )
+  }
 }

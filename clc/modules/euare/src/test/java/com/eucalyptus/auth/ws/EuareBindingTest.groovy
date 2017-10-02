@@ -52,6 +52,12 @@ class EuareBindingTest extends QueryBindingTestSupport {
   }
 
   @Test
+  void testInternalRoundTrip() {
+    URL resource = EuareBindingTest.class.getResource( '/euare-binding.xml' )
+    assertValidInternalRoundTrip( resource )
+  }
+
+  @Test
   void testCreateOpenIdConnectProvider( ) {
     bindAndAssertParameters(
         CreateOpenIdConnectProviderType,

@@ -62,6 +62,7 @@ public class BaseMessages {
   static {
     xmlMapper.registerModule( new XmlDataBindingModule( ) );
     xmlMapper.addMixIn( WebServiceError.class, WebServiceErrorMixIn.class );
+    xmlMapper.configure( SerializationFeature.FAIL_ON_EMPTY_BEANS, false );
     xmlMapper.configure( MapperFeature.AUTO_DETECT_IS_GETTERS, false );
     xmlMapper.configure( MapperFeature.REQUIRE_SETTERS_FOR_GETTERS, true );
 

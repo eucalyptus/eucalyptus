@@ -28,4 +28,10 @@ class PropertiesQueryBindingTest extends QueryBindingTestSupport {
     URL resource = PropertiesQueryBindingTest.getResource('/properties-binding.xml')
     assertValidBindingXml(resource)
   }
+
+  @Test
+  void testInternalRoundTrip() {
+    URL resource = PropertiesQueryBindingTest.getResource('/properties-binding.xml')
+    assertValidInternalRoundTrip( resource )
+  }
 }

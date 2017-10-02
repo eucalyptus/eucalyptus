@@ -77,6 +77,12 @@ class CloudFormationBindingTest extends QueryBindingTestSupport {
   }
 
   @Test
+  void testInternalRoundTrip() {
+    URL resource = CloudFormationBindingTest.class.getResource( '/cloudformation-binding.xml' )
+    assertValidInternalRoundTrip( resource )
+  }
+
+  @Test
   void testMessageQueryBindings() {
     URL resource = CloudFormationBindingTest.class.getResource( '/cloudformation-binding.xml' )
     CloudFormationQueryBinding asb = new CloudFormationQueryBinding() {

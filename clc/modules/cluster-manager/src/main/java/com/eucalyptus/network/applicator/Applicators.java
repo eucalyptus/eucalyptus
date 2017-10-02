@@ -31,7 +31,7 @@ package com.eucalyptus.network.applicator;
 import java.util.Iterator;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.common.Cluster;
-import com.eucalyptus.cluster.common.broadcast.NetworkInfo;
+import com.eucalyptus.cluster.common.broadcast.BNetworkInfo;
 import com.google.common.collect.ImmutableList;
 
 /**
@@ -50,7 +50,7 @@ public class Applicators {
 
   public static void apply(
       final Iterable<Cluster> clusters,
-      final NetworkInfo networkInfo
+      final BNetworkInfo networkInfo
   ) throws ApplicatorException {
 
     final ApplicatorContext context = new ApplicatorContext( clusters, networkInfo );

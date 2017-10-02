@@ -20,6 +20,7 @@ configurations {
   all*.exclude module: 'commons-logging' // we redirect to slf4j
   all*.exclude module: 'geronimo-activation_1.1_spec'
   all*.exclude module: 'geronimo-stax-api_1.0_spec'
+  all*.exclude module: 'vavr-match'      // optional dependency
 
   // these should be excluded via jibx deps but that fails due to these
   // dependencies being scoped in the pom
@@ -42,15 +43,19 @@ dependencies {
   api('com.cloudhopper.proxool:proxool:0.9.1') {
     exclude module: 'avalon-framework-api' // optional dependency
   }
-  api 'com.fasterxml.jackson.core:jackson-annotations:2.6.0'
-  api 'com.fasterxml.jackson.core:jackson-core:2.6.6'
-  api 'com.fasterxml.jackson.core:jackson-databind:2.6.6'
-  api 'com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.6.6'
-  api 'com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.6.6'
+  api 'com.fasterxml.jackson.core:jackson-annotations:2.9.2'
+  api 'com.fasterxml.jackson.core:jackson-core:2.9.2'
+  api 'com.fasterxml.jackson.core:jackson-databind:2.9.2'
+  api 'com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.9.2'
+  api 'com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.9.2'
+  api 'com.fasterxml.jackson.datatype:jackson-datatype-guava:2.9.2'
   api('com.github.sjones4:glisten:0.3.euca'){
     exclude module: 'groovy-all' // we include the indy variant
     exclude module: 'json-simple' // optional dependency
     exclude module: 'aws-java-sdk' // we include more recent modularised version
+  }
+  api('com.fasterxml.woodstox:woodstox-core:5.0.3') {
+    exclude module: 'stax-api'
   }
   api 'com.google.code.findbugs:jsr305:2.0.1'
   api 'com.google.guava:guava:19.0'
@@ -74,9 +79,8 @@ dependencies {
   api 'io.netty:netty-handler:4.0.37.Final'
   api 'io.netty:netty:3.6.6.Final'
   api 'io.netty:netty-transport:4.0.37.Final'
-  api('io.vavr:vavr:0.9.0') {
-    exclude module: 'vavr-match' // optional dependency
-  }
+  api 'io.vavr:vavr:0.9.0'
+  api 'io.vavr:vavr-jackson:0.9.0'
   api 'javax.inject:javax.inject:1'
   api 'jaxen:jaxen:1.1.4'
   api 'joda-time:joda-time:2.9.6'
@@ -109,9 +113,6 @@ dependencies {
   api('org.codehaus.woodstox:stax2-api:3.1.1') {
     exclude module: 'stax-api'
   }
-  api('org.codehaus.woodstox:woodstox-core-asl:4.2.0') {
-    exclude module: 'stax-api'
-  }
   api 'org.hamcrest:hamcrest-library:1.3' // 1.2
   api 'org.hibernate.common:hibernate-commons-annotations:4.0.5.Final'
   api 'org.hibernate.javax.persistence:hibernate-jpa-2.1-api:1.0.0.Final'
@@ -121,6 +122,9 @@ dependencies {
   api('org.hibernate:hibernate-proxool:4.3.11.Final'){
     exclude module: 'proxool' // we include a more recent version from another org
   }
+  api 'org.immutables:value:2.5.3'
+  api 'org.immutables:encode:2.5.3'
+  api 'org.immutables.vavr:vavr-encodings:0.4.0'
   runtimeOnly 'org.javassist:javassist:3.18.1-GA'
   runtimeOnly 'org.jboss.logging:jboss-logging:3.1.3.GA'
   runtimeOnly 'org.jboss.marshalling:jboss-marshalling:1.3.17.GA'

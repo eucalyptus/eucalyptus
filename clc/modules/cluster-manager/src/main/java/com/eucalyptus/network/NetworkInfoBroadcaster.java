@@ -32,7 +32,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.common.broadcast.NetworkInfo;
+import com.eucalyptus.cluster.common.broadcast.BNetworkInfo;
 import com.eucalyptus.cluster.common.Cluster;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -236,9 +236,10 @@ public class NetworkInfoBroadcaster {
       final Set<String> dirtyPublicAddresses = PublicAddresses.dirtySnapshot( );
       final Set<RouteKey> invalidStateRoutes = Sets.newHashSetWithExpectedSize( 50 );
       final int sourceFingerprint = fingerprint( source, clusters, dirtyPublicAddresses, NetworkGroups.NETWORK_CONFIGURATION );
-      final NetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
+      final BNetworkInfo info = NetworkInfoBroadcasts.buildNetworkConfiguration(
               networkConfiguration,
               source,
+              BaseEncoding.base16( ).lowerCase( ).encode( Ints.toByteArray( sourceFingerprint ) ),
               Suppliers.ofInstance( clusters ),
               Suppliers.ofInstance( otherClusters ),
               new Supplier<String>( ) {
@@ -257,7 +258,6 @@ public class NetworkInfoBroadcaster {
               dirtyPublicAddresses,
               invalidStateRoutes
           );
-          info.setVersion( BaseEncoding.base16( ).lowerCase( ).encode( Ints.toByteArray( sourceFingerprint ) ) );
 
       if ( !invalidStateRoutes.isEmpty( ) ) {
         vpcRouteStateInvalidator.accept( invalidStateRoutes );

@@ -31,7 +31,7 @@ package com.eucalyptus.network.applicator;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import javax.annotation.Nonnull;
 import com.eucalyptus.cluster.common.Cluster;
-import com.eucalyptus.cluster.common.broadcast.NetworkInfo;
+import com.eucalyptus.cluster.common.broadcast.BNetworkInfo;
 import com.eucalyptus.util.Parameters;
 import com.eucalyptus.util.TypedContext;
 import com.eucalyptus.util.TypedKey;
@@ -41,18 +41,19 @@ import com.eucalyptus.util.TypedKey;
  */
 public class ApplicatorContext {
 
+  public static final TypedKey<BNetworkInfo> INFO_KEY = TypedKey.create( "NetworkInfo" );
+
   private final Iterable<Cluster> clusters;
-  private final NetworkInfo networkInfo;
   private final TypedContext resourceContext = TypedContext.newTypedContext( );
 
   public ApplicatorContext(
       @Nonnull final Iterable<Cluster> clusters,
-      @Nonnull final NetworkInfo networkInfo
+      @Nonnull final BNetworkInfo networkInfo
   ) {
     Parameters.checkParam( "clusters", clusters, notNullValue( ) );
     Parameters.checkParam( "networkInfo", networkInfo, notNullValue( ) );
     this.clusters = clusters;
-    this.networkInfo = networkInfo;
+    setAttribute( INFO_KEY, networkInfo );
   }
 
   /**
@@ -69,8 +70,8 @@ public class ApplicatorContext {
    * @return The network information.
    */
   @Nonnull
-  public NetworkInfo getNetworkInfo( ) {
-    return networkInfo;
+  public BNetworkInfo getNetworkInfo( ) {
+    return getAttribute( INFO_KEY );
   }
 
   /**

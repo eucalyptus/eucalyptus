@@ -28,4 +28,10 @@ class TokensQueryBindingTest extends QueryBindingTestSupport {
     URL resource = TokensQueryBindingTest.getResource('/tokens-binding.xml')
     assertValidBindingXml(resource)
   }
+
+  @Test
+  void testInternalRoundTrip() {
+    URL resource = TokensQueryBindingTest.getResource('/tokens-binding.xml')
+    assertValidInternalRoundTrip( resource )
+  }
 }

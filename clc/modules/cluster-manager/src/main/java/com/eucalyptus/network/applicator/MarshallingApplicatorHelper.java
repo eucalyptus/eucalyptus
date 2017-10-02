@@ -28,11 +28,10 @@
  ************************************************************************/
 package com.eucalyptus.network.applicator;
 
-import java.io.StringWriter;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
+import java.io.IOException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.cluster.common.broadcast.NetworkInfo;
+import com.eucalyptus.cluster.common.broadcast.BNI;
+import com.eucalyptus.cluster.common.broadcast.BNetworkInfo;
 import com.eucalyptus.util.TypedKey;
 
 /**
@@ -51,17 +50,13 @@ class MarshallingApplicatorHelper {
   static String getMarshalledNetworkInfo( final ApplicatorContext context ) throws ApplicatorException {
     String networkInfo = context.getAttribute( MARSHALLED_INFO_KEY );
     if ( networkInfo == null ) try {
-      final NetworkInfo info = context.getNetworkInfo( );
-      final JAXBContext jc = JAXBContext.newInstance( NetworkInfo.class.getPackage( ).getName( ) );
-      final StringWriter writer = new StringWriter( 8192 );
-      jc.createMarshaller().marshal( info, writer );
-
-      networkInfo = writer.toString( );
+      final BNetworkInfo info = context.getNetworkInfo( );
+      networkInfo = BNI.toString( info );
       if ( logger.isTraceEnabled( ) ) {
-        logger.trace( "Broadcasting network information:\n${networkInfo}" );
+        logger.trace( "Broadcasting network information:\n" + networkInfo );
       }
       context.setAttribute( MARSHALLED_INFO_KEY, networkInfo );
-    } catch ( final JAXBException e ) {
+    } catch ( final IOException e ) {
       throw new ApplicatorException( "Error marshalling network information", e );
     }
     return networkInfo;

@@ -28,6 +28,8 @@
  ************************************************************************/
 package com.eucalyptus.ws.protocol
 
+import edu.ucsb.eucalyptus.msgs.BaseMessages
+
 import static org.junit.Assert.*
 import org.junit.BeforeClass
 import org.jibx.binding.classes.ClassFile
@@ -80,10 +82,31 @@ class QueryBindingTestSupport extends QueryRequestBindingTestSupport {
     }
   }
 
+  void assertValidInternalRoundTrip( URL resource, List<String> ignoreMessageClasses=[] ) {
+    List<Class> messageClasses = loadMessageClassesFromBindingXml( resource )
+    assertFalse( "No classes found for binding", messageClasses.isEmpty() )
+
+    messageClasses.each { Class clazz ->
+      if ( !ignoreMessageClasses.contains(clazz.getName()) ) {
+        BaseMessage original = (BaseMessage) clazz.newInstance( )
+        BaseMessage omTrippy = (BaseMessage) BaseMessages.fromOm( BaseMessages.toOm( original ), clazz )
+        assertEquals( 'Round trip lost something', original.toString( ), omTrippy.toString( )
+        )
+      }
+    }
+  }
+
   List<Class> loadRequestMessageClassesFromBindingXml( URL resource ) {
     Node binding = new XmlParser().parse( resource.toString() )
     binding.'mapping'.'@class'
         .findAll { String className -> !className.endsWith( "ResponseType" ) && !className.endsWith( "Response" ) }
+        .collect { String className -> Class.forName( className ) }
+        .findAll { Class clazz -> BaseMessage.class.isAssignableFrom( clazz ) }
+  }
+
+  List<Class> loadMessageClassesFromBindingXml( URL resource ) {
+    Node binding = new XmlParser().parse( resource.toString() )
+    binding.'mapping'.'@class'
         .collect { String className -> Class.forName( className ) }
         .findAll { Class clazz -> BaseMessage.class.isAssignableFrom( clazz ) }
   }

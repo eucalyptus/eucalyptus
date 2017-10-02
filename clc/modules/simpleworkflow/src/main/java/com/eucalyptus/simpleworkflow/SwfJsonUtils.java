@@ -43,6 +43,7 @@ import java.util.Locale;
 import com.eucalyptus.simpleworkflow.common.model.SimpleWorkflowMessage;
 import com.eucalyptus.util.Exceptions;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -75,16 +76,16 @@ public class SwfJsonUtils {
               .addDeserializer( Date.class, new EpochSecondsDateDeserializer( ) );
     mapper.registerModule( module );
     mapper.setDateFormat( new EpochSecondsDateFormat() );
-    mapper.addMixInAnnotations( SimpleWorkflowMessage.class, BindingMixIn.class );
+    mapper.addMixIn( SimpleWorkflowMessage.class, BindingMixIn.class );
     mapper.disable( SerializationFeature.FAIL_ON_EMPTY_BEANS );
     mapper.disable( MapperFeature.AUTO_DETECT_IS_GETTERS );
-    mapper.setVisibilityChecker(new VisibilityChecker.Std(VisibilityChecker.Std.class.getAnnotation(JsonAutoDetect.class)){
+    mapper.setVisibility( new VisibilityChecker.Std( Visibility.DEFAULT ) {
       private static final long serialVersionUID = 1L;
       @Override
       public boolean isSetterVisible( final Method m ) {
         return !( m.getParameterCount( ) == 1 && m.getParameterTypes( )[ 0 ].isEnum( ) ) && super.isSetterVisible( m );
       }
-    });
+    }.withOverrides( JsonAutoDetect.Value.defaultVisibility( ) ) );
     mapper.setSerializationInclusion( JsonInclude.Include.NON_NULL );
   }
 

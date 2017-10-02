@@ -66,6 +66,12 @@ class LoadBalancingQueryBindingTest extends QueryBindingTestSupport {
   }
 
   @Test
+  void testInternalRoundTrip() {
+    URL resource = LoadBalancingQueryBindingTest.getResource('/loadbalancing-binding.xml')
+    assertValidInternalRoundTrip( resource )
+  }
+
+  @Test
   void testMessageQueryBindings() {
     URL resource = LoadBalancingQueryBindingTest.class.getResource( '/loadbalancing-binding.xml' )
     LoadBalancingQueryBinding lbb = new LoadBalancingQueryBinding() {
