@@ -469,7 +469,7 @@ public class ProxyClusterProvider implements ClusterProvider, EventListener, Has
       this.pendingErrors.add( t );
       return false;
     } else if ( Exceptions.isCausedBy( t, ConnectionException.class ) || Exceptions.isCausedBy( t, IOException.class ) ) {
-      LOG.error( this.getName( ) + ": Error communicating with cluster: "
+      LOG.log( level, this.getName( ) + ": Error communicating with cluster: "
           + t.getMessage( ) );
       Logs.extreme( ).debug( t, t );
       this.pendingErrors.add( t );
