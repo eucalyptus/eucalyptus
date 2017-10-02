@@ -166,6 +166,10 @@ public class IPRange implements Iterable<Integer> {
     return Iterators.transform( new LongSequentialIterator( lower, upper ), Long::intValue );
   }
 
+  public int size( ) {
+    return 1 + ( unsigned( upper ).minus( unsigned( lower ) ).intValue( ) );
+  }
+
   public String toString( ) {
     return lower == upper ? PrivateAddresses.fromInteger( lower ) : PrivateAddresses.fromInteger( lower ) + "-" + PrivateAddresses.fromInteger( upper );
   }

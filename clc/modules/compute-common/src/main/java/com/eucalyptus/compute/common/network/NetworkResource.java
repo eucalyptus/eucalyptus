@@ -27,6 +27,14 @@ public abstract class NetworkResource extends EucalyptusData {
   private String value;
   private ArrayList<NetworkResource> resources = Lists.newArrayList( );
 
+  protected NetworkResource( ) {
+  }
+
+  protected NetworkResource( final String ownerId, final String value ) {
+    this.ownerId = ownerId;
+    this.value = value;
+  }
+
   public abstract String getType( );
 
   public String getOwnerId( ) {

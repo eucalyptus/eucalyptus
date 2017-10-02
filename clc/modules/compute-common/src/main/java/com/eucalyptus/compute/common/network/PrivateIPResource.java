@@ -19,7 +19,17 @@ import java.util.Objects;
 
 public class PrivateIPResource extends NetworkResource {
 
+  private static final long serialVersionUID = 1L;
+
   private String mac;
+
+  public PrivateIPResource( ) {
+  }
+
+  public PrivateIPResource( final String ownerId, final String value, final String mac ) {
+    super( ownerId, value );
+    this.mac = mac;
+  }
 
   @Override
   public String getType( ) {

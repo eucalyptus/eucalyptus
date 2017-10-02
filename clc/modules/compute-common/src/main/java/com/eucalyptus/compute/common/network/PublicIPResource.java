@@ -19,6 +19,17 @@ import java.util.Objects;
 
 public class PublicIPResource extends NetworkResource {
 
+  public PublicIPResource( ) {
+  }
+
+  public PublicIPResource( final String value ) {
+    super( null, value );
+  }
+
+  public PublicIPResource( final String ownerId, final String value ) {
+    super( ownerId, value );
+  }
+
   @Override
   public String getType( ) {
     return "public-ip";

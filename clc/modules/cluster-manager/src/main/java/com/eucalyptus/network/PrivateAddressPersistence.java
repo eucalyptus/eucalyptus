@@ -26,16 +26,28 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
-package com.eucalyptus.network.config
+package com.eucalyptus.network;
 
-import groovy.transform.CompileStatic
+import java.util.List;
+import com.google.common.base.Function;
+import com.google.common.base.Optional;
+import groovy.lang.Closure;
 
 /**
  *
  */
-@CompileStatic
-class NetworkConfigurationException extends Exception {
-  NetworkConfigurationException( final String message ) {
-    super( message )
-  }
+@SuppressWarnings( "Guava" )
+public interface PrivateAddressPersistence {
+
+  Optional<PrivateAddress> tryCreate( String scope, final String tag, String address );
+
+  void teardown( PrivateAddress address );
+
+  <V> Optional<V> withFirstMatch( PrivateAddress address, String ownerId, Closure<V> closure );
+
+  void withMatching( PrivateAddress address, Closure<?> closure );
+
+  <T> List<T> list( String scope, String tag, Function<PrivateAddress, T> transform );
+
+  PrivateAddressPersistence distinct( );
 }

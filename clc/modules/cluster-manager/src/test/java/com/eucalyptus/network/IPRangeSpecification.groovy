@@ -28,7 +28,6 @@
  ************************************************************************/
 package com.eucalyptus.network
 
-import com.eucalyptus.scripting.Groovyness
 import com.eucalyptus.util.Cidr
 import spock.lang.Specification
 
@@ -43,8 +42,8 @@ class IPRangeSpecification extends Specification {
 
   def 'should support a full range of IPv4'() {
     expect: 'parsed range equals specified range'
-    Groovyness.expandoMetaClass( parse( range ) ) == range( lower, upper )
-    Groovyness.expandoMetaClass( parse( range ) ).iterator( ).hasNext( )
+    parse( range ) == range( lower, upper )
+    parse( range ).iterator( ).hasNext( )
 
     where:
     range                     | lower | upper
@@ -53,7 +52,7 @@ class IPRangeSpecification extends Specification {
 
   def 'should allow single values or ranges'() {
     expect: 'parsed range equals specified range'
-    Groovyness.expandoMetaClass( parse( range ) ) == range( lower, upper )
+    parse( range ) == range( lower, upper )
 
     where:
     range                     | lower | upper
@@ -63,7 +62,7 @@ class IPRangeSpecification extends Specification {
 
   def 'should allow non-optimal single value'() {
     expect: 'parsed range equals specified range'
-    Groovyness.expandoMetaClass( parse( range ) ) == range( lower, upper )
+    parse( range ) == range( lower, upper )
 
     where:
     range                     | lower | upper
@@ -72,7 +71,7 @@ class IPRangeSpecification extends Specification {
 
   def 'should tolerate whitespace in ranges'() {
     expect: 'parsed range equals specified range'
-    Groovyness.expandoMetaClass( parse( range ) ) == range( lower, upper )
+    parse( range ) == range( lower, upper )
 
     where:
     range                         | lower | upper
@@ -88,7 +87,7 @@ class IPRangeSpecification extends Specification {
 
   def 'should split range'() {
     expect: 'split'
-    Groovyness.expandoMetaClass( parse( range ) ).split( ip ).collect{ Groovyness.expandoMetaClass(it) } == expected
+    parse( range ).split( ip ) == expected
 
     where:
     range                         | ip                | expected
@@ -99,7 +98,7 @@ class IPRangeSpecification extends Specification {
 
   def 'should be possible to generate from subnet/netmask'() {
     expect: 'parsed range equals specified range'
-    Groovyness.expandoMetaClass( fromSubnet( subnet, netmask ) ) == range( lower, upper )
+    fromSubnet( subnet, netmask ) == range( lower, upper )
 
     where:
     subnet        | netmask           | lower          | upper
@@ -114,7 +113,7 @@ class IPRangeSpecification extends Specification {
 
   def 'should be possible to generate from cidr'() {
     expect: 'parsed range equals specified range'
-    Groovyness.expandoMetaClass( fromCidr( Cidr.parse( cidr ) ) ) == range( lower, upper )
+    fromCidr( Cidr.parse( cidr ) ) == range( lower, upper )
 
     where:
     cidr             | lower          | upper
@@ -128,7 +127,7 @@ class IPRangeSpecification extends Specification {
 
   def 'should reject invalid ranges with IllegalArgumentException'() {
     when: 'parsing invalid range'
-    Groovyness.expandoMetaClass( parse( range ) )
+    parse( range )
 
     then:
     thrown(IllegalArgumentException)
@@ -151,8 +150,7 @@ class IPRangeSpecification extends Specification {
 
   def 'should be able to check for sub ranges'(){
     expect: 'parsed range containment check has expected result'
-    Groovyness.expandoMetaClass( parse( range ) )
-        .contains( Groovyness.expandoMetaClass( parse( perhapsContains ) ) ) == result
+    parse( range ).contains( parse( perhapsContains ) ) == result
 
     where:
     range               | perhapsContains           | result
@@ -169,12 +167,16 @@ class IPRangeSpecification extends Specification {
 
   def 'should expose range size'(){
     expect: 'range size correctly calculated'
-    Groovyness.expandoMetaClass( parse( range ) ).size( ) == size
+    parse( range ).size( ) == size
 
     where:
-    range               | size
-    '10.1.0.0'          | 1
-    '10.1.0.0-10.2.0.0' | 65536
+    range                 | size
+    '10.1.0.0'            | 1
+    '10.1.0.0-10.1.0.1'   | 2
+    '10.1.0.0-10.1.0.255' | 256
+    '10.1.0.0-10.1.1.0'   | 257
+    '10.1.0.0-10.1.1.255' | 512
+    '10.1.0.0-10.2.0.0'   | 65537
   }
 
   private static IPRange range( lower, upper ) {

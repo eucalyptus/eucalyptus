@@ -19,6 +19,13 @@ public class DescribeNetworkingFeaturesResponseType extends NetworkingMessage {
 
   private DescribeNetworkingFeaturesResult describeNetworkingFeaturesResult = new DescribeNetworkingFeaturesResult( );
 
+  public DescribeNetworkingFeaturesResponseType( ) {
+  }
+
+  public DescribeNetworkingFeaturesResponseType( final DescribeNetworkingFeaturesResult describeNetworkingFeaturesResult ) {
+    this.describeNetworkingFeaturesResult = describeNetworkingFeaturesResult;
+  }
+
   public DescribeNetworkingFeaturesResult getDescribeNetworkingFeaturesResult( ) {
     return describeNetworkingFeaturesResult;
   }

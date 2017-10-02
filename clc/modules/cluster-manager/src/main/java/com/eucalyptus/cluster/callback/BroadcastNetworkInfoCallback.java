@@ -26,38 +26,34 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
-package com.eucalyptus.cluster.callback
+package com.eucalyptus.cluster.callback;
 
-import com.eucalyptus.util.async.BroadcastCallback
-import com.eucalyptus.cluster.common.msgs.BroadcastNetworkInfoResponseType
-import com.eucalyptus.cluster.common.msgs.BroadcastNetworkInfoType
-import org.apache.log4j.Logger
+import org.apache.log4j.Logger;
+import com.eucalyptus.cluster.common.msgs.BroadcastNetworkInfoResponseType;
+import com.eucalyptus.cluster.common.msgs.BroadcastNetworkInfoType;
+import com.eucalyptus.util.async.BroadcastCallback;
 
 /**
  *
  */
-class BroadcastNetworkInfoCallback extends BroadcastCallback<BroadcastNetworkInfoType, BroadcastNetworkInfoResponseType> {
+public class BroadcastNetworkInfoCallback extends BroadcastCallback<BroadcastNetworkInfoType, BroadcastNetworkInfoResponseType> {
 
   private static Logger logger = Logger.getLogger( BroadcastNetworkInfoCallback.class );
 
-  private final String networkInfo
-  private final String version
-  private final String appliedVersion
+  private final String networkInfo;
+  private final String version;
+  private final String appliedVersion;
 
   public BroadcastNetworkInfoCallback(
       final String encodedNetworkInfo,
       final String version,
       final String appliedVersion
   ) {
-    this.networkInfo = encodedNetworkInfo
-    this.version = version
-    this.appliedVersion = appliedVersion
+    this.networkInfo = encodedNetworkInfo;
+    this.version = version;
+    this.appliedVersion = appliedVersion;
 
-    this.setRequest( new BroadcastNetworkInfoType(
-        networkInfo: encodedNetworkInfo,
-        version: version,
-        appliedVersion: appliedVersion
-    ) )
+    this.setRequest( new BroadcastNetworkInfoType( version, appliedVersion, encodedNetworkInfo ) );
   }
 
   @Override
@@ -70,7 +66,7 @@ class BroadcastNetworkInfoCallback extends BroadcastCallback<BroadcastNetworkInf
 
   @Override
   public void fireException( Throwable e ) {
-    logger.error( "Error in network information broadcast", e )
+    logger.error( "Error in network information broadcast", e );
   }
 
   @Override

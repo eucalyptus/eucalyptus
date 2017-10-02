@@ -39,7 +39,6 @@
 
 package com.eucalyptus.cloud.run;
 
-import static com.eucalyptus.cloud.VmInstanceLifecycleHelpers.NetworkResourceVmInstanceLifecycleHelper;
 import static com.eucalyptus.util.RestrictedTypes.BatchAllocator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -55,7 +54,6 @@ import com.eucalyptus.compute.common.internal.vmtypes.VmType;
 import com.google.common.base.Function;
 import org.apache.log4j.Logger;
 import com.eucalyptus.blockstorage.Storage;
-import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelper;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.compute.common.internal.util.IllegalMetadataAccessException;
@@ -481,7 +479,7 @@ public class AdmissionControl {
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
       try {
-        final VmInstanceLifecycleHelper helper = VmInstanceLifecycleHelpers.get( );
+        final VmInstanceLifecycleHelper helper = VmInstanceLifecycleHelper.get( );
 
         final PrepareNetworkResourcesType request = new PrepareNetworkResourcesType( );
         request.setAvailabilityZone( allocInfo.getPartition( ).getName( ) );
@@ -492,7 +490,7 @@ public class AdmissionControl {
         for ( final VmInstanceToken token : allocInfo.getAllocationTokens( ) ) {
           for ( final NetworkResource networkResource : result.getResources( ) ) {
             if ( token.getInstanceId( ).equals( networkResource.getOwnerId( ) ) ) {
-              token.getAttribute( NetworkResourceVmInstanceLifecycleHelper.NetworkResourcesKey ).add( networkResource );
+              token.getAttribute( VmInstanceLifecycleHelper.NetworkResourcesKey ).add( networkResource );
             }
           }
         }

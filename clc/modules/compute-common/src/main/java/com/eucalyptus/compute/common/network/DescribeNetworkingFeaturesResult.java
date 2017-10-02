@@ -23,6 +23,13 @@ public class DescribeNetworkingFeaturesResult extends EucalyptusData {
 
   private ArrayList<NetworkingFeature> networkingFeatures = Lists.newArrayList( );
 
+  public DescribeNetworkingFeaturesResult( ) {
+  }
+
+  public DescribeNetworkingFeaturesResult( final ArrayList<NetworkingFeature> networkingFeatures ) {
+    this.networkingFeatures = networkingFeatures;
+  }
+
   public ArrayList<NetworkingFeature> getNetworkingFeatures( ) {
     return networkingFeatures;
   }

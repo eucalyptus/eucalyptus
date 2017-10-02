@@ -19,6 +19,13 @@ public class PrepareNetworkResourcesResponseType extends NetworkingMessage {
 
   private PrepareNetworkResourcesResultType prepareNetworkResourcesResultType = new PrepareNetworkResourcesResultType( );
 
+  public PrepareNetworkResourcesResponseType( ) {
+  }
+
+  public PrepareNetworkResourcesResponseType( final PrepareNetworkResourcesResultType prepareNetworkResourcesResultType ) {
+    this.prepareNetworkResourcesResultType = prepareNetworkResourcesResultType;
+  }
+
   public PrepareNetworkResourcesResultType getPrepareNetworkResourcesResultType( ) {
     return prepareNetworkResourcesResultType;
   }

@@ -65,6 +65,7 @@ import com.eucalyptus.auth.AuthContextSupplier;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.VmInstanceLifecycleHelper;
 import com.eucalyptus.cloud.VmInstanceToken;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.common.callback.ResourceStateCallback;
@@ -104,11 +105,9 @@ import com.eucalyptus.blockstorage.msgs.GetVolumeTokenType;
 import com.eucalyptus.blockstorage.msgs.StorageVolume;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.cluster.common.ResourceToken;
-import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cluster.common.msgs.VmRunType;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.compute.common.internal.util.MetadataException;
-import com.eucalyptus.compute.common.internal.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.common.Cluster;
 import com.eucalyptus.cluster.common.ResourceState;
 import com.eucalyptus.cluster.callback.VmRunCallback;
@@ -720,7 +719,7 @@ public class ClusterAllocator implements Runnable {
     
 //TODO:GRZE:FINISH THIS.    Date date = Contexts.lookup( ).getContracts( ).get( Contract.Type.EXPIRATION ); 
     final VmRunType.Builder builder = VmRunType.builder( );
-    VmInstanceLifecycleHelpers.get( ).prepareVmRunType( childToken, builder );
+    VmInstanceLifecycleHelper.get( ).prepareVmRunType( childToken, builder );
     final VmRunType run = builder
                                    .instanceId( childToken.getInstanceId( ) )
                                    .naturalId( childToken.getInstanceUuid( ) )

@@ -46,8 +46,8 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.blockstorage.Volumes;
+import com.eucalyptus.cloud.VmInstanceLifecycleHelper;
 import com.eucalyptus.cluster.common.ResourceToken;
-import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.VmInstanceToken;
 import com.eucalyptus.cloud.run.*;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
@@ -549,11 +549,11 @@ public class VmControl {
         final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
         if ( VmState.STOPPED.equals( vm.getState( ) ) ) {
           Allocation allocInfo = Allocations.start( vm );
-          VmInstanceLifecycleHelpers.get( ).prepareAllocation( vm, allocInfo );
+          VmInstanceLifecycleHelper.get( ).prepareAllocation( vm, allocInfo );
           try {//scope for allocInfo
             AdmissionControl.run( ).apply( allocInfo );
             for ( final ResourceToken resourceToken : allocInfo.getAllocationTokens( ) ) {
-              VmInstanceLifecycleHelpers.get( ).startVmInstance( resourceToken, vm );
+              VmInstanceLifecycleHelper.get( ).startVmInstance( resourceToken, vm );
             }
             final int oldCode = vm.getState( ).getCode( );
             final int newCode = VmState.PENDING.getCode( );

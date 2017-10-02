@@ -21,6 +21,19 @@ public class BroadcastNetworkInfoType extends CloudClusterMessage {
   private String appliedVersion;
   private String networkInfo;
 
+  public BroadcastNetworkInfoType( ) {
+  }
+
+  public BroadcastNetworkInfoType(
+      final String version,
+      final String appliedVersion,
+      final String networkInfo
+  ) {
+    this.version = version;
+    this.appliedVersion = appliedVersion;
+    this.networkInfo = networkInfo;
+  }
+
   public String getVersion( ) {
     return version;
   }

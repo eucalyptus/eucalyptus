@@ -62,13 +62,13 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.VmInstanceLifecycleHelper;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.internal.util.InvalidInstanceProfileMetadataException;
 import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
 import com.eucalyptus.compute.common.ImageMetadata.Platform;
 import com.eucalyptus.compute.common.backend.RunInstancesType;
-import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.compute.common.internal.util.IllegalMetadataAccessException;
 import com.eucalyptus.compute.common.internal.util.InvalidMetadataException;
@@ -243,7 +243,7 @@ public class VerifyMetadata {
     
     @Override
     public boolean apply( Allocation allocInfo ) throws MetadataException {
-      VmInstanceLifecycleHelpers.get( ).verifyAllocation( allocInfo );
+      VmInstanceLifecycleHelper.get( ).verifyAllocation( allocInfo );
       return true;
     }
   }

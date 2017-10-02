@@ -71,6 +71,7 @@
 	<property name="build.src.dir" value="${build.dir}/src" />
 	<property name="generated.src.dir" value="${basedir}/src/generated/java" />
 	<property name="src.dir" value="${basedir}/src/main/java" />
+	<property name="groovy.src.dir" value="${basedir}/src/main/groovy" />
 	<property name="test.dir" value="${basedir}/src/test/java" />
 	<property name="conf.dir" value="${basedir}/conf" />
 	<property name="rsrc.dir" value="${basedir}/src/main/resources" />
@@ -219,7 +220,7 @@
 		</path>
 	</target>
 	<target name="builder" description="--> build the jar file from source.">
-		<condition property="builder.target" value="build-${builder.suffix}" else="build-java">
+		<condition property="builder.target" value="build-${builder.suffix}" else="build-all">
 			<isset property="builder.suffix" />
 		</condition>
 		<echo message="[BUILDER] ${builder.target} for ${ant.project.name}" />
@@ -258,18 +259,18 @@
 	<target name="should-build-groovy">
 		<mkdir dir="${build.classes.dir}" />
 		<uptodate property="build.notRequired" targetfile="${jar.file}">
-			<srcfiles dir="${src.dir}" includes="**/*" />
-			<srcfiles dir="${generated.src.dir}" includes="**/*" />
+			<srcfiles dir="${groovy.src.dir}" includes="**/*" />
 		</uptodate>
+		<condition property="build.notRequired">
+			<not><available file="${groovy.src.dir}" type="dir"/></not>
+		</condition>
 	</target>
-	<target name="build-groovy" depends="should-build-groovy,classpaths" unless="build.notRequired">
+	<target name="build-groovy" depends="classpaths,build-java,should-build-groovy" unless="build.notRequired">
 		<echo message="[COMPILE] main for ${ant.project.name}" />
-		<antcall target="clean" />
 		<antcall target="build-mkdirs" inheritall="true" inheritrefs="true" />
 		<taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />
-		<groovyc srcdir="${src.dir}:${generated.src.dir}:${build.classes.dir}" classpathref="classpath" includeantruntime="${groovyc.includeantruntime}" fork="${groovyc.fork}" destdir="${build.classes.dir}" verbose="true" listfiles="true" configscript="${project.basedir}/config.groovy">
+		<groovyc srcdir="${groovy.src.dir}" classpathref="classpath" includeantruntime="${groovyc.includeantruntime}" fork="${groovyc.fork}" destdir="${build.classes.dir}" verbose="true" listfiles="true" configscript="${project.basedir}/config.groovy">
 			<javac source="${javac.source}" target="${javac.target}" encoding="utf-8" debug="${javac.debug}" >
-				<compilerarg value="-Js=${build.src.dir}/main/java"/>
 				<compilerarg value="-Xbootclasspath:${groovyc.bootclasspath}"/>
 				<compilerarg value="${groovyc.extraargs.xlint}"/>
 				<compilerarg value="${groovyc.extraargs.werror}"/>
@@ -296,7 +297,8 @@
 			</fileset>
 		</copy>
 	</target>
-	<target name="builder-test" depends="classpaths,build-groovy">
+	<target name="build-all" depends="build-groovy"/>
+	<target name="builder-test" depends="classpaths,build-all">
 		<antcall target="build-mkdirs" inheritall="true" inheritrefs="true" />
 		<echo message="[COMPILE] test for ${ant.project.name}" />
 		<taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />

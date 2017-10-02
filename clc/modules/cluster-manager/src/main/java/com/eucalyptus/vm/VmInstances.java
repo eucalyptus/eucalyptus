@@ -79,7 +79,7 @@ import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeType;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Hosts;
-import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
+import com.eucalyptus.cloud.VmInstanceLifecycleHelper;
 import com.eucalyptus.cloud.VmInstanceToken;
 import com.eucalyptus.cloud.run.Allocations;
 import com.eucalyptus.cluster.Clusters;
@@ -837,7 +837,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
        Entities.asDistinctTransaction( VmInstance.class, new Predicate<VmInstance>( ) {
          @Override
          public boolean apply( @Nullable final VmInstance vmInstance ) {
-           VmInstanceLifecycleHelpers.get( ).cleanUpInstance( Entities.merge( vm ), vmState );
+           VmInstanceLifecycleHelper.get( ).cleanUpInstance( Entities.merge( vm ), vmState );
            return true;
          }
        } ).apply( vm );
@@ -1844,7 +1844,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
             TagHelper.createOrUpdateTags( allocInfo.getOwnerFullName( ), persistedInstance, instanceTags );
           }
         } );
-        VmInstanceLifecycleHelpers.get().prepareVmInstance( token, builder );
+        VmInstanceLifecycleHelper.get().prepareVmInstance( token, builder );
         VmInstance vmInst = builder
             .owner( allocInfo.getOwnerFullName( ) )
             .withIds( token.getInstanceId(),

@@ -33,7 +33,6 @@ import com.eucalyptus.address.Addresses
 import com.eucalyptus.auth.AuthContext
 import com.eucalyptus.auth.principal.AccountFullName
 import com.eucalyptus.auth.principal.Principals
-import com.eucalyptus.auth.principal.UserFullName
 import com.eucalyptus.cluster.common.msgs.VmRunType.Builder as VmRunBuilder
 import com.eucalyptus.cloud.run.Allocations.Allocation
 import com.eucalyptus.cluster.common.ResourceToken
@@ -86,7 +85,6 @@ import com.eucalyptus.network.IPRange
 import com.eucalyptus.network.NetworkGroups
 import com.eucalyptus.network.PrivateAddresses
 import com.eucalyptus.network.PublicAddresses
-import com.eucalyptus.records.Logs
 import com.eucalyptus.system.Threads
 import com.eucalyptus.util.Callback
 import com.eucalyptus.util.Cidr
@@ -116,7 +114,6 @@ import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.google.common.collect.Sets
 
-import com.eucalyptus.cluster.common.msgs.VmInfo
 import com.eucalyptus.cluster.common.msgs.NetworkConfigType
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -125,7 +122,6 @@ import org.springframework.core.OrderComparator
 
 import javax.annotation.Nonnull
 import javax.annotation.Nullable
-import javax.persistence.EntityTransaction
 
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.InvocationTargetException
@@ -146,6 +142,10 @@ import static com.google.common.base.MoreObjects.firstNonNull
 class VmInstanceLifecycleHelpers {
   private static final DispatchingVmInstanceLifecycleHelper dispatchingHelper =
       new DispatchingVmInstanceLifecycleHelper( )
+
+  static {
+    VmInstanceLifecycleHelper.Registry.helper.set( dispatchingHelper )
+  }
 
   static class DispatchingVmInstanceLifecycleHelper {
     private final ReadWriteLock helpersLock = new ReentrantReadWriteLock( )
@@ -175,10 +175,6 @@ class VmInstanceLifecycleHelpers {
       Collections.sort( helpers, new OrderComparator( ) )
       dispatchingHelper.helpers.set( helpers )
     }
-  }
-
-  static VmInstanceLifecycleHelper get( ) {
-    dispatchingHelper
   }
 
   static abstract class VmInstanceLifecycleHelperSupport implements Ordered, VmInstanceLifecycleHelper {
@@ -333,7 +329,7 @@ class VmInstanceLifecycleHelpers {
         try {
           defaultVpcId = vpcs.lookupDefault( account, CloudMetadatas.toDisplayName( ) )
         } catch ( VpcMetadataNotFoundException e ) {
-          defaultVpcId = "";
+          defaultVpcId = ""
         }
         allocation.setAttribute( DefaultVpcIdKey, defaultVpcId )
       }
@@ -376,7 +372,7 @@ class VmInstanceLifecycleHelpers {
     ) {
       if ( !prepareFromTokenResources( allocation, prepareNetworkResourcesType, PrivateIPResource ) ) {
         prepareNetworkResourcesType.getResources( ).addAll(
-            allocation.allocationTokens.collect{ ResourceToken token ->
+            allocation.allocationTokens.collect{ VmInstanceToken token ->
               new PrivateIPResource( ownerId: token.instanceId ) }
         )
       }
@@ -434,7 +430,7 @@ class VmInstanceLifecycleHelpers {
       if ( VmInstance.VmStateSet.TORNDOWN.contains( state ) ) try {
         if ( !instance.vpcId &&
             !Strings.isNullOrEmpty( instance.privateAddress ) &&
-            !VmNetworkConfig.DEFAULT_IP.equals( instance.privateAddress ) ) {
+            VmNetworkConfig.DEFAULT_IP != instance.privateAddress) {
           Networking.instance.release( new ReleaseNetworkResourcesType( resources: [
               new PrivateIPResource( value: instance.privateAddress, ownerId: instance.displayName )
           ] as ArrayList<NetworkResource> ) )
@@ -446,6 +442,7 @@ class VmInstanceLifecycleHelpers {
     }
   }
 
+  @SuppressWarnings("GroovyUnusedDeclaration")
   static final class PublicIPVmInstanceLifecycleHelper extends NetworkResourceVmInstanceLifecycleHelper {
     @Override
     void prepareNetworkAllocation(
@@ -459,7 +456,7 @@ class VmInstanceLifecycleHelpers {
       if ( ( isVpc && (instanceNetworkInterface?.networkInterfaceId==null) && firstNonNull(requestedAllocation,allocation.subnet.mapPublicIpOnLaunch) ) ||
           ( !isVpc && !allocation.usePrivateAddressing ) ) {
         if ( !prepareFromTokenResources( allocation, prepareNetworkResourcesType, PublicIPResource ) ) {
-          allocation?.allocationTokens?.each{ ResourceToken token ->
+          allocation?.allocationTokens?.each{ VmInstanceToken token ->
             Collection<NetworkResource> resources =
                 token.getAttribute(NetworkResourcesKey).findAll{ NetworkResource resource -> resource instanceof PublicIPResource }
             if ( resources.isEmpty( ) ) {
@@ -484,7 +481,7 @@ class VmInstanceLifecycleHelpers {
           if ( !instance.vpcId ) { // Network interface handles public IP for VPC
             withBatch {
               Addresses.getInstance( ).assign( address, instance )
-              Addresses.AddressingBatch.reset( ); // Flush after running
+              Addresses.AddressingBatch.reset( ) // Flush after running
             }
             VmInstances.updatePublicAddress( instance, address.address )
           }
@@ -506,60 +503,12 @@ class VmInstanceLifecycleHelpers {
     void cleanUpInstance( final VmInstance instance, final VmState state ) {
       // For EC2-Classic unassign any public/elastic IP
       if ( !instance.vpcId &&
-          !( VmNetworkConfig.DEFAULT_IP.equals( instance.publicAddress ) || Strings.isNullOrEmpty( instance.publicAddress ) ) &&
+          !( VmNetworkConfig.DEFAULT_IP == instance.publicAddress || Strings.isNullOrEmpty( instance.publicAddress ) ) &&
           VmInstance.VmStateSet.TORNDOWN.contains( state )
       ) {
         if ( Addresses.getInstance( ).unassign( instance.publicAddress ) ) {
           VmInstances.updatePublicAddress( instance, VmNetworkConfig.DEFAULT_IP )
-          PublicAddresses.markDirty( instance.publicAddress, instance.partition );
-        }
-      }
-    }
-
-    private static void restoreAddress(
-        final Optional<String> reservedPublicIp,
-        final VmInfo input ) {
-      Entities.transaction( VmInstance ) { EntityTransaction db ->
-        try {
-          final VmInstance instance = VmInstances.lookup( input.instanceId )
-
-          Closure<?> assign = { Address address ->
-            Addresses.getInstance( ).assign( address, instance )
-            null
-          }
-
-          Closure<?> updateInstanceAddresses = { Address address ->
-            VmInstances.updateAddresses( instance, input.netParams.ipAddress, address.address )
-            null
-          }
-
-          if ( reservedPublicIp.isPresent( ) ) { // Restore impending system address
-            final Address pendingAddress = Addresses.getInstance().lookupActiveAddress( reservedPublicIp.get( ) )
-            updateInstanceAddresses.call( pendingAddress )
-            if ( !pendingAddress.isReallyAssigned( ) ) {
-              assign.call( pendingAddress )
-            }
-          } else { // Check for / restore an Elastic IP
-            final UserFullName userFullName = UserFullName.getInstanceForAccount( input.accountId, input.ownerId )
-            final Address address = Addresses.getInstance().lookupActiveAddress( input.netParams.ignoredPublicIp )
-            if ( address.isAssigned( ) &&
-                address.instanceAddress.equals( input.netParams.ipAddress ) &&
-                address.instanceId.equals( input.instanceId ) ) {
-              updateInstanceAddresses.call( address )
-            } else if ( !address.isAssigned( ) && address.isAllocated( ) && address.ownerAccountNumber.equals( userFullName.accountNumber ) ) {
-              updateInstanceAddresses.call( address )
-              assign.call( address )
-            }
-          }
-
-          db.commit( )
-        } catch ( final Exception e ) {
-          Logger.getLogger( PublicIPVmInstanceLifecycleHelper ).error( "Failed to restore address state " + input.netParams
-              + " for instance "
-              + input.instanceId
-              + " because of: "
-              + e.message )
-          Logs.extreme( ).error( e, e )
+          PublicAddresses.markDirty( instance.publicAddress, instance.partition )
         }
       }
     }
@@ -609,8 +558,8 @@ class VmInstanceLifecycleHelpers {
           groups.add( NetworkGroups.lookupByGroupId( authContext.isSystemUser( ) ? null : accountFullName, groupId ) )
         }
       }
-      if ( !Collections.singleton( vpcId ).equals( Sets.newHashSet( Iterables.transform( groups, NetworkGroup.vpcId( ) ) ) ) ) {
-        throw new InvalidMetadataException( "Invalid security groups (inconsistent VPC)" );
+      if (Collections.singleton(vpcId) != Sets.newHashSet(Iterables.transform(groups, NetworkGroup.vpcId()))) {
+        throw new InvalidMetadataException( "Invalid security groups (inconsistent VPC)" )
       }
 
       final Map<String, NetworkGroup> networkRuleGroups = Maps.newHashMap( )
@@ -678,15 +627,15 @@ class VmInstanceLifecycleHelpers {
         )
         allocation.subnet = instance.bootRecord.subnet
 
-        final Partition partition = Partitions.lookupByName( allocation.subnet.availabilityZone );
-        allocation.setPartition( partition );
+        final Partition partition = Partitions.lookupByName( allocation.subnet.availabilityZone )
+        allocation.setPartition( partition )
       }
     }
 
     @Override
     void verifyAllocation( final Allocation allocation ) throws MetadataException {
       final RunInstancesType runInstances = (RunInstancesType) allocation.request
-      final boolean allowMultiVpc = Principals.systemUser( ).name.equals( runInstances.effectiveUserId )
+      final boolean allowMultiVpc = Principals.systemUser().name == runInstances.effectiveUserId
 
       final InstanceNetworkInterfaceSetItemRequestType instanceNetworkInterface =
           getPrimaryNetworkInterface( runInstances )
@@ -695,7 +644,8 @@ class VmInstanceLifecycleHelpers {
       final String privateIp = getPrimaryPrivateIp( instanceNetworkInterface, runInstances.privateIpAddress )
       final String subnetId = normalizeIdentifier( instanceNetworkInterface?.subnetId ?: runInstances.subnetId )
       final Set<String> networkIds = getSecurityGroupIds( instanceNetworkInterface )
-      final Set<NetworkingFeature> networkingFeatures = Networking.getInstance( ).describeFeatures( );
+      final Set<NetworkingFeature> networkingFeatures = Networking.getInstance( ).describeFeatures( )
+      //noinspection GrDeprecatedAPIUsage
       final String requiredResourceAccountNumber = !allocation.context.privileged ?
           allocation.ownerFullName.accountNumber :
           null
@@ -783,11 +733,11 @@ class VmInstanceLifecycleHelpers {
             throw new NoSuchGroupMetadataException( "Security group (${groupId}) not found", e )
           }
         }
-        if ( !groups.empty && !Collections.singleton( subnet.vpc.displayName ).equals( Sets.newHashSet( Iterables.transform( groups, NetworkGroup.vpcId( ) ) ) ) ) {
-          throw new InvalidMetadataException( "Invalid security groups (inconsistent VPC)" );
+        if ( !groups.empty && Collections.singleton(subnet.vpc.displayName) != Sets.newHashSet(Iterables.transform(groups, NetworkGroup.vpcId()))) {
+          throw new InvalidMetadataException( "Invalid security groups (inconsistent VPC)" )
         }
         if ( groups.size( ) > VpcConfiguration.getSecurityGroupsPerNetworkInterface( ) ) {
-          throw new SecurityGroupLimitMetadataException( );
+          throw new SecurityGroupLimitMetadataException( )
         }
 
         if ( secondaryNetworkInterfaces ) Entities.transaction( VpcNetworkInterface ) {
@@ -860,26 +810,26 @@ class VmInstanceLifecycleHelpers {
               if ( !Iterables.tryFind( secondaryGroups, CollectionUtils.propertyPredicate( groupId, NetworkGroup.groupId() ) ).isPresent() ) try {
                 secondaryGroups.add( lookup( requiredResourceAccountNumber, "security group", groupId, NetworkGroup ) )
               } catch ( Exception e ) {
-                throw new NoSuchGroupMetadataException( "Security group (${groupId}) not found", e );
+                throw new NoSuchGroupMetadataException( "Security group (${groupId}) not found", e )
               }
             }
-            if ( !secondaryGroups.empty && !Collections.singleton( secondarySubnet.vpc.displayName ).equals( Sets.newHashSet( Iterables.transform( secondaryGroups, NetworkGroup.vpcId( ) ) ) ) ) {
-              throw new InvalidMetadataException( "Invalid security groups for device ${networkInterfaceItem.deviceIndex} (inconsistent VPC)" );
+            if ( !secondaryGroups.empty && Collections.singleton(secondarySubnet.vpc.displayName) != Sets.newHashSet(Iterables.transform(secondaryGroups, NetworkGroup.vpcId()))) {
+              throw new InvalidMetadataException( "Invalid security groups for device ${networkInterfaceItem.deviceIndex} (inconsistent VPC)" )
             }
             if ( secondaryGroups.size( ) > VpcConfiguration.getSecurityGroupsPerNetworkInterface( ) ) {
-              throw new SecurityGroupLimitMetadataException( );
+              throw new SecurityGroupLimitMetadataException( )
             }
           }
           if ( deviceIndexes.size( ) > maxInterfaces ) {
             throw new InvalidMetadataException(
-                "Interface count ${deviceIndexes.size( )} exceeds the limit for ${allocation.getVmType( )?.name}" );
+                "Interface count ${deviceIndexes.size( )} exceeds the limit for ${allocation.getVmType( )?.name}" )
           }
         }
 
         allocation.subnet = subnet
 
-        final Partition partition = Partitions.lookupByName( subnet.availabilityZone );
-        allocation.setPartition( partition );
+        final Partition partition = Partitions.lookupByName( subnet.availabilityZone )
+        allocation.setPartition( partition )
 
         final Map<String, NetworkGroup> networkRuleGroups = Maps.newHashMap( )
         for ( final NetworkGroup networkGroup : groups ) {
@@ -897,7 +847,7 @@ class VmInstanceLifecycleHelpers {
         if ( defaultVpcId != null && !networkingFeatures.contains( NetworkingFeature.Vpc ) ) {
           throw new InvalidMetadataException( "EC2-VPC not supported, delete default VPC to run in EC2-Classic" )
         } else if ( defaultVpcId == null && !networkingFeatures.contains( NetworkingFeature.Classic ) ) {
-          throw new VpcRequiredMetadataException( );
+          throw new VpcRequiredMetadataException( )
         } else if ( runInstances.addressingType && !networkingFeatures.contains( NetworkingFeature.Classic ) ) {
           throw new InvalidMetadataException("Addressing scheme not supported in EC2-VPC")
         }
@@ -920,7 +870,7 @@ class VmInstanceLifecycleHelpers {
           allocation.getAttribute( secondaryNetworkInterfacesKey )
 
       if ( allocation.subnet && !prepareFromTokenResources( allocation, prepareNetworkResourcesType, VpcNetworkInterfaceResource ) ) {
-        allocation?.allocationTokens?.each{ ResourceToken token ->
+        allocation?.allocationTokens?.each{ VmInstanceToken token ->
           Collection<NetworkResource> resources = token.getAttribute(NetworkResourcesKey).findAll{ NetworkResource resource ->
             resource instanceof VpcNetworkInterfaceResource && resource.ownerId != null }
           if ( resources.isEmpty( ) ) {
@@ -1055,11 +1005,11 @@ class VmInstanceLifecycleHelpers {
               RestrictedTypes.resolver( VpcNetworkInterface ).apply( primaryInterface.value )
           builder.privateAddress( networkInterface.privateIpAddress )
           builder.macAddress( networkInterface.macAddress )
-          builder.primaryEniAttachmentId( networkInterface.attachment.attachmentId );
+          builder.primaryEniAttachmentId( networkInterface.attachment.attachmentId )
         } else {
           builder.privateAddress( primaryInterface.privateIp )
           builder.macAddress( primaryInterface.mac )
-          builder.primaryEniAttachmentId( primaryInterface.attachmentId );
+          builder.primaryEniAttachmentId( primaryInterface.attachmentId )
         }
 
         // Handle secondary interfaces
@@ -1131,7 +1081,7 @@ class VmInstanceLifecycleHelpers {
               new Date( ),
               resource.deleteOnTerminate
           ) )
-          resource.attachmentId = networkInterface.attachment.attachmentId;
+          resource.attachmentId = networkInterface.attachment.attachmentId
           Address address = getAddress( resourceToken )
           withBatch {
             if ( address != null ) {
@@ -1146,7 +1096,7 @@ class VmInstanceLifecycleHelpers {
           }
           // Add so eni information is available from instance, not for
           // persistence
-          instance.addNetworkInterface( networkInterface );
+          instance.addNetworkInterface( networkInterface )
 
           // Handle secondary interfaces
           final List<VpcNetworkInterfaceResource> secondaryResources = resources.findAll{ NetworkResource networkResource ->
@@ -1199,7 +1149,7 @@ class VmInstanceLifecycleHelpers {
             }
             // Add so eni information is available from instance, not for
             // persistence
-            instance.addNetworkInterface( secondaryNetworkInterface );
+            instance.addNetworkInterface( secondaryNetworkInterface )
           }
         } as Callback<VmInstance> )
       }
@@ -1223,7 +1173,7 @@ class VmInstanceLifecycleHelpers {
     void cleanUpInstance( final VmInstance instance, final VmState state ) {
       for ( VpcNetworkInterface networkInterface : instance.networkInterfaces ) {
         if ( networkInterface.associated && VmInstance.VmStateSet.DONE.contains( state ) ) {
-          PublicAddresses.markDirty( networkInterface.association.publicIp, instance.partition );
+          PublicAddresses.markDirty( networkInterface.association.publicIp, instance.partition )
         }
         if ( VmInstance.VmStateSet.DONE.contains( state ) && Entities.isPersistent( instance ) ) {
           if ( networkInterface.attached && networkInterface.attachment.deviceIndex == 0 ) {
@@ -1246,11 +1196,11 @@ class VmInstanceLifecycleHelpers {
      * The first four and last addresses are reserved in a subnet
      */
     private static boolean validPrivateIpForCidr( String cidrText, String privateIp ) {
-      boolean valid = true;
+      boolean valid = true
       if ( privateIp ) {
         final int addressAsInt = PrivateAddresses.asInteger( privateIp )
         final Cidr cidr = Cidr.parse( cidrText )
-        final IPRange range = IPRange.fromCidr( cidr ); // range omits first and last
+        final IPRange range = IPRange.fromCidr( cidr ) // range omits first and last
         valid = range.contains( IPRange.fromCidr( Cidr.of( addressAsInt, 32 ) ) ) && //
             !Iterables.contains( Iterables.limit( IPRange.fromCidr( cidr ), 3 ), addressAsInt )
       }

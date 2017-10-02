@@ -19,6 +19,13 @@ public class UpdateInstanceResourcesResponseType extends NetworkingMessage {
 
   private Boolean updated;
 
+  public UpdateInstanceResourcesResponseType( ) {
+  }
+
+  public UpdateInstanceResourcesResponseType( final Boolean updated ) {
+    this.updated = updated;
+  }
+
   public Boolean getUpdated( ) {
     return updated;
   }

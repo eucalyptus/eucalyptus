@@ -23,6 +23,13 @@ public class PrepareNetworkResourcesResultType extends EucalyptusData {
 
   private ArrayList<NetworkResource> resources = Lists.newArrayList( );
 
+  public PrepareNetworkResourcesResultType( ) {
+  }
+
+  public PrepareNetworkResourcesResultType( final ArrayList<NetworkResource> resources ) {
+    this.resources = resources;
+  }
+
   public ArrayList<NetworkResource> getResources( ) {
     return resources;
   }

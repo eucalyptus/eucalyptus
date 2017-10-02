@@ -26,6 +26,19 @@ public class PrepareNetworkResourcesType extends NetworkingMessage {
   private ArrayList<NetworkResource> resources = Lists.newArrayList( );
   private ArrayList<NetworkFeature> features = Lists.newArrayList( );
 
+  public PrepareNetworkResourcesType( ) {
+  }
+
+  public PrepareNetworkResourcesType(
+      final String vpc,
+      final String subnet,
+      final ArrayList<NetworkResource> resources
+  ) {
+    this.vpc = vpc;
+    this.subnet = subnet;
+    this.resources = resources;
+  }
+
   public String getAvailabilityZone( ) {
     return availabilityZone;
   }

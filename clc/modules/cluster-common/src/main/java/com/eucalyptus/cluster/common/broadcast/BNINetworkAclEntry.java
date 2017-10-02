@@ -18,6 +18,7 @@ package com.eucalyptus.cluster.common.broadcast;
 import org.immutables.value.Value.Immutable;
 import com.eucalyptus.cluster.common.broadcast.impl.ImmutableNetworkInfoStyle;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+import io.vavr.control.Option;
 
 /**
  *
@@ -35,11 +36,11 @@ public interface BNINetworkAclEntry {
 
   String cidr( );
 
-  Integer icmpCode( );
+  Option<Integer> icmpCode( );
 
-  Integer icmpType( );
+  Option<Integer> icmpType( );
 
-  Integer portRangeFrom( );
+  Option<Integer> portRangeFrom( );
 
-  Integer portRangeTo( );
+  Option<Integer> portRangeTo( );
 }

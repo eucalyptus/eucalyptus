@@ -42,13 +42,10 @@ package com.eucalyptus.vm.dns;
 import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
 
 import java.net.InetAddress;
-import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -76,8 +73,8 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.network.IPRange;
-import com.eucalyptus.network.config.Cluster;
-import com.eucalyptus.network.config.NetworkConfiguration;
+import com.eucalyptus.network.config.NetworkConfigurationApi.Cluster;
+import com.eucalyptus.network.config.NetworkConfigurationApi.NetworkConfiguration;
 import com.eucalyptus.network.config.NetworkConfigurations;
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.Classes;
@@ -100,12 +97,12 @@ import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.net.InetAddresses;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.vavr.collection.Array;
+import io.vavr.control.Option;
 
 @ConfigurableClass( root = "dns.split_horizon",
                     description = "Options controlling Split-Horizon DNS resolution." )
@@ -638,12 +635,9 @@ public abstract class SplitHorizonResolver extends DnsResolver {
       @Override
       public Predicate<InetAddress> get() {
         Predicate<InetAddress> predicate = Predicates.alwaysFalse( );
-        final Optional<NetworkConfiguration> config = NetworkConfigurations.getNetworkConfiguration( );
-        if ( config.isPresent( ) ) try {
-          final List<IPRange> ranges = ImmutableList.copyOf( Optional.presentInstances(
-              Iterables.transform(
-                  config.get( ).getPublicIps( ),
-                  IPRange.parse( ) ) ) );
+        final Option<NetworkConfiguration> config = NetworkConfigurations.getNetworkConfiguration( );
+        if ( config.isDefined( ) ) try {
+          final Array<IPRange> ranges = config.get( ).publicIps().flatMap( IPRange.optParse( ) );
           predicate = new Predicate<InetAddress>( ) {
             @Override
             public boolean apply( @Nullable final InetAddress inetAddress ) {
@@ -666,12 +660,12 @@ public abstract class SplitHorizonResolver extends DnsResolver {
 
   private enum ClusterSubnets implements Supplier<Iterable<Cidr>> {
     INSTANCE {
-      private final AtomicReference<Iterable<Cidr>> lastLoaded = new AtomicReference<Iterable<Cidr>>( Collections.<Cidr>emptyList( ) );
+      private final AtomicReference<Iterable<Cidr>> lastLoaded = new AtomicReference<>( Array.empty( ) );
 
       @Override
       public Iterable<Cidr> get( ) {
-        final Optional<NetworkConfiguration> configurationOptional = NetworkConfigurations.getNetworkConfiguration( );
-        if ( !configurationOptional.isPresent( ) || Databases.isVolatile( ) ) {
+        final Option<NetworkConfiguration> configurationOptional = NetworkConfigurations.getNetworkConfiguration( );
+        if ( !configurationOptional.isDefined( ) || Databases.isVolatile( ) ) {
           return lastLoaded.get( );
         } else try {
           final Set<String> clusters = Components.services( ClusterController.class )
@@ -679,14 +673,11 @@ public abstract class SplitHorizonResolver extends DnsResolver {
               .toJavaSet( );
           final NetworkConfiguration configuration =
               NetworkConfigurations.explode( configurationOptional.get( ), clusters );
-          final List<Cidr> cidrs = ImmutableList.copyOf( Optional.presentInstances( configuration.getClusters( )
-              .stream( )
-              .map( Cluster::getSubnet )
-              .filter( Objects::nonNull )
-              .map( FUtils.optional( ThrowingFunction.undeclared(
-                  subnet -> Subnets.cidr( subnet.getSubnet( ), subnet.getNetmask( ) )
-              ) ) )
-              .collect( Collectors.toList( ) ) ) );
+          final Array<Cidr> cidrs = configuration.clusters( )
+              .flatMap( Cluster::subnet )
+              .flatMap( FUtils.vOption( FUtils.optional( ThrowingFunction.undeclared(
+                  subnet -> Subnets.cidr( subnet.subnet( ).get(), subnet.netmask( ).get( ) )
+              ) ) ) );
           lastLoaded.set( cidrs );
           return cidrs;
         } catch ( final Throwable e ) {

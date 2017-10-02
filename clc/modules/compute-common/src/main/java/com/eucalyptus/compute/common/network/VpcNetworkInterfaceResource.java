@@ -30,6 +30,20 @@ public class VpcNetworkInterfaceResource extends NetworkResource {
   private ArrayList<String> networkGroupIds;
   private String attachmentId;
 
+  public VpcNetworkInterfaceResource( ) {
+  }
+
+  public VpcNetworkInterfaceResource(
+      final String ownerId,
+      final String value,
+      final String mac,
+      final String privateIp
+  ) {
+    super( ownerId, value );
+    this.mac = mac;
+    this.privateIp = privateIp;
+  }
+
   @Override
   public String getType( ) {
     return "network-interface";

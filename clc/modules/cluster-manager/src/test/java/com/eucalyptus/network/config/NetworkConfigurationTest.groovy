@@ -82,40 +82,36 @@ class NetworkConfigurationTest {
     }
     """.stripIndent()
 
-    NetworkConfiguration result = NetworkConfigurations.parse( config )
+    NetworkConfigurationApi.NetworkConfiguration result = NetworkConfigurations.parse( config )
     println result
 
-    NetworkConfiguration expected = new NetworkConfiguration(
-        mode: 'EDGE',
-        instanceDnsDomain: 'eucalyptus.internal',
-        instanceDnsServers: [ '1.2.3.4' ],
-        macPrefix: 'd0:0d',
-        publicIps: [ '10.111.200.1-10.111.200.2' ],
-        publicGateway: '10.111.0.1',
-        privateIps: [ '1.0.0.33-1.0.0.34' ],
-        subnets: [
-          new EdgeSubnet(
-              name: "1.0.0.0",
-              subnet: "1.0.0.0",
-              netmask: "255.255.0.0",
-              gateway: "1.0.0.1"
-          )
-        ],
-        clusters: [
-            new Cluster(
-                name: 'edgecluster0',
-                macPrefix: 'd0:0d',
-                subnet:
-                    new EdgeSubnet(
-                        name: "1.0.0.0",
-                        subnet: "1.0.0.0",
-                        netmask: "255.255.0.0",
-                        gateway: "1.0.0.1"
-                    ),
-                privateIps: [ '1.0.0.33', '1.0.0.34' ]
-            )
-        ]
-    )
+    NetworkConfigurationApi.NetworkConfiguration expected = ImmutableNetworkConfigurationApi.NetworkConfiguration.builder( )
+        .setValueMode('EDGE')
+        .setValueInstanceDnsDomain('eucalyptus.internal')
+        .instanceDnsServer('1.2.3.4')
+        .setValueMacPrefix('d0:0d')
+        .publicIp('10.111.200.1-10.111.200.2')
+        .setValuePublicGateway('10.111.0.1')
+        .privateIp('1.0.0.33-1.0.0.34')
+        .subnet(ImmutableNetworkConfigurationApi.EdgeSubnet.builder( )
+            .setValueName('1.0.0.0')
+            .setValueSubnet('1.0.0.0')
+            .setValueNetmask('255.255.0.0')
+            .setValueGateway('1.0.0.1')
+            .o( ) )
+        .cluster(ImmutableNetworkConfigurationApi.Cluster.builder( )
+            .setValueName('edgecluster0')
+            .setValueMacPrefix('d0:0d')
+            .setValueSubnet(ImmutableNetworkConfigurationApi.EdgeSubnet.builder( )
+                .setValueName('1.0.0.0')
+                .setValueSubnet('1.0.0.0')
+                .setValueNetmask('255.255.0.0')
+                .setValueGateway('1.0.0.1')
+                .o( ) )
+            .privateIp('1.0.0.33')
+            .privateIp('1.0.0.34')
+            .o( ) )
+        .o( )
 
     assertEquals( 'Result does not match template', expected, result )
   }
@@ -146,25 +142,23 @@ class NetworkConfigurationTest {
     }
     """.stripIndent()
 
-    NetworkConfiguration result = NetworkConfigurations.parse( config )
+    NetworkConfigurationApi.NetworkConfiguration result = NetworkConfigurations.parse( config )
     println result
 
-    NetworkConfiguration expected = new NetworkConfiguration(
-        publicIps: [ '10.111.200.1-10.111.200.2' ],
-        clusters: [
-            new Cluster(
-                name: 'edgecluster0',
-                macPrefix: 'd0:0d',
-                subnet:
-                    new EdgeSubnet(
-                        subnet: "1.0.0.0",
-                        netmask: "255.255.0.0",
-                        gateway: "1.0.0.1"
-                    ),
-                privateIps: [ '1.0.0.33', '1.0.0.34' ]
-            )
-        ]
-    )
+    NetworkConfigurationApi.NetworkConfiguration expected = ImmutableNetworkConfigurationApi.NetworkConfiguration.builder( )
+        .publicIp('10.111.200.1-10.111.200.2')
+        .cluster(ImmutableNetworkConfigurationApi.Cluster.builder( )
+            .setValueName('edgecluster0')
+            .setValueMacPrefix('d0:0d')
+            .setValueSubnet(ImmutableNetworkConfigurationApi.EdgeSubnet.builder( )
+                .setValueSubnet('1.0.0.0')
+                .setValueNetmask('255.255.0.0')
+                .setValueGateway('1.0.0.1')
+                .o( ) )
+            .privateIp('1.0.0.33')
+            .privateIp('1.0.0.34')
+            .o( ) )
+        .o( )
 
     assertEquals( 'Result does not match template', expected, result )
   }
@@ -199,31 +193,26 @@ class NetworkConfigurationTest {
     }
     """.stripIndent()
 
-    NetworkConfiguration result = NetworkConfigurations.parse( config )
+    NetworkConfigurationApi.NetworkConfiguration result = NetworkConfigurations.parse( config )
     println result
 
-    NetworkConfiguration expected = new NetworkConfiguration(
-        macPrefix: 'd0:0d',
-        publicIps: [ '10.111.200.1-10.111.200.2' ],
-        privateIps: [ '1.0.0.33-1.0.0.34' ],
-        subnets: [
-            new EdgeSubnet(
-                name: "1.0.0.0",
-                subnet: "1.0.0.0",
-                netmask: "255.255.0.0",
-                gateway: "1.0.0.1"
-            )
-        ],
-        clusters: [
-            new Cluster(
-                name: 'edgecluster0',
-                subnet:
-                    new EdgeSubnet(
-                        name: "1.0.0.0"
-                    )
-            )
-        ]
-    )
+    NetworkConfigurationApi.NetworkConfiguration expected = ImmutableNetworkConfigurationApi.NetworkConfiguration.builder( )
+        .setValueMacPrefix('d0:0d')
+        .publicIp('10.111.200.1-10.111.200.2')
+        .privateIp('1.0.0.33-1.0.0.34')
+        .subnet(ImmutableNetworkConfigurationApi.EdgeSubnet.builder( )
+            .setValueName('1.0.0.0')
+            .setValueSubnet('1.0.0.0')
+            .setValueNetmask('255.255.0.0')
+            .setValueGateway('1.0.0.1')
+            .o( ) )
+        .cluster(ImmutableNetworkConfigurationApi.Cluster.builder( )
+            .setValueName('edgecluster0')
+            .setValueSubnet(ImmutableNetworkConfigurationApi.EdgeSubnet.builder( )
+                .setValueName('1.0.0.0')
+                .o( ) )
+            .o( ) )
+        .o( )
 
     assertEquals( 'Result does not match template', expected, result )
   }
@@ -250,22 +239,20 @@ class NetworkConfigurationTest {
     }
     """.stripIndent()
 
-    NetworkConfiguration result = NetworkConfigurations.parse( config )
+    NetworkConfigurationApi.NetworkConfiguration result = NetworkConfigurations.parse( config )
     println result
 
-    NetworkConfiguration expected = new NetworkConfiguration(
-        macPrefix: 'd0:0d',
-        publicIps: [ '10.111.200.1-10.111.200.2' ],
-        privateIps: [ '1.0.0.33-1.0.0.34' ],
-        subnets: [
-            new EdgeSubnet(
-                name: "1.0.0.0",
-                subnet: "1.0.0.0",
-                netmask: "255.255.0.0",
-                gateway: "1.0.0.1"
-            )
-        ]
-    )
+    NetworkConfigurationApi.NetworkConfiguration expected = ImmutableNetworkConfigurationApi.NetworkConfiguration.builder( )
+        .setValueMacPrefix('d0:0d')
+        .publicIp('10.111.200.1-10.111.200.2')
+        .privateIp('1.0.0.33-1.0.0.34')
+        .subnet(ImmutableNetworkConfigurationApi.EdgeSubnet.builder( )
+            .setValueName('1.0.0.0')
+            .setValueSubnet('1.0.0.0')
+            .setValueNetmask('255.255.0.0')
+            .setValueGateway('1.0.0.1')
+            .o( ) )
+        .o( )
 
     assertEquals( 'Result does not match template', expected, result )
   }
@@ -478,26 +465,24 @@ class NetworkConfigurationTest {
     }
     """.stripIndent()
 
-    NetworkConfiguration result = NetworkConfigurations.parse( config )
+    NetworkConfigurationApi.NetworkConfiguration result = NetworkConfigurations.parse( config )
     println result
 
-    NetworkConfiguration expected = new NetworkConfiguration(
-        mode: 'VPCMIDO',
-        macPrefix: 'd0:0d',
-        publicIps: [ '10.111.200.1-10.111.200.2' ],
-        mido: new Midonet(
-                eucanetdHost: 'a',
-                gateways: [
-                    new MidonetGateway(
-                        gatewayHost: 'b',
-                        gatewayIP: '10.0.0.1',
-                        gatewayInterface: 'foo',
-                    )
-                ],
-                publicNetworkCidr: '0.0.0.0/0',
-                publicGatewayIP: '10.0.0.1'
-        )
-    )
+    NetworkConfigurationApi.NetworkConfiguration expected = ImmutableNetworkConfigurationApi.NetworkConfiguration.builder( )
+        .setValueMode('VPCMIDO')
+        .setValueMacPrefix('d0:0d')
+        .setValueMido(ImmutableNetworkConfigurationApi.Midonet.builder( )
+            .setValueEucanetdHost('a')
+            .gateway(ImmutableNetworkConfigurationApi.MidonetGateway.builder( )
+                .setValueGatewayIP('10.0.0.1')
+                .setValueGatewayHost('b')
+                .setValueGatewayInterface('foo')
+                .o( ) )
+            .setValuePublicNetworkCidr('0.0.0.0/0')
+            .setValuePublicGatewayIP('10.0.0.1')
+            .o( ) )
+        .publicIp('10.111.200.1-10.111.200.2')
+        .o( )
 
     assertEquals( 'Result does not match template', expected, result )
   }
@@ -522,22 +507,22 @@ class NetworkConfigurationTest {
     }
     """.stripIndent()
 
-    NetworkConfiguration result = NetworkConfigurations.parse( config )
+    NetworkConfigurationApi.NetworkConfiguration result = NetworkConfigurations.parse( config )
     println result
 
-    NetworkConfiguration expected = new NetworkConfiguration(
-        mode: 'VPCMIDO',
-        macPrefix: 'd0:0d',
-        publicIps: [ '10.111.200.1-10.111.200.2' ],
-        mido: new Midonet(
-            eucanetdHost: 'a',
-            gatewayHost: 'b',
-            gatewayIP: '10.0.0.1',
-            gatewayInterface: 'foo',
-            publicNetworkCidr: '0.0.0.0/0',
-            publicGatewayIP: '10.0.0.1'
-        )
-    )
+    NetworkConfigurationApi.NetworkConfiguration expected = ImmutableNetworkConfigurationApi.NetworkConfiguration.builder( )
+        .setValueMode('VPCMIDO')
+        .setValueMacPrefix('d0:0d')
+        .setValueMido(ImmutableNetworkConfigurationApi.Midonet.builder( )
+            .setValueEucanetdHost('a')
+            .setValueGatewayHost('b')
+            .setValueGatewayIP('10.0.0.1')
+            .setValueGatewayInterface('foo')
+            .setValuePublicNetworkCidr('0.0.0.0/0')
+            .setValuePublicGatewayIP('10.0.0.1')
+            .o( ) )
+        .publicIp('10.111.200.1-10.111.200.2')
+        .o( )
 
     assertEquals( 'Result does not match template', expected, result )
   }
@@ -581,43 +566,37 @@ class NetworkConfigurationTest {
     }
     """.stripIndent()
 
-    NetworkConfiguration result = NetworkConfigurations.parse( config )
+    NetworkConfigurationApi.NetworkConfiguration result = NetworkConfigurations.parse( config )
     println result
 
-    NetworkConfiguration expected = new NetworkConfiguration(
-        mode: 'VPCMIDO',
-        macPrefix: 'd0:0d',
-        publicIps: [ '10.111.200.1-10.111.200.2' ],
-        mido: new Midonet(
-            bgpAsn: '64512',
-            gateways: [
-                new MidonetGateway(
-                    ip: '10.111.5.11',
-                    externalDevice: 'em1.116',
-                    externalCidr: '10.116.128.0/17',
-                    externalIp: '10.116.133.11',
-                    bgpPeerIp: '10.116.133.173',
-                    bgpPeerAsn: '65000',
-                    bgpAdRoutes: [
-                        '10.116.150.0/24'
-                    ]
-                ),
-                new MidonetGateway(
-                    ip: '10.111.5.22',
-                    externalDevice: 'em1.117',
-                    externalCidr: '10.117.128.0/17',
-                    externalIp: '10.117.133.22',
-                    bgpPeerIp: '10.117.133.173',
-                    bgpPeerAsn: '65001',
-                    bgpAdRoutes: [
-                        '10.117.150.0/24'
-                    ]
-                ),
-            ]
-        )
-    )
+    NetworkConfigurationApi.NetworkConfiguration expected2 = ImmutableNetworkConfigurationApi.NetworkConfiguration.builder( )
+        .setValueMode('VPCMIDO')
+        .setValueMacPrefix('d0:0d')
+        .setValueMido(ImmutableNetworkConfigurationApi.Midonet.builder( )
+            .gateway(ImmutableNetworkConfigurationApi.MidonetGateway.builder( )
+                .setValueIp('10.111.5.11')
+                .setValueExternalCidr('10.116.128.0/17')
+                .setValueExternalDevice('em1.116')
+                .setValueExternalIp('10.116.133.11')
+                .setValueBgpPeerIp('10.116.133.173')
+                .setValueBgpPeerAsn('65000')
+                .bgpAdRoute('10.116.150.0/24')
+                .o( ) )
+            .gateway(ImmutableNetworkConfigurationApi.MidonetGateway.builder( )
+                .setValueIp('10.111.5.22')
+                .setValueExternalCidr('10.117.128.0/17')
+                .setValueExternalDevice('em1.117')
+                .setValueExternalIp('10.117.133.22')
+                .setValueBgpPeerIp('10.117.133.173')
+                .setValueBgpPeerAsn('65001')
+                .bgpAdRoute('10.117.150.0/24')
+                .o( ) )
+            .setValueBgpAsn('64512')
+            .o( ) )
+        .publicIp('10.111.200.1-10.111.200.2')
+        .o( )
 
-    assertEquals( 'Result does not match template', expected, result )
+    assertEquals( 'Result does not match template', expected2, result )
   }
 
   @Test
@@ -640,7 +619,7 @@ class NetworkConfigurationTest {
       NetworkConfigurations.parse( config )
       fail( "Expected error due to missing Mido.Gateways property" )
     } catch ( NetworkConfigurationException nce ) {
-      assertEquals( 'Parsing error', 'Missing required property "Mido.Gateways"', nce.message )
+      assertEquals( 'Parsing error', 'At least one gateway is required "Mido.Gateways"', nce.message )
     }
   }
 

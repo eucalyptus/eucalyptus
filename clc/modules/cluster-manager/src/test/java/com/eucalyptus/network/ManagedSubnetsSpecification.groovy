@@ -28,7 +28,8 @@
  ************************************************************************/
 package com.eucalyptus.network
 
-import com.eucalyptus.network.config.ManagedSubnet
+import com.eucalyptus.network.config.NetworkConfigurationApi
+import com.eucalyptus.network.config.ImmutableNetworkConfigurationApi
 import com.eucalyptus.util.Pair
 import spock.lang.Specification
 
@@ -44,10 +45,10 @@ class ManagedSubnetsSpecification extends Specification {
 
   def 'should allow low subnet values'() {
     expect: 'calculated address equals specified value'
-    indexToAddress( subnet( subnet, size ), tag, index ) == address
+    indexToAddress( managedSubnet( subnet, size ), tag, index ) == address
 
     and: 'calculated tag/index equals specified address'
-    addressToIndex( subnet( subnet, size ), address ) == pair( tag, index )
+    addressToIndex( managedSubnet( subnet, size ), address ) == pair( tag, index )
 
     where:
     subnet        | size  | tag | index | address
@@ -61,10 +62,10 @@ class ManagedSubnetsSpecification extends Specification {
 
   def 'should allow high subnet values'() {
     expect: 'calculated address equals specified value'
-    indexToAddress( subnet( subnet, size ), tag, index ) == address
+    indexToAddress( managedSubnet( subnet, size ), tag, index ) == address
 
     and: 'calculated tag/index equals specified address'
-    addressToIndex( subnet( subnet, size ), address ) == pair( tag, index )
+    addressToIndex( managedSubnet( subnet, size ), address ) == pair( tag, index )
 
     where:
     subnet          | size  | tag | index | address
@@ -77,10 +78,10 @@ class ManagedSubnetsSpecification extends Specification {
 
   def 'should allow large size'() {
     expect: 'calculated address equals specified value'
-    indexToAddress( subnet( subnet, size ), tag, index ) == address
+    indexToAddress( managedSubnet( subnet, size ), tag, index ) == address
 
     and: 'calculated tag/index equals specified address'
-    addressToIndex( subnet( subnet, size ), address ) == pair( tag, index )
+    addressToIndex( managedSubnet( subnet, size ), address ) == pair( tag, index )
 
     where:
     subnet    | size | tag | index | address
@@ -94,10 +95,10 @@ class ManagedSubnetsSpecification extends Specification {
 
   def 'should allow high index'() {
     expect: 'calculated address equals specified value'
-    indexToAddress( subnet( subnet, size ), tag, index ) == address
+    indexToAddress( managedSubnet( subnet, size ), tag, index ) == address
 
     and: 'calculated tag/index equals specified address'
-    addressToIndex( subnet( subnet, size ), address ) == pair( tag, index )
+    addressToIndex( managedSubnet( subnet, size ), address ) == pair( tag, index )
 
     where:
     subnet    | size | tag | index | address
@@ -111,7 +112,7 @@ class ManagedSubnetsSpecification extends Specification {
 
   def 'should restrict maximum vlan for subnet settings'() {
     expect: 'vlan restricted when appropriate'
-    restrictToMaximumSegment( subnet( subnet, netmask, size, 2, maxVlan ), maxVlan ) == restrictedMaxVlan
+    restrictToMaximumSegment( managedSubnet( subnet, netmask, size, 2, maxVlan ), maxVlan ) == restrictedMaxVlan
 
     where:
     subnet          |         netmask | size | maxVlan | restrictedMaxVlan
@@ -123,7 +124,7 @@ class ManagedSubnetsSpecification extends Specification {
 
   def 'should determine invalid minimum vlan for subnet settings'() {
     expect: 'invalid minimum vlans identified'
-    validSegmentForSubnet( subnet( subnet, netmask, size, minVlan, 4096 ), minVlan ) == valid
+    validSegmentForSubnet( managedSubnet( subnet, netmask, size, minVlan, 4096 ), minVlan ) == valid
 
     where:
     subnet          |         netmask | size | minVlan | valid
@@ -136,25 +137,25 @@ class ManagedSubnetsSpecification extends Specification {
     '172.16.0.0'    |   '255.255.0.0' | 2048 |     512 | false
   }
 
-  private static ManagedSubnet subnet( subnet, size ) {
-    new ManagedSubnet(
-        name: subnet,
-        subnet: subnet,
-        segmentSize: size,
-        minVlan: 2,
-        maxVlan: 4095
-    )
+  private static NetworkConfigurationApi.ManagedSubnet managedSubnet(String subnet, Integer size ) {
+    ImmutableNetworkConfigurationApi.ManagedSubnet.builder( )
+        .setValueName( subnet )
+        .setValueSubnet( subnet )
+        .setValueSegmentSize( size )
+        .setValueMinVlan( 2 )
+        .setValueMaxVlan( 4095 )
+        .o( )
   }
 
-  private static ManagedSubnet subnet( String subnet, String netmask, Integer size, Integer minVlan, Integer maxVlan ) {
-    new ManagedSubnet(
-        name: subnet,
-        subnet: subnet,
-        netmask: netmask,
-        segmentSize: size,
-        minVlan: minVlan,
-        maxVlan: maxVlan
-    )
+  private static NetworkConfigurationApi.ManagedSubnet managedSubnet(String subnet, String netmask, Integer size, Integer minVlan, Integer maxVlan ) {
+    ImmutableNetworkConfigurationApi.ManagedSubnet.builder( )
+        .setValueName( subnet )
+        .setValueSubnet( subnet )
+        .setValueNetmask( netmask )
+        .setValueSegmentSize( size )
+        .setValueMinVlan( minVlan )
+        .setValueMaxVlan( maxVlan )
+        .o( )
   }
 
   private static Pair<Integer,Long> pair( int tag, long index ) {

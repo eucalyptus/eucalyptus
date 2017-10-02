@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2016 Ent. Services Development Corporation LP
+ * Copyright 2009-2014 Ent. Services Development Corporation LP
  *
  * Redistribution and use of this software in source and binary forms,
  * with or without modification, are permitted provided that the
@@ -26,39 +26,15 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
-package com.eucalyptus.network
-
-import com.google.common.collect.Maps
-import com.google.common.collect.Sets
-import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
+package com.eucalyptus.network.config;
 
 /**
  *
  */
-@CompileStatic
-class PublicAddresses {
-  private static final Map<String,String> dirtyAddresses = Maps.newConcurrentMap( )
+public class NetworkConfigurationException extends Exception {
+  private static final long serialVersionUID = 1L;
 
-  static void markDirty( String address, String partition ) {
-    dirtyAddresses.put( address, partition )
-  }
-
-  static boolean clearDirty( Collection<String> inUse, String partition ) {
-    boolean cleared = false;
-    dirtyAddresses.each{ String address, String addressPartition ->
-      if ( partition == addressPartition && !inUse.contains( address )) {
-        cleared = dirtyAddresses.remove( address ) || cleared
-      }
-    }
-    cleared
-  }
-
-  static boolean clearDirty( String address ) {
-    dirtyAddresses.remove( address )
-  }
-
-  static Set<String> dirtySnapshot( ) {
-    Sets.newHashSet( dirtyAddresses.keySet( ) )
+  public NetworkConfigurationException( final String message ) {
+    super( message );
   }
 }

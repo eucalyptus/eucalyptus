@@ -120,7 +120,7 @@ public class VmInstanceToken extends ResourceToken implements CloudMetadata.VmIn
         releaseNetworkResourcesType.setVpc( allocation.getSubnet( ) == null ?
             null :
             CloudMetadatas.toDisplayName( ).apply( allocation.getSubnet( ).getVpc( ) ) );
-        releaseNetworkResourcesType.getResources( ).addAll( getAttribute( VmInstanceLifecycleHelpers.NetworkResourceVmInstanceLifecycleHelper.NetworkResourcesKey ) );
+        releaseNetworkResourcesType.getResources( ).addAll( getAttribute( VmInstanceLifecycleHelper.NetworkResourcesKey ) );
         Networking.getInstance( ).release( releaseNetworkResourcesType );
       } catch ( final Exception ex ) {
         LOG.error( ex, ex );

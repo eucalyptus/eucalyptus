@@ -23,6 +23,14 @@ public class ReleaseNetworkResourcesType extends NetworkingMessage {
   private String vpc;
   private ArrayList<NetworkResource> resources = Lists.newArrayList( );
 
+  public ReleaseNetworkResourcesType( ) {
+  }
+
+  public ReleaseNetworkResourcesType( final String vpc, final ArrayList<NetworkResource> resources ) {
+    this.vpc = vpc;
+    this.resources = resources;
+  }
+
   public String getVpc( ) {
     return vpc;
   }

@@ -36,27 +36,29 @@
  * IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  * NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
-
 package com.eucalyptus.cloud;
 
-import javax.persistence.Entity
-import javax.persistence.PersistenceContext
-import javax.persistence.Table
-import javax.persistence.Transient
-
-import com.eucalyptus.component.annotation.ComponentPart
-import com.eucalyptus.component.id.Eucalyptus
-import com.eucalyptus.config.ComponentConfiguration
+import java.io.Serializable;
+import javax.persistence.Entity;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+import com.eucalyptus.component.annotation.ComponentPart;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.config.ComponentConfiguration;
 
 @Entity
-@PersistenceContext(name="eucalyptus_config")
+@PersistenceContext( name = "eucalyptus_config" )
 @Table( name = "config_eucalyptus" )
-@ComponentPart(Eucalyptus.class)
+@ComponentPart( Eucalyptus.class )
 public class EucalyptusConfiguration extends ComponentConfiguration implements Serializable {
-  @Transient
+  private static final long serialVersionUID = 1L;
+
   private static String DEFAULT_SERVICE_PATH = "/services/Eucalyptus";
+
   public EucalyptusConfiguration( ) {
   }
+
+  @SuppressWarnings( "WeakerAccess" )
   public EucalyptusConfiguration( String name, String hostName ) {
     super( "eucalyptus", name, hostName, 8773, DEFAULT_SERVICE_PATH );
   }
