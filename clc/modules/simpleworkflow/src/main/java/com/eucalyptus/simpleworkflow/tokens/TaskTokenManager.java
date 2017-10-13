@@ -192,6 +192,8 @@ public class TaskTokenManager {
 
     private byte[] toByteArray() throws IOException {
       out.flush();
+      out.finish();
+      deflater.end();
       out.close();
       return byteStream.toByteArray();
     }
