@@ -860,6 +860,7 @@ public class SimpleWorkflowService {
                       public com.eucalyptus.simpleworkflow.common.model.ActivityTask apply( final ActivityTask activityTask ) {
                         if ( activityTask.getState( ) == ActivityTask.State.Pending ) {
                           final WorkflowExecution workflowExecution = activityTask.getWorkflowExecution( );
+                          Entities.lock(workflowExecution);
                           final Long startedId = workflowExecution.addHistoryEvent(
                               WorkflowHistoryEvent.create( workflowExecution, new ActivityTaskStartedEventAttributes( )
                                   .withIdentity( request.getIdentity( ) )
@@ -893,7 +894,7 @@ public class SimpleWorkflowService {
                     });
 
               } catch ( SwfMetadataException e ) {
-                logger.info( "Activity task for domain " + domain + ", list " + taskList + " not found" );
+                logger.debug( "Activity task for domain " + domain + ", list " + taskList + " not found" );
               } catch ( Exception e ) {
                 if ( PersistenceExceptions.isStaleUpdate( e ) ) {
                   logger.info( "Activity task for domain " + domain + ", list " + taskList + " already taken"  );
@@ -1044,6 +1045,7 @@ public class SimpleWorkflowService {
               @Override
               public WorkflowExecution apply( final WorkflowExecution workflowExecution ) {
                 if ( accessible.apply( workflowExecution ) ) {
+                  Entities.lock(workflowExecution);
                   try {
                     activityTasks.deleteByExample( ActivityTask.exampleWithUniqueName(
                         accountFullName,
@@ -1117,6 +1119,7 @@ public class SimpleWorkflowService {
               @Override
               public WorkflowExecution apply( final WorkflowExecution workflowExecution ) {
                 if ( accessible.apply( workflowExecution ) ) {
+                  Entities.lock(workflowExecution);
                   try {
                     activityTasks.deleteByExample( ActivityTask.exampleWithUniqueName(
                         accountFullName,
@@ -1198,6 +1201,7 @@ public class SimpleWorkflowService {
                   @Override
                   public DecisionTask apply( final WorkflowExecution workflowExecution ) {
                     if ( workflowExecution.getDecisionStatus( ) == Pending ) {
+                      Entities.lock(workflowExecution);
                       final List<WorkflowHistoryEvent> events = workflowExecution.getWorkflowHistory();
                       final List<WorkflowHistoryEvent> reverseEvents = Lists.reverse( events );
                       final WorkflowHistoryEvent scheduled = Iterables.find(
@@ -1245,7 +1249,7 @@ public class SimpleWorkflowService {
               Entities.evictCache( Class.forName( stale.getEntityName( ) ) );
             } catch ( ClassNotFoundException ce ) { /* eviction failure */ }
             if ( PersistenceExceptions.isStaleUpdate( e ) ) {
-              logger.info( "Decision task for workflow " + execution.getDisplayName() + " already taken" );
+              logger.debug( "Decision task for workflow " + execution.getDisplayName() + " already taken" );
             } else if (  PersistenceExceptions.isLockError( e ) ) {
               logger.info( "Decision task for workflow " + execution.getDisplayName() + " locking error" );
             } else {
@@ -1292,6 +1296,8 @@ public class SimpleWorkflowService {
             @Override
             public WorkflowExecution apply( final WorkflowExecution workflowExecution ) {
               if ( accessible.apply( workflowExecution ) ) {
+                Entities.lock(workflowExecution);
+
                 // clear pending notifications in case of retries
                 notificationTypeListPairs.clear( );
 
