@@ -312,6 +312,7 @@ that describes a Eucalyptus instance to be launched.
                 <xsl:when test="(/instance/hypervisor/@type = 'kvm' or /instance/hypervisor/@type = 'qemu')">
                     <serial type="file">
                         <source>
+                            <xsl:attribute name="append">on</xsl:attribute>
                             <xsl:attribute name="path">
                                 <xsl:value-of select="/instance/consoleLogPath"/>
                             </xsl:attribute>
