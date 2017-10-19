@@ -37,22 +37,26 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.metrics.MonitoredAction;
 import com.eucalyptus.util.metrics.ThruputMetrics;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Longs;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -160,7 +164,7 @@ public class AbsoluteMetricQueue {
 
   private static void callPutMetricData( final List<PutMetricDataType> putMetricDataList ) throws Exception {
     final List<ServiceConfiguration> serviceConfigurations =
-        Lists.newArrayList( Topology.lookupMany( CloudWatch.class ) );
+        ImmutableList.copyOf( Sets.newTreeSet( Topology.lookupMany( CloudWatch.class ) ) );
     if ( serviceConfigurations.isEmpty( ) ) {
       LOG.warn( "Cannot put compute system metric data, cloudwatch not enabled." );
       return;
@@ -169,10 +173,13 @@ public class AbsoluteMetricQueue {
     for ( final ServiceConfiguration serviceConfiguration: serviceConfigurations ) {
       semaphoreMap.put( serviceConfiguration, new Semaphore( 8 ) );
     }
-    final Iterator<ServiceConfiguration> putToServiceConfiguration =
-        Iterables.cycle( serviceConfigurations ).iterator( );
+    Collections.shuffle( putMetricDataList );
     for ( final PutMetricDataType putMetricData : putMetricDataList ) {
-      final ServiceConfiguration serviceConfiguration = putToServiceConfiguration.next( );
+      // put metric data for a particular user/service to a consistent cw service
+      // this improves caching and helps avoid conflicts when data is flushed
+      final int hash = Objects.hash( putMetricData.getUserId( ), putMetricData.getNamespace( ) );
+      final ServiceConfiguration serviceConfiguration =
+          serviceConfigurations.get( Math.abs( hash % serviceConfigurations.size( ) ) );
       final Semaphore activePuts = semaphoreMap.get( serviceConfiguration );
       activePuts.acquire( );
       try {
@@ -242,7 +249,15 @@ public class AbsoluteMetricQueue {
   }
 
   static {
-    dataFlushTimer.scheduleAtFixedRate(safeRunner, 0, 1, TimeUnit.MINUTES);
+    final String PROP_ABSOLUTE_METRICS_FLUSH_INTERVAL = "com.eucalyptus.compute.absoluteMetricsFlushInterval";
+    final long DEFAULT_ABSOLUTE_METRICS_FLUSH_INTERVAL = 60L;
+    final long ABSOLUTE_METRICS_FLUSH_INTERVAL = MoreObjects.firstNonNull(
+        Longs.tryParse(
+            System.getProperty(
+                PROP_ABSOLUTE_METRICS_FLUSH_INTERVAL,
+                String.valueOf( DEFAULT_ABSOLUTE_METRICS_FLUSH_INTERVAL ) ) ),
+        DEFAULT_ABSOLUTE_METRICS_FLUSH_INTERVAL );
+    dataFlushTimer.scheduleAtFixedRate(safeRunner, 0, ABSOLUTE_METRICS_FLUSH_INTERVAL, TimeUnit.SECONDS);
   }
 
   private void scrub(AbsoluteMetricQueueItem absoluteMetricQueueItem, Date now) {

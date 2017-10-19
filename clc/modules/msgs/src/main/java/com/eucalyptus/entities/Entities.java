@@ -80,6 +80,7 @@ import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
+import javax.persistence.FlushModeType;
 import javax.persistence.LockModeType;
 import javax.persistence.NoResultException;
 import javax.persistence.NonUniqueResultException;
@@ -513,6 +514,15 @@ public class Entities {
 
   public static <T> void flushSession( final T object ) {
     getTransaction( object ).txState.getSession().flush( );
+  }
+
+  /**
+   * Set the flush mode to on-commit, avoiding any pre-query auto flushing
+   *
+   * @param object The object used to determine the transaction context
+   */
+  public static void flushOnCommit( final Object object ) {
+    getTransaction( object ).txState.getEntityManager( ).setFlushMode( FlushModeType.COMMIT );
   }
 
   public static <T> void clearSession( final T object ) {

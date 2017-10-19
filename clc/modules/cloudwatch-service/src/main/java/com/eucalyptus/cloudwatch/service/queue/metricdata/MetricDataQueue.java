@@ -31,9 +31,11 @@ import com.eucalyptus.cloudwatch.service.queue.listmetrics.ListMetricQueue;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.metrics.MonitoredAction;
 import com.eucalyptus.util.metrics.ThruputMetrics;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.primitives.Longs;
 
 import org.apache.log4j.Logger;
 
@@ -102,7 +104,15 @@ public class MetricDataQueue {
   };
 
   static {
-    dataFlushTimer.scheduleAtFixedRate(safeRunner, 0, 1, TimeUnit.MINUTES);
+    final String PROP_METRICS_FLUSH_INTERVAL = "com.eucalyptus.cloudwatch.metricsFlushInterval";
+    final long DEFAULT_METRICS_FLUSH_INTERVAL = 60L;
+    final long METRICS_FLUSH_INTERVAL = MoreObjects.firstNonNull(
+        Longs.tryParse(
+            System.getProperty(
+                PROP_METRICS_FLUSH_INTERVAL,
+                String.valueOf( DEFAULT_METRICS_FLUSH_INTERVAL ) ) ),
+        DEFAULT_METRICS_FLUSH_INTERVAL );
+    dataFlushTimer.scheduleAtFixedRate(safeRunner, 0, METRICS_FLUSH_INTERVAL, TimeUnit.SECONDS);
   }
 
   public static List<SimpleMetricEntity> aggregate(List<SimpleMetricEntity> dataBatch) {
