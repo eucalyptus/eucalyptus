@@ -139,8 +139,15 @@ that describes a Eucalyptus instance to be launched.
                         <xsl:message terminate="yes">ERROR: invalid or unset /instance/os/@platform or /instance/backing/root/@type parameter</xsl:message>
                     </xsl:otherwise>
                 </xsl:choose>
-               <boot dev='hd'/>
+                <boot dev='hd'/>
+                <smbios mode='sysinfo'/>
             </os>
+            <sysinfo type='smbios'>
+                <system>
+                    <entry name='serial'>ec2<xsl:value-of select="substring(/instance/uuid,4)"/></entry>
+                    <entry name='uuid'>ec2<xsl:value-of select="substring(/instance/uuid,4)"/></entry>
+                </system>
+            </sysinfo>
             <features>
                 <acpi/>
                 <xsl:if test="/instance/hypervisor/@type = 'xen' and ( /instance/os/@platform = 'windows' or /instance/backing/root/@type = 'ebs' )">
