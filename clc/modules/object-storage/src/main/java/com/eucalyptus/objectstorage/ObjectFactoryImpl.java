@@ -20,6 +20,10 @@
 
 package com.eucalyptus.objectstorage;
 
+import static java.lang.String.valueOf;
+import static java.lang.System.getProperty;
+import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.primitives.Ints.tryParse;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Date;
@@ -91,11 +95,34 @@ public class ObjectFactoryImpl implements ObjectFactory {
    * The thread pool to handle the PUT operations to the backend. Use another thread to allow status updates on the object entity in the db to renew
    * the lease to prevent OSG object GC from occuring while the object is still uploading.
    */
-  private static final int CORE_POOL_SIZE = 10;
-  private static final int MAX_POOL_SIZE = 100;
-  private static final int MAX_QUEUE_SIZE = 2 * MAX_POOL_SIZE;
-  private static final ExecutorService PUT_OBJECT_SERVICE = new ThreadPoolExecutor(CORE_POOL_SIZE, MAX_POOL_SIZE, 60, TimeUnit.SECONDS,
-      new LinkedBlockingQueue<Runnable>(MAX_QUEUE_SIZE), Threads.threadFactory( "osg-object-factory-pool-%d" ));
+  private static final boolean DEFAULT_CORE_THREADS_TIMEOUT = true;
+  private static final int DEFAULT_CORE_POOL_SIZE = 100;
+  private static final int DEFAULT_MAX_POOL_SIZE = 100;
+  private static final int DEFAULT_MAX_QUEUE_SIZE = 2 * DEFAULT_MAX_POOL_SIZE;
+
+  private static final String PROP_PREFIX = "com.eucalyptus.objectstorage.putService";
+  private static final boolean CORE_THREADS_TIMEOUT =
+      Boolean.valueOf( getProperty( PROP_PREFIX + "CoreThreadsTimeout", valueOf( DEFAULT_CORE_THREADS_TIMEOUT ) ) );
+  private static final int CORE_POOL_SIZE =
+      firstNonNull( tryParse( getProperty( PROP_PREFIX + "CoreThreads", valueOf( DEFAULT_CORE_POOL_SIZE ) ) ), DEFAULT_CORE_POOL_SIZE);
+  private static final int MAX_POOL_SIZE =
+      firstNonNull( tryParse( getProperty( PROP_PREFIX + "MaxThreads", valueOf( DEFAULT_MAX_POOL_SIZE ) ) ), DEFAULT_MAX_POOL_SIZE);
+  private static final int MAX_QUEUE_SIZE =
+      firstNonNull( tryParse( getProperty( PROP_PREFIX + "QueueSize", valueOf( DEFAULT_MAX_QUEUE_SIZE ) ) ), DEFAULT_MAX_QUEUE_SIZE);
+  private static final ExecutorService PUT_OBJECT_SERVICE;
+
+  static {
+    final ThreadPoolExecutor executor = new ThreadPoolExecutor(
+        CORE_POOL_SIZE,
+        MAX_POOL_SIZE,
+        60,
+        TimeUnit.SECONDS,
+        new LinkedBlockingQueue<>(MAX_QUEUE_SIZE),
+        Threads.threadFactory( "osg-object-factory-pool-%d" )
+    );
+    executor.allowCoreThreadTimeOut( CORE_THREADS_TIMEOUT );
+    PUT_OBJECT_SERVICE = executor;
+  }
 
   public static long getPutTimeoutInMillis() {
     return ConfigurationCache.getConfiguration(ObjectStorageGlobalConfiguration.class).getFailed_put_timeout_hrs() * 60l * 60l * 1000l;
@@ -647,7 +674,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
       putRequest.setKey(mpuEntity.getObjectUuid());
       putRequest.setUser(requestUser);
       putRequest.setContentLength(entity.getSize().toString());
-      putRequest.setPartNumber(String.valueOf(entity.getPartNumber()));
+      putRequest.setPartNumber( valueOf(entity.getPartNumber()));
       putRequest.setUploadId(entity.getUploadId());
 
       Callable<UploadPartResponseType> putCallable = new Callable<UploadPartResponseType>() {
