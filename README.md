@@ -34,7 +34,7 @@ Requirements and Technical Notes
 License
 =======
 
-Eucalyptus is published under version 3 of the GNU General Public License. For more information, see the LICENSE file.
+Eucalyptus is published under a BSD license. For more information, see the LICENSE file.
 
 Building Eucalyptus
 ===================
