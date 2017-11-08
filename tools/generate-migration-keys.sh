@@ -2,23 +2,32 @@
 #
 # Script to generate keys for TLS migration of instances between NC nodes.
 #
-# Copyright 2013 Eucalyptus Systems, Inc.
+# Copyright 2013 Ent. Services Development Corporation LP
 #
-# This Program Is Free Software: You Can Redistribute It And/Or Modify
-# It Under The Terms Of The Gnu General Public License As Published By
-# The Free Software Foundation; Version 3 Of The License.
+# Redistribution and use of this software in source and binary forms,
+# with or without modification, are permitted provided that the
+# following conditions are met:
 #
-# This Program Is Distributed In The Hope That It Will Be Useful,
-# But Without Any Warranty; Without Even The Implied Warranty Of
-# Merchantability Or Fitness For A Particular Purpose.  See The
-# Gnu General Public License For More Details.
+#   Redistributions of source code must retain the above copyright
+#   notice, this list of conditions and the following disclaimer.
 #
-# You Should Have Received A Copy Of The Gnu General Public License
-# Along With This Program.  If Not, See Http://Www.Gnu.Org/Licenses/.
+#   Redistributions in binary form must reproduce the above copyright
+#   notice, this list of conditions and the following disclaimer
+#   in the documentation and/or other materials provided with the
+#   distribution.
 #
-# Please Contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
-# Ca 93117, Usa Or Visit Http://Www.Eucalyptus.Com/Licenses/ If You Need
-# Additional Information Or Have Any Questions.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 #
 #
 # Run on NC with 2-4 arguments:
