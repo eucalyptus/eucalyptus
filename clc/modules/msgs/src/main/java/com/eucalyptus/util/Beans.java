@@ -21,6 +21,7 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.InvalidPropertyException;
 import org.springframework.util.ReflectionUtils;
 import groovy.lang.GroovyObject;
+import groovy.lang.MetaProperty;
 
 /**
  *
@@ -48,6 +49,24 @@ public class Beans {
         return ReflectionUtils.invokeMethod(
             propertyDescriptor.getReadMethod( ),
             target );
+      } else {
+        throw new InvalidPropertyException( target.getClass( ), property, "get failed" );
+      }
+    }
+  }
+
+  public static Class<?> getObjectPropertyType( final Object target, final String property ) {
+    if ( target instanceof GroovyObject ) {
+      final MetaProperty metaProperty = ((GroovyObject)target).getMetaClass( ).getMetaProperty( property );
+      if ( metaProperty != null && metaProperty.getType( ) != null ) {
+        return metaProperty.getType( );
+      } else {
+        throw new InvalidPropertyException( target.getClass( ), property, "get failed" );
+      }
+    } else {
+      final PropertyDescriptor propertyDescriptor = BeanUtils.getPropertyDescriptor( target.getClass( ), property );
+      if ( propertyDescriptor != null ) {
+        return propertyDescriptor.getPropertyType( );
       } else {
         throw new InvalidPropertyException( target.getClass( ), property, "get failed" );
       }

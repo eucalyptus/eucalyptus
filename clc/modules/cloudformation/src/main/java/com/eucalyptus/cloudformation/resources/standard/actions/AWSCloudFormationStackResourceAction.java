@@ -29,7 +29,6 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.cloudformation.common.CloudFormation;
 import com.eucalyptus.cloudformation.CloudFormationService;
 import com.eucalyptus.cloudformation.common.msgs.CreateStackResponseType;
@@ -62,12 +61,9 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.ResourceFailureException;
 import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
-import com.eucalyptus.cloudformation.workflow.StackActivityClient;
 import com.eucalyptus.cloudformation.workflow.UpdateStackPartsWorkflowKickOff;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
-import com.eucalyptus.cloudformation.workflow.steps.UpdateCleanupUpdateMultiStepPromise;
-import com.eucalyptus.cloudformation.workflow.steps.UpdateRollbackCleanupUpdateMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection;
@@ -81,7 +77,6 @@ import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.netflix.glisten.WorkflowOperations;
 import org.apache.log4j.Logger;
 
 import javax.annotation.Nullable;
@@ -827,16 +822,13 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
     info = (AWSCloudFormationStackResourceInfo) resourceInfo;
   }
 
-  public Promise<String> getUpdateCleanupUpdatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
-    List<String> stepIds = Lists.newArrayList(updateCleanupUpdateSteps.keySet());
-    return new UpdateCleanupUpdateMultiStepPromise(workflowOperations, stepIds, this).getUpdateCleanupUpdatePromise(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
+  public List<String> getUpdateCleanupUpdateStepIds( ) {
+    return Lists.newArrayList(updateCleanupUpdateSteps.keySet());
   }
 
-  public Promise<String> getUpdateRollbackCleanupUpdatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
-    List<String> stepIds = Lists.newArrayList(updateRollbackCleanupUpdateSteps.keySet());
-    return new UpdateRollbackCleanupUpdateMultiStepPromise(workflowOperations, stepIds, this).getUpdateRollbackCleanupUpdatePromise(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
+  public List<String> getUpdateRollbackCleanupUpdateStepIds( ) {
+    return Lists.newArrayList(updateRollbackCleanupUpdateSteps.keySet());
   }
-
 }
 
 

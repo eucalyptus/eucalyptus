@@ -30,6 +30,7 @@
 package com.eucalyptus.cloudformation;
 
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow;
+import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 import com.amazonaws.services.simpleworkflow.model.DescribeWorkflowExecutionRequest;
 import com.amazonaws.services.simpleworkflow.model.RequestCancelWorkflowExecutionRequest;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution;
@@ -135,20 +136,12 @@ import com.eucalyptus.cloudformation.template.url.WhiteListURLMatcher;
 import com.eucalyptus.cloudformation.util.CfnIdentityDocumentCredential;
 import com.eucalyptus.cloudformation.workflow.CommonDeleteRollbackKickoff;
 import com.eucalyptus.cloudformation.workflow.CreateStackWorkflow;
-import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowClient;
-import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowDescriptionTemplate;
 import com.eucalyptus.cloudformation.workflow.MonitorCreateStackWorkflow;
-import com.eucalyptus.cloudformation.workflow.MonitorCreateStackWorkflowClient;
-import com.eucalyptus.cloudformation.workflow.MonitorCreateStackWorkflowDescriptionTemplate;
 import com.eucalyptus.cloudformation.workflow.MonitorUpdateStackWorkflow;
-import com.eucalyptus.cloudformation.workflow.MonitorUpdateStackWorkflowClient;
-import com.eucalyptus.cloudformation.workflow.MonitorUpdateStackWorkflowDescriptionTemplate;
-import com.eucalyptus.cloudformation.workflow.StartTimeoutPassableWorkflowClientFactory;
 import com.eucalyptus.cloudformation.workflow.UpdateStackPartsWorkflowKickOff;
 import com.eucalyptus.cloudformation.workflow.UpdateStackWorkflow;
-import com.eucalyptus.cloudformation.workflow.UpdateStackWorkflowClient;
-import com.eucalyptus.cloudformation.workflow.UpdateStackWorkflowDescriptionTemplate;
 import com.eucalyptus.cloudformation.workflow.WorkflowClientManager;
+import com.eucalyptus.cloudformation.workflow.WorkflowRegistry;
 import com.eucalyptus.cloudformation.ws.StackWorkflowTags;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.annotation.ComponentNamed;
@@ -179,8 +172,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteStreams;
-import com.netflix.glisten.InterfaceBasedWorkflowClient;
-import com.netflix.glisten.WorkflowDescriptionTemplate;
 import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Name;
@@ -205,6 +196,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import io.vavr.Tuple2;
 
 @ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
 @ComponentNamed
@@ -490,14 +482,13 @@ public class CloudFormationService {
               StackResourceEntityManager.addStackResource(stackResourceEntity);
             }
 
-            StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(stackId, stackName, accountId, accountAlias);
-            Long timeoutInSeconds = (request.getTimeoutInMinutes() != null && request.getTimeoutInMinutes()> 0 ? 60L * request.getTimeoutInMinutes() : null);
-            StartTimeoutPassableWorkflowClientFactory createStackWorkflowClientFactory = new StartTimeoutPassableWorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient( ), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
-            WorkflowDescriptionTemplate createStackWorkflowDescriptionTemplate = new CreateStackWorkflowDescriptionTemplate();
-            InterfaceBasedWorkflowClient<CreateStackWorkflow> createStackWorkflowClient = createStackWorkflowClientFactory
-              .getNewWorkflowClient(CreateStackWorkflow.class, createStackWorkflowDescriptionTemplate, stackWorkflowTags, timeoutInSeconds, null);
+            final StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(stackId, stackName, accountId, accountAlias);
 
-            CreateStackWorkflow createStackWorkflow = new CreateStackWorkflowClient(createStackWorkflowClient);
+            final Long timeoutInSeconds = (request.getTimeoutInMinutes() != null && request.getTimeoutInMinutes()> 0 ? 60L * request.getTimeoutInMinutes() : null);
+            final Tuple2<WorkflowClientExternal,CreateStackWorkflow> createStackWorkflowClients =
+                WorkflowRegistry.getWorkflowClient( WorkflowRegistry.CreateStackWorkflowKey, stackWorkflowTags, timeoutInSeconds );
+            final WorkflowClientExternal createStackWorkflowClient = createStackWorkflowClients._1();
+            final CreateStackWorkflow createStackWorkflow = createStackWorkflowClients._2( );
             createStackWorkflow.createStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), userId, onFailure, INIT_STACK_VERSION);
             StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
               StackWorkflowEntity.WorkflowType.CREATE_STACK_WORKFLOW,
@@ -505,15 +496,11 @@ public class CloudFormationService {
               createStackWorkflowClient.getWorkflowExecution().getWorkflowId(),
               createStackWorkflowClient.getWorkflowExecution().getRunId());
 
-            StartTimeoutPassableWorkflowClientFactory monitorCreateStackWorkflowClientFactory = new StartTimeoutPassableWorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient(), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
-            WorkflowDescriptionTemplate monitorCreateStackWorkflowDescriptionTemplate = new MonitorCreateStackWorkflowDescriptionTemplate();
-            InterfaceBasedWorkflowClient<MonitorCreateStackWorkflow> monitorCreateStackWorkflowClient = monitorCreateStackWorkflowClientFactory
-              .getNewWorkflowClient(MonitorCreateStackWorkflow.class, monitorCreateStackWorkflowDescriptionTemplate, stackWorkflowTags, null, null);
-
-            MonitorCreateStackWorkflow monitorCreateStackWorkflow = new MonitorCreateStackWorkflowClient(monitorCreateStackWorkflowClient);
+            final Tuple2<WorkflowClientExternal,MonitorCreateStackWorkflow> monitorCreateStackWorkflowClients =
+                WorkflowRegistry.getWorkflowClient( WorkflowRegistry.MonitorCreateStackWorkflowKey, stackWorkflowTags );
+            final WorkflowClientExternal monitorCreateStackWorkflowClient = monitorCreateStackWorkflowClients._1();
+            final MonitorCreateStackWorkflow monitorCreateStackWorkflow = monitorCreateStackWorkflowClients._2( );
             monitorCreateStackWorkflow.monitorCreateStack(stackId, stackName, accountId, accountAlias, stackEntity.getResourceDependencyManagerJson(), userId, onFailure, INIT_STACK_VERSION);
-
-
             StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
               StackWorkflowEntity.WorkflowType.MONITOR_CREATE_STACK_WORKFLOW,
               CloudFormationProperties.SWF_DOMAIN,
@@ -1538,13 +1525,12 @@ public class CloudFormationService {
       String previousResourceDependencyManagerJson = StackEntityHelper.resourceDependencyManagerToJson(previousTemplate.getResourceDependencyManager());
       StackUpdateInfoEntityManager.createUpdateInfo(stackId, accountId, previousResourceDependencyManagerJson, nextStackEntity.getResourceDependencyManagerJson(), nextStackEntity.getStackVersion(), stackName, accountAlias);
 
-      StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(stackId, stackName, accountId, accountAlias);
-      StartTimeoutPassableWorkflowClientFactory updateStackWorkflowClientFactory = new StartTimeoutPassableWorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient( ), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
-      WorkflowDescriptionTemplate updateStackWorkflowDescriptionTemplate = new UpdateStackWorkflowDescriptionTemplate();
-      InterfaceBasedWorkflowClient<UpdateStackWorkflow> updateStackWorkflowClient = updateStackWorkflowClientFactory
-        .getNewWorkflowClient(UpdateStackWorkflow.class, updateStackWorkflowDescriptionTemplate, stackWorkflowTags, null, null);
+      final StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(stackId, stackName, accountId, accountAlias);
 
-      UpdateStackWorkflow updateStackWorkflow = new UpdateStackWorkflowClient(updateStackWorkflowClient);
+      final Tuple2<WorkflowClientExternal,UpdateStackWorkflow> updateStackWorkflowClients =
+          WorkflowRegistry.getWorkflowClient( WorkflowRegistry.UpdateStackWorkflowKey, stackWorkflowTags );
+      final WorkflowClientExternal updateStackWorkflowClient = updateStackWorkflowClients._1();
+      final UpdateStackWorkflow updateStackWorkflow = updateStackWorkflowClients._2( );
       updateStackWorkflow.updateStack(nextStackEntity.getStackId(), nextStackEntity.getAccountId(), nextStackEntity.getResourceDependencyManagerJson(), userId, nextStackEntity.getStackVersion());
       StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
         StackWorkflowEntity.WorkflowType.UPDATE_STACK_WORKFLOW,
@@ -1552,28 +1538,21 @@ public class CloudFormationService {
         updateStackWorkflowClient.getWorkflowExecution().getWorkflowId(),
         updateStackWorkflowClient.getWorkflowExecution().getRunId());
 
-      StartTimeoutPassableWorkflowClientFactory monitorUpdateStackWorkflowClientFactory = new StartTimeoutPassableWorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient(), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
-      WorkflowDescriptionTemplate monitorUpdateStackWorkflowDescriptionTemplate = new MonitorUpdateStackWorkflowDescriptionTemplate();
-      InterfaceBasedWorkflowClient<MonitorUpdateStackWorkflow> monitorUpdateStackWorkflowClient = monitorUpdateStackWorkflowClientFactory
-        .getNewWorkflowClient(MonitorUpdateStackWorkflow.class, monitorUpdateStackWorkflowDescriptionTemplate, stackWorkflowTags, null, null);
-
-      MonitorUpdateStackWorkflow monitorUpdateStackWorkflow = new MonitorUpdateStackWorkflowClient(monitorUpdateStackWorkflowClient);
+      final Tuple2<WorkflowClientExternal,MonitorUpdateStackWorkflow> monitorUpdateStackWorkflowClients =
+          WorkflowRegistry.getWorkflowClient( WorkflowRegistry.MonitorUpdateStackWorkflowKey, stackWorkflowTags );
+      final WorkflowClientExternal monitorUpdateStackWorkflowClient = monitorUpdateStackWorkflowClients._1();
+      final MonitorUpdateStackWorkflow monitorUpdateStackWorkflow = monitorUpdateStackWorkflowClients._2( );
       monitorUpdateStackWorkflow.monitorUpdateStack(nextStackEntity.getStackId(),  nextStackEntity.getAccountId(),
         userId, nextStackEntity.getStackVersion(), outerStackArn);
-
-
       StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
         StackWorkflowEntity.WorkflowType.MONITOR_UPDATE_STACK_WORKFLOW,
         CloudFormationProperties.SWF_DOMAIN,
         monitorUpdateStackWorkflowClient.getWorkflowExecution().getWorkflowId(),
         monitorUpdateStackWorkflowClient.getWorkflowExecution().getRunId());
 
-
       UpdateStackResult updateStackResult = new UpdateStackResult();
       updateStackResult.setStackId(stackId);
       reply.setUpdateStackResult(updateStackResult);
-
-
 
     } catch (Exception ex) {
       handleException(ex);
