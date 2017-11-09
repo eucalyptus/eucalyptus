@@ -259,7 +259,7 @@
 	<target name="should-build-groovy">
 		<mkdir dir="${build.classes.dir}" />
 		<uptodate property="build.notRequired" targetfile="${jar.file}">
-			<srcfiles dir="${groovy.src.dir}" includes="**/*" />
+			<srcfiles dir="${groovy.src.dir}" includes="**/*" erroronmissingdir="false"/>
 		</uptodate>
 		<condition property="build.notRequired">
 			<not><available file="${groovy.src.dir}" type="dir"/></not>

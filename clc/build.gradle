@@ -29,9 +29,7 @@ subprojects {
   targetCompatibility = 1.8
   sourceCompatibility = 1.8
 
-  sourceSets.main.java.srcDirs = []
-  sourceSets.main.java.outputDir = file('build/classes/groovy/main')
-  sourceSets.main.groovy.srcDirs += ['src/main/java', 'src/generated/java', 'build/src/main/java']
+  sourceSets.main.java.srcDirs += ['src/generated/java', 'build/src/main/java']
 
   sourceSets.test.java.srcDirs = []
   sourceSets.test.groovy.srcDirs += ['src/test/java', 'build/src/test/java']
@@ -55,7 +53,7 @@ subprojects {
           classname: 'org.jibx.binding.ant.CompileTask',
           classpath: configurations.jibx.asPath ) {
       }
-      ant.bind( verbose: false, load: project.name != 'eucalyptus-compute-common' ) {  //TODO load fails for compute common
+      ant.bind( verbose: false, load: true ) {
         bindingfileset( dir: sourceSets.main.output.resourcesDir ) {
           include( name: '**/*-binding.xml' )
         }
