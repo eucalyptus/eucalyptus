@@ -18,6 +18,7 @@ package com.eucalyptus.compute.common.network;
 import java.util.Objects;
 
 public class PublicIPResource extends NetworkResource {
+  private static final long serialVersionUID = 1L;
 
   public PublicIPResource( ) {
   }
@@ -37,9 +38,7 @@ public class PublicIPResource extends NetworkResource {
 
   @Override
   public boolean equals( final Object o ) {
-    if ( this == o ) return true;
-    if ( o == null || getClass( ) != o.getClass( ) ) return false;
-    return super.equals( o );
+    return this == o || !( o == null || getClass( ) != o.getClass( ) ) && super.equals( o );
   }
 
   @Override

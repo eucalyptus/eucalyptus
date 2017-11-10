@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Objects;
 
 public class VpcNetworkInterfaceResource extends NetworkResource {
+  private static final long serialVersionUID = 1L;
 
   private Integer device;
   private String mac;
