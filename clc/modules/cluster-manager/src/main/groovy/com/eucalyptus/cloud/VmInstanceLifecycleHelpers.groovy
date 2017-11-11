@@ -107,7 +107,6 @@ import com.google.common.base.Optional
 import com.google.common.base.Predicates
 import com.google.common.base.Strings
 import com.google.common.base.Supplier
-import com.google.common.base.Suppliers
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.Iterables
 import com.google.common.collect.Lists
@@ -242,10 +241,6 @@ class VmInstanceLifecycleHelpers {
   }
 
   static abstract class NetworkResourceVmInstanceLifecycleHelper extends VmInstanceLifecycleHelperSupport {
-    public static final TypedKey<Set<NetworkResource>> NetworkResourcesKey =
-        TypedKey.create( "NetworkResources", { Sets.newHashSet( ) } as Supplier<Set<NetworkResource>> )
-    public static final TypedKey<String> DefaultVpcIdKey =
-        TypedKey.create( "DefaultVpcId", Suppliers.<String>ofInstance( null ) )
 
     static boolean prepareFromTokenResources(
         final Allocation allocation,
@@ -268,7 +263,7 @@ class VmInstanceLifecycleHelpers {
     @SuppressWarnings("UnnecessaryQualifiedReference")
     static Address getAddress( final ResourceToken token ) {
       final PublicIPResource publicIPResource = (PublicIPResource) Iterables.find(
-          token.getAttribute( NetworkResourceVmInstanceLifecycleHelper.NetworkResourcesKey ),
+          token.getAttribute(NetworkResourcesKey ),
           Predicates.instanceOf( PublicIPResource.class ),
           null )
       return publicIPResource!=null && publicIPResource.getValue()!=null ?
