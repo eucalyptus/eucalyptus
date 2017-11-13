@@ -103,9 +103,6 @@
 	<property name="javac.extraargs.werror" value="-Werror"/>
 	<property name="groovyc.fork" value="false"/>
 	<property name="groovyc.includeantruntime" value="true"/>
-	<property name="groovyc.bootclasspath" value="${javac.bootclasspath}"/>
-	<property name="groovyc.extraargs.werror" value="${javac.extraargs.werror}"/>
-	<property name="groovyc.extraargs.xlint" value="-FXlint:divzero,finally,overrides,-deprecation,${javac.extraargs.xlint.unchecked}"/>
 	<property name="bind.load" value="true"/>
 	<property name="bind.verbose" value="false"/>
 	<!--================================== other properties  ===================================-->
@@ -249,6 +246,7 @@
 		<javac classpathref="classpath" destdir="${build.classes.dir}" deprecation="false" failonerror="true" debug="${javac.debug}" sourcepathref="srcpath" source="${javac.source}" target="${javac.target}" encoding="utf-8" listfiles="true"  includeantruntime="${javac.includeantruntime}">
 			<src path="${src.dir}"/>
 			<src path="${generated.src.dir}"/>
+			<compilerarg line="-s ${build.src.dir}/main/java"/>
 			<compilerarg value="-Xbootclasspath:${javac.bootclasspath}"/>
 			<compilerarg value="${javac.extraargs.xlint}"/>
 			<compilerarg value="${javac.extraargs.werror}"/>
@@ -269,14 +267,7 @@
 		<echo message="[COMPILE] main for ${ant.project.name}" />
 		<antcall target="build-mkdirs" inheritall="true" inheritrefs="true" />
 		<taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />
-		<groovyc srcdir="${groovy.src.dir}" classpathref="classpath" includeantruntime="${groovyc.includeantruntime}" fork="${groovyc.fork}" destdir="${build.classes.dir}" verbose="true" listfiles="true" configscript="${project.basedir}/config.groovy">
-			<javac source="${javac.source}" target="${javac.target}" encoding="utf-8" debug="${javac.debug}" >
-				<compilerarg value="-Xbootclasspath:${groovyc.bootclasspath}"/>
-				<compilerarg value="${groovyc.extraargs.xlint}"/>
-				<compilerarg value="${groovyc.extraargs.werror}"/>
-				<compilerarg value="-Fimplicit:class"/>
-			</javac>
-		</groovyc>
+		<groovyc srcdir="${groovy.src.dir}" classpathref="classpath" includeantruntime="${groovyc.includeantruntime}" fork="${groovyc.fork}" destdir="${build.classes.dir}" verbose="true" listfiles="true" configscript="${project.basedir}/config.groovy"/>
 		<antcall target="build-bindings" />
 	</target>
 	<target name="build-bindings" depends="classpaths">
