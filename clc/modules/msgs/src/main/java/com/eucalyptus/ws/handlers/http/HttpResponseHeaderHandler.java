@@ -37,26 +37,40 @@ import java.util.Optional;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.MoreObjects;
+import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.stream.ChunkedInput;
 
 
 public class HttpResponseHeaderHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
+  private static final Logger logger = Logger.getLogger( HttpResponseHeaderHandler.class );
+
   private volatile int requestCount = 0;
+  private volatile boolean closeSent = false;
 
   @Override
   public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
     if ( e instanceof MessageEvent && ((MessageEvent)e).getMessage( ) instanceof HttpRequest ) {
       requestCount++;
+
+      if ( !closeSent ) {
+        ctx.sendUpstream( e );
+      } else { 
+        ctx.getChannel( ).setReadable( false );
+      }
+    } else {
+      ctx.sendUpstream( e );
     }
-    ctx.sendUpstream( e );
   }
 
   /**
@@ -64,28 +78,58 @@ public class HttpResponseHeaderHandler implements ChannelUpstreamHandler, Channe
    */
   @Override
   public void handleDownstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
-    if ( e instanceof MessageEvent && ((MessageEvent)e).getMessage() instanceof HttpResponse ) {
-      final HttpResponse response = (HttpResponse) ( (MessageEvent) e ).getMessage( );
+    if ( e instanceof MessageEvent ) {
+      final MessageEvent messageEvent = (MessageEvent) e;
 
-      // Persistent connection close
-      if ( requestCount >= MoreObjects.firstNonNull( StackConfiguration.HTTP_MAX_REQUESTS_PER_CONNECTION, 100 ) ) {
-        response.setHeader( HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE );
-        if ( ctx.getChannel( ).isOpen( ) ) {
+      if ( messageEvent.getMessage( ) instanceof HttpChunk ) {
+        final HttpChunk chunk = (HttpChunk) messageEvent.getMessage( );
+        if ( chunk.isLast( ) &&
+            ctx.getChannel( ).isOpen( ) &&
+            closeSent ) {
           e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
         }
-      }
+      } else if ( messageEvent.getMessage() instanceof HttpResponse ) {
+        final HttpResponse response = (HttpResponse) messageEvent.getMessage( );
 
-      // If previous handler has already set the Date header, leave it as is.
-      if (!response.containsHeader(HttpHeaders.Names.DATE)) {
-        response.setHeader(HttpHeaders.Names.DATE, Timestamps.formatRfc822Timestamp(new Date()));
-      }
+        // Persistent connection close
+        if ( HttpResponseStatus.OK.compareTo( response.getStatus( ) ) <= 0 &&
+            ctx.getChannel( ).isOpen( ) &&
+            requestCount >= MoreObjects.firstNonNull( StackConfiguration.HTTP_MAX_REQUESTS_PER_CONNECTION, 100 ) ) {
+          response.setHeader( HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE );
+          closeSent = true;
+          // chunked responses are not always marked as such, so treat as chunked if there
+          // is no content in the response
+          if ( !response.isChunked( ) && response.getContent( ).readableBytes( ) != 0 ) {
+            e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
+          }
+        }
 
-      // If server already set then do not overwrite
-      final Optional<String> header = StackConfiguration.getServerHeader( );
-      if ( !response.containsHeader(HttpHeaders.Names.SERVER) && header.isPresent( ) ) {
-        response.setHeader( HttpHeaders.Names.SERVER, header.get( ) );
+        // If previous handler has already set the Date header, leave it as is.
+        if (!response.containsHeader(HttpHeaders.Names.DATE)) {
+          response.setHeader(HttpHeaders.Names.DATE, Timestamps.formatRfc822Timestamp(new Date()));
+        }
+
+        // If server already set then do not overwrite
+        final Optional<String> header = StackConfiguration.getServerHeader( );
+        if ( !response.containsHeader(HttpHeaders.Names.SERVER) && header.isPresent( ) ) {
+          response.setHeader( HttpHeaders.Names.SERVER, header.get( ) );
+        }
+      } else if ( messageEvent.getMessage() instanceof ChunkedInput ) {
+        final ChunkedInput input = (ChunkedInput) messageEvent.getMessage( );
+
+        if ( ctx.getChannel( ).isOpen( ) &&
+            closeSent ) {
+          e.getFuture( ).addListener( future -> {
+            if ( input.isEndOfInput( ) ) {
+              future.getChannel( ).close( );
+            } else {
+              logger.warn( "Write listener fired before end of input, not closing channel." );
+            }
+          } );
+        }
       }
     }
+
     ctx.sendDownstream( e );
   }
 }
