@@ -39,7 +39,6 @@
 
 package com.eucalyptus.util;
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -77,23 +76,7 @@ public class Internets {
   private static final ConcurrentMap<String, InetAddress> localHostAddrList = new ConcurrentHashMap<String, InetAddress>( );
   private static final InetAddress                        localHostAddr     = determineLocalAddress( );
   private static final String                             localId           = localHostIdentifier( );
-  
-//  public static List<InetAddress> localInetAddresses( ) {
-//    return localHostAddrList;
-//  }
-//  
-  
-  public static boolean isReachable( InetAddress addr, int timeoutMillis ) throws IOException {
-//    try {
-//      timeoutMillis = timeoutMillis / 1000;
-//      return ( Boolean ) Groovyness.eval( String.format( "ret = \"/bin/ping -W %d -c 1 %s\".execute( ); ret.waitFor(); ret.exitValue() == 0;",
-//                                                         timeoutMillis,
-//                                                         addr.getHostAddress( ) ) );
-//    } catch ( ScriptExecutionFailedException ex ) {
-//      Logs.extreme( ).error( ex, ex );
-      return addr.isReachable( timeoutMillis );
-//    }
-  }
+
   
   private static InetAddress determineLocalAddress( ) {
     InetAddress laddr = null;
@@ -211,21 +194,21 @@ public class Internets {
           return !input.getName( ).contains( "virbr0" ) && !input.getDisplayName( ).contains( "virbr0" );
         }
       } ) );
-      Collections.sort( ifaces, new Comparator<NetworkInterface>( ) {
-        
+      ifaces.sort( new Comparator<NetworkInterface>( ) {
+
         @Override
         public int compare( NetworkInterface o1, NetworkInterface o2 ) {
           int min1 = 0;
           int min2 = 0;
           for ( InterfaceAddress ifaceAddr : o1.getInterfaceAddresses( ) ) {
             min1 = ( min1 > ifaceAddr.getNetworkPrefixLength( )
-              ? ifaceAddr.getNetworkPrefixLength( )
-              : min1 );
+                ? ifaceAddr.getNetworkPrefixLength( )
+                : min1 );
           }
           for ( InterfaceAddress ifaceAddr : o2.getInterfaceAddresses( ) ) {
             min2 = ( min2 > ifaceAddr.getNetworkPrefixLength( )
-              ? ifaceAddr.getNetworkPrefixLength( )
-              : min2 );
+                ? ifaceAddr.getNetworkPrefixLength( )
+                : min2 );
           }
           return min2 - min1;//return a positive int when min1 has a shorter routing prefix
         }
@@ -295,27 +278,6 @@ public class Internets {
   
   public static final Comparator<InetAddress> INET_ADDRESS_COMPARATOR = new Inet4AddressComparator( );
   
-  public static boolean testReachability( InetAddress inetAddr ) {
-    checkParam( "BUG: inetAddr is null.", inetAddr, notNullValue() );
-    try {
-      return inetAddr.isReachable( 10000 );
-    } catch ( IOException ex ) {
-      LOG.error( ex, ex );
-      return false;
-    }//TODO:GRZE:make reachability time tuneable
-  }
-  
-  public static boolean testReachability( String addr ) {
-    checkParam( "BUG: addr is null.", addr, notNullValue() );
-    try {
-      InetAddress inetAddr = Inet4Address.getByName( addr );
-      return testReachability( inetAddr );
-    } catch ( UnknownHostException ex ) {
-      LOG.error( ex, ex );
-      return false;
-    }
-  }
-  
   public static InetAddress toAddress( URI uri ) {
     checkParam( "BUG: uri is null.", uri, notNullValue() );
     try {
@@ -330,8 +292,8 @@ public class Internets {
     if ( maybeUrlMaybeHostname.startsWith( "vm:" ) ) {
       maybeUrlMaybeHostname = "localhost";
     }
-    URI uri = null;
-    String hostAddress = null;
+    URI uri;
+    String hostAddress;
     try {
       uri = new URI( maybeUrlMaybeHostname );
       hostAddress = uri.getHost( );
@@ -471,16 +433,4 @@ public class Internets {
       return getInterfaceCidr( address );
     }
   }
-
-
-  public static void main( String[] args ) throws Exception {
-    for ( String addr : Internets.getAllAddresses( ) ) {
-      System.out.println( addr );
-    }
-    for ( String addr : Internets.getAllLocalHostNamesIps() ) {
-      System.out.println( "Address: " + addr );
-    }
-    System.out.println( "Testing if 192.168.7.8 is reachable: " + Internets.testReachability( "192.168.7.8" ) );
-  }
-  
 }
