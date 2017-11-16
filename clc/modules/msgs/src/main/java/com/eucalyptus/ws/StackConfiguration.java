@@ -99,7 +99,7 @@ public class StackConfiguration extends AbstractPersistent {
   @ConfigurableField( description = "Server worker thread pool max.",
                       changeListener = WebServices.CheckNonNegativeIntegerPropertyChangeListener.class,
                       initial = "32" )
-  public static Integer       SERVER_POOL_MAX_THREADS           = 32;
+  public static Integer       SERVER_POOL_MAX_THREADS           = 128;
   @ConfigurableField( description = "Server max worker memory per connection.",
                       changeListener = WebServices.CheckNonNegativeLongPropertyChangeListener.class,
                       initial = "0" )

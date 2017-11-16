@@ -397,14 +397,10 @@ public class WebServices {
     private boolean       CHANNEL_REUSE_ADDRESS             = true;
     private Boolean       CHANNEL_KEEP_ALIVE                = true;
     private Boolean       CHANNEL_NODELAY                   = true;
-    private Integer       SERVER_POOL_MAX_THREADS           = 32;
+    private Integer       SERVER_POOL_MAX_THREADS           = 128;
     private Long          SERVER_POOL_MAX_MEM_PER_CONN      = 0L;
     private Long          SERVER_POOL_TOTAL_MEM             = 0L;
     private Long          SERVER_POOL_TIMEOUT_MILLIS        = 500L;
-    private Integer       SERVER_BOSS_POOL_MAX_THREADS      = 128;
-    private Long          SERVER_BOSS_POOL_MAX_MEM_PER_CONN = 0L;
-    private Long          SERVER_BOSS_POOL_TOTAL_MEM        = 0L;
-    private Long          SERVER_BOSS_POOL_TIMEOUT_MILLIS   = 500L;
     private Integer       PORT                              = 8773;
     private String        LISTENER_ADDRESS_MATCH            = "0.0.0.0";
     private AtomicBoolean isRunning = new AtomicBoolean(false);
@@ -429,10 +425,6 @@ public class WebServices {
         Long NEW_SERVER_POOL_MAX_MEM_PER_CONN = StackConfiguration.SERVER_POOL_MAX_MEM_PER_CONN;
         Long NEW_SERVER_POOL_TOTAL_MEM = StackConfiguration.SERVER_POOL_TOTAL_MEM;
         Long NEW_SERVER_POOL_TIMEOUT_MILLIS = StackConfiguration.SERVER_POOL_TIMEOUT_MILLIS;
-        Integer NEW_SERVER_BOSS_POOL_MAX_THREADS = StackConfiguration.SERVER_BOSS_POOL_MAX_THREADS;
-        Long NEW_SERVER_BOSS_POOL_MAX_MEM_PER_CONN = StackConfiguration.SERVER_BOSS_POOL_MAX_MEM_PER_CONN;
-        Long NEW_SERVER_BOSS_POOL_TOTAL_MEM = StackConfiguration.SERVER_BOSS_POOL_TOTAL_MEM;
-        Long NEW_SERVER_BOSS_POOL_TIMEOUT_MILLIS = StackConfiguration.SERVER_BOSS_POOL_TIMEOUT_MILLIS;
         Integer NEW_PORT = StackConfiguration.PORT;
         String NEW_LISTENER_ADDRESS_MATCH = StackConfiguration.LISTENER_ADDRESS_MATCH;
         if (!CHANNEL_CONNECT_TIMEOUT.equals(NEW_CHANNEL_CONNECT_TIMEOUT)) {
@@ -483,26 +475,6 @@ public class WebServices {
         if (!SERVER_POOL_TIMEOUT_MILLIS.equals(NEW_SERVER_POOL_TIMEOUT_MILLIS)) {
           LOG.info("bootstrap.webservices.server_pool_timeout_millis has changed: oldValue = " + SERVER_POOL_TIMEOUT_MILLIS + ", newValue = " + NEW_SERVER_POOL_TIMEOUT_MILLIS);
           SERVER_POOL_TIMEOUT_MILLIS = NEW_SERVER_POOL_TIMEOUT_MILLIS;
-          different = true;
-        }
-        if (!SERVER_BOSS_POOL_MAX_THREADS.equals(NEW_SERVER_BOSS_POOL_MAX_THREADS)) {
-          LOG.info("bootstrap.webservices.server_boss_pool_max_threads has changed: oldValue = " + SERVER_BOSS_POOL_MAX_THREADS + ", newValue = " + NEW_SERVER_BOSS_POOL_MAX_THREADS);
-          SERVER_BOSS_POOL_MAX_THREADS = NEW_SERVER_BOSS_POOL_MAX_THREADS;
-          different = true;
-        }
-        if (!SERVER_BOSS_POOL_MAX_MEM_PER_CONN.equals(NEW_SERVER_BOSS_POOL_MAX_MEM_PER_CONN)) {
-          LOG.info("bootstrap.webservices.server_boss_pool_max_mem_per_conn has changed: oldValue = " + SERVER_BOSS_POOL_MAX_MEM_PER_CONN + ", newValue = " + NEW_SERVER_BOSS_POOL_MAX_MEM_PER_CONN);
-          SERVER_BOSS_POOL_MAX_MEM_PER_CONN = NEW_SERVER_BOSS_POOL_MAX_MEM_PER_CONN;
-          different = true;
-        }
-        if (!SERVER_BOSS_POOL_TOTAL_MEM.equals(NEW_SERVER_BOSS_POOL_TOTAL_MEM)) {
-          LOG.info("bootstrap.webservices.server_boss_pool_total_mem has changed: oldValue = " + SERVER_BOSS_POOL_TOTAL_MEM + ", newValue = " + NEW_SERVER_BOSS_POOL_TOTAL_MEM);
-          SERVER_BOSS_POOL_TOTAL_MEM = NEW_SERVER_BOSS_POOL_TOTAL_MEM;
-          different = true;
-        }
-        if (!SERVER_BOSS_POOL_TIMEOUT_MILLIS.equals(NEW_SERVER_BOSS_POOL_TIMEOUT_MILLIS)) {
-          LOG.info("bootstrap.webservices.server_boss_pool_timeout_millis has changed: oldValue = " + SERVER_BOSS_POOL_TIMEOUT_MILLIS + ", newValue = " + NEW_SERVER_BOSS_POOL_TIMEOUT_MILLIS);
-          SERVER_BOSS_POOL_TIMEOUT_MILLIS = NEW_SERVER_BOSS_POOL_TIMEOUT_MILLIS;
           different = true;
         }
         if (!PORT.equals(NEW_PORT)) {
