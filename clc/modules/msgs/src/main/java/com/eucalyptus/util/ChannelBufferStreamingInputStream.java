@@ -38,6 +38,7 @@ import org.jboss.netty.buffer.ChannelBufferInputStream;
 import java.io.IOException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @ConfigurableClass(root = "objectstorage", description = "Streaming upload channel configuration.")
 public class ChannelBufferStreamingInputStream extends ChannelBufferInputStream {
@@ -61,6 +62,7 @@ public class ChannelBufferStreamingInputStream extends ChannelBufferInputStream 
   private ChannelBuffer b;
   private LinkedBlockingQueue<ChannelBuffer> buffers;
   private int bytesRead;
+  private AtomicBoolean closed = new AtomicBoolean( false );
 
   @Override
   public boolean markSupported() {
@@ -108,6 +110,9 @@ public class ChannelBufferStreamingInputStream extends ChannelBufferInputStream 
       if (off + len > bytes.length) {
         throw new IOException("Byte buffer is too small. Should be at least: " + (off + len));
       }
+      if (closed.get()) {
+        throw new IOException("Stream closed");
+      }
       int readSoFar = 0;
       int readable = 0;
       int toReadFromThisBuffer = 0;
@@ -128,8 +133,11 @@ public class ChannelBufferStreamingInputStream extends ChannelBufferInputStream 
             int retries = 0;
             do {
               b = buffers.poll(QUEUE_TIMEOUT, TimeUnit.SECONDS);
-            } while ((b == null) && retries++ < 60);
+            } while ((b == null) && !closed.get( ) && retries++ < 60);
             if (b == null) {
+              if (closed.get()) {
+                throw new IOException("Stream closed");
+              }
               LOG.error("No more data in this stream");
               bytesRead += readSoFar;
               return readSoFar;
@@ -202,14 +210,16 @@ public class ChannelBufferStreamingInputStream extends ChannelBufferInputStream 
       success = buffers.offer(input, QUEUE_TIMEOUT, TimeUnit.SECONDS);
     }
     if (!success) {
-      LOG.error("Timed out writing data to stream.");
+      LOG.error("Timed out writing data to stream, closing.");
+      IO.close( this );
       throw new EucalyptusCloudException("Aborting upload, could not process data in time. Either increase the upload queue size or retry the upload later.");
-    }
+    } 
   }
 
   @Override
   public void close() throws IOException {
     LOG.trace("Closing Channel Stream: " + buffers.remainingCapacity() + " " + buffers.size());
     super.close();
+    closed.set( true );
   }
 }

@@ -717,9 +717,9 @@ int find_and_start_instance(char *psInstanceId)
         // ensure it is not running already
         if ((dom = virDomainLookupByName(conn, psInstanceId)) != NULL) {
             LOGERROR("[%s] instance to start is already running, giving up\n", psInstanceId);
+            virDomainFree(dom);
             unlock_hypervisor_conn();
             EUCA_FREE(psXML);
-            virDomainFree(dom);
             return (EUCA_ERROR);
         }
         // start it

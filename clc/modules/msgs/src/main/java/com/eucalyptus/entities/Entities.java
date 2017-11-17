@@ -57,6 +57,7 @@ import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
+import javax.persistence.FlushModeType;
 import javax.persistence.LockModeType;
 import javax.persistence.NoResultException;
 import javax.persistence.NonUniqueResultException;
@@ -142,14 +143,14 @@ public class Entities {
   private static Logger                                          LOG                       = Logger.getLogger( Entities.class );
   private static ThreadLocal<String>                             txRootThreadLocal         = new ThreadLocal<>( );
   private static ThreadLocal<ConcurrentMap<String, CascadingTx>> txStateThreadLocal        = new ThreadLocal<ConcurrentMap<String, CascadingTx>>( ) {
-                                                                                             
+
                                                                                              @Override
                                                                                              protected ConcurrentMap<String, CascadingTx> initialValue( ) {
                                                                                                return Maps.newConcurrentMap( );
                                                                                              }
-                                                                                             
+
                                                                                            };
-  
+
   static String lookatPersistenceContext( final Object obj ) throws RuntimeException {
     final Class type = Classes.typeOf( obj );
     final Ats ats = Ats.inClassHierarchy( type );
@@ -175,7 +176,7 @@ public class Entities {
       return false;
     }
   }
-  
+
   private static CascadingTx getTransaction( final Object obj ) {
     if ( hasTransaction( obj ) ) {
       return txStateThreadLocal.get( ).get( lookatPersistenceContext( obj ) );
@@ -183,7 +184,7 @@ public class Entities {
       throw new NoSuchElementException( "Failed to find active transaction for persistence context: " + lookatPersistenceContext( obj ) + " and object: " + obj );
     }
   }
-  
+
   public static void removeTransaction( final CascadingTx tx ) {
     final String txId = makeTxRootName( tx );
     txLog.invalidate( txStateThreadLocal.toString( ) + tx.getRecord( ).getPersistenceContext( ) );
@@ -196,7 +197,7 @@ public class Entities {
       txStateThreadLocal.remove( );
     }
   }
-  
+
   private static void cleanStrandedTx( final CascadingTx txValue ) {
     LOG.error( "Found stranded transaction: " + txValue.getRecord( ).getPersistenceContext( ) + " started at: " + txValue.getRecord( ).getStack( ) );
     try {
@@ -205,11 +206,11 @@ public class Entities {
       LOG.trace( ex, ex );
     }
   }
-  
+
   private static String makeTxRootName( final CascadingTx tx ) {
     return txStateThreadLocal.toString( ) + tx.getRecord( ).getPersistenceContext( );
   }
-  
+
   private static CascadingTx createTransaction( final Object obj ) throws RecoverablePersistenceException, RuntimeException {
     final String ctx = lookatPersistenceContext( obj );
     final CascadingTx ret = new CascadingTx( ctx );
@@ -227,7 +228,7 @@ public class Entities {
       throw ex;
     }
   }
-  
+
   /**
    * @deprecated Use #transactionFor(Object) instead (try-with-resources)
    * @see #transactionFor(Object)
@@ -484,12 +485,30 @@ public class Entities {
     session.setFlushMode( FlushMode.MANUAL );
   }
 
+  /**
+   * Lock the given object for update.
+   *
+   * @param object The object used to determine the transaction context
+   */
+  public static void lock( final Object object ) {
+    getTransaction( object ).txState.getEntityManager( ).lock( object, LockModeType.PESSIMISTIC_WRITE );
+  }
+
   public static <T> void flush( final T object ) {
     getTransaction( object ).txState.getEntityManager( ).flush( );
   }
 
   public static <T> void flushSession( final T object ) {
     getTransaction( object ).txState.getSession().flush( );
+  }
+
+  /**
+   * Set the flush mode to on-commit, avoiding any pre-query auto flushing
+   *
+   * @param object The object used to determine the transaction context
+   */
+  public static void flushOnCommit( final Object object ) {
+    getTransaction( object ).txState.getEntityManager( ).setFlushMode( FlushModeType.COMMIT );
   }
 
   public static <T> void clearSession( final T object ) {
@@ -536,7 +555,7 @@ public class Entities {
   @SuppressWarnings( { "unchecked", "cast" } )
   @Deprecated
   public static <T> List<T> query( final T example,
-                                   final boolean readOnly, 
+                                   final boolean readOnly,
                                    final Criterion criterion,
                                    final Map<String,String> aliases ) {
     return query( example, readOnly, criterion, aliases, false );
@@ -609,7 +628,7 @@ public class Entities {
         .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
         .add( qbe )
         .list();
-    return Lists.newArrayList( Sets.newLinkedHashSet( resultList ) );    
+    return Lists.newArrayList( Sets.newLinkedHashSet( resultList ) );
   }
 
   private static Criteria setOptions( final Criteria criteria, final QueryOptions options ) {
@@ -638,7 +657,7 @@ public class Entities {
 
   private static Example setOptions( final Example example, final QueryOptions options ) {
     if ( options.getMatchMode( ) != null ) {
-      example.enableLike( options.getMatchMode( ) );  
+      example.enableLike( options.getMatchMode( ) );
     }
     return example;
   }
@@ -646,7 +665,7 @@ public class Entities {
   public static QueryOptionsBuilder queryOptions( ) {
     return new QueryOptionsBuilder( );
   }
-  
+
   public interface QueryOptions {
     @Nullable MatchMode getMatchMode( );
     @Nullable Integer getMaxResults( );
@@ -655,7 +674,7 @@ public class Entities {
     @Nullable Boolean getReadonly( );
     @Nullable Criterion getCriterion( );
   }
-  
+
   @SuppressWarnings( "unused" )
   public static final class QueryOptionsBuilder {
     private MatchMode matchMode;
@@ -694,7 +713,7 @@ public class Entities {
       this.criterion = criterion;
       return this;
     }
-    
+
     public QueryOptions build( ) {
       return new QueryOptions( ) {
         @Override
@@ -726,7 +745,7 @@ public class Entities {
         public Criterion getCriterion() {
           return criterion;
         }
-      };      
+      };
     }
   }
 
@@ -791,7 +810,7 @@ public class Entities {
     }
     return ret;
   }
-  
+
   private static <T> T maybeNaturalId( final T example ) throws HibernateException, NoSuchElementException {
     final String natId = ( ( HasNaturalId ) example ).getNaturalId( );
     @SuppressWarnings( "unchecked" )
@@ -800,14 +819,14 @@ public class Entities {
                                 .getSession( )
                                 .createCriteria( example.getClass( ) )
                                 .add( Restrictions.eq( "naturalId", natId ) )
-                                .setCacheable( true )         
+                                .setCacheable( true )
                                 .uniqueResult( );
     if ( ret == null ) {
       throw new NoSuchElementException( "NaturalId: " + natId );
     }
     return ret;
   }
-  
+
   private static <T> T maybePrimaryKey( final T example ) throws NoSuchElementException {
     final Object id = resolvePrimaryKey( example );
     if ( id == null ) {
@@ -821,7 +840,7 @@ public class Entities {
       }
     }
   }
-  
+
   static <T> Object resolvePrimaryKey( final T example ) {
     return Entities.getTransaction( example ).getTxState( ).getEntityManager( ).getEntityManagerFactory( ).getPersistenceUnitUtil( ).getIdentifier( example );
   }
@@ -838,7 +857,7 @@ public class Entities {
 
   /**
    * Invokes underlying persist implementation per jsr-220
-   * 
+   *
    * @throws ConstraintViolationException
    * @see http://opensource.atlassian.com/projects/hibernate/browse/HHH-1273
    */
@@ -851,7 +870,7 @@ public class Entities {
       throw ex;
     }
   }
-  
+
   /**
    * <table>
    * <tbody>
@@ -863,7 +882,7 @@ public class Entities {
    * </tr>
    * <tr valign="top">
    * <th>Object passed was never persisted</th>
-   * 
+   *
    * <td>1. Object added to persistence context as new entity<br>
    * 2. New entity inserted into database at flush/commit</td>
    * <td>1. State copied to new entity.<br>
@@ -877,7 +896,7 @@ public class Entities {
    * <th>Object was previously persisted, but not loaded in this persistence context</th>
    * <td>1. <tt>EntityExistsException</tt> thrown (or a <tt>PersistenceException</tt> at
    * flush/commit)</td>
-   * 
+   *
    * <td>2. Existing entity loaded.<br>
    * 2. State copied from object to loaded entity<br>
    * 3. Loaded entity updated in database at flush/commit<br>
@@ -889,7 +908,7 @@ public class Entities {
    * <th>Object was previously persisted and already loaded in this persistence context</th>
    * <td>1. <tt>EntityExistsException</tt> thrown (or a <tt>PersistenceException</tt> at flush or
    * commit time)</td>
-   * 
+   *
    * <td>1. State from object copied to loaded entity<br>
    * 2. Loaded entity updated in database at flush/commit<br>
    * 3. Loaded entity returned</td>
@@ -897,7 +916,7 @@ public class Entities {
    * </tr>
    * </tbody>
    * </table>
-   * 
+   *
    * @throws ConstraintViolationException
    * @throws NoSuchElementException
    */
@@ -915,7 +934,7 @@ public class Entities {
                                            ? newObject
                                            : persistedObject;
       } catch ( final RuntimeException ex ) {
-        
+
         PersistenceExceptions.throwFiltered( ex );
         throw ex;
       }
@@ -956,17 +975,17 @@ public class Entities {
     }
     return ret;
   }
-  
+
   public static <T> Function<T, T> merge( ) {
     return new Function<T, T>( ) {
-      
+
       @Override
       public T apply( final T arg0 ) {
         return Entities.merge( arg0 );
       }
     };
   }
-  
+
   public static <T> void refresh( final T newObject ) throws ConstraintViolationException {
     try {
       getTransaction( newObject ).getTxState( ).getEntityManager( ).refresh( newObject, ( LockModeType ) null );
@@ -975,7 +994,7 @@ public class Entities {
       throw ex;
     }
   }
-  
+
   public static <T> void refresh( final T newObject, final LockModeType lockMode ) throws ConstraintViolationException {
     try {
       getTransaction( newObject ).getTxState( ).getEntityManager( ).refresh( newObject, lockMode );
@@ -984,7 +1003,7 @@ public class Entities {
       throw ex;
     }
   }
-  
+
   /**
    * {@inheritDoc Session}
    */
@@ -1087,7 +1106,7 @@ public class Entities {
 
   /**
    * Count the matching entities for the given example.
-   * 
+   *
    * @param example The example entity
    * @return The number of matching entities
    */
@@ -1142,17 +1161,17 @@ public class Entities {
     final Transaction transaction = session.getTransaction();
     transaction.registerSynchronization( synchronization );
   }
-  
+
   /**
    * Private for a reason.
    */
   private static class CascadingTx implements EntityTransaction {
     private final TxRecord record;
     private TxState        txState;
-    
+
     /**
      * Private for a reason.
-     * 
+     *
      * @see {@link CascadingTx#get(Class)}
      * @param persistenceContext
      * @throws RecoverablePersistenceException
@@ -1169,7 +1188,7 @@ public class Entities {
         throw PersistenceExceptions.throwFiltered( ex );
       }
     }
-    
+
     /**
      * @delegate Do not change semantics here.
      * @see javax.persistence.EntityTransaction#getRollbackOnly()
@@ -1180,7 +1199,7 @@ public class Entities {
                                  ? false
                                  : this.txState.getRollbackOnly( );
     }
-    
+
     /**
      * @delegate Do not change semantics here.
      * @see javax.persistence.EntityTransaction#setRollbackOnly()
@@ -1191,7 +1210,7 @@ public class Entities {
         this.txState.setRollbackOnly( );
       }
     }
-    
+
     /**
      * @delegate Do not change semantics here.
      * @see javax.persistence.EntityTransaction#isActive()
@@ -1202,7 +1221,7 @@ public class Entities {
                                  ? false
                                  : this.txState.isActive( );
     }
-    
+
     /**
      * @delegate Do not change semantics here.
      * @see javax.persistence.EntityTransaction#begin()
@@ -1220,7 +1239,7 @@ public class Entities {
         throw ex;
       }
     }
-    
+
     /**
      * @delegate Do not change semantics here.
      * @see javax.persistence.EntityTransaction#rollback()
@@ -1240,7 +1259,7 @@ public class Entities {
         Logs.extreme( ).debug( "Duplicate call to rollback( )" );
       }
     }
-    
+
     /**
      * @delegate Do not change semantics here.
      * @see javax.persistence.EntityTransaction#commit()
@@ -1258,7 +1277,7 @@ public class Entities {
         Logs.extreme( ).error( "Duplicate call to commit( ): " + Threads.currentStackString( ) );
       }
     }
-    
+
     TxState getTxState( ) {
       return this.txState;
     }
@@ -1306,23 +1325,23 @@ public class Entities {
         public boolean isActive( ) {
           return CascadingTx.this.isActive( );
         }
-        
+
         @Override
         public boolean getRollbackOnly( ) {
           return CascadingTx.this.getRollbackOnly( );
         }
       };
     }
-    
+
     TxRecord getRecord( ) {
       return this.record;
     }
-    
+
     private class TxState implements EntityTransaction {
       private EntityManager                em;
       private EntityTransaction            transaction;
       private final WeakReference<Session> sessionRef;
-      
+
       public TxState( final String ctx ) {
         try {
           final EntityManagerFactory anemf = PersistenceContexts.getEntityManagerFactory( ctx );
@@ -1337,7 +1356,7 @@ public class Entities {
           throw ex;
         }
       }
-      
+
       private void doCleanup( ) {
         // transaction
         if ( this.transaction != null && this.transaction.isActive( ) ) try {
@@ -1364,15 +1383,15 @@ public class Entities {
           this.em = null;
         }
       }
-      
+
       EntityManager getEntityManager( ) {
         return this.em;
       }
-      
+
       Session getSession( ) {
         return this.sessionRef.get( );
       }
-      
+
       /**
        * @delegate Do not change semantics here.
        * @see javax.persistence.EntityTransaction#begin()
@@ -1388,7 +1407,7 @@ public class Entities {
           throw ex;
         }
       }
-      
+
       /**
        * @delegate Do not change semantics here.
        * @see javax.persistence.EntityTransaction#commit()
@@ -1405,7 +1424,7 @@ public class Entities {
           doCleanup();
         }
       }
-      
+
       /**
        * @delegate Do not change semantics here.
        * @see javax.persistence.EntityTransaction#getRollbackOnly()
@@ -1414,7 +1433,7 @@ public class Entities {
       public boolean getRollbackOnly( ) {
         return this.transaction.getRollbackOnly( );
       }
-      
+
       /**
        * @delegate Do not change semantics here.
        * @see javax.persistence.EntityTransaction#isActive()
@@ -1423,7 +1442,7 @@ public class Entities {
       public boolean isActive( ) {
         return this.transaction != null && this.transaction.isActive( );
       }
-      
+
       /**
        * @delegate Do not change semantics here.
        * @see javax.persistence.EntityTransaction#rollback()
@@ -1439,7 +1458,7 @@ public class Entities {
           doCleanup();
         }
       }
-      
+
       /**
        * @delegate Do not change semantics here.
        * @see javax.persistence.EntityTransaction#setRollbackOnly()
@@ -1448,31 +1467,31 @@ public class Entities {
       public void setRollbackOnly( ) {
         this.transaction.setRollbackOnly( );
       }
-      
+
     }
   }
-  
+
   public static class TxRecord {
     private final String            persistenceContext;
     private final String            uuid;
     private final Long              startTime;
     private final String            stack;
-    
+
     TxRecord( final String persistenceContext, final String uuid ) {
       this.persistenceContext = persistenceContext;
       this.uuid = uuid;
       this.stack = Threads.currentStackRange( 0, 32 );
       this.startTime = System.currentTimeMillis( );
     }
-    
+
     public Long getStartTime( ) {
       return this.startTime;
     }
-    
+
     public String getPersistenceContext( ) {
       return this.persistenceContext;
     }
-    
+
     public String getUuid( ) {
       return this.uuid;
     }
@@ -1480,14 +1499,14 @@ public class Entities {
     String getStack( ) {
       return this.stack;
     }
-    
+
   }
-  
+
   public static class RetryTransactionException extends RuntimeException {
     private static final long serialVersionUID = 1L;
 
     private final Iterable<Class<?>> entitiesToEvict;
-    
+
     /**
      * @param cause Throwable that occurred requiring a retry
      */
@@ -1507,18 +1526,18 @@ public class Entities {
       return entitiesToEvict;
     }
   }
-  
+
   private static class TransactionalFunction<E, D, R> implements Function<D, R> {
     private Class<E>       entityType;
     private Function<D, R> function;
     private Integer        retries = CONCURRENT_UPDATE_RETRIES;
-    
+
     TransactionalFunction( Class<E> entityType, Function<D, R> function, Integer retries ) {
       this.entityType = entityType;
       this.function = function;
       this.retries = retries;
     }
-    
+
     @Override
     public R apply( final D input ) {
       RuntimeException rootCause = null;
@@ -1560,7 +1579,7 @@ public class Entities {
                                ? rootCause
                                : new NullPointerException( "BUG: Transaction retry failed but root cause exception is unknown!" ) );
     }
-    
+
   }
   public static <T> Supplier<T> asTransaction( final Supplier<T> supplier ) {
     final List<Class> generics = Classes.genericsToClasses( supplier );
@@ -1600,20 +1619,20 @@ public class Entities {
   public static <E, T> Predicate<T> asTransaction( final Class<E> type, final Predicate<T> predicate ) {
     return asTransaction( type, predicate, CONCURRENT_UPDATE_RETRIES );
   }
-  
+
   public static <E, T> Predicate<T> asTransaction( final Class<E> type, final Predicate<T> predicate, final Integer retries ) {
     final Function<T, Boolean> funcionalized = Functions.forPredicate( predicate );
     final Function<T, Boolean> transactionalized = Entities.asTransaction( type, funcionalized, retries );
     return new Predicate<T>( ) {
-      
+
       @Override
       public boolean apply( T input ) {
         return transactionalized.apply( input );
       }
-      
+
     };
   }
-  
+
   public static <T, R> Function<T, R> asTransaction( final Function<T, R> function ) {
     if ( function instanceof TransactionalFunction ) {
       return function;
@@ -1627,7 +1646,7 @@ public class Entities {
       throw new IllegalArgumentException( "Failed to find generics for provided function, cannot make into transaction: " + Threads.currentStackString( ) );
     }
   }
-  
+
   public static <E, T, R> Function<T, R> asTransaction( final Class<E> type, final Function<T, R> function ) {
     if ( function instanceof TransactionalFunction ) {
       return function;
@@ -1648,7 +1667,7 @@ public class Entities {
       return new TransactionalFunction<>( type, function, retries );
     }
   }
-  
+
   /**
    * Commit the transaction if possible, else rollback.
    *

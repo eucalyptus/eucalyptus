@@ -323,6 +323,7 @@ public class ListMetricManager {
     // do db stuff in a certain number of operations per connection
     for (List<PrefetchFields> prefetchFieldsListPartial : Iterables.partition(dataBatchPrefetchMap.keySet(), LIST_METRIC_NUM_DB_OPERATIONS_PER_TRANSACTION)) {
       try (final TransactionResource db = Entities.transactionFor(ListMetric.class)) {
+        Entities.flushOnCommit(ListMetric.class);
         int numOperations = 0;
         for (PrefetchFields prefetchFields: prefetchFieldsListPartial) {
           // Prefetch all list metrics with same metric name/namespace/account id
