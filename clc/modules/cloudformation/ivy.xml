@@ -32,8 +32,7 @@
     <info organisation="com.eucalyptus" module="eucalyptus-cloudformation"/>
     <dependencies>
         <dependency name="eucalyptus-cloudformation-common" rev="latest.integration"/>
-        <dependency name="eucalyptus-msgs" rev="latest.integration"/>
-        <dependency name="eucalyptus-ws" rev="latest.integration"/>
+        <dependency name="eucalyptus-core" rev="latest.integration"/>
         <dependency name="eucalyptus-compute-common" rev="latest.integration"/>
         <dependency name="eucalyptus-cloudwatch-common" rev="latest.integration"/>
         <dependency name="eucalyptus-autoscaling-common" rev="latest.integration"/>

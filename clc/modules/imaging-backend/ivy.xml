@@ -1,13 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <ivy-module version="2.0">
     <info organisation="com.eucalyptus" module="eucalyptus-imaging-backend"/>
     <dependencies>
-        <dependency name="eucalyptus-msgs" rev="latest.integration"/>
         <dependency name="eucalyptus-core" rev="latest.integration"/>
         <dependency name="eucalyptus-compute-common" rev="latest.integration"/>
         <dependency name="eucalyptus-imaging-common" rev="latest.integration"/>
         <dependency name="eucalyptus-cluster-manager" rev="latest.integration"/>
-        <dependency name="eucalyptus-ws" rev="latest.integration"/>
-        <dependency name="eucalyptus-resources-support" rev="latest.integration"/>
+        <dependency name="eucalyptus-resources" rev="latest.integration"/>
         <dependency name="eucalyptus-cloudformation-common" rev="latest.integration"/>
     </dependencies>
 </ivy-module>

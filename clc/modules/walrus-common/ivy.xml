@@ -1,9 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <ivy-module version="2.0">
     <info organisation="com.eucalyptus" module="eucalyptus-walrus-common"/>
     <dependencies>
       <dependency name="eucalyptus-configuration" rev="latest.integration"/>
-      <dependency name="eucalyptus-ws" rev="latest.integration"/>
-      <dependency name="eucalyptus-msgs" rev="latest.integration"/>
       <dependency name="eucalyptus-core" rev="latest.integration"/>
       <dependency name="eucalyptus-troubleshooting" rev="latest.integration"/>
       <dependency name="eucalyptus-storage-common" rev="latest.integration"/>

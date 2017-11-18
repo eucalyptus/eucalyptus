@@ -38,5 +38,6 @@
 -->
 
 <project name="eucalyptus-core" basedir=".">
-	<import file="../module-inc.xml" />
+	<property name="javac.extraargs.xlint.unchecked" value="-unchecked"/>
+	<import file="../module-inc.xml"/>
 </project>

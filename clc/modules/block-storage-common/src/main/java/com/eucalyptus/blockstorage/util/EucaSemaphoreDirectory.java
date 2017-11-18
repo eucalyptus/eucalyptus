@@ -37,53 +37,41 @@
  * NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package edu.ucsb.eucalyptus.util;
+package com.eucalyptus.blockstorage.util;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.HashMap;
-import java.util.Map;
-import com.eucalyptus.system.Threads;
+import java.util.concurrent.ConcurrentHashMap;
 
-public class ConfigParser extends Thread {
-	private InputStream is;
-	private File file;
-	private Map<String, String> values;
 
-	public ConfigParser(InputStream is) {
-		super( Threads.threadUniqueName( "eucalyptus-config-parser" ) );
-		this.is = is;
-		values = new HashMap<String, String>();
+public class EucaSemaphoreDirectory {
+	private static ConcurrentHashMap<String, EucaSemaphore> semaphoreMap = new ConcurrentHashMap<String, EucaSemaphore>();
+
+	public static EucaSemaphore getSemaphore(String key) {
+		EucaSemaphore semaphore = semaphoreMap.putIfAbsent(key, new EucaSemaphore(Integer.MAX_VALUE));
+		if (semaphore == null) {
+			semaphore = semaphoreMap.get(key);
+		}
+		return semaphore;
 	}
 
-	public Map<String, String> getValues() {
-		return values;
+	public static EucaSemaphore getSemaphore(String key, int number) {
+		EucaSemaphore semaphore = semaphoreMap.putIfAbsent(key, new EucaSemaphore(number));
+		if (semaphore == null) {
+			semaphore = semaphoreMap.get(key);
+		}
+		return semaphore;
 	}
 
-	public void run() {
-		try {			
-			BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-			String line;
-            while((line = reader.readLine()) !=null) {
-                if(!line.startsWith("#")) {
-                    String[] parts = line.split("=");
-                    if(parts.length > 1) {
-                        values.put(parts[0], parts[1].replaceAll('\"' + "", ""));
-                    }
-                }
-            }
-		} catch (IOException ex) {
-			ex.printStackTrace();
-		} finally {
-			try {
-				is.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+	public static EucaSemaphore getSolitarySemaphore(String key) {
+		EucaSemaphore semaphore = semaphoreMap.putIfAbsent(key, new EucaSemaphore(1));
+		if (semaphore == null) {
+			semaphore = semaphoreMap.get(key);
+		}
+		return semaphore;
+	}
 
+	public static void removeSemaphore(String key) {
+		if(semaphoreMap.containsKey(key)) {
+			semaphoreMap.remove(key);
 		}
 	}
 }

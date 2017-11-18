@@ -37,6 +37,6 @@
   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
 -->
 
-<project name="eucalyptus-config" basedir=".">
+<project name="eucalyptus-configuration" basedir=".">
 	<import file="../module-inc.xml"/>
 </project>

@@ -37,7 +37,7 @@
  * NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package edu.ucsb.eucalyptus.util;
+package com.eucalyptus.blockstorage.util;
 
 import java.util.concurrent.Semaphore;
 

@@ -1,12 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <ivy-module version="2.0">
-    <info organisation="com.eucalyptus" module="eucalyptus-resources-support"/>
+    <info organisation="com.eucalyptus" module="eucalyptus-resources"/>
     <dependencies>
         <dependency name="eucalyptus-autoscaling-common" rev="latest.integration"/>
         <dependency name="eucalyptus-cloudwatch-common" rev="latest.integration"/>
         <dependency name="eucalyptus-cloudformation-common" rev="latest.integration"/>
         <dependency name="eucalyptus-compute-common" rev="latest.integration"/>
         <dependency name="eucalyptus-euare-common" rev="latest.integration"/>
-        <dependency name="eucalyptus-msgs" rev="latest.integration"/>
+        <dependency name="eucalyptus-core" rev="latest.integration"/>
     </dependencies>
 </ivy-module>
 

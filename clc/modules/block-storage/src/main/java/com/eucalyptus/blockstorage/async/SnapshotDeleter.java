@@ -48,7 +48,6 @@ import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
-import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.blockstorage.LogicalStorageManager;
 import com.eucalyptus.blockstorage.S3SnapshotTransfer;
@@ -63,8 +62,8 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.metrics.MonitoredAction;
 import com.eucalyptus.util.metrics.ThruputMetrics;
 
-import edu.ucsb.eucalyptus.util.EucaSemaphore;
-import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
+import com.eucalyptus.blockstorage.util.EucaSemaphore;
+import com.eucalyptus.blockstorage.util.EucaSemaphoreDirectory;
 
 /**
  * Checker task for removing snapshots marked in deleting status

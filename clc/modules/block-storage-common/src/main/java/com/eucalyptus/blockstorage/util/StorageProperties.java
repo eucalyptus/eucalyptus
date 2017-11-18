@@ -40,7 +40,6 @@
 package com.eucalyptus.blockstorage.util;
 
 import java.util.NoSuchElementException;
-import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Criterion;
@@ -55,7 +54,6 @@ import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.system.BaseDirectory;
 import com.google.common.collect.ImmutableSet;
 
-import edu.ucsb.eucalyptus.util.ConfigParser;
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 
 public class StorageProperties {

@@ -166,7 +166,7 @@ subprojects {
         }
 
         whenMerged { module ->
-          if ( name != 'msgs' ) {
+          if ( name != 'core' ) {
             def remove = module.dependencies.findAll{
                 it instanceof org.gradle.plugins.ide.idea.model.ModuleLibrary
               }.findAll{ moduleLibrary ->

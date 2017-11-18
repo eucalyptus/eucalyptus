@@ -60,7 +60,6 @@ import com.eucalyptus.blockstorage.ceph.entities.CephRbdImageToBeDeleted;
 import com.eucalyptus.blockstorage.ceph.entities.CephRbdInfo;
 import com.eucalyptus.blockstorage.ceph.entities.CephRbdSnapshotToBeDeleted;
 import com.eucalyptus.blockstorage.ceph.entities.CephRbdSnapshotToBeDeleted_;
-import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.blockstorage.entities.SnapshotInfo_;
 import com.eucalyptus.blockstorage.san.common.SANManager;
 import com.eucalyptus.blockstorage.san.common.SANProvider;
@@ -86,8 +85,8 @@ import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 import edu.ucsb.eucalyptus.util.SystemUtil.CommandOutput;
-import edu.ucsb.eucalyptus.util.EucaSemaphore;
-import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
+import com.eucalyptus.blockstorage.util.EucaSemaphore;
+import com.eucalyptus.blockstorage.util.EucaSemaphoreDirectory;
 
 /**
  * CephProvider implements the Eucalyptus Storage Controller plug-in for interacting with a Ceph cluster

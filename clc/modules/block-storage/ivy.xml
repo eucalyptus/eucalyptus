@@ -1,9 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <ivy-module version="2.0">
     <info organisation="com.eucalyptus" module="eucalyptus-block-storage"/>
     <dependencies>
         <dependency org="com.eucalyptus" name="eucalyptus-cluster-manager" rev="latest.integration"/>
         <dependency org="com.eucalyptus" name="eucalyptus-core" rev="latest.integration"/>
-        <dependency org="com.eucalyptus" name="eucalyptus-msgs" rev="latest.integration"/>
         <dependency org="com.eucalyptus" name="eucalyptus-storage-common" rev="latest.integration"/>
         <dependency org="com.eucalyptus" name="eucalyptus-object-storage-common" rev="latest.integration"/>
         <dependency org="com.eucalyptus" name="eucalyptus-troubleshooting" rev="latest.integration"/>
