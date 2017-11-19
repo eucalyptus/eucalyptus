@@ -158,7 +158,7 @@ public class StackConfiguration extends AbstractPersistent {
   
   @ConfigurableField( description = "Execute internal service operations from a separate thread pool (with respect to I/O).",
                       initial = "false" )
-  public static Boolean       ASYNC_INTERNAL_OPERATIONS         = Boolean.FALSE;
+  public static Boolean       ASYNC_INTERNAL_OPERATIONS         = Boolean.TRUE;
   
   @ConfigurableField( description = "Execute internal service operations out of band from the normal service bus.",
                       initial = "true" )
