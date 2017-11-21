@@ -152,6 +152,9 @@ public enum ServiceAccessLoggingHandler implements ChannelUpstreamHandler, Chann
         try {
           final Class<? extends ComponentId> compMsg = ComponentMessages.lookup( ( BaseMessage ) replyObject );
           final ComponentId compId = ComponentIds.lookup( compMsg );
+          if ( !compId.isRequestLogged( ) ) {
+            return;
+          }
           componentName = compId.name( );
         } catch ( Exception e ) {
           //GRZE: this needs to be a separate logger to avoid hitting the configured category for this class.
