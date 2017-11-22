@@ -37,7 +37,7 @@
   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
 -->
 
-<project name="eucalyptus-cluster-manager" basedir=".">
+<project name="eucalyptus-compute-backend" basedir=".">
 	<property name="javac.extraargs.xlint.unchecked" value="-unchecked"/>
 	<import file="../module-inc.xml" />
 </project>

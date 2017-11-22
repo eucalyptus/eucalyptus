@@ -3,9 +3,9 @@
     <info organisation="com.eucalyptus" module="eucalyptus-imaging-backend"/>
     <dependencies>
         <dependency name="eucalyptus-core" rev="latest.integration"/>
+        <dependency name="eucalyptus-compute-backend" rev="latest.integration"/>
         <dependency name="eucalyptus-compute-common" rev="latest.integration"/>
         <dependency name="eucalyptus-imaging-common" rev="latest.integration"/>
-        <dependency name="eucalyptus-cluster-manager" rev="latest.integration"/>
         <dependency name="eucalyptus-resources" rev="latest.integration"/>
         <dependency name="eucalyptus-cloudformation-common" rev="latest.integration"/>
     </dependencies>
