@@ -38,14 +38,14 @@ subprojects {
   apply plugin: 'java'
   apply plugin: 'java-library'
 
-  version = '5.0.0'
+  version = '4.4.2'
   targetCompatibility = 1.8
   sourceCompatibility = 1.8
 
-  sourceSets.main.java.srcDirs += ['src/generated/java', 'build/src/main/java']
+  sourceSets.main.java.srcDirs += ['src/generated/java']
 
   sourceSets.test.java.srcDirs = []
-  sourceSets.test.groovy.srcDirs += ['src/test/java', 'build/src/test/java']
+  sourceSets.test.groovy.srcDirs += ['src/test/java' ]
 
   task testJar(type: Jar, dependsOn: testClasses) {
     description 'Assembles a jar archive containing the test classes.'
@@ -143,8 +143,21 @@ subprojects {
     jibx 'xpp3:xpp3:1.1.4c'
   }
 
+  compileJava {
+    options.compilerArgs << "-s"
+    options.compilerArgs << "$project.buildDir/src/main/java"
+    options.compilerArgs << "-Xbootclasspath:${System.properties['sun.boot.class.path']}"
+    options.compilerArgs << "-Xlint:divzero,finally,overrides,-deprecation,-unchecked"
+    options.compilerArgs << "-Werror"
+    options.compilerArgs << "-implicit:class"
+    options.debug = true
+    doFirst {
+        file("$project.buildDir/src/main/java").mkdirs()
+    }
+  }
+
   compileGroovy {
-    options.compilerArgs << '-implicit:class'
+    options.compilerArgs << "-implicit:class"
   }
 
   test {
