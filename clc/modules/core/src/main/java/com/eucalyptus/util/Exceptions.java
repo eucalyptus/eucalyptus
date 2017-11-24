@@ -55,6 +55,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -250,6 +251,15 @@ public class Exceptions {
 
   public static Exception toException( Throwable cause ) {
     return toException( cause.getMessage( ), cause );
+  }
+
+  public static <T,E extends Throwable> T unwrap( final Class<E> cause, Supplier<T> supplier ) throws E {
+    try {
+      return supplier.get( );
+    } catch ( final Exception e ) {
+      Exceptions.findAndRethrow( e, cause );
+      throw Exceptions.toUndeclared( e );
+    }
   }
 
   public static <T extends Throwable> RuntimeException rethrow(

@@ -42,6 +42,17 @@ public interface ThrowingFunction<T,R,E extends Throwable> {
     return function.asUndeclaredFunction( );
   }
 
+  static <T,R,E extends Throwable> ThrowingFunction<T,R,E> declared( Class<E> e, Function<T,R> function ) {
+    return (T t) -> {
+      try {
+        return function.apply( t );
+      } catch ( final Throwable throwable ) {
+        Exceptions.findAndRethrow( throwable, e );
+        throw Exceptions.toUndeclared( throwable );
+      }
+    };
+  }
+
   default CompatFunction<T,R> asUndeclaredFunction( ) {
     return (T t) -> {
       try {
