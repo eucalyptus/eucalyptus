@@ -39,8 +39,6 @@
 
 package com.eucalyptus.blockstorage.config;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.Serializable;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -55,7 +53,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Transient;
 
-import org.apache.log4j.Logger;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.StorageManagers;
 import com.eucalyptus.bootstrap.Hosts;
@@ -71,15 +68,9 @@ import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.system.BaseDirectory;
-import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
-import com.eucalyptus.upgrade.Upgrades.Version;
-import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.Internets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
-import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
@@ -146,7 +137,7 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
          * the user to change it once set. The difficulty here is if 2 SCs are in an HA pair but have different backends installed (i.e. packages) The
          * implemented semantic is that if the proposed value is valid in either SC, then allow the change.
          */
-        List<ServiceConfiguration> scConfigs = null;
+        List<ServiceConfiguration> scConfigs;
         try {
           scConfigs = ServiceConfigurations.listPartition(Storage.class, probablePartitionName);
         } catch (NoSuchElementException e) {
@@ -258,70 +249,5 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
 
   public void setAvailableBackends(String availableBackends) {
     this.availableBackends = availableBackends;
-  }
-
-  @EntityUpgrade(entities = {StorageControllerConfiguration.class}, since = Version.v3_2_0, value = Storage.class)
-  public enum StorageControllerConfigurationUpgrade implements Predicate<Class> {
-    INSTANCE;
-    private static Logger LOG = Logger.getLogger(StorageControllerConfiguration.StorageControllerConfigurationUpgrade.class);
-
-    private static String loadLocalBlockStorageManagerConfig() throws Exception {
-      String manager = BLOCK_STORAGE_MANAGER_OVERLAY; // default
-      BufferedReader fileReader = new BufferedReader(new FileReader(BaseDirectory.CONF.getChildFile( "eucalyptus.conf" ) ) );
-      String ebsStorageManager = null;
-      String ebsSanProvider = null;
-      String line;
-      while ((line = fileReader.readLine()) != null) {
-        line.trim();
-        if (line.startsWith("CLOUD_OPTS")) {
-          ebsStorageManager = matchParameter(EBS_STORAGE_MANAGER_PATTERN, line);
-          ebsSanProvider = matchParameter(EBS_SAN_PROVIDER_PATTERN, line);
-          break;
-        }
-      }
-      fileReader.close();
-      if (Strings.isNullOrEmpty(ebsStorageManager)) {
-        manager = BLOCK_STORAGE_MANAGER_OVERLAY;
-      } else if ("DASManager".equals(ebsStorageManager)) {
-        manager = BLOCK_STORAGE_MANAGER_DAS;
-      } else if ("OverlayManager".equals(ebsStorageManager)) {
-        manager = BLOCK_STORAGE_MANAGER_OVERLAY;
-      } else if ("SANManager".equals(ebsStorageManager)) {
-        if ("EquallogicProvider".equals(ebsSanProvider)) {
-          manager = BLOCK_STORAGE_MANAGER_EQUALLOGIC;
-        } else if ("NetappProvider".equals(ebsSanProvider)) {
-          manager = BLOCK_STORAGE_MANAGER_NETAPP;
-        } else {
-          LOG.error("Invalid SAN provider name: " + ebsSanProvider);
-        }
-      } else {
-        LOG.error("Invalid storage manager name: " + ebsStorageManager);
-      }
-      return manager;
-    }
-
-    @Override
-    public boolean apply(Class arg0) {
-      EntityTransaction db = Entities.get(StorageControllerConfiguration.class);
-      try {
-        // Get local IP addresses or host names
-        Set<String> localAddresses = Internets.getAllLocalHostNamesIps();
-        List<StorageControllerConfiguration> entities = Entities.query(new StorageControllerConfiguration());
-        for (StorageControllerConfiguration entry : entities) {
-          // This SC is running on the local machine, upgrade its block storage manager config
-          if (localAddresses.contains(entry.getHostName())) {
-            LOG.debug("Upgrading SC config " + entry.getPartition());
-            entry.setBlockStorageManager(loadLocalBlockStorageManagerConfig());
-            LOG.debug("Set storage manager " + entry.getBlockStorageManager() + " for SC " + entry.getPartition());
-            break;
-          }
-        }
-        db.commit();
-        return true;
-      } catch (Exception ex) {
-        db.rollback();
-        throw Exceptions.toUndeclared(ex);
-      }
-    }
   }
 }

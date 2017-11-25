@@ -89,7 +89,6 @@ import com.eucalyptus.compute.common.GroupItemType;
 import com.eucalyptus.compute.common.GroupSetType;
 import com.eucalyptus.compute.common.IamInstanceProfile;
 import com.eucalyptus.compute.common.ImageMetadata.Platform;
-import com.eucalyptus.compute.common.internal.images.Images;
 import com.eucalyptus.compute.common.internal.network.PrivateAddressReferrer;
 import com.eucalyptus.compute.common.internal.util.ResourceAllocationException;
 import com.eucalyptus.component.ComponentIds;
@@ -112,7 +111,6 @@ import com.eucalyptus.compute.common.InstanceStatusItemType;
 import com.eucalyptus.compute.common.InstanceStatusType;
 import com.eucalyptus.compute.common.ReservationInfoType;
 import com.eucalyptus.compute.common.RunningInstancesItemType;
-import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
 import com.eucalyptus.compute.common.internal.vpc.Vpc;
 import com.eucalyptus.entities.UserMetadata;
@@ -124,7 +122,6 @@ import com.eucalyptus.compute.common.internal.network.NetworkGroup;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.InstanceCreationEvent;
 import com.eucalyptus.upgrade.Upgrades;
-import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.upgrade.Upgrades.PreUpgrade;
 import com.eucalyptus.upgrade.Upgrades.Version;
 import com.eucalyptus.util.CollectionUtils;
@@ -1506,56 +1503,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     CollectionUtils.fluent( networkGroups )
         .transform( TypeMappers.lookup( NetworkGroup.class, NetworkGroupId.class ) )
         .copyInto( networkGroupIds );
-  }
-
-  @EntityUpgrade( entities = { VmInstance.class }, since = Version.v3_3_0, value = Eucalyptus.class )
-  public enum VmInstanceUpgrade_3_3_0 implements Predicate<Class> {
-    INSTANCE;
-    private static Logger LOG = Logger.getLogger( VmInstance.VmInstanceUpgrade_3_3_0.class );
-    @Override
-    public boolean apply( Class arg0 ) {
-      EntityTransaction db = Entities.get( VmInstance.class );
-      try {
-        List<VmInstance> instances = Entities.query( new VmInstance( ) );
-        for ( VmInstance vm : instances ) {
-          if( vm.getBootRecord().getMachine() instanceof BlockStorageImageInfo ) {
-        	LOG.info( "Upgrading bfebs VmInstance: " + vm.toString() );
-        	if( vm.getBootRecord().getEphemeralStorage().isEmpty() ) {
-        	  LOG.info("Adding ephemeral disk at " + Images.DEFAULT_EPHEMERAL_DEVICE);
-        	  vm.getBootRecord( ).getEphemeralStorage( ).add( new VmEphemeralAttachment( vm, "ephemeral0", Images.DEFAULT_EPHEMERAL_DEVICE ) );
-        	}
-
-        	// Pre 3.3 code allowed only one persistent volume i.e. the root volume. Check before upgrading
-        	if ( vm.getBootRecord().getPersistentVolumes().size() == 1 ) {
-        	  VmVolumeAttachment attachment	= vm.getBootRecord().getPersistentVolumes().iterator().next();
-        	  LOG.info("Found the only VmVolumeAttachment: " + attachment.toString());
-        	  LOG.info("Setting root device flag to true");
-              attachment.setIsRootDevice(Boolean.TRUE);
-              LOG.info("Changing the device name to " + Images.DEFAULT_ROOT_DEVICE);
-              attachment.setDevice( Images.DEFAULT_ROOT_DEVICE);
-        	} else { // This should not be the case updating to 3.3
-        	 // If the instance has more or less than one persistent volume, iterate through them and update the one with device "/dev/sda1"
-        	  for ( VmVolumeAttachment attachment : vm.getBootRecord().getPersistentVolumes() ) {
-        		LOG.info("Found VmVolumeAttachment: " + attachment.toString());
-        		if ( attachment.getDevice().equalsIgnoreCase(Images.DEFAULT_PARTITIONED_ROOT_DEVICE) ) {
-        		  LOG.info("Setting root device flag to true");
-                  attachment.setIsRootDevice(Boolean.TRUE);
-                  LOG.info("Changing the device name from " + Images.DEFAULT_PARTITIONED_ROOT_DEVICE + " to " + Images.DEFAULT_ROOT_DEVICE);
-                  attachment.setDevice(Images.DEFAULT_ROOT_DEVICE);
-                }
-              }
-        	}
-          }
-          Entities.persist( vm );
-        }
-        db.commit( );
-        return true;
-      } catch ( Exception ex ) {
-    	LOG.error("Error upgrading VmInstance: ", ex);
-    	db.rollback();
-        throw Exceptions.toUndeclared( ex );
-      }
-    }
   }
 
   @PreUpgrade( value = Compute.class, since = Version.v5_0_0 )

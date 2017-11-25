@@ -58,7 +58,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
-import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
@@ -70,12 +69,8 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.UserMetadata;
-import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
-import com.eucalyptus.upgrade.Upgrades.Version;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.FullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
-import com.google.common.base.Predicate;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
@@ -355,27 +350,5 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     public void removePermissions( final List<String> accountIds ) {
         getPermissions( ).removeAll( accountIds );
     }
-  
-  @EntityUpgrade( entities = { Snapshot.class }, since = Version.v3_2_0, value = Compute.class )
-  public enum SnapshotUpgrade implements Predicate<Class> {
-    INSTANCE;
-    private static Logger LOG = Logger.getLogger( Snapshot.SnapshotUpgrade.class );
-    @Override
-    public boolean apply( Class arg0 ) {
-      EntityTransaction db = Entities.get( Snapshot.class );
-      try {
-        List<Snapshot> entities = Entities.query( new Snapshot( ) );
-        for ( Snapshot entry : entities ) {
-          LOG.debug( "Upgrading: " + entry.getDisplayName() );
-          entry.setDescription(null);
-        }
-        db.commit( );
-        return true;
-      } catch ( Exception ex ) {
-        db.rollback();
-        throw Exceptions.toUndeclared( ex );
-      }
-    }
-  }
-  
+
 }

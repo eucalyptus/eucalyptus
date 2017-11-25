@@ -39,28 +39,22 @@
 
 package com.eucalyptus.util;
 
-import static com.eucalyptus.upgrade.Upgrades.Version.v3_2_0;
 import java.io.Serializable;
-import java.util.concurrent.Callable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Digest;
-import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.upgrade.Upgrades.PreUpgrade;
 import com.eucalyptus.util.UniqueIds.PersistedCounter.Transaction;
 import com.google.common.base.Function;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import groovy.sql.Sql;
 
 public class UniqueIds implements Serializable {
   private static final long serialVersionUID = 1L;
@@ -146,7 +140,7 @@ public class UniqueIds implements Serializable {
       return new Function<Long, Long>( ) {
         @Override
         public Long apply( Long arg0 ) {
-          Long ret = 0l;
+          Long ret;
           try {
             final PersistedCounter entity = Entities.uniqueResult( new PersistedCounter( null, counterName ) );
             ret = entity.nextBlock( arg0 );
@@ -168,27 +162,5 @@ public class UniqueIds implements Serializable {
   private static Long nextIndex( final String counterName, long extent ) {
     return Entities.asTransaction( PersistedCounter.class, counterMap.getUnchecked( counterName ), 1000 ).apply( extent );
     
-  }
-  
-  @PreUpgrade( value = Empyrean.class,
-               since = v3_2_0 )
-  public enum DropOldTable implements Callable<Boolean> {
-    INSTANCE;
-    @Override
-    public Boolean call( ) throws Exception {
-      Sql sql = null;
-      try {
-        sql = Databases.getBootstrapper( ).getConnection( "eucalyptus_config" );
-        sql.execute( "drop table if exists config_unique_ids" );
-        return true;
-      } catch ( Exception ex ) {
-        LOG.error( ex, ex );
-        return false;
-      } finally {
-        if ( sql != null ) {
-          sql.close( );
-        }
-      }
-    }
   }
 }

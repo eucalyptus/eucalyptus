@@ -39,33 +39,24 @@
 
 package com.eucalyptus.images;
 
-import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.upgrade.Upgrades;
-import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.util.Callback;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Intervals;
 import com.google.common.base.Objects;
-import com.google.common.base.Predicate;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
@@ -101,16 +92,12 @@ public class ImageConfiguration extends AbstractPersistent {
   @Column( name = "max_manifest_size_b")
   private Integer       maxManifestSizeBytes;
 
-  public ImageConfiguration( ) {
-    super( );
-  }
-  
   public static void modify( Callback<ImageConfiguration> callback ) throws ExecutionException {
     Transactions.one( new ImageConfiguration( ), callback );
   }
   
   public static ImageConfiguration getInstance( ) {
-    ImageConfiguration ret = null;
+    ImageConfiguration ret;
     try {
       ret = Transactions.find( new ImageConfiguration( ) );
     } catch ( Exception ex1 ) {
@@ -182,33 +169,5 @@ public class ImageConfiguration extends AbstractPersistent {
   public long getCleanupPeriodMillis( ) {
     return Intervals.parse( getCleanupPeriod( ), 0 ); 
   }
-  
-  @EntityUpgrade( entities = { ImageConfiguration.class }, since = Upgrades.Version.v3_4_0, value = Eucalyptus.class)
-  public enum ImageConfigurationEntityUpgrade implements Predicate<Class> {
-      INSTANCE;
-      private static Logger LOG = Logger.getLogger(ImageConfiguration.ImageConfigurationEntityUpgrade.class);
 
-      @Override
-      public boolean apply(@Nullable Class aClass) {
-          EntityTransaction tran = Entities.get(ImageConfiguration.class);
-          try {
-              List<ImageConfiguration> configs = Entities.query(new ImageConfiguration());
-              if (configs != null && configs.size() > 0) {
-                  for (ImageConfiguration config : configs) {
-                      if (config.getMaxImageSizeGb() == null) {
-                          config.setMaxImageSizeGb(0); //None, set to 'unlimited' on upgrade if not already present.
-                          LOG.debug("Putting max image size as zero('unlimted') for image configuration entity: " + config.getId());
-                      }
-                  }
-              }
-              tran.commit();
-          }
-          catch (Exception ex) {
-              tran.rollback();
-              LOG.error("caught exception during upgrade, while attempting to create max image size");
-              Exceptions.toUndeclared(ex);
-          }
-          return true;
-      }
-  }
 }

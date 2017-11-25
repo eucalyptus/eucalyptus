@@ -40,12 +40,9 @@
 package com.eucalyptus.auth.euare.persist.entities;
 
 import java.io.Serializable;
-import java.util.List;
 import java.util.Set;
-import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
@@ -55,14 +52,7 @@ import javax.persistence.Transient;
 
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.util.Identifiers;
-import com.eucalyptus.component.id.Euare;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.upgrade.Upgrades;
-import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
-import com.eucalyptus.util.Exceptions;
-import org.apache.log4j.Logger;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.google.common.base.Predicate;
 
 /**
  * Database account entity.
@@ -197,33 +187,5 @@ public class AccountEntity extends AbstractPersistent implements Serializable {
     a.setAccountNumber( accountNumber );
     return a;
   }
-
-    @EntityUpgrade( entities = { AccountEntity.class }, since = Upgrades.Version.v3_4_0, value = Euare.class)
-    public enum AccountEntityUpgrade implements Predicate<Class> {
-        INSTANCE;
-        private static Logger LOG = Logger.getLogger(AccountEntity.AccountEntityUpgrade.class);
-
-        @Override
-        public boolean apply(@Nullable Class aClass) {
-            EntityTransaction tran = Entities.get(AccountEntity.class);
-            try {
-                final List<AccountEntity> accounts = Entities.criteriaQuery( AccountEntity.class ).list( );
-                for ( final AccountEntity account : accounts ) {
-                    if ( account.getCanonicalId() == null || account.getCanonicalId().equals("") ) {
-                         account.setCanonicalId( genCanonicalId( ) );
-                        LOG.debug("putting canonical id " + account.getCanonicalId() +
-                                " on account " + account.getAccountNumber());
-                    }
-                }
-                tran.commit();
-            }
-            catch (Exception ex) {
-                tran.rollback();
-                LOG.error("caught exception during upgrade, while attempting to generate and assign canonical ids");
-                Exceptions.toUndeclared(ex);
-            }
-            return true;
-        }
-    }
 
 }
