@@ -40,8 +40,6 @@
 package com.eucalyptus.walrus;
 
 import com.eucalyptus.auth.principal.AccountIdentifiers;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -84,46 +82,53 @@ import com.eucalyptus.walrus.msgs.PutObjectType;
 import com.eucalyptus.walrus.msgs.UploadPartResponseType;
 import com.eucalyptus.walrus.msgs.UploadPartType;
 import com.eucalyptus.walrus.storage.FileSystemStorageManager;
-import com.eucalyptus.walrus.util.WalrusProperties;
 
 import org.apache.log4j.Logger;
 
 import java.io.File;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.atomic.AtomicReference;
 
 import edu.ucsb.eucalyptus.util.SystemUtil;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 
 @ComponentNamed
 public class WalrusControl implements WalrusService {
 
   private static Logger LOG = Logger.getLogger(WalrusControl.class);
 
-  private static StorageManager storageManager;
-  private static WalrusManager walrusManager;
+  private static final AtomicReference<Tuple2<StorageManager,WalrusManager>> managers =
+      new AtomicReference<>( );
 
   public static void checkPreconditions() throws EucalyptusCloudException {
   }
 
   public static void configure() {
     WalrusInfo walrusInfo = WalrusInfo.getWalrusInfo();
+    StorageManager smanager = null;
+    WalrusManager wmanager = null;
     try {
-      storageManager = new FileSystemStorageManager();
+      smanager = new FileSystemStorageManager();
+      wmanager = new WalrusFSManager(smanager);
+      managers.set( Tuple.of( smanager, wmanager ) );
     } catch (Exception ex) {
       LOG.error(ex);
     }
-    walrusManager = new WalrusFSManager(storageManager);
+
     WalrusManager.configure();
     try {
-      walrusManager.check();
+      if (wmanager != null) {
+        wmanager.check( );
+      }
     } catch (EucalyptusCloudException ex) {
       LOG.error("Error initializing walrus", ex);
       SystemUtil.shutdownWithError(ex.getMessage());
     }
 
     try {
-      if (storageManager != null) {
-        storageManager.start();
+      if (smanager != null) {
+        smanager.start();
       }
     } catch (EucalyptusCloudException ex) {
       LOG.error("Error starting storage backend: " + ex);
@@ -140,24 +145,23 @@ public class WalrusControl implements WalrusService {
     }
   }
 
-  public WalrusControl() {}
-
   public static void enable() throws EucalyptusCloudException {
-    storageManager.enable();
+    storageManager( ).enable();
   }
 
   public static void disable() throws EucalyptusCloudException {
-    storageManager.disable();
+    storageManager( ).disable();
   }
 
   public static void check() throws EucalyptusCloudException {
-    storageManager.check();
+    storageManager( ).check();
   }
 
   public static void stop() throws EucalyptusCloudException {
-    storageManager.stop();
-    storageManager = null;
-    walrusManager = null;
+    final Tuple2<StorageManager,WalrusManager> managerTuple = managers.getAndSet( null );
+    if ( managerTuple != null ) {
+      managerTuple._1( ).stop( );
+    }
   }
 
   /**
@@ -173,100 +177,115 @@ public class WalrusControl implements WalrusService {
     }
   }
 
+  private static <M> M checkManager( final M m ) throws EucalyptusCloudException {
+    if ( m == null ) {
+      throw new EucalyptusCloudException( "Not available" );
+    }
+    return m;
+  }
+
+  private static StorageManager storageManager( ) throws EucalyptusCloudException {
+    return checkManager( managers.get( ) )._1( );
+  }
+
+  private static WalrusManager walrusManager( ) throws EucalyptusCloudException {
+    return checkManager( managers.get( ) )._2( );
+  }
+
   @Override
   public HeadBucketResponseType HeadBucket( HeadBucketType request ) throws EucalyptusCloudException {
     checkPermissions();
-    return walrusManager.headBucket(request);
+    return walrusManager().headBucket(request);
   }
 
   @Override
   public CreateBucketResponseType CreateBucket( CreateBucketType request ) throws EucalyptusCloudException {
     checkPermissions();
-    return walrusManager.createBucket(request);
+    return walrusManager().createBucket(request);
   }
 
   @Override
   public DeleteBucketResponseType DeleteBucket( DeleteBucketType request ) throws EucalyptusCloudException {
     checkPermissions();
-    return walrusManager.deleteBucket(request);
+    return walrusManager().deleteBucket(request);
   }
 
   @Override
   public ListAllMyBucketsResponseType ListAllMyBuckets( ListAllMyBucketsType request ) throws EucalyptusCloudException {
     checkPermissions();
-    return walrusManager.listAllMyBuckets(request);
+    return walrusManager().listAllMyBuckets(request);
   }
 
   @Override
   public PutObjectResponseType PutObject( PutObjectType request ) throws EucalyptusCloudException {
     checkPermissions();
-    return walrusManager.putObject(request);
+    return walrusManager().putObject(request);
   }
 
   @Override
   public PutObjectInlineResponseType PutObjectInline( PutObjectInlineType request ) throws EucalyptusCloudException {
     checkPermissions();
-    return walrusManager.putObjectInline(request);
+    return walrusManager().putObjectInline(request);
   }
 
   @Override
   public DeleteObjectResponseType DeleteObject( DeleteObjectType request ) throws EucalyptusCloudException {
     checkPermissions();
-    return walrusManager.deleteObject(request);
+    return walrusManager().deleteObject(request);
   }
 
   @Override
   public ListBucketResponseType ListBucket( ListBucketType request ) throws EucalyptusCloudException {
     checkPermissions();
-    return walrusManager.listBucket(request);
+    return walrusManager().listBucket(request);
   }
 
   @Override
   public GetObjectAccessControlPolicyResponseType GetObjectAccessControlPolicy( GetObjectAccessControlPolicyType request )
       throws EucalyptusCloudException {
     checkPermissions();
-    return walrusManager.getObjectAccessControlPolicy(request);
+    return walrusManager().getObjectAccessControlPolicy(request);
   }
 
   @Override
   public GetObjectResponseType GetObject( GetObjectType request ) throws EucalyptusCloudException {
     checkPermissions();
-    return walrusManager.getObject(request);
+    return walrusManager().getObject(request);
   }
 
   @Override
   public GetObjectExtendedResponseType GetObjectExtended( GetObjectExtendedType request ) throws EucalyptusCloudException {
     checkPermissions();
-    return walrusManager.getObjectExtended(request);
+    return walrusManager().getObjectExtended(request);
   }
 
   @Override
   public CopyObjectResponseType CopyObject( CopyObjectType request ) throws EucalyptusCloudException {
     checkPermissions();
-    return walrusManager.copyObject(request);
+    return walrusManager().copyObject(request);
   }
 
   @Override
   public InitiateMultipartUploadResponseType InitiateMultipartUpload( InitiateMultipartUploadType request ) throws EucalyptusCloudException {
     checkPermissions();
-    return walrusManager.initiateMultipartUpload(request);
+    return walrusManager().initiateMultipartUpload(request);
   }
 
   @Override
   public UploadPartResponseType UploadPart( UploadPartType request ) throws EucalyptusCloudException {
     checkPermissions();
-    return walrusManager.uploadPart(request);
+    return walrusManager().uploadPart(request);
   }
 
   @Override
   public CompleteMultipartUploadResponseType CompleteMultipartUpload( CompleteMultipartUploadType request ) throws EucalyptusCloudException {
     checkPermissions();
-    return walrusManager.completeMultipartUpload(request);
+    return walrusManager().completeMultipartUpload(request);
   }
 
   @Override
   public AbortMultipartUploadResponseType AbortMultipartUpload( AbortMultipartUploadType request ) throws EucalyptusCloudException {
     checkPermissions();
-    return walrusManager.abortMultipartUpload(request);
+    return walrusManager().abortMultipartUpload(request);
   }
 }
