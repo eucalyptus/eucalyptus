@@ -62,7 +62,7 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.VmInstanceLifecycleHelper;
+import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.internal.util.InvalidInstanceProfileMetadataException;
@@ -243,7 +243,7 @@ public class VerifyMetadata {
     
     @Override
     public boolean apply( Allocation allocInfo ) throws MetadataException {
-      VmInstanceLifecycleHelper.get( ).verifyAllocation( allocInfo );
+      VmInstanceLifecycleHelpers.get( ).verifyAllocation( allocInfo );
       return true;
     }
   }
@@ -368,7 +368,7 @@ public class VerifyMetadata {
           
           BlockStorageImageInfo bfebsImage = (BlockStorageImageInfo) imageInfo;
           Integer imageSizeGB = (int) ( bfebsImage.getImageSizeBytes( ) / BYTES_PER_GB );
-          Integer userRequestedSizeGB = null;
+          Integer userRequestedSizeGB;
           // Find the root block device mapping in the run instance request. Validate it
           BlockDeviceMappingItemType rootBlockDevice = Iterables.find( resultedInstanceMappings, Images.findEbsRootOptionalSnapshot( bfebsImage.getRootDeviceName() ), null );
           if( rootBlockDevice != null) {

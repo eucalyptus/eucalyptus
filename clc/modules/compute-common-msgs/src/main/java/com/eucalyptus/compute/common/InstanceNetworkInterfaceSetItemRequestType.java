@@ -54,6 +54,16 @@ public class InstanceNetworkInterfaceSetItemRequestType extends EucalyptusData {
     this.deviceIndex = deviceIndex;
   }
 
+  public InstanceNetworkInterfaceSetItemRequestType(
+      final Integer deviceIndex,
+      final String networkInterfaceId,
+      final Boolean associatePublicIpAddress
+  ) {
+    this.networkInterfaceId = networkInterfaceId;
+    this.deviceIndex = deviceIndex;
+    this.associatePublicIpAddress = associatePublicIpAddress;
+  }
+
   public void securityGroups( Iterable<String> groupIds ) {
     groupSet = new SecurityGroupIdSetType( StreamUtil.ofAll( groupIds ).map( SecurityGroupIdSetItemType.forGroupId( ) ).toJavaList( ) );
   }

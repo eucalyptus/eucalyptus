@@ -29,25 +29,24 @@
 package com.eucalyptus.network;
 
 import java.util.List;
-import com.google.common.base.Function;
-import com.google.common.base.Optional;
-import groovy.lang.Closure;
+import java.util.Optional;
+import java.util.function.Function;
+import com.eucalyptus.util.Callback;
 
 /**
  *
  */
-@SuppressWarnings( "Guava" )
 public interface PrivateAddressPersistence {
 
   Optional<PrivateAddress> tryCreate( String scope, final String tag, String address );
 
   void teardown( PrivateAddress address );
 
-  <V> Optional<V> withFirstMatch( PrivateAddress address, String ownerId, Closure<V> closure );
+  <V> Optional<V> withFirstMatch( PrivateAddress address, String ownerId, Function<? super PrivateAddress,V> transform );
 
-  void withMatching( PrivateAddress address, Closure<?> closure );
+  void withMatching( PrivateAddress address, Callback<? super PrivateAddress> callback );
 
-  <T> List<T> list( String scope, String tag, Function<PrivateAddress, T> transform );
+  <T> List<T> list( String scope, String tag, Function<? super PrivateAddress, T> transform );
 
   PrivateAddressPersistence distinct( );
 }

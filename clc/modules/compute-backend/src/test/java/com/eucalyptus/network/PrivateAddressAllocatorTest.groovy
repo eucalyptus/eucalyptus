@@ -29,12 +29,14 @@
 package com.eucalyptus.network
 
 import com.eucalyptus.compute.common.internal.vm.VmInstance
-import com.google.common.base.Function
-import com.google.common.base.Optional
+import com.eucalyptus.util.Callback
 import com.google.common.collect.Iterables
 import com.google.common.collect.Maps
 import groovy.transform.CompileStatic
 import org.junit.Test
+
+import java.util.function.Function
+
 import static org.junit.Assert.*
 
 /**
@@ -72,22 +74,22 @@ class PrivateAddressAllocatorTest {
   private void verifyBasicAllocation( TestPrivateAddressPersistence persistence,
                                       PrivateAddressAllocator allocator ) {
     String address = allocator.allocate( null, null, ranges( '10.0.0.0-10.0.0.10' ), 10, 0 )
-    assertTrue( 'one address allocated', persistence.addresses.size( ) == 1 );
+    assertTrue( 'one address allocated', persistence.addresses.size( ) == 1 )
     allocator.associate( address, instance( ) )
     assertTrue( 'address ownership can be verified', allocator.verify( null, address, 'i-12345678' ) )
     allocator.release( null, address, 'i-12345678' )
-    assertTrue( 'no addresses allocated', persistence.addresses.size() == 0 );
+    assertTrue( 'no addresses allocated', persistence.addresses.size() == 0 )
   }
 
   private void verifyAddressesExhaustedFailure( TestPrivateAddressPersistence persistence,
                                                 PrivateAddressAllocator allocator ) {
     allocator.allocate( null, null, ranges( '10.0.0.0' ), 1 , 0)
-    assertTrue( 'one address allocated', persistence.addresses.size( ) == 1 );
+    assertTrue( 'one address allocated', persistence.addresses.size( ) == 1 )
     try {
       allocator.allocate( null, null, ranges( '10.0.0.0' ), 1, 1 )
       fail( 'Allocation should have failed due to no available addresses' )
     } catch ( NotEnoughResourcesException ) {
-      assertTrue( 'one address allocated', persistence.addresses.size( ) == 1 );
+      assertTrue( 'one address allocated', persistence.addresses.size( ) == 1 )
     }
   }
 
@@ -97,21 +99,21 @@ class PrivateAddressAllocatorTest {
   private void verifyHugeAddressesExhaustedFailure( TestPrivateAddressPersistence persistence,
                                                     PrivateAddressAllocator allocator ) {
     allocator.allocate( null, null, ranges( '10.0.0.0' ), 1_000_000 , 0)
-    assertTrue( 'one address allocated', persistence.addresses.size( ) == 1 );
+    assertTrue( 'one address allocated', persistence.addresses.size( ) == 1 )
     try {
       allocator.allocate( null, null, ranges( '10.0.0.0' ), 1_000_000, 1 )
       fail( 'Allocation should have failed due to no available addresses' )
     } catch ( NotEnoughResourcesException ) {
-      assertTrue( 'one address allocated', persistence.addresses.size( ) == 1 );
+      assertTrue( 'one address allocated', persistence.addresses.size( ) == 1 )
     }
   }
 
   private void verifyEarlyRelease( TestPrivateAddressPersistence persistence,
                                    PrivateAddressAllocator allocator ) {
     String address = allocator.allocate( null, null, ranges( '10.0.0.0-10.0.0.10' ), 10, 0 )
-    assertTrue( 'one address allocated', persistence.addresses.size( ) == 1 );
+    assertTrue( 'one address allocated', persistence.addresses.size( ) == 1 )
     allocator.release( null, address, null )
-    assertTrue( 'no address allocated', persistence.addresses.isEmpty( ) );
+    assertTrue( 'no address allocated', persistence.addresses.isEmpty( ) )
   }
 
   private void verifyLazyAllocation( TestPrivateAddressPersistence persistence,
@@ -123,13 +125,13 @@ class PrivateAddressAllocatorTest {
         null
       }
     } ] as List<Iterable<Integer>>), 11, 0 )
-    assertTrue( 'one address allocated', persistence.addresses.size( ) == 1 );
+    assertTrue( 'one address allocated', persistence.addresses.size( ) == 1 )
   }
 
   private void verifyFullRange( TestPrivateAddressPersistence persistence,
                                 PrivateAddressAllocator allocator ) {
     ( 1..100 ).each{ allocator.allocate( null, null, ranges( '0.0.0.0-255.255.255.255' ), Integer.MAX_VALUE, 0 ) }
-    assertTrue( '100 addresses allocated', persistence.addresses.size( ) == 100 );
+    assertTrue( '100 addresses allocated', persistence.addresses.size( ) == 100 )
   }
 
   private void verifyOneAvailableAddress( TestPrivateAddressPersistence persistence,
@@ -141,15 +143,15 @@ class PrivateAddressAllocatorTest {
       String address =  PrivateAddresses.fromInteger( rangeIterator.next( ) )
       persistence.addresses.put( address, PrivateAddress.create( null, null, address ).allocate( ) )
     }
-    assertEquals( '255 addresses allocated', 255, persistence.addresses.size( ) );
+    assertEquals( '255 addresses allocated', 255, persistence.addresses.size( ) )
     String address = allocator.allocate( null, null, ranges, 256, 255 )
     assertNotNull( 'Expected address', address )
-    assertEquals( '256 addresses allocated', 256, persistence.addresses.size( ) );
+    assertEquals( '256 addresses allocated', 256, persistence.addresses.size( ) )
     allocator.release( null, address, null )
-    assertEquals( '255 addresses allocated', 255, persistence.addresses.size( ) );
+    assertEquals( '255 addresses allocated', 255, persistence.addresses.size( ) )
     String address2 = allocator.allocate( null, null, ranges, 256, -1 )
     assertNotNull( 'Expected address', address2 )
-    assertEquals( '256 addresses allocated', 256, persistence.addresses.size( ) );
+    assertEquals( '256 addresses allocated', 256, persistence.addresses.size( ) )
   }
 
   private VmInstance instance( ) {
@@ -169,7 +171,7 @@ class PrivateAddressAllocatorTest {
     @Override
     Optional<PrivateAddress> tryCreate( final String scope, final String tag, final String address ) {
       addresses.containsKey( address ) ?
-          Optional.absent( ) :
+          Optional.empty( ) :
           Optional.of( add( PrivateAddress.create( scope, tag, address ).allocate( ) ) )
     }
 
@@ -179,26 +181,26 @@ class PrivateAddressAllocatorTest {
     }
 
     @Override
-    def <V> Optional<V> withFirstMatch( final PrivateAddress address,
-                                        final String ownerId,
-                                        final Closure<V> closure ) {
+    <V> Optional<V> withFirstMatch(final PrivateAddress address,
+                                       final String ownerId,
+                                       final Function<? super PrivateAddress,V> transform ) {
       addresses.get( address.name )?.with{ PrivateAddress pa ->
-        Optional.fromNullable( closure.call( pa ) )
-      } ?: Optional.absent( )
+        Optional.ofNullable( transform.apply( pa ) )
+      } ?: Optional.empty( )
     }
 
     @Override
     void withMatching( final PrivateAddress address,
-                       final Closure<?> closure ) {
+                       final Callback<? super PrivateAddress> callback ) {
       address.name ?
-        addresses.values().findAll{ PrivateAddress pa -> pa.name == address.name }.each( closure ) :
-        addresses.values().findAll{ PrivateAddress pa -> pa.state == address.state }.each( closure )
+        addresses.values().findAll{ PrivateAddress pa -> pa.name == address.name }.each{ callback.fire(it) } :
+        addresses.values().findAll{ PrivateAddress pa -> pa.state == address.state }.each{ callback.fire(it) }
     }
 
     @Override
-    def <T> List<T> list( final String scope,
+    <T> List<T> list( final String scope,
                           final String tag,
-                          final Function<PrivateAddress, T> transform ) {
+                          final Function<? super PrivateAddress, T> transform ) {
       addresses.values()
           .findAll{ PrivateAddress pa -> pa.scope == scope && pa.tag == tag }
           .collect{ PrivateAddress pa -> transform.apply( pa ) } as List<T>

@@ -49,11 +49,18 @@ public class VpcNetworkInterfaceResource extends NetworkResource {
 
   public VpcNetworkInterfaceResource(
       final String ownerId,
+      final String value
+  ) {
+    super( ownerId, value );
+  }
+
+  public VpcNetworkInterfaceResource(
+      final String ownerId,
       final String value,
       final String mac,
       final String privateIp
   ) {
-    super( ownerId, value );
+    this( ownerId, value );
     this.mac = mac;
     this.privateIp = privateIp;
   }

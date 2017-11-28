@@ -65,7 +65,7 @@ import com.eucalyptus.auth.AuthContextSupplier;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.VmInstanceLifecycleHelper;
+import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.VmInstanceToken;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.common.callback.ResourceStateCallback;
@@ -312,7 +312,7 @@ public class ClusterAllocator implements Runnable {
     if(! VmInstances.VmSpecialUserData.apply(userData))
       return;
     
-    String payload = null;
+    String payload;
     int expirationDays = 180;
     try{
       final VmInstances.VmSpecialUserData specialData = new VmInstances.VmSpecialUserData(userData);
@@ -579,7 +579,7 @@ public class ClusterAllocator implements Runnable {
     	VirtualBootRecord rootVbr = childVmInfo.lookupRoot();
     	Volume rootVolume = token.getRootVolume();
     	String volumeId = rootVolume.getDisplayName( );
-    	String volumeToken = null;
+    	String volumeToken;
     	
     	// Wait for root volume
     	LOG.debug("Wait for root ebs volume " + rootVolume.getDisplayName() +  " to become available");
@@ -675,7 +675,7 @@ public class ClusterAllocator implements Runnable {
     int numDescVolError = 0;
     while ( ( System.currentTimeMillis( ) - startTime ) < VmInstances.EBS_VOLUME_CREATION_TIMEOUT * 60 * 1000L ) {
       try {
-        DescribeStorageVolumesResponseType volState = null;
+        DescribeStorageVolumesResponseType volState;
         try {
           final DescribeStorageVolumesType describeMsg = new DescribeStorageVolumesType( Lists.newArrayList( vol.getDisplayName( ) ) );
           volState = AsyncRequests.sendSync( scConfig, describeMsg );
@@ -719,7 +719,7 @@ public class ClusterAllocator implements Runnable {
     
 //TODO:GRZE:FINISH THIS.    Date date = Contexts.lookup( ).getContracts( ).get( Contract.Type.EXPIRATION ); 
     final VmRunType.Builder builder = VmRunType.builder( );
-    VmInstanceLifecycleHelper.get( ).prepareVmRunType( childToken, builder );
+    VmInstanceLifecycleHelpers.get( ).prepareVmRunType( childToken, builder );
     final VmRunType run = builder
                                    .instanceId( childToken.getInstanceId( ) )
                                    .naturalId( childToken.getInstanceUuid( ) )

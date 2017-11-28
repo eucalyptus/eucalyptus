@@ -26,38 +26,35 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
-package com.eucalyptus.cloud
+package com.eucalyptus.cloud;
 
-import com.eucalyptus.bootstrap.ServiceJarDiscovery
-import groovy.transform.CompileStatic
-import org.apache.log4j.Logger
-
-import java.lang.reflect.Modifier
+import java.lang.reflect.Modifier;
+import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 
 /**
  *
  */
-@CompileStatic
-class VmInstanceLifecycleHelperDiscovery extends ServiceJarDiscovery {
-  private final Logger logger = Logger.getLogger( VmInstanceLifecycleHelperDiscovery )
+public class VmInstanceLifecycleHelperDiscovery extends ServiceJarDiscovery {
+  private final Logger logger = Logger.getLogger( VmInstanceLifecycleHelperDiscovery.class );
 
   @Override
-  boolean processClass( final Class candidate ) throws Exception {
-    boolean accepted = false
-    if ( VmInstanceLifecycleHelper.isAssignableFrom( candidate ) &&
-        !Modifier.isAbstract( candidate.modifiers ) ) {
+  public boolean processClass( final Class candidate ) throws Exception {
+    boolean accepted = false;
+    if ( VmInstanceLifecycleHelper.class.isAssignableFrom( candidate ) &&
+        !Modifier.isAbstract( candidate.getModifiers( ) ) ) {
       try {
-        VmInstanceLifecycleHelpers.register( VmInstanceLifecycleHelper.cast( candidate.newInstance( ) ) )
-        accepted = true
+        VmInstanceLifecycleHelpers.register( VmInstanceLifecycleHelper.class.cast( candidate.newInstance( ) ) );
+        accepted = true;
       } catch ( Exception e ) {
-        logger.error( "Error registering instance lifecycle helper: ${candidate.name}", e );
+        logger.error( "Error registering instance lifecycle helper: " + candidate.getName( ), e );
       }
     }
-    accepted
+    return accepted;
   }
 
   @Override
-  Double getPriority() {
-    0.3d
+  public Double getPriority( ) {
+    return 0.3d;
   }
 }

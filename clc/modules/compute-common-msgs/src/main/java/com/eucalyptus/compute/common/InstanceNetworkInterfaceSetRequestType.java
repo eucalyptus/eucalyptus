@@ -39,6 +39,13 @@ public class InstanceNetworkInterfaceSetRequestType extends EucalyptusData {
   @HttpEmbedded( multiple = true )
   private ArrayList<InstanceNetworkInterfaceSetItemRequestType> item = new ArrayList<InstanceNetworkInterfaceSetItemRequestType>( );
 
+  public InstanceNetworkInterfaceSetRequestType() {
+  }
+
+  public InstanceNetworkInterfaceSetRequestType( InstanceNetworkInterfaceSetItemRequestType item ) {
+    this.item.add( item );
+  }
+
   public ArrayList<InstanceNetworkInterfaceSetItemRequestType> getItem( ) {
     return item;
   }

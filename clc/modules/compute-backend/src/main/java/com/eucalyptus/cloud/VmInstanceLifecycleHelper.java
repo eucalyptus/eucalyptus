@@ -29,7 +29,6 @@
 package com.eucalyptus.cloud;
 
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.common.ResourceToken;
 import com.eucalyptus.cluster.common.msgs.VmRunType.Builder;
@@ -100,12 +99,4 @@ public interface VmInstanceLifecycleHelper {
    * @param state    The instance state
    */
   void cleanUpInstance( VmInstance instance, VmState state );
-
-  static VmInstanceLifecycleHelper get( ) {
-    return Registry.helper.get( );
-  }
-
-  class Registry {
-    public static AtomicReference<VmInstanceLifecycleHelper> helper = new AtomicReference<>(  );
-  }
 }

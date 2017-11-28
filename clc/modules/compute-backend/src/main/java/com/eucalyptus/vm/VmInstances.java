@@ -79,7 +79,7 @@ import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeType;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Hosts;
-import com.eucalyptus.cloud.VmInstanceLifecycleHelper;
+import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.VmInstanceToken;
 import com.eucalyptus.cloud.run.Allocations;
 import com.eucalyptus.cluster.Clusters;
@@ -459,7 +459,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
     public void fireChange(final ConfigurableProperty t, final Object newValue)
         throws ConfigurablePropertyException {
       LOG.info("in fire change");
-      int maxSizeKB = -1;
+      int maxSizeKB;
       try {
         if (newValue == null) {
           throw new NullPointerException("newValue");
@@ -810,9 +810,8 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
 
   private static void cleanUp( final VmInstance vm,
                                final boolean rollbackNetworkingOnFailure ) {
-    BaseMessage originReq = null;
     try{
-      originReq = MessageContexts.lookupLast(vm.getInstanceId(), Sets.<Class>newHashSet(
+      MessageContexts.lookupLast(vm.getInstanceId(), Sets.<Class>newHashSet(
           TerminateInstancesType.class,
           StopInstancesType.class
           ));
@@ -837,7 +836,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
        Entities.asDistinctTransaction( VmInstance.class, new Predicate<VmInstance>( ) {
          @Override
          public boolean apply( @Nullable final VmInstance vmInstance ) {
-           VmInstanceLifecycleHelper.get( ).cleanUpInstance( Entities.merge( vm ), vmState );
+           VmInstanceLifecycleHelpers.get( ).cleanUpInstance( Entities.merge( vm ), vmState );
            return true;
          }
        } ).apply( vm );
@@ -1844,7 +1843,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
             TagHelper.createOrUpdateTags( allocInfo.getOwnerFullName( ), persistedInstance, instanceTags );
           }
         } );
-        VmInstanceLifecycleHelper.get().prepareVmInstance( token, builder );
+        VmInstanceLifecycleHelpers.get().prepareVmInstance( token, builder );
         VmInstance vmInst = builder
             .owner( allocInfo.getOwnerFullName( ) )
             .withIds( token.getInstanceId(),
@@ -1958,8 +1957,8 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       ImageInfo machineImage = null;
       KernelImageInfo kernel = null;
       RamdiskImageInfo ramdisk = null;
-      ImageMetadata.Architecture architecture = null;
-      ImageMetadata.Platform platform = null;
+      ImageMetadata.Architecture architecture;
+      ImageMetadata.Platform platform;
 
       if ( bootSet.getMachine() instanceof ImageInfo ) {
         machineImage = ( ImageInfo ) bootSet.getMachine( );
@@ -2155,7 +2154,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
     }
 
     private static int restoreLaunchIndex( final VmInfo input ) {
-      int launchIndex = 1;
+      int launchIndex;
       try {
         launchIndex = Integer.parseInt( input.getLaunchIndex( ) );
       } catch ( final Exception ex1 ) {

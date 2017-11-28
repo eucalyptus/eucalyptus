@@ -26,26 +26,28 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
-package com.eucalyptus.network
+package com.eucalyptus.network;
 
-import com.google.common.base.Supplier
-import groovy.transform.CompileStatic
-import org.apache.log4j.Logger
+import java.util.Iterator;
+import java.util.Set;
+import java.util.function.Function;
+import org.apache.log4j.Logger;
+import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
 
 /**
  * Private address allocator that uses the first free address.
  */
-@CompileStatic
-class FirstFreePrivateAddressAllocator extends PrivateAddressAllocatorSupport {
+public class FirstFreePrivateAddressAllocator extends PrivateAddressAllocatorSupport {
 
-  private static final Logger logger = Logger.getLogger( FirstFreePrivateAddressAllocator )
+  private static final Logger logger = Logger.getLogger( FirstFreePrivateAddressAllocator.class );
 
-  FirstFreePrivateAddressAllocator( ) {
-    this( new DatabasePrivateAddressPersistence( ) )
+  public FirstFreePrivateAddressAllocator( ) {
+    this( new DatabasePrivateAddressPersistence( ) );
   }
 
   protected FirstFreePrivateAddressAllocator( final PrivateAddressPersistence persistence ) {
-    super( logger, persistence )
+    super( logger, persistence );
   }
 
   @Override
@@ -53,14 +55,16 @@ class FirstFreePrivateAddressAllocator extends PrivateAddressAllocatorSupport {
       final Iterable<Integer> addresses,
       final int addressCount,
       final int allocatedCount,
-      final Closure<String> allocator,
+      final Function<Integer,String> allocator,
       final Supplier<Set<Integer>> lister
   ) {
-    Iterator<Integer> iterator = addresses.iterator( )
+    final Iterator<Integer> iterator = addresses.iterator( );
     while ( iterator.hasNext( ) ) {
-      String value = allocator.call( iterator.next( ) )
-      if ( value ) return value;
+      final String value = allocator.apply( iterator.next( ) );
+      if ( !Strings.isNullOrEmpty( value ) ) {
+        return value;
+      }
     }
-    null
+    return null;
   }
 }

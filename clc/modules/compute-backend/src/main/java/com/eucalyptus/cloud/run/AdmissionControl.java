@@ -47,6 +47,7 @@ import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.VmInstanceToken;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.compute.common.CloudMetadataLimitedType;
@@ -479,7 +480,7 @@ public class AdmissionControl {
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
       try {
-        final VmInstanceLifecycleHelper helper = VmInstanceLifecycleHelper.get( );
+        final VmInstanceLifecycleHelper helper = VmInstanceLifecycleHelpers.get( );
 
         final PrepareNetworkResourcesType request = new PrepareNetworkResourcesType( );
         request.setAvailabilityZone( allocInfo.getPartition( ).getName( ) );
