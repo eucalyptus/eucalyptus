@@ -39,12 +39,10 @@
 
 package com.eucalyptus.blockstorage;
 
-import junit.framework.TestCase;
-
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({VolumeTest.class})
-public class StorageTests extends TestCase {
+public class StorageTests {
 }
