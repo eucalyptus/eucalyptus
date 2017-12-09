@@ -39,6 +39,7 @@
         <dependency name="eucalyptus-loadbalancing-common" rev="latest.integration"/>
         <dependency name="eucalyptus-object-storage-common" rev="latest.integration"/>
         <dependency name="eucalyptus-simpleworkflow-common" rev="latest.integration"/>
+        <dependency name="eucalyptus-msgs" rev="latest.integration"/>
     </dependencies>
 </ivy-module>
 
