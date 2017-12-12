@@ -452,6 +452,13 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   }
 
   /**
+   * Should access for this service be logged.
+   */
+  public boolean isRequestLogged( ) {
+    return true;
+  }
+
+  /**
    * Temporary work around allowing components to opt out of DNS.
    *
    * @deprecated
