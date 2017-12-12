@@ -72,7 +72,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
-
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
@@ -83,7 +82,6 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ComponentMessages;
@@ -177,6 +175,9 @@ public enum ServiceAccessLoggingHandler implements ChannelUpstreamHandler, Chann
         try {
           final Class<? extends ComponentId> compMsg = ComponentMessages.lookup( ( BaseMessage ) replyObject );
           final ComponentId compId = ComponentIds.lookup( compMsg );
+          if ( !compId.isRequestLogged( ) ) {
+            return;
+          }
           componentName = compId.name( );
         } catch ( Exception e ) {
           //GRZE: this needs to be a separate logger to avoid hitting the configured category for this class.
