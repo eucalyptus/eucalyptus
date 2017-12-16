@@ -60,6 +60,11 @@ public class PolledNotifications extends ComponentId {
     return false;
   }
 
+  @Override
+  public boolean isRequestLogged() {
+    return false;
+  }
+
   /**
    * This forces the service to be co-located with the ENABLED cloud controller.
    */
