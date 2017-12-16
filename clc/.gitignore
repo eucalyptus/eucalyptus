@@ -1,6 +1,4 @@
-/.gradle
-/build.gradle
-/settings.gradle
+.gradle
 /build
 local.properties
 local.module.properties

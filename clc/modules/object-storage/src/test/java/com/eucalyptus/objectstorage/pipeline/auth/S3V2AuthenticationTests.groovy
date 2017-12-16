@@ -36,6 +36,7 @@ import com.eucalyptus.objectstorage.util.ObjectStorageProperties
 import org.jboss.netty.handler.codec.http.HttpHeaders
 import org.jboss.netty.handler.codec.http.HttpMethod
 import org.jboss.netty.handler.codec.http.HttpVersion
+import org.junit.Ignore
 import org.junit.Test
 
 import static org.junit.Assert.fail
@@ -47,6 +48,7 @@ import static org.junit.Assert.fail
  *
  * @author zhill on 2/5/14
  */
+@Ignore
 class S3V2AuthenticationTests {
   @Test
   public void testInvalidDnsParsing() {

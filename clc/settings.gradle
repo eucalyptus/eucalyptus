@@ -1,0 +1,25 @@
+/*
+ * Gradle settings for eucalyptus
+ */
+
+FileTree tree = fileTree(dir: 'modules')
+tree.include '*/ivy.xml'
+tree.each { File file ->
+  include "modules/${file.parentFile.name}"
+}
+
+rootProject.name = 'clc'
+
+rootProject.children.each{ moduleProject ->
+  moduleProject.name = "eucalyptus-${moduleProject.name.substring(8)}"
+
+  // submodules that do not match naming conventions
+  // there are also jar name mismatches for clustermgr vs cluster-manager, config vs configuration
+  if ( moduleProject.name.equals('eucalyptus-wsstack') ) {
+    moduleProject.name = 'eucalyptus-ws'
+  }
+  if ( moduleProject.name.equals('eucalyptus-euca-resources-support') ) {
+    moduleProject.name = 'eucalyptus-resources-support'
+  }
+}
+
