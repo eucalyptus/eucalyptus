@@ -153,7 +153,7 @@ public class Subnets extends ServiceJarDiscovery {
       this.subnetMask = InetAddresses.coerceToInteger( netmask );
       this.networkId = InetAddresses.coerceToInteger( address ) & this.subnetMask;
       this.subnet = InetAddresses.fromInteger( networkId );
-      this.prefix = ( int ) Math.round( Math.log( Integer.lowestOneBit( this.subnetMask ) ) / Math.log( 2 ) );
+      this.prefix = 32 - (( int ) Math.round( Math.log( Integer.lowestOneBit( this.subnetMask ) ) / Math.log( 2 ) ));
     }
 
     Subnet( InetAddress subnet, int prefix ) throws UnknownHostException {

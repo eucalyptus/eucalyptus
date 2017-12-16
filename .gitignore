@@ -142,7 +142,6 @@ tools/imaging/setup.cfg.template
 **/.classpath
 **/.idea/
 **/**/.idea/
-**/*.gradle
 **/*.iml
 **/*.ipl
 **/*.iws

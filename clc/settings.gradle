@@ -30,14 +30,12 @@
 FileTree tree = fileTree(dir: 'modules')
 tree.include '*/ivy.xml'
 tree.each { File file ->
-  include "modules:${file.parentFile.name}"
+  include "modules/${file.parentFile.name}"
 }
 
 rootProject.name = 'clc'
 
-rootProject.children.each{ project ->
-  project.children.each{ moduleProject ->
-    moduleProject.name = "eucalyptus-${moduleProject.name}"
-  }
+rootProject.children.each{ moduleProject ->
+  moduleProject.name = "eucalyptus-${moduleProject.name.substring(8)}"
 }
 

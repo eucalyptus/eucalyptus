@@ -39,6 +39,7 @@
 
 package com.eucalyptus.objectstorage;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Collections;
@@ -46,7 +47,6 @@ import java.util.Collections;
 import org.jmock.Expectations;
 import org.jmock.integration.junit4.JUnitRuleMockery;
 import org.junit.AfterClass;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -55,6 +55,8 @@ import com.eucalyptus.objectstorage.auth.RequestAuthorizationHandler;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.metadata.BucketLifecycleManager;
 import com.eucalyptus.objectstorage.metadata.BucketMetadataManager;
+import com.eucalyptus.objectstorage.metadata.BucketNameValidatorRepo;
+import com.eucalyptus.objectstorage.metadata.Validator;
 import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleType;
 
@@ -106,17 +108,18 @@ public class ObjectStorageGatewayTest {
     BucketMetadataManagers.setInstance(null);
   }
 
-  @Ignore
   @Test
   public void testCheckBucketName() {
-    assert (ObjectStorageGateway.checkBucketNameValidity("bucket"));
-    assert (ObjectStorageGateway.checkBucketNameValidity("bucket.bucket.bucket"));
-    assert (!ObjectStorageGateway.checkBucketNameValidity("10.100.1.1"));
-    assert (ObjectStorageGateway.checkBucketNameValidity("bu_ckeS-adsad"));
-    assert (ObjectStorageGateway.checkBucketNameValidity("aou12naofdufan1421_-123oiasd-afasf.asdfas"));
-    assert (!ObjectStorageGateway.checkBucketNameValidity("bucke<t>%12313"));
-    assert (!ObjectStorageGateway.checkBucketNameValidity("b*u&c%k#et"));
-    assert (ObjectStorageGateway.checkBucketNameValidity("bucket_name"));
+    final Validator<String> bucketNameValidator =
+        BucketNameValidatorRepo.getBucketNameValidator( "extended" );
+    assertTrue( bucketNameValidator.check("bucket"));
+    assertTrue( bucketNameValidator.check("bucket.bucket.bucket"));
+    assertTrue( bucketNameValidator.check("bu_ckeS-adsad"));
+    assertTrue( bucketNameValidator.check("aou12naofdufan1421_-123oiasd-afasf.asdfas"));
+    assertTrue( bucketNameValidator.check("bucket_name"));
+    //assertFalse( bucketNameValidator.check("10.100.1.1"));
+    assertFalse( bucketNameValidator.check("bucke<t>%12313"));
+    assertFalse( bucketNameValidator.check("b*u&c%k#et"));
   }
 
 }

@@ -31,8 +31,6 @@ plugins {
 }
 
 subprojects {
-  if ( it.name == 'modules' ) return
-
   apply plugin: 'groovy'
   apply plugin: 'idea'
   apply plugin: 'java'
@@ -112,10 +110,10 @@ subprojects {
     if ( file('ivy.xml').exists( ) ) {
       def module = new XmlParser().parse( file('ivy.xml') )
       module.dependencies.dependency.each {
-        api project(":modules:${it.'@name'}")
+        api project(":${it.'@name'}")
       }
       module.dependencies.dependency.each {
-        testImplementation project(path: ":modules:${it.'@name'}", configuration: 'tests')
+        testImplementation project(path: ":${it.'@name'}", configuration: 'tests')
       }
     }
 
@@ -206,9 +204,7 @@ task copyJars(type: Copy) {
 task copyDependencies(type: Copy) {
   description 'Copies jar dependencies to target/lib directory.'
   group 'Output'
-  from subprojects
-      .findAll{ it.name != 'modules' }
-      .collect{ it.configurations.runtimeClasspath }
+  from subprojects.collect{ it.configurations.runtimeClasspath }
   into 'target/lib'
   exclude '**/eucalyptus-*.jar'
 }
@@ -216,9 +212,7 @@ task copyDependencies(type: Copy) {
 task copyTestDependencies(type: Copy) {
   description 'Copies test jar dependencies to target/lib/tests directory.'
   group 'Output'
-  from subprojects
-      .findAll{ it.name != 'modules' }
-      .collect{ it.configurations.testRuntimeClasspath - it.configurations.runtimeClasspath }
+  from subprojects.collect{ it.configurations.testRuntimeClasspath - it.configurations.runtimeClasspath }
   into 'target/lib/tests'
   exclude '**/eucalyptus-*.jar'
   exclude '**/test-eucalyptus-*.jar'
@@ -229,13 +223,26 @@ task copyAllDependencies(dependsOn: [ 'copyDependencies', 'copyTestDependencies'
   group 'Output'
 }
 
+task testReport(type: TestReport) {
+  description 'Generates HTML junit report under target/reports/tests directory.'
+  destinationDir = file("target/reports/tests")
+  mustRunAfter subprojects*.test
+  reportOn subprojects*.test
+}
+
+task test {
+  finalizedBy( testReport )
+}
+
+task build {
+  finalizedBy( testReport )
+}
+
 idea {
   project {
     jdkName = '1.8'
     languageLevel = '1.8'
-    modules = allprojects
-                .findAll{ it.name != 'clc' }
-                .collect{ it.idea.module }
+    modules = subprojects.collect{ it.idea.module }
 
     ipr {
       withXml {
