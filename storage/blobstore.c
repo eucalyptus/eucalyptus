@@ -113,9 +113,9 @@
 
 #define BLOBSTORE_METADATA_FILE                  ".blobstore"
 #define BLOBSTORE_METADATA_TIMEOUT_USEC          (1000000LL * 60 * 2)   //!< it may take dozens of seconds to open blobstore when others are LRU-purging it
-#define BLOBSTORE_LOCK_TIMEOUT_USEC               500000LL
-#define BLOBSTORE_FIND_TIMEOUT_USEC                50000LL
-#define BLOBSTORE_DELETE_TIMEOUT_USEC              50000LL
+#define BLOBSTORE_LOCK_TIMEOUT_USEC              5000000LL
+#define BLOBSTORE_FIND_TIMEOUT_USEC              5000000LL
+#define BLOBSTORE_DELETE_TIMEOUT_USEC            5000000LL
 #define BLOBSTORE_SLEEP_INTERVAL_USEC              99999LL
 #define BLOBSTORE_DMSETUP_TIMEOUT_SEC                 60
 #define BLOBSTORE_MAX_CONCURRENT                      99
@@ -3146,6 +3146,7 @@ blockblob *blockblob_open(blobstore * bs, const char *id, unsigned long long siz
 
     int blobstore_locked = 0;
     if (blobstore_lock(bs, timeout_usec) == -1) {   // lock it so we can create blob's file atomically
+        ERR(BLOBSTORE_ERROR_AGAIN, "failed to lock the blobstore");
         goto free;                     // failed to obtain a lock on the blobstore
     } else {
         blobstore_locked = 1;
@@ -3208,6 +3209,7 @@ blockblob *blockblob_open(blobstore * bs, const char *id, unsigned long long siz
         created_blob = 1;
 
         if (blobstore_lock(bs, timeout_usec) == -1) {   // lock it so we can traverse blobstore safely
+            ERR(BLOBSTORE_ERROR_AGAIN, "failed to lock the blobstore");
             goto clean;                // failed to obtain a lock on the blobstore
         } else {
             blobstore_locked = 1;
