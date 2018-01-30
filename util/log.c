@@ -341,7 +341,7 @@ static FILE *get_file_impl(const char *log_file, FILE * fp, ino_t * log_inop, bo
 retry:
     // open unless it is already is open
     if (fp == NULL) {
-        mode_t old_umask = umask(~LOG_FILE_PERM);
+        umask(0022);
         fp = fopen(log_file, "a+");
         if (fp != NULL) {
             fd = fileno(fp);
@@ -349,7 +349,6 @@ retry:
                 fcntl(fd, F_SETFD, FD_CLOEXEC);
             }
         }
-        umask(old_umask);
         if (fp == NULL) {
             return NULL;
         }
