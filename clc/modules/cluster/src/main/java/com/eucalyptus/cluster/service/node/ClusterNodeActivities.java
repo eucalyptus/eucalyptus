@@ -37,6 +37,8 @@ import javax.inject.Inject;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.common.ClusterRegistry;
 import com.eucalyptus.cluster.common.msgs.ClusterBundleRestartInstanceResponseType;
+import com.eucalyptus.cluster.service.ClusterServiceId;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
@@ -96,7 +98,7 @@ public class ClusterNodeActivities {
 
   @SuppressWarnings( "WeakerAccess" )
   public void doActivities( ) {
-    if ( enabled || ClusterRegistry.hasEnabledLocalCluster( ) ) {
+    if ( enabled || Topology.isEnabledLocally( ClusterServiceId.class ) ) {
       final ClusterNodeActivityContext context = ClusterNodeActivityContext.of( clusterNodes, sensorConfig, clock );
       Stream.of( ClusterNodeActivity.values( ) ).forEach( activity -> activity.doActivity( context ) );
     }
