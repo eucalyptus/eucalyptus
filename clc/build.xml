@@ -106,12 +106,10 @@
 
 	<!--================================== test targets ===================================-->
 	<target name="junit" description="Run unit tests">
-		<property name="module.skipNativeMake" value="true"/>
 		<call-module-target target="junit"/>
 	</target>
 	<target name="junit-report">
 		<!-- Run tests -->
-		<property name="module.skipNativeMake" value="true"/>
 		<property name="junit.halt" value="off"/>
 		<call-module-target target="junit"/>
 
@@ -138,9 +136,6 @@
 	</target>
 
 	<!--================================== code targets ==================================-->
-	<target name="indent" description="Indent code">
-		<call-module-target target="indent"/>
-	</target>
 	<target name="generate" description="Generate checked in sources">
 		<call-module-target target="generate"/>
 	</target>

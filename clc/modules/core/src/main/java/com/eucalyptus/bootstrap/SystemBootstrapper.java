@@ -57,7 +57,6 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
-import com.eucalyptus.system.Capabilities;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
 import com.google.common.base.Functions;
@@ -97,9 +96,7 @@ public class SystemBootstrapper {
     LOG.info( "Returning Bootstrapper instance." );
     return singleton;
   }
-  
-  public SystemBootstrapper( ) {}
-  
+
   /**
    * <b>IMPORTANT NOTE:</b> this is the <b><i>only</i></b> class for which it is acceptable to
    * {@code catch} or {@code throw} the {@link Throwable} type. See {@link ThreadDeath} for an
@@ -213,9 +210,7 @@ public class SystemBootstrapper {
    * @throws Throwable
    */
   public boolean start( ) throws Throwable {
-    Capabilities.initialize( );
     SystemBootstrapper.runSystemStages( new Predicate<Stage>( ) {
-      
       @Override
       public boolean apply( Stage input ) {
         input.start( );
@@ -261,26 +256,6 @@ public class SystemBootstrapper {
   public String getVersion( ) {
     return BillOfMaterials.RequiredFields.VERSION.getValue( );
   }
-  
-  public boolean check( ) {
-    return true;
-  }
-  
-  public boolean destroy( ) {
-    return true;
-  }
-  
-  public boolean stop( ) throws Exception {
-    LOG.warn( "Shutting down Eucalyptus." );
-    EventRecord.here( SystemBootstrapper.class, EventClass.SYSTEM, EventType.SYSTEM_STOP, "SHUT DOWN" ).info( );
-    return true;
-  }
-  
-  public static void restart( ) { System.exit( 123 ); }
-  
-  private static native void shutdown( boolean reload );
-  
-  public static native void hello( );
   
   private static String printBanner( ) {
     String prefix = "\n\t";

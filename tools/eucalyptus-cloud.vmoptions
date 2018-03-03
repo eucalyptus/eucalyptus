@@ -1,0 +1,9 @@
+#
+# Eucalyptus cloud default vm options
+#
+-XX:+UseG1GC
+-XX:MaxGCPauseMillis=200
+-XX:+DisableExplicitGC
+-XX:+HeapDumpOnOutOfMemoryError
+-Djava.net.preferIPv4Stack=true
+-Djava.awt.headless=true

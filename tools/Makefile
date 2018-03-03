@@ -83,6 +83,8 @@ install: build
 	@$(INSTALL) -m 755 getstats.pl $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 get_bundle $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 euca-lictool $(DESTDIR)$(sbindir)
+	@$(INSTALL) -m 755 eucalyptus-cloud $(DESTDIR)$(sbindir)
+	@$(INSTALL) -m 644 eucalyptus-cloud.vmoptions $(DESTDIR)$(usrdir)/lib/eucalyptus
 	@$(INSTALL) -m 755 lic_template $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 lic_default $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 644 libvirt.xsl $(DESTDIR)$(etcdir)/eucalyptus
@@ -122,6 +124,8 @@ uninstall:
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/lic_template
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/lic_default
 	@$(RM) -f $(DESTDIR)$(sbindir)/euca-lictool
+	@$(RM) -f $(DESTDIR)$(sbindir)/eucalyptus-cloud
+	@$(RM) -f $(DESTDIR)$(usrdir)/lib/eucalyptus/eucalyptus-cloud.vmoptions
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/generate-migration-keys.sh
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/authorize-migration-keys
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/config-no-polkit

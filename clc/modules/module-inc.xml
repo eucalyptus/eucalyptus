@@ -155,22 +155,6 @@
 			</fileset>
 		</copy>
 	</target>
-	<!--================================== make macro ==================================-->
-	<target name="native-make-if-enabled" unless="module.skipNativeMake">
-		<exec failifexecutionfails="true" failonerror="true" dir="${makeDir}" executable="/usr/bin/make">
-				<arg value="${makeTarget}" />
-		</exec>
-   </target>
-    <macrodef name="native-make">
-		<attribute name="target" />
-		<attribute name="dir" />
-		<sequential>
-			<antcall target="native-make-if-enabled">
-				<param name="makeTarget" value="@{target}" />
-				<param name="makeDir" value="@{dir}" />
-			</antcall>
-		</sequential>
-	</macrodef>
 	<!--================================== init target ==================================-->
 	<target name="build-mkdirs">
 		<mkdir dir="${build.classes.dir}" />
@@ -363,10 +347,6 @@
 		</copy>
 		<antcall target="install-module" />
 	</target>
-	<!--================================== indent target ==================================-->
-	<target name="indent">
-		<antcall target="indent-module" />
-	</target>
 	<!--============================= code generation targets ============================-->
 	<target name="generate">
 		<antcall target="clean-generated" />
@@ -406,5 +386,4 @@
 	<target name="distclean-module" />
 	<target name="uninstall-module" />
 	<target name="install-module" />
-	<target name="indent-module" />
 </project>

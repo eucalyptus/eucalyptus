@@ -98,7 +98,7 @@ public class DASManager implements LogicalStorageManager {
   public static boolean initialized = false;
   public static final int MAX_LOOP_DEVICES = 256;
   public static final String EUCA_ROOT_WRAPPER = BaseDirectory.LIBEXEC.toString() + "/euca_rootwrap";
-  public static final String EUCA_VAR_RUN_PATH = System.getProperty("euca.run.dir");
+  public static final String EUCA_VAR_RUN_PATH = BaseDirectory.RUN.toString( );
   public static final StorageExportManager exportManager = new ISCSIManager();
   public static final StorageExportManager threadedExportManager = new ThreadPoolDispatchingStorageExportManager(new ISCSIManager());
   private static String volumeGroup;
