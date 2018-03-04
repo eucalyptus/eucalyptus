@@ -39,7 +39,6 @@
 
 package com.eucalyptus.bootstrap;
 
-import groovy.lang.ExpandoMetaClass;
 import java.io.PrintStream;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.InetAddress;
@@ -130,7 +129,6 @@ public class SystemBootstrapper {
    * @throws Throwable
    */
   public boolean init( ) throws Throwable {
-    ExpandoMetaClass.enableGlobally( );
     Logs.init( );
     Thread.setDefaultUncaughtExceptionHandler( new UncaughtExceptionHandler( ) {
       

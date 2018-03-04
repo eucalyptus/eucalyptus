@@ -39,7 +39,6 @@
 
 package com.eucalyptus.scripting;
 
-import groovy.lang.ExpandoMetaClass;
 import groovy.lang.ExpandoMetaClassCreationHandle;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyObject;
@@ -73,13 +72,6 @@ public class Groovyness {
             ".groovy" ) );
   }
 
-  public static <T extends GroovyObject> T expandoMetaClass( T obj ) {
-    ExpandoMetaClass emc = new ExpandoMetaClass( obj.getClass( ), false );
-    emc.initialize( );
-    obj.setMetaClass( emc );
-    return obj;
-  }
-  
   private static GroovyClassLoader getGroovyClassLoader( ) {
     GroovySystem.getMetaClassRegistry( ).setMetaClassCreationHandle( new ExpandoMetaClassCreationHandle( ) );
     CompilerConfiguration config = new CompilerConfiguration( );
