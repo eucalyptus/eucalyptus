@@ -103,6 +103,9 @@ public class DNSControl {
   private static final AtomicReference<Collection<Cidr>> addressMatchers =
       new AtomicReference<Collection<Cidr>>( Collections.<Cidr>emptySet( ) );
 
+  private static final boolean useLegacyTcp =
+      Boolean.valueOf( System.getProperty( "com.eucalyptus.dns.legacyTcp", "false" ) );
+
   private static final AtomicReference<Collection<TCPListener>> tcpListenerRef =
       new AtomicReference<Collection<TCPListener>>( Collections.<TCPListener>emptySet( ) );
 
@@ -116,9 +119,9 @@ public class DNSControl {
   public static volatile String dns_listener_address_match = "";
 
   @ConfigurableField( description = "Server worker thread pool max.",
-      initial = "512",
+      initial = "32",
       changeListener = WebServices.CheckNonNegativeIntegerPropertyChangeListener.class )
-  public static Integer SERVER_POOL_MAX_THREADS = 512;
+  public static Integer SERVER_POOL_MAX_THREADS = 32;
 
   @ConfigurableField( displayName = "server",
       description = "Comma separated list of nameservers, OS settings used if none specified (change requires restart)",
@@ -259,7 +262,7 @@ public class DNSControl {
 
   private static class UdpChannelPipelineFactory implements ChannelPipelineFactory {
 
-    private ExecutionHandler execHandler = null;
+    private final ExecutionHandler execHandler;
 
     private UdpChannelPipelineFactory( final ExecutionHandler execHandler ) {
       this.execHandler = execHandler;
@@ -329,7 +332,11 @@ public class DNSControl {
   }
 
   private static void initializeTCP( ) throws Exception {
-    initializeTCPSocket( );
+    if ( useLegacyTcp ) {
+      initializeTCPSocket( );
+    } else {
+      initializeTCPNetty( );
+    }
   }
 
   private static void initializeTCPSocket( ) throws Exception {
@@ -342,8 +349,6 @@ public class DNSControl {
   }
 
   private static void initializeTCPNetty( ) throws Exception {
-    // currently there's an issue with bind() throwing Socket permission exception
-    // due to the port < 1024
     if ( tcpChannelFactory == null ) {
       try {
         tcpChannelFactory =
@@ -445,12 +450,12 @@ public class DNSControl {
       udpChannelFactory.releaseExternalResources( );
       udpChannelFactory = null;
     }
-      /* if(tcpChannelGroup!=null)
-		    tcpChannelGroup.close().awaitUninterruptibly();
-		  if(tcpChannelFactory!=null) {
-		    tcpChannelFactory.releaseExternalResources();
-		    tcpChannelFactory = null;
-		  }*/
+    if ( tcpChannelGroup != null )
+      tcpChannelGroup.close( ).awaitUninterruptibly( );
+    if ( tcpChannelFactory != null ) {
+      tcpChannelFactory.releaseExternalResources( );
+      tcpChannelFactory = null;
+    }
   }
 
   public static void restart( ) throws Exception {
