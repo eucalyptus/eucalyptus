@@ -408,7 +408,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
             }
 
             if (formFields.get(ObjectStorageProperties.FormField.x_ignore_filecontentlength.toString()) != null) {
-              operationParams.put("ContentLength", (long) formFields.get(ObjectStorageProperties.FormField.x_ignore_filecontentlength.toString()));
+              operationParams.put("ContentLength", String.valueOf((long) formFields.get(ObjectStorageProperties.FormField.x_ignore_filecontentlength.toString())));
             } else {
               throw new MalformedPOSTRequestException(null, "Could not calculate upload content length from request");
               // if(contentLengthString != null) {
