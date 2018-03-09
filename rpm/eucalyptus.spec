@@ -31,9 +31,11 @@
 # You must also install coverity-analysis.
 %bcond_with coverity
 
+%{!?version: %define version 4.4}
+
 Summary:       Eucalyptus cloud platform
 Name:          eucalyptus
-Version:       4.4.2
+Version:       %{version}
 Release:       0%{?build_id:.%build_id}%{?dist}
 License:       GPLv3
 URL:           http://www.eucalyptus.com
@@ -702,6 +704,9 @@ usermod -a -G libvirt eucalyptus || :
 
 
 %changelog
+* Fri Mar  9 2018 Steve Jones <steve.jones@appscale.com> - 4.4.3
+- Build now handles rpm version
+
 * Fri Aug  4 2017 Garrett Holmstrom <gholms@dxc.com> - 4.4.2
 - Version bump (4.4.2)
 

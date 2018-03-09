@@ -12,7 +12,7 @@ subprojects {
   apply plugin: 'java'
   apply plugin: 'java-library'
 
-  version = '4.4.2'
+  version = file('../../../VERSION').text.trim()
   targetCompatibility = 1.8
   sourceCompatibility = 1.8
 

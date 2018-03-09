@@ -64,6 +64,7 @@ clc/modules/www/test-gwt/war/WEB-INF/*
 clc/modules/www/webapps
 clc/modules/www/gwt-unitCache/
 clc/target
+configure
 config.log
 config.status
 core.*
