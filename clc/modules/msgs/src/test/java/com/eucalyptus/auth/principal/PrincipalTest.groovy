@@ -28,6 +28,10 @@
  ************************************************************************/
 package com.eucalyptus.auth.principal
 
+import com.eucalyptus.auth.policy.ern.Ern
+import com.eucalyptus.auth.policy.ern.EuareErnBuilder
+import org.junit.BeforeClass
+
 import static org.junit.Assert.*
 import org.junit.Test
 
@@ -37,6 +41,11 @@ import static com.eucalyptus.auth.principal.Principal.PrincipalType.AWS
  * 
  */
 class PrincipalTest {
+
+  @BeforeClass
+  static void beforeClass( ) {
+    Ern.registerServiceErnBuilder( new EuareErnBuilder( ) );
+  }
 
   @Test
   void testPrincipalMatcherConversion() {
