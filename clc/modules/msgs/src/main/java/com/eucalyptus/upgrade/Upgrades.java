@@ -203,6 +203,12 @@ public class Upgrades {
     v4_4_1,
     v4_4_2,
     v4_4_3,
+    v4_4_4,
+    v4_4_5,
+    v4_4_6,
+    v4_4_7,
+    v4_4_8,
+    v4_4_9,
     v5_0_0;
 
     public String getVersion( ) {
