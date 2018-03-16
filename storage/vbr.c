@@ -91,7 +91,7 @@
 #define ART_SIG_MAX                              262144 //!< must be big enough for a digest and then some
 
 #define FIND_BLOB_TIMEOUT_USEC                   50000LL    //!< @TODO: use 100 or less to induce rare timeouts
-#define DELETE_BLOB_TIMEOUT_USEC                 50000LL
+#define DELETE_BLOB_TIMEOUT_USEC                 5000000LL
 
 #define FIND                                     0
 #define CREATE                                   1
