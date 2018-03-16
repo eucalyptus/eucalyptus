@@ -169,6 +169,9 @@ public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundH
             Channels.write(ctx, bodyWriteFuture, dataStream);
           }
         });
+        if ( !httpResponse.containsHeader( HttpHeaders.Names.CONNECTION ) ) {
+          httpResponse.addHeader( HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE );
+        }
       } else {
         writeFuture.addListener(ChannelFutureListener.CLOSE);
       }
