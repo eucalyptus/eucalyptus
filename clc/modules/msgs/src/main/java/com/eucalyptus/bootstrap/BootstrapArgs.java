@@ -91,8 +91,9 @@ public class BootstrapArgs {
     bootstrapHosts.addAll( BootstrapArgs.parseMultipleArgs( "euca.bootstrap.host", BindAddressValidator.INSTANCE ) );
     initSystem = System.getProperty( "euca.initialize" ) != null;
     upgradeSystem = System.getProperty( "euca.upgrade" ) != null;
-    try {
-        InetAddress.getByName( "eucalyptus.com" ).isReachable( NetworkInterface.getByInetAddress(Internets.localHostInetAddress( )), 64, 10000 );//GRZE:attempted hack to allocate raw socket
+    final String bootstrapReachableHost = System.getProperty( "euca.bootstrap.reachableHost" );
+    if ( bootstrapReachableHost != null ) try {
+        InetAddress.getByName( bootstrapReachableHost ).isReachable( NetworkInterface.getByInetAddress(Internets.localHostInetAddress( )), 64, 10000 );//GRZE:attempted hack to allocate raw socket
     } catch ( Exception ex2 ) {
         LOG.error( ex2 , ex2 );
     }
