@@ -52,6 +52,7 @@ public class CephRbdOutputStream extends OutputStream {
 
   private static final Logger LOG = Logger.getLogger(CephRbdOutputStream.class);
 
+  private final Object closeSync = new Object();
   private CephRbdConnectionManager conn;
   private RbdImage rbdImage;
   private long position;
@@ -64,6 +65,7 @@ public class CephRbdOutputStream extends OutputStream {
       isOpen = true;
       position = 0;
     } catch (Exception e) {
+      close( );
       throw new IOException("Failed to open CephInputStream for image " + imageName + " in pool " + poolName, e);
     }
   }
@@ -118,19 +120,28 @@ public class CephRbdOutputStream extends OutputStream {
 
   @Override
   public void close() {
-    if (isOpen) {
-      try {
-        conn.getRbd().close(rbdImage);
-      } catch (Exception e) {
-
-      } finally {
+    synchronized ( closeSync ) {
+      if ( isOpen ) {
+        final CephRbdConnectionManager closeConn = conn;
+        final RbdImage closeRbdImage = rbdImage;
         isOpen = false;
-        conn.disconnect();
         conn = null;
         rbdImage = null;
+
+        if ( closeConn != null ) {
+          try {
+            if ( closeRbdImage != null ) {
+              closeConn.getRbd( ).close( closeRbdImage );
+            }
+          } catch ( final RbdException e ) {
+            LOG.error( "Error closing image " + closeRbdImage.getName( ), e );
+          } finally {
+            closeConn.close( );
+          }
+        }
+      } else {
+        // nothing to do here, stream is not open/already closed
       }
-    } else {
-      // nothing to do here, stream is not open/already closed
     }
   }
 }

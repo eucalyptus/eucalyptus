@@ -249,13 +249,14 @@ public class S3SnapshotTransfer implements SnapshotTransfer {
       Path zipFilePath = Files.createTempFile(Paths.get("/var/tmp"), keyName + '-', '-' + String.valueOf(partNumber));
       part = SnapshotPart.createPart(snapUploadInfo, zipFilePath.toString(), partNumber, readOffset);
 
-      InputStream inputStream = storageResource.getInputStream();
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       GZIPOutputStream gzipStream = new GZIPOutputStream(baos);
       FileOutputStream outputStream = new FileOutputStream(zipFilePath.toString());
+      InputStream inputStream = null;
 
       try {
         LOG.debug("Reading snapshot " + snapshotId + " and compressing it to disk in chunks of size " + partSize + " bytes or greater");
+        inputStream = storageResource.getInputStream( );
         while ((len = inputStream.read(buffer)) > 0) {
           bytesRead += len;
           gzipStream.write(buffer, 0, len);
