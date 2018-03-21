@@ -363,6 +363,7 @@ static int write_xml_file(const xmlDocPtr doc, const char *instanceId, const cha
     chmod(path, BACKING_FILE_PERM);    // ensure perms in case when XML file exists
     if ((ret = xmlSaveFormatFileEnc(path, doc, "UTF-8", 1)) > 0) {
         LOGTRACE("[%s] wrote %s XML to %s\n", instanceId, type, path);
+        chmod(path, BACKING_FILE_PERM);
     } else {
         LOGERROR("[%s] failed to write %s XML to %s\n", instanceId, type, path);
     }

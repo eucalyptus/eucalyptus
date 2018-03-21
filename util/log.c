@@ -347,6 +347,7 @@ retry:
             fd = fileno(fp);
             if (fd != -1) {
                 fcntl(fd, F_SETFD, FD_CLOEXEC);
+                fchmod(fd, LOG_FILE_PERM);
             }
         }
         if (fp == NULL) {
