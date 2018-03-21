@@ -64,15 +64,6 @@ import javax.annotation.Nullable;
 
 public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
   private static Logger             LOG         = Logger.getLogger( ServiceContextHandler.class );
-  private ChannelLocal<Long>        startTime   = new ChannelLocal<>(true);
-  private ChannelLocal<Long>        openTime    = new ChannelLocal<>(true);
-  private ChannelLocal<Class<? extends BaseMessage>>
-                                    messageType = new ChannelLocal<Class<? extends BaseMessage>>(true) {
-                                                  @Override
-                                                  protected Class<? extends BaseMessage> initialValue( Channel channel ) {
-                                                    return BaseMessage.class;
-                                                  }
-                                                };
 
   public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) {//FIXME:GRZE: handle exceptions cleanly. convert to msg type and write.
     LOG.debug( ctx.getChannel( ), e.getCause( ) );
@@ -95,10 +86,9 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
 
   private MessageEvent makeDownstreamNewEvent( ChannelHandlerContext ctx, ChannelEvent e, BaseMessage reply ) {
     MappingHttpRequest request = null;
-    Context reqCtx = null;
     try {
       if ( reply != null ) {
-        reqCtx = Contexts.lookup( reply.getCorrelationId( ) );
+        Context reqCtx = Contexts.lookup( reply.getCorrelationId( ) );
         request = reqCtx.getHttpRequest( );
       }
     } catch ( NoSuchContextException e1 ) {
@@ -108,13 +98,6 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
       if ( reply == null ) {
         LOG.warn( "Received a null response for request: " + request.getMessageString( ) );
         reply = new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), ( BaseMessage ) request.getMessage( ), "Received a NULL reply" );
-      }
-      Long currTime = System.currentTimeMillis( );
-      try {
-    	  Logs.extreme( ).debug( EventRecord.here( reply.getClass( ), EventClass.MESSAGE, EventType.MSG_SERVICED, "request-ms",
-    			  Long.toString( currTime - this.startTime.get( ctx.getChannel( ) ) ) ) );
-      } catch ( Exception ex ) {
-    	  Logs.extreme( ).trace( ex, ex );
       }
       final MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
       final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
@@ -153,9 +136,7 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
       ChannelStateEvent evt = ( ChannelStateEvent ) e;
       switch ( evt.getState( ) ) {
         case OPEN:
-          if ( Boolean.TRUE.equals( evt.getValue( ) ) ) {
-            this.channelOpened( ctx, evt );
-          } else {
+          if ( Boolean.FALSE.equals( evt.getValue( ) ) ) {
             this.channelClosed( ctx, evt );
           }
         case BOUND:
@@ -181,8 +162,6 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
   }
 
   private void messageReceived( final ChannelHandlerContext ctx, final BaseMessage msg ) throws ServiceDispatchException {
-    this.startTime.set( ctx.getChannel( ), System.currentTimeMillis( ) );
-    this.messageType.set( ctx.getChannel( ), msg.getClass( ) );
     EventRecord.here( ServiceContextHandler.class, EventType.MSG_RECEIVED, msg.getClass( ).getSimpleName( ) ).trace( );
     ServiceOperations.dispatch( msg );
   }
@@ -195,21 +174,5 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
         Logs.extreme( ).debug( "Failed to remove the channel context on connection close.", ex );
       }
     }
-    try {
-      if ( ctx.getChannel() != null ) {
-        @Nullable final Class<?> msgClass = this.messageType.get( ctx.getChannel( ) );
-        @Nullable final Long openTime = this.openTime.get( ctx.getChannel( ) );
-        if ( msgClass != null && openTime != null ) {
-          Logs.extreme( ).debug( EventRecord.here( msgClass, EventClass.MESSAGE, EventType.MSG_SERVICED, "rtt-ms", Long.toString( System.currentTimeMillis( ) - openTime ) ) );
-        }
-      }
-    } catch ( Exception ex ) {
-      Logs.extreme( ).trace( ex, ex );
-    }
   }
-
-  private void channelOpened( final ChannelHandlerContext ctx, ChannelStateEvent evt ) {
-    this.openTime.set( ctx.getChannel( ), System.currentTimeMillis( ) );
-  }
-
 }
