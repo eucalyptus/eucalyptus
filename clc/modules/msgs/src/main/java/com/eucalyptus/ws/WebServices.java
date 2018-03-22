@@ -394,7 +394,7 @@ public class WebServices {
     private boolean       CHANNEL_REUSE_ADDRESS             = true;
     private Boolean       CHANNEL_KEEP_ALIVE                = true;
     private Boolean       CHANNEL_NODELAY                   = true;
-    private Integer       SERVER_POOL_MAX_THREADS           = 32;
+    private Integer       SERVER_POOL_MAX_THREADS           = 128;
     private Long          SERVER_POOL_MAX_MEM_PER_CONN      = 0L;
     private Long          SERVER_POOL_TOTAL_MEM             = 0L;
     private Long          SERVER_POOL_TIMEOUT_MILLIS        = 500L;

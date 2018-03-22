@@ -839,5 +839,43 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       return true;
     }
   }
+
+  @EntityUpgrade( entities = StaticDatabasePropertyEntry.class, since = Version.v4_4_3, value = Empyrean.class )
+  public enum StaticPropertyEntryUpgrade443 implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( StaticPropertyEntryUpgrade443.class );
+
+    private void updatePropertyValues( final Iterable<Tuple3<String,String,String>> updatedProperties ) {
+      try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
+        for ( final Tuple3<String,String,String> updatedProperty : updatedProperties ) {
+          final String propName = updatedProperty._1( );
+          final String oldValue = updatedProperty._2( );
+          final String newValue = updatedProperty._3( );
+          Entities.criteriaQuery( StaticDatabasePropertyEntry.class )
+              .whereEqual( StaticDatabasePropertyEntry_.propName, propName )
+              .uniqueResultOption( ).transform( property -> {
+            if ( oldValue.equals( property.getValue( ) ) ) {
+              LOG.info( "Updating value for "+propName+" property to " + newValue );
+              property.setValue( newValue );
+            }
+            return property;
+          } );
+        }
+        db.commit( );
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+
+    @Override
+    public boolean apply( final Class arg0 ) {
+      updatePropertyValues( ImmutableList.of(
+          Tuple.of( "bootstrap.webservices.server_pool_max_threads", "32", "128" ),
+          Tuple.of( "bootstrap.webservices.async_internal_operations", "false", "true" )
+      ) );
+
+      return true;
+    }
+  }
 }
 
