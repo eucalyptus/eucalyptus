@@ -38,7 +38,7 @@ Name:          eucalyptus
 Version:       %{version}
 Release:       0%{?build_id:.%build_id}%{?dist}
 License:       GPLv3
-URL:           http://www.eucalyptus.com
+URL:           https://eucalyptus.cloud/
 
 BuildRequires: ant >= 1.7
 BuildRequires: ant-apache-regexp
