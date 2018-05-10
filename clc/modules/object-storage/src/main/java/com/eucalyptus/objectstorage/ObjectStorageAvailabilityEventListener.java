@@ -59,12 +59,19 @@ public class ObjectStorageAvailabilityEventListener implements EventListener<Clo
   public void fireEvent(final ClockTick event) {
     if (BootstrapArgs.isCloudController() && Bootstrap.isOperational()) {
       try {
-        long capacity = 0;
-        capacity = ConfigurationCache.getConfiguration(ObjectStorageGlobalConfiguration.class).getMax_total_reporting_capacity_gb();
+        long capacity = ConfigurationCache.getConfiguration(ObjectStorageGlobalConfiguration.class).getMax_total_reporting_capacity_gb();
+        long used = 0;
+
+        if ( capacity != Integer.MAX_VALUE ) {
+          // only calculate usage if capacity is configured
+          // with many objects usage calculation causes load
+          used = (long) Math.ceil((double) ObjectStorageQuotaUtil.getTotalObjectSize() / FileUtils.ONE_GB);
+        }
 
         ListenerRegistry.getInstance().fireEvent(
-            new ResourceAvailabilityEvent(StorageWalrus, new Availability(capacity, Math.max(0,
-                capacity - (long) Math.ceil((double) ObjectStorageQuotaUtil.getTotalObjectSize() / FileUtils.ONE_GB)))));
+            new ResourceAvailabilityEvent(StorageWalrus, new Availability(
+                capacity,
+                Math.max(0, capacity - used))));
       } catch (Exception ex) {
         logger.error(ex, ex);
       }
