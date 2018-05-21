@@ -53,7 +53,7 @@ BuildRequires: java-1.8.0-openjdk-devel >= 1:1.8.0
 BuildRequires: jpackage-utils
 BuildRequires: json-c-devel
 BuildRequires: libuuid-devel
-BuildRequires: libvirt-devel >= 0.6
+BuildRequires: libvirt-devel >= 2.0.0
 BuildRequires: libxml2-devel
 BuildRequires: libxslt-devel
 BuildRequires: m2crypto
@@ -289,7 +289,7 @@ Requires:     kvm
 # Ceph support requires librados2, librbd1, and *also* qemu-kvm-rhev.
 Requires:     librados2%{?_isa}
 Requires:     librbd1%{?_isa}
-Requires:     libvirt
+Requires:     libvirt >= 2.0.0
 Requires:     libvirt-python
 Requires:     perl(Sys::Virt)
 Requires:     perl(Time::HiRes)
@@ -704,6 +704,9 @@ usermod -a -G libvirt eucalyptus || :
 
 
 %changelog
+* Thu May 10 2018 Steve Jones <steve.jones@appscale.com> - 4.4.4
+- Update libvirt requirement to 2.0.0+
+
 * Fri Mar  9 2018 Steve Jones <steve.jones@appscale.com> - 4.4.3
 - Build now handles rpm version
 
