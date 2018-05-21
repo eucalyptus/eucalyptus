@@ -79,6 +79,8 @@ import com.google.common.base.Strings;
 public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
   private static final Logger LOG = Logger.getLogger(DbObjectMetadataManagerImpl.class);
 
+  private enum ObjectListingType{ All, Latest, RequiringCleanup }
+
   public void start() throws Exception {
     LOG.trace("Starting DbObjectMetadataManager");
   }
@@ -96,7 +98,7 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
   public ObjectEntity finalizeCreation(ObjectEntity objectToUpdate, Date updateTimestamp, String eTag) throws MetadataOperationFailureException {
     objectToUpdate.setObjectModifiedTimestamp(updateTimestamp);
     objectToUpdate.seteTag(eTag);
-    objectToUpdate.setIsLatest(true);
+    objectToUpdate.markLatest();
     return this.transitionObjectToState(objectToUpdate, ObjectState.extant);
   }
 
@@ -221,22 +223,23 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
           searchCriteria = getSearchByBucket(searchCriteria, example.getBucket());
           List<ObjectEntity> results = searchCriteria.list();
           if (results.size() <= 1) {
-            // nothing to do
+            if (!results.isEmpty()) {
+              results.get(0).setCleanupRequired(Boolean.FALSE);
+            }
             return true;
           }
 
           ObjectEntity latest = results.get(0);
           latest.setIsLatest(Boolean.TRUE);
+          latest.setCleanupRequired(Boolean.FALSE);
           // Set all but the first element as not latest
           for (ObjectEntity obj : results.subList(1, results.size())) {
-            LOG.trace("Marking object " + obj.getObjectUuid() + " as no longer latest version");
+            LOG.trace("Marking object " + obj.getObjectUuid() + " as no longer latest version for " + example.getObjectKey( ));
             obj.setIsLatest(Boolean.FALSE);
-            if (latest.getVersionId() != null && ObjectStorageProperties.NULL_VERSION_ID.equals(latest.getVersionId()) && obj.getVersionId() != null
-                && ObjectStorageProperties.NULL_VERSION_ID.equals(obj.getVersionId())) {
-              LOG.trace("Transitioning to deleting");
+            if (latest.isNullVersioned() && obj.isNullVersioned()) {
+              LOG.trace("Transitioning object version to deleting for " + example.getObjectKey( ) );
               transitionObjectToState(obj, ObjectState.deleting);
             }
-
           }
         } catch (NoSuchElementException e) {
           // Nothing to do.
@@ -250,44 +253,6 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
 
     try {
       LOG.trace("Starting cleanup for " + bucket.getBucketName() + "/" + objectKey);
-      Entities.asTransaction(repairPredicate).apply(searchExample);
-    } catch (final Throwable f) {
-      LOG.error("Error in version/null repair", f);
-    }
-  }
-
-  @Override
-  public void cleanupAllNullVersionedObjectRecords(final Bucket bucket, final String objectKey) throws Exception {
-    ObjectEntity searchExample = new ObjectEntity(bucket, objectKey, null);
-
-    final Predicate<ObjectEntity> repairPredicate = new Predicate<ObjectEntity>() {
-      public boolean apply(ObjectEntity example) {
-        try {
-          // Find all null-versioned objects and mark them for deletion.
-          ObjectEntity searchExample =
-              new ObjectEntity().withKey(example.getObjectKey()).withBucket(example.getBucket()).withState(ObjectState.extant)
-                  .withVersionId(ObjectStorageProperties.NULL_VERSION_ID);
-          Criteria searchCriteria = Entities.createCriteria(ObjectEntity.class);
-          searchCriteria.add(Example.create(searchExample));
-          searchCriteria = getSearchByBucket(searchCriteria, bucket);
-
-          // Set all but the first element as not latest
-          for (ObjectEntity obj : (List<ObjectEntity>) searchCriteria.list()) {
-            LOG.trace("Marking object " + obj.getObjectUuid() + " as no longer latest version");
-            obj.setIsLatest(false);
-            obj = transitionObjectToState(obj, ObjectState.deleting);
-          }
-        } catch (NoSuchElementException e) {
-          // Nothing to do.
-        } catch (Exception e) {
-          LOG.error("Error consolidationg Object records for " + example.getBucket().getBucketName() + "/" + example.getObjectKey());
-          return false;
-        }
-        return true;
-      }
-    };
-
-    try {
       Entities.asTransaction(repairPredicate).apply(searchExample);
     } catch (final Throwable f) {
       LOG.error("Error in version/null repair", f);
@@ -599,7 +564,7 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
   @Override
   public PaginatedResult<ObjectEntity> listPaginated(final Bucket bucket, int maxKeys, String prefix, String delimiter, String startKey)
       throws Exception {
-    return listVersionsPaginated(bucket, maxKeys, prefix, delimiter, startKey, null, true);
+    return doListVersionsPaginated(bucket, maxKeys, prefix, delimiter, startKey, null, ObjectListingType.Latest );
 
   }
 
@@ -630,7 +595,7 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
     ObjectEntity retrieved = null;
     try (TransactionResource tran = Entities.transactionFor(ObjectEntity.class)) {
       retrieved = lookupObject(entity.getBucket(), entity.getObjectKey(), entity.getVersionId());
-      retrieved.setIsLatest(Boolean.TRUE);
+      retrieved.markLatest();
       Entities.mergeDirect(retrieved);
       tran.commit();
     } catch (Exception ex) {
@@ -656,11 +621,36 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
   public PaginatedResult<ObjectEntity> listVersionsPaginated(
       final Bucket bucket,
       final int maxEntries,
+      final String prefix,
+      final String delimiter,
+      final String fromKeyMarker,
+      final String fromVersionId,
+      final boolean latestOnly
+  ) throws Exception {
+    return doListVersionsPaginated(bucket, maxEntries, prefix, delimiter, fromKeyMarker, fromVersionId,
+        latestOnly ? ObjectListingType.Latest : ObjectListingType.All);
+  }
+
+  @Override
+  public PaginatedResult<ObjectEntity> listForCleanupPaginated(
+      final Bucket bucket,
+      final int maxKeys,
+      final String prefix,
+      final String delimiter,
+      final String startKey)
+      throws Exception {
+    return doListVersionsPaginated(bucket, maxKeys, prefix, delimiter, startKey, null,
+        ObjectListingType.RequiringCleanup);
+  }
+
+  protected PaginatedResult<ObjectEntity> doListVersionsPaginated(
+      final Bucket bucket,
+      final int maxEntries,
             String prefix,
             String delimiter,
       final String fromKeyMarker,
       final String fromVersionId,
-      final boolean latestOnly
+      final ObjectListingType listingType
   ) throws Exception {
     try ( final TransactionResource db = Entities.readOnlyDistinctTransactionFor( ObjectEntity.class ) ) {
       PaginatedResult<ObjectEntity> result = new PaginatedResult<ObjectEntity>();
@@ -672,9 +662,12 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
 
         // Return latest version, so exclude delete markers as well.
         // This makes listVersion act like listObjects
-        if (latestOnly) {
+        if ( listingType != ObjectListingType.All ) {
           searchObj.setIsLatest(true);
           searchObj.setIsDeleteMarker(false);
+          if ( listingType == ObjectListingType.RequiringCleanup ) {
+            searchObj.setCleanupRequired(true);
+          }
         }
 
         Criteria objCriteria = Entities.createCriteria(ObjectEntity.class);

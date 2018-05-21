@@ -1637,7 +1637,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         destObject.setSize(srcObject.getSize());
         destObject.setStorageClass(srcObject.getStorageClass());
         destObject.seteTag(srcObject.geteTag());
-        destObject.setIsLatest(Boolean.TRUE);
+        destObject.markLatest();
 
         // Prep the request to be sent to the backend
         request.setSourceObject(srcObject.getObjectUuid());

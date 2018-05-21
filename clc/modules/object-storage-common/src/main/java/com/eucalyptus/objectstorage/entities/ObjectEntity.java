@@ -45,6 +45,7 @@ import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
@@ -119,6 +120,9 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
 
   @Column(name = "is_latest")
   private Boolean isLatest;
+
+  @Column(name = "is_cleanup_required")
+  private Boolean isCleanupRequired;
 
   @Column(name = "creation_expiration")
   private Long creationExpiration; // Expiration time in system/epoch time to guarantee monotonically increasing values
@@ -269,7 +273,7 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
     deleteMarker.setObjectModifiedTimestamp(new Date());
     deleteMarker.setIsDeleteMarker(true);
     deleteMarker.setSize(0L);
-    deleteMarker.setIsLatest(true);
+    deleteMarker.markLatest();
     return deleteMarker;
   }
 
@@ -350,8 +354,21 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
     return isLatest;
   }
 
+  public void markLatest() {
+    setIsLatest(Boolean.TRUE);
+    setCleanupRequired(Boolean.TRUE);
+  }
+
   public void setIsLatest(Boolean isLatest) {
     this.isLatest = isLatest;
+  }
+
+  public Boolean getCleanupRequired() {
+    return isCleanupRequired;
+  }
+
+  public void setCleanupRequired(final Boolean cleanupRequired) {
+    isCleanupRequired = cleanupRequired;
   }
 
   public boolean isNullVersioned() {
@@ -497,6 +514,14 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
     }
 
   }
+
+  @PreUpdate
+  protected void preUpdate() {
+    if (!Boolean.TRUE.equals(getIsLatest())) {
+      setCleanupRequired(null);
+    }
+  }
+
   // TODO: add delete marker support. Fix is to use super-type for versioning entry and sub-types for version vs deleteMarker
 
 }
