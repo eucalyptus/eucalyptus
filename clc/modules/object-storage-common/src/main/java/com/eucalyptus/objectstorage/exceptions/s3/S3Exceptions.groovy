@@ -159,6 +159,12 @@ class AccessDeniedException extends S3Exception {
   }
 }
 
+class AccessDeniedOnCreateException extends AccessDeniedException {
+  def AccessDeniedOnCreateException(String resource) {
+    super(resource, "Access denied due to permissions or limit exceeded");
+  }
+}
+
 class AccountProblemException extends S3Exception {
   def AccountProblemException() {
     super(S3ErrorCodeStrings.AccountProblem, "There is a problem with your Eucalyptus account that prevents the operation from completing successfully. Please use Contact Us.", HttpResponseStatus.FORBIDDEN);
