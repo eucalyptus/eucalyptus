@@ -53,14 +53,19 @@ import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
+import java.util.Set;
 
 import javax.security.auth.x500.X500Principal;
 
 import org.apache.commons.codec.digest.Crypt;
 import org.apache.commons.codec.digest.Sha2Crypt;
 import org.apache.log4j.Logger;
+import org.bouncycastle.asn1.ASN1Encodable;
+import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.x509.BasicConstraints;
+import org.bouncycastle.asn1.x509.GeneralName;
 import org.bouncycastle.asn1.x509.X509Extensions;
 import org.bouncycastle.util.encoders.UrlBase64;
 import org.bouncycastle.x509.X509V3CertificateGenerator;
@@ -168,14 +173,16 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
 
   public X509Certificate generateServiceCertificate( KeyPair keys, String serviceName ) {
     X500Principal x500 = new X500Principal( String.format( "CN=%s, OU=Eucalyptus, O=Cloud, C=US", serviceName ) );
-//    if( !"eucalyptus".equals( serviceName ) ) {
-//      SystemCredentials sys = SystemCredentials.lookup( Eucalyptus.class );
-//      return generateCertificate( keys, x500, sys.getCertificate( ).getSubjectX500Principal( ), sys.getPrivateKey( ) );
-//    } else {
-      return generateCertificate( keys, x500, x500, null );
-//    }
+    return generateCertificate( keys, x500, x500, null );
   }
-  
+
+  public X509Certificate generateServiceCertificate( KeyPair keys, String serviceName, Set<String> altNames ) {
+    X500Principal x500 = new X500Principal( String.format( "CN=%s, OU=Eucalyptus, O=Cloud, C=US", serviceName ) );
+    Calendar cal = Calendar.getInstance( );
+    cal.add( Calendar.YEAR, 5 );
+    return generateCertificate( keys, x500, x500, null , cal.getTime(), altNames);
+  }
+
   public X509Certificate generateCertificate( KeyPair keys, String userName ) {
     return generateCertificate( keys, new X500Principal( String.format( "CN=%s, OU=Eucalyptus, O=User, C=US", userName ) ) );
   }
@@ -236,9 +243,14 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
     }
   }
 
-  
+
   @Override
   public X509Certificate generateCertificate( KeyPair keys, X500Principal subjectDn, X500Principal signer, PrivateKey signingKey, Date notAfter ) {
+    return generateCertificate( keys, subjectDn, signer, signingKey, notAfter, Collections.emptySet( ) );
+  }
+
+  @Override
+  public X509Certificate generateCertificate( KeyPair keys, X500Principal subjectDn, X500Principal signer, PrivateKey signingKey, Date notAfter, Set<String> altNames ) {
     signer = ( signingKey == null ? signer : subjectDn );
     signingKey = ( signingKey == null ? keys.getPrivate( ) : signingKey );
     EventRecord.caller( DefaultCryptoProvider.class, EventType.GENERATE_CERTIFICATE, signer.toString( ), subjectDn.toString( ) ).info();
@@ -250,6 +262,12 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
       certGen.addExtension( X509Extensions.SubjectKeyIdentifier, false, new SubjectKeyIdentifierStructure( keys.getPublic( ) ) );
     } catch ( InvalidKeyException e ) {
       LOG.error( "Error adding subject key identifier extension.", e );
+    }
+    if ( !altNames.isEmpty( ) ) {
+      certGen.addExtension( X509Extensions.SubjectAlternativeName, false,
+          new DERSequence( altNames.stream().map(
+              name -> new GeneralName( GeneralName.dNSName, name )
+          ).toArray( ASN1Encodable[]::new ) ) );
     }
     Calendar cal = Calendar.getInstance( );
     certGen.setNotBefore( cal.getTime( ) );

@@ -45,6 +45,7 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.cert.X509Certificate;
 import java.util.Date;
+import java.util.Set;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -117,7 +118,15 @@ public class Certs {
   public static X509Certificate generateServiceCertificate( final KeyPair keys, final String userName ) {
     return Crypto.getCertificateProvider( ).generateServiceCertificate( keys, userName );
   }
-  
+
+  public static X509Certificate generateServiceCertificate(
+      final KeyPair keys,
+      final String userName,
+      final Set<String> alternativeNames
+  ) {
+    return Crypto.getCertificateProvider( ).generateServiceCertificate( keys, userName, alternativeNames );
+  }
+
   public static String getFingerPrint( Key privKey ) {
     return Crypto.getCertificateProvider( ).getFingerPrint( privKey );
   }
