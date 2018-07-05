@@ -101,7 +101,6 @@
 \*----------------------------------------------------------------------------*/
 
 #define VOL_RETRIES 3
-#define SHUTDOWN_GRACE_PERIOD_SEC 60
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -488,7 +487,7 @@ int shutdown_then_destroy_domain(const char *instanceId, boolean do_destroy)
         boolean failed_to_shutdown = FALSE;
 
         if (deadline == 0) {           // first time through the loop
-            deadline = time(NULL) + SHUTDOWN_GRACE_PERIOD_SEC;
+            deadline = time(NULL) + nc_state.shutdown_grace_period_sec;
 
             // give OS a chance to shut down cleanly
             LOGDEBUG("shutting down instance\n");

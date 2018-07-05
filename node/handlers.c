@@ -1297,6 +1297,11 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
             }
 
             if (new_state == SHUTOFF || new_state == SHUTDOWN || new_state == CRASHED) {
+                if (instance->terminationRequestedTime > (time(NULL) - nc_state.shutdown_grace_period_sec)) {
+                    LOGINFO("[%s] ignoring hypervisor reported state %s for terminating domain during grace period (%d)\n",
+                            instance->instanceId, instance_state_names[new_state], nc_state.shutdown_grace_period_sec);
+                    break;
+                }
                 LOGWARN("[%s] hypervisor reported previously running domain as %s\n", instance->instanceId, instance_state_names[new_state]);
             }
             // change to state, whatever it happens to be
