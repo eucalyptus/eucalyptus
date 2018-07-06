@@ -3129,6 +3129,8 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
             used_disk = used_mem = used_cores = 0;
             for (i = 0; i < (*outInstsLen); i++) {
                 ncInstance *instance = (*outInsts)[i];
+                if (instance->state == TEARDOWN)
+                    continue;
                 used_disk += instance->params.disk;
                 used_mem += instance->params.mem;
                 used_cores += instance->params.cores;
