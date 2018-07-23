@@ -148,20 +148,33 @@ def write_config(config_values, config_file, disable_polkit=True):
                         commented = m.group('comment') == '#'
                         k = m.group('config_key')
                         v = m.group('config_value')
+                        not_configured = k in missing_values
 
                         if disable_polkit:
-                            if v != config_values[k] or commented:
-                                nf.write("{} = \"{}\"\n".format(k, config_values[k]))
-                                updated = True
+                            # Default case is we haven't seen the config key yet.
+                            if not_configured:
+                                if v != config_values[k] or commented:
+                                    nf.write("{} = \"{}\"\n".format(k, config_values[k]))
+                                    updated = True
+                                else:
+                                    # Config value is correct, no need to update
+                                    nf.write(line)
+                                missing_values.remove(k)
                             else:
-                                # Config value is correct, no need to update
-                                nf.write(line)
-                            missing_values.remove(k)
+                                # already configured this key/value, comment line if needed.
+                                if commented:
+                                    nf.write(line) # leave as is
+                                else:
+                                    nf.write("#" + line)
+                                    updated = True
                         else:
                             # Revert the config to *use* polkitd by commenting out the values
+                            # if there are duplicates, they all get commented out.
                             if not commented:
                                 nf.write("#" + line)
                                 updated = True
+                            else:
+                                nf.write(line)
 
                     # No match, then write the line as is
                     else:

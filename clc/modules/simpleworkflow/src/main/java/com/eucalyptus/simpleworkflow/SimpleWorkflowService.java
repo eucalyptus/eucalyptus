@@ -2228,6 +2228,11 @@ public class SimpleWorkflowService {
       throw new SimpleWorkflowClientException( "InvalidParameterValue", "Invalid task token." );
     }
 
+    // Amazon SWF client retries either InternalError or ThrottlingException after a backoff
+    if ( PersistenceExceptions.isLockError( e ) || PersistenceExceptions.isStaleUpdate( e ) ) {
+      throw new SimpleWorkflowClientException( "ThrottlingException", "Request throttled" );
+    }
+
     logger.error( e, e );
 
     final SimpleWorkflowException exception = new SimpleWorkflowException( "InternalError", Role.Receiver, String.valueOf(e.getMessage( )) );

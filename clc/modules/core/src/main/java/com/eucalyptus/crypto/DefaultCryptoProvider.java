@@ -41,6 +41,7 @@ package com.eucalyptus.crypto;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.KeyPair;
@@ -53,14 +54,19 @@ import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
+import java.util.Set;
 
 import javax.security.auth.x500.X500Principal;
 
 import org.apache.commons.codec.digest.Crypt;
 import org.apache.commons.codec.digest.Sha2Crypt;
 import org.apache.log4j.Logger;
+import org.bouncycastle.asn1.ASN1Encodable;
+import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.x509.BasicConstraints;
+import org.bouncycastle.asn1.x509.GeneralName;
 import org.bouncycastle.asn1.x509.X509Extensions;
 import org.bouncycastle.cert.CertRuntimeException;
 import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils;
@@ -82,9 +88,9 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
   public static String        PROVIDER              = "BC";
   private static final String PRIVATE_KEY_FORMAT    = System.getProperty( DefaultCryptoProvider.class.getName() + ".privateKeyFormat", "" );
   private static Logger       LOG                   = Logger.getLogger( DefaultCryptoProvider.class );
-  
+
   public DefaultCryptoProvider( ) {}
-  
+
   /**
    * @see com.eucalyptus.crypto.CryptoProvider#generateHashedPassword(java.lang.String)
    */
@@ -104,7 +110,7 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
     }
     return buf.toString( ).toLowerCase( );
   }
-  
+
   /**
    * @see com.eucalyptus.crypto.CryptoProvider#generateAlphanumericId(int)
    */
@@ -120,7 +126,7 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
   public String generateSecretKey() {
     return generateRandomAlphanumeric(40);//NOTE: this MUST be 40-chars from base64.
   }
-  
+
   /**
    * Note that the output has not always been of fixed length.
    *
@@ -134,11 +140,11 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
   private String generateRandomAlphanumeric(int length) {
     final StringBuilder randomBuilder = new StringBuilder( length + 90 );
     while( randomBuilder.length() < length ) {
-        randomBuilder.append(generateRandomAlphanumeric() );
+      randomBuilder.append(generateRandomAlphanumeric() );
     }
     return randomBuilder.toString().substring( 0, length );
   }
-    
+
   private String generateRandomAlphanumeric() {
     // length from generateRandomAlphanumeric is not constant due to
     // removal of punctuation characters
@@ -169,29 +175,31 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
 
   public X509Certificate generateServiceCertificate( KeyPair keys, String serviceName ) {
     X500Principal x500 = new X500Principal( String.format( "CN=%s, OU=Eucalyptus, O=Cloud, C=US", serviceName ) );
-//    if( !"eucalyptus".equals( serviceName ) ) {
-//      SystemCredentials sys = SystemCredentials.lookup( Eucalyptus.class );
-//      return generateCertificate( keys, x500, sys.getCertificate( ).getSubjectX500Principal( ), sys.getPrivateKey( ) );
-//    } else {
-      return generateCertificate( keys, x500, x500, null );
-//    }
+    return generateCertificate( keys, x500, x500, null );
   }
-  
+
+  public X509Certificate generateServiceCertificate( KeyPair keys, String serviceName, Set<String> altNames ) {
+    X500Principal x500 = new X500Principal( String.format( "CN=%s, OU=Eucalyptus, O=Cloud, C=US", serviceName ) );
+    Calendar cal = Calendar.getInstance( );
+    cal.add( Calendar.YEAR, 5 );
+    return generateCertificate( keys, x500, x500, null , cal.getTime(), altNames);
+  }
+
   public X509Certificate generateCertificate( KeyPair keys, String userName ) {
     return generateCertificate( keys, new X500Principal( String.format( "CN=%s, OU=Eucalyptus, O=User, C=US", userName ) ) );
   }
-  
+
   public X509Certificate generateCertificate( KeyPair keys, X500Principal dn ) {
     return generateCertificate( keys, dn, dn, null );
   }
-  
+
   @Override
   public X509Certificate generateCertificate( KeyPair keys, X500Principal subjectDn, X500Principal signer, PrivateKey signingKey) {
     Calendar cal = Calendar.getInstance( );
     cal.add( Calendar.YEAR, 5 );
     return generateCertificate(keys, subjectDn, signer, signingKey, cal.getTime() );
   }
-  
+
   @Override
   public  X509Certificate generateCertificate( PublicKey key, X500Principal subjectDn, X500Principal signer, PrivateKey signingKey, Date notAfter ) {
     if (signingKey == null){
@@ -210,7 +218,7 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
       LOG.error("No requesting key is specified");
       return null;
     }
-    
+
     EventRecord.caller( DefaultCryptoProvider.class, EventType.GENERATE_CERTIFICATE, signer.toString( ), subjectDn.toString( ) ).info();
     X509V3CertificateGenerator certGen = new X509V3CertificateGenerator( );
     certGen.setSerialNumber( BigInteger.valueOf( System.nanoTime( ) ).shiftLeft( 4 ).add( BigInteger.valueOf( ( long ) Math.rint( Math.random( ) * 1000 ) ) ) );
@@ -237,9 +245,14 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
     }
   }
 
-  
+
   @Override
   public X509Certificate generateCertificate( KeyPair keys, X500Principal subjectDn, X500Principal signer, PrivateKey signingKey, Date notAfter ) {
+    return generateCertificate( keys, subjectDn, signer, signingKey, notAfter, Collections.emptySet( ) );
+  }
+
+  @Override
+  public X509Certificate generateCertificate( KeyPair keys, X500Principal subjectDn, X500Principal signer, PrivateKey signingKey, Date notAfter, Set<String> altNames ) {
     signer = ( signingKey == null ? signer : subjectDn );
     signingKey = ( signingKey == null ? keys.getPrivate( ) : signingKey );
     EventRecord.caller( DefaultCryptoProvider.class, EventType.GENERATE_CERTIFICATE, signer.toString( ), subjectDn.toString( ) ).info();
@@ -251,6 +264,12 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
       certGen.addExtension( X509Extensions.SubjectKeyIdentifier, false, new JcaX509ExtensionUtils( ).createSubjectKeyIdentifier( keys.getPublic( ) ) );
     } catch ( NoSuchAlgorithmException | CertRuntimeException e ) {
       LOG.error( "Error adding subject key identifier extension.", e );
+    }
+    if ( !altNames.isEmpty( ) ) {
+      certGen.addExtension( X509Extensions.SubjectAlternativeName, false,
+          new DERSequence( altNames.stream().map(
+              name -> new GeneralName( GeneralName.dNSName, name )
+          ).toArray( ASN1Encodable[]::new ) ) );
     }
     Calendar cal = Calendar.getInstance( );
     certGen.setNotBefore( cal.getTime( ) );
@@ -267,7 +286,7 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
       return null;
     }
   }
-  
+
   /**
    * @see com.eucalyptus.crypto.CertificateProvider#generateKeyPair()
    */
@@ -278,7 +297,7 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
       EventRecord.caller( DefaultCryptoProvider.class, EventType.GENERATE_KEYPAIR );
       keyGen = KeyPairGenerator.getInstance( KEY_ALGORITHM, PROVIDER );
       SecureRandom random = Crypto.getSecureRandomSupplier( ).get( );
-    //TODO: RELEASE: see line:110
+      //TODO: RELEASE: see line:110
       keyGen.initialize( KEY_SIZE, random );
       KeyPair keyPair = keyGen.generateKeyPair( );
       return keyPair;
@@ -313,7 +332,7 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
   @Override
   public String generateSystemToken( byte[] data ) {
     PrivateKey pk = SystemCredentials.lookup( Eucalyptus.class ).getPrivateKey( );
-    return Signatures.SHA256withRSA.trySign( pk, data );    
+    return Signatures.SHA256withRSA.trySign( pk, data );
   }
 
   @Override

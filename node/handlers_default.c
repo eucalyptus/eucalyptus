@@ -101,7 +101,6 @@
 \*----------------------------------------------------------------------------*/
 
 #define VOL_RETRIES 3
-#define SHUTDOWN_GRACE_PERIOD_SEC 60
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -486,7 +485,7 @@ int shutdown_then_destroy_domain(const char *instanceId, boolean do_destroy)
         boolean failed_to_shutdown = FALSE;
 
         if (deadline == 0) {           // first time through the loop
-            deadline = time(NULL) + SHUTDOWN_GRACE_PERIOD_SEC;
+            deadline = time(NULL) + nc_state.shutdown_grace_period_sec;
 
             // give OS a chance to shut down cleanly
             LOGDEBUG("shutting down instance\n");
@@ -523,13 +522,15 @@ int shutdown_then_destroy_domain(const char *instanceId, boolean do_destroy)
         char ipath[EUCA_MAX_PATH] = { 0 };
         if (get_instance_path(instanceId, ipath, sizeof(ipath)) != EUCA_OK || strlen(ipath) <= 0) {
             LOGERROR("Failed to find instance path for instance %s\n", instanceId);
-        } else {
+        } else if (check_path(ipath) == 0) {
             char log_path_current[EUCA_MAX_PATH] = { 0 };
             char log_path_new[EUCA_MAX_PATH] = { 0 };
             snprintf(log_path_current, (sizeof(log_path_current) - 1), "%s/console.log", ipath);
             snprintf(log_path_new,     (sizeof(log_path_new) - 1), "%s/console.log.old", ipath);
-            if (rename(log_path_current, log_path_new) == -1) {
-                LOGERROR("Failed to move console log file from %s to %s\n", log_path_current, log_path_new);
+            if (check_path(log_path_current) == 0) {
+                if (rename(log_path_current, log_path_new) == -1) {
+                    LOGERROR("Failed to move console log file from %s to %s\n", log_path_current, log_path_new);
+                }
             }
         }
     }

@@ -90,9 +90,9 @@
 
 #define BLOBSTORE_METADATA_FILE                  ".blobstore"
 #define BLOBSTORE_METADATA_TIMEOUT_USEC          (1000000LL * 60 * 2)   //!< it may take dozens of seconds to open blobstore when others are LRU-purging it
-#define BLOBSTORE_LOCK_TIMEOUT_USEC               500000LL
-#define BLOBSTORE_FIND_TIMEOUT_USEC                50000LL
-#define BLOBSTORE_DELETE_TIMEOUT_USEC              50000LL
+#define BLOBSTORE_LOCK_TIMEOUT_USEC              5000000LL
+#define BLOBSTORE_FIND_TIMEOUT_USEC              5000000LL
+#define BLOBSTORE_DELETE_TIMEOUT_USEC            5000000LL
 #define BLOBSTORE_SLEEP_INTERVAL_USEC              99999LL
 #define BLOBSTORE_DMSETUP_TIMEOUT_SEC                 60
 #define BLOBSTORE_MAX_CONCURRENT                      99
@@ -3123,6 +3123,7 @@ blockblob *blockblob_open(blobstore * bs, const char *id, unsigned long long siz
 
     int blobstore_locked = 0;
     if (blobstore_lock(bs, timeout_usec) == -1) {   // lock it so we can create blob's file atomically
+        ERR(BLOBSTORE_ERROR_AGAIN, "failed to lock the blobstore");
         goto free;                     // failed to obtain a lock on the blobstore
     } else {
         blobstore_locked = 1;
@@ -3185,6 +3186,7 @@ blockblob *blockblob_open(blobstore * bs, const char *id, unsigned long long siz
         created_blob = 1;
 
         if (blobstore_lock(bs, timeout_usec) == -1) {   // lock it so we can traverse blobstore safely
+            ERR(BLOBSTORE_ERROR_AGAIN, "failed to lock the blobstore");
             goto clean;                // failed to obtain a lock on the blobstore
         } else {
             blobstore_locked = 1;
@@ -4023,9 +4025,8 @@ int blockblob_copy(blockblob * src_bb, unsigned long long src_offset_bytes, bloc
     // do the copy (with block devices dd will silently omit to copy bytes outside the block boundary, so we use paths for uncloned blobs)
     const char *src_path = (src_bb->snapshot_type == BLOBSTORE_SNAPSHOT_DM) ? (blockblob_get_dev(src_bb)) : (blockblob_get_file(src_bb));
     const char *dst_path = (dst_bb->snapshot_type == BLOBSTORE_SNAPSHOT_DM) ? (blockblob_get_dev(dst_bb)) : (blockblob_get_file(dst_bb));
-    mode_t old_umask = umask(~BLOBSTORE_FILE_PERM);
+    umask(0022);
     int error = diskutil_dd2(src_path, dst_path, granularity, copy_len_bytes / granularity, dst_offset_bytes / granularity, src_offset_bytes / granularity);
-    umask(old_umask);
     if (error) {
         ERR(BLOBSTORE_ERROR_INVAL, "failed to copy a section");
         return -1;

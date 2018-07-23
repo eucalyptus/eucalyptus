@@ -2178,7 +2178,7 @@ public class ActivityManager {
 
     UserRemoveFromLoadBalancerScalingProcessTask( final AutoScalingGroupCoreView group,
                                                   final List<String> instanceIds ) {
-      super( UUID.randomUUID().toString(), group, "UserRemoveFromLoadBalancer", instanceIds );
+      super( UUID.randomUUID().toString() + "-user-remove-from-load-balancer", group, "UserRemoveFromLoadBalancer", instanceIds );
     }
 
     @Override
@@ -2230,7 +2230,7 @@ public class ActivityManager {
     private volatile List<String> instanceIds;
 
     UntrackedInstanceTerminationScalingProcessTask( final AutoScalingGroupCoreView group ) {
-      super( group.getOwnerAccountNumber(), group, "UntrackedInstanceTermination" );
+      super( group.getOwnerAccountNumber() + "-untracked-instance-termination", group, "UntrackedInstanceTermination" );
     }
 
     @Override
@@ -2400,7 +2400,7 @@ public class ActivityManager {
     MonitoringScalingProcessTask( final AutoScalingGroupCoreView group,
                                   final List<String> pendingInstanceIds,
                                   final List<String> expectedRunningInstanceIds ) {
-      super( group, "Monitor" );
+      super( group.getArn() + "-monitor", group, "Monitor" );
       this.pendingInstanceIds = pendingInstanceIds;
       this.expectedRunningInstanceIds = scalingProcessEnabled( ScalingProcessType.HealthCheck, group ) ?
           expectedRunningInstanceIds :
@@ -2537,7 +2537,7 @@ public class ActivityManager {
 
     MetricsSubmissionScalingProcessTask( final AutoScalingGroupMetricsView group,
                                          final List<AutoScalingInstanceCoreView> autoScalingInstances ) {
-      super( group.getArn() + ":Metrics", group, "MetricsSubmission" );
+      super( group.getArn() + "-metrics-submission", group, "MetricsSubmission" );
       this.autoScalingInstances = autoScalingInstances;
     }
 
@@ -2606,7 +2606,7 @@ public class ActivityManager {
     ElbMonitoringScalingProcessTask( final AutoScalingGroupCoreView group,
                                      final List<String> loadBalancerNames,
                                      final List<String> expectedInstanceIds ) {
-      super( group, "ElbMonitor" );
+      super( group.getArn() + "-elb-monitor", group, "ElbMonitor" );
       this.loadBalancerNames = loadBalancerNames;
       this.expectedInstanceIds = expectedInstanceIds;
     }
@@ -3027,7 +3027,7 @@ public class ActivityManager {
                                   @Nullable final String instanceType,
                                   @Nullable final String keyName,
                                   final List<String> securityGroups ) {
-      super( UUID.randomUUID().toString() + "-validation", TypeMappers.transform( AutoScalingGroup.withOwner(owner), AutoScalingGroupCoreView.class ), "Validate" );
+      super( UUID.randomUUID().toString() + "-validate", TypeMappers.transform( AutoScalingGroup.withOwner(owner), AutoScalingGroupCoreView.class ), "Validate" );
       this.availabilityZoneToSubnetMapConsumer = availabilityZoneToSubnetMapConsumer;
       this.availabilityZones = availabilityZones;
       this.loadBalancerNames = loadBalancerNames;
