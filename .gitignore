@@ -37,6 +37,7 @@ clc/modules/core/src/main/resources/version.properties
 clc/modules/postgresql/src/main/resources/postgresql-binaries.properties
 clc/modules/*/build
 clc/target
+configure
 config.log
 config.status
 configure

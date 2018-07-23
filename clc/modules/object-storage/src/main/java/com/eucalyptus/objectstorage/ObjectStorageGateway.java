@@ -83,6 +83,7 @@ import com.eucalyptus.objectstorage.exceptions.MetadataOperationFailureException
 import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
+import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedOnCreateException;
 import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
 import com.eucalyptus.objectstorage.exceptions.s3.BucketAlreadyExistsException;
 import com.eucalyptus.objectstorage.exceptions.s3.BucketNotEmptyException;
@@ -480,7 +481,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       ObjectEntity objectEntity = ObjectEntity.newInitializedForCreate(bucket, request.getKey(), objectSize, requestUser, request.getCopiedHeaders());
 
       if (!authorizationHandler.operationAllowed(request, bucket, objectEntity, objectSize)) {
-        throw new AccessDeniedException(request.getBucket());
+        throw new AccessDeniedOnCreateException(request.getBucket());
       }
 
       // Auth checks passed, check if 100-continue needs to be sent
@@ -708,7 +709,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       } else {
         LOG.error("CorrelationId: " + request.getCorrelationId() + " Create bucket " + request.getBucket()
             + " access is denied based on ACL and/or IAM policy");
-        throw new AccessDeniedException(request.getBucket());
+        throw new AccessDeniedOnCreateException(request.getBucket());
       }
     } catch (AccessDeniedException e) {
       LOG.debug("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with AccessDeniedException");
@@ -1651,7 +1652,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         destObject.setSize(srcObject.getSize());
         destObject.setStorageClass(srcObject.getStorageClass());
         destObject.seteTag(srcObject.geteTag());
-        destObject.setIsLatest(Boolean.TRUE);
+        destObject.markLatest();
 
         // Prep the request to be sent to the backend
         request.setSourceObject(srcObject.getObjectUuid());
@@ -1691,7 +1692,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         return reply;
 
       } else {
-        throw new AccessDeniedException(destinationBucket + "/" + destinationKey);
+        throw new AccessDeniedOnCreateException(destinationBucket + "/" + destinationKey);
       }
     } else {
       throw new AccessDeniedException(sourceBucket + "/" + sourceKey);
@@ -2676,7 +2677,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         throw new InternalErrorException(partEntity.getResourceFullName(), e);
       }
     } else {
-      throw new AccessDeniedException(request.getBucket());
+      throw new AccessDeniedOnCreateException(request.getBucket());
     }
   }
 

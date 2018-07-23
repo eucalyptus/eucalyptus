@@ -39,6 +39,7 @@
 
 package com.eucalyptus.ws;
 
+import static org.jboss.netty.channel.ChannelState.INTEREST_OPS;
 import java.net.SocketAddress;
 import com.eucalyptus.auth.AuthContextSupplier;
 import static com.eucalyptus.util.RestrictedTypes.findPolicyVendor;
@@ -150,7 +151,47 @@ public class Handlers {
   public static ChannelHandler newHttpResponseHeaderHandler( ) { return new HttpResponseHeaderHandler( ); }
 
   private static ChannelHandler newChunkedWriteHandler( ) {
-    return new ChunkedWriteHandler( );
+    return new ChunkedWriteHandler( ) {
+      private void flush( final ChannelHandlerContext ctx ) {
+        try {
+          beforeRemove( ctx );
+        } catch ( final Exception e ) {
+          LOG.warn( "Unexpected exception while sending chunks.", e );
+        }
+      }
+
+      @Override
+      public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
+        if ( e instanceof ChannelStateEvent ) {
+          final ChannelStateEvent cse = (ChannelStateEvent) e;
+          if ( INTEREST_OPS == cse.getState( ) ) {
+            // flush off the io thread to avoid blocking other channels
+            pipelineExecutionHandler( ).getExecutor( ).execute( () -> flush( ctx ) );
+            ctx.sendUpstream(e);
+            return;
+          }
+        }
+        super.handleUpstream( ctx, e );
+      }
+
+      @Override
+      public void handleDownstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
+        final Channel channel = ctx.getChannel();
+        final boolean moveFlush = e instanceof MessageEvent && channel.isWritable( );
+        if ( moveFlush ) {
+          final Channel flushSuppressingChannel = new DelegatingChannel( channel ) {
+            @Override public boolean isWritable( ) { return false; }
+          };
+          super.handleDownstream( new DelegatingChannelHandlerContext( ctx ) {
+            @Override public Channel getChannel( ) { return flushSuppressingChannel; }
+          }, e );
+          // flush off the io thread to avoid blocking other channels
+          pipelineExecutionHandler( ).getExecutor( ).execute( () -> flush( ctx ) );
+        } else {
+          super.handleDownstream( ctx, e );
+        }
+      }
+    };
   }
 
   private static ChannelHandler newHttpResponseEncoder( ) {

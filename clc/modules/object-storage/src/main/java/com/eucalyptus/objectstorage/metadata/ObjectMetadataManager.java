@@ -161,6 +161,20 @@ public interface ObjectMetadataManager {
       String startVersionId, boolean latestOnly) throws Exception;
 
   /**
+   * List the objects in the given bucket requiring cleanup
+   *
+   * @param bucket
+   * @param maxRecordCount
+   * @param prefix
+   * @param delimiter
+   * @param startKey
+   * @return
+   * @throws TransactionException
+   */
+  public PaginatedResult<ObjectEntity> listForCleanupPaginated(Bucket bucket, int maxRecordCount, String prefix, String delimiter, String startKey)
+      throws Exception;
+
+  /**
    * Delete the object entity
    * 
    * @param objectToDelete
@@ -212,17 +226,6 @@ public interface ObjectMetadataManager {
    * @throws Exception
    */
   public void flushUploads(Bucket bucket) throws Exception;
-
-  /**
-   * Similar to cleanupInvalidObjects but does not preserve the latest. Will set all 'null' versioned object records to 'deleting' state. This is
-   * intended for synchronous invocation during object creation to invalidate all extant 'null' versions of the object to make quota-enforcement
-   * feasible.
-   * 
-   * @param bucket
-   * @param objectKey
-   * @throws Exception
-   */
-  public void cleanupAllNullVersionedObjectRecords(Bucket bucket, String objectKey) throws Exception;
 
   /**
    * Returns objects stuck in 'creating' state that are determined to be failed. Failure detection is based on timestamp comparision is limited by the

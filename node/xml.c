@@ -335,15 +335,15 @@ static int path_check(const char *path, const char *name)
 static int write_xml_file(const xmlDocPtr doc, const char *instanceId, const char *path, const char *type)
 {
     int ret = 0;
-    mode_t old_umask = umask(~BACKING_FILE_PERM);   // ensure the generated XML file has the right perms
+    umask(0022);   // ensure the generated XML file has the right perms
 
     chmod(path, BACKING_FILE_PERM);    // ensure perms in case when XML file exists
     if ((ret = xmlSaveFormatFileEnc(path, doc, "UTF-8", 1)) > 0) {
         LOGTRACE("[%s] wrote %s XML to %s\n", instanceId, type, path);
+        chmod(path, BACKING_FILE_PERM);
     } else {
         LOGERROR("[%s] failed to write %s XML to %s\n", instanceId, type, path);
     }
-    umask(old_umask);
     return ((ret > 0) ? (EUCA_OK) : (EUCA_ERROR));
 }
 

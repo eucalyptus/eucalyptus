@@ -39,5 +39,9 @@ import java.lang.annotation.RetentionPolicy;
 @java.lang.annotation.Documented
 @org.springframework.stereotype.Component
 public @interface ComponentNamed {
+
+  //enum ComponentHostDispatchStrategy{ None, All, Selected } //TODO:STEVE: do we need this? just add advice when dispatch is required?
+
   String value() default "";
+  //ComponentHostDispatchStrategy hostDispatchStrategy() default ComponentHostDispatchStrategy.None;
 }
