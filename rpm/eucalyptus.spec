@@ -545,7 +545,6 @@ cp -Rp admin-tools/conf/* $RPM_BUILD_ROOT/%{_sysconfdir}/eucalyptus-admin
 
 %files sc
 %attr(-,eucalyptus,eucalyptus) %dir /var/lib/eucalyptus/volumes
-/usr/share/eucalyptus/PopulateSnapPoints.groovy
 
 
 %files cc
@@ -704,6 +703,9 @@ usermod -a -G libvirt eucalyptus || :
 
 
 %changelog
+* Tue Jul 24 2018 Steve Jones <steve.jones@appscale.com> - 5.0
+- Remove PopulateSnapPoints.groovy script
+
 * Thu May 10 2018 Steve Jones <steve.jones@appscale.com> - 4.4.4
 - Update libvirt requirement to 2.0.0+
 
