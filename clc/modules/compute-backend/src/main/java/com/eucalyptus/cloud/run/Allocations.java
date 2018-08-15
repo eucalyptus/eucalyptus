@@ -271,16 +271,15 @@ public class Allocations {
       };
       this.request = inferRequest();
     }
-     private RunInstancesType inferRequest( ) {
-      return new RunInstancesType() {
-        {
-          this.setMinCount(1);
-          this.setMaxCount(1);
-          this.setImageId(bootSet.getMachine().getDisplayName());
-          this.setAvailabilityZone(partition.getName());
-          this.setInstanceType(vmType.getName());
-        }
-      };
+
+    private RunInstancesType inferRequest( ) {
+      final RunInstancesType runInstances = new RunInstancesType( );
+      runInstances.setMinCount(1);
+      runInstances.setMaxCount(1);
+      runInstances.setImageId(bootSet.getMachine().getDisplayName());
+      runInstances.setAvailabilityZone(partition.getName());
+      runInstances.setInstanceType(vmType.getName());
+      return runInstances;
     }
 
     public AllocationType getAllocationType( ) {
