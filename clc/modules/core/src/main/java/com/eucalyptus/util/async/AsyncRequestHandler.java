@@ -50,10 +50,12 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.WildcardNameMatcher;
 import com.eucalyptus.util.async.AsyncRequestChannelPoolMap.ChannelPoolKey;
@@ -203,12 +205,21 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> e
     }
   }
 
-  private void teardown( Throwable t ) {
-    if ( t == null ) {
-      t = new NullPointerException( "teardown() called with null argument." );
-    }
-    this.logRequestFailure( t );
-    this.response.setException( t );
+  private void respond( final Runnable runnable ) {
+    Threads.lookup( Empyrean.class, AsyncRequestHandler.class, "response" ).submit( runnable );
+  }
+
+  private void teardown( final Throwable throwable ) {
+    final Throwable t = throwable == null ?
+        new NullPointerException( "teardown() called with null argument." ) :
+        throwable;
+    respond( () -> {
+      try {
+        this.logRequestFailure( t );
+      } finally {
+        this.response.setException( t );
+      }
+    } );
     if ( this.acquireFuture != null ) {
       this.maybeCloseChannel( );
     }
@@ -277,7 +288,7 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> e
   public void exceptionCaught( final ChannelHandlerContext ctx, final Throwable cause ) throws Exception {
     Logs.extreme( ).error( cause, cause );
     if ( cause instanceof EucalyptusRemoteFault ) {//GRZE: treat this like a normal response, set the response and close the channel.
-      this.response.setException( cause );
+      respond( () -> this.response.setException( cause ) );
       if ( this.acquireFuture != null ) {
         this.maybeCloseChannel( );
       }
@@ -295,8 +306,13 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> e
           if ( !msg.get_return( true ) ) {
             this.teardown( new FailedRequestException( "Cluster response includes _return=false", msg ) );
           } else {
-            logMessage( response );
-            this.response.set( msg );
+            respond( () -> {
+              try {
+                logMessage( response );
+              } finally {
+                this.response.set( msg );
+              }
+            } );
             if ( HttpHeaders.isKeepAlive( ((IoMessage) message).getHttpMessage( ) ) ) {
               releaseChannel( ctx.channel( ) );
             } else {
