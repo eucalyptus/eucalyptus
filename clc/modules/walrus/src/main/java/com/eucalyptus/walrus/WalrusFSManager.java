@@ -328,7 +328,6 @@ public class WalrusFSManager extends WalrusManager {
       throw new InternalErrorException("Failed to delete bucket=" + bucketName, e);
     }
 
-    reply.setStatus(HttpResponseStatus.NO_CONTENT);
     reply.setStatusMessage("NO CONTENT");
     return reply;
   }
@@ -699,7 +698,6 @@ public class WalrusFSManager extends WalrusManager {
     }
 
     // Always set the response to 204 NO CONTENT
-    reply.setStatus(HttpResponseStatus.NO_CONTENT);
     reply.setStatusMessage("NO CONTENT");
     return reply;
   }

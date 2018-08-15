@@ -28,7 +28,6 @@
  ************************************************************************/
 package com.eucalyptus.walrus.msgs;
 
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.component.annotation.ComponentMessage;
 import com.eucalyptus.storage.msgs.BucketLogData;
 import com.eucalyptus.walrus.WalrusBackend;
@@ -38,7 +37,6 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 public class WalrusResponseType extends BaseMessage {
 
   private BucketLogData logData;
-  private HttpResponseStatus status;
   private String statusMessage;
 
   public BucketLogData getLogData( ) {
@@ -47,14 +45,6 @@ public class WalrusResponseType extends BaseMessage {
 
   public void setLogData( BucketLogData logData ) {
     this.logData = logData;
-  }
-
-  public HttpResponseStatus getStatus( ) {
-    return status;
-  }
-
-  public void setStatus( HttpResponseStatus status ) {
-    this.status = status;
   }
 
   public String getStatusMessage( ) {

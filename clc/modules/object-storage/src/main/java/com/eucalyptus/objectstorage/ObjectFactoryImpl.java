@@ -558,12 +558,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
       deleteRequest.setKey(entity.getObjectUuid());
 
       try {
-        deleteResponse = provider.deleteObject(deleteRequest);
-        if (!(HttpResponseStatus.NO_CONTENT.equals(deleteResponse.getStatus()) || HttpResponseStatus.OK.equals(deleteResponse.getStatus()))) {
-          LOG.trace("Backend did not confirm deletion of " + deleteRequest.getBucket() + "/" + deleteRequest.getKey() + " via request: "
-              + deleteRequest.toString());
-          throw new Exception("Object could not be confirmed as deleted.");
-        }
+        provider.deleteObject(deleteRequest);
       } catch (S3Exception e) {
         if (HttpResponseStatus.NOT_FOUND.equals(e.getStatus())) {
           // Ok, fall through.
