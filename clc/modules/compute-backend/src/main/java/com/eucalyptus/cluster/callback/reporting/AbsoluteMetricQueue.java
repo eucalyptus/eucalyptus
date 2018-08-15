@@ -287,7 +287,7 @@ public class AbsoluteMetricQueue {
   private static class DBCleanupService implements Runnable {
     @Override
     public void run() {
-      LOG.info("Calling absolute metric history (cloud) db cleanup service");
+      LOG.debug("Calling absolute metric history (cloud) db cleanup service");
       if (!( Bootstrap.isOperational() &&
         Topology.isEnabled(Eucalyptus.class) )) {
         LOG.info("Eucalyptus service is not ENABLED");
@@ -301,7 +301,7 @@ public class AbsoluteMetricQueue {
         LOG.error(ex);
         LOG.error(ex, ex);
       }
-      LOG.info("Done cleaning up absolute metric history (cloud) db");
+      LOG.debug("Done cleaning up absolute metric history (cloud) db");
     }
   }
 
