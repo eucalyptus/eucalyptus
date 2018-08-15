@@ -849,7 +849,7 @@ public class NetworkInfoBroadcaster {
 
     // populate internet gateways
     info.addAllInternetGateways( Stream.ofAll( internetGateways ).filter( gateway ->
-      activeVpcs.contains(gateway.vpcId().get())
+        gateway.vpcId().isDefined() && activeVpcs.contains(gateway.vpcId().get())
     ).map( internetGateway ->
       BNI.internetGateway( )
           .name( internetGateway.getId() )
