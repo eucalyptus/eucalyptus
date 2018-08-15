@@ -1158,7 +1158,7 @@ public class Topology {
       @Override
       public ServiceConfiguration call( ) throws Exception {
         if ( Bootstrap.isShuttingDown( ) ) {
-          throw Exceptions.toUndeclared( "System is shutting down." );
+          throw new OrderlyTransitionException( "System is shutting down." );
         } else {
           final Long serviceStart = System.currentTimeMillis( );
           Logs.extreme( ).debug( EventRecord.here( Topology.class, EventType.DEQUEUE, function.toString( ), config.getFullName( ).toString( ),
