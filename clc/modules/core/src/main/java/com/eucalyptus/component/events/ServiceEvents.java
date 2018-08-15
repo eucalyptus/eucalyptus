@@ -85,9 +85,6 @@ public class ServiceEvents {
         case STOPPED:
           msg = new StopServiceType( );
           break;
-//TODO:GRZE: Handle other state transitions here.
-//        case INITIALIZED:
-//        case LOADED:
         case NOTREADY:
           msg = new StartServiceType( );
           break;
@@ -96,7 +93,7 @@ public class ServiceEvents {
       }
       if ( msg != null ) {
         msg.getServices( ).add( TypeMappers.transform( config, ServiceId.class ) );
-        for ( Host h : Hosts.list( ) ) {
+        for ( Host h : Hosts.listBooted( ) ) {
           if ( !h.isLocalHost( ) && !h.getHostAddresses( ).contains( config.getInetAddress( ) ) ) {
             try {
               AsyncRequests.sendSync( ServiceConfigurations.createEphemeral( Empyrean.INSTANCE, h.getBindAddress( ) ), msg );
