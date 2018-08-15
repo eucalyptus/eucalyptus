@@ -268,7 +268,6 @@ class CloudFormationBindingTest extends QueryBindingTestSupport {
         }'''.stripIndent( ),
         CloudFormationQueryBinding.jsonWriter( ).withDefaultPrettyPrinter().writeValueAsString( new CloudFormationErrorResponse(
             effectiveUserId: '',
-            statusMessage: '',
             _epoch: 42,
             requestId: 'edbe8968-c437-11e4-bac0-25d29c2758a9',
             error: new Error(

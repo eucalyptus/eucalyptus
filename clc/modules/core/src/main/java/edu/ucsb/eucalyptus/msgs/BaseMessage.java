@@ -44,8 +44,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.UUID;
 
-import javax.persistence.Transient;
-
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -56,7 +54,6 @@ import org.jibx.runtime.JiBXException;
 
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.http.MappingHttpMessage;
@@ -69,14 +66,11 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class BaseMessage implements BaseMessageMarker {
-  @Transient
-  private static Logger        LOG       = Logger.getLogger( BaseMessage.class );
   private String               correlationId;
   private String               userId;
   private String               effectiveUserId;
   private BaseCallerContext    callerContext;
   private Boolean              _return   = true;
-  private String               statusMessage;
   private Integer              _epoch;                                           //NOTE:GRZE: intentionally violating naming conventions to avoid shadowing/conflicts
   private ArrayList<ServiceId> _services = Lists.newArrayList( );                //NOTE:GRZE: intentionally violating naming conventions to avoid shadowing/conflicts
   private ArrayList<ServiceId> _disabledServices = Lists.newArrayList( );                //NOTE:GRZE: intentionally violating naming conventions to avoid shadowing/conflicts
@@ -93,7 +87,6 @@ public class BaseMessage implements BaseMessageMarker {
     this( );
     this.userId = userId;
     this.effectiveUserId = userId;
-    this.statusMessage = null;
   }
   
   public BaseMessage( BaseMessage copy ) {
@@ -160,14 +153,6 @@ public class BaseMessage implements BaseMessageMarker {
   
   public void set_return( Boolean return1 ) {
     this._return = return1;
-  }
-  
-  public String getStatusMessage( ) {
-    return this.statusMessage;
-  }
-  
-  public void setStatusMessage( String statusMessage ) {
-    this.statusMessage = statusMessage;
   }
   
   @Deprecated
@@ -326,8 +311,7 @@ public class BaseMessage implements BaseMessageMarker {
     buf.append( this.getClass( ).getSimpleName( ) )
        .append( ":" ).append( this.correlationId )
        .append( ":return=" ).append( this.get_return( ) )
-       .append( ":epoch=" ).append( this.get_epoch( ) )
-       .append( ":status=" ).append( this.getStatusMessage( ) );
+       .append( ":epoch=" ).append( this.get_epoch( ) );
     return buf.toString( );
   }
   

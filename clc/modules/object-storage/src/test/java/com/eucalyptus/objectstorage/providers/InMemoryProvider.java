@@ -543,7 +543,6 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
       response.setContentDisposition(request.getContentDisposition());
       response.setLastModified(new Date());
       response.set_return(true);
-      LOG.debug("InMemory return response: " + response.getStatusMessage());
       return response;
     } catch (Exception e) {
       LOG.debug("InMemory PutObject exception: ", e);
@@ -688,7 +687,6 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
       response.setVersionId("null");
       response.setLastModified(new Date().toString());
       response.set_return(true);
-      LOG.debug("InMemory return response: " + response.getStatusMessage());
       return response;
     } catch (Exception e) {
       LOG.debug("InMemory PutObject exception: ", e);
@@ -740,7 +738,6 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
       response.setBucket(request.getBucket());
       response.setKey(request.getKey());
       response.set_return(true);
-      LOG.debug("InMemory return response: " + response.getStatusMessage());
       return response;
     } catch (Exception e) {
       LOG.debug("InMemory PutObject exception: ", e);
@@ -799,7 +796,6 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
       response.setEtag(memObj.eTag);
       response.setLastModified(new Date());
       response.set_return(true);
-      LOG.debug("InMemory return response: " + response.getStatusMessage());
       return response;
     } catch (Exception e) {
       LOG.debug("InMemory UploadPart exception: ", e);
@@ -869,7 +865,6 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
       response.setBucket(request.getBucket());
       response.setVersionId(finishedObj.versionId);
       response.set_return(true);
-      LOG.debug("InMemory return response: " + response.getStatusMessage());
       return response;
     } catch (Exception e) {
       LOG.debug("InMemory abortMultipartUpload exception: ", e);
@@ -893,7 +888,6 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
 
       AbortMultipartUploadResponseType response = request.getReply();
       response.set_return(true);
-      LOG.debug("InMemory return response: " + response.getStatusMessage());
       return response;
     } catch (Exception e) {
       LOG.debug("InMemory abortMultipartUpload exception: ", e);

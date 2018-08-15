@@ -128,7 +128,7 @@ public class IoSoapHandler extends ChannelDuplexHandler {
     if ( msg instanceof EucalyptusErrorMessageType ) {
       EucalyptusErrorMessageType errMsg = ( EucalyptusErrorMessageType ) msg;
       soapEnvelopeOption = Option.some( Pair.of(
-          Binding.createFault( errMsg.getSource( ), errMsg.getMessage( ), errMsg.getStatusMessage( ) ),
+          Binding.createFault( errMsg.getSource( ), errMsg.getMessage( ), errMsg.getMessage( ) ),
           org.jboss.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST.getCode( )
       ) );
     } else if ( msg instanceof ExceptionResponseType ) {

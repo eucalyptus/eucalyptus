@@ -534,7 +534,7 @@ class ObjectStorageProviderClientTest {
     try {
       headObjRequest.setKey('nonexistentkey')
       objResponse = provider.headObject(headObjRequest)
-      fail('Should have thrown exception on HEAD of fake object: ' + objResponse.getStatusMessage())
+      fail('Should have thrown exception on HEAD of fake object: ' + objResponse)
     } catch (EucalyptusCloudException e) {
       println 'Correctly caught exception on HEAD of non-existent object ' + e
 

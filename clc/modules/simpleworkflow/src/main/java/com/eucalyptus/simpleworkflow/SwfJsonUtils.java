@@ -122,7 +122,7 @@ public class SwfJsonUtils {
 
   // TODO:STEVE: add unit test to ensure we don't start using unexpected properties from BaseMessage
   // ignore properties of BaseMessage
-  @JsonIgnoreProperties( { "correlationId", "effectiveUserId", "reply", "statusMessage", "userId",
+  @JsonIgnoreProperties( { "correlationId", "effectiveUserId", "reply", "userId",
       "_disabledServices", "_notreadyServices", "_stoppedServices", "_epoch", "_services", "_return",
       "callerContext" } )
   private interface BindingMixIn {

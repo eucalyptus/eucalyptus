@@ -178,7 +178,6 @@ public class ObjectFactoryImpl implements ObjectFactory {
 
         @Override
         public CopyObjectResponseType call() throws Exception {
-          LOG.debug("calling copyObject");
           CopyObjectResponseType response;
           try {
             response = provider.copyObject(request);
@@ -190,7 +189,6 @@ public class ObjectFactoryImpl implements ObjectFactory {
               throw ex;
             }
           }
-          LOG.debug("Done with copyObject. " + response.getStatusMessage());
           return response;
         }
       };
@@ -326,9 +324,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
 
         @Override
         public PutObjectResponseType call() throws Exception {
-          LOG.debug("Putting data");
           PutObjectResponseType response = provider.putObject(putRequest, content);
-          LOG.debug("Done with put. Response status: " + response.getStatusMessage());
           return response;
         }
       };
@@ -612,11 +608,9 @@ public class ObjectFactoryImpl implements ObjectFactory {
       initRequest.setStorageClass(upload.getStorageClass());
       initRequest.setAccessControlList(upload.getAccessControlPolicy().getAccessControlList());
 
-      LOG.trace("Initiating MPU on backend");
       InitiateMultipartUploadResponseType response = provider.initiateMultipartUpload(initRequest);
       upload.setObjectModifiedTimestamp(response.getLastModified());
       upload.setUploadId(response.getUploadId());
-      LOG.trace("Done with MPU init on backend. " + response.getStatusMessage());
     } catch (Exception e) {
       LOG.error("InitiateMPU failure to backend for bucketuuid / objectuuid : " + upload.getBucket().getBucketUuid() + "/" + upload.getObjectUuid(),
           e);
@@ -684,9 +678,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
 
         @Override
         public UploadPartResponseType call() throws Exception {
-          LOG.trace("Putting data");
           UploadPartResponseType response = provider.uploadPart(putRequest, content);
-          LOG.trace("Done with put. " + response.getStatusMessage());
           return response;
         }
       };
@@ -770,7 +762,6 @@ public class ObjectFactoryImpl implements ObjectFactory {
         @Override
         public CompleteMultipartUploadResponseType call() throws Exception {
           CompleteMultipartUploadResponseType response = provider.completeMultipartUpload(commitRequest);
-          LOG.debug("Done with multipart upload. " + response.getStatusMessage());
           return response;
         }
       };
