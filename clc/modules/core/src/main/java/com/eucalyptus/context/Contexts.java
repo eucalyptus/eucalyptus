@@ -316,8 +316,7 @@ public class Contexts {
     try {
       Contexts.responseError( lookup( ).getCorrelationId( ), cause );
     } catch ( Exception e ) {
-      LOG.error( e );
-      Logs.extreme( ).error( cause, cause );
+      LOG.error( "Unable to send error response: " + e.getMessage( ) + "; " + cause.getMessage( ), cause );
     }
   }
 
