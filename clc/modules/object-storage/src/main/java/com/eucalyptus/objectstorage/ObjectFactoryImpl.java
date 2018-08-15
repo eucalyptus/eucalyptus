@@ -263,7 +263,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
     pot.setMetaData(gort.getMetaData());
     pot.setUser(requestUser);
     pot.setContentLength(gort.getSize().toString());
-    if (metadataDirective != null && "REPLACE".equals(metadataDirective)) {
+    if ("REPLACE".equals(metadataDirective)) {
       pot.setMetaData(request.getMetaData());
     } else if (metadataDirective == null || "".equals(metadataDirective) || "COPY".equals(metadataDirective)) {
       pot.setMetaData(gort.getMetaData());
@@ -283,7 +283,6 @@ public class ObjectFactoryImpl implements ObjectFactory {
     response.setVersionId(port.getVersionId());
     response.setKey(request.getDestinationObject());
     response.setBucket(request.getDestinationBucket());
-    response.setStatusMessage(port.getStatusMessage());
     response.setEtag(port.getEtag());
     response.setMetaData(port.getMetaData());
     // Last modified date in copy response is in ISO8601 format as per S3 API
@@ -538,7 +537,6 @@ public class ObjectFactoryImpl implements ObjectFactory {
 
     // Issue delete to backend
     DeleteObjectType deleteRequest;
-    DeleteObjectResponseType deleteResponse;
     LOG.trace("Deleting object " + entity.getObjectUuid() + ".");
     deleteRequest = new DeleteObjectType();
 

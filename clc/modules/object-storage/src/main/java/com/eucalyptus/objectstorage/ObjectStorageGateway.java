@@ -612,7 +612,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
     HeadBucketResponseType reply = request.getReply();
     reply.setBucket(bucket.getBucketName());
     reply.setStatus(HttpResponseStatus.OK);
-    reply.setStatusMessage("OK");
     reply.setTimestamp(new Date());
     setCorsInfo(request, reply, bucket);
     return reply;
@@ -676,7 +675,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
           reply.setStatus(HttpResponseStatus.OK);
           reply.setBucket(bucket.getBucketName());
           reply.setTimestamp(new Date());
-          reply.setStatusMessage("OK");
           LOG.trace("CorrelationId: " + request.getCorrelationId() + " Responding with " + reply.getStatus().toString());
           return reply;
         } catch (BucketAlreadyExistsException e) {
@@ -698,7 +696,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
             CreateBucketResponseType reply = request.getReply();
             reply.setStatus(HttpResponseStatus.OK);
             reply.setBucket(bucket.getBucketName());
-            reply.setStatusMessage("OK");
             LOG.trace("CorrelationId: " + request.getCorrelationId() + " Responding with " + reply.getStatus().toString());
             return reply;
           } else {
@@ -751,7 +748,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
     // Return success even if no deletion was needed. This is per s3-spec.
     DeleteBucketResponseType reply = request.getReply();
     reply.setStatus(HttpResponseStatus.NO_CONTENT);
-    reply.setStatusMessage("NoContent");
     LOG.trace("CorrelationId: " + request.getCorrelationId() + " Responding with " + reply.getStatus().toString());
     return reply;
   }
@@ -877,10 +873,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     PostObjectResponseType reply = request.getReply();
     reply.setEtag(etag);
     reply.setLastModified(putObjectResponse.getLastModified());
-    reply.set_return(putObjectResponse.get_return());
     reply.setMetaData(putObjectResponse.getMetaData());
-    reply.setErrorCode(putObjectResponse.getErrorCode());
-    reply.setStatusMessage(putObjectResponse.getStatusMessage());
 
     String successActionRedirect = request.getSuccessActionRedirect();
     if (successActionRedirect != null) {
@@ -929,7 +922,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
       // Nothing to do, object doesn't exist. Return 204 per S3 spec
       DeleteObjectResponseType reply = request.getReply();
       reply.setStatus(HttpResponseStatus.NO_CONTENT);
-      reply.setStatusMessage("No Content");
       bucket = ensureBucketExists(request.getBucket());
       if ( bucket != null) {
         setCorsInfo(request, reply, bucket);
@@ -958,7 +950,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
       DeleteObjectResponseType reply = request.getReply();
       reply.setStatus(HttpResponseStatus.NO_CONTENT);
-      reply.setStatusMessage("No Content");
       if (responseEntity != null) {
         reply.setVersionId(responseEntity.getVersionId());
         if (responseEntity.getIsDeleteMarker() != null && responseEntity.getIsDeleteMarker())
@@ -2667,7 +2658,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
         UploadPartResponseType response = request.getReply();
         response.setLastModified(updatedEntity.getObjectModifiedTimestamp());
         response.setEtag(updatedEntity.geteTag());
-        response.setStatusMessage("OK");
         response.setSize(updatedEntity.getSize());
         setCorsInfo(request, response, bucket);
         return response;

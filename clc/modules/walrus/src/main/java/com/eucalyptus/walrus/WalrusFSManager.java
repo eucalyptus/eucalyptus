@@ -328,7 +328,6 @@ public class WalrusFSManager extends WalrusManager {
       throw new InternalErrorException("Failed to delete bucket=" + bucketName, e);
     }
 
-    reply.setStatusMessage("NO CONTENT");
     return reply;
   }
 
@@ -697,8 +696,6 @@ public class WalrusFSManager extends WalrusManager {
       throw new InternalErrorException("Failed to delete object-key=" + objectKey + ", bucket=" + bucketName, e);
     }
 
-    // Always set the response to 204 NO CONTENT
-    reply.setStatusMessage("NO CONTENT");
     return reply;
   }
 

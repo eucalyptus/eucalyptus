@@ -37,7 +37,6 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 public class WalrusResponseType extends BaseMessage {
 
   private BucketLogData logData;
-  private String statusMessage;
 
   public BucketLogData getLogData( ) {
     return logData;
@@ -45,13 +44,5 @@ public class WalrusResponseType extends BaseMessage {
 
   public void setLogData( BucketLogData logData ) {
     this.logData = logData;
-  }
-
-  public String getStatusMessage( ) {
-    return statusMessage;
-  }
-
-  public void setStatusMessage( String statusMessage ) {
-    this.statusMessage = statusMessage;
   }
 }

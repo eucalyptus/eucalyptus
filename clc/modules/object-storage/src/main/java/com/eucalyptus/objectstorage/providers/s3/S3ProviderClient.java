@@ -576,7 +576,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
       // Save the owner info in response?
       reply.setBucket(request.getBucket());
       reply.setStatus(HttpResponseStatus.OK);
-      reply.setStatusMessage("OK");
     } catch (AmazonServiceException ex) {
       LOG.debug("Got service error from backend: " + ex.getMessage(), ex);
       throw S3ExceptionMapper.fromAWSJavaSDK(ex);
@@ -670,7 +669,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
     try {
       DeleteObjectResponseType reply = request.getReply();
       reply.setStatus(HttpResponseStatus.NO_CONTENT);
-      reply.setStatusMessage("NO CONTENT");
 
       internalS3Client = getS3Client(requestUser);
       AmazonS3Client s3Client = internalS3Client.getS3Client();
@@ -928,7 +926,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
       SetBucketLoggingConfigurationRequest loggingRequest = new SetBucketLoggingConfigurationRequest(request.getBucket(), config);
       s3Client.setBucketLoggingConfiguration(loggingRequest);
       reply.setStatus(HttpResponseStatus.OK);
-      reply.setStatusMessage("OK");
     } catch (AmazonServiceException e) {
       LOG.debug("Error from backend", e);
       throw S3ExceptionMapper.fromAWSJavaSDK(e);
@@ -1078,7 +1075,6 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
       s3Client.deleteVersion(request.getBucket(), request.getKey(), request.getVersionId());
       DeleteVersionResponseType reply = request.getReply();
       reply.setStatus(HttpResponseStatus.NO_CONTENT);
-      reply.setStatusMessage("NO CONTENT");
       return reply;
     } catch (AmazonServiceException e) {
       LOG.debug("Error from backend", e);
