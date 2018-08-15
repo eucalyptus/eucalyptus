@@ -861,6 +861,10 @@ public class Threads {
     return enqueue( ServiceConfigurations.createBogus( config, ownerType ), workers, callable );
   }
 
+  public static <C> Future<C> enqueue( final ServiceConfiguration config, final Class<?> ownerType, final Callable<C> callable ) {
+    return enqueue( config, ownerType, NUM_QUEUE_WORKERS, callable );
+  }
+
   public static <C> Future<C> enqueue( final ServiceConfiguration config, final Class<?> ownerType, final Integer workers, final Callable<C> callable, String correlationId ) {
     return enqueue( ServiceConfigurations.createBogus( config, ownerType ), workers, callable, correlationId );
   }

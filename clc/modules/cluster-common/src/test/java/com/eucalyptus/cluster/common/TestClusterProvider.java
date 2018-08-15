@@ -33,7 +33,6 @@ import com.eucalyptus.cluster.common.provider.ClusterProvider;
 import com.eucalyptus.cluster.common.msgs.NodeType;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceRegistrationException;
 
 /**
  *
@@ -43,9 +42,6 @@ public class TestClusterProvider implements ClusterProvider {
   private String name;
   private String partition;
   private String hostname;
-
-  public TestClusterProvider( ) {
-  }
 
   @Override
   public String getName( ) {
@@ -96,19 +92,19 @@ public class TestClusterProvider implements ClusterProvider {
   }
 
   @Override
-  public void start( ) throws ServiceRegistrationException {
+  public void start( ) {
   }
 
   @Override
-  public void stop( ) throws ServiceRegistrationException {
+  public void stop( ) {
   }
 
   @Override
-  public void enable( ) throws ServiceRegistrationException {
+  public void enable( ) {
   }
 
   @Override
-  public void disable( ) throws ServiceRegistrationException {
+  public void disable( ) {
   }
 
   @Override

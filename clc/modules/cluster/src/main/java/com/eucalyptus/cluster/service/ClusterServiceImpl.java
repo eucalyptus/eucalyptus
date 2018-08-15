@@ -41,6 +41,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
+
+import com.eucalyptus.component.annotation.ComponentNamed;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.common.broadcast.BNI;
 import com.eucalyptus.cluster.common.broadcast.BNIInstance;
@@ -114,6 +116,7 @@ import com.eucalyptus.cluster.service.conf.ClusterEucaConfLoader;
 import com.eucalyptus.cluster.service.migration.Migrations;
 import com.eucalyptus.cluster.service.node.ClusterNode;
 import com.eucalyptus.cluster.service.node.ClusterNodeActivities;
+import com.eucalyptus.cluster.service.node.ClusterNodeRuntimeException;
 import com.eucalyptus.cluster.service.node.ClusterNodes;
 import com.eucalyptus.cluster.service.scheduler.ScheduleResource;
 import com.eucalyptus.cluster.service.scheduler.Scheduler;
@@ -124,7 +127,6 @@ import com.eucalyptus.cluster.service.vm.ClusterVmInterface;
 import com.eucalyptus.cluster.service.vm.ClusterVms;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceStatusType;
@@ -140,10 +142,12 @@ import io.vavr.collection.Stream;
 import io.vavr.control.Option;
 
 /**
+ * Default implementation for the cluster controller service.
  *
+ * @see com.eucalyptus.cluster.proxy.ProxyClusterServiceImpl
  */
 @ComponentNamed("clusterService")
-public class ClusterServiceImpl implements ClusterService, ClusterEmpyreanService {
+public class ClusterServiceImpl implements ClusterFullService {
 
   private static final Logger logger = Logger.getLogger( ClusterServiceImpl.class );
 
@@ -230,7 +234,9 @@ public class ClusterServiceImpl implements ClusterService, ClusterEmpyreanServic
         broadcastNetworkInfo.setNetworkInfo( request.getNetworkInfo( ) );
         nodeService.broadcastNetworkInfoAsync( broadcastNetworkInfo );
       }
-    } catch ( Exception e ) {
+    } catch ( final ClusterNodeRuntimeException e ) {
+      logger.debug( "Incomplete broadcast: " + e.getMessage( ) );
+    } catch ( final Exception e ) {
       logger.error( e, e );
     }
 

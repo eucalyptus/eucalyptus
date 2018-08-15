@@ -884,8 +884,9 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
                 LOG.info( "Attempted terminate timed out in queue for " + instanceId );
               } else if ( Partitions.exists( partition )  ) try {
                 final TerminateCallback cb = new TerminateCallback( instanceId );
-                AsyncRequests.newRequest(  cb ).sendSync(
-                    Topology.lookup( ClusterController.class, Partitions.lookupByName( partition ) ) );
+                AsyncRequests.sendSync(
+                    Topology.lookup( ClusterController.class, Partitions.lookupByName( partition ) ),
+                    cb );
               } catch ( Exception ex ) {
                 LOG.error( ex );
                 Logs.extreme( ).error( ex, ex );

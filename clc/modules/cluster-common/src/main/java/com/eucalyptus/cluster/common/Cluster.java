@@ -146,11 +146,6 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster> {
     clusterProvider.init( this );
   }
 
-  @Deprecated
-  public ClusterProvider getClusterProvider( ) {
-    return clusterProvider;
-  }
-
   @Override
   public String getName( ) {
     return this.configuration.getName();
@@ -210,21 +205,21 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster> {
     }
   }
   
-  public void enable( ) throws ServiceRegistrationException {
+  public void enable( ) {
     clusterProvider.enable( );
   }
   
-  public void disable( ) throws ServiceRegistrationException {
+  public void disable( ) {
     try {
       clusterProvider.disable();
     } finally {
       try {
-        ClusterRegistry.getInstance( ).disable(this.getName());
-      } catch ( Exception ex ) {}
+        ClusterRegistry.getInstance( ).disable( this.getName( ) );
+      } catch ( Exception ignore ) {}
     }
   }
   
-  public void stop( ) throws ServiceRegistrationException {
+  public void stop( ) {
     try {
       clusterProvider.stop();
     } finally {

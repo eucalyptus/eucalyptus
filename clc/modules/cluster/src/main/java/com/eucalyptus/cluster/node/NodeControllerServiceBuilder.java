@@ -37,7 +37,7 @@
  * NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.cluster.proxy.node;
+package com.eucalyptus.cluster.node;
 
 import org.apache.log4j.Logger;
 
@@ -54,13 +54,13 @@ import com.eucalyptus.cluster.common.msgs.NodeInfo;
  * @author chris grzegorczyk <grze@eucalyptus.com>
  * @todo doc
  */
-@ComponentPart(ProxyNodeController.class)
-public class ProxyNodeServiceBuilder implements ServiceBuilder<ProxyNodeConfiguration> {
-  private static Logger LOG = Logger.getLogger( ProxyNodeServiceBuilder.class );
+@ComponentPart(NodeController.class)
+public class NodeControllerServiceBuilder implements ServiceBuilder<NodeControllerConfiguration> {
+  private static Logger LOG = Logger.getLogger( NodeControllerServiceBuilder.class );
 
   @Override
   public ComponentId getComponentId() {
-    return ComponentIds.lookup( ProxyNodeController.class );
+    return ComponentIds.lookup( NodeController.class );
   }
 
   @Override
@@ -141,13 +141,13 @@ public class ProxyNodeServiceBuilder implements ServiceBuilder<ProxyNodeConfigur
   }
   
   @Override
-  public ProxyNodeConfiguration newInstance( String partition, String name, String host, Integer port ) {
-    return new ProxyNodeConfiguration( partition, host );
+  public NodeControllerConfiguration newInstance( String partition, String name, String host, Integer port ) {
+    return new NodeControllerConfiguration( partition, host );
   }
 
   @Override
-  public ProxyNodeConfiguration newInstance() {
-    return new ProxyNodeConfiguration();
+  public NodeControllerConfiguration newInstance() {
+    return new NodeControllerConfiguration();
   }
 
 }

@@ -37,43 +37,29 @@
  * NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.cluster.proxy;
+package com.eucalyptus.cluster.node;
 
 import com.eucalyptus.cluster.common.ClusterController;
-import com.eucalyptus.component.annotation.ComponentApi;
-import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.InternalService;
 import com.eucalyptus.component.annotation.Partition;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.ws.StackConfiguration;
-import com.google.common.base.MoreObjects;
-import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelOption;
 
-@Partition( value = { Eucalyptus.class } )
-public class ProxyClusterController extends ComponentId {
+@Partition( value = ClusterController.class, manyToOne = true )
+@InternalService
+public class NodeController extends ComponentId {
   
-  private static final long       serialVersionUID = 1L;
-  public static final ComponentId INSTANCE         = new ProxyClusterController( );
-  
-  public ProxyClusterController( ) {
-    super( "proxy-cluster" );
+  public NodeController( ) {
+    super( "node" );
   }
   
   @Override
   public Integer getPort( ) {
-    return 8774;
+    return 8775;
   }
-
-  @Override
-  public boolean isRegisterable( ) {
-    return false;
-  }
-
+  
   @Override
   public String getServicePath( final String... pathParts ) {
-    return "/axis2/services/EucalyptusCC";
+    return "/axis2/services/EucalyptusNC";
   }
   
   @Override
@@ -82,40 +68,13 @@ public class ProxyClusterController extends ComponentId {
   }
 
   @Override
-  public Bootstrap getClientBootstrap() {
-    return super.getClientBootstrap( )
-        .option( ChannelOption.CONNECT_TIMEOUT_MILLIS, MoreObjects.firstNonNull( StackConfiguration.CLUSTER_CONNECT_TIMEOUT_MILLIS, 3000 ) );
+  public boolean isPartitioned() {
+    return true;
   }
 
-  @Partition( ProxyClusterController.class )
-  @InternalService
-  public static class GatherLogService extends ComponentId {
-
-    private static final long serialVersionUID = 1L;
-
-    public GatherLogService( ) {
-      super( "gatherlog" );
-    }
-
-    @Override
-    public Integer getPort( ) {
-      return 8774;
-    }
-
-    @Override
-    public String getServicePath( final String... pathParts ) {
-      return "/axis2/services/EucalyptusGL";
-    }
-
-    @Override
-    public String getInternalServicePath( final String... pathParts ) {
-      return this.getServicePath( pathParts );
-    }
-
-    @Override
-    public Bootstrap getClientBootstrap() {
-      return super.getClientBootstrap( )
-          .option( ChannelOption.CONNECT_TIMEOUT_MILLIS, MoreObjects.firstNonNull( StackConfiguration.CLUSTER_CONNECT_TIMEOUT_MILLIS, 3000 ) );
-    }
+  @Override
+  public boolean isRegisterable( ) {
+    return false;
   }
+
 }

@@ -134,6 +134,43 @@ public class AsyncRequests {
     }
   }
 
+  public static <A extends BaseMessage, B extends BaseMessage> B sendSync(
+      final ServiceConfiguration config,
+      final RemoteCallback<A, B> msgCallback
+  ) throws Exception {
+    return sendSync( config, Optional.<CallerContext>absent( ), msgCallback );
+  }
+
+  public static <A extends BaseMessage, B extends BaseMessage> B sendSync(
+      final ServiceConfiguration config,
+      final Optional<CallerContext> callerContext,
+      final RemoteCallback<A, B> msgCallback
+  ) throws Exception {
+    final A request = msgCallback.getRequest( );
+    if ( callerContext.isPresent( ) ) {
+      callerContext.get( ).apply( request );
+    }
+    if ( config.isVmLocal( ) ) {
+      try {
+        msgCallback.initialize( request );
+        B response = ServiceContext.<B>send( config.getComponentId( ), request ).get( );
+        msgCallback.fire( response );
+        return response;
+      } catch ( final Exception e ) {
+        Exception resultException = e;
+        if ( e instanceof ExecutionException && e.getCause( ) instanceof Exception ) {
+          resultException = (Exception) e.getCause( );
+        }
+        msgCallback.fireException( resultException );
+        throw resultException;
+      }
+    } else {
+      final AsyncRequest<A,B> asyncRequest = new AsyncRequest<A,B>( msgCallback );
+      asyncRequest.setRequest( request );
+      return asyncRequest.sendSync( config );
+    }
+  }
+
   public static <A extends BaseMessage, B extends BaseMessage> Request<A, B> newRequest( final RemoteCallback<A, B> msgCallback ) {
     return new AsyncRequest<A,B>( msgCallback ) {
       {

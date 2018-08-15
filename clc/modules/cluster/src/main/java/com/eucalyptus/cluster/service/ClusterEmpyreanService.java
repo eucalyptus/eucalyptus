@@ -40,7 +40,7 @@ import com.eucalyptus.cluster.common.msgs.ClusterStopServiceResponseType;
 import com.eucalyptus.cluster.common.msgs.ClusterStopServiceType;
 
 /**
- *
+ * The Cluster Controller provides service control for owned nodes.
  */
 public interface ClusterEmpyreanService {
 

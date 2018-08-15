@@ -41,6 +41,7 @@ public class ClusterEucaConf {
   private final String scheduler;
   private final Set<String> nodes;
   private final int nodePort;
+  private final int clusterPort;
   private final int maxInstances;
   private final int instanceTimeout;
 
@@ -49,12 +50,14 @@ public class ClusterEucaConf {
       final String scheduler,
       final Set<String> nodes,
       final int nodePort,
+      final int clusterPort,
       final int maxInstances,
       final int instanceTimeout ) {
     this.creationTime = creationTime;
     this.scheduler = MoreObjects.firstNonNull( scheduler, "ROUNDROBIN" );
     this.nodes = MoreObjects.firstNonNull( nodes, Collections.emptySet( ) );
     this.nodePort = nodePort;
+    this.clusterPort = clusterPort;
     this.maxInstances = maxInstances;
     this.instanceTimeout = instanceTimeout;
   }
@@ -76,6 +79,10 @@ public class ClusterEucaConf {
 
   public int getNodePort( ) {
     return nodePort;
+  }
+
+  public int getClusterPort( ) {
+    return clusterPort;
   }
 
   @Nonnull

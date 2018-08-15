@@ -28,7 +28,7 @@
  ************************************************************************/
 package com.eucalyptus.cluster.service.ws;
 
-import com.eucalyptus.cluster.proxy.node.ProxyNodeController;
+import com.eucalyptus.cluster.node.NodeController;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.util.async.AsyncRequestPoolable;
 import com.eucalyptus.ws.IoHandlers;
@@ -44,7 +44,7 @@ import io.netty.channel.socket.SocketChannel;
 /**
  *
  */
-@ComponentPart( ProxyNodeController.class )
+@ComponentPart( NodeController.class )
 public class NodeClientChannelInitializer extends MonitoredSocketChannelInitializer implements AsyncRequestPoolable {
 
   private static final String POOL_SIZE_PROP = "com.eucalyptus.cluster.nodeHttpPoolSize";

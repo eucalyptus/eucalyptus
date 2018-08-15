@@ -35,14 +35,18 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 import javax.inject.Inject;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.cluster.common.Cluster;
 import com.eucalyptus.cluster.common.ClusterRegistry;
 import com.eucalyptus.cluster.common.msgs.ClusterBundleRestartInstanceResponseType;
+import com.eucalyptus.cluster.service.ClusterServiceEnv;
 import com.eucalyptus.cluster.service.ClusterServiceId;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Assert;
 import com.google.common.base.MoreObjects;
 import io.vavr.collection.Stream;
@@ -98,7 +102,8 @@ public class ClusterNodeActivities {
 
   @SuppressWarnings( "WeakerAccess" )
   public void doActivities( ) {
-    if ( enabled || Topology.isEnabledLocally( ClusterServiceId.class ) ) {
+    if ( enabled ||
+        (ClusterServiceEnv.enableClusterActivities( ) && Topology.isEnabledLocally( ClusterServiceId.class )) ) {
       final ClusterNodeActivityContext context = ClusterNodeActivityContext.of( clusterNodes, sensorConfig, clock );
       Stream.of( ClusterNodeActivity.values( ) ).forEach( activity -> activity.doActivity( context ) );
     }
@@ -218,7 +223,8 @@ public class ClusterNodeActivities {
   }
 
   public static class ClusterNodeActivitiesEventListener implements EventListener<ClockTick> {
-    private static final CopyOnWriteArrayList<WeakReference<ClusterNodeActivities>> activities = new CopyOnWriteArrayList<>( );
+    private static final CopyOnWriteArrayList<WeakReference<ClusterNodeActivities>> activities
+        = new CopyOnWriteArrayList<>( );
 
     @SuppressWarnings( "unused" )
     public static void register( ) {
@@ -231,7 +237,15 @@ public class ClusterNodeActivities {
 
     @Override
     public void fireEvent( final ClockTick event ) {
-        activities.forEach( ref -> Option.of( ref.get( ) ).forEach( ClusterNodeActivities::doActivities ) );
+      if ( Bootstrap.isOperational( ) ) {
+        Option<Cluster> localCluster = ClusterRegistry.getInstance( ).getLocalCluster( true );
+        activities.forEach( ref -> Option.of( ref.get( ) ).forEach( nodeActivities -> localCluster.forEach( cluster ->
+            Threads.enqueue(
+                cluster.getConfiguration(),
+                ClusterNodeActivities.class,
+                () -> { nodeActivities.doActivities( ); return true; } )
+        ) ) );
+      }
     }
   }
 }

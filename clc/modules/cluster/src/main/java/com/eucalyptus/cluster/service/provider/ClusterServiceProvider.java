@@ -26,12 +26,15 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
-package com.eucalyptus.cluster.service;
+package com.eucalyptus.cluster.service.provider;
 
+import java.io.IOException;
+import java.net.ConnectException;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import javax.annotation.Nullable;
@@ -45,13 +48,12 @@ import com.eucalyptus.cluster.common.callback.ResourceStateCallback;
 import com.eucalyptus.cluster.common.callback.VmStateCallback;
 import com.eucalyptus.cluster.common.provider.ClusterProvider;
 import com.eucalyptus.cluster.common.msgs.NodeType;
-import com.eucalyptus.cluster.proxy.node.Nodes;
-import com.eucalyptus.cluster.proxy.node.ProxyNodeController;
+import com.eucalyptus.cluster.node.Nodes;
 import com.eucalyptus.cluster.service.config.ClusterServiceConfiguration;
+import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.event.ClockTick;
@@ -64,6 +66,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.SubjectMessageCallback;
+import com.google.common.base.MoreObjects;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 /**
@@ -116,26 +119,25 @@ public class ClusterServiceProvider implements ClusterProvider {
 
   @Override
   public void check() {
-    //TODO: fail check on errors from refresh callbacks?
   }
 
   @Override
-  public void start() throws ServiceRegistrationException {
+  public void start() {
     disable( );
   }
 
   @Override
-  public void stop() throws ServiceRegistrationException {
+  public void stop() {
     registry.deregister( cluster.getName( ) );
   }
 
   @Override
-  public void enable() throws ServiceRegistrationException {
+  public void enable() {
     registry.register( cluster );
   }
 
   @Override
-  public void disable() throws ServiceRegistrationException {
+  public void disable() {
     registry.registerDisabled( cluster );
   }
 
@@ -157,7 +159,7 @@ public class ClusterServiceProvider implements ClusterProvider {
       }
     };
     //GRZE: submit the node controller state updates in a separate thread to ensure it doesn't interfere with the Cluster state machine.
-    Threads.enqueue( ProxyNodeController.class, ResourceStateCallback.class, updateNodes );
+    Threads.enqueue( configuration, ResourceStateCallback.class, updateNodes );
   }
 
   @Override
@@ -177,7 +179,9 @@ public class ClusterServiceProvider implements ClusterProvider {
 
   private enum Refresh implements Consumer<Cluster> {
     RESOURCES( ResourceStateCallback.class ),
-    INSTANCES( VmStateCallback.class ),;
+    INSTANCES( VmStateCallback.class ),
+    ;
+
     Class<? extends SubjectMessageCallback<Cluster, ?, ?>> refresh;
 
     Refresh( final Class<? extends SubjectMessageCallback<Cluster,?,?>> refresh ) {
@@ -188,15 +192,25 @@ public class ClusterServiceProvider implements ClusterProvider {
       try {
         final SubjectMessageCallback<Cluster, ?, ?> messageCallback = refresh.newInstance( );
         messageCallback.setSubject( cluster );
-        BaseMessage baseMessage = AsyncRequests.newRequest( messageCallback ).sendSync( cluster.getConfiguration( ) );
+        final BaseMessage baseMessage = AsyncRequests.sendSync( cluster.getConfiguration( ), messageCallback );
         if ( Logs.extreme( ).isDebugEnabled( ) ) {
           Logs.extreme( ).debug( "Response to " + messageCallback + ": " + baseMessage );
         }
       } catch ( CancellationException ex ) {
         //do nothing
-      } catch ( Exception ex ) {
-        LOG.error( ex );
-        Logs.extreme( ).error( ex );
+      } catch ( final Exception ex ) {
+        Throwable thrown = ex;
+        if ( ex instanceof ExecutionException ) {
+          thrown = MoreObjects.firstNonNull( ex.getCause( ), ex );
+        }
+        final String message = this + " error: " + ex.getMessage( );
+        if ( Bootstrap.isShuttingDown( )
+            || Exceptions.isCausedBy( thrown, ConnectException.class )
+            || Exceptions.isCausedBy( thrown, IOException.class )) {
+          LOG.warn( message );
+        } else {
+          LOG.error( message, thrown );
+        }
         throw Exceptions.toUndeclared( ex );
       }
     }
@@ -223,8 +237,10 @@ public class ClusterServiceProvider implements ClusterProvider {
         final Refresh refresh = Refresh.values( )[ refreshOrdinal.getAndIncrement( ) % Refresh.values( ).length ];
         for ( final Cluster cluster : ClusterRegistry.getInstance( ).listValues( ) ) {
           final ServiceConfiguration configuration = cluster.getConfiguration( );
-          if ( configuration instanceof ClusterServiceConfiguration ) {
-            refresh.accept( cluster ); // TODO: threading
+          if ( configuration.lookupState( ).ordinal() < State.ENABLED.ordinal( ) ) {
+            cluster.disable( );
+          } else if ( configuration instanceof ClusterServiceConfiguration ) {
+            Threads.enqueue( configuration, Refresh.class, () -> { refresh.accept( cluster ); return true; } );
           }
         }
       }

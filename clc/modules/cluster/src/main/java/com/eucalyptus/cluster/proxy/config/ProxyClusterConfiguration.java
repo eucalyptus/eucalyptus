@@ -37,87 +37,46 @@
  * NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.cluster.proxy.node;
+package com.eucalyptus.cluster.proxy.config;
 
 import java.io.Serializable;
+import java.util.concurrent.Callable;
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PostLoad;
 import javax.persistence.Transient;
+import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.BootstrapArgs;
+import com.eucalyptus.cluster.proxy.ProxyClusterController;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
+import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.upgrade.Upgrades;
+import com.eucalyptus.upgrade.Upgrades.PreUpgrade;
+import groovy.sql.Sql;
 
 /**
- * @todo doc
- * @author chris grzegorczyk <grze@eucalyptus.com>
+ *
  */
-@Entity
-@PersistenceContext( name = "eucalyptus_config" )
-@ComponentPart( ProxyNodeController.class )
-@ConfigurableClass( root = "node",
-                    alias = "basic",
-                    description = "Node Controller Configuration.",
-                    singleton = false,
-                    deferred = true )
-public class ProxyNodeConfiguration extends ComponentConfiguration implements Serializable {
+@ComponentPart( ProxyClusterController.class )
+public class ProxyClusterConfiguration extends ComponentConfiguration implements Serializable {
   @Transient
-  private static String DEFAULT_SERVICE_PATH = "/axis2/services/EucalyptusNC";
+  private static String         DEFAULT_SERVICE_PATH  = "/axis2/services/EucalyptusCC";
   @Transient
-  private static Integer DEFAULT_SERVICE_PORT = 8775;
-
-  @Transient
-  @ConfigurableIdentifier
-  private String        propertyPrefix;
+  private static String         INSECURE_SERVICE_PATH = "/axis2/services/EucalyptusGL";
   
-  public ProxyNodeConfiguration( ) {
-    super( );
-  }
+  public ProxyClusterConfiguration( ) {}
   
-  public ProxyNodeConfiguration( String partition, String hostName ) {
-    super( partition, hostName, hostName, DEFAULT_SERVICE_PORT, DEFAULT_SERVICE_PATH );
-  }
-  
-  @PostLoad
-  private void initOnLoad( ) {//GRZE:HACK:HACK: needed to mark field as @ConfigurableIdentifier
-    if ( this.propertyPrefix == null ) {
-      this.propertyPrefix = this.getPartition( ).replace( ".", "" ) + "." + this.getName( );
-    }
+  public ProxyClusterConfiguration(String partition, String name, String hostName, Integer port ) {
+    super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
   }
   
   @Override
   public Boolean isVmLocal( ) {
     return false;
-  }
-  
-  @Override
-  public Boolean isHostLocal( ) {
-    return BootstrapArgs.isCloudController( );
-  }
-
-  /**
-   * Immutable for now.
-   */
-  @Override
-  public Integer getPort( ) {
-    return DEFAULT_SERVICE_PORT;
-  }
-
-  /**
-   * Immutable for now.
-   */
-  @Override
-  public String getServicePath( ) {
-    return DEFAULT_SERVICE_PATH;
-  }
-  
-  public String getPropertyPrefix( ) {
-    return this.getPartition( );
-  }
-  
-  public void setPropertyPrefix( String propertyPrefix ) {
-    this.setPartition( propertyPrefix );
   }
 }

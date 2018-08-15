@@ -37,7 +37,7 @@
  * NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.cluster.proxy.node;
+package com.eucalyptus.cluster.node;
 
 import java.net.URI;
 import java.util.*;
@@ -56,7 +56,7 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.fsm.TransitionRecord;
 import com.google.common.base.*;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.*;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import org.apache.log4j.Logger;
@@ -94,7 +94,7 @@ public class Nodes {
 
       @Override
       public ServiceConfiguration apply( @Nullable NodeInfo input ) {
-        ProxyNodeController compId = ComponentIds.lookup( ProxyNodeController.class );
+        NodeController compId = ComponentIds.lookup( NodeController.class );
         Component comp = Components.lookup( compId );
         try {
           return comp.lookup( input.getName( ) );
@@ -133,7 +133,7 @@ public class Nodes {
     for ( String unreportedTag : unreportedTags ) {
       NodeInfo unreportedNode = clusterNodeMap.get( unreportedTag );
       if ( unreportedNode != null && ( now - unreportedNode.getLastSeen( ).getTime( ) ) > Nodes.REFRESH_TIMEOUT ) {
-        Topology.destroy( Components.lookup( ProxyNodeController.class ).lookup( unreportedNode.getName() ) );
+        Topology.destroy( Components.lookup( NodeController.class ).lookup( unreportedNode.getName() ) );
         NodeInfo removed = clusterNodeMap.remove( unreportedTag );
         nodeLog.append( "GONE:" ).append( removed.getName() ).append( ":" ).append( removed.getLastState() ).append( " " );
       }
@@ -183,7 +183,7 @@ public class Nodes {
       public ServiceConfiguration apply( @Nullable NodeInfo input ) {
         if ( Component.State.ENABLED.apply( ccConfig ) && !ccConfig.lookupStateMachine( ).isBusy( ) ) {
           ServiceConfiguration ncConfig = Nodes.lookup( ccConfig, input.getName( ) );
-          Component component = Components.lookup( ProxyNodeController.class );
+          Component component = Components.lookup( NodeController.class );
           if ( !component.hasService( ncConfig ) ) {
             component.setup( ncConfig );
             try {
@@ -271,11 +271,11 @@ public class Nodes {
               if ( checkException != null ) {
                 LOG.debug( checkException );
               }
-              checkException = Faults.failure( ncConfig, e, Objects.firstNonNull( checkException, Faults.advisory( ncConfig, lastMessage ) ) );
+              checkException = Faults.failure( ncConfig, e, MoreObjects.firstNonNull( checkException, Faults.advisory( ncConfig, lastMessage ) ) );
             }
           }
         } finally {
-          checkException = Objects.firstNonNull( checkException, Faults.advisory( ncConfig, lastMessage ) );
+          checkException = MoreObjects.firstNonNull( checkException, Faults.advisory( ncConfig, lastMessage ) );
           nodeInfo.touch( reportedState, lastMessage, checkException );
           Faults.submit( ncConfig, tr, checkException );
         }
@@ -308,7 +308,7 @@ public class Nodes {
   }
 
   public static void clusterCleanup( Cluster cluster, Exception e ) {
-    Threads.enqueue( ProxyNodeController.class, CleanupNodes.class, new CleanupNodes( cluster, e ) );
+    Threads.enqueue( cluster.getConfiguration( ), CleanupNodes.class, new CleanupNodes( cluster, e ) );
   }
 
   public static class CleanupNodes implements Callable<Collection<NodeInfo>> {

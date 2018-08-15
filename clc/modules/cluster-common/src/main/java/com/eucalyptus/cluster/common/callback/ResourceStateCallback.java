@@ -53,18 +53,7 @@ public class ResourceStateCallback extends StateUpdateMessageCallback<Cluster, D
   private static Logger LOG = Logger.getLogger( ResourceStateCallback.class );
   
   public ResourceStateCallback( ) {
-    super( new DescribeResourcesType( ) {
-      {
-        regarding( );
-        for ( VmType arg0 : new VmTypesSupplier( ).get( ) ) {
-          getInstanceTypes( ).add( new VmTypeInfo( arg0.getName( ), arg0.getMemory( ), arg0.getDisk( ), arg0.getCpu( ), "sda1" ) {
-            {
-              this.setSwap( "sda2", 512 * 1024l * 1024l, "none" );
-            }
-          } );
-        }
-      }
-    } );
+    super( describeResources( ) );
   }
   
   /**
@@ -92,4 +81,20 @@ public class ResourceStateCallback extends StateUpdateMessageCallback<Cluster, D
     LOG.debug( "Request to " + this.getSubject( ).getName( ) + " failed: " + t.getMessage( ) );
   }
 
+  private static DescribeResourcesType describeResources( ) {
+    final DescribeResourcesType describeResourcesType = new DescribeResourcesType( ).regarding( );
+    for ( final VmType vmType : new VmTypesSupplier( ).get( ) ) {
+      describeResourcesType.getInstanceTypes( ).add( new VmTypeInfo(
+          vmType.getName( ),
+          vmType.getMemory( ),
+          vmType.getDisk( ),
+          vmType.getCpu( ),
+          "sda1" ) {
+        {
+          this.setSwap( "sda2", 512 * 1024l * 1024l, "none" );
+        }
+      } );
+    }
+    return describeResourcesType;
+  }
 }
