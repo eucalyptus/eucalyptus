@@ -525,7 +525,7 @@ cp -Rp admin-tools/conf/* $RPM_BUILD_ROOT/%{_sysconfdir}/eucalyptus-admin
 %{_sysctldir}/70-eucalyptus-cloud.conf
 %{_unitdir}/eucalyptus-cloud.service
 %{_unitdir}/eucalyptus-cloud-upgrade.service
-
+/usr/lib/eucalyptus/eucalyptus-cloud.vmoptions
 
 %files common-java-libs
 /usr/share/eucalyptus/*jar*
@@ -705,6 +705,7 @@ usermod -a -G libvirt eucalyptus || :
 %changelog
 * Tue Jul 24 2018 Steve Jones <steve.jones@appscale.com> - 5.0
 - Remove PopulateSnapPoints.groovy script
+- Package eucalyptus-cloud default vmoptions
 
 * Thu May 10 2018 Steve Jones <steve.jones@appscale.com> - 4.4.4
 - Update libvirt requirement to 2.0.0+
