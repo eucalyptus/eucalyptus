@@ -260,7 +260,9 @@ public class Futures {
         }
       } );
     }
-
+    if ( futures.isEmpty( ) ) {
+      combined.set( resultList );
+    }
     return combined;
   }
 
