@@ -41,6 +41,7 @@
 import com.eucalyptus.bootstrap.BootstrapArgs
 import com.eucalyptus.component.id.Eucalyptus
 import com.eucalyptus.crypto.Signatures
+import com.eucalyptus.util.Exceptions
 import com.google.common.base.Optional
 import com.google.common.base.Predicate
 import com.google.common.base.Strings
@@ -572,20 +573,29 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   }
 
   private void perhapsUpdateDbPassword( ) {
-    try {
-      dbExecute( 'postgres', PG_TEST_QUERY )
-    } catch ( Exception e ) {
-      if ( e.message?.contains('authentication') ) {
-        LOG.info( "Updating database password" )
-        String oldPassword = Signatures.SHA256withRSA.trySign( Eucalyptus.class, "eucalyptus".getBytes( ) )
-        try {
-          withConnection( getConnectionInternal( InetAddress.getByName('127.0.0.1'), 'postgres', null, userName, oldPassword ) ) { Sql sql ->
-            sql.execute( "ALTER ROLE " + getUserName( ) + " WITH PASSWORD \'" + getPassword( ) + "\'" )
-          }
-          dbExecute( 'postgres', PG_TEST_QUERY )
-        } catch ( Exception e2 ) {
-          LOG.warn( "Unable to update database password: ${e2.message}" )
+    for ( int i in 1..30 ) {
+      try {
+        dbExecute( 'postgres', PG_TEST_QUERY )
+        break
+      } catch ( Exception e ) {
+        if ( Exceptions.isCausedBy( e, ConnectException ) ) {
+          LOG.info( "Waiting for database to be available." )
+          Thread.sleep( 1000L )
+          continue;
         }
+        if ( e.message?.contains('authentication') ) {
+          LOG.info( "Updating database password" )
+          String oldPassword = Signatures.SHA256withRSA.trySign( Eucalyptus.class, "eucalyptus".getBytes( ) )
+          try {
+            withConnection( getConnectionInternal( InetAddress.getByName('127.0.0.1'), 'postgres', null, userName, oldPassword ) ) { Sql sql ->
+              sql.execute( "ALTER ROLE " + getUserName( ) + " WITH PASSWORD \'" + getPassword( ) + "\'" )
+            }
+            dbExecute( 'postgres', PG_TEST_QUERY )
+          } catch ( Exception e2 ) {
+            LOG.warn( "Unable to update database password: ${e2.message}" )
+          }
+        }
+        break
       }
     }
   }
