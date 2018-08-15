@@ -993,6 +993,10 @@ public class Hosts {
     return Hosts.list( DbFilter.INSTANCE );
   }
 
+  public static List<Host> listBooted( ) {
+    return Hosts.list( BootedFilter.INSTANCE );
+  }
+
   private static Host put( final Host newHost ) {
     return hostMap.put( newHost.getDisplayName( ), newHost );
   }
