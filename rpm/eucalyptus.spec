@@ -243,20 +243,10 @@ the cloud clients.
 Summary:      Eucalyptus cloud platform - cluster controller
 
 Requires:     %{name} = %{version}-%{release}
-Requires:     %{name}-axis2c-common = %{version}-%{release}
-Requires:     bridge-utils
-Requires:     dhcp >= 4.1.1-33.P1
+Requires:     %{name}-common-java = %{version}-%{release}
 Requires:     eucalyptus-selinux
-Requires:     httpd
-Requires:     iproute
-Requires:     iptables
-Requires:     iputils
-Requires:     libselinux-python
-Requires:     python-argparse
 Requires:     rsync
-Requires:     vconfig
 Requires:     /usr/bin/which
-%{?systemd_requires}
 
 Provides:     eucalyptus-cluster = %{version}-%{release}
 
@@ -268,6 +258,38 @@ computing service that is interface-compatible with Amazon AWS.
 
 This package contains the cluster controller part of eucalyptus. It
 handles a group of node controllers.
+
+
+%package cc-native
+Summary:      Eucalyptus cloud platform - native cluster controller
+
+Requires:     %{name} = %{version}-%{release}
+Requires:     %{name}-axis2c-common = %{version}-%{release}
+Requires:     %{name}-cc = %{version}-%{release}
+Requires:     bridge-utils
+Requires:     dhcp >= 4.1.1-33.P1
+Requires:     eucalyptus-selinux
+Requires:     httpd
+Requires:     iproute
+Requires:     iptables
+Requires:     iputils
+Requires:     libselinux-python
+Requires:     python-argparse
+Requires:     rsync
+Requires:     /usr/bin/which
+%{?systemd_requires}
+
+Provides:     eucalyptus-cluster = %{version}-%{release}
+
+%description cc-native
+Eucalyptus is a service overlay that implements elastic computing
+using existing resources. The goal of Eucalyptus is to allow sites
+with existing clusters and server infrastructure to co-host an elastic
+computing service that is interface-compatible with Amazon AWS.
+
+This package contains the native cluster controller service. It
+handles a group of node controllers as an alternative to the Java
+cluster controller.
 
 
 %package nc
@@ -548,15 +570,19 @@ cp -Rp admin-tools/conf/* $RPM_BUILD_ROOT/%{_sysconfdir}/eucalyptus-admin
 
 
 %files cc
-%{axis2c_home}/services/EucalyptusCC/
-%attr(-,eucalyptus,eucalyptus) %dir /var/lib/eucalyptus/CC
-/usr/lib/eucalyptus/shutdownCC
 /usr/sbin/clusteradmin-*
-/usr/sbin/eucalyptus-cluster
-/usr/share/eucalyptus/dynserv.pl
 %{_unitdir}/eucalyptus-cc.service
 %{_unitdir}/eucalyptus-cluster.service
 
+
+%files cc-native
+%{axis2c_home}/services/EucalyptusCC/
+%attr(-,eucalyptus,eucalyptus) %dir /var/lib/eucalyptus/CC
+/usr/lib/eucalyptus/shutdownCC
+/usr/sbin/eucalyptus-cluster
+/usr/share/eucalyptus/dynserv.pl
+%{_unitdir}/eucalyptus-cluster-native.service
+%{_unitdir}/eucalyptus-cloud.service.d/eucalyptus-cloud-cluster-native.conf
 
 %files nc
 %doc tools/nc-hooks
@@ -660,8 +686,8 @@ exit 0
 %systemd_post eucalyptus-cloud.service
 %sysctl_apply 70-eucalyptus-cloud.conf || :
 
-%post cc
-%systemd_post eucalyptus-cluster.service
+%post cc-native
+%systemd_post eucalyptus-cluster-native.service
 
 %post nc
 %systemd_post eucalyptus-node.service
@@ -679,8 +705,8 @@ usermod -a -G libvirt eucalyptus || :
 %preun common-java
 %systemd_preun eucalyptus-cloud.service
 
-%preun cc
-%systemd_preun eucalyptus-cluster.service
+%preun cc-native
+%systemd_preun eucalyptus-cluster-native.service
 
 %preun nc
 %systemd_preun eucalyptus-node.service
@@ -692,8 +718,8 @@ usermod -a -G libvirt eucalyptus || :
 %postun common-java
 %systemd_postun eucalyptus-cloud.service
 
-%postun cc
-%systemd_postun eucalyptus-cluster.service
+%postun cc-native
+%systemd_postun eucalyptus-cluster-native.service
 
 %postun nc
 %systemd_postun eucalyptus-node.service
@@ -703,7 +729,8 @@ usermod -a -G libvirt eucalyptus || :
 
 
 %changelog
-* Tue Jul 24 2018 Steve Jones <steve.jones@appscale.com> - 5.0
+* Wed Jul 25 2018 Steve Jones <steve.jones@appscale.com> - 5.0
+- Add cc-native rpm
 - Remove PopulateSnapPoints.groovy script
 - Package eucalyptus-cloud default vmoptions
 
