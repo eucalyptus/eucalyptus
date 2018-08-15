@@ -41,22 +41,12 @@ import com.eucalyptus.util.techpreview.TechPreview;
  */
 @Partition( Eucalyptus.class )
 @ComponentApi( ClusterController.class )
-@TechPreview( enableByDefaultProperty = "com.eucalyptus.cluster.service.enable" )
-@Description( "Cluster controller service" )
+@Description( "The Cluster Controller service" )
 public class ClusterServiceId extends ComponentId {
   private static final long serialVersionUID = 1L;
 
   public ClusterServiceId( ) {
-    super( "ClusterService" );
+    super( "Cluster" );
   }
 
-  @Override
-  public String getInternalServicePath( final String... pathParts ) {
-    return "/internal/Cluster";
-  }
-
-  @Override
-  public String getServicePath( final String... pathParts ) {
-    return "/services/Cluster";
-  }
 }

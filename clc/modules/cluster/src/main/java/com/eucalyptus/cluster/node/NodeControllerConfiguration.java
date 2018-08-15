@@ -37,44 +37,87 @@
  * NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.cluster.proxy.node;
+package com.eucalyptus.cluster.node;
 
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.annotation.InternalService;
-import com.eucalyptus.component.annotation.Partition;
-import com.eucalyptus.cluster.proxy.ProxyClusterController;
+import java.io.Serializable;
+import javax.persistence.Entity;
+import javax.persistence.PersistenceContext;
+import javax.persistence.PostLoad;
+import javax.persistence.Transient;
+import com.eucalyptus.bootstrap.BootstrapArgs;
+import com.eucalyptus.component.annotation.ComponentPart;
+import com.eucalyptus.config.ComponentConfiguration;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableIdentifier;
 
-@Partition( value = { ProxyClusterController.class }, manyToOne = true )
-@InternalService
-public class ProxyNodeController extends ComponentId {
-  
-  public ProxyNodeController( ) {
-    super( "node" );
-  }
-  
-  @Override
-  public Integer getPort( ) {
-    return 8775;
-  }
-  
-  @Override
-  public String getServicePath( final String... pathParts ) {
-    return "/axis2/services/EucalyptusNC";
-  }
-  
-  @Override
-  public String getInternalServicePath( final String... pathParts ) {
-    return this.getServicePath( pathParts );
-  }
+/**
+ * @todo doc
+ * @author chris grzegorczyk <grze@eucalyptus.com>
+ */
+@Entity
+@PersistenceContext( name = "eucalyptus_config" )
+@ComponentPart( NodeController.class )
+@ConfigurableClass( root = "node",
+                    alias = "basic",
+                    description = "Node Controller Configuration.",
+                    singleton = false,
+                    deferred = true )
+public class NodeControllerConfiguration extends ComponentConfiguration implements Serializable {
+  @Transient
+  private static String DEFAULT_SERVICE_PATH = "/axis2/services/EucalyptusNC";
+  @Transient
+  private static Integer DEFAULT_SERVICE_PORT = 8775;
 
-  @Override
-  public boolean isPartitioned() {
-    return true;
+  @Transient
+  @ConfigurableIdentifier
+  private String        propertyPrefix;
+  
+  public NodeControllerConfiguration( ) {
+    super( );
   }
-
+  
+  public NodeControllerConfiguration( String partition, String hostName ) {
+    super( partition, hostName, hostName, DEFAULT_SERVICE_PORT, DEFAULT_SERVICE_PATH );
+  }
+  
+  @PostLoad
+  private void initOnLoad( ) {//GRZE:HACK:HACK: needed to mark field as @ConfigurableIdentifier
+    if ( this.propertyPrefix == null ) {
+      this.propertyPrefix = this.getPartition( ).replace( ".", "" ) + "." + this.getName( );
+    }
+  }
+  
   @Override
-  public boolean isRegisterable( ) {
+  public Boolean isVmLocal( ) {
     return false;
   }
+  
+  @Override
+  public Boolean isHostLocal( ) {
+    return BootstrapArgs.isCloudController( );
+  }
 
+  /**
+   * Immutable for now.
+   */
+  @Override
+  public Integer getPort( ) {
+    return DEFAULT_SERVICE_PORT;
+  }
+
+  /**
+   * Immutable for now.
+   */
+  @Override
+  public String getServicePath( ) {
+    return DEFAULT_SERVICE_PATH;
+  }
+  
+  public String getPropertyPrefix( ) {
+    return this.getPartition( );
+  }
+  
+  public void setPropertyPrefix( String propertyPrefix ) {
+    this.setPartition( propertyPrefix );
+  }
 }

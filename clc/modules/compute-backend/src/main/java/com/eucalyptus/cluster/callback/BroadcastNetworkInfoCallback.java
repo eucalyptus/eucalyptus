@@ -29,8 +29,10 @@
 package com.eucalyptus.cluster.callback;
 
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cluster.common.msgs.BroadcastNetworkInfoResponseType;
 import com.eucalyptus.cluster.common.msgs.BroadcastNetworkInfoType;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.BroadcastCallback;
 
 /**
@@ -66,7 +68,11 @@ public class BroadcastNetworkInfoCallback extends BroadcastCallback<BroadcastNet
 
   @Override
   public void fireException( Throwable e ) {
-    logger.error( "Error in network information broadcast", e );
+    if ( Bootstrap.isShuttingDown( ) ) {
+      logger.warn( "Error in network information broadcast: " + e.getMessage( ) );
+    } else {
+      logger.error( "Error in network information broadcast: " + e.getMessage( ), e );
+    }
   }
 
   @Override

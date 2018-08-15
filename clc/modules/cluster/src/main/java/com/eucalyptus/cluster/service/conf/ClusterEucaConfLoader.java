@@ -75,6 +75,7 @@ public class ClusterEucaConfLoader {
         getTrimmedDequotedProperty( properties, "SCHEDPOLICY", "ROUNDROBIN" ),
         Sets.newLinkedHashSet( getFilteredDequotedPropertyList( properties, "NODES", "", InetAddresses::isInetAddress ) ),
         getTrimmedDequotedMappedProperty( properties, "NC_PORT", "8775", Integer::valueOf ),
+        getTrimmedDequotedMappedProperty( properties, "CC_PORT", "8774", Integer::valueOf ),
         getTrimmedDequotedMappedProperty( properties, "MAX_INSTANCES_PER_CC", "10000", Integer::valueOf ),
         Math.max( 30, getTrimmedDequotedMappedProperty( properties, "INSTANCE_TIMEOUT", "300", Integer::valueOf ) ) );
   }

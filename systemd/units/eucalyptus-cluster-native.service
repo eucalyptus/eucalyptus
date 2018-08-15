@@ -1,5 +1,5 @@
 [Unit]
-Description=Eucalyptus cluster controller
+Description=Eucalyptus legacy cluster controller native backend
 After=network.target
 Wants=chronyd.service
 

@@ -32,7 +32,7 @@ import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.cluster.common.Cluster;
 import com.eucalyptus.cluster.common.ClusterRegistry;
 import com.eucalyptus.cluster.common.msgs.CloudNodeMessage;
-import com.eucalyptus.cluster.proxy.node.ProxyNodeController;
+import com.eucalyptus.cluster.node.NodeController;
 import com.eucalyptus.cluster.service.NodeService;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceBuilders;
@@ -40,7 +40,6 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.util.async.AsyncProxy;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import io.vavr.collection.Stream;
 
 /**
  *
@@ -50,7 +49,7 @@ public class DefaultClusterNodeServiceFactory implements ClusterNodeServiceFacto
   @Override
   public NodeService nodeService( final ClusterNode node, final int port ) {
     final Cluster cluster = localCluster( );
-    final ServiceBuilder serviceBuilder = ServiceBuilders.lookup( ProxyNodeController.class );
+    final ServiceBuilder serviceBuilder = ServiceBuilders.lookup( NodeController.class );
     final ServiceConfiguration configuration =
         serviceBuilder.newInstance( cluster.getPartition( ), node.getNode( ), node.getNode( ), port );
     return AsyncProxy.client( NodeService.class, ( BaseMessage message) -> {
@@ -68,7 +67,7 @@ public class DefaultClusterNodeServiceFactory implements ClusterNodeServiceFacto
 
   private static Cluster localCluster( ) {
     return ClusterRegistry.getLocalCluster( false )
-        .getOrElseThrow( ( ) -> new IllegalStateException( "No local cluster" ) );
+        .getOrElseThrow( ( ) -> new ClusterNodeRuntimeException( "No local cluster" ) );
   }
 
 }

@@ -29,11 +29,16 @@
 package com.eucalyptus.cluster.service.config;
 
 import java.io.Serializable;
+import java.util.concurrent.Callable;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import com.eucalyptus.cluster.service.ClusterServiceId;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.config.ComponentConfiguration;
+import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.upgrade.Upgrades;
+import groovy.sql.Sql;
+import org.apache.log4j.Logger;
 
 /**
  *
@@ -50,5 +55,63 @@ public class ClusterServiceConfiguration extends ComponentConfiguration implemen
 
   public ClusterServiceConfiguration( String partition, String name, String hostName, Integer port ) {
     super( partition, name, hostName, port, SERVICE_PATH );
+  }
+
+  @Upgrades.PreUpgrade( value = Empyrean.class, since = Upgrades.Version.v4_4_0 )
+  public static class ClusterConfiguration440PreUpgrade implements Callable<Boolean> {
+    private static final Logger logger = Logger.getLogger( ClusterConfiguration440PreUpgrade.class );
+
+    @Override
+    public Boolean call( ) throws Exception {
+      Sql sql = null;
+      try {
+        sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection( "eucalyptus_config" );
+        sql.execute( "alter table config_component_base " +
+                "drop column if exists cluster_addrs_per_net, " +
+                "drop column if exists cluster_max_network_tag, " +
+                "drop column if exists cluster_min_addr, " +
+                "drop column if exists cluster_min_network_tag, " +
+                "drop column if exists cluster_min_vlan, " +
+                "drop column if exists cluster_use_network_tags"
+        );
+
+        return true;
+      } catch ( Exception ex ) {
+        logger.error( "Error updating cloud schema", ex );
+        return false;
+      } finally {
+        if ( sql != null ) {
+          sql.close( );
+        }
+      }
+    }
+  }
+
+  @Upgrades.PreUpgrade( value = Empyrean.class, since = Upgrades.Version.v5_0_0 )
+  public static class ClusterConfiguration500PreUpgrade implements Callable<Boolean> {
+    private static final Logger logger = Logger.getLogger( ClusterConfiguration500PreUpgrade.class );
+
+    @Override
+    public Boolean call( ) throws Exception {
+      Sql sql = null;
+      try {
+        sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection( "eucalyptus_config" );
+        sql.execute( "alter table config_component_base " +
+                "drop column if exists cluster_alt_source_hostname, " +
+                "drop column if exists cluster_network_mode, " +
+                "drop column if exists cluster_vnet_subnet, " +
+                "drop column if exists cluster_vnet_netmask, " +
+                "drop column if exists cluster_vnet_type, "
+        );
+        return true;
+      } catch ( Exception ex ) {
+        logger.error( "Error updating cloud schema", ex );
+        return false;
+      } finally {
+        if ( sql != null ) {
+          sql.close( );
+        }
+      }
+    }
   }
 }

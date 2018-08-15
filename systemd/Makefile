@@ -43,13 +43,17 @@ install: deploy
 	mkdir -p $(DESTDIR)/$(prefix)/usr/lib/modules-load.d
 	mkdir -p $(DESTDIR)/$(prefix)/usr/lib/sysctl.d
 	mkdir -p $(DESTDIR)/$(prefix)/usr/lib/tmpfiles.d
-	mkdir -p $(DESTDIR)/$(prefix)/usr/lib/systemd/system
+	mkdir -p $(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-cloud.service.d
 	install -m 0644 modules-load.d/*.conf $(DESTDIR)/$(prefix)/usr/lib/modules-load.d
 	install -m 0644 sysctl.d/*.conf $(DESTDIR)/$(prefix)/usr/lib/sysctl.d
 	install -m 0644 tmpfiles.d/*.conf $(DESTDIR)/$(prefix)/usr/lib/tmpfiles.d
 	install -m 0644 units/*.service $(DESTDIR)/$(prefix)/usr/lib/systemd/system
-	# For backwards compatibility with ``service eucalyptus-cc/nc start''
-	ln -fs eucalyptus-cluster.service $(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-cc.service
+	install -m 0644 units.d/eucalyptus-cloud-cluster-native.conf \
+		$(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-cloud.service.d
+
+	# For backwards compatibility with ``service eucalyptus-cluster/cc/nc start''
+	ln -fs eucalyptus-cloud.service $(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-cluster.service
+	ln -fs eucalyptus-cloud.service $(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-cc.service
 	ln -fs eucalyptus-node.service $(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-nc.service
 
 uninstall:
@@ -74,5 +78,7 @@ uninstall:
 			rm -f $(DESTDIR)/$(prefix)/usr/lib/systemd/system/$$(basename $$unit_file); \
 		done; \
 	fi
+	@$(RM) -f $(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-cloud.service.d/*.conf
+	@$(RM) -f $(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-cluster.service
 	@$(RM) -f $(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-cc.service
 	@$(RM) -f $(DESTDIR)/$(prefix)/usr/lib/systemd/system/eucalyptus-nc.service

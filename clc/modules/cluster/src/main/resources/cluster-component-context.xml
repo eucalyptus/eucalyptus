@@ -35,7 +35,7 @@
         http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd"
 >
 
-  <int:service-activator input-channel="clusterservice-request" ref="clusterService"/>
+  <int:service-activator input-channel="cluster-request" ref="#{T(com.eucalyptus.cluster.service.ClusterServiceEnv).beanName()}"/>
 
   <bean
       id="clusterNodeServiceFactory"
