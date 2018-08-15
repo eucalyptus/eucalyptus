@@ -42,6 +42,7 @@ package com.eucalyptus.component;
 import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.component.Faults.CheckException;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -50,6 +51,21 @@ import com.eucalyptus.util.Internets;
 public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> implements ServiceBuilder<T> {
   @Override
   public void fireLoad( ServiceConfiguration parent ) throws ServiceRegistrationException {}
+
+  @Override
+  public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {}
+
+  @Override
+  public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {}
+
+  @Override
+  public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {}
+
+  @Override
+  public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {}
+
+  @Override
+  public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException, CheckException {}
 
   private static Logger LOG = Logger.getLogger( AbstractServiceBuilder.class );
 
