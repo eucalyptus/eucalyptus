@@ -138,6 +138,17 @@ public class Components {
     return IdToComponent.INSTANCE.apply( componentId );
   }
 
+  public static Stream<ServiceConfiguration> servicesProviding( final Class<? extends ComponentId> componentId ) {
+    try {
+      return Stream.ofAll( ComponentIds.list( ) )
+          .filter( comp -> comp.hasApi( componentId ) )
+          .map( Components::lookup )
+          .flatMap( Component::services );
+    } catch ( NoSuchElementException e ) {
+      return Stream.empty( );
+    }
+  }
+
   public static Stream<ServiceConfiguration> services( final Class<? extends ComponentId> componentId ) {
     try {
       return Stream.ofAll( lookup( componentId ).services( ) );
