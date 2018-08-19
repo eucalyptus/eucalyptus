@@ -668,7 +668,7 @@ public abstract class SplitHorizonResolver extends DnsResolver {
         if ( !configurationOptional.isDefined( ) || Databases.isVolatile( ) ) {
           return lastLoaded.get( );
         } else try {
-          final Set<String> clusters = Components.services( ClusterController.class )
+          final Set<String> clusters = Components.servicesProviding( ClusterController.class )
               .map( ServiceConfiguration::getPartition )
               .toJavaSet( );
           final NetworkConfiguration configuration =
