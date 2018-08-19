@@ -50,10 +50,6 @@ public interface ClusterServiceMessage extends BaseMessageMarker, IMarshallable,
 
   void setUserId( String userId );
 
-  String getStatusMessage( );
-
-  void setStatusMessage( String statusMessage );
-
   Boolean get_return( );
 
   void set_return( Boolean returnValue );

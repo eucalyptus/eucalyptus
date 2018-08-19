@@ -106,6 +106,10 @@ class ClusterBindingTest {
     Binding binding = BindingManager.getBinding( 'eucalyptus_ucsb_edu' )
     OMElement messageOm = binding.toOM( new DescribeResourcesType( ) )
     println binding.fromOM( messageOm )
+    println binding.fromOM( """\
+        <DescribeResources xmlns="http://eucalyptus.ucsb.edu/">
+          <statusMessage>OK</statusMessage>
+        </DescribeResources>""".stripIndent( ) )
   }
 
   @Test

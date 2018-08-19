@@ -113,7 +113,7 @@ public class BaseMessages {
     return xmlMapper.readValue( reader, type );
   }
 
-  @JsonIgnoreProperties( { "correlationId", "effectiveUserId", "reply", "statusMessage", "userId" } )
+  @JsonIgnoreProperties( { "correlationId", "effectiveUserId", "reply", "userId" } )
   private static final class BaseMessageMixIn { }
 
   @JsonIgnoreProperties( { "webServiceErrorCode", "webServiceErrorMessage" } )

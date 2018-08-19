@@ -178,7 +178,6 @@ public class ObjectFactoryImpl implements ObjectFactory {
 
         @Override
         public CopyObjectResponseType call() throws Exception {
-          LOG.debug("calling copyObject");
           CopyObjectResponseType response;
           try {
             response = provider.copyObject(request);
@@ -190,7 +189,6 @@ public class ObjectFactoryImpl implements ObjectFactory {
               throw ex;
             }
           }
-          LOG.debug("Done with copyObject. " + response.getStatusMessage());
           return response;
         }
       };
@@ -263,7 +261,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
     pot.setMetaData(gort.getMetaData());
     pot.setUser(requestUser);
     pot.setContentLength(gort.getSize().toString());
-    if (metadataDirective != null && "REPLACE".equals(metadataDirective)) {
+    if ("REPLACE".equals(metadataDirective)) {
       pot.setMetaData(request.getMetaData());
     } else if (metadataDirective == null || "".equals(metadataDirective) || "COPY".equals(metadataDirective)) {
       pot.setMetaData(gort.getMetaData());
@@ -283,7 +281,6 @@ public class ObjectFactoryImpl implements ObjectFactory {
     response.setVersionId(port.getVersionId());
     response.setKey(request.getDestinationObject());
     response.setBucket(request.getDestinationBucket());
-    response.setStatusMessage(port.getStatusMessage());
     response.setEtag(port.getEtag());
     response.setMetaData(port.getMetaData());
     // Last modified date in copy response is in ISO8601 format as per S3 API
@@ -327,9 +324,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
 
         @Override
         public PutObjectResponseType call() throws Exception {
-          LOG.debug("Putting data");
           PutObjectResponseType response = provider.putObject(putRequest, content);
-          LOG.debug("Done with put. Response status: " + response.getStatusMessage());
           return response;
         }
       };
@@ -538,7 +533,6 @@ public class ObjectFactoryImpl implements ObjectFactory {
 
     // Issue delete to backend
     DeleteObjectType deleteRequest;
-    DeleteObjectResponseType deleteResponse;
     LOG.trace("Deleting object " + entity.getObjectUuid() + ".");
     deleteRequest = new DeleteObjectType();
 
@@ -558,12 +552,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
       deleteRequest.setKey(entity.getObjectUuid());
 
       try {
-        deleteResponse = provider.deleteObject(deleteRequest);
-        if (!(HttpResponseStatus.NO_CONTENT.equals(deleteResponse.getStatus()) || HttpResponseStatus.OK.equals(deleteResponse.getStatus()))) {
-          LOG.trace("Backend did not confirm deletion of " + deleteRequest.getBucket() + "/" + deleteRequest.getKey() + " via request: "
-              + deleteRequest.toString());
-          throw new Exception("Object could not be confirmed as deleted.");
-        }
+        provider.deleteObject(deleteRequest);
       } catch (S3Exception e) {
         if (HttpResponseStatus.NOT_FOUND.equals(e.getStatus())) {
           // Ok, fall through.
@@ -619,11 +608,9 @@ public class ObjectFactoryImpl implements ObjectFactory {
       initRequest.setStorageClass(upload.getStorageClass());
       initRequest.setAccessControlList(upload.getAccessControlPolicy().getAccessControlList());
 
-      LOG.trace("Initiating MPU on backend");
       InitiateMultipartUploadResponseType response = provider.initiateMultipartUpload(initRequest);
       upload.setObjectModifiedTimestamp(response.getLastModified());
       upload.setUploadId(response.getUploadId());
-      LOG.trace("Done with MPU init on backend. " + response.getStatusMessage());
     } catch (Exception e) {
       LOG.error("InitiateMPU failure to backend for bucketuuid / objectuuid : " + upload.getBucket().getBucketUuid() + "/" + upload.getObjectUuid(),
           e);
@@ -691,9 +678,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
 
         @Override
         public UploadPartResponseType call() throws Exception {
-          LOG.trace("Putting data");
           UploadPartResponseType response = provider.uploadPart(putRequest, content);
-          LOG.trace("Done with put. " + response.getStatusMessage());
           return response;
         }
       };
@@ -777,7 +762,6 @@ public class ObjectFactoryImpl implements ObjectFactory {
         @Override
         public CompleteMultipartUploadResponseType call() throws Exception {
           CompleteMultipartUploadResponseType response = provider.completeMultipartUpload(commitRequest);
-          LOG.debug("Done with multipart upload. " + response.getStatusMessage());
           return response;
         }
       };

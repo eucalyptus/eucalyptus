@@ -291,7 +291,7 @@ public class Json {
   private interface BaseMessageMinimalMixin {
   }
 
-  @JsonIgnoreProperties( { "correlationId", "effectiveUserId", "reply", "statusMessage", "userId",
+  @JsonIgnoreProperties( { "correlationId", "effectiveUserId", "reply", "userId",
       "_disabledServices", "_notreadyServices", "_stoppedServices", "_epoch", "_services", "_return",
       "callerContext" } )
   private interface BaseMessageMixin {

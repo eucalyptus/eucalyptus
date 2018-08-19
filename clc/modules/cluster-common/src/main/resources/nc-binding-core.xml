@@ -31,7 +31,7 @@
   <mapping class="com.eucalyptus.cluster.common.msgs.CloudNodeMessage" abstract="true">
     <value name="correlationId" get-method="getCorrelationId" set-method="setCorrelationId" usage="optional"/>
     <value name="userId" get-method="getUserId" set-method="setUserId" usage="optional" />
-    <value name="statusMessage" get-method="getStatusMessage" set-method="setStatusMessage" usage="optional" />
+    <structure name="statusMessage" usage="optional" />
     <value name="return" get-method="get_return" set-method="set_return" usage="optional" />
     <value name="epoch" get-method="get_epoch" set-method="set_epoch" usage="optional" />
     <collection get-method="get_services" set-method="set_services"
