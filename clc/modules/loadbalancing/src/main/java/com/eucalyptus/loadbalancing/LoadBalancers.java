@@ -32,6 +32,7 @@ package com.eucalyptus.loadbalancing;
 import static com.eucalyptus.loadbalancing.LoadBalancer.Scheme;
 import static com.eucalyptus.loadbalancing.common.LoadBalancingMetadata.LoadBalancerMetadata;
 import static com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
+import static com.eucalyptus.util.Strings.nonNull;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -780,6 +781,9 @@ public class LoadBalancers {
 						}
 					}));
 		}
+		if (desc.getBackendInstances()!=null) {
+			desc.getBackendInstances().getMember().sort(Ordering.natural().onResultOf(nonNull(BackendInstance::getInstanceId)));
+		}
 
 		/// availability zones
 		desc.setAvailabilityZones(new AvailabilityZones());
@@ -817,6 +821,7 @@ public class LoadBalancers {
 									}
 								}
 							})));
+							pnames.getMember().sort(Ordering.natural());
 							policiesOfListener.addAll(pnames.getMember());
 							desc.setPolicyNames(pnames);
 							return desc;
@@ -845,11 +850,13 @@ public class LoadBalancers {
 											}
 										})
 								));
+								desc.getPolicyNames().getMember().sort(Ordering.natural());
 								policiesForBackendServer.addAll(desc.getPolicyNames().getMember());
 								return desc;
 							}
 						})
 				));
+				desc.getBackendServerDescriptions().getMember().sort(Ordering.natural().onResultOf(BackendServerDescription::getInstancePort));
 			}
 		} catch (final Exception ex) {
 			;
@@ -885,6 +892,7 @@ public class LoadBalancers {
 		}
 		final PolicyDescriptions policyDescs = new PolicyDescriptions();
 		policyDescs.setMember((ArrayList<PolicyDescription>) policies);
+		policyDescs.getMember().sort(Ordering.natural().onResultOf(nonNull(PolicyDescription::getPolicyName)));
 		desc.setPolicyDescriptions(policyDescs);
 
 		return desc;
