@@ -49,7 +49,7 @@ public class EnableAvailabilityZoneWorkflowImpl
   private static Logger    LOG     = Logger.getLogger(  EnableAvailabilityZoneWorkflowImpl.class );
   
   final LoadBalancingActivitiesClient client = 
-      new LoadBalancingActivitiesClientImpl();
+      new LoadBalancingActivitiesClientImpl(null, LoadBalancingJsonDataConverter.getDefault(), null);
 
   private ElbWorkflowState state = ElbWorkflowState.WORKFLOW_RUNNING;
   private Promise<List<String>> persistedZones = null;

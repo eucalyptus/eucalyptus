@@ -64,13 +64,13 @@ public class UpdateLoadBalancerWorkflowImpl implements UpdateLoadBalancerWorkflo
       Logger.getLogger(  UpdateLoadBalancerWorkflowImpl.class );
 
   private final LoadBalancingActivitiesClient client =
-      new LoadBalancingActivitiesClientImpl();
+      new LoadBalancingActivitiesClientImpl(null, LoadBalancingJsonDataConverter.getDefault(), null);
   
   private final UpdateLoadBalancerWorkflowSelfClient selfClient =
-      new UpdateLoadBalancerWorkflowSelfClientImpl();
+      new UpdateLoadBalancerWorkflowSelfClientImpl(null, LoadBalancingJsonDataConverter.getDefault(), null);
   
   private final LoadBalancingVmActivitiesClient vmClient =
-      new LoadBalancingVmActivitiesClientImpl();
+      new LoadBalancingVmActivitiesClientImpl(null, LoadBalancingJsonDataConverter.getDefault(), null);
   private DecisionContextProvider contextProvider = 
       new DecisionContextProviderImpl();
   final WorkflowClock clock = 

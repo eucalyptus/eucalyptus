@@ -47,7 +47,7 @@ public class DeleteLoadBalancerListenersWorkflowImpl
   private static Logger    LOG     = Logger.getLogger(  DeleteLoadBalancerListenersWorkflowImpl.class );
   
   final LoadBalancingActivitiesClient client = 
-      new LoadBalancingActivitiesClientImpl();
+      new LoadBalancingActivitiesClientImpl(null, LoadBalancingJsonDataConverter.getDefault(), null);
   private ElbWorkflowState state = 
       ElbWorkflowState.WORKFLOW_RUNNING;
   TryCatchFinally task = null;
