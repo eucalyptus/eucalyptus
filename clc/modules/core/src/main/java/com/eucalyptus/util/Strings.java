@@ -30,10 +30,12 @@ package com.eucalyptus.util;
 
 import java.util.Collections;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 
@@ -354,6 +356,24 @@ public class Strings {
    */
   public static CompatFunction<Object,String> toStringFunction() {
     return StringerFunctions.TOSTRING;
+  }
+
+  /**
+   * Wrap a string returning function for null safety.
+   *
+   * <P>The returned function will return an empty string in place of
+   * any null values.</P>
+   *
+   * @return The wrapped function
+   */
+  public static <T> CompatFunction<T,String> nonNull( final Function<T,String> function ) {
+    return new CompatFunction<T,String>( ) {
+      @Nullable
+      @Override
+      public String apply( @Nullable final T t ) {
+        return MoreObjects.firstNonNull( function.apply( t ), "" );
+      }
+    };
   }
 
   /**
