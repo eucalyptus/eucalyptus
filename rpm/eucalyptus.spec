@@ -613,16 +613,6 @@ cp -Rp admin-tools/conf/* $RPM_BUILD_ROOT/%{_sysconfdir}/eucalyptus-admin
 
 
 %files admin-tools
-# Non-functional placeholder whose error messages people point people
-# to new tools (new in 4.3)
-%{_sbindir}/euca_conf
-# Old stuff (no replacements as of 4.3)
-%{python_sitelib}/eucadmin*
-%{_sbindir}/eureport-generate-report
-%{_sbindir}/eureport-export-data
-%{_sbindir}/eureport-delete-data
-%{_mandir}/man8/eureport-*.8*
-# New stuff (new in 4.2)
 %{python_sitelib}/eucalyptus_admin*
 %{_bindir}/euctl
 %{_bindir}/euserv-*
@@ -728,6 +718,9 @@ usermod -a -G libvirt eucalyptus || :
 
 
 %changelog
+* Fri Sep  7 2018 Steve Jones <steve.jones@appscale.com> - 5.0
+- Remove eureport-* tools and euca_conf stub
+
 * Wed Jul 25 2018 Steve Jones <steve.jones@appscale.com> - 5.0
 - Add cc-native rpm
 - Remove PopulateSnapPoints.groovy script
