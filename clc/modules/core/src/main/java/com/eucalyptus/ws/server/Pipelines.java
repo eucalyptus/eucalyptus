@@ -42,19 +42,14 @@ package com.eucalyptus.ws.server;
 import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
 import java.lang.reflect.Modifier;
 import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
-import org.apache.commons.codec.DecoderException;
-import org.apache.commons.codec.net.URLCodec;
+import java.util.regex.Pattern;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
@@ -77,8 +72,6 @@ import com.eucalyptus.util.Classes;
 import com.eucalyptus.ws.Handlers;
 import com.eucalyptus.ws.handlers.HmacHandler;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
-import com.eucalyptus.ws.protocol.BaseQueryBinding;
-import com.eucalyptus.ws.protocol.OperationParameter;
 import com.eucalyptus.ws.handlers.SoapHandler;
 import com.eucalyptus.ws.util.HmacUtils.SignatureVersion;
 import com.google.common.base.Supplier;
@@ -137,7 +130,8 @@ public class Pipelines {
     }
 
     final String hostHeader = request.getHeader( HttpHeaders.Names.HOST );
-    if ( hostHeader != null && ( hostHeader.contains( "amazonaws.com" ) || hostHeader.contains( subDomain.get( ) ) ) ) {
+    final String lowerHostHeader = hostHeader == null ? null : hostHeader.toLowerCase( );
+    if ( hostHeader != null && ( lowerHostHeader.contains( "amazonaws.com" ) || lowerHostHeader.contains( subDomain.get( ) ) ) ) {
       final String host = hostHeader.indexOf( ':' ) > 0 ? hostHeader.substring( 0, hostHeader.indexOf( ':' ) ) : hostHeader;
       LOG.debug( "Trying to intercept request for " + hostHeader );
       for ( final FilteredPipeline f : pipelines ) {
@@ -152,9 +146,9 @@ public class Pipelines {
             }
             LOG.debug( "Maybe intercepting: " + hostHeader + " using " + f.getClass( ) );
             if ( Ats.from( compIdClass ).has( AwsServiceName.class )
-                && host.matches( "[\\w\\.-_]*" + compId.getAwsServiceName( ) + "(?:\\.[\\w\\-]+)?\\.amazonaws.com" ) ) {
+                && host.matches( "(?i)[\\w.-]*" + compId.getAwsServiceName( ) + "(?:\\.[\\w-]+)?\\.amazonaws\\.com" ) ) {
               return f;//Return pipeline which can handle the request for ${service}.${region}.amazonaws.com
-            } else if ( host.matches( "[\\w\\.-_]*" + compId.name( ) + "\\." + subDomain.get( ) ) ) {
+            } else if ( host.matches( "(?i)[\\w.-]*" + compId.name( ) + "\\." + Pattern.quote(subDomain.get( )) ) ) {
               return f;//Return pipeline which can handle the request for ${service}.${system.dns.dnsdomain}
             }
           }
