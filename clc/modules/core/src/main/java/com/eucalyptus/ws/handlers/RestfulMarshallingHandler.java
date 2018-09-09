@@ -39,8 +39,6 @@
 
 package com.eucalyptus.ws.handlers;
 
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.MissingFormatArgumentException;
@@ -51,32 +49,23 @@ import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.ComponentPart;
-import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.UnsafeByteArrayOutputStream;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
-import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import com.google.common.base.Objects;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -116,8 +105,8 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   @Override
   public void incomingMessage( MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpRequest ) {
-      MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
-      String bindingVersion = httpRequest.getParameters( ).remove( RequiredQueryParams.Version.toString( ) );
+      final MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
+      final String bindingVersion = getVersionFromRequest( httpRequest );
       if ( Strings.isNullOrEmpty( bindingVersion ) && defaultVersion != null) {
         this.setNamespaceVersion( defaultVersion );
       } else if ( bindingVersion != null && bindingVersion.matches( "\\d\\d\\d\\d-\\d\\d-\\d\\d" ) ) {
@@ -136,7 +125,11 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       }
     }
   }
-  
+
+  protected String getVersionFromRequest( final MappingHttpRequest request ) {
+    return null;
+  }
+
   protected void setNamespace( String namespace ) {
     this.namespace = namespace;
     this.binding = BindingManager.getBinding( this.namespace, component );
@@ -189,13 +182,13 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
         } else {//actually try to bind response
           final Object message = httpResponse.getMessage( );
           try {//use request binding
-            this.binding.toStream( byteOut, message, getNamespaceOverride( message, null ) );
+            this.binding.toStream( byteOut, writeReplace( message ), getNamespaceOverride( message, null ) );
           } catch ( BindingException ex ) {
             Logs.extreme( ).error( ex, ex );
             byteOut.reset();
             if ( getDefaultBinding( ) != null ) {
               try {//use default binding with request namespace
-                getDefaultBinding( ).toStream( byteOut, message, getNamespaceOverride( message, this.namespace ) );
+                getDefaultBinding( ).toStream( byteOut, writeReplace( message ), getNamespaceOverride( message, this.namespace ) );
               } catch ( BindingException ex1 ) {//use default binding
                 if ( message instanceof BaseMessage ) {
                   byteOut.reset();
@@ -221,6 +214,10 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
         HoldMe.canHas.unlock( );
       }
     }
+  }
+
+  protected Object writeReplace( @Nonnull  final Object message ) {
+    return message;
   }
 
   protected String getNamespaceOverride( @Nonnull  final Object message,
