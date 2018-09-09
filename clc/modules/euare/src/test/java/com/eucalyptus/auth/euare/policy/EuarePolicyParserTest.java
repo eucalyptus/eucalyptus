@@ -50,7 +50,7 @@ public class EuarePolicyParserTest {
 
   @BeforeClass
   public static void beforeClass( ) {
-    Conditions.registerCondition( "StringEquals", StringEquals.class, false );
+    Conditions.registerCondition( "StringEquals", StringEquals.class, true );
     Keys.registerKeyProvider( new RegisteredKeyProvider( ) );
     Keys.registerKeyProvider( new OpenIDConnectKeyProvider( ) );
   }
