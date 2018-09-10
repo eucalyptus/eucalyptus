@@ -288,6 +288,10 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     return String.format("%s-model.xml", this.getName());
   }
 
+  public String getMessagesIndexFileName( ) {
+    return String.format("%s-messages.index", this.getName());
+  }
+
   public Set<String> getCertificateUsages( ) {
     return Collections.emptySet( );
   }

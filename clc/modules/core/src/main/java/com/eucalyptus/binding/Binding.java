@@ -70,54 +70,71 @@ import org.jibx.runtime.JiBXException;
 import org.jibx.runtime.impl.StAXReaderWrapper;
 import org.jibx.runtime.impl.StAXWriter;
 import org.jibx.runtime.impl.UnmarshallingContext;
+import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.NamespaceMappingXMLStreamWriter;
 import com.eucalyptus.util.OMXMLStreamWriter;
 import com.eucalyptus.util.ThrowingFunction;
 import com.eucalyptus.ws.WebServicesException;
+import com.google.common.collect.LinkedListMultimap;
+import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Maps;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import com.google.common.collect.Multimaps;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 
 public class Binding {
   
   private static Logger       LOG                 = Logger.getLogger( Binding.class );
   private final String        name;
   private IBindingFactory     bindingFactory;
-  private Map<String, Class>  elementToClassMap   = Maps.newHashMap( );
-  private Map<String, String> classToElementMap   = Maps.newHashMap( );
+  private Map<String, Class<?>> elementToClassMap = Maps.newHashMap( );
   private Map<String, String> classToNamespaceMap = Maps.newHashMap( );
-  
+  private RestBinding         restBinding;
+
   protected Binding( final String name ) {
     this.name = name;
   }
   
   public boolean hasElementClass( String elementName ) throws BindingException {
     return this.elementToClassMap.containsKey( elementName );
-    
   }
   
-  public Class getElementClass( String elementName ) throws BindingException {
+  public Class<?> getElementClass( String elementName ) throws BindingException {
     if ( !this.elementToClassMap.containsKey( elementName ) ) {
       throw new BindingElementNotFoundException( elementName, "Failed to find corresponding class mapping for element: " + elementName + " in namespace: " + this.name );
     }
     return this.elementToClassMap.get( elementName );
   }
-  
+
+  public RestBinding getRestBinding( ) {
+    return restBinding;
+  }
+
   public IBindingFactory seed( final Class seed ) throws BindingException {
     final ClassLoader systemClassLoader = ClassLoader.getSystemClassLoader( );
     try {
       this.bindingFactory = BindingDirectory.getFactory( this.name, seed, systemClassLoader );
+      final ListMultimap<Tuple2<String,String>, Class<?>> httpToClassMap = LinkedListMultimap.create( );
       final String[] mappedClasses = this.bindingFactory.getMappedClasses( );
       for ( int i = 0; i < mappedClasses.length; i++ ) {
         if ( this.bindingFactory.getElementNames( )[i] != null ) {
           try {
-            this.elementToClassMap.put( this.bindingFactory.getElementNames( )[i], systemClassLoader.loadClass( mappedClasses[i] ) );
-            this.classToElementMap.put( mappedClasses[i], this.bindingFactory.getElementNames( )[i] );
+            final Class<?> mappedClass = systemClassLoader.loadClass( mappedClasses[i] );
+            final Ats ats = Ats.from( mappedClass );
+            if ( ats.has( HttpRequestMapping.class ) ) {
+              final HttpRequestMapping httpRequestMapping = ats.get( HttpRequestMapping.class );
+              if ( !httpRequestMapping.uri( ).isEmpty( ) ) {
+                httpToClassMap.put( Tuple.of(httpRequestMapping.method(), httpRequestMapping.uri()), mappedClass );
+              }
+            }
+            this.elementToClassMap.put( this.bindingFactory.getElementNames( )[i], mappedClass );
             this.classToNamespaceMap.put( mappedClasses[i], this.bindingFactory.getElementNamespaces( )[i] );
           } catch ( ClassNotFoundException e ) {
             LOG.trace( e, e );
           }
         }
       }
+      this.restBinding = RestBinding.of( Multimaps.asMap( httpToClassMap ) );
     } catch ( JiBXException e ) {
       LOG.debug( e, e );
       throw new BindingException( "Failed to build binding factory for " + this.name + " with seed class " + seed.getCanonicalName( ) );

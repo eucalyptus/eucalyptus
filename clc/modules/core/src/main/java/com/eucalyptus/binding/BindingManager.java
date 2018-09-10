@@ -53,6 +53,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Parameters;
+import com.eucalyptus.util.ThrowingFunction;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -61,6 +62,7 @@ public class BindingManager {
 
   private static Map<BindingKey, Binding> bindingMap            = Maps.newConcurrentMap( );
   private static Map<BindingKey,Future<Boolean>> bindingSeedMap = Maps.newConcurrentMap( );
+  private static Map<BindingKey, RestBinding> restBindingMap    = Maps.newConcurrentMap( );
 
   public static String sanitizeNamespace( String namespace ) {
     return namespace.replaceAll( "(https?://)|(/$)", "" ).replaceAll( "[./-]", "_" );
@@ -109,6 +111,13 @@ public class BindingManager {
     }
   }
 
+  public static void registerBinding( final Optional<Class<? extends ComponentId>> component, final RestBinding restBinding ) {
+    final BindingKey key = key( component, "rest" );
+    if ( !restBindingMap.containsKey( key ) ) {
+      restBindingMap.put( key, restBinding );
+    }
+  }
+
   public static boolean isRegisteredBinding( final String bindingName ) {
     final BindingKey key = key( bindingName );
     return BindingManager.bindingMap.containsKey( key );
@@ -123,8 +132,12 @@ public class BindingManager {
     return getBinding( key( bindingName ) );
   }
 
+  public static RestBinding getRestBinding( final Class<? extends ComponentId> component ) throws BindingException {
+    return getRestBinding( key( Optional.<Class<? extends ComponentId>>fromNullable( component ), "rest" ) );
+  }
+
   private static BindingKey key( final String bindingName ) {
-    return key( Optional.<Class<? extends ComponentId>>absent( ), bindingName );
+    return key( Optional.absent( ), bindingName );
   }
 
   private static BindingKey key( final Optional<Class<? extends ComponentId>> component,
@@ -133,15 +146,27 @@ public class BindingManager {
   }
 
   private static Binding getBinding( final BindingKey key ) {
-    if ( BindingManager.bindingMap.containsKey( key ) ) {
-      return BindingManager.bindingMap.get( key );
+    return lookupBinding( key, bindingMap, Binding::new );
+  }
+
+  private static RestBinding getRestBinding( final BindingKey key ) throws BindingException {
+    return lookupBinding( key, restBindingMap, name -> { throw new BindingException( "Binding not found: " + name ); } );
+  }
+
+  private static <BT,BE extends Throwable> BT lookupBinding(
+      final BindingKey key,
+      final Map<BindingKey,BT> map,
+      final ThrowingFunction<String, BT, BE> create
+  ) throws BE {
+    if ( map.containsKey( key ) ) {
+      return map.get( key );
     } else {
       final BindingKey sanitizedKey = key.sanitized( );
-      if ( BindingManager.bindingMap.containsKey( sanitizedKey ) ) {
-        return BindingManager.bindingMap.get( sanitizedKey );
+      if ( map.containsKey( sanitizedKey ) ) {
+        return map.get( sanitizedKey );
       } else {
-        final Binding newBinding = new Binding( key.getName( ) );
-        BindingManager.bindingMap.put( key, newBinding );
+        final BT newBinding = create.apply( key.getName( ) );
+        map.put( key, newBinding );
         return newBinding;
       }
     }

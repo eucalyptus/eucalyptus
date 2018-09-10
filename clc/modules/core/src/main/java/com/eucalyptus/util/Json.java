@@ -40,11 +40,13 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import groovy.lang.GroovyObject;
@@ -89,10 +91,31 @@ public class Json {
         return objectMapper;
       }
     },
+    IgnoreBaseMessageUpper {
+      @Override
+      ObjectMapper config( final ObjectMapper objectMapper ) {
+        objectMapper.addMixIn( BaseMessage.class, BaseMessageUpperMixin.class );
+        return objectMapper;
+      }
+    },
     IgnoreVavr {
       @Override
       ObjectMapper config( final ObjectMapper objectMapper ) {
         objectMapper.addMixIn( Value.class, VavrMixin.class );
+        return objectMapper;
+      }
+    },
+    OmitNullValues {
+      @Override
+      ObjectMapper config( final ObjectMapper objectMapper ) {
+        objectMapper.setSerializationInclusion( Include.NON_NULL );
+        return objectMapper;
+      }
+    },
+    UpperCamelPropertyNaming {
+      @Override
+      ObjectMapper config( final ObjectMapper objectMapper ) {
+        objectMapper.setPropertyNamingStrategy( PropertyNamingStrategy.UPPER_CAMEL_CASE );
         return objectMapper;
       }
     },
@@ -147,6 +170,31 @@ public class Json {
       throw new IOException( "Invalid object" );
     }
     return (ObjectNode) node;
+  }
+
+  public static <T> T readObject(
+      final ObjectReader reader,
+      final Class<T> type,
+      final String jsonText
+  ) throws Exception {
+    final JsonParser parser = reader.getFactory( ).createParser( new StringReader( jsonText ) {
+      @Override public String toString() { return "json"; } // overridden for better source in error message
+    } );
+    if ( parser == null ) throw new IOException( "Null" );
+    final T value = reader.readValue( parser, type );
+    if ( value == null ) {
+      throw new IOException( "No content at " + parser.getCurrentLocation( ) );
+    }
+    boolean trailingContent;
+    try {
+      trailingContent = parser.nextToken( ) != null;
+    } catch ( IOException e ) {
+      trailingContent = true;
+    }
+    if ( trailingContent ) {
+      throw new IOException( "Unexpected trailing content at " + parser.getCurrentLocation( ) );
+    }
+    return value;
   }
 
   public static void writeObject( final OutputStream out, final Object object ) throws IOException {
@@ -295,6 +343,12 @@ public class Json {
       "_disabledServices", "_notreadyServices", "_stoppedServices", "_epoch", "_services", "_return",
       "callerContext" } )
   private interface BaseMessageMixin {
+  }
+
+  @JsonIgnoreProperties( { "CorrelationId", "EffectiveUserId", "Reply", "UserId",
+      "_disabledServices", "_notreadyServices", "_stoppedServices", "_epoch", "_services", "_return",
+      "CallerContext" } )
+  private interface BaseMessageUpperMixin {
   }
 
   @JsonIgnoreProperties( { "async", "defined", "distinct", "empty", "lazy", "memoized", "ordered",

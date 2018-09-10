@@ -161,6 +161,11 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
   }
 
   @Override
+  protected String getVersionFromRequest( final MappingHttpRequest request ) {
+    return request.getParameters( ).remove( RequiredQueryParams.Version.toString( ) );
+  }
+
+  @Override
   public Object bind( final MappingHttpRequest httpRequest ) throws BindingException {
     final String operationName = this.extractOperationName( httpRequest );
     final String operationNameType = operationName + "Type";
@@ -363,7 +368,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
     }
   }
 
-  private Object convertToType( final Supplier<String> value, final Class<?> targetType ) throws Exception {
+  public static Object convertToType( final Supplier<String> value, final Class<?> targetType ) throws Exception {
     if ( targetType.equals( String.class ) )
       return value.get();
     else if ( targetType.getName( ).equals( "int" ) )
