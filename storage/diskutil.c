@@ -103,6 +103,7 @@ enum {
     LOSETUP,
     MKDIR,
     MKEXT3,
+    MKSWAP,
     PARTED,
     TUNE2FS,
     LASTHELPER
@@ -145,6 +146,7 @@ static char *helpers[LASTHELPER] = {
     "losetup",
     "mkdir",
     "mkfs.ext3",
+    "mkswap",
     "parted",
     "tune2fs",
 };
