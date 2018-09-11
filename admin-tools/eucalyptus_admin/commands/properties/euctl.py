@@ -45,8 +45,6 @@ from eucalyptus_admin.commands.properties.modifypropertyvalue import \
 
 PROPERTY_TYPES = {'authentication.ldap_integration_configuration': 'json',
                   'cloud.network.network_configuration': 'json',
-                  'cloudformation.swf_client_config': 'json',
-                  'cloudformation.swf_workflow_worker_config': 'json',
                   'region.region_configuration': 'json'}
 
 
