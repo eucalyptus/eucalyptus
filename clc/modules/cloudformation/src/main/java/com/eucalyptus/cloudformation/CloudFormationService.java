@@ -375,7 +375,7 @@ public class CloudFormationService {
 
       final String stackIdLocal = UUID.randomUUID().toString();
       final String stackId = STACK_ID_PREFIX + REGION + ":" + accountId + ":stack/"+stackName+"/"+stackIdLocal;
-      final PseudoParameterValues pseudoParameterValues = new PseudoParameterValues();
+      final PseudoParameterValues pseudoParameterValues = populateRegionPseudoParameters(new PseudoParameterValues());
       pseudoParameterValues.setAccountId(accountId);
       pseudoParameterValues.setStackName(stackName);
       pseudoParameterValues.setStackId(stackId);
@@ -386,7 +386,6 @@ public class CloudFormationService {
         }
         pseudoParameterValues.setNotificationArns(notificationArns);
       }
-      pseudoParameterValues.setRegion(getRegion());
       final ArrayList<String> capabilities = Lists.newArrayList();
       if (request.getCapabilities() != null && request.getCapabilities().getMember() != null) {
         for (String capability: request.getCapabilities().getMember()) {
@@ -1071,12 +1070,10 @@ public class CloudFormationService {
       }
       final String stackIdLocal = UUID.randomUUID().toString();
       final String stackId = "arn:aws:cloudformation:" + REGION + ":" + accountId + ":stack/"+stackName+"/"+stackIdLocal;
-      final PseudoParameterValues pseudoParameterValues = new PseudoParameterValues();
+      final PseudoParameterValues pseudoParameterValues = populateRegionPseudoParameters(new PseudoParameterValues());
       pseudoParameterValues.setAccountId(accountId);
       pseudoParameterValues.setStackName(stackName);
       pseudoParameterValues.setStackId(stackId);
-      ArrayList<String> notificationArns = Lists.newArrayList();
-      pseudoParameterValues.setRegion(getRegion());
       List<Parameter> parameters = Lists.newArrayList();
       final GetTemplateSummaryResult getTemplateSummaryResult = new TemplateParser().getTemplateSummary(templateText, parameters, pseudoParameterValues, userId, CloudFormationProperties.ENFORCE_STRICT_RESOURCE_PROPERTIES);
       reply.setGetTemplateSummaryResult(getTemplateSummaryResult);
@@ -1403,7 +1400,7 @@ public class CloudFormationService {
         }
       }
 
-      final PseudoParameterValues nextPseudoParameterValues = new PseudoParameterValues();
+      final PseudoParameterValues nextPseudoParameterValues = populateRegionPseudoParameters(new PseudoParameterValues());
       nextPseudoParameterValues.setAccountId(accountId);
       nextPseudoParameterValues.setStackName(stackName);
       nextPseudoParameterValues.setStackId(stackId);
@@ -1415,7 +1412,6 @@ public class CloudFormationService {
         }
         nextPseudoParameterValues.setNotificationArns(nextNotificationArns);
       }
-      nextPseudoParameterValues.setRegion(getRegion());
 
       final String nextTemplateText = (usePreviousTemplate ?
         previousStackEntity.getTemplateBody() :
@@ -1680,11 +1676,18 @@ public class CloudFormationService {
     Map<String, String> pseudoParameterMap = StackEntityHelper.jsonToPseudoParameterMap(stackEntity.getPseudoParameterMapJson());
     if (pseudoParameterMap.containsKey(TemplateParser.AWS_REGION)) {
       JsonNode regionJsonNode = JsonHelper.getJsonNodeFromString(pseudoParameterMap.get(TemplateParser.AWS_REGION));
-
       if (regionJsonNode == null || !regionJsonNode.isValueNode()) {
         throw new ValidationErrorException(TemplateParser.AWS_REGION + " from stack is not a string.");
       }
       pseudoParameterValues.setRegion(regionJsonNode.asText());
+    }
+    JsonNode partitionJsonNode = JsonHelper.getJsonNodeFromString(pseudoParameterMap.get(TemplateParser.AWS_PARTITION));
+    if (partitionJsonNode != null && partitionJsonNode.isValueNode()) {
+      pseudoParameterValues.setPartition(partitionJsonNode.asText());
+    }
+    JsonNode urlSuffixJsonNode = JsonHelper.getJsonNodeFromString(pseudoParameterMap.get(TemplateParser.AWS_URL_SUFFIX));
+    if (urlSuffixJsonNode != null && urlSuffixJsonNode.isValueNode()) {
+      pseudoParameterValues.setUrlSuffix(urlSuffixJsonNode.asText());
     }
     return pseudoParameterValues;
   }
@@ -1745,12 +1748,10 @@ public class CloudFormationService {
       String templateText = (templateBody != null) ? templateBody : extractTemplateTextFromURL(templateUrl, user);
       final String stackIdLocal = UUID.randomUUID().toString();
       final String stackId = "arn:aws:cloudformation:" + REGION + ":" + accountId + ":stack/"+stackName+"/"+stackIdLocal;
-      final PseudoParameterValues pseudoParameterValues = new PseudoParameterValues();
+      final PseudoParameterValues pseudoParameterValues = populateRegionPseudoParameters(new PseudoParameterValues());
       pseudoParameterValues.setAccountId(accountId);
       pseudoParameterValues.setStackName(stackName);
       pseudoParameterValues.setStackId(stackId);
-      ArrayList<String> notificationArns = Lists.newArrayList();
-      pseudoParameterValues.setRegion(getRegion());
       List<Parameter> parameters = Lists.newArrayList();
       final ValidateTemplateResult validateTemplateResult = new TemplateParser().validateTemplate(templateText, parameters, pseudoParameterValues, userId, CloudFormationProperties.ENFORCE_STRICT_RESOURCE_PROPERTIES);
       reply.setValidateTemplateResult(validateTemplateResult);
@@ -1764,6 +1765,13 @@ public class CloudFormationService {
     return Optional.fromNullable( Strings.emptyToNull( REGION ) )
         .or( RegionConfigurations.getRegionName( ) )
         .or( "eucalyptus" );
+  }
+
+  public static PseudoParameterValues populateRegionPseudoParameters(final PseudoParameterValues pseudoParameterValues) {
+    pseudoParameterValues.setRegion(getRegion( ));
+    pseudoParameterValues.setPartition("eucalyptus");
+    pseudoParameterValues.setUrlSuffix(DomainNames.externalSubdomain().relativize(Name.root).toString());
+    return pseudoParameterValues;
   }
 
   private static void handleException(final Exception e)

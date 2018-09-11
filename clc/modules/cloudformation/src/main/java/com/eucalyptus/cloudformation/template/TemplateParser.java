@@ -131,6 +131,8 @@ public class TemplateParser {
   public static final String AWS_REGION = "AWS::Region";
   public static final String AWS_STACK_ID = "AWS::StackId";
   public static final String AWS_STACK_NAME = "AWS::StackName";
+  public static final String AWS_PARTITION = "AWS::Partition";
+  public static final String AWS_URL_SUFFIX = "AWS::URLSuffix";
 
   private static final String DEFAULT_TEMPLATE_VERSION = "2010-09-09";
   private static final String[] validTemplateVersions = new String[] {DEFAULT_TEMPLATE_VERSION};
@@ -335,6 +337,8 @@ public class TemplateParser {
     pseudoParameterMap.put(AWS_NO_VALUE, JsonHelper.getStringFromJsonNode(noValueNode));
 
     pseudoParameterMap.put(AWS_REGION, JsonHelper.getStringFromJsonNode(new TextNode(pseudoParameterValues.getRegion())));
+    pseudoParameterMap.put(AWS_PARTITION, JsonHelper.getStringFromJsonNode(new TextNode(pseudoParameterValues.getPartition())));
+    pseudoParameterMap.put(AWS_URL_SUFFIX, JsonHelper.getStringFromJsonNode(new TextNode(pseudoParameterValues.getUrlSuffix())));
 
     pseudoParameterMap.put(AWS_STACK_ID, JsonHelper.getStringFromJsonNode(new TextNode(pseudoParameterValues.getStackId())));
 
