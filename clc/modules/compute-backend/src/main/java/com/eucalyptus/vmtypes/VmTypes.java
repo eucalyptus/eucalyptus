@@ -109,9 +109,13 @@ public class VmTypes {
                       initial = "m1.small" )
   public static String         DEFAULT_TYPE_NAME        = "m1.small";
 
-  @ConfigurableField( description = "Format first ephemeral disk by defaut with ext3", initial = "true",
+  @ConfigurableField( description = "Format first ephemeral disk by default with ext3", initial = "true",
       changeListener = PropertyChangeListeners.IsBoolean.class)
   public static Boolean        FORMAT_EPHEMERAL_STORAGE = true;
+
+  @ConfigurableField( description = "Format swap disk by default. The property will be deprecated in next major release.",
+      initial = "false", changeListener = PropertyChangeListeners.IsBoolean.class)
+  public static Boolean        FORMAT_SWAP = false;
 
   @Deprecated
   //GRZE: this and all its references must be removed to complete the vm type support
@@ -600,7 +604,7 @@ public class VmTypes {
     public VmTypeInfo apply( VmType arg0 ) {
       return new VmTypeInfo( arg0.getName( ), arg0.getMemory( ), arg0.getDisk( ), arg0.getCpu( ), "sda1" ) {
         {
-          this.setSwap( "sda3", VmTypes.SWAP_SIZE_BYTES, "none" );
+          this.setSwap( "sda3", VmTypes.SWAP_SIZE_BYTES, VmTypes.FORMAT_SWAP ? "swap" : "none" );
         }
       };
     }

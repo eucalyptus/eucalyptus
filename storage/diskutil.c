@@ -103,6 +103,7 @@ enum {
     LOSETUP,
     MKDIR,
     MKEXT3,
+    MKSWAP,
     PARTED,
     TUNE2FS,
     LASTHELPER
@@ -145,6 +146,7 @@ static char *helpers[LASTHELPER] = {
     "losetup",
     "mkdir",
     "mkfs.ext3",
+    "mkswap",
     "parted",
     "tune2fs",
 };
@@ -772,6 +774,39 @@ int diskutil_unloop(const char *lodev)
     }
 
     LOGWARN("cannot detach loop device. lodev=%s\n", SP(lodev));
+    return (EUCA_INVALID_ERROR);
+}
+
+//!
+//! Format a partition as a swap.
+//!
+//! @param[in] lodev
+//! @param[in] size_bytes
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_ERROR: if any error occured.
+//!         \li EUCA_INVALID_ERROR: if any parameter does not meet the preconditions.
+//!
+//! @pre The lodev parameters must not be NULL.
+//!
+//! @post On success, the partition is formatted as swap.
+//!
+int diskutil_mkswap(const char *lodev, const long long size_bytes)
+{
+    char *output = NULL;
+
+    if (lodev) {
+        output = pruntf(TRUE, "%s %s %s %lld", helpers_path[ROOTWRAP], helpers_path[MKSWAP], lodev, size_bytes / 1024);
+        if (!output) {
+            LOGERROR("cannot format partition on '%s' as swap\n", lodev);
+            return (EUCA_ERROR);
+        }
+
+        EUCA_FREE(output);
+        return (EUCA_OK);
+    }
+
+    LOGWARN("cannot format partition as swap. lodev=%s\n", SP(lodev));
     return (EUCA_INVALID_ERROR);
 }
 

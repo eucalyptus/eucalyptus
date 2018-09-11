@@ -58,7 +58,6 @@ public class ResourceStateCallback extends StateUpdateMessageCallback<Cluster, D
   
   /**
    * @see com.eucalyptus.util.async.MessageCallback#fire(edu.ucsb.eucalyptus.msgs.BaseMessage)
-   * @param reply
    */
   @Override
   public void fire( final DescribeResourcesResponseType reply ) {
@@ -74,7 +73,6 @@ public class ResourceStateCallback extends StateUpdateMessageCallback<Cluster, D
   
   /**
    * @see StateUpdateMessageCallback#fireException(com.eucalyptus.util.async.FailedRequestException)
-   * @param t
    */
   @Override
   public void fireException( FailedRequestException t ) {
@@ -89,11 +87,7 @@ public class ResourceStateCallback extends StateUpdateMessageCallback<Cluster, D
           vmType.getMemory( ),
           vmType.getDisk( ),
           vmType.getCpu( ),
-          "sda1" ) {
-        {
-          this.setSwap( "sda2", 512 * 1024l * 1024l, "none" );
-        }
-      } );
+          "sda1" ) );
     }
     return describeResourcesType;
   }
