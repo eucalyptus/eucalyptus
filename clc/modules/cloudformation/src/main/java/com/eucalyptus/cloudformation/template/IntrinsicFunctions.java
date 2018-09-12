@@ -45,10 +45,12 @@ import com.eucalyptus.compute.common.DescribeSubnetsResponseType;
 import com.eucalyptus.compute.common.DescribeSubnetsType;
 import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.SubnetType;
+import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.base.Splitter;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -99,8 +101,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
   REF {
     @Override
     public MatchResult evaluateMatch(JsonNode jsonNode) {
-      boolean match = (jsonNode != null &&  jsonNode.isObject() && (jsonNode.size() == 1) && jsonNode.has(FunctionEvaluation.REF_STR));
-      return new MatchResult(match, jsonNode, this);
+      return evaluateSimpleMatch(jsonNode, FunctionEvaluation.REF_STR);
     }
 
     @Override
@@ -150,8 +151,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
   CONDITION {
     @Override
     public MatchResult evaluateMatch(JsonNode jsonNode) {
-      boolean match = (jsonNode != null &&  jsonNode.isObject() && (jsonNode.size() == 1) && jsonNode.has(FunctionEvaluation.CONDITION_STR));
-      return new MatchResult(match, jsonNode, this);
+      return evaluateSimpleMatch(jsonNode, FunctionEvaluation.CONDITION_STR);
     }
 
     @Override
@@ -188,8 +188,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
   IF {
     @Override
     public MatchResult evaluateMatch(JsonNode jsonNode) {
-      boolean match = (jsonNode != null &&  jsonNode.isObject() && (jsonNode.size() == 1) && jsonNode.has(FunctionEvaluation.FN_IF));
-      return new MatchResult(match, jsonNode, this);
+      return evaluateSimpleMatch(jsonNode, FunctionEvaluation.FN_IF);
     }
 
     @Override
@@ -233,8 +232,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
   EQUALS {
     @Override
     public MatchResult evaluateMatch(JsonNode jsonNode) {
-      boolean match = (jsonNode != null &&  jsonNode.isObject() && (jsonNode.size() == 1) && jsonNode.has(FunctionEvaluation.FN_EQUALS));
-      return new MatchResult(match, jsonNode, this);
+      return evaluateSimpleMatch(jsonNode, FunctionEvaluation.FN_EQUALS);
     }
 
     @Override
@@ -273,8 +271,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
   AND {
     @Override
     public MatchResult evaluateMatch(JsonNode jsonNode) {
-      boolean match = (jsonNode != null &&  jsonNode.isObject() && (jsonNode.size() == 1) && jsonNode.has(FunctionEvaluation.FN_AND));
-      return new MatchResult(match, jsonNode, this);
+      return evaluateSimpleMatch(jsonNode, FunctionEvaluation.FN_AND);
     }
 
     @Override
@@ -324,8 +321,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
   OR {
     @Override
     public MatchResult evaluateMatch(JsonNode jsonNode) {
-      boolean match = (jsonNode != null &&  jsonNode.isObject() && (jsonNode.size() == 1) && jsonNode.has(FunctionEvaluation.FN_OR));
-        return new MatchResult(match, jsonNode, this);
+      return evaluateSimpleMatch(jsonNode, FunctionEvaluation.FN_OR);
     }
 
     @Override
@@ -375,8 +371,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
   NOT {
     @Override
     public MatchResult evaluateMatch(JsonNode jsonNode) {
-      boolean match = (jsonNode != null &&  jsonNode.isObject() && (jsonNode.size() == 1) && jsonNode.has(FunctionEvaluation.FN_NOT));
-      return new MatchResult(match, jsonNode, this);
+      return evaluateSimpleMatch(jsonNode, FunctionEvaluation.FN_NOT);
     }
 
     @Override
@@ -420,8 +415,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
   FIND_IN_MAP {
     @Override
     public MatchResult evaluateMatch(JsonNode jsonNode) {
-      boolean match = (jsonNode != null &&  jsonNode.isObject() && (jsonNode.size() == 1) && jsonNode.has(FunctionEvaluation.FN_FIND_IN_MAP));
-      return new MatchResult(match, jsonNode, this);
+      return evaluateSimpleMatch(jsonNode, FunctionEvaluation.FN_FIND_IN_MAP);
     }
 
     @Override
@@ -481,8 +475,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
   BASE64 {
     @Override
     public MatchResult evaluateMatch(JsonNode jsonNode) {
-      boolean match = (jsonNode != null &&  jsonNode.isObject() && (jsonNode.size() == 1) && jsonNode.has(FunctionEvaluation.FN_BASE64));
-      return new MatchResult(match, jsonNode, this);
+      return evaluateSimpleMatch(jsonNode, FunctionEvaluation.FN_BASE64);
     }
 
     @Override
@@ -520,8 +513,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
   SELECT {
     @Override
     public MatchResult evaluateMatch(JsonNode jsonNode) {
-      boolean match = (jsonNode != null &&  jsonNode.isObject() && (jsonNode.size() == 1) && jsonNode.has(FunctionEvaluation.FN_SELECT));
-      return new MatchResult(match, jsonNode, this);
+      return evaluateSimpleMatch(jsonNode, FunctionEvaluation.FN_SELECT);
     }
 
     @Override
@@ -580,8 +572,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
   JOIN {
     @Override
     public MatchResult evaluateMatch(JsonNode jsonNode) {
-      boolean match = (jsonNode != null &&  jsonNode.isObject() && (jsonNode.size() == 1) && jsonNode.has(FunctionEvaluation.FN_JOIN));
-      return new MatchResult(match, jsonNode, this);
+      return evaluateSimpleMatch(jsonNode, FunctionEvaluation.FN_JOIN);
     }
 
     @Override
@@ -637,10 +628,123 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       return true;
     }
   },
+  SPLIT {
+    @Override
+    public boolean isBooleanFunction( ) {
+      return false;
+    }
+
+    @Override
+    public boolean mayBeStringFunction( ) {
+      return false;
+    }
+
+    @Override
+    public MatchResult evaluateMatch( final JsonNode jsonNode ) {
+      return evaluateSimpleMatch(jsonNode, FunctionEvaluation.FN_SPLIT);
+    }
+
+    @Override
+    public ValidateResult validateArgTypesWherePossible( final MatchResult matchResult ) throws CloudFormationException {
+      checkState(matchResult, this);
+      final JsonNode key = matchResult.getJsonNode().get(FunctionEvaluation.FN_SPLIT);
+      if (key == null || !key.isArray() || key.size() != 2 || key.get(0) == null || !key.get(0).isValueNode()
+          || key.get(0).asText() == null || key.get(0).asText().isEmpty() || key.get(1) == null) {
+        throw new ValidationErrorException("Template error: every Fn::Split object requires two non-empty parameters, " +
+            "the delimiter and the source string");
+      }
+      return new ValidateResult(matchResult.getJsonNode(), this);
+    }
+
+    @Override
+    public JsonNode evaluateFunction( final ValidateResult validateResult, final Template template, final String effectiveUserId ) throws CloudFormationException {
+      checkState(validateResult, this);
+      final JsonNode key = validateResult.getJsonNode().get(FunctionEvaluation.FN_SPLIT);
+      final String delimiter = key.get(0).asText();
+      final JsonNode sourceNode = FunctionEvaluation.evaluateFunctions(key.get(1), template, effectiveUserId);
+
+      if (sourceNode == null || !sourceNode.isValueNode() || sourceNode.asText() == null) {
+        throw new ValidationErrorException("Template error: every Fn::Split object requires two parameters, "
+            + "(1) a string delimiter and (2) a source string to be split or a function that returns a "
+            + "string (such as Fn::GetAtt) to be split.");
+      }
+      final String sourceString = sourceNode.asText();
+      final ArrayNode arrayNode = JsonHelper.createArrayNode();
+      for ( final String resultString : Splitter.on( delimiter ).split( sourceString ) ) {
+        arrayNode.add( resultString );
+      }
+      return arrayNode;
+    }
+  },
+  CIDR {
+    @Override
+    public boolean isBooleanFunction( ) {
+      return false;
+    }
+
+    @Override
+    public boolean mayBeStringFunction( ) {
+      return false;
+    }
+
+    @Override
+    public MatchResult evaluateMatch( final JsonNode jsonNode ) {
+      return evaluateSimpleMatch(jsonNode, FunctionEvaluation.FN_CIDR);
+    }
+
+    @Override
+    public ValidateResult validateArgTypesWherePossible( final MatchResult matchResult ) throws CloudFormationException {
+      checkState(matchResult, this);
+      final JsonNode key = matchResult.getJsonNode().get(FunctionEvaluation.FN_CIDR);
+      if (key == null || !key.isArray() || key.size() != 3 || key.get(0) == null || key.get(1) == null
+          || key.get(2) == null) {
+        throw new ValidationErrorException("Template error: every Fn::Cidr object requires three non-empty parameters, " +
+            "the ip block, the count, and the cidr bits");
+      }
+      return new ValidateResult(matchResult.getJsonNode(), this);
+    }
+
+    @Override
+    public JsonNode evaluateFunction( final ValidateResult validateResult, final Template template, final String effectiveUserId ) throws CloudFormationException {
+      checkState(validateResult, this);
+      final JsonNode key = validateResult.getJsonNode().get(FunctionEvaluation.FN_CIDR);
+      final JsonNode ipBlockNode = FunctionEvaluation.evaluateFunctions(key.get(0), template, effectiveUserId);
+      final JsonNode countNode = FunctionEvaluation.evaluateFunctions(key.get(1), template, effectiveUserId);
+      final JsonNode cidrBitsNode = FunctionEvaluation.evaluateFunctions(key.get(2), template, effectiveUserId);
+
+      if (ipBlockNode == null || !ipBlockNode.isValueNode() || ipBlockNode.asText() == null
+          || countNode == null || !countNode.isValueNode() || countNode.asText() == null
+          || cidrBitsNode == null || !cidrBitsNode.isValueNode() || cidrBitsNode.asText() == null ) {
+        throw new ValidationErrorException("Template error: every Fn::Cidr object requires three non-empty parameters");
+      }
+
+      final Cidr ipBlockCidr;
+      try {
+        ipBlockCidr = Cidr.parse( ipBlockNode.asText( ), true );
+      } catch ( Exception e ) {
+        throw new ValidationErrorException("Template error: Fn::Cidr invalid ipBlock " +  ipBlockNode.asText( ));
+      }
+      final int count;
+      final int cidrBits;
+      try {
+        count = Integer.parseInt( countNode.asText( ) );
+        if ( count < 1 || count > 256 ) throw new IllegalArgumentException("Count out of range");
+        cidrBits = Integer.parseInt( cidrBitsNode.asText( ) );
+        if ( cidrBits < 4 || cidrBits > 32 ) throw new IllegalArgumentException("CidrBits out of range");
+      } catch ( Exception e ) {
+        throw new ValidationErrorException( "Template error: Fn::Cidr invalid count or cidrBits" );
+      }
+
+      final ArrayNode arrayNode = JsonHelper.createArrayNode();
+      for ( final Cidr resultCidr : ipBlockCidr.split( 2<<(((32-ipBlockCidr.getPrefix())-cidrBits)-1), count) ) {
+        arrayNode.add( resultCidr.toString( ) );
+      }
+      return arrayNode;
+    }
+  },
   GET_AZS {
     public MatchResult evaluateMatch(JsonNode jsonNode) {
-      boolean match = (jsonNode != null &&  jsonNode.isObject() && (jsonNode.size() == 1) && jsonNode.has(FunctionEvaluation.FN_GET_AZS));
-      return new MatchResult(match, jsonNode, this);
+      return evaluateSimpleMatch(jsonNode, FunctionEvaluation.FN_GET_AZS);
     }
     @Override
     public ValidateResult validateArgTypesWherePossible(MatchResult matchResult) throws CloudFormationException {
@@ -735,8 +839,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
   },
   FN_SUB {
     public MatchResult evaluateMatch(JsonNode jsonNode) {
-      boolean match = (jsonNode != null &&  jsonNode.isObject() && (jsonNode.size() == 1) && jsonNode.has(FunctionEvaluation.FN_SUB));
-      return new MatchResult(match, jsonNode, this);
+      return evaluateSimpleMatch(jsonNode, FunctionEvaluation.FN_SUB);
     }
     @Override
     public ValidateResult validateArgTypesWherePossible(MatchResult matchResult) throws CloudFormationException {
@@ -865,8 +968,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
   },
   GET_ATT {
     public MatchResult evaluateMatch(JsonNode jsonNode) {
-      boolean match = (jsonNode != null &&  jsonNode.isObject() && (jsonNode.size() == 1) && jsonNode.has(FunctionEvaluation.FN_GET_ATT));
-      return new MatchResult(match, jsonNode, this);
+      return evaluateSimpleMatch(jsonNode, FunctionEvaluation.FN_GET_ATT);
     }
     @Override
     public ValidateResult validateArgTypesWherePossible(MatchResult matchResult) throws CloudFormationException {
@@ -935,8 +1037,8 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     public JsonNode evaluateFunction(ValidateResult validateResult, Template template, String effectiveUserId) throws CloudFormationException {
       checkState(validateResult, this);
       throw new ValidationErrorException("Template Error: Encountered unsupported function: " +
-        validateResult.getJsonNode().fieldNames().next()+" Supported functions are: [Fn::Base64, Fn::GetAtt, " +
-        "Fn::GetAZs, Fn::Join, Fn::FindInMap, Fn::Select, Ref, Fn::Equals, Fn::If, Fn::Not, " +
+        validateResult.getJsonNode().fieldNames().next()+" Supported functions are: [Fn::Base64, Fn::Cidr, " +
+        "Fn::GetAtt, Fn::GetAZs, Fn::Split, Fn::Join, Fn::FindInMap, Fn::Select, Ref, Fn::Equals, Fn::If, Fn::Not, " +
         "Condition, Fn::And, Fn::Or, Fn::Sub]");
     }
     @Override
@@ -952,6 +1054,11 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
 
   public abstract boolean isBooleanFunction();
   public abstract boolean mayBeStringFunction();
+
+  protected MatchResult evaluateSimpleMatch(final JsonNode jsonNode, final String intrinsicFunction) {
+    boolean match = (jsonNode != null && jsonNode.isObject() && (jsonNode.size() == 1) && jsonNode.has(intrinsicFunction));
+    return new MatchResult(match, jsonNode, this);
+  }
 
   protected void checkState(MatchResult matchResult, IntrinsicFunction intrinsicFunction) {
     if (matchResult == null || matchResult.isMatch() == false || !intrinsicFunction.equals(matchResult.getCallingFunction())) {

@@ -58,6 +58,9 @@ public class FunctionEvaluation {
   public static final String FN_GET_AZS = "Fn::GetAZs";
   public static final String FN_GET_ATT = "Fn::GetAtt";
   public static final String FN_SUB = "Fn::Sub";
+  public static final String FN_CIDR = "Fn::Cidr";
+  public static final String FN_SPLIT = "Fn::Split";
+
   public static final String AWS_NO_VALUE ="AWS::NoValue" ;
 
 
