@@ -200,6 +200,17 @@ class CidrSpecification extends Specification {
     '10.0.0.0/8'      | 2         | [ '10.0.0.0/9', '10.128.0.0/9' ]
   }
 
+  def 'should be able to split a CIDR with a limit'(){
+    expect: 'cidr split has expected result'
+    Lists.newArrayList( Iterables.transform( parse( cidr ).split( split, limit ), Functions.toStringFunction( ) ) ) == result
+
+    where:
+    cidr              | split | limit | result
+    '172.31.0.0/16'   | 16    | 4     | [ '172.31.0.0/20', '172.31.16.0/20', '172.31.32.0/20', '172.31.48.0/20' ]
+    '172.31.0.0/16'   | 1     | 44    | [ '172.31.0.0/16' ]
+    '10.0.0.0/8'      | 2     | 2     | [ '10.0.0.0/9', '10.128.0.0/9' ]
+  }
+
 
   private static Cidr cidr( int ip, int prefix ) {
     Cidr.of( ip, prefix )

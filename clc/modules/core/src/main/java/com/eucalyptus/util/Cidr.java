@@ -168,12 +168,16 @@ public class Cidr implements Predicate<InetAddress> {
   }
 
   public Iterable<Cidr> split( final int parts ) {
-    final List<Cidr> cidrs = Lists.newArrayList( );
+    return split( parts, Integer.MAX_VALUE );
+  }
+
+  public Iterable<Cidr> split( final int parts, final int limit ) {
+    final ArrayList<Cidr> cidrs = Lists.newArrayList( );
     final int bits = parts == 1 ? 0 : Numbers.log2( (int) parts - 1 ) + 1;
     final int maxParts = (int) Math.pow( 2, bits );
     final UnsignedInteger size = UnsignedInteger.fromIntBits( (int) Math.pow( 2, (double) ( 32 - prefix ) ) ).dividedBy( UnsignedInteger.fromIntBits( maxParts ) );
-    for ( int i = 0; i < parts; i++ ) {
-      ( (ArrayList<Cidr>) cidrs ).add( of( UnsignedInteger.fromIntBits( getIp( ) ).plus( size.times( UnsignedInteger.fromIntBits( i ) ) ).intValue( ), (int) prefix + bits ) );
+    for ( int i = 0; i < Math.min(parts, limit); i++ ) {
+      cidrs.add( of( UnsignedInteger.fromIntBits( getIp( ) ).plus( size.times( UnsignedInteger.fromIntBits( i ) ) ).intValue( ), prefix + bits ) );
     }
 
     return cidrs;
