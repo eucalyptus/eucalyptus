@@ -141,7 +141,7 @@ if [ ${SET_JVM_HEAP} -eq 1 ] ; then
   JAVA_OPTS="${JAVA_OPTS} -Xms${EUCA_JDK_HEAP} -Xmx${EUCA_JDK_HEAP}"
 fi
 JAVA_OPTS="${JAVA_OPTS} -cp /etc/eucalyptus/cloud.d:/etc/eucalyptus/cloud.d/scripts:/usr/share/eucalyptus/*"
-JAVA_OPTS="${JAVA_OPTS} -javaagent:${EUCA_HOME}/usr/share/eucalyptus/aspectjweaver-1.8.8.jar"
+JAVA_OPTS="${JAVA_OPTS} -javaagent:${EUCA_HOME}/usr/share/eucalyptus/aspectjweaver-1.8.13.jar"
 JAVA_OPTS="${JAVA_OPTS} -XX:HeapDumpPath=${EUCA_HOME}/var/log/eucalyptus/"
 JAVA_OPTS="${JAVA_OPTS} -XX:ErrorFile=${EUCA_HOME}/var/log/eucalyptus/cloud-java-error-%p.log"
 JAVA_OPTS="${JAVA_OPTS} -Djava.library.path=${EUCA_HOME}/usr/share/eucalyptus/"
