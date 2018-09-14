@@ -109,12 +109,12 @@ dependencies {
   api 'org.apache.httpcomponents:httpcore:4.4.4'
   api 'org.apache.santuario:xmlsec:1.5.6'
   api 'org.apache.velocity:velocity:1.7'
-  api 'org.apache.ws.commons.axiom:axiom-api:1.2.8'
-  api('org.apache.ws.commons.axiom:axiom-dom:1.2.8') {
-    exclude module: 'wstx-asl'
+  api 'org.apache.ws.commons.axiom:axiom-api:1.2.20'
+  api('org.apache.ws.commons.axiom:axiom-dom:1.2.20') {
+    exclude module: 'woodstox-core-asl'
   }
-  api('org.apache.ws.commons.axiom:axiom-impl:1.2.8') {
-    exclude module: 'wstx-asl'
+  api('org.apache.ws.commons.axiom:axiom-impl:1.2.20') {
+    exclude module: 'woodstox-core-asl'
   }
   api('org.apache.ws.security:wss4j:1.6.13') {
     exclude module: 'opensaml' // optional dependency

@@ -44,7 +44,7 @@ import java.util.List;
 import javax.xml.crypto.dsig.Reference;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMException;
-import org.apache.axiom.om.impl.builder.StAXOMBuilder;
+import org.apache.axiom.om.OMXMLParserWrapper;
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.axiom.soap.impl.builder.StAXSOAPModelBuilder;
 import org.apache.log4j.Logger;
@@ -91,7 +91,7 @@ public abstract class WsSecHandler extends MessageStackHandler {
         SOAPEnvelope env = httpRequest.getSoapEnvelope( );
         HoldMe.canHas.lock( );
         try {
-          final StAXOMBuilder doomBuilder = HoldMe.getStAXOMBuilder( HoldMe.getDOOMFactory( ), env.getXMLStreamReader( ) );
+          final OMXMLParserWrapper doomBuilder = HoldMe.getStAXOMBuilder( HoldMe.getDOOMFactory( ), env.getXMLStreamReader( ) );
           elem = doomBuilder.getDocumentElement( );
           elem.build( );
           doc = ( ( Element ) elem ).getOwnerDocument( );

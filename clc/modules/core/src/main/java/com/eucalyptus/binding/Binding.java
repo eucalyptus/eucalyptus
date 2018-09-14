@@ -52,7 +52,7 @@ import javax.xml.stream.XMLStreamWriter;
 import org.apache.axiom.om.OMDocument;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMFactory;
-import org.apache.axiom.om.impl.builder.StAXOMBuilder;
+import org.apache.axiom.om.OMXMLParserWrapper;
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.axiom.soap.SOAPFactory;
 import org.apache.axiom.soap.SOAPFault;
@@ -229,7 +229,7 @@ public class Binding {
   public Object fromOM( final String text ) throws Exception {
     HoldMe.canHas.lock( );
     try {
-      final StAXOMBuilder builder = HoldMe.getStAXOMBuilder( HoldMe.getXMLStreamReader( text ) );
+      final OMXMLParserWrapper builder = HoldMe.getStAXOMBuilder( HoldMe.getXMLStreamReader( text ) );
       return this.fromOM( builder.getDocumentElement( ) );
     } finally {
       HoldMe.canHas.unlock( );
