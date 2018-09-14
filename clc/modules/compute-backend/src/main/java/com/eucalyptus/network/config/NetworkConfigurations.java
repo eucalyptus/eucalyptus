@@ -161,9 +161,9 @@ public class NetworkConfigurations {
     return subnet != null && netmask != null && gateway != null ?
         ImmutableNetworkConfigurationApi.EdgeSubnet.builder()
             .name( Option.of( name ) )
-            .setValueSubnet( subnet )
-            .setValueNetmask( netmask )
-            .setValueGateway( gateway )
+            .subnet( subnet )
+            .netmask( netmask )
+            .gateway( gateway )
             .o( ) :
         null;
   }
@@ -278,7 +278,7 @@ public class NetworkConfigurations {
 
     for ( final String clusterName : clusterNames ) {
       if ( !existingClusterNames.contains( clusterName ) ) {
-        clusters = clusters.append( ImmutableNetworkConfigurationApi.Cluster.builder( ).setValueName( clusterName ).o( ) );
+        clusters = clusters.append( ImmutableNetworkConfigurationApi.Cluster.builder( ).name( clusterName ).o( ) );
       }
     }
 
@@ -288,7 +288,7 @@ public class NetworkConfigurations {
         clusters = clusters.replace(
             cluster,
             cluster = ImmutableNetworkConfigurationApi.Cluster.builder( ).from( cluster )
-                .setValueMacPrefix( configuration.macPrefix( ).getOrElse( VmInstances.MAC_PREFIX ) ).o( ) );
+                .macPrefix( configuration.macPrefix( ).getOrElse( VmInstances.MAC_PREFIX ) ).o( ) );
       }
 
       // EDGE mode configuration
