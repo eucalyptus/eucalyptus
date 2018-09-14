@@ -553,7 +553,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
 
       perhapsUpdateDbPassword( )
     } catch ( DatabaseProcessException ex ) {
-      String postgresVersionError = 'database files are incompatible with server';
+      String postgresVersionError = 'database files are incompatible with server'
       if ( BootstrapArgs.isUpgradeSystem( ) && Iterables.tryFind(
           Iterables.concat( ex.processErr, ex.processOut ),
           { String line -> line.contains( postgresVersionError ) } as Predicate<String> ).isPresent( ) ) try {
@@ -581,7 +581,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
         if ( Exceptions.isCausedBy( e, ConnectException ) ) {
           LOG.info( "Waiting for database to be available." )
           Thread.sleep( 1000L )
-          continue;
+          continue
         }
         if ( e.message?.contains('authentication') ) {
           LOG.info( "Updating database password" )
@@ -609,7 +609,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
       LOG.fatal( "Cannot upgrade databases to current postgres version, old postgres version unknown." )
       return false
     }
-    CommandResult versionCommandResult = runProcess( [ oldCommands.initdb, PG_VERSION_OPT ] );
+    CommandResult versionCommandResult = runProcess( [ oldCommands.initdb, PG_VERSION_OPT ] )
     if ( versionCommandResult.code == 0 ) {
       LOG.info( "Old postgres version: ${versionCommandResult.processOut.getAt( 0 )}" )
     } else {
@@ -879,7 +879,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
       dbExecute("postgres", "CREATE DATABASE \"${to}\" TEMPLATE \"${from}\" OWNER \"${getUserName()}\"" )
     } catch( Exception ex ) {
       LOG.error( "Copying database ${from} to ${to} failed because of: ${ex.message}" )
-      throw ex;
+      throw ex
     }
     LOG.info("Database ${from} copied to ${to} successfully")
   }
@@ -1060,6 +1060,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   Map<String, String> getJdbcUrlQueryParameters() {
     PG_USE_SSL ? [
       ssl:'true',
+      sslmode:'require',
       sslfactory: 'com.eucalyptus.postgresql.PostgreSQLSSLSocketFactory'
     ] : emptyMap()
   }
