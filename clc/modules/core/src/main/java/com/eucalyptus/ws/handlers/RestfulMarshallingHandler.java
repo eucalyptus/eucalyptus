@@ -66,7 +66,7 @@ import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.UnsafeByteArrayOutputStream;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
@@ -238,7 +238,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
     final MappingHttpRequest request = Contexts.lookup().getHttpRequest();
     if ( request != null ) {
       final String accept =
-          Objects.firstNonNull( request.getHeader( HttpHeaders.Names.ACCEPT_ENCODING ), "" ).toLowerCase();
+          MoreObjects.firstNonNull( request.getHeader( HttpHeaders.Names.ACCEPT_ENCODING ), "" ).toLowerCase();
       if ( accept.matches( "[a-z, *_-]{1,1024}" ) ) {
         final Iterable<String> encodings = Splitter.on(",").trimResults().omitEmptyStrings().split(accept);
         if ( Iterables.contains( encodings, HttpHeaders.Values.DEFLATE ) ) {

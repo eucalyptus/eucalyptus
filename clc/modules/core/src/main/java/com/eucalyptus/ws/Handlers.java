@@ -54,7 +54,6 @@ import javax.annotation.Nullable;
 
 import com.eucalyptus.ws.handlers.InternalXmlBindingHandler;
 import com.google.common.base.*;
-import com.google.common.base.Objects;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -542,12 +541,12 @@ public class Handlers {
           info.putIfAbsent( "pipeline", ctx.getPipeline().getClass() );
           info.putIfAbsent( "silent.requesthandler", requestHandler );
           if ( requestHandler != null && requestHandler.getRequest() != null && requestHandler.getRequest().get() != null ) {
-            info.putIfAbsent( "request.message", Objects.firstNonNull( requestHandler.getRequest().get(), NULLPROXY ).getClass() );
+            info.putIfAbsent( "request.message", MoreObjects.firstNonNull( requestHandler.getRequest().get(), NULLPROXY ).getClass() );
           }
         } else if ( e instanceof ExceptionEvent ) {//upstream only
           info.putIfAbsent( "exception", ( ( ExceptionEvent ) e ).getCause() );
         } else if ( e instanceof MessageEvent ) {
-          final Object message = Objects.firstNonNull( ( ( MessageEvent ) e ).getMessage(), NULLPROXY );
+          final Object message = MoreObjects.firstNonNull( ( ( MessageEvent ) e ).getMessage(), NULLPROXY );
           info.putIfAbsent( "silent.request", message );
           info.putIfAbsent( "request.type", message.getClass() );
         }

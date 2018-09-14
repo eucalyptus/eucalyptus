@@ -139,22 +139,22 @@ class ManagedSubnetsSpecification extends Specification {
 
   private static NetworkConfigurationApi.ManagedSubnet managedSubnet(String subnet, Integer size ) {
     ImmutableNetworkConfigurationApi.ManagedSubnet.builder( )
-        .setValueName( subnet )
-        .setValueSubnet( subnet )
-        .setValueSegmentSize( size )
-        .setValueMinVlan( 2 )
-        .setValueMaxVlan( 4095 )
+        .name( subnet )
+        .subnet( subnet )
+        .segmentSize( size )
+        .minVlan( 2 )
+        .maxVlan( 4095 )
         .o( )
   }
 
   private static NetworkConfigurationApi.ManagedSubnet managedSubnet(String subnet, String netmask, Integer size, Integer minVlan, Integer maxVlan ) {
     ImmutableNetworkConfigurationApi.ManagedSubnet.builder( )
-        .setValueName( subnet )
-        .setValueSubnet( subnet )
-        .setValueNetmask( netmask )
-        .setValueSegmentSize( size )
-        .setValueMinVlan( minVlan )
-        .setValueMaxVlan( maxVlan )
+        .name( subnet )
+        .subnet( subnet )
+        .netmask( netmask )
+        .segmentSize( size )
+        .minVlan( minVlan )
+        .maxVlan( maxVlan )
         .o( )
   }
 

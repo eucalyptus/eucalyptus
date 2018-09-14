@@ -56,7 +56,7 @@ import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Intervals;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
@@ -138,7 +138,7 @@ public class ImageConfiguration extends AbstractPersistent {
   }
 
   public Integer getMaxManifestSizeBytes( ) {
-    return Objects.firstNonNull( maxManifestSizeBytes, DEFAULT_MAX_MANIFEST_SIZE_IN_BYTES );
+    return MoreObjects.firstNonNull( maxManifestSizeBytes, DEFAULT_MAX_MANIFEST_SIZE_IN_BYTES );
   }
 
   public void setMaxManifestSizeBytes( final Integer maxManifestSizeBytes ) {

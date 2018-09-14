@@ -54,7 +54,7 @@ import com.eucalyptus.auth.principal.AccessKeyCredential;
 import com.eucalyptus.crypto.Hmac;
 import com.eucalyptus.ws.util.HmacUtils;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Iterables;
 import io.vavr.control.Option;
 
@@ -88,7 +88,7 @@ public class HmacCredentials extends WrappedCredentials<String> {
     this.verb = verb;
     this.servicePath = servicePath;
     this.body = body;
-    this.headerHost = Iterables.getFirst( Objects.firstNonNull( headers.get("host"), Collections.<String>emptyList() ), null );
+    this.headerHost = Iterables.getFirst( MoreObjects.firstNonNull( headers.get("host"), Collections.<String>emptyList() ), null );
     this.headerPort = ""+8773;
     if ( headerHost != null && headerHost.contains( ":" ) ) {
       String[] hostTokens = this.headerHost.split( ":" );

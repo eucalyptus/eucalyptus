@@ -78,7 +78,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.tags.TagHelper;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
@@ -338,7 +338,7 @@ public class ClusterAllocator implements Runnable {
 
     // create rsa keypair
     try{
-      final String endUserAccountNumber = Objects.firstNonNull(
+      final String endUserAccountNumber = MoreObjects.firstNonNull(
           Strings.emptyToNull( Optional.of( payload ).transform( regexReplace( SERVER_CERT_ACCOUNT_PATTERN, "$1", "" ) ).orNull( ) ),
           allocInfo.getOwnerFullName( ).getAccountNumber( ) );
       final KeyPair kp = Certs.generateKeyPair();
@@ -481,7 +481,7 @@ public class ClusterAllocator implements Runnable {
                 }
 
                 final boolean isRootDevice = mapping.getDeviceName().equals(rootDevName);
-                final boolean deleteOnTerminate = Objects.firstNonNull( mapping.getEbs().getDeleteOnTermination(), Boolean.FALSE );
+                final boolean deleteOnTerminate = MoreObjects.firstNonNull( mapping.getEbs().getDeleteOnTermination(), Boolean.FALSE );
                 VmInstances.addPersistentVolume( vm, mapping.getDeviceName(), volume, isRootDevice, deleteOnTerminate );
 
                 // Populate all volumes into resource token so they can be used for attach ops and vbr construction

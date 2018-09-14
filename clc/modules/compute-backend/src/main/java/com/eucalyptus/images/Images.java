@@ -72,7 +72,6 @@ import com.eucalyptus.compute.common.EbsDeviceMapping;
 import com.eucalyptus.compute.common.ImageDetails;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.ImageMetadata.Architecture;
-import com.eucalyptus.compute.common.ImageMetadata.State;
 import com.eucalyptus.compute.common.internal.images.BlockStorageDeviceMapping;
 import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
 import com.eucalyptus.compute.common.internal.images.BootableImageInfo;
@@ -108,10 +107,9 @@ import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMapper;
-import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -1191,7 +1189,7 @@ public class Images extends com.eucalyptus.compute.common.internal.images.Images
   }
 
   private static boolean getImagePublicVisibilityDefault( ) {
-    return Objects.firstNonNull( ImageConfiguration.getInstance( ).getDefaultVisibility( ), Boolean.FALSE );
+    return MoreObjects.firstNonNull( ImageConfiguration.getInstance( ).getDefaultVisibility( ), Boolean.FALSE );
   }
 
   public static class ImageCleanupEventListener implements EventListener<Hertz> {

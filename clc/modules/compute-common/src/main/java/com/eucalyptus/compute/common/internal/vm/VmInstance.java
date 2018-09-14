@@ -40,7 +40,6 @@
 package com.eucalyptus.compute.common.internal.vm;
 
 import static com.eucalyptus.util.Strings.truncate;
-import java.lang.Object;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -135,7 +134,7 @@ import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
 import com.eucalyptus.compute.common.internal.vmtypes.VmType;
 import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
@@ -333,7 +332,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     VmState( final int code, final VmState displayState ) {
       this.name = this.name( ).toLowerCase( ).replace( "_", "-" );
       this.code = code;
-      this.displayState = Objects.firstNonNull( displayState, this );
+      this.displayState = MoreObjects.firstNonNull( displayState, this );
     }
 
     public String getName( ) {
@@ -522,7 +521,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 
   private boolean dnsHostnamesEnabled( ) {
     final Vpc vpc = getBootRecord( ).getVpc( );
-    return vpc == null || Objects.firstNonNull( vpc.getDnsHostnames(), Boolean.FALSE );
+    return vpc == null || MoreObjects.firstNonNull( vpc.getDnsHostnames(), Boolean.FALSE );
   }
 
   public void store( ) {
@@ -961,7 +960,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public String getDisplayPublicAddress( ) {
     return VmStateSet.TORNDOWN.apply( this ) ?
         "" :
-        VmNetworkConfig.DEFAULT_IP.equals( Objects.firstNonNull( Strings.emptyToNull( getPublicAddress( ) ), VmNetworkConfig.DEFAULT_IP ) ) ?
+        VmNetworkConfig.DEFAULT_IP.equals( MoreObjects.firstNonNull( Strings.emptyToNull( getPublicAddress( ) ), VmNetworkConfig.DEFAULT_IP ) ) ?
             getVpcId( ) == null ? getDisplayPrivateAddress( ) : "" :
             getPublicAddress( );
   }
@@ -979,7 +978,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public String getDisplayPrivateAddress( ) {
     return VmStateSet.TORNDOWN.apply( this ) ?
         "" :
-        VmNetworkConfig.DEFAULT_IP.equals( Objects.firstNonNull( Strings.emptyToNull( getPrivateAddress( ) ), VmNetworkConfig.DEFAULT_IP ) ) ?
+        VmNetworkConfig.DEFAULT_IP.equals( MoreObjects.firstNonNull( Strings.emptyToNull( getPrivateAddress( ) ), VmNetworkConfig.DEFAULT_IP ) ) ?
             VmNetworkConfig.DEFAULT_IP :
             getPrivateAddress( );
   }
@@ -1454,10 +1453,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     private InstanceStatusType buildStatus( final VmInstance instance ) {
       if ( VmState.RUNNING.apply( instance ) ) {
         final VmRuntimeState vmRuntimeState = instance.getRuntimeState( );
-        final VmRuntimeState.InstanceStatus instanceStatus = Objects.firstNonNull(
+        final VmRuntimeState.InstanceStatus instanceStatus = MoreObjects.firstNonNull(
             vmRuntimeState.getInstanceStatus( ),
             VmRuntimeState.InstanceStatus.Ok );
-        final VmRuntimeState.ReachabilityStatus reachabilityStatus = Objects.firstNonNull(
+        final VmRuntimeState.ReachabilityStatus reachabilityStatus = MoreObjects.firstNonNull(
             vmRuntimeState.getReachabilityStatus(),
             VmRuntimeState.ReachabilityStatus.Passed );
         final Date unreachabilityTimestamp = reachabilityStatus != VmRuntimeState.ReachabilityStatus.Passed ?

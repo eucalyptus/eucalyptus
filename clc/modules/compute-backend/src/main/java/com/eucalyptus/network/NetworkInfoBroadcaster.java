@@ -569,7 +569,7 @@ public class NetworkInfoBroadcaster {
     final ImmutableBNetworkInfo.Builder info = networkConfiguration
         .map( TypeMappers.lookupF( NetworkConfiguration.class, ImmutableBNetworkInfo.Builder.class ) )
         .getOrElse( networkInfo( ).configuration( BNI.configuration( ).o( ) ) );
-    info.setValueVersion( version );
+    info.version( version );
     final ImmutableBNIConfiguration.Builder bniConfiguration = BNI.configuration( )
         .addAllProperties( Array.narrow( info.o( ).configuration( ).simpleProperties( ) ) );
 
@@ -592,7 +592,7 @@ public class NetworkInfoBroadcaster {
             return Option.of( configCluster!=null && ( vpcmido || configCluster.subnet().isDefined( ) ) ?
                 BNI.cluster( )
                     .name( configCluster.name( ).get( ) )
-                    .setValueSubnet( vpcmido ?
+                    .subnet( vpcmido ?
                         subnet( )
                             .name( "172.31.0.0" )
                             .property( property( "subnet", "172.31.0.0" ) )
@@ -752,8 +752,8 @@ public class NetworkInfoBroadcaster {
             BNI.networkAcl( )
               .name( networkAcl.getId() )
               .ownerId( networkAcl.ownerAccountNumber() )
-              .setValueIngressEntries( networkAclEntries( networkAcl.ingressRules( ).map(TypeMappers.lookupF( NetworkAclEntryNetworkView.class, BNINetworkAclEntry.class ) ) ) )
-              .setValueEgressEntries( networkAclEntries( networkAcl.egressRules().map(TypeMappers.lookupF( NetworkAclEntryNetworkView.class, BNINetworkAclEntry.class ) ) ) )
+              .ingressEntries( networkAclEntries( networkAcl.ingressRules( ).map(TypeMappers.lookupF( NetworkAclEntryNetworkView.class, BNINetworkAclEntry.class ) ) ) )
+              .egressEntries( networkAclEntries( networkAcl.egressRules().map(TypeMappers.lookupF( NetworkAclEntryNetworkView.class, BNINetworkAclEntry.class ) ) ) )
               .o( ) ) )
           .addAllRouteTables( Stream.ofAll( routeTables ).filter( routeTable -> routeTable.vpcId( ).equals( vpc.getId() ) ).map( routeTable ->
             BNI.routeTable( )
@@ -891,7 +891,7 @@ public class NetworkInfoBroadcaster {
       securityGroup( )
           .name( group.getId() )
           .ownerId( group.ownerAccountNumber() )
-          .setValueIngressRules( securityGroupRules( )
+          .ingressRules( securityGroupRules( )
               .addAllRules( group.ingressPermissions( )
                   .filter( ipPermission ->
                       !ipPermission.groupId().isDefined() || activeSecurityGroups.contains( ipPermission.groupId().get() ) )
@@ -907,7 +907,7 @@ public class NetworkInfoBroadcaster {
                       .cidr( ipPermission.cidr() )
                       .o( ) ) )
               .o( ) )
-          .setValueEgressRules( securityGroupRules( )
+          .egressRules( securityGroupRules( )
               .addAllRules( group.egressPermissions()
                   .filter( ipPermission ->
                       !ipPermission.groupId().isDefined() || activeSecurityGroups.contains( ipPermission.groupId().get() ) )

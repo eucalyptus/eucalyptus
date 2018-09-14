@@ -31,7 +31,7 @@ package com.eucalyptus.auth.policy.ern;
 import java.util.Collections;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import net.sf.json.JSONException;
 
@@ -71,7 +71,7 @@ public class EuareErnBuilder extends ServiceErnBuilder {
         name = pathName.get().substring( lastSlash + 1 );
       }
       final String accountId = matcher.group( ARN_PATTERNGROUP_IAM_NAMESPACE );
-      final String type = Objects.firstNonNull( matcher.group( ARN_PATTERNGROUP_IAM_TYPE ), "*" );
+      final String type = MoreObjects.firstNonNull( matcher.group( ARN_PATTERNGROUP_IAM_TYPE ), "*" );
       return new EuareResourceName( accountId, type, path, name);
     }
     throw new JSONException( "'" + ern + "' is not a valid ARN" );

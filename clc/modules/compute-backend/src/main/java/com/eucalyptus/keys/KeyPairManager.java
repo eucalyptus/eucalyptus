@@ -109,7 +109,7 @@ public class KeyPairManager {
     final Context ctx = Contexts.lookup( );
     final String keyName = request.getKeyName( );
 
-    if (!CharMatcher.ASCII.matchesAllOf( keyName )) {
+    if (!CharMatcher.ascii( ).matchesAllOf( keyName )) {
         throw new ClientComputeException("InvalidParameterValue", "Value ("+keyName+") for parameter KeyName is invalid. Character sets beyond ASCII are not supported.");
     }
     try{

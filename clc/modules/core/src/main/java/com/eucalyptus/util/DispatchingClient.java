@@ -38,7 +38,6 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.concurrent.ListenableFuture;
-import com.google.common.base.Objects;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 /**

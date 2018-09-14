@@ -34,7 +34,7 @@ import java.util.Set;
 import javax.xml.namespace.QName;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMOutputFormat;
-import org.apache.axiom.om.impl.builder.StAXOMBuilder;
+import org.apache.axiom.om.OMXMLParserWrapper;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.euare.common.identity.Identity;
@@ -86,7 +86,7 @@ public class EuareRemoteRegionService {
 
       final EuareMessage euareResponse;  //TODO:STEVE: move this message marshalling to a helper (BaseMessages? also IdentityService#tunnelAction)
       try ( final LockResource lock = LockResource.lock( HoldMe.canHas ) ) {
-        final StAXOMBuilder omBuilder = HoldMe.getStAXOMBuilder( HoldMe.getXMLStreamReader( responseContent ) );
+        final OMXMLParserWrapper omBuilder = HoldMe.getStAXOMBuilder( HoldMe.getXMLStreamReader( responseContent ) );
         final OMElement message = omBuilder.getDocumentElement( );
         final String messageTypeName = message.getAttributeValue( new QName( "type" ) );
         final Class<?> messageType = getClass( ).getClassLoader( ).loadClass( messageTypeName );

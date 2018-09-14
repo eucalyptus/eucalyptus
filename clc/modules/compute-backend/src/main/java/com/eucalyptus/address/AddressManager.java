@@ -73,7 +73,7 @@ import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.compute.common.internal.vm.VmNetworkConfig;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
@@ -139,7 +139,7 @@ public class AddressManager {
     final Address address;
     try {
       address = RestrictedTypes.doPrivileged(
-          Objects.firstNonNull( request.getPublicIp( ), allocationId ),
+          MoreObjects.firstNonNull( request.getPublicIp( ), allocationId ),
           Address.class );
     } catch ( NoSuchElementException e ) {
       if ( request.getAllocationId( ) != null ) {
@@ -202,7 +202,7 @@ public class AddressManager {
     final String networkInterfaceId = request.getNetworkInterfaceId()==null ?
         null :
         normalizeNetworkInterfaceIdentifier( request.getNetworkInterfaceId() );
-    final Address address = RestrictedTypes.doPrivileged( Objects.firstNonNull(
+    final Address address = RestrictedTypes.doPrivileged( MoreObjects.firstNonNull(
             request.getPublicIp( ),
             ResourceIdentifiers.tryNormalize().apply( request.getAllocationId( ) ) ),
         Address.class );
@@ -323,7 +323,7 @@ public class AddressManager {
     final Address address;
     try {
       address = RestrictedTypes.doPrivileged(
-          Objects.firstNonNull( request.getPublicIp( ), associationId ),
+          MoreObjects.firstNonNull( request.getPublicIp( ), associationId ),
           Address.class );
     } catch ( final NoSuchElementException e ) {
       if ( request.getAssociationId( ) != null ) {

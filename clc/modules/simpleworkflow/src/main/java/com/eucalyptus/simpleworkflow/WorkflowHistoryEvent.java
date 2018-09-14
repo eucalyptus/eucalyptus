@@ -40,7 +40,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.simpleworkflow.common.model.WorkflowEventAttributes;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Strings;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 /**
  *
@@ -94,7 +94,7 @@ public class WorkflowHistoryEvent extends AbstractPersistent {
   }
 
   public Long getEventId( ) {
-    return Objects.firstNonNull( getEventOrder( ), 0L ) + 1L;
+    return MoreObjects.firstNonNull( getEventOrder( ), 0L ) + 1L;
   }
 
   public WorkflowExecution getWorkflowExecution( ) {

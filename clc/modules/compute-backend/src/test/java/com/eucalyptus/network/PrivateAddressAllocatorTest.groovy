@@ -171,7 +171,7 @@ class PrivateAddressAllocatorTest {
     @Override
     Optional<PrivateAddress> tryCreate( final String scope, final String tag, final String address ) {
       addresses.containsKey( address ) ?
-          Optional.empty( ) :
+          Optional.<PrivateAddress>empty( ) :
           Optional.of( add( PrivateAddress.create( scope, tag, address ).allocate( ) ) )
     }
 

@@ -31,7 +31,6 @@ package com.eucalyptus.objectstorage.metadata;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -52,7 +51,6 @@ import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
-import com.eucalyptus.objectstorage.MpuPartMetadataManagers;
 import com.eucalyptus.objectstorage.ObjectState;
 import com.eucalyptus.objectstorage.PaginatedResult;
 import com.eucalyptus.objectstorage.entities.Bucket;
@@ -68,7 +66,7 @@ import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.msgs.s3.Part;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 
 /**
@@ -221,7 +219,7 @@ public class DbMpuPartMetadataManagerImpl implements MpuPartMetadataManager {
           // Calculate the sum size of the parts to update the bucket size.
           PartEntity searchExample = new PartEntity().withUploadId(uploadId).withState(ObjectState.extant);
           long size =
-              Objects.firstNonNull(
+              MoreObjects.firstNonNull(
                   (Number) Entities.createCriteria(PartEntity.class).add(Example.create(searchExample)).setProjection(Projections.sum("size"))
                       .setReadOnly(true).uniqueResult(), 0).longValue();
 

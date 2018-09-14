@@ -92,8 +92,8 @@ public class AppliedVersionApplicator extends ModeSpecificApplicator {
       context.setAttribute(
           ApplicatorContext.INFO_KEY,
           BNI.networkInfo( ).from( info )
-              .setValueAppliedTime( Timestamps.formatIso8601Timestamp( new Date( lastAppliedVersion.getLeft( ) ) ) )
-              .setValueAppliedVersion( lastAppliedVersion.getRight( ) )
+              .appliedTime( Timestamps.formatIso8601Timestamp( new Date( lastAppliedVersion.getLeft( ) ) ) )
+              .appliedVersion( lastAppliedVersion.getRight( ) )
               .o( ) );
       MarshallingApplicatorHelper.clearMarshalledNetworkInfoCache( context );
       alreadyApplied = info.version( ).get( ).equals( lastAppliedVersion.getRight( ) );
@@ -121,8 +121,8 @@ public class AppliedVersionApplicator extends ModeSpecificApplicator {
               context.setAttribute(
                   ApplicatorContext.INFO_KEY,
                   BNI.networkInfo( ).from( info )
-                      .setValueAppliedTime( Timestamps.formatIso8601Timestamp( new Date( appliedVersion.getLeft( ) ) ) )
-                      .setValueAppliedVersion( appliedVersion.getRight( ) )
+                      .appliedTime( Timestamps.formatIso8601Timestamp( new Date( appliedVersion.getLeft( ) ) ) )
+                      .appliedVersion( appliedVersion.getRight( ) )
                       .o( ) );
               MarshallingApplicatorHelper.clearMarshalledNetworkInfoCache( context );
               applied = true;

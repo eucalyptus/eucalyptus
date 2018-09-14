@@ -45,7 +45,7 @@ import javax.inject.Named;
 import javax.xml.namespace.QName;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMOutputFormat;
-import org.apache.axiom.om.impl.builder.StAXOMBuilder;
+import org.apache.axiom.om.OMXMLParserWrapper;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.Accounts;
@@ -408,7 +408,7 @@ public class IdentityService {
       final String content = request.getContent( );
       final EuareMessage euareRequest;
       try ( final LockResource lock = LockResource.lock( HoldMe.canHas ) ) {
-        final StAXOMBuilder omBuilder = HoldMe.getStAXOMBuilder( HoldMe.getXMLStreamReader( content ) );
+        final OMXMLParserWrapper omBuilder = HoldMe.getStAXOMBuilder( HoldMe.getXMLStreamReader( content ) );
         final OMElement message = omBuilder.getDocumentElement( );
         final String messageTypeName = message.getAttributeValue( new QName( "type" ) );
         final Class<?> messageType = getClass( ).getClassLoader( ).loadClass( messageTypeName );

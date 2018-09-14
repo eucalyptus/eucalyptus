@@ -76,7 +76,7 @@ import com.eucalyptus.util.Callback;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
 
 import org.apache.log4j.Logger;
@@ -310,7 +310,7 @@ public class SnapshotManager {
             "The snapshot '"+request.getSnapshotId( )+"' does not exist." );
       } catch ( Exception e ) {
         Exceptions.findAndRethrow( e, EucalyptusCloudException.class, EucalyptusWebServiceException.class );
-        throw new EucalyptusCloudException( Objects.firstNonNull( e.getCause( ), e ) );
+        throw new EucalyptusCloudException( MoreObjects.firstNonNull( e.getCause( ), e ) );
       }
 
       return reply;

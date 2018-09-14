@@ -45,6 +45,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
@@ -68,7 +69,6 @@ import javax.persistence.Transient;
 import javax.persistence.Version;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Objects;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimaps;
@@ -621,7 +621,7 @@ public class Faults {
 
     @Override
     public int hashCode() {
-      return Objects.hashCode( this.serviceConfiguration, this.error.getMessage(), this.finalState );
+      return Objects.hash( this.serviceConfiguration, this.error.getMessage(), this.finalState );
     }
 
     @Override
@@ -633,9 +633,9 @@ public class Faults {
         return false;
       }
       final FaultRecord that = ( FaultRecord ) obj;
-      return Objects.equal( this.serviceConfiguration.getFullName().toString(), that.serviceConfiguration.getFullName().toString() )
-             && Objects.equal( this.error.getMessage(), that.error.getMessage() )
-             && Objects.equal( this.finalState, that.finalState );
+      return Objects.equals( this.serviceConfiguration.getFullName().toString(), that.serviceConfiguration.getFullName().toString() )
+             && Objects.equals( this.error.getMessage(), that.error.getMessage() )
+             && Objects.equals( this.finalState, that.finalState );
     }
   }
   

@@ -47,10 +47,9 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.Callable;
 import org.apache.axiom.om.OMElement;
-import org.apache.axiom.om.impl.builder.StAXOMBuilder;
+import org.apache.axiom.om.OMXMLParserWrapper;
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.log4j.Logger;
 import org.apache.ws.security.SOAPConstants;
@@ -352,7 +351,7 @@ public class WSSecurity {
   
   public static Element getSecurityElement( SOAPEnvelope envelope ) {
 	 // get security header 
-    final StAXOMBuilder doomBuilder = HoldMe.getStAXOMBuilder( HoldMe.getDOOMFactory( ), envelope.getXMLStreamReader( ) );
+    final OMXMLParserWrapper doomBuilder = HoldMe.getStAXOMBuilder( HoldMe.getDOOMFactory( ), envelope.getXMLStreamReader( ) );
     final OMElement elem = doomBuilder.getDocumentElement( );
     elem.build( );
     final Element env = ( ( Element ) elem );

@@ -111,6 +111,7 @@ import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
@@ -2201,7 +2202,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
 
     final String bucketName = s3BucketName;
     final String bucketPrefix =
-          com.google.common.base.Objects.firstNonNull(s3BucketPrefix, "");
+          MoreObjects.firstNonNull(s3BucketPrefix, "");
 
     final String roleName = getRoleName(accountNumber, lbName);
     final String policyName = ACCESSLOG_ROLE_POLICY_NAME;
@@ -2289,9 +2290,9 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     if(accessLogEnabled) {
       bucketName = s3BucketName;
       bucketPrefix =
-          com.google.common.base.Objects.firstNonNull(s3BucketPrefix, "");
+          MoreObjects.firstNonNull(s3BucketPrefix, "");
       emitInterval =
-         com.google.common.base.Objects.firstNonNull(emitInterval, 60);
+         MoreObjects.firstNonNull(emitInterval, 60);
     } else {
       bucketName = "";
       bucketPrefix = "";

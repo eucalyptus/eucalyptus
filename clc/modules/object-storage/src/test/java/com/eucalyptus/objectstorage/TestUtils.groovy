@@ -99,7 +99,7 @@ public class TestUtils {
   public static List<ObjectEntity> createNObjects(
       final ObjectMetadataManager objMgr, int count,
       final Bucket bucket, String keyPrefix, long contentLength, final UserPrincipal usr) {
-    def objectEntities = []
+    List<ObjectEntity> objectEntities = []
     for (int i = 0; i < count; i++) {
       ObjectEntity entity = ObjectEntity.newInitializedForCreate(bucket, keyPrefix + i, contentLength, usr)
       entity = objMgr.initiateCreation(entity);

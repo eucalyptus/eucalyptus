@@ -46,7 +46,7 @@ import org.hibernate.annotations.Type;
 
 import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.auth.principal.OwnerFullName;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -343,7 +343,7 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
       configuration.setKeyName( keyName );
       configuration.setUserData( userData );
       configuration.setAssociatePublicIpAddress( associatePublicIpAddress );
-      configuration.setInstanceMonitoring( Objects.firstNonNull( instanceMonitoring, Boolean.TRUE ) );
+      configuration.setInstanceMonitoring( MoreObjects.firstNonNull( instanceMonitoring, Boolean.TRUE ) );
       configuration.setIamInstanceProfile( iamInstanceProfile );
       configuration.setSecurityGroups( Lists.newArrayList( securityGroups ) );
       configuration.setBlockDeviceMappings( Lists.newArrayList( blockDeviceMappings ) );
