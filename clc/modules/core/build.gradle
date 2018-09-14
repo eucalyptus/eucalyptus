@@ -61,6 +61,7 @@ dependencies {
   api 'com.fasterxml.jackson.core:jackson-databind:2.9.6'
   api 'com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.9.6'
   api 'com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.9.6'
+  api 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.9.6'
   api 'com.fasterxml.jackson.datatype:jackson-datatype-guava:2.9.6'
   api('com.github.sjones4:glisten:0.3.euca'){
     exclude module: 'groovy-all' // we include the indy variant
