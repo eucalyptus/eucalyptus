@@ -71,7 +71,7 @@ import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.compute.common.internal.vm.VmInstanceTag;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -477,7 +477,7 @@ public class CloudWatchHelper {
             instance.getBootRecord( ).getVmType( ).getDisplayName( ),
             instance.getOwnerAccountNumber( ),
             instance.getRuntimeState( ).getInstanceStatus( ) == VmRuntimeState.InstanceStatus.Ok ? 0 : 1,
-            Objects.firstNonNull( instance.getMonitoring( ), Boolean.FALSE )
+            MoreObjects.firstNonNull( instance.getMonitoring( ), Boolean.FALSE )
         );
       }
     }

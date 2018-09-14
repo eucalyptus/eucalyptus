@@ -87,11 +87,10 @@ import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
 import com.eucalyptus.compute.common.internal.tags.FilterSupport;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.VolumeSizeExceededException;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Volumes {
   private static Logger     LOG                   = Logger.getLogger( Volumes.class );
@@ -480,7 +479,7 @@ public class Volumes {
     SYSTEM_MANAGED {
       @Override
       public Boolean apply(final Volume vol){
-        return Objects.firstNonNull( vol.getSystemManaged( ), Boolean.FALSE );
+        return MoreObjects.firstNonNull( vol.getSystemManaged( ), Boolean.FALSE );
       }
     },
   }

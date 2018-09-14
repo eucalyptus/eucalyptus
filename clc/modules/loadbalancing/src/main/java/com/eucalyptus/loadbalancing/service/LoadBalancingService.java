@@ -199,6 +199,7 @@ import com.eucalyptus.util.TypeMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
@@ -2426,7 +2427,7 @@ public class LoadBalancingService {
           throw new InvalidConfigurationRequestException(String.format("S3Bucket: %s does not exist", bucketName));
         }
         final Integer emitInterval =
-            com.google.common.base.Objects.firstNonNull(accessLog.getEmitInterval(), 60);
+            MoreObjects.firstNonNull(accessLog.getEmitInterval(), 60);
 
         if(emitInterval < 5 || emitInterval > 60) {
           throw new InvalidConfigurationRequestException("Access log's emit interval must be between 5 and 60 minutes");

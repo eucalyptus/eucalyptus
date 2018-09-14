@@ -71,7 +71,7 @@ dependencies {
     exclude module: 'stax-api'
   }
   api 'com.google.code.findbugs:jsr305:2.0.1'
-  api 'com.google.guava:guava:19.0'
+  api 'com.google.guava:guava:20.0'
   api 'com.io7m.xom:xom:1.2.10' // 1.2.9
   api 'com.jcraft:jsch:0.1.49'
   api 'commons-beanutils:commons-beanutils:1.8.3'

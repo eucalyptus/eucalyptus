@@ -29,7 +29,7 @@
 package com.eucalyptus.component.annotation;
 
 import com.eucalyptus.util.FUtils;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 /**
  *
@@ -76,7 +76,7 @@ public enum DatabaseNamingStrategy {
 
   private static DatabaseNamingStrategy propertyValueIfPresent( final String propertyName,
                                                                 final DatabaseNamingStrategy fallback ) {
-    return Objects.firstNonNull(
+    return MoreObjects.firstNonNull(
         FUtils.valueOfFunction( DatabaseNamingStrategy.class ).apply( System.getProperty( propertyName, "" ) ),
         fallback );
   }

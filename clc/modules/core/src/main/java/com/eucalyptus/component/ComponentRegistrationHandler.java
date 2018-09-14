@@ -164,7 +164,7 @@ public class ComponentRegistrationHandler {
                         + ex.getMessage( ) );
             }
           }
-        }, MoreExecutors.sameThreadExecutor( ) );
+        }, MoreExecutors.directExecutor( ) );
       } catch ( Exception ex ) {
         LOG.info( builder.getClass( ).getSimpleName( ) + ": load failed because of: "
                   + ex.getMessage( ) );

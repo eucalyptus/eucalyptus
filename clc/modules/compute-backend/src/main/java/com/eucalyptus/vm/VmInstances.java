@@ -187,7 +187,7 @@ import com.google.common.base.CaseFormat;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
@@ -622,7 +622,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       if ( newValue != null && !"[a-zA-Z0-9]{1,128}".matches( String.valueOf( newValue ) ) ) {
         throw new ConfigurablePropertyException( "Invalid ebs root device name: " + newValue );
       }
-      ebsRootDeviceName.set( String.valueOf( Objects.firstNonNull( newValue, Objects.firstNonNull( EBS_ROOT_DEVICE_NAME, "emi" ) ) ) );
+      ebsRootDeviceName.set( String.valueOf( MoreObjects.firstNonNull( newValue, MoreObjects.firstNonNull( EBS_ROOT_DEVICE_NAME, "emi" ) ) ) );
     }
   }
 
@@ -1170,7 +1170,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
   }
 
   private static String ipOrDefault( final String ip ) {
-    return Objects.firstNonNull( com.google.common.base.Strings.emptyToNull( ip ), VmNetworkConfig.DEFAULT_IP );
+    return MoreObjects.firstNonNull( com.google.common.base.Strings.emptyToNull( ip ), VmNetworkConfig.DEFAULT_IP );
   }
 
   public static void stopVmInstance( final VmInstance vmInstance, final StopInstanceCallback cb ) {
@@ -3058,7 +3058,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
     INSTANCE_STATUS {
       @Override
       public String apply( final VmInstance instance ) {
-        return Objects.firstNonNull(
+        return MoreObjects.firstNonNull(
             instance.getRuntimeState( ).getInstanceStatus( ),
             VmRuntimeState.InstanceStatus.Ok ).toString( );
       }
@@ -3066,7 +3066,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
     INSTANCE_REACHABILITY_STATUS {
       @Override
       public String apply( final VmInstance instance ) {
-        return Objects.firstNonNull(
+        return MoreObjects.firstNonNull(
             instance.getRuntimeState( ).getReachabilityStatus( ),
             VmRuntimeState.ReachabilityStatus.Passed ).toString( );
       }

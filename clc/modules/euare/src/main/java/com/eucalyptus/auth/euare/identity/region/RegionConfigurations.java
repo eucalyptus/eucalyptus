@@ -46,7 +46,7 @@ import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.records.Logs;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 
@@ -158,23 +158,23 @@ public class RegionConfigurations {
   }
 
   public static boolean isUseSsl( ) {
-    return Objects.firstNonNull( REGION_ENABLE_SSL, Boolean.TRUE );
+    return MoreObjects.firstNonNull( REGION_ENABLE_SSL, Boolean.TRUE );
   }
 
   public static boolean isUseDefaultCAs( ) {
-    return Objects.firstNonNull( REGION_SSL_DEFAULT_CAS, Boolean.FALSE );
+    return MoreObjects.firstNonNull( REGION_SSL_DEFAULT_CAS, Boolean.FALSE );
   }
 
   public static boolean isVerifyHostnames( ) {
-    return Objects.firstNonNull( REGION_SSL_VERIFY_HOSTNAMES, Boolean.TRUE );
+    return MoreObjects.firstNonNull( REGION_SSL_VERIFY_HOSTNAMES, Boolean.TRUE );
   }
 
   public static String getSslProtocols( ) {
-    return Objects.firstNonNull( REGION_SSL_PROTOCOLS, REGION_DEFAULT_SSL_PROTOCOLS );
+    return MoreObjects.firstNonNull( REGION_SSL_PROTOCOLS, REGION_DEFAULT_SSL_PROTOCOLS );
   }
 
   public static String getSslCiphers( ) {
-    return Objects.firstNonNull( REGION_SSL_CIPHERS, REGION_DEFAULT_SSL_CIPHERS );
+    return MoreObjects.firstNonNull( REGION_SSL_CIPHERS, REGION_DEFAULT_SSL_CIPHERS );
   }
 
   public static class RegionNamePropertyChangeListener implements PropertyChangeListener<String> {

@@ -72,7 +72,7 @@ import com.eucalyptus.compute.common.internal.keys.KeyPairs;
 import com.eucalyptus.compute.common.internal.keys.SshKeyPair;
 import com.eucalyptus.auth.type.RestrictedType;
 import com.eucalyptus.compute.common.internal.vmtypes.VmType;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Sets;
 import static com.eucalyptus.compute.common.ImageMetadata.Platform;
 import static com.eucalyptus.compute.common.ImageMetadata.VirtualizationType;
@@ -420,7 +420,7 @@ public class VmBootRecord {
   }
 
   public final Boolean isMonitoring() {
-    return Objects.firstNonNull( monitoring, Boolean.FALSE );
+    return MoreObjects.firstNonNull( monitoring, Boolean.FALSE );
   }
 
   void setVmInstance( VmInstance vmInstance ) {

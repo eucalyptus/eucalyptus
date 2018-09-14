@@ -97,7 +97,6 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Enums;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
@@ -281,7 +280,7 @@ public class EuareService {
     EuareAccount account = getRealAccount( ctx, request );
     EuareUser userFound = lookupUser( ctx );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) || request.getDelegateAccount( ) != null ) {
-      userFound = lookupUserByName( account, Objects.firstNonNull(
+      userFound = lookupUserByName( account, MoreObjects.firstNonNull(
           Strings.emptyToNull( request.getUserName( ) ),
           userFound.getName( ) ) );
     }
@@ -849,7 +848,7 @@ public class EuareService {
     EuareAccount account = getRealAccount( ctx, request );
     EuareUser userFound = lookupUser( ctx );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) || request.getDelegateAccount( ) != null ) {
-      userFound = lookupUserByName( account, Objects.firstNonNull(
+      userFound = lookupUserByName( account, MoreObjects.firstNonNull(
           Strings.emptyToNull( request.getUserName( ) ),
           userFound.getName( ) ) );
     }
@@ -967,7 +966,7 @@ public class EuareService {
     final EuareAccount account = getRealAccount( ctx, request );
     final String pemCertBody = request.getCertificateBody();
     final String pemCertChain = request.getCertificateChain();
-    final String path = Objects.firstNonNull( request.getPath(), "/" );
+    final String path = MoreObjects.firstNonNull( request.getPath(), "/" );
     final String certName = request.getServerCertificateName();
     final String pemPk = request.getPrivateKey();
     try{

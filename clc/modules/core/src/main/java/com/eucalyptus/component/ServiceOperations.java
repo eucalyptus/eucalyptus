@@ -251,7 +251,7 @@ public class ServiceOperations {
         final MappingHttpRequest request = context.getHttpRequest( );
         final String hostHeader = request.getHeader( HttpHeaders.HOST );
         if ( hostHeader != null && componentId.isAlwaysLocal( ) ) {
-          final String host = HostAndPort.fromString( hostHeader ).getHostText( );
+          final String host = HostAndPort.fromString( hostHeader ).getHost( );
           final Host coordinator = Hosts.getCoordinator( );
           if ( !InetAddresses.isInetAddress( host ) &&
               (coordinator == null || !coordinator.isLocalHost( )) &&

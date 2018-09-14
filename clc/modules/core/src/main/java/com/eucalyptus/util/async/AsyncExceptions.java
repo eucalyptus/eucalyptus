@@ -35,7 +35,7 @@ import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.eucalyptus.ws.WebServiceError;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 
 /**
@@ -95,7 +95,7 @@ public class AsyncExceptions {
           Exceptions.findCause( throwable, EucalyptusRemoteFault.class );
       if ( remoteFault != null ) {
         final Integer status =
-            Objects.firstNonNull( remoteFault.getStatus(), HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode( ) );
+            MoreObjects.firstNonNull( remoteFault.getStatus(), HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode( ) );
         final String code = remoteFault.getFaultCode();
         final String message = remoteFault.getFaultDetail();
         error = Optional.of( new AsyncWebServiceError( status, code, message ) );

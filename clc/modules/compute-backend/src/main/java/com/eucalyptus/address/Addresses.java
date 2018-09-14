@@ -75,6 +75,7 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.RestrictedTypes;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicates;
 import com.google.common.base.Suppliers;
 import org.apache.log4j.Logger;
@@ -104,7 +105,6 @@ import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.compute.common.internal.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
@@ -888,7 +888,7 @@ public class Addresses {
       @Override
       public boolean apply( final String publicAddress ) {
         final VmInstance vm = VmInstances.lookup( instanceId );
-        VmInstances.updatePublicAddress( vm, Objects.firstNonNull( publicAddress, VmNetworkConfig.DEFAULT_IP ) );
+        VmInstances.updatePublicAddress( vm, MoreObjects.firstNonNull( publicAddress, VmNetworkConfig.DEFAULT_IP ) );
         return true;
       }
     } ).apply( publicIp );
@@ -933,7 +933,7 @@ public class Addresses {
 
       // allocation info
       addressInfoType.setPublicIp( address.getAddress( ) );
-      addressInfoType.setDomain( Objects.firstNonNull( address.getDomain( ), AddressDomain.standard ).toString( ) );
+      addressInfoType.setDomain( MoreObjects.firstNonNull( address.getDomain( ), AddressDomain.standard ).toString( ) );
       addressInfoType.setAllocationId( address.getAllocationId( ) );
 
       // association info

@@ -39,7 +39,7 @@
 
 package com.eucalyptus.ws.server;
 
-import static com.google.common.base.Objects.firstNonNull;
+import static com.google.common.base.MoreObjects.firstNonNull;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;

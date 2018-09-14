@@ -31,7 +31,7 @@ package com.eucalyptus.compute.common.internal.vm;
 import java.io.Serializable;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 /**
  *
@@ -91,7 +91,7 @@ public class NetworkGroupId implements Serializable {
 
   @Override
   public String toString() {
-    return Objects.toStringHelper( this )
+    return MoreObjects.toStringHelper( this )
         .add( "groupId", getGroupId( ) )
         .add( "groupName", getGroupName( ) )
         .toString();

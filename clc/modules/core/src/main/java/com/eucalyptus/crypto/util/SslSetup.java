@@ -95,7 +95,6 @@ import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.IO;
 import com.eucalyptus.util.Pair;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -248,7 +247,7 @@ public class SslSetup {
     if ( urlConnection instanceof HttpsURLConnection ) {
       final HttpsURLConnection httpsURLConnection = (HttpsURLConnection) urlConnection;
       httpsURLConnection.setHostnameVerifier(
-          Objects.firstNonNull( USER_SSL_ENABLE_HOSTNAME_VERIFICATION, Boolean.TRUE ) ?
+          MoreObjects.firstNonNull( USER_SSL_ENABLE_HOSTNAME_VERIFICATION, Boolean.TRUE ) ?
             new BrowserCompatHostnameVerifier( ) :
             new AllowAllHostnameVerifier( ) );
       httpsURLConnection.setSSLSocketFactory( UserSSLSocketFactory.get( ) );
@@ -650,7 +649,7 @@ public class SslSetup {
         final List<TrustManager> trustManagers = Lists.newArrayList( );
         trustManagers.addAll( trustManagersForStore( ((AbstractKeyStore)SystemCredentials.getKeyStore( )).getKeyStore( ) ) );
         final File trustStore = new File( System.getProperty( "java.home" ), trustStorePath );
-        if ( Objects.firstNonNull( USER_SSL_DEFAULT_CAS, false ) && trustStore.isFile( ) ) {
+        if ( MoreObjects.firstNonNull( USER_SSL_DEFAULT_CAS, false ) && trustStore.isFile( ) ) {
           trustManagers.addAll( trustManagersForStore( getTrustStore( trustStore ) ) );
         }
 

@@ -65,7 +65,7 @@ import com.eucalyptus.compute.common.internal.vm.VmInstance.Reason;
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Sets;
 
@@ -191,7 +191,7 @@ public class VmRuntimeState {
   
   public void reachable( ) {
     // zombie instances cannot be reachable
-    if ( !Objects.firstNonNull( getZombie( ), Boolean.FALSE ) ) {
+    if ( !MoreObjects.firstNonNull( getZombie( ), Boolean.FALSE ) ) {
       setUnreachableTimestamp( null );
       setInstanceStatus( VmRuntimeState.InstanceStatus.Ok );
       setReachabilityStatus( VmRuntimeState.ReachabilityStatus.Passed );

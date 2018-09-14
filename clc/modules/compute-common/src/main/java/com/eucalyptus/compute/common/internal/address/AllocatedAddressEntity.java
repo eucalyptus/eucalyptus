@@ -61,7 +61,7 @@ import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.upgrade.Upgrades;
 import com.eucalyptus.util.HasFullName;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Sets;
@@ -210,7 +210,7 @@ public class AllocatedAddressEntity extends UserMetadata<AddressState> implement
    */
   @Nonnull
   public AddressDomain domainWithDefault( ) {
-    return Objects.firstNonNull( getDomain( ), AddressDomain.standard );
+    return MoreObjects.firstNonNull( getDomain( ), AddressDomain.standard );
   }
 
   @Nullable

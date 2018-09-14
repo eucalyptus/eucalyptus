@@ -107,7 +107,7 @@ import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
@@ -505,7 +505,7 @@ public class RemotePrincipalProvider implements PrincipalProvider {
         @Nonnull
         @Override
         public String getAuthenticatedId() {
-          return Objects.firstNonNull( principal.getRoleId( ), principal.getUserId( ) );
+          return MoreObjects.firstNonNull( principal.getRoleId( ), principal.getUserId( ) );
         }
 
         @Nonnull

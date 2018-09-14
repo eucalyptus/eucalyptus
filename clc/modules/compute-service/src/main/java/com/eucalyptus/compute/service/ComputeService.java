@@ -60,9 +60,6 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.auth.type.RestrictedType;
-import com.eucalyptus.binding.Binding;
-import com.eucalyptus.binding.BindingException;
-import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -148,7 +145,7 @@ import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
@@ -510,7 +507,7 @@ public class ComputeService {
     final DescribeInstanceStatusResponseType reply = msg.getReply();
     final Context ctx = Contexts.lookup();
     final boolean showAll = msg.getInstancesSet( ).remove( "verbose" ) || !msg.getInstancesSet( ).isEmpty( );
-    final boolean includeAllInstances = Objects.firstNonNull( msg.getIncludeAllInstances(), Boolean.FALSE );
+    final boolean includeAllInstances = MoreObjects.firstNonNull( msg.getIncludeAllInstances(), Boolean.FALSE );
     final Collection<String> identifiers = normalizeInstanceIdentifiers( msg.getInstancesSet() );
     final Filter filter = Filters.generateFor( msg.getFilterSet(), VmInstance.class, "status" )
         .withOptionalInternalFilter( "instance-id", identifiers )

@@ -36,7 +36,7 @@ import org.apache.xml.security.utils.resolver.ResourceResolverContext;
 import org.apache.xml.security.utils.resolver.ResourceResolverException;
 import org.apache.xml.security.utils.resolver.ResourceResolverSpi;
 import org.w3c.dom.Element;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 /**
  * Resolve elements by ID within a document, supports ws-utility identifiers.
@@ -60,7 +60,7 @@ public class WssIdResolver extends ResourceResolverSpi {
   
     final XMLSignatureInput result = new XMLSignatureInput( referencedElement );
     result.setMIMEType( "text/xml" );
-    result.setSourceURI( Objects.firstNonNull( context.baseUri, "" ) + context.uriToResolve );
+    result.setSourceURI( MoreObjects.firstNonNull( context.baseUri, "" ) + context.uriToResolve );
     return result;
   }
 

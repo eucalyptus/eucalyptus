@@ -79,7 +79,7 @@ import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
@@ -207,7 +207,7 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
         } else {
           try{
             final AccountFullName accountFullName = AccountFullName.getInstance(
-                Objects.firstNonNull( Strings.emptyToNull( groupInfo.getSourceUserId() ), defaultUserId ) );
+                MoreObjects.firstNonNull( Strings.emptyToNull( groupInfo.getSourceUserId() ), defaultUserId ) );
             final NetworkGroup networkGroup = vpcId == null ?
                 NetworkGroups.lookup( accountFullName, groupInfo.getSourceGroupName( ) ) :
                 NetworkGroups.lookup( accountFullName, vpcId, groupInfo.getSourceGroupName( ) );

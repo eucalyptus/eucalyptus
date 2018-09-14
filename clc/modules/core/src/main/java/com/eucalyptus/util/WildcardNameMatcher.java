@@ -63,7 +63,7 @@ public class WildcardNameMatcher {
   private Pattern buildPattern( final String patternList ) {
     if ( !patternList.trim( ).isEmpty( ) ) {
       final Splitter splitter =
-          Splitter.on( CharMatcher.WHITESPACE.or( CharMatcher.anyOf( ",;|" ) ) ).trimResults( ).omitEmptyStrings( );
+          Splitter.on( CharMatcher.whitespace( ).or( CharMatcher.anyOf( ",;|" ) ) ).trimResults( ).omitEmptyStrings( );
       final StringBuilder builder = new StringBuilder( );
       builder.append( "(" );
       for ( final String nameWithWildcards : splitter.split( patternList ) ) {

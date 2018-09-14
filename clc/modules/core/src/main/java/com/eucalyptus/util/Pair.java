@@ -33,7 +33,7 @@ import static com.eucalyptus.util.Parameters.checkParam;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
 
@@ -254,7 +254,7 @@ public class Pair<L,R> {
 
   @Override
   public String toString( ) {
-    return Objects.toStringHelper( this )
+    return MoreObjects.toStringHelper( this )
         .add( "left", left )
         .add( "right", right )
         .toString( );

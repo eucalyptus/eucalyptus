@@ -78,7 +78,6 @@ import com.eucalyptus.util.Strings;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
@@ -114,12 +113,12 @@ public class NetworkGroupManager {
     }
     final String vpcId = Optional.fromNullable( ResourceIdentifiers.tryNormalize( ).apply( request.getVpcId( ) ) )
         .or( Optional.fromNullable( getDefaultVpcId( accountFullName ) ) ).orNull( );
-    if ( vpcId == null && !CharMatcher.ASCII.matchesAllOf(groupName) ) {
+    if ( vpcId == null && !CharMatcher.ascii().matchesAllOf(groupName) ) {
       throw new ClientComputeException("InvalidParameterValue", "Value ("+groupName+") for parameter GroupName is invalid. Character sets beyond ASCII are not supported.");
     } else if ( vpcId != null && !NetworkGroups.VPC_GROUP_NAME_PATTERN.matcher( groupName ).matches( ) ) {
       throw new ClientComputeException("InvalidParameterValue", "Invalid security group name. Valid names are non-empty strings less than 256 characters from the following set:  a-zA-Z0-9. _-:/()#,@[]+=&;{}!$*");
     }
-    if ( vpcId == null && !CharMatcher.ASCII.matchesAllOf( groupDescription ) ) {
+    if ( vpcId == null && !CharMatcher.ascii().matchesAllOf( groupDescription ) ) {
       throw new ClientComputeException("InvalidParameterValue", "Value ("+groupDescription+") for parameter GroupDescription is invalid. Character sets beyond ASCII are not supported.");
     } else if ( vpcId != null && !NetworkGroups.VPC_GROUP_DESC_PATTERN.matcher( groupDescription ).matches( ) ) {
       throw new ClientComputeException("InvalidParameterValue", "Invalid security group description. Valid descriptions are strings less than 256 characters from the following set:  a-zA-Z0-9. _-:/()#,@[]+=&;{}!$*");
@@ -577,7 +576,7 @@ public class NetworkGroupManager {
     } catch ( NoSuchMetadataException e ) {
       throw new ClientComputeException(
           "InvalidGroup.NotFound",
-          String.format( "The security group '%s' does not exist", Objects.firstNonNull( groupName, groupId ) ) );
+          String.format( "The security group '%s' does not exist", MoreObjects.firstNonNull( groupName, groupId ) ) );
     }
   }
 

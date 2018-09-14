@@ -241,7 +241,7 @@ public class ObjectStorageProperties {
 
     private final Splitter COMMA_SPLITTER = Splitter.on(',').omitEmptyStrings().trimResults();
     private final Splitter KEY_VALUE_SPLITTER = Splitter.on('=').limit(2).omitEmptyStrings()
-        .trimResults(CharMatcher.anyOf("'\"").or(CharMatcher.WHITESPACE));
+        .trimResults(CharMatcher.anyOf("'\"").or(CharMatcher.whitespace( )));
 
     @Override
     public List<String[]> apply(String arg0) {

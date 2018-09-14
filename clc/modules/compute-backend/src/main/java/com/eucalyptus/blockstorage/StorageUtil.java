@@ -40,7 +40,7 @@ import com.eucalyptus.compute.common.internal.blockstorage.Volume;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 
 /**
@@ -88,7 +88,7 @@ public class StorageUtil {
     long size = -1;
     final EntityTransaction db = Entities.get(sizedType);
     try {
-      size = Objects.firstNonNull((Number) Entities.createCriteria(sizedType)
+      size = MoreObjects.firstNonNull((Number) Entities.createCriteria(sizedType)
           .add(Restrictions.in("state", EnumSet.of(State.EXTANT, State.BUSY)))
           .add(partition == null ?
               Restrictions.isNotNull(partitionProperty) : // Get size for all partitions.

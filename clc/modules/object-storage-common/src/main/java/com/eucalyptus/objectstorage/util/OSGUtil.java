@@ -112,7 +112,7 @@ public class OSGUtil {
 
     private Pattern buildPatternFromWildcardList( @Nonnull final String list )  {
       final Splitter splitter =
-          Splitter.on( CharMatcher.WHITESPACE.or( CharMatcher.anyOf( ",;|" ) ) ).trimResults( ).omitEmptyStrings( );
+          Splitter.on( CharMatcher.whitespace( ).or( CharMatcher.anyOf( ",;|" ) ) ).trimResults( ).omitEmptyStrings( );
       final Splitter wildSplitter = Splitter.on( '*' );
       final Joiner wildJoiner = Joiner.on( ".*");
       final StringBuilder builder = new StringBuilder( );
