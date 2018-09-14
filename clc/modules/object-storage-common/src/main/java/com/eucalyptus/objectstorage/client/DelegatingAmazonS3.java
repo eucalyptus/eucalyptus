@@ -84,6 +84,46 @@ class DelegatingAmazonS3<T extends AmazonS3> implements AmazonS3 {
   }
 
   @Override
+  public DeleteBucketEncryptionResult deleteBucketEncryption( final String bucketName ) throws AmazonServiceException, SdkClientException {
+    return delegate.deleteBucketEncryption( bucketName );
+  }
+
+  @Override
+  public DeleteBucketEncryptionResult deleteBucketEncryption( final DeleteBucketEncryptionRequest request ) throws AmazonServiceException, SdkClientException {
+    return delegate.deleteBucketEncryption( request );
+  }
+
+  @Override
+  public boolean doesBucketExistV2( final String bucketName ) throws SdkClientException, AmazonServiceException {
+    return delegate.doesBucketExistV2( bucketName );
+  }
+
+  @Override
+  public RestoreObjectResult restoreObjectV2( final RestoreObjectRequest request ) throws AmazonServiceException {
+    return delegate.restoreObjectV2( request );
+  }
+
+  @Override
+  public GetBucketEncryptionResult getBucketEncryption( final String bucketName ) throws AmazonServiceException, SdkClientException {
+    return delegate.getBucketEncryption( bucketName );
+  }
+
+  @Override
+  public GetBucketEncryptionResult getBucketEncryption( final GetBucketEncryptionRequest request ) throws AmazonServiceException, SdkClientException {
+    return delegate.getBucketEncryption( request );
+  }
+
+  @Override
+  public SetBucketEncryptionResult setBucketEncryption( final SetBucketEncryptionRequest setBucketEncryptionRequest ) throws AmazonServiceException, SdkClientException {
+    return delegate.setBucketEncryption( setBucketEncryptionRequest );
+  }
+
+  @Override
+  public SelectObjectContentResult selectObjectContent( final SelectObjectContentRequest selectRequest ) throws AmazonServiceException, SdkClientException {
+    return delegate.selectObjectContent( selectRequest );
+  }
+
+  @Override
   @Deprecated
   public void setObjectRedirectLocation( final String bucketName, final String key, final String newRedirectLocation ) throws SdkClientException, AmazonServiceException {
     delegate.setObjectRedirectLocation( bucketName, key, newRedirectLocation );
@@ -847,6 +887,11 @@ class DelegatingAmazonS3<T extends AmazonS3> implements AmazonS3 {
   @Override
   public AmazonS3Waiters waiters( ) {
     return delegate.waiters( );
+  }
+
+  @Override
+  public void shutdown( ) {
+    delegate.shutdown();
   }
 }
 
