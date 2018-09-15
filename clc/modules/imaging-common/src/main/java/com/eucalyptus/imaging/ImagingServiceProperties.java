@@ -79,9 +79,9 @@ public class ImagingServiceProperties {
 
   @ConfigurableField(displayName = "instance_type",
       description = "instance type for imaging worker",
-      initial = "m1.small", readonly = false, type = ConfigurableFieldType.KEYVALUE,
+      initial = "t2.nano", readonly = false, type = ConfigurableFieldType.KEYVALUE,
       changeListener = PropertyChangeListeners.InstanceTypeChangeListener.class)
-  public static String INSTANCE_TYPE = "m1.small";
+  public static String INSTANCE_TYPE = "t2.nano";
 
   @ConfigurableField(displayName = "availability_zones",
       description = "availability zones for imaging worker",

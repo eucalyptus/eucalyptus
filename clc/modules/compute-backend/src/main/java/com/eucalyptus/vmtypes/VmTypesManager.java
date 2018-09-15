@@ -88,33 +88,36 @@ public class VmTypesManager {
   public DescribeInstanceTypesResponseType DescribeInstanceTypes( final DescribeInstanceTypesType request ) throws ClientComputeException {
     DescribeInstanceTypesResponseType reply = request.getReply( );
     final boolean administrator = Contexts.lookup( ).isAdministrator( );
+    final boolean verboseByTypeId = request.getInstanceTypes( ).remove( "verbose" );
     for ( final VmType v : Iterables.filter( VmTypes.list( ), CloudMetadatas.filteringFor( VmType.class ).byId( request.getInstanceTypes( ) ).byPrivileges( ).buildPredicate( ) ) ) {
-      VmTypeDetails vmTypeDetails = new VmTypeDetails( ) {
-        {
-          this.setName( v.getName( ) );
-          this.setDisk( v.getDisk( ) );
-          this.setCpu( v.getCpu( ) );
-          this.setMemory( v.getMemory( ) );
-          this.setNetworkInterfaces( v.getNetworkInterfaces( ) );
-          if ( request.getVerbose( ) ) {
-            for ( EphemeralDisk e : v.getEphemeralDisks() ) {
-              this.getEphemeralDisk( ).add( new VmTypeEphemeralDisk( e.getDiskName( ), e.getDeviceName( ), e.getSize( ), e.getFormat( ).name( ) ) );
+      if ( v.getEnabled( ) || (administrator && (request.getVerbose( ) || verboseByTypeId))) {
+        VmTypeDetails vmTypeDetails = new VmTypeDetails( ) {
+          {
+            this.setName( v.getName( ) );
+            this.setDisk( v.getDisk( ) );
+            this.setCpu( v.getCpu( ) );
+            this.setMemory( v.getMemory( ) );
+            this.setNetworkInterfaces( v.getNetworkInterfaces( ) );
+            if ( request.getVerbose( ) ) {
+              for ( EphemeralDisk e : v.getEphemeralDisks() ) {
+                this.getEphemeralDisk( ).add( new VmTypeEphemeralDisk( e.getDiskName( ), e.getDeviceName( ), e.getSize( ), e.getFormat( ).name( ) ) );
+              }
+            }
+            if ( request.getAvailability( ) ) {
+              if ( !administrator ) {
+                throw new ClientComputeException( "AuthFailure", "Not permitted to access availability" );
+              }
+              for ( ServiceConfiguration cc : Topology.enabledServices( ClusterController.class ) ) {
+                VmTypeAvailability available = Clusters.lookupAny( cc ).getNodeState( ).getAvailability( v );
+                VmTypeZoneStatus status = VmAvailabilityToZoneStatus.INSTANCE.apply( available );
+                status.setZoneName( cc.getPartition( ) );//sucks having to set this here...
+                this.getAvailability( ).add( status );
+              }
             }
           }
-          if ( request.getAvailability( ) ) {
-            if ( !administrator ) {
-              throw new ClientComputeException( "AuthFailure", "Not permitted to access availability" );
-            }
-            for ( ServiceConfiguration cc : Topology.enabledServices( ClusterController.class ) ) {
-              VmTypeAvailability available = Clusters.lookupAny( cc ).getNodeState( ).getAvailability( v );
-              VmTypeZoneStatus status = VmAvailabilityToZoneStatus.INSTANCE.apply( available );
-              status.setZoneName( cc.getPartition( ) );//sucks having to set this here...
-              this.getAvailability( ).add( status );
-            }
-          }
-        }
-      };
-      reply.getInstanceTypeDetails( ).add( vmTypeDetails );
+        };
+        reply.getInstanceTypeDetails( ).add( vmTypeDetails );
+      }
     }
     return reply;
   }
@@ -138,6 +141,7 @@ public class VmTypesManager {
               vmType.setDisk( MoreObjects.firstNonNull( request.getDisk( ), vmType.getDisk( ) ) );
               vmType.setMemory( MoreObjects.firstNonNull( request.getMemory( ), vmType.getMemory( ) ) );
               vmType.setNetworkInterfaces( MoreObjects.firstNonNull( request.getNetworkInterfaces( ), vmType.getNetworkInterfaces( ) ) );
+              vmType.setEnabled( MoreObjects.firstNonNull( request.getEnabled( ), vmType.getEnabled( ) ) );
             }
             //GRZE:TODO:EUCA-3500 do the appropriate sanity checks here.
             VmTypes.update( vmType );

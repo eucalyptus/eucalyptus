@@ -143,7 +143,7 @@ public class VerifyMetadata {
     public boolean apply( Allocation allocInfo ) throws MetadataException {
       String instanceType = allocInfo.getRequest( ).getInstanceType( );
       VmType vmType = VmTypes.lookup( instanceType );
-      if ( !RestrictedTypes.filterPrivileged( ).apply( vmType ) ) {
+      if ( !vmType.getEnabled() || !RestrictedTypes.filterPrivileged( ).apply( vmType ) ) {
         throw new IllegalMetadataAccessException( "Not authorized to allocate vm type " + instanceType + " for " + allocInfo.getOwnerFullName() );
       }
       allocInfo.setVmType( vmType );

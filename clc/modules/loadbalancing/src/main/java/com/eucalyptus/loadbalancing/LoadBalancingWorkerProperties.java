@@ -67,11 +67,11 @@ public class LoadBalancingWorkerProperties {
 
   @ConfigurableField( displayName = "instance_type", 
       description = "instance type for loadbalancer instances",
-      initial = "m1.medium",
+      initial = "t2.nano",
       readonly = false,
       type = ConfigurableFieldType.KEYVALUE,
       changeListener = ElbInstanceTypeChangeListener.class)
-  public static String INSTANCE_TYPE = "m1.medium";
+  public static String INSTANCE_TYPE = "t2.nano";
 
   @ConfigurableField( displayName = "keyname", 
       description = "keyname to use when debugging loadbalancer VMs",

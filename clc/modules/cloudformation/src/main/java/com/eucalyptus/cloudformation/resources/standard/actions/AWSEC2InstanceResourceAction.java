@@ -1069,7 +1069,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
           } else {
             ModifyInstanceAttributeType modifyInstanceAttributeType = MessageHelper.createMessage(ModifyInstanceAttributeType.class, newAction.info.getEffectiveUserId());
             modifyInstanceAttributeType.setInstanceId(newAction.info.getPhysicalResourceId());
-            modifyInstanceAttributeType.setInstanceType(convertToAttributeValueType("m1.small"));
+            modifyInstanceAttributeType.setInstanceType(convertToAttributeValueType("t2.micro"));
             AsyncRequests.sendSync(configuration, modifyInstanceAttributeType);
           }
         }

@@ -59,7 +59,7 @@ public class RunInstancesType extends VmControlMessage implements HasTags {
   private String version;
   private String encoding;
   private String addressingType;
-  private String instanceType = "m1.small";
+  private String instanceType;
   private String kernelId;
   private String ramdiskId;
   @HttpParameterMapping( parameter = "Placement.AvailabilityZone" )

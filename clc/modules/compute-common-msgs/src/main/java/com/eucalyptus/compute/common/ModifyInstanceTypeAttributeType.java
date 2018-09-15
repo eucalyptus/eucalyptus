@@ -43,8 +43,9 @@ public class ModifyInstanceTypeAttributeType extends VmTypeMessage {
   private Integer disk;
   @ComputeMessageValidation.FieldRange( min = 1l )
   private Integer memory;
-  @ComputeMessageValidation.FieldRange( min = 1l, max = 8l )
+  @ComputeMessageValidation.FieldRange( min = 1l, max = 15l )
   private Integer networkInterfaces;
+  private Boolean enabled;
 
   public Boolean getReset( ) {
     return reset;
@@ -100,5 +101,13 @@ public class ModifyInstanceTypeAttributeType extends VmTypeMessage {
 
   public void setNetworkInterfaces( Integer networkInterfaces ) {
     this.networkInterfaces = networkInterfaces;
+  }
+
+  public Boolean getEnabled( ) {
+    return enabled;
+  }
+
+  public void setEnabled( final Boolean enabled ) {
+    this.enabled = enabled;
   }
 }
