@@ -46,6 +46,7 @@ import com.eucalyptus.compute.common.DescribeSubnetsType;
 import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.SubnetType;
 import com.eucalyptus.util.Cidr;
+import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -75,13 +76,13 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public ValidateResult validateArgTypesWherePossible(MatchResult matchResult) throws CloudFormationException {
+    public ValidateResult validateArgTypesWherePossible(MatchResult matchResult) {
       checkState(matchResult, this);
       return new ValidateResult(matchResult.getJsonNode(), this);
     }
 
     @Override
-    public JsonNode evaluateFunction(ValidateResult validateResult, Template template, String effectiveUserId) throws CloudFormationException {
+    public JsonNode evaluateFunction(ValidateResult validateResult, Template template, String effectiveUserId) {
       checkState(validateResult, this);
       return validateResult.getJsonNode();
     }
@@ -479,7 +480,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public ValidateResult validateArgTypesWherePossible(MatchResult matchResult) throws CloudFormationException {
+    public ValidateResult validateArgTypesWherePossible(MatchResult matchResult) {
       checkState(matchResult, this);
       // no intrinsic evaluation
       return new ValidateResult(matchResult.getJsonNode(), this);
@@ -497,8 +498,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       if (key == null) {
         throw new ValidationErrorException("Template error: every Fn::Base64 object must not have a null value.");
       }
-      return (key == null) ? validateResult.getJsonNode() :
-        new TextNode(new String(Base64.encode(key.getBytes()))); // TODO: are we just delaying an NPE?
+      return new TextNode(new String(Base64.encode(key.getBytes()))); // TODO: are we just delaying an NPE?
     }
     @Override
     public boolean isBooleanFunction() {
@@ -554,7 +554,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       if (argArray == null || !argArray.isArray()) {
         throw new ValidationErrorException("Template error: Fn::Select requires a list argument with two elements: an integer index and a list");
       }
-      if (argArray == null || index < 0 || index >= argArray.size()) {
+      if ( index < 0 || index >= argArray.size( ) ) {
         throw new ValidationErrorException("Template error: Fn::Select cannot select nonexistent value at index " + index);
       }
       return argArray.get(index);
@@ -603,7 +603,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
           + "strings (such as Fn::GetAZs) to be joined.");
       }
       String delimiter = delimiterNode.asText();
-      if (arrayOfStrings == null || arrayOfStrings.size() == 0) return new TextNode("");
+      if ( arrayOfStrings.size( ) == 0 ) return new TextNode("");
       String tempDelimiter = "";
       StringBuilder buffer = new StringBuilder();
       for (int i=0;i<arrayOfStrings.size();i++) {
@@ -747,7 +747,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       return evaluateSimpleMatch(jsonNode, FunctionEvaluation.FN_GET_AZS);
     }
     @Override
-    public ValidateResult validateArgTypesWherePossible(MatchResult matchResult) throws CloudFormationException {
+    public ValidateResult validateArgTypesWherePossible(MatchResult matchResult) {
       checkState(matchResult, this);
       // no intrinsic evaluation
       return new ValidateResult(matchResult.getJsonNode(), this);
@@ -776,7 +776,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       final Map<String, List<String>> availabilityZoneMap = Maps.newHashMap();
       availabilityZoneMap.put(CloudFormationService.getRegion( ), defaultRegionAvailabilityZones);
       availabilityZoneMap.put("",defaultRegionAvailabilityZones); // "" defaults to the default region
-      if (availabilityZoneMap != null && availabilityZoneMap.containsKey(key)) {
+      if ( availabilityZoneMap.containsKey(key) ) {
         availabilityZones.addAll(availabilityZoneMap.get(key));
       } else {
         // AWS appears to return no values in a different (or non-existant) region so we do the same.
@@ -978,8 +978,10 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       if (key == null || !key.isArray() || key.size() != 2 || key.get(0) == null || !key.get(0).isValueNode()
         || key.get(0).asText() == null || key.get(0).asText().isEmpty() || key.get(1) == null ||
         !key.get(1).isValueNode() || key.get(1).asText() == null || key.get(1).asText().isEmpty()) {
-        throw new ValidationErrorException("Template error: every Fn::GetAtt object requires two non-empty parameters, " +
-          "the resource name and the resource attribute");
+        if ( key == null || !key.isTextual( ) ) {
+          throw new ValidationErrorException( "Template error: every Fn::GetAtt object requires two non-empty parameters, " +
+              "the resource name and the resource attribute" );
+        }
       }
       return new ValidateResult(matchResult.getJsonNode(), this);
     }
@@ -988,7 +990,12 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     public JsonNode evaluateFunction(ValidateResult validateResult, Template template, String effectiveUserId) throws CloudFormationException {
       checkState(validateResult, this);
       JsonNode key = validateResult.getJsonNode().get(FunctionEvaluation.FN_GET_ATT);
-      String resourceName = key.get(0).asText();
+      String resourceName;
+      if ( key.isTextual( ) ) {
+        resourceName = Strings.substringBefore( ".", key.asText( ) );
+      } else {
+        resourceName = key.get( 0 ).asText( );
+      }
       if (!template.getResourceInfoMap().containsKey(resourceName)) {
         throw new ValidationErrorException("Template error: instance of Fn::GetAtt references undefined resource "
           + resourceName);
@@ -997,7 +1004,12 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       if (!resourceInfo.getReady()) {
         throw new ValidationErrorException("Template error: reference " + resourceName + " not ready");
       }
-      String attributeName = key.get(1).asText();
+      String attributeName;
+      if ( key.isTextual( ) ) {
+        attributeName = Strings.substringAfter( ".", key.asText( ) );
+      } else {
+        attributeName = key.get( 1 ).asText( );
+      }
       try {
         return JsonHelper.getJsonNodeFromString(resourceInfo.getResourceAttributeJson(attributeName));
       } catch (Exception ex) {
@@ -1027,7 +1039,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
     }
 
     @Override
-    public ValidateResult validateArgTypesWherePossible(MatchResult matchResult) throws CloudFormationException {
+    public ValidateResult validateArgTypesWherePossible(MatchResult matchResult) {
       checkState(matchResult, this);
       // no intrinsic evaluation
       return new ValidateResult(matchResult.getJsonNode(), this);

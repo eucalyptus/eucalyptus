@@ -44,7 +44,12 @@ import com.eucalyptus.cloudformation.resources.ResourceResolverManager;
 import com.eucalyptus.cloudformation.template.dependencies.CyclicDependencyException;
 import com.eucalyptus.cloudformation.template.dependencies.DependencyManager;
 import com.eucalyptus.util.Json;
+import com.eucalyptus.util.Strings;
+import com.eucalyptus.util.Yaml;
+import com.eucalyptus.util.Yaml.TaggedTokenFilter;
+import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
@@ -60,7 +65,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.regex.PatternSyntaxException;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 
 
 /**
@@ -137,18 +145,27 @@ public class TemplateParser {
   private static final String DEFAULT_TEMPLATE_VERSION = "2010-09-09";
   private static final String[] validTemplateVersions = new String[] {DEFAULT_TEMPLATE_VERSION};
 
-  public Template parse(String templateBody, List<Parameter> userParameters, List<String> capabilities, PseudoParameterValues pseudoParameterValues, String effectiveUserId, boolean enforceStrictResourceProperties) throws CloudFormationException {
-    Template template = new Template();
-    template.setResourceInfoMap(Maps.<String, ResourceInfo>newLinkedHashMap());
+  private static final ObjectReader reader = Yaml.mapper( new CloudFormationTaggedTokenFilter( ) ).reader( );
+
+  public JsonNode parseTemplateText( final String template ) throws ValidationErrorException {
     JsonNode templateJsonNode;
     try {
-      templateJsonNode = Json.parse( templateBody );
+      templateJsonNode = template.trim().startsWith( "{" ) ?
+          Json.parse( template ) :
+          Yaml.parse( reader, template );
     } catch (IOException ex) {
       throw new ValidationErrorException(ex.getMessage());
     }
     if (!templateJsonNode.isObject()) {
       throw new ValidationErrorException("Template body is not a JSON object");
     }
+    return templateJsonNode;
+  }
+
+  public Template parse(String templateBody, List<Parameter> userParameters, List<String> capabilities, PseudoParameterValues pseudoParameterValues, String effectiveUserId, boolean enforceStrictResourceProperties) throws CloudFormationException {
+    Template template = new Template();
+    template.setResourceInfoMap(Maps.<String, ResourceInfo>newLinkedHashMap());
+    JsonNode templateJsonNode = parseTemplateText( templateBody );
     template.setTemplateBody(templateBody);
     addPseudoParameters(template, pseudoParameterValues);
     buildResourceMap(template, templateJsonNode, enforceStrictResourceProperties);
@@ -238,15 +255,7 @@ public class TemplateParser {
   public GetTemplateSummaryResult getTemplateSummary(String templateBody, List<Parameter> userParameters, PseudoParameterValues pseudoParameterValues, String effectiveUserId, boolean enforceStrictResourceProperties) throws CloudFormationException {
     Template template = new Template();
     template.setResourceInfoMap(Maps.<String, ResourceInfo>newLinkedHashMap());
-    JsonNode templateJsonNode;
-    try {
-      templateJsonNode = Json.parse(templateBody);
-    } catch (IOException ex) {
-      throw new ValidationErrorException(ex.getMessage());
-    }
-    if (!templateJsonNode.isObject()) {
-      throw new ValidationErrorException("Template body is not a JSON object");
-    }
+    JsonNode templateJsonNode = parseTemplateText( templateBody );
     template.setTemplateBody(templateBody);
     addPseudoParameters(template, pseudoParameterValues);
     buildResourceMap(template, templateJsonNode, enforceStrictResourceProperties);
@@ -1357,8 +1366,16 @@ public class TemplateParser {
     if (fnAttMatcher.isMatch()) {
       IntrinsicFunctions.GET_ATT.validateArgTypesWherePossible(fnAttMatcher);
       // we have a match against a "ref"...
-      String refName = jsonNode.get(FunctionEvaluation.FN_GET_ATT).get(0).asText();
-      String attName = jsonNode.get(FunctionEvaluation.FN_GET_ATT).get(1).asText();
+      String refName;
+      String attName;
+      final JsonNode key = jsonNode.get(FunctionEvaluation.FN_GET_ATT);
+      if ( key.isTextual( ) ) {
+        refName = Strings.substringBefore( ".", key.asText( ) );
+        attName = Strings.substringAfter( ".", key.asText( ) );
+      } else {
+        refName = key.get( 0 ).asText( );
+        attName = key.get( 1 ).asText( );
+      }
       // Not sure why, but AWS validates attribute types even in Conditions
       if (resourceInfoMap.containsKey(refName)) {
         ResourceInfo resourceInfo = resourceInfoMap.get(refName);
@@ -1383,15 +1400,7 @@ public class TemplateParser {
 
   public Map<String,ParameterType> getParameterTypeMap(String templateBody) throws CloudFormationException {
     Map<String, ParameterType> returnVal = Maps.newHashMap();
-    JsonNode templateJsonNode;
-    try {
-      templateJsonNode = Json.parse( templateBody );
-    } catch (IOException ex) {
-      throw new ValidationErrorException(ex.getMessage());
-    }
-    if (!templateJsonNode.isObject()) {
-      throw new ValidationErrorException("Template body is not a JSON object");
-    }
+    JsonNode templateJsonNode = parseTemplateText( templateBody );
     JsonNode parametersJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateParser.TemplateSection.Parameters.toString());
     if (parametersJsonNode != null) {
       for (String parameterKey : Lists.newArrayList(parametersJsonNode.fieldNames())) {
@@ -1406,5 +1415,42 @@ public class TemplateParser {
     return returnVal;
   }
 
+  private static class CloudFormationTaggedTokenFilter implements TaggedTokenFilter{
+    private final Function<String,Boolean> tagTest = io.vavr.collection.HashSet.of(
+        "Base64",
+        "Cidr",
+        "FindInMap",
+        "GetAtt",
+        "GetAZs",
+        "Join",
+        "Select",
+        "Split",
+        "Sub",
+        "Ref",
+        "And",
+        "Equals",
+        "If",
+        "Not",
+        "Or"
+    );
+
+    @Override
+    public Tuple2<io.vavr.collection.List<Tuple2<JsonToken, String>>, io.vavr.collection.List<Tuple2<JsonToken, String>>> filterTag(
+        final String tag,
+        final JsonToken token
+    ) {
+      Tuple2<io.vavr.collection.List<Tuple2<JsonToken, String>>, io.vavr.collection.List<Tuple2<JsonToken, String>>> result = null;
+      if ( tagTest.apply( tag ) ) {
+        String name = "Ref".equals( tag ) ? tag : "Fn::" + tag;
+        result = Tuple.of(
+            io.vavr.collection.List.of(
+                Tuple.of( JsonToken.START_OBJECT, null ),
+                Tuple.of( JsonToken.FIELD_NAME, name ) ),
+            io.vavr.collection.List.of(
+                Tuple.of( JsonToken.END_OBJECT, null ) ) );
+      }
+      return result;
+    }
+  };
 }
 
