@@ -104,12 +104,6 @@ public class AWSSQSQueuePolicyResourceAction extends StepBasedResourceAction {
         return action;
       }
     };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
-    }
   }
 
   private enum DeleteSteps implements Step {
@@ -125,12 +119,6 @@ public class AWSSQSQueuePolicyResourceAction extends StepBasedResourceAction {
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -207,12 +195,6 @@ public class AWSSQSQueuePolicyResourceAction extends StepBasedResourceAction {
         }
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 }

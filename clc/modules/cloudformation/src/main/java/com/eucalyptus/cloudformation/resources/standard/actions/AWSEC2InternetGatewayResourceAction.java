@@ -130,11 +130,6 @@ public class AWSEC2InternetGatewayResourceAction extends StepBasedResourceAction
         }
         return action;
       }
-    };
-
-    @Override
-    public Integer getTimeout( ) {
-      return null;
     }
   }
 
@@ -159,11 +154,6 @@ public class AWSEC2InternetGatewayResourceAction extends StepBasedResourceAction
         AsyncRequests.<DeleteInternetGatewayType,DeleteInternetGatewayResponseType> sendSync(configuration, deleteInternetGatewayType);
         return action;
       }
-    };
-
-    @Override
-    public Integer getTimeout( ) {
-      return null;
     }
   }
 
@@ -223,12 +213,6 @@ public class AWSEC2InternetGatewayResourceAction extends StepBasedResourceAction
         }
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -251,9 +235,6 @@ public class AWSEC2InternetGatewayResourceAction extends StepBasedResourceAction
   public void setResourceInfo(ResourceInfo resourceInfo) {
     info = (AWSEC2InternetGatewayResourceInfo) resourceInfo;
   }
-
-
-
 }
 
 

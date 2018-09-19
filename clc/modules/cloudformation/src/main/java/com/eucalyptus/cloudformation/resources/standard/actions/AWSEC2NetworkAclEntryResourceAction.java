@@ -142,12 +142,6 @@ public class AWSEC2NetworkAclEntryResourceAction extends StepBasedResourceAction
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -186,12 +180,6 @@ public class AWSEC2NetworkAclEntryResourceAction extends StepBasedResourceAction
         DeleteNetworkAclEntryResponseType deleteNetworkAclEntryResponseType = AsyncRequests.<DeleteNetworkAclEntryType, DeleteNetworkAclEntryResponseType> sendSync(configuration, deleteNetworkAclEntryType);
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -216,15 +204,8 @@ public class AWSEC2NetworkAclEntryResourceAction extends StepBasedResourceAction
         ReplaceNetworkAclEntryResponseType replaceNetworkAclEntryResponseType = AsyncRequests.<ReplaceNetworkAclEntryType, ReplaceNetworkAclEntryResponseType>sendSync(configuration, replaceNetworkAclEntryType);
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
-
 
   @Override
   public ResourceProperties getResourceProperties() {
@@ -261,9 +242,6 @@ public class AWSEC2NetworkAclEntryResourceAction extends StepBasedResourceAction
     icmpTypeCodeType.setType(icmp.getType());
     return icmpTypeCodeType;
   }
-
-
-
 }
 
 

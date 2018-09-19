@@ -133,12 +133,6 @@ public class AWSSQSQueueResourceAction extends StepBasedResourceAction {
         return action;
       }
     };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
-    }
   }
 
   private enum DeleteSteps implements Step {
@@ -153,12 +147,6 @@ public class AWSSQSQueueResourceAction extends StepBasedResourceAction {
         AsyncRequests.sendSync(configuration, deleteQueueType);
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -205,12 +193,6 @@ public class AWSSQSQueueResourceAction extends StepBasedResourceAction {
         AsyncRequests.sendSync(configuration, setQueueAttributesType);
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 

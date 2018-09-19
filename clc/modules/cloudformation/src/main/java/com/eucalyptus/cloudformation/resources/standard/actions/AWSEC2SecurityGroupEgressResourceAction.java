@@ -164,12 +164,6 @@ public class AWSEC2SecurityGroupEgressResourceAction extends StepBasedResourceAc
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -224,12 +218,6 @@ public class AWSEC2SecurityGroupEgressResourceAction extends StepBasedResourceAc
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 

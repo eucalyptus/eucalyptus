@@ -405,12 +405,6 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
       }
     };
 
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
-    }
-
     private static boolean alreadyDeletedOrNeverCreated(AWSCloudFormationStackResourceAction action, ServiceConfiguration configuration) throws Exception {
       if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return true;
       // First see if stack exists or has been deleted
@@ -585,12 +579,6 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         newAction.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(newAction.info.getPhysicalResourceId())));
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -646,11 +634,6 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         // Wait as long as necessary for stacks
         return MAX_TIMEOUT;
       }
-    };
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
   private static StatusAndReason getStackStatusAndReason(AWSCloudFormationStackResourceAction action, ServiceConfiguration configuration) throws Exception {
@@ -735,11 +718,6 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         // Wait as long as necessary for stacks
         return MAX_TIMEOUT;
       }
-    };
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -792,12 +770,6 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         // Wait as long as necessary for stacks
         return MAX_TIMEOUT;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 

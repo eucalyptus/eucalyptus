@@ -489,12 +489,6 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends StepBased
         ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
         return describeLoadBalancerToGetAttributes(action, configuration);
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -610,12 +604,6 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends StepBased
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -770,11 +758,6 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends StepBased
         ServiceConfiguration configuration = Topology.lookup(LoadBalancing.class);
         return describeLoadBalancerToGetAttributes(newAction, configuration);
       }
-    };
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -958,12 +941,6 @@ public class AWSElasticLoadBalancingLoadBalancerResourceAction extends StepBased
             "replacing. Rename " + oldAction.properties.getLoadBalancerName() + " and update the stack again.");
         }
         return newAction;
-      }
-
-      @Nullable
-      @Override
-      public Integer getTimeout() {
-        return null;
       }
     }
   }

@@ -416,11 +416,6 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
       public Integer getTimeout() {
         return (int) MAX_SIGNAL_TIMEOUT;
       }
-    };
-    // no retries on most steps
-    @Override
-    public Integer getTimeout( ) {
-      return null;
     }
   }
 
@@ -510,10 +505,6 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
         return true;
       }
       return false;
-    }
-
-    public Integer getTimeout( ) {
-      return null;
     }
   }
 
@@ -789,12 +780,6 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
       public Integer getTimeout() {
         return MAX_SIGNAL_TIMEOUT;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 

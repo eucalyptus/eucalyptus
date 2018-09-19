@@ -133,13 +133,6 @@ public class AWSEC2NatGatewayResourceAction extends StepBasedResourceAction {
       public Integer getTimeout() {
         return NAT_GATEWAY_AVAILABLE_MAX_CREATE_RETRY_SECS;
       }
-    };
-
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -161,12 +154,6 @@ public class AWSEC2NatGatewayResourceAction extends StepBasedResourceAction {
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 

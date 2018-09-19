@@ -173,14 +173,7 @@ public class AWSEC2DHCPOptionsResourceAction extends StepBasedResourceAction {
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
-
   }
 
   private enum DeleteSteps implements Step {
@@ -204,12 +197,6 @@ public class AWSEC2DHCPOptionsResourceAction extends StepBasedResourceAction {
         AsyncRequests.<DeleteDhcpOptionsType,DeleteDhcpOptionsResponseType> sendSync(configuration, deleteDhcpOptionsType);
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -269,12 +256,6 @@ public class AWSEC2DHCPOptionsResourceAction extends StepBasedResourceAction {
         }
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 

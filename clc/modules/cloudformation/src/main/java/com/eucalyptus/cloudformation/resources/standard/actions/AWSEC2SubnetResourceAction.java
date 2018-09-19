@@ -178,12 +178,6 @@ public class AWSEC2SubnetResourceAction extends StepBasedResourceAction {
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -303,12 +297,6 @@ public class AWSEC2SubnetResourceAction extends StepBasedResourceAction {
         }
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -331,9 +319,6 @@ public class AWSEC2SubnetResourceAction extends StepBasedResourceAction {
   public void setResourceInfo(ResourceInfo resourceInfo) {
     info = (AWSEC2SubnetResourceInfo) resourceInfo;
   }
-
-
-
 }
 
 

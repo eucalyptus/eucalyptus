@@ -135,12 +135,6 @@ public class AWSEC2NetworkAclResourceAction extends StepBasedResourceAction {
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -166,12 +160,6 @@ public class AWSEC2NetworkAclResourceAction extends StepBasedResourceAction {
         DeleteNetworkAclResponseType DeleteNetworkAclResponseType = AsyncRequests.<DeleteNetworkAclType, DeleteNetworkAclResponseType> sendSync(configuration, DeleteNetworkAclType);
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -231,12 +219,6 @@ public class AWSEC2NetworkAclResourceAction extends StepBasedResourceAction {
         }
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -259,8 +241,6 @@ public class AWSEC2NetworkAclResourceAction extends StepBasedResourceAction {
   public void setResourceInfo(ResourceInfo resourceInfo) {
     info = (AWSEC2NetworkAclResourceInfo) resourceInfo;
   }
-
-
 }
 
 

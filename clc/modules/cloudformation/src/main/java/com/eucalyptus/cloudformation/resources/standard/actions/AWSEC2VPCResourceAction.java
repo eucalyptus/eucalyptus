@@ -212,12 +212,6 @@ public class AWSEC2VPCResourceAction extends StepBasedResourceAction {
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -242,12 +236,6 @@ public class AWSEC2VPCResourceAction extends StepBasedResourceAction {
         AsyncRequests.<DeleteVpcType,DeleteVpcResponseType> sendSync(configuration, deleteVpcType);
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -360,12 +348,6 @@ public class AWSEC2VPCResourceAction extends StepBasedResourceAction {
         }
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -394,9 +376,6 @@ public class AWSEC2VPCResourceAction extends StepBasedResourceAction {
     attributeBooleanValueType.setValue(value);
     return attributeBooleanValueType;
   }
-
-
-
 }
 
 

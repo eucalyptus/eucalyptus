@@ -108,12 +108,6 @@ public class AWSEC2SubnetNetworkAclAssociationResourceAction extends StepBasedRe
         action.info.setAssociationId(JsonHelper.getStringFromJsonNode(new TextNode(newAssociationId)));
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -137,12 +131,6 @@ public class AWSEC2SubnetNetworkAclAssociationResourceAction extends StepBasedRe
         action.replaceAssociation(configuration, action.info.getPhysicalResourceId(), defaultNetworkAclId);
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 

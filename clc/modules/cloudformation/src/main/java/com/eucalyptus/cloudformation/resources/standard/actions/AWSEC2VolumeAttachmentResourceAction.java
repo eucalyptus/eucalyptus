@@ -188,12 +188,6 @@ public class AWSEC2VolumeAttachmentResourceAction extends StepBasedResourceActio
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -249,12 +243,6 @@ public class AWSEC2VolumeAttachmentResourceAction extends StepBasedResourceActio
         return VOLUME_DETACHMENT_MAX_DELETE_RETRY_SECS;
       }
     };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
-    }
 
     private static boolean notCreatedOrNoInstanceOrNoVolume(AWSEC2VolumeAttachmentResourceAction action, ServiceConfiguration configuration) throws Exception {
       if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return true;

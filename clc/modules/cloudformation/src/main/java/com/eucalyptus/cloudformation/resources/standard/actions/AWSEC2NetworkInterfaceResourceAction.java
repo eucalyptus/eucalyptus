@@ -300,12 +300,6 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -338,12 +332,6 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
         return NETWORK_INTERFACE_DELETED_MAX_DELETE_RETRY_SECS;
       }
     };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
-    }
 
     private static boolean checkDeleted(AWSEC2NetworkInterfaceResourceAction action, ServiceConfiguration configuration) throws Exception {
       // check if network interface still exists (return otherwise)
@@ -548,12 +536,6 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
         }
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 

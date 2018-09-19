@@ -125,12 +125,6 @@ public class AWSIAMInstanceProfileResourceAction extends StepBasedResourceAction
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -150,12 +144,6 @@ public class AWSIAMInstanceProfileResourceAction extends StepBasedResourceAction
         AsyncRequests.<DeleteInstanceProfileType,DeleteInstanceProfileResponseType> sendSync(configuration, deleteInstanceProfileType);
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -223,16 +211,8 @@ public class AWSIAMInstanceProfileResourceAction extends StepBasedResourceAction
         }
         return newAction;
       }
-
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
-
 }
 
 

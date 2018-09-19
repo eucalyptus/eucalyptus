@@ -127,12 +127,6 @@ public class AWSIAMAccessKeyResourceAction extends StepBasedResourceAction {
         AsyncRequests.<UpdateAccessKeyType,UpdateAccessKeyResponseType> sendSync(configuration, updateAccessKeyType);
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -156,12 +150,6 @@ public class AWSIAMAccessKeyResourceAction extends StepBasedResourceAction {
         AsyncRequests.<DeleteAccessKeyType,DeleteAccessKeyResponseType> sendSync(configuration, deleteAccessKeyType);
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -201,12 +189,6 @@ public class AWSIAMAccessKeyResourceAction extends StepBasedResourceAction {
         AsyncRequests.<UpdateAccessKeyType,UpdateAccessKeyResponseType> sendSync(configuration, updateAccessKeyType);
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -222,12 +204,6 @@ public class AWSIAMAccessKeyResourceAction extends StepBasedResourceAction {
           throw new ValidationErrorException("AccessKey Serial cannot be decreased");
         }
         return newAction;
-      }
-
-      @Nullable
-      @Override
-      public Integer getTimeout() {
-        return null;
       }
     }
   }
