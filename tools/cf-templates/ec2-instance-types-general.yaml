@@ -1,0 +1,491 @@
+# CloudFormation template for General Purpose EC2 InstanceTypes
+# 
+# Parameters allow the enabled instance types to be customized:
+#
+#   euform-[create|update]-stack \
+#     --template-file ec2-instance-types-general.yaml \
+#     -p EnableM1=True \
+#     ec2-instance-types-general
+#
+# The eucalyptus account must be used for instance type resources.
+#
+AWSTemplateFormatVersion: 2010-09-09
+Description: EC2 General Instance Types
+Parameters:
+  EnableM1:
+    Description: Enable M1 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableM2:
+    Description: Enable M2 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableM3:
+    Description: Enable M3 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableM4:
+    Description: Enable M4 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableM5:
+    Description: Enable M5 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "True"
+  EnableM5D:
+    Description: Enable M5D instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableT1:
+    Description: Enable T1 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableT2:
+    Description: Enable T2 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "True"
+  EnableT3:
+    Description: Enable T3 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+Resources:
+  M1LARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: m1.large
+      Enabled: !Ref EnableM1
+      Cpu: 2
+      Disk: 840
+      Memory: 7680
+      NetworkInterfaces: 3
+  M1MEDIUM:
+    Type: AWS::EC2::InstanceType
+    DependsOn: M1LARGE
+    Properties:
+      Name: m1.medium
+      Enabled: !Ref EnableM1
+      Cpu: 1
+      Disk: 410
+      Memory: 3840
+      NetworkInterfaces: 2
+  M1SMALL:
+    Type: AWS::EC2::InstanceType
+    DependsOn: M1MEDIUM
+    Properties:
+      Name: m1.small
+      Enabled: !Ref EnableM1
+      Cpu: 1
+      Disk: 160
+      Memory: 1741
+      NetworkInterfaces: 2
+  M1XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: M1SMALL
+    Properties:
+      Name: m1.xlarge
+      Enabled: !Ref EnableM1
+      Cpu: 4
+      Disk: 1680
+      Memory: 15360
+      NetworkInterfaces: 4
+  M22XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: m2.2xlarge
+      Enabled: !Ref EnableM2
+      Cpu: 4
+      Disk: 850
+      Memory: 35021
+      NetworkInterfaces: 4
+  M24XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: M22XLARGE
+    Properties:
+      Name: m2.4xlarge
+      Enabled: !Ref EnableM2
+      Cpu: 8
+      Disk: 1680
+      Memory: 70042
+      NetworkInterfaces: 8
+  M2XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: M24XLARGE
+    Properties:
+      Name: m2.xlarge
+      Enabled: !Ref EnableM2
+      Cpu: 2
+      Disk: 420
+      Memory: 17510
+      NetworkInterfaces: 4
+  M32XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: m3.2xlarge
+      Enabled: !Ref EnableM3
+      Cpu: 8
+      Disk: 160
+      Memory: 30720
+      NetworkInterfaces: 4
+  M3LARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: M32XLARGE
+    Properties:
+      Name: m3.large
+      Enabled: !Ref EnableM3
+      Cpu: 2
+      Disk: 32
+      Memory: 7680
+      NetworkInterfaces: 3
+  M3MEDIUM:
+    Type: AWS::EC2::InstanceType
+    DependsOn: M3LARGE
+    Properties:
+      Name: m3.medium
+      Enabled: !Ref EnableM3
+      Cpu: 1
+      Disk: 4
+      Memory: 3840
+      NetworkInterfaces: 2
+  M3XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: M3MEDIUM
+    Properties:
+      Name: m3.xlarge
+      Enabled: !Ref EnableM3
+      Cpu: 4
+      Disk: 80
+      Memory: 15360
+      NetworkInterfaces: 4
+  M410XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: m4.10xlarge
+      Enabled: !Ref EnableM4
+      Cpu: 40
+      Disk: 40
+      Memory: 163840
+      NetworkInterfaces: 8
+  M416XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: M410XLARGE
+    Properties:
+      Name: m4.16xlarge
+      Enabled: !Ref EnableM4
+      Cpu: 64
+      Disk: 60
+      Memory: 262144
+      NetworkInterfaces: 8
+  M42XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: M416XLARGE
+    Properties:
+      Name: m4.2xlarge
+      Enabled: !Ref EnableM4
+      Cpu: 8
+      Disk: 20
+      Memory: 32768
+      NetworkInterfaces: 4
+  M44XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: M42XLARGE
+    Properties:
+      Name: m4.4xlarge
+      Enabled: !Ref EnableM4
+      Cpu: 16
+      Disk: 20
+      Memory: 65536
+      NetworkInterfaces: 8
+  M4LARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: M44XLARGE
+    Properties:
+      Name: m4.large
+      Enabled: !Ref EnableM4
+      Cpu: 2
+      Disk: 10
+      Memory: 8192
+      NetworkInterfaces: 2
+  M4XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: M4LARGE
+    Properties:
+      Name: m4.xlarge
+      Enabled: !Ref EnableM4
+      Cpu: 4
+      Disk: 15
+      Memory: 16384
+      NetworkInterfaces: 4
+  M512XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: m5.12xlarge
+      Enabled: !Ref EnableM5
+      Cpu: 48
+      Disk: 50
+      Memory: 196608
+      NetworkInterfaces: 8
+  M524XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: M512XLARGE
+    Properties:
+      Name: m5.24xlarge
+      Enabled: !Ref EnableM5
+      Cpu: 96
+      Disk: 100
+      Memory: 393216
+      NetworkInterfaces: 15
+  M52XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: M524XLARGE
+    Properties:
+      Name: m5.2xlarge
+      Enabled: !Ref EnableM5
+      Cpu: 8
+      Disk: 20
+      Memory: 32768
+      NetworkInterfaces: 4
+  M54XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: M52XLARGE
+    Properties:
+      Name: m5.4xlarge
+      Enabled: !Ref EnableM5
+      Cpu: 16
+      Disk: 20
+      Memory: 65536
+      NetworkInterfaces: 8
+  M5LARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: M54XLARGE
+    Properties:
+      Name: m5.large
+      Enabled: !Ref EnableM5
+      Cpu: 2
+      Disk: 10
+      Memory: 8192
+      NetworkInterfaces: 3
+  M5XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: M5LARGE
+    Properties:
+      Name: m5.xlarge
+      Enabled: !Ref EnableM5
+      Cpu: 4
+      Disk: 15
+      Memory: 16384
+      NetworkInterfaces: 4
+  M5D12XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: m5d.12xlarge
+      Enabled: !Ref EnableM5D
+      Cpu: 48
+      Disk: 1800
+      Memory: 196608
+      NetworkInterfaces: 8
+  M5D24XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: M5D12XLARGE
+    Properties:
+      Name: m5d.24xlarge
+      Enabled: !Ref EnableM5D
+      Cpu: 96
+      Disk: 3600
+      Memory: 393216
+      NetworkInterfaces: 15
+  M5D2XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: M5D24XLARGE
+    Properties:
+      Name: m5d.2xlarge
+      Enabled: !Ref EnableM5D
+      Cpu: 8
+      Disk: 300
+      Memory: 32768
+      NetworkInterfaces: 4
+  M5D4XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: M5D2XLARGE
+    Properties:
+      Name: m5d.4xlarge
+      Enabled: !Ref EnableM5D
+      Cpu: 16
+      Disk: 600
+      Memory: 65536
+      NetworkInterfaces: 8
+  M5DLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: M5D4XLARGE
+    Properties:
+      Name: m5d.large
+      Enabled: !Ref EnableM5D
+      Cpu: 2
+      Disk: 75
+      Memory: 8192
+      NetworkInterfaces: 3
+  M5DXLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: M5DLARGE
+    Properties:
+      Name: m5d.xlarge
+      Enabled: !Ref EnableM5D
+      Cpu: 4
+      Disk: 150
+      Memory: 16384
+      NetworkInterfaces: 4
+  T1MICRO:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: t1.micro
+      Enabled: !Ref EnableT1
+      Cpu: 1
+      Disk: 5
+      Memory: 628
+      NetworkInterfaces: 2
+  T22XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: t2.2xlarge
+      Enabled: !Ref EnableT2
+      Cpu: 8
+      Disk: 20
+      Memory: 32768
+      NetworkInterfaces: 3
+  T2LARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: T22XLARGE
+    Properties:
+      Name: t2.large
+      Enabled: !Ref EnableT2
+      Cpu: 2
+      Disk: 15
+      Memory: 8192
+      NetworkInterfaces: 3
+  T2MEDIUM:
+    Type: AWS::EC2::InstanceType
+    DependsOn: T2LARGE
+    Properties:
+      Name: t2.medium
+      Enabled: !Ref EnableT2
+      Cpu: 2
+      Disk: 10
+      Memory: 4096
+      NetworkInterfaces: 3
+  T2MICRO:
+    Type: AWS::EC2::InstanceType
+    DependsOn: T2MEDIUM
+    Properties:
+      Name: t2.micro
+      Enabled: !Ref EnableT2
+      Cpu: 1
+      Disk: 10
+      Memory: 1024
+      NetworkInterfaces: 2
+  T2NANO:
+    Type: AWS::EC2::InstanceType
+    DependsOn: T2MICRO
+    Properties:
+      Name: t2.nano
+      Enabled: !Ref EnableT2
+      Cpu: 1
+      Disk: 5
+      Memory: 512
+      NetworkInterfaces: 2
+  T2SMALL:
+    Type: AWS::EC2::InstanceType
+    DependsOn: T2NANO
+    Properties:
+      Name: t2.small
+      Enabled: !Ref EnableT2
+      Cpu: 1
+      Disk: 10
+      Memory: 2048
+      NetworkInterfaces: 2
+  T2XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: T2SMALL
+    Properties:
+      Name: t2.xlarge
+      Enabled: !Ref EnableT2
+      Cpu: 4
+      Disk: 15
+      Memory: 16384
+      NetworkInterfaces: 3
+  T32XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: t3.2xlarge
+      Enabled: !Ref EnableT3
+      Cpu: 8
+      Disk: 20
+      Memory: 32768
+      NetworkInterfaces: 4
+  T3LARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: T32XLARGE
+    Properties:
+      Name: t3.large
+      Enabled: !Ref EnableT3
+      Cpu: 2
+      Disk: 15
+      Memory: 8192
+      NetworkInterfaces: 3
+  T3MEDIUM:
+    Type: AWS::EC2::InstanceType
+    DependsOn: T3LARGE
+    Properties:
+      Name: t3.medium
+      Enabled: !Ref EnableT3
+      Cpu: 2
+      Disk: 10
+      Memory: 4096
+      NetworkInterfaces: 3
+  T3MICRO:
+    Type: AWS::EC2::InstanceType
+    DependsOn: T3MEDIUM
+    Properties:
+      Name: t3.micro
+      Enabled: !Ref EnableT3
+      Cpu: 1
+      Disk: 10
+      Memory: 1024
+      NetworkInterfaces: 2
+  T3NANO:
+    Type: AWS::EC2::InstanceType
+    DependsOn: T3MICRO
+    Properties:
+      Name: t3.nano
+      Enabled: !Ref EnableT3
+      Cpu: 1
+      Disk: 5
+      Memory: 512
+      NetworkInterfaces: 2
+  T3SMALL:
+    Type: AWS::EC2::InstanceType
+    DependsOn: T3NANO
+    Properties:
+      Name: t3.small
+      Enabled: !Ref EnableT3
+      Cpu: 1
+      Disk: 10
+      Memory: 2048
+      NetworkInterfaces: 2
+  T3XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: T3SMALL
+    Properties:
+      Name: t3.xlarge
+      Enabled: !Ref EnableT3
+      Cpu: 4
+      Disk: 15
+      Memory: 16384
+      NetworkInterfaces: 4

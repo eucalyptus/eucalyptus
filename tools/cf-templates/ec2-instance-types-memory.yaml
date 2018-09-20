@@ -1,0 +1,413 @@
+# CloudFormation template for Memory Optimized EC2 InstanceTypes
+#
+# Parameters allow the enabled instance types to be customized:
+#
+#   euform-[create|update]-stack \
+#     --template-file ec2-instance-types-memory.yaml \
+#     -p EnableR3=True \
+#     ec2-instance-types-memory
+#
+# The eucalyptus account must be used for instance type resources.
+#
+AWSTemplateFormatVersion: 2010-09-09
+Description: EC2 Memory Optimized Instance Types
+Parameters:
+  EnableR3:
+    Description: Enable R3 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableR4:
+    Description: Enable R4 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableR5:
+    Description: Enable R5 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableR5D:
+    Description: Enable R5D instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableX1:
+    Description: Enable X1 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableX1E:
+    Description: Enable X1E instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableZ1D:
+    Description: Enable Z1D instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+Resources:
+  R32XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: r3.2xlarge
+      Enabled: !Ref EnableR3
+      Cpu: 8
+      Disk: 160
+      Memory: 62464
+      NetworkInterfaces: 4
+  R34XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: R32XLARGE
+    Properties:
+      Name: r3.4xlarge
+      Enabled: !Ref EnableR3
+      Cpu: 16
+      Disk: 320
+      Memory: 124928
+      NetworkInterfaces: 8
+  R38XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: R34XLARGE
+    Properties:
+      Name: r3.8xlarge
+      Enabled: !Ref EnableR3
+      Cpu: 32
+      Disk: 640
+      Memory: 249856
+      NetworkInterfaces: 8
+  R3LARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: R38XLARGE
+    Properties:
+      Name: r3.large
+      Enabled: !Ref EnableR3
+      Cpu: 2
+      Disk: 32
+      Memory: 15616
+      NetworkInterfaces: 3
+  R3XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: R3LARGE
+    Properties:
+      Name: r3.xlarge
+      Enabled: !Ref EnableR3
+      Cpu: 4
+      Disk: 80
+      Memory: 31232
+      NetworkInterfaces: 4
+  R416XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: r4.16xlarge
+      Enabled: !Ref EnableR4
+      Cpu: 64
+      Disk: 60
+      Memory: 499712
+      NetworkInterfaces: 15
+  R42XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: R416XLARGE
+    Properties:
+      Name: r4.2xlarge
+      Enabled: !Ref EnableR4
+      Cpu: 8
+      Disk: 20
+      Memory: 62464
+      NetworkInterfaces: 4
+  R44XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: R42XLARGE
+    Properties:
+      Name: r4.4xlarge
+      Enabled: !Ref EnableR4
+      Cpu: 16
+      Disk: 20
+      Memory: 124928
+      NetworkInterfaces: 8
+  R48XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: R44XLARGE
+    Properties:
+      Name: r4.8xlarge
+      Enabled: !Ref EnableR4
+      Cpu: 32
+      Disk: 40
+      Memory: 249856
+      NetworkInterfaces: 8
+  R4LARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: R48XLARGE
+    Properties:
+      Name: r4.large
+      Enabled: !Ref EnableR4
+      Cpu: 2
+      Disk: 10
+      Memory: 15616
+      NetworkInterfaces: 3
+  R4XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: R4LARGE
+    Properties:
+      Name: r4.xlarge
+      Enabled: !Ref EnableR4
+      Cpu: 4
+      Disk: 15
+      Memory: 31232
+      NetworkInterfaces: 4
+  R512XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: r5.12xlarge
+      Enabled: !Ref EnableR5
+      Cpu: 48
+      Disk: 50
+      Memory: 393216
+      NetworkInterfaces: 8
+  R524XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: R512XLARGE
+    Properties:
+      Name: r5.24xlarge
+      Enabled: !Ref EnableR5
+      Cpu: 96
+      Disk: 100
+      Memory: 786432
+      NetworkInterfaces: 15
+  R52XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: R524XLARGE
+    Properties:
+      Name: r5.2xlarge
+      Enabled: !Ref EnableR5
+      Cpu: 8
+      Disk: 20
+      Memory: 65536
+      NetworkInterfaces: 4
+  R54XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: R52XLARGE
+    Properties:
+      Name: r5.4xlarge
+      Enabled: !Ref EnableR5
+      Cpu: 16
+      Disk: 20
+      Memory: 131072
+      NetworkInterfaces: 8
+  R5LARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: R54XLARGE
+    Properties:
+      Name: r5.large
+      Enabled: !Ref EnableR5
+      Cpu: 2
+      Disk: 10
+      Memory: 16384
+      NetworkInterfaces: 3
+  R5XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: R5LARGE
+    Properties:
+      Name: r5.xlarge
+      Enabled: !Ref EnableR5
+      Cpu: 4
+      Disk: 15
+      Memory: 32768
+      NetworkInterfaces: 4
+  R5D12XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: r5d.12xlarge
+      Enabled: !Ref EnableR5D
+      Cpu: 48
+      Disk: 1800
+      Memory: 393216
+      NetworkInterfaces: 8
+  R5D24XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: R5D12XLARGE
+    Properties:
+      Name: r5d.24xlarge
+      Enabled: !Ref EnableR5D
+      Cpu: 96
+      Disk: 3600
+      Memory: 786432
+      NetworkInterfaces: 15
+  R5D2XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: R5D24XLARGE
+    Properties:
+      Name: r5d.2xlarge
+      Enabled: !Ref EnableR5D
+      Cpu: 8
+      Disk: 300
+      Memory: 65536
+      NetworkInterfaces: 4
+  R5D4XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: R5D2XLARGE
+    Properties:
+      Name: r5d.4xlarge
+      Enabled: !Ref EnableR5D
+      Cpu: 16
+      Disk: 600
+      Memory: 131072
+      NetworkInterfaces: 8
+  R5DLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: R5D4XLARGE
+    Properties:
+      Name: r5d.large
+      Enabled: !Ref EnableR5D
+      Cpu: 2
+      Disk: 75
+      Memory: 16384
+      NetworkInterfaces: 3
+  R5DXLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: R5DLARGE
+    Properties:
+      Name: r5d.xlarge
+      Enabled: !Ref EnableR5D
+      Cpu: 4
+      Disk: 150
+      Memory: 32768
+      NetworkInterfaces: 4
+  X116XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: x1.16xlarge
+      Enabled: !Ref EnableX1
+      Cpu: 64
+      Disk: 1920
+      Memory: 999424
+      NetworkInterfaces: 8
+  X132XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: X116XLARGE
+    Properties:
+      Name: x1.32xlarge
+      Enabled: !Ref EnableX1
+      Cpu: 128
+      Disk: 3840
+      Memory: 1998848
+      NetworkInterfaces: 8
+  X1E16XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: x1e.16xlarge
+      Enabled: !Ref EnableX1E
+      Cpu: 64
+      Disk: 1920
+      Memory: 1998848
+      NetworkInterfaces: 8
+  X1E2XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: X1E16XLARGE
+    Properties:
+      Name: x1e.2xlarge
+      Enabled: !Ref EnableX1E
+      Cpu: 8
+      Disk: 240
+      Memory: 249856
+      NetworkInterfaces: 4
+  X1E32XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: X1E2XLARGE
+    Properties:
+      Name: x1e.32xlarge
+      Enabled: !Ref EnableX1E
+      Cpu: 128
+      Disk: 3840
+      Memory: 3997696
+      NetworkInterfaces: 8
+  X1E4XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: X1E32XLARGE
+    Properties:
+      Name: x1e.4xlarge
+      Enabled: !Ref EnableX1E
+      Cpu: 16
+      Disk: 480
+      Memory: 499712
+      NetworkInterfaces: 4
+  X1E8XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: X1E4XLARGE
+    Properties:
+      Name: x1e.8xlarge
+      Enabled: !Ref EnableX1E
+      Cpu: 32
+      Disk: 960
+      Memory: 999424
+      NetworkInterfaces: 4
+  X1EXLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: X1E8XLARGE
+    Properties:
+      Name: x1e.xlarge
+      Enabled: !Ref EnableX1E
+      Cpu: 4
+      Disk: 120
+      Memory: 124928
+      NetworkInterfaces: 3
+  Z1D12XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: z1d.12xlarge
+      Enabled: !Ref EnableZ1D
+      Cpu: 48
+      Disk: 1800
+      Memory: 393216
+      NetworkInterfaces: 15
+  Z1D2XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: Z1D12XLARGE
+    Properties:
+      Name: z1d.2xlarge
+      Enabled: !Ref EnableZ1D
+      Cpu: 8
+      Disk: 300
+      Memory: 65536
+      NetworkInterfaces: 4
+  Z1D3XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: Z1D2XLARGE
+    Properties:
+      Name: z1d.3xlarge
+      Enabled: !Ref EnableZ1D
+      Cpu: 12
+      Disk: 450
+      Memory: 98304
+      NetworkInterfaces: 8
+  Z1D6XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: Z1D3XLARGE
+    Properties:
+      Name: z1d.6xlarge
+      Enabled: !Ref EnableZ1D
+      Cpu: 24
+      Disk: 900
+      Memory: 196608
+      NetworkInterfaces: 8
+  Z1DLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: Z1D6XLARGE
+    Properties:
+      Name: z1d.large
+      Enabled: !Ref EnableZ1D
+      Cpu: 2
+      Disk: 75
+      Memory: 16384
+      NetworkInterfaces: 3
+  Z1DXLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: Z1DLARGE
+    Properties:
+      Name: z1d.xlarge
+      Enabled: !Ref EnableZ1D
+      Cpu: 4
+      Disk: 150
+      Memory: 32768
+      NetworkInterfaces: 4

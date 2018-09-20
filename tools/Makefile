@@ -106,7 +106,8 @@ install: build
 	@$(INSTALL) -m 755 clusteradmin-register-nodes $(DESTDIR)$(sbindir)/clusteradmin-register-nodes
 	@$(INSTALL) -m 755 clusteradmin-register-nodes $(DESTDIR)$(sbindir)/clusteradmin-deregister-nodes
 	@$(INSTALL) -d $(DESTDIR)$(etcdir)/eucalyptus/cloud.d/elb-security-policy
-	@$(INSTALL) -m 755 elb-security-policy/*.json $(DESTDIR)$(etcdir)/eucalyptus/cloud.d/elb-security-policy/
+	@$(INSTALL) -m 644 elb-security-policy/*.json $(DESTDIR)$(etcdir)/eucalyptus/cloud.d/elb-security-policy/
+	@$(INSTALL) -m 644 cf-templates/*.yaml $(DESTDIR)$(datarootdir)/eucalyptus/doc/
 	@make -C status install
 	@make -C imaging install
 
