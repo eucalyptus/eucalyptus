@@ -28,10 +28,29 @@
  ************************************************************************/
 package com.eucalyptus.compute.common;
 
-public class CreateSnapshotType extends BlockSnapshotMessage {
+import java.util.ArrayList;
+import java.util.Set;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import com.eucalyptus.binding.HttpEmbedded;
+import edu.ucsb.eucalyptus.msgs.HasTags;
+
+public class CreateSnapshotType extends BlockSnapshotMessage implements HasTags {
 
   private String volumeId;
   private String description;
+  @HttpEmbedded( multiple = true )
+  private ArrayList<ResourceTagSpecification> tagSpecification = new ArrayList<ResourceTagSpecification>( );
+
+  @Override
+  public Set<String> getTagKeys( @Nullable String resourceType, @Nullable String resourceId ) {
+    return getTagKeys( tagSpecification, resourceType, resourceId );
+  }
+
+  @Override
+  public String getTagValue( @Nullable String resourceType, @Nullable String resourceId, @Nonnull final String tagKey ) {
+    return getTagValue( tagSpecification, resourceType, resourceId, tagKey );
+  }
 
   public String getVolumeId( ) {
     return volumeId;
@@ -47,5 +66,13 @@ public class CreateSnapshotType extends BlockSnapshotMessage {
 
   public void setDescription( String description ) {
     this.description = description;
+  }
+
+  public ArrayList<ResourceTagSpecification> getTagSpecification( ) {
+    return tagSpecification;
+  }
+
+  public void setTagSpecification( ArrayList<ResourceTagSpecification> tagSpecification ) {
+    this.tagSpecification = tagSpecification;
   }
 }

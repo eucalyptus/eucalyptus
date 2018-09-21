@@ -43,8 +43,10 @@ import static com.eucalyptus.compute.common.ImageMetadata.State.available;
 import static com.eucalyptus.compute.common.ImageMetadata.State.pending;
 import static com.eucalyptus.images.Images.inState;
 
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -53,12 +55,15 @@ import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotResponseType;
 import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotType;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.ClientUnauthorizedComputeException;
 import com.eucalyptus.compute.ComputeException;
+import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.backend.CreateSnapshotResponseType;
 import com.eucalyptus.compute.common.backend.CreateSnapshotType;
 import com.eucalyptus.compute.common.backend.DeleteSnapshotResponseType;
@@ -72,6 +77,11 @@ import com.eucalyptus.compute.common.internal.blockstorage.Snapshot;
 import com.eucalyptus.compute.common.internal.blockstorage.Snapshots;
 import com.eucalyptus.compute.common.internal.blockstorage.State;
 import com.eucalyptus.compute.common.internal.blockstorage.Volume;
+import com.eucalyptus.compute.common.internal.tags.Tag;
+import com.eucalyptus.compute.common.internal.tags.TagSupport;
+import com.eucalyptus.compute.common.internal.tags.Tags;
+import com.eucalyptus.compute.common.internal.util.MetadataException;
+import com.eucalyptus.tags.TagHelper;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.google.common.base.Function;
@@ -127,6 +137,20 @@ public class SnapshotManager {
   public CreateSnapshotResponseType create( final CreateSnapshotType request ) throws EucalyptusCloudException, NoSuchComponentException, DuplicateMetadataException, AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException, TransactionException {
     final Context ctx = Contexts.lookup( );
     final String volumeId = normalizeVolumeIdentifier( request.getVolumeId( ) );
+
+    try {
+      TagHelper.validateTagSpecifications( request.getTagSpecification( ) );
+    } catch ( MetadataException e ) {
+      throw new ClientComputeException( "InvalidParameterValue", e.getMessage( ) );
+    }
+    final List<ResourceTag> snapshotTags = TagHelper.tagsForResource( request.getTagSpecification( ), PolicySpec.EC2_RESOURCE_SNAPSHOT );
+
+    if ( !snapshotTags.isEmpty( ) ) {
+      if ( !TagHelper.createTagsAuthorized( ctx, PolicySpec.EC2_RESOURCE_SNAPSHOT ) ) {
+        throw new ClientUnauthorizedComputeException( "Not authorized to create tags by " + ctx.getUser( ).getName( ) );
+      }
+    }
+
     final Volume vol;
     try {
       vol = Transactions.find( Volume.named( ctx.getUserFullName( ).asAccountFullName( ), volumeId ) );
@@ -135,12 +159,17 @@ public class SnapshotManager {
     }
     final ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) );
     final Volume volReady = Volumes.checkVolumeReady( vol );
-    Supplier<Snapshot> allocator = new Supplier<Snapshot>( ) {
-      
+    final Supplier<Snapshot> allocator = new Supplier<Snapshot>( ) {
       @Override
       public Snapshot get( ) {
         try {
-          return initializeSnapshot( Accounts.getAuthenticatedArn( ctx.getUser( ) ), ctx.getUserFullName( ), volReady, sc, request.getDescription() );
+          return initializeSnapshot(
+              Accounts.getAuthenticatedArn( ctx.getUser( ) ),
+              ctx.getUserFullName( ),
+              volReady,
+              sc,
+              request.getDescription(),
+              snapshotTags );
         } catch ( EucalyptusCloudException ex ) {
           throw new RuntimeException( ex );
         }
@@ -179,12 +208,16 @@ public class SnapshotManager {
       LOG.error("Unable to fire snap shot creation reporting event", reportEx);
     }
     
-    CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply( );
+    CreateSnapshotResponseType reply = request.getReply( );
     com.eucalyptus.compute.common.Snapshot snapMsg = snap.morph( new com.eucalyptus.compute.common.Snapshot( ) );
     snapMsg.setProgress( "0%" );
     snapMsg.setOwnerId( snap.getOwnerAccountNumber( ) );
     snapMsg.setVolumeSize( volReady.getSize( ).toString( ) );
     reply.setSnapshot( snapMsg );
+    Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( Snapshot.class ).getResourceTagMap(
+        AccountFullName.getInstance( ctx.getAccountNumber( ) ),
+        Collections.singleton( snap.getDisplayName( ) ) );
+    Tags.addFromTags( reply.getSnapshot().getTagSet(), ResourceTag.class, tagsMap.get( snap.getDisplayName( ) ) );
     return reply;
   }
 
@@ -405,7 +438,8 @@ public class SnapshotManager {
                                               final UserFullName userFullName,
                                               final Volume vol,
                                               final ServiceConfiguration sc,
-                                              final String description ) throws EucalyptusCloudException {
+                                              final String description,
+                                              final List<ResourceTag> snapshotTags ) throws EucalyptusCloudException {
     final EntityTransaction db = Entities.get( Snapshot.class );
     try {
       while ( true ) {
@@ -415,6 +449,7 @@ public class SnapshotManager {
         } catch ( NoSuchElementException e ) {
           final Snapshot snap = new Snapshot( userFullName, newId, description, vol.getDisplayName( ), vol.getSize( ), sc.getName( ), sc.getPartition( ) );
           Entities.persist( snap );
+          TagHelper.createOrUpdateTags( userFullName, snap, snapshotTags );
           db.commit( );
           return snap;
         }
