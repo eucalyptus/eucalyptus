@@ -38,6 +38,11 @@ public class AWSEC2NatGatewayResourceInfo extends ResourceInfo {
   }
 
   @Override
+  public boolean supportsTags( ) {
+    return true;
+  }
+
+  @Override
   public String toString( ) {
     return MoreObjects.toStringHelper( this )
         .toString( );

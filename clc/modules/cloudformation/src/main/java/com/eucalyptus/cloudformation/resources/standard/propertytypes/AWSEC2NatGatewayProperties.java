@@ -28,10 +28,12 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.resources.standard.propertytypes;
 
+import java.util.ArrayList;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
 import com.eucalyptus.cloudformation.resources.annotations.Property;
 import com.eucalyptus.cloudformation.resources.annotations.Required;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.Lists;
 
 public class AWSEC2NatGatewayProperties implements ResourceProperties {
 
@@ -42,6 +44,9 @@ public class AWSEC2NatGatewayProperties implements ResourceProperties {
   @Required
   @Property
   private String subnetId;
+
+  @Property
+  private ArrayList<EC2Tag> tags = Lists.newArrayList( );
 
   public String getAllocationId( ) {
     return allocationId;
@@ -59,11 +64,20 @@ public class AWSEC2NatGatewayProperties implements ResourceProperties {
     this.subnetId = subnetId;
   }
 
+  public ArrayList<EC2Tag> getTags( ) {
+    return tags;
+  }
+
+  public void setTags( ArrayList<EC2Tag> tags ) {
+    this.tags = tags;
+  }
+
   @Override
   public String toString( ) {
     return MoreObjects.toStringHelper( this )
         .add( "allocationId", allocationId )
         .add( "subnetId", subnetId )
+        .add( "tags", tags )
         .toString( );
   }
 }
