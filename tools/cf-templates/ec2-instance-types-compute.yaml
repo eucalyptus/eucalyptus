@@ -1,0 +1,317 @@
+# CloudFormation template for Compute Optimized EC2 InstanceTypes
+#
+# Parameters allow the enabled instance types to be customized:
+#
+#   euform-[create|update]-stack \
+#     --template-file ec2-instance-types-compute.yaml \
+#     -p EnableC1=True \
+#     ec2-instance-types-compute
+#
+# The eucalyptus account must be used for instance type resources.
+#
+AWSTemplateFormatVersion: 2010-09-09
+Description: EC2 Compute Optimized Instance Types
+Parameters:
+  EnableC1:
+    Description: Enable C1 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableC3:
+    Description: Enable C3 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableC4:
+    Description: Enable C4 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableC5:
+    Description: Enable C5 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableC5D:
+    Description: Enable C5D instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableCC2:
+    Description: Enable CC2 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableCG1:
+    Description: Enable CG1 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableCR1:
+    Description: Enable CR1 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+Resources:
+  C1MEDIUM:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: c1.medium
+      Enabled: !Ref EnableC1
+      Cpu: 2
+      Disk: 350
+      Memory: 1741
+      NetworkInterfaces: 2
+  C1XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: C1MEDIUM
+    Properties:
+      Name: c1.xlarge
+      Enabled: !Ref EnableC1
+      Cpu: 8
+      Disk: 1680
+      Memory: 7168
+      NetworkInterfaces: 4
+  C32XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: c3.2xlarge
+      Enabled: !Ref EnableC3
+      Cpu: 8
+      Disk: 160
+      Memory: 15360
+      NetworkInterfaces: 4
+  C34XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: C32XLARGE
+    Properties:
+      Name: c3.4xlarge
+      Enabled: !Ref EnableC3
+      Cpu: 16
+      Disk: 320
+      Memory: 30720
+      NetworkInterfaces: 8
+  C38XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: C34XLARGE
+    Properties:
+      Name: c3.8xlarge
+      Enabled: !Ref EnableC3
+      Cpu: 32
+      Disk: 640
+      Memory: 61440
+      NetworkInterfaces: 8
+  C3LARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: C38XLARGE
+    Properties:
+      Name: c3.large
+      Enabled: !Ref EnableC3
+      Cpu: 2
+      Disk: 32
+      Memory: 3840
+      NetworkInterfaces: 3
+  C3XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: C3LARGE
+    Properties:
+      Name: c3.xlarge
+      Enabled: !Ref EnableC3
+      Cpu: 4
+      Disk: 80
+      Memory: 7680
+      NetworkInterfaces: 4
+  C42XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: c4.2xlarge
+      Enabled: !Ref EnableC4
+      Cpu: 8
+      Disk: 20
+      Memory: 15360
+      NetworkInterfaces: 4
+  C44XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: C42XLARGE
+    Properties:
+      Name: c4.4xlarge
+      Enabled: !Ref EnableC4
+      Cpu: 16
+      Disk: 20
+      Memory: 30720
+      NetworkInterfaces: 8
+  C48XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: C44XLARGE
+    Properties:
+      Name: c4.8xlarge
+      Enabled: !Ref EnableC4
+      Cpu: 36
+      Disk: 40
+      Memory: 61440
+      NetworkInterfaces: 8
+  C4LARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: C48XLARGE
+    Properties:
+      Name: c4.large
+      Enabled: !Ref EnableC4
+      Cpu: 2
+      Disk: 10
+      Memory: 3840
+      NetworkInterfaces: 3
+  C4XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: C4LARGE
+    Properties:
+      Name: c4.xlarge
+      Enabled: !Ref EnableC4
+      Cpu: 4
+      Disk: 15
+      Memory: 7680
+      NetworkInterfaces: 4
+  C518XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: c5.18xlarge
+      Enabled: !Ref EnableC5
+      Cpu: 72
+      Disk: 80
+      Memory: 147456
+      NetworkInterfaces: 15
+  C52XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: C518XLARGE
+    Properties:
+      Name: c5.2xlarge
+      Enabled: !Ref EnableC5
+      Cpu: 8
+      Disk: 20
+      Memory: 16384
+      NetworkInterfaces: 4
+  C54XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: C52XLARGE
+    Properties:
+      Name: c5.4xlarge
+      Enabled: !Ref EnableC5
+      Cpu: 16
+      Disk: 20
+      Memory: 32768
+      NetworkInterfaces: 8
+  C59XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: C54XLARGE
+    Properties:
+      Name: c5.9xlarge
+      Enabled: !Ref EnableC5
+      Cpu: 36
+      Disk: 40
+      Memory: 73728
+      NetworkInterfaces: 8
+  C5LARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: C59XLARGE
+    Properties:
+      Name: c5.large
+      Enabled: !Ref EnableC5
+      Cpu: 2
+      Disk: 10
+      Memory: 4096
+      NetworkInterfaces: 3
+  C5XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: C5LARGE
+    Properties:
+      Name: c5.xlarge
+      Enabled: !Ref EnableC5
+      Cpu: 4
+      Disk: 15
+      Memory: 8192
+      NetworkInterfaces: 4
+  C5D18XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: c5d.18xlarge
+      Enabled: !Ref EnableC5D
+      Cpu: 72
+      Disk: 1800
+      Memory: 147456
+      NetworkInterfaces: 15
+  C5D2XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: C5D18XLARGE
+    Properties:
+      Name: c5d.2xlarge
+      Enabled: !Ref EnableC5D
+      Cpu: 8
+      Disk: 200
+      Memory: 16384
+      NetworkInterfaces: 4
+  C5D4XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: C5D2XLARGE
+    Properties:
+      Name: c5d.4xlarge
+      Enabled: !Ref EnableC5D
+      Cpu: 16
+      Disk: 400
+      Memory: 32768
+      NetworkInterfaces: 8
+  C5D9XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: C5D4XLARGE
+    Properties:
+      Name: c5d.9xlarge
+      Enabled: !Ref EnableC5D
+      Cpu: 36
+      Disk: 900
+      Memory: 73728
+      NetworkInterfaces: 8
+  C5DLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: C5D9XLARGE
+    Properties:
+      Name: c5d.large
+      Enabled: !Ref EnableC5D
+      Cpu: 2
+      Disk: 50
+      Memory: 4096
+      NetworkInterfaces: 3
+  C5DXLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: C5DLARGE
+    Properties:
+      Name: c5d.xlarge
+      Enabled: !Ref EnableC5D
+      Cpu: 4
+      Disk: 100
+      Memory: 8192
+      NetworkInterfaces: 4
+  CC28XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: cc2.8xlarge
+      Enabled: !Ref EnableCC2
+      Cpu: 32
+      Disk: 3360
+      Memory: 61952
+      NetworkInterfaces: 8
+  CG14XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: cg1.4xlarge
+      Enabled: !Ref EnableCG1
+      Cpu: 16
+      Disk: 200
+      Memory: 12288
+      NetworkInterfaces: 8
+  CR18XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: cr1.8xlarge
+      Enabled: !Ref EnableCR1
+      Cpu: 32
+      Disk: 240
+      Memory: 249856
+      NetworkInterfaces: 8

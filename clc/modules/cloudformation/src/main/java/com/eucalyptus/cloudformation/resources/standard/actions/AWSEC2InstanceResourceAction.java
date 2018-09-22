@@ -392,11 +392,6 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
         }
         return action;
       }
-
-      @Override
-      public Integer getTimeout() {
-        return null;
-      }
     },
     WAIT_UNTIL_RUNNING {
       @Override
@@ -559,12 +554,6 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
       public Integer getTimeout() {
         return (int) TimeUnit.HOURS.toSeconds(12);
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -613,12 +602,6 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
       public Integer getTimeout() {
         return INSTANCE_TERMINATED_MAX_DELETE_RETRY_SECS;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -938,12 +921,6 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
       public Integer getTimeout() {
         return INSTANCE_ATTACH_VOLUME_MAX_UPDATE_RETRY_SECS;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -1092,7 +1069,7 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
           } else {
             ModifyInstanceAttributeType modifyInstanceAttributeType = MessageHelper.createMessage(ModifyInstanceAttributeType.class, newAction.info.getEffectiveUserId());
             modifyInstanceAttributeType.setInstanceId(newAction.info.getPhysicalResourceId());
-            modifyInstanceAttributeType.setInstanceType(convertToAttributeValueType("m1.small"));
+            modifyInstanceAttributeType.setInstanceType(convertToAttributeValueType("t2.micro"));
             AsyncRequests.sendSync(configuration, modifyInstanceAttributeType);
           }
         }
@@ -1160,14 +1137,8 @@ public class AWSEC2InstanceResourceAction extends StepBasedResourceAction {
       public Integer getTimeout() {
         return INSTANCE_RUNNING_MAX_UPDATE_RETRY_SECS;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
-  };
+  }
 
   private static AttributeBooleanFlatValueType convertToAttributeBooleanFlatValueType(Boolean value) {
     AttributeBooleanFlatValueType attributeBooleanFlatValueType = new AttributeBooleanFlatValueType();

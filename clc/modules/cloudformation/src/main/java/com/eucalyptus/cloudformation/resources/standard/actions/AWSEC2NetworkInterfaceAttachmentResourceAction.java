@@ -137,14 +137,7 @@ public class AWSEC2NetworkInterfaceAttachmentResourceAction extends StepBasedRes
         return NETWORK_INTERFACE_ATTACHMENT_MAX_CREATE_OR_UPDATE_RETRY_SECS;
       }
 
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
-
   }
 
   private static void throwNotAttachedMessage(String networkInterfaceId, String instanceId) throws RetryAfterConditionCheckFailedException {
@@ -236,12 +229,6 @@ public class AWSEC2NetworkInterfaceAttachmentResourceAction extends StepBasedRes
       public Integer getTimeout() {
         return NETWORK_INTERFACE_DETACHMENT_MAX_DELETE_OR_UPDATE_RETRY_SECS;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout( ) {
-      return null;
     }
   }
 
@@ -322,13 +309,8 @@ public class AWSEC2NetworkInterfaceAttachmentResourceAction extends StepBasedRes
           Objects.equals(oldAction.properties.getNetworkInterfaceId(), newAction.properties.getNetworkInterfaceId())
       );
     }
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
-    }
   }
+
   private static ResourceAction waitUntilDetached(AWSEC2NetworkInterfaceAttachmentResourceAction action, ServiceConfiguration configuration) throws Exception {
     DescribeNetworkInterfacesType describeNetworkInterfacesType = MessageHelper.createMessage(DescribeNetworkInterfacesType.class, action.info.getEffectiveUserId());
     describeNetworkInterfacesType.setNetworkInterfaceIdSet(action.convertNetworkInterfaceIdSet(action.properties.getNetworkInterfaceId()));

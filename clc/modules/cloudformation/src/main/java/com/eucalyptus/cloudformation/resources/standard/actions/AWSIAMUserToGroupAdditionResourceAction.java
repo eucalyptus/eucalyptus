@@ -111,12 +111,6 @@ public class AWSIAMUserToGroupAdditionResourceAction extends StepBasedResourceAc
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -130,12 +124,6 @@ public class AWSIAMUserToGroupAdditionResourceAction extends StepBasedResourceAc
         IAMHelper.removeUsersFromGroup(configuration, action.properties.getUsers(), action.properties.getGroupName(), action.info.getEffectiveUserId());
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -205,12 +193,6 @@ public class AWSIAMUserToGroupAdditionResourceAction extends StepBasedResourceAc
         }
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 

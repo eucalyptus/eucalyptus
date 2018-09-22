@@ -223,12 +223,6 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
 
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -286,12 +280,6 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
 
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -373,16 +361,8 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
         }
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
-
-
 
   @Override
   public ResourceProperties getResourceProperties() {
@@ -403,10 +383,6 @@ public class AWSEC2EIPAssociationResourceAction extends StepBasedResourceAction 
   public void setResourceInfo(ResourceInfo resourceInfo) {
     info = (AWSEC2EIPAssociationResourceInfo) resourceInfo;
   }
-
-
-
-
 }
 
 

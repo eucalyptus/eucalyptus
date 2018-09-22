@@ -165,11 +165,6 @@ public class AWSIAMGroupResourceAction extends StepBasedResourceAction {
         }
         return action;
       }
-    };
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -200,12 +195,6 @@ public class AWSIAMGroupResourceAction extends StepBasedResourceAction {
         AsyncRequests.<DeleteGroupType,DeleteGroupResponseType> sendSync(configuration, deleteGroupType);
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -339,13 +328,6 @@ public class AWSIAMGroupResourceAction extends StepBasedResourceAction {
         }
         return newAction;
       }
-
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -360,16 +342,8 @@ public class AWSIAMGroupResourceAction extends StepBasedResourceAction {
         }
         return newAction;
       }
-
-      @Nullable
-      @Override
-      public Integer getTimeout() {
-        return null;
-      }
     }
   }
-
-
 }
 
 

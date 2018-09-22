@@ -47,6 +47,7 @@ import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PostLoad;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
@@ -131,6 +132,9 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
   @Column( name = "config_vm_type_enis" )
   private Integer            networkInterfaces;
 
+  @Column( name = "config_vm_enabled" )
+  private Boolean            enabled;
+
   @ElementCollection
   @CollectionTable( name = "config_vm_types_ephemeral_disks" )
   private Set<EphemeralDisk> ephemeralDisks = Sets.newHashSet( );
@@ -147,13 +151,15 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
       final Integer cpu,
       final Integer disk,
       final Integer memory,
-      final Integer networkInterfaces
+      final Integer networkInterfaces,
+      final Boolean enabled
   ) {
     this( name );
     this.cpu = cpu;
     this.disk = disk;
     this.memory = memory;
     this.networkInterfaces = networkInterfaces;
+    this.enabled = enabled;
   }
   
   public static VmType create( ) {
@@ -200,7 +206,15 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
   public void setMemory( final Integer memory ) {
     this.memory = memory;
   }
-  
+
+  public Boolean getEnabled( ) {
+    return enabled;
+  }
+
+  public void setEnabled( final Boolean enabled ) {
+    this.enabled = enabled;
+  }
+
   @SuppressWarnings( "RedundantIfStatement" )
   @Override
   public boolean equals( final Object o ) {
@@ -269,7 +283,14 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
   public OwnerFullName getOwner( ) {
     return Principals.nobodyFullName( );
   }
-  
+
+  @PostLoad
+  private void onLoad( ) {
+    if ( enabled == null ) {
+      enabled = true;
+    }
+  }
+
   public Supplier<VmType> allocator( ) {
     return new Supplier<VmType>( ) {
       
@@ -388,8 +409,8 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
     return new VmType.EphemeralBuilder( this );
   }
   
-  public static VmType create( String name, Integer cpu, Integer disk, Integer memory, Integer networkInterfaces ) {
-    return new VmType( name, cpu, disk, memory, networkInterfaces );
+  public static VmType create( String name, Integer cpu, Integer disk, Integer memory, Integer networkInterfaces, Boolean enabled ) {
+    return new VmType( name, cpu, disk, memory, networkInterfaces, enabled );
   }
   
   public static VmType named( String name ) {

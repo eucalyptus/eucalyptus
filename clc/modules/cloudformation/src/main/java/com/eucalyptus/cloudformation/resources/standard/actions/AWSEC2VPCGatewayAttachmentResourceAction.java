@@ -126,12 +126,6 @@ public class AWSEC2VPCGatewayAttachmentResourceAction extends StepBasedResourceA
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -179,12 +173,6 @@ public class AWSEC2VPCGatewayAttachmentResourceAction extends StepBasedResourceA
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -227,16 +215,8 @@ public class AWSEC2VPCGatewayAttachmentResourceAction extends StepBasedResourceA
         }
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
-
-
 
   @Override
   public ResourceProperties getResourceProperties() {
@@ -270,9 +250,6 @@ public class AWSEC2VPCGatewayAttachmentResourceAction extends StepBasedResourceA
 
     vpnGatewayIdSetItem.setVpnGatewayId(vpnGatewayId);
   }
-
-
-
 }
 
 

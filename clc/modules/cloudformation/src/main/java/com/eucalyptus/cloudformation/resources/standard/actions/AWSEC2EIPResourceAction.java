@@ -167,12 +167,6 @@ public class AWSEC2EIPResourceAction extends StepBasedResourceAction {
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -229,12 +223,6 @@ public class AWSEC2EIPResourceAction extends StepBasedResourceAction {
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -323,11 +311,6 @@ public class AWSEC2EIPResourceAction extends StepBasedResourceAction {
           }
         }
         return newAction;
-      }
-      @Nullable
-      @Override
-      public Integer getTimeout() {
-        return null;
       }
     }
   }

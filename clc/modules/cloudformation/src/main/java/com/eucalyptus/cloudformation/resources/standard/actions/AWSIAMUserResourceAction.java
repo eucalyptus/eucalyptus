@@ -217,12 +217,6 @@ public class AWSIAMUserResourceAction extends StepBasedResourceAction {
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -286,12 +280,6 @@ public class AWSIAMUserResourceAction extends StepBasedResourceAction {
         AsyncRequests.<DeleteUserType,DeleteUserResponseType> sendSync(configuration, deleteUserType);
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -503,13 +491,6 @@ public class AWSIAMUserResourceAction extends StepBasedResourceAction {
         newAction.info.setArn(JsonHelper.getStringFromJsonNode(new TextNode(user.getArn())));
         return newAction;
       }
-    };
-
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -523,12 +504,6 @@ public class AWSIAMUserResourceAction extends StepBasedResourceAction {
           throw new ValidationErrorException("CloudFormation cannot update a stack when a custom-named resource requires replacing. Rename "+oldAction.properties.getUserName()+" and update the stack again.");
         }
         return newAction;
-      }
-
-      @Nullable
-      @Override
-      public Integer getTimeout() {
-        return null;
       }
     }
   }

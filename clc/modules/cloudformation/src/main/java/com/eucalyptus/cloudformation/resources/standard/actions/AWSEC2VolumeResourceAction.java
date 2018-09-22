@@ -243,12 +243,6 @@ public class AWSEC2VolumeResourceAction extends StepBasedResourceAction {
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -357,12 +351,6 @@ public class AWSEC2VolumeResourceAction extends StepBasedResourceAction {
       }
     };
 
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
-    }
-
     private static boolean volumeDeleted(AWSEC2VolumeResourceAction action, ServiceConfiguration configuration) throws Exception {
       if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return true;
       DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
@@ -462,12 +450,6 @@ public class AWSEC2VolumeResourceAction extends StepBasedResourceAction {
         }
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -490,9 +472,6 @@ public class AWSEC2VolumeResourceAction extends StepBasedResourceAction {
   public void setResourceInfo(ResourceInfo resourceInfo) {
     info = (AWSEC2VolumeResourceInfo) resourceInfo;
   }
-
-
-
 }
 
 

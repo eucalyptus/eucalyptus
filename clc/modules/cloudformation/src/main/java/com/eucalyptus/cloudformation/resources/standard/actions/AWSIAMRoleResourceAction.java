@@ -166,12 +166,6 @@ public class AWSIAMRoleResourceAction extends StepBasedResourceAction {
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -200,12 +194,6 @@ public class AWSIAMRoleResourceAction extends StepBasedResourceAction {
         AsyncRequests.<DeleteRoleType,DeleteRoleResponseType> sendSync(configuration, deleteRoleType);
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -339,12 +327,6 @@ public class AWSIAMRoleResourceAction extends StepBasedResourceAction {
         }
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -358,12 +340,6 @@ public class AWSIAMRoleResourceAction extends StepBasedResourceAction {
           throw new ValidationErrorException("CloudFormation cannot update a stack when a custom-named resource requires replacing. Rename "+oldAction.properties.getRoleName()+" and update the stack again.");
         }
         return newAction;
-      }
-
-      @Nullable
-      @Override
-      public Integer getTimeout() {
-        return null;
       }
     }
   }

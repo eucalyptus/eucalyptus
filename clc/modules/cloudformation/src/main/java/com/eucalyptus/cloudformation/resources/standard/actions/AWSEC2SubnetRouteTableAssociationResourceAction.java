@@ -105,12 +105,6 @@ public class AWSEC2SubnetRouteTableAssociationResourceAction extends StepBasedRe
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -128,12 +122,6 @@ public class AWSEC2SubnetRouteTableAssociationResourceAction extends StepBasedRe
         action.disassociateRouteTable(configuration, action.info.getPhysicalResourceId());
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -150,13 +138,6 @@ public class AWSEC2SubnetRouteTableAssociationResourceAction extends StepBasedRe
         newAction.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(newAction.info.getPhysicalResourceId())));
         return newAction;
       }
-    },
-    ;
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 

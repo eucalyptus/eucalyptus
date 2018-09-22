@@ -160,7 +160,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private static final long    serialVersionUID = 1L;
   private static final Logger  LOG              = Logger.getLogger( VmInstance.class );
 
-  public static final String         DEFAULT_TYPE         = "m1.small";
+  public static final String         DEFAULT_TYPE         = "t2.micro";
   public static final String         ROOT_DEVICE_TYPE_EBS = "ebs";
   public static final String         ID_PREFIX            = "i";
   public static final String         VM_NC_HOST_TAG       = "euca:node";

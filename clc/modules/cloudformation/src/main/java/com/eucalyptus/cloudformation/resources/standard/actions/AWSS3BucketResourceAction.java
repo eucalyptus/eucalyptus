@@ -225,12 +225,6 @@ public class AWSS3BucketResourceAction extends StepBasedResourceAction {
         return action;
       }
     };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
-    }
   }
 
   private enum DeleteSteps implements Step {
@@ -251,12 +245,6 @@ public class AWSS3BucketResourceAction extends StepBasedResourceAction {
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -501,12 +489,6 @@ public class AWSS3BucketResourceAction extends StepBasedResourceAction {
           newAction.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(newAction.info.getPhysicalResourceId())));
           return newAction;
         }
-      }
-
-      @Nullable
-      @Override
-      public Integer getTimeout() {
-        return null;
       }
     }
   }

@@ -184,12 +184,6 @@ public class AWSIAMManagedPolicyResourceAction extends StepBasedResourceAction {
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -266,12 +260,6 @@ public class AWSIAMManagedPolicyResourceAction extends StepBasedResourceAction {
 
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -438,12 +426,6 @@ public class AWSIAMManagedPolicyResourceAction extends StepBasedResourceAction {
         }
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 

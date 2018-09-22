@@ -117,12 +117,6 @@ public class AWSEC2VPCDHCPOptionsAssociationResourceAction extends StepBasedReso
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -160,12 +154,6 @@ public class AWSEC2VPCDHCPOptionsAssociationResourceAction extends StepBasedReso
         AsyncRequests.<AssociateDhcpOptionsType,AssociateDhcpOptionsResponseType> sendSync(configuration, associateDhcpOptionsType);
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -202,12 +190,6 @@ public class AWSEC2VPCDHCPOptionsAssociationResourceAction extends StepBasedReso
         AsyncRequests.<AssociateDhcpOptionsType,AssociateDhcpOptionsResponseType> sendSync(configuration, associateDhcpOptionsType);
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -230,9 +212,6 @@ public class AWSEC2VPCDHCPOptionsAssociationResourceAction extends StepBasedReso
   public void setResourceInfo(ResourceInfo resourceInfo) {
     info = (AWSEC2VPCDHCPOptionsAssociationResourceInfo) resourceInfo;
   }
-
-
-
 }
 
 

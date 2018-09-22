@@ -91,11 +91,6 @@ public class AWSS3BucketPolicyResourceAction extends StepBasedResourceAction {
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
-    };
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -117,12 +112,6 @@ public class AWSS3BucketPolicyResourceAction extends StepBasedResourceAction {
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -158,11 +147,6 @@ public class AWSS3BucketPolicyResourceAction extends StepBasedResourceAction {
           s3c.setBucketPolicy(newAction.properties.getBucket(), newAction.properties.getPolicyDocument().toString());
         }
         return newAction;
-      }
-      @Nullable
-      @Override
-      public Integer getTimeout() {
-        return null;
       }
     }
   }

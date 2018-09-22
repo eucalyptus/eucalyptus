@@ -146,12 +146,6 @@ public class AWSEC2RouteResourceAction extends StepBasedResourceAction {
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -192,12 +186,6 @@ public class AWSEC2RouteResourceAction extends StepBasedResourceAction {
         DeleteRouteResponseType deleteRouteResponseType = AsyncRequests.<DeleteRouteType, DeleteRouteResponseType>sendSync(configuration, deleteRouteType);
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -242,12 +230,6 @@ public class AWSEC2RouteResourceAction extends StepBasedResourceAction {
         ReplaceRouteResponseType replaceRouteResponseType = AsyncRequests.<ReplaceRouteType, ReplaceRouteResponseType>sendSync(configuration, replaceRouteType);
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
   @Override

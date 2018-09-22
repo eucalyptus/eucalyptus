@@ -330,7 +330,7 @@ public class ClusterEndpoint {
                                                                                                                       + cluster.getConfiguration( ).getFullName( ) ) );
                                                                                    info.add( new ClusterInfoType( String.format( INFO_FSTRING, "vm types" ),
                                                                                                                   HEADER_STRING ) );
-                                                                                   for ( VmType v : VmTypes.list( ) ) {
+                                                                                   for ( VmType v : VmTypes.listEnabled( ) ) {
                                                                                      VmTypeAvailability va = cluster.getNodeState( ).getAvailability( v );
                                                                                      info.add( s( v.getName( ),
                                                                                                   String.format( STATE_FSTRING, va.getAvailable( ),

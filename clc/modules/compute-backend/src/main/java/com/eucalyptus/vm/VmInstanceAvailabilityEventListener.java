@@ -90,7 +90,7 @@ public class VmInstanceAvailabilityEventListener implements EventListener<ClockT
 
       final ArrayListMultimap<ResourceType,Availability> availabilityByType = ArrayListMultimap.create( );
       final Map<ResourceType,AvailabilityAccumulator> availabilities = Maps.newEnumMap( ResourceType.class );
-      final Iterable<VmType> vmTypes = Lists.newArrayList( VmTypes.list( ) );
+      final Iterable<VmType> vmTypes = Lists.newArrayList( VmTypes.listEnabled( ) );
       for ( final Cluster cluster : Clusters.list( ) ) {
         availabilities.put( Core, new AvailabilityAccumulator( VmType.SizeProperties.Cpu ) );
         availabilities.put( Disk, new AvailabilityAccumulator( VmType.SizeProperties.Disk ) );

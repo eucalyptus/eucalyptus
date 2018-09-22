@@ -245,12 +245,6 @@ public class AWSEC2SecurityGroupResourceAction extends StepBasedResourceAction {
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -491,12 +485,6 @@ public class AWSEC2SecurityGroupResourceAction extends StepBasedResourceAction {
         }
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -508,9 +496,6 @@ public class AWSEC2SecurityGroupResourceAction extends StepBasedResourceAction {
     ipPermissionType.setCidrIpRanges(Lists.newArrayList("0.0.0.0/0"));
     return ipPermissionType;
   }
-
-
-
 }
 
 
