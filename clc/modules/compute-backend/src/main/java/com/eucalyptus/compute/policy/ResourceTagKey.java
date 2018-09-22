@@ -62,6 +62,7 @@ public class ResourceTagKey implements ComputeKey {
       .add( qualifiedName( VENDOR_EC2, EC2_CREATEVPCPEERINGCONNECTION ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETEDHCPOPTIONS ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETEINTERNETGATEWAY ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_DELETENATGATEWAY ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETENETWORKACL ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETENETWORKACLENTRY ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETEROUTE ) )

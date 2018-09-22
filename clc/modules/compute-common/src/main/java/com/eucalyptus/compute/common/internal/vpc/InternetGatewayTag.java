@@ -110,7 +110,7 @@ public class InternetGatewayTag extends Tag<InternetGatewayTag> {
 
   public static final class InternetGatewayTagSupport extends TagSupport {
     public InternetGatewayTagSupport() {
-      super( InternetGateway.class, "igw", "displayName", "internetGateway", " InvalidInternetGatewayID.NotFound", "The internet gateway '%s' does not exist." );
+      super( InternetGateway.class, "igw", "displayName", "internetGateway", "InvalidInternetGatewayID.NotFound", "The internet gateway '%s' does not exist." );
     }
 
     @Override
