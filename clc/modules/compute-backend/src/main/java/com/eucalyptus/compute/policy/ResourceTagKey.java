@@ -28,6 +28,8 @@
  ************************************************************************/
 package com.eucalyptus.compute.policy;
 
+import static com.eucalyptus.auth.policy.PolicySpec.EC2_CREATESNAPSHOT;
+import static com.eucalyptus.auth.policy.PolicySpec.EC2_DELETESNAPSHOT;
 import static com.eucalyptus.auth.policy.PolicySpec.qualifiedName;
 import static com.eucalyptus.compute.common.policy.ComputePolicySpec.*;
 import java.util.Map;
@@ -55,6 +57,7 @@ public class ResourceTagKey implements ComputeKey {
       .add( qualifiedName( VENDOR_EC2, EC2_ATTACHVOLUME ) )
       .add( qualifiedName( VENDOR_EC2, EC2_AUTHORIZESECURITYGROUPEGRESS ) )
       .add( qualifiedName( VENDOR_EC2, EC2_AUTHORIZESECURITYGROUPINGRESS ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_CREATESNAPSHOT ) )
       .add( qualifiedName( VENDOR_EC2, EC2_CREATETAGS ) )
       .add( qualifiedName( VENDOR_EC2, EC2_CREATEVPCPEERINGCONNECTION ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETEDHCPOPTIONS ) )
@@ -64,6 +67,7 @@ public class ResourceTagKey implements ComputeKey {
       .add( qualifiedName( VENDOR_EC2, EC2_DELETEROUTE ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETEROUTETABLE ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETESECURITYGROUP ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_DELETESNAPSHOT ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETETAGS ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETEVOLUME ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETEVPCPEERINGCONNECTION ) )
