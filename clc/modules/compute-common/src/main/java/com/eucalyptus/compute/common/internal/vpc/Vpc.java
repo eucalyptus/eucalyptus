@@ -42,6 +42,7 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.auth.principal.FullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
@@ -59,6 +60,25 @@ import com.eucalyptus.auth.principal.OwnerFullName;
 public class Vpc extends UserMetadata<Vpc.State> implements VpcMetadata {
 
   private static final long serialVersionUID = 1L;
+
+  @Column( name = "metadata_cidr", nullable = false )
+  private String cidr;
+
+  @Column( name = "metadata_default", nullable = false )
+  private Boolean defaultVpc;
+
+  @Column( name = "metadata_dns_enabled", nullable = false )
+  private Boolean dnsEnabled;
+
+  @Column( name = "metadata_dns_hostnames", nullable = false )
+  private Boolean dnsHostnames;
+
+  @ManyToOne
+  @JoinColumn( name = "metadata_dhcp_option_set_id" )
+  private DhcpOptionSet dhcpOptionSet;
+
+  @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "vpc" )
+  private Collection<VpcTag> tags;
 
   public enum State {
     pending,
@@ -108,24 +128,10 @@ public class Vpc extends UserMetadata<Vpc.State> implements VpcMetadata {
     return vpc;
   }
 
-  @Column( name = "metadata_cidr", nullable = false )
-  private String cidr;
-
-  @Column( name = "metadata_default", nullable = false )
-  private Boolean defaultVpc;
-
-  @Column( name = "metadata_dns_enabled", nullable = false )
-  private Boolean dnsEnabled;
-
-  @Column( name = "metadata_dns_hostnames", nullable = false )
-  private Boolean dnsHostnames;
-
-  @ManyToOne
-  @JoinColumn( name = "metadata_dhcp_option_set_id" )
-  private DhcpOptionSet dhcpOptionSet;
-
-  @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "vpc" )
-  private Collection<VpcTag> tags;
+  @Override
+  protected String createUniqueName( ) {
+    return ResourceIdentifiers.truncate( getDisplayName( ) );
+  }
 
   @Override
   public String getPartition() {

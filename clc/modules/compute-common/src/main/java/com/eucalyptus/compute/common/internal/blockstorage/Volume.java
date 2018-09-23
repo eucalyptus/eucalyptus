@@ -60,6 +60,7 @@ import com.eucalyptus.compute.common.CloudMetadata.VolumeMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.auth.principal.FullName;
@@ -139,6 +140,11 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
       @Override public String getPartition( ) { return partition; }
       @Override public Integer getSize( ) { return size; }
     };
+  }
+
+  @Override
+  protected String createUniqueName( ) {
+    return ResourceIdentifiers.truncate( getDisplayName( ) );
   }
 
   public String mapState( ) {

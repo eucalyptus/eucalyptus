@@ -63,10 +63,10 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.VolumeStatusItemType;
-import com.eucalyptus.compute.common.internal.account.IdentityIdFormats;
 import com.eucalyptus.compute.common.internal.blockstorage.State;
 import com.eucalyptus.compute.common.internal.blockstorage.Volume;
 import com.eucalyptus.compute.common.internal.blockstorage.VolumeTag;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
@@ -209,7 +209,7 @@ public class Volumes {
       final Integer newSize,
       final Consumer<Volume> consumeInTx
       ) throws ExecutionException {
-    final String newId = IdentityIdFormats.generate( arn, Volume.ID_PREFIX );
+    final String newId = ResourceIdentifiers.generateString( Volume.ID_PREFIX );
     LOG.debug("Creating volume");
     final Volume newVol = Transactions.save( Volume.create( sc, owner, snapId, newSize, newId ), new Callback<Volume>( ) {
       @Override

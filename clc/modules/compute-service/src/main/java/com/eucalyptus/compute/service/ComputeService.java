@@ -50,25 +50,18 @@ import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Restrictions;
 
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthContextSupplier;
-import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.auth.type.RestrictedType;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.*;
 import com.eucalyptus.compute.common.backend.ComputeBackendMessage;
-import com.eucalyptus.compute.common.internal.account.IdentityIdFormat;
-import com.eucalyptus.compute.common.internal.account.IdentityIdFormat.IdResource;
-import com.eucalyptus.compute.common.internal.account.IdentityIdFormat.IdType;
-import com.eucalyptus.compute.common.internal.account.IdentityIdFormats;
 import com.eucalyptus.compute.common.internal.address.AddressI;
 import com.eucalyptus.compute.common.internal.address.AllocatedAddressEntity;
 import com.eucalyptus.compute.common.internal.blockstorage.Snapshot;
@@ -76,6 +69,7 @@ import com.eucalyptus.compute.common.internal.blockstorage.Snapshots;
 import com.eucalyptus.compute.common.internal.blockstorage.State;
 import com.eucalyptus.compute.common.internal.blockstorage.Volume;
 import com.eucalyptus.compute.common.internal.identifier.InvalidResourceIdentifier;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifier;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.common.internal.images.BlockStorageDeviceMapping;
 import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
@@ -1412,17 +1406,15 @@ public class ComputeService {
   ) throws EucalyptusCloudException {
     final Context context = checkAuthorized( );
     final DescribeIdentityIdFormatResponseType response = request.getReply( );
-    final Pair<IdType,String> identity =
-        verifyIdentity( context.getAccountNumber( ), request.getPrincipalArn( ), false );
     final Optional<String> resource = Optional.fromNullable( verifyIdentifierResource( request.getResource( ) ) );
     response.setStatuses( Lists.newArrayList(
         Iterables.transform(
-            IdentityIdFormats.listIdFormatsWithDefaults(
-                context.getAccountNumber( ),
-                identity.getLeft( ),
-                identity.getRight( ),
-                resource.transform( FUtils.valueOfFunction( IdResource.class ) ) ),
-            TypeMappers.lookup( IdentityIdFormat.class, IdFormatItemType.class ) )
+            Iterables.filter(
+                ResourceIdentifiers.getLongIdentifierResources( ),
+                resource.transform( Predicates::equalTo ).or( Predicates.alwaysTrue( ) ) ),
+            longIdResource -> new IdFormatItemType(
+                longIdResource,
+                ResourceIdentifiers.useLongIdentifierForResource( longIdResource ) ) )
     ) );
     return response;
   }
@@ -1431,19 +1423,6 @@ public class ComputeService {
       final ModifyIdentityIdFormatType request
   ) throws EucalyptusCloudException {
     final ModifyIdentityIdFormatResponseType response = request.getReply( );
-    final Context context = checkAuthorized( );
-    final Pair<IdType,String> identity =
-        verifyIdentity( context.getAccountNumber( ), request.getPrincipalArn( ), true );
-    final Optional<String> resource = Optional.fromNullable( verifyIdentifierResource( request.getResource( ) ) );
-    final Boolean useLongIds = request.getUseLongIds( );
-    if ( !IdentityIdFormats.saveIdFormat(
-        context.getAccountNumber( ),
-        identity.getLeft( ),
-        identity.getRight( ),
-        IdResource.valueOf( resource.get( ) ),
-        useLongIds ) ) {
-      response.markFailed( );
-    }
     return response;
   }
 
@@ -1452,16 +1431,14 @@ public class ComputeService {
   ) throws EucalyptusCloudException {
     final Context context = checkAuthorized( );
     final DescribeIdFormatResponseType response = request.getReply( );
-    final Pair<IdType,String> identity = getRequestIdentity( context );
     final Optional<String> resource = Optional.fromNullable( verifyIdentifierResource( request.getResource( ) ) );
     response.setStatuses( Lists.newArrayList(
         Iterables.transform(
-            IdentityIdFormats.listIdFormatsWithDefaults(
-                context.getAccountNumber( ),
-                identity.getLeft( ),
-                identity.getRight( ),
-                resource.transform( FUtils.valueOfFunction( IdResource.class ) ) ),
-            TypeMappers.lookup( IdentityIdFormat.class, IdFormatItemType.class ) )
+            Iterables.filter( ResourceIdentifiers.getLongIdentifierResources( ),
+                resource.transform( Predicates::equalTo ).or( Predicates.alwaysTrue( ) ) ),
+            longIdResource -> new IdFormatItemType(
+                longIdResource,
+                ResourceIdentifiers.useLongIdentifierForResource( longIdResource ) ) )
     ) );
     return response;
   }
@@ -1470,18 +1447,6 @@ public class ComputeService {
       final ModifyIdFormatType request
   ) throws EucalyptusCloudException {
     final ModifyIdFormatResponseType response = request.getReply( );
-    final Context context = checkAuthorized( );
-    final Pair<IdType,String> identity = getRequestIdentity( context );
-    final Optional<String> resource = Optional.fromNullable( verifyIdentifierResource( request.getResource( ) ) );
-    final Boolean useLongIds = request.getUseLongIds( );
-    if ( !IdentityIdFormats.saveIdFormat(
-        context.getAccountNumber( ),
-        identity.getLeft( ),
-        identity.getRight( ),
-        IdResource.valueOf( resource.get( ) ),
-        useLongIds ) ) {
-      response.markFailed( );
-    }
     return response;
   }
 
@@ -1797,48 +1762,8 @@ public class ComputeService {
             RestrictedTypes.filterPrivileged( ).apply( imgInfo );
   }
 
-  private static Pair<IdType,String> getRequestIdentity( final Context context ) {
-    final UserPrincipal principal = context.getUser( );
-    return Accounts.isRoleIdentifier( principal.getAuthenticatedId( ) ) ?
-        Pair.pair( IdType.role, Accounts.getAuthenticatedFullName( principal ) ):
-        Pair.pair( IdType.user, Accounts.getUserFullName( principal ) );
-  }
-
-  private static Pair<IdType,String> verifyIdentity(
-      final String accountNumber,
-      final String arn,
-      final boolean checkExists
-  ) throws ComputeServiceClientException {
-    final Optional<Pair<IdType,String>> identityOption =
-        IdentityIdFormats.tryParseIdentity( accountNumber, arn ).transform( Pair.right( ) );
-    if ( !identityOption.isPresent( ) ) {
-      throw new ComputeServiceClientException(
-          "InvalidTargetArn.Unknown",
-          "Invalid TargetArn: " + arn );
-    }
-    final Pair<IdType,String> identity = identityOption.get( );
-    if ( checkExists ) {
-      try {
-        final String name = Accounts.getNameFromFullName( identity.getRight( ) );
-        switch ( identity.getLeft( ) ) {
-          case user:
-            Accounts.lookupPrincipalByAccountNumberAndUsername( accountNumber, name );
-            break;
-          case role:
-            Accounts.lookupRoleByName( accountNumber, name );
-            break;
-        }
-      } catch ( final AuthException e ) {
-        throw new ComputeServiceClientException(
-            "InvalidTargetArn.Unknown",
-            "Invalid TargetArn: " + arn );
-      }
-    }
-    return identity;
-  }
-
   private static String verifyIdentifierResource( final String resource ) throws ComputeServiceClientException {
-    if ( resource != null && !IdentityIdFormats.isValidResource( resource ) ) {
+    if ( resource != null && !ResourceIdentifiers.getLongIdentifierResources( ).contains( resource ) ) {
       throw new ComputeServiceClientException( "InvalidParameterValue", "Invalid resource type: " + resource );
     }
     return resource;

@@ -62,6 +62,7 @@ public interface CloudMetadata extends RestrictedType {
   interface KeyPairMetadata extends CloudMetadata {}
   
   @PolicyResourceType( "security-group" )
+  @CloudMetadataLongIdentifierConfigurable( prefix = "sg" )
   interface NetworkGroupMetadata extends CloudMetadata {
     String getGroupId( );
   }
@@ -79,7 +80,7 @@ public interface CloudMetadata extends RestrictedType {
   }
   
   @PolicyResourceType( VmInstanceMetadata.POLICY_RESOURCE_TYPE )
-  @CloudMetadataLongIdentifierConfigurable( prefix = "i", relatedPrefixes = "r" )
+  @CloudMetadataLongIdentifierConfigurable( prefix = "i" )
   interface VmInstanceMetadata extends CloudMetadata {
     String POLICY_RESOURCE_TYPE = "instance";
   }
@@ -98,26 +99,37 @@ public interface CloudMetadata extends RestrictedType {
   interface TagMetadata extends CloudMetadata {}
 
   @PolicyResourceType( "dhcp-options" )
+  @CloudMetadataLongIdentifierConfigurable( prefix = "dopt" )
   interface DhcpOptionSetMetadata extends CloudMetadata {}
 
   @PolicyResourceType( "internet-gateway" )
+  @CloudMetadataLongIdentifierConfigurable( prefix = "igw" )
   interface InternetGatewayMetadata extends CloudMetadata {}
 
   @PolicyResourceType( "nat-gateway" )
   interface NatGatewayMetadata extends CloudMetadata {}
 
   @PolicyResourceType( "network-acl" )
+  @CloudMetadataLongIdentifierConfigurable( prefix = "acl")
   interface NetworkAclMetadata extends CloudMetadata {}
 
   @PolicyResourceType( "network-interface" )
+  @CloudMetadataLongIdentifierConfigurable( prefix = "eni" )
   interface NetworkInterfaceMetadata extends CloudMetadata {}
 
   @PolicyResourceType( "route-table" )
+  @CloudMetadataLongIdentifierConfigurable( prefix = "rtb" )
   interface RouteTableMetadata extends CloudMetadata {}
 
   @PolicyResourceType( "subnet" )
+  @CloudMetadataLongIdentifierConfigurable( prefix = "subnet" )
   interface SubnetMetadata extends CloudMetadata {}
 
   @PolicyResourceType( "vpc" )
+  @CloudMetadataLongIdentifierConfigurable( prefix = "vpc" )
   interface VpcMetadata extends CloudMetadata {}
+
+  @PolicyResourceType( "conversion-task" )
+  @CloudMetadataLongIdentifierConfigurable( relatedPrefixes = {"import-i", "import-vol"} )
+  interface ConversionTaskMetadata extends CloudMetadata {}
 }

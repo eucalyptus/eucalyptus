@@ -49,10 +49,10 @@ public class NetworkAclEntryType extends EucalyptusData {
     this.ruleAction = ruleAction;
     this.egress = egress;
     this.cidrBlock = cidrBlock;
-    if ( icmpCode != null && icmpCode > 0 ) {
+    if ( icmpType != null ) {
       this.icmpTypeCode = new IcmpTypeCodeType( icmpCode, icmpType );
     }
-    if ( portRangeFrom != null && portRangeFrom > 0 ) {
+    if ( portRangeFrom != null ) {
       this.portRange = new PortRangeType( portRangeFrom, portRangeTo );
     }
 

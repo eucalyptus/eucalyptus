@@ -128,4 +128,22 @@ class ResourceIdentifiersSpecification extends Specification {
     identifier << [ 'i-a0000000', 'vol-00f0000a' ]
   }
 
+  def 'should allow long identifier to be truncated '() {
+    expect: 'valid long identifier is truncated to short identifier'
+    ResourceIdentifiers.truncate( identifier ) == truncated
+
+    where:
+    identifier                | truncated
+    null                      | null
+    ''                        | ''
+    'i-00000000'              | 'i-00000000'
+    'vol-00000000'            | 'vol-00000000'
+    'XXXXX-aaaaaaaa'          | 'XXXXX-aaaaaaaa'
+    'XX-XX-FFFFFFFF'          | 'XX-XX-FFFFFFFF'
+    'i-00000000000000000'     | 'i-00000000'
+    'vol-00000000000000000'   | 'vol-00000000'
+    'XXXXX-aaaaaaaaaaaaaaaaa' | 'XXXXX-aaaaaaaa'
+    'XX-XX-FFFFFFFFFFFFFFFFF' | 'XX-XX-FFFFFFFF'
+    'XX-XX-FFFFFFFFFFFFFFFF'  | 'XX-XX-FFFFFFFFFFFFFFFF'
+  }
 }

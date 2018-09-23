@@ -70,7 +70,7 @@ public class CreateLaunchConfigurationType extends AutoScalingMessage {
     // Validate security group identifiers or names used consistently
     if ( securityGroups != null && securityGroups.getMember( ) != null ) {
       int idCount = Stream.ofAll( securityGroups.getMember( ) )
-          .filter( group -> group.matches( "sg-[0-9A-Fa-f]{8}" ) )
+          .filter( group -> group.matches( "sg-[0-9A-Fa-f]{8}(?:[0-9a-fA-F]{9})?" ) )
           .size( );
       if ( idCount != 0 && idCount != securityGroups.getMember( ).size( ) ) {
         errors.put( "SecurityGroups.member", "Must use either use group-id or group-name for all the security groups, not both at the same time" );

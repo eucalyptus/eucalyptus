@@ -50,7 +50,6 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.compute.common.NatGatewayType;
-import com.eucalyptus.compute.common.internal.account.IdentityIdFormats;
 import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
 import com.eucalyptus.compute.common.internal.util.ResourceAllocationException;
 import com.eucalyptus.component.annotation.ComponentNamed;
@@ -2093,7 +2092,7 @@ public class VpcManager {
     ela_attach( "networkInterfaceAttachment" ),
     eni( "networkInterface" ),
     eni_attach( "networkInterfaceAttachment" ),
-    i( "instance", LongIdStyle.Configurable ),
+    i( "instance" ),
     igw( "internetGateway" ),
     nat( "natGateway", LongIdStyle.Always ),
     rtb( "routeTable" ),
@@ -2109,7 +2108,7 @@ public class VpcManager {
     private final String defaultListParameter;
 
     Identifier( final String defaultParameter ) {
-      this( defaultParameter, LongIdStyle.Never );
+      this( defaultParameter, LongIdStyle.Configurable );
     }
 
     Identifier( final String defaultParameter, final LongIdStyle longIdStyle ) {
@@ -2126,11 +2125,11 @@ public class VpcManager {
     public String generate( final UserPrincipal identity ) {
       switch ( longIdStyle ) {
         case Never:
-          return ResourceIdentifiers.generateString( prefix( ) );
+          return ResourceIdentifiers.generateShortString( prefix( ) );
         case Always:
           return ResourceIdentifiers.generateLongString( prefix( ) );
         case Configurable:
-          return IdentityIdFormats.generate( Accounts.getAuthenticatedArn( identity ), prefix( ) );
+          return ResourceIdentifiers.generateString( prefix( ) );
       }
       throw new IllegalStateException( "Unexpected long identity value " + longIdStyle );
     }

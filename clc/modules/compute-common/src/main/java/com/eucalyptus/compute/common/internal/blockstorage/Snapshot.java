@@ -56,8 +56,8 @@ import javax.persistence.Index;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
@@ -80,8 +80,8 @@ import com.eucalyptus.auth.principal.OwnerFullName;
     @Index( name = "metadata_snapshots_display_name_idx", columnList = "metadata_display_name" ),
 }  )
 public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
-  @Transient
-  private static Logger LOG = Logger.getLogger( Snapshot.class );
+
+  private static final Logger LOG = Logger.getLogger( Snapshot.class );
 
   public static final String ID_PREFIX = "snap";
 
@@ -104,21 +104,21 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "snapshot" )
   private Collection<SnapshotTag> tags;
 
-    @ElementCollection
-    @CollectionTable( name = "metadata_snapshot_permissions" )
-    private Set<String> permissions = new HashSet<String>( );
+  @ElementCollection
+  @CollectionTable( name = "metadata_snapshot_permissions" )
+  private Set<String> permissions = new HashSet<String>( );
 
-    @ElementCollection
-    @CollectionTable( name = "metadata_snapshot_pcodes" )
-    private Set<String> productCodes = new HashSet<String>( );
+  @ElementCollection
+  @CollectionTable( name = "metadata_snapshot_pcodes" )
+  private Set<String> productCodes = new HashSet<String>( );
 
-    @Column( name = "metadata_snapshot_is_public", columnDefinition = "boolean default false" )
-    private Boolean snapshotPublic;
+  @Column( name = "metadata_snapshot_is_public", columnDefinition = "boolean default false" )
+  private Boolean snapshotPublic;
 
 
-    protected Snapshot( ) {
-    super( );
-  }
+  protected Snapshot( ) {
+  super( );
+}
   
   Snapshot( final OwnerFullName ownerFullName, final String displayName ) {
     super( ownerFullName, displayName );
@@ -153,6 +153,11 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     final Snapshot snapshot = new Snapshot();
     snapshot.setNaturalId( naturalId );
     return snapshot;
+  }
+
+  @Override
+  protected String createUniqueName( ) {
+    return ResourceIdentifiers.truncate( getDisplayName( ) );
   }
 
   public String mapState( ) {

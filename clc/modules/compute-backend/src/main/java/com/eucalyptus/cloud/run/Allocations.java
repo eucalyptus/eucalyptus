@@ -62,7 +62,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.VmInstanceToken;
-import com.eucalyptus.compute.common.internal.account.IdentityIdFormats;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.common.internal.util.MetadataException;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.compute.common.backend.RunInstancesType;
@@ -166,7 +166,7 @@ public class Allocations {
 
       this.reservationIndex = UniqueIds.nextIndex(VmInstance.class,
           (long) request.getMaxCount());
-      this.reservationId = IdentityIdFormats.generate( getAuthenticatedArn( ), "r" );
+      this.reservationId = ResourceIdentifiers.generateString( "r" );
       this.request.setMonitoring(this.monitoring);
       // GRZE:FIXME: moved all this encode/decode junk into util.UserDatas
       if (this.request.getUserData() != null) {
@@ -522,7 +522,7 @@ public class Allocations {
 
     public String getInstanceId( int index ) {
       if ( !this.instanceIds.containsKey( index ) ) {
-        this.instanceIds.put( index, VmInstances.getId( Accounts.getAuthenticatedArn( context.getUser( ) ) ) );
+        this.instanceIds.put( index, VmInstances.getId( ) );
       }
       return this.instanceIds.get(index);
     }

@@ -932,7 +932,7 @@
         <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
       </collection>
     </structure>
-    <collection name="natGatewayId" factory="org.jibx.runtime.Utility.arrayListFactory" field="natGatewayId" usage="optional">
+    <collection name="natGatewayId" factory="org.jibx.runtime.Utility.arrayListFactory" field="natGatewayId" usage="optional" item-type="java.lang.String">
       <structure name="item" />
     </collection>
     <value name="maxResults" field="maxResults" usage="optional"/>
