@@ -31,7 +31,7 @@ package com.eucalyptus.compute.common;
 import java.util.Date;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
-public class NatGatewayType extends EucalyptusData {
+public class NatGatewayType extends EucalyptusData implements VpcTagged {
 
   private Date createTime;
   private Date deleteTime;
@@ -42,6 +42,7 @@ public class NatGatewayType extends EucalyptusData {
   private String subnetId;
   private String state;
   private NatGatewayAddressSetType natGatewayAddressSet = new NatGatewayAddressSetType( );
+  private ResourceTagSetType tagSet = new ResourceTagSetType( );
 
   public NatGatewayType( ) {
   }
@@ -131,5 +132,13 @@ public class NatGatewayType extends EucalyptusData {
 
   public void setNatGatewayAddressSet( NatGatewayAddressSetType natGatewayAddressSet ) {
     this.natGatewayAddressSet = natGatewayAddressSet;
+  }
+
+  public ResourceTagSetType getTagSet( ) {
+    return tagSet;
+  }
+
+  public void setTagSet( ResourceTagSetType tagSet ) {
+    this.tagSet = tagSet;
   }
 }
