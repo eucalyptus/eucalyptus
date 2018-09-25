@@ -1142,6 +1142,7 @@ public class ComputeService {
         NatGateway.class,
         NatGatewayType.class,
         reply.getNatGatewaySet( ).getItem( ),
+        NatGatewayType::getNatGatewayId,
         natGateways );
     return reply;
   }

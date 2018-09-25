@@ -959,6 +959,7 @@
     <value name="natGatewayId" field="natGatewayId" usage="required"/>
     <value name="state" field="state" usage="optional"/>
     <value name="failureMessage" field="failureMessage" usage="optional"/>
+    <structure name="tagSet" field="tagSet" usage="optional" type="com.eucalyptus.compute.common.ResourceTagSetType"/>
   </mapping>
   <mapping class="com.eucalyptus.compute.common.NatGatewaySetType" abstract="true">
     <collection field="item">
