@@ -32,7 +32,7 @@ import java.util.Collection;
 import com.eucalyptus.util.CompatFunction;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
-public class DhcpOptionsType extends EucalyptusData implements VpcTagged {
+public class DhcpOptionsType extends EucalyptusData implements ResourceTagged {
 
   private String dhcpOptionsId;
   private DhcpConfigurationItemSetType dhcpConfigurationSet;

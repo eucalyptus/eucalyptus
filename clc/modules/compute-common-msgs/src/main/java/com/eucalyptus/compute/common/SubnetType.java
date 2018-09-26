@@ -31,7 +31,7 @@ package com.eucalyptus.compute.common;
 import com.eucalyptus.util.CompatFunction;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
-public class SubnetType extends EucalyptusData implements VpcTagged {
+public class SubnetType extends EucalyptusData implements ResourceTagged {
 
   private String subnetId;
   private String state;

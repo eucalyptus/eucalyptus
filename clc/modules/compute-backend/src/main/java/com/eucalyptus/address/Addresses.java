@@ -64,6 +64,7 @@ import com.eucalyptus.compute.common.internal.address.AddressDomain;
 import com.eucalyptus.compute.common.internal.address.AddressI;
 import com.eucalyptus.compute.common.internal.address.AddressState;
 import com.eucalyptus.compute.common.internal.address.AllocatedAddressEntity;
+import com.eucalyptus.compute.common.internal.address.AllocatedAddressTag;
 import com.eucalyptus.compute.common.internal.vm.VmNetworkConfig;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
 import com.eucalyptus.entities.PersistenceExceptions;
@@ -956,6 +957,7 @@ public class Addresses {
 
     private static <TI extends AddressI> Builder<TI> properties( final Builder<TI> builder ) {
       return builder
+          .withUnsupportedTagFiltering( Predicates.not( Predicates.instanceOf( Address.class ) ) )
           .withStringProperty( "allocation-id", ALLOCATION_ID )
           .withStringProperty( "association-id", ASSOCIATION_ID )
           .withStringProperty( "domain", DOMAIN )
@@ -976,6 +978,7 @@ public class Addresses {
   public static class AllocatedAddressEntityFilterSupport extends AddressIFilterSupport<AllocatedAddressEntity> {
     public AllocatedAddressEntityFilterSupport ( ) {
       super( builderFor( AllocatedAddressEntity.class )
+          .withTagFiltering( AllocatedAddressTag.class, "allocatedAddress" )
           .withPersistenceFilter( "allocation-id", "allocationId" )
           .withPersistenceFilter( "association-id", "associationId" )
           .withPersistenceFilter( "domain", "domain", FUtils.valueOfFunction( AddressDomain.class ) )

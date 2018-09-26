@@ -31,7 +31,7 @@ package com.eucalyptus.compute.common;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
 
-public class AddressInfoType extends EucalyptusData {
+public class AddressInfoType extends EucalyptusData implements ResourceTagged {
 
   private String publicIp;
   private String allocationId;
@@ -41,6 +41,7 @@ public class AddressInfoType extends EucalyptusData {
   private String networkInterfaceId;
   private String networkInterfaceOwnerId;
   private String privateIpAddress;
+  private ResourceTagSetType tagSet = new ResourceTagSetType( );
 
   public AddressInfoType( final String publicIp, final String domain, final String instanceId ) {
     this.publicIp = publicIp;
@@ -113,5 +114,13 @@ public class AddressInfoType extends EucalyptusData {
 
   public void setPrivateIpAddress( String privateIpAddress ) {
     this.privateIpAddress = privateIpAddress;
+  }
+
+  public ResourceTagSetType getTagSet( ) {
+    return tagSet;
+  }
+
+  public void setTagSet( ResourceTagSetType tagSet ) {
+    this.tagSet = tagSet;
   }
 }

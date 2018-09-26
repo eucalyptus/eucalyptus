@@ -32,7 +32,7 @@ import java.util.Collection;
 import com.eucalyptus.util.CompatFunction;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
-public class RouteTableType extends EucalyptusData implements VpcTagged {
+public class RouteTableType extends EucalyptusData implements ResourceTagged {
 
   private String routeTableId;
   private String vpcId;

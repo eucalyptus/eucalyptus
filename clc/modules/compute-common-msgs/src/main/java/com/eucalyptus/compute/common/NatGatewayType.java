@@ -31,7 +31,7 @@ package com.eucalyptus.compute.common;
 import java.util.Date;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
-public class NatGatewayType extends EucalyptusData implements VpcTagged {
+public class NatGatewayType extends EucalyptusData implements ResourceTagged {
 
   private Date createTime;
   private Date deleteTime;

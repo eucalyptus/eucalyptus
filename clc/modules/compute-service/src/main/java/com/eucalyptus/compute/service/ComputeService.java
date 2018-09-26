@@ -361,6 +361,11 @@ public class ComputeService {
           TypeMappers.lookup( AddressI.class, AddressInfoType.class ) );
 
       Iterables.addAll( reply.getAddressesSet( ), addresses );
+      Tags.populateTags(
+          AccountFullName.getInstance( ctx.getAccountNumber() ),
+          AllocatedAddressEntity.class,
+          reply.getAddressesSet( ),
+          AddressInfoType::getAllocationId );
     } catch ( final Exception e ) {
       Exceptions.findAndRethrow( e, ComputeServiceException.class );
       LOG.error( e );
@@ -1724,7 +1729,7 @@ public class ComputeService {
     }
   }
 
-  private static <AP extends AbstractPersistent & CloudMetadata, AT extends VpcTagged> void describe(
+  private static <AP extends AbstractPersistent & CloudMetadata, AT extends ResourceTagged> void describe(
       final Identifier identifier,
       final Collection<String> ids,
       final Collection<com.eucalyptus.compute.common.Filter> filters,
@@ -1736,7 +1741,7 @@ public class ComputeService {
     describe( identifier, ids, filters, persistent, api, results, new Callback<AccountFullName>( ) {
       @Override
       public void fire( final AccountFullName accountFullName ) {
-        populateTags( accountFullName, persistent, results, idFunction );
+        Tags.populateTags( accountFullName, persistent, results, idFunction );
       }
     }, lister );
   }
@@ -1790,21 +1795,6 @@ public class ComputeService {
     return
         ( ctx.isAdministrator( ) || imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) ) &&
             RestrictedTypes.filterPrivileged( ).apply( imgInfo );
-  }
-
-  private static <VT extends VpcTagged> void populateTags( final AccountFullName accountFullName,
-                                                           final Class<? extends CloudMetadata> resourceType,
-                                                           final List<? extends VT> items,
-                                                           final Function<? super VT, String> idFunction ) {
-    final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( resourceType )
-        .getResourceTagMap( accountFullName, Iterables.transform( items, idFunction ) );
-    for ( final VT item : items ) {
-      final ResourceTagSetType tags = new ResourceTagSetType( );
-      Tags.addFromTags( tags.getItem(), ResourceTagSetItemType.class, tagsMap.get( idFunction.apply( item ) ) );
-      if ( !tags.getItem().isEmpty() ) {
-        item.setTagSet( tags );
-      }
-    }
   }
 
   private static Pair<IdType,String> getRequestIdentity( final Context context ) {

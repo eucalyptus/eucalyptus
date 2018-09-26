@@ -125,6 +125,7 @@
     <value name="networkInterfaceId" field="networkInterfaceId" usage="optional" />
     <value name="networkInterfaceOwnerId" field="networkInterfaceOwnerId" usage="optional" />
     <value name="privateIpAddress" field="privateIpAddress" usage="optional" />
+    <structure name="tagSet" field="tagSet" usage="optional" type="com.eucalyptus.compute.common.ResourceTagSetType"/>
   </mapping>
   <!-- 2015-04-15 -->
   <mapping name="DescribeMovingAddresses" class="com.eucalyptus.compute.common.DescribeMovingAddressesType"

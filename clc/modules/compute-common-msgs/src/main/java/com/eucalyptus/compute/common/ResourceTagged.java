@@ -28,7 +28,7 @@
  ************************************************************************/
 package com.eucalyptus.compute.common;
 
-public interface VpcTagged {
+public interface ResourceTagged {
 
   ResourceTagSetType getTagSet( );
 
