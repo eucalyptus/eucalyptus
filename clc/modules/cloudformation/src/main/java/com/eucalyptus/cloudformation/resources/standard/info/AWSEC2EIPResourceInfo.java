@@ -50,6 +50,11 @@ public class AWSEC2EIPResourceInfo extends ResourceInfo {
   }
 
   @Override
+  public boolean supportsTags( ) {
+    return true;
+  }
+
+  @Override
   public String toString( ) {
     return MoreObjects.toStringHelper( this )
         .add( "allocationId", allocationId )

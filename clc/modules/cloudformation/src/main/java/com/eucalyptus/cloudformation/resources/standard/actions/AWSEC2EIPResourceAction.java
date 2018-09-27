@@ -36,8 +36,10 @@ import com.eucalyptus.cloudformation.resources.EC2Helper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
+import com.eucalyptus.cloudformation.resources.standard.TagHelper;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2EIPResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2EIPProperties;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
@@ -53,21 +55,30 @@ import com.eucalyptus.compute.common.AssociateAddressResponseType;
 import com.eucalyptus.compute.common.AssociateAddressType;
 import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
+import com.eucalyptus.compute.common.ComputeApi;
+import com.eucalyptus.compute.common.CreateTagsType;
+import com.eucalyptus.compute.common.DeleteTagsType;
 import com.eucalyptus.compute.common.DescribeAddressesResponseType;
 import com.eucalyptus.compute.common.DescribeAddressesType;
 import com.eucalyptus.compute.common.DescribeInstancesResponseType;
 import com.eucalyptus.compute.common.DescribeInstancesType;
+import com.eucalyptus.compute.common.DescribeTagsResponseType;
+import com.eucalyptus.compute.common.DescribeTagsType;
 import com.eucalyptus.compute.common.DisassociateAddressResponseType;
 import com.eucalyptus.compute.common.DisassociateAddressType;
 import com.eucalyptus.compute.common.ReleaseAddressResponseType;
 import com.eucalyptus.compute.common.ReleaseAddressType;
+import com.eucalyptus.compute.common.TagInfo;
+import com.eucalyptus.util.async.AsyncProxy;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
 
 
 /**
@@ -127,13 +138,45 @@ public class AWSEC2EIPResourceAction extends StepBasedResourceAction {
         if (action.properties.getDomain() != null) {
           allocateAddressType.setDomain(action.properties.getDomain());
         }
-        AllocateAddressResponseType allocateAddressResponseType = AsyncRequests.<AllocateAddressType, AllocateAddressResponseType> sendSync(configuration, allocateAddressType);
+        AllocateAddressResponseType allocateAddressResponseType = AsyncRequests.sendSync(configuration, allocateAddressType);
         String publicIp = allocateAddressResponseType.getPublicIp();
         action.info.setPhysicalResourceId(publicIp);
         action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         if (action.properties.getDomain() != null) {
           action.info.setAllocationId(JsonHelper.getStringFromJsonNode(new TextNode(allocateAddressResponseType.getAllocationId())));
+        }
+        return action;
+      }
+    },
+    CREATE_TAGS {
+      @Override
+      public ResourceAction perform(final ResourceAction resourceAction) throws Exception {
+        final AWSEC2EIPResourceAction action = (AWSEC2EIPResourceAction) resourceAction;
+        if ( action.info.getAllocationId( ) != null ) {
+          final String allocationId = JsonHelper.getJsonNodeFromString(action.info.getAllocationId()).asText();
+          // Create 'system' tags as admin user
+          final String effectiveAdminUserId = action.info.getAccountId( );
+          final CreateTagsType createSystemTagsType = MessageHelper.createPrivilegedMessage( CreateTagsType.class, effectiveAdminUserId );
+          createSystemTagsType.setResourcesSet( Lists.newArrayList( allocationId ) );
+          createSystemTagsType.setTagSet( EC2Helper.createTagSet( TagHelper.getEC2SystemTags( action.info, action.getStackEntity( ) ) ) );
+          AsyncProxy.client( ComputeApi.class, Function.identity( ) ).createTags(
+              createSystemTagsType
+          );
+          // Create non-system tags as regular user
+          final List<EC2Tag> tags = TagHelper.getEC2StackTags( action.getStackEntity( ) );
+          if ( action.properties.getTags( ) != null && !action.properties.getTags( ).isEmpty( ) ) {
+            TagHelper.checkReservedEC2TemplateTags( action.properties.getTags( ) );
+            tags.addAll( action.properties.getTags( ) );
+          }
+          if ( !tags.isEmpty( ) ) {
+            final CreateTagsType createTagsType = MessageHelper.createMessage( CreateTagsType.class, action.info.getEffectiveUserId( ) );
+            createTagsType.setResourcesSet( Lists.newArrayList( allocationId ) );
+            createTagsType.setTagSet( EC2Helper.createTagSet( tags ) );
+            AsyncProxy.client( ComputeApi.class, Function.identity( ) ).createTags(
+                createTagsType
+            );
+          }
         }
         return action;
       }
@@ -226,8 +269,6 @@ public class AWSEC2EIPResourceAction extends StepBasedResourceAction {
     }
   }
 
-
-
   @Override
   public ResourceProperties getResourceProperties() {
     return properties;
@@ -308,6 +349,63 @@ public class AWSEC2EIPResourceAction extends StepBasedResourceAction {
             if (newAction.properties.getInstanceId() != null) {
               EC2Helper.refreshInstanceAttributes(newAction.getStackEntity(), newAction.properties.getInstanceId(), newAction.info.getEffectiveUserId(), newAction.getStackEntity().getStackVersion());
             }
+          }
+        }
+        return newAction;
+      }
+    },
+    UPDATE_TAGS {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        final AWSEC2EIPResourceAction oldAction = (AWSEC2EIPResourceAction) oldResourceAction;
+        final AWSEC2EIPResourceAction newAction = (AWSEC2EIPResourceAction) newResourceAction;
+        if ( oldAction.info.getAllocationId( ) != null &&
+            newAction.info.getAllocationId( ) != null ) {
+          final ComputeApi compute = AsyncProxy.client( ComputeApi.class, Function.identity( ) );
+          final String allocationId = JsonHelper.getJsonNodeFromString(newAction.info.getAllocationId()).asText();
+          final DescribeTagsType describeTagsType = MessageHelper.createMessage(DescribeTagsType.class, newAction.info.getEffectiveUserId());
+          describeTagsType.setFilterSet(Lists.newArrayList(CloudFilters.filter("resource-id", allocationId)));
+          final DescribeTagsResponseType describeTagsResponseType = compute.describeTags(describeTagsType);
+          final Set<EC2Tag> existingTags = Sets.newLinkedHashSet();
+          if (describeTagsResponseType != null && describeTagsResponseType.getTagSet() != null) {
+            for (final TagInfo tagInfo: describeTagsResponseType.getTagSet()) {
+              existingTags.add( new EC2Tag( tagInfo.getKey( ), tagInfo.getValue() )  );
+            }
+          }
+          final Set<EC2Tag> newTags = Sets.newLinkedHashSet();
+          if (newAction.properties.getTags() != null) {
+            newTags.addAll(newAction.properties.getTags());
+          }
+          final List<EC2Tag> newStackTags = TagHelper.getEC2StackTags(newAction.getStackEntity());
+          if (newStackTags != null) {
+            newTags.addAll(newStackTags);
+          }
+          TagHelper.checkReservedEC2TemplateTags(newTags);
+          // add only 'new' tags
+          final Set<EC2Tag> onlyNewTags = Sets.difference(newTags, existingTags);
+          if (!onlyNewTags.isEmpty()) {
+            final CreateTagsType createTagsType = MessageHelper.createMessage(CreateTagsType.class, newAction.info.getEffectiveUserId());
+            createTagsType.setResourcesSet(Lists.newArrayList(allocationId));
+            createTagsType.setTagSet(EC2Helper.createTagSet(onlyNewTags));
+            compute.createTags(createTagsType);
+          }
+          //  Get old tags...
+          final Set<EC2Tag> oldTags = Sets.newLinkedHashSet();
+          if (oldAction.properties.getTags() != null) {
+            oldTags.addAll(oldAction.properties.getTags());
+          }
+          final List<EC2Tag> oldStackTags = TagHelper.getEC2StackTags(oldAction.getStackEntity());
+          if (oldStackTags != null) {
+            oldTags.addAll(oldStackTags);
+          }
+
+          // remove only the old tags that are not new and that exist
+          final Set<EC2Tag> tagsToRemove = Sets.intersection(oldTags, Sets.difference(existingTags, newTags));
+          if (!tagsToRemove.isEmpty()) {
+            final DeleteTagsType deleteTagsType = MessageHelper.createMessage(DeleteTagsType.class, newAction.info.getEffectiveUserId());
+            deleteTagsType.setResourcesSet(Lists.newArrayList(allocationId));
+            deleteTagsType.setTagSet(EC2Helper.deleteTagSet(tagsToRemove));
+            compute.deleteTags(deleteTagsType);
           }
         }
         return newAction;

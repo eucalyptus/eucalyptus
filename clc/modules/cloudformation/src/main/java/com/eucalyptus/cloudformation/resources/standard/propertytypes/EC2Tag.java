@@ -34,6 +34,14 @@ import com.google.common.base.MoreObjects;
 
 public class EC2Tag {
 
+  public EC2Tag() {
+  }
+
+  public EC2Tag( final String key, final String value ) {
+    this.key = key;
+    this.value = value;
+  }
+
   @Property
   private String key;
 
