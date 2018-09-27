@@ -51,8 +51,10 @@ import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.common.AddressInfoType;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.internal.address.AddressDomain;
+import com.eucalyptus.compute.common.internal.address.AllocatedAddressEntity;
 import com.eucalyptus.compute.common.internal.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
+import com.eucalyptus.compute.common.internal.tags.Tags;
 import com.eucalyptus.compute.common.internal.util.NotEnoughResourcesException;
 import com.eucalyptus.compute.common.internal.vpc.InternetGateways;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
@@ -191,6 +193,11 @@ public class AddressManager {
         reply.getAddressesSet( ).add( new AddressInfoType( address.getName( ), AddressDomain.standard.toString(), Principals.nobodyFullName( ).getUserName( ) ) );
       }
     }
+    Tags.populateTags(
+        AccountFullName.getInstance( ctx.getAccountNumber( ) ),
+        AllocatedAddressEntity.class,
+        reply.getAddressesSet( ),
+        AddressInfoType::getAllocationId );
     return reply;
   }
 

@@ -32,7 +32,7 @@ import java.util.Collection;
 import com.eucalyptus.util.CompatFunction;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
-public class NetworkAclType extends EucalyptusData implements VpcTagged {
+public class NetworkAclType extends EucalyptusData implements ResourceTagged {
 
   private String networkAclId;
   private String vpcId;

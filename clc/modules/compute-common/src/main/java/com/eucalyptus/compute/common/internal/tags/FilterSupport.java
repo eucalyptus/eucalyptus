@@ -67,10 +67,12 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import io.vavr.control.Option;
 
 /**
  * Filter support class overridden for each resource that supports filtering.
  */
+@SuppressWarnings( { "StaticPseudoFunctionalStyleMethod", "Guava", "Convert2Lambda" } )
 public abstract class FilterSupport<RT> {
 
   private static final ConcurrentMap<SupportKey,FilterSupport<?>> supportMap = Maps.newConcurrentMap();
@@ -80,6 +82,7 @@ public abstract class FilterSupport<RT> {
   private Class<? extends Tag> tagClass;
   private final String tagFieldName;
   private final String resourceFieldName;
+  private final Option<Predicate<Object>> tagPredicate;
   private final Set<String> internalFilters;
   private final Map<String,Function<? super String,Predicate<? super RT>>> predicateFunctions;
   private final Map<String,String> aliases;
@@ -96,6 +99,7 @@ public abstract class FilterSupport<RT> {
     this.qualifier = builder.qualifier;
     this.tagClass = builder.tagClass;
     this.tagFieldName = builder.tagFieldName;
+    this.tagPredicate = builder.tagPredicate;
     this.resourceFieldName = builder.resourceFieldName;
     this.internalFilters = builder.buildInternalFilters();
     this.predicateFunctions = builder.buildPredicateFunctions();
@@ -111,7 +115,7 @@ public abstract class FilterSupport<RT> {
    * @return The builder to use
    */
   protected static <RT> Builder<RT> builderFor( final Class<RT> resourceClass ) {
-    return new Builder<RT>( resourceClass, Filters.DEFAULT_FILTERS );
+    return new Builder<>( resourceClass, Filters.DEFAULT_FILTERS );
   }
 
   /**
@@ -124,7 +128,7 @@ public abstract class FilterSupport<RT> {
    */
   protected static <RT> Builder<RT> qualifierBuilderFor( final Class<RT> resourceClass,
                                                          final String qualifier ) {
-    return new Builder<RT>( resourceClass, qualifier );
+    return new Builder<>( resourceClass, qualifier );
   }
 
   /**
@@ -143,6 +147,7 @@ public abstract class FilterSupport<RT> {
     private Class<? extends Tag> tagClass;
     private String tagFieldName; // usually "tags"
     private String resourceFieldName;
+    private Option<Predicate<Object>> tagPredicate = Option.none( );
 
     private Builder( final Class<RT> resourceClass,
                      final String qualifier ) {
@@ -182,6 +187,25 @@ public abstract class FilterSupport<RT> {
     }
 
     /**
+     * Filter out all results when a tag filter is present.
+     *
+     * @return This builder for call chaining
+     */
+    public Builder<RT> withUnsupportedTagFiltering( ) {
+      return withUnsupportedTagFiltering( Predicates.alwaysFalse( ) );
+    }
+
+    /**
+     * Add provided predicate when a tag filter is present.
+     *
+     * @return This builder for call chaining
+     */
+    public Builder<RT> withUnsupportedTagFiltering( final Predicate<Object> predicate ) {
+      tagPredicate = Option.some( predicate );
+      return this;
+    }
+
+    /**
      * Declare a filterable boolean property.
      *
      * @param filterName The name of the filter
@@ -190,7 +214,7 @@ public abstract class FilterSupport<RT> {
      */
     public Builder<RT> withBooleanProperty( final String filterName,
                                             final Function<? super RT,Boolean> booleanExtractor ) {
-      predicateFunctions.put( filterName,  FilterSupport.<RT>booleanFilter( booleanExtractor ) );
+      predicateFunctions.put( filterName,  FilterSupport.booleanFilter( booleanExtractor ) );
       return this;
     }
 
@@ -207,7 +231,7 @@ public abstract class FilterSupport<RT> {
     public Builder<RT> withInternalBooleanProperty( final String filterName,
                                                     final Function<? super RT,Boolean> booleanExtractor ) {
       internalFilters.add( filterName );
-      predicateFunctions.put( filterName,  FilterSupport.<RT>booleanFilter( booleanExtractor ) );
+      predicateFunctions.put( filterName,  FilterSupport.booleanFilter( booleanExtractor ) );
       return this;
     }
 
@@ -220,7 +244,7 @@ public abstract class FilterSupport<RT> {
      */
     public Builder<RT> withBooleanSetProperty( final String filterName,
                                                final Function<? super RT,Set<Boolean>> booleanSetExtractor ) {
-      predicateFunctions.put( filterName,  FilterSupport.<RT>booleanSetFilter( booleanSetExtractor ) );
+      predicateFunctions.put( filterName,  FilterSupport.booleanSetFilter( booleanSetExtractor ) );
       return this;
     }
 
@@ -233,7 +257,7 @@ public abstract class FilterSupport<RT> {
      */
     public Builder<RT> withDateProperty( final String filterName,
                                          final Function<? super RT,Date> dateExtractor ) {
-      predicateFunctions.put( filterName,  FilterSupport.<RT>dateFilter( dateExtractor ) );
+      predicateFunctions.put( filterName,  FilterSupport.dateFilter( dateExtractor ) );
       return this;
     }
 
@@ -246,7 +270,7 @@ public abstract class FilterSupport<RT> {
      */
     public Builder<RT> withDateSetProperty( final String filterName,
                                             final Function<? super RT,Set<Date>> dateSetExtractor ) {
-      predicateFunctions.put( filterName,  FilterSupport.<RT>dateSetFilter( dateSetExtractor ) );
+      predicateFunctions.put( filterName,  FilterSupport.dateSetFilter( dateSetExtractor ) );
       return this;
     }
 
@@ -259,7 +283,7 @@ public abstract class FilterSupport<RT> {
      */
     public Builder<RT> withIntegerProperty( final String filterName,
                                             final Function<? super RT,Integer> integerExtractor ) {
-      predicateFunctions.put( filterName,  FilterSupport.<RT>intFilter( integerExtractor ) );
+      predicateFunctions.put( filterName,  FilterSupport.intFilter( integerExtractor ) );
       return this;
     }
 
@@ -272,7 +296,7 @@ public abstract class FilterSupport<RT> {
      */
     public Builder<RT> withIntegerSetProperty( final String filterName,
                                                final Function<? super RT,Set<Integer>> integerSetExtractor ) {
-      predicateFunctions.put( filterName, FilterSupport.<RT>intSetFilter( integerSetExtractor ) );
+      predicateFunctions.put( filterName, FilterSupport.intSetFilter( integerSetExtractor ) );
       return this;
     }
 
@@ -287,7 +311,7 @@ public abstract class FilterSupport<RT> {
     public Builder<RT> withIntegerSetProperty( final String filterName,
                                                final Function<? super RT,Set<Integer>> integerSetExtractor,
                                                final Function<String,Integer> valueFunction ) {
-      predicateFunctions.put( filterName, FilterSupport.<RT>intSetFilter( integerSetExtractor, valueFunction ) );
+      predicateFunctions.put( filterName, FilterSupport.intSetFilter( integerSetExtractor, valueFunction ) );
       return this;
     }
 
@@ -300,7 +324,7 @@ public abstract class FilterSupport<RT> {
      */
     public Builder<RT> withLongProperty( final String filterName,
                                          final Function<? super RT,Long> longExtractor ) {
-      predicateFunctions.put( filterName,  FilterSupport.<RT>longFilter( longExtractor ) );
+      predicateFunctions.put( filterName,  FilterSupport.longFilter( longExtractor ) );
       return this;
     }
 
@@ -313,7 +337,7 @@ public abstract class FilterSupport<RT> {
      */
     public Builder<RT> withLongSetProperty( final String filterName,
                                             final Function<? super RT,Set<Long>> longSetExtractor ) {
-      predicateFunctions.put( filterName, FilterSupport.<RT>longSetFilter( longSetExtractor ) );
+      predicateFunctions.put( filterName, FilterSupport.longSetFilter( longSetExtractor ) );
       return this;
     }
 
@@ -326,7 +350,7 @@ public abstract class FilterSupport<RT> {
      */
     public Builder<RT> withStringProperty( final String filterName,
                                            final Function<? super RT,String> stringExtractor ) {
-      predicateFunctions.put( filterName,  FilterSupport.<RT>stringFilter( stringExtractor ) );
+      predicateFunctions.put( filterName,  FilterSupport.stringFilter( stringExtractor ) );
       return this;
     }
 
@@ -343,7 +367,7 @@ public abstract class FilterSupport<RT> {
     public Builder<RT> withInternalStringProperty( final String filterName,
                                                    final Function<? super RT,String> stringExtractor ) {
       internalFilters.add( filterName );
-      predicateFunctions.put( filterName,  FilterSupport.<RT>stringFilter( stringExtractor ) );
+      predicateFunctions.put( filterName,  FilterSupport.stringFilter( stringExtractor ) );
       return this;
     }
 
@@ -356,7 +380,7 @@ public abstract class FilterSupport<RT> {
      */
     public Builder<RT> withStringSetProperty( final String filterName,
                                               final Function<? super RT,Set<String>> stringSetExtractor ) {
-      predicateFunctions.put( filterName,  FilterSupport.<RT>stringSetFilter( stringSetExtractor ) );
+      predicateFunctions.put( filterName,  FilterSupport.stringSetFilter( stringSetExtractor ) );
       return this;
     }
 
@@ -364,7 +388,7 @@ public abstract class FilterSupport<RT> {
                                                  final Function<? super RT, ?> extractor,
                                                  final Function<String, Collection> explodeFunction ) {
       predicateFunctions.put( filterName,
-          FilterSupport.<RT>explodedLiteralFilter( extractor, likeWildFunction( explodeFunction ) ) );
+          FilterSupport.explodedLiteralFilter( extractor, likeWildFunction( explodeFunction ) ) );
       return this;
     }
 
@@ -379,9 +403,9 @@ public abstract class FilterSupport<RT> {
                                              final String value ) {
       predicateFunctions.put(
           filterName,
-          FilterSupport.<RT>stringFilter( Functions.compose(
+          FilterSupport.stringFilter( Functions.compose(
               Functions.constant( value ),
-              Functions.<RT>identity() ) ) );
+              Functions.identity() ) ) );
       return this;
     }
 
@@ -394,7 +418,7 @@ public abstract class FilterSupport<RT> {
      * @return This builder for call chaining
      */
     public Builder<RT> withUnsupportedProperty( final String filterName ) {
-      predicateFunctions.put( filterName,  FilterSupport.<RT>falseFilter() );
+      predicateFunctions.put( filterName,  FilterSupport.falseFilter() );
       return this;
     }
 
@@ -493,7 +517,6 @@ public abstract class FilterSupport<RT> {
      * @param fieldName The path to the field (dot separated)
      * @param valueFunction The value conversion function for this filter
      * @return This builder for call chaining
-     * @see com.google.common.base.Enums#valueOfFunction
      */
     public Builder<RT> withPersistenceFilter( final String filterName,
                                               final String fieldName,
@@ -513,7 +536,6 @@ public abstract class FilterSupport<RT> {
      * @param aliases The aliases used by this filter
      * @param valueFunction The value conversion function for this filter
      * @return This builder for call chaining
-     * @see com.google.common.base.Enums#valueOfFunction
      */
     public Builder<RT> withPersistenceFilter( final String filterName,
                                               final String fieldName,
@@ -663,22 +685,27 @@ public abstract class FilterSupport<RT> {
     final List<Junction> tagJunctions = Lists.newArrayList();
     for ( final Map.Entry<String,Set<String>> filter : Iterables.filter( filters.entrySet(), isTagFilter() ) ) {
       tagPresent = true;
-      final Junction disjunction = Restrictions.disjunction();
-      final String filterName = filter.getKey();
-      for ( final String value : filter.getValue() ) {
-        if ( "tag-key".equals( filterName ) ) {
-          disjunction.add( buildTagRestriction( value, null, true ) );
-        } else if ( "tag-value".equals( filterName ) ) {
-          disjunction.add( buildTagRestriction( null, value, true ) );
-        } else {
-          disjunction.add( buildTagRestriction( filterName.substring(4), value, false ) );
+      if ( hasPersistenceTagFiltering( ) ) {
+        final Junction disjunction = Restrictions.disjunction( );
+        final String filterName = filter.getKey( );
+        for ( final String value : filter.getValue( ) ) {
+          if ( "tag-key".equals( filterName ) ) {
+            disjunction.add( buildTagRestriction( value, null, true ) );
+          } else if ( "tag-value".equals( filterName ) ) {
+            disjunction.add( buildTagRestriction( null, value, true ) );
+          } else {
+            disjunction.add( buildTagRestriction( filterName.substring( 4 ), value, false ) );
+          }
         }
+        tagJunctions.add( disjunction );
       }
-      tagJunctions.add( disjunction );
     }
-    if ( tagPresent ) conjunction.add( tagCriterion( accountId, tagJunctions ) );
+    if ( tagPresent ) {
+      conjunction.add( tagCriterion( accountId, tagJunctions ) );
+      tagPredicate.forEach( and::add );
+    }
 
-    return new Filter( aliases, conjunction, Predicates.and( and ), tagPresent );
+    return new Filter( aliases, conjunction, Predicates.and( and ) );
   }
 
   public static FilterSupport<?> forResource( @Nonnull final Class<?> metadataClass,
@@ -705,7 +732,7 @@ public abstract class FilterSupport<RT> {
   }
 
   private static <T> Function<? super String, Predicate<? super T>> falseFilter() {
-    return Functions.<Predicate<? super T>>constant( Predicates.alwaysFalse() );
+    return Functions.constant( Predicates.alwaysFalse() );
   }
 
 
@@ -717,16 +744,16 @@ public abstract class FilterSupport<RT> {
       public Predicate<T> apply( final String filterValue ) {
         Collection values = explodeFunction.apply( filterValue );
         return values == null ?
-            Predicates.<T>alwaysTrue() :
+            Predicates.alwaysTrue() :
             Predicates.compose(
-              Predicates.<Object>in( values ),
+              Predicates.in( values ),
               Functions.compose( extractor, Functions.<T>identity() ) );
       }
     };
   }
 
   private static <T> Function<? super String, Predicate<? super T>> stringFilter( final Function<? super T, String> extractor ) {
-    return stringSetFilter( Functions.compose( FilterSupport.<String>toSet(), extractor ) );
+    return stringSetFilter( Functions.compose( FilterSupport.toSet(), extractor ) );
   }
 
   private static <T> Function<? super String, Predicate<? super T>> stringSetFilter( final Function<? super T, Set<String>> extractor ) {
@@ -746,7 +773,7 @@ public abstract class FilterSupport<RT> {
   }
 
   private static <T> Function<? super String, Predicate<? super T>> dateFilter( final Function<? super T, Date> extractor ) {
-    return dateSetFilter( Functions.compose( FilterSupport.<Date>toSet(), extractor ) );
+    return dateSetFilter( Functions.compose( FilterSupport.toSet(), extractor ) );
   }
 
   private static <T> Function<? super String, Predicate<? super T>> dateSetFilter( final Function<? super T, Set<Date>> extractor ) {
@@ -754,7 +781,7 @@ public abstract class FilterSupport<RT> {
   }
 
   private static <T> Function<? super String, Predicate<? super T>> booleanFilter( final Function<? super T, Boolean> extractor ) {
-    return booleanSetFilter( Functions.compose( FilterSupport.<Boolean>toSet(), extractor ) );
+    return booleanSetFilter( Functions.compose( FilterSupport.toSet(), extractor ) );
   }
 
   private static <T> Function<? super String, Predicate<? super T>> booleanSetFilter( final Function<? super T, Set<Boolean>> extractor ) {
@@ -762,7 +789,7 @@ public abstract class FilterSupport<RT> {
   }
 
   private static <T> Function<? super String, Predicate<? super T>> intFilter( final Function<? super T, Integer> extractor ) {
-    return intSetFilter( Functions.compose( FilterSupport.<Integer>toSet(), extractor ) );
+    return intSetFilter( Functions.compose( FilterSupport.toSet(), extractor ) );
   }
 
   private static <T> Function<? super String, Predicate<? super T>> intSetFilter( final Function<? super T, Set<Integer>> extractor ) {
@@ -777,7 +804,7 @@ public abstract class FilterSupport<RT> {
   }
 
   private static <T> Function<? super String, Predicate<? super T>> longFilter( final Function<? super T, Long> extractor ) {
-    return longSetFilter( Functions.compose( FilterSupport.<Long>toSet(), extractor ) );
+    return longSetFilter( Functions.compose( FilterSupport.toSet(), extractor ) );
   }
 
   private static <T> Function<? super String, Predicate<? super T>> longSetFilter( final Function<? super T, Set<Long>> extractor ) {
@@ -841,7 +868,7 @@ public abstract class FilterSupport<RT> {
       @Override
       public Set<T> apply( final T value ) {
         return value == null ?
-            Collections.<T>emptySet() :
+            Collections.emptySet() :
             Collections.singleton( value );
       }
     };
@@ -871,13 +898,21 @@ public abstract class FilterSupport<RT> {
         );
   }
 
-  private boolean isTagFilteringEnabled() {
+  private boolean hasPersistenceTagFiltering( ) {
     return tagFieldName != null;
+  }
+
+  private boolean hasPredicateTagFiltering( ) {
+    return tagPredicate.isDefined( );
+  }
+
+  private boolean isTagFilteringEnabled() {
+    return hasPersistenceTagFiltering( ) || hasPredicateTagFiltering( );
   }
 
   private Predicate<Map.Entry<String,?>> isTagFilter() {
     return !isTagFilteringEnabled() ?
-        Predicates.<Map.Entry<String,?>>alwaysFalse() :
+        Predicates.alwaysFalse() :
         new Predicate<Map.Entry<String,?>>() {
           @Override
           public boolean apply( final Map.Entry<String, ?> stringEntry ) {
@@ -891,7 +926,7 @@ public abstract class FilterSupport<RT> {
                                                              final Function<String,?> valueFunction ) {
     final Object value = valueFunction.apply( filterPattern );
     return value == null ?
-        Predicates.<Set<T>>alwaysFalse() :
+        Predicates.alwaysFalse() :
         new Predicate<Set<T>>() {
       @SuppressWarnings( "SuspiciousMethodCalls" )
       @Override
@@ -1227,7 +1262,7 @@ public abstract class FilterSupport<RT> {
 
     public static PersistenceFilter persistenceFilter( final String property,
                                                        final Set<String> aliases ) {
-      return persistenceFilter( property, aliases, Functions.<String>identity() );
+      return persistenceFilter( property, aliases, Functions.identity() );
     }
 
     public static PersistenceFilter persistenceFilter( final String property,

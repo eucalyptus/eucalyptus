@@ -36,7 +36,12 @@ import javax.persistence.EntityTransaction;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Junction;
 import org.hibernate.criterion.Restrictions;
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.compute.common.ResourceTagSetItemType;
+import com.eucalyptus.compute.common.ResourceTagSetType;
+import com.eucalyptus.compute.common.ResourceTagged;
 import com.eucalyptus.compute.common.TagInfo;
 import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
 import com.eucalyptus.entities.Entities;
@@ -207,6 +212,34 @@ public class Tags {
         Iterables.transform(
             tags,
             TypeMappers.lookup( Tag.class, targetItemType ) ) );
+  }
+
+  /**
+   * Populate tags on a resource.
+   *
+   * @param accountFullName The tag account
+   * @param resourceType The resource class
+   * @param items The list of items for tag population
+   * @param idFunction Extract resource identifier from an item
+   * @param <RT> The tagged resource type
+   */
+  public static <RT extends ResourceTagged> void populateTags( final AccountFullName accountFullName,
+                                                                final Class<? extends CloudMetadata> resourceType,
+                                                                final List<? extends RT> items,
+                                                                final Function<? super RT, String> idFunction ) {
+    final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( resourceType ).getResourceTagMap(
+        accountFullName,
+        Iterables.filter( Iterables.transform( items, idFunction ), Predicates.notNull( ) ) );
+    for ( final RT item : items ) {
+      final ResourceTagSetType tags = new ResourceTagSetType( );
+      Tags.addFromTags(
+          tags.getItem(),
+          ResourceTagSetItemType.class,
+          tagsMap.getOrDefault( idFunction.apply( item ), Collections.emptyList() ) );
+      if ( !tags.getItem().isEmpty() ) {
+        item.setTagSet( tags );
+      }
+    }
   }
 
   private static Tag lookup( final Tag example ) throws NoSuchMetadataException {

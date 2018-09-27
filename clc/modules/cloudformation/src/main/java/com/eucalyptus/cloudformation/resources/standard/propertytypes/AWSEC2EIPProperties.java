@@ -28,9 +28,11 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.resources.standard.propertytypes;
 
+import java.util.ArrayList;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
 import com.eucalyptus.cloudformation.resources.annotations.Property;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.Lists;
 
 public class AWSEC2EIPProperties implements ResourceProperties {
 
@@ -39,6 +41,9 @@ public class AWSEC2EIPProperties implements ResourceProperties {
 
   @Property
   private String domain;
+
+  @Property
+  private ArrayList<EC2Tag> tags = Lists.newArrayList( );
 
   public String getDomain( ) {
     return domain;
@@ -56,11 +61,20 @@ public class AWSEC2EIPProperties implements ResourceProperties {
     this.instanceId = instanceId;
   }
 
+  public ArrayList<EC2Tag> getTags( ) {
+    return tags;
+  }
+
+  public void setTags( ArrayList<EC2Tag> tags ) {
+    this.tags = tags;
+  }
+
   @Override
   public String toString( ) {
     return MoreObjects.toStringHelper( this )
         .add( "instanceId", instanceId )
         .add( "domain", domain )
+        .add( "tags", tags )
         .toString( );
   }
 }

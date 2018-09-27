@@ -32,7 +32,7 @@ import com.eucalyptus.util.CompatFunction;
 import com.google.common.base.Strings;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
-public class InternetGatewayType extends EucalyptusData implements VpcTagged {
+public class InternetGatewayType extends EucalyptusData implements ResourceTagged {
 
   private String internetGatewayId;
   private InternetGatewayAttachmentSetType attachmentSet = new InternetGatewayAttachmentSetType( );
