@@ -33,7 +33,6 @@ import javax.persistence.Column;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.MappedSuperclass;
-import javax.persistence.Transient;
 
 /**
  * Identical to AbstractStatefulPersistent, but without the stack-trace element.
@@ -41,7 +40,7 @@ import javax.persistence.Transient;
  */
 @MappedSuperclass
 public abstract class AbstractStatefulStacklessPersistent<STATE extends Enum<STATE>> extends AbstractPersistent {
-    @Transient
+
     private static final long serialVersionUID = 1L;
 
     @Column( name = "metadata_state" )

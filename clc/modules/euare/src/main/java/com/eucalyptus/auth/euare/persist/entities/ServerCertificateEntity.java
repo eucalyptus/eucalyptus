@@ -37,7 +37,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
-import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Type;
@@ -70,7 +69,7 @@ import com.google.common.base.Predicate;
 @PolicyVendor( "iam" )
 @PolicyResourceType( "server-certificate" )
 public class ServerCertificateEntity extends AbstractOwnedPersistent implements RestrictedType {
-  @Transient
+
   private static final long serialVersionUID = 1L;
 
   @Column(name = "metadata_server_cert_path", nullable = true)

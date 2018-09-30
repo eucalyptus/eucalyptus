@@ -65,7 +65,7 @@ import com.google.common.base.Function;
 @Table( name = "metadata_servo_instance" )
 public class LoadBalancerServoInstance extends AbstractPersistent {
 	private static Logger    LOG     = Logger.getLogger( LoadBalancerServoInstance.class );
-	@Transient
+
 	private static final long serialVersionUID = 1L;
 	
 	@Transient

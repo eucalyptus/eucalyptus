@@ -44,13 +44,11 @@ import java.io.Serializable;
 import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
-import javax.persistence.Transient;
 
 import org.hibernate.annotations.Parent;
 
 @Embeddable
 public class NetworkPeer implements Serializable {
-  @Transient
   private static final long serialVersionUID = 1L;
   @Parent
   private NetworkRule       networkRule;

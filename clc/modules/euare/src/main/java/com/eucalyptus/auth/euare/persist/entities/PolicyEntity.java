@@ -49,7 +49,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import javax.persistence.Transient;
+
 import org.hibernate.annotations.Type;
 import com.eucalyptus.entities.AbstractPersistent;
 
@@ -64,7 +64,6 @@ import com.eucalyptus.entities.AbstractPersistent;
 } )
 public class PolicyEntity extends AbstractPersistent implements Serializable {
 
-  @Transient
   private static final long serialVersionUID = 1L;
   
   // The policy name

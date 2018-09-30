@@ -57,7 +57,6 @@ import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.NotFound;
@@ -94,7 +93,6 @@ import groovy.sql.Sql;
 } )
 public class GroupEntity extends AbstractPersistent implements Serializable {
 
-  @Transient
   private static final long serialVersionUID = 1L;
 
   // The Group ID: the user facing group id which conforms to length and character restrictions per spec.

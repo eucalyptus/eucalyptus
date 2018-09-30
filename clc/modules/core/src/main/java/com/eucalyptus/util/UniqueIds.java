@@ -44,7 +44,7 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import javax.persistence.Transient;
+
 import org.apache.log4j.Logger;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Digest;
@@ -76,8 +76,7 @@ public class UniqueIds implements Serializable {
       }
       
     }
-    
-    @Transient
+
     private static final long serialVersionUID = 1L;
     @Column( name = "config_unique_ids_current_base" )
     private Long              currentBase;

@@ -44,7 +44,6 @@ import java.io.Serializable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
-import javax.persistence.Transient;
 
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.config.ComponentConfiguration;
@@ -54,7 +53,7 @@ import com.eucalyptus.objectstorage.ObjectStorage;
 @PersistenceContext(name = "eucalyptus_config")
 @ComponentPart(ObjectStorage.class)
 public class ObjectStorageConfiguration extends ComponentConfiguration implements Serializable {
-  @Transient
+
   public static String DEFAULT_SERVICE_PATH = "/services/objectstorage";
 
   @Column(name = "osp_clients")

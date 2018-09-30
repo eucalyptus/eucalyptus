@@ -48,7 +48,6 @@ import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.util.Identifiers;
@@ -63,7 +62,6 @@ import com.eucalyptus.entities.AbstractPersistent;
 @Table( name = "auth_account" )
 public class AccountEntity extends AbstractPersistent implements Serializable {
 
-  @Transient
   private static final long serialVersionUID = 1L;
 
   // Account name, it is unique.

@@ -52,7 +52,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
-import javax.persistence.Transient;
+
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.component.id.Euare;
@@ -70,8 +70,7 @@ import groovy.sql.Sql;
     @Index( name = "auth_access_key_owning_user_idx", columnList = "auth_access_key_owning_user" )
 } )
 public class AccessKeyEntity extends AbstractPersistent implements Serializable {
-  
-  @Transient
+
   private static final long serialVersionUID = 1L;
   
   // If the key is active

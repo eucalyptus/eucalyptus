@@ -45,7 +45,7 @@ import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
-import javax.persistence.Transient;
+
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
@@ -53,7 +53,7 @@ import com.eucalyptus.auth.type.RestrictedType.UserRestrictedType;
 
 @MappedSuperclass
 public abstract class UserMetadata<STATE extends Enum<STATE>> extends AccountMetadata<STATE> implements UserRestrictedType {
-  @Transient
+
   private static final long serialVersionUID = 1L;
 
   @Column( name = "metadata_user_id" )

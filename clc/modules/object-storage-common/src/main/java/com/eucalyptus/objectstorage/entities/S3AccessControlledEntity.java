@@ -68,7 +68,7 @@ import com.google.common.base.Function;
  */
 @MappedSuperclass
 public abstract class S3AccessControlledEntity<STATE extends Enum<STATE>> extends AbstractStatefulStacklessPersistent<STATE> {
-  @Transient
+
   private static final Logger LOG = Logger.getLogger(S3AccessControlledEntity.class);
 
   // Display name for IAM user

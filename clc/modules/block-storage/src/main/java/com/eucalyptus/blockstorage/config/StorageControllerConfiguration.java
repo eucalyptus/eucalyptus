@@ -80,7 +80,6 @@ import com.google.common.collect.Sets;
 @ConfigurableClass(root = "storage", alias = "basic", description = "Basic cluster controller configuration.", singleton = false, deferred = true)
 public class StorageControllerConfiguration extends ComponentConfiguration implements Serializable {
 
-  @Transient
   private static String DEFAULT_SERVICE_PATH = "/services/Storage";
 
   @Transient
