@@ -63,6 +63,38 @@ public class Subnet extends UserMetadata<Subnet.State> implements SubnetMetadata
 
   private static final long serialVersionUID = 1L;
 
+  @ManyToOne( optional = false )
+  @JoinColumn( name = "metadata_vpc_id" )
+  private Vpc vpc;
+
+  @ManyToOne( optional = false, fetch = FetchType.LAZY )
+  @JoinColumn( name = "metadata_network_acl_id" )
+  private NetworkAcl networkAcl;
+
+  @Column( name = "metadata_nacl_association_id", nullable = false, unique = true )
+  private String networkAclAssociationId;
+
+  @Column( name = "metadata_cidr", nullable = false )
+  private String cidr;
+
+  @Column( name = "metadata_availability_zone", nullable = false )
+  private String availabilityZone;
+
+  @Column( name = "metadata_available_ips", nullable = false )
+  private Integer availableIpAddressCount;
+
+  @Column( name = "metadata_default_for_az", nullable = false )
+  private Boolean defaultForAz;
+
+  @Column( name = "metadata_map_public_ip", nullable = false )
+  private Boolean mapPublicIpOnLaunch;
+
+  @OneToOne( cascade = CascadeType.REMOVE, mappedBy = "subnet" )
+  private RouteTableAssociation routeTableAssociation;
+
+  @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "subnet" )
+  private Collection<SubnetTag> tags;
+
   public enum State {
     pending,
     available,
@@ -120,37 +152,10 @@ public class Subnet extends UserMetadata<Subnet.State> implements SubnetMetadata
     return subnet;
   }
 
-  @ManyToOne( optional = false )
-  @JoinColumn( name = "metadata_vpc_id" )
-  private Vpc vpc;
-
-  @ManyToOne( optional = false, fetch = FetchType.LAZY )
-  @JoinColumn( name = "metadata_network_acl_id" )
-  private NetworkAcl networkAcl;
-
-  @Column( name = "metadata_nacl_association_id", nullable = false, unique = true )
-  private String networkAclAssociationId;
-
-  @Column( name = "metadata_cidr", nullable = false )
-  private String cidr;
-
-  @Column( name = "metadata_availability_zone", nullable = false )
-  private String availabilityZone;
-
-  @Column( name = "metadata_available_ips", nullable = false )
-  private Integer availableIpAddressCount;
-
-  @Column( name = "metadata_default_for_az", nullable = false )
-  private Boolean defaultForAz;
-
-  @Column( name = "metadata_map_public_ip", nullable = false )
-  private Boolean mapPublicIpOnLaunch;
-
-  @OneToOne( cascade = CascadeType.REMOVE, mappedBy = "subnet" )
-  private RouteTableAssociation routeTableAssociation;
-
-  @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "subnet" )
-  private Collection<SubnetTag> tags;
+  @Override
+  protected String createUniqueName( ) {
+    return ResourceIdentifiers.truncate( getDisplayName( ) );
+  }
 
   @Override
   public String getPartition() {

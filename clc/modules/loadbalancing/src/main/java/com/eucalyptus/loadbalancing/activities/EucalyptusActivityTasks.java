@@ -2436,7 +2436,7 @@ public class EucalyptusActivityTasks {
 		}
 		AuthorizeSecurityGroupIngressType getRequest(){
 			AuthorizeSecurityGroupIngressType req = new AuthorizeSecurityGroupIngressType( );
-			if ( this.groupNameOrId.matches( "sg-[0-9a-fA-F]{8}" ) ) {
+			if ( this.groupNameOrId.matches( "sg-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?" ) ) {
 				req.setGroupId( this.groupNameOrId );
 			} else {
 				req.setGroupName( this.groupNameOrId );

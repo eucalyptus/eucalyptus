@@ -30,13 +30,15 @@ package com.eucalyptus.compute.common.internal.identifier;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.apache.log4j.Logger;
+import com.eucalyptus.auth.policy.annotation.PolicyResourceType;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.CloudMetadataLongIdentifierConfigurable;
@@ -48,16 +50,18 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.FUtils;
+import com.eucalyptus.util.Strings;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 
 /**
@@ -69,17 +73,19 @@ import com.google.common.collect.Sets;
     description = "Properties for compute."
 )
 public class ResourceIdentifiers {
-
+  private static final Logger logger = Logger.getLogger( ResourceIdentifiers.class );
   private static final Pattern resourcePattern = Pattern.compile( "[0-9a-fA-F]{8}|[0-9a-fA-F]{17}" );
-  private static final Set<String> configurableLongIdentifierResourcePrefixes =
-      new CopyOnWriteArraySet<>( );
+  private static final Map<String,String> configurableResourcePrefixToResourceMap = Maps.newConcurrentMap( );
   private static final Function<String,Set<String>> shortIdentifierPrefixes =
       FUtils.memoizeLast( ResourceIdentifiers::prefixes );
   private static final Function<String,Set<String>> longIdentifierPrefixes =
       FUtils.memoizeLast( ResourceIdentifiers::prefixes );
+  private static final Function<Iterable<String>,Set<String>> longIdentifierResources =
+      FUtils.memoizeLast( unordered -> ImmutableSet.copyOf( Ordering.natural( ).sortedCopy( unordered ) ) );
   private static final ConcurrentMap<String,ResourceIdentifierCanonicalizer> canonicalizers = Maps.newConcurrentMap();
   private static final AtomicReference<ResourceIdentifierCanonicalizer> defaultCanonicalizer =
       new AtomicReference<>( new LowerResourceIdentifierCanonicalizer( ) );
+
   @SuppressWarnings( "unused" )
   @ConfigurableField(
       description = "Name of the canonicalizer for resource identifiers.",
@@ -105,13 +111,6 @@ public class ResourceIdentifiers {
   )
   public static volatile String LONG_IDENTIFIER_PREFIXES = "";
 
-  @SuppressWarnings( "WeakerAccess" )
-  @ConfigurableField(
-      initial = "true",
-      description = "Allow account settings to specify long identifier usage"
-  )
-  public static volatile Boolean LONG_IDENTIFIER_ACCOUNT_SETTINGS_USED = true;
-
   static void register( final ResourceIdentifierCanonicalizer canonicalizer ) {
     canonicalizers.put( canonicalizer.getName( ).toLowerCase( ), canonicalizer );
   }
@@ -119,10 +118,6 @@ public class ResourceIdentifiers {
   @SuppressWarnings( "unused" )
   public static Optional<ResourceIdentifierCanonicalizer> getCanonicalizer( final String name ) {
     return Optional.fromNullable( canonicalizers.get( name.toLowerCase( ) ) );
-  }
-
-  public static boolean useAccountLongIdentifierSettings() {
-    return MoreObjects.firstNonNull( LONG_IDENTIFIER_ACCOUNT_SETTINGS_USED, Boolean.TRUE );
   }
 
   /**
@@ -212,8 +207,35 @@ public class ResourceIdentifiers {
 
   public static boolean useLongIdentifierForPrefix( final String prefix ) {
     //noinspection ConstantConditions
-    return !shortIdentifierPrefixes.apply( SHORT_IDENTIFIER_PREFIXES ).contains( prefix ) &&
-        longIdentifierPrefixes.apply( LONG_IDENTIFIER_PREFIXES ).contains( prefix );
+    return longIdentifierPrefixes.apply( LONG_IDENTIFIER_PREFIXES ).contains( prefix ) ||
+        !shortIdentifierPrefixes.apply( SHORT_IDENTIFIER_PREFIXES ).contains( prefix );
+  }
+
+  public static boolean useLongIdentifierForResource( final String resource ) {
+    return configurableResourcePrefixToResourceMap.entrySet( ).stream( )
+        .filter( entry -> resource.equals( entry.getValue( ) ) )
+        .map( Map.Entry::getKey )
+        .anyMatch( ResourceIdentifiers::useLongIdentifierForPrefix );
+  }
+
+  public static Set<String> getLongIdentifierResources( ) {
+    return longIdentifierResources.apply( configurableResourcePrefixToResourceMap.values( ) );
+  }
+
+  /**
+   * Truncate a long identifier to a short identifier format.
+   *
+   * @return Null if the given identifier was null else the short identifier
+   */
+  public static String truncate( final String identifier ) {
+    String shortId = identifier;
+    if ( identifier != null ) {
+        final int index = identifier.lastIndexOf( '-' );
+        if ( index == identifier.length() - 18 ) {
+          shortId = Strings.truncate( identifier, identifier.length( ) - 9 );
+        }
+    }
+    return shortId;
   }
 
   private static Set<String> prefixValues( final String prefixList ) {
@@ -223,7 +245,7 @@ public class ResourceIdentifiers {
 
   private static Set<String> prefixes( final String prefixList ) {
     if ( "*".equals( prefixList ) ) {
-      return configurableLongIdentifierResourcePrefixes;
+      return ImmutableSet.copyOf( configurableResourcePrefixToResourceMap.keySet( ) );
     } else {
       return ImmutableSet.copyOf( prefixValues( prefixList ) );
     }
@@ -299,6 +321,31 @@ public class ResourceIdentifiers {
   }
 
   public static final class ConfigurableLongResourceIdentifierDiscovery extends ServiceJarDiscovery {
+    public ConfigurableLongResourceIdentifierDiscovery( ) {
+      configurableResourcePrefixToResourceMap.putAll(
+          ImmutableMap.<String, String>builder( )
+              .put( "bun", "bundle" )
+              .put( "cgw", "customer-gateway" )
+              .put( "eipalloc", "elastic-ip-allocation" )
+              .put( "eipassoc", "elastic-ip-association" )
+              .put( "export-i", "export-task" )
+              .put( "fl", "flow-log" )
+              .put( "import-i", "import-task" )
+              .put( "aclassoc", "network-acl-association" )
+              .put( "eni-attach", "network-interface-attachment" )
+              .put( "pl", "prefix-list" )
+              .put( "r", "reservation" )
+              .put( "rtbassoc", "route-table-association" )
+              .put( "subnet-cidr-assoc", "subnet-cidr-block-association" )
+              .put( "vpc-cidr-assoc", "vpc-cidr-block-association" )
+              .put( "vpce", "vpc-endpoint" )
+              .put( "pcx", "vpc-peering-connection" )
+              .put( "vpn", "vpn-connection" )
+              .put( "vgw", "vpn-gateway" )
+              .build( )
+      );
+    }
+
     @Override
     public boolean processClass( Class candidate ) throws Exception {
       if ( CloudMetadata.class.isAssignableFrom( candidate ) ) {
@@ -306,8 +353,20 @@ public class ResourceIdentifiers {
         final CloudMetadataLongIdentifierConfigurable configurable =
             ats.get( CloudMetadataLongIdentifierConfigurable.class );
         if ( configurable != null ) {
-          configurableLongIdentifierResourcePrefixes.add( configurable.prefix( ) );
-          configurableLongIdentifierResourcePrefixes.addAll( Arrays.asList( configurable.relatedPrefixes( ) ) );
+          final PolicyResourceType type = ats.get( PolicyResourceType.class );
+          if ( type != null ) {
+            final String resource = type.value( );
+            if ( !configurable.prefix( ).isEmpty( ) ) {
+              configurableResourcePrefixToResourceMap.putIfAbsent( configurable.prefix( ), resource );
+            }
+            for ( final String prefix : configurable.relatedPrefixes( ) ) {
+              configurableResourcePrefixToResourceMap.putIfAbsent( prefix, resource );
+            }
+          } else {
+            logger.warn(
+                "Ignoring long identifier configuration due to missing @PolicyResourceType annotation for: " +
+                configurable.prefix( ) + "/" + Arrays.asList( configurable.relatedPrefixes( ) ) );
+          }
           return true;
         }
       }
@@ -319,6 +378,4 @@ public class ResourceIdentifiers {
       return 1.0d;
     }
   }
-
-
 }

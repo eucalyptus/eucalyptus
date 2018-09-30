@@ -111,9 +111,10 @@ import com.eucalyptus.compute.common.backend.CreateTagsType;
 import com.eucalyptus.compute.common.backend.DeleteTagsType;
 import com.eucalyptus.compute.common.backend.StopInstancesType;
 import com.eucalyptus.compute.common.backend.TerminateInstancesType;
-import com.eucalyptus.compute.common.internal.account.IdentityIdFormats;
 import com.eucalyptus.compute.common.internal.blockstorage.State;
 import com.eucalyptus.compute.common.internal.blockstorage.Volume;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifier;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
 import com.eucalyptus.compute.common.internal.images.BootableImageInfo;
 import com.eucalyptus.compute.common.internal.images.ImageInfo;
@@ -685,10 +686,10 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
   }
 
 
-  public static String getId( final String identityArn ) {
+  public static String getId( ) {
     String vmId;
     do {
-      vmId = IdentityIdFormats.generate( identityArn, VmInstance.ID_PREFIX );
+      vmId = ResourceIdentifiers.generateString( VmInstance.ID_PREFIX );
     } while ( VmInstances.contains( vmId ) );
     return vmId;
   }

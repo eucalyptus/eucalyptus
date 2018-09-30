@@ -39,6 +39,6 @@ import java.lang.annotation.Target;
 @Target( ElementType.TYPE )
 @Retention( RetentionPolicy.RUNTIME )
 public @interface CloudMetadataLongIdentifierConfigurable {
-  String prefix( );
+  String prefix( ) default "";
   String[] relatedPrefixes( ) default {};
 }

@@ -88,6 +88,7 @@ import com.eucalyptus.compute.common.GroupItemType;
 import com.eucalyptus.compute.common.GroupSetType;
 import com.eucalyptus.compute.common.IamInstanceProfile;
 import com.eucalyptus.compute.common.ImageMetadata.Platform;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.common.internal.network.PrivateAddressReferrer;
 import com.eucalyptus.compute.common.internal.util.ResourceAllocationException;
 import com.eucalyptus.component.ComponentIds;
@@ -473,7 +474,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 
   @Override
   protected String createUniqueName() {
-    return getDisplayName( ) == null ? null : truncate( getDisplayName( ), 10 );
+    return ResourceIdentifiers.truncate( getDisplayName( ) );
   }
 
   /**

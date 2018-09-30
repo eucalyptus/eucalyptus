@@ -72,7 +72,6 @@ import com.eucalyptus.compute.common.backend.ModifySnapshotAttributeResponseType
 import com.eucalyptus.compute.common.backend.ModifySnapshotAttributeType;
 import com.eucalyptus.compute.common.backend.ResetSnapshotAttributeResponseType;
 import com.eucalyptus.compute.common.backend.ResetSnapshotAttributeType;
-import com.eucalyptus.compute.common.internal.account.IdentityIdFormats;
 import com.eucalyptus.compute.common.internal.blockstorage.Snapshot;
 import com.eucalyptus.compute.common.internal.blockstorage.Snapshots;
 import com.eucalyptus.compute.common.internal.blockstorage.State;
@@ -164,7 +163,6 @@ public class SnapshotManager {
       public Snapshot get( ) {
         try {
           return initializeSnapshot(
-              Accounts.getAuthenticatedArn( ctx.getUser( ) ),
               ctx.getUserFullName( ),
               volReady,
               sc,
@@ -434,8 +432,7 @@ public class SnapshotManager {
     return Predicates.or( SnapshotInUseVerifier.INSTANCE ).apply( snapshotId );
   }
 
-  private static Snapshot initializeSnapshot( final String authenticatedArn,
-                                              final UserFullName userFullName,
+  private static Snapshot initializeSnapshot( final UserFullName userFullName,
                                               final Volume vol,
                                               final ServiceConfiguration sc,
                                               final String description,
@@ -443,7 +440,7 @@ public class SnapshotManager {
     final EntityTransaction db = Entities.get( Snapshot.class );
     try {
       while ( true ) {
-        final String newId = IdentityIdFormats.generate( authenticatedArn, Snapshot.ID_PREFIX );
+        final String newId = ResourceIdentifiers.generateString( Snapshot.ID_PREFIX );
         try {
           Entities.uniqueResult( Snapshot.named( null, newId ) );
         } catch ( NoSuchElementException e ) {

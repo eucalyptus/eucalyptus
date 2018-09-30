@@ -3020,10 +3020,10 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
         return ret;
 
     for (i = 0; i < (*outInstsLen); i++) {
-        char vols_str[128] = "";
-        char vol_str[16] = "";
-        char nics_str[128] = "";
-        char nic_str[16] = "";
+        char vols_str[CHAR_BUFFER_SIZE] = "";
+        char vol_str[SMALL_CHAR_BUFFER_SIZE] = "";
+        char nics_str[CHAR_BUFFER_SIZE] = "";
+        char nic_str[SMALL_CHAR_BUFFER_SIZE] = "";
         char status_str[128] = "running";
         ncInstance *instance = (*outInsts)[i];
 

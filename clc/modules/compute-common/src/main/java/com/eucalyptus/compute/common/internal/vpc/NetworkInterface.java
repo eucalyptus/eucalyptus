@@ -55,6 +55,7 @@ import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.common.internal.network.NetworkGroup;
 import com.eucalyptus.compute.common.internal.network.PrivateAddressReferrer;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
@@ -83,6 +84,64 @@ import com.google.common.collect.Sets;
 public class NetworkInterface extends UserMetadata<NetworkInterface.State> implements NetworkInterfaceMetadata, PrivateAddressReferrer {
 
   private static final long serialVersionUID = 1L;
+
+  @ManyToOne( optional = false )
+  @JoinColumn( name = "metadata_vpc_id", nullable = false, updatable = false )
+  private Vpc vpc;
+
+  @ManyToOne( optional = false )
+  @JoinColumn( name = "metadata_subnet_id", nullable = false, updatable = false )
+  private Subnet subnet;
+
+  // Due to an issue with mappedBy on VmNetworkConfig we define the instance
+  // reference here rather than on the embedded attachment where it belongs
+  @ManyToOne( fetch = FetchType.LAZY )
+  @JoinColumn( name = "metadata_instance_id" )
+  private VmInstance instance;
+
+  @NotFound( action = NotFoundAction.IGNORE )
+  @JoinTable( name = "metadata_network_interfaces_groups",
+      joinColumns =        @JoinColumn( name = "networkinterface_id" ),
+      inverseJoinColumns = @JoinColumn( name = "networkgroup_id" ) )
+  @ManyToMany
+  private Set<NetworkGroup> networkGroups = Sets.newHashSet();
+
+  @Column( name = "metadata_zone", nullable = false, updatable = false )
+  private String availabilityZone;
+
+  @Column( name = "metadata_description", nullable = false )
+  private String description;
+
+  @Column( name = "metadata_requester_id", updatable = false )
+  private String requesterId;
+
+  @Column( name = "metadata_requester_managed", nullable = false )
+  private Boolean requesterManaged;
+
+  @Column( name = "metadata_mac_address", nullable = false )
+  private String macAddress;
+
+  @Column( name = "metadata_private_ip", nullable = false )
+  private String privateIpAddress;
+
+  @Column( name = "metadata_private_name" )
+  private String privateDnsName;
+
+  @Column( name = "metadata_source_dest_check", nullable = false )
+  private Boolean sourceDestCheck;
+
+  @Column( name = "metadata_type" )
+  @Enumerated( EnumType.STRING )
+  private Type type;
+
+  @Embedded
+  private NetworkInterfaceAttachment attachment;
+
+  @Embedded
+  private NetworkInterfaceAssociation association;
+
+  @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "networkInterface" )
+  private Collection<NetworkInterfaceTag> tags;
 
   public enum State {
     available,
@@ -231,63 +290,10 @@ public class NetworkInterface extends UserMetadata<NetworkInterface.State> imple
     return example;
   }
 
-  @ManyToOne( optional = false )
-  @JoinColumn( name = "metadata_vpc_id", nullable = false, updatable = false )
-  private Vpc vpc;
-
-  @ManyToOne( optional = false )
-  @JoinColumn( name = "metadata_subnet_id", nullable = false, updatable = false )
-  private Subnet subnet;
-
-  // Due to an issue with mappedBy on VmNetworkConfig we define the instance
-  // reference here rather than on the embedded attachment where it belongs
-  @ManyToOne( fetch = FetchType.LAZY )
-  @JoinColumn( name = "metadata_instance_id" )
-  private VmInstance instance;
-
-  @NotFound( action = NotFoundAction.IGNORE )
-  @JoinTable( name = "metadata_network_interfaces_groups",
-      joinColumns =        @JoinColumn( name = "networkinterface_id" ),
-      inverseJoinColumns = @JoinColumn( name = "networkgroup_id" ) )
-  @ManyToMany
-  private Set<NetworkGroup> networkGroups = Sets.newHashSet();
-
-  @Column( name = "metadata_zone", nullable = false, updatable = false )
-  private String availabilityZone;
-
-  @Column( name = "metadata_description", nullable = false )
-  private String description;
-
-  @Column( name = "metadata_requester_id", updatable = false )
-  private String requesterId;
-
-  @Column( name = "metadata_requester_managed", nullable = false )
-  private Boolean requesterManaged;
-
-  @Column( name = "metadata_mac_address", nullable = false )
-  private String macAddress;
-
-  @Column( name = "metadata_private_ip", nullable = false )
-  private String privateIpAddress;
-
-  @Column( name = "metadata_private_name" )
-  private String privateDnsName;
-
-  @Column( name = "metadata_source_dest_check", nullable = false )
-  private Boolean sourceDestCheck;
-
-  @Column( name = "metadata_type" )
-  @Enumerated( EnumType.STRING )
-  private Type type;
-
-  @Embedded
-  private NetworkInterfaceAttachment attachment;
-
-  @Embedded
-  private NetworkInterfaceAssociation association;
-
-  @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "networkInterface" )
-  private Collection<NetworkInterfaceTag> tags;
+  @Override
+  protected String createUniqueName( ) {
+    return ResourceIdentifiers.truncate( getDisplayName( ) );
+  }
 
   @Override
   public String getPartition( ) {

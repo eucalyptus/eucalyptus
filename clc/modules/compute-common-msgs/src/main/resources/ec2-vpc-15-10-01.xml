@@ -932,8 +932,10 @@
         <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
       </collection>
     </structure>
-    <collection name="natGatewayId" factory="org.jibx.runtime.Utility.arrayListFactory" field="natGatewayId" usage="optional">
-      <structure name="item" />
+    <collection name="natGatewayId" factory="org.jibx.runtime.Utility.arrayListFactory" field="natGatewayId" usage="optional" item-type="java.lang.String">
+      <structure name="item">
+        <value name="natGatewayId" />
+      </structure>
     </collection>
     <value name="maxResults" field="maxResults" usage="optional"/>
     <value name="nextToken" field="nextToken" usage="optional"/>

@@ -200,7 +200,12 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   public static ImageInfo named( final String imageId ) {
     return new ImageInfo( imageId );
   }
-  
+
+  @Override
+  protected String createUniqueName( ) {
+    return ResourceIdentifiers.truncate( getDisplayName( ) );
+  }
+
   public ImageMetadata.Type getImageType( ) {
     return this.imageType;
   }

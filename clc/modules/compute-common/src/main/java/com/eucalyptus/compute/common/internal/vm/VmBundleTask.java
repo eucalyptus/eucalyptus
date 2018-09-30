@@ -49,6 +49,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Parent;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.upgrade.Upgrades;
 import com.eucalyptus.util.Strings;
 import com.google.common.base.Function;
@@ -178,7 +179,10 @@ public class VmBundleTask {
   }
 
   public String getBundleId( ) {
-    return Strings.truncate( getInstanceId( ), 10 ).replaceFirst( "i-", "bun-" );
+    return (ResourceIdentifiers.useLongIdentifierForPrefix( "bun") ?
+        getInstanceId( ) :
+        Strings.truncate( getInstanceId( ), 10 )
+    ).replaceFirst( "i-", "bun-" );
   }
   
   public BundleState getState( ) {

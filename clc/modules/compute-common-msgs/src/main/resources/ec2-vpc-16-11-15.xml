@@ -932,8 +932,10 @@
         <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
       </collection>
     </structure>
-    <collection name="natGatewayId" factory="org.jibx.runtime.Utility.arrayListFactory" field="natGatewayId" usage="optional">
-      <structure name="item" />
+    <collection name="natGatewayId" factory="org.jibx.runtime.Utility.arrayListFactory" field="natGatewayId" usage="optional" item-type="java.lang.String">
+      <structure name="item">
+        <value name="natGatewayId" />
+      </structure>
     </collection>
     <value name="maxResults" field="maxResults" usage="optional"/>
     <value name="nextToken" field="nextToken" usage="optional"/>
@@ -1259,8 +1261,10 @@
   </mapping>
   <mapping name="DescribeSecurityGroupReferences" class="com.eucalyptus.compute.common.DescribeSecurityGroupReferencesType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
-    <collection name="groupId" factory="org.jibx.runtime.Utility.arrayListFactory" field="groupId" usage="optional">
-      <structure name="item" />
+    <collection name="groupId" factory="org.jibx.runtime.Utility.arrayListFactory" field="groupId" usage="optional" item-type="java.lang.String">
+      <structure name="item">
+        <value name="groupId" />
+      </structure>
     </collection>
   </mapping>
   <mapping name="DescribeSecurityGroupReferencesResponse" class="com.eucalyptus.compute.common.DescribeSecurityGroupReferencesResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
@@ -1280,8 +1284,10 @@
 
   <mapping name="AttachClassicLinkVpc" class="com.eucalyptus.compute.common.AttachClassicLinkVpcType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
-    <collection name="securityGroupId" factory="org.jibx.runtime.Utility.arrayListFactory" field="securityGroupId" usage="optional">
-      <structure name="item" />
+    <collection name="securityGroupId" factory="org.jibx.runtime.Utility.arrayListFactory" field="securityGroupId" usage="optional" item-type="java.lang.String">
+      <structure name="item">
+        <value name="securityGroupId" />
+      </structure>
     </collection>
     <value name="instanceId" field="instanceId" usage="optional"/>
     <value name="vpcId" field="vpcId" usage="optional"/>
@@ -1298,8 +1304,10 @@
         <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
       </collection>
     </structure>
-    <collection name="instanceId" factory="org.jibx.runtime.Utility.arrayListFactory" field="instanceId" usage="optional">
-      <structure name="item" />
+    <collection name="instanceId" factory="org.jibx.runtime.Utility.arrayListFactory" field="instanceId" usage="optional" item-type="java.lang.String">
+      <structure name="item">
+        <value name="instanceId" />
+      </structure>
     </collection>
     <value name="maxResults" field="maxResults" usage="optional"/>
     <value name="nextToken" field="nextToken" usage="optional"/>
@@ -1353,8 +1361,10 @@
 
   <mapping name="DescribeVpcClassicLinkDnsSupport" class="com.eucalyptus.compute.common.DescribeVpcClassicLinkDnsSupportType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
-    <collection name="vpcIds" factory="org.jibx.runtime.Utility.arrayListFactory" field="vpcIds" usage="optional">
-      <structure name="item" />
+    <collection name="vpcIds" factory="org.jibx.runtime.Utility.arrayListFactory" field="vpcIds" usage="optional" item-type="java.lang.String">
+      <structure name="item">
+        <value name="vpcId" />
+      </structure>
     </collection>
     <value name="maxResults" field="maxResults" usage="optional"/>
     <value name="nextToken" field="nextToken" usage="optional"/>
@@ -1386,8 +1396,10 @@
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="clientToken" field="clientToken" usage="optional"/>
     <value name="policyDocument" field="policyDocument" usage="optional"/>
-    <collection name="routeTableId" factory="org.jibx.runtime.Utility.arrayListFactory" field="routeTableId" usage="optional">
-      <structure name="item" />
+    <collection name="routeTableId" factory="org.jibx.runtime.Utility.arrayListFactory" field="routeTableId" usage="optional" item-type="java.lang.String">
+      <structure name="item">
+        <value name="routeTableId" />
+      </structure>
     </collection>
     <value name="serviceName" field="serviceName" usage="optional"/>
     <value name="vpcId" field="vpcId" usage="optional"/>
@@ -1398,8 +1410,10 @@
 
   <mapping name="DeleteVpcEndpoints" class="com.eucalyptus.compute.common.DeleteVpcEndpointsType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
-    <collection name="vpcEndpointId" factory="org.jibx.runtime.Utility.arrayListFactory" field="vpcEndpointId" usage="optional">
-      <structure name="item" />
+    <collection name="vpcEndpointId" factory="org.jibx.runtime.Utility.arrayListFactory" field="vpcEndpointId" usage="optional" item-type="java.lang.String">
+      <structure name="item">
+        <value name="vpcEndpointId" />
+      </structure>
     </collection>
   </mapping>
   <mapping name="DeleteVpcEndpointsResponse" class="com.eucalyptus.compute.common.DeleteVpcEndpointsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
@@ -1415,8 +1429,10 @@
     </structure>
     <value name="maxResults" field="maxResults" usage="optional"/>
     <value name="nextToken" field="nextToken" usage="optional"/>
-    <collection name="prefixListId" factory="org.jibx.runtime.Utility.arrayListFactory" field="prefixListId" usage="optional">
-      <structure name="item" />
+    <collection name="prefixListId" factory="org.jibx.runtime.Utility.arrayListFactory" field="prefixListId" usage="optional" item-type="java.lang.String">
+      <structure name="item">
+        <value name="prefixListId" />
+      </structure>
     </collection>
   </mapping>
   <mapping name="DescribePrefixListsResponse" class="com.eucalyptus.compute.common.DescribePrefixListsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
@@ -1443,8 +1459,10 @@
     </structure>
     <value name="maxResults" field="maxResults" usage="optional"/>
     <value name="nextToken" field="nextToken" usage="optional"/>
-    <collection name="vpcEndpointId" factory="org.jibx.runtime.Utility.arrayListFactory" field="vpcEndpointId" usage="optional">
-      <structure name="item" />
+    <collection name="vpcEndpointId" factory="org.jibx.runtime.Utility.arrayListFactory" field="vpcEndpointId" usage="optional" item-type="java.lang.String">
+      <structure name="item">
+        <value name="vpcEndpointId" />
+      </structure>
     </collection>
   </mapping>
   <mapping name="DescribeVpcEndpointsResponse" class="com.eucalyptus.compute.common.DescribeVpcEndpointsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
@@ -1454,12 +1472,16 @@
 
   <mapping name="ModifyVpcEndpoint" class="com.eucalyptus.compute.common.ModifyVpcEndpointType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
-    <collection name="addRouteTableId" factory="org.jibx.runtime.Utility.arrayListFactory" field="addRouteTableId" usage="optional">
-      <structure name="item" />
+    <collection name="addRouteTableId" factory="org.jibx.runtime.Utility.arrayListFactory" field="addRouteTableId" usage="optional" item-type="java.lang.String">
+      <structure name="item">
+        <value name="addRouteTableId" />
+      </structure>
     </collection>
     <value name="policyDocument" field="policyDocument" usage="optional"/>
-    <collection name="removeRouteTableId" factory="org.jibx.runtime.Utility.arrayListFactory" field="removeRouteTableId" usage="optional">
-      <structure name="item" />
+    <collection name="removeRouteTableId" factory="org.jibx.runtime.Utility.arrayListFactory" field="removeRouteTableId" usage="optional" item-type="java.lang.String">
+      <structure name="item">
+        <value name="removeRouteTableId" />
+      </structure>
     </collection>
     <value name="resetPolicy" field="resetPolicy" usage="optional"/>
     <value name="vpcEndpointId" field="vpcEndpointId" usage="optional"/>

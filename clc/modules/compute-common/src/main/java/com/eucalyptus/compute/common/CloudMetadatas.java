@@ -44,15 +44,14 @@ import javax.annotation.Nullable;
 import com.eucalyptus.util.RestrictedTypes;
 
 /**
- * Functionality from this class moved to RestrictedTypes. This class remains
- * in case we want to add any CloudMetadata specific functionality.
+ *
  */
 public class CloudMetadatas extends RestrictedTypes {
 
-  public static final Pattern ID_IMAGE         = Pattern.compile( "[ae](ki-|mi-|ri-)[0-9a-fA-F]{8}" );
-  public static final Pattern ID_KERNEL_IMAGE  = Pattern.compile( "[ae]ki-[0-9a-fA-F]{8}" );
-  public static final Pattern ID_MACHINE_IMAGE = Pattern.compile( "[ae]mi-[0-9a-fA-F]{8}" );
-  public static final Pattern ID_RAMDISK_IMAGE = Pattern.compile( "[ae]ri-[0-9a-fA-F]{8}" );
+  public static final Pattern ID_IMAGE         = Pattern.compile( "[ae](ki-|mi-|ri-)[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?" );
+  public static final Pattern ID_KERNEL_IMAGE  = Pattern.compile( "[ae]ki-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?" );
+  public static final Pattern ID_MACHINE_IMAGE = Pattern.compile( "[ae]mi-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?" );
+  public static final Pattern ID_RAMDISK_IMAGE = Pattern.compile( "[ae]ri-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?" );
 
 
   /**
