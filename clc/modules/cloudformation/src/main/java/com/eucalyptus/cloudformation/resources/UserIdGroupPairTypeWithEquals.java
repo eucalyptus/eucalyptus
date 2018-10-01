@@ -38,11 +38,13 @@ public class UserIdGroupPairTypeWithEquals {
   private String sourceUserId;
   private String sourceGroupName;
   private String sourceGroupId;
+  private String description;
 
   public UserIdGroupPairTypeWithEquals( UserIdGroupPairType userIdGroupPairType ) {
     this.sourceUserId = userIdGroupPairType.getSourceUserId( );
     this.sourceGroupName = userIdGroupPairType.getSourceGroupName( );
     this.sourceGroupId = userIdGroupPairType.getSourceGroupId( );
+    this.description = userIdGroupPairType.getDescription( );
   }
 
   public UserIdGroupPairType getUserIdGroupPairType( ) {
@@ -50,6 +52,7 @@ public class UserIdGroupPairTypeWithEquals {
     userIdGroupPairType.setSourceUserId( sourceUserId );
     userIdGroupPairType.setSourceGroupName( sourceGroupName );
     userIdGroupPairType.setSourceGroupId( sourceGroupId );
+    userIdGroupPairType.setDescription( description );
     return userIdGroupPairType;
   }
 
@@ -77,6 +80,14 @@ public class UserIdGroupPairTypeWithEquals {
     this.sourceGroupId = sourceGroupId;
   }
 
+  public String getDescription( ) {
+    return description;
+  }
+
+  public void setDescription( final String description ) {
+    this.description = description;
+  }
+
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
@@ -84,12 +95,13 @@ public class UserIdGroupPairTypeWithEquals {
     final UserIdGroupPairTypeWithEquals that = (UserIdGroupPairTypeWithEquals) o;
     return Objects.equals( getSourceUserId( ), that.getSourceUserId( ) ) &&
         Objects.equals( getSourceGroupName( ), that.getSourceGroupName( ) ) &&
-        Objects.equals( getSourceGroupId( ), that.getSourceGroupId( ) );
+        Objects.equals( getSourceGroupId( ), that.getSourceGroupId( ) ) &&
+        Objects.equals( getDescription( ), that.getDescription( ) );
   }
 
   @Override
   public int hashCode( ) {
-    return Objects.hash( getSourceUserId( ), getSourceGroupName( ), getSourceGroupId( ) );
+    return Objects.hash( getSourceUserId( ), getSourceGroupName( ), getSourceGroupId( ), getDescription( ) );
   }
 
   @Override
@@ -98,6 +110,7 @@ public class UserIdGroupPairTypeWithEquals {
         .add( "sourceUserId", sourceUserId )
         .add( "sourceGroupName", sourceGroupName )
         .add( "sourceGroupId", sourceGroupId )
+        .add( "description", description )
         .toString( );
   }
 }

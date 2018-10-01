@@ -35,14 +35,17 @@ import com.google.common.base.MoreObjects;
 public class CidrIpTypeWithEquals {
 
   private String cidrIp;
+  private String description;
 
   public CidrIpTypeWithEquals( CidrIpType cidrIpType ) {
     this.cidrIp = cidrIpType.getCidrIp( );
+    this.description = cidrIpType.getDescription( );
   }
 
   public CidrIpType getCidrIpType( ) {
     CidrIpType cidrIpType = new CidrIpType( );
     cidrIpType.setCidrIp( cidrIp );
+    cidrIpType.setCidrIp( description );
     return cidrIpType;
   }
 
@@ -54,23 +57,33 @@ public class CidrIpTypeWithEquals {
     this.cidrIp = cidrIp;
   }
 
+  public String getDescription( ) {
+    return description;
+  }
+
+  public void setDescription( final String description ) {
+    this.description = description;
+  }
+
   @Override
   public boolean equals( final Object o ) {
     if ( this == o ) return true;
     if ( o == null || getClass( ) != o.getClass( ) ) return false;
     final CidrIpTypeWithEquals that = (CidrIpTypeWithEquals) o;
-    return Objects.equals( getCidrIp( ), that.getCidrIp( ) );
+    return Objects.equals( getCidrIp( ), that.getCidrIp( ) ) &&
+        Objects.equals( getDescription( ), that.getDescription( ) );
   }
 
   @Override
   public int hashCode( ) {
-    return Objects.hash( getCidrIp( ) );
+    return Objects.hash( getCidrIp( ), getDescription() );
   }
 
   @Override
   public String toString( ) {
     return MoreObjects.toStringHelper( this )
         .add( "cidrIp", cidrIp )
+        .add( "description", description )
         .toString( );
   }
 }

@@ -39,6 +39,9 @@ public class EC2SecurityGroupRule {
   private String cidrIp;
 
   @Property
+  private String description;
+
+  @Property
   private String destinationSecurityGroupId;
 
   @Property
@@ -66,6 +69,14 @@ public class EC2SecurityGroupRule {
 
   public void setCidrIp( String cidrIp ) {
     this.cidrIp = cidrIp;
+  }
+
+  public String getDescription( ) {
+    return description;
+  }
+
+  public void setDescription( final String description ) {
+    this.description = description;
   }
 
   public String getDestinationSecurityGroupId( ) {
@@ -130,6 +141,7 @@ public class EC2SecurityGroupRule {
     if ( o == null || getClass( ) != o.getClass( ) ) return false;
     final EC2SecurityGroupRule that = (EC2SecurityGroupRule) o;
     return Objects.equals( getCidrIp( ), that.getCidrIp( ) ) &&
+        Objects.equals( getDescription( ), that.getDescription( ) ) &&
         Objects.equals( getDestinationSecurityGroupId( ), that.getDestinationSecurityGroupId( ) ) &&
         Objects.equals( getFromPort( ), that.getFromPort( ) ) &&
         Objects.equals( getIpProtocol( ), that.getIpProtocol( ) ) &&
@@ -141,13 +153,14 @@ public class EC2SecurityGroupRule {
 
   @Override
   public int hashCode( ) {
-    return Objects.hash( getCidrIp( ), getDestinationSecurityGroupId( ), getFromPort( ), getIpProtocol( ), getSourceSecurityGroupId( ), getSourceSecurityGroupName( ), getSourceSecurityGroupOwnerId( ), getToPort( ) );
+    return Objects.hash( getCidrIp( ), getDescription(), getDestinationSecurityGroupId( ), getFromPort( ), getIpProtocol( ), getSourceSecurityGroupId( ), getSourceSecurityGroupName( ), getSourceSecurityGroupOwnerId( ), getToPort( ) );
   }
 
   @Override
   public String toString( ) {
     return MoreObjects.toStringHelper( this )
         .add( "cidrIp", cidrIp )
+        .add( "description", description )
         .add( "destinationSecurityGroupId", destinationSecurityGroupId )
         .add( "fromPort", fromPort )
         .add( "ipProtocol", ipProtocol )
