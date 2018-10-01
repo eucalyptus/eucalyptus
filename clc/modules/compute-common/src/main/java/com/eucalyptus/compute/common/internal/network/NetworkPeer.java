@@ -58,27 +58,35 @@ public class NetworkPeer implements Serializable {
   private String            groupName;
   @Column( name = "network_rule_peer_network_group_id" )
   private String            groupId;
+  @Column( name = "network_rule_peer_network_description" )
+  private String            description;
 
   NetworkPeer( ) {}
 
   public NetworkPeer( final String userQueryKey,
                       final String groupName,
-                      final String groupId ) {
-    this( null, userQueryKey, groupName, groupId );
+                      final String groupId,
+                      final String description ) {
+    this( null, userQueryKey, groupName, groupId, description );
   }
 
   public NetworkPeer( @Nullable final NetworkRule networkRule,
                       final String userQueryKey,
                       final String groupName,
-                      final String groupId ) {
+                      final String groupId,
+                      final String description ) {
     this.networkRule = networkRule;
     this.otherAccountId = userQueryKey;
     this.groupName = groupName;
     this.groupId = groupId;
+    this.description = description;
   }
 
-  public static NetworkPeer create( final String userQueryKey, final String groupName, final String groupId ) {
-    return new NetworkPeer( userQueryKey, groupName, groupId );
+  public static NetworkPeer create( final String userQueryKey,
+                                    final String groupName,
+                                    final String groupId,
+                                    final String description ) {
+    return new NetworkPeer( userQueryKey, groupName, groupId, description );
   }
 
   public String getUserQueryKey( ) {
@@ -109,6 +117,15 @@ public class NetworkPeer implements Serializable {
 
   public void setGroupId( final String groupId ) {
     this.groupId = groupId;
+  }
+
+  @Nullable
+  public String getDescription( ) {
+    return description;
+  }
+
+  public void setDescription( final String description ) {
+    this.description = description;
   }
 
   @Override

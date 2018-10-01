@@ -33,6 +33,15 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 public class CidrIpType extends EucalyptusData {
 
   private String cidrIp;
+  private String description;
+
+  public CidrIpType( ) {
+  }
+
+  public CidrIpType( final String cidrIp, final String description ) {
+    this.cidrIp = cidrIp;
+    this.description = description;
+  }
 
   public String getCidrIp( ) {
     return cidrIp;
@@ -40,5 +49,13 @@ public class CidrIpType extends EucalyptusData {
 
   public void setCidrIp( String cidrIp ) {
     this.cidrIp = cidrIp;
+  }
+
+  public String getDescription( ) {
+    return description;
+  }
+
+  public void setDescription( final String description ) {
+    this.description = description;
   }
 }

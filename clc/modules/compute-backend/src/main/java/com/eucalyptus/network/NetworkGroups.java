@@ -45,13 +45,16 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.compute.common.CidrIpType;
 import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.internal.network.NetworkCidr;
 import com.eucalyptus.compute.common.internal.network.NetworkGroup;
 import com.eucalyptus.compute.common.internal.network.NetworkGroupTag;
 import com.eucalyptus.compute.common.internal.network.NetworkPeer;
@@ -71,13 +74,13 @@ import com.eucalyptus.network.config.NetworkConfigurations;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.compute.common.internal.tags.FilterSupport;
 import com.eucalyptus.util.Cidr;
+import com.eucalyptus.util.CompatFunction;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
-import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
@@ -92,7 +95,7 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
 
   public static final Pattern VPC_GROUP_NAME_PATTERN       = Pattern.compile( "[a-zA-Z0-9 ._\\-:/()#,@\\[\\]+=&;{}!$*]{1,255}" );
   public static final Pattern VPC_GROUP_DESC_PATTERN       = Pattern.compile( "[a-zA-Z0-9 ._\\-:/()#,@\\[\\]+=&;{}!$*]{0,255}" );
-  private static Logger       LOG                           = Logger.getLogger( NetworkGroups.class );
+  private static Logger       LOG                          = Logger.getLogger( NetworkGroups.class );
 
   @ConfigurableField( description = "Minutes before a pending index allocation timesout and is released.", initial = "35" )
   public static volatile Integer      NETWORK_INDEX_PENDING_TIMEOUT = 35;
@@ -226,7 +229,7 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
   }
 
   @TypeMapper
-  public enum NetworkPeerAsUserIdGroupPairType implements Function<NetworkPeer, UserIdGroupPairType> {
+  public enum NetworkPeerAsUserIdGroupPairType implements CompatFunction<NetworkPeer, UserIdGroupPairType> {
     INSTANCE;
     
     @Override
@@ -234,27 +237,43 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
       return new UserIdGroupPairType(
           peer.getUserQueryKey( ),
           peer.getGroupName( ),
-          peer.getGroupId( ) );
+          peer.getGroupId( ),
+          peer.getDescription( ) );
     }
   }
-  
+
   @TypeMapper
-  public enum NetworkRuleAsIpPerm implements Function<NetworkRule, IpPermissionType> {
+  public enum NetworkCidrAsCidrIpType implements CompatFunction<NetworkCidr, CidrIpType> {
+    INSTANCE;
+
+    @Override
+    public CidrIpType apply( final NetworkCidr cidr ) {
+      return new CidrIpType(
+          cidr.getCidrIp(),
+          cidr.getDescription( ) );
+    }
+  }
+
+  @TypeMapper
+  public enum NetworkRuleAsIpPerm implements CompatFunction<NetworkRule, IpPermissionType> {
     INSTANCE;
     
     @Override
     public IpPermissionType apply( final NetworkRule rule ) {
-      final IpPermissionType ipPerm = new IpPermissionType( rule.getDisplayProtocol( ), rule.getLowPort( ), rule.getHighPort( ) );
-      final Iterable<UserIdGroupPairType> peers = Iterables.transform( rule.getNetworkPeers( ),
-                                                                       TypeMappers.lookup( NetworkPeer.class, UserIdGroupPairType.class ) );
-      Iterables.addAll( ipPerm.getGroups( ), peers );
-      ipPerm.setCidrIpRanges( rule.getIpRanges( ) );
+      final IpPermissionType ipPerm = new IpPermissionType(
+          rule.getDisplayProtocol( ), rule.getLowPort( ), rule.getHighPort( ) );
+      ipPerm.getGroups( ).addAll( rule.getNetworkPeers( ).stream( )
+          .map( TypeMappers.lookupF( NetworkPeer.class, UserIdGroupPairType.class ) )
+          .collect( Collectors.toList( ) ) );
+      ipPerm.getIpRanges( ).addAll( rule.getIpRanges( ).stream( )
+          .map( TypeMappers.lookupF( NetworkCidr.class, CidrIpType.class ) )
+          .collect( Collectors.toList( ) ) );
       return ipPerm;
     }
   }
   
   @TypeMapper
-  public enum NetworkGroupAsSecurityGroupItem implements Function<NetworkGroup, SecurityGroupItemType> {
+  public enum NetworkGroupAsSecurityGroupItem implements CompatFunction<NetworkGroup, SecurityGroupItemType> {
     INSTANCE;
     @Override
     public SecurityGroupItemType apply( final NetworkGroup input ) {
@@ -280,20 +299,24 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
     }
   }
   
-  public enum IpPermissionTypeExtractNetworkPeers implements Function<IpPermissionType, Collection<NetworkPeer>> {
+  public enum IpPermissionTypeExtractNetworkPeers implements CompatFunction<IpPermissionType, Collection<NetworkPeer>> {
     INSTANCE;
     
     @Override
     public Collection<NetworkPeer> apply( IpPermissionType ipPerm ) {
       final Collection<NetworkPeer> networkPeers = Lists.newArrayList();
       for ( UserIdGroupPairType peerInfo : ipPerm.getGroups( ) ) {
-        networkPeers.add( new NetworkPeer( peerInfo.getSourceUserId(), peerInfo.getSourceGroupName(), peerInfo.getSourceGroupId() ) );
+        networkPeers.add( new NetworkPeer(
+            peerInfo.getSourceUserId(),
+            peerInfo.getSourceGroupName(),
+            peerInfo.getSourceGroupId(),
+            peerInfo.getDescription( ) ) );
       }
       return networkPeers;
     }
   }
 
-  private static class IpPermissionTypeAsNetworkRule implements Function<IpPermissionType, List<NetworkRule>> {
+  private static class IpPermissionTypeAsNetworkRule implements CompatFunction<IpPermissionType, List<NetworkRule>> {
     private final boolean anyProtocolAllowed;
     private final boolean forRevoke;
 
@@ -313,7 +336,7 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
         if ( ipPerm.getFromPort()!=null && ipPerm.getFromPort( ) == 0 && ipPerm.getToPort( ) != null && ipPerm.getToPort( ) == 0 ) {
           ipPerm.setToPort( 65535 );
         }
-        List<String> empty = Lists.newArrayList( );
+        List<NetworkCidr> empty = Collections.emptyList( );
         //:: fixes handling of under-specified named-network rules sent by some clients :://
         if ( ipPerm.getIpProtocol( ) == null ) {
           NetworkRule rule = NetworkRule.create( NetworkRule.Protocol.tcp, ipPerm.getFromPort( ), ipPerm.getToPort( ),
@@ -330,21 +353,28 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
                                                  IpPermissionTypeExtractNetworkPeers.INSTANCE.apply( ipPerm ), empty );
           ruleList.add( rule );
         }
-      } else if ( !ipPerm.getCidrIpRanges().isEmpty( ) ) {
-        List<String> ipRanges = Lists.newArrayList( );
-        List<String> literalIpRanges = Lists.newArrayList( ipPerm.getCidrIpRanges( ) );
-        for ( final String range : ipPerm.getCidrIpRanges( ) ) {
+      } else if ( !ipPerm.getIpRanges( ).isEmpty( ) ) {
+        List<NetworkCidr> ipRanges = Lists.newArrayList( );
+        List<NetworkCidr> literalIpRanges = Lists.newArrayList( );
+        for ( final CidrIpType range : ipPerm.getIpRanges( ) ) {
           try {
-            if ( range.indexOf( '/' ) < 0 ) throw new IllegalArgumentException( );
+            if ( range.getCidrIp()==null || range.getCidrIp().indexOf( '/' ) < 0 ) {
+              throw new IllegalArgumentException( "Invalid ip range" );
+            }
             try {
-              ipRanges.add( Cidr.parse( range, true ).toString( ) );
+              ipRanges.add( NetworkCidr.create(
+                  Cidr.parse( range.getCidrIp(), true ).toString( ),
+                  range.getDescription( ) ) );
             } catch ( IllegalArgumentException e ) {
               if ( forRevoke ) {
-                ipRanges.add( range );
+                ipRanges.add( NetworkCidr.create(
+                    range.getCidrIp( ),
+                    range.getDescription( ) ) );
               } else {
                 throw e;
               }
             }
+            literalIpRanges.add( NetworkCidr.create( range.getCidrIp( )  ) );
           } catch ( IllegalArgumentException e ) {
             throw new IllegalArgumentException( "Invalid IP range: '"+range+"'" );
           }
@@ -381,7 +411,7 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
   }
 
   @RestrictedTypes.Resolver( NetworkGroup.class )
-  public enum Lookup implements Function<String, NetworkGroup> {
+  public enum Lookup implements CompatFunction<String, NetworkGroup> {
     INSTANCE;
 
     @Override
@@ -423,13 +453,13 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
     }
   }
 
-  private enum FilterSetFunctions implements Function<NetworkGroup,Set<String>> {
+  private enum FilterSetFunctions implements CompatFunction<NetworkGroup,Set<String>> {
     PERMISSION_CIDR {
       @Override
       public Set<String> apply( final NetworkGroup group ) {
         final Set<String> result = Sets.newHashSet();
         for ( final NetworkRule rule : group.getNetworkRules() ) {
-          result.addAll( rule.getIpRanges() );
+          result.addAll( rule.getIpRanges( ).stream( ).map( NetworkCidr::getCidrIp ).collect( Collectors.toList( ) ) );
         }
         return result;
       }
@@ -503,7 +533,7 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
   }
 
   @RestrictedTypes.QuantityMetricFunction( CloudMetadata.NetworkGroupMetadata.class )
-  public enum CountNetworkGroups implements Function<OwnerFullName, Long> {
+  public enum CountNetworkGroups implements CompatFunction<OwnerFullName, Long> {
     INSTANCE;
 
     @Override

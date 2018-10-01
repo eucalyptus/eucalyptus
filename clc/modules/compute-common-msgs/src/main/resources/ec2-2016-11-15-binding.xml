@@ -38,7 +38,7 @@
   <include path="classpath:ec2-export-12-05-01.xml" />
   <include path="classpath:ec2-ips-15-04-15.xml" />
   <include path="classpath:ec2-keypairs-10-08-31.xml" />
-  <include path="classpath:ec2-security-11-01-01.xml" />
+  <include path="classpath:ec2-security-16-11-15.xml" />
   <include path="classpath:ec2-zones-10-08-31.xml" />
   <include path="classpath:ec2-regions-10-08-31.xml" />
   <include path="classpath:ec2-ebs-volumes-14-09-01.xml" />
