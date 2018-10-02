@@ -39,6 +39,9 @@ import com.google.common.collect.Lists;
 public class AWSIAMManagedPolicyProperties implements ResourceProperties {
 
   @Property
+  private String managedPolicyName;
+
+  @Property
   private String description;
 
   @Property
@@ -56,6 +59,14 @@ public class AWSIAMManagedPolicyProperties implements ResourceProperties {
 
   @Property
   private ArrayList<String> users = Lists.newArrayList( );
+
+  public String getManagedPolicyName( ) {
+    return managedPolicyName;
+  }
+
+  public void setManagedPolicyName( final String managedPolicyName ) {
+    this.managedPolicyName = managedPolicyName;
+  }
 
   public String getDescription( ) {
     return description;

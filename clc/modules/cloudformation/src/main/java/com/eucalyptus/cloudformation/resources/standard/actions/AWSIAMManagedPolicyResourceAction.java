@@ -63,6 +63,7 @@ import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
 import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Euare;
@@ -72,9 +73,10 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -88,6 +90,10 @@ public class AWSIAMManagedPolicyResourceAction extends StepBasedResourceAction {
 
   public AWSIAMManagedPolicyResourceAction() {
     super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
+    Map<String, UpdateStep> updateWithReplacementMap = Maps.newLinkedHashMap();
+    updateWithReplacementMap.putAll(fromUpdateEnum(UpdateWithReplacementPreCreateSteps.class));
+    updateWithReplacementMap.putAll(createStepsToUpdateWithReplacementSteps(fromEnum(CreateSteps.class)));
+    setUpdateSteps(UpdateTypeAndDirection.UPDATE_WITH_REPLACEMENT, updateWithReplacementMap);
   }
 
   @Override
@@ -112,6 +118,9 @@ public class AWSIAMManagedPolicyResourceAction extends StepBasedResourceAction {
     if (!Objects.equals(properties.getUsers(), otherAction.properties.getUsers())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
+    if (!Objects.equals(properties.getManagedPolicyName(), otherAction.properties.getManagedPolicyName())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
     return updateType;
   }
 
@@ -121,7 +130,7 @@ public class AWSIAMManagedPolicyResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSIAMManagedPolicyResourceAction action = (AWSIAMManagedPolicyResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        String policyName = action.getDefaultPhysicalResourceId();
+        String policyName = action.properties.getManagedPolicyName() != null ? action.properties.getManagedPolicyName() : action.getDefaultPhysicalResourceId();
         CreatePolicyType createPolicyType = MessageHelper.createMessage(CreatePolicyType.class, action.info.getEffectiveUserId());
         if (action.properties.getDescription() != null) {
           createPolicyType.setDescription(action.properties.getDescription());
@@ -423,6 +432,20 @@ public class AWSIAMManagedPolicyResourceAction extends StepBasedResourceAction {
           deletePolicyVersionType.setPolicyArn(newAction.info.getPhysicalResourceId());
           deletePolicyVersionType.setVersionId(defaultPolicyVersionId);
           AsyncRequests.sendSync(configuration, deletePolicyVersionType);
+        }
+        return newAction;
+      }
+    }
+  }
+
+  private enum UpdateWithReplacementPreCreateSteps implements UpdateStep {
+    CHECK_CHANGED_MANAGED_POLICY_NAME {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSIAMManagedPolicyResourceAction oldAction = (AWSIAMManagedPolicyResourceAction) oldResourceAction;
+        AWSIAMManagedPolicyResourceAction newAction = (AWSIAMManagedPolicyResourceAction) newResourceAction;
+        if (Objects.equals(oldAction.properties.getManagedPolicyName(), newAction.properties.getManagedPolicyName()) && oldAction.properties.getManagedPolicyName() != null) {
+          throw new ValidationErrorException("CloudFormation cannot update a stack when a custom-named resource requires replacing. Rename "+oldAction.properties.getManagedPolicyName()+" and update the stack again.");
         }
         return newAction;
       }
