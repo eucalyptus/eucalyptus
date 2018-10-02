@@ -53,6 +53,7 @@ import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.ClientUnauthorizedComputeException;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.internal.network.NetworkCidr;
 import com.eucalyptus.compute.common.internal.network.NetworkGroup;
 import com.eucalyptus.compute.common.internal.network.NetworkRule;
 import com.eucalyptus.compute.common.internal.util.MetadataConstraintException;
@@ -138,7 +139,8 @@ public class NetworkGroupManager {
             final NetworkGroup group = NetworkGroups.create( ctx.getUserFullName( ), vpc, groupName, groupDescription );
             if ( vpc != null ) {
               group.addNetworkRules( Lists.newArrayList(
-                  NetworkRule.createEgress( null/*protocol name*/, -1, null/*low port*/, null/*high port*/, null/*peers*/, Collections.singleton( "0.0.0.0/0" ) )
+                  NetworkRule.createEgress( null/*protocol name*/, -1, null/*low port*/, null/*high port*/,
+                      null/*peers*/, Collections.singleton( NetworkCidr.create( "0.0.0.0/0" ) ) )
               ) );
             }
             tx.commit();
@@ -269,7 +271,7 @@ public class NetworkGroupManager {
             throw new ClientComputeException( "InvalidGroup.NotFound", e.getMessage( ) );
           }
           for ( final IpPermissionType ipPerm : ipPermissions ) {
-            if ( ipPerm.getCidrIpRanges().isEmpty() && ipPerm.getGroups().isEmpty() ) {
+            if ( ipPerm.getIpRanges().isEmpty() && ipPerm.getGroups().isEmpty() ) {
               continue; // see EUCA-5934
             }
             if ((ipPerm.getIpProtocol( ).equals( "icmp" ) || (ipPerm.getIpProtocol( ).equals( "1" ))) &&
@@ -342,7 +344,7 @@ public class NetworkGroupManager {
             throw new ClientComputeException( "InvalidGroup.NotFound", e.getMessage( ) );
           }
           for ( final IpPermissionType ipPerm : ipPermissions ) {
-            if ( ipPerm.getCidrIpRanges().isEmpty() && ipPerm.getGroups().isEmpty() ) {
+            if ( ipPerm.getIpRanges().isEmpty() && ipPerm.getGroups().isEmpty() ) {
               continue; // see EUCA-5934
             }
             if ((ipPerm.getIpProtocol( ).equals( "icmp" ) || (ipPerm.getIpProtocol( ).equals( "1" ))) &&
@@ -516,11 +518,11 @@ public class NetworkGroupManager {
         }
         // set a rule for tcp:1-65535, udp:1-65535, icmp: -1
         IpPermissionType tcpPermission = new IpPermissionType("tcp", 1, 65535);
-        tcpPermission.setGroups(Lists.newArrayList(new UserIdGroupPairType(sourceSecurityGroupOwnerId, sourceSecurityGroupName, null)));
+        tcpPermission.setGroups(Lists.newArrayList(new UserIdGroupPairType(sourceSecurityGroupOwnerId, sourceSecurityGroupName, null, null)));
         IpPermissionType udpPermission = new IpPermissionType("udp", 1, 65535); 
-        udpPermission.setGroups(Lists.newArrayList(new UserIdGroupPairType(sourceSecurityGroupOwnerId, sourceSecurityGroupName, null)));
+        udpPermission.setGroups(Lists.newArrayList(new UserIdGroupPairType(sourceSecurityGroupOwnerId, sourceSecurityGroupName, null, null)));
         IpPermissionType icmpPermission = new IpPermissionType("icmp", -1, -1); 
-        icmpPermission.setGroups(Lists.newArrayList(new UserIdGroupPairType(sourceSecurityGroupOwnerId, sourceSecurityGroupName, null)));
+        icmpPermission.setGroups(Lists.newArrayList(new UserIdGroupPairType(sourceSecurityGroupOwnerId, sourceSecurityGroupName, null, null)));
         return Lists.newArrayList(tcpPermission, udpPermission, icmpPermission);
       }
     }

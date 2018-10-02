@@ -51,7 +51,6 @@ import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
-import javax.persistence.EntityTransaction;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Index;
@@ -99,6 +98,7 @@ import groovy.sql.Sql;
 public class NetworkRule extends AbstractPersistent {
 
   public static final Pattern PROTOCOL_PATTERN = Pattern.compile( "icmp|tcp|udp|[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]|-1" );
+  public static final Pattern PERMISSION_DESC_PATTERN = Pattern.compile( "[a-zA-Z0-9 ._\\-:/()#,@\\[\\]+=&;{}!$*]{0,255}" );
 
   /**
    * 
@@ -123,7 +123,7 @@ public class NetworkRule extends AbstractPersistent {
 
     private final int number;
 
-    private Protocol( int number ) {
+    Protocol( int number ) {
       this.number = number;
     }
 
@@ -168,7 +168,7 @@ public class NetworkRule extends AbstractPersistent {
   
   @ElementCollection
   @CollectionTable( name = "metadata_network_rule_ip_ranges" )
-  private Set<String>       ipRanges         = Sets.newHashSet( );
+  private Set<NetworkCidr>  ipRanges         = Sets.newHashSet( );
   
   @ElementCollection
   @CollectionTable( name = "metadata_network_group_rule_peers" )
@@ -180,7 +180,7 @@ public class NetworkRule extends AbstractPersistent {
                          final Integer protocolNumber,
                          final Integer lowPort,
                          final Integer highPort,
-                         final Collection<String> ipRanges,
+                         final Collection<NetworkCidr> ipRanges,
                          final Collection<NetworkPeer> peers ) {
     this.egress = false;
     this.protocol = protocol;
@@ -206,9 +206,19 @@ public class NetworkRule extends AbstractPersistent {
     }
 
     if ( ipRanges != null ) {
+      for ( NetworkCidr cidr : ipRanges ) {
+        if ( cidr.getDescription( ) != null && !PERMISSION_DESC_PATTERN.matcher( cidr.getDescription( ) ).matches( ) ) {
+          throw new IllegalArgumentException( "Invalid permission description" );
+        }
+      }
       this.ipRanges.addAll( ipRanges );
     }
     if ( peers != null ) {
+      for ( NetworkPeer peer : peers ) {
+        if ( peer.getDescription( ) != null && !PERMISSION_DESC_PATTERN.matcher( peer.getDescription( ) ).matches( ) ) {
+          throw new IllegalArgumentException( "Invalid permission description" );
+        }
+      }
       this.networkPeers.addAll( peers );
     }
   }
@@ -217,7 +227,7 @@ public class NetworkRule extends AbstractPersistent {
                                     final Integer lowPort,
                                     final Integer highPort,
                                     final Collection<NetworkPeer> peers,
-                                    final Collection<String> ipRanges ) {
+                                    final Collection<NetworkCidr> ipRanges ) {
     return create( protocol, protocol.number, lowPort, highPort, peers, ipRanges );
   }
 
@@ -226,7 +236,7 @@ public class NetworkRule extends AbstractPersistent {
                                     final Integer lowPort,
                                     final Integer highPort,
                                     final Collection<NetworkPeer> peers,
-                                    final Collection<String> ipRanges ) {
+                                    final Collection<NetworkCidr> ipRanges ) {
     return new NetworkRule( protocol, protocolNumber, lowPort, highPort, ipRanges, peers );
   }
 
@@ -235,7 +245,7 @@ public class NetworkRule extends AbstractPersistent {
                                           final Integer lowPort,
                                           final Integer highPort,
                                           final Collection<NetworkPeer> peers,
-                                          final Collection<String> ipRanges ) {
+                                          final Collection<NetworkCidr> ipRanges ) {
     final NetworkRule rule = new NetworkRule( protocol, protocolNumber, lowPort, highPort, ipRanges, peers );
     rule.setEgress( true );
     return rule;
@@ -246,7 +256,7 @@ public class NetworkRule extends AbstractPersistent {
                                     final Integer lowPort,
                                     final Integer highPort,
                                     final Collection<NetworkPeer> peers,
-                                    final Collection<String> ipRanges ) {
+                                    final Collection<NetworkCidr> ipRanges ) {
     Pair<Optional<Protocol>,Integer> protocolPair = parseProtocol( protocolText, vpc );
     return create( protocolPair.getLeft( ).orNull( ), protocolPair.getRight( ), lowPort, highPort, peers, ipRanges );
   }
@@ -363,11 +373,11 @@ public class NetworkRule extends AbstractPersistent {
     this.highPort = highPort;
   }
   
-  public Set<String> getIpRanges( ) {
+  public Set<NetworkCidr> getIpRanges( ) {
     return this.ipRanges;
   }
   
-  public void setIpRanges( final Set<String> ipRanges ) {
+  public void setIpRanges( final Set<NetworkCidr> ipRanges ) {
     this.ipRanges = ipRanges;
   }
   

@@ -39,14 +39,20 @@ public class UserIdGroupPairType extends EucalyptusData {
   private String sourceGroupName;
   @HttpParameterMapping( parameter = "GroupId" )
   private String sourceGroupId;
+  private String description;
 
   public UserIdGroupPairType( ) {
   }
 
   public UserIdGroupPairType( String userId, String groupName, String groupId ) {
+    this( userId, groupName, groupId, null );
+  }
+
+  public UserIdGroupPairType( String userId, String groupName, String groupId, String description ) {
     this.sourceUserId = userId;
     this.sourceGroupName = groupName;
     this.sourceGroupId = groupId;
+    this.description = description;
   }
 
   public String getSourceUserId( ) {
@@ -71,5 +77,13 @@ public class UserIdGroupPairType extends EucalyptusData {
 
   public void setSourceGroupId( String sourceGroupId ) {
     this.sourceGroupId = sourceGroupId;
+  }
+
+  public String getDescription( ) {
+    return description;
+  }
+
+  public void setDescription( final String description ) {
+    this.description = description;
   }
 }

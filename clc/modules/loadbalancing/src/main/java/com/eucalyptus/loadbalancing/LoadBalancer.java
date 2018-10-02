@@ -144,8 +144,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		if(this.relationView==null)
 			this.relationView = new LoadBalancerRelationView(this);
 	}
-	
-	@Transient
+
 	private static final long serialVersionUID = 1L;
 	
 	public enum STATE {

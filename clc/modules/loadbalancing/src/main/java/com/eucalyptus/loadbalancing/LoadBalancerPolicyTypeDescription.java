@@ -53,8 +53,7 @@ import com.google.common.collect.Lists;
 @Table( name = "metadata_policy_type_description" )
 public class LoadBalancerPolicyTypeDescription extends AbstractPersistent{
 	private static Logger    LOG     = Logger.getLogger( LoadBalancerPolicyTypeDescription.class );
-	
-	@Transient
+
 	private static final long serialVersionUID = 1L;
 	
 	@Transient

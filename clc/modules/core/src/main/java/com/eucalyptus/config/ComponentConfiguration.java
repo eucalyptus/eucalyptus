@@ -51,7 +51,7 @@ import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import javax.persistence.Transient;
+
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.CanBootstrap;
 import com.eucalyptus.component.Component;
@@ -87,9 +87,9 @@ import groovy.sql.Sql;
 @Inheritance( strategy = InheritanceType.SINGLE_TABLE )
 @DiscriminatorColumn(length = 255)
 public class ComponentConfiguration extends AbstractPersistent implements ServiceConfiguration {
-  @Transient
+
   private static final long serialVersionUID = 1L;
-  @Transient
+
   private static Logger     LOG              = Logger.getLogger( ComponentConfiguration.class );
 
   @Column( name = "config_component_partition" )

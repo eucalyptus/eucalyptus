@@ -39,6 +39,9 @@ public class AWSEC2SecurityGroupEgressProperties implements ResourceProperties {
   private String cidrIp;
 
   @Property
+  private String description;
+
+  @Property
   private String destinationSecurityGroupId;
 
   @Property
@@ -61,6 +64,14 @@ public class AWSEC2SecurityGroupEgressProperties implements ResourceProperties {
 
   public void setCidrIp( String cidrIp ) {
     this.cidrIp = cidrIp;
+  }
+
+  public String getDescription( ) {
+    return description;
+  }
+
+  public void setDescription( final String description ) {
+    this.description = description;
   }
 
   public String getDestinationSecurityGroupId( ) {
@@ -107,6 +118,7 @@ public class AWSEC2SecurityGroupEgressProperties implements ResourceProperties {
   public String toString( ) {
     return MoreObjects.toStringHelper( this )
         .add( "cidrIp", cidrIp )
+        .add( "description", description )
         .add( "destinationSecurityGroupId", destinationSecurityGroupId )
         .add( "fromPort", fromPort )
         .add( "groupId", groupId )

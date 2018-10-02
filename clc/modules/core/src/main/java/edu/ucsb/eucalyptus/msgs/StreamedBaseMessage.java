@@ -39,11 +39,10 @@
 
 package edu.ucsb.eucalyptus.msgs;
 
-import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 
 public class StreamedBaseMessage extends BaseMessage {
-  @Transient
+
   private static Logger        LOG       = Logger.getLogger( StreamedBaseMessage.class );
   private boolean hasStreamingData; //True if data will be streamed, false if not. If message itself contains full response then false
   

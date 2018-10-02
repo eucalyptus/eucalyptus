@@ -49,6 +49,9 @@ public class AWSEC2SecurityGroupIngressProperties implements ResourceProperties 
   private String cidrIp;
 
   @Property
+  private String description;
+
+  @Property
   private String sourceSecurityGroupName;
 
   @Property
@@ -69,6 +72,14 @@ public class AWSEC2SecurityGroupIngressProperties implements ResourceProperties 
 
   public void setCidrIp( String cidrIp ) {
     this.cidrIp = cidrIp;
+  }
+
+  public String getDescription( ) {
+    return description;
+  }
+
+  public void setDescription( final String description ) {
+    this.description = description;
   }
 
   public Integer getFromPort( ) {
@@ -142,6 +153,7 @@ public class AWSEC2SecurityGroupIngressProperties implements ResourceProperties 
         .add( "groupId", groupId )
         .add( "ipProtocol", ipProtocol )
         .add( "cidrIp", cidrIp )
+        .add( "description", description )
         .add( "sourceSecurityGroupName", sourceSecurityGroupName )
         .add( "sourceSecurityGroupId", sourceSecurityGroupId )
         .add( "sourceSecurityGroupOwnerId", sourceSecurityGroupOwnerId )

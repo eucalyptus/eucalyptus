@@ -54,15 +54,6 @@ public class IpPermissionType extends EucalyptusData {
     this.toPort = toPort;
   }
 
-  public List<String> getCidrIpRanges( ) {
-    List<String> ranges = Lists.newArrayList( );
-    for ( CidrIpType ipRange : ipRanges ) {
-      ranges.add( ipRange.getCidrIp( ) );
-    }
-
-    return ranges;
-  }
-
   public void setCidrIpRanges( Collection<String> cidrIps ) {
     ArrayList<CidrIpType> ranges = Lists.newArrayList( );
     for ( String cidrIp : cidrIps ) {

@@ -50,6 +50,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.compute.common.NatGatewayType;
+import com.eucalyptus.compute.common.internal.network.NetworkCidr;
 import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
 import com.eucalyptus.compute.common.internal.util.ResourceAllocationException;
 import com.eucalyptus.component.annotation.ComponentNamed;
@@ -1033,10 +1034,10 @@ public class VpcManager {
                 NetworkGroups.defaultNetworkName(),
                 "default VPC security group" );
             final Collection<NetworkPeer> peers = Lists.newArrayList(
-                NetworkPeer.create( group.getOwnerAccountNumber(), group.getName(), group.getGroupId() ) );
+                NetworkPeer.create( group.getOwnerAccountNumber(), group.getName(), group.getGroupId(), null ) );
             group.addNetworkRules( Lists.newArrayList(
                 NetworkRule.create( null/*protocol name*/, -1, null/*low port*/, null/*high port*/, peers, null/*cidrs*/ ),
-                NetworkRule.createEgress( null/*protocol name*/, -1, null/*low port*/, null/*high port*/, null/*peers*/, Collections.singleton( "0.0.0.0/0" ) )
+                NetworkRule.createEgress( null/*protocol name*/, -1, null/*low port*/, null/*high port*/, null/*peers*/, Collections.singleton( NetworkCidr.create(  "0.0.0.0/0" ) ) )
             ) );
             securityGroups.save( group );
           }

@@ -412,7 +412,7 @@ public class NetworkInfoBroadcaster {
             .toPort( toPort )
             .icmpType(icmpType )
             .icmpCode( icmpCode )
-            .cidr( Option.of( cidr ) )
+            .cidr( Option.of( cidr.getCidrIp( ) ) )
             .o( )
       ).toJavaList( ) );
     }

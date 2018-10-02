@@ -68,7 +68,7 @@ import com.google.common.collect.Lists;
 @DiscriminatorColumn( name = "record_class", discriminatorType = DiscriminatorType.STRING )
 @DiscriminatorValue( value = "base" )
 public class BaseRecord extends AbstractPersistent implements Serializable, Record {
-  @Transient
+
   private static Logger                     LOG    = Logger.getLogger( BaseRecord.class );
   @Column( name = "record_timestamp" )
   private Date                              timestamp;
@@ -94,25 +94,25 @@ public class BaseRecord extends AbstractPersistent implements Serializable, Reco
   private RecordLevel                       level;
   @Transient
   private ArrayList                         others = Lists.newArrayList( );
-  @Transient
+
   private static final String               ISNULL = "NULL";
-  @Transient
+
   protected static final String             NEXT   = "\n";
   @Transient
   private transient String                  lead;
   @Transient
   private Class                             realCreator;
-  @Transient
+
   private static BlockingQueue<EventRecord> trace  = new LinkedBlockingDeque<EventRecord>( );
-  @Transient
+
   private static BlockingQueue<EventRecord> debug  = new LinkedBlockingDeque<EventRecord>( );
-  @Transient
+
   private static BlockingQueue<EventRecord> info   = new LinkedBlockingDeque<EventRecord>( );
-  @Transient
+
   private static BlockingQueue<EventRecord> warn   = new LinkedBlockingDeque<EventRecord>( );
-  @Transient
+
   private static BlockingQueue<EventRecord> error  = new LinkedBlockingDeque<EventRecord>( );
-  @Transient
+
   private static BlockingQueue<EventRecord> fatal  = new LinkedBlockingDeque<EventRecord>( );
   
   public BaseRecord( EventType type, EventClass clazz, Class creator, StackTraceElement codeLocation, String userId, String correlationId, String other ) {

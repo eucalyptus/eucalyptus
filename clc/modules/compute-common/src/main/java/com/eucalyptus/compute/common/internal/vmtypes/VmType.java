@@ -49,7 +49,6 @@ import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PostLoad;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.compute.common.CloudMetadata.VmTypeMetadata;
@@ -105,7 +104,7 @@ import com.google.common.collect.Sets;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "cloud_vm_type" )
 public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFullName<VmTypeMetadata> {
-  @Transient
+
   private static final long  serialVersionUID = 1L;
   
   @Column( name = "config_vm_type_name" )

@@ -98,10 +98,9 @@ import com.google.common.collect.Sets;
 @DiscriminatorColumn( name = "metadata_image_discriminator", discriminatorType = DiscriminatorType.STRING )
 @DiscriminatorValue( value = "metadata_kernel_or_ramdisk" )
 public class ImageInfo extends UserMetadata<ImageMetadata.State> implements ImageMetadata {
-  @Transient
+
   private static final long          serialVersionUID = 1L;
-  
-  @Transient
+
   private static Logger              LOG              = Logger.getLogger( ImageInfo.class );
   
   /**

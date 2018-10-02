@@ -63,9 +63,8 @@ import com.eucalyptus.configurable.ConfigurableIdentifier;
                     singleton = false,
                     deferred = true )
 public class NodeControllerConfiguration extends ComponentConfiguration implements Serializable {
-  @Transient
+
   private static String DEFAULT_SERVICE_PATH = "/axis2/services/EucalyptusNC";
-  @Transient
   private static Integer DEFAULT_SERVICE_PORT = 8775;
 
   @Transient

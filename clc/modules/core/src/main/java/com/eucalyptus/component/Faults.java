@@ -175,7 +175,7 @@ public class Faults {
              updatable = false,
              nullable = false )
     private String                naturalId;
-    @Transient
+
     private static final long     serialVersionUID = 1L;
     @Enumerated( EnumType.STRING )
     private final Severity        severity;

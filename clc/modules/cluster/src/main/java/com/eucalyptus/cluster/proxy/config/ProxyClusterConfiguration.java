@@ -40,33 +40,17 @@
 package com.eucalyptus.cluster.proxy.config;
 
 import java.io.Serializable;
-import java.util.concurrent.Callable;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.PersistenceContext;
-import javax.persistence.PostLoad;
-import javax.persistence.Transient;
-import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.cluster.proxy.ProxyClusterController;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.config.ComponentConfiguration;
-import com.eucalyptus.configurable.ConfigurableClass;
-import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.configurable.ConfigurableIdentifier;
-import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.upgrade.Upgrades;
-import com.eucalyptus.upgrade.Upgrades.PreUpgrade;
-import groovy.sql.Sql;
 
 /**
  *
  */
 @ComponentPart( ProxyClusterController.class )
 public class ProxyClusterConfiguration extends ComponentConfiguration implements Serializable {
-  @Transient
+
   private static String         DEFAULT_SERVICE_PATH  = "/axis2/services/EucalyptusCC";
-  @Transient
   private static String         INSECURE_SERVICE_PATH = "/axis2/services/EucalyptusGL";
   
   public ProxyClusterConfiguration( ) {}

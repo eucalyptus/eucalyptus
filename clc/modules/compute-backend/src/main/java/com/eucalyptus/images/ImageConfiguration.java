@@ -46,7 +46,6 @@ import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -63,7 +62,7 @@ import com.google.common.base.MoreObjects;
 @Table( name = "cloud_image_configuration" )
 @ConfigurableClass( root = "cloud.images", description = "Configuration options controlling the handling of registered images (EMI/EKI/ERI)." )
 public class ImageConfiguration extends AbstractPersistent {
-  @Transient
+
   private static Logger LOG = Logger.getLogger( ImageConfiguration.class );
 
   private static final int DEFAULT_MAX_IMAGE_SIZE_GB = 30;

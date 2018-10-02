@@ -68,15 +68,15 @@ import com.google.common.base.Predicate;
 @ConfigurableClass(root = "objectstorage.s3provider", alias = "backendconfig", description = "Configuration for S3-compatible backend",
     singleton = true)
 public class S3ProviderConfiguration extends AbstractPersistent implements CacheableConfiguration<S3ProviderConfiguration> {
-  @Transient
+
   private static final String DEFAULT_S3_ENDPOINT = "uninitialized-s3-endpoint";
-  @Transient
+
   private static final Logger LOG = Logger.getLogger(S3ProviderConfiguration.class);
-  @Transient
+
   private static final boolean DEFAULT_BACKEND_DNS = false;
-  @Transient
+
   private static final Boolean DEFAULT_BACKEND_HTTPS = false;
-  @Transient
+
   private static final String DEFAULT_S3_HEAD_RESPONSE = "405";
 
   @ConfigurableField(description = "External S3 endpoint.", displayName = "s3_endpoint", initial = DEFAULT_S3_ENDPOINT)

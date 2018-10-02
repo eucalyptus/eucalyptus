@@ -43,14 +43,13 @@ import javax.persistence.Column;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.MappedSuperclass;
-import javax.persistence.Transient;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import org.hibernate.annotations.Type;
 
 @MappedSuperclass
 public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> extends AbstractPersistent {
-  @Transient 
+
   private static final long serialVersionUID = 1L;
 
   @Column( name = "metadata_state" )

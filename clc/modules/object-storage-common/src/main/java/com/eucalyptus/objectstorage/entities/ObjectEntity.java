@@ -58,8 +58,6 @@ import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.annotations.OptimisticLockType;
 import org.hibernate.annotations.OptimisticLocking;
 import org.hibernate.annotations.Type;
-import org.hibernate.criterion.Criterion;
-import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.objectstorage.ObjectState;
@@ -83,7 +81,6 @@ import com.google.common.collect.Maps;
     @Index(name = "IDX_object_sort", columnList = "object_key, object_last_modified desc"),
 })
 public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implements Comparable {
-  @Transient
   private static Logger LOG = Logger.getLogger(ObjectEntity.class);
 
   @Column(name = "object_key")

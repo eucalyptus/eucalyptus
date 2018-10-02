@@ -69,7 +69,7 @@ import com.google.common.collect.ImmutableList;
 @Table( name = "metadata_autoscale_group" )
 public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
 	private static Logger    LOG     = Logger.getLogger( LoadBalancerAutoScalingGroup.class );
-	@Transient
+
 	private static final long serialVersionUID = 1L;
 
 	@Transient

@@ -28,6 +28,7 @@
  ************************************************************************/
 package com.eucalyptus.network
 
+import com.eucalyptus.compute.common.internal.network.NetworkCidr
 import com.eucalyptus.compute.common.internal.network.NetworkGroup
 import com.eucalyptus.compute.common.internal.network.NetworkPeer
 import com.eucalyptus.compute.common.internal.network.NetworkRule
@@ -55,8 +56,8 @@ class NetworkGroupFilterSupportTest extends FilterSupportTest.InstanceTestSuppor
     assertMatch( true, "group-name", "test", new NetworkGroup( null, "test" ) )
     assertMatch( false, "group-name", "test", new NetworkGroup( null, "not test" ) )
 
-    assertMatch( true, "ip-permission.cidr", "0.0.0.0/0", new NetworkGroup( networkRules: [ new NetworkRule( ipRanges: [ "0.0.0.0/0" ] ) ] as Set ) )
-    assertMatch( false, "ip-permission.cidr", "0.0.0.0/0", new NetworkGroup( networkRules: [ new NetworkRule( ipRanges: [ "1.1.1.1/32" ] ) ] as Set ) )
+    assertMatch( true, "ip-permission.cidr", "0.0.0.0/0", new NetworkGroup( networkRules: [ new NetworkRule( ipRanges: [new NetworkCidr (cidrIp: "0.0.0.0/0")] ) ] as Set ) )
+    assertMatch( false, "ip-permission.cidr", "0.0.0.0/0", new NetworkGroup( networkRules: [ new NetworkRule( ipRanges: [new NetworkCidr (cidrIp: "1.1.1.1/32")] ) ] as Set ) )
 
     assertMatch( true, "ip-permission.from-port", "34", new NetworkGroup( networkRules: [ new NetworkRule( lowPort: 34 ) ] as Set ) )
     assertMatch( false, "ip-permission.from-port", "34", new NetworkGroup( networkRules: [ new NetworkRule( lowPort: 35 ) ] as Set ) )
