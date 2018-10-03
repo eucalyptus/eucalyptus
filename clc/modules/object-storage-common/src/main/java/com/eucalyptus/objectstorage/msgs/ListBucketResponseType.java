@@ -36,13 +36,21 @@ public class ListBucketResponseType extends ObjectStorageResponseType {
 
   private String name;
   private String prefix;
-  private String marker;
-  private String nextMarker;
   private int maxKeys;
   private String delimiter;
   private boolean isTruncated;
   private ArrayList<ListEntry> contents;
   private ArrayList<CommonPrefixesEntry> commonPrefixesList = new ArrayList<CommonPrefixesEntry>( );
+
+  // v1 listing
+  private String marker;
+  private String nextMarker;
+
+  // v2 listing
+  private String startAfter;
+  private Integer keyCount;
+  private String continuationToken;
+  private String nextContinuationToken;
 
   public String getName( ) {
     return name;
@@ -96,12 +104,40 @@ public class ListBucketResponseType extends ObjectStorageResponseType {
     return isTruncated;
   }
 
-  public boolean isIsTruncated( ) {
-    return isTruncated;
-  }
-
   public void setIsTruncated( boolean isTruncated ) {
     this.isTruncated = isTruncated;
+  }
+
+  public String getStartAfter( ) {
+    return startAfter;
+  }
+
+  public void setStartAfter( final String startAfter ) {
+    this.startAfter = startAfter;
+  }
+
+  public Integer getKeyCount( ) {
+    return keyCount;
+  }
+
+  public void setKeyCount( final Integer keyCount ) {
+    this.keyCount = keyCount;
+  }
+
+  public String getContinuationToken( ) {
+    return continuationToken;
+  }
+
+  public void setContinuationToken( final String continuationToken ) {
+    this.continuationToken = continuationToken;
+  }
+
+  public String getNextContinuationToken( ) {
+    return nextContinuationToken;
+  }
+
+  public void setNextContinuationToken( final String nextContinuationToken ) {
+    this.nextContinuationToken = nextContinuationToken;
   }
 
   public ArrayList<ListEntry> getContents( ) {
