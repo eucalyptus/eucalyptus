@@ -42,9 +42,17 @@ import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 public class ListBucketType extends ObjectStorageRequestType {
 
   private String prefix;
-  private String marker;
   private String maxKeys;
   private String delimiter;
+
+  // v1
+  private String marker;
+
+  // v2
+  private String startAfter;
+  private String continuationToken;
+  private String fetchOwner;
+  private String listType;
 
   public ListBucketType( ) {
     prefix = "";
@@ -66,6 +74,38 @@ public class ListBucketType extends ObjectStorageRequestType {
 
   public void setMarker( String marker ) {
     this.marker = marker;
+  }
+
+  public String getStartAfter( ) {
+    return startAfter;
+  }
+
+  public void setStartAfter( final String startAfter ) {
+    this.startAfter = startAfter;
+  }
+
+  public String getContinuationToken( ) {
+    return continuationToken;
+  }
+
+  public void setContinuationToken( final String continuationToken ) {
+    this.continuationToken = continuationToken;
+  }
+
+  public String getFetchOwner( ) {
+    return fetchOwner;
+  }
+
+  public void setFetchOwner( final String fetchOwner ) {
+    this.fetchOwner = fetchOwner;
+  }
+
+  public String getListType( ) {
+    return listType;
+  }
+
+  public void setListType( final String listType ) {
+    this.listType = listType;
   }
 
   public String getMaxKeys( ) {
