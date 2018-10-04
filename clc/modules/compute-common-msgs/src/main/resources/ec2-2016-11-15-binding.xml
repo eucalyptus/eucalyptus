@@ -41,7 +41,7 @@
   <include path="classpath:ec2-security-16-11-15.xml" />
   <include path="classpath:ec2-zones-10-08-31.xml" />
   <include path="classpath:ec2-regions-10-08-31.xml" />
-  <include path="classpath:ec2-ebs-volumes-14-09-01.xml" />
+  <include path="classpath:ec2-ebs-volumes-16-11-15.xml" />
   <include path="classpath:ec2-ebs-snapshots-14-05-01.xml" />
   <include path="classpath:ec2-ebs-snapshot-attr.xml" />
   <include path="classpath:ec2-filters-tags-10-06-15.xml" />
