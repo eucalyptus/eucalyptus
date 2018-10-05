@@ -475,14 +475,16 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
    *
    * @return
    */
-  public ListEntry toListEntry() {
+  public ListEntry toListEntry(boolean includeOwner) {
     ListEntry e = new ListEntry();
     e.setEtag("\"" + this.geteTag() + "\"");
     e.setKey(this.getObjectKey());
     e.setLastModified(DateFormatter.dateToListingFormattedString(this.getObjectModifiedTimestamp()));
     e.setSize(this.getSize());
     e.setStorageClass(this.getStorageClass());
-    e.setOwner(new CanonicalUser(this.getOwnerCanonicalId(), this.getOwnerDisplayName()));
+    if (includeOwner) {
+      e.setOwner( new CanonicalUser( this.getOwnerCanonicalId( ), this.getOwnerDisplayName( ) ) );
+    }
     return e;
   }
 

@@ -123,8 +123,12 @@
              class="com.eucalyptus.objectstorage.msgs.ListBucketResponseType">
         <value name="Name" field="name"/>
         <value name="Prefix" field="prefix"/>
-        <value name="Marker" field="marker"/>
+        <value name="Marker" field="marker" usage="optional"/>
         <value name="NextMarker" field="nextMarker" usage="optional"/>
+        <value name="StartAfter" field="startAfter" usage="optional"/>
+        <value name="ContinuationToken" field="continuationToken" usage="optional"/>
+        <value name="NextContinuationToken" field="nextContinuationToken" usage="optional"/>
+        <value name="KeyCount" field="keyCount" usage="optional"/>
         <value name="MaxKeys" field="maxKeys"/>
         <value name="Delimiter" field="delimiter" usage="optional"/>
         <value name="IsTruncated" field="isTruncated"/>
