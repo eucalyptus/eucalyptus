@@ -13,13 +13,13 @@ import java.util.ArrayList;
 
 public class IdFormatList extends EucalyptusData {
 
-  private ArrayList<IdFormat> member = new ArrayList<IdFormat>();
+  private ArrayList<IdFormatItemType> member = new ArrayList<IdFormatItemType>();
 
-  public ArrayList<IdFormat> getMember( ) {
+  public ArrayList<IdFormatItemType> getMember( ) {
     return member;
   }
 
-  public void setMember( final ArrayList<IdFormat> member ) {
+  public void setMember( final ArrayList<IdFormatItemType> member ) {
     this.member = member;
   }
 }
