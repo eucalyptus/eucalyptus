@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
@@ -50,7 +51,9 @@ import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Restrictions;
 
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthContextSupplier;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -126,8 +129,6 @@ import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.OwnerFullName;
-import com.eucalyptus.util.FUtils;
-import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncExceptions;
@@ -1450,6 +1451,58 @@ public class ComputeService {
     return response;
   }
 
+  public DescribeAggregateIdFormatResponseType describeAggregateIdFormat(
+      DescribeAggregateIdFormatType request
+  ) throws EucalyptusCloudException {
+    final Context context = checkAuthorized( );
+    final DescribeAggregateIdFormatResponseType response = request.getReply( );
+    final IdFormatList idFormatList = new IdFormatList();
+    final AtomicBoolean aggregated = new AtomicBoolean( true );
+    idFormatList.setMember( Lists.newArrayList(
+        Iterables.transform(
+            ResourceIdentifiers.getLongIdentifierResources( ),
+            longIdResource -> {
+              boolean useLongId = ResourceIdentifiers.useLongIdentifierForResource( longIdResource );
+              if (!useLongId) aggregated.set( false );
+              return new IdFormatItemType(longIdResource, useLongId);
+            } )
+    ) );
+    response.setUseLongIdsAggregated( aggregated.get( ) );
+    response.setStatuses( idFormatList );
+    return response;
+  }
+
+  public DescribePrincipalIdFormatResponseType describePrincipalIdFormat(
+      DescribePrincipalIdFormatType request
+  ) throws EucalyptusCloudException {
+    final Context context = checkAuthorized( );
+    final DescribePrincipalIdFormatResponseType response = request.getReply( );
+    final PrincipalIdFormatList principals = new PrincipalIdFormatList( );
+    final PrincipalIdFormat principalIdFormat = new PrincipalIdFormat( );
+    final IdFormatList idFormatList = new IdFormatList();
+    final Predicate<String> resourcePredicate =
+        request.getResources( ) != null && !request.getResources( ).getMember( ).isEmpty( ) ?
+            Predicates.in( request.getResources( ).getMember( ) ) :
+            Predicates.alwaysTrue( );
+    idFormatList.setMember( Lists.newArrayList(
+        Iterables.transform(
+            Iterables.filter(
+                ResourceIdentifiers.getLongIdentifierResources( ),
+                resourcePredicate ),
+            longIdResource -> new IdFormatItemType(
+                longIdResource,
+                ResourceIdentifiers.useLongIdentifierForResource( longIdResource ) ) )
+    ) );
+    principalIdFormat.setStatuses( idFormatList );
+    try {
+      principalIdFormat.setArn( Accounts.getAccountArn( context.getAccountNumber( ) ) );
+    } catch ( AuthException ignore ) {
+    }
+    principals.getMember( ).add( principalIdFormat );
+    response.setPrincipals( principals );
+    return response;
+  }
+
   public AllocateHostsResponseType allocateHosts(
       final AllocateHostsType request
   ) throws EucalyptusCloudException {
@@ -1751,13 +1804,6 @@ public class ComputeService {
     return response;
   }
 
-  public DescribeAggregateIdFormatResponseType describeAggregateIdFormat(
-      DescribeAggregateIdFormatType request
-  ) {
-    final DescribeAggregateIdFormatResponseType response = request.getReply( );
-    return response;
-  }
-
   public DescribeElasticGpusResponseType describeElasticGpus(
       DescribeElasticGpusType request
   ) {
@@ -1825,13 +1871,6 @@ public class ComputeService {
       DescribeNetworkInterfacePermissionsType request
   ) {
     final DescribeNetworkInterfacePermissionsResponseType response = request.getReply( );
-    return response;
-  }
-
-  public DescribePrincipalIdFormatResponseType describePrincipalIdFormat(
-      DescribePrincipalIdFormatType request
-  ) {
-    final DescribePrincipalIdFormatResponseType response = request.getReply( );
     return response;
   }
 

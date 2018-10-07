@@ -535,14 +535,9 @@
       <structure name="item" type="com.eucalyptus.compute.common.HistoryRecordEntry"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.compute.common.IdFormat" abstract="true">
-    <value name="Deadline" get-method="getDeadline" set-method="setDeadline" usage="optional"/>
-    <value name="Resource" get-method="getResource" set-method="setResource" usage="optional"/>
-    <value name="UseLongIds" get-method="getUseLongIds" set-method="setUseLongIds" usage="optional"/>
-  </mapping>
   <mapping class="com.eucalyptus.compute.common.IdFormatList" abstract="true">
     <collection field="member">
-      <structure name="item" type="com.eucalyptus.compute.common.IdFormat"/>
+      <structure name="item" type="com.eucalyptus.compute.common.IdFormatItemType"/>
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.compute.common.InstanceCreditSpecificationList" abstract="true">
@@ -629,8 +624,8 @@
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.compute.common.PrincipalIdFormat" abstract="true">
-    <value name="Arn" get-method="getArn" set-method="setArn" usage="optional"/>
-    <structure get-method="getStatuses" set-method="setStatuses" usage="optional" type="com.eucalyptus.compute.common.IdFormatList" name="Statuses"/>
+    <value name="arn" get-method="getArn" set-method="setArn" usage="optional"/>
+    <structure get-method="getStatuses" set-method="setStatuses" usage="optional" type="com.eucalyptus.compute.common.IdFormatList" name="statusSet"/>
   </mapping>
   <mapping class="com.eucalyptus.compute.common.PrincipalIdFormatList" abstract="true">
     <collection field="member">
@@ -1435,8 +1430,8 @@
   <mapping name="DescribeAggregateIdFormatResponse" class="com.eucalyptus.compute.common.DescribeAggregateIdFormatResponseType"
            extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
-    <structure get-method="getStatuses" set-method="setStatuses" usage="optional" type="com.eucalyptus.compute.common.IdFormatList" name="Statuses"/>
-    <value name="UseLongIdsAggregated" get-method="getUseLongIdsAggregated" set-method="setUseLongIdsAggregated" usage="optional"/>
+    <structure get-method="getStatuses" set-method="setStatuses" usage="optional" type="com.eucalyptus.compute.common.IdFormatList" name="statusSet"/>
+    <value name="useLongIdsAggregated" get-method="getUseLongIdsAggregated" set-method="setUseLongIdsAggregated" usage="optional"/>
   </mapping>
   <mapping name="DescribeInstanceCreditSpecifications" class="com.eucalyptus.compute.common.DescribeInstanceCreditSpecificationsType"
            extends="com.eucalyptus.compute.common.ComputeMessage">
@@ -1478,8 +1473,8 @@
   <mapping name="DescribePrincipalIdFormatResponse" class="com.eucalyptus.compute.common.DescribePrincipalIdFormatResponseType"
            extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
-    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
-    <structure get-method="getPrincipals" set-method="setPrincipals" usage="optional" type="com.eucalyptus.compute.common.PrincipalIdFormatList" name="Principals"/>
+    <value name="nextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getPrincipals" set-method="setPrincipals" usage="optional" type="com.eucalyptus.compute.common.PrincipalIdFormatList" name="principalSet"/>
   </mapping>
 
   <mapping name="DescribeAccountAttributes" class="com.eucalyptus.compute.common.DescribeAccountAttributesType" extends="com.eucalyptus.compute.common.ComputeMessage">
