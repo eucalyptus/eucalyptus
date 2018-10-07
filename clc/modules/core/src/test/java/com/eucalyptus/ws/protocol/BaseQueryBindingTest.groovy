@@ -218,6 +218,18 @@ class BaseQueryBindingTest {
     assertNull( "Data value", httpValueTypes.dataValue  )
   }
 
+  @Test
+  void testHttpValueMessageListProperty() {
+    BaseQueryBinding binding = new TestQueryBinding( new TestBinding( ) )
+    Object HttpValueTypesObject = bind( binding, "/service?Operation=HttpValueTypes&ListDataValue.1=value1&ListDataValue.2=value2" )
+    assertTrue( "Bound type", HttpValueTypesObject instanceof HttpValueTypes )
+    HttpValueTypes httpValueTypes = (HttpValueTypes) HttpValueTypesObject
+    assertNotNull( "List data value", httpValueTypes?.listDataValue  )
+    assertEquals( "List data values", ["value1", "value2"], httpValueTypes?.listDataValue?.member  )
+    assertNull( "Data value", httpValueTypes.dataValue  )
+    assertNull( "Data value wrapper", httpValueTypes.dataValueWrapper  )
+  }
+
   Object bind( BaseQueryBinding binding, String url ) {
     binding.bind( new MappingHttpRequest( HttpVersion.HTTP_1_1, HttpMethod.GET, url ) )
   }
@@ -399,6 +411,7 @@ class NestedData extends EucalyptusMessage {
 class HttpValueTypes extends EucalyptusMessage {
   DataValue dataValue
   DataValueWrapper dataValueWrapper
+  ListDataValue listDataValue
 }
 
 class NestedDataChild extends EucalyptusData {
@@ -456,6 +469,11 @@ class DataValueWrapper extends EucalyptusData {
 class DataValue extends EucalyptusData {
   @HttpValue
   String value
+}
+
+class ListDataValue extends EucalyptusData {
+  @HttpValue
+  ArrayList<String> member = new ArrayList<String>();
 }
 
 class NestedDataGrandChildValue extends EucalyptusData {

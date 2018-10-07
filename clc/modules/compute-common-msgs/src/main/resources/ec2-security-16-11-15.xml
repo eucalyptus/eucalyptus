@@ -192,4 +192,36 @@
     <value name="return" get-method="get_return" set-method="set_return" />
   </mapping>
 
+  <mapping name="UpdateSecurityGroupRuleDescriptionsEgress" class="com.eucalyptus.compute.common.UpdateSecurityGroupRuleDescriptionsEgressType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="GroupId" get-method="getGroupId" set-method="setGroupId" usage="optional"/>
+    <value name="GroupName" get-method="getGroupName" set-method="setGroupName" usage="optional"/>
+    <collection name="ipPermissions" factory="org.jibx.runtime.Utility.arrayListFactory" field="ipPermissions">
+      <structure name="item" map-as="com.eucalyptus.compute.common.IpPermissionType" />
+    </collection>
+  </mapping>
+
+  <mapping name="UpdateSecurityGroupRuleDescriptionsEgressResponse" class="com.eucalyptus.compute.common.UpdateSecurityGroupRuleDescriptionsEgressResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+
+  <mapping name="UpdateSecurityGroupRuleDescriptionsIngress" class="com.eucalyptus.compute.common.UpdateSecurityGroupRuleDescriptionsIngressType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="GroupId" get-method="getGroupId" set-method="setGroupId" usage="optional"/>
+    <value name="GroupName" get-method="getGroupName" set-method="setGroupName" usage="optional"/>
+    <collection name="ipPermissions" factory="org.jibx.runtime.Utility.arrayListFactory" field="ipPermissions">
+      <structure name="item" map-as="com.eucalyptus.compute.common.IpPermissionType" />
+    </collection>
+  </mapping>
+
+  <mapping name="UpdateSecurityGroupRuleDescriptionsIngressResponse" class="com.eucalyptus.compute.common.UpdateSecurityGroupRuleDescriptionsIngressResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+
 </binding>

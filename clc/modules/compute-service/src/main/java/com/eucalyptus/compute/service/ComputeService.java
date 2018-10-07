@@ -1625,6 +1625,349 @@ public class ComputeService {
     return response;
   }
 
+  public AcceptVpcEndpointConnectionsResponseType acceptVpcEndpointConnections(
+    AcceptVpcEndpointConnectionsType request
+  ) {
+    final AcceptVpcEndpointConnectionsResponseType response = request.getReply( );
+    return response;
+  }
+
+  public CopyFpgaImageResponseType copyFpgaImage(
+      CopyFpgaImageType request
+  ) {
+    final CopyFpgaImageResponseType response = request.getReply( );
+    return response;
+  }
+
+  public CreateDefaultSubnetResponseType createDefaultSubnet(
+      CreateDefaultSubnetType request
+  ) {
+    final CreateDefaultSubnetResponseType response = request.getReply( );
+    return response;
+  }
+
+  public CreateDefaultVpcResponseType createDefaultVpc(
+      CreateDefaultVpcType request
+  ) {
+    final CreateDefaultVpcResponseType response = request.getReply( );
+    return response;
+  }
+
+  public CreateFleetResponseType createFleet(
+      CreateFleetType request
+  ) {
+    final CreateFleetResponseType response = request.getReply( );
+    return response;
+  }
+
+  public CreateFpgaImageResponseType createFpgaImage(
+      CreateFpgaImageType request
+  ) {
+    final CreateFpgaImageResponseType response = request.getReply( );
+    return response;
+  }
+
+  public CreateLaunchTemplateResponseType createLaunchTemplate(
+      CreateLaunchTemplateType request
+  ) {
+    final CreateLaunchTemplateResponseType response = request.getReply( );
+    return response;
+  }
+
+  public CreateLaunchTemplateVersionResponseType createLaunchTemplateVersion(
+      CreateLaunchTemplateVersionType request
+  ) {
+    final CreateLaunchTemplateVersionResponseType response = request.getReply( );
+    return response;
+  }
+
+  public CreateNetworkInterfacePermissionResponseType createNetworkInterfacePermission(
+      CreateNetworkInterfacePermissionType request
+  ) {
+    final CreateNetworkInterfacePermissionResponseType response = request.getReply( );
+    return response;
+  }
+
+  public CreateVpcEndpointConnectionNotificationResponseType createVpcEndpointConnectionNotification(
+      CreateVpcEndpointConnectionNotificationType request
+  ) {
+    final CreateVpcEndpointConnectionNotificationResponseType response = request.getReply( );
+    return response;
+  }
+
+  public CreateVpcEndpointServiceConfigurationResponseType createVpcEndpointServiceConfiguration(
+      CreateVpcEndpointServiceConfigurationType request
+  ) {
+    final CreateVpcEndpointServiceConfigurationResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DeleteFleetsResponseType deleteFleets(
+      DeleteFleetsType request
+  ) {
+    final DeleteFleetsResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DeleteFpgaImageResponseType deleteFpgaImage(
+      DeleteFpgaImageType request
+  ) {
+    final DeleteFpgaImageResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DeleteLaunchTemplateResponseType deleteLaunchTemplate(
+      DeleteLaunchTemplateType request
+  ) {
+    final DeleteLaunchTemplateResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DeleteLaunchTemplateVersionsResponseType deleteLaunchTemplateVersions(
+      DeleteLaunchTemplateVersionsType request
+  ) {
+    final DeleteLaunchTemplateVersionsResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DeleteNetworkInterfacePermissionResponseType deleteNetworkInterfacePermission(
+      DeleteNetworkInterfacePermissionType request
+  ) {
+    final DeleteNetworkInterfacePermissionResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DeleteVpcEndpointConnectionNotificationsResponseType deleteVpcEndpointConnectionNotifications(
+      DeleteVpcEndpointConnectionNotificationsType request
+  ) {
+    final DeleteVpcEndpointConnectionNotificationsResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DeleteVpcEndpointServiceConfigurationsResponseType deleteVpcEndpointServiceConfigurations(
+      DeleteVpcEndpointServiceConfigurationsType request
+  ) {
+    final DeleteVpcEndpointServiceConfigurationsResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DescribeAggregateIdFormatResponseType describeAggregateIdFormat(
+      DescribeAggregateIdFormatType request
+  ) {
+    final DescribeAggregateIdFormatResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DescribeElasticGpusResponseType describeElasticGpus(
+      DescribeElasticGpusType request
+  ) {
+    final DescribeElasticGpusResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DescribeFleetHistoryResponseType describeFleetHistory(
+      DescribeFleetHistoryType request
+  ) {
+    final DescribeFleetHistoryResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DescribeFleetInstancesResponseType describeFleetInstances(
+      DescribeFleetInstancesType request
+  ) {
+    final DescribeFleetInstancesResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DescribeFleetsResponseType describeFleets(
+      DescribeFleetsType request
+  ) {
+    final DescribeFleetsResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DescribeFpgaImageAttributeResponseType describeFpgaImageAttribute(
+      DescribeFpgaImageAttributeType request
+  ) {
+    final DescribeFpgaImageAttributeResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DescribeFpgaImagesResponseType describeFpgaImages(
+      DescribeFpgaImagesType request
+  ) {
+    final DescribeFpgaImagesResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DescribeInstanceCreditSpecificationsResponseType describeInstanceCreditSpecifications(
+      DescribeInstanceCreditSpecificationsType request
+  ) {
+    final DescribeInstanceCreditSpecificationsResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DescribeLaunchTemplatesResponseType describeLaunchTemplates(
+      DescribeLaunchTemplatesType request
+  ) {
+    final DescribeLaunchTemplatesResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DescribeLaunchTemplateVersionsResponseType describeLaunchTemplateVersions(
+      DescribeLaunchTemplateVersionsType request
+  ) {
+    final DescribeLaunchTemplateVersionsResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DescribeNetworkInterfacePermissionsResponseType describeNetworkInterfacePermissions(
+      DescribeNetworkInterfacePermissionsType request
+  ) {
+    final DescribeNetworkInterfacePermissionsResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DescribePrincipalIdFormatResponseType describePrincipalIdFormat(
+      DescribePrincipalIdFormatType request
+  ) {
+    final DescribePrincipalIdFormatResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DescribeVolumesModificationsResponseType describeVolumesModifications(
+      DescribeVolumesModificationsType request
+  ) {
+    final DescribeVolumesModificationsResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DescribeVpcEndpointConnectionNotificationsResponseType describeVpcEndpointConnectionNotifications(
+      DescribeVpcEndpointConnectionNotificationsType request
+  ) {
+    final DescribeVpcEndpointConnectionNotificationsResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DescribeVpcEndpointConnectionsResponseType describeVpcEndpointConnections(
+      DescribeVpcEndpointConnectionsType request
+  ) {
+    final DescribeVpcEndpointConnectionsResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DescribeVpcEndpointServiceConfigurationsResponseType describeVpcEndpointServiceConfigurations(
+      DescribeVpcEndpointServiceConfigurationsType request
+  ) {
+    final DescribeVpcEndpointServiceConfigurationsResponseType response = request.getReply( );
+    return response;
+  }
+
+  public DescribeVpcEndpointServicePermissionsResponseType describeVpcEndpointServicePermissions(
+      DescribeVpcEndpointServicePermissionsType request
+  ) {
+    final DescribeVpcEndpointServicePermissionsResponseType response = request.getReply( );
+    return response;
+  }
+
+  public GetLaunchTemplateDataResponseType getLaunchTemplateData(
+      GetLaunchTemplateDataType request
+  ) {
+    final GetLaunchTemplateDataResponseType response = request.getReply( );
+    return response;
+  }
+
+  public ModifyFleetResponseType modifyFleet(
+      ModifyFleetType request
+  ) {
+    final ModifyFleetResponseType response = request.getReply( );
+    return response;
+  }
+
+  public ModifyFpgaImageAttributeResponseType modifyFpgaImageAttribute(
+      ModifyFpgaImageAttributeType request
+  ) {
+    final ModifyFpgaImageAttributeResponseType response = request.getReply( );
+    return response;
+  }
+
+  public ModifyInstanceCreditSpecificationResponseType modifyInstanceCreditSpecification(
+      ModifyInstanceCreditSpecificationType request
+  ) {
+    final ModifyInstanceCreditSpecificationResponseType response = request.getReply( );
+    return response;
+  }
+
+  public ModifyLaunchTemplateResponseType modifyLaunchTemplate(
+      ModifyLaunchTemplateType request
+  ) {
+    final ModifyLaunchTemplateResponseType response = request.getReply( );
+    return response;
+  }
+
+  public ModifyVolumeResponseType modifyVolume(
+      ModifyVolumeType request
+  ) {
+    final ModifyVolumeResponseType response = request.getReply( );
+    return response;
+  }
+
+  public ModifyVpcEndpointConnectionNotificationResponseType modifyVpcEndpointConnectionNotification(
+      ModifyVpcEndpointConnectionNotificationType request
+  ) {
+    final ModifyVpcEndpointConnectionNotificationResponseType response = request.getReply( );
+    return response;
+  }
+
+  public ModifyVpcEndpointServiceConfigurationResponseType modifyVpcEndpointServiceConfiguration(
+      ModifyVpcEndpointServiceConfigurationType request
+  ) {
+    final ModifyVpcEndpointServiceConfigurationResponseType response = request.getReply( );
+    return response;
+  }
+
+  public ModifyVpcEndpointServicePermissionsResponseType modifyVpcEndpointServicePermissions(
+      ModifyVpcEndpointServicePermissionsType request
+  ) {
+    final ModifyVpcEndpointServicePermissionsResponseType response = request.getReply( );
+    return response;
+  }
+
+  public ModifyVpcTenancyResponseType modifyVpcTenancy(
+      ModifyVpcTenancyType request
+  ) {
+    final ModifyVpcTenancyResponseType response = request.getReply( );
+    return response;
+  }
+
+  public RejectVpcEndpointConnectionsResponseType rejectVpcEndpointConnections(
+      RejectVpcEndpointConnectionsType request
+  ) {
+    final RejectVpcEndpointConnectionsResponseType response = request.getReply( );
+    return response;
+  }
+
+  public ResetFpgaImageAttributeResponseType resetFpgaImageAttribute(
+      ResetFpgaImageAttributeType request
+  ) {
+    final ResetFpgaImageAttributeResponseType response = request.getReply( );
+    return response;
+  }
+
+  public UpdateSecurityGroupRuleDescriptionsEgressResponseType updateSecurityGroupRuleDescriptionsEgress(
+      UpdateSecurityGroupRuleDescriptionsEgressType request
+  ) {
+    final UpdateSecurityGroupRuleDescriptionsEgressResponseType response = request.getReply( );
+    return response;
+  }
+
+  public UpdateSecurityGroupRuleDescriptionsIngressResponseType updateSecurityGroupRuleDescriptionsIngress(
+      UpdateSecurityGroupRuleDescriptionsIngressType request
+  ) {
+    final UpdateSecurityGroupRuleDescriptionsIngressResponseType response = request.getReply( );
+    return response;
+  }
+
   public ComputeMessage proxy( final ComputeMessage request ) throws EucalyptusCloudException {
     // Dispatch
     try {

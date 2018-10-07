@@ -42,6 +42,1446 @@
       <structure name="item" type="com.eucalyptus.compute.common.GroupItemType"/>
     </collection>
   </mapping>
+  <mapping class="com.eucalyptus.compute.common.UnsuccessfulItem" abstract="true">
+    <structure get-method="getError" set-method="setError" usage="optional" type="com.eucalyptus.compute.common.UnsuccessfulItemError" name="Error"/>
+    <value name="ResourceId" get-method="getResourceId" set-method="setResourceId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.UnsuccessfulItemError" abstract="true">
+    <value name="Code" get-method="getCode" set-method="setCode" usage="optional"/>
+    <value name="Message" get-method="getMessage" set-method="setMessage" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.UnsuccessfulItemSet" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.UnsuccessfulItem"/>
+    </collection>
+  </mapping>
+  <mapping name="AcceptVpcEndpointConnections" class="com.eucalyptus.compute.common.AcceptVpcEndpointConnectionsType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="ServiceId" get-method="getServiceId" set-method="setServiceId" usage="optional"/>
+    <structure get-method="getVpcEndpointIds" set-method="setVpcEndpointIds" usage="optional" type="com.eucalyptus.compute.common.ValueStringList" name="VpcEndpointIds"/>
+  </mapping>
+  <mapping name="AcceptVpcEndpointConnectionsResponse" class="com.eucalyptus.compute.common.AcceptVpcEndpointConnectionsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getUnsuccessful" set-method="setUnsuccessful" usage="optional" type="com.eucalyptus.compute.common.UnsuccessfulItemSet" name="Unsuccessful"/>
+  </mapping>
+  <mapping name="CreateDefaultSubnet" class="com.eucalyptus.compute.common.CreateDefaultSubnetType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="AvailabilityZone" get-method="getAvailabilityZone" set-method="setAvailabilityZone" usage="optional"/>
+  </mapping>
+  <mapping name="CreateDefaultSubnetResponse" class="com.eucalyptus.compute.common.CreateDefaultSubnetResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getSubnet" set-method="setSubnet" usage="optional" type="com.eucalyptus.compute.common.SubnetType" name="Subnet"/>
+  </mapping>
+  <mapping name="CreateDefaultVpc" class="com.eucalyptus.compute.common.CreateDefaultVpcType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+  </mapping>
+  <mapping name="CreateDefaultVpcResponse" class="com.eucalyptus.compute.common.CreateDefaultVpcResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getVpc" set-method="setVpc" usage="optional" type="com.eucalyptus.compute.common.VpcType" name="Vpc"/>
+  </mapping>
+  <mapping name="CreateNetworkInterfacePermission" class="com.eucalyptus.compute.common.CreateNetworkInterfacePermissionType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="AwsAccountId" get-method="getAwsAccountId" set-method="setAwsAccountId" usage="optional"/>
+    <value name="AwsService" get-method="getAwsService" set-method="setAwsService" usage="optional"/>
+    <value name="NetworkInterfaceId" get-method="getNetworkInterfaceId" set-method="setNetworkInterfaceId" usage="optional"/>
+    <value name="Permission" get-method="getPermission" set-method="setPermission" usage="optional"/>
+  </mapping>
+  <mapping name="CreateNetworkInterfacePermissionResponse" class="com.eucalyptus.compute.common.CreateNetworkInterfacePermissionResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getInterfacePermission" set-method="setInterfacePermission" usage="optional" type="com.eucalyptus.compute.common.NetworkInterfacePermission" name="InterfacePermission"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ConnectionNotification" abstract="true">
+    <structure get-method="getConnectionEvents" set-method="setConnectionEvents" usage="optional" type="com.eucalyptus.compute.common.ValueStringList" name="ConnectionEvents"/>
+    <value name="ConnectionNotificationArn" get-method="getConnectionNotificationArn" set-method="setConnectionNotificationArn" usage="optional"/>
+    <value name="ConnectionNotificationId" get-method="getConnectionNotificationId" set-method="setConnectionNotificationId" usage="optional"/>
+    <value name="ConnectionNotificationState" get-method="getConnectionNotificationState" set-method="setConnectionNotificationState" usage="optional"/>
+    <value name="ConnectionNotificationType" get-method="getConnectionNotificationType" set-method="setConnectionNotificationType" usage="optional"/>
+    <value name="ServiceId" get-method="getServiceId" set-method="setServiceId" usage="optional"/>
+    <value name="VpcEndpointId" get-method="getVpcEndpointId" set-method="setVpcEndpointId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ConnectionNotificationSet" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.ConnectionNotification"/>
+    </collection>
+  </mapping>
+  <mapping name="DeleteNetworkInterfacePermission" class="com.eucalyptus.compute.common.DeleteNetworkInterfacePermissionType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="Force" get-method="getForce" set-method="setForce" usage="optional"/>
+    <value name="NetworkInterfacePermissionId" get-method="getNetworkInterfacePermissionId" set-method="setNetworkInterfacePermissionId" usage="optional"/>
+  </mapping>
+  <mapping name="DeleteNetworkInterfacePermissionResponse" class="com.eucalyptus.compute.common.DeleteNetworkInterfacePermissionResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="DescribeNetworkInterfacePermissions" class="com.eucalyptus.compute.common.DescribeNetworkInterfacePermissionsType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+    <value name="MaxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
+    <structure get-method="getNetworkInterfacePermissionIds" set-method="setNetworkInterfacePermissionIds" usage="optional" type="com.eucalyptus.compute.common.NetworkInterfacePermissionIdList" name="NetworkInterfacePermissionIds"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeNetworkInterfacePermissionsResponse" class="com.eucalyptus.compute.common.DescribeNetworkInterfacePermissionsResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getNetworkInterfacePermissions" set-method="setNetworkInterfacePermissions" usage="optional" type="com.eucalyptus.compute.common.NetworkInterfacePermissionList" name="NetworkInterfacePermissions"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping name="CreateVpcEndpointConnectionNotification" class="com.eucalyptus.compute.common.CreateVpcEndpointConnectionNotificationType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="ClientToken" get-method="getClientToken" set-method="setClientToken" usage="optional"/>
+    <structure get-method="getConnectionEvents" set-method="setConnectionEvents" usage="optional" type="com.eucalyptus.compute.common.ValueStringList" name="ConnectionEvents"/>
+    <value name="ConnectionNotificationArn" get-method="getConnectionNotificationArn" set-method="setConnectionNotificationArn" usage="optional"/>
+    <value name="ServiceId" get-method="getServiceId" set-method="setServiceId" usage="optional"/>
+    <value name="VpcEndpointId" get-method="getVpcEndpointId" set-method="setVpcEndpointId" usage="optional"/>
+  </mapping>
+  <mapping name="CreateVpcEndpointConnectionNotificationResponse" class="com.eucalyptus.compute.common.CreateVpcEndpointConnectionNotificationResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="ClientToken" get-method="getClientToken" set-method="setClientToken" usage="optional"/>
+    <structure get-method="getConnectionNotification" set-method="setConnectionNotification" usage="optional" type="com.eucalyptus.compute.common.ConnectionNotification" name="ConnectionNotification"/>
+  </mapping>
+  <mapping name="CreateVpcEndpointServiceConfiguration" class="com.eucalyptus.compute.common.CreateVpcEndpointServiceConfigurationType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="AcceptanceRequired" get-method="getAcceptanceRequired" set-method="setAcceptanceRequired" usage="optional"/>
+    <value name="ClientToken" get-method="getClientToken" set-method="setClientToken" usage="optional"/>
+    <structure get-method="getNetworkLoadBalancerArns" set-method="setNetworkLoadBalancerArns" usage="optional" type="com.eucalyptus.compute.common.ValueStringList" name="NetworkLoadBalancerArns"/>
+  </mapping>
+  <mapping name="CreateVpcEndpointServiceConfigurationResponse" class="com.eucalyptus.compute.common.CreateVpcEndpointServiceConfigurationResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="ClientToken" get-method="getClientToken" set-method="setClientToken" usage="optional"/>
+    <structure get-method="getServiceConfiguration" set-method="setServiceConfiguration" usage="optional" type="com.eucalyptus.compute.common.ServiceConfiguration" name="ServiceConfiguration"/>
+  </mapping>
+  <mapping name="DeleteVpcEndpointConnectionNotifications" class="com.eucalyptus.compute.common.DeleteVpcEndpointConnectionNotificationsType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getConnectionNotificationIds" set-method="setConnectionNotificationIds" usage="optional" type="com.eucalyptus.compute.common.ValueStringList" name="ConnectionNotificationIds"/>
+  </mapping>
+  <mapping name="DeleteVpcEndpointConnectionNotificationsResponse" class="com.eucalyptus.compute.common.DeleteVpcEndpointConnectionNotificationsResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getUnsuccessful" set-method="setUnsuccessful" usage="optional" type="com.eucalyptus.compute.common.UnsuccessfulItemSet" name="Unsuccessful"/>
+  </mapping>
+  <mapping name="DeleteVpcEndpointServiceConfigurations" class="com.eucalyptus.compute.common.DeleteVpcEndpointServiceConfigurationsType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getServiceIds" set-method="setServiceIds" usage="optional" type="com.eucalyptus.compute.common.ValueStringList" name="ServiceIds"/>
+  </mapping>
+  <mapping name="DeleteVpcEndpointServiceConfigurationsResponse" class="com.eucalyptus.compute.common.DeleteVpcEndpointServiceConfigurationsResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getUnsuccessful" set-method="setUnsuccessful" usage="optional" type="com.eucalyptus.compute.common.UnsuccessfulItemSet" name="Unsuccessful"/>
+  </mapping>
+  <mapping name="DescribeVpcEndpointConnectionNotifications" class="com.eucalyptus.compute.common.DescribeVpcEndpointConnectionNotificationsType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="ConnectionNotificationId" get-method="getConnectionNotificationId" set-method="setConnectionNotificationId" usage="optional"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+    <value name="MaxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeVpcEndpointConnectionNotificationsResponse" class="com.eucalyptus.compute.common.DescribeVpcEndpointConnectionNotificationsResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getConnectionNotificationSet" set-method="setConnectionNotificationSet" usage="optional" type="com.eucalyptus.compute.common.ConnectionNotificationSet" name="ConnectionNotificationSet"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeVpcEndpointConnections" class="com.eucalyptus.compute.common.DescribeVpcEndpointConnectionsType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+    <value name="MaxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeVpcEndpointConnectionsResponse" class="com.eucalyptus.compute.common.DescribeVpcEndpointConnectionsResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getVpcEndpointConnections" set-method="setVpcEndpointConnections" usage="optional" type="com.eucalyptus.compute.common.VpcEndpointConnectionSet" name="VpcEndpointConnections"/>
+  </mapping>
+  <mapping name="DescribeVpcEndpointServiceConfigurations" class="com.eucalyptus.compute.common.DescribeVpcEndpointServiceConfigurationsType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+    <value name="MaxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getServiceIds" set-method="setServiceIds" usage="optional" type="com.eucalyptus.compute.common.ValueStringList" name="ServiceIds"/>
+  </mapping>
+  <mapping name="DescribeVpcEndpointServiceConfigurationsResponse" class="com.eucalyptus.compute.common.DescribeVpcEndpointServiceConfigurationsResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getServiceConfigurations" set-method="setServiceConfigurations" usage="optional" type="com.eucalyptus.compute.common.ServiceConfigurationSet" name="ServiceConfigurations"/>
+  </mapping>
+  <mapping name="DescribeVpcEndpointServicePermissions" class="com.eucalyptus.compute.common.DescribeVpcEndpointServicePermissionsType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+    <value name="MaxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <value name="ServiceId" get-method="getServiceId" set-method="setServiceId" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeVpcEndpointServicePermissionsResponse" class="com.eucalyptus.compute.common.DescribeVpcEndpointServicePermissionsResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getAllowedPrincipals" set-method="setAllowedPrincipals" usage="optional" type="com.eucalyptus.compute.common.AllowedPrincipalSet" name="AllowedPrincipals"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping name="ModifyVpcEndpointConnectionNotification" class="com.eucalyptus.compute.common.ModifyVpcEndpointConnectionNotificationType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getConnectionEvents" set-method="setConnectionEvents" usage="optional" type="com.eucalyptus.compute.common.ValueStringList" name="ConnectionEvents"/>
+    <value name="ConnectionNotificationArn" get-method="getConnectionNotificationArn" set-method="setConnectionNotificationArn" usage="optional"/>
+    <value name="ConnectionNotificationId" get-method="getConnectionNotificationId" set-method="setConnectionNotificationId" usage="optional"/>
+  </mapping>
+  <mapping name="ModifyVpcEndpointConnectionNotificationResponse" class="com.eucalyptus.compute.common.ModifyVpcEndpointConnectionNotificationResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="ModifyVpcEndpointServiceConfiguration" class="com.eucalyptus.compute.common.ModifyVpcEndpointServiceConfigurationType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="AcceptanceRequired" get-method="getAcceptanceRequired" set-method="setAcceptanceRequired" usage="optional"/>
+    <structure get-method="getAddNetworkLoadBalancerArns" set-method="setAddNetworkLoadBalancerArns" usage="optional" type="com.eucalyptus.compute.common.ValueStringList" name="AddNetworkLoadBalancerArns"/>
+    <structure get-method="getRemoveNetworkLoadBalancerArns" set-method="setRemoveNetworkLoadBalancerArns" usage="optional" type="com.eucalyptus.compute.common.ValueStringList" name="RemoveNetworkLoadBalancerArns"/>
+    <value name="ServiceId" get-method="getServiceId" set-method="setServiceId" usage="optional"/>
+  </mapping>
+  <mapping name="ModifyVpcEndpointServiceConfigurationResponse" class="com.eucalyptus.compute.common.ModifyVpcEndpointServiceConfigurationResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="ModifyVpcEndpointServicePermissions" class="com.eucalyptus.compute.common.ModifyVpcEndpointServicePermissionsType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getAddAllowedPrincipals" set-method="setAddAllowedPrincipals" usage="optional" type="com.eucalyptus.compute.common.ValueStringList" name="AddAllowedPrincipals"/>
+    <structure get-method="getRemoveAllowedPrincipals" set-method="setRemoveAllowedPrincipals" usage="optional" type="com.eucalyptus.compute.common.ValueStringList" name="RemoveAllowedPrincipals"/>
+    <value name="ServiceId" get-method="getServiceId" set-method="setServiceId" usage="optional"/>
+  </mapping>
+  <mapping name="ModifyVpcEndpointServicePermissionsResponse" class="com.eucalyptus.compute.common.ModifyVpcEndpointServicePermissionsResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="ModifyVpcTenancy" class="com.eucalyptus.compute.common.ModifyVpcTenancyType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="InstanceTenancy" get-method="getInstanceTenancy" set-method="setInstanceTenancy" usage="optional"/>
+    <value name="VpcId" get-method="getVpcId" set-method="setVpcId" usage="optional"/>
+  </mapping>
+  <mapping name="ModifyVpcTenancyResponse" class="com.eucalyptus.compute.common.ModifyVpcTenancyResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="RejectVpcEndpointConnections" class="com.eucalyptus.compute.common.RejectVpcEndpointConnectionsType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="ServiceId" get-method="getServiceId" set-method="setServiceId" usage="optional"/>
+    <structure get-method="getVpcEndpointIds" set-method="setVpcEndpointIds" usage="optional" type="com.eucalyptus.compute.common.ValueStringList" name="VpcEndpointIds"/>
+  </mapping>
+  <mapping name="RejectVpcEndpointConnectionsResponse" class="com.eucalyptus.compute.common.RejectVpcEndpointConnectionsResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getUnsuccessful" set-method="setUnsuccessful" usage="optional" type="com.eucalyptus.compute.common.UnsuccessfulItemSet" name="Unsuccessful"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpcEndpointConnectionSet" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.VpcEndpointConnection"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpcEndpointConnection" abstract="true">
+    <value name="CreationTimestamp" get-method="getCreationTimestamp" set-method="setCreationTimestamp" usage="optional"/>
+    <value name="ServiceId" get-method="getServiceId" set-method="setServiceId" usage="optional"/>
+    <value name="VpcEndpointId" get-method="getVpcEndpointId" set-method="setVpcEndpointId" usage="optional"/>
+    <value name="VpcEndpointOwner" get-method="getVpcEndpointOwner" set-method="setVpcEndpointOwner" usage="optional"/>
+    <value name="VpcEndpointState" get-method="getVpcEndpointState" set-method="setVpcEndpointState" usage="optional"/>
+  </mapping>
+  <!--<mapping class="com.eucalyptus.compute.common.ElasticGpuAssociation" abstract="true">-->
+  <!--<value name="ElasticGpuAssociationId" get-method="getElasticGpuAssociationId" set-method="setElasticGpuAssociationId" usage="optional"/>-->
+  <!--<value name="ElasticGpuAssociationState" get-method="getElasticGpuAssociationState" set-method="setElasticGpuAssociationState" usage="optional"/>-->
+  <!--<value name="ElasticGpuAssociationTime" get-method="getElasticGpuAssociationTime" set-method="setElasticGpuAssociationTime" usage="optional"/>-->
+  <!--<value name="ElasticGpuId" get-method="getElasticGpuId" set-method="setElasticGpuId" usage="optional"/>-->
+  <!--</mapping>-->
+  <!--<mapping class="com.eucalyptus.compute.common.ElasticGpuAssociationList" abstract="true">-->
+  <!--<collection field="member">-->
+  <!--<structure name="item" type="com.eucalyptus.compute.common.ElasticGpuAssociation"/>-->
+  <!--</collection>-->
+  <!--</mapping>-->
+  <mapping class="com.eucalyptus.compute.common.ElasticGpuHealth" abstract="true">
+    <value name="Status" get-method="getStatus" set-method="setStatus" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ElasticGpuIdSet" abstract="true">
+    <collection field="member">
+      <value name="item" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ElasticGpuSet" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.ElasticGpus"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ElasticGpuSpecification" abstract="true">
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ElasticGpuSpecificationList" abstract="true">
+    <collection field="member">
+      <structure name="ElasticGpuSpecification" type="com.eucalyptus.compute.common.ElasticGpuSpecification"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ElasticGpuSpecificationResponse" abstract="true">
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ElasticGpuSpecificationResponseList" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.ElasticGpuSpecificationResponse"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ElasticGpus" abstract="true">
+    <value name="AvailabilityZone" get-method="getAvailabilityZone" set-method="setAvailabilityZone" usage="optional"/>
+    <structure get-method="getElasticGpuHealth" set-method="setElasticGpuHealth" usage="optional" type="com.eucalyptus.compute.common.ElasticGpuHealth" name="ElasticGpuHealth"/>
+    <value name="ElasticGpuId" get-method="getElasticGpuId" set-method="setElasticGpuId" usage="optional"/>
+    <value name="ElasticGpuState" get-method="getElasticGpuState" set-method="setElasticGpuState" usage="optional"/>
+    <value name="ElasticGpuType" get-method="getElasticGpuType" set-method="setElasticGpuType" usage="optional"/>
+    <value name="InstanceId" get-method="getInstanceId" set-method="setInstanceId" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeElasticGpus" class="com.eucalyptus.compute.common.DescribeElasticGpusType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getElasticGpuIds" set-method="setElasticGpuIds" usage="optional" type="com.eucalyptus.compute.common.ElasticGpuIdSet" name="ElasticGpuIds"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+    <value name="MaxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeElasticGpusResponse" class="com.eucalyptus.compute.common.DescribeElasticGpusResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getElasticGpuSet" set-method="setElasticGpuSet" usage="optional" type="com.eucalyptus.compute.common.ElasticGpuSet" name="ElasticGpuSet"/>
+    <value name="MaxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ActiveInstance" abstract="true">
+    <value name="InstanceHealth" get-method="getInstanceHealth" set-method="setInstanceHealth" usage="optional"/>
+    <value name="InstanceId" get-method="getInstanceId" set-method="setInstanceId" usage="optional"/>
+    <value name="InstanceType" get-method="getInstanceType" set-method="setInstanceType" usage="optional"/>
+    <value name="SpotInstanceRequestId" get-method="getSpotInstanceRequestId" set-method="setSpotInstanceRequestId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ActiveInstanceSet" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.ActiveInstance"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.AllowedPrincipal" abstract="true">
+    <value name="Principal" get-method="getPrincipal" set-method="setPrincipal" usage="optional"/>
+    <value name="PrincipalType" get-method="getPrincipalType" set-method="setPrincipalType" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.AllowedPrincipalSet" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.AllowedPrincipal"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.DeleteFleetError" abstract="true">
+    <value name="Code" get-method="getCode" set-method="setCode" usage="optional"/>
+    <value name="Message" get-method="getMessage" set-method="setMessage" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.DeleteFleetErrorItem" abstract="true">
+    <structure get-method="getError" set-method="setError" usage="optional" type="com.eucalyptus.compute.common.DeleteFleetError" name="Error"/>
+    <value name="FleetId" get-method="getFleetId" set-method="setFleetId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.DeleteFleetErrorSet" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.DeleteFleetErrorItem"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.DeleteFleetSuccessItem" abstract="true">
+    <value name="CurrentFleetState" get-method="getCurrentFleetState" set-method="setCurrentFleetState" usage="optional"/>
+    <value name="FleetId" get-method="getFleetId" set-method="setFleetId" usage="optional"/>
+    <value name="PreviousFleetState" get-method="getPreviousFleetState" set-method="setPreviousFleetState" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.DeleteFleetSuccessSet" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.DeleteFleetSuccessItem"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.DeleteLaunchTemplateVersionsResponseErrorItem" abstract="true">
+    <value name="LaunchTemplateId" get-method="getLaunchTemplateId" set-method="setLaunchTemplateId" usage="optional"/>
+    <value name="LaunchTemplateName" get-method="getLaunchTemplateName" set-method="setLaunchTemplateName" usage="optional"/>
+    <structure get-method="getResponseError" set-method="setResponseError" usage="optional" type="com.eucalyptus.compute.common.ResponseError" name="ResponseError"/>
+    <value name="VersionNumber" get-method="getVersionNumber" set-method="setVersionNumber" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.DeleteLaunchTemplateVersionsResponseErrorSet" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.DeleteLaunchTemplateVersionsResponseErrorItem"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.DeleteLaunchTemplateVersionsResponseSuccessItem" abstract="true">
+    <value name="LaunchTemplateId" get-method="getLaunchTemplateId" set-method="setLaunchTemplateId" usage="optional"/>
+    <value name="LaunchTemplateName" get-method="getLaunchTemplateName" set-method="setLaunchTemplateName" usage="optional"/>
+    <value name="VersionNumber" get-method="getVersionNumber" set-method="setVersionNumber" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.DeleteLaunchTemplateVersionsResponseSuccessSet" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.DeleteLaunchTemplateVersionsResponseSuccessItem"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.EventInformation" abstract="true">
+    <value name="EventDescription" get-method="getEventDescription" set-method="setEventDescription" usage="optional"/>
+    <value name="EventSubType" get-method="getEventSubType" set-method="setEventSubType" usage="optional"/>
+    <value name="InstanceId" get-method="getInstanceId" set-method="setInstanceId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.FleetData" abstract="true">
+    <value name="ActivityStatus" get-method="getActivityStatus" set-method="setActivityStatus" usage="optional"/>
+    <value name="ClientToken" get-method="getClientToken" set-method="setClientToken" usage="optional"/>
+    <value name="CreateTime" get-method="getCreateTime" set-method="setCreateTime" usage="optional"/>
+    <value name="ExcessCapacityTerminationPolicy" get-method="getExcessCapacityTerminationPolicy" set-method="setExcessCapacityTerminationPolicy" usage="optional"/>
+    <value name="FleetId" get-method="getFleetId" set-method="setFleetId" usage="optional"/>
+    <value name="FleetState" get-method="getFleetState" set-method="setFleetState" usage="optional"/>
+    <value name="FulfilledCapacity" get-method="getFulfilledCapacity" set-method="setFulfilledCapacity" usage="optional"/>
+    <value name="FulfilledOnDemandCapacity" get-method="getFulfilledOnDemandCapacity" set-method="setFulfilledOnDemandCapacity" usage="optional"/>
+    <structure get-method="getLaunchTemplateConfigs" set-method="setLaunchTemplateConfigs" usage="optional" type="com.eucalyptus.compute.common.FleetLaunchTemplateConfigList" name="LaunchTemplateConfigs"/>
+    <structure get-method="getOnDemandOptions" set-method="setOnDemandOptions" usage="optional" type="com.eucalyptus.compute.common.OnDemandOptions" name="OnDemandOptions"/>
+    <value name="ReplaceUnhealthyInstances" get-method="getReplaceUnhealthyInstances" set-method="setReplaceUnhealthyInstances" usage="optional"/>
+    <structure get-method="getSpotOptions" set-method="setSpotOptions" usage="optional" type="com.eucalyptus.compute.common.SpotOptions" name="SpotOptions"/>
+    <structure name="tagSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="tagSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.ResourceTag" />
+      </collection>
+    </structure>    <structure get-method="getTargetCapacitySpecification" set-method="setTargetCapacitySpecification" usage="optional" type="com.eucalyptus.compute.common.TargetCapacitySpecification" name="TargetCapacitySpecification"/>
+    <value name="TerminateInstancesWithExpiration" get-method="getTerminateInstancesWithExpiration" set-method="setTerminateInstancesWithExpiration" usage="optional"/>
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+    <value name="ValidFrom" get-method="getValidFrom" set-method="setValidFrom" usage="optional"/>
+    <value name="ValidUntil" get-method="getValidUntil" set-method="setValidUntil" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.FleetIdSet" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.FleetLaunchTemplateConfig" abstract="true">
+    <structure get-method="getLaunchTemplateSpecification" set-method="setLaunchTemplateSpecification" usage="optional" type="com.eucalyptus.compute.common.FleetLaunchTemplateSpecification" name="LaunchTemplateSpecification"/>
+    <structure get-method="getOverrides" set-method="setOverrides" usage="optional" type="com.eucalyptus.compute.common.FleetLaunchTemplateOverridesList" name="Overrides"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.FleetLaunchTemplateConfigList" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.FleetLaunchTemplateConfig"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.FleetSet" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.FleetData"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.FpgaImageAttribute" abstract="true">
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <value name="FpgaImageId" get-method="getFpgaImageId" set-method="setFpgaImageId" usage="optional"/>
+    <structure get-method="getLoadPermissions" set-method="setLoadPermissions" usage="optional" type="com.eucalyptus.compute.common.LoadPermissionList" name="LoadPermissions"/>
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+    <structure get-method="getProductCodes" set-method="setProductCodes" usage="optional" type="com.eucalyptus.compute.common.ProductCodeList" name="ProductCodes"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.FpgaImageIdList" abstract="true">
+    <collection field="member">
+      <value name="item" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.FpgaImageList" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.FpgaImage"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.HistoryRecordEntry" abstract="true">
+    <structure get-method="getEventInformation" set-method="setEventInformation" usage="optional" type="com.eucalyptus.compute.common.EventInformation" name="EventInformation"/>
+    <value name="EventType" get-method="getEventType" set-method="setEventType" usage="optional"/>
+    <value name="Timestamp" get-method="getTimestamp" set-method="setTimestamp" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.HistoryRecordSet" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.HistoryRecordEntry"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.IdFormat" abstract="true">
+    <value name="Deadline" get-method="getDeadline" set-method="setDeadline" usage="optional"/>
+    <value name="Resource" get-method="getResource" set-method="setResource" usage="optional"/>
+    <value name="UseLongIds" get-method="getUseLongIds" set-method="setUseLongIds" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.IdFormatList" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.IdFormat"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.InstanceCreditSpecificationList" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.InstanceCreditSpecification"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.InstanceCreditSpecificationListRequest" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.InstanceCreditSpecificationRequest"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.InstanceIdStringList" abstract="true">
+    <collection field="member">
+      <value name="InstanceId" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplate" abstract="true">
+    <value name="CreateTime" get-method="getCreateTime" set-method="setCreateTime" usage="optional"/>
+    <value name="CreatedBy" get-method="getCreatedBy" set-method="setCreatedBy" usage="optional"/>
+    <value name="DefaultVersionNumber" get-method="getDefaultVersionNumber" set-method="setDefaultVersionNumber" usage="optional"/>
+    <value name="LatestVersionNumber" get-method="getLatestVersionNumber" set-method="setLatestVersionNumber" usage="optional"/>
+    <value name="LaunchTemplateId" get-method="getLaunchTemplateId" set-method="setLaunchTemplateId" usage="optional"/>
+    <value name="LaunchTemplateName" get-method="getLaunchTemplateName" set-method="setLaunchTemplateName" usage="optional"/>
+    <structure name="tagSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="tagSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.ResourceTag" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateNameStringList" abstract="true">
+    <collection field="member">
+      <value name="item" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateSet" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.LaunchTemplate"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateVersion" abstract="true">
+    <value name="CreateTime" get-method="getCreateTime" set-method="setCreateTime" usage="optional"/>
+    <value name="CreatedBy" get-method="getCreatedBy" set-method="setCreatedBy" usage="optional"/>
+    <value name="DefaultVersion" get-method="getDefaultVersion" set-method="setDefaultVersion" usage="optional"/>
+    <structure get-method="getLaunchTemplateData" set-method="setLaunchTemplateData" usage="optional" type="com.eucalyptus.compute.common.ResponseLaunchTemplateData" name="LaunchTemplateData"/>
+    <value name="LaunchTemplateId" get-method="getLaunchTemplateId" set-method="setLaunchTemplateId" usage="optional"/>
+    <value name="LaunchTemplateName" get-method="getLaunchTemplateName" set-method="setLaunchTemplateName" usage="optional"/>
+    <value name="VersionDescription" get-method="getVersionDescription" set-method="setVersionDescription" usage="optional"/>
+    <value name="VersionNumber" get-method="getVersionNumber" set-method="setVersionNumber" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateVersionSet" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.LaunchTemplateVersion"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LoadPermissionModifications" abstract="true">
+    <structure get-method="getAdd" set-method="setAdd" usage="optional" type="com.eucalyptus.compute.common.LoadPermissionListRequest" name="Add"/>
+    <structure get-method="getRemove" set-method="setRemove" usage="optional" type="com.eucalyptus.compute.common.LoadPermissionListRequest" name="Remove"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NetworkInterfacePermission" abstract="true">
+    <value name="AwsAccountId" get-method="getAwsAccountId" set-method="setAwsAccountId" usage="optional"/>
+    <value name="AwsService" get-method="getAwsService" set-method="setAwsService" usage="optional"/>
+    <value name="NetworkInterfaceId" get-method="getNetworkInterfaceId" set-method="setNetworkInterfaceId" usage="optional"/>
+    <value name="NetworkInterfacePermissionId" get-method="getNetworkInterfacePermissionId" set-method="setNetworkInterfacePermissionId" usage="optional"/>
+    <value name="Permission" get-method="getPermission" set-method="setPermission" usage="optional"/>
+    <structure get-method="getPermissionState" set-method="setPermissionState" usage="optional" type="com.eucalyptus.compute.common.NetworkInterfacePermissionState" name="PermissionState"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NetworkInterfacePermissionIdList" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NetworkInterfacePermissionList" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.NetworkInterfacePermission"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.OnDemandOptionsRequest" abstract="true">
+    <value name="AllocationStrategy" get-method="getAllocationStrategy" set-method="setAllocationStrategy" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.OwnerStringList" abstract="true">
+    <collection field="member">
+      <value name="Owner" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.PrincipalIdFormat" abstract="true">
+    <value name="Arn" get-method="getArn" set-method="setArn" usage="optional"/>
+    <structure get-method="getStatuses" set-method="setStatuses" usage="optional" type="com.eucalyptus.compute.common.IdFormatList" name="Statuses"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.PrincipalIdFormatList" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.PrincipalIdFormat"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ProductCodeStringList" abstract="true">
+    <collection field="member">
+      <value name="ProductCode" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.RequestLaunchTemplateData" abstract="true">
+    <structure get-method="getBlockDeviceMappings" set-method="setBlockDeviceMappings" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplateBlockDeviceMappingRequestList" name="BlockDeviceMappings"/>
+    <structure get-method="getCpuOptions" set-method="setCpuOptions" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplateCpuOptionsRequest" name="CpuOptions"/>
+    <structure get-method="getCreditSpecification" set-method="setCreditSpecification" usage="optional" type="com.eucalyptus.compute.common.CreditSpecificationRequest" name="CreditSpecification"/>
+    <value name="DisableApiTermination" get-method="getDisableApiTermination" set-method="setDisableApiTermination" usage="optional"/>
+    <value name="EbsOptimized" get-method="getEbsOptimized" set-method="setEbsOptimized" usage="optional"/>
+    <structure get-method="getElasticGpuSpecifications" set-method="setElasticGpuSpecifications" usage="optional" type="com.eucalyptus.compute.common.ElasticGpuSpecificationList" name="ElasticGpuSpecifications"/>
+    <structure get-method="getIamInstanceProfile" set-method="setIamInstanceProfile" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplateIamInstanceProfileSpecificationRequest" name="IamInstanceProfile"/>
+    <value name="ImageId" get-method="getImageId" set-method="setImageId" usage="optional"/>
+    <value name="InstanceInitiatedShutdownBehavior" get-method="getInstanceInitiatedShutdownBehavior" set-method="setInstanceInitiatedShutdownBehavior" usage="optional"/>
+    <structure get-method="getInstanceMarketOptions" set-method="setInstanceMarketOptions" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplateInstanceMarketOptionsRequest" name="InstanceMarketOptions"/>
+    <value name="InstanceType" get-method="getInstanceType" set-method="setInstanceType" usage="optional"/>
+    <value name="KernelId" get-method="getKernelId" set-method="setKernelId" usage="optional"/>
+    <value name="KeyName" get-method="getKeyName" set-method="setKeyName" usage="optional"/>
+    <structure get-method="getMonitoring" set-method="setMonitoring" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplatesMonitoringRequest" name="Monitoring"/>
+    <structure get-method="getNetworkInterfaces" set-method="setNetworkInterfaces" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplateInstanceNetworkInterfaceSpecificationRequestList" name="NetworkInterfaces"/>
+    <structure get-method="getPlacement" set-method="setPlacement" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplatePlacementRequest" name="Placement"/>
+    <value name="RamDiskId" get-method="getRamDiskId" set-method="setRamDiskId" usage="optional"/>
+    <structure get-method="getSecurityGroupIds" set-method="setSecurityGroupIds" usage="optional" type="com.eucalyptus.compute.common.SecurityGroupIdStringList" name="SecurityGroupIds"/>
+    <structure get-method="getSecurityGroups" set-method="setSecurityGroups" usage="optional" type="com.eucalyptus.compute.common.SecurityGroupStringList" name="SecurityGroups"/>
+    <structure get-method="getTagSpecifications" set-method="setTagSpecifications" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplateTagSpecificationRequestList" name="TagSpecifications"/>
+    <value name="UserData" get-method="getUserData" set-method="setUserData" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ResourceList" abstract="true">
+    <collection field="member">
+      <value name="item" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ResponseLaunchTemplateData" abstract="true">
+    <structure get-method="getBlockDeviceMappings" set-method="setBlockDeviceMappings" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplateBlockDeviceMappingList" name="BlockDeviceMappings"/>
+    <structure get-method="getCpuOptions" set-method="setCpuOptions" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplateCpuOptions" name="CpuOptions"/>
+    <structure get-method="getCreditSpecification" set-method="setCreditSpecification" usage="optional" type="com.eucalyptus.compute.common.CreditSpecification" name="CreditSpecification"/>
+    <value name="DisableApiTermination" get-method="getDisableApiTermination" set-method="setDisableApiTermination" usage="optional"/>
+    <value name="EbsOptimized" get-method="getEbsOptimized" set-method="setEbsOptimized" usage="optional"/>
+    <structure get-method="getElasticGpuSpecifications" set-method="setElasticGpuSpecifications" usage="optional" type="com.eucalyptus.compute.common.ElasticGpuSpecificationResponseList" name="ElasticGpuSpecifications"/>
+    <structure get-method="getIamInstanceProfile" set-method="setIamInstanceProfile" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplateIamInstanceProfileSpecification" name="IamInstanceProfile"/>
+    <value name="ImageId" get-method="getImageId" set-method="setImageId" usage="optional"/>
+    <value name="InstanceInitiatedShutdownBehavior" get-method="getInstanceInitiatedShutdownBehavior" set-method="setInstanceInitiatedShutdownBehavior" usage="optional"/>
+    <structure get-method="getInstanceMarketOptions" set-method="setInstanceMarketOptions" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplateInstanceMarketOptions" name="InstanceMarketOptions"/>
+    <value name="InstanceType" get-method="getInstanceType" set-method="setInstanceType" usage="optional"/>
+    <value name="KernelId" get-method="getKernelId" set-method="setKernelId" usage="optional"/>
+    <value name="KeyName" get-method="getKeyName" set-method="setKeyName" usage="optional"/>
+    <structure get-method="getMonitoring" set-method="setMonitoring" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplatesMonitoring" name="Monitoring"/>
+    <structure get-method="getNetworkInterfaces" set-method="setNetworkInterfaces" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplateInstanceNetworkInterfaceSpecificationList" name="NetworkInterfaces"/>
+    <structure get-method="getPlacement" set-method="setPlacement" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplatePlacement" name="Placement"/>
+    <value name="RamDiskId" get-method="getRamDiskId" set-method="setRamDiskId" usage="optional"/>
+    <structure get-method="getSecurityGroupIds" set-method="setSecurityGroupIds" usage="optional" type="com.eucalyptus.compute.common.ValueStringList" name="SecurityGroupIds"/>
+    <structure get-method="getSecurityGroups" set-method="setSecurityGroups" usage="optional" type="com.eucalyptus.compute.common.ValueStringList" name="SecurityGroups"/>
+    <structure get-method="getTagSpecifications" set-method="setTagSpecifications" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplateTagSpecificationList" name="TagSpecifications"/>
+    <value name="UserData" get-method="getUserData" set-method="setUserData" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ServiceConfiguration" abstract="true">
+    <value name="AcceptanceRequired" get-method="getAcceptanceRequired" set-method="setAcceptanceRequired" usage="optional"/>
+    <structure get-method="getAvailabilityZones" set-method="setAvailabilityZones" usage="optional" type="com.eucalyptus.compute.common.ValueStringList" name="AvailabilityZones"/>
+    <structure get-method="getBaseEndpointDnsNames" set-method="setBaseEndpointDnsNames" usage="optional" type="com.eucalyptus.compute.common.ValueStringList" name="BaseEndpointDnsNames"/>
+    <structure get-method="getNetworkLoadBalancerArns" set-method="setNetworkLoadBalancerArns" usage="optional" type="com.eucalyptus.compute.common.ValueStringList" name="NetworkLoadBalancerArns"/>
+    <value name="PrivateDnsName" get-method="getPrivateDnsName" set-method="setPrivateDnsName" usage="optional"/>
+    <value name="ServiceId" get-method="getServiceId" set-method="setServiceId" usage="optional"/>
+    <value name="ServiceName" get-method="getServiceName" set-method="setServiceName" usage="optional"/>
+    <value name="ServiceState" get-method="getServiceState" set-method="setServiceState" usage="optional"/>
+    <structure get-method="getServiceType" set-method="setServiceType" usage="optional" type="com.eucalyptus.compute.common.ServiceTypeDetailSet" name="ServiceType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ServiceConfigurationSet" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.ServiceConfiguration"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.SpotOptionsRequest" abstract="true">
+    <value name="AllocationStrategy" get-method="getAllocationStrategy" set-method="setAllocationStrategy" usage="optional"/>
+    <value name="InstanceInterruptionBehavior" get-method="getInstanceInterruptionBehavior" set-method="setInstanceInterruptionBehavior" usage="optional"/>
+    <value name="InstancePoolsToUseCount" get-method="getInstancePoolsToUseCount" set-method="setInstancePoolsToUseCount" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.StorageLocation" abstract="true">
+    <value name="Bucket" get-method="getBucket" set-method="setBucket" usage="optional"/>
+    <value name="Key" get-method="getKey" set-method="setKey" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.SuccessfulInstanceCreditSpecificationItem" abstract="true">
+    <value name="InstanceId" get-method="getInstanceId" set-method="setInstanceId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.SuccessfulInstanceCreditSpecificationSet" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.SuccessfulInstanceCreditSpecificationItem"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.TargetCapacitySpecificationRequest" abstract="true">
+    <value name="DefaultTargetCapacityType" get-method="getDefaultTargetCapacityType" set-method="setDefaultTargetCapacityType" usage="optional"/>
+    <value name="OnDemandTargetCapacity" get-method="getOnDemandTargetCapacity" set-method="setOnDemandTargetCapacity" usage="optional"/>
+    <value name="SpotTargetCapacity" get-method="getSpotTargetCapacity" set-method="setSpotTargetCapacity" usage="optional"/>
+    <value name="TotalTargetCapacity" get-method="getTotalTargetCapacity" set-method="setTotalTargetCapacity" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.UnsuccessfulInstanceCreditSpecificationSet" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.UnsuccessfulInstanceCreditSpecificationItem"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.UserGroupStringList" abstract="true">
+    <collection field="member">
+      <value name="UserGroup" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.UserIdStringList" abstract="true">
+    <collection field="member">
+      <value name="UserId" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VersionStringList" abstract="true">
+    <collection field="member">
+      <value name="item" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ResponseError" abstract="true">
+    <value name="Code" get-method="getCode" set-method="setCode" usage="optional"/>
+    <value name="Message" get-method="getMessage" set-method="setMessage" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.FleetLaunchTemplateSpecification" abstract="true">
+    <value name="LaunchTemplateId" get-method="getLaunchTemplateId" set-method="setLaunchTemplateId" usage="optional"/>
+    <value name="LaunchTemplateName" get-method="getLaunchTemplateName" set-method="setLaunchTemplateName" usage="optional"/>
+    <value name="Version" get-method="getVersion" set-method="setVersion" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.FleetLaunchTemplateOverridesList" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.FleetLaunchTemplateOverrides"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.OnDemandOptions" abstract="true">
+    <value name="AllocationStrategy" get-method="getAllocationStrategy" set-method="setAllocationStrategy" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.SpotOptions" abstract="true">
+    <value name="AllocationStrategy" get-method="getAllocationStrategy" set-method="setAllocationStrategy" usage="optional"/>
+    <value name="InstanceInterruptionBehavior" get-method="getInstanceInterruptionBehavior" set-method="setInstanceInterruptionBehavior" usage="optional"/>
+    <value name="InstancePoolsToUseCount" get-method="getInstancePoolsToUseCount" set-method="setInstancePoolsToUseCount" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.TargetCapacitySpecification" abstract="true">
+    <value name="DefaultTargetCapacityType" get-method="getDefaultTargetCapacityType" set-method="setDefaultTargetCapacityType" usage="optional"/>
+    <value name="OnDemandTargetCapacity" get-method="getOnDemandTargetCapacity" set-method="setOnDemandTargetCapacity" usage="optional"/>
+    <value name="SpotTargetCapacity" get-method="getSpotTargetCapacity" set-method="setSpotTargetCapacity" usage="optional"/>
+    <value name="TotalTargetCapacity" get-method="getTotalTargetCapacity" set-method="setTotalTargetCapacity" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LoadPermission" abstract="true">
+    <value name="Group" get-method="getGroup" set-method="setGroup" usage="optional"/>
+    <value name="UserId" get-method="getUserId" set-method="setUserId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LoadPermissionList" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.LoadPermission"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ProductCode" abstract="true">
+    <value name="ProductCodeId" get-method="getProductCodeId" set-method="setProductCodeId" usage="optional"/>
+    <value name="ProductCodeType" get-method="getProductCodeType" set-method="setProductCodeType" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ProductCodeList" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.ProductCode"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.FpgaImage" abstract="true">
+    <value name="CreateTime" get-method="getCreateTime" set-method="setCreateTime" usage="optional"/>
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <value name="FpgaImageGlobalId" get-method="getFpgaImageGlobalId" set-method="setFpgaImageGlobalId" usage="optional"/>
+    <value name="FpgaImageId" get-method="getFpgaImageId" set-method="setFpgaImageId" usage="optional"/>
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+    <value name="OwnerAlias" get-method="getOwnerAlias" set-method="setOwnerAlias" usage="optional"/>
+    <value name="OwnerId" get-method="getOwnerId" set-method="setOwnerId" usage="optional"/>
+    <structure get-method="getPciId" set-method="setPciId" usage="optional" type="com.eucalyptus.compute.common.PciId" name="PciId"/>
+    <structure get-method="getProductCodes" set-method="setProductCodes" usage="optional" type="com.eucalyptus.compute.common.ProductCodeList" name="ProductCodes"/>
+    <value name="Public" get-method="getPublic" set-method="setPublic" usage="optional"/>
+    <value name="ShellVersion" get-method="getShellVersion" set-method="setShellVersion" usage="optional"/>
+    <structure get-method="getState" set-method="setState" usage="optional" type="com.eucalyptus.compute.common.FpgaImageState" name="State"/>
+    <structure name="tagSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="tagSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.ResourceTag" />
+      </collection>
+    </structure>
+    <value name="UpdateTime" get-method="getUpdateTime" set-method="setUpdateTime" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.InstanceCreditSpecification" abstract="true">
+    <value name="CpuCredits" get-method="getCpuCredits" set-method="setCpuCredits" usage="optional"/>
+    <value name="InstanceId" get-method="getInstanceId" set-method="setInstanceId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.InstanceCreditSpecificationRequest" abstract="true">
+    <value name="CpuCredits" get-method="getCpuCredits" set-method="setCpuCredits" usage="optional"/>
+    <value name="InstanceId" get-method="getInstanceId" set-method="setInstanceId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateBlockDeviceMapping" abstract="true">
+    <value name="DeviceName" get-method="getDeviceName" set-method="setDeviceName" usage="optional"/>
+    <structure get-method="getEbs" set-method="setEbs" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplateEbsBlockDevice" name="Ebs"/>
+    <value name="NoDevice" get-method="getNoDevice" set-method="setNoDevice" usage="optional"/>
+    <value name="VirtualName" get-method="getVirtualName" set-method="setVirtualName" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateBlockDeviceMappingList" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.LaunchTemplateBlockDeviceMapping"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateEbsBlockDevice" abstract="true">
+    <value name="DeleteOnTermination" get-method="getDeleteOnTermination" set-method="setDeleteOnTermination" usage="optional"/>
+    <value name="Encrypted" get-method="getEncrypted" set-method="setEncrypted" usage="optional"/>
+    <value name="Iops" get-method="getIops" set-method="setIops" usage="optional"/>
+    <value name="KmsKeyId" get-method="getKmsKeyId" set-method="setKmsKeyId" usage="optional"/>
+    <value name="SnapshotId" get-method="getSnapshotId" set-method="setSnapshotId" usage="optional"/>
+    <value name="VolumeSize" get-method="getVolumeSize" set-method="setVolumeSize" usage="optional"/>
+    <value name="VolumeType" get-method="getVolumeType" set-method="setVolumeType" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateCpuOptions" abstract="true">
+    <value name="CoreCount" get-method="getCoreCount" set-method="setCoreCount" usage="optional"/>
+    <value name="ThreadsPerCore" get-method="getThreadsPerCore" set-method="setThreadsPerCore" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateIamInstanceProfileSpecification" abstract="true">
+    <value name="Arn" get-method="getArn" set-method="setArn" usage="optional"/>
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateInstanceMarketOptions" abstract="true">
+    <value name="MarketType" get-method="getMarketType" set-method="setMarketType" usage="optional"/>
+    <structure get-method="getSpotOptions" set-method="setSpotOptions" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplateSpotMarketOptions" name="SpotOptions"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplatesMonitoring" abstract="true">
+    <value name="Enabled" get-method="getEnabled" set-method="setEnabled" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateInstanceNetworkInterfaceSpecificationList" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.LaunchTemplateInstanceNetworkInterfaceSpecification"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplatePlacement" abstract="true">
+    <value name="Affinity" get-method="getAffinity" set-method="setAffinity" usage="optional"/>
+    <value name="AvailabilityZone" get-method="getAvailabilityZone" set-method="setAvailabilityZone" usage="optional"/>
+    <value name="GroupName" get-method="getGroupName" set-method="setGroupName" usage="optional"/>
+    <value name="HostId" get-method="getHostId" set-method="setHostId" usage="optional"/>
+    <value name="SpreadDomain" get-method="getSpreadDomain" set-method="setSpreadDomain" usage="optional"/>
+    <value name="Tenancy" get-method="getTenancy" set-method="setTenancy" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateTagSpecification" abstract="true">
+    <value name="ResourceType" get-method="getResourceType" set-method="setResourceType" usage="optional"/>
+    <structure name="tagSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="tagSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.ResourceTag" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateTagSpecificationList" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.LaunchTemplateTagSpecification"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LoadPermissionListRequest" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.LoadPermissionRequest"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LoadPermissionRequest" abstract="true">
+    <value name="Group" get-method="getGroup" set-method="setGroup" usage="optional"/>
+    <value name="UserId" get-method="getUserId" set-method="setUserId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NetworkInterfacePermissionState" abstract="true">
+    <value name="State" get-method="getState" set-method="setState" usage="optional"/>
+    <value name="StatusMessage" get-method="getStatusMessage" set-method="setStatusMessage" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateBlockDeviceMappingRequest" abstract="true">
+    <value name="DeviceName" get-method="getDeviceName" set-method="setDeviceName" usage="optional"/>
+    <structure get-method="getEbs" set-method="setEbs" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplateEbsBlockDeviceRequest" name="Ebs"/>
+    <value name="NoDevice" get-method="getNoDevice" set-method="setNoDevice" usage="optional"/>
+    <value name="VirtualName" get-method="getVirtualName" set-method="setVirtualName" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateBlockDeviceMappingRequestList" abstract="true">
+    <collection field="member">
+      <structure name="BlockDeviceMapping" type="com.eucalyptus.compute.common.LaunchTemplateBlockDeviceMappingRequest"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateCpuOptionsRequest" abstract="true">
+    <value name="CoreCount" get-method="getCoreCount" set-method="setCoreCount" usage="optional"/>
+    <value name="ThreadsPerCore" get-method="getThreadsPerCore" set-method="setThreadsPerCore" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.CreditSpecificationRequest" abstract="true">
+    <value name="CpuCredits" get-method="getCpuCredits" set-method="setCpuCredits" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateIamInstanceProfileSpecificationRequest" abstract="true">
+    <value name="Arn" get-method="getArn" set-method="setArn" usage="optional"/>
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateInstanceMarketOptionsRequest" abstract="true">
+    <value name="MarketType" get-method="getMarketType" set-method="setMarketType" usage="optional"/>
+    <structure get-method="getSpotOptions" set-method="setSpotOptions" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplateSpotMarketOptionsRequest" name="SpotOptions"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplatesMonitoringRequest" abstract="true">
+    <value name="Enabled" get-method="getEnabled" set-method="setEnabled" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.PrivateIpAddressSpecification" abstract="true">
+    <value name="Primary" get-method="getPrimary" set-method="setPrimary" usage="optional"/>
+    <value name="PrivateIpAddress" get-method="getPrivateIpAddress" set-method="setPrivateIpAddress" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.PrivateIpAddressSpecificationList" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.PrivateIpAddressSpecification"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.InstanceIpv6AddressListRequest" abstract="true">
+    <collection field="member">
+      <structure name="InstanceIpv6Address" type="com.eucalyptus.compute.common.InstanceIpv6AddressRequest"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.InstanceIpv6AddressRequest" abstract="true">
+    <value name="Ipv6Address" get-method="getIpv6Address" set-method="setIpv6Address" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest" abstract="true">
+    <value name="AssociatePublicIpAddress" get-method="getAssociatePublicIpAddress" set-method="setAssociatePublicIpAddress" usage="optional"/>
+    <value name="DeleteOnTermination" get-method="getDeleteOnTermination" set-method="setDeleteOnTermination" usage="optional"/>
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <value name="DeviceIndex" get-method="getDeviceIndex" set-method="setDeviceIndex" usage="optional"/>
+    <structure get-method="getGroups" set-method="setGroups" usage="optional" type="com.eucalyptus.compute.common.SecurityGroupIdStringList" name="Groups"/>
+    <value name="Ipv6AddressCount" get-method="getIpv6AddressCount" set-method="setIpv6AddressCount" usage="optional"/>
+    <structure get-method="getIpv6Addresses" set-method="setIpv6Addresses" usage="optional" type="com.eucalyptus.compute.common.InstanceIpv6AddressListRequest" name="Ipv6Addresses"/>
+    <value name="NetworkInterfaceId" get-method="getNetworkInterfaceId" set-method="setNetworkInterfaceId" usage="optional"/>
+    <value name="PrivateIpAddress" get-method="getPrivateIpAddress" set-method="setPrivateIpAddress" usage="optional"/>
+    <structure get-method="getPrivateIpAddresses" set-method="setPrivateIpAddresses" usage="optional" type="com.eucalyptus.compute.common.PrivateIpAddressSpecificationList" name="PrivateIpAddresses"/>
+    <value name="SecondaryPrivateIpAddressCount" get-method="getSecondaryPrivateIpAddressCount" set-method="setSecondaryPrivateIpAddressCount" usage="optional"/>
+    <value name="SubnetId" get-method="getSubnetId" set-method="setSubnetId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateInstanceNetworkInterfaceSpecificationRequestList" abstract="true">
+    <collection field="member">
+      <structure name="InstanceNetworkInterfaceSpecification" type="com.eucalyptus.compute.common.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplatePlacementRequest" abstract="true">
+    <value name="Affinity" get-method="getAffinity" set-method="setAffinity" usage="optional"/>
+    <value name="AvailabilityZone" get-method="getAvailabilityZone" set-method="setAvailabilityZone" usage="optional"/>
+    <value name="GroupName" get-method="getGroupName" set-method="setGroupName" usage="optional"/>
+    <value name="HostId" get-method="getHostId" set-method="setHostId" usage="optional"/>
+    <value name="SpreadDomain" get-method="getSpreadDomain" set-method="setSpreadDomain" usage="optional"/>
+    <value name="Tenancy" get-method="getTenancy" set-method="setTenancy" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.SecurityGroupIdStringList" abstract="true">
+    <collection field="member">
+      <value name="SecurityGroupId" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.SecurityGroupStringList" abstract="true">
+    <collection field="member">
+      <value name="SecurityGroup" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateTagSpecificationRequest" abstract="true">
+    <value name="ResourceType" get-method="getResourceType" set-method="setResourceType" usage="optional"/>
+    <structure name="tagSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="tagSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.ResourceTag" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateTagSpecificationRequestList" abstract="true">
+    <collection field="member">
+      <structure name="LaunchTemplateTagSpecificationRequest" type="com.eucalyptus.compute.common.LaunchTemplateTagSpecificationRequest"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ServiceTypeDetail" abstract="true">
+    <value name="ServiceType" get-method="getServiceType" set-method="setServiceType" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ServiceTypeDetailSet" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.ServiceTypeDetail"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.UnsuccessfulInstanceCreditSpecificationItem" abstract="true">
+    <structure get-method="getError" set-method="setError" usage="optional" type="com.eucalyptus.compute.common.UnsuccessfulInstanceCreditSpecificationItemError" name="Error"/>
+    <value name="InstanceId" get-method="getInstanceId" set-method="setInstanceId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.UnsuccessfulInstanceCreditSpecificationItemError" abstract="true">
+    <value name="Code" get-method="getCode" set-method="setCode" usage="optional"/>
+    <value name="Message" get-method="getMessage" set-method="setMessage" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ValueStringList" abstract="true">
+    <collection field="member">
+      <value name="item" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.FleetLaunchTemplateConfigListRequest" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.FleetLaunchTemplateConfigRequest"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.FleetLaunchTemplateConfigRequest" abstract="true">
+    <structure get-method="getLaunchTemplateSpecification" set-method="setLaunchTemplateSpecification" usage="optional" type="com.eucalyptus.compute.common.FleetLaunchTemplateSpecificationRequest" name="LaunchTemplateSpecification"/>
+    <structure get-method="getOverrides" set-method="setOverrides" usage="optional" type="com.eucalyptus.compute.common.FleetLaunchTemplateOverridesListRequest" name="Overrides"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.FleetLaunchTemplateSpecificationRequest" abstract="true">
+    <value name="LaunchTemplateId" get-method="getLaunchTemplateId" set-method="setLaunchTemplateId" usage="optional"/>
+    <value name="LaunchTemplateName" get-method="getLaunchTemplateName" set-method="setLaunchTemplateName" usage="optional"/>
+    <value name="Version" get-method="getVersion" set-method="setVersion" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.FleetLaunchTemplateOverridesListRequest" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.FleetLaunchTemplateOverridesRequest"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.FleetLaunchTemplateOverridesRequest" abstract="true">
+    <value name="AvailabilityZone" get-method="getAvailabilityZone" set-method="setAvailabilityZone" usage="optional"/>
+    <value name="InstanceType" get-method="getInstanceType" set-method="setInstanceType" usage="optional"/>
+    <value name="MaxPrice" get-method="getMaxPrice" set-method="setMaxPrice" usage="optional"/>
+    <value name="Priority" get-method="getPriority" set-method="setPriority" usage="optional"/>
+    <value name="SubnetId" get-method="getSubnetId" set-method="setSubnetId" usage="optional"/>
+    <value name="WeightedCapacity" get-method="getWeightedCapacity" set-method="setWeightedCapacity" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.FleetLaunchTemplateOverrides" abstract="true">
+    <value name="AvailabilityZone" get-method="getAvailabilityZone" set-method="setAvailabilityZone" usage="optional"/>
+    <value name="InstanceType" get-method="getInstanceType" set-method="setInstanceType" usage="optional"/>
+    <value name="MaxPrice" get-method="getMaxPrice" set-method="setMaxPrice" usage="optional"/>
+    <value name="Priority" get-method="getPriority" set-method="setPriority" usage="optional"/>
+    <value name="SubnetId" get-method="getSubnetId" set-method="setSubnetId" usage="optional"/>
+    <value name="WeightedCapacity" get-method="getWeightedCapacity" set-method="setWeightedCapacity" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.PciId" abstract="true">
+    <value name="DeviceId" get-method="getDeviceId" set-method="setDeviceId" usage="optional"/>
+    <value name="SubsystemId" get-method="getSubsystemId" set-method="setSubsystemId" usage="optional"/>
+    <value name="SubsystemVendorId" get-method="getSubsystemVendorId" set-method="setSubsystemVendorId" usage="optional"/>
+    <value name="VendorId" get-method="getVendorId" set-method="setVendorId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.FpgaImageState" abstract="true">
+    <value name="Code" get-method="getCode" set-method="setCode" usage="optional"/>
+    <value name="Message" get-method="getMessage" set-method="setMessage" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.CreditSpecification" abstract="true">
+    <value name="CpuCredits" get-method="getCpuCredits" set-method="setCpuCredits" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateSpotMarketOptions" abstract="true">
+    <value name="BlockDurationMinutes" get-method="getBlockDurationMinutes" set-method="setBlockDurationMinutes" usage="optional"/>
+    <value name="InstanceInterruptionBehavior" get-method="getInstanceInterruptionBehavior" set-method="setInstanceInterruptionBehavior" usage="optional"/>
+    <value name="MaxPrice" get-method="getMaxPrice" set-method="setMaxPrice" usage="optional"/>
+    <value name="SpotInstanceType" get-method="getSpotInstanceType" set-method="setSpotInstanceType" usage="optional"/>
+    <value name="ValidUntil" get-method="getValidUntil" set-method="setValidUntil" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateInstanceNetworkInterfaceSpecification" abstract="true">
+    <value name="AssociatePublicIpAddress" get-method="getAssociatePublicIpAddress" set-method="setAssociatePublicIpAddress" usage="optional"/>
+    <value name="DeleteOnTermination" get-method="getDeleteOnTermination" set-method="setDeleteOnTermination" usage="optional"/>
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <value name="DeviceIndex" get-method="getDeviceIndex" set-method="setDeviceIndex" usage="optional"/>
+    <structure get-method="getGroups" set-method="setGroups" usage="optional" type="com.eucalyptus.compute.common.GroupIdStringList" name="Groups"/>
+    <value name="Ipv6AddressCount" get-method="getIpv6AddressCount" set-method="setIpv6AddressCount" usage="optional"/>
+    <structure get-method="getIpv6Addresses" set-method="setIpv6Addresses" usage="optional" type="com.eucalyptus.compute.common.InstanceIpv6AddressList" name="Ipv6Addresses"/>
+    <value name="NetworkInterfaceId" get-method="getNetworkInterfaceId" set-method="setNetworkInterfaceId" usage="optional"/>
+    <value name="PrivateIpAddress" get-method="getPrivateIpAddress" set-method="setPrivateIpAddress" usage="optional"/>
+    <structure get-method="getPrivateIpAddresses" set-method="setPrivateIpAddresses" usage="optional" type="com.eucalyptus.compute.common.PrivateIpAddressSpecificationList" name="PrivateIpAddresses"/>
+    <value name="SecondaryPrivateIpAddressCount" get-method="getSecondaryPrivateIpAddressCount" set-method="setSecondaryPrivateIpAddressCount" usage="optional"/>
+    <value name="SubnetId" get-method="getSubnetId" set-method="setSubnetId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateEbsBlockDeviceRequest" abstract="true">
+    <value name="DeleteOnTermination" get-method="getDeleteOnTermination" set-method="setDeleteOnTermination" usage="optional"/>
+    <value name="Encrypted" get-method="getEncrypted" set-method="setEncrypted" usage="optional"/>
+    <value name="Iops" get-method="getIops" set-method="setIops" usage="optional"/>
+    <value name="KmsKeyId" get-method="getKmsKeyId" set-method="setKmsKeyId" usage="optional"/>
+    <value name="SnapshotId" get-method="getSnapshotId" set-method="setSnapshotId" usage="optional"/>
+    <value name="VolumeSize" get-method="getVolumeSize" set-method="setVolumeSize" usage="optional"/>
+    <value name="VolumeType" get-method="getVolumeType" set-method="setVolumeType" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.LaunchTemplateSpotMarketOptionsRequest" abstract="true">
+    <value name="BlockDurationMinutes" get-method="getBlockDurationMinutes" set-method="setBlockDurationMinutes" usage="optional"/>
+    <value name="InstanceInterruptionBehavior" get-method="getInstanceInterruptionBehavior" set-method="setInstanceInterruptionBehavior" usage="optional"/>
+    <value name="MaxPrice" get-method="getMaxPrice" set-method="setMaxPrice" usage="optional"/>
+    <value name="SpotInstanceType" get-method="getSpotInstanceType" set-method="setSpotInstanceType" usage="optional"/>
+    <value name="ValidUntil" get-method="getValidUntil" set-method="setValidUntil" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.GroupIdStringList" abstract="true">
+    <collection field="member">
+      <value name="groupId" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.InstanceIpv6Address" abstract="true">
+    <value name="Ipv6Address" get-method="getIpv6Address" set-method="setIpv6Address" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.InstanceIpv6AddressList" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.InstanceIpv6Address"/>
+    </collection>
+  </mapping>
+  <mapping name="CreateFleet" class="com.eucalyptus.compute.common.CreateFleetType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="ClientToken" get-method="getClientToken" set-method="setClientToken" usage="optional"/>
+    <value name="ExcessCapacityTerminationPolicy" get-method="getExcessCapacityTerminationPolicy" set-method="setExcessCapacityTerminationPolicy" usage="optional"/>
+    <structure get-method="getLaunchTemplateConfigs" set-method="setLaunchTemplateConfigs" usage="optional" type="com.eucalyptus.compute.common.FleetLaunchTemplateConfigListRequest" name="LaunchTemplateConfigs"/>
+    <structure get-method="getOnDemandOptions" set-method="setOnDemandOptions" usage="optional" type="com.eucalyptus.compute.common.OnDemandOptionsRequest" name="OnDemandOptions"/>
+    <value name="ReplaceUnhealthyInstances" get-method="getReplaceUnhealthyInstances" set-method="setReplaceUnhealthyInstances" usage="optional"/>
+    <structure get-method="getSpotOptions" set-method="setSpotOptions" usage="optional" type="com.eucalyptus.compute.common.SpotOptionsRequest" name="SpotOptions"/>
+    <structure get-method="getTargetCapacitySpecification" set-method="setTargetCapacitySpecification" usage="optional" type="com.eucalyptus.compute.common.TargetCapacitySpecificationRequest" name="TargetCapacitySpecification"/>
+    <value name="TerminateInstancesWithExpiration" get-method="getTerminateInstancesWithExpiration" set-method="setTerminateInstancesWithExpiration" usage="optional"/>
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+    <value name="ValidFrom" get-method="getValidFrom" set-method="setValidFrom" usage="optional"/>
+    <value name="ValidUntil" get-method="getValidUntil" set-method="setValidUntil" usage="optional"/>
+  </mapping>
+  <mapping name="CreateFleetResponse" class="com.eucalyptus.compute.common.CreateFleetResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="FleetId" get-method="getFleetId" set-method="setFleetId" usage="optional"/>
+  </mapping>
+  <mapping name="DeleteFleets" class="com.eucalyptus.compute.common.DeleteFleetsType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getFleetIds" set-method="setFleetIds" usage="optional" type="com.eucalyptus.compute.common.FleetIdSet" name="FleetIds"/>
+    <value name="TerminateInstances" get-method="getTerminateInstances" set-method="setTerminateInstances" usage="optional"/>
+  </mapping>
+  <mapping name="DeleteFleetsResponse" class="com.eucalyptus.compute.common.DeleteFleetsResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getSuccessfulFleetDeletions" set-method="setSuccessfulFleetDeletions" usage="optional" type="com.eucalyptus.compute.common.DeleteFleetSuccessSet" name="SuccessfulFleetDeletions"/>
+    <structure get-method="getUnsuccessfulFleetDeletions" set-method="setUnsuccessfulFleetDeletions" usage="optional" type="com.eucalyptus.compute.common.DeleteFleetErrorSet" name="UnsuccessfulFleetDeletions"/>
+  </mapping>
+  <mapping name="DescribeFleetHistory" class="com.eucalyptus.compute.common.DescribeFleetHistoryType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="EventType" get-method="getEventType" set-method="setEventType" usage="optional"/>
+    <value name="FleetId" get-method="getFleetId" set-method="setFleetId" usage="optional"/>
+    <value name="MaxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <value name="StartTime" get-method="getStartTime" set-method="setStartTime" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeFleetHistoryResponse" class="com.eucalyptus.compute.common.DescribeFleetHistoryResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="FleetId" get-method="getFleetId" set-method="setFleetId" usage="optional"/>
+    <structure get-method="getHistoryRecords" set-method="setHistoryRecords" usage="optional" type="com.eucalyptus.compute.common.HistoryRecordSet" name="HistoryRecords"/>
+    <value name="LastEvaluatedTime" get-method="getLastEvaluatedTime" set-method="setLastEvaluatedTime" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <value name="StartTime" get-method="getStartTime" set-method="setStartTime" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeFleetInstances" class="com.eucalyptus.compute.common.DescribeFleetInstancesType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+    <value name="FleetId" get-method="getFleetId" set-method="setFleetId" usage="optional"/>
+    <value name="MaxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeFleetInstancesResponse" class="com.eucalyptus.compute.common.DescribeFleetInstancesResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getActiveInstances" set-method="setActiveInstances" usage="optional" type="com.eucalyptus.compute.common.ActiveInstanceSet" name="ActiveInstances"/>
+    <value name="FleetId" get-method="getFleetId" set-method="setFleetId" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeFleets" class="com.eucalyptus.compute.common.DescribeFleetsType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+    <structure get-method="getFleetIds" set-method="setFleetIds" usage="optional" type="com.eucalyptus.compute.common.FleetIdSet" name="FleetIds"/>
+    <value name="MaxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeFleetsResponse" class="com.eucalyptus.compute.common.DescribeFleetsResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getFleets" set-method="setFleets" usage="optional" type="com.eucalyptus.compute.common.FleetSet" name="Fleets"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping name="ModifyFleet" class="com.eucalyptus.compute.common.ModifyFleetType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="ExcessCapacityTerminationPolicy" get-method="getExcessCapacityTerminationPolicy" set-method="setExcessCapacityTerminationPolicy" usage="optional"/>
+    <value name="FleetId" get-method="getFleetId" set-method="setFleetId" usage="optional"/>
+    <structure get-method="getTargetCapacitySpecification" set-method="setTargetCapacitySpecification" usage="optional" type="com.eucalyptus.compute.common.TargetCapacitySpecificationRequest" name="TargetCapacitySpecification"/>
+  </mapping>
+  <mapping name="ModifyFleetResponse" class="com.eucalyptus.compute.common.ModifyFleetResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="CopyFpgaImage" class="com.eucalyptus.compute.common.CopyFpgaImageType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="ClientToken" get-method="getClientToken" set-method="setClientToken" usage="optional"/>
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+    <value name="SourceFpgaImageId" get-method="getSourceFpgaImageId" set-method="setSourceFpgaImageId" usage="optional"/>
+    <value name="SourceRegion" get-method="getSourceRegion" set-method="setSourceRegion" usage="optional"/>
+  </mapping>
+  <mapping name="CopyFpgaImageResponse" class="com.eucalyptus.compute.common.CopyFpgaImageResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="FpgaImageId" get-method="getFpgaImageId" set-method="setFpgaImageId" usage="optional"/>
+  </mapping>
+  <mapping name="CreateFpgaImage" class="com.eucalyptus.compute.common.CreateFpgaImageType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="ClientToken" get-method="getClientToken" set-method="setClientToken" usage="optional"/>
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <structure get-method="getInputStorageLocation" set-method="setInputStorageLocation" usage="optional" type="com.eucalyptus.compute.common.StorageLocation" name="InputStorageLocation"/>
+    <structure get-method="getLogsStorageLocation" set-method="setLogsStorageLocation" usage="optional" type="com.eucalyptus.compute.common.StorageLocation" name="LogsStorageLocation"/>
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+  </mapping>
+  <mapping name="CreateFpgaImageResponse" class="com.eucalyptus.compute.common.CreateFpgaImageResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="FpgaImageGlobalId" get-method="getFpgaImageGlobalId" set-method="setFpgaImageGlobalId" usage="optional"/>
+    <value name="FpgaImageId" get-method="getFpgaImageId" set-method="setFpgaImageId" usage="optional"/>
+  </mapping>
+  <mapping name="DeleteFpgaImage" class="com.eucalyptus.compute.common.DeleteFpgaImageType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="FpgaImageId" get-method="getFpgaImageId" set-method="setFpgaImageId" usage="optional"/>
+  </mapping>
+  <mapping name="DeleteFpgaImageResponse" class="com.eucalyptus.compute.common.DeleteFpgaImageResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="DescribeFpgaImageAttribute" class="com.eucalyptus.compute.common.DescribeFpgaImageAttributeType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="Attribute" get-method="getAttribute" set-method="setAttribute" usage="optional"/>
+    <value name="FpgaImageId" get-method="getFpgaImageId" set-method="setFpgaImageId" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeFpgaImageAttributeResponse" class="com.eucalyptus.compute.common.DescribeFpgaImageAttributeResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getFpgaImageAttribute" set-method="setFpgaImageAttribute" usage="optional" type="com.eucalyptus.compute.common.FpgaImageAttribute" name="FpgaImageAttribute"/>
+  </mapping>
+  <mapping name="DescribeFpgaImages" class="com.eucalyptus.compute.common.DescribeFpgaImagesType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+    <structure get-method="getFpgaImageIds" set-method="setFpgaImageIds" usage="optional" type="com.eucalyptus.compute.common.FpgaImageIdList" name="FpgaImageIds"/>
+    <value name="MaxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getOwners" set-method="setOwners" usage="optional" type="com.eucalyptus.compute.common.OwnerStringList" name="Owners"/>
+  </mapping>
+  <mapping name="DescribeFpgaImagesResponse" class="com.eucalyptus.compute.common.DescribeFpgaImagesResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getFpgaImages" set-method="setFpgaImages" usage="optional" type="com.eucalyptus.compute.common.FpgaImageList" name="FpgaImages"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping name="ModifyFpgaImageAttribute" class="com.eucalyptus.compute.common.ModifyFpgaImageAttributeType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="Attribute" get-method="getAttribute" set-method="setAttribute" usage="optional"/>
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <value name="FpgaImageId" get-method="getFpgaImageId" set-method="setFpgaImageId" usage="optional"/>
+    <structure get-method="getLoadPermission" set-method="setLoadPermission" usage="optional" type="com.eucalyptus.compute.common.LoadPermissionModifications" name="LoadPermission"/>
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+    <value name="OperationType" get-method="getOperationType" set-method="setOperationType" usage="optional"/>
+    <structure get-method="getProductCodes" set-method="setProductCodes" usage="optional" type="com.eucalyptus.compute.common.ProductCodeStringList" name="ProductCodes"/>
+    <structure get-method="getUserGroups" set-method="setUserGroups" usage="optional" type="com.eucalyptus.compute.common.UserGroupStringList" name="UserGroups"/>
+    <structure get-method="getUserIds" set-method="setUserIds" usage="optional" type="com.eucalyptus.compute.common.UserIdStringList" name="UserIds"/>
+  </mapping>
+  <mapping name="ModifyFpgaImageAttributeResponse" class="com.eucalyptus.compute.common.ModifyFpgaImageAttributeResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getFpgaImageAttribute" set-method="setFpgaImageAttribute" usage="optional" type="com.eucalyptus.compute.common.FpgaImageAttribute" name="FpgaImageAttribute"/>
+  </mapping>
+  <mapping name="ResetFpgaImageAttribute" class="com.eucalyptus.compute.common.ResetFpgaImageAttributeType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="Attribute" get-method="getAttribute" set-method="setAttribute" usage="optional"/>
+    <value name="FpgaImageId" get-method="getFpgaImageId" set-method="setFpgaImageId" usage="optional"/>
+  </mapping>
+  <mapping name="ResetFpgaImageAttributeResponse" class="com.eucalyptus.compute.common.ResetFpgaImageAttributeResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="CreateLaunchTemplate" class="com.eucalyptus.compute.common.CreateLaunchTemplateType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="ClientToken" get-method="getClientToken" set-method="setClientToken" usage="optional"/>
+    <structure get-method="getLaunchTemplateData" set-method="setLaunchTemplateData" usage="optional" type="com.eucalyptus.compute.common.RequestLaunchTemplateData" name="LaunchTemplateData"/>
+    <value name="LaunchTemplateName" get-method="getLaunchTemplateName" set-method="setLaunchTemplateName" usage="optional"/>
+    <value name="VersionDescription" get-method="getVersionDescription" set-method="setVersionDescription" usage="optional"/>
+  </mapping>
+  <mapping name="CreateLaunchTemplateResponse" class="com.eucalyptus.compute.common.CreateLaunchTemplateResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getLaunchTemplate" set-method="setLaunchTemplate" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplate" name="LaunchTemplate"/>
+  </mapping>
+  <mapping name="CreateLaunchTemplateVersion" class="com.eucalyptus.compute.common.CreateLaunchTemplateVersionType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="ClientToken" get-method="getClientToken" set-method="setClientToken" usage="optional"/>
+    <structure get-method="getLaunchTemplateData" set-method="setLaunchTemplateData" usage="optional" type="com.eucalyptus.compute.common.RequestLaunchTemplateData" name="LaunchTemplateData"/>
+    <value name="LaunchTemplateId" get-method="getLaunchTemplateId" set-method="setLaunchTemplateId" usage="optional"/>
+    <value name="LaunchTemplateName" get-method="getLaunchTemplateName" set-method="setLaunchTemplateName" usage="optional"/>
+    <value name="SourceVersion" get-method="getSourceVersion" set-method="setSourceVersion" usage="optional"/>
+    <value name="VersionDescription" get-method="getVersionDescription" set-method="setVersionDescription" usage="optional"/>
+  </mapping>
+  <mapping name="CreateLaunchTemplateVersionResponse" class="com.eucalyptus.compute.common.CreateLaunchTemplateVersionResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getLaunchTemplateVersion" set-method="setLaunchTemplateVersion" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplateVersion" name="LaunchTemplateVersion"/>
+  </mapping>
+  <mapping name="DeleteLaunchTemplate" class="com.eucalyptus.compute.common.DeleteLaunchTemplateType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="LaunchTemplateId" get-method="getLaunchTemplateId" set-method="setLaunchTemplateId" usage="optional"/>
+    <value name="LaunchTemplateName" get-method="getLaunchTemplateName" set-method="setLaunchTemplateName" usage="optional"/>
+  </mapping>
+  <mapping name="DeleteLaunchTemplateResponse" class="com.eucalyptus.compute.common.DeleteLaunchTemplateResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getLaunchTemplate" set-method="setLaunchTemplate" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplate" name="LaunchTemplate"/>
+  </mapping>
+  <mapping name="DeleteLaunchTemplateVersions" class="com.eucalyptus.compute.common.DeleteLaunchTemplateVersionsType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="LaunchTemplateId" get-method="getLaunchTemplateId" set-method="setLaunchTemplateId" usage="optional"/>
+    <value name="LaunchTemplateName" get-method="getLaunchTemplateName" set-method="setLaunchTemplateName" usage="optional"/>
+    <structure get-method="getVersions" set-method="setVersions" usage="optional" type="com.eucalyptus.compute.common.VersionStringList" name="Versions"/>
+  </mapping>
+  <mapping name="DeleteLaunchTemplateVersionsResponse" class="com.eucalyptus.compute.common.DeleteLaunchTemplateVersionsResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getSuccessfullyDeletedLaunchTemplateVersions" set-method="setSuccessfullyDeletedLaunchTemplateVersions" usage="optional" type="com.eucalyptus.compute.common.DeleteLaunchTemplateVersionsResponseSuccessSet" name="SuccessfullyDeletedLaunchTemplateVersions"/>
+    <structure get-method="getUnsuccessfullyDeletedLaunchTemplateVersions" set-method="setUnsuccessfullyDeletedLaunchTemplateVersions" usage="optional" type="com.eucalyptus.compute.common.DeleteLaunchTemplateVersionsResponseErrorSet" name="UnsuccessfullyDeletedLaunchTemplateVersions"/>
+  </mapping>
+  <mapping name="DescribeLaunchTemplates" class="com.eucalyptus.compute.common.DescribeLaunchTemplatesType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+    <structure get-method="getLaunchTemplateIds" set-method="setLaunchTemplateIds" usage="optional" type="com.eucalyptus.compute.common.ValueStringList" name="LaunchTemplateIds"/>
+    <structure get-method="getLaunchTemplateNames" set-method="setLaunchTemplateNames" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplateNameStringList" name="LaunchTemplateNames"/>
+    <value name="MaxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeLaunchTemplatesResponse" class="com.eucalyptus.compute.common.DescribeLaunchTemplatesResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getLaunchTemplates" set-method="setLaunchTemplates" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplateSet" name="LaunchTemplates"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeLaunchTemplateVersions" class="com.eucalyptus.compute.common.DescribeLaunchTemplateVersionsType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+    <value name="LaunchTemplateId" get-method="getLaunchTemplateId" set-method="setLaunchTemplateId" usage="optional"/>
+    <value name="LaunchTemplateName" get-method="getLaunchTemplateName" set-method="setLaunchTemplateName" usage="optional"/>
+    <value name="MaxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
+    <value name="MaxVersion" get-method="getMaxVersion" set-method="setMaxVersion" usage="optional"/>
+    <value name="MinVersion" get-method="getMinVersion" set-method="setMinVersion" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getVersions" set-method="setVersions" usage="optional" type="com.eucalyptus.compute.common.VersionStringList" name="Versions"/>
+  </mapping>
+  <mapping name="DescribeLaunchTemplateVersionsResponse" class="com.eucalyptus.compute.common.DescribeLaunchTemplateVersionsResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getLaunchTemplateVersions" set-method="setLaunchTemplateVersions" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplateVersionSet" name="LaunchTemplateVersions"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping name="GetLaunchTemplateData" class="com.eucalyptus.compute.common.GetLaunchTemplateDataType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="InstanceId" get-method="getInstanceId" set-method="setInstanceId" usage="optional"/>
+  </mapping>
+  <mapping name="GetLaunchTemplateDataResponse" class="com.eucalyptus.compute.common.GetLaunchTemplateDataResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getLaunchTemplateData" set-method="setLaunchTemplateData" usage="optional" type="com.eucalyptus.compute.common.ResponseLaunchTemplateData" name="LaunchTemplateData"/>
+  </mapping>
+  <mapping name="ModifyLaunchTemplate" class="com.eucalyptus.compute.common.ModifyLaunchTemplateType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="ClientToken" get-method="getClientToken" set-method="setClientToken" usage="optional"/>
+    <value name="DefaultVersion" get-method="getDefaultVersion" set-method="setDefaultVersion" usage="optional"/>
+    <value name="LaunchTemplateId" get-method="getLaunchTemplateId" set-method="setLaunchTemplateId" usage="optional"/>
+    <value name="LaunchTemplateName" get-method="getLaunchTemplateName" set-method="setLaunchTemplateName" usage="optional"/>
+  </mapping>
+  <mapping name="ModifyLaunchTemplateResponse" class="com.eucalyptus.compute.common.ModifyLaunchTemplateResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getLaunchTemplate" set-method="setLaunchTemplate" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplate" name="LaunchTemplate"/>
+  </mapping>
+  <mapping name="DescribeAggregateIdFormat" class="com.eucalyptus.compute.common.DescribeAggregateIdFormatType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+  </mapping>
+  <mapping name="DescribeAggregateIdFormatResponse" class="com.eucalyptus.compute.common.DescribeAggregateIdFormatResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getStatuses" set-method="setStatuses" usage="optional" type="com.eucalyptus.compute.common.IdFormatList" name="Statuses"/>
+    <value name="UseLongIdsAggregated" get-method="getUseLongIdsAggregated" set-method="setUseLongIdsAggregated" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeInstanceCreditSpecifications" class="com.eucalyptus.compute.common.DescribeInstanceCreditSpecificationsType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+    <structure get-method="getInstanceIds" set-method="setInstanceIds" usage="optional" type="com.eucalyptus.compute.common.InstanceIdStringList" name="InstanceIds"/>
+    <value name="MaxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeInstanceCreditSpecificationsResponse" class="com.eucalyptus.compute.common.DescribeInstanceCreditSpecificationsResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getInstanceCreditSpecifications" set-method="setInstanceCreditSpecifications" usage="optional" type="com.eucalyptus.compute.common.InstanceCreditSpecificationList" name="InstanceCreditSpecifications"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping name="ModifyInstanceCreditSpecification" class="com.eucalyptus.compute.common.ModifyInstanceCreditSpecificationType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="ClientToken" get-method="getClientToken" set-method="setClientToken" usage="optional"/>
+    <structure get-method="getInstanceCreditSpecifications" set-method="setInstanceCreditSpecifications" usage="optional" type="com.eucalyptus.compute.common.InstanceCreditSpecificationListRequest" name="InstanceCreditSpecifications"/>
+  </mapping>
+  <mapping name="ModifyInstanceCreditSpecificationResponse" class="com.eucalyptus.compute.common.ModifyInstanceCreditSpecificationResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getSuccessfulInstanceCreditSpecifications" set-method="setSuccessfulInstanceCreditSpecifications" usage="optional" type="com.eucalyptus.compute.common.SuccessfulInstanceCreditSpecificationSet" name="SuccessfulInstanceCreditSpecifications"/>
+    <structure get-method="getUnsuccessfulInstanceCreditSpecifications" set-method="setUnsuccessfulInstanceCreditSpecifications" usage="optional" type="com.eucalyptus.compute.common.UnsuccessfulInstanceCreditSpecificationSet" name="UnsuccessfulInstanceCreditSpecifications"/>
+  </mapping>
+  <mapping name="DescribePrincipalIdFormat" class="com.eucalyptus.compute.common.DescribePrincipalIdFormatType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="MaxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getResources" set-method="setResources" usage="optional" type="com.eucalyptus.compute.common.ResourceList" name="Resources"/>
+  </mapping>
+  <mapping name="DescribePrincipalIdFormatResponse" class="com.eucalyptus.compute.common.DescribePrincipalIdFormatResponseType"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getPrincipals" set-method="setPrincipals" usage="optional" type="com.eucalyptus.compute.common.PrincipalIdFormatList" name="Principals"/>
+  </mapping>
+
   <mapping name="DescribeAccountAttributes" class="com.eucalyptus.compute.common.DescribeAccountAttributesType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <structure name="accountAttributeNameSet" field="accountAttributeNameSet" usage="optional" type="com.eucalyptus.compute.common.AccountAttributeNameSetType"/>
@@ -1281,7 +2721,6 @@
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <structure name="staleSecurityGroupSet"/>
   </mapping>
-
   <mapping name="AttachClassicLinkVpc" class="com.eucalyptus.compute.common.AttachClassicLinkVpcType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <collection name="securityGroupId" factory="org.jibx.runtime.Utility.arrayListFactory" field="securityGroupId" usage="optional" item-type="java.lang.String">
@@ -1296,7 +2735,6 @@
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="return" constant="false" />
   </mapping>
-
   <mapping name="DescribeClassicLinkInstances" class="com.eucalyptus.compute.common.DescribeClassicLinkInstancesType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <structure name="filterSet" usage="optional">
@@ -1316,7 +2754,6 @@
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <structure name="instancesSet"/>
   </mapping>
-
   <mapping name="DescribeVpcClassicLink" class="com.eucalyptus.compute.common.DescribeVpcClassicLinkType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <structure name="filterSet" usage="optional">
@@ -1330,7 +2767,6 @@
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <structure name="vpcSet"/>
   </mapping>
-
   <mapping name="DetachClassicLinkVpc" class="com.eucalyptus.compute.common.DetachClassicLinkVpcType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="vpcId" field="vpcId" usage="optional"/>
@@ -1340,7 +2776,6 @@
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="return" constant="false" />
   </mapping>
-
   <mapping name="DisableVpcClassicLink" class="com.eucalyptus.compute.common.DisableVpcClassicLinkType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="vpcId" field="vpcId" usage="optional"/>
@@ -1349,7 +2784,6 @@
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="return" constant="false" />
   </mapping>
-
   <mapping name="EnableVpcClassicLink" class="com.eucalyptus.compute.common.EnableVpcClassicLinkType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="vpcId" field="vpcId" usage="optional"/>
@@ -1358,7 +2792,6 @@
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="return" constant="false" />
   </mapping>
-
   <mapping name="DescribeVpcClassicLinkDnsSupport" class="com.eucalyptus.compute.common.DescribeVpcClassicLinkDnsSupportType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <collection name="vpcIds" factory="org.jibx.runtime.Utility.arrayListFactory" field="vpcIds" usage="optional" item-type="java.lang.String">
@@ -1373,7 +2806,6 @@
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <structure name="vpcs"/>
   </mapping>
-
   <mapping name="DisableVpcClassicLinkDnsSupport" class="com.eucalyptus.compute.common.DisableVpcClassicLinkDnsSupportType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="vpcId" field="vpcId" usage="optional"/>
@@ -1382,7 +2814,6 @@
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="return" constant="false" />
   </mapping>
-
   <mapping name="EnableVpcClassicLinkDnsSupport" class="com.eucalyptus.compute.common.EnableVpcClassicLinkDnsSupportType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="vpcId" field="vpcId" usage="optional"/>
@@ -1391,7 +2822,6 @@
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="return" constant="false" />
   </mapping>
-
   <mapping name="CreateVpcEndpoint" class="com.eucalyptus.compute.common.CreateVpcEndpointType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="clientToken" field="clientToken" usage="optional"/>
@@ -1407,7 +2837,6 @@
   <mapping name="CreateVpcEndpointResponse" class="com.eucalyptus.compute.common.CreateVpcEndpointResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
   </mapping>
-
   <mapping name="DeleteVpcEndpoints" class="com.eucalyptus.compute.common.DeleteVpcEndpointsType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <collection name="vpcEndpointId" factory="org.jibx.runtime.Utility.arrayListFactory" field="vpcEndpointId" usage="optional" item-type="java.lang.String">
@@ -1419,7 +2848,6 @@
   <mapping name="DeleteVpcEndpointsResponse" class="com.eucalyptus.compute.common.DeleteVpcEndpointsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
   </mapping>
-
   <mapping name="DescribePrefixLists" class="com.eucalyptus.compute.common.DescribePrefixListsType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <structure name="filterSet" usage="optional">
@@ -1439,7 +2867,6 @@
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <structure name="prefixListSet"/>
   </mapping>
-
   <mapping name="DescribeVpcEndpointServices" class="com.eucalyptus.compute.common.DescribeVpcEndpointServicesType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="maxResults" field="maxResults" usage="optional"/>
@@ -1449,7 +2876,6 @@
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <structure name="serviceNameSet"/>
   </mapping>
-
   <mapping name="DescribeVpcEndpoints" class="com.eucalyptus.compute.common.DescribeVpcEndpointsType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <structure name="filterSet" usage="optional">
@@ -1469,7 +2895,6 @@
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <structure name="vpcEndpointSet"/>
   </mapping>
-
   <mapping name="ModifyVpcEndpoint" class="com.eucalyptus.compute.common.ModifyVpcEndpointType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <collection name="addRouteTableId" factory="org.jibx.runtime.Utility.arrayListFactory" field="addRouteTableId" usage="optional" item-type="java.lang.String">
@@ -1489,7 +2914,6 @@
   <mapping name="ModifyVpcEndpointResponse" class="com.eucalyptus.compute.common.ModifyVpcEndpointResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
   </mapping>
-
   <mapping name="AssignIpv6AddressesResponse" class="com.eucalyptus.compute.common.AssignIpv6AddressesResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
   </mapping>
@@ -1567,5 +2991,4 @@
     </collection>
     <value name="NetworkInterfaceId" field="networkInterfaceId" usage="optional"/>
   </mapping>
-
 </binding>

@@ -55,6 +55,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
+import org.springframework.util.ReflectionUtils;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingElementNotFoundException;
 import com.eucalyptus.binding.BindingException;
@@ -269,6 +270,30 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
 
   private List<String> populateObject( final Object obj, final Map<String, String> paramFieldMap, final Map<String, String> params ) {
     final List<String> failedMappings = new ArrayList<String>( );
+    if ( ( params.containsKey( "0" ) || params.containsKey( "1" ) ) && isValueObject( obj.getClass( ) ) ) {
+      Field field = findValueField( obj.getClass( ) );
+      if ( field!=null && field.getType( ).equals( ArrayList.class ) ) {
+        field.setAccessible( true );
+        final ArrayList theList = ( ArrayList ) ReflectionUtils.getField( field, obj );
+        final Class genericType = ( Class ) ( ( ParameterizedType ) field.getGenericType( ) ).getActualTypeArguments( )[0];
+        if ( isSimpleType( genericType ) ) {
+          final List<String> keys = Lists.newArrayList( params.keySet( ) );
+          final Pattern paramPattern = Pattern.compile( "([0-9]{1,7})" );
+          final Map<String,Object> indexToValueMap = new TreeMap<String,Object>( Ordering.natural().onResultOf( FunctionToInteger.INSTANCE ) );
+          for ( final String k : keys ) {
+            final Matcher matcher = paramPattern.matcher( k );
+            if ( matcher.matches() ) {
+              try {
+                indexToValueMap.put( matcher.group(1), convertToType( Suppliers.ofInstance(params.remove( k )), genericType )  );
+              } catch ( Exception ignore ) {
+              }
+            }
+          }
+          theList.addAll( indexToValueMap.values() );
+          return failedMappings;
+        }
+      }
+    }
     for ( final Map.Entry<String, String> e : paramFieldMap.entrySet( ) ) {
       try {
         if ( getRecursiveField( obj.getClass( ), e.getValue( ) ).getType( ).equals( ArrayList.class ) ) {
@@ -393,6 +418,15 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
       return null;
   }
 
+  private boolean isSimpleType( final Class<?> type ) {
+    return String.class.equals( type ) ||
+        Boolean.class.equals( type ) ||
+        Integer.class.equals( type ) ||
+        Long.class.equals( type ) ||
+        Double.class.equals( type ) ||
+        Date.class.equals( type );
+  }
+
   @SuppressWarnings( "rawtypes" )
   private List<String> populateObjectList( final Object obj, final Map.Entry<String, String> paramFieldPair, final Map<String, String> params, final int paramSize ) {
     final List<String> failedMappings = new ArrayList<String>( );
@@ -401,12 +435,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
       final ArrayList theList = ( ArrayList ) getObjectProperty( obj, paramFieldPair.getValue( ) );
       final Class genericType = ( Class ) ( ( ParameterizedType ) declaredField.getGenericType( ) ).getActualTypeArguments( )[0];
       // :: simple case: FieldName.# :://
-      if ( String.class.equals( genericType ) ||
-           Boolean.class.equals( genericType ) ||
-           Integer.class.equals( genericType ) ||
-           Long.class.equals( genericType ) ||
-           Double.class.equals( genericType ) ||
-           Date.class.equals( genericType ) ) {
+      if ( isSimpleType( genericType ) ) {
         if ( params.containsKey( paramFieldPair.getKey( ) ) ) {
           theList.add( convertToType( Suppliers.ofInstance(params.remove( paramFieldPair.getKey() )), genericType ) );
         } else {
