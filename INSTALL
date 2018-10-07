@@ -160,7 +160,7 @@ Link to the RPM spec file:
 
 Create the tarballs of eucalyptus and the eucalyptus-cloud-libs that
 rpmbuild will un-tar and build. We also need the cloud libs installed
-at /usr/share/eucalyptus for rpmbuild to find.
+at /usr/share/eucalyptus/lib for rpmbuild to find.
 
 >>>>> Commands 4c: 
 # cd $EUCAGIT && \
@@ -326,7 +326,7 @@ Run the "make" commands below. The "make clean" deletes the artifacts from
 any previous build. The "make" builds the artifacts, in the
 $EUCAGIT/eucalyptus tree. The "make install" of eucalyptus-cloud-libs
 is required for the eucalyptus "make" to find the cloud libraries at 
-/usr/share/eucalyptus, because --disable-bundled-jars was supplied to
+/usr/share/eucalyptus/lib, because --disable-bundled-jars was supplied to
 the configure command. Without it, the "make" of eucalyptus will download
 the "master" branch of the cloud libs from github, regardless of the branch
 you're building, which would be incorrect if you're not building "master".
