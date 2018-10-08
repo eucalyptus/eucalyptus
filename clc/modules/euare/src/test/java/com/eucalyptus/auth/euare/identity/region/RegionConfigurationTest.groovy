@@ -102,6 +102,54 @@ class RegionConfigurationTest {
     assertEquals( 'Result does not match template', expected, result)
   }
 
+  @Test
+  void testYamlFullParse() {
+    String config = """
+      Regions:
+        - Name: region-1
+          CertificateFingerprint: EC:E7:3D:DF:97:43:00:9E:FC:F0:2C:6D:98:D2:82:EB:AA:04:75:10:E7:C2:F2:6F:31:F1:F1:CA:A1:61:DE:41
+          IdentifierPartitions:
+            - 1
+          Services:
+            - Type: identity
+              Endpoints:
+                - https://identity.example.com:8773/services/Identity
+          RemoteCidrs:
+            - "1.0.0.0/32"
+          ForwardedForCidrs:
+            - "1.0.0.0/32"
+      RemoteCidrs:
+         - "1.0.0.0/32"
+      ForwardedForCidrs:
+         - "1.0.0.0/32"
+    """.stripIndent()
+
+    RegionConfiguration result = RegionConfigurations.parse( config )
+    println result
+
+    RegionConfiguration expected = new RegionConfiguration(
+        regions: [
+            new Region(
+                name: 'region-1',
+                certificateFingerprint: 'EC:E7:3D:DF:97:43:00:9E:FC:F0:2C:6D:98:D2:82:EB:AA:04:75:10:E7:C2:F2:6F:31:F1:F1:CA:A1:61:DE:41',
+                identifierPartitions: [ 1 ],
+                services: [
+                    new Service(
+                        type: 'identity',
+                        endpoints: [ 'https://identity.example.com:8773/services/Identity' ]
+                    )
+                ],
+                remoteCidrs: [ "1.0.0.0/32" ],
+                forwardedForCidrs: [ "1.0.0.0/32" ]
+            )
+        ],
+        remoteCidrs: [ "1.0.0.0/32" ],
+        forwardedForCidrs: [ "1.0.0.0/32" ]
+    )
+
+    assertEquals( 'Result does not match template', expected, result)
+  }
+
   @Test( expected = RegionConfigurationException )
   void testInvalidRegion( ) {
     String config =  """
