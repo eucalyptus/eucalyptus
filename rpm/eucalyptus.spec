@@ -496,6 +496,7 @@ cp -Rp admin-tools/conf/* $RPM_BUILD_ROOT/%{_sysconfdir}/eucalyptus-admin
 %{_tmpfilesdir}/eucalyptus.conf
 /usr/sbin/euca-generate-fault
 %dir /usr/share/eucalyptus
+%dir /usr/share/eucalyptus/lib
 %doc /usr/share/eucalyptus/doc/
 /usr/share/eucalyptus/faults/
 /usr/share/eucalyptus/status/
@@ -549,7 +550,7 @@ cp -Rp admin-tools/conf/* $RPM_BUILD_ROOT/%{_sysconfdir}/eucalyptus-admin
 /usr/lib/eucalyptus/eucalyptus-cloud.vmoptions
 
 %files common-java-libs
-/usr/share/eucalyptus/*jar*
+/usr/share/eucalyptus/lib/*jar*
 
 
 %files cloud

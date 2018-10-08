@@ -47,7 +47,7 @@ include ../Makedefs
 #
 CLOUD_LIBS_BRANCH ?= master
 ifeq ($(USE_BUNDLED_JARS), no)
-    CLOUD_LIBS_DIR ?= ${datarootdir}/eucalyptus
+    CLOUD_LIBS_DIR ?= ${datarootdir}/eucalyptus/lib
 else
     CLOUD_LIBS_DIR ?= $(CURDIR)/lib
 endif
@@ -167,7 +167,7 @@ distclean: clean
 install: build
 	ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=$(CLOUD_LIBS_DIR) -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) install
 ifneq ($(USE_BUNDLED_JARS), no)
-	install -D -m 0644 $(CLOUD_LIBS_DIR)/*.jar $(DESTDIR)$(datarootdir)/eucalyptus
+	install -D -m 0644 $(CLOUD_LIBS_DIR)/*.jar $(DESTDIR)$(datarootdir)/eucalyptus/lib
 endif
 
 install-test: build-test
