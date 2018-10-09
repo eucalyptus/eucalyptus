@@ -37,6 +37,7 @@ import java.lang.annotation.Target;
 import java.lang.reflect.ParameterizedType;
 import java.math.BigInteger;
 import java.util.Collections;
+import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -56,6 +57,8 @@ import com.eucalyptus.network.config.NetworkConfigurationApi.ImmutableNetworkCon
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.CompatSupplier;
 import com.eucalyptus.util.Parameters;
+import com.eucalyptus.util.Yaml;
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.AbstractTypeResolver;
 import com.fasterxml.jackson.databind.DeserializationConfig;
 import com.fasterxml.jackson.databind.JavaType;
@@ -86,13 +89,26 @@ import io.vavr.jackson.datatype.VavrModule;
 public interface NetworkConfigurationApi {
 
   static NetworkConfiguration parse( final String config ) throws IOException {
-    return Mapping.mapper( ).readValue( new StringReader( config ) {
-      @Override
-      public String toString( ) {
-        return "property";
+    try {
+      return parse( Mapping.mapper( ), config );
+    } catch ( final JsonParseException e ) {
+      if ( Objects.toString( e.getMessage( ), "" ).startsWith( "Unrecognized token" ) ) {
+        return parse( Mapping.yamlMapper( ), config );
+      } else {
+        throw e;
       }
+    }
+  }
 
-    }, NetworkConfigurationApi.NetworkConfiguration.class );
+  static NetworkConfiguration parse( final ObjectMapper mapper, final String config ) throws IOException {
+    return mapper.readValue(
+        new StringReader( config ) {
+          @Override
+          public String toString( ) {
+            return "property";
+          }
+        },
+        NetworkConfigurationApi.NetworkConfiguration.class );
   }
 
   @Immutable
@@ -862,15 +878,29 @@ public interface NetworkConfigurationApi {
   }
 
   class Mapping {
-    private static CompatSupplier<ObjectMapper> mapperSupplier =
+    private static final CompatSupplier<ObjectMapper> mapperSupplier =
         CompatSupplier.of( Suppliers.memoize( Mapping::buildMapper ) );
+
+    private static final CompatSupplier<ObjectMapper> yamlMapperSupplier =
+        CompatSupplier.of( Suppliers.memoize( Mapping::buildYamlMapper ) );
 
     static ObjectMapper mapper( ) {
       return mapperSupplier.get( );
     }
 
+    static ObjectMapper yamlMapper( ) {
+      return yamlMapperSupplier.get( );
+    }
+
     private static ObjectMapper buildMapper( ) {
-      final ObjectMapper mapper = new ObjectMapper( );
+      return configure( new ObjectMapper( ) );
+    }
+
+    private static ObjectMapper buildYamlMapper( ) {
+      return configure( Yaml.mapper( ) );
+    }
+
+    private static ObjectMapper configure( final ObjectMapper mapper ) {
       mapper.registerModule( new VavrModule( ) );
       mapper.registerModule( new NetworkConfigurationApi.NetworkConfigurationModule( ) );
       return mapper;

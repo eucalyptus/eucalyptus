@@ -31,6 +31,7 @@ package com.eucalyptus.auth.euare.identity.region;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.Locale;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import org.apache.log4j.Logger;
 import org.springframework.context.MessageSource;
@@ -44,6 +45,8 @@ import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Yaml;
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.google.common.base.MoreObjects;
@@ -104,13 +107,17 @@ public class RegionConfigurations {
   public static String REGION_SSL_CIPHERS = REGION_DEFAULT_SSL_CIPHERS;
 
   public static RegionConfiguration parse( final String configuration ) throws RegionConfigurationException {
-    final ObjectMapper mapper = new ObjectMapper( );
-    mapper.setPropertyNamingStrategy( PropertyNamingStrategy.PASCAL_CASE_TO_CAMEL_CASE );
-    final RegionConfiguration regionConfiguration;
+    RegionConfiguration regionConfiguration;
     try {
-      regionConfiguration = mapper.readValue( new StringReader( configuration ) {
-        @Override public String toString( ) { return "property"; } // overridden for better source in error message
-      }, RegionConfiguration.class );
+      try {
+        regionConfiguration = parse( new ObjectMapper( ), configuration );
+      } catch ( final JsonParseException e ) {
+        if ( Objects.toString( e.getMessage( ), "" ).startsWith( "Unrecognized token" ) ) {
+          regionConfiguration = parse( Yaml.mapper( ), configuration );
+        } else {
+          throw e;
+        }
+      }
     } catch ( IOException e ) {
       throw new RegionConfigurationException( e.getMessage( ) );
     }
@@ -175,6 +182,16 @@ public class RegionConfigurations {
 
   public static String getSslCiphers( ) {
     return MoreObjects.firstNonNull( REGION_SSL_CIPHERS, REGION_DEFAULT_SSL_CIPHERS );
+  }
+
+  private static RegionConfiguration parse( final ObjectMapper mapper, final String configuration ) throws IOException {
+    mapper.setPropertyNamingStrategy( PropertyNamingStrategy.UPPER_CAMEL_CASE );
+    return mapper.readValue( new StringReader( configuration ) {
+      @Override
+      public String toString( ) {
+        return "property";
+      } // overridden for better source in error message
+    }, RegionConfiguration.class );
   }
 
   public static class RegionNamePropertyChangeListener implements PropertyChangeListener<String> {
