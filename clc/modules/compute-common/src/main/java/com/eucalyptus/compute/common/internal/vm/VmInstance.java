@@ -87,6 +87,7 @@ import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.GroupItemType;
 import com.eucalyptus.compute.common.GroupSetType;
 import com.eucalyptus.compute.common.IamInstanceProfile;
+import com.eucalyptus.compute.common.IamInstanceProfileAssociation;
 import com.eucalyptus.compute.common.ImageMetadata.Platform;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.common.internal.network.PrivateAddressReferrer;
@@ -1189,6 +1190,29 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
 
   @TypeMapper
+  public enum IamInstanceProfileAssociationTransform implements Function<VmInstance, IamInstanceProfileAssociation> {
+    INSTANCE;
+
+    @Override
+    public IamInstanceProfileAssociation apply( final VmInstance instance ) {
+      final VmBootRecord vmBootRecord = instance.getBootRecord( );
+
+      final IamInstanceProfile iamInstanceProfile = new IamInstanceProfile( );
+      iamInstanceProfile.setArn( vmBootRecord.getIamInstanceProfileArn( ) );
+      iamInstanceProfile.setId( vmBootRecord.getIamInstanceProfileId( ) );
+
+      final IamInstanceProfileAssociation association = new IamInstanceProfileAssociation( );
+      association.setAssociationId( vmBootRecord.getIamInstanceProfileAssociationId( ) );
+      association.setIamInstanceProfile( iamInstanceProfile );
+      association.setInstanceId( instance.getInstanceId( ) );
+      association.setState( "associated" );
+      association.setTimestamp( vmBootRecord.getIamInstanceProfileAssociationTimestamp( ) );
+
+      return association;
+    }
+  }
+
+  @TypeMapper
   public enum NetworkGroupIdTransform implements Function<NetworkGroup,NetworkGroupId> {
     INSTANCE;
 
@@ -1297,6 +1321,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   @Nullable
   public String getClientToken() {
     return this.getVmId().getClientToken();
+  }
+
+  @Nullable
+  public String getIamInstanceProfileAssociationId() {
+    return getBootRecord( ).getIamInstanceProfileAssociationId( );
   }
 
   /**

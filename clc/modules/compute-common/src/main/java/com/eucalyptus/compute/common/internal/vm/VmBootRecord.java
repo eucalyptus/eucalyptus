@@ -40,6 +40,7 @@
 package com.eucalyptus.compute.common.internal.vm;
 
 import java.util.Arrays;
+import java.util.Date;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -115,11 +116,15 @@ public class VmBootRecord {
   private Boolean                 monitoring;
   @Column( name = "metadata_vm_user_data" )
   private byte[]                  userData;
-  @Column( name = "metadata_vm_nameorarn", updatable = false, length = 2048 )
+  @Column( name = "metadata_vm_iam_iip_assoc" )
+  private String                  iamInstanceProfileAssociationId;
+  @Column( name = "metadata_vm_iam_iip_assoc_time" )
+  private Date                    iamInstanceProfileAssociationTimestamp;
+  @Column( name = "metadata_vm_nameorarn", length = 2048 )
   private String                  iamInstanceProfileArn;
-  @Column( name = "metadata_vm_iam_instance_profile_id", updatable = false )
+  @Column( name = "metadata_vm_iam_instance_profile_id" )
   private String                  iamInstanceProfileId;
-  @Column( name = "metadata_vm_iam_role_arn", updatable = false, length =  2048 )
+  @Column( name = "metadata_vm_iam_role_arn", length =  2048 )
   private String                  iamRoleArn;
   @Type(type="text")
   @Column( name = "metadata_vm_sshkey" )
@@ -170,6 +175,12 @@ public class VmBootRecord {
     this.subnet = subnet;
     this.subnetId = CloudMetadatas.toDisplayName( ).apply( subnet );
     this.monitoring = monitoring;
+    this.iamInstanceProfileAssociationId = iamInstanceProfileArn == null ?
+        null :
+        ResourceIdentifiers.generateLongString( "iip-assoc" );
+    if ( this.iamInstanceProfileAssociationId != null ) {
+      iamInstanceProfileAssociationTimestamp = new Date( );
+    }
     this.iamInstanceProfileArn = iamInstanceProfileArn;
     this.iamInstanceProfileId = iamInstanceProfileId;
     this.iamRoleArn = iamRoleArn;
@@ -180,7 +191,39 @@ public class VmBootRecord {
   private void cleanUp( ) {
     this.persistentVolumes.clear( );
   }
-  
+
+  public String associateIamInstanceProfile(
+      @Nullable final String associationId,
+      @Nonnull  final String iamInstanceProfileArn,
+      @Nonnull  final String iamInstanceProfileId,
+      @Nonnull  final String iamRoleArn
+  ) {
+    verifyIamInstanceProfileAssociation( "re-associate", associationId );
+    final String newAssociationId = ResourceIdentifiers.generateLongString( "iip-assoc" );
+    setIamInstanceProfileAssociationId( newAssociationId );
+    setIamInstanceProfileAssociationTimestamp( new Date( ) );
+    setIamInstanceProfileArn( iamInstanceProfileArn );
+    setIamInstanceProfileId( iamInstanceProfileId );
+    setIamRoleArn( iamRoleArn );
+    return newAssociationId;
+  }
+
+  public void disassociateIamInstanceProfile( final String associationId ) {
+    verifyIamInstanceProfileAssociation( "disassociate", associationId );
+    setIamInstanceProfileAssociationId( null );
+    setIamInstanceProfileAssociationTimestamp( null );
+    setIamInstanceProfileArn( null );
+    setIamInstanceProfileId( null );
+    setIamRoleArn( null );
+  }
+
+  private void verifyIamInstanceProfileAssociation( final String action, final String associationId ) {
+    final String currentAssociationId = getIamInstanceProfileAssociationId();
+    if ( currentAssociationId != null && !currentAssociationId.equals( associationId ) ) {
+      throw new IllegalStateException( "Cannot " + action + " iam instance profile association id invalid " + associationId );
+    }
+  }
+
   private VmInstance getVmInstance( ) {
     return this.vmInstance;
   }
@@ -316,6 +359,23 @@ public class VmBootRecord {
     return this.userData;
   }
 
+  @Nullable
+  public String getIamInstanceProfileAssociationId( ) {
+    return iamInstanceProfileAssociationId;
+  }
+
+  public void setIamInstanceProfileAssociationId( final String iamInstanceProfileAssociationId ) {
+    this.iamInstanceProfileAssociationId = iamInstanceProfileAssociationId;
+  }
+
+  public Date getIamInstanceProfileAssociationTimestamp( ) {
+    return iamInstanceProfileAssociationTimestamp;
+  }
+
+  public void setIamInstanceProfileAssociationTimestamp( final Date iamInstanceProfileAssociationTimestamp ) {
+    this.iamInstanceProfileAssociationTimestamp = iamInstanceProfileAssociationTimestamp;
+  }
+
   /**
    * Could be name for an instance created before to 3.4
    */
@@ -324,20 +384,32 @@ public class VmBootRecord {
     return iamInstanceProfileArn;
   }
 
-  /**
-   * May be null when ARN is set on upgraded systems (from pre 3.4)
-   */
-  @Nullable
-  public String getIamInstanceProfileId() {
-    return iamInstanceProfileId;
+  public void setIamInstanceProfileArn( final String iamInstanceProfileArn ) {
+    this.iamInstanceProfileArn = iamInstanceProfileArn;
   }
 
   /**
    * May be null when ARN is set on upgraded systems (from pre 3.4)
    */
   @Nullable
-  public String getIamRoleArn() {
+  public String getIamInstanceProfileId( ) {
+    return iamInstanceProfileId;
+  }
+
+  public void setIamInstanceProfileId( final String iamInstanceProfileId ) {
+    this.iamInstanceProfileId = iamInstanceProfileId;
+  }
+
+  /**
+   * May be null when ARN is set on upgraded systems (from pre 3.4)
+   */
+  @Nullable
+  public String getIamRoleArn( ) {
     return iamRoleArn;
+  }
+
+  public void setIamRoleArn( final String iamRoleArn ) {
+    this.iamRoleArn = iamRoleArn;
   }
 
   public SshKeyPair getSshKeyPair( ) {

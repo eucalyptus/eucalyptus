@@ -2596,6 +2596,18 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
     }
   }
 
+  public static class VmInstanceIamInstanceProfileAssociationFilterSupport extends FilterSupport<VmInstance> {
+    public VmInstanceIamInstanceProfileAssociationFilterSupport() {
+      super( qualifierBuilderFor( VmInstance.class, "instance-profile" )
+          .withInternalStringProperty( "iam-instance-profile.association-id", VmInstanceFilterFunctions.INSTANCE_PROFILE_ASSOCIATION_ID )
+          .withStringProperty( "instance-id", CloudMetadatas.toDisplayName( ) )
+          .withConstantProperty( "state", "associated" )
+          .withPersistenceFilter( "instance-id", "displayName" )
+          .withPersistenceFilter( "iam-instance-profile.association-id", "bootRecord.iamInstanceProfileAssociationId", Collections.<String>emptySet() )
+      );
+    }
+  }
+
   public static class VmBundleTaskFilterSupport extends FilterSupport<VmBundleTask> {
     private enum ProgressToInteger implements Function<String,Integer> {
       INSTANCE {
@@ -3046,6 +3058,12 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       @Override
       public String apply( final VmInstance instance ) {
         return instance.getIamInstanceProfileArn();
+      }
+    },
+    INSTANCE_PROFILE_ASSOCIATION_ID {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return instance.getIamInstanceProfileAssociationId();
       }
     },
     INSTANCE_STATE_NAME {

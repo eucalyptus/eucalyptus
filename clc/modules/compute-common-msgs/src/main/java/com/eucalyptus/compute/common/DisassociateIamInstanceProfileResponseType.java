@@ -29,5 +29,13 @@
 package com.eucalyptus.compute.common;
 
 public class DisassociateIamInstanceProfileResponseType extends IamInstanceProfileComputeMessage {
+  private IamInstanceProfileAssociation iamInstanceProfileAssociation;
 
+  public IamInstanceProfileAssociation getIamInstanceProfileAssociation( ) {
+    return iamInstanceProfileAssociation;
+  }
+
+  public void setIamInstanceProfileAssociation( final IamInstanceProfileAssociation iamInstanceProfileAssociation ) {
+    this.iamInstanceProfileAssociation = iamInstanceProfileAssociation;
+  }
 }
