@@ -30,4 +30,13 @@ package com.eucalyptus.compute.common;
 
 public class AssociateIamInstanceProfileResponseType extends IamInstanceProfileComputeMessage {
 
+  private IamInstanceProfileAssociation iamInstanceProfileAssociation;
+
+  public IamInstanceProfileAssociation getIamInstanceProfileAssociation( ) {
+    return iamInstanceProfileAssociation;
+  }
+
+  public void setIamInstanceProfileAssociation( final IamInstanceProfileAssociation iamInstanceProfileAssociation ) {
+    this.iamInstanceProfileAssociation = iamInstanceProfileAssociation;
+  }
 }

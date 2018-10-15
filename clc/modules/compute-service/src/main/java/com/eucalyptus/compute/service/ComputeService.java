@@ -58,6 +58,7 @@ import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.type.RestrictedType;
 import com.eucalyptus.component.Topology;
@@ -72,7 +73,6 @@ import com.eucalyptus.compute.common.internal.blockstorage.Snapshots;
 import com.eucalyptus.compute.common.internal.blockstorage.State;
 import com.eucalyptus.compute.common.internal.blockstorage.Volume;
 import com.eucalyptus.compute.common.internal.identifier.InvalidResourceIdentifier;
-import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifier;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.common.internal.images.BlockStorageDeviceMapping;
 import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
@@ -92,8 +92,11 @@ import com.eucalyptus.compute.common.internal.tags.TagSupport;
 import com.eucalyptus.compute.common.internal.tags.Tags;
 import com.eucalyptus.compute.common.internal.util.MetadataException;
 import com.eucalyptus.compute.common.internal.vm.NetworkGroupId;
+import com.eucalyptus.compute.common.internal.vm.VmBootRecord;
 import com.eucalyptus.compute.common.internal.vm.VmBootVolumeAttachment;
+import com.eucalyptus.compute.common.internal.vm.VmIamInstanceProfileHelper;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet;
 import com.eucalyptus.compute.common.internal.vm.VmInstances;
 import com.eucalyptus.compute.common.internal.vm.VmStandardVolumeAttachment;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
@@ -126,6 +129,7 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.CollectionUtils;
+import com.eucalyptus.util.CompatFunction;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.OwnerFullName;
@@ -158,13 +162,14 @@ import com.google.common.collect.TreeMultimap;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.BaseMessages;
+import io.vavr.Tuple2;
 import io.vavr.control.Option;
 
 
 /**
  *
  */
-@SuppressWarnings( { "UnusedDeclaration", "Guava", "StaticPseudoFunctionalStyleMethod" } )
+@SuppressWarnings( { "UnusedDeclaration", "Guava", "StaticPseudoFunctionalStyleMethod", "RedundantThrows", "Convert2Lambda", "deprecation" } )
 @ComponentNamed
 public class ComputeService {
   private static Logger LOG = Logger.getLogger( ComputeService.class );
@@ -215,7 +220,7 @@ public class ComputeService {
         .byId( imageIds )
         .byOwningAccount( request.getOwnersSet() )
         .byPredicate( showAllStates ?
-            Predicates.<ImageInfo>alwaysTrue() :
+            Predicates.alwaysTrue() :
             Images.standardStatePredicate( ) )
         .byPredicate( Images.filterExecutableBy( request.getExecutableBySet() ) )
         .byPredicate( filter.asPredicate() )
@@ -226,7 +231,7 @@ public class ComputeService {
         new ImageInfo( ),
         persistenceFilter.asCriterion( ),
         persistenceFilter.getAliases( ),
-        Predicates.and( new TrackingPredicate<ImageInfo>( imageIds ), requestedAndAccessible ),
+        Predicates.and( new TrackingPredicate<>( imageIds ), requestedAndAccessible ),
         Images.TO_IMAGE_DETAILS );
 
     errorIfNotFound( "InvalidAMIID.NotFound", "image", imageIds );
@@ -393,13 +398,13 @@ public class ComputeService {
         CloudMetadatas.filteringFor( NetworkGroup.class )
             .byPredicate( Predicates.or( ImmutableList.of(
                 request.getSecurityGroupSet( ).isEmpty() && request.getSecurityGroupIdSet( ).isEmpty() ?
-                    Predicates.<NetworkGroup>alwaysTrue() :
-                    Predicates.<NetworkGroup>alwaysFalse(),
+                    Predicates.alwaysTrue() :
+                    Predicates.alwaysFalse(),
                 request.getSecurityGroupSet( ).isEmpty() ?
-                    Predicates.<NetworkGroup>alwaysFalse() :
-                    CloudMetadatas.<NetworkGroup>filterById( request.getSecurityGroupSet( ) ),
+                    Predicates.alwaysFalse() :
+                    CloudMetadatas.filterById( request.getSecurityGroupSet( ) ),
                 request.getSecurityGroupIdSet( ).isEmpty() ?
-                    Predicates.<NetworkGroup>alwaysFalse() :
+                    Predicates.alwaysFalse() :
                     CloudMetadatas.filterByProperty( normalizeGroupIdentifiers( request.getSecurityGroupIdSet( ) ), NetworkGroup.groupId() ) ) ) )
             .byPredicate( filter.asPredicate( ) )
             .byPrivileges()
@@ -436,14 +441,16 @@ public class ComputeService {
 
     errorIfNotFound( "InvalidGroup.NotFound", "security group", normalizedIds );
 
-    final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( NetworkGroup.class )
-        .getResourceTagMap( AccountFullName.getInstance( ctx.getAccountNumber( ) ),
-            Iterables.transform( securityGroupItems, SecurityGroupItemToGroupId.INSTANCE ) );
-    for ( final SecurityGroupItemType securityGroupItem : securityGroupItems ) {
-      Tags.addFromTags( securityGroupItem.getTagSet(), ResourceTag.class, tagsMap.get( securityGroupItem.getGroupId() ) );
-    }
+    if ( securityGroupItems != null ) {
+      final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( NetworkGroup.class )
+          .getResourceTagMap( AccountFullName.getInstance( ctx.getAccountNumber( ) ),
+              Iterables.transform( securityGroupItems, SecurityGroupItemToGroupId.INSTANCE ) );
+      for ( final SecurityGroupItemType securityGroupItem : securityGroupItems ) {
+        Tags.addFromTags( securityGroupItem.getTagSet(), ResourceTag.class, tagsMap.get( securityGroupItem.getGroupId() ) );
+      }
 
-    Iterables.addAll( reply.getSecurityGroupInfo( ), securityGroupItems );
+      Iterables.addAll( reply.getSecurityGroupInfo( ), securityGroupItems );
+    }
 
     return reply;
   }
@@ -472,7 +479,7 @@ public class ComputeService {
           ownerFullName,
           persistenceFilter.asCriterionWithConjunction( Restrictions.not( VmInstance.criterion( VmInstance.VmState.BURIED ) ) ),
           persistenceFilter.getAliases( ),
-          Predicates.and( new TrackingPredicate<VmInstance>( identifiers ), requestedAndAccessible ) );
+          Predicates.and( new TrackingPredicate<>( identifiers ), requestedAndAccessible ) );
       errorIfNotFound( "InvalidInstanceID.NotFound", "instance ID", identifiers );
       final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( VmInstance.class )
           .getResourceTagMap(  AccountFullName.getInstance( ctx.getAccountNumber() ),
@@ -515,7 +522,7 @@ public class ComputeService {
     final Filter persistenceFilter = getPersistenceFilter( VmInstance.class, "status", identifiers, "instance-id", filter );
     final Predicate<? super VmInstance> requestedAndAccessible = CloudMetadatas.filteringFor( VmInstance.class )
         .byId( identifiers ) // filters without wildcard support
-        .byPredicate( includeAllInstances ? Predicates.<VmInstance>alwaysTrue() : VmInstance.VmState.RUNNING )
+        .byPredicate( includeAllInstances ? Predicates.alwaysTrue() : VmInstance.VmState.RUNNING )
         .byPredicate( filter.asPredicate() )
         .byPrivileges()
         .buildPredicate();
@@ -527,7 +534,7 @@ public class ComputeService {
           ownerFullName,
           persistenceFilter.asCriterionWithConjunction( Restrictions.not( VmInstance.criterion( VmInstance.VmState.BURIED ) ) ),
           persistenceFilter.getAliases( ),
-          Predicates.and( new TrackingPredicate<VmInstance>( identifiers ), requestedAndAccessible ) );
+          Predicates.and( new TrackingPredicate<>( identifiers ), requestedAndAccessible ) );
       errorIfNotFound( "InvalidInstanceID.NotFound", "instance ID", identifiers );
       Iterables.addAll(
           reply.getInstanceStatusSet().getItem(),
@@ -616,7 +623,7 @@ public class ComputeService {
           reply.setUserData( vm.getUserData( ) == null ? "" : Base64.toBase64String( vm.getUserData() ) );
           break;
         default:
-          throw new ComputeServiceClientException( " InvalidParameterValue", "Invalid value for attribute ("+attribute+")" );
+          throw new ComputeServiceClientException( "InvalidParameterValue", "Invalid value for attribute ("+attribute+")" );
       }
     } catch ( Exception ex ) {
       LOG.error( ex );
@@ -640,7 +647,7 @@ public class ComputeService {
         .buildPredicate();
     final Iterable<SshKeyPair> keyPairs = KeyPairs.list(
         ownerFullName,
-        Predicates.and( new TrackingPredicate<SshKeyPair>( keyNames ), requestedAndAccessible ),
+        Predicates.and( new TrackingPredicate<>( keyNames ), requestedAndAccessible ),
         persistenceFilter.asCriterion( ),
         persistenceFilter.getAliases( ) );
     for ( final SshKeyPair kp : keyPairs ) {
@@ -651,13 +658,11 @@ public class ComputeService {
   }
 
   public CopySnapshotResponseType copySnapshot( final CopySnapshotType request ) {
-    final CopySnapshotResponseType reply = request.getReply( );
-    return reply;
+    return request.getReply( );
   }
 
   public DescribePlacementGroupsResponseType describePlacementGroups( final DescribePlacementGroupsType request ) {
-    final DescribePlacementGroupsResponseType reply = request.getReply( );
-    return reply;
+    return request.getReply( );
   }
 
   public DescribeReservedInstancesResponseType describeReservedInstances(
@@ -821,16 +826,16 @@ public class ComputeService {
           attachmentCriterion = Restrictions.conjunction( );
           attachmentAliases = Collections.emptyMap( );
         } else { // load all attachments for account
-          attachmentCriterion = Restrictions.eq( "vmInstance.ownerAccountNumber", ownerFullName.getAccountNumber( ) );;
+          attachmentCriterion = Restrictions.eq( "vmInstance.ownerAccountNumber", ownerFullName.getAccountNumber( ) );
           attachmentAliases = Collections.singletonMap( "vmInstance", "vmInstance" );
         }
         final Map<String,VmVolumeAttachment> attachmentMap = CollectionUtils.putAll(
             Iterables.concat(
                 Entities.query( VmBootVolumeAttachment.example( ), true, attachmentCriterion, attachmentAliases ),
                 Entities.query( VmStandardVolumeAttachment.example( ), true, attachmentCriterion, attachmentAliases ) ),
-            Maps.<String,VmVolumeAttachment>newHashMap( ),
+            Maps.newHashMap( ),
             VmVolumeAttachment.volumeId( ),
-            Functions.<VmVolumeAttachment>identity( ) );
+            Functions.identity( ) );
 
         // build response volumes
         for ( final Volume foundVol : filteredVolumes ) {
@@ -911,7 +916,7 @@ public class ComputeService {
             persistenceFilter.getAliases( ) );
         final Iterable<Volume> filteredVolumes = Iterables.filter(
             volumes,
-            Predicates.and( new TrackingPredicate<Volume>( volumeIds ), requestedAndAccessible ) );
+            Predicates.and( new TrackingPredicate<>( volumeIds ), requestedAndAccessible ) );
         for ( final Volume foundVol : filteredVolumes ) {
           if ( State.ANNIHILATED.equals( foundVol.getState( ) ) ) {
             Entities.delete( foundVol );
@@ -1101,8 +1106,7 @@ public class ComputeService {
   }
 
   public DescribeCustomerGatewaysResponseType describeCustomerGateways(DescribeCustomerGatewaysType request) throws EucalyptusCloudException {
-    DescribeCustomerGatewaysResponseType reply = request.getReply( );
-    return reply;
+    return request.getReply( );
   }
 
   public DescribeDhcpOptionsResponseType describeDhcpOptions( final DescribeDhcpOptionsType request ) throws EucalyptusCloudException {
@@ -1252,7 +1256,7 @@ public class ComputeService {
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
     try {
       final Vpc vpc =
-          vpcs.lookupByName( accountFullName, Identifier.vpc.normalize( request.getVpcId( ) ), Functions.<Vpc>identity() );
+          vpcs.lookupByName( accountFullName, Identifier.vpc.normalize( request.getVpcId( ) ), Functions.identity() );
       if ( RestrictedTypes.filterPrivileged( ).apply( vpc ) ) {
         reply.setVpcId( vpc.getDisplayName( ) );
         switch ( request.getAttribute( ) ) {
@@ -1275,23 +1279,19 @@ public class ComputeService {
   }
 
   public DescribeVpcPeeringConnectionsResponseType describeVpcPeeringConnections(DescribeVpcPeeringConnectionsType request) throws EucalyptusCloudException {
-    DescribeVpcPeeringConnectionsResponseType reply = request.getReply( );
-    return reply;
+    return request.getReply( );
   }
 
   public ModifyVpcPeeringConnectionOptionsResponseType modifyVpcPeeringConnectionOptions(ModifyVpcPeeringConnectionOptionsType request) throws EucalyptusCloudException {
-    ModifyVpcPeeringConnectionOptionsResponseType reply = request.getReply( );
-    return reply;
+    return request.getReply( );
   }
 
   public DescribeSecurityGroupReferencesResponseType describeSecurityGroupReferences(DescribeSecurityGroupReferencesType request) throws EucalyptusCloudException {
-    DescribeSecurityGroupReferencesResponseType reply = request.getReply( );
-    return reply;
+    return request.getReply( );
   }
 
   public DescribeStaleSecurityGroupsResponseType describeStaleSecurityGroups(DescribeStaleSecurityGroupsType request) throws EucalyptusCloudException {
-    DescribeStaleSecurityGroupsResponseType reply = request.getReply( );
-    return reply;
+    return request.getReply( );
   }
 
   public DescribeVpcsResponseType describeVpcs( final DescribeVpcsType request ) throws EucalyptusCloudException {
@@ -1309,13 +1309,11 @@ public class ComputeService {
   }
 
   public DescribeVpnConnectionsResponseType describeVpnConnections(DescribeVpnConnectionsType request) throws EucalyptusCloudException {
-    DescribeVpnConnectionsResponseType reply = request.getReply( );
-    return reply;
+    return request.getReply( );
   }
 
   public DescribeVpnGatewaysResponseType describeVpnGateways(DescribeVpnGatewaysType request) throws EucalyptusCloudException {
-    DescribeVpnGatewaysResponseType reply = request.getReply( );
-    return reply;
+    return request.getReply( );
   }
 
   public DescribeMovingAddressesResponseType describeMovingAddresses( DescribeMovingAddressesType request ) {
@@ -1423,8 +1421,7 @@ public class ComputeService {
   public ModifyIdentityIdFormatResponseType modifyIdentityIdFormat(
       final ModifyIdentityIdFormatType request
   ) throws EucalyptusCloudException {
-    final ModifyIdentityIdFormatResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DescribeIdFormatResponseType describeIdFormat(
@@ -1447,8 +1444,7 @@ public class ComputeService {
   public ModifyIdFormatResponseType modifyIdFormat(
       final ModifyIdFormatType request
   ) throws EucalyptusCloudException {
-    final ModifyIdFormatResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DescribeAggregateIdFormatResponseType describeAggregateIdFormat(
@@ -1503,508 +1499,625 @@ public class ComputeService {
     return response;
   }
 
-  public AllocateHostsResponseType allocateHosts(
-      final AllocateHostsType request
-  ) throws EucalyptusCloudException {
-    final AllocateHostsResponseType response = request.getReply( );
-    return response;
-  }
-
-  public DescribeHostReservationOfferingsResponseType describeHostReservationOfferings(
-      final DescribeHostReservationOfferingsType request
-  ) throws EucalyptusCloudException {
-    final DescribeHostReservationOfferingsResponseType response = request.getReply( );
-    return response;
-  }
-
-  public DescribeHostReservationsResponseType describeHostReservations(
-      final DescribeHostReservationsType request
-  ) throws EucalyptusCloudException {
-    final DescribeHostReservationsResponseType response = request.getReply( );
-    return response;
-  }
-
-  public DescribeHostsResponseType describeHosts(
-      final DescribeHostsType request
-  ) throws EucalyptusCloudException {
-    final DescribeHostsResponseType response = request.getReply( );
-    return response;
-  }
-
-  public GetHostReservationPurchasePreviewResponseType getHostReservationPurchasePreview(
-      final GetHostReservationPurchasePreviewType request
-  ) throws EucalyptusCloudException {
-    final GetHostReservationPurchasePreviewResponseType response = request.getReply( );
-    return response;
-  }
-
-  public ModifyHostsResponseType modifyHosts(
-      final ModifyHostsType request
-  ) throws EucalyptusCloudException {
-    final ModifyHostsResponseType response = request.getReply( );
-    return response;
-  }
-
-  public PurchaseHostReservationResponseType purchaseHostReservation(
-      final PurchaseHostReservationType request
-  ) throws EucalyptusCloudException {
-    final PurchaseHostReservationResponseType response = request.getReply( );
-    return response;
-  }
-
-  public ReleaseHostsResponseType releaseHosts(
-      final ReleaseHostsType request
-  ) throws EucalyptusCloudException {
-    final ReleaseHostsResponseType response = request.getReply( );
-    return response;
-  }
-
-  public DescribeScheduledInstanceAvailabilityResponseType describeScheduledInstanceAvailability(
-      final DescribeScheduledInstanceAvailabilityType request
-  ) throws EucalyptusCloudException {
-    final DescribeScheduledInstanceAvailabilityResponseType response = request.getReply( );
-    return response;
-  }
-
-  public DescribeScheduledInstancesResponseType describeScheduledInstances(
-      final DescribeScheduledInstancesType request
-  ) throws EucalyptusCloudException {
-    final DescribeScheduledInstancesResponseType response = request.getReply( );
-    return response;
-  }
-
-  public PurchaseScheduledInstancesResponseType purchaseScheduledInstances(
-      final PurchaseScheduledInstancesType request
-  ) throws EucalyptusCloudException {
-    final PurchaseScheduledInstancesResponseType response = request.getReply( );
-    return response;
-  }
-
-  public RunScheduledInstancesResponseType runScheduledInstances(
-      final RunScheduledInstancesType request
-  ) throws EucalyptusCloudException {
-    final RunScheduledInstancesResponseType response = request.getReply( );
-    return response;
-  }
-
-  public AssignIpv6AddressesResponseType assignIpv6AddressesType(
-      final AssignIpv6AddressesType request
-  ) throws EucalyptusCloudException {
-    final AssignIpv6AddressesResponseType response = request.getReply( );
-    return response;
-  }
-
-  public AssociateSubnetCidrBlockResponseType associateSubnetCidrBlock(
-      final AssociateSubnetCidrBlockType request
-  ) throws EucalyptusCloudException {
-    final AssociateSubnetCidrBlockResponseType response = request.getReply( );
-    return response;
-  }
-
-  public AssociateVpcCidrBlockResponseType associateVpcCidrBlock(
-      final AssociateVpcCidrBlockType request
-  ) throws EucalyptusCloudException {
-    final AssociateVpcCidrBlockResponseType response = request.getReply( );
-    return response;
-  }
-
-  public CreateEgressOnlyInternetGatewayResponseType createEgressOnlyInternetGateway(
-      final CreateEgressOnlyInternetGatewayType request
-  ) throws EucalyptusCloudException {
-    final CreateEgressOnlyInternetGatewayResponseType response = request.getReply( );
-    return response;
-  }
-
-  public DeleteEgressOnlyInternetGatewayResponseType deleteEgressOnlyInternetGateway(
-      final DeleteEgressOnlyInternetGatewayType request
-  ) throws EucalyptusCloudException {
-    final DeleteEgressOnlyInternetGatewayResponseType response = request.getReply( );
-    return response;
-  }
-
-  public DescribeEgressOnlyInternetGatewaysResponseType describeEgressOnlyInternetGateways(
-      final DescribeEgressOnlyInternetGatewaysType request
-  ) throws EucalyptusCloudException {
-    final DescribeEgressOnlyInternetGatewaysResponseType response = request.getReply( );
-    return response;
-  }
-
-  public DisassociateSubnetCidrBlockResponseType disassociateSubnetCidrBlock(
-      final DisassociateSubnetCidrBlockType request
-  ) throws EucalyptusCloudException {
-    final DisassociateSubnetCidrBlockResponseType response = request.getReply( );
-    return response;
-  }
-
-  public DisassociateVpcCidrBlockResponseType disassociateVpcCidrBlock(
-      final DisassociateVpcCidrBlockType request
-  ) throws EucalyptusCloudException {
-    final DisassociateVpcCidrBlockResponseType response = request.getReply( );
-    return response;
-  }
-
-  public UnassignIpv6AddressesResponseType unassignIpv6Addresses(
-      final UnassignIpv6AddressesType request
-  ) throws EucalyptusCloudException {
-    final UnassignIpv6AddressesResponseType response = request.getReply( );
-    return response;
-  }
-
   public AssociateIamInstanceProfileResponseType associateIamInstanceProfile(
       final AssociateIamInstanceProfileType request
   ) throws EucalyptusCloudException {
+    final Context context = checkAuthorized( );
+    final AuthContextSupplier user = context.getAuthContext( );
     final AssociateIamInstanceProfileResponseType response = request.getReply( );
+    final String instanceId = normalizeInstanceIdentifier( request.getInstanceId( ) );
+    try {
+      final OwnerFullName ownerFullName = context.getUserFullName( ).asAccountFullName( );
+      final String instanceProfileArn = request.getIamInstanceProfile().getArn();
+      final String instanceProfileName = request.getIamInstanceProfile().getName();
+      final Tuple2<String,String> profileAccountAndName;
+      try {
+        profileAccountAndName = VmIamInstanceProfileHelper.profileAccountAndName(
+            ownerFullName.getAccountNumber( ),
+            instanceProfileArn,
+            instanceProfileName );
+      } catch ( IllegalArgumentException e ) {
+        throw new ComputeServiceClientException( "InvalidIamInstanceProfileArn.Malformed", e.getMessage( ) );
+      }
+
+      try ( final TransactionResource tx = Entities.transactionFor( VmInstance.class ) ) {
+        final InstanceProfile profile;
+        try {
+          profile = VmIamInstanceProfileHelper.lookup( profileAccountAndName );
+        } catch ( NoSuchElementException e ) {
+          throw new ComputeServiceClientException( "InvalidTargetArn.Unknown", e.getMessage( ) );
+        }
+
+        if ( !Strings.isNullOrEmpty( instanceProfileName ) &&  !instanceProfileName.equals( profile.getName( ) ) ) {
+          throw new ComputeServiceClientException( "InvalidParameterValue", String.format(
+              "Invalid IAM instance profile name '%s' for ARN: %s", profileAccountAndName._2( ), instanceProfileArn) );
+        }
+
+        final String roleArn;
+        try {
+          roleArn = VmIamInstanceProfileHelper.checkAuthorized( profile, user, ownerFullName );
+        } catch ( IllegalStateException e ) {
+          throw new ComputeServiceAuthorizationException( "AuthFailure", e.getMessage( ) );
+        } catch ( IllegalArgumentException e ) {
+          throw new ComputeServiceClientException( "InvalidParameterValue", e.getMessage( ) );
+        }
+
+        final VmInstance vm;
+        try {
+          vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
+        } catch ( NoSuchElementException e ) {
+          throw new ComputeServiceClientException("InvalidInstanceID.NotFound", "The instance ID '" + instanceId + "' does not exist");
+        }
+        final VmBootRecord vmBootRecord = vm.getBootRecord( );
+        final String associationId = vmBootRecord.associateIamInstanceProfile(
+            null,
+            profile.getInstanceProfileArn( ),
+            profile.getInstanceProfileId( ),
+            roleArn );
+
+        final IamInstanceProfileAssociation association =
+            TypeMappers.transform( vm, IamInstanceProfileAssociation.class );
+        association.setState( "associating" );
+        association.setTimestamp( null );
+        response.setIamInstanceProfileAssociation( association );
+
+        tx.commit( );
+      }
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
     return response;
   }
 
   public DescribeIamInstanceProfileAssociationsResponseType describeIamInstanceProfileAssociations(
       final DescribeIamInstanceProfileAssociationsType request
   ) throws EucalyptusCloudException {
+    final Context context = checkAuthorized( );
+    final boolean showAll = request.getAssociationId( ).remove( "verbose" );
+    final Collection<String> identifiers = normalizeIamInstanceProfileAssociationIdentifiers( request.getAssociationId( ) );
+    final Filter filter = Filters.generateFor( request.getFilterSet(), VmInstance.class, "instance-profile" )
+        .withOptionalInternalFilter( "iam-instance-profile.association-id", identifiers.isEmpty( ) ?
+            Collections.singleton( "iip-assoc-*" ) :
+            identifiers )
+        .generate();
+    final Predicate<? super VmInstance> requestedAndAccessible = CloudMetadatas.filteringFor( VmInstance.class )
+        .byPredicate( VmStateSet.DONE.not() )
+        .byPredicate( filter.asPredicate() )
+        .byPrivileges()
+        .buildPredicate();
+    final OwnerFullName ownerFullName = context.getUserFullName( ).asAccountFullName( );
     final DescribeIamInstanceProfileAssociationsResponseType response = request.getReply( );
+    try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( VmInstance.class ) ) {
+      final List<VmInstance> instances = VmInstances.list(
+          showAll && context.isAdministrator( ) ? null : ownerFullName,
+          filter.asCriterionWithConjunction( Restrictions.not( VmInstance.criterion( VmInstance.VmState.BURIED ) ) ),
+          filter.getAliases( ),
+          Predicates.and( new TrackingPredicate<>(
+              VmInstance::getIamInstanceProfileAssociationId, identifiers ), requestedAndAccessible ) );
+      errorIfNotFound( "InvalidAssociationID.NotFound", "association ID", identifiers );
+
+      final IamInstanceProfileAssociationSet associations = new IamInstanceProfileAssociationSet();
+      Iterables.addAll(
+          associations.getMember( ),
+          Iterables.transform(
+              instances,
+              TypeMappers.lookup( VmInstance.class, IamInstanceProfileAssociation.class ) ) );
+      response.setIamInstanceProfileAssociations( associations );
+    } catch ( final Exception e ) {
+      throw handleException( e );
+    }
     return response;
   }
 
   public DisassociateIamInstanceProfileResponseType disassociateIamInstanceProfile(
       final DisassociateIamInstanceProfileType request
   ) throws EucalyptusCloudException {
+    final Context context = checkAuthorized( );
     final DisassociateIamInstanceProfileResponseType response = request.getReply( );
+    final String associationId = normalizeIamInstanceProfileAssociationIdentifier( request.getAssociationId( ) );
+    try {
+      final OwnerFullName ownerFullName = context.getUserFullName( ).asAccountFullName( );
+      try ( final TransactionResource tx = Entities.transactionFor( VmInstance.class ) ) {
+        final VmInstance vm = VmIamInstanceProfileHelper.lookupVmInstanceByIamInstanceProfileAssociationId(
+            context.isAdministrator( ) ? null : ownerFullName,
+            associationId
+        );
+
+        RestrictedTypes.doPrivileged( vm.getInstanceId( ), new VmInstanceResolver( vm ) );
+
+        final IamInstanceProfileAssociation association =
+            TypeMappers.transform( vm, IamInstanceProfileAssociation.class );
+        association.setState( "disassociating" );
+        association.setTimestamp( null );
+
+        vm.getBootRecord( ).disassociateIamInstanceProfile( associationId );
+
+        response.setIamInstanceProfileAssociation( association );
+
+        tx.commit( );
+      }
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
     return response;
   }
 
   public ReplaceIamInstanceProfileAssociationResponseType replaceIamInstanceProfileAssociation(
       final ReplaceIamInstanceProfileAssociationType request
   ) throws EucalyptusCloudException {
+    final Context context = checkAuthorized( );
     final ReplaceIamInstanceProfileAssociationResponseType response = request.getReply( );
+    final AuthContextSupplier user = context.getAuthContext( );
+    final String associationId = normalizeIamInstanceProfileAssociationIdentifier( request.getAssociationId( ) );
+    try {
+      final OwnerFullName ownerFullName = context.getUserFullName( ).asAccountFullName( );
+      final String instanceProfileArn = request.getIamInstanceProfile().getArn();
+      final String instanceProfileName = request.getIamInstanceProfile().getName();
+      final Tuple2<String,String> profileAccountAndName;
+      try {
+        profileAccountAndName = VmIamInstanceProfileHelper.profileAccountAndName(
+            ownerFullName.getAccountNumber( ),
+            instanceProfileArn,
+            instanceProfileName );
+      } catch ( IllegalArgumentException e ) {
+        throw new ComputeServiceClientException( "InvalidIamInstanceProfileArn.Malformed", e.getMessage( ) );
+      }
+
+      try ( final TransactionResource tx = Entities.transactionFor( VmInstance.class ) ) {
+        final InstanceProfile profile;
+        try {
+          profile = VmIamInstanceProfileHelper.lookup( profileAccountAndName );
+        } catch ( NoSuchElementException e ) {
+          throw new ComputeServiceClientException( "InvalidTargetArn.Unknown", e.getMessage( ) );
+        }
+
+        if ( !Strings.isNullOrEmpty( instanceProfileName ) &&  !instanceProfileName.equals( profile.getName( ) ) ) {
+          throw new ComputeServiceClientException( "InvalidParameterValue", String.format(
+              "Invalid IAM instance profile name '%s' for ARN: %s", profileAccountAndName._2( ), instanceProfileArn) );
+        }
+
+        final VmInstance vm = VmIamInstanceProfileHelper.lookupVmInstanceByIamInstanceProfileAssociationId(
+            context.isAdministrator( ) ? null : ownerFullName,
+            associationId
+        );
+
+        final String roleArn;
+        try {
+          roleArn = VmIamInstanceProfileHelper.checkAuthorized( profile, user, ownerFullName );
+        } catch ( IllegalStateException e ) {
+          throw new ComputeServiceAuthorizationException( "AuthFailure", e.getMessage( ) );
+        } catch ( IllegalArgumentException e ) {
+          throw new ComputeServiceClientException( "InvalidParameterValue", e.getMessage( ) );
+        }
+
+        final String newAssociationId = vm.getBootRecord( ).associateIamInstanceProfile(
+            associationId,
+            profile.getInstanceProfileArn( ),
+            profile.getInstanceProfileId( ),
+            roleArn );
+
+        RestrictedTypes.doPrivileged( vm.getInstanceId( ), new VmInstanceResolver( vm ) );
+        final IamInstanceProfileAssociation association =
+            TypeMappers.transform( vm, IamInstanceProfileAssociation.class );
+        association.setState( "associating" );
+        association.setTimestamp( null );
+
+        response.setIamInstanceProfileAssociation( association );
+
+        tx.commit( );
+      }
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
     return response;
+  }
+
+  public AllocateHostsResponseType allocateHosts(
+      final AllocateHostsType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( );
+  }
+
+  public DescribeHostReservationOfferingsResponseType describeHostReservationOfferings(
+      final DescribeHostReservationOfferingsType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( );
+  }
+
+  public DescribeHostReservationsResponseType describeHostReservations(
+      final DescribeHostReservationsType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( );
+  }
+
+  public DescribeHostsResponseType describeHosts(
+      final DescribeHostsType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( );
+  }
+
+  public GetHostReservationPurchasePreviewResponseType getHostReservationPurchasePreview(
+      final GetHostReservationPurchasePreviewType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( );
+  }
+
+  public ModifyHostsResponseType modifyHosts(
+      final ModifyHostsType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( );
+  }
+
+  public PurchaseHostReservationResponseType purchaseHostReservation(
+      final PurchaseHostReservationType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( );
+  }
+
+  public ReleaseHostsResponseType releaseHosts(
+      final ReleaseHostsType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( );
+  }
+
+  public DescribeScheduledInstanceAvailabilityResponseType describeScheduledInstanceAvailability(
+      final DescribeScheduledInstanceAvailabilityType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( );
+  }
+
+  public DescribeScheduledInstancesResponseType describeScheduledInstances(
+      final DescribeScheduledInstancesType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( );
+  }
+
+  public PurchaseScheduledInstancesResponseType purchaseScheduledInstances(
+      final PurchaseScheduledInstancesType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( );
+  }
+
+  public RunScheduledInstancesResponseType runScheduledInstances(
+      final RunScheduledInstancesType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( );
+  }
+
+  public AssignIpv6AddressesResponseType assignIpv6AddressesType(
+      final AssignIpv6AddressesType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( );
+  }
+
+  public AssociateSubnetCidrBlockResponseType associateSubnetCidrBlock(
+      final AssociateSubnetCidrBlockType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( );
+  }
+
+  public AssociateVpcCidrBlockResponseType associateVpcCidrBlock(
+      final AssociateVpcCidrBlockType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( );
+  }
+
+  public CreateEgressOnlyInternetGatewayResponseType createEgressOnlyInternetGateway(
+      final CreateEgressOnlyInternetGatewayType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( );
+  }
+
+  public DeleteEgressOnlyInternetGatewayResponseType deleteEgressOnlyInternetGateway(
+      final DeleteEgressOnlyInternetGatewayType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( );
+  }
+
+  public DescribeEgressOnlyInternetGatewaysResponseType describeEgressOnlyInternetGateways(
+      final DescribeEgressOnlyInternetGatewaysType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( );
+  }
+
+  public DisassociateSubnetCidrBlockResponseType disassociateSubnetCidrBlock(
+      final DisassociateSubnetCidrBlockType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( );
+  }
+
+  public DisassociateVpcCidrBlockResponseType disassociateVpcCidrBlock(
+      final DisassociateVpcCidrBlockType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( );
+  }
+
+  public UnassignIpv6AddressesResponseType unassignIpv6Addresses(
+      final UnassignIpv6AddressesType request
+  ) throws EucalyptusCloudException {
+    return request.getReply( );
   }
 
   public AcceptVpcEndpointConnectionsResponseType acceptVpcEndpointConnections(
     AcceptVpcEndpointConnectionsType request
   ) {
-    final AcceptVpcEndpointConnectionsResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public CopyFpgaImageResponseType copyFpgaImage(
       CopyFpgaImageType request
   ) {
-    final CopyFpgaImageResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public CreateDefaultSubnetResponseType createDefaultSubnet(
       CreateDefaultSubnetType request
   ) {
-    final CreateDefaultSubnetResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public CreateDefaultVpcResponseType createDefaultVpc(
       CreateDefaultVpcType request
   ) {
-    final CreateDefaultVpcResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public CreateFleetResponseType createFleet(
       CreateFleetType request
   ) {
-    final CreateFleetResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public CreateFpgaImageResponseType createFpgaImage(
       CreateFpgaImageType request
   ) {
-    final CreateFpgaImageResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public CreateLaunchTemplateResponseType createLaunchTemplate(
       CreateLaunchTemplateType request
   ) {
-    final CreateLaunchTemplateResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public CreateLaunchTemplateVersionResponseType createLaunchTemplateVersion(
       CreateLaunchTemplateVersionType request
   ) {
-    final CreateLaunchTemplateVersionResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public CreateNetworkInterfacePermissionResponseType createNetworkInterfacePermission(
       CreateNetworkInterfacePermissionType request
   ) {
-    final CreateNetworkInterfacePermissionResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public CreateVpcEndpointConnectionNotificationResponseType createVpcEndpointConnectionNotification(
       CreateVpcEndpointConnectionNotificationType request
   ) {
-    final CreateVpcEndpointConnectionNotificationResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public CreateVpcEndpointServiceConfigurationResponseType createVpcEndpointServiceConfiguration(
       CreateVpcEndpointServiceConfigurationType request
   ) {
-    final CreateVpcEndpointServiceConfigurationResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DeleteFleetsResponseType deleteFleets(
       DeleteFleetsType request
   ) {
-    final DeleteFleetsResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DeleteFpgaImageResponseType deleteFpgaImage(
       DeleteFpgaImageType request
   ) {
-    final DeleteFpgaImageResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DeleteLaunchTemplateResponseType deleteLaunchTemplate(
       DeleteLaunchTemplateType request
   ) {
-    final DeleteLaunchTemplateResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DeleteLaunchTemplateVersionsResponseType deleteLaunchTemplateVersions(
       DeleteLaunchTemplateVersionsType request
   ) {
-    final DeleteLaunchTemplateVersionsResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DeleteNetworkInterfacePermissionResponseType deleteNetworkInterfacePermission(
       DeleteNetworkInterfacePermissionType request
   ) {
-    final DeleteNetworkInterfacePermissionResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DeleteVpcEndpointConnectionNotificationsResponseType deleteVpcEndpointConnectionNotifications(
       DeleteVpcEndpointConnectionNotificationsType request
   ) {
-    final DeleteVpcEndpointConnectionNotificationsResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DeleteVpcEndpointServiceConfigurationsResponseType deleteVpcEndpointServiceConfigurations(
       DeleteVpcEndpointServiceConfigurationsType request
   ) {
-    final DeleteVpcEndpointServiceConfigurationsResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DescribeElasticGpusResponseType describeElasticGpus(
       DescribeElasticGpusType request
   ) {
-    final DescribeElasticGpusResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DescribeFleetHistoryResponseType describeFleetHistory(
       DescribeFleetHistoryType request
   ) {
-    final DescribeFleetHistoryResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DescribeFleetInstancesResponseType describeFleetInstances(
       DescribeFleetInstancesType request
   ) {
-    final DescribeFleetInstancesResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DescribeFleetsResponseType describeFleets(
       DescribeFleetsType request
   ) {
-    final DescribeFleetsResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DescribeFpgaImageAttributeResponseType describeFpgaImageAttribute(
       DescribeFpgaImageAttributeType request
   ) {
-    final DescribeFpgaImageAttributeResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DescribeFpgaImagesResponseType describeFpgaImages(
       DescribeFpgaImagesType request
   ) {
-    final DescribeFpgaImagesResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DescribeInstanceCreditSpecificationsResponseType describeInstanceCreditSpecifications(
       DescribeInstanceCreditSpecificationsType request
   ) {
-    final DescribeInstanceCreditSpecificationsResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DescribeLaunchTemplatesResponseType describeLaunchTemplates(
       DescribeLaunchTemplatesType request
   ) {
-    final DescribeLaunchTemplatesResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DescribeLaunchTemplateVersionsResponseType describeLaunchTemplateVersions(
       DescribeLaunchTemplateVersionsType request
   ) {
-    final DescribeLaunchTemplateVersionsResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DescribeNetworkInterfacePermissionsResponseType describeNetworkInterfacePermissions(
       DescribeNetworkInterfacePermissionsType request
   ) {
-    final DescribeNetworkInterfacePermissionsResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DescribeVolumesModificationsResponseType describeVolumesModifications(
       DescribeVolumesModificationsType request
   ) {
-    final DescribeVolumesModificationsResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DescribeVpcEndpointConnectionNotificationsResponseType describeVpcEndpointConnectionNotifications(
       DescribeVpcEndpointConnectionNotificationsType request
   ) {
-    final DescribeVpcEndpointConnectionNotificationsResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DescribeVpcEndpointConnectionsResponseType describeVpcEndpointConnections(
       DescribeVpcEndpointConnectionsType request
   ) {
-    final DescribeVpcEndpointConnectionsResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DescribeVpcEndpointServiceConfigurationsResponseType describeVpcEndpointServiceConfigurations(
       DescribeVpcEndpointServiceConfigurationsType request
   ) {
-    final DescribeVpcEndpointServiceConfigurationsResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DescribeVpcEndpointServicePermissionsResponseType describeVpcEndpointServicePermissions(
       DescribeVpcEndpointServicePermissionsType request
   ) {
-    final DescribeVpcEndpointServicePermissionsResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public GetLaunchTemplateDataResponseType getLaunchTemplateData(
       GetLaunchTemplateDataType request
   ) {
-    final GetLaunchTemplateDataResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public ModifyFleetResponseType modifyFleet(
       ModifyFleetType request
   ) {
-    final ModifyFleetResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public ModifyFpgaImageAttributeResponseType modifyFpgaImageAttribute(
       ModifyFpgaImageAttributeType request
   ) {
-    final ModifyFpgaImageAttributeResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public ModifyInstanceCreditSpecificationResponseType modifyInstanceCreditSpecification(
       ModifyInstanceCreditSpecificationType request
   ) {
-    final ModifyInstanceCreditSpecificationResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public ModifyLaunchTemplateResponseType modifyLaunchTemplate(
       ModifyLaunchTemplateType request
   ) {
-    final ModifyLaunchTemplateResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public ModifyVolumeResponseType modifyVolume(
       ModifyVolumeType request
   ) {
-    final ModifyVolumeResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public ModifyVpcEndpointConnectionNotificationResponseType modifyVpcEndpointConnectionNotification(
       ModifyVpcEndpointConnectionNotificationType request
   ) {
-    final ModifyVpcEndpointConnectionNotificationResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public ModifyVpcEndpointServiceConfigurationResponseType modifyVpcEndpointServiceConfiguration(
       ModifyVpcEndpointServiceConfigurationType request
   ) {
-    final ModifyVpcEndpointServiceConfigurationResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public ModifyVpcEndpointServicePermissionsResponseType modifyVpcEndpointServicePermissions(
       ModifyVpcEndpointServicePermissionsType request
   ) {
-    final ModifyVpcEndpointServicePermissionsResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public ModifyVpcTenancyResponseType modifyVpcTenancy(
       ModifyVpcTenancyType request
   ) {
-    final ModifyVpcTenancyResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public RejectVpcEndpointConnectionsResponseType rejectVpcEndpointConnections(
       RejectVpcEndpointConnectionsType request
   ) {
-    final RejectVpcEndpointConnectionsResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public ResetFpgaImageAttributeResponseType resetFpgaImageAttribute(
       ResetFpgaImageAttributeType request
   ) {
-    final ResetFpgaImageAttributeResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public UpdateSecurityGroupRuleDescriptionsEgressResponseType updateSecurityGroupRuleDescriptionsEgress(
       UpdateSecurityGroupRuleDescriptionsEgressType request
   ) {
-    final UpdateSecurityGroupRuleDescriptionsEgressResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public UpdateSecurityGroupRuleDescriptionsIngressResponseType updateSecurityGroupRuleDescriptionsIngress(
       UpdateSecurityGroupRuleDescriptionsIngressType request
   ) {
-    final UpdateSecurityGroupRuleDescriptionsIngressResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public ComputeMessage proxy( final ComputeMessage request ) throws EucalyptusCloudException {
@@ -2032,7 +2145,7 @@ public class ComputeService {
       final Class<AT> api,
       final List<AT> results,
       final Lister<AP> lister ) throws EucalyptusCloudException {
-    describe( identifier, ids, filters, persistent, api, results, Callbacks.<AccountFullName>noop( ), lister );
+    describe( identifier, ids, filters, persistent, api, results, Callbacks.noop( ), lister );
   }
 
   private static <AP extends AbstractPersistent & CloudMetadata, AT> void describe(
@@ -2111,7 +2224,7 @@ public class ComputeService {
   ) throws InvalidFilterException {
     return !identifiers.isEmpty( ) ?
         Filters.generateFor(
-            Collections.<com.eucalyptus.compute.common.Filter>emptySet( ),
+            Collections.emptySet( ),
             persistent,
             qualifier ).withOptionalInternalFilter( identifierFilterName, identifiers ).generate( ) :
         filter;
@@ -2186,6 +2299,24 @@ public class ComputeService {
     }
   }
 
+  private static List<String> normalizeIamInstanceProfileAssociationIdentifiers(
+      final List<String> identifiers
+  ) throws EucalyptusCloudException {
+    try {
+      return ResourceIdentifiers.normalize( "iip-assoc", identifiers );
+    } catch ( final InvalidResourceIdentifier e ) {
+      throw new ComputeServiceClientException( "InvalidParameterValue", "Invalid id: \""+e.getIdentifier()+"\"" );
+    }
+  }
+
+  private static String normalizeIamInstanceProfileAssociationIdentifier(
+      final String identifier
+  ) throws EucalyptusCloudException {
+    return normalizeIdentifier(
+        identifier, "iip-assoc", true,
+        "Value (%s) for parameter iam instance profile association is invalid." );
+  }
+
   private static String normalizeImageIdentifier( final String identifier ) throws EucalyptusCloudException {
     return normalizeIdentifier(
         identifier, null, true, "Value (%s) for parameter image is invalid." );
@@ -2237,6 +2368,19 @@ public class ComputeService {
       throw new ComputeServiceClientException(
           "InvalidParameterValue",
           "Value ("+e.getIdentifier()+") for parameter snapshots is invalid. Expected: 'snap-...'." );
+    }
+  }
+
+  private static class VmInstanceResolver implements CompatFunction<String,VmInstance> {
+    private final VmInstance instance;
+
+    private VmInstanceResolver( final VmInstance instance ) {
+      this.instance = instance;
+    }
+
+    @Override
+    public VmInstance apply( @Nullable final String identifier ) {
+      return instance;
     }
   }
 

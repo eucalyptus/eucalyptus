@@ -627,8 +627,26 @@
     <value name="imageData" field="imageData" usage="optional" />
   </mapping>
 
+
+  <mapping class="com.eucalyptus.compute.common.IamInstanceProfileAssociation" abstract="true">
+    <value name="associationId" get-method="getAssociationId" set-method="setAssociationId" usage="optional"/>
+    <structure get-method="getIamInstanceProfile" set-method="setIamInstanceProfile" usage="optional" type="com.eucalyptus.compute.common.IamInstanceProfile" name="iamInstanceProfile"/>
+    <value name="instanceId" get-method="getInstanceId" set-method="setInstanceId" usage="optional"/>
+    <value name="state" get-method="getState" set-method="setState" usage="optional"/>
+    <value name="timestamp" get-method="getTimestamp" set-method="setTimestamp" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.IamInstanceProfileAssociationSet" abstract="true">
+    <collection field="member">
+      <structure name="item" type="com.eucalyptus.compute.common.IamInstanceProfileAssociation"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.IamInstanceProfileSpecification" abstract="true">
+    <value name="arn" get-method="getArn" set-method="setArn" usage="optional"/>
+    <value name="name" get-method="getName" set-method="setName" usage="optional"/>
+  </mapping>
   <mapping name="AssociateIamInstanceProfileResponse" class="com.eucalyptus.compute.common.AssociateIamInstanceProfileResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getIamInstanceProfileAssociation" set-method="setIamInstanceProfileAssociation" usage="optional" type="com.eucalyptus.compute.common.IamInstanceProfileAssociation" name="iamInstanceProfileAssociation"/>
   </mapping>
   <mapping name="AssociateIamInstanceProfile" class="com.eucalyptus.compute.common.AssociateIamInstanceProfileType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
@@ -637,6 +655,8 @@
   </mapping>
   <mapping name="DescribeIamInstanceProfileAssociationsResponse" class="com.eucalyptus.compute.common.DescribeIamInstanceProfileAssociationsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getIamInstanceProfileAssociations" set-method="setIamInstanceProfileAssociations" usage="optional" type="com.eucalyptus.compute.common.IamInstanceProfileAssociationSet" name="iamInstanceProfileAssociationSet"/>
+    <value name="nextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
   </mapping>
   <mapping name="DescribeIamInstanceProfileAssociations" class="com.eucalyptus.compute.common.DescribeIamInstanceProfileAssociationsType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
@@ -651,6 +671,7 @@
   </mapping>
   <mapping name="DisassociateIamInstanceProfileResponse" class="com.eucalyptus.compute.common.DisassociateIamInstanceProfileResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getIamInstanceProfileAssociation" set-method="setIamInstanceProfileAssociation" usage="optional" type="com.eucalyptus.compute.common.IamInstanceProfileAssociation" name="iamInstanceProfileAssociation"/>
   </mapping>
   <mapping name="DisassociateIamInstanceProfile" class="com.eucalyptus.compute.common.DisassociateIamInstanceProfileType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
@@ -658,15 +679,12 @@
   </mapping>
   <mapping name="ReplaceIamInstanceProfileAssociationResponse" class="com.eucalyptus.compute.common.ReplaceIamInstanceProfileAssociationResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure get-method="getIamInstanceProfileAssociation" set-method="setIamInstanceProfileAssociation" usage="optional" type="com.eucalyptus.compute.common.IamInstanceProfileAssociation" name="iamInstanceProfileAssociation"/>
   </mapping>
   <mapping name="ReplaceIamInstanceProfileAssociation" class="com.eucalyptus.compute.common.ReplaceIamInstanceProfileAssociationType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <value name="AssociationId" field="associationId" usage="optional"/>
     <structure name="IamInstanceProfile" field="iamInstanceProfile" usage="optional" type="com.eucalyptus.compute.common.IamInstanceProfileSpecification"/>
-  </mapping>
-  <mapping class="com.eucalyptus.compute.common.IamInstanceProfileSpecification" abstract="true">
-    <value name="Arn" field="arn" usage="optional"/>
-    <value name="Name" field="name" usage="optional"/>
   </mapping>
 
 </binding>
