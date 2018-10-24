@@ -1,0 +1,239 @@
+# CloudFormation template for Storage Optimized EC2 InstanceTypes
+#
+# Parameters allow the enabled instance types to be customized:
+#
+#   euform-[create|update]-stack \
+#     --template-file ec2-instance-types-storage.yaml \
+#     -p EnableD2=True \
+#     ec2-instance-types-storage
+#
+# The eucalyptus account must be used for instance type resources.
+#
+AWSTemplateFormatVersion: 2010-09-09
+Description: EC2 Storage Optimized Instance Types
+Parameters:
+  EnableD2:
+    Description: Enable D2 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableH1:
+    Description: Enable H1 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableHI1:
+    Description: Enable HI1 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableHS1:
+    Description: Enable HS1 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableI2:
+    Description: Enable I2 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableI3:
+    Description: Enable I3 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+Resources:
+  D22XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: d2.2xlarge
+      Enabled: !Ref EnableD2
+      Cpu: 8
+      Disk: 12000
+      Memory: 62464
+      NetworkInterfaces: 4
+  D24XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: D22XLARGE
+    Properties:
+      Name: d2.4xlarge
+      Enabled: !Ref EnableD2
+      Cpu: 16
+      Disk: 24000
+      Memory: 124928
+      NetworkInterfaces: 8
+  D28XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: D24XLARGE
+    Properties:
+      Name: d2.8xlarge
+      Enabled: !Ref EnableD2
+      Cpu: 36
+      Disk: 48000
+      Memory: 249856
+      NetworkInterfaces: 8
+  D2XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: D28XLARGE
+    Properties:
+      Name: d2.xlarge
+      Enabled: !Ref EnableD2
+      Cpu: 4
+      Disk: 6000
+      Memory: 31232
+      NetworkInterfaces: 4
+  H116XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: h1.16xlarge
+      Enabled: !Ref EnableH1
+      Cpu: 64
+      Disk: 16000
+      Memory: 262144
+      NetworkInterfaces: 15
+  H12XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: H116XLARGE
+    Properties:
+      Name: h1.2xlarge
+      Enabled: !Ref EnableH1
+      Cpu: 8
+      Disk: 2000
+      Memory: 32768
+      NetworkInterfaces: 4
+  H14XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: H12XLARGE
+    Properties:
+      Name: h1.4xlarge
+      Enabled: !Ref EnableH1
+      Cpu: 16
+      Disk: 4000
+      Memory: 65536
+      NetworkInterfaces: 8
+  H18XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: H14XLARGE
+    Properties:
+      Name: h1.8xlarge
+      Enabled: !Ref EnableH1
+      Cpu: 32
+      Disk: 8000
+      Memory: 131072
+      NetworkInterfaces: 8
+  HI14XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: hi1.4xlarge
+      Enabled: !Ref EnableHI1
+      Cpu: 48
+      Disk: 24000
+      Memory: 119808
+      NetworkInterfaces: 8
+  HS18XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: hs1.8xlarge
+      Enabled: !Ref EnableHS1
+      Cpu: 16
+      Disk: 48000
+      Memory: 119808
+      NetworkInterfaces: 8
+  I22XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: i2.2xlarge
+      Enabled: !Ref EnableI2
+      Cpu: 8
+      Disk: 1600
+      Memory: 62464
+      NetworkInterfaces: 4
+  I24XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: I22XLARGE
+    Properties:
+      Name: i2.4xlarge
+      Enabled: !Ref EnableI2
+      Cpu: 16
+      Disk: 3200
+      Memory: 124928
+      NetworkInterfaces: 8
+  I28XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: I24XLARGE
+    Properties:
+      Name: i2.8xlarge
+      Enabled: !Ref EnableI2
+      Cpu: 32
+      Disk: 6400
+      Memory: 249856
+      NetworkInterfaces: 8
+  I2XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: I28XLARGE
+    Properties:
+      Name: i2.xlarge
+      Enabled: !Ref EnableI2
+      Cpu: 4
+      Disk: 800
+      Memory: 31232
+      NetworkInterfaces: 4
+  I316XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: i3.16xlarge
+      Enabled: !Ref EnableI3
+      Cpu: 64
+      Disk: 15200
+      Memory: 499712
+      NetworkInterfaces: 15
+  I32XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: I316XLARGE
+    Properties:
+      Name: i3.2xlarge
+      Enabled: !Ref EnableI3
+      Cpu: 8
+      Disk: 1900
+      Memory: 62464
+      NetworkInterfaces: 4
+  I34XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: I32XLARGE
+    Properties:
+      Name: i3.4xlarge
+      Enabled: !Ref EnableI3
+      Cpu: 16
+      Disk: 3800
+      Memory: 124928
+      NetworkInterfaces: 8
+  I38XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: I34XLARGE
+    Properties:
+      Name: i3.8xlarge
+      Enabled: !Ref EnableI3
+      Cpu: 32
+      Disk: 7600
+      Memory: 249856
+      NetworkInterfaces: 8
+  I3LARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: I38XLARGE
+    Properties:
+      Name: i3.large
+      Enabled: !Ref EnableI3
+      Cpu: 2
+      Disk: 475
+      Memory: 15616
+      NetworkInterfaces: 3
+  I3XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: I3LARGE
+    Properties:
+      Name: i3.xlarge
+      Enabled: !Ref EnableI3
+      Cpu: 4
+      Disk: 950
+      Memory: 31232
+      NetworkInterfaces: 4

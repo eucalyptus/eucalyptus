@@ -40,8 +40,8 @@
 <binding force-classes="true" add-constructors="true"
          name="s3_amazonaws_com_doc_2006_03_01">
 
+    <include path="classpath:error-binding.xml" precompiled="true"/>
     <include path="classpath:osg-nons-binding-inc.xml"/>
     <include path="classpath:osg-s3ns-binding-inc.xml"/>
 
 </binding>
-        

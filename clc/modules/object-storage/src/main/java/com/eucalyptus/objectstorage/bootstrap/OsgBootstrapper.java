@@ -46,8 +46,10 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.component.ServiceDependencyException;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.ObjectStorageGateway;
+import com.eucalyptus.util.EucalyptusCloudException;
 
 @Provides(ObjectStorage.class)
 @RunDuring(Bootstrap.Stage.RemoteServicesInit)
@@ -122,7 +124,14 @@ public class OsgBootstrapper extends Bootstrapper {
   @Override
   public boolean check() throws Exception {
     // check local storage
-    ObjectStorageGateway.check();
+    try {
+      ObjectStorageGateway.check( );
+    } catch ( EucalyptusCloudException e ) {
+      if ( "No ENABLED WalrusBackend found. Cannot initialize fully.".equals( e.getMessage( ) ) ) {
+        throw new ServiceDependencyException( e.getMessage( ), e );
+      }
+      throw e;
+    }
     return true;
   }
 }

@@ -126,7 +126,7 @@ public class ObjectStateTransitions {
             updatingEntity.setState(ObjectState.extant);
             updatingEntity.setCreationExpiration(null);
             updatingEntity.setObjectModifiedTimestamp(entity.getObjectModifiedTimestamp());
-            updatingEntity.setIsLatest(true);
+            updatingEntity.markLatest();
             updatingEntity.seteTag(entity.geteTag());
             updatingEntity.setSize(entity.getSize());
             updatingEntity.setStoredHeaders(entity.getStoredHeaders());

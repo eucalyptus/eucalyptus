@@ -45,8 +45,8 @@ import com.google.common.cache.CacheBuilderSpec;
 import com.google.common.collect.Lists;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import javaslang.collection.Stream;
-import javaslang.control.Option;
+import io.vavr.collection.Stream;
+import io.vavr.control.Option;
 
 /**
  *
@@ -84,8 +84,7 @@ public class NodeWsSecHandler extends IoWsSecHandler {
   private static CredentialProxy lookupCredentials( final ChannelHandlerContext ctx ) {
     final Option<Cluster> clusterOption = Stream.ofAll( ClusterRegistry.getInstance( ).listValues( ) )
             .appendAll( ClusterRegistry.getInstance( ).listDisabledValues( ) )
-            .find( cluster -> cluster.getConfiguration( ).isHostLocal( ) )
-            .getOption( );
+            .find( cluster -> cluster.getConfiguration( ).isHostLocal( ) );
     if ( clusterOption.isDefined( ) ) {
       final String partition = clusterOption.get( ).getPartition( );
       try {

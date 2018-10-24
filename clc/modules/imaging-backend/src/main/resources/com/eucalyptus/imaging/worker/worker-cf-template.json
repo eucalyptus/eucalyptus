@@ -13,7 +13,7 @@
       "Type": "String"
     },
     "InstanceType": {
-      "Default": "m1.small",
+      "Default": "t2.micro",
       "Type": "String"
     },
     "KeyName": {

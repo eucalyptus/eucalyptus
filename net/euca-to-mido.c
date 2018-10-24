@@ -860,10 +860,14 @@ int do_midonet_populate_vpcs(mido_config *mido) {
     // - for each VPC, for each subnet, find all instances (and populate instances)
 
     int i = 0, j = 0, k = 0, rc = 0, rtid = 0, natgrtid = 0, ret = 0;
-    char subnetname[LID_LEN], vpcname[LID_LEN], aclname[LID_LEN], sgname[LID_LEN];
-    char instanceId[LID_LEN];
-    char natgname[LID_LEN];
-    char tmpstr[64];
+    char subnetname[VPC_SUBNET_ID_LEN];
+    char vpcname[VPC_ID_LEN];
+    char aclname[NETWORK_ACL_ID_LEN];
+    char sgname[SECURITY_GROUP_ID_LEN];
+    char instanceId[INSTANCE_ID_LEN];
+    char natgname[NATG_ID_LEN];
+    char tmpstr[MIDO_NAME_LEN];
+    char *pattern;
     midoname **chains = NULL;
     int max_chains = 0;
     mido_vpc_secgroup *vpcsecgroup = NULL;
@@ -884,9 +888,14 @@ int do_midonet_populate_vpcs(mido_config *mido) {
     }
     for (i = 0; i < max_routers; i++) {
         LOGTRACE("inspecting mido router '%s'\n", routers[i]->obj->name);
-        memset(vpcname, 0, 16);
-        sscanf(routers[i]->obj->name, "vr_%12s_%d", vpcname, &rtid);
-        if ((sscanf(routers[i]->obj->name, "vr_%12s_%d", vpcname, &rtid) == 2) &&
+        memset(vpcname, 0, VPC_ID_LEN);
+        if ((strlen(routers[i]->obj->name) > 15) && (routers[i]->obj->name[15] == '_')) {
+          pattern = "vr_%12s_%d";
+        } else {
+          pattern = "vr_%21s_%d";
+        }
+        sscanf(routers[i]->obj->name, pattern, vpcname, &rtid);
+        if ((sscanf(routers[i]->obj->name, pattern, vpcname, &rtid) == 2) &&
                 strlen(vpcname) && rtid) {
             vpc = &(mido->vpcs[mido->max_vpcs]);
             mido->max_vpcs++;
@@ -912,10 +921,15 @@ int do_midonet_populate_vpcs(mido_config *mido) {
     for (i = 0; i < max_bridges; i++) {
         LOGTRACE("inspecting bridge '%s'\n", bridges[i]->obj->name);
 
-        memset(vpcname, 0, LID_LEN);
-        memset(subnetname, 0, LID_LEN);
+        memset(vpcname, 0, VPC_ID_LEN);
+        memset(subnetname, 0, VPC_SUBNET_ID_LEN);
 
-        sscanf(bridges[i]->obj->name, "vb_%12s_%15s", vpcname, subnetname);
+        if ((strlen(bridges[i]->obj->name) > 15) && (bridges[i]->obj->name[15] == '_')) {
+          pattern = "vb_%12s_%24s";
+        } else {
+          pattern = "vb_%21s_%24s";
+        }
+        sscanf(bridges[i]->obj->name, pattern, vpcname, subnetname);
         if (strlen(vpcname) && strlen(subnetname)) {
             LOGTRACE("discovered VPC subnet installed in midonet: %s/%s\n", vpcname, subnetname);
             find_mido_vpc(mido, vpcname, &vpc);
@@ -944,7 +958,7 @@ int do_midonet_populate_vpcs(mido_config *mido) {
                     }
                     natgname[0] = '\0';
                     natgrtid = 0;
-                    snprintf(tmpstr, 64, "natr_%%21s_%s_%%d", subnetname);
+                    snprintf(tmpstr, MIDO_NAME_LEN, "natr_%%21s_%s_%%d", subnetname);
                     sscanf(natgrouters[j]->obj->name, tmpstr, natgname, &natgrtid);
                     if ((strlen(natgname)) && (natgrtid != 0)) {
                         LOGTRACE("discovered %s in %s installed in midonet\n", natgname, subnetname);
@@ -978,10 +992,15 @@ int do_midonet_populate_vpcs(mido_config *mido) {
     for (i = 0; i < max_chains; i++) {
         LOGTRACE("inspecting chain '%s'\n", chains[i]->name);
 
-        memset(vpcname, 0, LID_LEN);
-        memset(aclname, 0, LID_LEN);
+        memset(vpcname, 0, VPC_ID_LEN);
+        memset(aclname, 0, NETWORK_ACL_ID_LEN);
 
-        sscanf(chains[i]->name, "acl_ingress_%12s_%12s", vpcname, aclname);
+        if ((strlen(chains[i]->name) > 24) && (chains[i]->name[24] == '_')) {
+          pattern = "acl_ingress_%12s_%21s";
+        } else {
+          pattern = "acl_ingress_%21s_%21s";
+        }
+        sscanf(chains[i]->name, pattern, vpcname, aclname);
         if (strlen(vpcname) && strlen(aclname)) {
             LOGTRACE("discovered VPC network acl installed in midonet: %s/%s\n", vpcname, aclname);
             find_mido_vpc(mido, vpcname, &vpc);
@@ -1008,14 +1027,14 @@ int do_midonet_populate_vpcs(mido_config *mido) {
         LOGTRACE("inspecting chain '%s'\n", chains[i]->name);
         sgname[0] = '\0';
 
-        sscanf(chains[i]->name, "sg_ingress_%11s", sgname);
+        sscanf(chains[i]->name, "sg_ingress_%20s", sgname);
         if (strlen(sgname)) {
             LOGTRACE("discovered VPC security group installed in midonet: %s\n", sgname);
             mido->vpcsecgroups = EUCA_REALLOC_C(mido->vpcsecgroups, (mido->max_vpcsecgroups + 1), sizeof (mido_vpc_secgroup));
             vpcsecgroup = &(mido->vpcsecgroups[mido->max_vpcsecgroups]);
             (mido->max_vpcsecgroups)++;
             bzero(vpcsecgroup, sizeof (mido_vpc_secgroup));
-            snprintf(vpcsecgroup->name, 16, "%s", sgname);
+            snprintf(vpcsecgroup->name, SECURITY_GROUP_ID_LEN, "%s", sgname);
             populate_mido_vpc_secgroup(mido, vpcsecgroup);
         }
     }
@@ -1033,7 +1052,7 @@ int do_midonet_populate_vpcs(mido_config *mido) {
                 if (!brports[k]) {
                     continue;
                 }
-                memset(instanceId, 0, LID_LEN);
+                memset(instanceId, 0, INSTANCE_ID_LEN);
 
                 if (brports[k]->port && brports[k]->port->ifname) {
                     sscanf(brports[k]->port->ifname, "vn_%s", instanceId);
@@ -1041,7 +1060,7 @@ int do_midonet_populate_vpcs(mido_config *mido) {
                     if (strlen(instanceId)) {
                         char *mido_instanceId = find_mido_vpc_instance_id(instanceId);
                         if (mido_instanceId) {
-                            snprintf(instanceId, LID_LEN, "%s", mido_instanceId);
+                            snprintf(instanceId, INSTANCE_ID_LEN, "%s", mido_instanceId);
                         }
                         EUCA_FREE(mido_instanceId);
                         LOGTRACE("discovered VPC subnet instance/interface: %s/%s/%s\n", vpc->name, vpcsubnet->name, instanceId);
@@ -1764,7 +1783,7 @@ int do_midonet_update_pass3_vpcs(globalNetworkInfo *gni, mido_config *mido) {
             vpc = &(mido->vpcs[mido->max_vpcs]);
             bzero(vpc, sizeof (mido_vpc));
             mido->max_vpcs++;
-            snprintf(vpc->name, 16, "%s", gnivpc->name);
+            snprintf(vpc->name, VPC_ID_LEN, "%s", gnivpc->name);
             vpc->gniVpc = gnivpc;
             gnivpc->mido_present = vpc;
             get_next_router_id(mido, &(vpc->rtid));
@@ -1827,8 +1846,8 @@ int do_midonet_update_pass3_vpcs(globalNetworkInfo *gni, mido_config *mido) {
                 vpcsubnet = &(vpc->subnets[vpc->max_subnets]);
                 vpc->max_subnets++;
                 bzero(vpcsubnet, sizeof (mido_vpc_subnet));
-                snprintf(vpcsubnet->name, 16, "%s", gnivpc->subnets[j].name);
-                snprintf(vpcsubnet->vpcname, 16, "%s", vpc->name);
+                snprintf(vpcsubnet->name, VPC_SUBNET_ID_LEN, "%s", gnivpc->subnets[j].name);
+                snprintf(vpcsubnet->vpcname, VPC_ID_LEN, "%s", vpc->name);
                 vpcsubnet->gniSubnet = gnivpcsubnet;
                 gnivpcsubnet->mido_present = vpcsubnet;
                 vpcsubnet->nacl_changed = 1;
@@ -1924,7 +1943,7 @@ int do_midonet_update_pass3_vpcs(globalNetworkInfo *gni, mido_config *mido) {
                 // get the subnet
                 find_mido_vpc_subnet(vpc, gninatg->subnet, &vpcsubnet);
                 if (vpcsubnet == NULL) {
-                    LOGERROR("Unable to find %s for %s - aborting NAT Gateway creation\n", gninatg->subnet, gninatg->name);
+                    LOGERROR("Unable to find %s in vpc for %s - aborting NAT Gateway creation\n", gninatg->subnet, gninatg->name);
                     continue;
                 }
                 // necessary memory should have been allocated in pass1
@@ -3624,8 +3643,8 @@ char *find_mido_vpc_instance_id(const char *id) {
         LOGWARN("Invalid argument: unable to find NULL instance id\n");
         return (NULL);
     }
-    char iagname[64];
-    snprintf(iagname, 64, "elip_post_%s", id);
+    char iagname[MIDO_NAME_LEN];
+    snprintf(iagname, MIDO_NAME_LEN, "elip_post_%s", id);
     midonet_api_ipaddrgroup *iag = mido_get_ipaddrgroup(iagname);
     if (iag) {
         char *foundid = strstr(iag->obj->name, id);
@@ -4385,13 +4404,13 @@ int find_mido_vpc_subnet_routes(mido_config *mido, mido_vpc *vpc, mido_vpc_subne
 int populate_mido_vpc_secgroup(mido_config *mido, mido_vpc_secgroup *vpcsecgroup) {
     int ret = 0;
     int i = 0;
-    char name[64];
+    char name[MIDO_NAME_LEN];
 
     if (!mido || !vpcsecgroup) {
         return (1);
     }
 
-    snprintf(name, 64, "sg_ingress_%11s", vpcsecgroup->name);
+    snprintf(name, MIDO_NAME_LEN, "sg_ingress_%20s", vpcsecgroup->name);
     midonet_api_chain *sgchain = mido_get_chain(name);
     if (sgchain != NULL) {
         LOGTRACE("Found SG chain %s\n", sgchain->obj->name);
@@ -4399,7 +4418,7 @@ int populate_mido_vpc_secgroup(mido_config *mido, mido_vpc_secgroup *vpcsecgroup
         vpcsecgroup->midos[VPCSG_INGRESS] = sgchain->obj;
     }
 
-    snprintf(name, 64, "sg_egress_%11s", vpcsecgroup->name);
+    snprintf(name, MIDO_NAME_LEN, "sg_egress_%20s", vpcsecgroup->name);
     sgchain = mido_get_chain(name);
     if (sgchain != NULL) {
         LOGTRACE("Found SG chain %s\n", sgchain->obj->name);
@@ -4407,7 +4426,7 @@ int populate_mido_vpc_secgroup(mido_config *mido, mido_vpc_secgroup *vpcsecgroup
         vpcsecgroup->midos[VPCSG_EGRESS] = sgchain->obj;
     }
 
-    snprintf(name, 64, "sg_priv_%11s", vpcsecgroup->name);
+    snprintf(name, MIDO_NAME_LEN, "sg_priv_%20s", vpcsecgroup->name);
     midonet_api_ipaddrgroup *sgipaddrgroup = mido_get_ipaddrgroup(name);
     if (sgipaddrgroup != NULL) {
         LOGTRACE("Found SG IAG %s\n", sgipaddrgroup->obj->name);
@@ -4415,7 +4434,7 @@ int populate_mido_vpc_secgroup(mido_config *mido, mido_vpc_secgroup *vpcsecgroup
         vpcsecgroup->midos[VPCSG_IAGPRIV] = sgipaddrgroup->obj;
     }
 
-    snprintf(name, 64, "sg_pub_%11s", vpcsecgroup->name);
+    snprintf(name, MIDO_NAME_LEN, "sg_pub_%20s", vpcsecgroup->name);
     sgipaddrgroup = mido_get_ipaddrgroup(name);
     if (sgipaddrgroup != NULL) {
         LOGTRACE("Found SG IAG %s\n", sgipaddrgroup->obj->name);
@@ -4423,7 +4442,7 @@ int populate_mido_vpc_secgroup(mido_config *mido, mido_vpc_secgroup *vpcsecgroup
         vpcsecgroup->midos[VPCSG_IAGPUB] = sgipaddrgroup->obj;
     }
 
-    snprintf(name, 64, "sg_all_%11s", vpcsecgroup->name);
+    snprintf(name, MIDO_NAME_LEN, "sg_all_%20s", vpcsecgroup->name);
     sgipaddrgroup = mido_get_ipaddrgroup(name);
     if (sgipaddrgroup != NULL) {
         LOGTRACE("Found SG IAG %s\n", sgipaddrgroup->obj->name);
@@ -4455,14 +4474,14 @@ int populate_mido_vpc_secgroup(mido_config *mido, mido_vpc_secgroup *vpcsecgroup
  */
 int create_mido_vpc_secgroup(mido_config *mido, mido_vpc_secgroup *vpcsecgroup) {
     int ret = 0;
-    char name[32];
+    char name[MIDO_NAME_LEN];
     midonet_api_chain *ch = NULL;
     midonet_api_ipaddrgroup *ipag = NULL;
 
     if (!mido || !vpcsecgroup) {
         return (1);
     }
-    snprintf(name, 32, "sg_ingress_%11s", vpcsecgroup->name);
+    snprintf(name, MIDO_NAME_LEN, "sg_ingress_%20s", vpcsecgroup->name);
     ch = mido_create_chain(VPCMIDO_TENANT, name, &(vpcsecgroup->midos[VPCSG_INGRESS]));
     if (!ch) {
         LOGWARN("Failed to create chain %s.\n", name);
@@ -4471,7 +4490,7 @@ int create_mido_vpc_secgroup(mido_config *mido, mido_vpc_secgroup *vpcsecgroup) 
         vpcsecgroup->ingress = ch;
     }
 
-    snprintf(name, 32, "sg_egress_%11s", vpcsecgroup->name);
+    snprintf(name, MIDO_NAME_LEN, "sg_egress_%20s", vpcsecgroup->name);
     ch = mido_create_chain(VPCMIDO_TENANT, name, &(vpcsecgroup->midos[VPCSG_EGRESS]));
     if (!ch) {
         LOGWARN("Failed to create chain %s.\n", name);
@@ -4480,7 +4499,7 @@ int create_mido_vpc_secgroup(mido_config *mido, mido_vpc_secgroup *vpcsecgroup) 
         vpcsecgroup->egress = ch;
     }
 
-    snprintf(name, 32, "sg_priv_%11s", vpcsecgroup->name);
+    snprintf(name, MIDO_NAME_LEN, "sg_priv_%20s", vpcsecgroup->name);
     ipag = mido_create_ipaddrgroup(VPCMIDO_TENANT, name, &(vpcsecgroup->midos[VPCSG_IAGPRIV]));
     if (!ipag) {
         LOGWARN("Failed to create ipaddrgroup %s.\n", name);
@@ -4489,7 +4508,7 @@ int create_mido_vpc_secgroup(mido_config *mido, mido_vpc_secgroup *vpcsecgroup) 
         vpcsecgroup->iag_priv = ipag;
     }
 
-    snprintf(name, 32, "sg_pub_%11s", vpcsecgroup->name);
+    snprintf(name, MIDO_NAME_LEN, "sg_pub_%20s", vpcsecgroup->name);
     ipag = mido_create_ipaddrgroup(VPCMIDO_TENANT, name, &(vpcsecgroup->midos[VPCSG_IAGPUB]));
     if (!ipag) {
         LOGWARN("Failed to create ipaddrgroup %s.\n", name);
@@ -4498,7 +4517,7 @@ int create_mido_vpc_secgroup(mido_config *mido, mido_vpc_secgroup *vpcsecgroup) 
         vpcsecgroup->iag_pub = ipag;
     }
 
-    snprintf(name, 32, "sg_all_%11s", vpcsecgroup->name);
+    snprintf(name, MIDO_NAME_LEN, "sg_all_%20s", vpcsecgroup->name);
     ipag = mido_create_ipaddrgroup(VPCMIDO_TENANT, name, &(vpcsecgroup->midos[VPCSG_IAGALL]));
     if (!ipag) {
         LOGWARN("Failed to create ipaddrgroup %s.\n", name);
@@ -4802,13 +4821,13 @@ int clear_parsed_chain_rule(mido_parsed_chain_rule *rule) {
 int populate_mido_vpc_nacl(mido_config *mido, mido_vpc_nacl *vpcnacl) {
     int ret = 0;
     int i = 0;
-    char name[64];
+    char name[MIDO_NAME_LEN];
 
     if (!mido || !vpcnacl || !strlen(vpcnacl->name) || !strlen(vpcnacl->vpcname)) {
         return (1);
     }
 
-    snprintf(name, 64, "acl_ingress_%s_%s", vpcnacl->vpcname, vpcnacl->name);
+    snprintf(name, MIDO_NAME_LEN, "acl_ingress_%s_%s", vpcnacl->vpcname, vpcnacl->name);
     midonet_api_chain *aclchain = mido_get_chain(name);
     if (aclchain != NULL) {
         LOGTRACE("Found NACL ingress chain %s\n", aclchain->obj->name);
@@ -4816,7 +4835,7 @@ int populate_mido_vpc_nacl(mido_config *mido, mido_vpc_nacl *vpcnacl) {
         vpcnacl->midos[VPCNACL_INGRESS] = aclchain->obj;
     }
 
-    snprintf(name, 64, "acl_egress_%s_%s", vpcnacl->vpcname, vpcnacl->name);
+    snprintf(name, MIDO_NAME_LEN, "acl_egress_%s_%s", vpcnacl->vpcname, vpcnacl->name);
     aclchain = mido_get_chain(name);
     if (aclchain != NULL) {
         LOGTRACE("Found NACL egress chain %s\n", aclchain->obj->name);
@@ -4850,13 +4869,13 @@ int populate_mido_vpc_nacl(mido_config *mido, mido_vpc_nacl *vpcnacl) {
  */
 int create_mido_vpc_nacl(mido_config *mido, mido_vpc *vpc, mido_vpc_nacl *vpcnacl) {
     int ret = 0;
-    char name[LID_LEN * 2];
+    char name[MIDO_NAME_LEN];
     midonet_api_chain *ch = NULL;
 
     if (!mido || !vpc || !vpcnacl) {
         return (1);
     }
-    snprintf(name, LID_LEN * 2, "acl_ingress_%s_%s", vpc->name, vpcnacl->name);
+    snprintf(name, MIDO_NAME_LEN, "acl_ingress_%s_%s", vpc->name, vpcnacl->name);
     ch = mido_create_chain(VPCMIDO_TENANT, name, &(vpcnacl->midos[VPCNACL_INGRESS]));
     if (!ch) {
         LOGWARN("Failed to create chain %s.\n", name);
@@ -4865,7 +4884,7 @@ int create_mido_vpc_nacl(mido_config *mido, mido_vpc *vpc, mido_vpc_nacl *vpcnac
         vpcnacl->ingress = ch;
     }
 
-    snprintf(name, LID_LEN * 2, "acl_egress_%s_%s", vpc->name, vpcnacl->name);
+    snprintf(name, MIDO_NAME_LEN, "acl_egress_%s_%s", vpc->name, vpcnacl->name);
     ch = mido_create_chain(VPCMIDO_TENANT, name, &(vpcnacl->midos[VPCNACL_EGRESS]));
     if (!ch) {
         LOGWARN("Failed to create chain %s.\n", name);
@@ -5051,7 +5070,7 @@ int parse_mido_nacl_entry(mido_config *mido, gni_acl_entry *entry, mido_parsed_c
 int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc *vpc,
         mido_vpc_subnet *vpcsubnet, mido_vpc_instance *vpcinstance) {
     int ret = 0, found = 0, i = 0, j = 0;
-    char fstr[64], tmp_name[32];
+    char fstr[64], tmp_name[MIDO_NAME_LEN];
     char *targetIP = NULL;
     char *rdst = NULL;
     char *privip = NULL;
@@ -5202,14 +5221,14 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc 
         LOGWARN("Unable to populate vpcinstance %s IPADDRGROUP\n", vpcinstance->name);
     }
 
-    snprintf(tmp_name, 32, "ic_%s_prechain", vpcinstance->name);
+    snprintf(tmp_name, MIDO_NAME_LEN, "ic_%s_prechain", vpcinstance->name);
     midonet_api_chain *ic = mido_get_chain(tmp_name);
     if (ic != NULL) {
         LOGTRACE("Found chain %s\n", ic->obj->name);
         vpcinstance->prechain = ic;
         vpcinstance->midos[INST_PRECHAIN] = ic->obj;
     }
-    snprintf(tmp_name, 32, "ic_%s_postchain", vpcinstance->name);
+    snprintf(tmp_name, MIDO_NAME_LEN, "ic_%s_postchain", vpcinstance->name);
     ic = mido_get_chain(tmp_name);
     if (ic != NULL) {
         LOGTRACE("Found chain %s\n", ic->obj->name);
@@ -5361,7 +5380,7 @@ int populate_mido_vpc_instance(mido_config *mido, mido_core *midocore, mido_vpc 
  */
 int create_mido_vpc_instance(mido_vpc_instance *vpcinstance) {
     int ret = 0;
-    char iagname[64], tmp_name[32];
+    char iagname[MIDO_NAME_LEN], tmp_name[MIDO_NAME_LEN];
     midonet_api_ipaddrgroup *iag = NULL;
     midonet_api_chain *ch = NULL;
 
@@ -5370,7 +5389,7 @@ int create_mido_vpc_instance(mido_vpc_instance *vpcinstance) {
     }
     
     // set up elip ipaddrgroups
-    snprintf(iagname, 64, "elip_pre_%s", vpcinstance->name);
+    snprintf(iagname, MIDO_NAME_LEN, "elip_pre_%s", vpcinstance->name);
     iag = mido_create_ipaddrgroup(VPCMIDO_TENANT, iagname, &(vpcinstance->midos[INST_ELIP_PRE_IPADDRGROUP]));
     if (iag == NULL) {
         LOGWARN("Failed to create IAG %s.\n", iagname);
@@ -5379,7 +5398,7 @@ int create_mido_vpc_instance(mido_vpc_instance *vpcinstance) {
     vpcinstance->iag_pre = iag;
 
     iag = NULL;    
-    snprintf(iagname, 64, "elip_post_%s", vpcinstance->name);
+    snprintf(iagname, MIDO_NAME_LEN, "elip_post_%s", vpcinstance->name);
     iag = mido_create_ipaddrgroup(VPCMIDO_TENANT, iagname, &(vpcinstance->midos[INST_ELIP_POST_IPADDRGROUP]));
     if (iag == NULL) {
         LOGWARN("Failed to create IAG %s.\n", iagname);
@@ -5388,7 +5407,7 @@ int create_mido_vpc_instance(mido_vpc_instance *vpcinstance) {
     vpcinstance->iag_post = iag;
 
     // setup instance chains
-    snprintf(tmp_name, 32, "ic_%s_prechain", vpcinstance->name);
+    snprintf(tmp_name, MIDO_NAME_LEN, "ic_%s_prechain", vpcinstance->name);
     ch = mido_create_chain(VPCMIDO_TENANT, tmp_name, &(vpcinstance->midos[INST_PRECHAIN]));
     if (ch == NULL) {
         LOGWARN("Failed to create chain %s.\n", tmp_name);
@@ -5396,7 +5415,7 @@ int create_mido_vpc_instance(mido_vpc_instance *vpcinstance) {
     }
     vpcinstance->prechain = ch;
 
-    snprintf(tmp_name, 32, "ic_%s_postchain", vpcinstance->name);
+    snprintf(tmp_name, MIDO_NAME_LEN, "ic_%s_postchain", vpcinstance->name);
     ch = NULL;
     ch = mido_create_chain(VPCMIDO_TENANT, tmp_name, &(vpcinstance->midos[INST_POSTCHAIN]));
     if (ch == NULL) {
@@ -5456,7 +5475,7 @@ int delete_mido_vpc_instance(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *
 int populate_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vpcsubnet,
         mido_vpc_natgateway *natgateway) {
     int ret = 0, rc = 0, i = 0, j = 0;
-    char *tmpstr = NULL, tmp_name[64];
+    char *tmpstr = NULL, tmp_name[MIDO_NAME_LEN];
     char *pubip = NULL;
     int foundcnt = 0;
     boolean found1 = FALSE;
@@ -5477,7 +5496,7 @@ int populate_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_subn
         natgateway->midos[NATG_SUBNBR] = vpcsubnet->subnetbr->obj;
     }
     // Search NAT Gateway Router in MidoNet
-    snprintf(tmp_name, 64, "natr_%s", natgateway->name);
+    snprintf(tmp_name, MIDO_NAME_LEN, "natr_%s", natgateway->name);
     midonet_api_router *router =  natgateway->natgrt;
     if (router != NULL) {
         LOGTRACE("Found router %s\n", router->obj->name);
@@ -5527,7 +5546,7 @@ int populate_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_subn
     }
 
     // Search public IP
-    snprintf(tmp_name, 64, "elip_pre_%s", natgateway->name);
+    snprintf(tmp_name, MIDO_NAME_LEN, "elip_pre_%s", natgateway->name);
     midonet_api_ipaddrgroup *ipag = mido_get_ipaddrgroup(tmp_name);
     if (ipag != NULL) {
         LOGTRACE("Found ipag %s\n", ipag->obj->name);
@@ -5569,14 +5588,14 @@ int populate_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_subn
     }
 
     // Search NAT Gateway router chains
-    snprintf(tmp_name, 64, "natc_%s_rtin", natgateway->name);
+    snprintf(tmp_name, MIDO_NAME_LEN, "natc_%s_rtin", natgateway->name);
     midonet_api_chain *icin = mido_get_chain(tmp_name);
     if (icin != NULL) {
         LOGTRACE("Found chain %s\n", icin->obj->name);
         natgateway->midos[NATG_RT_INCHAIN] = icin->obj;
         natgateway->inchain = icin;
     }
-    snprintf(tmp_name, 64, "natc_%s_rtout", natgateway->name);
+    snprintf(tmp_name, MIDO_NAME_LEN, "natc_%s_rtout", natgateway->name);
     midonet_api_chain *icout = mido_get_chain(tmp_name);
     if (icout != NULL) {
         LOGTRACE("Found chain %s\n", icout->obj->name);
@@ -5632,9 +5651,9 @@ int create_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet
     char natg_subnetip[INET_ADDR_LEN];
     char natg_subnetmac[ENET_ADDR_LEN];
     char natg_pubip[INET_ADDR_LEN];
-    char natg_rtname[64];
-    char tmpbuf[64];
-    char iagname[64];
+    char natg_rtname[MIDO_NAME_LEN];
+    char tmpbuf[MIDO_NAME_LEN];
+    char iagname[MIDO_NAME_LEN];
     char *tmpstr = NULL;
 
     if (!mido || !vpc || !vpcsubnet || !vpcnatgateway) {
@@ -5679,7 +5698,7 @@ int create_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet
     EUCA_FREE(tmpstr);
 
     // Create the NAT Gateway mido router
-    snprintf(natg_rtname, 64, "natr_%s_%s_%d", vpcnatgateway->name, vpcsubnet->name, vpcnatgateway->rtid);
+    snprintf(natg_rtname, MIDO_NAME_LEN, "natr_%s_%s_%d", vpcnatgateway->name, vpcsubnet->name, vpcnatgateway->rtid);
     vpcnatgateway->natgrt = mido_create_router(VPCMIDO_TENANT, natg_rtname, &(vpcnatgateway->midos[NATG_RT]));
     if (vpcnatgateway->natgrt == NULL) {
         LOGERROR("Failed to create %s: check midonet health\n", natg_rtname);
@@ -5773,7 +5792,7 @@ int create_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet
     midonet_api_chain *ch = NULL;
     if (ret == 0) {
         // create nat gateway router chains
-        snprintf(tmpbuf, 64, "natc_%s_rtin", vpcnatgateway->name);
+        snprintf(tmpbuf, MIDO_NAME_LEN, "natc_%s_rtin", vpcnatgateway->name);
         ch = mido_create_chain(VPCMIDO_TENANT, tmpbuf, &(vpcnatgateway->midos[NATG_RT_INCHAIN]));
         if (!ch) {
             LOGWARN("Failed to create chain %s.\n", tmpbuf);
@@ -5782,7 +5801,7 @@ int create_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet
             vpcnatgateway->inchain = ch;
         }
 
-        snprintf(tmpbuf, 64, "natc_%s_rtout", vpcnatgateway->name);
+        snprintf(tmpbuf, MIDO_NAME_LEN, "natc_%s_rtout", vpcnatgateway->name);
         ch = mido_create_chain(VPCMIDO_TENANT, tmpbuf, &(vpcnatgateway->midos[NATG_RT_OUTCHAIN]));
         if (!ch) {
             LOGWARN("Failed to create chain %s.\n", tmpbuf);
@@ -5833,7 +5852,7 @@ int create_mido_vpc_natgateway(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet
 
     midonet_api_ipaddrgroup *ig = NULL;
     if (ret == 0) {
-        snprintf(iagname, 64, "elip_pre_%s", vpcnatgateway->name);
+        snprintf(iagname, MIDO_NAME_LEN, "elip_pre_%s", vpcnatgateway->name);
         ig = mido_create_ipaddrgroup(VPCMIDO_TENANT, iagname, &(vpcnatgateway->midos[NATG_ELIP_PRE_IPADDRGROUP]));
         if (!ig) {
             LOGWARN("Failed to create IAG %s.\n", iagname);
@@ -6846,7 +6865,7 @@ int create_mido_gws_bgp_v5(mido_config *mido, mido_core *midocore) {
  */
 int populate_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vpcsubnet) {
     int rc = 0, ret = 0, i = 0, j = 0, found = 0;
-    char tmp_name[32] = { 0 };
+    char tmp_name[MIDO_NAME_LEN] = { 0 };
 
     if (mido->midocore->eucanetdhost) {
         vpcsubnet->midos[SUBN_BR_METAHOST] = mido->midocore->eucanetdhost->obj;
@@ -6906,14 +6925,14 @@ int populate_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *
         }
 
         // populate vpcsubnet infilter and outfilter
-        snprintf(tmp_name, 32, "sc_%s_in", vpcsubnet->name);
+        snprintf(tmp_name, MIDO_NAME_LEN, "sc_%s_in", vpcsubnet->name);
         midonet_api_chain *sc = mido_get_chain(tmp_name);
         if (sc != NULL) {
             LOGTRACE("Found chain %s\n", sc->obj->name);
             vpcsubnet->inchain = sc;
             vpcsubnet->midos[SUBN_BR_INFILTER] = sc->obj;
         }
-        snprintf(tmp_name, 32, "sc_%s_out", vpcsubnet->name);
+        snprintf(tmp_name, MIDO_NAME_LEN, "sc_%s_out", vpcsubnet->name);
         sc = mido_get_chain(tmp_name);
         if (sc != NULL) {
             LOGTRACE("Found chain %s\n", sc->obj->name);
@@ -6944,11 +6963,11 @@ int populate_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *
  */
 int populate_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
     int ret = 0, i = 0, j = 0;
-    char vpcname[32];
+    char vpcname[MIDO_NAME_LEN];
 
     midonet_api_chain *chain = NULL;
 
-    snprintf(vpcname, 32, "vc_%s_prechain", vpc->name);
+    snprintf(vpcname, MIDO_NAME_LEN, "vc_%s_prechain", vpc->name);
     chain = mido_get_chain(vpcname);
     if (chain != NULL) {
         LOGTRACE("Found chain %s", chain->obj->name);
@@ -6956,7 +6975,7 @@ int populate_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
         vpc->midos[VPC_VPCRT_UPLINK_PRECHAIN] = chain->obj;
     }
 
-    snprintf(vpcname, 32, "vc_%s_preelip", vpc->name);
+    snprintf(vpcname, MIDO_NAME_LEN, "vc_%s_preelip", vpc->name);
     chain = mido_get_chain(vpcname);
     if (chain != NULL) {
         LOGTRACE("Found chain %s", chain->obj->name);
@@ -6964,7 +6983,7 @@ int populate_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
         vpc->midos[VPC_VPCRT_PREELIPCHAIN] = chain->obj;
     }
 
-    snprintf(vpcname, 32, "vc_%s_postchain", vpc->name);
+    snprintf(vpcname, MIDO_NAME_LEN, "vc_%s_postchain", vpc->name);
     chain = mido_get_chain(vpcname);
     if (chain != NULL) {
         LOGTRACE("Found chain %s", chain->obj->name);
@@ -6998,14 +7017,14 @@ int populate_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
 
     found = 0;
     if (mido->config->enable_mido_md || mido->config->populate_mido_md) {
-        snprintf(vpcname, 32, "vc_%s_mdulin", vpc->name);
+        snprintf(vpcname, MIDO_NAME_LEN, "vc_%s_mdulin", vpc->name);
         chain = mido_get_chain(vpcname);
         if (chain != NULL) {
             LOGTRACE("Found chain %s", chain->obj->name);
             vpc->rt_mduplink_infilter = chain;
             vpc->midos[VPC_VPCRT_MDUPLINK_INFILTER] = chain->obj;
         }
-        snprintf(vpcname, 32, "vc_%s_mdulout", vpc->name);
+        snprintf(vpcname, MIDO_NAME_LEN, "vc_%s_mdulout", vpc->name);
         chain = mido_get_chain(vpcname);
         if (chain != NULL) {
             LOGTRACE("Found chain %s", chain->obj->name);
@@ -8106,7 +8125,7 @@ int create_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vp
         char *subnet, char *slashnet, char *gw, char *instanceDNSDomain,
         u32 *instanceDNSServers, int max_instanceDNSServers) {
     int rc = 0, ret = 0;
-    char name_buf[32], *tapiface = NULL;
+    char name_buf[MIDO_NAME_LEN], *tapiface = NULL;
 
     // Create a VPC router port - to be linked with the VPC subnet port
     rc = mido_create_router_port(vpc->vpcrt, vpc->midos[VPC_VPCRT], gw, subnet, slashnet, NULL, &(vpcsubnet->midos[SUBN_VPCRT_BRPORT]));
@@ -8124,7 +8143,7 @@ int create_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vp
     }
 
     // Create the VPC subnet mido bridge
-    snprintf(name_buf, 32, "vb_%s_%s", vpc->name, vpcsubnet->name);
+    snprintf(name_buf, MIDO_NAME_LEN, "vb_%s_%s", vpc->name, vpcsubnet->name);
     vpcsubnet->subnetbr = mido_create_bridge(VPCMIDO_TENANT, name_buf, &(vpcsubnet->midos[SUBN_BR]));
     if (!vpcsubnet->subnetbr) {
         LOGERROR("cannot create midonet bridge: check midonet health\n");
@@ -8146,7 +8165,7 @@ int create_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vp
     }
 
     // Create bridge infilter
-    snprintf(name_buf, 32, "sc_%s_in", vpcsubnet->name);
+    snprintf(name_buf, MIDO_NAME_LEN, "sc_%s_in", vpcsubnet->name);
     midonet_api_chain *ch = mido_create_chain(VPCMIDO_TENANT, name_buf, &(vpcsubnet->midos[SUBN_BR_INFILTER]));
     if (ch == NULL) {
         LOGWARN("Failed to create chain %s.\n", name_buf);
@@ -8154,7 +8173,7 @@ int create_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vp
     }
     vpcsubnet->inchain = ch;
     // Create bridge outfilter
-    snprintf(name_buf, 32, "sc_%s_out", vpcsubnet->name);
+    snprintf(name_buf, MIDO_NAME_LEN, "sc_%s_out", vpcsubnet->name);
     ch = NULL;
     ch = mido_create_chain(VPCMIDO_TENANT, name_buf, &(vpcsubnet->midos[SUBN_BR_OUTFILTER]));
     if (ch == NULL) {
@@ -8238,7 +8257,7 @@ int create_mido_vpc_subnet(mido_config *mido, mido_vpc *vpc, mido_vpc_subnet *vp
  */
 int create_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
     int rc = 0;
-    char name_buf[32];
+    char name_buf[MIDO_NAME_LEN];
     char nw[INET_ADDR_LEN], sn[INET_ADDR_LEN], ip[INET_ADDR_LEN], gw[INET_ADDR_LEN];
     char mdip[INET_ADDR_LEN], mdnw[INET_ADDR_LEN], mdsn[INET_ADDR_LEN], mdgw[INET_ADDR_LEN];
     char mdhttp[INET_ADDR_LEN], mddns[INET_ADDR_LEN];
@@ -8259,7 +8278,7 @@ int create_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
     EUCA_FREE(tmpstr);
 
     // Create the VPC mido router
-    snprintf(name_buf, 32, "vr_%s_%d", vpc->name, vpc->rtid);
+    snprintf(name_buf, MIDO_NAME_LEN, "vr_%s_%d", vpc->name, vpc->rtid);
     vpc->vpcrt = mido_create_router(VPCMIDO_TENANT, name_buf, &(vpc->midos[VPC_VPCRT]));
     if (vpc->vpcrt == NULL) {
         LOGERROR("cannot create midonet router: check midonet health\n");
@@ -8297,7 +8316,7 @@ int create_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
 
     // Create pre, preelip, and post chains
     midonet_api_chain *ch = NULL;
-    snprintf(name_buf, 32, "vc_%s_prechain", vpc->name);
+    snprintf(name_buf, MIDO_NAME_LEN, "vc_%s_prechain", vpc->name);
     ch = mido_create_chain(VPCMIDO_TENANT, name_buf, &(vpc->midos[VPC_VPCRT_UPLINK_PRECHAIN]));
     if (!ch) {
         LOGERROR("cannot create midonet pre chain: check midonet health\n");
@@ -8306,7 +8325,7 @@ int create_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
         vpc->rt_uplink_prechain = ch;
     }
 
-    snprintf(name_buf, 32, "vc_%s_preelip", vpc->name);
+    snprintf(name_buf, MIDO_NAME_LEN, "vc_%s_preelip", vpc->name);
     ch = mido_create_chain(VPCMIDO_TENANT, name_buf, &(vpc->midos[VPC_VPCRT_PREELIPCHAIN]));
     if (!ch) {
         LOGERROR("cannot create midonet preelip chain: check midonet health\n");
@@ -8315,7 +8334,7 @@ int create_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
         vpc->rt_preelipchain = ch;
     }
 
-    snprintf(name_buf, 32, "vc_%s_postchain", vpc->name);
+    snprintf(name_buf, MIDO_NAME_LEN, "vc_%s_postchain", vpc->name);
     ch = mido_create_chain(VPCMIDO_TENANT, name_buf, &(vpc->midos[VPC_VPCRT_UPLINK_POSTCHAIN]));
     if (!ch) {
         LOGERROR("cannot create midonet post chain: check midonet health\n");
@@ -8407,7 +8426,7 @@ int create_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
 
         // Create chains
         midonet_api_chain *ch = NULL;
-        snprintf(name_buf, 32, "vc_%s_mdulin", vpc->name);
+        snprintf(name_buf, MIDO_NAME_LEN, "vc_%s_mdulin", vpc->name);
         ch = mido_create_chain(VPCMIDO_TENANT, name_buf, &(vpc->midos[VPC_VPCRT_MDUPLINK_INFILTER]));
         if (!ch) {
             LOGERROR("cannot create midomd infilter: check midonet health\n");
@@ -8416,7 +8435,7 @@ int create_mido_vpc(mido_config *mido, mido_core *midocore, mido_vpc *vpc) {
             vpc->rt_mduplink_infilter = ch;
         }
 
-        snprintf(name_buf, 32, "vc_%s_mdulout", vpc->name);
+        snprintf(name_buf, MIDO_NAME_LEN, "vc_%s_mdulout", vpc->name);
         ch = mido_create_chain(VPCMIDO_TENANT, name_buf, &(vpc->midos[VPC_VPCRT_MDUPLINK_OUTFILTER]));
         if (!ch) {
             LOGERROR("cannot create midomd outfilter chain: check midonet health\n");

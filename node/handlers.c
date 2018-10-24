@@ -957,43 +957,8 @@ virConnectPtr lock_hypervisor_conn()
         sem_v(hyp_sem);
         return NULL;
     }
-    // Fork off a process just to open and immediately close a libvirt connection.
-    // The purpose is to try to identify periods when open or close calls block indefinitely.
-    // Success in the child process does not guarantee success in the parent process, but
-    // hopefully it will flag certain bad conditions and will allow the parent to avoid them.
 
-    if ((cpid = fork()) < 0) {         // fork error
-        LOGERROR("failed to fork to check hypervisor connection\n");
-        bail = TRUE;                   // we are in big trouble if we cannot fork
-    } else if (cpid == 0) {            // child process - checks on the connection
-        if ((tmp_conn = virConnectOpen(nc_state.uri)) == NULL)
-            exit(1);
-        virConnectClose(tmp_conn);
-        exit(0);
-    } else {                           // parent process - waits for the child, kills it if necessary
-        if ((rc = timewait(cpid, &status, LIBVIRT_TIMEOUT_SEC)) < 0) {
-            LOGERROR("failed to wait for forked process: %s\n", strerror(errno));
-            bail = TRUE;
-        } else if (rc == 0) {
-            LOGERROR("timed out waiting for hypervisor checker pid=%d\n", cpid);
-            bail = TRUE;
-        } else if (WEXITSTATUS(status) != 0) {
-            LOGERROR("child process failed to connect to hypervisor\n");
-            bail = TRUE;
-        }
-        // terminate the child, if any
-        killwait(cpid);
-    }
-
-    if (bail) {
-        sem_v(hyp_sem);
-        return NULL;                   // better fail the operation than block the whole NC
-    }
-
-    LOGTRACE("process check for libvirt succeeded\n");
-
-    // At this point, the check for libvirt done in a separate process was
-    // successful, so we proceed to close and reopen the connection in a
+    // close and reopen the connection in a
     // separate thread, which we will try to wake up with SIGUSR1 if it
     // blocks for too long (as a last-resource effort). The reason we reset
     // the connection so often is because libvirt operations have a
@@ -1340,6 +1305,11 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
             }
 
             if (new_state == SHUTOFF || new_state == SHUTDOWN || new_state == CRASHED) {
+                if (instance->terminationRequestedTime > (time(NULL) - nc_state.shutdown_grace_period_sec)) {
+                    LOGINFO("[%s] ignoring hypervisor reported state %s for terminating domain during grace period (%d)\n",
+                            instance->instanceId, instance_state_names[new_state], nc_state.shutdown_grace_period_sec);
+                    break;
+                }
                 LOGWARN("[%s] hypervisor reported previously running domain as %s\n", instance->instanceId, instance_state_names[new_state]);
             }
             // change to state, whatever it happens to be
@@ -1913,9 +1883,9 @@ void *startup_thread(void *arg)
             if (i > 0 && create_timedout == 1) {
                 dom = virDomainLookupByName(conn, instance->instanceId);
                 if (dom) {
-
-                    // a forked process failed to return in a timely manner, yet the instance
-                    // launched. Since we can't verify the validity of the instance, terminate and
+                    // Previous launch attempt did not complete cleanly.
+                    //
+                    // Since we can't verify the validity of the instance, terminate and
                     // let the NC clean up.
                     LOGERROR("[%s] failed to launch cleanly after %d seconds, destroying instance\n", instance->instanceId, CREATE_TIMEOUT_SEC);
                     error = virDomainDestroy(dom);
@@ -1929,68 +1899,30 @@ void *startup_thread(void *arg)
                 }
             }
 
-            // We have seen virDomainCreateLinux() on occasion block indefinitely,
-            // which freezes all activity on the NC since hyp_sem and loop_sem are
-            // being held by the thread. (This is on Lucid with AppArmor enabled.)
-            // To protect against that, we invoke the function in a process and
-            // terminate it after CREATE_TIMEOUT_SEC seconds.
-            //
-            // #0  0x00007f359f0b1f93 in poll () from /lib/libc.so.6
-            // #1  0x00007f359a9a44e2 in ?? () from /usr/lib/libvirt.so.0
-            // #2  0x00007f359a9a5060 in ?? () from /usr/lib/libvirt.so.0
-            // #3  0x00007f359a9ac159 in ?? () from /usr/lib/libvirt.so.0
-            // #4  0x00007f359a98d65b in virDomainCreateXML () from /usr/lib/libvirt.so.0
-            // #5  0x00007f359b053c8e in startup_thread (arg=0x7f358813bf40) at handlers.c:644
-            // #6  0x00007f359f3619ca in start_thread () from /lib/libpthread.so.0
-            // #7  0x00007f359f0be70d in clone () from /lib/libc.so.6
-            // #8  0x0000000000000000 in ?? ()
+            if ((dom = virDomainCreateLinux(conn, xml, 0)) != NULL) {
+                created = TRUE;
+                virDomainFree(dom);
+                dom = NULL;
 
-            if ((cpid = fork()) < 0) { // fork error
-                LOGERROR("[%s] failed to fork to start instance\n", instance->instanceId);
-            } else if (cpid == 0) {    // child process - creates the domain
-                if ((dom = virDomainCreateLinux(conn, xml, 0)) != NULL) {
-                    virDomainFree(dom); // To be safe. Docs are not clear on whether the handle exists outside the process.
+                if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_VPCMIDO)) {
+                    bridge_instance_interfaces_remove(&nc_state, instance);
+                }
 
-                    if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_VPCMIDO)) {
-                        bridge_instance_interfaces_remove(&nc_state, instance);
+                // Fix for EUCA-12608
+                if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_EDGE)) {
+                    char iface[IF_NAME_LEN];
+                    char *ishort = euca_truncate_interfaceid(instance->instanceId);
+                    if (ishort) {
+                        snprintf(iface, IF_NAME_LEN, "vn_%s", ishort);
+                    } else {
+                        LOGWARN("Failed to get short id from %s\n", instance->instanceId);
+                        snprintf(iface, IF_NAME_LEN, "vn_%s", instance->instanceId);
                     }
-                    // Fix for EUCA-12608
-                    if (!strcmp(nc_state.pEucaNet->sMode, NETMODE_EDGE)) {
-                        char iface[IF_NAME_LEN];
-                        char *ishort = euca_truncate_interfaceid(instance->instanceId);
-                        if (ishort) {
-                            snprintf(iface, IF_NAME_LEN, "vn_%s", ishort);
-                        } else {
-                            LOGWARN("Failed to get short id from %s\n", instance->instanceId);
-                            snprintf(iface, IF_NAME_LEN, "vn_%s", instance->instanceId);
-                        }
-                        EUCA_FREE(ishort);
-                        bridge_interface_set_hairpin(&nc_state, instance, iface);
-                    } 
-
-                    exit(0);
-                } else {
-                    exit(1);
+                    EUCA_FREE(ishort);
+                    bridge_interface_set_hairpin(&nc_state, instance, iface);
                 }
             } else {
-                // parent process - waits for the child, kills it if necessary
-                try_killing = FALSE;
-                if ((rc = timewait(cpid, &status, CREATE_TIMEOUT_SEC)) < 0) {
-                    LOGERROR("[%s] failed to wait for forked process: %s\n", instance->instanceId, strerror(errno));
-                    try_killing = TRUE;
-                } else if (rc == 0) {
-                    LOGERROR("[%s] timed out waiting for forked process pid=%d\n", instance->instanceId, cpid);
-                    create_timedout = 1; // Sometimes a timeout can occur but the instance is running...
-                    try_killing = TRUE;
-                } else if (WEXITSTATUS(status) != 0) {
-                    LOGERROR("[%s] hypervisor failed to create the instance\n", instance->instanceId);
-                } else {
-                    created = TRUE;
-                }
-
-                if (try_killing) {
-                    killwait(cpid);
-                }
+                LOGERROR("[%s] hypervisor failed to create the instance\n", instance->instanceId);
             }
 
             sem_v(loop_sem);
@@ -3088,10 +3020,10 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
         return ret;
 
     for (i = 0; i < (*outInstsLen); i++) {
-        char vols_str[128] = "";
-        char vol_str[16] = "";
-        char nics_str[128] = "";
-        char nic_str[16] = "";
+        char vols_str[CHAR_BUFFER_SIZE] = "";
+        char vol_str[SMALL_CHAR_BUFFER_SIZE] = "";
+        char nics_str[CHAR_BUFFER_SIZE] = "";
+        char nic_str[SMALL_CHAR_BUFFER_SIZE] = "";
         char status_str[128] = "running";
         ncInstance *instance = (*outInsts)[i];
 
@@ -3212,6 +3144,8 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
             used_disk = used_mem = used_cores = 0;
             for (i = 0; i < (*outInstsLen); i++) {
                 ncInstance *instance = (*outInsts)[i];
+                if (instance->state == TEARDOWN)
+                    continue;
                 used_disk += instance->params.disk;
                 used_mem += instance->params.mem;
                 used_cores += instance->params.cores;

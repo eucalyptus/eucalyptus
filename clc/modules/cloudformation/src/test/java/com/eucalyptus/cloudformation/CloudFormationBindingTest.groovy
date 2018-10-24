@@ -30,6 +30,28 @@ package com.eucalyptus.cloudformation
 
 import com.eucalyptus.binding.Binding
 import com.eucalyptus.binding.BindingException
+import com.eucalyptus.cloudformation.common.msgs.CancelUpdateStackType
+import com.eucalyptus.cloudformation.common.msgs.CloudFormationErrorResponse
+import com.eucalyptus.cloudformation.common.msgs.CreateStackType
+import com.eucalyptus.cloudformation.common.msgs.DeleteStackType
+import com.eucalyptus.cloudformation.common.msgs.DescribeStackEventsType
+import com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceType
+import com.eucalyptus.cloudformation.common.msgs.DescribeStackResourcesType
+import com.eucalyptus.cloudformation.common.msgs.DescribeStacksType
+import com.eucalyptus.cloudformation.common.msgs.Error
+import com.eucalyptus.cloudformation.common.msgs.EstimateTemplateCostType
+import com.eucalyptus.cloudformation.common.msgs.GetStackPolicyType
+import com.eucalyptus.cloudformation.common.msgs.GetTemplateType
+import com.eucalyptus.cloudformation.common.msgs.ListStackResourcesType
+import com.eucalyptus.cloudformation.common.msgs.ListStacksType
+import com.eucalyptus.cloudformation.common.msgs.Parameter
+import com.eucalyptus.cloudformation.common.msgs.Parameters
+import com.eucalyptus.cloudformation.common.msgs.ResourceList
+import com.eucalyptus.cloudformation.common.msgs.SetStackPolicyType
+import com.eucalyptus.cloudformation.common.msgs.Tag
+import com.eucalyptus.cloudformation.common.msgs.Tags
+import com.eucalyptus.cloudformation.common.msgs.UpdateStackType
+import com.eucalyptus.cloudformation.common.msgs.ValidateTemplateType
 import com.eucalyptus.cloudformation.ws.CloudFormationQueryBinding
 import com.eucalyptus.ws.protocol.QueryBindingTestSupport
 import edu.ucsb.eucalyptus.msgs.BaseMessage
@@ -38,7 +60,7 @@ import org.junit.Test
 import static org.junit.Assert.assertEquals;
 
 /**
- * 
+ *
  */
 class CloudFormationBindingTest extends QueryBindingTestSupport {
 
@@ -52,6 +74,12 @@ class CloudFormationBindingTest extends QueryBindingTestSupport {
   void testValidQueryBinding() {
     URL resource = CloudFormationBindingTest.class.getResource( '/cloudformation-binding.xml' )
     assertValidQueryBinding( resource )
+  }
+
+  @Test
+  void testInternalRoundTrip() {
+    URL resource = CloudFormationBindingTest.class.getResource( '/cloudformation-binding.xml' )
+    assertValidInternalRoundTrip( resource )
   }
 
   @Test
@@ -69,7 +97,7 @@ class CloudFormationBindingTest extends QueryBindingTestSupport {
           String operationName, Map<String, String> params, BaseMessage eucaMsg)
           throws BindingException {
           // Validation requires compiled bindings
-      } 
+      }
     }
 
         // CancelUpdateStack
@@ -210,7 +238,7 @@ class CloudFormationBindingTest extends QueryBindingTestSupport {
       stackPolicyURL: 'Stack-Policy-URL',
       templateBody: 'Template-Body',
       templateURL: 'Template-URL'
-    ), 13 ) 
+    ), 13 )
     // ValidateTemplate
     bindAndAssertObject( asb, ValidateTemplateType.class, "ValidateTemplate", new ValidateTemplateType(
       templateBody: 'Template-Body',
@@ -240,7 +268,6 @@ class CloudFormationBindingTest extends QueryBindingTestSupport {
         }'''.stripIndent( ),
         CloudFormationQueryBinding.jsonWriter( ).withDefaultPrettyPrinter().writeValueAsString( new CloudFormationErrorResponse(
             effectiveUserId: '',
-            statusMessage: '',
             _epoch: 42,
             requestId: 'edbe8968-c437-11e4-bac0-25d29c2758a9',
             error: new Error(

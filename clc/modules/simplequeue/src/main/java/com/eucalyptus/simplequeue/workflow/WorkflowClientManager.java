@@ -30,7 +30,7 @@
 package com.eucalyptus.simplequeue.workflow;
 
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow;
-import com.eucalyptus.simplequeue.SimpleQueue;
+import com.eucalyptus.simplequeue.common.SimpleQueue;
 import com.eucalyptus.simplequeue.bootstrap.SimpleQueueAWSCredentialsProvider;
 import com.eucalyptus.simplequeue.config.SimpleQueueProperties;
 import com.eucalyptus.simpleworkflow.common.client.Config;

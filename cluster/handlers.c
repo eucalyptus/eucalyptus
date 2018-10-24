@@ -2968,12 +2968,12 @@ int ncInstance_to_ccInstance(ccInstance * dst, ncInstance * src)
 
     euca_strncpy(dst->uuid, src->uuid, 48);
     euca_strncpy(dst->instanceId, src->instanceId, INSTANCE_ID_LEN);
-    euca_strncpy(dst->reservationId, src->reservationId, LID_LEN);
+    euca_strncpy(dst->reservationId, src->reservationId, RESERVATION_ID_LEN);
     euca_strncpy(dst->accountId, src->accountId, 48);
     euca_strncpy(dst->ownerId, src->ownerId, 48);
-    euca_strncpy(dst->amiId, src->imageId, 16);
-    euca_strncpy(dst->kernelId, src->kernelId, 16);
-    euca_strncpy(dst->ramdiskId, src->ramdiskId, 16);
+    euca_strncpy(dst->amiId, src->imageId, IMAGE_ID_LEN);
+    euca_strncpy(dst->kernelId, src->kernelId, IMAGE_ID_LEN);
+    euca_strncpy(dst->ramdiskId, src->ramdiskId, IMAGE_ID_LEN);
     euca_strncpy(dst->keyName, src->keyName, 1024);
     euca_strncpy(dst->launchIndex, src->launchIndex, 64);
     euca_strncpy(dst->platform, src->platform, 64);
@@ -3038,13 +3038,13 @@ int ccInstance_to_ncInstance(ncInstance * dst, ccInstance * src)
 
     euca_strncpy(dst->uuid, src->uuid, 48);
     euca_strncpy(dst->instanceId, src->instanceId, INSTANCE_ID_LEN);
-    euca_strncpy(dst->reservationId, src->reservationId, LID_LEN);
+    euca_strncpy(dst->reservationId, src->reservationId, RESERVATION_ID_LEN);
     euca_strncpy(dst->accountId, src->accountId, 48);
     euca_strncpy(dst->userId, src->ownerId, 48);    //! @TODO: is this right?
     euca_strncpy(dst->ownerId, src->ownerId, 48);
-    euca_strncpy(dst->imageId, src->amiId, 16);
-    euca_strncpy(dst->kernelId, src->kernelId, 16);
-    euca_strncpy(dst->ramdiskId, src->ramdiskId, 16);
+    euca_strncpy(dst->imageId, src->amiId, IMAGE_ID_LEN);
+    euca_strncpy(dst->kernelId, src->kernelId, IMAGE_ID_LEN);
+    euca_strncpy(dst->ramdiskId, src->ramdiskId, IMAGE_ID_LEN);
     euca_strncpy(dst->keyName, src->keyName, 1024);
     euca_strncpy(dst->launchIndex, src->launchIndex, 64);
     euca_strncpy(dst->platform, src->platform, 64);
@@ -6827,11 +6827,11 @@ int allocate_ccInstance(ccInstance * out, char *id, char *amiId, char *kernelId,
         if (id)
             euca_strncpy(out->instanceId, id, INSTANCE_ID_LEN);
         if (amiId)
-            euca_strncpy(out->amiId, amiId, 16);
+            euca_strncpy(out->amiId, amiId, IMAGE_ID_LEN);
         if (kernelId)
-            euca_strncpy(out->kernelId, kernelId, 16);
+            euca_strncpy(out->kernelId, kernelId, IMAGE_ID_LEN);
         if (ramdiskId)
-            euca_strncpy(out->ramdiskId, ramdiskId, 16);
+            euca_strncpy(out->ramdiskId, ramdiskId, IMAGE_ID_LEN);
 
         if (amiURL)
             euca_strncpy(out->amiURL, amiURL, 512);
@@ -6849,7 +6849,7 @@ int allocate_ccInstance(ccInstance * out, char *id, char *amiId, char *kernelId,
         if (accountId)
             euca_strncpy(out->accountId, accountId, 48);
         if (reservationId)
-            euca_strncpy(out->reservationId, reservationId, LID_LEN);
+            euca_strncpy(out->reservationId, reservationId, RESERVATION_ID_LEN);
         if (keyName)
             euca_strncpy(out->keyName, keyName, 1024);
         out->ts = ts;

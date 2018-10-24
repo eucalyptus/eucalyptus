@@ -71,7 +71,7 @@ public abstract class LaunchConfigurations {
   }
 
   public static boolean containsSecurityGroupIdentifiers( final Iterable<String> groups ) {
-    return !Iterables.isEmpty( groups ) && Iterables.get( groups, 0 ).matches( "sg-[0-9A-Fa-f]{8}" );
+    return !Iterables.isEmpty( groups ) && Iterables.get( groups, 0 ).matches( "sg-[0-9A-Fa-f]{8}(?:[0-9a-fA-F]{9})?" );
   }
 
   public static class PersistingBuilder extends LaunchConfiguration.BaseBuilder<PersistingBuilder> {

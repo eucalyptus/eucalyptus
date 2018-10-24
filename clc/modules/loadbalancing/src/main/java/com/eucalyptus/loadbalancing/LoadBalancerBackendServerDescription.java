@@ -66,8 +66,7 @@ import com.google.common.collect.Lists;
 @Table( name = "metadata_backend_server_description" )
 public class LoadBalancerBackendServerDescription extends AbstractPersistent {
   private static Logger    LOG     = Logger.getLogger( LoadBalancerBackendServerDescription.class );
-  
-  @Transient
+
   private static final long serialVersionUID = 1L;
   
   @Transient
@@ -120,18 +119,6 @@ public class LoadBalancerBackendServerDescription extends AbstractPersistent {
     }
     if(!this.policyDescriptions.contains(policy))
       this.policyDescriptions.add(policy);
-  }
-  
-  public void removePolicy(final String policyName){
-    if(this.policyDescriptions==null || policyName==null)
-      return;
-    LoadBalancerPolicyDescription toDelete = null;
-    for(final LoadBalancerPolicyDescription pol : this.policyDescriptions){
-      if(policyName.equals(pol.getPolicyName()))
-        toDelete = pol;
-    }
-    if(toDelete!=null)
-      this.policyDescriptions.remove(toDelete);
   }
   
   public void removePolicy(final LoadBalancerPolicyDescription policy){

@@ -41,6 +41,7 @@
 import com.eucalyptus.bootstrap.BootstrapArgs
 import com.eucalyptus.component.id.Eucalyptus
 import com.eucalyptus.crypto.Signatures
+import com.eucalyptus.util.Exceptions
 import com.google.common.base.Optional
 import com.google.common.base.Predicate
 import com.google.common.base.Strings
@@ -87,6 +88,7 @@ class PostgresqlBootstrapper extends Bootstrapper.Simple implements DatabaseBoot
   
   // Static definitions of postgres commands and options
   private static final String EUCA_OLD_HOME = System.getProperty( 'euca.upgrade.old.dir' )
+  private static final String EUCA_DB_USER  = System.getProperty( 'euca.db.user', DatabaseBootstrapper.DB_USERNAME )
   private static final String EUCA_DB_DIR  = 'data'
   private static final String EUCA_TX_DIR  = 'tx'
   private static final String PG_BIN = 'bin'
@@ -108,7 +110,7 @@ class PostgresqlBootstrapper extends Bootstrapper.Simple implements DatabaseBoot
   private static final String PG_DB_OPT = '-D'
   private static final String PG_X_OPT = '-X'
   private static final String PG_X_DIR =  SubDirectory.DB.getChildFile( EUCA_TX_DIR ).getAbsolutePath()
-  private static final String PG_USER_OPT = "-U${DatabaseBootstrapper.DB_USERNAME}"
+  private static final String PG_USER_OPT = "-U${EUCA_DB_USER}"
   private static final String PG_TRUST_OPT = '--auth=password'
   private static final String PG_PASSFILE = SubDirectory.DB.getChildPath( 'pgpass.txt' )
   private static final String PG_PASSWORDFILE = SubDirectory.DB.getChildPath( 'pass.txt' )
@@ -453,10 +455,8 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   }
 
   private Iterable<Pair<String,Optional<String>>> databases( ) {
-    final List<String> contexts = PersistenceContexts.list();
-    contexts.addAll(PersistenceContexts.listRemotable());
     Iterables.transform(
-        contexts,
+        PersistenceContexts.list( ),
         Pair.robuilder( PersistenceContexts.toDatabaseName( ), PersistenceContexts.toSchemaName( ) ) )
   }
   
@@ -553,7 +553,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
 
       perhapsUpdateDbPassword( )
     } catch ( DatabaseProcessException ex ) {
-      String postgresVersionError = 'database files are incompatible with server';
+      String postgresVersionError = 'database files are incompatible with server'
       if ( BootstrapArgs.isUpgradeSystem( ) && Iterables.tryFind(
           Iterables.concat( ex.processErr, ex.processOut ),
           { String line -> line.contains( postgresVersionError ) } as Predicate<String> ).isPresent( ) ) try {
@@ -573,20 +573,29 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   }
 
   private void perhapsUpdateDbPassword( ) {
-    try {
-      dbExecute( 'postgres', PG_TEST_QUERY )
-    } catch ( Exception e ) {
-      if ( e.message?.contains('authentication') ) {
-        LOG.info( "Updating database password" )
-        String oldPassword = Signatures.SHA256withRSA.trySign( Eucalyptus.class, "eucalyptus".getBytes( ) )
-        try {
-          withConnection( getConnectionInternal( InetAddress.getByName('127.0.0.1'), 'postgres', null, userName, oldPassword ) ) { Sql sql ->
-            sql.execute( "ALTER ROLE " + getUserName( ) + " WITH PASSWORD \'" + getPassword( ) + "\'" )
-          }
-          dbExecute( 'postgres', PG_TEST_QUERY )
-        } catch ( Exception e2 ) {
-          LOG.warn( "Unable to update database password: ${e2.message}" )
+    for ( int i in 1..30 ) {
+      try {
+        dbExecute( 'postgres', PG_TEST_QUERY )
+        break
+      } catch ( Exception e ) {
+        if ( Exceptions.isCausedBy( e, ConnectException ) ) {
+          LOG.info( "Waiting for database to be available." )
+          Thread.sleep( 1000L )
+          continue
         }
+        if ( e.message?.contains('authentication') ) {
+          LOG.info( "Updating database password" )
+          String oldPassword = Signatures.SHA256withRSA.trySign( Eucalyptus.class, "eucalyptus".getBytes( ) )
+          try {
+            withConnection( getConnectionInternal( InetAddress.getByName('127.0.0.1'), 'postgres', null, userName, oldPassword ) ) { Sql sql ->
+              sql.execute( "ALTER ROLE " + getUserName( ) + " WITH PASSWORD \'" + getPassword( ) + "\'" )
+            }
+            dbExecute( 'postgres', PG_TEST_QUERY )
+          } catch ( Exception e2 ) {
+            LOG.warn( "Unable to update database password: ${e2.message}" )
+          }
+        }
+        break
       }
     }
   }
@@ -600,7 +609,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
       LOG.fatal( "Cannot upgrade databases to current postgres version, old postgres version unknown." )
       return false
     }
-    CommandResult versionCommandResult = runProcess( [ oldCommands.initdb, PG_VERSION_OPT ] );
+    CommandResult versionCommandResult = runProcess( [ oldCommands.initdb, PG_VERSION_OPT ] )
     if ( versionCommandResult.code == 0 ) {
       LOG.info( "Old postgres version: ${versionCommandResult.processOut.getAt( 0 )}" )
     } else {
@@ -870,7 +879,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
       dbExecute("postgres", "CREATE DATABASE \"${to}\" TEMPLATE \"${from}\" OWNER \"${getUserName()}\"" )
     } catch( Exception ex ) {
       LOG.error( "Copying database ${from} to ${to} failed because of: ${ex.message}" )
-      throw ex;
+      throw ex
     }
     LOG.info("Database ${from} copied to ${to} successfully")
   }
@@ -1019,7 +1028,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   
   @Override
   String getUserName( ) {
-    DatabaseBootstrapper.DB_USERNAME
+    EUCA_DB_USER
   }
 
   @Override
@@ -1051,6 +1060,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   Map<String, String> getJdbcUrlQueryParameters() {
     PG_USE_SSL ? [
       ssl:'true',
+      sslmode:'require',
       sslfactory: 'com.eucalyptus.postgresql.PostgreSQLSSLSocketFactory'
     ] : emptyMap()
   }

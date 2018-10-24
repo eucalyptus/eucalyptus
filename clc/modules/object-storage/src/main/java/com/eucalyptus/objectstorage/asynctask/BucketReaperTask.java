@@ -171,7 +171,7 @@ public class BucketReaperTask {
     LOG.trace("Cleaning object histories for bucket uuid " + b.getBucketUuid() + ", name " + b.getBucketName());
     do {
       try {
-        result = ObjectMetadataManagers.getInstance().listPaginated(b, chunkSize, null, null, nextKey);
+        result = ObjectMetadataManagers.getInstance().listForCleanupPaginated(b, chunkSize, null, null, nextKey);
       } catch (final Throwable f) {
         LOG.error("Could not get object listing for bucket " + b.getBucketName() + " with next marker: " + nextKey);
         break;

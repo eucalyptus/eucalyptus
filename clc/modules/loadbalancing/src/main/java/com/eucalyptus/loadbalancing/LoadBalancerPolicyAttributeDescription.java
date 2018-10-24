@@ -33,7 +33,6 @@ import java.util.NoSuchElementException;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
-import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
@@ -57,8 +56,7 @@ import com.google.common.base.Function;
 @Table( name = "metadata_policy_attr_description" )
 public class LoadBalancerPolicyAttributeDescription extends AbstractPersistent{
   private static Logger    LOG     = Logger.getLogger( LoadBalancerPolicyAttributeDescription.class );
-  
-  @Transient
+
   private static final long serialVersionUID = 1L;
  
   @ManyToOne
@@ -68,8 +66,7 @@ public class LoadBalancerPolicyAttributeDescription extends AbstractPersistent{
   @Column( name = "attribute_name", nullable=true)
   private String attributeName = null;
 
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   @Column( name = "attribute_value", nullable=true)
   private String attributeValue = null;
   

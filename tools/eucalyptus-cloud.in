@@ -1,0 +1,168 @@
+#!/bin/sh
+
+EUCA_HOME="${EUCALYPTUS}"
+EUCA_DB_HOME="@EUCA_DB_HOME@"
+EUCA_DB_SUFFIX="@EUCA_DB_SUFFIX@"
+EUCA_USER="${EUCA_USER:-eucalyptus}"
+EUCA_VERSION="@EUCA_VERSION@"
+EUCA_EXTRA_VERSION="@EXTRA_VERSION@"
+EUCA_JDK="${EUCA_JDK:-/usr/lib/jvm/jre-1.8.0}"
+EUCA_JDK_HEAP="${EUCA_JDK_HEAP:-2g}"
+EUCA_LOG_LEVEL="${LOGLEVEL:-INFO}"
+EUCA_LOG_APPENDER="${LOGAPPENDER:-console-log}"
+EUCA_VM_TYPE="-server"
+EUCA_VM_OPTIONS_FILE=""
+if [ -r "${EUCA_HOME}/etc/eucalyptus/eucalyptus-cloud.vmoptions" ] ; then
+  EUCA_VM_OPTIONS_FILE="${EUCA_HOME}/etc/eucalyptus/eucalyptus-cloud.vmoptions"
+elif [ -r "${EUCA_HOME}/usr/lib/eucalyptus/eucalyptus-cloud.vmoptions" ] ; then
+  EUCA_VM_OPTIONS_FILE="${EUCA_HOME}/usr/lib/eucalyptus/eucalyptus-cloud.vmoptions"
+fi
+
+JAVA_OPTS="${JAVA_OPTS:-}"
+CLOUD_JAVA_OPTS="${CLOUD_JAVA_OPTS:-}"
+SET_JVM_HEAP=1
+SHOW_BANNER=1
+BOOTSTRAP_HOST_INDEX=0
+BIND_ADDR_INDEX=0
+OPTIONS=b:dD:h:i:j:l:L:u:vX:
+LONGOPTIONS="bootstrap-host:,db-home:,bind-addr:,debug,home:,force-remote-bootstrap,initialize,java-home:,jmx,jvm-name:"
+LONGOPTIONS="${LONGOPTIONS},log-appender:,log-level:,mcast-addr,upgrade,upgrade-old-version:,upgrade-old-dir:"
+LONGOPTIONS="${LONGOPTIONS},upgrade-force,user:,verbose"
+PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTIONS --name "eucalyptus-cloud" -- "$@")
+if [[ $? -ne 0 ]]; then
+    exit 2
+fi
+eval set -- "$PARSED"
+while true; do
+    case "$1" in
+        -b|--bootstrap-host)
+            JAVA_OPTS="${JAVA_OPTS} -Deuca.bootstrap.host.${BOOTSTRAP_HOST_INDEX}=${2}"
+            BOOTSTRAP_HOST_INDEX=$((BOOTSTRAP_HOST_INDEX+1))
+            shift 2
+            ;;
+        --db-home)
+            EUCA_DB_HOME="${2}"
+            shift 2
+            ;;
+        -d|--debug)
+            JAVA_OPTS="${JAVA_OPTS} -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005"
+            shift
+            ;;
+        --force-remote-bootstrap)
+            JAVA_OPTS="${JAVA_OPTS} -Deuca.force.remote.bootstrap=true"
+            shift
+            ;;
+        -h|--home)
+            EUCA_HOME="${2}"
+            shift 2
+            ;;
+        -i|--bind-addr)
+            JAVA_OPTS="${JAVA_OPTS} -Deuca.bind.addr.${BIND_ADDR_INDEX}=${2}"
+            BIND_ADDR_INDEX=$((BIND_ADDR_INDEX+1))
+            shift 2
+            ;;
+        --initialize)
+            JAVA_OPTS="${JAVA_OPTS} -Deuca.initialize=true"
+            SHOW_BANNER=0
+            shift
+            ;;
+        -j|--java-home)
+            EUCA_JDK="${2}"
+            shift 2
+            ;;
+        --jmx)
+            JAVA_OPTS="${JAVA_OPTS} -Dcom.sun.management.jmxremote"
+            JAVA_OPTS="${JAVA_OPTS} -Dcom.sun.management.jmxremote.port=8772"
+            JAVA_OPTS="${JAVA_OPTS} -Dcom.sun.management.jmxremote.authenticate=false"
+            JAVA_OPTS="${JAVA_OPTS} -Dcom.sun.management.jmxremote.ssl=false"
+            shift
+            ;;
+        --jvm-name)
+            EUCA_VM_TYPE="${2}"
+            shift 2
+            ;;
+        -l|--log-level)
+            EUCA_LOG_LEVEL="${2}"
+            shift 2
+            ;;
+        -L|--log-appender)
+            EUCA_LOG_APPENDER="${2}"
+            shift 2
+            ;;
+        --mcast-addr)
+            JAVA_OPTS="${JAVA_OPTS} -Deuca.mcast.addr=${2}"
+            shift 2
+            ;;
+        -u|--user)
+            EUCA_USER="${2}"
+            shift 2
+            ;;
+        --upgrade)
+            JAVA_OPTS="${JAVA_OPTS} -Deuca.upgrade=true"
+            shift
+            ;;
+        --upgrade-old-version)
+            JAVA_OPTS="${JAVA_OPTS} -Deuca.upgrade.old.version=${2}"
+            shift 2
+            ;;
+        --upgrade-old-dir)
+            JAVA_OPTS="${JAVA_OPTS} -Deuca.upgrade.old.dir=${2}"
+            shift 2
+            ;;
+        --upgrade-force)
+            JAVA_OPTS="${JAVA_OPTS} -Deuca.upgrade.force=true"
+            shift
+            ;;
+        -v|--verbose)
+            JAVA_OPTS="${JAVA_OPTS} -verbose:gc"
+            JAVA_OPTS="${JAVA_OPTS} -XX:+PrintGCTimeStamps"
+            JAVA_OPTS="${JAVA_OPTS} -XX:+PrintGCDetails"
+            shift
+            ;;
+        -D|-X)
+            CLOUD_JAVA_OPTS="${CLOUD_JAVA_OPTS} ${1}${2}"
+            [ "-X" == "${1}" ] && [ "mx" == "${2%%[0-9]*}" ] && SET_JVM_HEAP=0
+            shift 2
+            ;;
+        --)
+            shift
+            break
+            ;;
+        *)
+            echo "Options error at $1"
+            exit 3
+            ;;
+    esac
+done
+
+JAVA_HOME="${EUCA_JDK}"
+JAVA_OPTS="${JAVA_OPTS} ${EUCA_VM_TYPE}"
+if [ ${SET_JVM_HEAP} -eq 1 ] ; then
+  JAVA_OPTS="${JAVA_OPTS} -Xms${EUCA_JDK_HEAP} -Xmx${EUCA_JDK_HEAP}"
+fi
+JAVA_OPTS="${JAVA_OPTS} -cp /etc/eucalyptus/cloud.d:/etc/eucalyptus/cloud.d/scripts:/usr/share/eucalyptus/lib/*"
+JAVA_OPTS="${JAVA_OPTS} -javaagent:${EUCA_HOME}/usr/share/eucalyptus/lib/aspectjweaver-1.8.13.jar"
+JAVA_OPTS="${JAVA_OPTS} -XX:HeapDumpPath=${EUCA_HOME}/var/log/eucalyptus/"
+JAVA_OPTS="${JAVA_OPTS} -XX:ErrorFile=${EUCA_HOME}/var/log/eucalyptus/cloud-java-error-%p.log"
+JAVA_OPTS="${JAVA_OPTS} -Deuca.home=${EUCA_HOME}"
+JAVA_OPTS="${JAVA_OPTS} -Deuca.user=eucalyptus"
+JAVA_OPTS="${JAVA_OPTS} -Deuca.db.home=${EUCA_DB_HOME}"
+if [ -n "${EUCA_DB_SUFFIX}" ] ; then
+  JAVA_OPTS="${JAVA_OPTS} -Deuca.db.suffix=${EUCA_DB_SUFFIX}"
+fi
+JAVA_OPTS="${JAVA_OPTS} -Deuca.version=${EUCA_VERSION}"
+if [ -n "${EUCA_EXTRA_VERSION}" ] ; then
+  JAVA_OPTS="${JAVA_OPTS} -Deuca.extra_version=${EUCA_EXTRA_VERSION}"
+fi
+JAVA_OPTS="${JAVA_OPTS} -Deuca.log.appender=${EUCA_LOG_APPENDER}"
+JAVA_OPTS="${JAVA_OPTS} -Deuca.log.dir=${EUCA_HOME}/var/log/eucalyptus"
+JAVA_OPTS="${JAVA_OPTS} -Deuca.log.level=${EUCA_LOG_LEVEL}"
+if [ -n "${EUCA_VM_OPTIONS_FILE}" ] ; then
+  JAVA_OPTS="${JAVA_OPTS} $(cat ${EUCA_VM_OPTIONS_FILE} | grep -v '^#.*')"
+fi
+JAVA_OPTS="${JAVA_OPTS} ${CLOUD_JAVA_OPTS}"
+
+if [ ${SHOW_BANNER} -eq 1 ] ; then
+  echo "Starting Eucalyptus Cloud v${EUCA_VERSION}"
+fi
+exec ${JAVA_HOME}/bin/java ${JAVA_OPTS} com.eucalyptus.bootstrap.Main "$@"

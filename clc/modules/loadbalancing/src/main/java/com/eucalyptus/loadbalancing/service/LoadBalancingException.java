@@ -43,8 +43,6 @@ import com.eucalyptus.ws.Role;
 public class LoadBalancingException extends EucalyptusWebServiceException {
   private static final long serialVersionUID = 1L;
 
-  public static final String DUPLICATE_LOADBALANCER_EXCEPTION = "Duplicate loadbalancer name is found";
-	
 	public static final Role DEFAULT_ROLE = Role.Receiver;
 	public static final String DEFAULT_CODE = "InternalFailure";
 

@@ -46,7 +46,6 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
-import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Parent;
 import com.google.common.base.Strings;
@@ -67,7 +66,6 @@ public class VmMigrationTask {
     return builder.toString( );
   }
 
-  @Transient
   private static Logger  LOG = Logger.getLogger( VmMigrationTask.class );
   
   @Parent

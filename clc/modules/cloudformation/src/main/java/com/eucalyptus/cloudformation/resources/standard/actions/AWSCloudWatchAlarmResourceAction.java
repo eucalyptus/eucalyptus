@@ -143,12 +143,6 @@ public class AWSCloudWatchAlarmResourceAction extends StepBasedResourceAction {
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -173,12 +167,6 @@ public class AWSCloudWatchAlarmResourceAction extends StepBasedResourceAction {
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -235,16 +223,8 @@ public class AWSCloudWatchAlarmResourceAction extends StepBasedResourceAction {
         AsyncRequests.<PutMetricAlarmType, PutMetricAlarmResponseType> sendSync(configuration, putMetricAlarmType);
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
-
-
 
   @Override
   public ResourceProperties getResourceProperties() {

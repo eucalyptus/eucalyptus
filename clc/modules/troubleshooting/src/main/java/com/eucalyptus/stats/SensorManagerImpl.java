@@ -31,6 +31,7 @@ package com.eucalyptus.stats;
 
 import com.eucalyptus.stats.configuration.StatsConfiguration;
 import com.eucalyptus.scripting.Groovyness;
+import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
@@ -98,9 +99,9 @@ public class SensorManagerImpl implements SensorManager {
      * @return
      */
     private static List<SensorEntry> getSensorList() {
-        LOG.info("Reloading sensor list from: " + StatsConfiguration.sensorCodeDirectory.toString() + "/" + StatsConfiguration.getSensorConfigScript());
+        LOG.info("Reloading sensor list from: " + SubDirectory.SCRIPTS.getChildPath(StatsConfiguration.getSensorConfigScript()));
         try {
-            return Groovyness.run(StatsConfiguration.sensorCodeDirectory, StatsConfiguration.getSensorConfigScript());
+            return Groovyness.run(StatsConfiguration.getSensorConfigScript());
         } catch (Exception e) {
             LOG.error("Could not load sensor list groovy script", e);
             return null;

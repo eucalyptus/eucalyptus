@@ -43,8 +43,6 @@ import com.google.common.collect.Lists;
  *
  */
 public class WorkflowClients {
-  private static final String TASK_LIST =
-      LoadBalancingServiceProperties.SWF_TASKLIST;
   private static final String DOMAIN =
       LoadBalancingServiceProperties.SWF_DOMAIN;
   

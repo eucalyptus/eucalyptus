@@ -93,8 +93,8 @@ public class LoadBalancingMessageValidation {
 
     // EC2
     EC2_INSTANCE_ID( "i-[a-fA-F0-9]{8}(?:[0-9a-fA-F]{9})?" ),
-    EC2_SECURITY_GROUP_ID( "sg-[a-fA-F0-9]{8}" ),
-    EC2_SUBNET_ID( "subnet-[a-fA-F0-9]{8}" ),
+    EC2_SECURITY_GROUP_ID( "sg-[a-fA-F0-9]{8}(?:[0-9a-fA-F]{9})?" ),
+    EC2_SUBNET_ID( "subnet-[a-fA-F0-9]{8}(?:[0-9a-fA-F]{9})?" ),
     ;
 
     private final Pattern pattern;

@@ -43,11 +43,9 @@ from eucalyptus_admin.commands.properties.modifypropertyvalue import \
     ModifyPropertyValue
 
 
-PROPERTY_TYPES = {'authentication.ldap_integration_configuration': 'json',
-                  'cloud.network.network_configuration': 'json',
-                  'cloudformation.swf_client_config': 'json',
-                  'cloudformation.swf_workflow_worker_config': 'json',
-                  'region.region_configuration': 'json'}
+PROPERTY_TYPES = {'authentication.ldap_integration_configuration': ['json'],
+                  'cloud.network.network_configuration': ['json', 'yaml'],
+                  'region.region_configuration': ['json', 'yaml']}
 
 
 def _property_key_value(kvp_str):
@@ -127,7 +125,7 @@ class Euctl(PropertiesRequest):
                     editor, vi(1).'''),
                 Arg('--dump', action='store_true', help='''Output the value of
                     a structure variable in its entirety.''')),
-            Arg('--format', choices=('json', 'yaml', 'raw'), default='json',
+            Arg('--format', choices=('json', 'yaml', 'raw'),
                 help='''Try to use the specified format when displaying
                 a structure variable.  "raw" is only allowed with --dump.
                 (default: json)''')]
@@ -139,7 +137,7 @@ class Euctl(PropertiesRequest):
             argcheck = '--dump'
         elif self.args.get('edit'):
             argcheck = '--edit'
-            if self.args.get('format') == 'raw':
+            if self.args.get('format', 'json') == 'raw':
                 raise ArgumentError(
                     'argument --format: "raw" is only allowed with --dump')
         if argcheck:
@@ -161,7 +159,7 @@ class Euctl(PropertiesRequest):
         if self.args.get('dump'):
             prop_name = self.args.get('prop_pairs')[0][0]
             self.log.info('dumping property value   %s', prop_name)
-            if self.args.get('format') == 'raw':
+            if self.args.get('format', 'json') == 'raw':
                 # We need to actively prevent this from being parsed.
                 prop_type = _Property
             else:
@@ -309,32 +307,45 @@ class Euctl(PropertiesRequest):
 
     def _get_formatter(self, prop):
         formatter = None
-        if self.args.get('format') == 'raw':
+        if self.args.get('format', None) == 'raw':
             formatter = _Formatter()
-        if self.args.get('format') == 'json':
+        if self.args.get('format', None) == 'json':
             formatter = _JSONFormatter()
-        if self.args.get('format') == 'yaml':
+        if self.args.get('format', None) == 'yaml':
             formatter = _YAMLFormatter()
         if isinstance(prop, _FallbackProperty):
             print >> sys.stderr, 'warning: existing value of', prop.name, \
                 'is malformed; outputting it as raw text'
             return _FallbackFormatter(formatter)
+        if not formatter:
+            formatter = prop.formatter()
         if formatter:
             return formatter
         raise NotImplementedError('formatter "{0}" not implemented'
-                                  .format(self.args.get('format')))
+                                  .format(self.args.get('format', 'json')))
 
 
 def _build_property(prop_name, prop_value, prop_type=None, log=None):
     if prop_type:
-        prop = prop_type(prop_name)
-    elif PROPERTY_TYPES.get(prop_name) == 'json':
-        prop = _JSONProperty(prop_name)
+        props = [prop_type(prop_name)]
+    elif PROPERTY_TYPES.get(prop_name, None):
+        props = []
+        for property_type in PROPERTY_TYPES.get(prop_name):
+            if property_type == 'json':
+                props.append(_JSONProperty(prop_name))
+            elif property_type == 'yaml':
+                props.append(_YAMLProperty(prop_name))
     else:
-        prop = _Property(prop_name)
-    try:
-        prop.loads(prop_value)
-    except (ValueError, yaml.error.YAMLError):
+        props = [_Property(prop_name)]
+    prop = None
+    for cprop in props:
+        try:
+            cprop.loads(prop_value)
+            prop = cprop
+            break
+        except (ValueError, yaml.error.YAMLError):
+            pass
+    if not prop:
         if log:
             log.warn('parsing of variable %s failed; --dump or --edit will '
                      'output it as raw text', prop_name, exc_info=True)
@@ -422,6 +433,9 @@ class _Property(object):
     def load(self, fileobj):
         self.loads(fileobj.read())
 
+    def formatter(self):
+        return self._formatter
+
     def print_(self, suppress_name=False, force=False):
         if self.value == {}:
             value = ''
@@ -435,6 +449,15 @@ class _Property(object):
 
 class _JSONProperty(_Property):
     FORMATTER = _JSONFormatter
+
+    def print_(self, suppress_name=False, force=False):
+        if force:
+            print >> sys.stderr, 'use euctl --dump to view {0}'.format(
+                self.name)
+
+
+class _YAMLProperty(_Property):
+    FORMATTER = _YAMLFormatter
 
     def print_(self, suppress_name=False, force=False):
         if force:

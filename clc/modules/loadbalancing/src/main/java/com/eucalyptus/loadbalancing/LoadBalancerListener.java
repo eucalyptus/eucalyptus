@@ -156,8 +156,7 @@ public class LoadBalancerListener extends AbstractPersistent
 	public enum PROTOCOL{
 		HTTP, HTTPS, TCP, SSL, NONE
 	}
-	
-	@Transient
+
 	private static final long serialVersionUID = 1L;
 	
 	@Transient

@@ -64,6 +64,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -218,11 +219,11 @@ public class VmInstances {
       public List<VmInstance> get() {
         return Entities.query( VmInstance.withToken( ownerFullName, clientToken ) );
       }
-    }, Predicates.and(
+    }, Predicates.and( ImmutableList.of(
         CollectionUtils.propertyPredicate( clientToken, VmInstance.clientToken( ) ),
         RestrictedTypes.filterByOwner( ownerFullName ),
         checkPredicate( predicate )
-    ) );
+    ) ) );
   }
 
   private static List<VmInstance> list( @Nonnull Supplier<List<VmInstance>> instancesSupplier,
@@ -276,9 +277,9 @@ public class VmInstances {
     },
     ;
 
+    @SuppressWarnings( "unchecked" )
     @Override
     public List<String> results( final List<?> listing ) {
-      //noinspection unchecked
       return ( List<String> ) listing;
     }
   }
@@ -301,28 +302,6 @@ public class VmInstances {
     return predicate == null ?
         Predicates.<T>alwaysTrue() :
         predicate;
-  }
-
-  public static VmVolumeAttachment lookupVolumeAttachment( final String volumeId , final List<VmInstance> vms ) {
-    VmVolumeAttachment ret = null;
-    try {
-      for ( VmInstance vm : vms ) {
-        try {
-          ret = vm.lookupVolumeAttachment( volumeId );
-          if ( ret.getVmInstance( ) == null ) {
-            ret.setVmInstance( vm );
-          }
-        } catch ( NoSuchElementException ex ) {
-          continue;
-        }
-      }
-      if ( ret == null ) {
-        throw new NoSuchElementException( "VmVolumeAttachment: no volume attachment for " + volumeId );
-      }
-      return ret;
-    } catch ( Exception ex ) {
-      throw new NoSuchElementException( ex.getMessage( ) );
-    }
   }
 
   @RestrictedTypes.Resolver( CloudMetadata.VmInstanceMetadata.class )

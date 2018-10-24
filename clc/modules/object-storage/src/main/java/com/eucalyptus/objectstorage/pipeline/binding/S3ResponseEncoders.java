@@ -33,7 +33,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageResponseType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import javaslang.Tuple2;
+import io.vavr.Tuple2;
 
 /**
  *

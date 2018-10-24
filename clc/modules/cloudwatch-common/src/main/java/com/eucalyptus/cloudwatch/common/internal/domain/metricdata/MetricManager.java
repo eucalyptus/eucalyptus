@@ -67,7 +67,7 @@ public class MetricManager {
   public static volatile Integer METRIC_DATA_NUM_DB_OPERATIONS_UNTIL_SESSION_FLUSH = 50;
 
   public static final Logger LOG = Logger.getLogger(MetricManager.class);
-  public static void addMetric(String accountId, 
+  public static void addMetric(String accountId,
       String metricName, String namespace, Map<String, String> dimensionMap,
       MetricType metricType, Units units, Date timestamp, Double sampleSize,
       Double sampleMax, Double sampleMin, Double sampleSum) {
@@ -86,7 +86,7 @@ public class MetricManager {
     validateMetricQueueItem(simpleMetricEntity);
     addManyMetrics(makeMetricMap(hash(simpleMetricEntity)));
   }
-  
+
   private static Multimap<Class, MetricEntity> makeMetricMap(Collection<MetricEntity> entities) {
     Multimap<Class, MetricEntity> metricMap = ArrayListMultimap
         .<Class, MetricEntity> create();
@@ -97,7 +97,7 @@ public class MetricManager {
     }
     return metricMap;
   }
-  
+
 
   private static List<MetricEntity> hash(SimpleMetricEntity simpleMetricEntity) {
     if (simpleMetricEntity == null) return new ArrayList<MetricEntity>();
@@ -167,7 +167,7 @@ public class MetricManager {
   }
 
   public static void deleteAllMetrics() {
-    for (Class c : MetricEntityFactory.getAllClassesForEntitiesGet()) {
+    for (Class<?> c : MetricEntityFactory.getAllClassesForEntitiesGet()) {
       try (final TransactionResource db = Entities.transactionFor(c)) {
         Entities.deleteAll(c);
         db.commit();
@@ -177,12 +177,12 @@ public class MetricManager {
 
   /**
    * Delete all metrics before a certain date
-   * 
+   *
    * @param before
    *          the date to delete before (inclusive)
    */
   public static void deleteMetrics(Date before) {
-    for (Class c : MetricEntityFactory.getAllClassesForEntitiesGet()) {
+    for (Class<?> c : MetricEntityFactory.getAllClassesForEntitiesGet()) {
       try (final TransactionResource db = Entities.transactionFor(c)) {
         Map<String, Date> criteria = new HashMap<String, Date>();
         criteria.put("before", before);
@@ -579,7 +579,7 @@ public class MetricManager {
     LOG.trace("sampleMax="+simpleMetricEntity.getSampleMax());
     LOG.trace("sampleMin="+simpleMetricEntity.getSampleMin());
     LOG.trace("sampleSum="+simpleMetricEntity.getSampleSum());
-  
+
     if (simpleMetricEntity.getDimensionMap() == null) {
       simpleMetricEntity.setDimensionMap(new HashMap<String, String>());
     } else if (simpleMetricEntity.getDimensionMap().size() > AbstractPersistentWithDimensions.MAX_DIM_NUM) {

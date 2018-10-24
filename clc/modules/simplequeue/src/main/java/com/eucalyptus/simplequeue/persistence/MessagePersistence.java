@@ -28,7 +28,7 @@
  ************************************************************************/
 package com.eucalyptus.simplequeue.persistence;
 
-import com.eucalyptus.simplequeue.Message;
+import com.eucalyptus.simplequeue.common.msgs.Message;
 import com.eucalyptus.simplequeue.exceptions.SimpleQueueException;
 
 import java.util.Collection;

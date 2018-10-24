@@ -40,28 +40,23 @@
 package com.eucalyptus.cluster.proxy.callback;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.cluster.common.Cluster;
-import com.eucalyptus.cluster.proxy.ProxyClusterProvider;
+import com.eucalyptus.cluster.proxy.ProxyClusterManager;
 import com.eucalyptus.util.InvalidCredentialsException;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.SubjectMessageCallback;
 import com.eucalyptus.cluster.common.msgs.GetKeysResponseType;
 import com.eucalyptus.cluster.common.msgs.GetKeysType;
 
-public class ProxyClusterCertsCallback extends SubjectMessageCallback<Cluster, GetKeysType, GetKeysResponseType> {
+public class ProxyClusterCertsCallback extends SubjectMessageCallback<ProxyClusterManager, GetKeysType, GetKeysResponseType> {
   private static Logger LOG = Logger.getLogger( ProxyClusterCertsCallback.class );
 
   public ProxyClusterCertsCallback( ) {
     super( new GetKeysType( "self" ).regarding( ) );
   }
   
-  /**
-   * TODO: DOCUMENT
-   * @param msg
-   */
   @Override
   public void fire( GetKeysResponseType msg ) {
-    if( !((ProxyClusterProvider)this.getSubject( ).getClusterProvider( )).checkCerts( msg.getCerts( ) ) ) {
+    if( !this.getSubject( ).checkCerts( msg.getCerts( ) ) ) {
       throw new InvalidCredentialsException( "Cluster credentials are invalid: " + this.getSubject( ).getName( ) );
     }
   }

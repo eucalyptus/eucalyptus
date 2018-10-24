@@ -30,7 +30,7 @@ package com.eucalyptus.cluster.service.fake;
 
 import java.util.Date;
 import java.util.concurrent.ConcurrentMap;
-import com.eucalyptus.cluster.service.vm.VmVolumeAttachment;
+import com.eucalyptus.cluster.service.vm.ClusterVmVolume;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Maps;
@@ -45,7 +45,7 @@ public class FakeNodeVmInfo {
   private volatile State state;
   private volatile long stateTimestamp;
   private volatile String publicIp;
-  private final ConcurrentMap<String, VmVolumeAttachment> volumeAttachments = Maps.newConcurrentMap( );
+  private final ConcurrentMap<String, ClusterVmVolume> volumeAttachments = Maps.newConcurrentMap( );
 
   public FakeNodeVmInfo( final String id ) {
     this.id = id;
@@ -83,7 +83,7 @@ public class FakeNodeVmInfo {
     return getState( ).name( );
   }
 
-  public ConcurrentMap<String, VmVolumeAttachment> getVolumeAttachments( ) {
+  public ConcurrentMap<String, ClusterVmVolume> getVolumeAttachments( ) {
     return volumeAttachments;
   }
 

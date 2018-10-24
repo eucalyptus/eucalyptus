@@ -43,7 +43,6 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
-import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.OrderBy;
@@ -186,8 +185,7 @@ public class WorkflowExecution extends UserMetadata<WorkflowExecution.ExecutionS
   private Date latestActivityTaskScheduled;
 
   @Column( name = "latest_execution_context" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   private String latestExecutionContext;
 
   @Column( name = "timeout_timestamp" )

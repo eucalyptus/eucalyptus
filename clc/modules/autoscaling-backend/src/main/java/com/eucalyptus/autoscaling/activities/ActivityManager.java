@@ -109,6 +109,7 @@ import com.eucalyptus.cloudwatch.common.msgs.ResourceList;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.ClusterInfoType;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.DescribeImagesResponseType;
@@ -1008,7 +1009,7 @@ public class ActivityManager {
   }
 
   private Filter filter( final String name, final Collection<String> values ) {
-    return Filter.filter( name, values );
+    return CloudFilters.filter( name, values );
   }
 
   private void transitionToRegistered( final AutoScalingGroupMetadata group, final List<String> instanceIds ) {
@@ -1072,7 +1073,8 @@ public class ActivityManager {
     for ( final Map.Entry<K,V> currentEntry : map.entrySet() ) {
       if ( entryList.isEmpty( ) || valueComparator.compare( entryValue, currentEntry.getValue() ) > 0) {
         entryValue = currentEntry.getValue( );
-        entryList = Lists.newArrayList( currentEntry );
+        entryList = Lists.newArrayList( );
+        entryList.add( currentEntry );
       } else if ( valueComparator.compare( entryValue, currentEntry.getValue() ) == 0 ) {
         entryList.add( currentEntry );
       }
@@ -2176,7 +2178,7 @@ public class ActivityManager {
 
     UserRemoveFromLoadBalancerScalingProcessTask( final AutoScalingGroupCoreView group,
                                                   final List<String> instanceIds ) {
-      super( UUID.randomUUID().toString(), group, "UserRemoveFromLoadBalancer", instanceIds );
+      super( UUID.randomUUID().toString() + "-user-remove-from-load-balancer", group, "UserRemoveFromLoadBalancer", instanceIds );
     }
 
     @Override
@@ -2228,7 +2230,7 @@ public class ActivityManager {
     private volatile List<String> instanceIds;
 
     UntrackedInstanceTerminationScalingProcessTask( final AutoScalingGroupCoreView group ) {
-      super( group.getOwnerAccountNumber(), group, "UntrackedInstanceTermination" );
+      super( group.getOwnerAccountNumber() + "-untracked-instance-termination", group, "UntrackedInstanceTermination" );
     }
 
     @Override
@@ -2398,7 +2400,7 @@ public class ActivityManager {
     MonitoringScalingProcessTask( final AutoScalingGroupCoreView group,
                                   final List<String> pendingInstanceIds,
                                   final List<String> expectedRunningInstanceIds ) {
-      super( group, "Monitor" );
+      super( group.getArn() + "-monitor", group, "Monitor" );
       this.pendingInstanceIds = pendingInstanceIds;
       this.expectedRunningInstanceIds = scalingProcessEnabled( ScalingProcessType.HealthCheck, group ) ?
           expectedRunningInstanceIds :
@@ -2535,7 +2537,7 @@ public class ActivityManager {
 
     MetricsSubmissionScalingProcessTask( final AutoScalingGroupMetricsView group,
                                          final List<AutoScalingInstanceCoreView> autoScalingInstances ) {
-      super( group.getArn() + ":Metrics", group, "MetricsSubmission" );
+      super( group.getArn() + "-metrics-submission", group, "MetricsSubmission" );
       this.autoScalingInstances = autoScalingInstances;
     }
 
@@ -2604,7 +2606,7 @@ public class ActivityManager {
     ElbMonitoringScalingProcessTask( final AutoScalingGroupCoreView group,
                                      final List<String> loadBalancerNames,
                                      final List<String> expectedInstanceIds ) {
-      super( group, "ElbMonitor" );
+      super( group.getArn() + "-elb-monitor", group, "ElbMonitor" );
       this.loadBalancerNames = loadBalancerNames;
       this.expectedInstanceIds = expectedInstanceIds;
     }
@@ -2750,7 +2752,7 @@ public class ActivityManager {
       subnetIdSetType.setItem( subnetIdItems );
       final DescribeSubnetsType describeSubnetsType = new DescribeSubnetsType( );
       describeSubnetsType.setSubnetSet( subnetIdSetType );
-      describeSubnetsType.getFilterSet( ).add( Filter.filter( "subnet-id", this.subnetIds ) );
+      describeSubnetsType.getFilterSet( ).add( CloudFilters.filter( "subnet-id", this.subnetIds ) );
       client.dispatch( describeSubnetsType, callback );
     }
 
@@ -3025,7 +3027,7 @@ public class ActivityManager {
                                   @Nullable final String instanceType,
                                   @Nullable final String keyName,
                                   final List<String> securityGroups ) {
-      super( UUID.randomUUID().toString() + "-validation", TypeMappers.transform( AutoScalingGroup.withOwner(owner), AutoScalingGroupCoreView.class ), "Validate" );
+      super( UUID.randomUUID().toString() + "-validate", TypeMappers.transform( AutoScalingGroup.withOwner(owner), AutoScalingGroupCoreView.class ), "Validate" );
       this.availabilityZoneToSubnetMapConsumer = availabilityZoneToSubnetMapConsumer;
       this.availabilityZones = availabilityZones;
       this.loadBalancerNames = loadBalancerNames;

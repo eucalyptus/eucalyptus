@@ -91,7 +91,7 @@
 #define ART_SIG_MAX                              262144 //!< must be big enough for a digest and then some
 
 #define FIND_BLOB_TIMEOUT_USEC                   50000LL    //!< @TODO: use 100 or less to induce rare timeouts
-#define DELETE_BLOB_TIMEOUT_USEC                 50000LL
+#define DELETE_BLOB_TIMEOUT_USEC                 5000000LL
 
 #define FIND                                     0
 #define CREATE                                   1
@@ -664,6 +664,8 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
         vbr->format = NC_FORMAT_EXT3;
     } else if (strstr(vbr->formatName, "ntfs") == vbr->formatName) {
         vbr->format = NC_FORMAT_NTFS;
+    } else if (strstr(vbr->formatName, "swap") == vbr->formatName) {
+        vbr->format = NC_FORMAT_SWAP;
     } else {
         LOGERROR("failed to parse resource format '%s'\n", vbr->formatName);
         return (EUCA_ERROR);
@@ -1167,6 +1169,9 @@ blockmap map = { BLOBSTORE_SNAPSHOT, BLOBSTORE_ZERO, {blob:NULL}
     case NC_FORMAT_EXT2:              //! @TODO distinguish ext2 and ext3!
     case NC_FORMAT_EXT3:
         format = diskutil_mkfs(dest_dev, a->size_bytes);
+        break;
+    case NC_FORMAT_SWAP:
+        format = diskutil_mkswap(dest_dev, a->size_bytes);
         break;
     default:
         LOGERROR("[%s] format of type %d/%s is NOT IMPLEMENTED\n", a->instanceId, vbr->format, vbr->formatName);

@@ -33,9 +33,6 @@ import org.hibernate.annotations.Type;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
@@ -60,8 +57,7 @@ public class DeleteStackWorkflowExtraInfoEntity extends AbstractPersistent {
   String runId;
 
   @Column(name = "retained_resources_str" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String retainedResourcesStr;
 
   public DeleteStackWorkflowExtraInfoEntity() {

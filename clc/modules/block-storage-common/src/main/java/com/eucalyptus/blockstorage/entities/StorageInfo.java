@@ -55,7 +55,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PostLoad;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.blockstorage.Storage;
@@ -98,7 +97,6 @@ public class StorageInfo extends AbstractPersistent {
   private static final String DEFAULT_MAX_CONCURRENT_SNAPSHOTS = "3";
   private static final String DEFAULT_MAX_SNAP_DELTAS = "0";
 
-  @Transient
   private static Logger LOG = Logger.getLogger(StorageInfo.class);
 
   @ConfigurableIdentifier

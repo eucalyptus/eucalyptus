@@ -29,41 +29,27 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.eucalyptus.auth.euare.AttachGroupPolicyResponseType;
-import com.eucalyptus.auth.euare.AttachGroupPolicyType;
-import com.eucalyptus.auth.euare.AttachRolePolicyResponseType;
-import com.eucalyptus.auth.euare.AttachRolePolicyType;
-import com.eucalyptus.auth.euare.AttachUserPolicyResponseType;
-import com.eucalyptus.auth.euare.AttachUserPolicyType;
-import com.eucalyptus.auth.euare.CreatePolicyResponseType;
-import com.eucalyptus.auth.euare.CreatePolicyType;
-import com.eucalyptus.auth.euare.CreatePolicyVersionType;
-import com.eucalyptus.auth.euare.DeleteGroupPolicyResponseType;
-import com.eucalyptus.auth.euare.DeleteGroupPolicyType;
-import com.eucalyptus.auth.euare.DeletePolicyType;
-import com.eucalyptus.auth.euare.DeletePolicyVersionResponseType;
-import com.eucalyptus.auth.euare.DeletePolicyVersionType;
-import com.eucalyptus.auth.euare.DeleteRolePolicyResponseType;
-import com.eucalyptus.auth.euare.DeleteRolePolicyType;
-import com.eucalyptus.auth.euare.DeleteUserPolicyResponseType;
-import com.eucalyptus.auth.euare.DeleteUserPolicyType;
-import com.eucalyptus.auth.euare.DetachGroupPolicyType;
-import com.eucalyptus.auth.euare.DetachRolePolicyType;
-import com.eucalyptus.auth.euare.DetachUserPolicyType;
-import com.eucalyptus.auth.euare.GetPolicyResponseType;
-import com.eucalyptus.auth.euare.GetPolicyType;
-import com.eucalyptus.auth.euare.ListEntitiesForPolicyResponseType;
-import com.eucalyptus.auth.euare.ListEntitiesForPolicyType;
-import com.eucalyptus.auth.euare.PolicyGroup;
-import com.eucalyptus.auth.euare.PolicyRole;
-import com.eucalyptus.auth.euare.PolicyUser;
-import com.eucalyptus.auth.euare.PutGroupPolicyResponseType;
-import com.eucalyptus.auth.euare.PutGroupPolicyType;
-import com.eucalyptus.auth.euare.PutRolePolicyResponseType;
-import com.eucalyptus.auth.euare.PutRolePolicyType;
-import com.eucalyptus.auth.euare.PutUserPolicyResponseType;
-import com.eucalyptus.auth.euare.PutUserPolicyType;
-import com.eucalyptus.cloudformation.CloudFormationException;
+import com.eucalyptus.auth.euare.common.msgs.AttachGroupPolicyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.AttachGroupPolicyType;
+import com.eucalyptus.auth.euare.common.msgs.AttachRolePolicyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.AttachRolePolicyType;
+import com.eucalyptus.auth.euare.common.msgs.AttachUserPolicyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.AttachUserPolicyType;
+import com.eucalyptus.auth.euare.common.msgs.CreatePolicyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.CreatePolicyType;
+import com.eucalyptus.auth.euare.common.msgs.CreatePolicyVersionType;
+import com.eucalyptus.auth.euare.common.msgs.DeletePolicyType;
+import com.eucalyptus.auth.euare.common.msgs.DeletePolicyVersionType;
+import com.eucalyptus.auth.euare.common.msgs.DetachGroupPolicyType;
+import com.eucalyptus.auth.euare.common.msgs.DetachRolePolicyType;
+import com.eucalyptus.auth.euare.common.msgs.DetachUserPolicyType;
+import com.eucalyptus.auth.euare.common.msgs.GetPolicyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.GetPolicyType;
+import com.eucalyptus.auth.euare.common.msgs.ListEntitiesForPolicyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.ListEntitiesForPolicyType;
+import com.eucalyptus.auth.euare.common.msgs.PolicyGroup;
+import com.eucalyptus.auth.euare.common.msgs.PolicyRole;
+import com.eucalyptus.auth.euare.common.msgs.PolicyUser;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.IAMHelper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
@@ -77,6 +63,7 @@ import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
 import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Euare;
@@ -86,12 +73,10 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-import javax.annotation.Nullable;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -105,6 +90,10 @@ public class AWSIAMManagedPolicyResourceAction extends StepBasedResourceAction {
 
   public AWSIAMManagedPolicyResourceAction() {
     super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
+    Map<String, UpdateStep> updateWithReplacementMap = Maps.newLinkedHashMap();
+    updateWithReplacementMap.putAll(fromUpdateEnum(UpdateWithReplacementPreCreateSteps.class));
+    updateWithReplacementMap.putAll(createStepsToUpdateWithReplacementSteps(fromEnum(CreateSteps.class)));
+    setUpdateSteps(UpdateTypeAndDirection.UPDATE_WITH_REPLACEMENT, updateWithReplacementMap);
   }
 
   @Override
@@ -129,6 +118,9 @@ public class AWSIAMManagedPolicyResourceAction extends StepBasedResourceAction {
     if (!Objects.equals(properties.getUsers(), otherAction.properties.getUsers())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
+    if (!Objects.equals(properties.getManagedPolicyName(), otherAction.properties.getManagedPolicyName())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
     return updateType;
   }
 
@@ -138,7 +130,7 @@ public class AWSIAMManagedPolicyResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSIAMManagedPolicyResourceAction action = (AWSIAMManagedPolicyResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        String policyName = action.getDefaultPhysicalResourceId();
+        String policyName = action.properties.getManagedPolicyName() != null ? action.properties.getManagedPolicyName() : action.getDefaultPhysicalResourceId();
         CreatePolicyType createPolicyType = MessageHelper.createMessage(CreatePolicyType.class, action.info.getEffectiveUserId());
         if (action.properties.getDescription() != null) {
           createPolicyType.setDescription(action.properties.getDescription());
@@ -201,12 +193,6 @@ public class AWSIAMManagedPolicyResourceAction extends StepBasedResourceAction {
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -283,12 +269,6 @@ public class AWSIAMManagedPolicyResourceAction extends StepBasedResourceAction {
 
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -455,12 +435,20 @@ public class AWSIAMManagedPolicyResourceAction extends StepBasedResourceAction {
         }
         return newAction;
       }
-    };
+    }
+  }
 
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
+  private enum UpdateWithReplacementPreCreateSteps implements UpdateStep {
+    CHECK_CHANGED_MANAGED_POLICY_NAME {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSIAMManagedPolicyResourceAction oldAction = (AWSIAMManagedPolicyResourceAction) oldResourceAction;
+        AWSIAMManagedPolicyResourceAction newAction = (AWSIAMManagedPolicyResourceAction) newResourceAction;
+        if (Objects.equals(oldAction.properties.getManagedPolicyName(), newAction.properties.getManagedPolicyName()) && oldAction.properties.getManagedPolicyName() != null) {
+          throw new ValidationErrorException("CloudFormation cannot update a stack when a custom-named resource requires replacing. Rename "+oldAction.properties.getManagedPolicyName()+" and update the stack again.");
+        }
+        return newAction;
+      }
     }
   }
 

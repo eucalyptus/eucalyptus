@@ -212,14 +212,14 @@ public class WalrusProviderClient extends S3ProviderClient {
    * Walrus provider mapping maps all requests to the single ObjectStorage account used for interaction with Walrus
    */
   @Override
-  protected BasicAWSCredentials mapCredentials(User requestUser) throws AuthException, IllegalArgumentException {
+  protected BasicAWSCredentials getCredentials( ) throws AuthException, IllegalArgumentException {
     List<AccessKey> eucaAdminKeys = osgUser.getKeys();
     if (eucaAdminKeys != null && eucaAdminKeys.size() > 0) {
       return new BasicAWSCredentials(eucaAdminKeys.get(0).getAccessKey(), eucaAdminKeys.get(0).getSecretKey());
     } else {
       LOG.error(
-          "No key found for user " + requestUser.getUserId() + " . Cannot map credentials for call to WalrusBackend backend for data operation");
-      throw new AuthException("No access key found for backend call to WalrusBackend for UserId: " + requestUser.getUserId());
+          "No key found for osg user " + osgUser.getUserId() + " . Cannot map credentials for call to WalrusBackend backend for data operation");
+      throw new AuthException("No access key found for backend call to WalrusBackend for UserId: " + osgUser.getUserId());
     }
   }
 
@@ -474,13 +474,7 @@ public class WalrusProviderClient extends S3ProviderClient {
   @Override
   public DeleteObjectResponseType deleteObject(DeleteObjectType request) throws S3Exception {
     try {
-      DeleteObjectResponseType response =
-          proxyRequest(request, com.eucalyptus.walrus.msgs.DeleteObjectType.class, com.eucalyptus.walrus.msgs.DeleteObjectResponseType.class);
-      // HACK: Remote Walrus cannot send HTTP status over wire. Setting the status here for now - EUCA-9425
-      if (response.getStatus() == null && response.getStatusMessage().equals("NO CONTENT")) {
-        response.setStatus(HttpResponseStatus.NO_CONTENT);
-      }
-      return response;
+      return proxyRequest(request, com.eucalyptus.walrus.msgs.DeleteObjectType.class, com.eucalyptus.walrus.msgs.DeleteObjectResponseType.class);
     } catch (EucalyptusCloudException e) {
       LOG.debug("Error response from WalrusBackend", e);
       throw mapWalrusExceptionToS3Exception(e);

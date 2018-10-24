@@ -50,19 +50,6 @@ public enum ImportTaskState {
 		this.externalVolumeStatusMessage = externalVolumeStatus;
 	}
 
-	public static ImportTaskState fromString(String input) {
-		if (input == null)
-			throw new IllegalArgumentException("Input can't be null");
-		return ImportTaskState.valueOf(input.toUpperCase().replaceAll("-", "_"));
-	}
-
-	public boolean validTransition(ImportTaskState newState) {
-		// there is one valid back transition
-		if (newState == NEW && this == PENDING)
-			return true;
-		return newState.ordinal() > this.ordinal();
-	}
-
 	public String getExternalTaskStateName() {
 		return externalTaskStateName;
 	}

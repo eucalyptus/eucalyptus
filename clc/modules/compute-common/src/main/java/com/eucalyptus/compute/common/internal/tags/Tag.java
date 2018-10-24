@@ -115,7 +115,7 @@ public class Tag<T extends Tag<T>> extends UserMetadata<Tag.State> implements Ta
   protected String createUniqueName() {
     return getOwnerAccountNumber() + ":" + getResourceType() + ":" + getResourceId() + ":" + getKey();
   }
-  
+
   @Nullable
   public String getKey() {
     return getDisplayName();
@@ -136,15 +136,15 @@ public class Tag<T extends Tag<T>> extends UserMetadata<Tag.State> implements Ta
 
   @SuppressWarnings( "unchecked" )
   @Nullable
-  public final String getResourceId(){ 
+  public final String getResourceId(){
     return resourceId != null ?
         resourceId :
         extractResourceId( );
   }
 
   @Nullable
-  public String getResourceType(){ 
-    return resourceType; 
+  public String getResourceType(){
+    return resourceType;
   }
 
   @Override
@@ -173,6 +173,7 @@ public class Tag<T extends Tag<T>> extends UserMetadata<Tag.State> implements Ta
     this.resourceId = resourceId;
   }
 
+  @SuppressWarnings( "unchecked" )
   private String extractResourceId() {
     return resourceIdFunction.apply( (T) this );
   }

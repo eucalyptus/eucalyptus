@@ -32,7 +32,6 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Index;
 import javax.persistence.JoinColumn;
-import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
@@ -41,7 +40,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.simpleworkflow.common.model.WorkflowEventAttributes;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Strings;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 /**
  *
@@ -65,8 +64,7 @@ public class WorkflowHistoryEvent extends AbstractPersistent {
   private String eventType;
 
   @Column( name = "event_attributes", nullable = false, updatable = false )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   private String eventAttributes;
 
   protected WorkflowHistoryEvent( ) {
@@ -96,7 +94,7 @@ public class WorkflowHistoryEvent extends AbstractPersistent {
   }
 
   public Long getEventId( ) {
-    return Objects.firstNonNull( getEventOrder( ), 0L ) + 1L;
+    return MoreObjects.firstNonNull( getEventOrder( ), 0L ) + 1L;
   }
 
   public WorkflowExecution getWorkflowExecution( ) {

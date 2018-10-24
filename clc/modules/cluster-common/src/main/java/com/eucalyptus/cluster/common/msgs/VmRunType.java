@@ -70,16 +70,6 @@ public class VmRunType extends CloudClusterMessage {
       return this;
     }
     
-    public VmRunType.Builder vlan( final Integer vlan ) {
-      this.buildit.setVlan( vlan );
-      return this;
-    }
-    
-    public VmRunType.Builder networkIndex( Long networkIndex ) {
-      this.buildit.setNetworkIndex( networkIndex );
-      return this;
-    }
-
     public VmRunType.Builder privateAddress( String privateAddress ) {
       this.buildit.setPrivateAddress( privateAddress );
       return this;

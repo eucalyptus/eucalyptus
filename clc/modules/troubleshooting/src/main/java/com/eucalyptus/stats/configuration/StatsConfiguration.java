@@ -52,7 +52,6 @@ import java.lang.annotation.Annotation;
 @ConfigurableClass(root = "stats", description = "Configuration values for eucalyptus status and statistics on system processes", deferred = true)
 public class StatsConfiguration {
     private static final Logger LOG = Logger.getLogger(StatsConfiguration.class);
-    public static SubDirectory sensorCodeDirectory = SubDirectory.SCRIPTS; //Place to scan for groovy files to ingress sensors
 
     private static final String EMITTER_PROPERTY_NAME = "euca.stats.emitter";
     private static final String EMITTER_PROPERTY_DEFAULT = "com.eucalyptus.stats.emitters.FileSystemEmitter";

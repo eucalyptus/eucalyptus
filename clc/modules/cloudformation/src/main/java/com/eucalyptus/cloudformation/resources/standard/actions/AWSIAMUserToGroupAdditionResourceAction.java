@@ -29,8 +29,8 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.eucalyptus.auth.euare.AddUserToGroupResponseType;
-import com.eucalyptus.auth.euare.AddUserToGroupType;
+import com.eucalyptus.auth.euare.common.msgs.AddUserToGroupResponseType;
+import com.eucalyptus.auth.euare.common.msgs.AddUserToGroupType;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.IAMHelper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
@@ -111,12 +111,6 @@ public class AWSIAMUserToGroupAdditionResourceAction extends StepBasedResourceAc
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -130,12 +124,6 @@ public class AWSIAMUserToGroupAdditionResourceAction extends StepBasedResourceAc
         IAMHelper.removeUsersFromGroup(configuration, action.properties.getUsers(), action.properties.getGroupName(), action.info.getEffectiveUserId());
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -205,12 +193,6 @@ public class AWSIAMUserToGroupAdditionResourceAction extends StepBasedResourceAc
         }
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 

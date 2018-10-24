@@ -34,8 +34,10 @@ import com.eucalyptus.cloudwatch.common.internal.domain.metricdata.SimpleMetricE
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.metrics.MonitoredAction;
 import com.eucalyptus.util.metrics.ThruputMetrics;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Longs;
 
 import org.apache.log4j.Logger;
 
@@ -55,23 +57,8 @@ public class ListMetricQueue {
     public synchronized void drainTo(List<T> list) {
       list.addAll(items);
       items.clear();
-
-    }
-    public synchronized void drainTo(List<T> list, int maxItems) {
-      List<T> intermediateList = Lists.newArrayList();
-      int ctr=0;
-      for (T item: items) {
-        intermediateList.add(item);
-        ctr++;
-        if (ctr == maxItems) break;
-      }
-      list.addAll(intermediateList);
-      items.removeAll(intermediateList);
     }
 
-    public synchronized void putAll(List<T> list) {
-      items.addAll(list);
-    }
     public synchronized void put(T item) {
       items.add(item);
     }
@@ -142,7 +129,15 @@ public class ListMetricQueue {
   }
 
   static {
-    dataFlushTimer.scheduleAtFixedRate(safeRunner, 0, 5, TimeUnit.MINUTES);
+    final String PROP_LIST_METRICS_FLUSH_INTERVAL = "com.eucalyptus.cloudwatch.listMetricsFlushInterval";
+    final long DEFAULT_LIST_METRICS_FLUSH_INTERVAL = 300L;
+    final long LIST_METRICS_FLUSH_INTERVAL = MoreObjects.firstNonNull(
+        Longs.tryParse(
+            System.getProperty(
+                PROP_LIST_METRICS_FLUSH_INTERVAL,
+                String.valueOf( DEFAULT_LIST_METRICS_FLUSH_INTERVAL ) ) ),
+            DEFAULT_LIST_METRICS_FLUSH_INTERVAL );
+    dataFlushTimer.scheduleAtFixedRate(safeRunner, 0, LIST_METRICS_FLUSH_INTERVAL, TimeUnit.SECONDS);
   }
 
   public void addAll(List<SimpleMetricEntity> dataBatch) {

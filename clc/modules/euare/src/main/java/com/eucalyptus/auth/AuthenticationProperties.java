@@ -85,8 +85,7 @@ public class AuthenticationProperties {
 
   @ConfigurableField(
       description = "Strategy for generation of certificates on credential download ( Never | Absent | Limited )",
-      initial = DEFAULT_CREDENTIAL_DOWNLOAD_GENERATE_CERTIFICATE,
-      changeListener = CredentialDownloadGenerateCertificateChangeListener.class )
+      initial = DEFAULT_CREDENTIAL_DOWNLOAD_GENERATE_CERTIFICATE )
   public static volatile String CREDENTIAL_DOWNLOAD_GENERATE_CERTIFICATE = DEFAULT_CREDENTIAL_DOWNLOAD_GENERATE_CERTIFICATE;
 
   @ConfigurableField( description = "Limit for access keys per user", initial = "2", changeListener = PropertyChangeListeners.IsPositiveInteger.class )
@@ -128,42 +127,12 @@ public class AuthenticationProperties {
 
   private static AtomicLong AUTHORIZATION_REUSE_EXPIRY_MILLIS = new AtomicLong( 0 );
 
-  private static volatile CredentialDownloadGenerateCertificateStrategy credentialDownloadGenerateCertificateStrategy =
-      Enums.getIfPresent(
-          CredentialDownloadGenerateCertificateStrategy.class,
-          DEFAULT_CREDENTIAL_DOWNLOAD_GENERATE_CERTIFICATE
-      ).orNull( );
-
-  public enum CredentialDownloadGenerateCertificateStrategy {
-    /**
-     * Include a certificate if the user has no (non-deprecated) certificates
-     */
-    Absent,
-
-    /**
-     * Include a certificate if permitted by IAM limits
-     */
-    Limited,
-
-    /**
-     * Never generated a certificate for credential downloads
-     */
-    Never,
-  }
-
   public static long getAuthorizationExpiry( ) {
     return AUTHORIZATION_EXPIRY_MILLIS.get( );
   }
 
   public static long getAuthorizationReuseExpiry( ) {
     return AUTHORIZATION_REUSE_EXPIRY_MILLIS.get( );
-  }
-
-  @Nonnull
-  public static CredentialDownloadGenerateCertificateStrategy getCredentialDownloadGenerateCertificateStrategy( ) {
-    return com.google.common.base.Objects.firstNonNull(
-        credentialDownloadGenerateCertificateStrategy,
-        CredentialDownloadGenerateCertificateStrategy.Never );
   }
 
   public static final class CidrChangeListener implements PropertyChangeListener {
@@ -186,23 +155,6 @@ public class AuthenticationProperties {
         if ( value == null || value < 1 || value > 65535 ) {
           throw new ConfigurablePropertyException( "Invalid value: " + newValue );
         }
-      }
-    }
-  }
-
-  public static class CredentialDownloadGenerateCertificateChangeListener implements PropertyChangeListener {
-    @Override
-    public void fireChange( final ConfigurableProperty configurableProperty,
-                            final Object newValue ) throws ConfigurablePropertyException {
-
-      final Optional<CredentialDownloadGenerateCertificateStrategy> strategy =
-          Enums.getIfPresent( CredentialDownloadGenerateCertificateStrategy.class, String.valueOf( newValue ) );
-      if ( strategy.isPresent( ) ) {
-        credentialDownloadGenerateCertificateStrategy = strategy.get( );
-      } else {
-        credentialDownloadGenerateCertificateStrategy = valueOf(
-            CredentialDownloadGenerateCertificateStrategy.class, DEFAULT_CREDENTIAL_DOWNLOAD_GENERATE_CERTIFICATE );
-        throw new ConfigurablePropertyException( "Invalid certificate download value: " + newValue );
       }
     }
   }
@@ -267,16 +219,10 @@ public class AuthenticationProperties {
     private static Logger LOG = Logger.getLogger( RaiseCredentialLimitPropertyUpgrade.class );
 
     private static final String CREDENTIAL_LIMIT = "1000000";
-    private static final String CERTIFICATE_STRATEGY = CredentialDownloadGenerateCertificateStrategy.Limited.name( );
 
     @Override
     public boolean apply( Class arg0 ) {
       try {
-        LOG.info( "Setting authentication.credential_download_generate_certificate to " + CERTIFICATE_STRATEGY );
-        StaticDatabasePropertyEntry.update(
-            AuthenticationProperties.class.getName( ) + ".credential_download_generate_certificate",
-            "authentication.credential_download_generate_certificate",
-            CERTIFICATE_STRATEGY );
         LOG.info( "Setting authentication.access_keys_limit to " + CREDENTIAL_LIMIT );
         StaticDatabasePropertyEntry.update(
             AuthenticationProperties.class.getName( ) + ".access_keys_limit",

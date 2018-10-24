@@ -66,7 +66,7 @@ import com.eucalyptus.walrus.msgs.WalrusResponseType;
 
 /**
  * Provides message mapping functions for ObjectStorage types <-> Walrus types
- * 
+ *
  * @author zhill
  *
  */
@@ -84,7 +84,7 @@ public enum MessageMapper {
 
   /**
    * Maps the OSG request type to the Walrus type, including BaseMessage handling for 'regarding' and correlationId mapping
-   * 
+   *
    * @param outputClass
    * @param request
    * @return
@@ -105,7 +105,7 @@ public enum MessageMapper {
 
   /**
    * Maps the response from walrus to the appropriate response type for OSG
-   * 
+   *
    * @param initialRequest
    * @param response
    * @return

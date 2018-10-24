@@ -36,7 +36,7 @@ import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.auth.principal.PolicyScope;
-import com.eucalyptus.cloudformation.CloudFormationMetadata;
+import com.eucalyptus.cloudformation.common.CloudFormationMetadata;
 import com.eucalyptus.cloudformation.common.policy.CloudFormationPolicySpec;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.entities.Entities;

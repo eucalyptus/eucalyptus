@@ -78,8 +78,7 @@ import com.google.common.primitives.Ints;
 public class KeyPairs {
   private static Logger     LOG         = Logger.getLogger( KeyPairs.class );
   private static SshKeyPair NO_KEY      = SshKeyPair.noKey( );
-  public static String      NO_KEY_NAME = "";
-  
+
   public static SshKeyPair noKey( ) {
     return NO_KEY;
   }
@@ -132,15 +131,6 @@ public class KeyPairs {
       db.rollback( );
       throw new NoSuchKeyMetadataException( "Failed to find key pair: " + keyName + " for " + ownerFullName, ex );
     }
-  }
-
-  public static SshKeyPair fromPublicKey( OwnerFullName ownerFullName, String keyValue ) throws NoSuchMetadataException {
-    try {
-      return Transactions.find( SshKeyPair.withPublicKey( ownerFullName, keyValue ) );
-    } catch ( Exception e ) {
-      throw new NoSuchMetadataException( "Failed to find key pair with public key: " + keyValue + " for " + ownerFullName, e );
-    }
-    
   }
 
   public static PrivateKey create( UserFullName userName, String keyName ) throws MetadataException, TransactionException {

@@ -46,8 +46,8 @@
 
   <appender name="console" class="org.apache.log4j.ConsoleAppender">
     <param name="Target" value="System.out" />
-    <param name="Threshold" value="${euca.log.level}" />
     <layout class="com.eucalyptus.system.EucaLayout" />
+    <filter class="com.eucalyptus.system.log.EucaThresholdFilter"/>
   </appender>
   <appender name="console-warn" class="org.apache.log4j.ConsoleAppender">
     <param name="Target" value="System.out" />
@@ -57,20 +57,20 @@
     </layout>
   </appender>
   <appender name="console-log" class="com.eucalyptus.util.PermissionedRollingFileAppender">
-    <param name="Threshold" value="${euca.log.level}" />
     <param name="File" value="${euca.log.dir}/cloud-output.log" />
     <param name="MaxFileSize" value="10MB" />
     <param name="MaxBackupIndex" value="10" />
     <param name="Permissions" value="rw-r-----" />
     <layout class="com.eucalyptus.system.EucaLayout" />
+    <filter class="com.eucalyptus.system.log.EucaThresholdFilter"/>
   </appender>
   <appender name="tracking-log-file" class="com.eucalyptus.util.PermissionedRollingFileAppender">
-    <param name="Threshold" value="${euca.log.level}" />
     <param name="File" value="${euca.log.dir}/cloud-tracking.log" />
     <param name="MaxFileSize" value="10MB" />
     <param name="MaxBackupIndex" value="10" />
     <param name="Permissions" value="rw-r-----" />
     <layout class="com.eucalyptus.system.RequestTrackingLayout" />
+    <filter class="com.eucalyptus.system.log.EucaThresholdFilter"/>
   </appender>
   <appender name="cloud-debug-file" class="com.eucalyptus.util.PermissionedRollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-debug.log" />
@@ -95,21 +95,21 @@
     <param name="File" value="${euca.log.dir}/cloud-exhaust.log" />
     <param name="MaxFileSize" value="10MB" />
     <param name="MaxBackupIndex" value="2" />
-    <param name="Threshold" value="${euca.exhaust.level}" />
     <param name="Permissions" value="rw-r-----" />
     <layout class="org.apache.log4j.PatternLayout">
       <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%c:%t] %m%n" />
     </layout>
+    <filter class="com.eucalyptus.system.log.EucaExhaustThresholdFilter"/>
   </appender>
   <appender name="cloud-extreme-file" class="com.eucalyptus.util.PermissionedRollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-extreme.log" />
     <param name="MaxFileSize" value="10MB" />
     <param name="MaxBackupIndex" value="10" />
-    <param name="Threshold" value="${euca.exhaust.level}" />
     <param name="Permissions" value="rw-r-----" />
     <layout class="org.apache.log4j.PatternLayout">
       <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%c:%t] %m%n" />
     </layout>
+    <filter class="com.eucalyptus.system.log.EucaExhaustThresholdFilter"/>
   </appender>
   <appender name="cloud-request-file" class="com.eucalyptus.util.PermissionedRollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-requests.log" />
@@ -142,13 +142,12 @@
       <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%C.%M(%F):%L] %m%n" />
     </layout>
   </appender>
+
   <category name="com.eucalyptus" additivity="true">
-    <priority value="${euca.log.level}" />
     <appender-ref ref="logfile" />
     <appender-ref ref="tracking-log-file" />
   </category>
   <category name="edu.ucsb.eucalyptus" additivity="true">
-    <priority value="${euca.log.level}" />
     <appender-ref ref="logfile" />
     <appender-ref ref="tracking-log-file" />
   </category>
@@ -157,7 +156,6 @@
     you are having unexplained failures.
   -->
   <category name="EXHAUST" additivity="false">
-    <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="EXTREME" additivity="false">
@@ -165,28 +163,22 @@
     <appender-ref ref="cloud-extreme" />
   </category>
   <category name="com.eucalyptus.upgrade.StandalonePersistence" additivity="false">
-    <priority value="${euca.log.level}" />
     <appender-ref ref="upgrade" />
     <appender-ref ref="console-warn" />
   </category>
   <category name="com.eucalyptus.util.fsm.StateMachineBuilder" additivity="false">
-    <priority value="${euca.log.level}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="com.eucalyptus.cluster">
-    <priority value="${euca.log.level}" />
     <appender-ref ref="tracking-log-file" />
   </category>
   <category name="com.eucalyptus.cluster.callback">
-    <priority value="${euca.log.level}" />
     <appender-ref ref="tracking-log-file" />
   </category>
   <category name="edu.ucsb.eucalyptus.cloud.cluster">
-    <priority value="${euca.log.level}" />
     <appender-ref ref="tracking-log-file" />
   </category>
   <category name="com.eucalyptus.context.Context" additivity="false">
-    <priority value="${euca.log.exhaustive.user}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="com.eucalyptus.ws.server.ServiceAccessLoggingHandler" additivity="false">
@@ -194,133 +186,91 @@
     <appender-ref ref="cloud-request" />
   </category>
   <category name="com.eucalyptus.ws.handlers.MessageStackHandler" additivity="false">
-    <priority value="${euca.log.exhaustive.user}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="com.eucalyptus.ws.server.FilteredPipeline" additivity="false">
-    <priority value="${euca.log.exhaustive.user}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="com.eucalyptus.ws.server.PipelineRegistry" additivity="false">
-    <priority value="${euca.log.exhaustive.user}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="com.eucalyptus.vm.MetadataRequest" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="com.eucalyptus.ws.util.HmacUtils" additivity="false">
-    <priority value="${euca.log.exhaustive.user}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="com.eucalyptus.auth.login.HMAC" additivity="false">
     <priority value="OFF" />
     <appender-ref ref="cloud-exhaust" />
   </category>
-  <category name="org.apache.commons.beanutils.converters" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.apache.xml.security.signature.Reference" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.jgroups.protocols.TP" additivity="false">
+  <category name="org.jgroups.protocols.TP">
     <priority value="FATAL" />
-    <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="org.logicalcobwebs.proxool" additivity="false">
-    <priority value="${euca.log.level}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.apache" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="com.eucalyptus.crypto.util.WSSecurity" additivity="false">
-    <priority value="${euca.log.level}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.jboss" additivity="false">
-    <priority value="${euca.log.level}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.hibernate" additivity="false">
-    <priority value="${euca.log.level}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="net.sf.hajdbc" additivity="false">
-    <priority value="${euca.log.level}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.springframework" additivity="false">
-    <priority value="${euca.log.level}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.springframework.integration.channel.DirectChannel" additivity="false">
-    <priority value="INFO" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.springframework.integration.handler.MessageHandlerChain" additivity="false">
-    <priority value="INFO" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.springframework.integration.handler.ServiceActivatingHandler" additivity="false">
-    <priority value="INFO" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.springframework.integration.router.PayloadTypeRouter" additivity="false">
-    <priority value="INFO" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.springframework.integration.transformer.MessageTransformingHandler" additivity="false">
-    <priority value="INFO" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-
-  <category name="org.eclipse.jetty" additivity="false">
-    <priority value="${euca.log.level}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.jgroups" additivity="false">
-    <priority value="${euca.log.level}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.jgroups.protocol.UDP" additivity="false">
-    <priority value="FATAL" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="com.eucalyptus.scripts.setup_db" additivity="true">
-    <priority value="INFO" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.apache.commons.httpclient" additivity="true">
-    <priority value="ERROR" />
-    <appender-ref ref="${euca.log.appender}" />
-  </category>
-  <!--
-  <category name="org.hibernate.SQL" additivity="false">
     <priority value="DEBUG" />
     <appender-ref ref="cloud-exhaust" />
   </category>
-  -->
-  <category name="httpclient.wire" additivity="true">
+  <category name="org.apache" additivity="false">
+    <priority value="DEBUG" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="com.eucalyptus.crypto.util.WSSecurity" additivity="false">
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="org.jboss" additivity="false">
+    <priority value="DEBUG" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="org.hibernate" additivity="false">
+    <priority value="DEBUG" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="org.springframework" additivity="false">
+    <priority value="DEBUG" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="org.springframework.integration.channel.DirectChannel">
+    <priority value="INFO" />
+  </category>
+  <category name="org.springframework.integration.handler.MessageHandlerChain">
+    <priority value="INFO" />
+  </category>
+  <category name="org.springframework.integration.handler.ServiceActivatingHandler">
+    <priority value="INFO" />
+  </category>
+  <category name="org.springframework.integration.router.PayloadTypeRouter">
+    <priority value="INFO" />
+  </category>
+  <category name="org.springframework.integration.transformer.MessageTransformingHandler">
+    <priority value="INFO" />
+  </category>
+  <category name="org.jgroups" additivity="false">
+    <priority value="DEBUG" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="org.jgroups.protocol.UDP">
+    <priority value="FATAL" />
+  </category>
+  <category name="com.eucalyptus.scripts.setup_db">
+    <priority value="INFO" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="org.apache.commons.httpclient">
     <priority value="ERROR" />
-    <appender-ref ref="${euca.log.appender}" />
   </category>
-
-    <!--Silence an annoying logger in the AWS Java SDK S3 bits -->
-  <category name="com.amazonaws.services.s3.internal.RepeatableInputStream" additivity="false">
-      <priority value="ERROR"/>
-      <appender-ref ref="${euca.log.appender}" />
+  <category name="httpclient.wire">
+    <priority value="ERROR" />
   </category>
-  <category name="com.amazonaws.services.s3.AmazonS3Client" additivity="false">
+  <!--Silence an annoying logger in the AWS Java SDK S3 bits -->
+  <category name="com.amazonaws.services.s3.internal.RepeatableInputStream">
       <priority value="ERROR"/>
-      <appender-ref ref="${euca.log.appender}" />
   </category>
-  <category name="com.amazonaws.auth.AWS4Signer" additivity="false">
+  <category name="com.amazonaws.services.s3.AmazonS3Client">
       <priority value="ERROR"/>
-      <appender-ref ref="${euca.log.appender}" />
+  </category>
+  <category name="com.amazonaws.auth.AWS4Signer">
+      <priority value="ERROR"/>
   </category>
   <!-- Disable logging of errors from swf activities -->
   <category name="com.amazonaws.services.simpleworkflow.flow.worker.SynchronousActivityTaskPoller">
@@ -335,6 +285,7 @@
   </category>
 
   <root>
+    <priority class="com.eucalyptus.system.log.EucaLevel" value="${euca.log.level}"/>
     <appender-ref ref="${euca.log.appender}" />
     <appender-ref ref="cloud-error-file" />
   </root>

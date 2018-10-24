@@ -28,6 +28,7 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.workflow;
 
+import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.config.CloudFormationProperties;
 import com.eucalyptus.cloudformation.entity.StackUpdateInfoEntity;
@@ -35,9 +36,7 @@ import com.eucalyptus.cloudformation.entity.StackUpdateInfoEntityManager;
 import com.eucalyptus.cloudformation.entity.StackWorkflowEntity;
 import com.eucalyptus.cloudformation.entity.StackWorkflowEntityManager;
 import com.eucalyptus.cloudformation.ws.StackWorkflowTags;
-import com.netflix.glisten.InterfaceBasedWorkflowClient;
-import com.netflix.glisten.WorkflowDescriptionTemplate;
-import com.netflix.glisten.WorkflowTags;
+import io.vavr.Tuple2;
 
 /**
  * Created by ethomas on 4/11/16.
@@ -49,26 +48,29 @@ public class UpdateStackPartsWorkflowKickOff {
     if (stackUpdateInfoEntity == null) {
       throw new ResourceFailureException("Unable to find update info record for stack " + stackId);
     }
-    StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(stackUpdateInfoEntity.getStackId(), stackUpdateInfoEntity.getStackName(), stackUpdateInfoEntity.getAccountId(), stackUpdateInfoEntity.getAccountAlias());
-    StartTimeoutPassableWorkflowClientFactory updateCleanupStackStartTimeoutPassableWorkflowClientFactory = new StartTimeoutPassableWorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient(), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
-    WorkflowDescriptionTemplate updateCleanupStackWorkflowDescriptionTemplate = new UpdateCleanupStackWorkflowDescriptionTemplate();
-    InterfaceBasedWorkflowClient<UpdateCleanupStackWorkflow> updateCleanupStackWorkflowClient = updateCleanupStackStartTimeoutPassableWorkflowClientFactory
-      .getNewWorkflowClient(UpdateCleanupStackWorkflow.class, updateCleanupStackWorkflowDescriptionTemplate, stackWorkflowTags, null, null);
+    final StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(
+        stackUpdateInfoEntity.getStackId(),
+        stackUpdateInfoEntity.getStackName(),
+        stackUpdateInfoEntity.getAccountId(),
+        stackUpdateInfoEntity.getAccountAlias() );
 
-    UpdateCleanupStackWorkflow updateCleanupStackWorkflow = new UpdateCleanupStackWorkflowClient(updateCleanupStackWorkflowClient);
+
+    final Tuple2<WorkflowClientExternal,UpdateCleanupStackWorkflow> updateCleanupStackWorkflowClients =
+        WorkflowRegistry.getWorkflowClient( WorkflowRegistry.UpdateCleanupStackWorkflowKey, stackWorkflowTags );
+    final WorkflowClientExternal updateCleanupStackWorkflowClient = updateCleanupStackWorkflowClients._1();
+    final UpdateCleanupStackWorkflow updateCleanupStackWorkflow = updateCleanupStackWorkflowClients._2( );
     updateCleanupStackWorkflow.performUpdateCleanupStack(stackUpdateInfoEntity.getStackId(), stackUpdateInfoEntity.getAccountId(),
       stackUpdateInfoEntity.getOldResourceDependencyManagerJson(), effectiveUserId, stackUpdateInfoEntity.getUpdatedStackVersion());
+
     StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackUpdateInfoEntity.getStackId(),
       StackWorkflowEntity.WorkflowType.UPDATE_CLEANUP_STACK_WORKFLOW, CloudFormationProperties.SWF_DOMAIN,
       updateCleanupStackWorkflowClient.getWorkflowExecution().getWorkflowId(),
       updateCleanupStackWorkflowClient.getWorkflowExecution().getRunId());
 
-
-    StartTimeoutPassableWorkflowClientFactory monitorUpdateCleanupStackStartTimeoutPassableWorkflowClientFactory = new StartTimeoutPassableWorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient(), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
-    WorkflowDescriptionTemplate monitorUpdateCleanupStackWorkflowDescriptionTemplate = new MonitorUpdateCleanupStackWorkflowDescriptionTemplate();
-    InterfaceBasedWorkflowClient<MonitorUpdateCleanupStackWorkflow> monitorUpdateCleanupStackWorkflowClient = monitorUpdateCleanupStackStartTimeoutPassableWorkflowClientFactory
-      .getNewWorkflowClient(MonitorUpdateCleanupStackWorkflow.class, monitorUpdateCleanupStackWorkflowDescriptionTemplate, stackWorkflowTags, null, null);
-    MonitorUpdateCleanupStackWorkflow monitorUpdateCleanupStackWorkflow = new MonitorUpdateCleanupStackWorkflowClient(monitorUpdateCleanupStackWorkflowClient);
+    final Tuple2<WorkflowClientExternal,MonitorUpdateCleanupStackWorkflow> monitorUpdateCleanupStackWorkflowClients =
+        WorkflowRegistry.getWorkflowClient( WorkflowRegistry.MonitorUpdateCleanupStackWorkflowKey, stackWorkflowTags );
+    final WorkflowClientExternal monitorUpdateCleanupStackWorkflowClient = monitorUpdateCleanupStackWorkflowClients._1();
+    final MonitorUpdateCleanupStackWorkflow monitorUpdateCleanupStackWorkflow = monitorUpdateCleanupStackWorkflowClients._2( );
     monitorUpdateCleanupStackWorkflow.monitorUpdateCleanupStack(stackId,  accountId, stackUpdateInfoEntity.getUpdatedStackVersion());
 
     StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
@@ -83,25 +85,29 @@ public class UpdateStackPartsWorkflowKickOff {
     if (stackUpdateInfoEntity == null) {
       throw new ResourceFailureException("Unable to find update info record for stack " + stackId);
     }
-    StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(stackUpdateInfoEntity.getStackId(), stackUpdateInfoEntity.getStackName(), stackUpdateInfoEntity.getAccountId(), stackUpdateInfoEntity.getAccountAlias());
-    StartTimeoutPassableWorkflowClientFactory updateRollbackCleanupStackStartTimeoutPassableWorkflowClientFactory = new StartTimeoutPassableWorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient(), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
-    WorkflowDescriptionTemplate updateRollbackCleanupStackWorkflowDescriptionTemplate = new UpdateRollbackCleanupStackWorkflowDescriptionTemplate();
-    InterfaceBasedWorkflowClient<UpdateRollbackCleanupStackWorkflow> updateRollbackCleanupStackWorkflowClient = updateRollbackCleanupStackStartTimeoutPassableWorkflowClientFactory
-      .getNewWorkflowClient(UpdateRollbackCleanupStackWorkflow.class, updateRollbackCleanupStackWorkflowDescriptionTemplate, stackWorkflowTags, null, null);
 
-    UpdateRollbackCleanupStackWorkflow updateRollbackCleanupStackWorkflow = new UpdateRollbackCleanupStackWorkflowClient(updateRollbackCleanupStackWorkflowClient);
+    final StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(
+        stackUpdateInfoEntity.getStackId(),
+        stackUpdateInfoEntity.getStackName(),
+        stackUpdateInfoEntity.getAccountId(),
+        stackUpdateInfoEntity.getAccountAlias());
+
+    final Tuple2<WorkflowClientExternal,UpdateRollbackCleanupStackWorkflow> updateRollbackCleanupStackWorkflowClients =
+        WorkflowRegistry.getWorkflowClient( WorkflowRegistry.UpdateRollbackCleanupStackWorkflowKey, stackWorkflowTags );
+    final WorkflowClientExternal updateRollbackCleanupStackWorkflowClient = updateRollbackCleanupStackWorkflowClients._1();
+    final UpdateRollbackCleanupStackWorkflow updateRollbackCleanupStackWorkflow = updateRollbackCleanupStackWorkflowClients._2( );
     updateRollbackCleanupStackWorkflow.performUpdateRollbackCleanupStack(stackUpdateInfoEntity.getStackId(), stackUpdateInfoEntity.getAccountId(),
       stackUpdateInfoEntity.getResourceDependencyManagerJson(), effectiveUserId, stackUpdateInfoEntity.getUpdatedStackVersion() + 1);
+
     StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackUpdateInfoEntity.getStackId(),
       StackWorkflowEntity.WorkflowType.UPDATE_ROLLBACK_CLEANUP_STACK_WORKFLOW, CloudFormationProperties.SWF_DOMAIN,
       updateRollbackCleanupStackWorkflowClient.getWorkflowExecution().getWorkflowId(),
       updateRollbackCleanupStackWorkflowClient.getWorkflowExecution().getRunId());
 
-    StartTimeoutPassableWorkflowClientFactory monitorUpdateRollbackCleanupStackStartTimeoutPassableWorkflowClientFactory = new StartTimeoutPassableWorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient(), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
-    WorkflowDescriptionTemplate monitorUpdateRollbackCleanupStackWorkflowDescriptionTemplate = new MonitorUpdateRollbackCleanupStackWorkflowDescriptionTemplate();
-    InterfaceBasedWorkflowClient<MonitorUpdateRollbackCleanupStackWorkflow> monitorUpdateRollbackCleanupStackWorkflowClient = monitorUpdateRollbackCleanupStackStartTimeoutPassableWorkflowClientFactory
-      .getNewWorkflowClient(MonitorUpdateRollbackCleanupStackWorkflow.class, monitorUpdateRollbackCleanupStackWorkflowDescriptionTemplate, stackWorkflowTags, null, null);
-    MonitorUpdateRollbackCleanupStackWorkflow monitorUpdateRollbackCleanupStackWorkflow = new MonitorUpdateRollbackCleanupStackWorkflowClient(monitorUpdateRollbackCleanupStackWorkflowClient);
+    final Tuple2<WorkflowClientExternal,MonitorUpdateRollbackCleanupStackWorkflow> monitorUpdateRollbackCleanupStackWorkflowClients =
+        WorkflowRegistry.getWorkflowClient( WorkflowRegistry.MonitorUpdateRollbackCleanupStackWorkflowKey, stackWorkflowTags );
+    final WorkflowClientExternal monitorUpdateRollbackCleanupStackWorkflowClient = monitorUpdateRollbackCleanupStackWorkflowClients._1();
+    final MonitorUpdateRollbackCleanupStackWorkflow monitorUpdateRollbackCleanupStackWorkflow = monitorUpdateRollbackCleanupStackWorkflowClients._2( );
     monitorUpdateRollbackCleanupStackWorkflow.monitorUpdateRollbackCleanupStack(stackId,  accountId, stackUpdateInfoEntity.getUpdatedStackVersion() + 1);
 
     StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
@@ -109,7 +115,6 @@ public class UpdateStackPartsWorkflowKickOff {
       CloudFormationProperties.SWF_DOMAIN,
       monitorUpdateRollbackCleanupStackWorkflowClient.getWorkflowExecution().getWorkflowId(),
       monitorUpdateRollbackCleanupStackWorkflowClient.getWorkflowExecution().getRunId());
-
   }
 
   public static void kickOffUpdateRollbackStackWorkflow(String stackId, String accountId, String outerStackArn, String effectiveUserId) throws CloudFormationException, ResourceFailureException {
@@ -117,26 +122,31 @@ public class UpdateStackPartsWorkflowKickOff {
     if (stackUpdateInfoEntity == null) {
       throw new ResourceFailureException("Unable to find update info record for stack " + stackId);
     }
-    StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(stackUpdateInfoEntity.getStackId(), stackUpdateInfoEntity.getStackName(), stackUpdateInfoEntity.getAccountId(), stackUpdateInfoEntity.getAccountAlias());
-    StartTimeoutPassableWorkflowClientFactory updateRollbackStackStartTimeoutPassableWorkflowClientFactory = new StartTimeoutPassableWorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient(), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
-    WorkflowDescriptionTemplate updateRollbackStackWorkflowDescriptionTemplate = new UpdateRollbackStackWorkflowDescriptionTemplate();
-    InterfaceBasedWorkflowClient<UpdateRollbackStackWorkflow> updateRollbackStackWorkflowClient = updateRollbackStackStartTimeoutPassableWorkflowClientFactory
-      .getNewWorkflowClient(UpdateRollbackStackWorkflow.class, updateRollbackStackWorkflowDescriptionTemplate, stackWorkflowTags, null, null);
 
-    UpdateRollbackStackWorkflow updateRollbackStackWorkflow = new UpdateRollbackStackWorkflowClient(updateRollbackStackWorkflowClient);
+    final StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(
+        stackUpdateInfoEntity.getStackId(),
+        stackUpdateInfoEntity.getStackName(),
+        stackUpdateInfoEntity.getAccountId(),
+        stackUpdateInfoEntity.getAccountAlias() );
+
+
+    final Tuple2<WorkflowClientExternal,UpdateRollbackStackWorkflow> updateRollbackStackWorkflowClients =
+        WorkflowRegistry.getWorkflowClient( WorkflowRegistry.UpdateRollbackStackWorkflowKey, stackWorkflowTags );
+    final WorkflowClientExternal updateRollbackStackWorkflowClient = updateRollbackStackWorkflowClients._1();
+    final UpdateRollbackStackWorkflow updateRollbackStackWorkflow = updateRollbackStackWorkflowClients._2( );
     updateRollbackStackWorkflow.performUpdateRollbackStack(stackUpdateInfoEntity.getStackId(), stackUpdateInfoEntity.getAccountId(),
       outerStackArn, stackUpdateInfoEntity.getOldResourceDependencyManagerJson(),
       effectiveUserId, stackUpdateInfoEntity.getUpdatedStackVersion() + 1);
+
     StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackUpdateInfoEntity.getStackId(),
       StackWorkflowEntity.WorkflowType.UPDATE_ROLLBACK_STACK_WORKFLOW, CloudFormationProperties.SWF_DOMAIN,
       updateRollbackStackWorkflowClient.getWorkflowExecution().getWorkflowId(),
       updateRollbackStackWorkflowClient.getWorkflowExecution().getRunId());
 
-    StartTimeoutPassableWorkflowClientFactory monitorUpdateRollbackStackStartTimeoutPassableWorkflowClientFactory = new StartTimeoutPassableWorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient(), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
-    WorkflowDescriptionTemplate monitorUpdateRollbackStackWorkflowDescriptionTemplate = new MonitorUpdateRollbackStackWorkflowDescriptionTemplate();
-    InterfaceBasedWorkflowClient<MonitorUpdateRollbackStackWorkflow> monitorUpdateRollbackStackWorkflowClient = monitorUpdateRollbackStackStartTimeoutPassableWorkflowClientFactory
-      .getNewWorkflowClient(MonitorUpdateRollbackStackWorkflow.class, monitorUpdateRollbackStackWorkflowDescriptionTemplate, stackWorkflowTags, null, null);
-    MonitorUpdateRollbackStackWorkflow monitorUpdateRollbackStackWorkflow = new MonitorUpdateRollbackStackWorkflowClient(monitorUpdateRollbackStackWorkflowClient);
+    final Tuple2<WorkflowClientExternal,MonitorUpdateRollbackStackWorkflow> monitorUpdateRollbackStackWorkflowClients =
+        WorkflowRegistry.getWorkflowClient( WorkflowRegistry.MonitorUpdateRollbackStackWorkflowKey, stackWorkflowTags );
+    final WorkflowClientExternal monitorUpdateRollbackStackWorkflowClient = monitorUpdateRollbackStackWorkflowClients._1();
+    final MonitorUpdateRollbackStackWorkflow monitorUpdateRollbackStackWorkflow = monitorUpdateRollbackStackWorkflowClients._2( );
     monitorUpdateRollbackStackWorkflow.monitorUpdateRollbackStack(stackId,  accountId, stackUpdateInfoEntity.getUpdatedStackVersion() + 1);
 
     StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
@@ -144,7 +154,6 @@ public class UpdateStackPartsWorkflowKickOff {
       CloudFormationProperties.SWF_DOMAIN,
       monitorUpdateRollbackStackWorkflowClient.getWorkflowExecution().getWorkflowId(),
       monitorUpdateRollbackStackWorkflowClient.getWorkflowExecution().getRunId());
-
   }
 
 }

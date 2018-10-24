@@ -34,7 +34,7 @@ import javax.annotation.Nonnull;
 import com.eucalyptus.util.Json;
 import com.eucalyptus.util.Parameters;
 import com.fasterxml.jackson.databind.JsonNode;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 /**
  *

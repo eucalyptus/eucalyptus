@@ -41,7 +41,6 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
-import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
@@ -81,23 +80,19 @@ public class RollingUpdateStateEntity extends AbstractPersistent {
   AWSAutoScalingAutoScalingGroupResourceAction.UpdateRollbackInfo.State state = AWSAutoScalingAutoScalingGroupResourceAction.UpdateRollbackInfo.State.NOT_STARTED;
 
   @Column(name = "obsolete_instances_json" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String obsoleteInstancesJson = "";
 
   @Column(name = "previous_running_instance_ids" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String previousRunningInstanceIds = "";
 
   @Column(name = "current_batch_instance_ids" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String currentBatchInstanceIds = "";
 
   @Column(name = "already_suspended_process_names" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String alreadySuspendedProcessNames = "";
 
   @Column(name = "num_expected_total_signals")

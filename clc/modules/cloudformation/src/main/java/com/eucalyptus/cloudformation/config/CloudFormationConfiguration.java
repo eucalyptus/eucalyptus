@@ -28,7 +28,7 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.config;
 
-import com.eucalyptus.cloudformation.CloudFormation;
+import com.eucalyptus.cloudformation.common.CloudFormation;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.config.ComponentConfiguration;
 

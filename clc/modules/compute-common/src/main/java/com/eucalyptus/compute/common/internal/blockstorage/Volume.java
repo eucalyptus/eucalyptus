@@ -48,7 +48,6 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Index;
-import javax.persistence.Lob;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
@@ -61,6 +60,7 @@ import com.eucalyptus.compute.common.CloudMetadata.VolumeMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.auth.principal.FullName;
@@ -85,9 +85,8 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   private String   partition;     //TODO:GRZE: change to injected ref.
   @Column( name = "metadata_volume_parentsnapshot" )
   private String   parentSnapshot;
-  @Lob
   @Column( name = "metadata_volume_remotedevice" )
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   private String   remoteDevice;
   @Column( name = "metadata_volume_localdevice" )
   private String   localDevice;
@@ -141,6 +140,11 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
       @Override public String getPartition( ) { return partition; }
       @Override public Integer getSize( ) { return size; }
     };
+  }
+
+  @Override
+  protected String createUniqueName( ) {
+    return ResourceIdentifiers.truncate( getDisplayName( ) );
   }
 
   public String mapState( ) {

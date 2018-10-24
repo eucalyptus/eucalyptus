@@ -171,11 +171,6 @@ public class AWSCloudFormationWaitConditionResourceAction extends StepBasedResou
         action.info.setEucaCreateStartTime(JsonHelper.getStringFromJsonNode(new TextNode("" + System.currentTimeMillis())));
         return action;
       }
-      @Nullable
-      @Override
-      public Integer getTimeout() {
-        return null;
-      }
     },
     CHECK_SIGNALS {
       @Override
@@ -324,12 +319,6 @@ public class AWSCloudFormationWaitConditionResourceAction extends StepBasedResou
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         return resourceAction; // nothing to do really
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 

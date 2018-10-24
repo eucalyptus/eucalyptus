@@ -44,6 +44,7 @@ import com.eucalyptus.simpleworkflow.common.stateful.PolledNotifications;
 public class SimpleWorkflowBootstrapper extends Bootstrapper.Simple {
   @Override
   public boolean check() throws Exception {
-    return Topology.isEnabled( PolledNotifications.class );
+    throwIfNotEnabled( PolledNotifications.class );
+    return true;
   }
 }

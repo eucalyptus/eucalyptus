@@ -29,7 +29,6 @@
 package com.eucalyptus.simplequeue.ws;
 
 import com.eucalyptus.auth.euare.DelegatingUserPrincipal;
-import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.PolicyVersions;
 import com.eucalyptus.auth.principal.Principals;
@@ -38,24 +37,19 @@ import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.crypto.util.SecurityHeader;
-import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.simplequeue.SimpleQueue;
+import com.eucalyptus.simplequeue.common.SimpleQueue;
 import com.eucalyptus.simplequeue.config.SimpleQueueConfiguration;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
-import com.eucalyptus.ws.protocol.OperationParameter;
 import com.eucalyptus.ws.server.QueryPipeline;
 import com.eucalyptus.ws.stages.UnrollableStage;
 import com.eucalyptus.ws.util.HmacUtils;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import javax.annotation.Nonnull;
 import javax.security.auth.Subject;

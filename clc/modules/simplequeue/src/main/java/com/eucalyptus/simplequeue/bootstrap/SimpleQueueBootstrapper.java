@@ -34,7 +34,7 @@ import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.simplequeue.SimpleQueue;
+import com.eucalyptus.simplequeue.common.SimpleQueue;
 import com.eucalyptus.simplequeue.workflow.SimpleQueueWorkflows;
 import com.eucalyptus.simplequeue.workflow.WorkflowClientManager;
 import com.eucalyptus.simpleworkflow.common.SimpleWorkflow;
@@ -56,6 +56,7 @@ public class SimpleQueueBootstrapper extends Bootstrapper.Simple {
   public boolean check() throws Exception {
     if (!super.check())
       return false;
+    throwIfNotEnabled( SimpleWorkflow.class );
     if (Topology.isEnabled( SimpleWorkflow.class ))  {
       try {
         if(!WorkflowClientManager.isRunning()) {

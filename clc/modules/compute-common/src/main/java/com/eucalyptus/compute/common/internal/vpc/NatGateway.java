@@ -28,14 +28,16 @@
  ************************************************************************/
 package com.eucalyptus.compute.common.internal.vpc;
 
+import java.util.Collection;
 import java.util.Date;
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Index;
 import javax.persistence.JoinColumn;
-import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
@@ -112,8 +114,7 @@ public class NatGateway extends UserMetadata<NatGateway.State> implements NatGat
   private String failureCode;
 
   @Column( name = "metadata_failure_message" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   private String failureMessage;
 
   @Column( name = "metadata_allocation_id", nullable = false, updatable = false )
@@ -130,6 +131,9 @@ public class NatGateway extends UserMetadata<NatGateway.State> implements NatGat
 
   @Column( name = "metadata_public_ip" )
   private String publicIpAddress;
+
+  @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "natGateway" )
+  private Collection<NatGatewayTag> tags;
 
   protected NatGateway( ) {
   }

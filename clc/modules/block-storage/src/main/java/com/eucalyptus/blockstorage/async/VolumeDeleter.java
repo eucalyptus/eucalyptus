@@ -61,7 +61,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
-import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
+import com.eucalyptus.blockstorage.util.EucaSemaphoreDirectory;
 
 /**
  * Checker task for removing volumes marked in deleting status

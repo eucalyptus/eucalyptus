@@ -44,6 +44,7 @@ import java.io.InputStream;
 
 import org.apache.log4j.Logger;
 
+import com.ceph.rbd.RbdException;
 import com.ceph.rbd.RbdImage;
 import com.eucalyptus.blockstorage.ceph.entities.CephRbdInfo;
 
@@ -51,18 +52,24 @@ public class CephRbdInputStream extends InputStream {
 
   private static final Logger LOG = Logger.getLogger(CephRbdInputStream.class);
 
+  private final Object closeSync = new Object();
   private CephRbdConnectionManager conn;
   private RbdImage rbdImage;
   private long position;
   private boolean isOpen;
 
-  public CephRbdInputStream(String imageName, String poolName, CephRbdInfo info) throws IOException {
+  public CephRbdInputStream(
+      final String imageName,
+      final String poolName,
+      final CephRbdInfo info
+  ) throws IOException {
     try {
-      conn = CephRbdConnectionManager.getConnection(info, poolName);
+      conn = CephRbdConnectionManager.getConnection( info, poolName );
       rbdImage = conn.getRbd().open(imageName);
       isOpen = true;
       position = 0;
     } catch (Exception e) {
+      close( );
       throw new IOException("Failed to open CephInputStream for image " + imageName + " in pool " + poolName, e);
     }
   }
@@ -94,7 +101,7 @@ public class CephRbdInputStream extends InputStream {
 
     if (isOpen) {
       byte[] buffer = new byte[len];
-      int bytesRead = 0;
+      int bytesRead;
       if ((bytesRead = rbdImage.read(position, buffer, buffer.length)) > 0) { // something was read
         position += bytesRead;
         for (int i = 0; i < bytesRead; i++) {
@@ -118,20 +125,29 @@ public class CephRbdInputStream extends InputStream {
   }
 
   @Override
-  public void close() {
-    if (isOpen) {
-      try {
-        conn.getRbd().close(rbdImage);
-      } catch (Exception e) {
-
-      } finally {
+  public void close( ) {
+    synchronized ( closeSync ) {
+      if ( isOpen ) {
+        final CephRbdConnectionManager closeConn = conn;
+        final RbdImage closeRbdImage = rbdImage;
         isOpen = false;
-        conn.disconnect();
         conn = null;
         rbdImage = null;
+
+        if ( closeConn != null ) {
+          try {
+            if ( closeRbdImage != null ) {
+              closeConn.getRbd( ).close( closeRbdImage );
+            }
+          } catch ( final RbdException e ) {
+            LOG.error( "Error closing image " + closeRbdImage.getName( ), e );
+          } finally {
+            closeConn.close( );
+          }
+        }
+      } else {
+        // nothing to do here, stream is not open/already closed
       }
-    } else {
-      // nothing to do here, stream is not open/already closed
     }
   }
 }

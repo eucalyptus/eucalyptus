@@ -189,7 +189,7 @@ public class DownloadManifestFactory {
   /**
    * Generates download manifest based on bundle manifest and puts in into
    * system owned bucket
-   * 
+   *
    * @param baseManifest
    *          the base manifest
    * @param keyToUse
@@ -492,7 +492,7 @@ public class DownloadManifestFactory {
   private static boolean objectExist(@Nonnull EucaS3Client s3Client,
       String bucketName, String objectName) throws EucalyptusCloudException {
     try {
-      ObjectMetadata metadata = s3Client.getS3Client().getObjectMetadata(
+      ObjectMetadata metadata = s3Client.getObjectMetadata(
           bucketName, objectName);
       if (metadata == null || metadata.getUserMetadata() == null)
         return false;
@@ -512,7 +512,7 @@ public class DownloadManifestFactory {
 
   /**
    * Creates system owned bucket to store download manifest files if needed
-   * 
+   *
    * @throws EucalyptusCloudException
    */
   private static void createManifestsBucketIfNeeded(

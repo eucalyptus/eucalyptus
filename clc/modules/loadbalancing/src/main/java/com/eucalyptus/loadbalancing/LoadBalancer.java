@@ -97,7 +97,7 @@ import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
@@ -144,8 +144,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		if(this.relationView==null)
 			this.relationView = new LoadBalancerRelationView(this);
 	}
-	
-	@Transient
+
 	private static final long serialVersionUID = 1L;
 	
 	public enum STATE {
@@ -373,32 +372,6 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	
 	public Collection<LoadBalancerAutoScalingGroupCoreView> getAutoScaleGroups(){
 		return this.relationView.getAutoScaleGroups();
-	}
-	
-	public void addPolicyDescription(final LoadBalancerPolicyDescription desc){
-	  if (this.policies ==null)
-	    this.policies = Lists.newArrayList();
-	  this.policies.remove(desc);
-	  this.policies.add(desc);
-	}
-	
-	public void removePolicyDescription(final LoadBalancerPolicyDescription desc){
-	  if(this.policies ==null)
-	    return;
-	  this.policies.remove(desc);
-	}
-	
-	public void addBackendServerDescription(final LoadBalancerBackendServerDescription desc) {
-	  if (this.backendServers == null)
-	    this.backendServers = Lists.newArrayList();
-	  this.backendServers.remove(desc);
-	  this.backendServers.add(desc);
-	}
-	
-	public void removeBackendServerDescription(final LoadBalancerBackendServerDescription desc) {
-	  if(this.backendServers == null)
-	    return;
-	  this.backendServers.remove(desc);
 	}
 	
 	public boolean useSystemAccount(){
@@ -782,16 +755,16 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 
 				final ConnectionSettings connectionSettings = new ConnectionSettings( );
 				connectionSettings.setIdleTimeout(
-						Objects.firstNonNull( loadBalancer.getConnectionIdleTimeout( ), 60 ) );
+						MoreObjects.firstNonNull( loadBalancer.getConnectionIdleTimeout( ), 60 ) );
 				attributes.setConnectionSettings( connectionSettings );
 
 				final CrossZoneLoadBalancing crossZoneLoadBalancing = new CrossZoneLoadBalancing( );
 				crossZoneLoadBalancing.setEnabled( 
-				    Objects.firstNonNull(loadBalancer.getCrossZoneLoadbalancingEnabled(), false) );
+				    MoreObjects.firstNonNull(loadBalancer.getCrossZoneLoadbalancingEnabled(), false) );
 				attributes.setCrossZoneLoadBalancing( crossZoneLoadBalancing );
 				
 				final AccessLog accessLog = new AccessLog();
-				accessLog.setEnabled(Objects.firstNonNull(loadBalancer.getAccessLogEnabled(), false));
+				accessLog.setEnabled(MoreObjects.firstNonNull(loadBalancer.getAccessLogEnabled(), false));
 				accessLog.setEmitInterval(loadBalancer.getAccessLogEmitInterval());
 				accessLog.setS3BucketName(loadBalancer.getAccessLogS3BucketName());
 				accessLog.setS3BucketPrefix(loadBalancer.getAccessLogS3BucketPrefix());

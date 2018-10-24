@@ -45,7 +45,6 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAttributeDescriptionCoreView;
@@ -66,6 +65,7 @@ import com.eucalyptus.loadbalancing.service.LoadBalancingException;
 import com.eucalyptus.loadbalancing.service.PolicyTypeNotFoundException;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Strings;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
@@ -73,6 +73,7 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.base.Predicate;
 /**
@@ -498,17 +499,6 @@ public class LoadBalancerPolicies {
     }
   }
 
-  public static void removePolicyFromListener(final LoadBalancerListener listener, final LoadBalancerPolicyDescription policy){
-    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerListener.class ) ) {
-      final LoadBalancerListener update = Entities.uniqueResult(listener);
-      update.removePolicy(policy);
-      db.commit();
-    }catch(final Exception ex){
-      throw Exceptions.toUndeclared(ex);
-    }
-  }
-
-
   public static void addPoliciesToBackendServer(final LoadBalancerBackendServerDescription server, final List<LoadBalancerPolicyDescription> policies)
       throws LoadBalancingException {
     try ( final TransactionResource db =
@@ -667,7 +657,7 @@ public class LoadBalancerPolicies {
       PolicyDescription policyDesc = null;
       String[] policyFiles = null;
       final Set<String> policyNames = Sets.newHashSet();
-      final String dir = String.format("%s/elb-security-policy", BaseDirectory.CONF);
+      final String dir = String.format("%s/elb-security-policy", BaseDirectory.ETC);
       try{
         final File policyDirectory = new File(dir);
         policyFiles = policyDirectory.list(new FilenameFilter() {
@@ -757,6 +747,7 @@ public class LoadBalancerPolicies {
       }
       final PolicyAttributeDescriptions descs = new PolicyAttributeDescriptions();
       descs.setMember((ArrayList<PolicyAttributeDescription>) attrDescs);
+      descs.getMember().sort(Ordering.natural().onResultOf(Strings.nonNull(PolicyAttributeDescription::getAttributeName)));
       policy.setPolicyAttributeDescriptions(descs);
       return policy;
     }

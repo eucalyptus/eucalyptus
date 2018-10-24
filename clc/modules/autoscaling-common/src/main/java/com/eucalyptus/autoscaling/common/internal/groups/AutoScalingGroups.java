@@ -59,7 +59,7 @@ import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableSet;
@@ -269,8 +269,8 @@ public abstract class AutoScalingGroups {
     public AutoScalingGroupTag apply( final TagType tagType ) {
       final AutoScalingGroupTag groupTag = AutoScalingGroupTag.createUnassigned();
       groupTag.setKey( tagType.getKey() );
-      groupTag.setValue( Objects.firstNonNull( tagType.getValue(), "" ) );
-      groupTag.setPropagateAtLaunch( Objects.firstNonNull( tagType.getPropagateAtLaunch(), Boolean.FALSE ) );
+      groupTag.setValue( MoreObjects.firstNonNull( tagType.getValue(), "" ) );
+      groupTag.setPropagateAtLaunch( MoreObjects.firstNonNull( tagType.getPropagateAtLaunch(), Boolean.FALSE ) );
       return groupTag;
     }
   }

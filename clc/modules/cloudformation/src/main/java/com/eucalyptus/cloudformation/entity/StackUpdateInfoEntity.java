@@ -35,7 +35,6 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
-import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
@@ -62,13 +61,11 @@ public class StackUpdateInfoEntity extends AbstractPersistent {
   String accountAlias;
 
   @Column(name = "old_resource_dependency_manager_json" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String oldResourceDependencyManagerJson;
 
   @Column(name = "resource_dependency_manager_json" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String resourceDependencyManagerJson;
 
   @Column(name = "updated_stack_version")

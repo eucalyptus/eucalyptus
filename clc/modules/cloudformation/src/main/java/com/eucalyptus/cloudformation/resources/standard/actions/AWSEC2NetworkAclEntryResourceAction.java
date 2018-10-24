@@ -45,6 +45,7 @@ import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.CreateNetworkAclEntryResponseType;
 import com.eucalyptus.compute.common.CreateNetworkAclEntryType;
@@ -52,7 +53,6 @@ import com.eucalyptus.compute.common.DeleteNetworkAclEntryResponseType;
 import com.eucalyptus.compute.common.DeleteNetworkAclEntryType;
 import com.eucalyptus.compute.common.DescribeNetworkAclsResponseType;
 import com.eucalyptus.compute.common.DescribeNetworkAclsType;
-import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.IcmpTypeCodeType;
 import com.eucalyptus.compute.common.NetworkAclEntryType;
 import com.eucalyptus.compute.common.NetworkAclType;
@@ -119,7 +119,7 @@ public class AWSEC2NetworkAclEntryResourceAction extends StepBasedResourceAction
           throw new ValidationErrorException("NetworkAclId is a required field");
         }
         DescribeNetworkAclsType describeNetworkAclsType = MessageHelper.createMessage(DescribeNetworkAclsType.class, action.info.getEffectiveUserId());
-        describeNetworkAclsType.getFilterSet( ).add( Filter.filter( "network-acl-id", action.properties.getNetworkAclId() ) );
+        describeNetworkAclsType.getFilterSet( ).add( CloudFilters.filter( "network-acl-id", action.properties.getNetworkAclId() ) );
         DescribeNetworkAclsResponseType describeNetworkAclsResponseType = AsyncRequests.sendSync(configuration, describeNetworkAclsType);
         if (describeNetworkAclsResponseType.getNetworkAclSet() == null || describeNetworkAclsResponseType.getNetworkAclSet().getItem() == null ||
           describeNetworkAclsResponseType.getNetworkAclSet().getItem().isEmpty()) {
@@ -142,12 +142,6 @@ public class AWSEC2NetworkAclEntryResourceAction extends StepBasedResourceAction
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -161,7 +155,7 @@ public class AWSEC2NetworkAclEntryResourceAction extends StepBasedResourceAction
 
         // See if network ACL is there
         DescribeNetworkAclsType describeNetworkAclsType = MessageHelper.createMessage(DescribeNetworkAclsType.class, action.info.getEffectiveUserId());
-        describeNetworkAclsType.getFilterSet( ).add( Filter.filter( "network-acl-id", action.properties.getNetworkAclId() ) );
+        describeNetworkAclsType.getFilterSet( ).add( CloudFilters.filter( "network-acl-id", action.properties.getNetworkAclId() ) );
         DescribeNetworkAclsResponseType describeNetworkAclsResponseType = AsyncRequests.sendSync( configuration, describeNetworkAclsType);
         if (describeNetworkAclsResponseType.getNetworkAclSet() == null || describeNetworkAclsResponseType.getNetworkAclSet().getItem() == null ||
           describeNetworkAclsResponseType.getNetworkAclSet().getItem().isEmpty()) {
@@ -186,12 +180,6 @@ public class AWSEC2NetworkAclEntryResourceAction extends StepBasedResourceAction
         DeleteNetworkAclEntryResponseType deleteNetworkAclEntryResponseType = AsyncRequests.<DeleteNetworkAclEntryType, DeleteNetworkAclEntryResponseType> sendSync(configuration, deleteNetworkAclEntryType);
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -216,15 +204,8 @@ public class AWSEC2NetworkAclEntryResourceAction extends StepBasedResourceAction
         ReplaceNetworkAclEntryResponseType replaceNetworkAclEntryResponseType = AsyncRequests.<ReplaceNetworkAclEntryType, ReplaceNetworkAclEntryResponseType>sendSync(configuration, replaceNetworkAclEntryType);
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
-
 
   @Override
   public ResourceProperties getResourceProperties() {
@@ -261,9 +242,6 @@ public class AWSEC2NetworkAclEntryResourceAction extends StepBasedResourceAction
     icmpTypeCodeType.setType(icmp.getType());
     return icmpTypeCodeType;
   }
-
-
-
 }
 
 

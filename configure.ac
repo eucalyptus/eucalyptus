@@ -188,11 +188,6 @@ if test $goodversion -eq 0; then
         AC_MSG_ERROR([Eucalyptus needs at least JDK version $java_min_version])
 fi
 
-# now let's test we have jni.h
-if test ! -e $JAVA_HOME/include/jni.h ; then
-        AC_MSG_ERROR([Cannot find jni.h in $JAVA_HOME: do you have a JDK installed?])
-fi
-
 ant_version=`$ANT -version 2>&1 | grep "Ant.* version" | \
         sed -e 's/.*Ant.* version \([[0-9.]]*\).*/\1/'`
 goodversion=`expr $ant_version ">=" $ant_min_version`
@@ -265,15 +260,13 @@ AC_CHECK_FUNCS([bzero dup2 ftruncate gettimeofday mkdir pow select strchr strdup
 AC_CONFIG_FILES([Makedefs
                  admin-tools/eucalyptus_admin/__init__.py:admin-tools/eucalyptus_admin/__init__.py.in
                  clc/modules/postgresql/src/main/resources/postgresql-binaries.properties:clc/modules/postgresql/src/main/resources/postgresql-binaries.properties.in
-                 clc/eucadmin/setup.cfg.template:clc/eucadmin/setup.cfg.template.in
-                 clc/eucadmin/eucadmin/__init__.py:clc/eucadmin/eucadmin/__init__.py.in
-                 clc/modules/bootstrap/src/main/native/arguments.ggo:clc/modules/bootstrap/src/main/native/arguments.ggo.in
                  cluster/eucalyptus-cluster
                  node/eucalyptus-node
+                 tools/eucalyptus-cloud:tools/eucalyptus-cloud.in
                  tools/eucalyptus-logrotate.conf:tools/eucalyptus-logrotate.conf.in
                  tools/imaging/setup.cfg.template:tools/imaging/setup.cfg.template.in
                  tools/imaging/eucatoolkit/__init__.py:tools/imaging/eucatoolkit/__init__.py.in
-                 clc/modules/bootstrap/src/main/resources/version.properties:clc/modules/bootstrap/src/main/resources/version.properties.in])
+                 clc/modules/core/src/main/resources/version.properties:clc/modules/core/src/main/resources/version.properties.in])
 
 AC_DEFINE_UNQUOTED([EUCA_VERSION], "$EUCA_VERSION", [Version of Eucalyptus])
 

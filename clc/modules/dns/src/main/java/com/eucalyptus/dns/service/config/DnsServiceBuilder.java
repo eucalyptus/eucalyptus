@@ -30,7 +30,6 @@ package com.eucalyptus.dns.service.config;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
@@ -38,21 +37,11 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.Dns;
-import com.eucalyptus.config.DeregisterDnsType;
-import com.eucalyptus.config.DescribeDnsType;
-import com.eucalyptus.config.ModifyDnsAttributeType;
-import com.eucalyptus.config.RegisterDnsType;
 
 /**
  *
  */
 @ComponentPart( Dns.class )
-@Handles( {
-    DeregisterDnsType.class,
-    DescribeDnsType.class,
-    ModifyDnsAttributeType.class,
-    RegisterDnsType.class,
-} )
 public class DnsServiceBuilder extends AbstractServiceBuilder<DnsConfiguration> {
   private static final Logger LOG = Logger.getLogger( DnsServiceBuilder.class );
 

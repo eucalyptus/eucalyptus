@@ -74,7 +74,7 @@ import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.util.Strings;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -218,7 +218,7 @@ public class UserPrincipalImpl implements UserPrincipal, HasRole {
     this.systemAdmin = Accounts.isAdministrativeAccount( account.getName( ) );
     this.systemUser = systemAdmin;
     this.password = user.getPassword();
-    this.passwordExpires = password == null ? null : Objects.firstNonNull( user.getPasswordExpires( ), Long.MAX_VALUE );
+    this.passwordExpires = password == null ? null : MoreObjects.firstNonNull( user.getPasswordExpires( ), Long.MAX_VALUE );
     this.role = null;
     this.keys = ImmutableList.copyOf( Iterables.filter( Iterables.transform( user.getKeys( ), ekeyWrapper( this ) ), AccessKeys.isActive( ) ) );
     this.certificates = ImmutableList.copyOf(
@@ -282,7 +282,7 @@ public class UserPrincipalImpl implements UserPrincipal, HasRole {
     this.systemAdmin = user.isSystemAdmin();
     this.systemUser = user.isSystemUser();
     this.password = user.getPassword();
-    this.passwordExpires = password == null ? null : Objects.firstNonNull( user.getPasswordExpires( ), Long.MAX_VALUE );
+    this.passwordExpires = password == null ? null : MoreObjects.firstNonNull( user.getPasswordExpires( ), Long.MAX_VALUE );
     this.role = null;
     this.keys = ImmutableList.copyOf( Iterables.filter( Iterables.transform( user.getKeys( ), keyWrapper( this ) ), AccessKeys.isActive( ) )  );
     this.certificates = ImmutableList.copyOf(

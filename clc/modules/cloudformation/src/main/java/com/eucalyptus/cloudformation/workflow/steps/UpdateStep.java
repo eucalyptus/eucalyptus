@@ -48,5 +48,7 @@ public interface UpdateStep extends Nameable{
    * @see #MAX_TIMEOUT
    */
   @Nullable
-  Integer getTimeout();
+  default Integer getTimeout( ){
+    return null;
+  };
 }

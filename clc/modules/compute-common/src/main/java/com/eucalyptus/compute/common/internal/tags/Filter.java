@@ -49,28 +49,23 @@ public class Filter {
   @Nonnull private final Map<String,String> aliases;
   @Nonnull private final Criterion criterion;
   @Nonnull private final Predicate<Object> predicate;
-  private final boolean filteringOnTags;
-  
+
   Filter( @Nonnull final Map<String,String> aliases,
           @Nonnull final Criterion criterion,
-          @Nonnull final Predicate<Object> predicate,
-          final boolean filteringOnTags ) {
+          @Nonnull final Predicate<Object> predicate ) {
     this.aliases = aliases;
     this.criterion = criterion;
     this.predicate = predicate;
-    this.filteringOnTags = filteringOnTags;
   }
 
-  Filter( @Nonnull final Predicate<Object> predicate,
-          final boolean filteringOnTags ) {
+  Filter( @Nonnull final Predicate<Object> predicate ) {
     this( Collections.<String,String>emptyMap(),
         Restrictions.conjunction(),
-        predicate,
-        filteringOnTags );
+        predicate);
   }
   
   private Filter() {
-    this( Predicates.alwaysTrue(), false );
+    this( Predicates.alwaysTrue() );
   }
 
   /**
@@ -115,15 +110,6 @@ public class Filter {
   }
 
   /**
-   * Does the filter use tags?
-   *
-   * @return True if the filter uses any tags
-   */
-  public boolean isFilteringOnTags() {
-    return filteringOnTags;
-  }
-
-  /**
    * Create a Filter that will always pass (filters out nothing)
    */
   static Filter alwaysTrue() {
@@ -146,8 +132,7 @@ public class Filter {
     return new Filter(
       aliases,
       and,
-      Predicates.and( this.predicate, filter.predicate ),
-      this.filteringOnTags || filter.filteringOnTags
+      Predicates.and( this.predicate, filter.predicate )
     );
   }
 }

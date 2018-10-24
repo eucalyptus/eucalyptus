@@ -76,7 +76,7 @@ import com.google.common.collect.Lists;
 @Table( name = "metadata_backend_instance" )
 public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBackendInstance.STATE> {
 	private static Logger    LOG     = Logger.getLogger( LoadBalancerBackendInstance.class );
-	@Transient
+
 	private static final long serialVersionUID = 1L;
 
 	@Transient

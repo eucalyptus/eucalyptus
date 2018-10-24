@@ -130,7 +130,8 @@ public class AclUtils {
       return true;
     }
 
-    if (ObjectStorageProperties.S3_GROUP.AWS_EXEC_READ.equals(group)) {
+    if (ObjectStorageProperties.S3_GROUP.EC2_BUNDLE_READ.equals(group) ||
+        ObjectStorageProperties.S3_GROUP.AWS_EXEC_READ.equals(group)) {
       try {
         return Accounts.lookupSystemAccountByAlias( AccountIdentifiers.AWS_EXEC_READ_SYSTEM_ACCOUNT ).getCanonicalId( )
             .equals( userId );
@@ -140,9 +141,8 @@ public class AclUtils {
       }
     }
 
-    // System or euca/admin only in logging and ec2-bundle-read groups
-    if (ObjectStorageProperties.S3_GROUP.EC2_BUNDLE_READ.equals(group) ||
-        ObjectStorageProperties.S3_GROUP.LOGGING_GROUP.equals(group)) {
+    // System or euca/admin only in logging
+    if (ObjectStorageProperties.S3_GROUP.LOGGING_GROUP.equals(group)) {
       try {
         return
             Principals.systemUser( ).getCanonicalId( ).equals(userId) ||

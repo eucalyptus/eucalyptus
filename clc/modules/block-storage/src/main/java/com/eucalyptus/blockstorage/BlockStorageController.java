@@ -77,8 +77,6 @@ import com.eucalyptus.blockstorage.msgs.AttachStorageVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.AttachStorageVolumeType;
 import com.eucalyptus.blockstorage.msgs.CloneVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.CloneVolumeType;
-import com.eucalyptus.blockstorage.msgs.ConvertVolumesResponseType;
-import com.eucalyptus.blockstorage.msgs.ConvertVolumesType;
 import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotResponseType;
 import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotType;
 import com.eucalyptus.blockstorage.msgs.CreateStorageVolumeResponseType;
@@ -179,21 +177,6 @@ public class BlockStorageController implements BlockStorageService {
       return null;
     }
   };
-
-  // TODO: zhill, this can be added later for snapshot abort capabilities
-  // static ConcurrentHashMap<String,HttpTransfer> httpTransferMap; //To keep track of current transfers to support aborting
-
-  // Introduced for testing EUCA-9297 fix: allows artificial capacity changes of backend
-  static boolean setUseTestingDelegateManager(boolean enableDelegate) {
-    if (enableDelegate && !(blockManager instanceof StorageManagerTestingProxy)) {
-      LOG.info("Switching to use delegating storage manager for testing");
-      blockManager = new StorageManagerTestingProxy(blockManager);
-    } else if (!enableDelegate && (blockManager instanceof StorageManagerTestingProxy)) {
-      LOG.info("Switching to NOT use delegating storage manager anymore");
-      blockManager = ((StorageManagerTestingProxy) blockManager).getDelegateStorageManager();
-    }
-    return enableDelegate;
-  }
 
   public static void configure() throws EucalyptusCloudException {
     BlockStorageGlobalConfiguration.getInstance();
@@ -1180,32 +1163,6 @@ public class BlockStorageController implements BlockStorageService {
     }
     return reply;
 
-  }
-
-  @Override
-  public ConvertVolumesResponseType ConvertVolumes(ConvertVolumesType request) throws EucalyptusCloudException {
-    ConvertVolumesResponseType reply = (ConvertVolumesResponseType) request.getReply();
-    String provider = request.getOriginalProvider();
-    provider = "com.eucalyptus.storage." + provider;
-    if (!blockManager.getClass().getName().equals(provider)) {
-      // different backend provider. Try upgrade
-      try {
-        LogicalStorageManager fromBlockManager = (LogicalStorageManager) ClassLoader.getSystemClassLoader().loadClass(provider).newInstance();
-        fromBlockManager.checkPreconditions();
-        // initialize fromBlockManager
-        new VolumesConvertor(fromBlockManager, blockManager).start();
-      } catch (InstantiationException e) {
-        LOG.error(e);
-        throw new EucalyptusCloudException(e);
-      } catch (ClassNotFoundException e) {
-        LOG.error(e);
-        throw new EucalyptusCloudException(e);
-      } catch (IllegalAccessException e) {
-        LOG.error(e);
-        throw new EucalyptusCloudException(e);
-      }
-    }
-    return reply;
   }
 
   /**

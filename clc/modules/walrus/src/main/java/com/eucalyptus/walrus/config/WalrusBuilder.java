@@ -41,7 +41,6 @@ package com.eucalyptus.walrus.config;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
@@ -50,14 +49,8 @@ import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.walrus.WalrusBackend;
 import com.eucalyptus.walrus.WalrusConfiguration;
-import com.eucalyptus.walrus.msgs.DeregisterWalrusBackendType;
-import com.eucalyptus.walrus.msgs.DescribeWalrusBackendsType;
-import com.eucalyptus.walrus.msgs.ModifyWalrusBackendAttributeType;
-import com.eucalyptus.walrus.msgs.RegisterWalrusBackendType;
 
 @ComponentPart(WalrusBackend.class)
-@Handles({RegisterWalrusBackendType.class, DeregisterWalrusBackendType.class, DescribeWalrusBackendsType.class,
-    ModifyWalrusBackendAttributeType.class})
 public class WalrusBuilder extends AbstractServiceBuilder<WalrusConfiguration> {
   private static final Logger LOG = Logger.getLogger(WalrusBuilder.class);
 

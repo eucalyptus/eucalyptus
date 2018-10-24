@@ -28,6 +28,7 @@
  ************************************************************************/
 package com.eucalyptus.compute.common.internal.address;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -35,11 +36,14 @@ import java.util.concurrent.Callable;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.FetchType;
 import javax.persistence.Index;
+import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
@@ -61,7 +65,7 @@ import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.upgrade.Upgrades;
 import com.eucalyptus.util.HasFullName;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Sets;
@@ -134,11 +138,10 @@ public class AllocatedAddressEntity extends UserMetadata<AddressState> implement
   @Column( name = "metadata_association_private_address" )
   private String privateAddress;
 
-  protected AllocatedAddressEntity() {}
+  @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "allocatedAddress" )
+  private Collection<AllocatedAddressTag> tags;
 
-  protected AllocatedAddressEntity( String ipAddress ) {
-    this( Principals.nobodyFullName( ), ipAddress );
-  }
+  protected AllocatedAddressEntity() {}
 
   protected AllocatedAddressEntity( final OwnerFullName owner, final String ipAddress ) {
     super( owner, ipAddress );
@@ -159,14 +162,6 @@ public class AllocatedAddressEntity extends UserMetadata<AddressState> implement
       @Nullable final String ip
   ) {
     return new AllocatedAddressEntity( owner, ip );
-  }
-
-  public static AllocatedAddressEntity exampleWithNaturalId(
-    final String uuid
-  ) {
-    final AllocatedAddressEntity example = new AllocatedAddressEntity( );
-    example.setNaturalId( uuid );
-    return example;
   }
 
   public static AllocatedAddressEntity example() {
@@ -210,7 +205,7 @@ public class AllocatedAddressEntity extends UserMetadata<AddressState> implement
    */
   @Nonnull
   public AddressDomain domainWithDefault( ) {
-    return Objects.firstNonNull( getDomain( ), AddressDomain.standard );
+    return MoreObjects.firstNonNull( getDomain( ), AddressDomain.standard );
   }
 
   @Nullable

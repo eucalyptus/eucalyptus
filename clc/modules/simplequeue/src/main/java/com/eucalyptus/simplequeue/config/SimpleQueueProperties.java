@@ -35,7 +35,6 @@ import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.configurable.StaticPropertyEntry;
-import com.eucalyptus.simplequeue.persistence.cassandra.CassandraSessionManager;
 import com.eucalyptus.simpleworkflow.common.client.Config;
 import com.eucalyptus.system.Ats;
 
@@ -57,20 +56,6 @@ public class SimpleQueueProperties {
   private static final String DEFAULT_SWF_WORKFLOW_WORKER_CONFIG =
       "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 2, \"MaximumPollRateIntervalMilliseconds\": 50, \"MaximumPollRatePerSecond\": 20 }";
 
-  @ConfigurableField(
-    initial = "auto",
-    description = "The db to use (postgres|cassandra|euca-cassandra|auto)"
-  )
-  public static volatile String DB_TO_USE = "auto";
-  @ConfigurableField(
-    initial = "127.0.0.1",
-    description = "The host for cassandra",
-    changeListener = CassandraSessionManager.ChangeListener.class )
-  public static volatile String CASSANDRA_HOST = "127.0.0.1";
-  @ConfigurableField(
-    initial = "SimpleQueueDomain",
-    description = "The simple workflow service domain for simplequeue",
-    changeListener = Config.NameValidatingChangeListener.class )
   public static volatile String SWF_DOMAIN = "SimpleQueueDomain";
   @ConfigurableField(
     initial = "SimpleQueueTaskList",

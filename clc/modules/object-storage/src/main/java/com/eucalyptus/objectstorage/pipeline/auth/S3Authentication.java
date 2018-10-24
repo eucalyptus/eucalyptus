@@ -49,7 +49,6 @@ import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.ws.util.HmacUtils.SignatureCredential;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
-import javaslang.control.Try.CheckedFunction;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.joda.time.DateTime;
@@ -57,8 +56,6 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nonnull;
 import javax.security.auth.Subject;
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.*;
 
 import static com.eucalyptus.objectstorage.pipeline.auth.S3V2Authentication.AWS_V2_AUTH_TYPE;

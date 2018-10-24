@@ -39,6 +39,7 @@
 
 <project name="eucalyptus-module-import" xmlns:ivy="antlib:org.apache.ivy.ant">
 	<!--================================== euca defines ==================================-->
+	<property name="project.basedir" value="${basedir}/../../" />
 	<property file="${basedir}/../../local.module.properties" />
 	<property environment="localenv" />
 	<property name="euca.home.0" value="${localenv.EUCALYPTUS}" />
@@ -49,7 +50,6 @@
 	<condition property="DESTDIR" value="/" else="${localenv.DESTDIR}">
 		<contains string="${DESTDIR.0}" substring="localenv" />
 	</condition>
-	<property name="project.basedir" value="${basedir}/../../" />
 	<loadfile srcfile="${project.basedir}/../VERSION" property="euca.version">
 		<filterchain>
 			<filterreader classname="org.apache.tools.ant.filters.StripLineBreaks" />
@@ -57,7 +57,7 @@
 	</loadfile>
 	<property name="euca.etc.dir" value="${euca.home}/etc/eucalyptus" />
 	<property name="euca.conf.dir" value="${euca.home}/etc/eucalyptus/cloud.d" />
-	<property name="euca.lib.dir" value="${euca.home}/usr/share/eucalyptus" />
+	<property name="euca.lib.dir" value="${euca.home}/usr/share/eucalyptus/lib" />
 	<property name="euca.var.dir" value="${euca.home}/var/lib/eucalyptus" />
 	<property name="euca.run.dir" value="${euca.home}/var/run/eucalyptus" />
 	<property name="euca.log.dir" value="${euca.home}/var/log/eucalyptus" />
@@ -71,6 +71,7 @@
 	<property name="build.src.dir" value="${build.dir}/src" />
 	<property name="generated.src.dir" value="${basedir}/src/generated/java" />
 	<property name="src.dir" value="${basedir}/src/main/java" />
+	<property name="groovy.src.dir" value="${basedir}/src/main/groovy" />
 	<property name="test.dir" value="${basedir}/src/test/java" />
 	<property name="conf.dir" value="${basedir}/conf" />
 	<property name="rsrc.dir" value="${basedir}/src/main/resources" />
@@ -96,13 +97,16 @@
 	<property name="javac.target" value="${javac.source}"/>
 	<property name="javac.debug" value="true"/>
 	<property name="javac.includeantruntime" value="false"/>
+	<property name="javac.bootclasspath" value="${sun.boot.class.path}"/>
+	<property name="javac.extraargs.xlint.unchecked" value="unchecked"/>
+	<property name="javac.extraargs.xlint" value="-Xlint:divzero,finally,overrides,-deprecation,${javac.extraargs.xlint.unchecked}"/>
+	<property name="javac.extraargs.werror" value="-Werror"/>
 	<property name="groovyc.fork" value="false"/>
 	<property name="groovyc.includeantruntime" value="true"/>
+	<property name="bind.load" value="true"/>
+	<property name="bind.verbose" value="false"/>
 	<!--================================== other properties  ===================================-->
-	<property name="euca.junit.jvmargs" value=""/>
-	<!--================================== dependencies  ===================================-->
-	<!-- Fix for RHEL bug 810067 -->
-	<taskdef uri="antlib:org.apache.ivy.ant" classpath="${ivy.jar}" />
+	<property name="euca.junit.jvmargs" value="-ea"/>
 	<!--================================== classpaths ==================================-->
 	<path id="runtimeclasspath">
 		<pathelement path="${euca.conf.dir}" />
@@ -125,6 +129,24 @@
 			<include name="**/src/test/resources" />
 		</dirset>
 	</path>
+	<path id="jibx-classpath">
+		<fileset dir="${lib.dir}" erroronmissingdir="false">
+			<include name="bcel-*.jar" />
+			<include name="dom4j-*.jar" />
+			<include name="jibx-*.jar" />
+			<include name="joda-time-*.jar" />
+			<include name="log4j-*.jar" />
+			<include name="xpp3-*.jar" />
+		</fileset>
+	</path>
+	<!--================================== dependencies  ===================================-->
+	<!-- Fix for RHEL bug 810067 -->
+	<taskdef uri="antlib:org.apache.ivy.ant" classpath="${ivy.jar}" />
+	<taskdef name="bind" classname="org.jibx.binding.ant.CompileTask" onerror="ignore">
+		<classpath>
+			<path refid="jibx-classpath"/>
+		</classpath>
+	</taskdef>
 	<!--================================== copy conf ==================================-->
 	<target name="copy-conf">
 		<copy todir="${DESTDIR}${euca.conf.dir}">
@@ -133,22 +155,6 @@
 			</fileset>
 		</copy>
 	</target>
-	<!--================================== make macro ==================================-->
-	<target name="native-make-if-enabled" unless="module.skipNativeMake">
-		<exec failifexecutionfails="true" failonerror="true" dir="${makeDir}" executable="/usr/bin/make">
-				<arg value="${makeTarget}" />
-		</exec>
-   </target>
-    <macrodef name="native-make">
-		<attribute name="target" />
-		<attribute name="dir" />
-		<sequential>
-			<antcall target="native-make-if-enabled">
-				<param name="makeTarget" value="@{target}" />
-				<param name="makeDir" value="@{dir}" />
-			</antcall>
-		</sequential>
-	</macrodef>
 	<!--================================== init target ==================================-->
 	<target name="build-mkdirs">
 		<mkdir dir="${build.classes.dir}" />
@@ -195,7 +201,7 @@
 		</path>
 	</target>
 	<target name="builder" description="--> build the jar file from source.">
-		<condition property="builder.target" value="build-${builder.suffix}" else="build-java">
+		<condition property="builder.target" value="build-${builder.suffix}" else="build-all">
 			<isset property="builder.suffix" />
 		</condition>
 		<echo message="[BUILDER] ${builder.target} for ${ant.project.name}" />
@@ -224,27 +230,50 @@
 		<javac classpathref="classpath" destdir="${build.classes.dir}" deprecation="false" failonerror="true" debug="${javac.debug}" sourcepathref="srcpath" source="${javac.source}" target="${javac.target}" encoding="utf-8" listfiles="true"  includeantruntime="${javac.includeantruntime}">
 			<src path="${src.dir}"/>
 			<src path="${generated.src.dir}"/>
-		</javac>	
+			<compilerarg line="-s ${build.src.dir}/main/java"/>
+			<compilerarg value="-Xbootclasspath:${javac.bootclasspath}"/>
+			<compilerarg value="${javac.extraargs.xlint}"/>
+			<compilerarg value="${javac.extraargs.werror}"/>
+			<compilerarg value="-implicit:class"/>
+		</javac>
+		<antcall target="build-bindings" />
 	</target>
 	<target name="should-build-groovy">
 		<mkdir dir="${build.classes.dir}" />
 		<uptodate property="build.notRequired" targetfile="${jar.file}">
-			<srcfiles dir="${src.dir}" includes="**/*" />
-			<srcfiles dir="${generated.src.dir}" includes="**/*" />
+			<srcfiles dir="${groovy.src.dir}" includes="**/*" erroronmissingdir="false"/>
 		</uptodate>
+		<condition property="build.notRequired">
+			<not><available file="${groovy.src.dir}" type="dir"/></not>
+		</condition>
 	</target>
-	<target name="build-groovy" depends="should-build-groovy,classpaths" unless="build.notRequired">
+	<target name="build-groovy" depends="classpaths,build-java,should-build-groovy" unless="build.notRequired">
 		<echo message="[COMPILE] main for ${ant.project.name}" />
-		<antcall target="clean" />
 		<antcall target="build-mkdirs" inheritall="true" inheritrefs="true" />
 		<taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />
-		<groovyc srcdir="${src.dir}:${generated.src.dir}:${build.classes.dir}" classpathref="classpath" includeantruntime="${groovyc.includeantruntime}" fork="${groovyc.fork}" destdir="${build.classes.dir}" verbose="true" listfiles="true" configscript="${project.basedir}/config.groovy">
-			<javac source="${javac.source}" target="${javac.target}" encoding="utf-8" debug="${javac.debug}" >
-				<compilerarg value="-Js=${build.src.dir}/main/java"/>
-			</javac>
-		</groovyc>
+		<groovyc srcdir="${groovy.src.dir}" classpathref="classpath" includeantruntime="${groovyc.includeantruntime}" fork="${groovyc.fork}" destdir="${build.classes.dir}" verbose="true" listfiles="true" configscript="${project.basedir}/config.groovy"/>
+		<antcall target="build-bindings" />
 	</target>
-	<target name="builder-test" depends="classpaths,build-groovy">
+	<target name="build-bindings" depends="classpaths">
+		<echo message="[COMPILE] bindings for ${ant.project.name}" />
+		<bind verbose="${bind.verbose}" load="${bind.load}">
+			<bindingfileset dir="${rsrc.dir}">
+				<include name="**/*-binding.xml" />
+			</bindingfileset>
+			<classpath>
+				<pathelement path="${build.classes.dir}"/>
+				<pathelement path="${rsrc.dir}"/>
+				<path refid="classpath"/>
+			</classpath>
+		</bind>
+		<copy todir="${build.classes.dir}"> <!-- copy for inclusion in other bindings -->
+			<fileset dir="${rsrc.dir}">
+				<include name="**/*-binding.xml" />
+			</fileset>
+		</copy>
+	</target>
+	<target name="build-all" depends="build-groovy"/>
+	<target name="builder-test" depends="classpaths,build-all">
 		<antcall target="build-mkdirs" inheritall="true" inheritrefs="true" />
 		<echo message="[COMPILE] test for ${ant.project.name}" />
 		<taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />
@@ -269,10 +298,14 @@
                                 <path refid="resources-classpath"/>
                                 <path refid="test-classpath"/>
                         </classpath>
+                        <!-- TODO use skipNonTests=true and remove includes/excludes once we can use ant 1.9.3 -->
                         <batchtest todir="${junit.reports.dir}">
                                 <fileset dir="${build.test.dir}">
-                                        <include name="**/*Test.class"/>
-                                        <include name="**/*Specification.class"/>
+                                        <include name="**/*Test*"/>
+                                        <include name="**/*Specification*"/>
+                                        <exclude name="**/*$*"/>
+                                        <exclude name="**/Test*"/>
+                                        <exclude name="**/*TestSupport.class"/>
                                 </fileset>
                         </batchtest>
                 </junit>
@@ -292,7 +325,7 @@
 	<target name="do-jar" unless="jar.notRequired">
 		<echo message="[JARFILE] target/${ant.project.name}-${euca.version}.jar" />
 		<delete file="${jar.file}" />
-		<jar destfile="${jar.file}">
+		<jar destfile="${jar.file}" duplicate="preserve" level="9">
 			<fileset dir="${build.classes.dir}">
 				<include name="${jar.build.includes}" />
 				<exclude name="${jar.build.excludes}" />
@@ -313,10 +346,6 @@
 			<fileset file="${jar.file}" />
 		</copy>
 		<antcall target="install-module" />
-	</target>
-	<!--================================== indent target ==================================-->
-	<target name="indent">
-		<antcall target="indent-module" />
 	</target>
 	<!--============================= code generation targets ============================-->
 	<target name="generate">
@@ -357,5 +386,4 @@
 	<target name="distclean-module" />
 	<target name="uninstall-module" />
 	<target name="install-module" />
-	<target name="indent-module" />
 </project>

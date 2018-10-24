@@ -33,64 +33,64 @@
             type="java.util.Date"
             deserializer="org.jibx.runtime.Utility.deserializeDateTime"
             serializer="com.eucalyptus.ws.util.SerializationUtils.serializeDateTime"/>
-  <mapping class="com.eucalyptus.cloudformation.CloudFormationMessage" abstract="true"/>
-  <mapping class="com.eucalyptus.cloudformation.ErrorDetail" abstract="true"/>
-  <mapping class="com.eucalyptus.cloudformation.ResponseMetadata" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage" abstract="true"/>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ErrorDetail" abstract="true"/>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata" abstract="true">
     <value name="RequestId" field="requestId" usage="required"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.Error" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.Error" abstract="true">
     <value name="Type" field="type" usage="required"/>
     <value name="Code" field="code" usage="required"/>
     <value name="Message" field="message" usage="required"/>
-    <structure name="Detail" field="detail" usage="optional" type="com.eucalyptus.cloudformation.ErrorDetail"/>
+    <structure name="Detail" field="detail" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ErrorDetail"/>
   </mapping>
-  <mapping name="ErrorResponse" class="com.eucalyptus.cloudformation.CloudFormationErrorResponse" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <structure name="Error" field="error" usage="optional" type="com.eucalyptus.cloudformation.Error"/>
+  <mapping name="ErrorResponse" class="com.eucalyptus.cloudformation.common.msgs.CloudFormationErrorResponse" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="Error" field="error" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Error"/>
     <value name="RequestId" field="requestId" usage="required"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.ResourceList" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ResourceList" abstract="true">
     <collection field="member">
       <value name="member" type="java.lang.String"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.Output" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.Output" abstract="true">
     <value name="Description" field="description" usage="optional"/>
     <value name="OutputKey" field="outputKey" usage="optional"/>
     <value name="OutputValue" field="outputValue" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.Outputs" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.Outputs" abstract="true">
     <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudformation.Output"/>
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.Output"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.Parameter" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.Parameter" abstract="true">
     <value name="ParameterKey" field="parameterKey" usage="optional"/>
     <value name="ParameterValue" field="parameterValue" usage="optional"/>
     <value name="UsePreviousValue" field="usePreviousValue" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.Parameters" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.Parameters" abstract="true">
     <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudformation.Parameter"/>
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.Parameter"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.ParameterConstraints" abstract="true">
-    <structure name="AllowedValues" field="allowedValues" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ParameterConstraints" abstract="true">
+    <structure name="AllowedValues" field="allowedValues" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.ParameterDeclaration" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ParameterDeclaration" abstract="true">
     <value name="DefaultValue" field="defaultValue" usage="optional"/>
     <value name="Description" field="description" usage="optional"/>
     <value name="NoEcho" field="noEcho" usage="optional"/>
-    <structure name="ParameterConstraints" field="parameterConstraints" usage="optional" type="com.eucalyptus.cloudformation.ParameterConstraints"/>
+    <structure name="ParameterConstraints" field="parameterConstraints" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ParameterConstraints"/>
     <value name="ParameterKey" field="parameterKey" usage="optional"/>
     <value name="ParameterType" field="parameterType" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.ParameterDeclarations" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ParameterDeclarations" abstract="true">
     <collection field="member">
-        <structure name="member" type="com.eucalyptus.cloudformation.ParameterDeclaration"/>
+        <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.ParameterDeclaration"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.StackEvent" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackEvent" abstract="true">
     <value name="EventId" field="eventId" usage="required"/>
     <value name="LogicalResourceId" field="logicalResourceId" usage="optional"/>
     <value name="PhysicalResourceId" field="physicalResourceId" usage="optional"/>
@@ -102,12 +102,12 @@
     <value name="StackName" field="stackName" usage="required"/>
     <value name="Timestamp" field="timestamp" usage="required"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.StackEvents" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackEvents" abstract="true">
     <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudformation.StackEvent"/>
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.StackEvent"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.StackResource" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackResource" abstract="true">
     <value name="Description" field="description" usage="optional"/>
     <value name="LogicalResourceId" field="logicalResourceId" usage="required"/>
     <value name="PhysicalResourceId" field="physicalResourceId" usage="optional"/>
@@ -118,12 +118,12 @@
     <value name="StackName" field="stackName" usage="optional"/>
     <value name="Timestamp" field="timestamp" usage="required"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.StackResources" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackResources" abstract="true">
     <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudformation.StackResource"/>
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.StackResource"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.StackResourceSummary" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackResourceSummary" abstract="true">
     <value name="LastUpdatedTimestamp" field="lastUpdatedTimestamp" usage="required"/>
     <value name="LogicalResourceId" field="logicalResourceId" usage="required"/>
     <value name="PhysicalResourceId" field="physicalResourceId" usage="optional"/>
@@ -131,68 +131,68 @@
     <value name="ResourceStatusReason" field="resourceStatusReason" usage="optional"/>
     <value name="ResourceType" field="resourceType" usage="required"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.StackResourceSummaries" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackResourceSummaries" abstract="true">
     <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudformation.StackResourceSummary"/>
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.StackResourceSummary"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.StackSummaries" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackSummaries" abstract="true">
     <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudformation.StackSummary"/>
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.StackSummary"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.Tag" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.Tag" abstract="true">
     <value name="Key" field="key" usage="optional"/>
     <value name="Value" field="value" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.Tags" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.Tags" abstract="true">
     <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudformation.Tag"/>
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.Tag"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.TemplateParameter" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.TemplateParameter" abstract="true">
     <value name="DefaultValue" field="defaultValue" usage="optional"/>
     <value name="Description" field="description" usage="optional"/>
     <value name="NoEcho" field="noEcho" usage="optional"/>
     <value name="ParameterKey" field="parameterKey" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.TemplateParameters" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.TemplateParameters" abstract="true">
     <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudformation.TemplateParameter"/>
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.TemplateParameter"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.Stack" abstract="true">
-    <structure name="Capabilities" field="capabilities" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.Stack" abstract="true">
+    <structure name="Capabilities" field="capabilities" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
     <value name="CreationTime" field="creationTime" usage="required"/>
     <value name="Description" field="description" usage="optional"/>
     <value name="DisableRollback" field="disableRollback" usage="optional"/>
     <value name="LastUpdatedTime" field="lastUpdatedTime" usage="optional"/>
-    <structure name="NotificationARNs" field="notificationARNs" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
-    <structure name="Outputs" field="outputs" usage="optional" type="com.eucalyptus.cloudformation.Outputs"/>
-    <structure name="Parameters" field="parameters" usage="optional" type="com.eucalyptus.cloudformation.Parameters"/>
+    <structure name="NotificationARNs" field="notificationARNs" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
+    <structure name="Outputs" field="outputs" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Outputs"/>
+    <structure name="Parameters" field="parameters" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Parameters"/>
     <value name="StackId" field="stackId" usage="optional"/>
     <value name="StackName" field="stackName" usage="required"/>
     <value name="StackStatus" field="stackStatus" usage="required"/>
     <value name="StackStatusReason" field="stackStatusReason" usage="optional"/>
-    <structure name="Tags" field="tags" usage="optional" type="com.eucalyptus.cloudformation.Tags"/>
+    <structure name="Tags" field="tags" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Tags"/>
     <value name="TimeoutInMinutes" field="timeoutInMinutes" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.Stacks" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.Stacks" abstract="true">
     <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudformation.Stack"/>
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.Stack"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.CancelUpdateStackResult" abstract="true"/>
-  <mapping class="com.eucalyptus.cloudformation.CreateStackResult" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.CancelUpdateStackResult" abstract="true"/>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.CreateStackResult" abstract="true">
     <value name="StackId" field="stackId" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.ContinueUpdateRollbackResult" abstract="true"/>
-  <mapping class="com.eucalyptus.cloudformation.DeleteStackResult" abstract="true"/>
-  <mapping class="com.eucalyptus.cloudformation.DescribeStackEventsResult" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ContinueUpdateRollbackResult" abstract="true"/>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DeleteStackResult" abstract="true"/>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DescribeStackEventsResult" abstract="true">
     <value name="NextToken" field="nextToken" usage="optional"/>
-    <structure name="StackEvents" field="stackEvents" usage="optional" type="com.eucalyptus.cloudformation.StackEvents"/>
+    <structure name="StackEvents" field="stackEvents" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackEvents"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.StackResourceDetail" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackResourceDetail" abstract="true">
     <value name="Description" field="description" usage="optional"/>
     <value name="LastUpdatedTimestamp" field="lastUpdatedTimestamp" usage="required"/>
     <value name="LogicalResourceId" field="logicalResourceId" usage="required"/>
@@ -204,44 +204,44 @@
     <value name="StackId" field="stackId" usage="optional"/>
     <value name="StackName" field="stackName" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.DescribeStackResourceResult" abstract="true">
-    <structure name="StackResourceDetail" field="stackResourceDetail" usage="optional" type="com.eucalyptus.cloudformation.StackResourceDetail"/>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceResult" abstract="true">
+    <structure name="StackResourceDetail" field="stackResourceDetail" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackResourceDetail"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.DescribeStackResourcesResult" abstract="true">
-    <structure name="StackResources" field="stackResources" usage="optional" type="com.eucalyptus.cloudformation.StackResources"/>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourcesResult" abstract="true">
+    <structure name="StackResources" field="stackResources" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackResources"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.DescribeStacksResult" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DescribeStacksResult" abstract="true">
     <value name="NextToken" field="nextToken" usage="optional"/>
-    <structure name="Stacks" field="stacks" usage="optional" type="com.eucalyptus.cloudformation.Stacks"/>
+    <structure name="Stacks" field="stacks" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Stacks"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.EstimateTemplateCostResult" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.EstimateTemplateCostResult" abstract="true">
     <value name="Url" field="url" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.GetStackPolicyResult" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.GetStackPolicyResult" abstract="true">
     <value name="StackPolicyBody" field="stackPolicyBody" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.GetTemplateResult" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.GetTemplateResult" abstract="true">
     <value name="TemplateBody" field="templateBody" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.GetTemplateSummaryResult" abstract="true">
-    <structure name="Capabilities" field="capabilities" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.GetTemplateSummaryResult" abstract="true">
+    <structure name="Capabilities" field="capabilities" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
     <value name="CapabilitiesReason" field="capabilitiesReason" usage="optional"/>
     <value name="Description" field="description" usage="optional"/>
     <value name="Metadata" field="metadata" usage="optional"/>
-    <structure name="ResourceTypes" field="resourceTypes" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
-    <structure name="Parameters" field="parameters" usage="optional" type="com.eucalyptus.cloudformation.ParameterDeclarations"/>
+    <structure name="ResourceTypes" field="resourceTypes" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
+    <structure name="Parameters" field="parameters" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ParameterDeclarations"/>
     <value name="Version" field="version" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.ListStackResourcesResult" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ListStackResourcesResult" abstract="true">
       <value name="NextToken" field="nextToken" usage="optional"/>
-      <structure name="StackResourceSummaries" field="stackResourceSummaries" usage="optional" type="com.eucalyptus.cloudformation.StackResourceSummaries"/>
+      <structure name="StackResourceSummaries" field="stackResourceSummaries" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackResourceSummaries"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.ListStacksResult" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ListStacksResult" abstract="true">
     <value name="NextToken" field="nextToken" usage="optional"/>
-    <structure name="StackSummaries" field="stackSummaries" usage="optional" type="com.eucalyptus.cloudformation.StackSummaries"/>
+    <structure name="StackSummaries" field="stackSummaries" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackSummaries"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.SignalResourceResult" abstract="true"/>
-  <mapping class="com.eucalyptus.cloudformation.StackSummary" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.SignalResourceResult" abstract="true"/>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackSummary" abstract="true">
     <value name="CreationTime" field="creationTime" usage="required"/>
     <value name="DeletionTime" field="deletionTime" usage="optional"/>
     <value name="LastUpdatedTime" field="lastUpdatedTime" usage="optional"/>
@@ -251,217 +251,217 @@
     <value name="StackStatusReason" field="stackStatusReason" usage="optional"/>
     <value name="TemplateDescription" field="templateDescription" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.UpdateStackResult" abstract="true">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.UpdateStackResult" abstract="true">
     <value name="StackId" field="stackId" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.ValidateTemplateResult" abstract="true">
-    <structure name="Capabilities" field="capabilities" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ValidateTemplateResult" abstract="true">
+    <structure name="Capabilities" field="capabilities" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
     <value name="CapabilitiesReason" field="capabilitiesReason" usage="optional"/>
     <value name="Description" field="description" usage="optional"/>
-    <structure name="Parameters" field="parameters" usage="optional" type="com.eucalyptus.cloudformation.TemplateParameters"/>
+    <structure name="Parameters" field="parameters" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.TemplateParameters"/>
   </mapping>
-  <mapping name="CancelUpdateStack" class="com.eucalyptus.cloudformation.CancelUpdateStackType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
+  <mapping name="CancelUpdateStack" class="com.eucalyptus.cloudformation.common.msgs.CancelUpdateStackType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
     <value name="StackName" field="stackName" usage="required"/>
   </mapping>
-  <mapping name="CancelUpdateStackResponse" class="com.eucalyptus.cloudformation.CancelUpdateStackResponseType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <structure name="CancelUpdateStackResult" field="cancelUpdateStackResult" usage="required" type="com.eucalyptus.cloudformation.CancelUpdateStackResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.ResponseMetadata"/>
+  <mapping name="CancelUpdateStackResponse" class="com.eucalyptus.cloudformation.common.msgs.CancelUpdateStackResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="CancelUpdateStackResult" field="cancelUpdateStackResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.CancelUpdateStackResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="ContinueUpdateRollback" class="com.eucalyptus.cloudformation.ContinueUpdateRollbackType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
+  <mapping name="ContinueUpdateRollback" class="com.eucalyptus.cloudformation.common.msgs.ContinueUpdateRollbackType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
     <value name="StackName" field="stackName" usage="required"/>
   </mapping>
-  <mapping name="ContinueUpdateRollbackResponse" class="com.eucalyptus.cloudformation.ContinueUpdateRollbackResponseType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <structure name="ContinueUpdateRollbackResult" field="continueUpdateRollbackResult" usage="required" type="com.eucalyptus.cloudformation.ContinueUpdateRollbackResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.ResponseMetadata"/>
+  <mapping name="ContinueUpdateRollbackResponse" class="com.eucalyptus.cloudformation.common.msgs.ContinueUpdateRollbackResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="ContinueUpdateRollbackResult" field="continueUpdateRollbackResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ContinueUpdateRollbackResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="CreateStack" class="com.eucalyptus.cloudformation.CreateStackType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <structure name="Capabilities" field="capabilities" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
+  <mapping name="CreateStack" class="com.eucalyptus.cloudformation.common.msgs.CreateStackType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="Capabilities" field="capabilities" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
     <value name="DisableRollback" field="disableRollback" usage="optional"/>
-    <structure name="NotificationARNs" field="notificationARNs" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
+    <structure name="NotificationARNs" field="notificationARNs" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
     <value name="OnFailure" field="onFailure" usage="optional"/>
-    <structure name="Parameters" field="parameters" usage="optional" type="com.eucalyptus.cloudformation.Parameters"/>
-    <structure name="ResourceTypes" field="resourceTypes" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
+    <structure name="Parameters" field="parameters" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Parameters"/>
+    <structure name="ResourceTypes" field="resourceTypes" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
     <value name="StackName" field="stackName" usage="required"/>
     <value name="StackPolicyBody" field="stackPolicyBody" usage="optional"/>
     <value name="StackPolicyURL" field="stackPolicyURL" usage="optional"/>
-    <structure name="Tags" field="tags" usage="optional" type="com.eucalyptus.cloudformation.Tags"/>
+    <structure name="Tags" field="tags" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Tags"/>
     <value name="TemplateBody" field="templateBody" usage="optional"/>
     <value name="TemplateURL" field="templateURL" usage="optional"/>
     <value name="TimeoutInMinutes" field="timeoutInMinutes" usage="optional"/>
   </mapping>
-  <mapping name="CreateStackResponse" class="com.eucalyptus.cloudformation.CreateStackResponseType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <structure name="CreateStackResult" field="createStackResult" usage="required" type="com.eucalyptus.cloudformation.CreateStackResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.ResponseMetadata"/>
+  <mapping name="CreateStackResponse" class="com.eucalyptus.cloudformation.common.msgs.CreateStackResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="CreateStackResult" field="createStackResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.CreateStackResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="DeleteStack" class="com.eucalyptus.cloudformation.DeleteStackType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <structure name="RetainResources" field="retainResources" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
+  <mapping name="DeleteStack" class="com.eucalyptus.cloudformation.common.msgs.DeleteStackType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="RetainResources" field="retainResources" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
     <value name="StackName" field="stackName" usage="required"/>
   </mapping>
-  <mapping name="DeleteStackResponse" class="com.eucalyptus.cloudformation.DeleteStackResponseType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <structure name="DeleteStackResult" field="deleteStackResult" usage="required" type="com.eucalyptus.cloudformation.DeleteStackResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.ResponseMetadata"/>
+  <mapping name="DeleteStackResponse" class="com.eucalyptus.cloudformation.common.msgs.DeleteStackResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="DeleteStackResult" field="deleteStackResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DeleteStackResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="DescribeStackEvents" class="com.eucalyptus.cloudformation.DescribeStackEventsType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
+  <mapping name="DescribeStackEvents" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackEventsType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
     <value name="NextToken" field="nextToken" usage="optional"/>
     <value name="StackName" field="stackName" usage="optional"/>
   </mapping>
-  <mapping name="DescribeStackEventsResponse" class="com.eucalyptus.cloudformation.DescribeStackEventsResponseType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <structure name="DescribeStackEventsResult" field="describeStackEventsResult" usage="required" type="com.eucalyptus.cloudformation.DescribeStackEventsResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.ResponseMetadata"/>
+  <mapping name="DescribeStackEventsResponse" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackEventsResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="DescribeStackEventsResult" field="describeStackEventsResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DescribeStackEventsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="DescribeStackResource" class="com.eucalyptus.cloudformation.DescribeStackResourceType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
+  <mapping name="DescribeStackResource" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
     <value name="LogicalResourceId" field="logicalResourceId" usage="required"/>
     <value name="StackName" field="stackName" usage="required"/>
   </mapping>
-  <mapping name="DescribeStackResourceResponse" class="com.eucalyptus.cloudformation.DescribeStackResourceResponseType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <structure name="DescribeStackResourceResult" field="describeStackResourceResult" usage="required" type="com.eucalyptus.cloudformation.DescribeStackResourceResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.ResponseMetadata"/>
+  <mapping name="DescribeStackResourceResponse" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="DescribeStackResourceResult" field="describeStackResourceResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="DescribeStackResources" class="com.eucalyptus.cloudformation.DescribeStackResourcesType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
+  <mapping name="DescribeStackResources" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourcesType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
     <value name="LogicalResourceId" field="logicalResourceId" usage="optional"/>
     <value name="PhysicalResourceId" field="physicalResourceId" usage="optional"/>
     <value name="StackName" field="stackName" usage="optional"/>
   </mapping>
-  <mapping name="DescribeStackResourcesResponse" class="com.eucalyptus.cloudformation.DescribeStackResourcesResponseType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <structure name="DescribeStackResourcesResult" field="describeStackResourcesResult" usage="required" type="com.eucalyptus.cloudformation.DescribeStackResourcesResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.ResponseMetadata"/>
+  <mapping name="DescribeStackResourcesResponse" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourcesResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="DescribeStackResourcesResult" field="describeStackResourcesResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourcesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="DescribeStacks" class="com.eucalyptus.cloudformation.DescribeStacksType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
+  <mapping name="DescribeStacks" class="com.eucalyptus.cloudformation.common.msgs.DescribeStacksType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
     <value name="NextToken" field="nextToken" usage="optional"/>
     <value name="StackName" field="stackName" usage="optional"/>
   </mapping>
-  <mapping name="DescribeStacksResponse" class="com.eucalyptus.cloudformation.DescribeStacksResponseType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <structure name="DescribeStacksResult" field="describeStacksResult" usage="required" type="com.eucalyptus.cloudformation.DescribeStacksResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.ResponseMetadata"/>
+  <mapping name="DescribeStacksResponse" class="com.eucalyptus.cloudformation.common.msgs.DescribeStacksResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="DescribeStacksResult" field="describeStacksResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DescribeStacksResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="EstimateTemplateCost" class="com.eucalyptus.cloudformation.EstimateTemplateCostType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <structure name="Parameters" field="parameters" usage="optional" type="com.eucalyptus.cloudformation.Parameters"/>
+  <mapping name="EstimateTemplateCost" class="com.eucalyptus.cloudformation.common.msgs.EstimateTemplateCostType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="Parameters" field="parameters" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Parameters"/>
     <value name="TemplateBody" field="templateBody" usage="optional"/>
     <value name="TemplateURL" field="templateURL" usage="optional"/>
   </mapping>
-  <mapping name="EstimateTemplateCostResponse" class="com.eucalyptus.cloudformation.EstimateTemplateCostResponseType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <structure name="EstimateTemplateCostResult" field="estimateTemplateCostResult" usage="required" type="com.eucalyptus.cloudformation.EstimateTemplateCostResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.ResponseMetadata"/>
+  <mapping name="EstimateTemplateCostResponse" class="com.eucalyptus.cloudformation.common.msgs.EstimateTemplateCostResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="EstimateTemplateCostResult" field="estimateTemplateCostResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.EstimateTemplateCostResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="GetStackPolicy" class="com.eucalyptus.cloudformation.GetStackPolicyType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
+  <mapping name="GetStackPolicy" class="com.eucalyptus.cloudformation.common.msgs.GetStackPolicyType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
     <value name="StackName" field="stackName" usage="required"/>
   </mapping>
-  <mapping name="GetStackPolicyResponse" class="com.eucalyptus.cloudformation.GetStackPolicyResponseType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <structure name="GetStackPolicyResult" field="getStackPolicyResult" usage="required" type="com.eucalyptus.cloudformation.GetStackPolicyResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.ResponseMetadata"/>
+  <mapping name="GetStackPolicyResponse" class="com.eucalyptus.cloudformation.common.msgs.GetStackPolicyResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="GetStackPolicyResult" field="getStackPolicyResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.GetStackPolicyResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="GetTemplate" class="com.eucalyptus.cloudformation.GetTemplateType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
+  <mapping name="GetTemplate" class="com.eucalyptus.cloudformation.common.msgs.GetTemplateType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
     <value name="StackName" field="stackName" usage="required"/>
   </mapping>
-  <mapping name="GetTemplateResponse" class="com.eucalyptus.cloudformation.GetTemplateResponseType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <structure name="GetTemplateResult" field="getTemplateResult" usage="required" type="com.eucalyptus.cloudformation.GetTemplateResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.ResponseMetadata"/>
+  <mapping name="GetTemplateResponse" class="com.eucalyptus.cloudformation.common.msgs.GetTemplateResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="GetTemplateResult" field="getTemplateResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.GetTemplateResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="GetTemplateSummary" class="com.eucalyptus.cloudformation.GetTemplateSummaryType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
+  <mapping name="GetTemplateSummary" class="com.eucalyptus.cloudformation.common.msgs.GetTemplateSummaryType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
     <value name="StackName" field="stackName" usage="optional"/>
     <value name="TemplateBody" field="templateBody" usage="optional"/>
     <value name="TemplateURL" field="templateURL" usage="optional"/>
   </mapping>
-  <mapping name="GetTemplateSummaryResponse" class="com.eucalyptus.cloudformation.GetTemplateSummaryResponseType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <structure name="GetTemplateSummaryResult" field="getTemplateSummaryResult" usage="required" type="com.eucalyptus.cloudformation.GetTemplateSummaryResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.ResponseMetadata"/>
+  <mapping name="GetTemplateSummaryResponse" class="com.eucalyptus.cloudformation.common.msgs.GetTemplateSummaryResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="GetTemplateSummaryResult" field="getTemplateSummaryResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.GetTemplateSummaryResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="ListStackResources" class="com.eucalyptus.cloudformation.ListStackResourcesType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
+  <mapping name="ListStackResources" class="com.eucalyptus.cloudformation.common.msgs.ListStackResourcesType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
     <value name="NextToken" field="nextToken" usage="optional"/>
     <value name="StackName" field="stackName" usage="required"/>
   </mapping>
-  <mapping name="ListStackResourcesResponse" class="com.eucalyptus.cloudformation.ListStackResourcesResponseType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <structure name="ListStackResourcesResult" field="listStackResourcesResult" usage="required" type="com.eucalyptus.cloudformation.ListStackResourcesResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.ResponseMetadata"/>
+  <mapping name="ListStackResourcesResponse" class="com.eucalyptus.cloudformation.common.msgs.ListStackResourcesResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="ListStackResourcesResult" field="listStackResourcesResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ListStackResourcesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="ListStacks" class="com.eucalyptus.cloudformation.ListStacksType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
+  <mapping name="ListStacks" class="com.eucalyptus.cloudformation.common.msgs.ListStacksType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
     <value name="NextToken" field="nextToken" usage="optional"/>
-    <structure name="StackStatusFilter" field="stackStatusFilter" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
+    <structure name="StackStatusFilter" field="stackStatusFilter" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
   </mapping>
-  <mapping name="ListStacksResponse" class="com.eucalyptus.cloudformation.ListStacksResponseType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <structure name="ListStacksResult" field="listStacksResult" usage="required" type="com.eucalyptus.cloudformation.ListStacksResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.ResponseMetadata"/>
+  <mapping name="ListStacksResponse" class="com.eucalyptus.cloudformation.common.msgs.ListStacksResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="ListStacksResult" field="listStacksResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ListStacksResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="SetStackPolicy" class="com.eucalyptus.cloudformation.SetStackPolicyType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
+  <mapping name="SetStackPolicy" class="com.eucalyptus.cloudformation.common.msgs.SetStackPolicyType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
     <value name="StackName" field="stackName" usage="required"/>
     <value name="StackPolicyBody" field="stackPolicyBody" usage="optional"/>
     <value name="StackPolicyURL" field="stackPolicyURL" usage="optional"/>
   </mapping>
-  <mapping name="SetStackPolicyResponse" class="com.eucalyptus.cloudformation.SetStackPolicyResponseType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.ResponseMetadata"/>
+  <mapping name="SetStackPolicyResponse" class="com.eucalyptus.cloudformation.common.msgs.SetStackPolicyResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="SignalResource" class="com.eucalyptus.cloudformation.SignalResourceType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
+  <mapping name="SignalResource" class="com.eucalyptus.cloudformation.common.msgs.SignalResourceType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
     <value name="LogicalResourceId" field="logicalResourceId" usage="required"/>
     <value name="StackName" field="stackName" usage="required"/>
     <value name="Status" field="status" usage="required"/>
     <value name="UniqueId" field="uniqueId" usage="required"/>
   </mapping>
-  <mapping name="SignalResourceResponse" class="com.eucalyptus.cloudformation.SignalResourceResponseType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <structure name="SignalResourceResult" field="signalResourceResult" usage="required" type="com.eucalyptus.cloudformation.SignalResourceResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.ResponseMetadata"/>
+  <mapping name="SignalResourceResponse" class="com.eucalyptus.cloudformation.common.msgs.SignalResourceResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="SignalResourceResult" field="signalResourceResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.SignalResourceResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="UpdateStack" class="com.eucalyptus.cloudformation.UpdateStackType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <structure name="Capabilities" field="capabilities" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
-    <structure name="NotificationARNs" field="notificationARNs" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
-    <structure name="Parameters" field="parameters" usage="optional" type="com.eucalyptus.cloudformation.Parameters"/>
-    <structure name="ResourceTypes" field="resourceTypes" usage="optional" type="com.eucalyptus.cloudformation.ResourceList"/>
+  <mapping name="UpdateStack" class="com.eucalyptus.cloudformation.common.msgs.UpdateStackType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="Capabilities" field="capabilities" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
+    <structure name="NotificationARNs" field="notificationARNs" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
+    <structure name="Parameters" field="parameters" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Parameters"/>
+    <structure name="ResourceTypes" field="resourceTypes" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
     <value name="StackName" field="stackName" usage="required"/>
     <value name="StackPolicyBody" field="stackPolicyBody" usage="optional"/>
     <value name="StackPolicyDuringUpdateBody" field="stackPolicyDuringUpdateBody" usage="optional"/>
     <value name="StackPolicyDuringUpdateURL" field="stackPolicyDuringUpdateURL" usage="optional"/>
     <value name="StackPolicyURL" field="stackPolicyURL" usage="optional"/>
-    <structure name="Tags" field="tags" usage="optional" type="com.eucalyptus.cloudformation.Tags"/>
+    <structure name="Tags" field="tags" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Tags"/>
     <value name="TemplateBody" field="templateBody" usage="optional"/>
     <value name="TemplateURL" field="templateURL" usage="optional"/>
     <value name="UsePreviousTemplate" field="usePreviousTemplate" usage="optional"/>
   </mapping>
-  <mapping name="UpdateStackResponse" class="com.eucalyptus.cloudformation.UpdateStackResponseType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <structure name="UpdateStackResult" field="updateStackResult" usage="required" type="com.eucalyptus.cloudformation.UpdateStackResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.ResponseMetadata"/>
+  <mapping name="UpdateStackResponse" class="com.eucalyptus.cloudformation.common.msgs.UpdateStackResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="UpdateStackResult" field="updateStackResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.UpdateStackResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="ValidateTemplate" class="com.eucalyptus.cloudformation.ValidateTemplateType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
+  <mapping name="ValidateTemplate" class="com.eucalyptus.cloudformation.common.msgs.ValidateTemplateType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
     <value name="TemplateBody" field="templateBody" usage="optional"/>
     <value name="TemplateURL" field="templateURL" usage="optional"/>
   </mapping>
-  <mapping name="ValidateTemplateResponse" class="com.eucalyptus.cloudformation.ValidateTemplateResponseType" extends="com.eucalyptus.cloudformation.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.CloudFormationMessage"/>
-    <structure name="ValidateTemplateResult" field="validateTemplateResult" usage="required" type="com.eucalyptus.cloudformation.ValidateTemplateResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.ResponseMetadata"/>
+  <mapping name="ValidateTemplateResponse" class="com.eucalyptus.cloudformation.common.msgs.ValidateTemplateResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="ValidateTemplateResult" field="validateTemplateResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ValidateTemplateResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
 </binding>
-  
+

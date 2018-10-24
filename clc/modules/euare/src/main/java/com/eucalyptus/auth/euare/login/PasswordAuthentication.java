@@ -39,7 +39,7 @@ import com.eucalyptus.auth.euare.principal.EuareUser;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.crypto.Crypto;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 
 /**
@@ -110,7 +110,7 @@ public class PasswordAuthentication {
   }
 
   private static void checkPasswordExpiration( final User user ) throws CredentialExpiredException {
-    if ( Objects.firstNonNull( user.getPasswordExpires(), Long.MAX_VALUE )
+    if ( MoreObjects.firstNonNull( user.getPasswordExpires(), Long.MAX_VALUE )
         < System.currentTimeMillis() ) {
       throw new CredentialExpiredException();
     }

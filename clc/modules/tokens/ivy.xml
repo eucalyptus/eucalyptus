@@ -1,9 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <ivy-module version="2.0">
     <info organisation="com.eucalyptus" module="eucalyptus-tokens"/>
     <dependencies>
         <dependency name="eucalyptus-euare" rev="latest.integration"/>
         <dependency name="eucalyptus-tokens-common" rev="latest.integration"/>
-        <dependency name="eucalyptus-ws" rev="latest.integration"/>
+        <dependency name="eucalyptus-core" rev="latest.integration"/>
     </dependencies>
 </ivy-module>
 

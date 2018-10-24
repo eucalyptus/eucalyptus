@@ -38,7 +38,6 @@ import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
-import javax.persistence.Lob;
 import javax.persistence.OrderColumn;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
@@ -47,7 +46,7 @@ import org.hibernate.annotations.Type;
 
 import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.auth.principal.OwnerFullName;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -82,8 +81,7 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
   private List<String> securityGroups = Lists.newArrayList();
 
   @Column( name = "metadata_user_data" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")  
+  @Type(type="text")
   private String userData;
 
   @Column( name = "metadata_instance_type", nullable = false )
@@ -345,7 +343,7 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
       configuration.setKeyName( keyName );
       configuration.setUserData( userData );
       configuration.setAssociatePublicIpAddress( associatePublicIpAddress );
-      configuration.setInstanceMonitoring( Objects.firstNonNull( instanceMonitoring, Boolean.TRUE ) );
+      configuration.setInstanceMonitoring( MoreObjects.firstNonNull( instanceMonitoring, Boolean.TRUE ) );
       configuration.setIamInstanceProfile( iamInstanceProfile );
       configuration.setSecurityGroups( Lists.newArrayList( securityGroups ) );
       configuration.setBlockDeviceMappings( Lists.newArrayList( blockDeviceMappings ) );

@@ -40,6 +40,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 
 import javax.annotation.Nonnull;
@@ -71,7 +72,6 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.objectstorage.auth.RequestAuthorizationHandler;
-import com.eucalyptus.objectstorage.bittorrent.Tracker;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.BucketTags;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
@@ -84,6 +84,7 @@ import com.eucalyptus.objectstorage.exceptions.MetadataOperationFailureException
 import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
+import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedOnCreateException;
 import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
 import com.eucalyptus.objectstorage.exceptions.s3.BucketAlreadyExistsException;
 import com.eucalyptus.objectstorage.exceptions.s3.BucketNotEmptyException;
@@ -246,6 +247,7 @@ import com.eucalyptus.storage.msgs.s3.TaggingConfiguration;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.storage.msgs.s3.Upload;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -253,7 +255,7 @@ import com.google.common.net.HttpHeaders;
 
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.SystemUtil;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 /**
  * Operation handler for the ObjectStorageGateway. Main point of entry This class handles user and system requests.
@@ -292,9 +294,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
       } catch (S3Exception ex) {
         LOG.error("Error initializing Object Storage Gateway", ex);
         SystemUtil.shutdownWithError(ex.getMessage());
-      } 
+      }
     } else {
-      String errMsg = "In initializing ospClient, expected a valid reference " 
+      String errMsg = "In initializing ospClient, expected a valid reference "
           + "to Object Storage Provider Client, but found none (null)";
       LOG.error(errMsg);
       throw new EucalyptusCloudException(errMsg);
@@ -310,7 +312,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     } catch (S3Exception ex) {
       LOG.error("Error starting storage backend",ex);
     }
-    
+
     // The ospClient should be configured by now.
     if (ospClient == null) {
       String errMsg = "Error starting storage backend, ospClient is still null at the end of configure().";
@@ -368,7 +370,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
     synchronized (ObjectStorageGateway.class) {
       ospClient = null;
     }
-    Tracker.die();
 
     try {
       ObjectMetadataManagers.getInstance().stop();
@@ -394,7 +395,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see com.eucalyptus.objectstorage.ObjectStorageService#UpdateObjectStorageConfiguration(com.eucalyptus.objectstorage.msgs.
    * UpdateObjectStorageConfigurationType)
    */
@@ -421,7 +422,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * com.eucalyptus.objectstorage.ObjectStorageService#GetObjectStorageConfiguration(com.eucalyptus.objectstorage.msgs.GetObjectStorageConfigurationType
    * )
@@ -481,7 +482,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       ObjectEntity objectEntity = ObjectEntity.newInitializedForCreate(bucket, request.getKey(), objectSize, requestUser, request.getCopiedHeaders());
 
       if (!authorizationHandler.operationAllowed(request, bucket, objectEntity, objectSize)) {
-        throw new AccessDeniedException(request.getBucket());
+        throw new AccessDeniedOnCreateException(request.getBucket());
       }
 
       // Auth checks passed, check if 100-continue needs to be sent
@@ -532,7 +533,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
   /**
    * Gets the user for the request. Uses one in the request if found, if not, uses the Context. If the context is a System context, the system admin
    * (eucalyptus/admin) is returned.
-   * 
+   *
    * @param request
    * @return
    * @throws AccountProblemException
@@ -556,7 +557,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /**
    * A terse request logging function to log request entry at INFO level.
-   * 
+   *
    * @param request
    */
   protected static <I extends ObjectStorageRequestType> void logRequest(I request) {
@@ -602,7 +603,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see com.eucalyptus.objectstorage.ObjectStorageService#HeadBucket(com.eucalyptus.objectstorage.msgs.HeadBucketType)
    */
   @Override
@@ -612,7 +613,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
     HeadBucketResponseType reply = request.getReply();
     reply.setBucket(bucket.getBucketName());
     reply.setStatus(HttpResponseStatus.OK);
-    reply.setStatusMessage("OK");
     reply.setTimestamp(new Date());
     setCorsInfo(request, reply, bucket);
     return reply;
@@ -620,7 +620,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /**
    * Create a full ACP object from a user and an ACL object. Expands canned-acls and adds owner information
-   * 
+   *
    * @param acl
    * @param requestUser
    * @return
@@ -640,7 +640,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see com.eucalyptus.objectstorage.ObjectStorageService#CreateBucket(com.eucalyptus.objectstorage.msgs.CreateBucketType)
    */
   @Override
@@ -676,7 +676,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
           reply.setStatus(HttpResponseStatus.OK);
           reply.setBucket(bucket.getBucketName());
           reply.setTimestamp(new Date());
-          reply.setStatusMessage("OK");
           LOG.trace("CorrelationId: " + request.getCorrelationId() + " Responding with " + reply.getStatus().toString());
           return reply;
         } catch (BucketAlreadyExistsException e) {
@@ -688,9 +687,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
              * SetBucketAccessControlPolicyType(); aclRequest.setUser(request.getUser()); aclRequest.setAccessControlPolicy(acPolicy);
              * aclRequest.setBucket(request.getBucket()); try { SetBucketAccessControlPolicyResponseType response =
              * setRESTBucketAccessControlPolicy(aclRequest); } catch(S3Exception s3ex) {
-             * 
+             *
              * } catch(Exception aclEx) {
-             * 
+             *
              * } } else { //All the same, do nothing. }
              */
 
@@ -698,7 +697,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
             CreateBucketResponseType reply = request.getReply();
             reply.setStatus(HttpResponseStatus.OK);
             reply.setBucket(bucket.getBucketName());
-            reply.setStatusMessage("OK");
             LOG.trace("CorrelationId: " + request.getCorrelationId() + " Responding with " + reply.getStatus().toString());
             return reply;
           } else {
@@ -709,7 +707,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       } else {
         LOG.error("CorrelationId: " + request.getCorrelationId() + " Create bucket " + request.getBucket()
             + " access is denied based on ACL and/or IAM policy");
-        throw new AccessDeniedException(request.getBucket());
+        throw new AccessDeniedOnCreateException(request.getBucket());
       }
     } catch (AccessDeniedException e) {
       LOG.debug("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with AccessDeniedException");
@@ -725,7 +723,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see com.eucalyptus.objectstorage.ObjectStorageService#DeleteBucket(com.eucalyptus.objectstorage.msgs.DeleteBucketType)
    */
   @Override
@@ -751,7 +749,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
     // Return success even if no deletion was needed. This is per s3-spec.
     DeleteBucketResponseType reply = request.getReply();
     reply.setStatus(HttpResponseStatus.NO_CONTENT);
-    reply.setStatusMessage("NoContent");
     LOG.trace("CorrelationId: " + request.getCorrelationId() + " Responding with " + reply.getStatus().toString());
     return reply;
   }
@@ -767,7 +764,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see com.eucalyptus.objectstorage.ObjectStorageService#ListAllMyBuckets(com.eucalyptus.objectstorage.msgs.ListAllMyBucketsType)
    */
   @Override
@@ -781,7 +778,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
      * ListAllMyBuckets uses a weird authentication check for IAM because it is technically a bucket operation(there are no service operations) , but
      * the request is not against a specific bucket and the account admin cannot limit listallbuckets output on a per-bucket basis. The only valid
      * resource to grant s3:ListAllMyBuckets to is '*'.
-     * 
+     *
      * This sets up a fake bucket so that the ACL checks and basic ownership checks can be passed, leaving just the IAM permission check.
      */
     Bucket fakeBucket = new Bucket();
@@ -812,7 +809,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * com.eucalyptus.objectstorage.ObjectStorageService#GetBucketAccessControlPolicy(com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyType
    * )
@@ -848,7 +845,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see com.eucalyptus.objectstorage.ObjectStorageService#PostObject(com.eucalyptus.objectstorage.msgs.PostObjectType)
    */
   @Override
@@ -877,10 +874,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     PostObjectResponseType reply = request.getReply();
     reply.setEtag(etag);
     reply.setLastModified(putObjectResponse.getLastModified());
-    reply.set_return(putObjectResponse.get_return());
     reply.setMetaData(putObjectResponse.getMetaData());
-    reply.setErrorCode(putObjectResponse.getErrorCode());
-    reply.setStatusMessage(putObjectResponse.getStatusMessage());
 
     String successActionRedirect = request.getSuccessActionRedirect();
     if (successActionRedirect != null) {
@@ -915,7 +909,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see com.eucalyptus.objectstorage.ObjectStorageService#DeleteObject(com.eucalyptus.objectstorage.msgs.DeleteObjectType)
    */
   @Override
@@ -929,7 +923,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
       // Nothing to do, object doesn't exist. Return 204 per S3 spec
       DeleteObjectResponseType reply = request.getReply();
       reply.setStatus(HttpResponseStatus.NO_CONTENT);
-      reply.setStatusMessage("No Content");
       bucket = ensureBucketExists(request.getBucket());
       if ( bucket != null) {
         setCorsInfo(request, reply, bucket);
@@ -958,7 +951,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
       DeleteObjectResponseType reply = request.getReply();
       reply.setStatus(HttpResponseStatus.NO_CONTENT);
-      reply.setStatusMessage("No Content");
       if (responseEntity != null) {
         reply.setVersionId(responseEntity.getVersionId());
         if (responseEntity.getIsDeleteMarker() != null && responseEntity.getIsDeleteMarker())
@@ -983,7 +975,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see com.eucalyptus.objectstorage.ObjectStorageService#ListBucket(com.eucalyptus.objectstorage.msgs.ListBucketType)
    */
   @Override
@@ -992,6 +984,13 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
     // Get the listing from the back-end and copy results in.
     // return ospClient.listBucket(request);
+    final boolean v2 = "2".equals(request.getListType());
+    final String afterKey = v2 ?
+        request.getContinuationToken() != null ?
+            B64.standard.decString(request.getContinuationToken()) :
+            request.getStartAfter() :
+        request.getMarker();
+    final boolean includeOwner = !v2 || "true".equals(request.getFetchOwner());
     ListBucketResponseType reply = request.getReply();
     int maxKeys = 1000;
     try {
@@ -1005,23 +1004,30 @@ public class ObjectStorageGateway implements ObjectStorageService {
     reply.setMaxKeys(maxKeys);
     reply.setName(request.getBucket());
     reply.setDelimiter(request.getDelimiter());
-    reply.setMarker(request.getMarker());
+    if (v2) {
+      reply.setContinuationToken(request.getContinuationToken());
+      reply.setStartAfter(request.getStartAfter());
+    } else {
+      reply.setMarker(request.getMarker());
+    }
     reply.setPrefix(request.getPrefix());
     reply.setIsTruncated(false);
 
     PaginatedResult<ObjectEntity> result;
     try {
-      result = ObjectMetadataManagers.getInstance().listPaginated(bucket, maxKeys, request.getPrefix(), request.getDelimiter(), request.getMarker());
+      result = ObjectMetadataManagers.getInstance().listPaginated(bucket, maxKeys, request.getPrefix(), request.getDelimiter(), afterKey);
     } catch (Exception e) {
       LOG.error("Error getting object listing for bucket: " + request.getBucket(), e);
       throw new InternalErrorException(request.getBucket());
     }
 
     if (result != null) {
+      int keyCount = 0;
       reply.setContents( new ArrayList<>( ));
 
       for (ObjectEntity obj : result.getEntityList()) {
-        reply.getContents().add(obj.toListEntry());
+        reply.getContents().add(obj.toListEntry(includeOwner));
+        keyCount++;
       }
 
       if (result.getCommonPrefixes() != null && result.getCommonPrefixes().size() > 0) {
@@ -1029,16 +1035,26 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
         for (String s : result.getCommonPrefixes()) {
           reply.getCommonPrefixesList().add(new CommonPrefixesEntry(s));
+          keyCount++;
         }
       }
       reply.setIsTruncated(result.isTruncated);
       if (result.isTruncated) {
+        String next;
         if (result.getLastEntry() instanceof ObjectEntity) {
-          reply.setNextMarker(((ObjectEntity) result.getLastEntry()).getObjectKey());
+          next = ((ObjectEntity) result.getLastEntry()).getObjectKey();
         } else {
           // If max-keys = 0, then last entry may be empty
-          reply.setNextMarker((result.getLastEntry() != null ? result.getLastEntry().toString() : ""));
+          next = (result.getLastEntry() != null ? result.getLastEntry().toString() : "");
         }
+        if (v2) {
+          reply.setNextContinuationToken(B64.standard.encString(next));
+        } else {
+          reply.setNextMarker(next);
+        }
+      }
+      if (v2) {
+        reply.setKeyCount(keyCount);
       }
     } else {
       // Do nothing
@@ -1050,7 +1066,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * com.eucalyptus.objectstorage.ObjectStorageService#GetObjectAccessControlPolicy(com.eucalyptus.objectstorage.msgs.GetObjectAccessControlPolicyType
    * )
@@ -1073,7 +1089,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * com.eucalyptus.objectstorage.ObjectStorageService#SetRESTBucketAccessControlPolicy(com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyType
    * )
@@ -1146,7 +1162,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * com.eucalyptus.objectstorage.ObjectStorageService#SetRESTObjectAccessControlPolicy(com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyType
    * )
@@ -1208,22 +1224,24 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see com.eucalyptus.objectstorage.ObjectStorageService#GetObject(com.eucalyptus.objectstorage.msgs.GetObjectType)
    */
   @Override
   public GetObjectResponseType getObject(final GetObjectType request) throws S3Exception {
-    ObjectEntity objectEntity = getObjectEntityAndCheckPermissions(request, request.getVersionId());
-    // Handle 100-continue here.
+    final ObjectEntity objectEntity = getObjectEntityAndCheckPermissions(request, request.getVersionId());
     if (objectEntity.getIsDeleteMarker()) {
       throw new NoSuchKeyException(request.getKey());
+    }
+    if ( MoreObjects.firstNonNull( request.getGetTorrent( ), false ) ) {
+      throw new AccessDeniedException( request.getBucket( ) + "/" + request.getKey( ) );
     }
 
     request.setKey(objectEntity.getObjectUuid());
     request.setBucket(objectEntity.getBucket().getBucketUuid());
-    GetObjectResponseType reply;
     // Versioning not used on backend
     request.setVersionId(null);
+    final GetObjectResponseType reply;
     try {
       reply = ospClient.getObject(request);
     } catch (Exception e) {
@@ -1237,7 +1255,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     reply.setVersionId(objectEntity.getVersionId());
     reply.setHasStreamingData(true);
 
-    if (request.getInlineData()) {
+    if ( MoreObjects.firstNonNull( request.getInlineData( ), false ) ) {
       // Write the data into a string and include in response. Only use for small internal operations.
       // Cannot be invoked by S3 clients (inline flag is not part of s3 binding)
       if (reply.getSize() * 4 > ObjectStorageProperties.MAX_INLINE_DATA_SIZE) {
@@ -1280,7 +1298,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see com.eucalyptus.objectstorage.ObjectStorageService#GetObjectExtended(com.eucalyptus.objectstorage.msgs.GetObjectExtendedType)
    */
   @Override
@@ -1472,7 +1490,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see com.eucalyptus.objectstorage.ObjectStorageService#GetObject(com.eucalyptus.objectstorage.msgs.GetObjectType)
    */
   @Override
@@ -1508,7 +1526,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see com.eucalyptus.objectstorage.ObjectStorageService#GetBucketLocation(com.eucalyptus.objectstorage.msgs.GetBucketLocationType)
    */
   @Override
@@ -1524,7 +1542,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see com.eucalyptus.objectstorage.ObjectStorageService#CopyObject(com.eucalyptus.objectstorage.msgs.CopyObjectType)
    */
   @Override
@@ -1650,7 +1668,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         destObject.setSize(srcObject.getSize());
         destObject.setStorageClass(srcObject.getStorageClass());
         destObject.seteTag(srcObject.geteTag());
-        destObject.setIsLatest(Boolean.TRUE);
+        destObject.markLatest();
 
         // Prep the request to be sent to the backend
         request.setSourceObject(srcObject.getObjectUuid());
@@ -1690,7 +1708,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         return reply;
 
       } else {
-        throw new AccessDeniedException(destinationBucket + "/" + destinationKey);
+        throw new AccessDeniedOnCreateException(destinationBucket + "/" + destinationKey);
       }
     } else {
       throw new AccessDeniedException(sourceBucket + "/" + sourceKey);
@@ -1699,7 +1717,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see com.eucalyptus.objectstorage.ObjectStorageService#GetBucketLoggingStatus(com.eucalyptus.objectstorage.msgs.GetBucketLoggingStatusType)
    */
   @Override
@@ -1733,7 +1751,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see com.eucalyptus.objectstorage.ObjectStorageService#SetBucketLoggingStatus(com.eucalyptus.objectstorage.msgs.SetBucketLoggingStatusType)
    */
   @Override
@@ -1746,7 +1764,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see com.eucalyptus.objectstorage.ObjectStorageService#GetBucketVersioningStatus(com.eucalyptus.objectstorage.msgs.GetBucketVersioningStatusType)
    */
   @Override
@@ -1763,7 +1781,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see com.eucalyptus.objectstorage.ObjectStorageService#SetBucketVersioningStatus(com.eucalyptus.objectstorage.msgs.SetBucketVersioningStatusType)
    */
   @Override
@@ -1787,7 +1805,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see com.eucalyptus.objectstorage.ObjectStorageService#ListVersions(com.eucalyptus.objectstorage.msgs.ListVersionsType)
    */
   @Override
@@ -1851,7 +1869,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see com.eucalyptus.objectstorage.ObjectStorageService#DeleteVersion(com.eucalyptus.objectstorage.msgs.DeleteVersionType)
    */
   @Override
@@ -1909,7 +1927,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     try {
       LifecycleConfiguration lifecycle = new LifecycleConfiguration();
       List<LifecycleRule> responseRules = BucketLifecycleManagers.getInstance().getLifecycleRules(bucket.getBucketUuid());
-      lifecycle.setRules(responseRules);
+      lifecycle.setRules(Lists.newArrayList(responseRules));
       reply.setLifecycleConfiguration(lifecycle);
     } catch (Exception e) {
       throw new InternalErrorException(request.getBucket());
@@ -2035,7 +2053,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       }
 
       TaggingConfiguration tagging = new TaggingConfiguration();
-      List<BucketTag> bucketTagList = new ArrayList<>( );
+      ArrayList<BucketTag> bucketTagList = new ArrayList<>( );
       for (BucketTags bucketTags : bucketTagsLookup) {
         BucketTag bucketTag = new BucketTag();
         bucketTag.setKey(bucketTags.getKey());
@@ -2084,15 +2102,15 @@ public class ObjectStorageGateway implements ObjectStorageService {
   public GetBucketCorsResponseType getBucketCors(GetBucketCorsType request) throws S3Exception {
     GetBucketCorsResponseType response;
     Bucket bucket;
-    
+
     if (request == null) {
       throw new InternalErrorException(null, "Null request passed to getBucketCors()");
     }
     try {
       bucket = getBucketAndCheckAuthorization(request);
     } catch (S3Exception s3e) {
-      LOG.warn("Caught S3Exception while getting the bucket <" + 
-          request.getBucket() + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() + 
+      LOG.warn("Caught S3Exception while getting the bucket <" +
+          request.getBucket() + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() +
           ", responding to client with: ", s3e);
       throw s3e;
     }
@@ -2106,11 +2124,11 @@ public class ObjectStorageGateway implements ObjectStorageService {
     CorsConfiguration corsConfiguration = new CorsConfiguration();
     List<CorsRule> responseRules = BucketCorsManagers.getInstance().getCorsRules(bucket.getBucketUuid());
     if (responseRules != null && !responseRules.isEmpty()) {
-      corsConfiguration.setRules(responseRules);
+      corsConfiguration.setRules(Lists.newArrayList(responseRules));
       response.setCorsConfiguration(corsConfiguration);
     } else {
       NoSuchCorsConfigurationException nscc = new NoSuchCorsConfigurationException(bucket.getBucketName());
-      throw nscc;       
+      throw nscc;
     }
     return response;
   }
@@ -2119,32 +2137,32 @@ public class ObjectStorageGateway implements ObjectStorageService {
       throws S3Exception {
     setCorsInfo(request, response, bucket.getBucketName(), bucket.getBucketUuid());
   }
-   
-  private void setCorsInfo(ObjectStorageRequestType request, ObjectStorageCommonResponseType response, String bucketName, String bucketUuid) 
+
+  private void setCorsInfo(ObjectStorageRequestType request, ObjectStorageCommonResponseType response, String bucketName, String bucketUuid)
       throws S3Exception {
     // NOTE: The request.getBucket() might be the bucket name, or might be the UUID, or might not be populated,
     // depending on how it's been set by the caller. So, we pass in the bucket name separately.
-    // We need the bucket name for user-facing error messages, and we need the UUID to look up 
+    // We need the bucket name for user-facing error messages, and we need the UUID to look up
     // bucket entities in the DB.
-    
+
     if (request == null) {
       throw new InternalErrorException(bucketName, "setCorsInfo called with a null request, bucket " + bucketName);
     }
-    
+
     if (response == null) {
       throw new InternalErrorException(bucketName, "setCorsInfo called with a null response, bucket " + bucketName);
     }
-    
+
     // If it stays null, tells addCorsResponseHeaders not to add any headers
     response.setAllowedOrigin(null);
-    
+
     if (bucketUuid == null || bucketUuid.isEmpty()) {
       LOG.trace("No bucket UUID, so no CORS headers");
       return;
     } else {
       response.setBucketUuid(bucketUuid);
     }
-    
+
     String origin = request.getOrigin();
     if (origin == null || origin.isEmpty()) {
       LOG.trace("No origin header, so no CORS headers");
@@ -2152,7 +2170,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     } else {
       response.setOrigin(origin);
     }
-    
+
     String httpMethod = request.getHttpMethod();
     if (httpMethod == null || httpMethod.isEmpty()) {
       LOG.trace("No method header, so no CORS headers");
@@ -2160,7 +2178,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
     } else {
       response.setHttpMethod(httpMethod);
     }
-    
+
     // We don't care if the bucket name is null
     response.setBucketName(bucketName);
 
@@ -2168,8 +2186,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
     try {
       corsRules = BucketCorsManagers.getInstance().getCorsRules(bucketUuid);
     } catch (Exception ex) {
-      LOG.warn("Caught general exception while getting the CORS configuration for bucket <" + 
-          bucketName + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() + 
+      LOG.warn("Caught general exception while getting the CORS configuration for bucket <" +
+          bucketName + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() +
           ", responding to client with 500 InternalError because of: ", ex);
       throw new InternalErrorException("Bucket " + bucketName, ex);
     }
@@ -2212,7 +2230,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         response.setMaxAgeSeconds(null);
       }
 
-      // Set the "allow credentials" header to true only if the matching 
+      // Set the "allow credentials" header to true only if the matching
       // CORS rule is NOT "any origin", otherwise don't set the header.
       if (!corsMatchResult.getAnyOrigin()) {
         response.setAllowCredentials("true");
@@ -2222,12 +2240,12 @@ public class ObjectStorageGateway implements ObjectStorageService {
       }
 
       // Set the Vary header only if we have any other CORS headers.
-      // Check the allowed origin, because if we have any CORS headers, 
-      // we will have that one. 
-      // Match AWS behavior: Always contains these 3 header names. 
+      // Check the allowed origin, because if we have any CORS headers,
+      // we will have that one.
+      // Match AWS behavior: Always contains these 3 header names.
       // It tells the user agent: If you cache this request+response, only
-      // give the cached response to a future request if all these headers 
-      // match the ones in the cached request. Otherwise, send the request 
+      // give the cached response to a future request if all these headers
+      // match the ones in the cached request. Otherwise, send the request
       // to the server, don't use the cached response.
       if (response.getAllowedOrigin() != null) {
         response.setVary(HttpHeaders.ORIGIN + ", " +
@@ -2245,15 +2263,15 @@ public class ObjectStorageGateway implements ObjectStorageService {
   public SetBucketCorsResponseType setBucketCors(SetBucketCorsType request) throws S3Exception {
     SetBucketCorsResponseType response;
     Bucket bucket;
-    
+
     if (request == null) {
       throw new InternalErrorException(null, "Null request passed to setBucketCors()");
     }
     try {
       bucket = getBucketAndCheckAuthorization(request);
     } catch (S3Exception s3e) {
-      LOG.warn("Caught S3Exception while getting the bucket <" + 
-          request.getBucket() + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() + 
+      LOG.warn("Caught S3Exception while getting the bucket <" +
+          request.getBucket() + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() +
           ", responding to client with: ", s3e);
       throw s3e;
     }
@@ -2272,12 +2290,12 @@ public class ObjectStorageGateway implements ObjectStorageService {
     if (corsRules == null || corsRules.isEmpty()) {
       throw new MalformedXMLException(null, "No CORS rules found in CORS configuration in request");
     }
-    
+
     // Per AWS docs, max 100 CORS config rules.
     // TODO: Validate by testing against AWS, gets checked prior to CORS config checking?
     final int MAX_CORS_RULES = 100;
     if (corsRules.size() > MAX_CORS_RULES) {
-      throw new MalformedXMLException(bucket.getBucketName(), corsRules.size() + 
+      throw new MalformedXMLException(bucket.getBucketName(), corsRules.size() +
           "CORS rules are more than the allowed " + MAX_CORS_RULES + " rules in a CORS configuration");
     }
 
@@ -2331,8 +2349,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
     try {
       bucket = getBucketAndCheckAuthorization(request);
     } catch (S3Exception s3e) {
-      LOG.warn("Caught S3Exception while getting the bucket <" + 
-          request.getBucket() + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() + 
+      LOG.warn("Caught S3Exception while getting the bucket <" +
+          request.getBucket() + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() +
           ", responding to client with: ", s3e);
       throw s3e;
     }
@@ -2359,8 +2377,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
     PreflightCheckCorsResponseType response;
 
     try {
-      // For a preflight request, we don't need to authenticate the client's 
-      // access to the bucket nor object in the request. We send back the 
+      // For a preflight request, we don't need to authenticate the client's
+      // access to the bucket nor object in the request. We send back the
       // response headers regardless. This matches AWS behavior.
       // We're not exposing any data from the bucket, just whether or
       // not the client's proposed CORS request would be allowed or not,
@@ -2369,7 +2387,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       // So, normally added to a method like this but not here:
       // (left here commented out as an explainer)
       // Bucket bucket = getBucketAndCheckAuthorization(request);
-      
+
       bucketName = request.getBucket();
       Bucket bucket = ensureBucketExists(bucketName);
       String key = request.getKey();
@@ -2397,49 +2415,49 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
       List<String> requestHeaders = preflightRequest.getRequestHeaders();
       CorsMatchResult corsMatchResult = OSGUtil.matchCorsRules (corsRules, requestOrigin, requestMethod, requestHeaders);
-      
+
       CorsRule corsRuleMatch = corsMatchResult.getCorsRuleMatch();
       if (corsRuleMatch == null) {
         // No rule matched the request
         throw new CorsPreflightNotAllowedException(requestMethod,
             key == null ? "BUCKET" : "OBJECT");
       }
-      
+
       // We found a match, fill in the response fields
       PreflightResponse responseFields = new PreflightResponse();
       response.setPreflightResponse(responseFields);
-      
+
       // If the origin we matched against is "*" (any origin allowed), then
-      // set the response's origin to "*" instead of the origin in the 
+      // set the response's origin to "*" instead of the origin in the
       // request. Matches AWS behavior and W3 spec: (strange but true)
       // https://www.w3.org/TR/cors/#resource-preflight-requests
       responseFields.setOrigin(corsMatchResult.getAnyOrigin() ? "*" : requestOrigin);
 
       // Return all the CORS rule's allowed methods in the response
       responseFields.setMethods(corsRuleMatch.getAllowedMethods());
-      
+
       // Return all of the request's Access-Control-Request-Headers ni the response
       responseFields.setAllowedHeaders(preflightRequest.getRequestHeaders());
 
       // Return all of the CORS rule's expose headers in the response
       responseFields.setExposeHeaders(corsRuleMatch.getExposeHeaders());
-      
+
       responseFields.setMaxAgeSeconds(corsRuleMatch.getMaxAgeSeconds());
 
       response.setStatus(HttpResponseStatus.OK);
 
     } catch (S3Exception s3e) {
-      LOG.warn("Caught S3Exception while processing the preflight CORS request for bucket <" + 
-          bucketName + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() + 
+      LOG.warn("Caught S3Exception while processing the preflight CORS request for bucket <" +
+          bucketName + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() +
           ", responding to client with: ", s3e);
       throw s3e;
     } catch (Exception ex) {
-      LOG.warn("Caught general exception while processing the preflight CORS request for bucket <" + 
-          bucketName + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() + 
+      LOG.warn("Caught general exception while processing the preflight CORS request for bucket <" +
+          bucketName + ">, CorrelationId: " + Contexts.lookup().getCorrelationId() +
           ", responding to client with 500 InternalError because of: ", ex);
       throw new InternalErrorException(bucketName, ex);
     }
-    
+
     return response;
   }
 
@@ -2665,7 +2683,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
         UploadPartResponseType response = request.getReply();
         response.setLastModified(updatedEntity.getObjectModifiedTimestamp());
         response.setEtag(updatedEntity.geteTag());
-        response.setStatusMessage("OK");
         response.setSize(updatedEntity.getSize());
         setCorsInfo(request, response, bucket);
         return response;
@@ -2675,7 +2692,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         throw new InternalErrorException(partEntity.getResourceFullName(), e);
       }
     } else {
-      throw new AccessDeniedException(request.getBucket());
+      throw new AccessDeniedOnCreateException(request.getBucket());
     }
   }
 

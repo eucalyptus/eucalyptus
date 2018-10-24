@@ -29,14 +29,11 @@
 
 package com.eucalyptus.cloudformation.workflow.steps;
 
-import com.amazonaws.services.simpleworkflow.flow.core.Promise;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
-import com.eucalyptus.cloudformation.workflow.StackActivityClient;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.netflix.glisten.WorkflowOperations;
 
 import javax.annotation.Nullable;
 import java.util.EnumMap;
@@ -158,34 +155,19 @@ public abstract class StepBasedResourceAction extends ResourceAction {
       }
     });
   }
+
   @Override
-  public Promise<String> getCreatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int createdResourceVersion) {
-    List<String> stepIds = Lists.newArrayList(createSteps.keySet());
-    return new CreateMultiStepPromise(workflowOperations, stepIds, this).getCreatePromise(resourceId, stackId, accountId, effectiveUserId, createdResourceVersion);
+  public List<String> getCreateStepIds( ) {
+    return Lists.newArrayList(createSteps.keySet());
   }
 
   @Override
-  public Promise<String> getDeletePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
-    List<String> stepIds = Lists.newArrayList(deleteSteps.keySet());
-    return new DeleteMultiStepPromise(workflowOperations, stepIds, this).getDeletePromise(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
+  public List<String> getDeleteStepIds( ) {
+    return Lists.newArrayList(deleteSteps.keySet());
   }
 
   @Override
-  public Promise<String> getUpdateCleanupPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
-    List<String> stepIds = Lists.newArrayList(deleteSteps.keySet());
-    return new CleanupMultiStepPromise(workflowOperations, stepIds, this).getCleanupPromise(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
+  public List<String> getUpdateStepIds( final UpdateTypeAndDirection updateTypeAndDirection ) {
+    return Lists.newArrayList(updateStepEnumMap.get(updateTypeAndDirection).keySet());
   }
-
-  @Override
-  public Promise<String> getUpdateRollbackCleanupPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int rolledBackResourceVersion) {
-    List<String> stepIds = Lists.newArrayList(deleteSteps.keySet());
-    return new CleanupMultiStepPromise(workflowOperations, stepIds, this).getCleanupPromise(resourceId, stackId, accountId, effectiveUserId, rolledBackResourceVersion);
-  }
-
-  @Override
-  public Promise<String> getUpdatePromise(UpdateTypeAndDirection updateTypeAndDirection, WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
-    List<String> stepIds = Lists.newArrayList(updateStepEnumMap.get(updateTypeAndDirection).keySet());
-    return new UpdateMultiStepPromise(workflowOperations, stepIds, this, updateTypeAndDirection).getUpdatePromise(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
-  }
-
 }

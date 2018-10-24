@@ -28,6 +28,7 @@
  ************************************************************************/
 package com.eucalyptus.cluster.service.fake;
 
+import java.time.Clock;
 import java.util.concurrent.ConcurrentMap;
 import com.eucalyptus.cluster.service.NodeService;
 import com.eucalyptus.cluster.service.node.ClusterNode;
@@ -41,18 +42,20 @@ public class FakeClusterNodeServiceFactory implements ClusterNodeServiceFactory 
 
   private final ConcurrentMap<String,NodeService> nodeServiceMap = Maps.newConcurrentMap( );
   private final boolean allowReload;
+  private final Clock clock;
 
   public FakeClusterNodeServiceFactory( ) {
-    this( true );
+    this( Clock.systemDefaultZone( ), true );
   }
 
-  public FakeClusterNodeServiceFactory( final boolean allowReload ) {
+  public FakeClusterNodeServiceFactory( final Clock clock, final boolean allowReload ) {
+    this.clock = clock;
     this.allowReload = allowReload;
   }
 
 
   @Override
   public NodeService nodeService( final ClusterNode node, final int port ) {
-    return nodeServiceMap.computeIfAbsent( node.getNode( ), __ -> new FakeNodeService( node, allowReload ) );
+    return nodeServiceMap.computeIfAbsent( node.getNode( ), __ -> new FakeNodeService( node, clock, allowReload ) );
   }
 }

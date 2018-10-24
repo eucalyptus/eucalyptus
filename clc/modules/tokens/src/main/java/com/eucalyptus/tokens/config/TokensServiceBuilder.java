@@ -28,7 +28,6 @@
  ************************************************************************/
 package com.eucalyptus.tokens.config;
 
-import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
@@ -38,12 +37,6 @@ import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.Tokens;
 
 @ComponentPart( Tokens.class )
-@Handles( {
-    RegisterTokensType.class,
-    DeregisterTokensType.class,
-    DescribeTokensType.class,
-    ModifyTokensAttributeType.class
-} )
 public class TokensServiceBuilder extends AbstractServiceBuilder<TokensConfiguration> {
 
   @Override

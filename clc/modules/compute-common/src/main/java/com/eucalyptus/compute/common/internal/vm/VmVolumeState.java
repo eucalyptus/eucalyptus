@@ -44,11 +44,8 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 import javax.persistence.CascadeType;
-import javax.persistence.CollectionTable;
-import javax.persistence.ElementCollection;
 import javax.persistence.Embeddable;
 import javax.persistence.OneToMany;
-import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Parent;
@@ -63,7 +60,7 @@ import com.google.common.collect.Sets;
 
 @Embeddable
 public class VmVolumeState {
-  @Transient
+
   private static Logger                 LOG         = Logger.getLogger( VmVolumeState.class );
   @Parent
   private VmInstance                    vmInstance;

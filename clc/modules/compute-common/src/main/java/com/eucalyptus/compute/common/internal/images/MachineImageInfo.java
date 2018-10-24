@@ -41,11 +41,9 @@ package com.eucalyptus.compute.common.internal.images;
 
 import java.util.List;
 
-import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
-import javax.persistence.EntityTransaction;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.PersistenceContext;
@@ -129,16 +127,6 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
   }
   
   @Override
-  public boolean hasKernel( ) {
-    return this.getKernelId( ) != null;
-  }
-  
-  @Override
-  public boolean hasRamdisk( ) {
-    return this.getRamdiskId( ) != null;
-  }
-  
-  @Override
   public String getManifestLocation( ) {
     return super.getManifestLocation( );
   }
@@ -183,41 +171,6 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
  
   public void setRunManifestLocation( final String runManifestLocation) {
     this.runManifestLocation = runManifestLocation;
-  }
-  
-  @EntityUpgrade( entities = { MachineImageInfo.class }, since = Version.v3_4_0, value = Eucalyptus.class )
-  public enum MachineImageInfo340Upgrade implements Predicate<Class> {
-	  INSTANCE;
-	  private static Logger LOG = Logger.getLogger( MachineImageInfo.MachineImageInfo340Upgrade.class );
-
-	  @Override
-	  public boolean apply(@Nullable Class arg0) {
-		  // TODO Auto-generated method stub
-		  EntityTransaction db = Entities.get( MachineImageInfo.class );
-		  try {
-			  List<MachineImageInfo> images = Entities.query( new MachineImageInfo( ) );
-			  for ( MachineImageInfo image : images ) {
-				  LOG.info("Upgrading MachineImageInfo: " + image.toString());
-				  // all machine images prior 3.4.0 are paravirtualized type
-				  if(image.virtType==null){
-					  if(ImageMetadata.Platform.windows.equals(image.getPlatform()))
-						  image.virtType = ImageMetadata.VirtualizationType.hvm;
-					  else
-						  image.virtType = ImageMetadata.VirtualizationType.paravirtualized;
-					  Entities.persist(image);
-				  }
-			  }
-			  db.commit( );
-			  return true;
-		  } catch ( Exception ex ) {
-			  LOG.error("Error upgrading MachineImageInfo: ", ex);
-			  db.rollback();
-			  throw Exceptions.toUndeclared( ex );
-		  } finally{
-			  if(db.isActive())
-				  db.rollback();
-		  }
-	  } 
   }
   
   @EntityUpgrade( entities = { MachineImageInfo.class }, since = Version.v4_0_0, value = Eucalyptus.class )

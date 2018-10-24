@@ -56,6 +56,7 @@
 
 #define INTIP_ENI_MAP_FILE     EUCALYPTUS_RUN_DIR "/eucanetd_intip_eni_map"
 #define INTIP_ENI_MAP_FILE_TMP INTIP_ENI_MAP_FILE ".tmp"
+#define MIDO_NAME_LEN          64
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

@@ -81,6 +81,12 @@ class AutoScalingBindingTest extends QueryBindingTestSupport {
   }
 
   @Test
+  void testInternalRoundTrip() {
+    URL resource = AutoScalingBindingTest.class.getResource( '/autoscaling-binding.xml' )
+    assertValidInternalRoundTrip( resource )
+  }
+
+  @Test
   void testMessageQueryBindings() {
     URL resource = AutoScalingBindingTest.class.getResource( '/autoscaling-binding.xml' )
 

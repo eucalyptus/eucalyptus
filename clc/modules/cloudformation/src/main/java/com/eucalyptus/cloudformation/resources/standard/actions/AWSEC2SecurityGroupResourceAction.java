@@ -53,6 +53,8 @@ import com.eucalyptus.compute.common.AuthorizeSecurityGroupEgressResponseType;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupEgressType;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressResponseType;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressType;
+import com.eucalyptus.compute.common.CidrIpType;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.CreateSecurityGroupResponseType;
 import com.eucalyptus.compute.common.CreateSecurityGroupType;
@@ -66,7 +68,6 @@ import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
 import com.eucalyptus.compute.common.DescribeTagsResponseType;
 import com.eucalyptus.compute.common.DescribeTagsType;
-import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.IpPermissionType;
 import com.eucalyptus.compute.common.RevokeSecurityGroupEgressResponseType;
 import com.eucalyptus.compute.common.RevokeSecurityGroupEgressType;
@@ -83,9 +84,7 @@ import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import org.apache.log4j.Logger;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -99,7 +98,6 @@ public class AWSEC2SecurityGroupResourceAction extends StepBasedResourceAction {
   @ConfigurableField(initial = "300", description = "The amount of time (in seconds) to retry security group deletes (may fail if instances from autoscaling group)")
   public static volatile Integer SECURITY_GROUP_MAX_DELETE_RETRY_SECS = 300;
 
-  private static final Logger LOG = Logger.getLogger(AWSEC2SecurityGroupResourceAction.class);
   private AWSEC2SecurityGroupProperties properties = new AWSEC2SecurityGroupProperties();
   private AWSEC2SecurityGroupResourceInfo info = new AWSEC2SecurityGroupResourceInfo();
 
@@ -164,7 +162,7 @@ public class AWSEC2SecurityGroupResourceAction extends StepBasedResourceAction {
         }
         String groupName = action.getDefaultPhysicalResourceId();
         createSecurityGroupType.setGroupName(groupName);
-        CreateSecurityGroupResponseType createSecurityGroupResponseType = AsyncRequests.<CreateSecurityGroupType,CreateSecurityGroupResponseType> sendSync(configuration, createSecurityGroupType);
+        CreateSecurityGroupResponseType createSecurityGroupResponseType = AsyncRequests.sendSync(configuration, createSecurityGroupType);
         String groupId = createSecurityGroupResponseType.getGroupId();
         if (!Strings.isNullOrEmpty(action.properties.getVpcId())) {
           action.info.setPhysicalResourceId(groupId);
@@ -215,7 +213,7 @@ public class AWSEC2SecurityGroupResourceAction extends StepBasedResourceAction {
             authorizeSecurityGroupIngressType.setGroupId(JsonHelper.getJsonNodeFromString(action.info.getGroupId()).asText());
             IpPermissionType ipPermissionType = getIpPermissionTypeForIngress(action, ec2SecurityGroupRule);
             authorizeSecurityGroupIngressType.setIpPermissions(Lists.newArrayList(ipPermissionType));
-            AuthorizeSecurityGroupIngressResponseType authorizeSecurityGroupIngressResponseType = AsyncRequests.<AuthorizeSecurityGroupIngressType, AuthorizeSecurityGroupIngressResponseType> sendSync(configuration, authorizeSecurityGroupIngressType);
+            AsyncRequests.sendSync(configuration, authorizeSecurityGroupIngressType);
           }
         }
         return action;
@@ -231,7 +229,7 @@ public class AWSEC2SecurityGroupResourceAction extends StepBasedResourceAction {
           RevokeSecurityGroupEgressType revokeSecurityGroupEgressType = MessageHelper.createMessage(RevokeSecurityGroupEgressType.class, action.info.getEffectiveUserId());
           revokeSecurityGroupEgressType.setGroupId(JsonHelper.getJsonNodeFromString(action.info.getGroupId()).asText());
           revokeSecurityGroupEgressType.setIpPermissions(Lists.newArrayList(DEFAULT_EGRESS_RULE()));
-          RevokeSecurityGroupEgressResponseType revokeSecurityGroupEgressResponseType = AsyncRequests.<RevokeSecurityGroupEgressType, RevokeSecurityGroupEgressResponseType> sendSync(configuration, revokeSecurityGroupEgressType);
+          AsyncRequests.sendSync(configuration, revokeSecurityGroupEgressType);
 
           for (EC2SecurityGroupRule ec2SecurityGroupRule : action.properties.getSecurityGroupEgress()) {
             AuthorizeSecurityGroupEgressType authorizeSecurityGroupEgressType = MessageHelper.createMessage(AuthorizeSecurityGroupEgressType.class, action.info.getEffectiveUserId());
@@ -240,17 +238,11 @@ public class AWSEC2SecurityGroupResourceAction extends StepBasedResourceAction {
 
 
             authorizeSecurityGroupEgressType.setIpPermissions(Lists.newArrayList(ipPermissionType));
-            AuthorizeSecurityGroupEgressResponseType authorizeSecurityGroupEgressResponseType = AsyncRequests.<AuthorizeSecurityGroupEgressType, AuthorizeSecurityGroupEgressResponseType> sendSync(configuration, authorizeSecurityGroupEgressType);
+            AsyncRequests.sendSync(configuration, authorizeSecurityGroupEgressType);
           }
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -265,10 +257,10 @@ public class AWSEC2SecurityGroupResourceAction extends StepBasedResourceAction {
       ec2SecurityGroupRule.getToPort()
     );
     if (!Strings.isNullOrEmpty(ec2SecurityGroupRule.getCidrIp())) {
-      ipPermissionType.setCidrIpRanges(Lists.newArrayList(ec2SecurityGroupRule.getCidrIp()));
+      ipPermissionType.setIpRanges(Lists.newArrayList(new CidrIpType(ec2SecurityGroupRule.getCidrIp(), ec2SecurityGroupRule.getDescription())));
     }
     if (!Strings.isNullOrEmpty(ec2SecurityGroupRule.getDestinationSecurityGroupId())) {
-      ipPermissionType.setGroups(Lists.newArrayList(new UserIdGroupPairType(null, null, ec2SecurityGroupRule.getDestinationSecurityGroupId())));
+      ipPermissionType.setGroups(Lists.newArrayList(new UserIdGroupPairType(null, null, ec2SecurityGroupRule.getDestinationSecurityGroupId(), ec2SecurityGroupRule.getDescription())));
     }
     return ipPermissionType;
   }
@@ -292,11 +284,11 @@ public class AWSEC2SecurityGroupResourceAction extends StepBasedResourceAction {
       ec2SecurityGroupRule.getToPort()
     );
     if (!Strings.isNullOrEmpty(ec2SecurityGroupRule.getCidrIp())) {
-      ipPermissionType.setCidrIpRanges(Lists.newArrayList(ec2SecurityGroupRule.getCidrIp()));
+      ipPermissionType.setIpRanges(Lists.newArrayList(new CidrIpType(ec2SecurityGroupRule.getCidrIp(), ec2SecurityGroupRule.getDescription())));
     }
     if (!Strings.isNullOrEmpty(ec2SecurityGroupRule.getSourceSecurityGroupId())) {
       // Generally no need for SourceSecurityGroupOwnerId if SourceSecurityGroupId is set, but pass it along if set
-      ipPermissionType.setGroups(Lists.newArrayList(new UserIdGroupPairType(ec2SecurityGroupRule.getSourceSecurityGroupOwnerId(), null, ec2SecurityGroupRule.getSourceSecurityGroupId())));
+      ipPermissionType.setGroups(Lists.newArrayList(new UserIdGroupPairType(ec2SecurityGroupRule.getSourceSecurityGroupOwnerId(), null, ec2SecurityGroupRule.getSourceSecurityGroupId(), ec2SecurityGroupRule.getDescription())));
     }
     if (!Strings.isNullOrEmpty(ec2SecurityGroupRule.getSourceSecurityGroupName())) {
       // I think SourceSecurityGroupOwnerId is needed here.  If not provided, use the local account id
@@ -304,7 +296,7 @@ public class AWSEC2SecurityGroupResourceAction extends StepBasedResourceAction {
       if (Strings.isNullOrEmpty(sourceSecurityGroupOwnerId)) {
         sourceSecurityGroupOwnerId = action.getStackEntity().getAccountId();
       }
-      ipPermissionType.setGroups(Lists.newArrayList(new UserIdGroupPairType(sourceSecurityGroupOwnerId, ec2SecurityGroupRule.getSourceSecurityGroupName(), null)));
+      ipPermissionType.setGroups(Lists.newArrayList(new UserIdGroupPairType(sourceSecurityGroupOwnerId, ec2SecurityGroupRule.getSourceSecurityGroupName(), null, ec2SecurityGroupRule.getDescription())));
     }
     return ipPermissionType;
   }
@@ -320,7 +312,7 @@ public class AWSEC2SecurityGroupResourceAction extends StepBasedResourceAction {
         // See if group exists now
         String groupId = JsonHelper.getJsonNodeFromString(action.info.getGroupId()).asText();
         DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, action.info.getEffectiveUserId());
-        describeSecurityGroupsType.setFilterSet( Lists.newArrayList( Filter.filter( "group-id", groupId ) ) );
+        describeSecurityGroupsType.setFilterSet( Lists.newArrayList( CloudFilters.filter( "group-id", groupId ) ) );
         DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.sendSync(configuration, describeSecurityGroupsType);
         ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
         if (securityGroupItemTypeArrayList == null || securityGroupItemTypeArrayList.isEmpty()) {
@@ -355,13 +347,13 @@ public class AWSEC2SecurityGroupResourceAction extends StepBasedResourceAction {
         // first get ingress and egress rules...
         String groupId = JsonHelper.getJsonNodeFromString(newAction.info.getGroupId()).asText();
         DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, newAction.info.getEffectiveUserId());
-        describeSecurityGroupsType.setFilterSet( Lists.newArrayList( Filter.filter( "group-id", groupId ) ) );
+        describeSecurityGroupsType.setFilterSet( Lists.newArrayList( CloudFilters.filter( "group-id", groupId ) ) );
         DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.sendSync(configuration, describeSecurityGroupsType);
 
         Set<IpPermissionTypeWithEquals> existingIngressPermissionTypes = Sets.newLinkedHashSet();
         Set<IpPermissionTypeWithEquals> existingEgressPermissionTypes = Sets.newLinkedHashSet();
 
-        if (describeSecurityGroupsResponseType != null && describeSecurityGroupsResponseType.getSecurityGroupInfo() != null && 
+        if (describeSecurityGroupsResponseType != null && describeSecurityGroupsResponseType.getSecurityGroupInfo() != null &&
           !describeSecurityGroupsResponseType.getSecurityGroupInfo().isEmpty()) {
           if (describeSecurityGroupsResponseType.getSecurityGroupInfo().get(0).getIpPermissions() != null) {
             existingIngressPermissionTypes.addAll(IpPermissionTypeWithEquals.getNonNullCollection(describeSecurityGroupsResponseType.getSecurityGroupInfo().get(0).getIpPermissions()));
@@ -405,7 +397,7 @@ public class AWSEC2SecurityGroupResourceAction extends StepBasedResourceAction {
           }
         }
 
-        // add all new rules that are not in the existing set 
+        // add all new rules that are not in the existing set
         for (IpPermissionTypeWithEquals ipPermissionTypeWithEquals : Sets.difference(newIngressPermissionTypes, existingIngressPermissionTypes)) {
           AuthorizeSecurityGroupIngressType authorizeSecurityGroupIngressType = MessageHelper.createMessage(AuthorizeSecurityGroupIngressType.class, newAction.info.getEffectiveUserId());
           authorizeSecurityGroupIngressType.setGroupId(groupId);
@@ -444,7 +436,7 @@ public class AWSEC2SecurityGroupResourceAction extends StepBasedResourceAction {
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         String groupId = JsonHelper.getJsonNodeFromString(newAction.info.getGroupId()).asText();
         DescribeTagsType describeTagsType = MessageHelper.createMessage(DescribeTagsType.class, newAction.info.getEffectiveUserId());
-        describeTagsType.setFilterSet(Lists.newArrayList(Filter.filter("resource-id", groupId)));
+        describeTagsType.setFilterSet(Lists.newArrayList( CloudFilters.filter("resource-id", groupId)));
         DescribeTagsResponseType describeTagsResponseType = AsyncRequests.sendSync(configuration, describeTagsType);
         Set<EC2Tag> existingTags = Sets.newLinkedHashSet();
         if (describeTagsResponseType != null && describeTagsResponseType.getTagSet() != null) {
@@ -491,26 +483,17 @@ public class AWSEC2SecurityGroupResourceAction extends StepBasedResourceAction {
         }
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
-  
-  
+
+
   private static final IpPermissionType DEFAULT_EGRESS_RULE() {
     IpPermissionType ipPermissionType = new IpPermissionType();
     ipPermissionType.setIpProtocol("-1");
     ipPermissionType.setCidrIpRanges(Lists.newArrayList("0.0.0.0/0"));
     return ipPermissionType;
   }
-
-
-
 }
 
 

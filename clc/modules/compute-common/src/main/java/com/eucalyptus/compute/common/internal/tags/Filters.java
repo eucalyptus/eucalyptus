@@ -31,6 +31,7 @@ package com.eucalyptus.compute.common.internal.tags;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import com.eucalyptus.util.CompatFunction;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
@@ -138,6 +139,11 @@ public class Filters {
     return escaped;
   }
 
+  @Nonnull
+  public static CompatFunction<CharSequence,String> escape( ) {
+    return Filters::escape;
+  }
+
   public static class FiltersBuilder {
     private final Iterable<com.eucalyptus.compute.common.Filter> filters;
     private final Class<?> resourceType;
@@ -172,7 +178,7 @@ public class Filters {
     public Filter generate() throws InvalidFilterException {
       Filter filter;
 
-      final FilterSupport support = FilterSupport.forResource( resourceType, qualifier );
+      final FilterSupport<?> support = FilterSupport.forResource( resourceType, qualifier );
       if ( support == null ) {
         filter = Filter.alwaysTrue();
       } else {

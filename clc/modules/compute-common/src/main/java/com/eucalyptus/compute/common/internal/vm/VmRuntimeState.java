@@ -51,7 +51,6 @@ import javax.persistence.Embeddable;
 import javax.persistence.Embedded;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
-import javax.persistence.Lob;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
@@ -66,7 +65,7 @@ import com.eucalyptus.compute.common.internal.vm.VmInstance.Reason;
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Sets;
 
@@ -143,8 +142,7 @@ public class VmRuntimeState {
   @ElementCollection
   @CollectionTable( name = "metadata_instances_state_reasons" )
   private Set<String>         reasonDetails       = Sets.newHashSet( );
-  @Lob
-  @Type( type = "org.hibernate.type.StringClobType" )
+  @Type(type="text")
   @Column( name = "metadata_vm_password_data" )
   private String              passwordData;
   @Column( name = "metadata_vm_pending" )
@@ -193,7 +191,7 @@ public class VmRuntimeState {
   
   public void reachable( ) {
     // zombie instances cannot be reachable
-    if ( !Objects.firstNonNull( getZombie( ), Boolean.FALSE ) ) {
+    if ( !MoreObjects.firstNonNull( getZombie( ), Boolean.FALSE ) ) {
       setUnreachableTimestamp( null );
       setInstanceStatus( VmRuntimeState.InstanceStatus.Ok );
       setReachabilityStatus( VmRuntimeState.ReachabilityStatus.Passed );

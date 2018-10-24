@@ -37,6 +37,8 @@ public class PseudoParameterValues {
   String region;
   String stackName;
   String stackId;
+  String partition;
+  String urlSuffix;
 
   public String getAccountId() {
     return accountId;
@@ -78,4 +80,19 @@ public class PseudoParameterValues {
     this.stackId = stackId;
   }
 
+  public String getPartition() {
+    return partition;
+  }
+
+  public void setPartition(final String partition) {
+    this.partition = partition;
+  }
+
+  public String getUrlSuffix() {
+    return urlSuffix;
+  }
+
+  public void setUrlSuffix(final String urlSuffix) {
+    this.urlSuffix = urlSuffix;
+  }
 }

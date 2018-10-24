@@ -46,31 +46,31 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.euare.AddRoleToInstanceProfileType;
-import com.eucalyptus.auth.euare.CreateInstanceProfileResponseType;
-import com.eucalyptus.auth.euare.CreateInstanceProfileType;
-import com.eucalyptus.auth.euare.CreateRoleResponseType;
-import com.eucalyptus.auth.euare.CreateRoleType;
-import com.eucalyptus.auth.euare.DeleteInstanceProfileType;
-import com.eucalyptus.auth.euare.DeleteRolePolicyType;
-import com.eucalyptus.auth.euare.DeleteRoleType;
-import com.eucalyptus.auth.euare.EuareMessage;
-import com.eucalyptus.auth.euare.GetRolePolicyResponseType;
-import com.eucalyptus.auth.euare.GetRolePolicyResult;
-import com.eucalyptus.auth.euare.GetRolePolicyType;
-import com.eucalyptus.auth.euare.GetServerCertificateResponseType;
-import com.eucalyptus.auth.euare.GetServerCertificateType;
-import com.eucalyptus.auth.euare.InstanceProfileType;
-import com.eucalyptus.auth.euare.ListInstanceProfilesResponseType;
-import com.eucalyptus.auth.euare.ListInstanceProfilesType;
-import com.eucalyptus.auth.euare.ListRolePoliciesResponseType;
-import com.eucalyptus.auth.euare.ListRolePoliciesType;
-import com.eucalyptus.auth.euare.ListRolesResponseType;
-import com.eucalyptus.auth.euare.ListRolesType;
-import com.eucalyptus.auth.euare.PutRolePolicyType;
-import com.eucalyptus.auth.euare.RemoveRoleFromInstanceProfileType;
-import com.eucalyptus.auth.euare.RoleType;
-import com.eucalyptus.auth.euare.ServerCertificateType;
+import com.eucalyptus.auth.euare.common.msgs.AddRoleToInstanceProfileType;
+import com.eucalyptus.auth.euare.common.msgs.CreateInstanceProfileResponseType;
+import com.eucalyptus.auth.euare.common.msgs.CreateInstanceProfileType;
+import com.eucalyptus.auth.euare.common.msgs.CreateRoleResponseType;
+import com.eucalyptus.auth.euare.common.msgs.CreateRoleType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteInstanceProfileType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteRolePolicyType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteRoleType;
+import com.eucalyptus.auth.euare.common.msgs.EuareMessage;
+import com.eucalyptus.auth.euare.common.msgs.GetRolePolicyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.GetRolePolicyResult;
+import com.eucalyptus.auth.euare.common.msgs.GetRolePolicyType;
+import com.eucalyptus.auth.euare.common.msgs.GetServerCertificateResponseType;
+import com.eucalyptus.auth.euare.common.msgs.GetServerCertificateType;
+import com.eucalyptus.auth.euare.common.msgs.InstanceProfileType;
+import com.eucalyptus.auth.euare.common.msgs.ListInstanceProfilesResponseType;
+import com.eucalyptus.auth.euare.common.msgs.ListInstanceProfilesType;
+import com.eucalyptus.auth.euare.common.msgs.ListRolePoliciesResponseType;
+import com.eucalyptus.auth.euare.common.msgs.ListRolePoliciesType;
+import com.eucalyptus.auth.euare.common.msgs.ListRolesResponseType;
+import com.eucalyptus.auth.euare.common.msgs.ListRolesType;
+import com.eucalyptus.auth.euare.common.msgs.PutRolePolicyType;
+import com.eucalyptus.auth.euare.common.msgs.RemoveRoleFromInstanceProfileType;
+import com.eucalyptus.auth.euare.common.msgs.RoleType;
+import com.eucalyptus.auth.euare.common.msgs.ServerCertificateType;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.autoscaling.common.AutoScaling;
@@ -1134,7 +1134,7 @@ public class EucalyptusActivityTasks {
 		DescribeImagesType getRequest(){
 			final DescribeImagesType req = new DescribeImagesType();
 			if(this.imageIds!=null && this.imageIds.size()>0){
-				req.setFilterSet( Lists.newArrayList( Filter.filter( "image-id", this.imageIds ) ) );
+				req.setFilterSet( Lists.newArrayList( CloudFilters.filter( "image-id", this.imageIds ) ) );
 			}
 			return req;
 		}
@@ -1510,7 +1510,7 @@ public class EucalyptusActivityTasks {
 			req.setSubnetId(this.subnetId);
 			if(this.securityGroupIds!=null && ! this.securityGroupIds.isEmpty()) {
 				final SecurityGroupIdSetType groupIds = new SecurityGroupIdSetType();
-				groupIds.setItem(new ArrayList(
+				groupIds.setItem(new ArrayList<>(
 						this.securityGroupIds.stream()
 						.map(id -> {
 							final SecurityGroupIdSetItemType item =
@@ -1584,7 +1584,7 @@ public class EucalyptusActivityTasks {
 			req.setNetworkInterfaceId(this.networkInterfaceId);
 			if(this.securityGroupIds!=null) {
 				final SecurityGroupIdSetType groupIds = new SecurityGroupIdSetType();
-				groupIds.setItem(new ArrayList(
+				groupIds.setItem(new ArrayList<>(
 						this.securityGroupIds.stream()
 								.map(id -> {
 									final SecurityGroupIdSetItemType item =
@@ -1726,7 +1726,7 @@ public class EucalyptusActivityTasks {
 							return item;
 						}).collect(Collectors.toList());
 				req.setVpcSet( new VpcIdSetType() );
-				req.getVpcSet().setItem(new ArrayList(idItems));
+				req.getVpcSet().setItem(new ArrayList<>(idItems));
 			}
 			return req;
 		}
@@ -2436,7 +2436,7 @@ public class EucalyptusActivityTasks {
 		}
 		AuthorizeSecurityGroupIngressType getRequest(){
 			AuthorizeSecurityGroupIngressType req = new AuthorizeSecurityGroupIngressType( );
-			if ( this.groupNameOrId.matches( "sg-[0-9a-fA-F]{8}" ) ) {
+			if ( this.groupNameOrId.matches( "sg-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?" ) ) {
 				req.setGroupId( this.groupNameOrId );
 			} else {
 				req.setGroupName( this.groupNameOrId );
@@ -2661,7 +2661,7 @@ public class EucalyptusActivityTasks {
 	}
 
 	private static Filter filter( final String name, final Iterable<String> values ) {
-		return Filter.filter( name, values );
+		return CloudFilters.filter( name, values );
 	}
 
 	private abstract class EucalyptusActivityTask <TM extends BaseMessage, TC extends ComponentId>{

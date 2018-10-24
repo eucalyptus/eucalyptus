@@ -35,7 +35,6 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
-import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
@@ -53,35 +52,29 @@ public class StackResourceEntity extends AbstractPersistent {
   @Column(name = "logical_resource_id", nullable = false )
   String logicalResourceId;
   @Column(name = "metadata_json" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String metadataJson;
   @Column(name = "physical_resource_id" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String physicalResourceId;
   @Column(name = "resource_status", nullable = false )
   @Enumerated(EnumType.STRING)
   Status resourceStatus;
   @Column(name = "resource_status_reason" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String resourceStatusReason;
   @Column(name = "resource_type", nullable = false )
   String resourceType;
   @Column(name = "is_ready", nullable = false)
   Boolean ready = false;
   @Column(name = "properties_json" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String propertiesJson;
   @Column(name = "update_policy_json" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String updatePolicyJson;
   @Column(name = "creation_policy_json" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String creationPolicyJson;
   @Column(name = "deletionPolicy", nullable = false )
   String deletionPolicy = "Delete";
@@ -90,8 +83,7 @@ public class StackResourceEntity extends AbstractPersistent {
   @Column(name = "is_created_enough_to_delete", nullable = false)
   Boolean createdEnoughToDelete;
   @Column(name = "reference_value_json" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String referenceValueJson;
 
   public String getUpdateType() {
@@ -103,8 +95,7 @@ public class StackResourceEntity extends AbstractPersistent {
   }
 
   @Column(name = "resource_attributes_json" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String resourceAttributesJson;
 
   public Boolean getRecordDeleted() {

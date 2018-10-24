@@ -45,26 +45,26 @@
     <value name="localDev" field="device" usage="required" />
     <value name="state" field="status" usage="required" />
   </mapping>
-  <mapping name="AttachVolume" class="com.eucalyptus.cluster.common.msgs.ClusterAttachVolumeType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  <mapping name="AttachVolume" class="com.eucalyptus.cluster.common.msgs.ClusterAttachVolumeType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
     <value name="volumeId" field="volumeId" usage="required" />
     <value name="instanceId" field="instanceId" usage="required" />
     <value name="remoteDev" field="remoteDevice" usage="required" />
     <value name="localDev" field="device" usage="required" />
   </mapping>
-  <mapping name="AttachVolumeResponse" class="com.eucalyptus.cluster.common.msgs.ClusterAttachVolumeResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  <mapping name="AttachVolumeResponse" class="com.eucalyptus.cluster.common.msgs.ClusterAttachVolumeResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
   </mapping>
-  <mapping name="DetachVolume" class="com.eucalyptus.cluster.common.msgs.ClusterDetachVolumeType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  <mapping name="DetachVolume" class="com.eucalyptus.cluster.common.msgs.ClusterDetachVolumeType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
     <value name="instanceId" field="instanceId" usage="required" />
     <value name="volumeId" field="volumeId" usage="required" />
     <value name="remoteDev" field="remoteDevice" usage="required" />
     <value name="localDev" field="device" usage="required" />
     <value name="force" field="force" usage="required" />
   </mapping>
-  <mapping name="DetachVolumeResponse" class="com.eucalyptus.cluster.common.msgs.ClusterDetachVolumeResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  <mapping name="DetachVolumeResponse" class="com.eucalyptus.cluster.common.msgs.ClusterDetachVolumeResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+    <structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
   </mapping>
 
 </binding>

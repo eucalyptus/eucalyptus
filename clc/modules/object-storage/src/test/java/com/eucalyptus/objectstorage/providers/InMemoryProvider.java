@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 import java.util.UUID;
 
@@ -128,6 +129,7 @@ import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.storage.msgs.s3.Upload;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 
 /**
  * This is a fake provider for testing-purposes only. This is a stateful in-memory provider that will respond like a regular provider but with no
@@ -171,6 +173,11 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
       } else {
         return false;
       }
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash( key, versionId );
     }
 
     @Override
@@ -314,7 +321,6 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
     HeadBucketResponseType response = request.getReply();
     response.setBucket(request.getBucket());
     response.setStatus(HttpResponseStatus.OK);
-    response.setStatusMessage("OK");
     return response;
   }
 
@@ -361,7 +367,6 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
     }
 
     response.setStatus(HttpResponseStatus.OK);
-    response.setStatusMessage("OK");
     response.setBucket(request.getBucket());
     response.setTimestamp(new Date());
     return response;
@@ -380,7 +385,6 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
 
     DeleteBucketResponseType response = request.getReply();
     response.setStatus(HttpResponseStatus.NO_CONTENT);
-    response.setStatusMessage("NoContent");
 
     try {
       MemoryBucket b = getBucket(request.getBucket(), request.getEffectiveUserId());
@@ -538,9 +542,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
       response.setVersionId("null");
       response.setContentDisposition(request.getContentDisposition());
       response.setLastModified(new Date());
-      response.setStatusMessage("OK");
       response.set_return(true);
-      LOG.debug("InMemory return response: " + response.getStatusMessage());
       return response;
     } catch (Exception e) {
       LOG.debug("InMemory PutObject exception: ", e);
@@ -569,7 +571,6 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
       default:
     }
     DeleteObjectResponseType response = request.getReply();
-    response.setStatusMessage("NoContent");
     response.setStatus(HttpResponseStatus.NO_CONTENT);
 
     try {
@@ -615,8 +616,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
     response.setSize(obj.size);
     response.setVersionId(obj.versionId);
     response.setDataInputStream(new ByteArrayInputStream(obj.content));
-    response.setStatusMessage("OK");
-    response.setMetaData(obj.userMetadata);
+    response.setMetaData(obj.userMetadata==null?null: Lists.newArrayList(obj.userMetadata));
     return response;
   }
 
@@ -642,8 +642,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
     response.setLastModified(obj.modifiedDate);
     response.setSize(obj.size);
     response.setVersionId(obj.versionId);
-    response.setStatusMessage("OK");
-    response.setMetaData(obj.userMetadata);
+    response.setMetaData(obj.userMetadata==null?null:Lists.newArrayList(obj.userMetadata));
     return response;
   }
 
@@ -687,9 +686,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
       response.setEtag(destObject.eTag);
       response.setVersionId("null");
       response.setLastModified(new Date().toString());
-      response.setStatusMessage("OK");
       response.set_return(true);
-      LOG.debug("InMemory return response: " + response.getStatusMessage());
       return response;
     } catch (Exception e) {
       LOG.debug("InMemory PutObject exception: ", e);
@@ -738,11 +735,9 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
       bucket.uploads.put(memObj.uploadId, memObj);
       InitiateMultipartUploadResponseType response = request.getReply();
       response.setUploadId(memObj.uploadId);
-      response.setStatusMessage("OK");
       response.setBucket(request.getBucket());
       response.setKey(request.getKey());
       response.set_return(true);
-      LOG.debug("InMemory return response: " + response.getStatusMessage());
       return response;
     } catch (Exception e) {
       LOG.debug("InMemory PutObject exception: ", e);
@@ -800,9 +795,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
       response.setContentType(request.getContentType());
       response.setEtag(memObj.eTag);
       response.setLastModified(new Date());
-      response.setStatusMessage("OK");
       response.set_return(true);
-      LOG.debug("InMemory return response: " + response.getStatusMessage());
       return response;
     } catch (Exception e) {
       LOG.debug("InMemory UploadPart exception: ", e);
@@ -871,9 +864,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
       response.setKey(request.getKey());
       response.setBucket(request.getBucket());
       response.setVersionId(finishedObj.versionId);
-      response.setStatusMessage("OK");
       response.set_return(true);
-      LOG.debug("InMemory return response: " + response.getStatusMessage());
       return response;
     } catch (Exception e) {
       LOG.debug("InMemory abortMultipartUpload exception: ", e);
@@ -896,9 +887,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
       bucket.uploads.remove(request.getUploadId());
 
       AbortMultipartUploadResponseType response = request.getReply();
-      response.setStatusMessage("OK");
       response.set_return(true);
-      LOG.debug("InMemory return response: " + response.getStatusMessage());
       return response;
     } catch (Exception e) {
       LOG.debug("InMemory abortMultipartUpload exception: ", e);

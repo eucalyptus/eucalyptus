@@ -37,7 +37,7 @@ import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 /**
  * Reference to a VPC security group.
@@ -97,7 +97,7 @@ public class LoadBalancerSecurityGroupRef  implements Serializable {
 
   @Override
   public String toString() {
-    return Objects.toStringHelper( this )
+    return MoreObjects.toStringHelper( this )
         .add( "groupId", getGroupId( ) )
         .add( "groupName", getGroupName( ) )
         .toString();

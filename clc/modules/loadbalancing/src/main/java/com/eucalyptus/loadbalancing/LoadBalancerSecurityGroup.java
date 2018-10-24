@@ -66,7 +66,7 @@ import com.google.common.collect.ImmutableList;
 public class LoadBalancerSecurityGroup extends AbstractPersistent {
 
 	public enum STATE { InService, OutOfService }
-	@Transient
+
 	private static final long serialVersionUID = 1L;
 
 	private LoadBalancerSecurityGroup(){}

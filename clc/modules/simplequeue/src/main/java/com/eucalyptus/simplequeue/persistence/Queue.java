@@ -35,7 +35,7 @@ import com.eucalyptus.auth.principal.PolicyScope;
 import com.eucalyptus.auth.principal.PolicyVersion;
 import com.eucalyptus.auth.principal.PolicyVersions;
 import com.eucalyptus.simplequeue.Constants;
-import com.eucalyptus.simplequeue.SimpleQueueMetadata;
+import com.eucalyptus.simplequeue.common.SimpleQueueMetadata;
 import com.eucalyptus.simplequeue.exceptions.InternalFailureException;
 import com.eucalyptus.simplequeue.exceptions.SimpleQueueException;
 import com.fasterxml.jackson.databind.JsonNode;

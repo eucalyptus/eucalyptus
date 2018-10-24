@@ -45,21 +45,25 @@ import com.eucalyptus.blockstorage.ceph.exceptions.EucalyptusCephException;
  */
 public class CephRbdConnectionManager implements AutoCloseable {
 
-  private static Logger LOG = Logger.getLogger(CephRbdConnectionManager.class);
+  private static final Logger LOG = Logger.getLogger(CephRbdConnectionManager.class);
   private static final String KEYRING = "keyring";
+  private static final Object connectionSync = new Object();
 
+  private final Object shutdownSync = new Object();
   private Rados rados;
   private IoCTX ioContext;
   private Rbd rbd;
   private String pool;
 
-  private CephRbdConnectionManager(CephRbdInfo config, String poolName) {
+  private CephRbdConnectionManager(final CephRbdInfo config, final String poolName) {
     try {
       LOG.trace("Opening a new connection to Ceph cluster pool=" + poolName);
       rados = new Rados(config.getCephUser());
       rados.confSet(KEYRING, config.getCephKeyringFile());
       rados.confReadFile(new File(config.getCephConfigFile()));
-      rados.connect();
+      synchronized ( connectionSync ) {
+        rados.connect();
+      }
       pool = poolName;
       ioContext = rados.ioCtxCreate(pool);
       rbd = new Rbd(ioContext);
@@ -91,14 +95,24 @@ public class CephRbdConnectionManager implements AutoCloseable {
   public void disconnect() {
     try {
       LOG.trace("Closing connection to Ceph cluster pool=" + pool);
-      if (rados != null && ioContext != null) {
-        rados.ioCtxDestroy(ioContext);
-        // Calling shutdown causes the following initialization of rados to seg-fault and crash the jvm. commenting it out
-        // rados.shutDown();
-        rados = null;
-        ioContext = null;
+      synchronized ( shutdownSync ) {
+        final Rados shutdownRados = rados;
+        final IoCTX shutdownIoContext = ioContext;
         rbd = null;
         pool = null;
+        rados = null;
+        ioContext = null;
+        if ( shutdownRados != null ) {
+          try {
+            if ( shutdownIoContext != null ) {
+              shutdownRados.ioCtxDestroy( shutdownIoContext );
+            }
+          } finally {
+            synchronized ( connectionSync ) {
+              shutdownRados.shutDown();
+            }
+          }
+        }
       }
     } catch (Exception e) {
       LOG.debug("Caught error during teardown", e);
@@ -110,7 +124,7 @@ public class CephRbdConnectionManager implements AutoCloseable {
   }
 
   @Override
-  public void close() throws Exception {
+  public void close( ){
     disconnect();
   }
 }

@@ -32,6 +32,7 @@ package com.eucalyptus.loadbalancing;
 import static com.eucalyptus.loadbalancing.LoadBalancer.Scheme;
 import static com.eucalyptus.loadbalancing.common.LoadBalancingMetadata.LoadBalancerMetadata;
 import static com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
+import static com.eucalyptus.util.Strings.nonNull;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -52,7 +53,7 @@ import org.apache.log4j.Logger;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.TextParseException;
 
-import com.eucalyptus.auth.euare.ServerCertificateType;
+import com.eucalyptus.auth.euare.common.msgs.ServerCertificateType;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.entities.Entities;
@@ -127,7 +128,7 @@ public class LoadBalancers {
 			 throw Exceptions.toUndeclared(ex);
 		 }
 	}
-	
+
 	public static List<LoadBalancer> listLoadbalancers(final String accountNumber) {
 	  try ( final TransactionResource db = Entities.transactionFor( LoadBalancer.class ) ) {
       return Entities.query(LoadBalancer.ownedByAccount(accountNumber));
@@ -137,7 +138,7 @@ public class LoadBalancers {
       throw Exceptions.toUndeclared(ex);
     }
 	}
-	
+
 	// a loadbalancer is per-account resource; per-user access is governed by IAM policy
 	@Nonnull
 	public static LoadBalancer getLoadbalancer(final Context ctx, final String lbName){
@@ -168,7 +169,7 @@ public class LoadBalancers {
 		}
 		throw new NoSuchElementException();
 	}
-	
+
 	public static String getLoadBalancerDnsName( final LoadBalancerCoreView loadBalancer ) {
 		return getLoadBalancerDnsName(
 				loadBalancer.getScheme(),
@@ -245,7 +246,7 @@ public class LoadBalancers {
 					lb.getLoadbalancerDeploymentVersion()).isEqualOrLaterThan(version);
 		}
 	}
-	
+
 	public enum DeploymentVersion {
 		v4_1_0,
 		v4_2_0, // the version is checked from 4.2.0
@@ -298,17 +299,17 @@ public class LoadBalancers {
       final Scheme scheme,
       final Map<String,String> securityGroupIdsToNames,
       final Map<String,String> tags ) throws LoadBalancingException {
-    
+
     final List<LoadBalancer> accountLbs = LoadBalancers.listLoadbalancers(user.getAccountNumber());
     for(final LoadBalancer lb : accountLbs) {
       if (lbName.toLowerCase().equals(lb.getDisplayName().toLowerCase()))
         throw new DuplicateAccessPointName( );
     }
-    
+
     /// EC2 classic
     if (vpcId == null) {
       ///FIXME: not a sane reference
-      final String securityGroupName = 
+      final String securityGroupName =
           LoadBalancingActivitiesImpl.getSecurityGroupName(user.getAccountNumber(), lbName);
       try ( final TransactionResource db = Entities.transactionFor(LoadBalancerSecurityGroup.class)) {
         try{
@@ -359,7 +360,7 @@ public class LoadBalancers {
 			@Override
 			public boolean apply(@Nullable Void arg0) {
 				try{
-					final LoadBalancer toDelete =  Entities.uniqueResult( LoadBalancer.named(user, lbName));	
+					final LoadBalancer toDelete =  Entities.uniqueResult( LoadBalancer.named(user, lbName));
 					Entities.delete(toDelete);
 				}catch(final Exception ex){
 					return false;
@@ -369,13 +370,13 @@ public class LoadBalancers {
 		};
 		Entities.asTransaction(LoadBalancer.class, delete).apply(null);
 	}
-	
+
 	public static void validateListener(final List<Listener> listeners)
 				throws LoadBalancingException, EucalyptusCloudException{
 		validateListener(null, listeners);
 	}
-	
-	public static void validateListener(final LoadBalancer lb, final List<Listener> listeners) 
+
+	public static void validateListener(final LoadBalancer lb, final List<Listener> listeners)
 				throws LoadBalancingException, EucalyptusCloudException{
 		for(Listener listener : listeners){
 			if(!LoadBalancerListener.protocolSupported(listener))
@@ -392,8 +393,8 @@ public class LoadBalancers {
 			  if(sslId==null || sslId.length()<=0)
 			    throw new InvalidConfigurationRequestException("SSLCertificateId is required for HTTPS or SSL protocol");
 			}
-			
-    		// check the listener 
+
+    		// check the listener
 			if(lb!=null && lb.hasListener( listener.getLoadBalancerPort() )){
 				final LoadBalancerListenerCoreView existing = lb.findListener( listener.getLoadBalancerPort() );
 				if ( existing.getInstancePort() != listener.getInstancePort() ||
@@ -404,9 +405,9 @@ public class LoadBalancers {
 			}
 		}
 	}
-	
-	
-	public static void createLoadbalancerListener(final String lbName, final Context ctx , final List<Listener> listeners) 
+
+
+	public static void createLoadbalancerListener(final String lbName, final Context ctx , final List<Listener> listeners)
 			throws LoadBalancingException, EucalyptusCloudException {
 	    LoadBalancer lb;
     	try{
@@ -414,21 +415,21 @@ public class LoadBalancers {
     	}catch(Exception ex){
     		throw new InternalFailure400Exception("unable to find the loadbalancer");
 	    }
-    	
+
     	validateListener(lb, listeners);
-    	
+
 		final Predicate<LoadBalancer> creator = new Predicate<LoadBalancer>(){
 	        @Override
 	        public boolean apply( LoadBalancer lb ) {
 	        	for(Listener listener : listeners){
-	        		// check the listener 
-	    			try{	
+	        		// check the listener
+	    			try{
 	        			if(!lb.hasListener( listener.getLoadBalancerPort() )){
 	        				LoadBalancerListener.Builder builder = new LoadBalancerListener.Builder(lb, listener.getInstancePort(),
 											listener.getLoadBalancerPort(), LoadBalancerListener.PROTOCOL.valueOf(listener.getProtocol().toUpperCase()));
 	            			if(!Strings.isNullOrEmpty(listener.getInstanceProtocol()))
 	            				builder.instanceProtocol(PROTOCOL.valueOf(listener.getInstanceProtocol()));
-	            			
+
 	            			if(!Strings.isNullOrEmpty(listener.getSSLCertificateId()))
 	            				builder.withSSLCerntificate(listener.getSSLCertificateId());
 	            			Entities.persist(builder.build());
@@ -442,7 +443,7 @@ public class LoadBalancers {
 	    };
 	    Entities.asTransaction(LoadBalancerListener.class, creator).apply(lb);
 	}
-	
+
 	public static void addZone(
 		final String lbName,
 		final Context ctx,
@@ -478,7 +479,7 @@ public class LoadBalancers {
 			throw new InternalFailure400Exception("Failed to persist the zone");
 		}
 	}
-	
+
 	public static void removeZone(final String lbName, final Context ctx, final Collection<String> zones) throws LoadBalancingException{
 	 	LoadBalancer lb;
     	try{
@@ -498,7 +499,7 @@ public class LoadBalancers {
 			}
 		}
 	}
-	
+
 	public static LoadBalancerZone findZone(final LoadBalancer lb, final String zoneName){
 		try ( final TransactionResource db = Entities.transactionFor( LoadBalancerZone.class ) ) {
 			final LoadBalancerZone exist = Entities.uniqueResult(LoadBalancerZone.named(lb, zoneName));
@@ -510,7 +511,7 @@ public class LoadBalancers {
 			throw Exceptions.toUndeclared(ex);
 		}
 	}
-	
+
 	public static List<LoadBalancerZoneCoreView> findZonesInService(final LoadBalancer lb){
 		final List<LoadBalancerZoneCoreView> inService = Lists.newArrayList();
 		for(final LoadBalancerZoneCoreView zone : lb.getZones()){
@@ -519,7 +520,7 @@ public class LoadBalancers {
 		}
 		return inService;
 	}
-	
+
 	public static LoadBalancerServoInstance lookupServoInstance(final String instanceId) throws LoadBalancingException {
 		try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
 			LoadBalancerServoInstance sample = LoadBalancerServoInstance.named(instanceId);
@@ -531,30 +532,7 @@ public class LoadBalancers {
 			throw new LoadBalancingException("failed to query servo instances", ex);
 		}
 	}
-	
-	public static LoadBalancerBackendInstance lookupBackendInstance(final LoadBalancer lb, final String instanceId) {
-		try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
-			final LoadBalancerBackendInstance found = Entities.uniqueResult(LoadBalancerBackendInstance.named(lb, instanceId));
-			return found;
-		}catch(final NoSuchElementException ex){
-			throw ex;
-		}catch(final Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
-	}
-	
-	public static void deleteBackendInstance(final LoadBalancer lb, final String instanceId) {
-		try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
-			final LoadBalancerBackendInstance toDelete = Entities.uniqueResult(LoadBalancerBackendInstance.named(lb, instanceId));
-		    Entities.delete(toDelete);
-		    db.commit();
-		}catch(final NoSuchElementException ex){
-			throw ex;
-		}catch(final Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
-	}
-	
+
 	public static void unsetForeignKeys(final Context ctx, final String loadbalancer){
 		Predicate<LoadBalancerServoInstance> unsetServoInstanceKey = new Predicate<LoadBalancerServoInstance>(){
 			@Override
@@ -570,7 +548,7 @@ public class LoadBalancers {
 				}
 			}
 		};
-		
+
 		LoadBalancer lb;
 		try{
 			lb = getLoadbalancer(ctx, loadbalancer);
@@ -586,7 +564,7 @@ public class LoadBalancers {
 					}catch(final Exception ex){
 						continue;
 					}
-					
+
 					for(LoadBalancerServoInstanceCoreView servo : zone.getServoInstances()){
 						try{
 							final LoadBalancerServoInstance instance = LoadBalancerServoInstanceEntityTransform.INSTANCE.apply(servo);
@@ -598,7 +576,7 @@ public class LoadBalancers {
 			}
 		}
 	}
-	
+
 	public static void setLoadBalancerListenerSSLCertificate(final LoadBalancer lb, final int lbPort, final String certArn)
 	    throws LoadBalancingException {
 	  final Collection<LoadBalancerListenerCoreView> listeners = lb.getListeners();
@@ -613,7 +591,7 @@ public class LoadBalancers {
 	    throw new ListenerNotFoundException();
 	  if(!(PROTOCOL.HTTPS.equals(listener.getProtocol()) || PROTOCOL.SSL.equals(listener.getProtocol())))
 	    throw new InvalidConfigurationRequestException("Listener's protocol is not HTTPS or SSL");
-	      
+
 	  checkSSLCertificate(lb.getOwnerAccountNumber(), certArn);
 	  updateIAMRolePolicy(lb.getOwnerAccountNumber(), lb.getDisplayName(), listener.getCertificateId(), certArn);
 	  try ( final TransactionResource db = Entities.transactionFor( LoadBalancerListener.class ) ) {
@@ -627,10 +605,10 @@ public class LoadBalancers {
 	    throw Exceptions.toUndeclared(ex);
 	  }
 	}
-	
-	private static void updateIAMRolePolicy(final String accountId, final String lbName, 
+
+	private static void updateIAMRolePolicy(final String accountId, final String lbName,
 	    final String oldCertArn, final String newCertArn) throws LoadBalancingException{
-	   final String prefix = 
+	   final String prefix =
          String.format("arn:aws:iam::%s:server-certificate", accountId);
      final String oldCertName = oldCertArn.replace(prefix, "")
          .substring(oldCertArn.replace(prefix, "").lastIndexOf("/")+1);
@@ -638,26 +616,26 @@ public class LoadBalancers {
          .substring(newCertArn.replace(prefix, "").lastIndexOf("/")+1);
 
      ////FIXME: not a sound reference
-     final String roleName = String.format("%s-%s-%s", LoadBalancingActivitiesImpl.ROLE_NAME_PREFIX, 
+     final String roleName = String.format("%s-%s-%s", LoadBalancingActivitiesImpl.ROLE_NAME_PREFIX,
         accountId, lbName);
-     final String oldPolicyName = String.format("%s-%s-%s-%s", 
+     final String oldPolicyName = String.format("%s-%s-%s-%s",
 	      LoadBalancingActivitiesImpl.SERVER_CERT_ROLE_POLICY_NAME_PREFIX,
-          accountId, lbName, oldCertName);  
+          accountId, lbName, oldCertName);
      LoadBalancer lb;
-     try{ 
+     try{
        lb= LoadBalancers.getLoadbalancer(accountId, lbName);
      }catch(Exception ex){
        throw new LoadBalancingException("Failed to find the loadbalancer named " + lbName, ex);
-     } 
-     
+     }
+
      try{
          EucalyptusActivityTasks.getInstance().deleteRolePolicy(roleName, oldPolicyName, lb.useSystemAccount());
       }catch(final Exception ex){
         throw new LoadBalancingException("Failed to delete old role policy "+oldPolicyName, ex);
      }
-     final String newPolicyName = String.format("%s-%s-%s-%s", 
+     final String newPolicyName = String.format("%s-%s-%s-%s",
          LoadBalancingActivitiesImpl.SERVER_CERT_ROLE_POLICY_NAME_PREFIX,
-         accountId, lbName, newCertName); 
+         accountId, lbName, newCertName);
      final String newPolicyDoc = LoadBalancingActivitiesImpl.ROLE_SERVER_CERT_POLICY_DOCUMENT
          .replace("CERT_ARN_PLACEHOLDER", newCertArn);
      try{
@@ -666,18 +644,18 @@ public class LoadBalancers {
        throw new LoadBalancingException("Failed to add new role policy "+newPolicyName, ex);
      }
 	}
-	
-	
+
+
 	public static void checkSSLCertificate(final String accountNumber, final String certArn)
 	    throws LoadBalancingException {
 	  try{
       final String prefix = String.format("arn:aws:iam::%s:server-certificate", accountNumber);
       if(!certArn.startsWith(prefix))
         throw new CertificateNotFoundException();
-      
+
       final String pathAndName = certArn.replace(prefix, "");
       final String certName = pathAndName.substring(pathAndName.lastIndexOf("/")+1);
-      final ServerCertificateType cert = 
+      final ServerCertificateType cert =
           EucalyptusActivityTasks.getInstance().getServerCertificate(accountNumber, certName);
       if(cert==null)
         throw new CertificateNotFoundException();
@@ -691,7 +669,7 @@ public class LoadBalancers {
 	//// WARNING: this method is database intensive call
 	//// Do not invoke too frequently!
 	public static LoadBalancerServoDescription getServoDescription(
-	    final String accountId, final String lbName, final String zone) 
+	    final String accountId, final String lbName, final String zone)
 	        throws LoadBalancingException {
 	  final LoadBalancer lb = getLoadbalancer(accountId, lbName);
 	  final LoadBalancerZone lbZone;
@@ -718,12 +696,12 @@ public class LoadBalancers {
 	 }
 	  return getServoDescription(lb, lbZone, lbListeners, backendServers, lbPolicies);
 	}
-	
+
 	public static LoadBalancerServoDescription getServoDescription(
-	    final LoadBalancer lb, 
-	    final LoadBalancerZone zone, 
+	    final LoadBalancer lb,
+	    final LoadBalancerZone zone,
 	    final List<LoadBalancerListener> lbListeners,
-	    final List<LoadBalancerBackendServerDescription> backendServers, 
+	    final List<LoadBalancerBackendServerDescription> backendServers,
 	    final List<LoadBalancerPolicyDescription> lbPolicies) {
 
 		final String lbName = lb.getDisplayName();
@@ -803,6 +781,9 @@ public class LoadBalancers {
 						}
 					}));
 		}
+		if (desc.getBackendInstances()!=null) {
+			desc.getBackendInstances().getMember().sort(Ordering.natural().onResultOf(nonNull(BackendInstance::getInstanceId)));
+		}
 
 		/// availability zones
 		desc.setAvailabilityZones(new AvailabilityZones());
@@ -840,6 +821,7 @@ public class LoadBalancers {
 									}
 								}
 							})));
+							pnames.getMember().sort(Ordering.natural());
 							policiesOfListener.addAll(pnames.getMember());
 							desc.setPolicyNames(pnames);
 							return desc;
@@ -868,11 +850,13 @@ public class LoadBalancers {
 											}
 										})
 								));
+								desc.getPolicyNames().getMember().sort(Ordering.natural());
 								policiesForBackendServer.addAll(desc.getPolicyNames().getMember());
 								return desc;
 							}
 						})
 				));
+				desc.getBackendServerDescriptions().getMember().sort(Ordering.natural().onResultOf(BackendServerDescription::getInstancePort));
 			}
 		} catch (final Exception ex) {
 			;
@@ -908,6 +892,7 @@ public class LoadBalancers {
 		}
 		final PolicyDescriptions policyDescs = new PolicyDescriptions();
 		policyDescs.setMember((ArrayList<PolicyDescription>) policies);
+		policyDescs.getMember().sort(Ordering.natural().onResultOf(nonNull(PolicyDescription::getPolicyName)));
 		desc.setPolicyDescriptions(policyDescs);
 
 		return desc;

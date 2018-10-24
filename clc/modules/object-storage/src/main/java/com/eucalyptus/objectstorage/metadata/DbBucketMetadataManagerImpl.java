@@ -64,8 +64,8 @@ import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.VersioningStatus;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
-import javaslang.control.Option;
+import com.google.common.base.MoreObjects;
+import io.vavr.control.Option;
 
 /**
  * Three types of failures on a metadata operation: IllegalResourceState - entity is not in a state where the update is a valid change (e.g.
@@ -397,7 +397,7 @@ public class DbBucketMetadataManagerImpl implements BucketMetadataManager {
     long size = -1;
     try (TransactionResource db = Entities.transactionFor(Bucket.class)) {
       size =
-          Objects.firstNonNull(
+          MoreObjects.firstNonNull(
               (Number) Entities.createCriteria(Bucket.class).setProjection(Projections.sum("bucketSize")).setReadOnly(true).uniqueResult(), 0)
               .longValue();
       db.commit();

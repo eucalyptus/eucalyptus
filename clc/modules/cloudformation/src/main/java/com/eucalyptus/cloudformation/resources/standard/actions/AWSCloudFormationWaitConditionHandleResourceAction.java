@@ -126,12 +126,6 @@ public class AWSCloudFormationWaitConditionHandleResourceAction extends StepBase
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -159,12 +153,6 @@ public class AWSCloudFormationWaitConditionHandleResourceAction extends StepBase
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 

@@ -46,22 +46,16 @@ import com.eucalyptus.cluster.common.ClusterRegistry;
 import com.eucalyptus.cluster.proxy.ProxyClusterController;
 import com.eucalyptus.component.*;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.annotation.ComponentPart;
-import com.eucalyptus.cluster.proxy.config.DeregisterClusterType;
-import com.eucalyptus.cluster.proxy.config.DescribeClustersType;
-import com.eucalyptus.cluster.proxy.config.ModifyClusterAttributeType;
-import com.eucalyptus.cluster.proxy.config.RegisterClusterType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 
+/**
+ *
+ */
 @ComponentPart( ProxyClusterController.class )
-@Handles( { RegisterClusterType.class,
-           DeregisterClusterType.class,
-           DescribeClustersType.class,
-           ModifyClusterAttributeType.class } )
-public class ProxyClusterServiceBuilder extends AbstractServiceBuilder<ClusterConfiguration> {
+public class ProxyClusterServiceBuilder extends AbstractServiceBuilder<ProxyClusterConfiguration> {
   static Logger LOG = Logger.getLogger( ProxyClusterServiceBuilder.class );
   
   @Override
@@ -78,127 +72,18 @@ public class ProxyClusterServiceBuilder extends AbstractServiceBuilder<ClusterCo
   }
   
   @Override
-  public ClusterConfiguration newInstance( ) {
-    return new ClusterConfiguration( );
+  public ProxyClusterConfiguration newInstance( ) {
+    return new ProxyClusterConfiguration( );
   }
   
   @Override
-  public ClusterConfiguration newInstance( final String partition, final String name, final String host, final Integer port ) {
-    return new ClusterConfiguration( partition, name, host, port );
+  public ProxyClusterConfiguration newInstance(final String partition, final String name, final String host, final Integer port ) {
+    return new ProxyClusterConfiguration( partition, name, host, port );
   }
   
   @Override
   public ComponentId getComponentId( ) {
     return ComponentIds.lookup( ProxyClusterController.class );
-  }
-  
-  @Override
-  public void fireStart( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    LOG.info( "Starting cluster: " + config );
-    EventRecord.here( ProxyClusterServiceBuilder.class, EventType.COMPONENT_SERVICE_START, config.getComponentId( ).name( ), config.getName( ),
-                      ServiceUris.remote( config ).toASCIIString( ) ).info( );
-    try {
-      if ( !ClusterRegistry.getInstance( ).contains( config.getName( ) ) ) {
-        final Cluster newCluster = new Cluster( config );
-        newCluster.start( );
-      } else {
-        try {
-          final Cluster newCluster = ClusterRegistry.getInstance( ).lookupDisabled( config.getName( ) );
-          ClusterRegistry.getInstance( ).deregister( config.getName( ) );
-          newCluster.start( );
-        } catch ( final NoSuchElementException ex ) {
-          final Cluster newCluster = ClusterRegistry.getInstance( ).lookup( config.getName( ) );
-          ClusterRegistry.getInstance( ).deregister( config.getName( ) );
-          newCluster.start( );
-        }
-      }
-    } catch ( final NoSuchElementException ex ) {
-      LOG.error( ex, ex );
-    }
-  }
-  
-  @Override
-  public void fireEnable( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    LOG.info( "Enabling cluster: " + config );
-    EventRecord.here( ProxyClusterServiceBuilder.class, EventType.COMPONENT_SERVICE_ENABLED, config.getComponentId( ).name( ), config.getName( ),
-                      ServiceUris.remote( config ).toASCIIString( ) ).info( );
-    Cluster newCluster = null;
-    try {
-      try {
-        newCluster = ClusterRegistry.getInstance( ).lookupDisabled( config.getName( ) );
-        newCluster.enable( );
-      } catch ( final NoSuchElementException ex ) {
-        newCluster = ClusterRegistry.getInstance().lookup( config.getName() );
-        newCluster.enable( );
-      }
-    } catch ( final Exception ex ) {
-      LOG.error( ex );
-      if ( newCluster != null ) {
-        newCluster.cleanup( ex );
-        throw ex;
-      }
-    }
-  }
-  
-  @Override
-  public void fireDisable( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    LOG.info( "Disabling cluster: " + config );
-    EventRecord.here( ProxyClusterServiceBuilder.class, EventType.COMPONENT_SERVICE_DISABLED, config.getComponentId( ).name( ), config.getName( ),
-                      ServiceUris.remote( config ).toASCIIString( ) ).info( );
-    try {
-      if ( ClusterRegistry.getInstance( ).contains( config.getName( ) ) ) {
-        try {
-          final Cluster newCluster = ClusterRegistry.getInstance( ).lookup( config.getName( ) );
-          newCluster.disable( );
-        } catch ( final NoSuchElementException ex ) {
-          final Cluster newCluster = ClusterRegistry.getInstance( ).lookupDisabled( config.getName( ) );
-          newCluster.disable( );
-        }
-      }
-    } catch ( final NoSuchElementException ex ) {
-      LOG.error( ex, ex );
-    }
-  }
-  
-  @Override
-  public void fireStop( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    try {
-      LOG.info( "Tearing down cluster: " + config );
-      final Cluster cluster = ClusterRegistry.getInstance( ).lookupDisabled( config.getName( ) );
-      EventRecord.here( ProxyClusterServiceBuilder.class, EventType.COMPONENT_SERVICE_STOPPED, config.getComponentId( ).name( ), config.getName( ),
-                        ServiceUris.remote( config ).toASCIIString( ) ).info( );
-      cluster.stop( );
-    } catch ( final NoSuchElementException ex ) {
-      LOG.error( ex, ex );
-    } catch ( final Exception ex ) {
-      LOG.error( ex, ex );
-    }
-  }
-  
-  @Override
-  public void fireCheck( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    Cluster cluster;
-    try {
-      cluster = ClusterRegistry.getInstance( ).lookup( config.getName( ) );
-    } catch ( final NoSuchElementException ex ) {
-      cluster = ClusterRegistry.getInstance( ).lookupDisabled( config.getName( ) );
-    }
-    try {
-      try {
-        cluster.check();
-      } catch ( final NoSuchElementException ex ) {
-        throw Faults.failure( config, ex );
-      } catch ( final IllegalStateException ex ) {
-        Logs.exhaust( ).error( ex, ex );
-        throw Faults.failure( config, ex );
-      } catch ( final Exception ex ) {
-        Logs.exhaust( ).error( ex, ex );
-        throw Faults.failure( config, ex );
-      }
-    } catch ( Faults.CheckException e ) {
-      cluster.cleanup( e );
-      throw e;
-    }
   }
 
 }

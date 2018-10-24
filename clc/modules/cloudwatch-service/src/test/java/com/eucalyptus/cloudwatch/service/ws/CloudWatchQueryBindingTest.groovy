@@ -72,6 +72,12 @@ class CloudWatchQueryBindingTest extends QueryBindingTestSupport {
   }
 
   @Test
+  void testInternalRoundTrip() {
+    URL resource = CloudWatchQueryBindingTest.class.getResource( '/cloudwatch-binding.xml' )
+    assertValidInternalRoundTrip( resource )
+  }
+
+  @Test
   void testMessageQueryBindings() {
     URL resource = CloudWatchQueryBindingTest.class.getResource( '/cloudwatch-binding.xml' )
     CloudWatchQueryBinding mb = new CloudWatchQueryBinding() {

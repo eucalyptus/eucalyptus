@@ -31,18 +31,16 @@ package com.eucalyptus.simplequeue.workflow;
 
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.cloudwatch.common.CloudWatch;
-import com.eucalyptus.cloudwatch.common.msgs.MetricDatum;
 import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.simplequeue.Constants;
-import com.eucalyptus.simplequeue.SimpleQueue;
+import com.eucalyptus.simplequeue.common.SimpleQueue;
 import com.eucalyptus.simplequeue.async.CloudWatchClient;
 import com.eucalyptus.simplequeue.config.SimpleQueueProperties;
 import com.eucalyptus.simplequeue.persistence.PersistenceFactory;
 import com.eucalyptus.simplequeue.persistence.Queue;
-import com.eucalyptus.util.async.AsyncRequests;
 import org.apache.log4j.Logger;
 
 import java.util.Collection;

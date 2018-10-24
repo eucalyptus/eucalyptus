@@ -60,7 +60,7 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.upgrade.Upgrades;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.util.Exceptions;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 
 /**
@@ -204,7 +204,7 @@ public class AutoScalingInstance extends AbstractOwnedPersistent implements Auto
 
   public boolean healthStatusGracePeriodExpired() {
     final long gracePeriodMillis = TimeUnit.SECONDS.toMillis( 
-        Objects.firstNonNull( getAutoScalingGroup( ).getHealthCheckGracePeriod(), 0 ) );
+        MoreObjects.firstNonNull( getAutoScalingGroup( ).getHealthCheckGracePeriod(), 0 ) );
     // last update timestamp will be when InService state entered
     return getInServiceTimestamp()!=null && System.currentTimeMillis() - getInServiceTimestamp().getTime() > gracePeriodMillis;
   }

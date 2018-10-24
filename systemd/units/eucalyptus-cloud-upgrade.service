@@ -6,3 +6,5 @@ PartOf=eucalyptus-cloud.service
 [Service]
 Type=oneshot
 ExecStart=/usr/libexec/eucalyptus/euca-upgrade --db
+User=eucalyptus
+Group=eucalyptus

@@ -40,7 +40,7 @@ import com.eucalyptus.objectstorage.exceptions.MetadataOperationFailureException
 import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.VersioningStatus;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 /**
  * Interface to operate on buckets This interface is an action mechanism, not a policy checker. Validation on input, beyond what is required for the

@@ -33,7 +33,6 @@ import com.eucalyptus.cluster.common.Cluster;
 import com.eucalyptus.cluster.common.msgs.NodeType;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceRegistrationException;
 
 /**
  * ClusterProvider is an internal API for providing cluster functionality.
@@ -49,11 +48,11 @@ public interface ClusterProvider {
   void init( Cluster cluster );
   void refreshResources( );
   void check( );
-  void start( ) throws ServiceRegistrationException;
-  void stop( ) throws ServiceRegistrationException;
-  void enable( ) throws ServiceRegistrationException;
-  void disable( ) throws ServiceRegistrationException;
-  void updateNodeInfo( List<NodeType> nodes );
+  void start( );
+  void stop( );
+  void enable( );
+  void disable( );
+  void updateNodeInfo( long time, List<NodeType> nodes );
   boolean hasNode( String sourceHost );
   void cleanup( Cluster cluster, Exception ex );
 }

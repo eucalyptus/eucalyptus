@@ -43,7 +43,7 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.ConnectionException;
 import com.eucalyptus.util.concurrent.ListenableFuture;
 import com.eucalyptus.ws.WebServicesException;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Throwables;
 import org.apache.log4j.Logger;
 
@@ -110,7 +110,7 @@ public class NotifyClientUtils {
       public void run( ) {
         try {
           final PollForNotificationResponseType response = dispatchFuture.get( );
-          consumer.accept(Objects.firstNonNull(response.getNotified(), false));
+          consumer.accept(MoreObjects.firstNonNull(response.getNotified(), false));
         } catch ( final InterruptedException e ) {
           logger.info( "Interrupted while polling for task " + poll.getChannel( ), e );
         } catch ( final ExecutionException e ) {

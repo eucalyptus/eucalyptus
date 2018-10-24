@@ -41,10 +41,10 @@ import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Index;
 import javax.persistence.JoinColumn;
-import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
@@ -58,8 +58,6 @@ import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.annotations.OptimisticLockType;
 import org.hibernate.annotations.OptimisticLocking;
 import org.hibernate.annotations.Type;
-import org.hibernate.criterion.Criterion;
-import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.objectstorage.ObjectState;
@@ -83,7 +81,6 @@ import com.google.common.collect.Maps;
     @Index(name = "IDX_object_sort", columnList = "object_key, object_last_modified desc"),
 })
 public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implements Comparable {
-  @Transient
   private static Logger LOG = Logger.getLogger(ObjectEntity.class);
 
   @Column(name = "object_key")
@@ -120,15 +117,17 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
   @Column(name = "is_latest")
   private Boolean isLatest;
 
+  @Column(name = "is_cleanup_required")
+  private Boolean isCleanupRequired;
+
   @Column(name = "creation_expiration")
   private Long creationExpiration; // Expiration time in system/epoch time to guarantee monotonically increasing values
 
   @Column(name = "upload_id")
   private String uploadId;
 
-  @Column(name = "stored_headers")
-  @Lob
-  @Type(type = "org.hibernate.type.StringClobType")
+  @Column(name = "stored_headers" )
+  @Type( type = "text" )
   private String storedHeaders;
 
   public Long getCreationExpiration() {
@@ -269,7 +268,7 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
     deleteMarker.setObjectModifiedTimestamp(new Date());
     deleteMarker.setIsDeleteMarker(true);
     deleteMarker.setSize(0L);
-    deleteMarker.setIsLatest(true);
+    deleteMarker.markLatest();
     return deleteMarker;
   }
 
@@ -350,8 +349,21 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
     return isLatest;
   }
 
+  public void markLatest() {
+    setIsLatest(Boolean.TRUE);
+    setCleanupRequired(Boolean.TRUE);
+  }
+
   public void setIsLatest(Boolean isLatest) {
     this.isLatest = isLatest;
+  }
+
+  public Boolean getCleanupRequired() {
+    return isCleanupRequired;
+  }
+
+  public void setCleanupRequired(final Boolean cleanupRequired) {
+    isCleanupRequired = cleanupRequired;
   }
 
   public boolean isNullVersioned() {
@@ -434,38 +446,21 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
     return true;
   }
 
-  public static class QueryHelpers {
-
-    public static Criterion getIsPartRestriction() {
-      return Restrictions.isNotNull("partNumber");
-    }
-
-    public static Criterion getIsNotPartRestriction() {
-      return Restrictions.isNull("partNumber");
-    }
-
-    public static Criterion getIsPendingRestriction() {
-      return Restrictions.isNull("objectModifiedTimestamp");
-    }
-
-    public static Criterion getIsMultipartRestriction() {
-      return Restrictions.isNotNull("uploadId");
-    }
-  }
-
   /**
    * Return a ListEntry for this entity
    *
    * @return
    */
-  public ListEntry toListEntry() {
+  public ListEntry toListEntry(boolean includeOwner) {
     ListEntry e = new ListEntry();
     e.setEtag("\"" + this.geteTag() + "\"");
     e.setKey(this.getObjectKey());
     e.setLastModified(DateFormatter.dateToListingFormattedString(this.getObjectModifiedTimestamp()));
     e.setSize(this.getSize());
     e.setStorageClass(this.getStorageClass());
-    e.setOwner(new CanonicalUser(this.getOwnerCanonicalId(), this.getOwnerDisplayName()));
+    if (includeOwner) {
+      e.setOwner(new CanonicalUser(this.getOwnerCanonicalId(), this.getOwnerDisplayName()));
+    }
     return e;
   }
 
@@ -497,6 +492,14 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
     }
 
   }
+
+  @PreUpdate
+  protected void preUpdate() {
+    if (!Boolean.TRUE.equals(getIsLatest())) {
+      setCleanupRequired(null);
+    }
+  }
+
   // TODO: add delete marker support. Fix is to use super-type for versioning entry and sub-types for version vs deleteMarker
 
 }

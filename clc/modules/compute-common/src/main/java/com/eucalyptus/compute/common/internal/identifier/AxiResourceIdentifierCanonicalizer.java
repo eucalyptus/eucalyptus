@@ -29,7 +29,7 @@
 package com.eucalyptus.compute.common.internal.identifier;
 
 import java.util.Map;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 
 /**
@@ -50,7 +50,7 @@ public class AxiResourceIdentifierCanonicalizer implements ResourceIdentifierCan
 
   @Override
   public String canonicalizePrefix( final String prefix ) {
-    return Objects.firstNonNull( prefixMap.get( prefix ), prefix );
+    return MoreObjects.firstNonNull( prefixMap.get( prefix ), prefix );
   }
 
   @Override
