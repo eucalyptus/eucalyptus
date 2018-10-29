@@ -28,14 +28,7 @@
  ************************************************************************/
 package com.eucalyptus.objectstorage.msgs;
 
-import com.eucalyptus.util.ChannelBufferStreamingInputStream;
-
 public class ObjectStorageDataRequestType extends ObjectStorageRequestType {
-
-  private Boolean isCompressed;
-  private ChannelBufferStreamingInputStream data;
-  private boolean isChunked;
-  private boolean expectHeader;
 
   public ObjectStorageDataRequestType( ) {
   }
@@ -44,43 +37,4 @@ public class ObjectStorageDataRequestType extends ObjectStorageRequestType {
     super( bucket, key );
   }
 
-  public Boolean getIsCompressed( ) {
-    return isCompressed;
-  }
-
-  public void setIsCompressed( Boolean isCompressed ) {
-    this.isCompressed = isCompressed;
-  }
-
-  public ChannelBufferStreamingInputStream getData( ) {
-    return data;
-  }
-
-  public void setData( ChannelBufferStreamingInputStream data ) {
-    this.data = data;
-  }
-
-  public boolean getIsChunked( ) {
-    return isChunked;
-  }
-
-  public boolean isIsChunked( ) {
-    return isChunked;
-  }
-
-  public void setIsChunked( boolean isChunked ) {
-    this.isChunked = isChunked;
-  }
-
-  public boolean getExpectHeader( ) {
-    return expectHeader;
-  }
-
-  public boolean isExpectHeader( ) {
-    return expectHeader;
-  }
-
-  public void setExpectHeader( boolean expectHeader ) {
-    this.expectHeader = expectHeader;
-  }
 }

@@ -29,6 +29,7 @@
 
 package com.eucalyptus.objectstorage;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -72,6 +73,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.objectstorage.auth.RequestAuthorizationHandler;
+import com.eucalyptus.objectstorage.client.GenericS3ClientFactoryConfiguration;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.BucketTags;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
@@ -496,7 +498,12 @@ public class ObjectStorageGateway implements ObjectStorageService {
       final String fullObjectKey = objectEntity.getObjectUuid();
       request.setKey(fullObjectKey); // Ensure the backend uses the new full object name
       try {
-        objectEntity = OsgObjectFactory.getFactory().createObject(ospClient, objectEntity, request.getData(), request.getMetaData(), requestUser);
+        objectEntity = OsgObjectFactory.getFactory().createObject(
+            ospClient,
+            objectEntity,
+            new BufferedInputStream( request.getData(), GenericS3ClientFactoryConfiguration.getInstance().getBuffer_size() ),
+            request.getMetaData(),
+            requestUser);
       } catch (Exception e) {
         // Wrap the error from back-end with a 500 error
         throw new InternalErrorException(request.getKey(), e);
@@ -2678,8 +2685,12 @@ public class ObjectStorageGateway implements ObjectStorageService {
       }
 
       try {
-        PartEntity updatedEntity =
-            OsgObjectFactory.getFactory().createObjectPart(ospClient, objectEntity, partEntity, request.getData(), requestUser);
+        PartEntity updatedEntity = OsgObjectFactory.getFactory().createObjectPart(
+            ospClient,
+            objectEntity,
+            partEntity,
+            new BufferedInputStream( request.getData(), GenericS3ClientFactoryConfiguration.getInstance().getBuffer_size() ),
+            requestUser);
         UploadPartResponseType response = request.getReply();
         response.setLastModified(updatedEntity.getObjectModifiedTimestamp());
         response.setEtag(updatedEntity.geteTag());

@@ -29,7 +29,6 @@
 package com.eucalyptus.objectstorage.msgs;
 
 import java.util.HashMap;
-import java.util.Map;
 import com.eucalyptus.objectstorage.policy.AdminOverrideAllowed;
 import com.eucalyptus.objectstorage.policy.RequiresACLPermission;
 import com.eucalyptus.objectstorage.policy.RequiresPermission;
@@ -42,7 +41,7 @@ import com.google.common.collect.Maps;
 @RequiresPermission( standard = S3PolicySpec.S3_PUTOBJECT )
 @ResourceType( S3PolicySpec.S3_RESOURCE_OBJECT )
 @RequiresACLPermission( object = {}, bucket = {}, ownerOf = { ObjectStorageProperties.Resource.object } )
-public class UploadPartType extends ObjectStorageDataRequestType {
+public class UploadPartType extends ObjectStorageDataPutRequestType {
 
   private String contentLength;
   private String contentMD5;
