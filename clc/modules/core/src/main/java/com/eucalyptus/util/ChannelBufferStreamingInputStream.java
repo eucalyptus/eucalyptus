@@ -230,7 +230,7 @@ public class ChannelBufferStreamingInputStream extends InputStream {
   private boolean readComplete( int additionalByteCount ) {
     return
         ( contentLength != null && contentLength <= ( bytesRead + additionalByteCount ) ) ||
-        ( buffer == HttpChunk.LAST_CHUNK.getContent( ) && buffers.isEmpty( ) );
+        ( contentLength == null && buffer == HttpChunk.LAST_CHUNK.getContent( ) && buffers.isEmpty( ) );
   }
 
   private boolean canPutChunks( ) {
