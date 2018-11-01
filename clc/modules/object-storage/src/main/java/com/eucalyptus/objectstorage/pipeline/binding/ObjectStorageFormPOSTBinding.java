@@ -52,7 +52,7 @@ import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageDataPutRequestType;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.collect.Maps;
@@ -106,9 +106,9 @@ public class ObjectStorageFormPOSTBinding extends ObjectStorageRESTBinding {
 
         // Handle the first data chunk properly
         if (firstChunkEvent == null && firstChunk != null && msgEvent.getMessage() instanceof MappingHttpRequest
-            && ((MappingHttpRequest) msgEvent.getMessage()).getMessage() instanceof ObjectStorageDataRequestType) {
-          ObjectStorageDataRequestType dataReq = (ObjectStorageDataRequestType) ((MappingHttpRequest) msgEvent.getMessage()).getMessage();
-          handleData(dataReq, firstChunk.getContent());
+            && ((MappingHttpRequest) msgEvent.getMessage()).getMessage() instanceof ObjectStorageDataPutRequestType ) {
+          ObjectStorageDataPutRequestType dataReq = (ObjectStorageDataPutRequestType) ((MappingHttpRequest) msgEvent.getMessage()).getMessage();
+          handleData(channelHandlerContext.getChannel(), dataReq, firstChunk.getContent());
         }
       } catch (Exception e) {
         LOG.error("Error in POST multipart form binding", e);

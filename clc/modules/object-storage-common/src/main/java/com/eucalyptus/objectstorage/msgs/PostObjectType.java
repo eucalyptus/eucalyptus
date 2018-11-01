@@ -29,7 +29,6 @@
 package com.eucalyptus.objectstorage.msgs;
 
 import java.util.ArrayList;
-import java.util.List;
 import com.eucalyptus.objectstorage.policy.AdminOverrideAllowed;
 import com.eucalyptus.objectstorage.policy.RequiresACLPermission;
 import com.eucalyptus.objectstorage.policy.RequiresPermission;
@@ -43,7 +42,7 @@ import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 @RequiresPermission( standard = S3PolicySpec.S3_PUTOBJECT )
 @ResourceType( S3PolicySpec.S3_RESOURCE_OBJECT )
 @RequiresACLPermission( object = {}, bucket = { ObjectStorageProperties.Permission.WRITE } )
-public class PostObjectType extends ObjectStorageDataRequestType {
+public class PostObjectType extends ObjectStorageDataPutRequestType {
 
   private String contentLength;
   private ArrayList<MetaDataEntry> metaData = new ArrayList<>( );

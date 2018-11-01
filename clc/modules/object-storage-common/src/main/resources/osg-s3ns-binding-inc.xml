@@ -57,7 +57,7 @@
   </mapping>
 
   <mapping
-      class="com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType"
+      class="com.eucalyptus.objectstorage.msgs.ObjectStorageDataPutRequestType"
       abstract="true">
     <value name="IsCompressed" field="isCompressed" usage="optional"/>
   </mapping>
@@ -299,7 +299,7 @@
 
   <mapping name="PutObject" class="com.eucalyptus.objectstorage.msgs.PutObjectType">
     <structure
-        map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType"/>
+        map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataPutRequestType"/>
     <collection field="metaData"
                 factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
       <structure map-as="com.eucalyptus.storage.msgs.s3.MetaDataEntry"/>
@@ -320,7 +320,7 @@
   <mapping name="PostObject"
            class="com.eucalyptus.objectstorage.msgs.PostObjectType">
     <structure
-        map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType"/>
+        map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataPutRequestType"/>
     <collection field="metaData"
                 factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
       <structure map-as="com.eucalyptus.storage.msgs.s3.MetaDataEntry"/>
@@ -342,7 +342,7 @@
   <mapping name="PutObjectInline"
            class="com.eucalyptus.objectstorage.msgs.PutObjectInlineType">
     <structure
-        map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType"/>
+        map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataPutRequestType"/>
     <collection field="metaData"
                 factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
       <structure map-as="com.eucalyptus.storage.msgs.s3.MetaDataEntry"/>
@@ -369,8 +369,6 @@
   </mapping>
 
   <mapping name="GetObject" class="com.eucalyptus.objectstorage.msgs.GetObjectType">
-    <structure
-        map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType"/>
     <value name="GetMetadata" field="getMetaData"/>
     <value name="InlineData" field="inlineData"/>
     <structure
@@ -391,8 +389,6 @@
 
   <mapping name="GetObjectExtended"
            class="com.eucalyptus.objectstorage.msgs.GetObjectExtendedType">
-    <structure
-        map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType"/>
     <value name="GetMetadata" field="getMetaData"/>
     <value name="InlineData" field="inlineData"/>
     <value name="ByteRangeStart" field="byteRangeStart"/>
@@ -417,8 +413,6 @@
 
   <mapping name="HeadObject"
            class="com.eucalyptus.objectstorage.msgs.HeadObjectType">
-    <structure
-        map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType"/>
     <structure
         map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
         usage="optional"/>
@@ -530,7 +524,6 @@
 
   <mapping name="InitiateMultipartUpload"
            class="com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadType">
-    <structure map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType"/>
     <value name="CacheControl" field="cacheControl" usage="optional"/>
     <value name="ContentEncoding" field="contentEncoding" usage="optional"/>
     <value name="Expires" field="expires" usage="optional"/>
@@ -554,7 +547,7 @@
 
   <mapping name="UploadPart"
            class="com.eucalyptus.objectstorage.msgs.UploadPartType">
-    <structure map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType"/>
+    <structure map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataPutRequestType"/>
     <value name="ContentLength" field="contentLength" usage="optional"/>
     <value name="ContentMD5" field="contentMD5" usage="optional"/>
     <value name="Expect" field="expect" usage="optional"/>
@@ -569,7 +562,6 @@
 
   <mapping name="CompleteMultipartUpload"
            class="com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadType">
-    <structure map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType"/>
     <collection factory="org.jibx.runtime.Utility.arrayListFactory"
                 field="parts">
       <structure name="Part" map-as="com.eucalyptus.storage.msgs.s3.Part"/>
@@ -596,7 +588,6 @@
   </mapping>
 
   <mapping name="ListParts" class="com.eucalyptus.objectstorage.msgs.ListPartsType">
-    <structure map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType"/>
     <value name="UploadId" field="uploadId"/>
     <value name="MaxParts" field="maxParts" usage="optional"/>
     <value name="PartNumberMarker" field="partNumberMarker" usage="optional"/>
@@ -625,7 +616,6 @@
 
   <mapping name="ListMultipartUploads"
            class="com.eucalyptus.objectstorage.msgs.ListMultipartUploadsType">
-    <structure map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType"/>
     <value name="Delimiter" field="delimiter" usage="optional"/>
     <value name="MaxUploads" field="maxUploads" usage="optional"/>
     <value name="KeyMarker" field="keyMarker" usage="optional"/>

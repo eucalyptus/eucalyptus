@@ -33,7 +33,7 @@ import java.util.List;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 
-public class PutObjectInlineType extends ObjectStorageDataRequestType {
+public class PutObjectInlineType extends ObjectStorageDataPutRequestType {
 
   private String contentLength;
   private ArrayList<MetaDataEntry> metaData = new ArrayList<>( );

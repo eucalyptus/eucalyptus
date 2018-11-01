@@ -206,8 +206,13 @@ public class WalrusOutboundHandler extends MessageStackHandler {
     final Channel channel = ctx.getChannel();
     if (channel.isWritable()) {
       ChannelFuture writeFuture = Channels.future(ctx.getChannel());
-      Channels.write(ctx, writeFuture, httpResponse);
       List<ChunkedInput> dataStreams = response.getDataInputStream();
+      if (dataStreams==null) {
+        if ( !httpResponse.containsHeader( HttpHeaders.Names.CONNECTION ) ) {
+          httpResponse.addHeader( HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE );
+        }
+      }
+      Channels.write(ctx, writeFuture, httpResponse);
       if (dataStreams != null) {
         for (final ChunkedInput dataStream : dataStreams) {
           channel.write(dataStream).addListener(new ChannelFutureListener() {

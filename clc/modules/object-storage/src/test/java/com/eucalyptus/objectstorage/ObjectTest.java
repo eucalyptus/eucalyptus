@@ -91,7 +91,7 @@ public class ObjectTest {
     putObjectRequest.setKey(objectName);
     String data = "hi here is some data";
     putObjectRequest.setContentLength(String.valueOf(data.length()));
-    ChannelBufferStreamingInputStream cbsis = new ChannelBufferStreamingInputStream(ChannelBuffers.copiedBuffer(data.getBytes()));
+    ChannelBufferStreamingInputStream cbsis = new ChannelBufferStreamingInputStream(null, ChannelBuffers.copiedBuffer(data.getBytes()), (long)data.length( ));
     putObjectRequest.setData(cbsis);
     putObjectRequest.setUserId(userId);
     ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();

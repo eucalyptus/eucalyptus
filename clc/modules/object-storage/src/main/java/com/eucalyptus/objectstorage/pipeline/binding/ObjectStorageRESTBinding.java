@@ -65,10 +65,12 @@ import org.apache.log4j.Logger;
 import org.apache.xml.dtm.ref.DTMNodeList;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.w3c.dom.Node;
@@ -94,7 +96,7 @@ import com.eucalyptus.objectstorage.exceptions.s3.MethodNotAllowedException;
 import com.eucalyptus.objectstorage.exceptions.s3.NotImplementedException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetRequestType;
-import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageDataPutRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
 import com.eucalyptus.objectstorage.pipeline.ObjectStorageRESTPipeline;
 import com.eucalyptus.objectstorage.util.AclUtils;
@@ -131,6 +133,7 @@ import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.storage.msgs.s3.Transition;
 import com.eucalyptus.util.Beans;
 import com.eucalyptus.util.ChannelBufferStreamingInputStream;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
@@ -192,19 +195,18 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         ObjectStorageDataGetRequestType getObject = (ObjectStorageDataGetRequestType) msg;
         getObject.setChannel(ctx.getChannel());
       }
-      if (msg instanceof ObjectStorageDataRequestType) {
+      if (msg instanceof ObjectStorageDataPutRequestType ) {
+        ObjectStorageDataPutRequestType request = (ObjectStorageDataPutRequestType) msg;
         String expect = httpRequest.getHeader(HttpHeaders.Names.EXPECT);
         if (expect != null) {
           if (expect.toLowerCase().equals("100-continue")) {
-            ObjectStorageDataRequestType request = (ObjectStorageDataRequestType) msg;
             request.setExpectHeader(true);
           }
         }
 
         // handle the content.
-        ObjectStorageDataRequestType request = (ObjectStorageDataRequestType) msg;
         request.setIsChunked(httpRequest.isChunked());
-        handleData(request, httpRequest.getContent());
+        handleData(ctx.getChannel(), request, httpRequest.getContent());
       }
     }
   }
@@ -239,8 +241,12 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     }
   }
 
-  public void handleData(ObjectStorageDataRequestType dataRequest, ChannelBuffer content) {
-    ChannelBufferStreamingInputStream stream = new ChannelBufferStreamingInputStream(content);
+  public void handleData(Channel channel, ObjectStorageDataPutRequestType dataRequest, ChannelBuffer content) {
+    ChannelBufferStreamingInputStream stream = new ChannelBufferStreamingInputStream(channel, content, dataRequest.contentLength( ));
+    if ( !dataRequest.getIsChunked( ) ) try {
+      stream.putChunk( HttpChunk.LAST_CHUNK.getContent( ) );
+    } catch ( InterruptedException | EucalyptusCloudException ignore ) {
+    }
     dataRequest.setData(stream);
   }
 
