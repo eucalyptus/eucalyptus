@@ -91,7 +91,7 @@ dependencies {
   api 'io.netty:netty-codec:4.0.37.Final'
   api 'io.netty:netty-common:4.0.37.Final'
   api 'io.netty:netty-handler:4.0.37.Final'
-  api 'io.netty:netty:3.6.10.Final'
+  api 'io.netty:netty:3.6.9.Final'
   api 'io.netty:netty-transport:4.0.37.Final'
   api 'io.vavr:vavr:0.9.2'
   api 'io.vavr:vavr-jackson:0.9.2'
