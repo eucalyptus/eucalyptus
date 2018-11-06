@@ -74,6 +74,7 @@
 #include <openssl/bio.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>
+#include <openssl/bn.h>
 
 #include <eucalyptus.h>
 
@@ -144,6 +145,36 @@
  |                               IMPLEMENTATION                               |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+// https://wiki.openssl.org/index.php/OpenSSL_1.1.0_Changes#Compatibility_Layer
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+
+int RSA_set0_key(RSA *r, BIGNUM *n, BIGNUM *e, BIGNUM *d)
+{
+/* If the fields n and e in r are NULL, the corresponding input
+ * parameters MUST be non-NULL for n and e.  d may be
+ * left NULL (in case only the public key is used).
+ */
+if ((r->n == NULL && n == NULL)
+    || (r->e == NULL && e == NULL))
+    return 0;
+
+if (n != NULL) {
+    BN_free(r->n);
+    r->n = n;
+}
+if (e != NULL) {
+    BN_free(r->e);
+    r->e = e;
+}
+if (d != NULL) {
+    BN_free(r->d);
+    r->d = d;
+}
+
+return 1;
+}
+#endif
 
 //!
 //!
@@ -227,6 +258,8 @@ int encryptWindowsPassword(char *pass, char *key, char **out, int *outsize)
     int i = 0;
     int encsize = 0;
     RSA *r = NULL;
+    BIGNUM *n = NULL;
+    BIGNUM *e = NULL;
 
     if (!pass || !key || !out || !outsize) {
         return (EUCA_ERROR);
@@ -291,15 +324,20 @@ int encryptWindowsPassword(char *pass, char *key, char **out, int *outsize)
         return (EUCA_MEMORY_ERROR);
     }
 
-    if (!BN_hex2bn(&(r->e), exponentbuf) || !BN_hex2bn(&(r->n), modbuf)) {
+    if (!BN_hex2bn(e, exponentbuf) || !BN_hex2bn(n, modbuf)) {
+        BN_free(e);
+        BN_free(n);
+        RSA_free(r);
         EUCA_FREE(sshkey_dec);
         EUCA_FREE(exponentbuf);
         EUCA_FREE(modbuf);
         return (EUCA_ERROR);
     }
+    RSA_set0_key(r, n, e, NULL);
 
     bzero(encpassword, 512);
     if ((encsize = RSA_public_encrypt(strlen(pass), (unsigned char *)pass, (unsigned char *)encpassword, r, RSA_PKCS1_PADDING)) <= 0) {
+        RSA_free(r);
         EUCA_FREE(sshkey_dec);
         EUCA_FREE(exponentbuf);
         EUCA_FREE(modbuf);
@@ -309,12 +347,14 @@ int encryptWindowsPassword(char *pass, char *key, char **out, int *outsize)
     *out = base64_enc((unsigned char *)encpassword, encsize);
     *outsize = encsize;
     if (!*out || *outsize <= 0) {
+        RSA_free(r);
         EUCA_FREE(sshkey_dec);
         EUCA_FREE(exponentbuf);
         EUCA_FREE(modbuf);
         return (EUCA_ERROR);
     }
 
+    RSA_free(r);
     EUCA_FREE(sshkey_dec);
     EUCA_FREE(exponentbuf);
     EUCA_FREE(modbuf);
