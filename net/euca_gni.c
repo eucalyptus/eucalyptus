@@ -2244,7 +2244,7 @@ int gni_populate_gnidata(globalNetworkInfo *gni, xmlNodePtr xmlnode, xmlXPathCon
         rc += evaluate_xpath_property(ctxptr, doc, xmlnode, expression, &results, &max_results);
         for (i = 0; i < max_results; i++) {
             LOGTRACE("after function: %d: %s\n", i, results[i]);
-            snprintf(gni->sMode, NETMODE_LEN, results[i]);
+            snprintf(gni->sMode, NETMODE_LEN, "%s", results[i]);
             gni->nmCode = euca_netmode_atoi(gni->sMode);
             EUCA_FREE(results[i]);
         }
@@ -2824,7 +2824,7 @@ int gni_populate_interfaces(globalNetworkInfo *gni, gni_instance *instance, xmlN
                 //snprintf(gni->interfaces[gni->max_interfaces + i].instance_name.name, 1024, instance->name);
                 //gni_populate_instance_interface(&(gni->interfaces[gni->max_interfaces + i]), nodeset.nodeTab[i], ctxptr, doc);
                 gni->ifs[gni->max_ifs + i] = EUCA_ZALLOC_C(1, sizeof (gni_instance));
-                snprintf(gni->ifs[gni->max_ifs + i]->instance_name.name, 32, instance->name);
+                snprintf(gni->ifs[gni->max_ifs + i]->instance_name.name, 32, "%s", instance->name);
                 gni_populate_instance_interface(gni->ifs[gni->max_ifs + i], nodeset.nodeTab[i], ctxptr, doc);
                 instance->interfaces[i] = gni->ifs[gni->max_ifs + i];
                 //gni_instance_interface_print(gni->ifs[gni->max_ifs + i]), EUCA_LOG_INFO);

@@ -153,9 +153,9 @@ int ebt_handler_init(ebt_handler *ebth, const char *cmdprefix) {
     }
 
     if (ebth->init) {
-        snprintf(sTempFilterFile, EUCA_MAX_PATH, ebth->ebt_filter_file);
-        snprintf(sTempNatFile, EUCA_MAX_PATH, ebth->ebt_nat_file);
-        snprintf(sTempAscFile, EUCA_MAX_PATH, ebth->ebt_asc_file);
+        snprintf(sTempFilterFile, EUCA_MAX_PATH, "%s", ebth->ebt_filter_file);
+        snprintf(sTempNatFile, EUCA_MAX_PATH, "%s", ebth->ebt_nat_file);
+        snprintf(sTempAscFile, EUCA_MAX_PATH, "%s", ebth->ebt_asc_file);
 
         if (truncate_file(sTempFilterFile)) {            
             return (1);
@@ -209,9 +209,9 @@ int ebt_handler_init(ebt_handler *ebth, const char *cmdprefix) {
     bzero(ebth, sizeof(ebt_handler));
 
     // Copy names back into handler
-    snprintf(ebth->ebt_filter_file, EUCA_MAX_PATH, sTempFilterFile);
-    snprintf(ebth->ebt_nat_file, EUCA_MAX_PATH, sTempNatFile);
-    snprintf(ebth->ebt_asc_file, EUCA_MAX_PATH, sTempAscFile);
+    snprintf(ebth->ebt_filter_file, EUCA_MAX_PATH, "%s", sTempFilterFile);
+    snprintf(ebth->ebt_nat_file, EUCA_MAX_PATH, "%s", sTempNatFile);
+    snprintf(ebth->ebt_asc_file, EUCA_MAX_PATH, "%s", sTempAscFile);
 
     if (cmdprefix) {
         snprintf(ebth->cmdprefix, EUCA_MAX_PATH, "%s", cmdprefix);
@@ -473,7 +473,7 @@ int ebt_handler_add_table(ebt_handler *ebth, char *tablename) {
             exit(1);
         }
         bzero(&(ebth->tables[ebth->max_tables]), sizeof(ebt_table));
-        snprintf(ebth->tables[ebth->max_tables].name, 64, tablename);
+        snprintf(ebth->tables[ebth->max_tables].name, 64, "%s", tablename);
         ebth->max_tables++;
     }
 

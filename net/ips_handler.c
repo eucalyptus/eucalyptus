@@ -150,7 +150,7 @@ int ips_handler_init(ips_handler *ipsh, const char *cmdprefix) {
     }
 
     if (ipsh->init) {
-        snprintf(sTempFileName, EUCA_MAX_PATH, ipsh->ips_file);
+        snprintf(sTempFileName, EUCA_MAX_PATH, "%s", ipsh->ips_file);
         if (truncate_file(sTempFileName)) {
             return (1);
         }
@@ -172,7 +172,7 @@ int ips_handler_init(ips_handler *ipsh, const char *cmdprefix) {
 
     bzero(ipsh, sizeof(ips_handler));
 
-    snprintf(ipsh->ips_file, EUCA_MAX_PATH, sTempFileName);
+    snprintf(ipsh->ips_file, EUCA_MAX_PATH, "%s", sTempFileName);
 
     if (cmdprefix) {
         snprintf(ipsh->cmdprefix, EUCA_MAX_PATH, "%s", cmdprefix);
@@ -361,7 +361,7 @@ int ips_handler_add_set(ips_handler *ipsh, char *setname) {
             exit(1);
         }
         bzero(&(ipsh->sets[ipsh->max_sets]), sizeof(ips_set));
-        snprintf(ipsh->sets[ipsh->max_sets].name, 64, setname);
+        snprintf(ipsh->sets[ipsh->max_sets].name, 64, "%s", setname);
         ipsh->sets[ipsh->max_sets].ref_count = 1;
         ipsh->max_sets++;
     }
