@@ -91,7 +91,7 @@ VNLIBS= ../util/euca_network.o ../util/log.o ../util/fault.o ../util/wc.o ../uti
 WSSECLIBS=../util/euca_axis.o ../util/euca_auth.o
 CC_LIBS = ../util/config.o ${LIBS} ${LDFLAGS} -lcurl -lssl -lcrypto -lrampart
 STATS_OBJS= ../util/stats/stats.o ../util/stats/sensor_common.o ../util/stats/message_sensor.o ../util/stats/service_sensor.o ../util/stats/fs_emitter.o ../util/stats/message_stats.o
-STATS_LIBS=-ljson -ljson-c -lm
+STATS_LIBS=-ljson-c -lm
 CFLAGS += 
 
 all: generated/stubs

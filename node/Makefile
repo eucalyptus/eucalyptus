@@ -92,7 +92,7 @@ NET_LIB = ../net/libeucanet.a
 NC_HANDLERS=handlers_xen.o handlers_kvm.o handlers_default.o xml.o hooks.o
 STORAGE_OBJS=../storage/backing.o ../storage/diskutil.o ../storage/blobstore.o ../storage/objectstorage.o ../storage/vbr.o ../storage/iscsi.o ../storage/ebs_utils.o ../storage/sc-client-marshal-adb.o ../storage/storage-controller.o
 STATS_OBJS = ../util/stats/stats.o ../util/stats/sensor_common.o ../util/stats/message_sensor.o ../util/stats/service_sensor.o ../util/stats/fs_emitter.o ../util/stats/message_stats.o
-STATS_LIBS = -ljson -ljson-c -lm
+STATS_LIBS = -ljson-c -lm
 CFLAGS += 
 
 BUILD_ID=-DEUCA_COMPILE_TIMESTAMP=\""[built `date --rfc-3339='sec'`]"\"
