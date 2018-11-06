@@ -225,7 +225,6 @@ Requires:     lvm2
 Requires:     perl(Getopt::Long)
 Requires:     postgresql
 Requires:     postgresql-server
-Requires:     python-argparse
 Requires:     rsync
 
 %description cloud
@@ -252,7 +251,6 @@ Requires:     iproute
 Requires:     iptables
 Requires:     iputils
 Requires:     libselinux-python
-Requires:     python-argparse
 Requires:     rsync
 Requires:     vconfig
 Requires:     /usr/bin/which
@@ -377,7 +375,6 @@ Requires:     %{name} = %{version}-%{release}
 Requires:     euca2ools >= 3.1
 Requires:     eucalyptus-selinux
 Requires:     pv
-Requires:     python-argparse
 Requires:     python-lxml
 Requires:     python-requests
 # The next seven come from storage/diskutil.c, which shells
