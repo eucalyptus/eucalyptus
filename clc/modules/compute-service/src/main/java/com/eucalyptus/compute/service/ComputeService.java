@@ -1850,18 +1850,6 @@ public class ComputeService {
     return request.getReply( );
   }
 
-  public CreateDefaultSubnetResponseType createDefaultSubnet(
-      CreateDefaultSubnetType request
-  ) {
-    return request.getReply( );
-  }
-
-  public CreateDefaultVpcResponseType createDefaultVpc(
-      CreateDefaultVpcType request
-  ) {
-    return request.getReply( );
-  }
-
   public CreateFleetResponseType createFleet(
       CreateFleetType request
   ) {
