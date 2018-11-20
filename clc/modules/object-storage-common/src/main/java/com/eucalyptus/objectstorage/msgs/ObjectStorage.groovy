@@ -810,28 +810,44 @@ public class DeleteResponseType extends ObjectStorageResponseType {
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object = [], bucket = [ObjectStorageProperties.Permission.READ])
 public class ListBucketType extends ObjectStorageRequestType {
-  String prefix;
-  String marker;
-  String maxKeys;
-  String delimiter;
+  String prefix
+  String maxKeys
+  String delimiter
+
+  // v1
+  String marker
+
+  // v2
+  String startAfter
+  String continuationToken
+  String fetchOwner
+  String listType
 
   def ListBucketType() {
-    prefix = "";
-    marker = "";
-    //delimiter = "";
+    prefix = ""
+    marker = ""
+    //delimiter = ""
   }
 }
 
 public class ListBucketResponseType extends ObjectStorageResponseType {
-  String name;
-  String prefix;
-  String marker;
-  String nextMarker;
-  int maxKeys;
-  String delimiter;
-  boolean isTruncated;
-  ArrayList<ListEntry> contents;
-  ArrayList<CommonPrefixesEntry> commonPrefixesList = new ArrayList<CommonPrefixesEntry>();
+  String name
+  String prefix
+  int maxKeys
+  String delimiter
+  boolean isTruncated
+  ArrayList<ListEntry> contents
+  ArrayList<CommonPrefixesEntry> commonPrefixesList = new ArrayList<CommonPrefixesEntry>()
+
+  // v1 listing
+  String marker
+  String nextMarker
+
+  // v2 listing
+  String startAfter
+  Integer keyCount
+  String continuationToken
+  String nextContinuationToken
 }
 
 /* GET /bucket?versions */

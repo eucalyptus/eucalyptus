@@ -62,6 +62,10 @@ public class ObjectStorageGETBinding extends ObjectStorageRESTBinding {
     SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.maxkeys.toString(), "ListBucket");
     SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.marker.toString(), "ListBucket");
     SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.delimiter.toString(), "ListBucket");
+    SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.startafter.toString(), "ListBucket");
+    SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.continuationtoken.toString(), "ListBucket");
+    SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.fetchowner.toString(), "ListBucket");
+    SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.listtype.toString(), "ListBucket");
     SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.location.toString(), "GetBucketLocation");
 
     SUPPORTED_OPS.put(BUCKET + HttpMethod.GET.toString() + ObjectStorageProperties.BucketParameter.logging.toString(), "GetBucketLoggingStatus");
