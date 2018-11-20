@@ -52,7 +52,7 @@
 #include <errno.h>
 #include <ctype.h>
 #include <curl/curl.h>
-#include <json/json.h>
+#include <json-c/json.h>
 
 #include <eucalyptus.h>
 #include <misc.h>

@@ -66,7 +66,7 @@
 #include <signal.h>
 #include <math.h>
 #include <assert.h>
-#include <json/json.h>
+#include <json-c/json.h>
 
 #include <eucalyptus.h>
 #include "axis2_skel_EucalyptusCC.h"

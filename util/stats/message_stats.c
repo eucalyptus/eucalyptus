@@ -56,7 +56,7 @@
 #include <string.h>
 #include <log.h>
 #include <ipc.h>
-#include <json/json.h>
+#include <json-c/json.h>
 #include <math.h>
 
 /*----------------------------------------------------------------------------*\

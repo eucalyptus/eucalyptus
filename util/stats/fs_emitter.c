@@ -60,7 +60,7 @@
 #include <diskutil.h>
 #include <log.h>
 #include <stdio.h>
-#include <json/json.h>
+#include <json-c/json.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
