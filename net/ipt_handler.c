@@ -164,7 +164,7 @@ int ipt_handler_init(ipt_handler *pIpt, const char *psCmdPrefix, const char *psP
         //
         // Copy filename out of the current ipt_handler struct.
         //
-        snprintf(sTempFileName, EUCA_MAX_PATH, pIpt->ipt_file);
+        snprintf(sTempFileName, EUCA_MAX_PATH, "%s", pIpt->ipt_file);
         
         //  Truncate the file to ensure we're dealing with a clean slate.
         if (truncate_file(sTempFileName)){
@@ -195,7 +195,7 @@ int ipt_handler_init(ipt_handler *pIpt, const char *psCmdPrefix, const char *psP
     bzero(pIpt, sizeof(ipt_handler));
 
     // Populate the temporary filename
-    snprintf(pIpt->ipt_file, EUCA_MAX_PATH, sTempFileName);
+    snprintf(pIpt->ipt_file, EUCA_MAX_PATH, "%s", sTempFileName);
     
     // If we have a command prefix (like euca_rootwrap) set it
     pIpt->cmdprefix[0] = '\0';
@@ -483,7 +483,7 @@ int ipt_handler_add_table(ipt_handler *ipth, char *tablename) {
             exit(1);
         }
         bzero(&(ipth->tables[ipth->max_tables]), sizeof(ipt_table));
-        snprintf(ipth->tables[ipth->max_tables].name, 64, tablename);
+        snprintf(ipth->tables[ipth->max_tables].name, 64, "%s", tablename);
         ipth->max_tables++;
     }
 

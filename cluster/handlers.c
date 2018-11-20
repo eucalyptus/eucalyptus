@@ -1999,7 +1999,7 @@ int doDescribeResources(ncMetadata * pMeta, virtualMachine ** ccvms, int vmLen, 
             euca_strncat(logStr, typeStr, 2047);
         }
         euca_strncat(logStr, "\n", 2047);
-        LOGDEBUG(logStr);
+        LOGDEBUG("%s", logStr);
         /*
         if (vmLen >= 5) {
             LOGDEBUG("resources summary ({avail/max}): %s{%d/%d} %s{%d/%d} %s{%d/%d} %s{%d/%d} %s{%d/%d}\n", (*ccvms)[0].name,
