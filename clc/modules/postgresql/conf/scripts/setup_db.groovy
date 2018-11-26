@@ -234,10 +234,6 @@ class PostgresqlBootstrapper extends Bootstrapper.Simple implements DatabaseBoot
     try {
       kernelParametersCheck( )
       
-      if ( !versionCheck( ) ){
-        throw new RuntimeException("Postgres versions less than 9.1.X are not supported")
-      }
-      
       if ( !initDatabase( ) ) {
         throw new RuntimeException("Unable to initialize the postgres database")
       }
@@ -302,18 +298,6 @@ class PostgresqlBootstrapper extends Bootstrapper.Simple implements DatabaseBoot
       }
     }  catch ( Exception e ) {
       LOG.error("Error checking kernel parameters: " + e.message )
-    }
-  }
-  
-  // Version check to ensure only Postgres 9.X creates the db.
-  private boolean versionCheck( ) {
-    try {
-      String cmd = newCommands.initdb + " --version"
-      def pattern = ~/.*\s+9\.[1-9]\d*(\.\d+)*$/
-      pattern.matcher( cmd.execute( ).text.trim( ) ).matches( )
-    } catch ( Exception e ) {
-      LOG.fatal("Unable to find the initdb command")
-      false
     }
   }
   

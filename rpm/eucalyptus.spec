@@ -225,7 +225,6 @@ Requires:     lvm2
 Requires:     perl(Getopt::Long)
 Requires:     postgresql
 Requires:     postgresql-server
-Requires:     python-argparse
 Requires:     rsync
 
 %description cloud
@@ -274,7 +273,6 @@ Requires:     iproute
 Requires:     iptables
 Requires:     iputils
 Requires:     libselinux-python
-Requires:     python-argparse
 Requires:     rsync
 Requires:     /usr/bin/which
 %{?systemd_requires}
@@ -307,7 +305,6 @@ Requires:     eucalyptus-selinux > 0.2
 Requires:     eucanetd = %{version}-%{release}
 Requires:     httpd
 Requires:     iscsi-initiator-utils
-Requires:     kvm
 # Ceph support requires librados2, librbd1, and *also* qemu-kvm-rhev.
 Requires:     librados2%{?_isa}
 Requires:     librbd1%{?_isa}
@@ -317,6 +314,7 @@ Requires:     perl(Sys::Virt)
 Requires:     perl(Time::HiRes)
 Requires:     perl(XML::Simple)
 Requires:     qemu-kvm
+Requires:     qemu-system-x86
 # The next six come from storage/diskutil.c, which shells out to lots of stuff.
 Requires:     coreutils
 Requires:     curl
@@ -399,7 +397,6 @@ Requires:     %{name} = %{version}-%{release}
 Requires:     euca2ools >= 3.1
 Requires:     eucalyptus-selinux
 Requires:     pv
-Requires:     python-argparse
 Requires:     python-lxml
 Requires:     python-requests
 # The next seven come from storage/diskutil.c, which shells

@@ -72,7 +72,7 @@
 include ../Makedefs
 
 # Standard Libraries, Dependencies and Includes
-STDLIBS      := -lpthread -lm -lssl -lxml2 -lcurl -lcrypto -ljson -ljson-c
+STDLIBS      := -lpthread -lm -lssl -lxml2 -lcurl -lcrypto -ljson-c
 STDDEPS      := ../util/sequence_executor.o ../util/atomic_file.o ../util/log.o ../util/ipc.o ../util/misc.o  
 STDDEPS      += ../util/euca_string.o ../util/euca_file.o ../util/hash.o ../util/fault.o ../util/wc.o ../util/utf8.o  
 STDDEPS      += ../util/euca_auth.o ../storage/diskutil.o ../storage/http.o ../util/config.o ../util/euca_network.o

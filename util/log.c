@@ -1012,9 +1012,9 @@ int logprintfl(const char *func, const char *file, int line, log_level_e level, 
             l = LOG_INFO;
 
         if (custom_spec)
-            syslog(l, buf);
+            syslog(l, "%s", buf);
         else
-            syslog(l, buf + offset);
+            syslog(l, "%s", buf + offset);
     }
 
     if (is_corrid && log_file_path_req_track != NULL) {

@@ -54,7 +54,7 @@
 #include "sensor_common.h"
 #include <eucalyptus.h>
 #include <log.h>
-#include <json/json.h>
+#include <json-c/json.h>
 #include <stdarg.h>
 
 /*----------------------------------------------------------------------------*\

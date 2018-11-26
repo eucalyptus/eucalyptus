@@ -126,6 +126,7 @@ struct nc_state_t {
     int createImage_cleanup_threshold;
     int teardown_state_duration;
     int migration_ready_threshold;
+    int reboot_grace_period_sec;
     int shutdown_grace_period_sec;
     boolean migration_capable;
     int ephemeral_cache_highwater_gb;

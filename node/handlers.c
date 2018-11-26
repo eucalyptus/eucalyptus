@@ -1304,6 +1304,18 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                 }
             }
 
+            // during reboot ensure that the domain enters reboot before setting instance back to Running
+            // and that we allow the instance to restart without detecting it as termination of the instance
+            if ((old_state == BOOTING) && (
+                ((new_state == RUNNING) && (instance->bootTime > (time(NULL) - MONITORING_PERIOD))) ||
+                ((new_state == SHUTOFF || new_state == SHUTDOWN) && (instance->bootTime > (time(NULL) - nc_state.reboot_grace_period_sec)))
+               )) {
+                if (new_state != RUNNING) { // skip logging for running as this happens frequently on reboot
+                    LOGINFO("[%s] ignoring hypervisor reported state %s for booting domain during grace period (%d)\n",
+                            instance->instanceId, instance_state_names[new_state], nc_state.reboot_grace_period_sec);
+                }
+                break;
+            }
             if (new_state == SHUTOFF || new_state == SHUTDOWN || new_state == CRASHED) {
                 if (instance->terminationRequestedTime > (time(NULL) - nc_state.shutdown_grace_period_sec)) {
                     LOGINFO("[%s] ignoring hypervisor reported state %s for terminating domain during grace period (%d)\n",
@@ -2393,6 +2405,7 @@ static int init(void)
     GET_VAR_INT(nc_state.sc_request_timeout_sec, CONFIG_SC_REQUEST_TIMEOUT, 45);
     GET_VAR_INT(nc_state.concurrent_cleanup_ops, CONFIG_CONCURRENT_CLEANUP_OPS, 30);
     GET_VAR_INT(nc_state.disable_snapshots, CONFIG_DISABLE_SNAPSHOTS, 0);
+    GET_VAR_INT(nc_state.reboot_grace_period_sec, CONFIG_NC_REBOOT_GRACE_PERIOD_SEC, 30);
     GET_VAR_INT(nc_state.shutdown_grace_period_sec, CONFIG_SHUTDOWN_GRACE_PERIOD_SEC, 60);
 
     strcpy(nc_state.admin_user_id, EUCALYPTUS_ADMIN);

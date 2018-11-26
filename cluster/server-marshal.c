@@ -2062,7 +2062,7 @@ adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t *
         }
     }
     if (ccMeta.replyString != NULL) {  // if replyString is set, we have a more detailed status/error message
-        snprintf(statusMessage, sizeof(statusMessage), ccMeta.replyString);
+        snprintf(statusMessage, sizeof(statusMessage), "%s", ccMeta.replyString);
         EUCA_FREE(ccMeta.replyString); // the caller must free
     }
 
@@ -2133,7 +2133,7 @@ adb_StartInstanceResponse_t *StartInstanceMarshal(adb_StartInstance_t * startIns
     }
 
     if (ccMeta.replyString != NULL) {  // if replyString is set, we have a more detailed status/error message
-        snprintf(statusMessage, sizeof(statusMessage), ccMeta.replyString);
+        snprintf(statusMessage, sizeof(statusMessage), "%s", ccMeta.replyString);
         EUCA_FREE(ccMeta.replyString); // the caller must free
     }
 
@@ -2200,7 +2200,7 @@ adb_StopInstanceResponse_t *StopInstanceMarshal(adb_StopInstance_t * stopInstanc
         }
     }
     if (ccMeta.replyString != NULL) {  // if replyString is set, we have a more detailed status/error message
-        snprintf(statusMessage, sizeof(statusMessage), ccMeta.replyString);
+        snprintf(statusMessage, sizeof(statusMessage), "%s", ccMeta.replyString);
         EUCA_FREE(ccMeta.replyString); // the caller must free
     }
 

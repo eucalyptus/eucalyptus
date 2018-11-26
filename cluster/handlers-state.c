@@ -353,9 +353,9 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
                             }
                             myStatus->localEpoch = config->ccStatus.localEpoch;
                             sprintf(myStatus->serviceId.type, "node");
-                            sprintf(myStatus->serviceId.name, r->hostname);
-                            sprintf(myStatus->serviceId.partition, config->ccStatus.serviceId.partition);
-                            sprintf(myStatus->serviceId.uris[0], r->ncURL);
+                            sprintf(myStatus->serviceId.name, "%s", r->hostname);
+                            sprintf(myStatus->serviceId.partition, "%s", config->ccStatus.serviceId.partition);
+                            sprintf(myStatus->serviceId.uris[0], "%s", r->ncURL);
                             myStatus->serviceId.urisLen = 1;
                             LOGDEBUG("external services\t uri[%d]: %s %s %s %s %s\n",
                                      idIdx, myStatus->serviceId.type, myStatus->serviceId.partition, myStatus->serviceId.name, myStatus->localState, myStatus->serviceId.uris[0]);

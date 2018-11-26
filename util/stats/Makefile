@@ -41,7 +41,7 @@ include ../../Makedefs
 
 TEST_OBJS=../config.o ../ipc.o ../misc.o ../wc.o ../log.o ../euca_string.o ../euca_file.o ../../storage/diskutil.o
 STATS_OBJS=../config.o ../ipc.o ../misc.o ../wc.o ../log.o ../euca_string.o ../euca_file.o ../../storage/diskutil.o
-STATS_LIBS = -ljson -lm
+STATS_LIBS = -ljson-c -lm
 EFENCE=-lefence
 #DEBUGS = -DDEBUG # -DDEBUG1
 all: sensor_common.o stats.o message_stats.o message_sensor.o fs_emitter.o service_sensor.o 
