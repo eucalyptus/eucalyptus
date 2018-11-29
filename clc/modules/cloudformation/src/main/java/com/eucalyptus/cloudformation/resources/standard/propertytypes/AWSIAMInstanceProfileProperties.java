@@ -37,7 +37,6 @@ import com.google.common.collect.Lists;
 
 public class AWSIAMInstanceProfileProperties implements ResourceProperties {
 
-  @Required
   @Property
   private String path;
 

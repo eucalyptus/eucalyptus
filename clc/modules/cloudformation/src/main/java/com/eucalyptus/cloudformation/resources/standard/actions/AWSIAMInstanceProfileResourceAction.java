@@ -58,9 +58,9 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 
@@ -68,6 +68,7 @@ import java.util.Objects;
  * Created by ethomas on 2/3/14.
  */
 public class AWSIAMInstanceProfileResourceAction extends StepBasedResourceAction {
+  private static final String DEFAULT_PATH = "/";
 
   private AWSIAMInstanceProfileProperties properties = new AWSIAMInstanceProfileProperties();
   private AWSIAMInstanceProfileResourceInfo info = new AWSIAMInstanceProfileResourceInfo();
@@ -97,7 +98,7 @@ public class AWSIAMInstanceProfileResourceAction extends StepBasedResourceAction
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
         String instanceProfileName = action.getDefaultPhysicalResourceId();
         CreateInstanceProfileType createInstanceProfileType = MessageHelper.createMessage(CreateInstanceProfileType.class, action.info.getEffectiveUserId());
-        createInstanceProfileType.setPath(action.properties.getPath());
+        createInstanceProfileType.setPath(MoreObjects.firstNonNull(action.properties.getPath(), DEFAULT_PATH));
         createInstanceProfileType.setInstanceProfileName(instanceProfileName);
         CreateInstanceProfileResponseType createInstanceProfileResponseType = AsyncRequests.<CreateInstanceProfileType,CreateInstanceProfileResponseType> sendSync(configuration, createInstanceProfileType);
         String arn = createInstanceProfileResponseType.getCreateInstanceProfileResult().getInstanceProfile().getArn();
