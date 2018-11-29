@@ -73,7 +73,7 @@
   <mapping name="CreateDefaultSubnetResponse" class="com.eucalyptus.compute.common.CreateDefaultSubnetResponseType"
            extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
-    <structure get-method="getSubnet" set-method="setSubnet" usage="optional" type="com.eucalyptus.compute.common.SubnetType" name="Subnet"/>
+    <structure get-method="getSubnet" set-method="setSubnet" usage="optional" type="com.eucalyptus.compute.common.SubnetType" name="subnet"/>
   </mapping>
   <mapping name="CreateDefaultVpc" class="com.eucalyptus.compute.common.CreateDefaultVpcType"
            extends="com.eucalyptus.compute.common.ComputeMessage">
@@ -82,7 +82,7 @@
   <mapping name="CreateDefaultVpcResponse" class="com.eucalyptus.compute.common.CreateDefaultVpcResponseType"
            extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
-    <structure get-method="getVpc" set-method="setVpc" usage="optional" type="com.eucalyptus.compute.common.VpcType" name="Vpc"/>
+    <structure get-method="getVpc" set-method="setVpc" usage="optional" type="com.eucalyptus.compute.common.VpcType" name="vpc"/>
   </mapping>
   <mapping name="CreateNetworkInterfacePermission" class="com.eucalyptus.compute.common.CreateNetworkInterfacePermissionType"
            extends="com.eucalyptus.compute.common.ComputeMessage">

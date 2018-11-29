@@ -894,6 +894,65 @@ public class VpcManager {
     return reply;
   }
 
+  public CreateDefaultSubnetResponseType createDefaultSubnet(
+      final CreateDefaultSubnetType request
+  ) throws EucalyptusCloudException {
+    final CreateDefaultSubnetResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName();
+    final Optional<String> availabilityZone = Iterables.tryFind(
+        Clusters.list( ),
+        Predicates.and(
+            CollectionUtils.propertyPredicate( request.getAvailabilityZone( ), CloudMetadatas.toDisplayName( ) ),
+            RestrictedTypes.filterPrivilegedWithoutOwner( ) ) ).transform( CloudMetadatas.toDisplayName( ) );
+    if ( !availabilityZone.isPresent( ) ) {
+      throw new ClientComputeException( "InvalidParameterValue", "Availability zone invalid: " + request.getAvailabilityZone( ) );
+    }
+    final Supplier<Subnet> allocator = new Supplier<Subnet>( ) {
+      @SuppressWarnings( "OptionalGetWithoutIsPresent" )
+      @Override
+      public Subnet get( ) {
+        try {
+          final Vpc vpc =
+              vpcs.lookupDefault( accountFullName, Functions.identity( ) );
+          try {
+            subnets.lookupDefault( accountFullName, availabilityZone.get( ), Functions.identity( ) );
+            throw new ClientComputeException( "DefaultSubnetAlreadyExistsInAvailabilityZone",
+                "Default subnet exists for zone " + availabilityZone.get( ) );
+          } catch ( VpcMetadataNotFoundException ignore ) {
+          }
+          final String vpcCidr = vpc.getCidr( );
+          final Set<String> cidrsInUse = Sets.newHashSet( subnets.listByExample(
+              Subnet.exampleWithOwner( accountFullName ),
+              CollectionUtils.propertyPredicate( vpc.getDisplayName(), Subnets.FilterStringFunctions.VPC_ID ),
+              Subnets.FilterStringFunctions.CIDR ) );
+          final NetworkAcl networkAcl = networkAcls.lookupDefault( vpc.getDisplayName(), Functions.identity() );
+          final List<String> subnetCidrs = Lists.newArrayList( Iterables.transform(
+              Cidr.parseUnsafe( ).apply( vpcCidr ).split( 16 ),
+              Functions.toStringFunction( ) ) );
+          subnetCidrs.removeAll( cidrsInUse );
+          final Subnet subnet = subnets.save( Subnet.create(
+              vpc.getOwner( ),
+              vpc,
+              networkAcl,
+              Identifier.subnet.generate( ctx.getUser( ) ),
+              subnetCidrs.remove( 0 ),
+              availabilityZone.get( ) ) );
+          subnet.setDefaultForAz( true );
+          subnet.setMapPublicIpOnLaunch( true );
+          return subnet;
+        } catch ( VpcMetadataNotFoundException ex ) {
+          throw Exceptions.toUndeclared( new ClientComputeException( "DefaultVpcDoesNotExist", "Default vpc not found" ) );
+        } catch ( Exception ex ) {
+          throw new RuntimeException( ex );
+        }
+      }
+    };
+    reply.setSubnet( allocate( allocator, Subnet.class, SubnetType.class ) );
+    invalidate( reply.getSubnet( ).getSubnetId( ) );
+    return reply;
+  }
+
   public CreateSubnetResponseType createSubnet( final CreateSubnetType request ) throws EucalyptusCloudException {
     final CreateSubnetResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
@@ -956,6 +1015,90 @@ public class VpcManager {
     };
     reply.setSubnet( allocate( allocator, Subnet.class, SubnetType.class ) );
     invalidate( reply.getSubnet( ).getSubnetId( ) );
+    return reply;
+  }
+
+  public CreateDefaultVpcResponseType createDefaultVpc(
+      final CreateDefaultVpcType request
+  ) throws EucalyptusCloudException {
+    final CreateDefaultVpcResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup();
+    final UserFullName userFullName = ctx.getUserFullName();
+    final AccountFullName accountFullName = userFullName.asAccountFullName();
+    final Supplier<Vpc> allocator = new Supplier<Vpc>( ) {
+      @Override
+      public Vpc get( ) {
+        try {
+          try {
+            vpcs.lookupDefault( accountFullName, Functions.identity() );
+            throw new ClientComputeException( "DefaultVpcAlreadyExists", "Default vpc already exists" );
+          } catch ( final VpcMetadataNotFoundException ignore ) {
+          }
+          final String vpcCidr = VpcConfiguration.getDefaultVpcCidr( );
+          final UserFullName vpcOwner =
+              UserFullName.getInstance( Accounts.lookupPrincipalByAccountNumber( accountFullName.getAccountNumber( ) ) );
+          DhcpOptionSet options;
+          try {
+            options = dhcpOptionSets.lookupByExample(
+                DhcpOptionSet.exampleDefault( accountFullName ),
+                accountFullName,
+                "default",
+                Predicates.alwaysTrue(),
+                Functions.identity() );
+          } catch ( VpcMetadataNotFoundException e ) {
+            options = dhcpOptionSets.save( DhcpOptionSet.createDefault(
+                vpcOwner,
+                Identifier.dopt.generate( ctx.getUser( ) ),
+                VmInstances.INSTANCE_SUBDOMAIN ) );
+          }
+          final Vpc vpc = vpcs.save(
+              Vpc.create( vpcOwner, Identifier.vpc.generate( ctx.getUser( ) ), options, vpcCidr, true ) );
+          final RouteTable routeTable = routeTables.save(
+              RouteTable.create( vpcOwner, vpc, Identifier.rtb.generate( ctx.getUser( ) ), vpc.getCidr(), true ) );
+          final NetworkAcl networkAcl = networkAcls.save(
+              NetworkAcl.create( vpcOwner, vpc, Identifier.acl.generate( ctx.getUser( ) ), true ) );
+          final NetworkGroup group = NetworkGroup.create(
+              vpcOwner,
+              vpc,
+              ResourceIdentifiers.generateString( NetworkGroup.ID_PREFIX ),
+              NetworkGroups.defaultNetworkName(),
+              "default VPC security group" );
+          final Collection<NetworkPeer> peers = Lists.newArrayList(
+              NetworkPeer.create( group.getOwnerAccountNumber(), group.getName(), group.getGroupId(), null ) );
+          group.addNetworkRules( Lists.newArrayList(
+              NetworkRule.create( null/*protocol name*/, -1, null/*low port*/, null/*high port*/, peers, null/*cidrs*/ ),
+              NetworkRule.createEgress( null/*protocol name*/, -1, null/*low port*/, null/*high port*/, null/*peers*/, Collections.singleton( NetworkCidr.create(  "0.0.0.0/0" ) ) )
+          ) );
+          securityGroups.save( group );
+          InternetGateway internetGateway = internetGateways.save(
+              InternetGateway.create( vpcOwner, Identifier.igw.generate( ctx.getUser( ) ) ) );
+          internetGateway.setVpc( vpc );
+          routeTable.getRoutes( ).add(
+              Route.create( routeTable, Route.RouteOrigin.CreateRoute, "0.0.0.0/0", internetGateway ) );
+          final Set<String> zonesWithoutSubnets =
+              Sets.newTreeSet( Clusters.stream( ).map( CloudMetadatas.toDisplayName( ) ) );
+          final List<String> subnetCidrs = Lists.newArrayList( Iterables.transform(
+              Cidr.parseUnsafe( ).apply( vpcCidr ).split( 16 ),
+              Functions.toStringFunction( ) ) );
+          for ( final String zone : zonesWithoutSubnets ) {
+            final Subnet subnet = subnets.save( Subnet.create(
+                vpcOwner,
+                vpc,
+                networkAcl,
+                Identifier.subnet.generate( ctx.getUser( ) ),
+                subnetCidrs.remove( 0 ),
+                zone ) );
+            subnet.setDefaultForAz( true );
+            subnet.setMapPublicIpOnLaunch( true );
+          }
+          return vpc;
+        } catch ( Exception ex ) {
+          throw new RuntimeException( ex );
+        }
+      }
+    };
+    reply.setVpc( allocate( allocator, Vpc.class, VpcType.class ) );
+    invalidate( reply.getVpc( ).getVpcId( ) );
     return reply;
   }
 
