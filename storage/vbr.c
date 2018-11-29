@@ -368,7 +368,7 @@ static int prep_location(virtualBootRecord * vbr, ncMetadata * pMeta, const char
                 //Anything other than storage/ebs
                 char *l = vbr->resourceLocation + (strlen(typeName) + 3);   // +3 for "://", so 'l' points past, e.g., "objectstorage:"
                 snprintf(vbr->preparedResourceLocation, sizeof(vbr->preparedResourceLocation), "%s/%s", service->uris[0], l);   //! @TODO for now we just pick the first one
-                snprintf(vbr->resourceLocation, sizeof(vbr->resourceLocation), vbr->preparedResourceLocation);  //! @TODO trying this out
+                snprintf(vbr->resourceLocation, sizeof(vbr->resourceLocation), "%s", vbr->preparedResourceLocation);  //! @TODO trying this out
             } else {
                 //For storage, just copy the url for the SC into the preparedResourceLocation slot
                 snprintf(vbr->preparedResourceLocation, sizeof(vbr->preparedResourceLocation), "%s", service->uris[0]); //! @TODO for now we just pick the first one

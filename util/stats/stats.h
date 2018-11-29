@@ -56,7 +56,7 @@
  |                                  INCLUDES                                  |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-#include <json/json.h>
+#include <json-c/json.h>
 #include "sensor_common.h"
 #include <ipc.h>
 

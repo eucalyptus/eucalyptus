@@ -188,12 +188,6 @@ if test $goodversion -eq 0; then
         AC_MSG_ERROR([Eucalyptus needs at least JDK version $java_min_version])
 fi
 
-ant_version=`$ANT -version 2>&1 | grep "Ant.* version" | \
-        sed -e 's/.*Ant.* version \([[0-9.]]*\).*/\1/'`
-goodversion=`expr $ant_version ">=" $ant_min_version`
-if test $goodversion -eq 0; then
-        AC_MSG_ERROR([Eucalyptus needs at least ANT version $ant_min_version])
-fi
 # some version of ant picks up the wrong java
 java_version=`JAVA_HOME=$JAVA_HOME $ANT -diagnostics 2>&1 | grep ^java.version | \
         sed -e 's/java.* \([[0-9.]]*\).*/\1/'`

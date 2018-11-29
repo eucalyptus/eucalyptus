@@ -166,6 +166,10 @@ that describes a Eucalyptus instance to be launched.
                     </xsl:choose>
                 </xsl:if>
 
+                <rng model="virtio">
+                    <backend model="random">/dev/urandom</backend>
+                </rng>
+
                 <!-- disks or partitions (on Xen) from VBR -->
 
                 <xsl:for-each select="/instance/disks/diskPath">
