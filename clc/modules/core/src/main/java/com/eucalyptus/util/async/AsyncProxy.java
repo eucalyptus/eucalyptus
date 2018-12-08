@@ -28,12 +28,18 @@
  ************************************************************************/
 package com.eucalyptus.util.async;
 
+import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import com.eucalyptus.component.ServiceConfiguration;
 import java.util.function.Function;
+import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.component.Topology;
@@ -52,6 +58,79 @@ import edu.ucsb.eucalyptus.msgs.CallerContext;
  * asynchronous calls return CheckedListenableFuture&lt;BaseMessage>.
  */
 public class AsyncProxy {
+
+  private static final Logger logger = Logger.getLogger( AsyncProxy.class );
+
+  /*
+   * Strategies for MethodHandle lookup of default methods.
+   *
+   * Java 8 requires an approach which will fail with later JDKs
+   */
+  private enum SpecialMethodHandleLookup {
+    Default,
+    Java8 {
+      @Override
+      public MethodHandle lookup(
+          final Class clientInterface,
+          final Method method
+      ) throws ReflectiveOperationException {
+            final Class<?> declaringClass = method.getDeclaringClass( );
+            final Constructor<MethodHandles.Lookup> constructor =
+                MethodHandles.Lookup.class.getDeclaredConstructor( Class.class, int.class );
+            constructor.setAccessible( true );
+        try {
+          return constructor.
+              newInstance( declaringClass, MethodHandles.Lookup.PRIVATE ).
+              unreflectSpecial( method, declaringClass );
+        } catch ( InvocationTargetException|InstantiationException e ) {
+          throw new ReflectiveOperationException(e);
+        }
+      }
+    },
+    ;
+
+    private static final AtomicReference<SpecialMethodHandleLookup> lookupRef =
+        new AtomicReference<>( SpecialMethodHandleLookup.Default );
+
+    public MethodHandle lookup(
+        final Class clientInterface,
+        final Method method
+    ) throws ReflectiveOperationException {
+      return MethodHandles.lookup( )
+          .findSpecial(
+              clientInterface,
+              method.getName( ),
+              MethodType.methodType(
+                  method.getReturnType( ),
+                  method.getParameterTypes( ) ),
+              clientInterface );
+    }
+
+    /*
+     * Attempt lookup using the Default strategy. Fallback to Java 8 approach
+     * on first failure with warning log message.
+     */
+    public static MethodHandle lookupWithFallback(
+        final Class clientInterface,
+        final Method method
+    ) throws ReflectiveOperationException {
+      final SpecialMethodHandleLookup lookupStrategy = lookupRef.get( );
+      try {
+        return lookupStrategy.lookup( clientInterface, method );
+      } catch ( IllegalAccessException e ) {
+        if ( lookupStrategy == SpecialMethodHandleLookup.Default ) {
+          // if we used the default strategy then update to Java 8 approach
+          if ( lookupRef.compareAndSet(
+              SpecialMethodHandleLookup.Default,
+              SpecialMethodHandleLookup.Java8 ) ) {
+            logger.warn( "Switched to Java 8 compatible default method lookups" );
+          }
+          return lookupRef.get().lookup( clientInterface, method );
+        }
+        throw e;
+      }
+    }
+  }
 
   /**
    * Create a client that uses Topology to resolve an endpoint, propagates the contextual identity
@@ -80,7 +159,6 @@ public class AsyncProxy {
   /**
    * Create a client using the given message transform
    */
-  @SuppressWarnings( "unchecked" )
   public static <T> T client(
       final Class<T> clientInterface,
       final Function<BaseMessage,BaseMessage> messageTransform
@@ -104,7 +182,7 @@ public class AsyncProxy {
   }
 
   /**
-   * Create a client that the endpoint from the given supplier
+   * Create a client that uses the endpoint from the given supplier
    */
   @SuppressWarnings( "unchecked" )
   public static <T> T client(
@@ -117,15 +195,9 @@ public class AsyncProxy {
         new Class<?>[]{ clientInterface },
         ( target, method, arguments ) -> {
           if ( method.isDefault( ) ) {
-            final Class<?> declaringClass = method.getDeclaringClass( );
-            final Constructor<MethodHandles.Lookup> constructor =
-                MethodHandles.Lookup.class.getDeclaredConstructor( Class.class, int.class );
-            constructor.setAccessible( true );
-            return constructor.
-                newInstance( declaringClass, MethodHandles.Lookup.PRIVATE ).
-                unreflectSpecial( method, declaringClass ).
-                bindTo( target ).
-                invokeWithArguments( arguments );
+            return SpecialMethodHandleLookup.lookupWithFallback( clientInterface, method )
+                .bindTo( target )
+                .invokeWithArguments( arguments );
           }
           if ( arguments.length != 1 || !(arguments[0] instanceof BaseMessage) ) {
             throw new IllegalArgumentException( "Expected one argument of type BaseMessage: " + method );
