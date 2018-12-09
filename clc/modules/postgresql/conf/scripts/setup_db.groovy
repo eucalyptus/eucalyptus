@@ -51,6 +51,8 @@ import groovy.transform.Immutable
 import java.nio.file.Files
 import java.nio.file.attribute.PosixFilePermissions
 import java.sql.ResultSet
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import com.eucalyptus.bootstrap.Bootstrapper
 import com.eucalyptus.bootstrap.DatabaseBootstrapper
 import com.eucalyptus.bootstrap.OrderedShutdown
@@ -388,7 +390,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
         pgconfText = pgconfText.replaceAll( "#(?=\\s{0,128}"+quote(property.key)+"\\s{0,128}=)", "" ) // ensure enabled
         pgconfText = pgconfText.replaceAll(
             "(?<=\\s{0,128}"+ quote(property.key) +"\\s{0,128}=\\s{0,128})\\S.*",
-            quoteReplacement(property.value) + " # Updated by setup_db.groovy (${new Date().format( 'yyyy-MM-dd' )})")
+            quoteReplacement(property.value) + " # Updated by setup_db.groovy (${LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)})")
       }
       
       orgPGCONF.write( pgconfText )

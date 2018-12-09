@@ -122,8 +122,10 @@ subprojects {
     testImplementation 'org.apache.derby:derby:10.8.3.0'
     testImplementation 'org.jmock:jmock:2.6.0'
     testImplementation 'org.jmock:jmock-junit4:2.6.0'
-    testImplementation('org.spockframework:spock-core:0.7-groovy-2.0') {
-      exclude module: 'groovy-all' // we include the indy variant
+    testImplementation('org.spockframework:spock-core:1.2-groovy-2.5') {
+      exclude module: 'groovy-json'
+      exclude module: 'groovy-nio'
+      exclude module: 'groovy-macro'
     }
 
     jibx 'org.apache.bcel:bcel:6.2'
