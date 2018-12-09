@@ -147,10 +147,10 @@ This package contains the common-java files.
 %package common-java-libs
 Summary:      Eucalyptus cloud platform - ws java stack libs
 
-Requires:     eucalyptus-java-deps >= 4.4
+Requires:     eucalyptus-java-deps >= 5.0
 Requires:     eucalyptus-selinux
 Requires:     jpackage-utils
-Requires:     java-1.8.0-openjdk >= 1:1.8.0
+Requires:     java-11-openjdk-headless >= 1:1.11.0
 
 Provides:     %{name}-java-libs = %{version}-%{release}
 
