@@ -325,6 +325,7 @@ static void *rebooting_thread(void *arg)
     virConnectPtr conn = NULL;
     rebooting_thread_params *params = ((rebooting_thread_params *) arg);
     nc = &(params->nc);
+    boolean shutoff = FALSE;
 
     sem_p(inst_sem);
     {
@@ -345,23 +346,25 @@ static void *rebooting_thread(void *arg)
         EUCA_FREE(params);
         return NULL;
     }
-    dom = virDomainLookupByName(conn, instance->instanceId);
-    if (dom == NULL) {
-        LOGERROR("[%s] cannot locate instance to reboot, giving up\n", instance->instanceId);
-        unlock_hypervisor_conn();
-        EUCA_FREE(params);
-        return NULL;
-    }
-    // obtain the most up-to-date XML for domain from libvirt
-    xml = virDomainGetXMLDesc(dom, 0);
-    if (xml == NULL) {
-        LOGERROR("[%s] cannot obtain metadata for instance to reboot, giving up\n", instance->instanceId);
-        virDomainFree(dom);            // release libvirt resource
-        unlock_hypervisor_conn();
-        EUCA_FREE(params);
-        return NULL;
-    }
-    virDomainFree(dom);                // release libvirt resource
+    { // hypervisor lock
+        dom = virDomainLookupByName(conn, instance->instanceId);
+        if (dom == NULL) {
+            LOGERROR("[%s] cannot locate instance to reboot, giving up\n", instance->instanceId);
+            unlock_hypervisor_conn();
+            EUCA_FREE(params);
+            return NULL;
+        }
+        // obtain the most up-to-date XML for domain from libvirt
+        xml = virDomainGetXMLDesc(dom, 0);
+        if (xml == NULL) {
+            LOGERROR("[%s] cannot obtain metadata for instance to reboot, giving up\n", instance->instanceId);
+            virDomainFree(dom);            // release libvirt resource
+            unlock_hypervisor_conn();
+            EUCA_FREE(params);
+            return NULL;
+        }
+        virDomainFree(dom);                // release libvirt resource
+    } // end hypervisor lock
     unlock_hypervisor_conn();
 
     LOGINFO("[%s] shutting down\n", instance->instanceId);
@@ -384,21 +387,32 @@ static void *rebooting_thread(void *arg)
         EUCA_FREE(params);
         return NULL;
     }
-    // domain is now shut down, create a new one with the same XML
-    LOGINFO("[%s] rebooting\n", instance->instanceId);
-    if (!strcmp(nc->pEucaNet->sMode, NETMODE_VPCMIDO)) {
-        // need to sleep to allow midolman to update the VM interface
-        sleep(10);
-    }
-    dom = virDomainCreateLinux(conn, xml, 0);
-    if (dom == NULL) {
-        LOGERROR("[%s] failed to restart instance\n", instance->instanceId);
-        change_state(instance, SHUTOFF);
-    } else {
-        euca_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
-        sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so we set base value accurately
-        virDomainFree(dom);
+    { // hypervisor lock
+        // domain is now shut down, create a new one with the same XML
+        LOGINFO("[%s] rebooting\n", instance->instanceId);
+        if (!strcmp(nc->pEucaNet->sMode, NETMODE_VPCMIDO)) {
+            // need to sleep to allow midolman to update the VM interface
+            sleep(10);
+        }
+        dom = virDomainCreateLinux(conn, xml, 0);
+        if (dom == NULL) {
+            LOGERROR("[%s] failed to restart instance\n", instance->instanceId);
+            shutoff = TRUE;
+        } else {
+            euca_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
+            sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so we set base value accurately
+            virDomainFree(dom);
+        }
+    } // end hypervisor lock
+    unlock_hypervisor_conn();
 
+    if (shutoff == TRUE) {
+        sem_p(inst_sem);
+        {
+            change_state(instance, SHUTOFF);
+        }
+        sem_v(inst_sem);
+    } else {
         if (!strcmp(nc->pEucaNet->sMode, NETMODE_VPCMIDO)) {
             bridge_instance_interfaces_remove(nc, instance);
         }
@@ -409,11 +423,14 @@ static void *rebooting_thread(void *arg)
             snprintf(iface, 16, "vn_%s", instance->instanceId);
             bridge_interface_set_hairpin(nc, instance, iface);
         } 
-
+        sem_p(inst_sem);
+        {
+            instance->rebootTime = 0; // clear reboot time when running
+        }
+        sem_v(inst_sem);
     }
     EUCA_FREE(xml);
 
-    unlock_hypervisor_conn();
     unset_corrid(get_corrid());
     EUCA_FREE(params);
     return NULL;
@@ -434,20 +451,32 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     pthread_t tcb = { 0 };
     ncInstance *instance = NULL;
     rebooting_thread_params *params = NULL;
-    int old_state;
+    int old_state = 0;
+    int old_bootTime = 0;
     sem_p(inst_sem);
     {
         instance = find_instance(&global_instances, instanceId);
-        old_state = instance->state;
-        instance->bootTime = time(NULL);    // otherwise nc_state.booting_cleanup_threshold will kick in
-        change_state(instance, BOOTING);    // not STAGING, since in that mode we don't poll hypervisor for info
-        LOGDEBUG("[%s] is set to BOOTING stage\n", instanceId);
+        if (instance != NULL) {
+            old_state = instance->state;
+            if (old_state != BOOTING) {
+                old_bootTime = instance->bootTime;
+                instance->bootTime = time(NULL);    // otherwise nc_state.booting_cleanup_threshold will kick in
+                instance->rebootTime = instance->bootTime;  // reboot time will not be set on initial boot
+                change_state(instance, BOOTING);    // not STAGING, since in that mode we don't poll hypervisor for info
+                LOGDEBUG("[%s] is set to BOOTING stage\n", instanceId);
+            }
+        }
     }
     sem_v(inst_sem);
 
     if (instance == NULL) {
         LOGERROR("[%s] cannot find instance\n", instanceId);
         return (EUCA_NOT_FOUND_ERROR);
+    }
+
+    if ((old_state == BOOTING) && (instance->rebootTime > 0)) {
+        LOGINFO("[%s] reboot in progress, ignoring reboot request.\n", instanceId);
+        return (EUCA_OK);
     }
 
     params = EUCA_ZALLOC(1, sizeof(rebooting_thread_params));
@@ -460,8 +489,8 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
         {
             instance = find_instance(&global_instances, instanceId);
             // if instance state is still BOOTING set it back to the old one
-            if (instance->state == BOOTING) {
-                instance->bootTime = 0;
+            if (instance != NULL && instance->state == BOOTING) {
+                instance->bootTime = old_bootTime;
                 change_state(instance, old_state);
             }
         }
