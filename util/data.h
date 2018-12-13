@@ -387,6 +387,7 @@ typedef struct ncInstance_t {
     int launchTime;                    //!< timestamp of RunInstances request arrival
     int expiryTime;                    //!< timestamp of instance ->RUNNING expiration
     int bootTime;                      //!< timestamp of STAGING->BOOTING transition
+    int rebootTime;                    //!< timestamp of RUNNING->BOOTING transition (while active)
     int bundlingTime;                  //!< timestamp of ->BUNDLING transition
     int createImageTime;               //!< timestamp of ->CREATEIMAGE transition
     int terminationRequestedTime;      //!< timestamp of TerminateInstance request arrival
