@@ -704,7 +704,8 @@ out:
         unlock_hypervisor_conn();
 
     sem_p(inst_sem);
-    LOGDEBUG("%d outgoing migrations still active\n", --outgoing_migrations_in_progress);
+    outgoing_migrations_in_progress--;
+    LOGDEBUG("%d outgoing migrations still active\n", outgoing_migrations_in_progress);
     if (migration_error) {
         migration_rollback(instance);
     } else {
