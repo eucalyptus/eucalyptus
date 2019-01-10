@@ -33,6 +33,7 @@ import groovy.sql.GroovyRowResult;
 import groovy.sql.Sql;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -55,6 +56,7 @@ import java.util.stream.Collectors;
 import org.apache.log4j.Logger;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.tool.hbm2ddl.SchemaUpdate;
+import org.hibernate.tuple.entity.EntityTuplizerFactory;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Bootstrapper;
@@ -1166,9 +1168,16 @@ public class Upgrades {
         final Configuration configuration = PersistenceContexts.getConfiguration( config );
         final File configDigestFile = SubDirectory.RUNDB.getChildFile( ctx + ".cfg.sha256" );
         final ByteArrayOutputStream output = new ByteArrayOutputStream( 4096 );
-        final ObjectOutputStream outputObject = new ObjectOutputStream( output );
-        outputObject.writeObject( configuration ); // when using Java 7 the EntityTuplizerFactory/ConcurrentHashMap can
-        outputObject.flush( );                     // cause spurious hash differences. This occurs much less with Java 8.
+        final ObjectOutputStream outputObject = new ObjectOutputStream( output ) {
+          { enableReplaceObject( true ); }
+          @Override protected Object replaceObject( final Object obj ) throws IOException {
+            // skip EntityTuplizerFactory[/ConcurrentHashMap] which can cause spurious hash
+            // differences.
+            return obj instanceof EntityTuplizerFactory ? null : super.replaceObject( obj );
+          }
+        };
+        outputObject.writeObject( configuration );
+        outputObject.flush( );
         final String digest = BaseEncoding.base16().lowerCase( )
             .encode( Digest.SHA256.digestBinary( output.toByteArray( ) ) );
         final boolean upgrade = BootstrapArgs.isUpgradeSystem( ) || isForceUpgrade( );
