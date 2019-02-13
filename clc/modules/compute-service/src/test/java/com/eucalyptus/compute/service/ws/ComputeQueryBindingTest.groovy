@@ -51,14 +51,12 @@ import com.eucalyptus.compute.common.UserIdGroupPairType
 import com.eucalyptus.ws.protocol.QueryBindingTestSupport
 import com.google.common.base.Splitter
 import edu.ucsb.eucalyptus.msgs.BaseMessage
-import groovy.transform.CompileStatic
 import org.junit.Test
 import static org.junit.Assert.*
 
 /**
  *
  */
-@CompileStatic
 class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     @Test

@@ -96,7 +96,7 @@ class CFUpgrades {
           final String simpleworkflow = ComponentIds.lookup(SimpleWorkflow).name()
           final ServiceBuilder builder = ServiceBuilders.lookup(SimpleWorkflow)
           ServiceConfigurations.list(CloudFormation).each { ServiceConfiguration configuration ->
-            final String simpleWorkflowServiceName
+            String simpleWorkflowServiceName = ""
             if (configuration.name.equals("${configuration.partition}.${cloudformation}" as String)) {
               simpleWorkflowServiceName = "${configuration.partition}.${simpleworkflow}"
             } else { // use host based naming

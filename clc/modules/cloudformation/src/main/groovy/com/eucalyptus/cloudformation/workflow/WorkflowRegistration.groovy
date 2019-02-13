@@ -1,7 +1,13 @@
+/*
+ * Copyright 2018 AppScale Systems, Inc
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
 package com.eucalyptus.cloudformation.workflow
 
+import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal
 import com.eucalyptus.bootstrap.Bootstrap
-import com.eucalyptus.bootstrap.Bootstrapper
+import com.eucalyptus.bootstrap.Bootstrapper.Simple
 import com.eucalyptus.bootstrap.Provides
 import com.eucalyptus.bootstrap.RunDuring
 import com.eucalyptus.cloudformation.common.CloudFormation
@@ -10,6 +16,8 @@ import com.eucalyptus.cloudformation.ws.StackWorkflowTags
 import com.netflix.glisten.InterfaceBasedWorkflowClient
 import com.netflix.glisten.WorkflowDescriptionTemplate
 import groovy.transform.CompileStatic
+import groovy.transform.TupleConstructor
+import io.vavr.Tuple2
 import org.apache.log4j.Logger
 
 import java.util.function.Function
@@ -141,20 +149,32 @@ class WorkflowRegistration {
       WorkflowDescriptionTemplate template,
       Function<InterfaceBasedWorkflowClient<T>,T> clientFactory
   ){
-    { StackWorkflowTags tags, Long timeout ->
+    return new WorkflowBuilderImpl<>( workflowType, template, clientFactory )
+  }
 
+  @TupleConstructor
+  static class WorkflowBuilderImpl<T> implements WorkflowRegistry.WorkflowBuilder<T> {
+    Class<T> workflowType
+    WorkflowDescriptionTemplate template
+    Function<InterfaceBasedWorkflowClient<T>,T> clientFactory
+
+    @Override
+    Tuple2<WorkflowClientExternal, T> build(final StackWorkflowTags tags, final Long timeout) {
       StartTimeoutPassableWorkflowClientFactory factory =
           new StartTimeoutPassableWorkflowClientFactory(
-            WorkflowClientManager.getSimpleWorkflowClient(),
-            CloudFormationProperties.SWF_DOMAIN,
-            CloudFormationProperties.SWF_TASKLIST );
+              WorkflowClientManager.getSimpleWorkflowClient(),
+              CloudFormationProperties.SWF_DOMAIN,
+              CloudFormationProperties.SWF_TASKLIST )
 
       InterfaceBasedWorkflowClient<T> client = factory.getNewWorkflowClient(
           workflowType,
           template,
           tags, timeout, null )
-      io.vavr.Tuple.of( client, clientFactory.apply( client ) )
-    } as WorkflowRegistry.WorkflowBuilder<T>
+
+      T typedClient = workflowType.cast( clientFactory.apply( client ) )
+
+      return io.vavr.Tuple.of( client as WorkflowClientExternal, typedClient )
+    }
   }
 
   /**
@@ -162,14 +182,14 @@ class WorkflowRegistration {
    */
   @Provides( CloudFormation )
   @RunDuring( Bootstrap.Stage.UnprivilegedConfiguration )
-  static class WorkflowRegistrationBootstrapper extends Bootstrapper.Simple {
+  static class WorkflowRegistrationBootstrapper extends Simple {
     private static final Logger logger = Logger.getLogger( WorkflowRegistrationBootstrapper )
 
     @Override
     boolean load( ) throws Exception {
       logger.info( "Registering CloudFormation workflows" )
       registerWorkflows( )
-      return true;
+      return true
     }
   }
 }

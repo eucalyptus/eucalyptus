@@ -6,7 +6,7 @@ EUCA_DB_SUFFIX="@EUCA_DB_SUFFIX@"
 EUCA_USER="${EUCA_USER:-eucalyptus}"
 EUCA_VERSION="@EUCA_VERSION@"
 EUCA_EXTRA_VERSION="@EXTRA_VERSION@"
-EUCA_JDK="${EUCA_JDK:-/usr/lib/jvm/jre-1.8.0}"
+EUCA_JDK="${EUCA_JDK:-/usr/lib/jvm/jre-11}"
 EUCA_JDK_HEAP="${EUCA_JDK_HEAP:-2g}"
 EUCA_LOG_LEVEL="${LOGLEVEL:-INFO}"
 EUCA_LOG_APPENDER="${LOGAPPENDER:-console-log}"
@@ -45,7 +45,7 @@ while true; do
             shift 2
             ;;
         -d|--debug)
-            JAVA_OPTS="${JAVA_OPTS} -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005"
+            JAVA_OPTS="${JAVA_OPTS} -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
             shift
             ;;
         --force-remote-bootstrap)
@@ -141,7 +141,7 @@ if [ ${SET_JVM_HEAP} -eq 1 ] ; then
   JAVA_OPTS="${JAVA_OPTS} -Xms${EUCA_JDK_HEAP} -Xmx${EUCA_JDK_HEAP}"
 fi
 JAVA_OPTS="${JAVA_OPTS} -cp /etc/eucalyptus/cloud.d:/etc/eucalyptus/cloud.d/scripts:/usr/share/eucalyptus/lib/*"
-JAVA_OPTS="${JAVA_OPTS} -javaagent:${EUCA_HOME}/usr/share/eucalyptus/lib/aspectjweaver-1.8.13.jar"
+JAVA_OPTS="${JAVA_OPTS} -javaagent:${EUCA_HOME}/usr/share/eucalyptus/lib/aspectjweaver-1.9.2.jar"
 JAVA_OPTS="${JAVA_OPTS} -XX:HeapDumpPath=${EUCA_HOME}/var/log/eucalyptus/"
 JAVA_OPTS="${JAVA_OPTS} -XX:ErrorFile=${EUCA_HOME}/var/log/eucalyptus/cloud-java-error-%p.log"
 JAVA_OPTS="${JAVA_OPTS} -Deuca.home=${EUCA_HOME}"
