@@ -28,9 +28,11 @@
  ************************************************************************/
 package com.eucalyptus.crypto.util
 
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+
 import static org.junit.Assert.*
 import org.junit.Test
-import java.text.SimpleDateFormat
 import com.eucalyptus.auth.login.AuthenticationException
 
 /**
@@ -44,9 +46,11 @@ class TimestampsTest {
     Date time = new Date( 1358200169581L ) // any date with non zero millis
     for ( final Timestamps.PatternHolder pattern : Timestamps.iso8601 ) {
       // Date format puts the millis at the end, regex match/replace moves them, e.g. .000581 -> .581000 
-      String formatted = sdf( pattern.pattern ).format( time ).replaceFirst( "(.*)\\.(0*)([0-9]*)(Z?)", '$1.$3$2$4' )
+      String formatted = dtf( pattern.pattern ).format( time.toInstant() ).replaceFirst( "(.*)\\.(0*)([0-9]*)(Z?)", '$1.$3$2$4' )
       Date result = Timestamps.parseIso8601Timestamp( formatted )
-      long accuracy = pattern.pattern.contains( "S" ) ? 1 : 1000
+      long accuracy = pattern.pattern.contains( "S" ) ? 100 : 1000
+      accuracy = pattern.pattern.contains( "SS" ) ? 10 : accuracy
+      accuracy = pattern.pattern.contains( "SSS" ) ? 1 : accuracy
       Date expected = new Date( ( time.getTime() / accuracy as Long ) * accuracy )
       assertEquals( "Round trip date for pattern " + pattern, format(expected), format(result) )
     }
@@ -60,6 +64,12 @@ class TimestampsTest {
   @Test( expected=AuthenticationException.class )
   void testInvalidTimestamp() {
     Timestamps.parseIso8601Timestamp( "invalid" )
+  }
+
+  @Test
+  void testNpeTimestamp() {
+    // Java 11 NPE on parse
+    Timestamps.parseIso8601Timestamp("2019-02-17T00:57:14.850Z")
   }
 
   @Test
@@ -174,13 +184,59 @@ class TimestampsTest {
         Timestamps.formatIso8601UTCLongDateMillisTimezone( new Date( 1358200169000L ) ) )
   }
 
-  private SimpleDateFormat sdf( final String pattern ) {
-    final SimpleDateFormat format = new SimpleDateFormat( pattern )
-    format.setTimeZone( TimeZone.getTimeZone( "GMT" ) )
-    format
+  @Test
+  void testParseRfc822Timestamp() {
+    assertEquals(
+        "Parsing RFC 2616 date",
+        new Date( 1358200169000L ),
+        Timestamps.parseTimestamp("Mon, 14 Jan 2013 21:49:29 GMT", Timestamps.Type.RFC_2616) )
+  }
+
+  @Test
+  void testParseRfc822TimestampBrokenRequestBuilder() {
+    assertEquals(
+        "Parsing RFC 2616 date with -0000 zone",
+        new Date( 1358200169000L ),
+        Timestamps.parseTimestamp("Mon, 14 Jan 2013 21:49:29 -0000", Timestamps.Type.RFC_2616) )
+  }
+
+  @Test
+  void testFormatIso8601Timestamp() {
+    assertEquals(
+        "iso 8601 timestamp",
+        "2013-01-14T21:49:29Z",
+        Timestamps.formatIso8601Timestamp( new Date( 1358200169000L ) ) )
+  }
+
+  @Test
+  void testFormatIso8601UTCLongDateMillisTimezone() {
+    assertEquals(
+        "iso 8601 long utc timestamp",
+        "2013-01-14T21:49:29.000+0000",
+        Timestamps.formatIso8601UTCLongDateMillisTimezone( new Date( 1358200169000L ) ) )
+  }
+
+  @Test
+  void testFormatShortIso8601Date() {
+    assertEquals(
+        "iso 8601 short date",
+        "20130114",
+        Timestamps.formatShortIso8601Date( new Date( 1358200169000L ) ) )
+  }
+
+  @Test
+  void testFormatShortIso8601Timestamp() {
+    assertEquals(
+        "iso 8601 short timestamp",
+        "20130114T214929Z",
+        Timestamps.formatShortIso8601Timestamp( new Date( 1358200169000L ) ) )
+  }
+
+  private DateTimeFormatter dtf(final String pattern ) {
+    DateTimeFormatter.ofPattern(pattern).withZone(ZoneId.of('GMT'))
   }
 
   private String format( Date date ) {
-    sdf( "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'" ).format( date )
+    dtf( "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'" ).format( date.toInstant() )
   }
 }
