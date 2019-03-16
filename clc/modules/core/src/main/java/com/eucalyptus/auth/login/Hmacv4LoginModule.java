@@ -148,7 +148,7 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
       } );
       sb.append( header );
       sb.append( ':' );
-      sb.append( Joiner.on( ',' ).join( Ordering.<String>natural().sortedCopy( values ) ) );
+      sb.append( Joiner.on( ',' ).join(values) );
       sb.append( '\n' );
     }
     sb.append( '\n' );
@@ -166,9 +166,14 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
     final ByteBuffer byteBuffer = StandardCharsets.UTF_8.encode( CharBuffer.wrap( text ) );
     return BaseEncoding.base16( ).lowerCase( ).encode( Digest.SHA256.digestBinary( byteBuffer ) );
   }
-  
+
+  private static String pathencode( final String path ) {
+    //TODO: encode path correctly
+    return path==null ? null : path.replace( " ", "%20" );
+  }
+
   public static String canonicalizePath( final String servicePath ) throws URISyntaxException {
-    return servicePath.isEmpty() ? "/" : new URI("http", "0.0.0.0", servicePath, null).normalize().getPath(); //TODO encode path here when it becomes necessary
+    return servicePath.isEmpty() ? "/" : pathencode(new URI("http", "0.0.0.0", servicePath, null).normalize().getPath());
   }
 
   public static byte[] getHmacSHA256( final byte[] signatureKey,
