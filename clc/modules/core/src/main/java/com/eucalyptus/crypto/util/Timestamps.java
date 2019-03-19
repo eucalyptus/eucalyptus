@@ -40,11 +40,16 @@
 package com.eucalyptus.crypto.util;
 
 import java.text.ParsePosition;
-import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.temporal.TemporalAccessor;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.concurrent.ExecutionException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.google.common.base.Function;
@@ -65,10 +70,10 @@ public class Timestamps {
     RFC_2616(rfc2616),
     ISO_8601(iso8601);
     
-    private final List<PatternHolder> patterns;
+    private final ImmutableList<PatternHolder> patterns;
     
-    private Type( final List<PatternHolder> patterns ) {
-      this.patterns = patterns;  
+    Type( final List<PatternHolder> patterns ) {
+      this.patterns = ImmutableList.copyOf(patterns);
     }
   }
   
@@ -112,24 +117,27 @@ public class Timestamps {
   }
 
   public static String formatRfc822Timestamp( final Date date ) {
-    return sdf( rfc822Timestamp ).format( date );
+    return dtf( rfc822Timestamp ).format( temporal(date) );
   }
 
   public static String formatIso8601Timestamp( final Date date ) {
-    return sdf( iso8601Timestamp ).format( date );
+    return dtf( iso8601Timestamp ).format( temporal(date) );
   }
 
   public static String formatShortIso8601Timestamp( final Date date ) {
-    return sdf( iso8601ShortTimestamp ).format( date );    
+    return dtf( iso8601ShortTimestamp ).format( temporal(date) );
   }
 
   public static String formatShortIso8601Date( final Date date ) {
-    return sdf( iso8601ShortDate ).format( date );
+    return dtf( iso8601ShortDate ).format( temporal(date) );
   }
 
   public static String formatIso8601UTCLongDateMillisTimezone( final Date date ) {
-    final SimpleDateFormat format = sdf( iso8601TimestampWithMillisAndTimezone );
-    return format.format(date);
+    return dtf( iso8601TimestampWithMillisAndTimezone ).format(temporal(date));
+  }
+
+  private static TemporalAccessor temporal(final Date date) {
+    return date.toInstant();
   }
 
   /**
@@ -169,6 +177,7 @@ public class Timestamps {
    */
   private static final List<PatternHolder> rfc2616 = ImmutableList.of(
     new PatternHolder( "EEE, dd MMM yyyy HH:mm:ss zzz" ), // RFC 822 / 1123
+    new PatternHolder( "EEE, dd MMM yyyy HH:mm:ss Z" ), // Invalid, but python requestbuilder uses -0000
     new PatternHolder(  "EEEE, dd-MMM-yy HH:mm:ss zzz" ), // RFC 850 / 1036
     new PatternHolder(  "EEE MMM d HH:mm:ss yyyy" ) // ANSI C asctime() format 
   );
@@ -181,12 +190,12 @@ public class Timestamps {
   static {
     final List<String> patterns = Lists.newArrayList(
       "yyyy-MM-dd'T'HH:mm:ss",
-      "yyyy-MM-dd'T'HH:mm:ssZ",
       "yyyy-MM-dd'T'HH:mm:ssX",
       "yyyy-MM-dd'T'HH:mm:ssXXX",
-      "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
+      "yyyy-MM-dd'T'HH:mm:ssZ",
       "yyyy-MM-dd'T'HH:mm:ss.SSSX",
       "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+      "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
       "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'Z",
       "yyyy-MM-dd'T'HH:mm:ss'Z'",
       "yyyy-MM-dd'T'HH:mm:ss'Z'Z"
@@ -202,8 +211,7 @@ public class Timestamps {
     final List<PatternHolder> generatedPatterns = Lists.newArrayList();    
     for ( final String pattern : patterns ) {
       for ( final Iso8601Variants variant : Iso8601Variants.values() ) {
-        // Type hint required to compile on OpenJDK 1.6
-        generatedPatterns.add( PatternHolder.generate( ((Function<String,String>)variant).apply( pattern ) ) );
+        generatedPatterns.add( PatternHolder.generate( variant.apply( pattern ) ) );
       }
     }
 
@@ -212,22 +220,20 @@ public class Timestamps {
     iso8601 = ImmutableList.copyOf( generatedPatterns );  
   }
 
-  private static ThreadLocal<Cache<String,SimpleDateFormat>> patternLocal =
-      new ThreadLocal<Cache<String,SimpleDateFormat>>(  ) {
-        @Override
-        protected Cache<String,SimpleDateFormat> initialValue( ) {
-          return CacheBuilder.newBuilder( ).softValues( ).build( );
-        }
-      };
+  private static Cache<String,DateTimeFormatter> patternCache = CacheBuilder.newBuilder().build();
 
-  private static SimpleDateFormat sdf( final String pattern ) {
-    SimpleDateFormat format = patternLocal.get( ).getIfPresent( pattern );
-    if ( format == null ) {
-      format = new SimpleDateFormat( pattern );
-      format.setTimeZone( TimeZone.getTimeZone( zone( pattern ) ) );
-      patternLocal.get( ).put( pattern, format );
+  private static DateTimeFormatter dtf(final String pattern) {
+    try {
+      return patternCache.get(
+          pattern,
+          () -> {
+            final ZoneId zoneId = pattern.endsWith("X") ? null : TimeZone.getTimeZone(zone(pattern)).toZoneId();
+            return DateTimeFormatter.ofPattern(pattern).withZone(zoneId);
+          }
+      );
+    } catch (final ExecutionException e) {
+      throw new RuntimeException(e);
     }
-    return format;
   }
 
   private static String zone( final String pattern ) {
@@ -237,8 +243,6 @@ public class Timestamps {
   private static final class PatternHolder {
     private final String pattern;
     private final int length; // length of the text that can match the pattern if known
-    private final int fractionTrunction;
-    private final int fractionPadding;
 
     private PatternHolder( final String pattern ) {
       this( pattern, -1 ); 
@@ -247,13 +251,6 @@ public class Timestamps {
     private PatternHolder( final String pattern, final int length ) {
       this.pattern = pattern;
       this.length = length;
-      
-      int precision = 0;
-      for ( char character : pattern.toCharArray() ) {
-        if ( character == 'S' ) precision++;  
-      }      
-      fractionTrunction = Math.max( 0, precision - 3 );
-      fractionPadding = precision == 0  ? 0 : Math.max( 0, 3 - precision );
     }
 
     /**
@@ -264,64 +261,24 @@ public class Timestamps {
       representativeInput = representativeInput.replace( "'T'", "T" );
       representativeInput = representativeInput.replace( "'Z'", "U" );
       representativeInput = representativeInput.replace( "Z", "-0000" );
-      representativeInput = representativeInput.replace( "XXX", "-00:00" );
-      representativeInput = representativeInput.replace( "X", "-00" );
-      return new PatternHolder( pattern, representativeInput.length() );
+      return new PatternHolder( pattern, pattern.endsWith("X") ? -1 : representativeInput.length() );
     }
     
     private Date parse( final String timestamp, final ParsePosition position ) {
       Date result = null;
       if ( length == -1 || length == timestamp.length() - position.getIndex() ) {
-        String timestampForParsing = timestamp;   
-        boolean valid = true;
-        if ( fractionTrunction > 0 || fractionPadding > 0 ) {
-          valid = false;
-          final int fractionIndex = timestamp.indexOf('.');
-          if ( fractionTrunction > 0 ) {
-            // Date parser parses milliseconds from the wrong end of the value
-            // e.g. 000581 is 581 milliseconds when it should be zero
-            // To parse correctly we shift the value and pad with leading zeros.
-            if ( fractionIndex > 0 && timestamp.length() >= (fractionIndex + 4 + fractionTrunction) ) {
-                timestampForParsing = 
-                  timestamp.substring( 0, fractionIndex + 1 ) +
-                  Strings.repeat( "0", fractionTrunction ) +
-                  timestamp.substring( fractionIndex + 1, fractionIndex + 4 ) +
-                  timestamp.substring( fractionIndex + 4 + fractionTrunction );
-              final String unparsed = timestamp.substring( fractionIndex + 4, fractionIndex + 4 + fractionTrunction );            
-              valid = isDigits( unparsed );
-            }
-          } else if ( fractionIndex > 0 && timestamp.length() >= (fractionIndex + 3 - fractionPadding) ) {
-            // Date parser parses fractional tens or hundredths of a second incorrectly
-            // e.g. .5 is 5 milliseconds when it should be 500
-            // To parse correctly we pad with trailing zeros.
-            timestampForParsing =
-                timestamp.substring( 0, fractionIndex + ( 4 - fractionPadding )  ) +
-                Strings.repeat( "0", fractionPadding ) +
-                timestamp.substring( fractionIndex + ( 4 - fractionPadding ) );
-            valid = true;
-          }
+        try {
+          result = Date.from(Instant.from(dtf(pattern).parse(timestamp, position)));
+        } catch (final DateTimeParseException e) {
+          // pattern does not match
         }
-        if ( valid ) {
-          result = sdf( pattern ).parse( timestampForParsing, position );
-        }
-      } 
-      
+      }
+
       if ( result == null && position.getErrorIndex() < 0 ) {
         position.setErrorIndex( position.getIndex() );
       }
-      
+
       return result;
-    }
-    
-    private boolean isDigits( final String text )  {
-      boolean digits = true;
-      for ( final char character : text.toCharArray() ) {
-        if ( character < '0' || character > '9' ) {
-          digits = false;
-          break;
-        }
-      }     
-      return digits;
     }
     
     public String toString() {
