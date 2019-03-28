@@ -32,6 +32,8 @@
 %bcond_with coverity
 
 %{!?version: %define version 5.0}
+%{!?version_java_deps: %define version_java_deps 5.0}
+%{!?version_selinux: %define version_selinux 0.2.5}
 
 Summary:       Eucalyptus cloud platform
 Name:          eucalyptus
@@ -47,7 +49,7 @@ BuildRequires: axis2-adb-codegen
 BuildRequires: axis2-codegen
 BuildRequires: axis2c-devel >= 1.6.0
 BuildRequires: curl-devel
-BuildRequires: eucalyptus-java-deps
+BuildRequires: eucalyptus-java-deps >= %{version_java_deps}
 BuildRequires: gengetopt
 BuildRequires: java-1.8.0-openjdk-devel >= 1:1.8.0
 BuildRequires: jpackage-utils
@@ -69,7 +71,7 @@ BuildRequires: /usr/bin/awk
 
 Requires(pre): shadow-utils
 
-Requires:      eucalyptus-selinux
+Requires:      eucalyptus-selinux >= %{version_selinux}
 
 Source0:       %{tarball_basedir}.tar.xz
 
@@ -88,7 +90,7 @@ will need to install Eucalyptus services as well.
 Summary:      Eucalyptus cloud platform - Axis2/C shared components
 
 Requires:     %{name} = %{version}-%{release}
-Requires:     eucalyptus-selinux
+Requires:     eucalyptus-selinux >= %{version_selinux}
 Requires:     httpd
 Requires:     perl(Digest::MD5)
 Requires:     perl(MIME::Base64)
@@ -107,7 +109,7 @@ that are based on Axis2/C.
 Summary:      Eucalyptus cloud platform - shared block device utilities
 
 Requires:     %{name} = %{version}-%{release}
-Requires:     eucalyptus-selinux
+Requires:     eucalyptus-selinux >= %{version_selinux}
 Requires:     libselinux-python
 Requires:     perl(Crypt::OpenSSL::RSA)
 Requires:     perl(Crypt::OpenSSL::Random)
@@ -128,7 +130,7 @@ that connect to iSCSI targets.
 Summary:      Eucalyptus cloud platform - ws java stack
 Requires:     %{name} = %{version}-%{release}
 Requires:     %{name}-common-java-libs = %{version}-%{release}
-Requires:     eucalyptus-selinux
+Requires:     eucalyptus-selinux >= %{version_selinux}
 Requires:     lvm2
 Requires:     /usr/bin/which
 %{?systemd_requires}
@@ -147,8 +149,8 @@ This package contains the common-java files.
 %package common-java-libs
 Summary:      Eucalyptus cloud platform - ws java stack libs
 
-Requires:     eucalyptus-java-deps >= 5.0
-Requires:     eucalyptus-selinux
+Requires:     eucalyptus-java-deps >= %{version_java_deps}
+Requires:     eucalyptus-selinux >= %{version_selinux}
 Requires:     jpackage-utils
 Requires:     java-11-openjdk-headless >= 1:1.11.0
 
@@ -168,7 +170,7 @@ Summary:      Eucalyptus cloud platform - walrus
 
 Requires:     %{name}             = %{version}-%{release}
 Requires:     %{name}-common-java = %{version}-%{release}
-Requires:     eucalyptus-selinux
+Requires:     eucalyptus-selinux >= %{version_selinux}
 Requires:     lvm2
 
 %description walrus
@@ -189,7 +191,7 @@ Requires:     %{name} = %{version}-%{release}
 Requires:     %{name}-blockdev-utils = %{version}-%{release}
 Requires:     %{name}-common-java = %{version}-%{release}
 Requires:     device-mapper-multipath
-Requires:     eucalyptus-selinux
+Requires:     eucalyptus-selinux >= %{version_selinux}
 Requires:     iscsi-initiator-utils
 Requires:     librados2%{?_isa}
 Requires:     librbd1%{?_isa}
@@ -217,7 +219,7 @@ Requires:     %{name}                     = %{version}-%{release}
 Requires:     %{name}-common-java%{?_isa} = %{version}-%{release}
 # Change this to Recommends in RHEL 8
 Requires:     %{name}-admin-tools         = %{version}-%{release}
-Requires:     eucalyptus-selinux
+Requires:     eucalyptus-selinux >= %{version_selinux}
 Requires:     euca2ools >= 2.0
 Requires:     eucanetd = %{version}-%{release}
 Requires:     libselinux-python
@@ -243,7 +245,7 @@ Summary:      Eucalyptus cloud platform - cluster controller
 
 Requires:     %{name} = %{version}-%{release}
 Requires:     %{name}-common-java = %{version}-%{release}
-Requires:     eucalyptus-selinux
+Requires:     eucalyptus-selinux >= %{version_selinux}
 Requires:     rsync
 Requires:     /usr/bin/which
 
@@ -267,7 +269,7 @@ Requires:     %{name}-axis2c-common = %{version}-%{release}
 Requires:     %{name}-cc = %{version}-%{release}
 Requires:     bridge-utils
 Requires:     dhcp >= 4.1.1-33.P1
-Requires:     eucalyptus-selinux
+Requires:     eucalyptus-selinux >= %{version_selinux}
 Requires:     httpd
 Requires:     iproute
 Requires:     iptables
@@ -301,7 +303,7 @@ Requires:     bridge-utils
 Requires:     device-mapper
 Requires:     device-mapper-multipath
 Requires:     euca2ools >= 3.2
-Requires:     eucalyptus-selinux > 0.2
+Requires:     eucalyptus-selinux >= %{version_selinux}
 Requires:     eucanetd = %{version}-%{release}
 Requires:     httpd
 Requires:     iscsi-initiator-utils
@@ -344,7 +346,7 @@ Summary:      Eucalyptus cloud platform - admin CLI tools
 License:      BSD and Python
 
 Requires:     euca2ools >= 3.2
-Requires:     eucalyptus-selinux
+Requires:     eucalyptus-selinux >= %{version_selinux}
 Requires:     python-boto >= 2.1
 Requires:     python-prettytable
 Requires:     python-requestbuilder >= 0.4
@@ -369,7 +371,7 @@ License:        GPLv3
 
 Requires:       dhcp >= 4.1.1-33.P1
 Requires:       ebtables
-Requires:       eucalyptus-selinux > 0.2
+Requires:       eucalyptus-selinux >= %{version_selinux}
 Requires:       ipset
 Requires:       iptables
 # nginx 1.9.13 added perl as a loadable module (EUCA-12734)
@@ -395,7 +397,7 @@ License:      ASL 2.0
 Requires:     %{name} = %{version}-%{release}
 # This includes both things under tools/imaging and storage.
 Requires:     euca2ools >= 3.1
-Requires:     eucalyptus-selinux
+Requires:     eucalyptus-selinux >= %{version_selinux}
 Requires:     pv
 Requires:     python-lxml
 Requires:     python-requests
@@ -716,6 +718,9 @@ usermod -a -G libvirt eucalyptus || :
 
 
 %changelog
+* Wed Mar 27 2019 Steve Jones <steve.jones@appscale.com> - 5.0
+- Update requires for eucalyptus java deps and selinux packages
+
 * Fri Sep  7 2018 Steve Jones <steve.jones@appscale.com> - 5.0
 - Remove eureport-* tools and euca_conf stub
 
