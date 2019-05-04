@@ -39,6 +39,8 @@ build: eucalyptus_admin
 
 install: eucalyptus_admin
 	$(PYTHON) setup.py install --root=$(DESTDIR)
+	@sed --in-place '1s/python /python2 /' $(DESTDIR)/usr/bin/euctl
+	@sed --in-place '1s/python /python2 /' $(DESTDIR)/usr/bin/euserv-*
 
 clean:
 	@$(RM) -rf build dist
