@@ -47,17 +47,23 @@ import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
+import com.eucalyptus.util.Cidr;
+import com.eucalyptus.util.CompatSupplier;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.StackConfiguration;
+import com.google.common.base.CharMatcher;
+import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
+import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
-import java.util.Collection;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -74,25 +80,17 @@ import java.util.stream.Collectors;
 
 @ConfigurableClass(root = "services.loadbalancing", description = "Parameters controlling loadbalancing")
 public class LoadBalancingSystemVpcs {
-    private static Logger LOG = Logger.getLogger(LoadBalancingSystemVpcs.class);
+    private static final Logger LOG = Logger.getLogger(LoadBalancingSystemVpcs.class);
 
-    static Supplier<Map<String, Set<String>>> systemVpcPublicSubnetBlocksSupplier =
-            () -> {
-                final Map<String, Set<String>> val = splitPublicSubnetBlocks();
-                systemVpcPublicSubnetBlocksSupplier = () -> val;
-                return val;
-            };
+    private static final Supplier<Map<String, Set<String>>> systemVpcPublicSubnetBlocksSupplier =
+        CompatSupplier.of(Suppliers.memoize(LoadBalancingSystemVpcs::splitPublicSubnetBlocks));
 
-    static Map<String, Set<String>> SystemVpcPublicSubnetBlocks() {
+    private static Map<String, Set<String>> SystemVpcPublicSubnetBlocks() {
         return systemVpcPublicSubnetBlocksSupplier.get();
     }
 
     static Supplier<Map<String, Set<String>>> systemVpcPrivateSubnetBlocksSupplier =
-            () -> {
-                final Map<String, Set<String>> val = splitPrivateSubnetBlocks();
-                systemVpcPrivateSubnetBlocksSupplier = () -> val;
-                return val;
-            };
+        CompatSupplier.of(Suppliers.memoize(LoadBalancingSystemVpcs::splitPrivateSubnetBlocks));
 
     static Map<String, Set<String>> SystemVpcPrivateSubnetBlocks() {
         return systemVpcPrivateSubnetBlocksSupplier.get();
@@ -158,60 +156,62 @@ public class LoadBalancingSystemVpcs {
         }
     }
 
-    private static final Set<String> SystemVpcCidrBlocks = Sets.newHashSet(
-            "10.254.0.0/16",
-            "192.168.0.0/16"
-    );
+    @ConfigurableField( description = "Comma separated list of CIDRs for use with ELB VPCs",
+        displayName = "vpc_cidrs",
+        changeListener = SystemVpcCidrListChangeListener.class )
+    public static volatile String vpc_cidrs = "10.254.0.0/16, 192.168.0.0/16";
+
+    private static List<String> SystemVpcCidrBlocks() {
+        return Lists.newArrayList( LIST_SPLITTER.split( vpc_cidrs ) );
+    }
+
+    private static List<Cidr> SystemVpcCidrs( ) {
+        //noinspection StaticPseudoFunctionalStyleMethod
+        return Lists.newArrayList( com.google.common.base.Optional.presentInstances(
+            Iterables.transform( SystemVpcCidrBlocks(), Cidr.parse( ) ) ) );
+    }
+
+    private static final Splitter LIST_SPLITTER =
+        Splitter.on( CharMatcher.anyOf(", ;:") ).trimResults( ).omitEmptyStrings( );
+
+    public static class SystemVpcCidrListChangeListener implements PropertyChangeListener<String> {
+        @Override
+        public void fireChange( final ConfigurableProperty t, final String newValue ) throws ConfigurablePropertyException {
+            if ( !Strings.isNullOrEmpty( newValue ) ) {
+                for ( final String cidrStr : LIST_SPLITTER.split( newValue ) ) {
+                    final Cidr cidr = Cidr.parse( ).apply( cidrStr ).orNull( );
+                    if ( cidr == null ) {
+                        throw new ConfigurablePropertyException( "Invalid cidr: " + cidr );
+                    }
+                    if ( 16 != cidr.getPrefix( ) ) {
+                        throw new ConfigurablePropertyException( "Invalid cidr range (/16): " + newValue );
+                    }
+                }
+            }
+        }
+    }
 
     // public subnets: "10.254.0.0/16" -> ["10.254.0.0/28", "10.254.0.16/28", ..., "10.254.1.240/28"]
     //                 256 public subnets = Max # of AZs
     //
     private static Map<String, Set<String>> splitPublicSubnetBlocks() {
-        final Map<String, Set<String>> subnetCidrBlocks = Maps.newHashMap();
-        final int SUBNET_SIZE_MASK = 28;
-        final int NUM_SUBNET_HOSTS = 16;
-
-        for (final String vpcCidrBlock : SystemVpcCidrBlocks) {
-            final String[] prefixAndMask = vpcCidrBlock.split("/");
-            final String ipPrefix = prefixAndMask[0];
-            final String[] ipParts = ipPrefix.split("\\.");
-            if (ipParts.length != 4)
-                throw Exceptions.toUndeclared("Invalid cidr format found: " + vpcCidrBlock);
-            subnetCidrBlocks.put(vpcCidrBlock, Sets.<String>newHashSet());
-
-            for (int i = 0; i <= 1; i++) {
-                for (int j = 0; j <= 255; j += NUM_SUBNET_HOSTS) {
-                    final String subnetBlock = String.format("%s.%s.%d.%d/%d",
-                            ipParts[0], ipParts[1], i, j, SUBNET_SIZE_MASK);
-                    subnetCidrBlocks.get(vpcCidrBlock).add(subnetBlock);
-                }
-            }
-        }
-        return subnetCidrBlocks;
+        return buildVpcSubnetMap( 256 );
     }
 
     // private subnets: "10.254.0.0/16" -> ["10.254.16.0/20", "10.254.32.0/20", ..., ]
     private static Map<String, Set<String>> splitPrivateSubnetBlocks() {
-        final Map<String, Set<String>> subnetCidrBlocks = Maps.newHashMap();
         final int numSubnetHosts = NumberOfHostsPerSystemSubnet(); /// NOTE: MAX # of ELB VMs IN AZ
-        final int SUBNET_SIZE_MASK = 32 - (int) log2(numSubnetHosts);
+        return buildVpcSubnetMap(65536 / numSubnetHosts );
+    }
 
-        for (final String vpcCidrBlock : SystemVpcCidrBlocks) {
-            final String[] prefixAndMask = vpcCidrBlock.split("/");
-            final String ipPrefix = prefixAndMask[0];
-            final String[] ipParts = ipPrefix.split("\\.");
-            if (ipParts.length != 4)
-                throw Exceptions.toUndeclared("Invalid cidr format found: " + vpcCidrBlock);
-            subnetCidrBlocks.put(vpcCidrBlock, Sets.<String>newHashSet());
+    private static Map<String, Set<String>> buildVpcSubnetMap( final int subnetParts ) {
+        final Map<String, Set<String>> subnetCidrBlocks = Maps.newHashMap();
+        for (final Cidr vpcCidr : SystemVpcCidrs() ) {
+            final String vpcCidrBlock = vpcCidr.toString( );
+            subnetCidrBlocks.put(vpcCidrBlock, Sets.newHashSet());
 
-            // numSubnetHosts = multiplication of 256
-            for (int i = 0; i < 65536; i += numSubnetHosts) {
-                int idx256Subnets = (int) (i / 256.0);
-                if (idx256Subnets <= 1) // this block is taken for public subnet
-                    continue;
-                final String subnetBlock = String.format("%s.%s.%d.%d/%d",
-                        ipParts[0], ipParts[1], idx256Subnets, 0, SUBNET_SIZE_MASK);
-                subnetCidrBlocks.get(vpcCidrBlock).add(subnetBlock);
+            for (final Cidr subnetCidr : vpcCidr.split( subnetParts )) {
+                subnetCidrBlocks.get(vpcCidrBlock).add(subnetCidr.toString());
             }
         }
         return subnetCidrBlocks;
@@ -225,7 +225,7 @@ public class LoadBalancingSystemVpcs {
         final EucalyptusActivityTasks client = EucalyptusActivityTasks.getInstance();
         final List<VpcType> vpcs = client.describeSystemVpcs(null);
         final Set<String> result = vpcs.stream()
-                .filter(vpc -> SystemVpcCidrBlocks.contains(vpc.getCidrBlock()))
+                .filter(vpc -> SystemVpcCidrBlocks().contains(vpc.getCidrBlock()))
                 .map(vpc -> vpc.getVpcId())
                 .collect(Collectors.toSet());
         systemVpcs = () -> result;
@@ -360,7 +360,7 @@ public class LoadBalancingSystemVpcs {
 
                 final String userVpcCidrBlock = userVpc.get().getCidrBlock();
                 // find system VPC with no-overlapping cidr block
-                final String systemCidrBlock = SystemVpcCidrBlocks.stream().filter((systemCidr ->
+                final String systemCidrBlock = SystemVpcCidrBlocks().stream().filter((systemCidr ->
                         ! cidrBlockInclusive.test(systemCidr, userVpcCidrBlock)
                 )).findFirst().get();
 
@@ -589,10 +589,10 @@ public class LoadBalancingSystemVpcs {
             final Map<String, VpcType> cidrToVpc = Maps.newHashMap();
             final Map<String, String> vpcToCidr = Maps.newHashMap();
             for (final VpcType vpc : vpcs) {
-                if (SystemVpcCidrBlocks.contains(vpc.getCidrBlock()))
+                if (SystemVpcCidrBlocks().contains(vpc.getCidrBlock()))
                     cidrToVpc.put(vpc.getCidrBlock(), vpc);
             }
-            for (final String cidrBlock : SystemVpcCidrBlocks) {
+            for (final String cidrBlock : SystemVpcCidrBlocks()) {
                 if (!cidrToVpc.containsKey(cidrBlock)) {
                     final String vpcId = client.createSystemVpc(cidrBlock);
                     final List<VpcType> result = client.describeSystemVpcs(Lists.newArrayList(vpcId));
@@ -600,7 +600,7 @@ public class LoadBalancingSystemVpcs {
                     cidrToVpc.put(cidrBlock, vpc);
                 }
             }
-            if (SystemVpcCidrBlocks.size() != cidrToVpc.size()) {
+            if (SystemVpcCidrBlocks().size() != cidrToVpc.size()) {
                 throw new Exception("Could not find some system VPCs");
             }
 
