@@ -44,7 +44,7 @@ import com.google.common.collect.Maps;
 @RequiresPermission( standard = S3PolicySpec.S3_PUTOBJECT )
 @ResourceType( S3PolicySpec.S3_RESOURCE_OBJECT )
 @RequiresACLPermission( object = {}, bucket = { ObjectStorageProperties.Permission.WRITE } )
-public class PutObjectType extends ObjectStorageDataPutRequestType {
+public class PutObjectType extends ObjectStorageDataPutRequestType implements ObjectMetadataRequestType {
 
   private String contentLength;
   private ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>( );
