@@ -1516,6 +1516,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
       request.setVersionId(null);
       HeadObjectResponseType backendReply = ospClient.headObject(request);
       reply.setMetaData(backendReply.getMetaData());
+      reply.setContentType(backendReply.getContentType());
       populateStoredHeaders(reply, objectEntity.getStoredHeaders());
     } catch (S3Exception e) {
       LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);
