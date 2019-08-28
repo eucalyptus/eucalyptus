@@ -575,6 +575,10 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         } else if (verb.equals(ObjectStorageProperties.HTTPVerb.POST.toString())) {
           if (params.containsKey("uploadId")) {
             operationParams.put("Parts", getPartsList(httpRequest));
+          } else if (params.containsKey("uploads")) {
+            String contentType = httpRequest.getHeader(HttpHeaders.Names.CONTENT_TYPE);
+            if (contentType != null)
+              operationParams.put("ContentType", contentType);
           }
         }
       }

@@ -141,6 +141,7 @@ import com.eucalyptus.objectstorage.msgs.ListPartsResponseType;
 import com.eucalyptus.objectstorage.msgs.ListPartsType;
 import com.eucalyptus.objectstorage.msgs.ListVersionsResponseType;
 import com.eucalyptus.objectstorage.msgs.ListVersionsType;
+import com.eucalyptus.objectstorage.msgs.ObjectMetadataRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
 import com.eucalyptus.objectstorage.msgs.PostObjectResponseType;
@@ -351,7 +352,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
       HttpHeaders.Names.CACHE_CONTROL, "Content-Disposition", // strangely not included
       HttpHeaders.Names.CONTENT_ENCODING, HttpHeaders.Names.EXPIRES));
 
-  protected ObjectMetadata getS3ObjectMetadata(PutObjectType request) {
+  protected ObjectMetadata getS3ObjectMetadata(ObjectMetadataRequestType request) {
     ObjectMetadata meta = new ObjectMetadata();
     if (request.getMetaData() != null) {
       for (MetaDataEntry m : request.getMetaData()) {
@@ -1114,11 +1115,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
     String bucketName = request.getBucket();
     String key = request.getKey();
     InitiateMultipartUploadRequest initiateMultipartUploadRequest = new InitiateMultipartUploadRequest(bucketName, key);
-    ObjectMetadata metadata = new ObjectMetadata();
-    for (MetaDataEntry meta : request.getMetaData()) {
-      metadata.addUserMetadata(meta.getName(), meta.getValue());
-    }
-
+    ObjectMetadata metadata = getS3ObjectMetadata(request);
     initiateMultipartUploadRequest.setObjectMetadata(metadata);
     try {
       internalS3Client = getS3Client(requestUser);
