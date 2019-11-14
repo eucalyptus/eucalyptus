@@ -939,8 +939,16 @@ public class TemplateParser {
     if (fnAttMatcher.isMatch()) {
       IntrinsicFunctions.GET_ATT.validateArgTypesWherePossible(fnAttMatcher);
       // we have a match against a "ref"...
-      String refName = currentNode.get(FunctionEvaluation.FN_GET_ATT).get(0).asText();
-      String attName = currentNode.get(FunctionEvaluation.FN_GET_ATT).get(1).asText();
+      String refName;
+      String attName;
+      final JsonNode key = currentNode.get(FunctionEvaluation.FN_GET_ATT);
+      if ( key.isTextual( ) ) {
+        refName = Strings.substringBefore( ".", key.asText( ) );
+        attName = Strings.substringAfter( ".", key.asText( ) );
+      } else {
+        refName = key.get( 0 ).asText( );
+        attName = key.get( 1 ).asText( );
+      }
       // Not sure why, but AWS validates attribute types even in Conditions
       if (template.getResourceInfoMap().containsKey(refName)) {
         ResourceInfo resourceInfo = template.getResourceInfoMap().get(refName);
@@ -1184,8 +1192,16 @@ public class TemplateParser {
     if (fnAttMatcher.isMatch()) {
       IntrinsicFunctions.GET_ATT.validateArgTypesWherePossible(fnAttMatcher);
       // we have a match against a "ref"...
-      String refName = jsonNode.get(FunctionEvaluation.FN_GET_ATT).get(0).asText();
-      String attName = jsonNode.get(FunctionEvaluation.FN_GET_ATT).get(1).asText();
+      String refName;
+      String attName;
+      final JsonNode key = jsonNode.get(FunctionEvaluation.FN_GET_ATT);
+      if ( key.isTextual( ) ) {
+        refName = Strings.substringBefore( ".", key.asText( ) );
+        attName = Strings.substringAfter( ".", key.asText( ) );
+      } else {
+        refName = key.get( 0 ).asText( );
+        attName = key.get( 1 ).asText( );
+      }
       // Not sure why, but AWS validates attribute types even in Conditions
       if (template.getResourceInfoMap().containsKey(refName)) {
         ResourceInfo resourceInfo = template.getResourceInfoMap().get(refName);
