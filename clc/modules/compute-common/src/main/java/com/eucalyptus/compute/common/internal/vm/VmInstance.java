@@ -281,6 +281,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 
     },
     EXPECTING_TEARDOWN( VmState.STOPPING, VmState.SHUTTING_DOWN ),
+    NOT_TORNDOWN( VmState.PENDING, VmState.RUNNING, VmState.SHUTTING_DOWN, VmState.STOPPING ),
     TORNDOWN( VmState.STOPPED, VmState.TERMINATED, VmState.BURIED ),
     STOP( VmState.STOPPING, VmState.STOPPED ),
     NOT_RUNNING( VmState.STOPPING, VmState.STOPPED, VmState.SHUTTING_DOWN, VmState.TERMINATED, VmState.BURIED ),

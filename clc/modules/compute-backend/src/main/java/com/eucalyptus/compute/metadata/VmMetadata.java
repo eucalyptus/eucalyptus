@@ -182,16 +182,17 @@ public class VmMetadata {
 
   private static Function<String,Optional<String>> resolveVm( ) {
     return new Function<String,Optional<String>>() {
+      private final VmInstance.VmStateSet stateSet = VmInstance.VmStateSet.NOT_TORNDOWN;
       @Nullable
       @Override
       public Optional<String> apply( final String requestIp  ) {
         VmInstance findVm = null;
         if ( !Databases.isVolatile() ) {
           try {
-            findVm = VmInstances.lookupByPublicIp( requestIp );
+            findVm = VmInstances.lookupByPublicIp( requestIp, stateSet );
           } catch ( Exception ex2 ) {
             try {
-              findVm = VmInstances.lookupByPrivateIp( requestIp );
+              findVm = VmInstances.lookupByPrivateIp( requestIp, stateSet );
             } catch ( Exception ex ) {
               Logs.exhaust().error( ex );
             }
