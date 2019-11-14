@@ -53,6 +53,7 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.Projection;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.compute.common.CloudMetadata;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.records.Logs;
@@ -129,12 +130,25 @@ public class VmInstances {
    */
   @Nonnull
   public static VmInstance lookupByPublicIp( final String ip ) throws NoSuchElementException {
+    return lookupByPublicIp( ip, VmStateSet.RUN );
+  }
+
+  /**
+   * Function for lookup of VM instance by public IP and desired states.
+   *
+   * @param ip The public/elastic IP for the instance
+   * @param stateSet The state set for the instance
+   * @return The instance
+   * @throws NoSuchElementException if an instance was not found with the IP
+   */
+  @Nonnull
+  public static VmInstance lookupByPublicIp(final String ip, final VmStateSet stateSet) throws NoSuchElementException {
     try ( TransactionResource db =
               Entities.transactionFor( VmInstance.class ) ) {
       VmInstance vmExample = VmInstance.exampleWithPublicIp( ip );
       VmInstance vm = ( VmInstance ) Entities.createCriteriaUnique( VmInstance.class )
           .add( Example.create( vmExample ) )
-          .add( VmInstance.criterion( VmInstance.VmState.RUNNING, VmInstance.VmState.PENDING ) )
+          .add( VmInstance.criterion( stateSet.array( ) ) )
           .uniqueResult();
       if ( vm == null ) {
         throw new NoSuchElementException( "VmInstance with public ip: " + ip );

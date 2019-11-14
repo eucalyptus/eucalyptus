@@ -695,11 +695,15 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
   }
   
   public static VmInstance lookupByPrivateIp( final String ip ) throws NoSuchElementException {
+    return lookupByPrivateIp( ip, VmStateSet.RUN );
+  }
+
+  public static VmInstance lookupByPrivateIp( final String ip, final VmStateSet stateSet ) throws NoSuchElementException {
     try ( TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
       VmInstance vmExample = VmInstance.exampleWithPrivateIp( ip );
       VmInstance vm = ( VmInstance ) Entities.createCriteriaUnique( VmInstance.class )
                                              .add( Example.create( vmExample ) )
-                                             .add( Restrictions.in( "state", new VmState[] { VmState.RUNNING, VmState.PENDING } ) )
+                                             .add( Restrictions.in( "state", stateSet.array( ) ) )
                                              .uniqueResult( );
       if ( vm == null ) {
         throw new NoSuchElementException( "VmInstance with private ip: " + ip );
