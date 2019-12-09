@@ -72,6 +72,19 @@ public class Yaml {
       "str"
   ).map( Strings.prepend( "tag:yaml.org,2002:" ) ).toSet( );
 
+  /**
+   * Can JSON be ruled out? is the given text YAML rather than JSON?
+   *
+   * <p>This can be used before parsing to help eliminate JSON as a candidate
+   * format.</p>
+   *
+   * @param text The text to check
+   * @return False if the given text is (heuristically) YAML
+   */
+  public static boolean mightBeJson( final String text ) {
+    return text == null || !(text.startsWith("---") || text.startsWith("#"));
+  }
+
   public static JsonNode parse( final InputStream yamlStream ) throws IOException {
     return parse( reader, yamlStream );
   }

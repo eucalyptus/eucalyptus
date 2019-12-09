@@ -89,15 +89,14 @@ import io.vavr.jackson.datatype.VavrModule;
 public interface NetworkConfigurationApi {
 
   static NetworkConfiguration parse( final String config ) throws IOException {
-    try {
+    if ( Yaml.mightBeJson( config ) ) try {
       return parse( Mapping.mapper( ), config );
     } catch ( final JsonParseException e ) {
-      if ( Objects.toString( e.getMessage( ), "" ).startsWith( "Unrecognized token" ) ) {
-        return parse( Mapping.yamlMapper( ), config );
-      } else {
+      if ( !Objects.toString( e.getMessage( ), "" ).startsWith( "Unrecognized token" ) ) {
         throw e;
       }
     }
+    return parse( Mapping.yamlMapper( ), config );
   }
 
   static NetworkConfiguration parse( final ObjectMapper mapper, final String config ) throws IOException {
