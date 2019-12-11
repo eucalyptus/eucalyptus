@@ -65,6 +65,7 @@ import com.eucalyptus.component.id.Database
 import com.eucalyptus.crypto.util.PEMFiles
 import com.eucalyptus.entities.PersistenceContexts
 import com.eucalyptus.system.SubDirectory
+import com.eucalyptus.util.Internets
 import com.eucalyptus.util.Pair
 import com.google.common.base.Joiner
 import com.google.common.collect.Iterables
@@ -107,7 +108,7 @@ class PostgresqlBootstrapper extends Bootstrapper.Simple implements DatabaseBoot
   private static final String PG_PORT = 8777
   private static final String PG_HOST = BootstrapArgs.isInitializeSystem() || BootstrapArgs.isUpgradeSystem() ?
       '127.0.0.1' :
-      '0.0.0.0' // or "127.0.0.1,${Internets.localHostAddress( )}"
+      System.getProperty( 'euca.db.host', "127.0.0.1,${Internets.localHostAddress( )}")
   private static final String PG_PORT_OPTS2 = "-o -h${PG_HOST} -p${PG_PORT}"
   private static final String PG_DB_OPT = '-D'
   private static final String PG_X_OPT = '-X'
