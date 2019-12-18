@@ -421,7 +421,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
       throw new EucalyptusCloudException("S3 provider HEAD op code is not set");
     }
     try {
-      int headResponse = excuteHeadRequest(this.getUpstreamEndpoint());
+      int headResponse = executeHeadRequest(this.getUpstreamEndpoint());
       if (headResponse != expectedResponse) {
         LOG.warn("Connectivity check to S3 endpoint failed. Expected HEAD op against " + this.getUpstreamEndpoint() + " to return HTTP response "
             + expectedResponse + ", but got " + headResponse);
@@ -440,7 +440,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
     }
   }
 
-  protected int excuteHeadRequest(URI targetURI) {
+  protected int executeHeadRequest(URI targetURI) {
     LOG.trace("Executing HEAD op on " + targetURI);
     HttpURLConnection connection = null;
     int code = 500;
@@ -448,12 +448,10 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
       connection = (HttpURLConnection) targetURI.toURL().openConnection();
       connection.setRequestMethod("HEAD");
       connection.setUseCaches(false);
-      try {
-        connection.getInputStream();
-        code = connection.getResponseCode();
-      } catch (IOException ex) {
-        code = connection.getResponseCode();
-      }
+      connection.setConnectTimeout(15_000);
+      connection.setReadTimeout(15_000);
+      connection.setRequestProperty("Connection", "close");
+      code = connection.getResponseCode();
       LOG.trace("HEAD op response HTTP " + code);
       return code;
     } catch (Exception ex) {
