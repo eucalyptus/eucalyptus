@@ -109,15 +109,14 @@ public class RegionConfigurations {
   public static RegionConfiguration parse( final String configuration ) throws RegionConfigurationException {
     RegionConfiguration regionConfiguration;
     try {
-      try {
+      if ( Yaml.mightBeJson( configuration ) ) try {
         regionConfiguration = parse( new ObjectMapper( ), configuration );
       } catch ( final JsonParseException e ) {
-        if ( Objects.toString( e.getMessage( ), "" ).startsWith( "Unrecognized token" ) ) {
-          regionConfiguration = parse( Yaml.mapper( ), configuration );
-        } else {
+        if ( !Objects.toString( e.getMessage( ), "" ).startsWith( "Unrecognized token" ) ) {
           throw e;
         }
       }
+      regionConfiguration = parse( Yaml.mapper( ), configuration );
     } catch ( IOException e ) {
       throw new RegionConfigurationException( e.getMessage( ) );
     }
