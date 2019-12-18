@@ -36,6 +36,7 @@ fi
 [ "$EUCALYPTUS" = not_configured ] && EUCALYPTUS=@prefix@
 [ -z "$EUCALYPTUS" ]         && EUCALYPTUS=@prefix@
 [ -z "$EUCA_USER" ]          && EUCA_USER=eucalyptus
+[ -z "$CC_ADDR" ]            && CC_ADDR=0.0.0.0
 [ -z "$CC_PORT" ]            && CC_PORT=8774
 [ -z "$AXIS2C_HOME" ]        && AXIS2C_HOME="@AXIS2C_HOME@"
 [ -z "$APACHE2_MODULE_DIR" ] && APACHE2_MODULE_DIR="@APACHE2_MODULE_DIR@"
@@ -51,7 +52,7 @@ sed -e "s|EUCALYPTUS|$EUCALYPTUS|" \
     -e "s|AXIS2C_HOME|$AXIS2C_HOME|" \
     -e "s|\(ServerRoot\).*|\1 /|" \
     -e "s|EUCA_USER|$EUCA_USER|" \
-    -e "s|\(Listen\).*|\1 $CC_PORT|" \
+    -e "s|\(Listen\).*|\1 $CC_ADDR:$CC_PORT|" \
     -e "s|\(PidFile\).*|\1 $PIDFILE|" \
     -e "s|\(Allow from\).*|\1 all|" \
     -e "s|\(ErrorLog\).*|\1 $HTTPD_LOGFILE|" \
