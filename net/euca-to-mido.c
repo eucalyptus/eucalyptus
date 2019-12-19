@@ -4722,9 +4722,12 @@ int parse_mido_chain_rule_protocol(int proto, int icmpType, int icmpCode,
             break;
         case 6:  // TCP
         case 17: // UDP
+            if ((fromPort == 0) && (toPort == 0)) {
+                LOGDEBUG("Invalid argument: mapping tcp/udp rule with zero port\n");
+            }
             snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD], 64, "jsonjson");
-            snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_S], 64, "%d", fromPort);
-            snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_E], 64, "%d", toPort);
+            snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_S], 64, "%d", (fromPort == 0) ? 1 : fromPort);
+            snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_E], 64, "%d", (toPort == 0) ? 1 : toPort);
             snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_END], 64, "END");
             break;
         case -1: // All protocols
