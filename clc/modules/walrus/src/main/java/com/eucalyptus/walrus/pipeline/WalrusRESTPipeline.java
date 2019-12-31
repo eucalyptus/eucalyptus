@@ -45,9 +45,11 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.xbill.DNS.Name;
+import org.xbill.DNS.TextParseException;
 
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.annotation.ComponentPart;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.dns.DomainNames;
 import com.eucalyptus.walrus.WalrusBackend;
 import com.eucalyptus.walrus.pipeline.stages.WalrusOutboundStage;
@@ -138,10 +140,12 @@ public class WalrusRESTPipeline extends FilteredPipeline {
     try {
       return DomainNames.absolute(Name.fromString(Iterables.getFirst(hostSplitter.split(fullHostHeader), fullHostHeader))).subdomain(
           DomainNames.externalSubdomain(WalrusBackend.class));
-    } catch (Exception e) {
+    } catch (final TextParseException e) {
+      LOG.debug( "Invalid hostname in request: " + fullHostHeader + " " + Exceptions.getCauseMessage( e ) );
+    } catch (final Exception e) {
       LOG.error("Error parsing domain name from hostname: " + fullHostHeader, e);
-      return false;
     }
+    return false;
   }
 
   @Override
