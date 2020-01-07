@@ -323,7 +323,6 @@ Requires:     curl
 Requires:     e2fsprogs
 Requires:     file
 Requires:     parted
-Requires:     vconfig
 Requires:     util-linux
 Requires:     /usr/bin/which
 %{?systemd_requires}

@@ -188,16 +188,6 @@ int dev_rename(dev_handler *devh, const char *psDeviceName, const char *psNewDev
 //! @}
 
 //! @{
-//! @name APIs to work with VLAN on devices
-const char *dev_get_vlan_name(const char *psDeviceName, u16 vlan);
-int dev_get_vlan_id(const char *psDeviceName);
-boolean dev_has_vlan(const char *psDeviceName, u16 vlan);
-dev_entry *dev_create_vlan(dev_handler *devh, const char *psDeviceName, u16 vlan);
-int dev_remove_vlan(dev_handler *devh, const char *psDeviceName, u16 vlan);
-int dev_remove_vlan_interface(dev_handler *devh, const char *psVlanInterfaceName);
-//! @}
-
-//! @{
 //! @name APIs to work with bridge devices
 boolean dev_is_bridge(const char *psDeviceName);
 boolean dev_is_bridge_interface(const char *psDeviceName, const char *psBridgeName);
