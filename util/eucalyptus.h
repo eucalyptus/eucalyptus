@@ -189,6 +189,7 @@
 #define CONFIG_NC_PORT                          "NC_PORT"
 #define CONFIG_NODES                            "NODES"
 #define CONFIG_HYPERVISOR                       "HYPERVISOR"
+#define CONFIG_NC_ADDR                          "NC_ADDR"
 #define CONFIG_NC_CACHE_SIZE                    "NC_CACHE_SIZE"
 #define CONFIG_NC_WORK_SIZE                     "NC_WORK_SIZE"
 #define CONFIG_NC_OVERHEAD_SIZE                 "NC_WORK_OVERHEAD_SIZE"
