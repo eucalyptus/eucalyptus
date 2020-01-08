@@ -148,7 +148,7 @@ if [ -r "$EUCA_CONF" ] ; then
     . $EUCA_CONF
 fi
 if [ -z "$EUCA_USER" ] ; then
-    EUCA_USER=root
+    EUCA_USER=eucalyptus
 fi
 chmod 700 /etc/pki/libvirt/private
 chmod 600 /etc/pki/libvirt/private/clientkey.pem  /etc/pki/libvirt/private/serverkey.pem
