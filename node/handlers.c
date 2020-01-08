@@ -2862,35 +2862,47 @@ static int init(void)
     }
 
     {                                  // find and set IP
-        char hostname[HOSTNAME_SIZE];
-        if (gethostname(hostname, sizeof(hostname)) != 0) {
-            LOGFATAL("failed to find hostname\n");
-            return (EUCA_FATAL_ERROR);
-        }
-        LOGDEBUG("Searching for IP by hostname %s\n", hostname);
 
-        struct addrinfo hints, *servinfo, *p;
-        struct sockaddr_in *h;
-        memset(&hints, 0, sizeof hints);
-        hints.ai_family = AF_INET;
-        hints.ai_socktype = SOCK_STREAM;
-        int rv;
-        if ((rv = getaddrinfo(hostname, "http", &hints, &servinfo)) != 0) {
-            LOGFATAL("getaddrinfo: %s\n", gai_strerror(rv));
-            return (EUCA_FATAL_ERROR);
-        }
         int found = 0;
-        for(p = servinfo; !found && p != NULL; p = p->ai_next) {
-            if (!found) {
-                h = (struct sockaddr_in *) p->ai_addr;
-                euca_strncpy(nc_state.ip, inet_ntoa(h->sin_addr), sizeof(nc_state.ip));
+        tmp = getConfString(nc_state.configFiles, 2, CONFIG_NC_ADDR);
+        if (tmp) {
+            if(strcmp(tmp, "0.0.0.0")) {
+                euca_strncpy(nc_state.ip, tmp, sizeof(nc_state.ip));
+                LOGDEBUG("Using NC_ADDR IP %s\n", nc_state.ip);
                 found = 1;
             }
+            EUCA_FREE(tmp);
         }
-        freeaddrinfo(servinfo);
         if (!found) {
-            LOGFATAL("failed to obtain IP for %s\n", hostname);
-            return (EUCA_FATAL_ERROR);
+            char hostname[HOSTNAME_SIZE];
+            if (gethostname(hostname, sizeof(hostname)) != 0) {
+                LOGFATAL("failed to find hostname\n");
+                return (EUCA_FATAL_ERROR);
+            }
+            LOGDEBUG("Searching for IP by hostname %s\n", hostname);
+
+            struct addrinfo hints, *servinfo, *p;
+            struct sockaddr_in *h;
+            memset(&hints, 0, sizeof hints);
+            hints.ai_family = AF_INET;
+            hints.ai_socktype = SOCK_STREAM;
+            int rv;
+            if ((rv = getaddrinfo(hostname, "http", &hints, &servinfo)) != 0) {
+                LOGFATAL("getaddrinfo: %s\n", gai_strerror(rv));
+                return (EUCA_FATAL_ERROR);
+            }
+            for(p = servinfo; !found && p != NULL; p = p->ai_next) {
+                if (!found) {
+                    h = (struct sockaddr_in *) p->ai_addr;
+                    euca_strncpy(nc_state.ip, inet_ntoa(h->sin_addr), sizeof(nc_state.ip));
+                    found = 1;
+                }
+            }
+            freeaddrinfo(servinfo);
+            if (!found) {
+                LOGFATAL("failed to obtain IP for %s\n", hostname);
+                return (EUCA_FATAL_ERROR);
+            }
         }
         LOGINFO("using IP %s\n", nc_state.ip);
         LOGINFO("Initializing localhost info for vbr processing\n");
