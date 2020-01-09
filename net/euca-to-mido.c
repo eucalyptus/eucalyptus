@@ -4692,23 +4692,42 @@ int parse_mido_chain_rule_protocol(int proto, int icmpType, int icmpCode,
     switch (proto) {
         case 1: // ICMP
             if (icmpType != -1) {
-                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS], 64, "jsonjson");
-                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS_S], 64, "%d", icmpType);
-                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS_E], 64, "%d", icmpType);
-                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS_END], 64, "END");
+                if (icmpType != 0) {
+                    snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS], 64, "jsonjson");
+                    snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS_S], 64, "%d", icmpType);
+                    snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS_E], 64, "%d", icmpType);
+                    snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS_END], 64, "END");
+                } else {
+                    snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS], 64, "jsonjson");
+                    snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS_S], 64, "1");
+                    snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS_E], 64, "255");
+                    snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS_INV], 64, "true");
+                    snprintf(parsed_rule->jsonel[MIDO_CRULE_TPS_END], 64, "END");
+                }
             }
             if (icmpCode != -1) {
-                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD], 64, "jsonjson");
-                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_S], 64, "%d", icmpCode);
-                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_E], 64, "%d", icmpCode);
-                snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_END], 64, "END");
+                if (icmpCode != 0) {
+                    snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD], 64, "jsonjson");
+                    snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_S], 64, "%d", icmpCode);
+                    snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_E], 64, "%d", icmpCode);
+                    snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_END], 64, "END");
+                } else {
+                    snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD], 64, "jsonjson");
+                    snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_S], 64, "1");
+                    snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_E], 64, "255");
+                    snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_INV], 64, "true");
+                    snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_END], 64, "END");
+                }
             }
             break;
         case 6:  // TCP
         case 17: // UDP
+            if ((fromPort == 0) && (toPort == 0)) {
+                LOGDEBUG("Invalid argument: mapping tcp/udp rule with zero port\n");
+            }
             snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD], 64, "jsonjson");
-            snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_S], 64, "%d", fromPort);
-            snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_E], 64, "%d", toPort);
+            snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_S], 64, "%d", (fromPort == 0) ? 1 : fromPort);
+            snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_E], 64, "%d", (toPort == 0) ? 1 : toPort);
             snprintf(parsed_rule->jsonel[MIDO_CRULE_TPD_END], 64, "END");
             break;
         case -1: // All protocols
@@ -4765,9 +4784,10 @@ int create_mido_vpc_secgroup_rule(midonet_api_chain *chain, midoname **outname,
             rc = mido_create_rule(chain, chain->obj, outname, NULL,
                     "position", spos, "type", "accept", "tpDst", rule->jsonel[MIDO_CRULE_TPD],
                     "tpDst:start", rule->jsonel[MIDO_CRULE_TPD_S], "tpDst:end", rule->jsonel[MIDO_CRULE_TPD_E],
-                    "tpDst:END", rule->jsonel[MIDO_CRULE_TPD_END], "tpSrc", rule->jsonel[MIDO_CRULE_TPS],
-                    "tpSrc:start", rule->jsonel[MIDO_CRULE_TPS_S], "tpSrc:end", rule->jsonel[MIDO_CRULE_TPS_E],
-                    "tpSrc:END", rule->jsonel[MIDO_CRULE_TPS_END], "nwProto", rule->jsonel[MIDO_CRULE_PROTO],
+                    "tpDst:END", rule->jsonel[MIDO_CRULE_TPD_END],  "invTpDst", rule->jsonel[MIDO_CRULE_TPD_INV],
+                    "tpSrc", rule->jsonel[MIDO_CRULE_TPS], "tpSrc:start", rule->jsonel[MIDO_CRULE_TPS_S],
+                    "tpSrc:end", rule->jsonel[MIDO_CRULE_TPS_E], "tpSrc:END", rule->jsonel[MIDO_CRULE_TPS_END],
+                    "invTpSrc", rule->jsonel[MIDO_CRULE_TPS_INV], "nwProto", rule->jsonel[MIDO_CRULE_PROTO],
                     "ipAddrGroupDst", rule->jsonel[MIDO_CRULE_GRPUUID], "nwDstAddress", rule->jsonel[MIDO_CRULE_NW],
                     "nwDstLength", rule->jsonel[MIDO_CRULE_NWLEN], NULL);
             break;
@@ -4775,9 +4795,10 @@ int create_mido_vpc_secgroup_rule(midonet_api_chain *chain, midoname **outname,
             rc = mido_create_rule(chain, chain->obj, outname, NULL,
                     "position", spos, "type", "accept", "tpDst", rule->jsonel[MIDO_CRULE_TPD],
                     "tpDst:start", rule->jsonel[MIDO_CRULE_TPD_S], "tpDst:end", rule->jsonel[MIDO_CRULE_TPD_E],
-                    "tpDst:END", rule->jsonel[MIDO_CRULE_TPD_END], "tpSrc", rule->jsonel[MIDO_CRULE_TPS],
-                    "tpSrc:start", rule->jsonel[MIDO_CRULE_TPS_S], "tpSrc:end", rule->jsonel[MIDO_CRULE_TPS_E],
-                    "tpSrc:END", rule->jsonel[MIDO_CRULE_TPS_END], "nwProto", rule->jsonel[MIDO_CRULE_PROTO],
+                    "tpDst:END", rule->jsonel[MIDO_CRULE_TPD_END],  "invTpDst", rule->jsonel[MIDO_CRULE_TPD_INV],
+                    "tpSrc", rule->jsonel[MIDO_CRULE_TPS], "tpSrc:start", rule->jsonel[MIDO_CRULE_TPS_S],
+                    "tpSrc:end", rule->jsonel[MIDO_CRULE_TPS_E], "tpSrc:END", rule->jsonel[MIDO_CRULE_TPS_END],
+                    "invTpSrc", rule->jsonel[MIDO_CRULE_TPS_INV], "nwProto", rule->jsonel[MIDO_CRULE_PROTO],
                     "ipAddrGroupSrc", rule->jsonel[MIDO_CRULE_GRPUUID], "nwSrcAddress", rule->jsonel[MIDO_CRULE_NW],
                     "nwSrcLength", rule->jsonel[MIDO_CRULE_NWLEN], NULL);
             break;
@@ -4939,9 +4960,11 @@ int create_mido_vpc_nacl_entry(midonet_api_chain *chain, midoname **outname,
                     "tpDst", entry->jsonel[MIDO_CRULE_TPD],
                     "tpDst:start", entry->jsonel[MIDO_CRULE_TPD_S], "tpDst:end", entry->jsonel[MIDO_CRULE_TPD_E],
                     "tpDst:END", entry->jsonel[MIDO_CRULE_TPD_END],
+                    "invTpDst", entry->jsonel[MIDO_CRULE_TPD_INV],
                     "tpSrc", entry->jsonel[MIDO_CRULE_TPS],
                     "tpSrc:start", entry->jsonel[MIDO_CRULE_TPS_S], "tpSrc:end", entry->jsonel[MIDO_CRULE_TPS_E],
                     "tpSrc:END", entry->jsonel[MIDO_CRULE_TPS_END],
+                    "invTpSrc", entry->jsonel[MIDO_CRULE_TPS_INV],
                     "nwProto", entry->jsonel[MIDO_CRULE_PROTO],
                     "nwDstAddress", entry->jsonel[MIDO_CRULE_NW],
                     "nwDstLength", entry->jsonel[MIDO_CRULE_NWLEN], NULL);
@@ -4952,9 +4975,11 @@ int create_mido_vpc_nacl_entry(midonet_api_chain *chain, midoname **outname,
                     "tpDst", entry->jsonel[MIDO_CRULE_TPD],
                     "tpDst:start", entry->jsonel[MIDO_CRULE_TPD_S], "tpDst:end", entry->jsonel[MIDO_CRULE_TPD_E],
                     "tpDst:END", entry->jsonel[MIDO_CRULE_TPD_END],
+                    "invTpDst", entry->jsonel[MIDO_CRULE_TPD_INV],
                     "tpSrc", entry->jsonel[MIDO_CRULE_TPS],
                     "tpSrc:start", entry->jsonel[MIDO_CRULE_TPS_S], "tpSrc:end", entry->jsonel[MIDO_CRULE_TPS_E],
                     "tpSrc:END", entry->jsonel[MIDO_CRULE_TPS_END],
+                    "invTpSrc", entry->jsonel[MIDO_CRULE_TPS_INV],
                     "nwProto", entry->jsonel[MIDO_CRULE_PROTO],
                     "nwSrcAddress", entry->jsonel[MIDO_CRULE_NW],
                     "nwSrcLength", entry->jsonel[MIDO_CRULE_NWLEN], NULL);
