@@ -423,6 +423,15 @@ public class SystemCredentials {
       RestrictSize.INSTANCE.apply( privateKey );
       super.addKeyPair( alias, cert, privateKey, keyPassword );
     }
+
+    @Override
+    public final void addKeyPair( String alias, X509Certificate[] certs, PrivateKey privateKey, String keyPassword ) throws IOException, GeneralSecurityException {
+      for ( final X509Certificate cert : certs ) {
+        RestrictSize.INSTANCE.apply( cert.getPublicKey( ) );
+      }
+      RestrictSize.INSTANCE.apply( privateKey );
+      super.addKeyPair( alias, certs, privateKey, keyPassword );
+    }
   }
   
   public static final KeyStore getKeyStore( ) {

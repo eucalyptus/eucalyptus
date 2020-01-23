@@ -153,13 +153,18 @@ public abstract class AbstractKeyStore implements com.eucalyptus.crypto.KeyStore
     this.keyStore.setCertificateEntry( alias, cert );
     this.store( );
   }
-  
+
   @Override
   public void addKeyPair( final String alias, final X509Certificate cert, final PrivateKey privateKey, final String keyPassword ) throws IOException, GeneralSecurityException {
-    this.keyStore.setKeyEntry( alias, privateKey, keyPassword.toCharArray( ), new Certificate[] { cert } );
+    this.addKeyPair( alias, new X509Certificate[]{ cert }, privateKey, keyPassword );
+  }
+
+  @Override
+  public void addKeyPair( final String alias, final X509Certificate[] certs, final PrivateKey privateKey, final String keyPassword ) throws IOException, GeneralSecurityException {
+    this.keyStore.setKeyEntry( alias, privateKey, keyPassword.toCharArray( ), certs );
     this.store( );
   }
-  
+
   @Override
   public void store( ) throws IOException, GeneralSecurityException {
     LOG.info( "Writing back keystore: " + this.fileName );

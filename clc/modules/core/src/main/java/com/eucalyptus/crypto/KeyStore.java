@@ -52,38 +52,40 @@ import java.util.List;
 
 public interface KeyStore {
   
-  public abstract KeyPair getKeyPair( final String alias, final String password ) throws GeneralSecurityException;
+  KeyPair getKeyPair( final String alias, final String password ) throws GeneralSecurityException;
   
-  public abstract boolean check( ) throws GeneralSecurityException;
+  boolean check( ) throws GeneralSecurityException;
   
-  public abstract boolean containsEntry( final String alias );
+  boolean containsEntry( final String alias );
 
-  public abstract X509Certificate getCertificate( final String alias ) throws GeneralSecurityException;
+  X509Certificate getCertificate( final String alias ) throws GeneralSecurityException;
 
-  public abstract List<X509Certificate> getCertificateChain( final String alias ) throws GeneralSecurityException;
+  List<X509Certificate> getCertificateChain( final String alias ) throws GeneralSecurityException;
   
-  public abstract Key getKey( final String alias, final String password ) throws GeneralSecurityException;
+  Key getKey( final String alias, final String password ) throws GeneralSecurityException;
   
-  public abstract String getCertificateAlias( final String certPem ) throws GeneralSecurityException;
+  String getCertificateAlias( final String certPem ) throws GeneralSecurityException;
   
-  public abstract String getCertificateAlias( final X509Certificate cert ) throws GeneralSecurityException;
+  String getCertificateAlias( final X509Certificate cert ) throws GeneralSecurityException;
   
-  public abstract void addCertificate( final String alias, final X509Certificate cert ) throws IOException, GeneralSecurityException;
+  void addCertificate( final String alias, final X509Certificate cert ) throws IOException, GeneralSecurityException;
   
-  public abstract void addKeyPair( final String alias, final X509Certificate cert, final PrivateKey privateKey, final String keyPassword ) throws IOException, GeneralSecurityException;
+  void addKeyPair( final String alias, final X509Certificate cert, final PrivateKey privateKey, final String keyPassword ) throws IOException, GeneralSecurityException;
+
+  void addKeyPair( final String alias, final X509Certificate[] certs, final PrivateKey privateKey, final String keyPassword ) throws IOException, GeneralSecurityException;
+
+  void store( ) throws IOException, GeneralSecurityException;
   
-  public abstract void store( ) throws IOException, GeneralSecurityException;
+  List<String> getAliases( ) throws KeyStoreException;
   
-  public abstract List<String> getAliases( ) throws KeyStoreException;
+  String getFileName( );
   
-  public abstract String getFileName( );
+  void remove( final String alias );
   
-  public abstract void remove( final String alias );
+  void remove( );
   
-  public abstract void remove( );
+  InputStream getAsInputStream( ) throws FileNotFoundException;
   
-  public abstract InputStream getAsInputStream( ) throws FileNotFoundException;
-  
-  public abstract List<X509Certificate> getAllCertificates( ) throws KeyStoreException;
+  List<X509Certificate> getAllCertificates( ) throws KeyStoreException;
   
 }
