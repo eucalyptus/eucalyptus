@@ -265,7 +265,7 @@ public class PolicySpec {
       .build();
 
   // Action syntax
-  public static final Pattern ACTION_PATTERN = Pattern.compile( "\\*|(?:([a-z0-9]+):(\\S+))" );
+  public static final Pattern ACTION_PATTERN = Pattern.compile( "\\*|(?:([a-z0-9-]+):(\\S+))" );
 
   // Wildcard
   public static final String ALL_RESOURCE = "*";

@@ -191,6 +191,27 @@ public class PolicyParserTest {
         normalizedPolicyJson );
   }
 
+  @Test
+  public void testParseServiceHyphenPolicy( ) throws Exception {
+    String policyJson =
+        "{\n" +
+            "  \"Statement\": {\n" +
+            "    \"Effect\": \"Allow\",\n" +
+            "    \"Action\": \"aws-marketplace:ViewSubscriptions\",\n" +
+            "    \"Resource\": \"*\"\n" +
+            "  }\n" +
+            "}";
+
+    PolicyPolicy policy = PolicyParser.getInstance().parse( policyJson );
+    assertNotNull( "Policy null", policy );
+    assertNotNull( "Policy authorizations", policy.getAuthorizations() );
+    assertEquals( "Policy authorization count", 1, policy.getAuthorizations().size() );
+    Authorization authorization = policy.getAuthorizations().get( 0 );
+    assertNotNull( "Authorization null", authorization );
+    assertNull( "Authorization principal", authorization.getPrincipal( ) );
+    assertEquals( "Authorization actions", Sets.newHashSet( "aws-marketplace:viewsubscriptions" ), authorization.getActions() );
+  }
+
   @Test(expected = PolicyParseException.class )
   public void testParseUserPolicyMissingResource() throws Exception {
     String policyJson =
