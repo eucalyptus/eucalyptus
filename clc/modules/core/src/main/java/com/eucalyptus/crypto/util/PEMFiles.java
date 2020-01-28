@@ -49,6 +49,8 @@ import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.annotation.Nullable;
 
@@ -125,6 +127,22 @@ public class PEMFiles {
       LOG.error( e, e );//this can never happen
     }
     return x509;
+  }
+
+  public static List<X509Certificate> getCertChain( final byte[] o ) {
+    final List<X509Certificate> certificates = new ArrayList<>();
+    final ByteArrayInputStream pemByteIn = new ByteArrayInputStream( o );
+    try ( final PEMParser in = new PEMParser( new InputStreamReader( pemByteIn ) ) ) {
+      final JcaX509CertificateConverter converter =
+          new JcaX509CertificateConverter( ).setProvider( BouncyCastleProvider.PROVIDER_NAME );
+      X509CertificateHolder certificateHolder;
+      while( ( certificateHolder = (X509CertificateHolder) in.readObject( ) ) != null ) {
+        certificates.add( converter.getCertificate( certificateHolder ) );
+      }
+    } catch ( IOException | CertificateException e ) {
+      LOG.error( e, e );
+    }
+    return certificates;
   }
 
   @Nullable
