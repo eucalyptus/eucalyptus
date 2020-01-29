@@ -44,7 +44,7 @@ public class ResourceInfoHelper {
   public static void setResourceAttributesJson(ResourceInfo resourceInfo, String json) throws CloudFormationException {
     JsonNode attributeNode = JsonHelper.getJsonNodeFromString(json);
     for (String attributeName: Lists.newArrayList(attributeNode.fieldNames())) {
-      if (resourceInfo.getAttributeNames().contains(attributeName)) {
+      if (resourceInfo.isAttributeAllowed(attributeName)) {
         resourceInfo.setResourceAttributeJson(attributeName, attributeNode.get(attributeName).asText());
       } else {
         LOG.warn("Attempting to set non-existent attribute '" + attributeName + "' on resource " + resourceInfo.getLogicalResourceId() + " (" + resourceInfo.getType() + "). " +
