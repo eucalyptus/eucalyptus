@@ -1769,8 +1769,12 @@ public class CloudFormationService {
 
   public static PseudoParameterValues populateRegionPseudoParameters(final PseudoParameterValues pseudoParameterValues) {
     pseudoParameterValues.setRegion(getRegion( ));
-    pseudoParameterValues.setPartition("eucalyptus");
-    pseudoParameterValues.setUrlSuffix(DomainNames.externalSubdomain().relativize(Name.root).toString());
+    pseudoParameterValues.setPartition(Objects.toString(
+        Strings.emptyToNull(CloudFormationProperties.PSEUDO_PARAM_PARTITION),
+        "eucalyptus"));
+    pseudoParameterValues.setUrlSuffix(Objects.toString(
+        Strings.emptyToNull(CloudFormationProperties.PSEUDO_PARAM_URLSUFFIX),
+        DomainNames.externalSubdomain().relativize(Name.root).toString()));
     return pseudoParameterValues;
   }
 

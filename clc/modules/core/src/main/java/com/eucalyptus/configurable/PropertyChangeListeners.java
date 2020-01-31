@@ -39,7 +39,13 @@
 
 package com.eucalyptus.configurable;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
+import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Strings;
 import com.google.common.cache.CacheBuilderSpec;
 import com.google.common.primitives.Ints;
 import org.apache.log4j.Logger;
@@ -108,6 +114,34 @@ public class PropertyChangeListeners {
       try {
         CacheBuilderSpec.parse( String.valueOf( newValue ) );
       } catch ( Exception e ) {
+        throw new ConfigurablePropertyException( e.getMessage( ) );
+      }
+    }
+  }
+
+  public static class RegexMatchListener implements PropertyChangeListener {
+    @Target( ElementType.FIELD )
+    @Retention( RetentionPolicy.RUNTIME )
+    public @interface RegexMatch {
+       String message();
+       String regex();
+       boolean allowEmpty() default true;
+    }
+
+    @Override
+    public void fireChange( final ConfigurableProperty t, final Object newValue ) throws ConfigurablePropertyException {
+      try {
+        final RegexMatch match = t.getField().getAnnotation(RegexMatch.class);
+        if (match == null) {
+          throw new ConfigurablePropertyException("Missing validation regex");
+        }
+        final String newValueStr = String.valueOf( newValue );
+        if (!( (Strings.isNullOrEmpty(newValueStr) && match.allowEmpty()) ||
+             newValueStr.matches( match.regex() ) ) ) {
+          throw new ConfigurablePropertyException( match.message() );
+        }
+      } catch ( Exception e ) {
+        Exceptions.findAndRethrow( e, ConfigurablePropertyException.class );
         throw new ConfigurablePropertyException( e.getMessage( ) );
       }
     }

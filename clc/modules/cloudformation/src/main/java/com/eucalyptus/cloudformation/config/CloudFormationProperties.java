@@ -80,6 +80,22 @@ public class CloudFormationProperties {
       changeListener = PropertyChangeListeners.CacheSpecListener.class )
   public static volatile String CFN_INSTANCE_AUTH_CACHE = "";
 
+  @ConfigurableField(
+      description = "CloudFormation AWS::Partition (default: eucalyptus)",
+      changeListener = PropertyChangeListeners.RegexMatchListener.class )
+  @PropertyChangeListeners.RegexMatchListener.RegexMatch(
+      message = "Invalid partition value, must be dashed lowercase alphanumeric, max length 64",
+      regex = "[a-z0-9-]{1,64}" )
+  public static volatile String PSEUDO_PARAM_PARTITION = "";
+
+  @ConfigurableField(
+      description = "CloudFormation AWS::URLSuffix (default: dns domain)",
+      changeListener = PropertyChangeListeners.RegexMatchListener.class )
+  @PropertyChangeListeners.RegexMatchListener.RegexMatch(
+      message = "Invalid url suffix value, must be a valid domain with optional port",
+      regex = "[a-zA-Z0-9-]{3,64}(?:\\.[a-zA-Z0-9-]{3,64})*(?::[0-9]{1,5})?" )
+  public static volatile String PSEUDO_PARAM_URLSUFFIX = "";
+
   // In case we are using AWS SWF
   public static boolean USE_AWS_SWF = "true".equalsIgnoreCase(System.getProperty("cloudformation.use_aws_swf"));
   public static String AWS_ACCESS_KEY = System.getProperty("cloudformation.aws_access_key", "");
