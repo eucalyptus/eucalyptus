@@ -41,6 +41,8 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.tokens.SecurityTokenAWSCredentialsProvider;
+import com.eucalyptus.cloudformation.common.msgs.AccountLimit;
+import com.eucalyptus.cloudformation.common.msgs.AccountLimitList;
 import com.eucalyptus.cloudformation.common.msgs.CancelUpdateStackResponseType;
 import com.eucalyptus.cloudformation.common.msgs.CancelUpdateStackType;
 import com.eucalyptus.cloudformation.common.msgs.ContinueUpdateRollbackResponseType;
@@ -50,6 +52,9 @@ import com.eucalyptus.cloudformation.common.msgs.CreateStackResult;
 import com.eucalyptus.cloudformation.common.msgs.CreateStackType;
 import com.eucalyptus.cloudformation.common.msgs.DeleteStackResponseType;
 import com.eucalyptus.cloudformation.common.msgs.DeleteStackType;
+import com.eucalyptus.cloudformation.common.msgs.DescribeAccountLimitsResponseType;
+import com.eucalyptus.cloudformation.common.msgs.DescribeAccountLimitsResult;
+import com.eucalyptus.cloudformation.common.msgs.DescribeAccountLimitsType;
 import com.eucalyptus.cloudformation.common.msgs.DescribeStackEventsResponseType;
 import com.eucalyptus.cloudformation.common.msgs.DescribeStackEventsResult;
 import com.eucalyptus.cloudformation.common.msgs.DescribeStackEventsType;
@@ -770,6 +775,26 @@ public class CloudFormationService {
       }
     }
     return currentWorkflowRetainedResources;
+  }
+
+  public DescribeAccountLimitsResponseType describeAccountLimits(final DescribeAccountLimitsType request ) throws CloudFormationException {
+    final DescribeAccountLimitsResponseType reply = request.getReply();
+    try {
+      final Context ctx = Contexts.lookup();
+      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_DESCRIBEACCOUNTLIMITS, ctx);
+
+      final AccountLimitList accountLimitList = new AccountLimitList();
+      final AccountLimit accountLimit = new AccountLimit();
+      accountLimit.setName("StackOutputsLimit");
+      accountLimit.setValue((int)Limits.MAX_OUTPUTS_PER_TEMPLATE);
+      accountLimitList.getMember().add(accountLimit);
+      final DescribeAccountLimitsResult describeAccountLimitsResult = new DescribeAccountLimitsResult();
+      describeAccountLimitsResult.setAccountLimits(accountLimitList);
+      reply.setDescribeAccountLimitsResult(describeAccountLimitsResult);
+    } catch (final Exception ex) {
+      handleException(ex);
+    }
+    return reply;
   }
 
   public DescribeStackEventsResponseType describeStackEvents( final DescribeStackEventsType request ) throws CloudFormationException {

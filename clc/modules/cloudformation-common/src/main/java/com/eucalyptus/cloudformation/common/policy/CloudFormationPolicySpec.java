@@ -39,6 +39,7 @@ public interface CloudFormationPolicySpec {
   String CLOUDFORMATION_CANCELUPDATESTACK = "cancelupdatestack";
   String CLOUDFORMATION_CREATESTACK = "createstack";
   String CLOUDFORMATION_DELETESTACK = "deletestack";
+  String CLOUDFORMATION_DESCRIBEACCOUNTLIMITS = "describeaccountlimits";
   String CLOUDFORMATION_DESCRIBESTACKEVENTS = "describestackevents";
   String CLOUDFORMATION_DESCRIBESTACKRESOURCE = "describestackresource";
   String CLOUDFORMATION_DESCRIBESTACKRESOURCES = "describestackresources";

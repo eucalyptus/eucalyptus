@@ -463,5 +463,27 @@
     <structure name="ValidateTemplateResult" field="validateTemplateResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ValidateTemplateResult"/>
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
+  <mapping name="DescribeAccountLimits" class="com.eucalyptus.cloudformation.common.msgs.DescribeAccountLimitsType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeAccountLimitsResponse" class="com.eucalyptus.cloudformation.common.msgs.DescribeAccountLimitsResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="DescribeAccountLimitsResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DescribeAccountLimitsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DescribeAccountLimitsResult" abstract="true">
+    <structure get-method="getAccountLimits" set-method="setAccountLimits" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.AccountLimitList" name="AccountLimits"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.AccountLimit" abstract="true">
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+    <value name="Value" get-method="getValue" set-method="setValue" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.AccountLimitList" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.AccountLimit"/>
+    </collection>
+  </mapping>
 </binding>
 

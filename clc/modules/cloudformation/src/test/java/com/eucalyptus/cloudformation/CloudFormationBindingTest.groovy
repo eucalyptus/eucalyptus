@@ -54,10 +54,10 @@ import com.eucalyptus.cloudformation.common.msgs.UpdateStackType
 import com.eucalyptus.cloudformation.common.msgs.ValidateTemplateType
 import com.eucalyptus.cloudformation.ws.CloudFormationQueryBinding
 import com.eucalyptus.ws.protocol.QueryBindingTestSupport
+import com.google.common.base.Splitter
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import org.junit.Test
-
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*
 
 /**
  *
@@ -276,6 +276,182 @@ class CloudFormationBindingTest extends QueryBindingTestSupport {
                 type: 'Sender'
             )
         ) ) )
+  }
+
+  @Test
+  void testBindingsForAllActions(){
+    // https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_Operations.html
+    String actionsCopiedAndPastedFromAWSCFDocs = '''
+    CancelUpdateStack
+
+    ContinueUpdateRollback
+
+    CreateChangeSet
+
+    CreateStack
+
+    CreateStackInstances
+
+    CreateStackSet
+
+    DeleteChangeSet
+
+    DeleteStack
+
+    DeleteStackInstances
+
+    DeleteStackSet
+
+    DeregisterType
+
+    DescribeAccountLimits
+
+    DescribeChangeSet
+
+    DescribeStackDriftDetectionStatus
+
+    DescribeStackEvents
+
+    DescribeStackInstance
+
+    DescribeStackResource
+
+    DescribeStackResourceDrifts
+
+    DescribeStackResources
+
+    DescribeStacks
+
+    DescribeStackSet
+
+    DescribeStackSetOperation
+
+    DescribeType
+
+    DescribeTypeRegistration
+
+    DetectStackDrift
+
+    DetectStackResourceDrift
+
+    DetectStackSetDrift
+
+    EstimateTemplateCost
+
+    ExecuteChangeSet
+
+    GetStackPolicy
+
+    GetTemplate
+
+    GetTemplateSummary
+
+    ListChangeSets
+
+    ListExports
+
+    ListImports
+
+    ListStackInstances
+
+    ListStackResources
+
+    ListStacks
+
+    ListStackSetOperationResults
+
+    ListStackSetOperations
+
+    ListStackSets
+
+    ListTypeRegistrations
+
+    ListTypes
+
+    ListTypeVersions
+
+    RecordHandlerProgress
+
+    RegisterType
+
+    SetStackPolicy
+
+    SetTypeDefaultVersion
+
+    SignalResource
+
+    StopStackSetOperation
+
+    UpdateStack
+
+    UpdateStackInstances
+
+    UpdateStackSet
+
+    UpdateTerminationProtection
+
+    ValidateTemplate
+    '''
+
+    List<String> whitelist = [
+        // change sets
+        'CreateChangeSet',
+        'DeleteChangeSet',
+        'DescribeChangeSet',
+        'ExecuteChangeSet',
+        'ListChangeSets',
+
+        // stack sets
+        'CreateStackInstances',
+        'CreateStackSet',
+        'DeleteStackInstances',
+        'DeleteStackSet',
+        'DescribeStackInstance',
+        'DescribeStackSet',
+        'DescribeStackSetOperation',
+        'ListStackInstances',
+        'ListStackSetOperationResults',
+        'ListStackSetOperations',
+        'ListStackSets',
+        'StopStackSetOperation',
+        'UpdateStackInstances',
+        'UpdateStackSet',
+
+        // drift
+        'DescribeStackDriftDetectionStatus',
+        'DescribeStackResourceDrifts',
+        'DetectStackDrift',
+        'DetectStackResourceDrift',
+        'DetectStackSetDrift',
+
+        // types
+        'DeregisterType',
+        'DescribeType',
+        'DescribeTypeRegistration',
+        'ListTypeRegistrations',
+        'ListTypes',
+        'ListTypeVersions',
+        'RecordHandlerProgress',
+        'RegisterType',
+        'SetTypeDefaultVersion',
+
+        // other
+        'ListExports',
+        'ListImports',
+        'UpdateTerminationProtection',
+    ]
+    Splitter.on(' ').trimResults( ).omitEmptyStrings( ).split( actionsCopiedAndPastedFromAWSCFDocs ).each { String action ->
+      try {
+        Class.forName( "com.eucalyptus.cloudformation.common.msgs.${action}Type" )
+      } catch ( Exception e ) {
+        if ( !whitelist.contains(action) ) fail( "Message not found for ${action}" )
+      }
+      try {
+        Class.forName( "com.eucalyptus.cloudformation.common.msgs.${action}ResponseType" )
+      } catch ( Exception e ) {
+        if ( !whitelist.contains(action) ) fail( "Response message not found for ${action}" )
+      }
+    }
   }
 
   static class TestBean {

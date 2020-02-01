@@ -1,0 +1,34 @@
+/*
+ * Copyright 2020 AppScale Systems, Inc
+ *
+ * Use of this source code is governed by a BSD-2-Clause
+ * license that can be found in the LICENSE file or at
+ * https://opensource.org/licenses/BSD-2-Clause
+ */
+package com.eucalyptus.cloudformation.common.msgs;
+
+import edu.ucsb.eucalyptus.msgs.EucalyptusData;
+
+
+public class DescribeAccountLimitsResult extends EucalyptusData {
+
+  private AccountLimitList accountLimits;
+  private String nextToken;
+
+  public AccountLimitList getAccountLimits( ) {
+    return accountLimits;
+  }
+
+  public void setAccountLimits( final AccountLimitList accountLimits ) {
+    this.accountLimits = accountLimits;
+  }
+
+  public String getNextToken( ) {
+    return nextToken;
+  }
+
+  public void setNextToken( final String nextToken ) {
+    this.nextToken = nextToken;
+  }
+
+}
