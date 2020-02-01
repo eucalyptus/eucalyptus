@@ -13,21 +13,22 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 public class AccountLimit extends EucalyptusData {
 
   private String name;
+
   private Integer value;
 
-  public String getName( ) {
+  public String getName() {
     return name;
   }
 
-  public void setName( final String name ) {
+  public void setName(final String name) {
     this.name = name;
   }
 
-  public Integer getValue( ) {
+  public Integer getValue() {
     return value;
   }
 
-  public void setValue( final Integer value ) {
+  public void setValue(final Integer value) {
     this.value = value;
   }
 

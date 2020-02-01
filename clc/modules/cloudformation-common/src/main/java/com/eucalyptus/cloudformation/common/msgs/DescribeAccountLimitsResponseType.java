@@ -7,24 +7,25 @@
  */
 package com.eucalyptus.cloudformation.common.msgs;
 
-
 public class DescribeAccountLimitsResponseType extends CloudFormationMessage {
 
-  private DescribeAccountLimitsResult result = new DescribeAccountLimitsResult( );
-  private ResponseMetadata responseMetadata = new ResponseMetadata( );
+  private DescribeAccountLimitsResult result = new DescribeAccountLimitsResult();
 
-  public DescribeAccountLimitsResult getDescribeAccountLimitsResult( ) {
+  private ResponseMetadata responseMetadata = new ResponseMetadata();
+
+  public DescribeAccountLimitsResult getDescribeAccountLimitsResult() {
     return result;
   }
 
-  public void setDescribeAccountLimitsResult( final DescribeAccountLimitsResult result ) {
+  public void setDescribeAccountLimitsResult(final DescribeAccountLimitsResult result) {
     this.result = result;
   }
-  public ResponseMetadata getResponseMetadata( ) {
+
+  public ResponseMetadata getResponseMetadata() {
     return responseMetadata;
   }
 
-  public void setResponseMetadata( final ResponseMetadata responseMetadata ) {
+  public void setResponseMetadata(final ResponseMetadata responseMetadata) {
     this.responseMetadata = responseMetadata;
   }
 

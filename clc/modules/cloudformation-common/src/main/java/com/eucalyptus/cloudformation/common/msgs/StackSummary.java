@@ -1,108 +1,132 @@
-/*************************************************************************
- * Copyright 2009-2014 Ent. Services Development Corporation LP
+/*
+ * Copyright 2020 AppScale Systems, Inc
  *
- * Redistribution and use of this software in source and binary forms,
- * with or without modification, are permitted provided that the
- * following conditions are met:
- *
- *   Redistributions of source code must retain the above copyright
- *   notice, this list of conditions and the following disclaimer.
- *
- *   Redistributions in binary form must reproduce the above copyright
- *   notice, this list of conditions and the following disclaimer
- *   in the documentation and/or other materials provided with the
- *   distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- ************************************************************************/
+ * Use of this source code is governed by a BSD-2-Clause
+ * license that can be found in the LICENSE file or at
+ * https://opensource.org/licenses/BSD-2-Clause
+ */
 package com.eucalyptus.cloudformation.common.msgs;
 
-import java.util.Date;
+import javax.annotation.Nonnull;
+import com.eucalyptus.cloudformation.common.CloudFormationMessageValidation.FieldRegex;
+import com.eucalyptus.cloudformation.common.CloudFormationMessageValidation.FieldRegexValue;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
+
 
 public class StackSummary extends EucalyptusData {
 
-  private Date creationTime;
-  private Date deletionTime;
-  private Date lastUpdatedTime;
+  @Nonnull
+  private java.util.Date creationTime;
+
+  private java.util.Date deletionTime;
+
+  private StackDriftInformationSummary driftInformation;
+
+  private java.util.Date lastUpdatedTime;
+
+  private String parentId;
+
+  private String rootId;
+
   private String stackId;
+
+  @Nonnull
   private String stackName;
+
+  @Nonnull
+  @FieldRegex(FieldRegexValue.ENUM_STACKSTATUS)
   private String stackStatus;
+
   private String stackStatusReason;
+
   private String templateDescription;
 
-  public Date getCreationTime( ) {
+  public java.util.Date getCreationTime() {
     return creationTime;
   }
 
-  public void setCreationTime( Date creationTime ) {
+  public void setCreationTime(final java.util.Date creationTime) {
     this.creationTime = creationTime;
   }
 
-  public Date getDeletionTime( ) {
+  public java.util.Date getDeletionTime() {
     return deletionTime;
   }
 
-  public void setDeletionTime( Date deletionTime ) {
+  public void setDeletionTime(final java.util.Date deletionTime) {
     this.deletionTime = deletionTime;
   }
 
-  public Date getLastUpdatedTime( ) {
+  public StackDriftInformationSummary getDriftInformation() {
+    return driftInformation;
+  }
+
+  public void setDriftInformation(final StackDriftInformationSummary driftInformation) {
+    this.driftInformation = driftInformation;
+  }
+
+  public java.util.Date getLastUpdatedTime() {
     return lastUpdatedTime;
   }
 
-  public void setLastUpdatedTime( Date lastUpdatedTime ) {
+  public void setLastUpdatedTime(final java.util.Date lastUpdatedTime) {
     this.lastUpdatedTime = lastUpdatedTime;
   }
 
-  public String getStackId( ) {
+  public String getParentId() {
+    return parentId;
+  }
+
+  public void setParentId(final String parentId) {
+    this.parentId = parentId;
+  }
+
+  public String getRootId() {
+    return rootId;
+  }
+
+  public void setRootId(final String rootId) {
+    this.rootId = rootId;
+  }
+
+  public String getStackId() {
     return stackId;
   }
 
-  public void setStackId( String stackId ) {
+  public void setStackId(final String stackId) {
     this.stackId = stackId;
   }
 
-  public String getStackName( ) {
+  public String getStackName() {
     return stackName;
   }
 
-  public void setStackName( String stackName ) {
+  public void setStackName(final String stackName) {
     this.stackName = stackName;
   }
 
-  public String getStackStatus( ) {
+  public String getStackStatus() {
     return stackStatus;
   }
 
-  public void setStackStatus( String stackStatus ) {
+  public void setStackStatus(final String stackStatus) {
     this.stackStatus = stackStatus;
   }
 
-  public String getStackStatusReason( ) {
+  public String getStackStatusReason() {
     return stackStatusReason;
   }
 
-  public void setStackStatusReason( String stackStatusReason ) {
+  public void setStackStatusReason(final String stackStatusReason) {
     this.stackStatusReason = stackStatusReason;
   }
 
-  public String getTemplateDescription( ) {
+  public String getTemplateDescription() {
     return templateDescription;
   }
 
-  public void setTemplateDescription( String templateDescription ) {
+  public void setTemplateDescription(final String templateDescription) {
     this.templateDescription = templateDescription;
   }
+
 }

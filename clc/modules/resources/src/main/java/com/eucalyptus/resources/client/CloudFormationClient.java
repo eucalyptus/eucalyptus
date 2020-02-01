@@ -31,6 +31,7 @@ package com.eucalyptus.resources.client;
 import java.util.ArrayList;
 
 import com.eucalyptus.cloudformation.common.CloudFormation;
+import com.eucalyptus.cloudformation.common.msgs.Capabilities;
 import com.eucalyptus.cloudformation.common.msgs.CreateStackType;
 import com.eucalyptus.cloudformation.common.msgs.DeleteStackType;
 import com.eucalyptus.cloudformation.common.msgs.DescribeStackResourcesResponseType;
@@ -39,7 +40,6 @@ import com.eucalyptus.cloudformation.common.msgs.DescribeStacksResponseType;
 import com.eucalyptus.cloudformation.common.msgs.DescribeStacksType;
 import com.eucalyptus.cloudformation.common.msgs.Parameter;
 import com.eucalyptus.cloudformation.common.msgs.Parameters;
-import com.eucalyptus.cloudformation.common.msgs.ResourceList;
 import com.eucalyptus.cloudformation.common.msgs.Stack;
 import com.eucalyptus.cloudformation.common.msgs.StackResource;
 import com.eucalyptus.cloudformation.common.msgs.StackResources;
@@ -108,7 +108,7 @@ public class CloudFormationClient {
         params.getMember().addAll(parameters);
         req.setParameters(params);
       }
-      ResourceList rl = new ResourceList();
+      Capabilities rl = new Capabilities();
       rl.getMember().add("CAPABILITY_IAM");
       req.setCapabilities(rl);
       return req;

@@ -31,22 +31,25 @@ package com.eucalyptus.cloudformation.ws;
 
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.HoldMe;
-import com.eucalyptus.cloudformation.common.msgs.CloudFormationErrorResponse;
+import com.eucalyptus.cloudformation.common.msgs.Error;
+import com.eucalyptus.cloudformation.common.msgs.ErrorResponse;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Json;
+import com.eucalyptus.util.Json.JsonOption;
 import com.eucalyptus.util.UnsafeByteArrayOutputStream;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.eucalyptus.ws.protocol.BaseQueryBinding;
 import com.eucalyptus.ws.protocol.OperationParameter;
-import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleSerializers;
@@ -67,6 +70,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.EnumSet;
 
 
 public class CloudFormationQueryBinding extends BaseQueryBinding<OperationParameter> {
@@ -97,7 +101,7 @@ public class CloudFormationQueryBinding extends BaseQueryBinding<OperationParame
   //          String response = Binding.createRestFault( this.requestType.get( ctx.getChannel( ) ), "Recieved an response from the service which has no content.", "" );
   //          byteOut.write( response.getBytes( ) );
   //          httpResponse.setStatus( HttpResponseStatus.INTERNAL_SERVER_ERROR );
-          } else if (httpResponse.getMessage( ) instanceof CloudFormationErrorResponse) {
+          } else if (httpResponse.getMessage( ) instanceof ErrorResponse) {
             jsonWriter().writeValue(byteOut, httpResponse.getMessage());
           } else if ( httpResponse.getMessage( ) instanceof EucalyptusErrorMessageType) {
             EucalyptusErrorMessageType errMsg = ( EucalyptusErrorMessageType ) httpResponse.getMessage( );
@@ -145,19 +149,30 @@ public class CloudFormationQueryBinding extends BaseQueryBinding<OperationParame
   }
 
   public static ObjectWriter jsonWriter( ) {
-    final ObjectMapper mapper = new ObjectMapper( );
-    mapper.setPropertyNamingStrategy( PropertyNamingStrategy.PASCAL_CASE_TO_CAMEL_CASE );
+    final ObjectMapper mapper = Json.mapper( EnumSet.of(
+        JsonOption.IgnoreBaseMessageUpper,
+        JsonOption.OmitNullValues,
+        JsonOption.UpperCamelPropertyNaming) );
     mapper.setSerializerFactory( mapper.getSerializerFactory( ).withAdditionalSerializers(
         new SimpleSerializers( Lists.<JsonSerializer<?>>newArrayList( new EpochSecondsDateSerializer( ) ) )
     ) );
-    mapper.setSerializationInclusion( JsonInclude.Include.NON_NULL );
     mapper.addMixIn( EucalyptusData.class, MemberMixin.class ); // omit "member" objects when serializing lists
+    mapper.addMixIn( ErrorResponse.class, ErrorResponseMixin.class );
     return mapper.writer( ).without( SerializationFeature.FAIL_ON_EMPTY_BEANS );
   }
 
   private interface MemberMixin {
     @JsonValue
     ArrayList<Object> getMember( );
+  }
+
+  private interface ErrorResponseMixin {
+    @JsonFormat(with={
+        JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY,
+        JsonFormat.Feature.WRITE_SINGLE_ELEM_ARRAYS_UNWRAPPED})
+    ArrayList<Error> getError();
+    @JsonIgnore String getWebServiceErrorCode();
+    @JsonIgnore String getWebServiceErrorMessage();
   }
 
   private static final class EpochSecondsDateSerializer extends StdSerializer<Date> {

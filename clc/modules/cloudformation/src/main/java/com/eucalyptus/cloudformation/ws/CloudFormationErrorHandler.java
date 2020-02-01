@@ -28,7 +28,7 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.ws;
 
-import com.eucalyptus.cloudformation.common.msgs.CloudFormationErrorResponse;
+import com.eucalyptus.cloudformation.common.msgs.ErrorResponse;
 import com.eucalyptus.cloudformation.common.msgs.Error;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.ws.Role;
@@ -50,14 +50,14 @@ public class CloudFormationErrorHandler extends ErrorHandlerSupport {
                                             final Role role,
                                             final String code,
                                             final String message ) {
-    final CloudFormationErrorResponse errorResp = new CloudFormationErrorResponse( );
+    final ErrorResponse errorResp = new ErrorResponse( );
     errorResp.setCorrelationId( correlationId );
     errorResp.setRequestId( correlationId );
     final Error error = new Error( );
     error.setType( role == Role.Receiver ? "Receiver" : "Sender" );
     error.setCode( code );
     error.setMessage( message );
-    errorResp.setError( error );
+    errorResp.getError().add( error );
     return errorResp;
   }
 }

@@ -37,6 +37,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import com.eucalyptus.cloudformation.common.msgs.CancelUpdateStackResponseType;
 import com.eucalyptus.cloudformation.common.msgs.CancelUpdateStackType;
+import com.eucalyptus.cloudformation.common.msgs.Capabilities;
 import com.eucalyptus.cloudformation.common.msgs.CreateStackResponseType;
 import com.eucalyptus.cloudformation.common.msgs.CreateStackResult;
 import com.eucalyptus.cloudformation.common.msgs.CreateStackType;
@@ -69,11 +70,11 @@ import com.eucalyptus.cloudformation.common.msgs.ListStackResourcesType;
 import com.eucalyptus.cloudformation.common.msgs.ListStacksResponseType;
 import com.eucalyptus.cloudformation.common.msgs.ListStacksResult;
 import com.eucalyptus.cloudformation.common.msgs.ListStacksType;
+import com.eucalyptus.cloudformation.common.msgs.NotificationARNs;
 import com.eucalyptus.cloudformation.common.msgs.Output;
 import com.eucalyptus.cloudformation.common.msgs.Outputs;
 import com.eucalyptus.cloudformation.common.msgs.Parameter;
 import com.eucalyptus.cloudformation.common.msgs.Parameters;
-import com.eucalyptus.cloudformation.common.msgs.ResourceList;
 import com.eucalyptus.cloudformation.common.msgs.SetStackPolicyResponseType;
 import com.eucalyptus.cloudformation.common.msgs.SetStackPolicyType;
 import com.eucalyptus.cloudformation.common.msgs.Stack;
@@ -277,7 +278,7 @@ public class CloudFormationServiceForBindingTest {
     for (int k=1;k<=i;k++) {
       capabilitiesMember.add("capability-"+k+"-"+i);
     }
-    ResourceList capabilities = new ResourceList();
+    Capabilities capabilities = new Capabilities();
     capabilities.setMember(capabilitiesMember);
     stack.setCapabilities(capabilities);
     try {
@@ -298,7 +299,7 @@ public class CloudFormationServiceForBindingTest {
     for (int k=1;k<=i;k++) {
       notificationARNMember.add("notificationARN-"+k+"-"+i);
     }
-    ResourceList notificationARNs = new ResourceList();
+    NotificationARNs notificationARNs = new NotificationARNs();
     notificationARNs.setMember(notificationARNMember);
     stack.setNotificationARNs(notificationARNs);
     ArrayList<Output> outputsMember = new ArrayList<Output>();
@@ -503,7 +504,7 @@ public class CloudFormationServiceForBindingTest {
     for (int k=1;k<=NUM_PARAMS;k++) {
       capabilitiesMember.add("capability-"+k);
     }
-    ResourceList capabilities = new ResourceList();
+    Capabilities capabilities = new Capabilities();
     capabilities.setMember(capabilitiesMember);
     validateTemplateResult.setCapabilities(capabilities);
     validateTemplateResult.setCapabilitiesReason("capabilitiesReason");

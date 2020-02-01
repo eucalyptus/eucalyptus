@@ -1,150 +1,187 @@
-/*************************************************************************
- * Copyright 2009-2014 Ent. Services Development Corporation LP
+/*
+ * Copyright 2020 AppScale Systems, Inc
  *
- * Redistribution and use of this software in source and binary forms,
- * with or without modification, are permitted provided that the
- * following conditions are met:
- *
- *   Redistributions of source code must retain the above copyright
- *   notice, this list of conditions and the following disclaimer.
- *
- *   Redistributions in binary form must reproduce the above copyright
- *   notice, this list of conditions and the following disclaimer
- *   in the documentation and/or other materials provided with the
- *   distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- ************************************************************************/
+ * Use of this source code is governed by a BSD-2-Clause
+ * license that can be found in the LICENSE file or at
+ * https://opensource.org/licenses/BSD-2-Clause
+ */
 package com.eucalyptus.cloudformation.common.msgs;
+
+import javax.annotation.Nonnull;
+import com.eucalyptus.cloudformation.common.CloudFormationMessageValidation.FieldRange;
+
 
 public class UpdateStackType extends CloudFormationMessage {
 
-  private ResourceList capabilities;
-  private ResourceList notificationARNs;
+  private Capabilities capabilities;
+
+  @FieldRange(min = 1, max = 128)
+  private String clientRequestToken;
+
+  @FieldRange(max = 5)
+  private NotificationARNs notificationARNs;
+
   private Parameters parameters;
-  private ResourceList resourceTypes;
+
+  private ResourceTypes resourceTypes;
+
+  @FieldRange(min = 20, max = 2048)
+  private String roleARN;
+
+  private RollbackConfiguration rollbackConfiguration;
+
+  @Nonnull
   private String stackName;
+
+  @FieldRange(min = 1, max = 16384)
   private String stackPolicyBody;
+
+  @FieldRange(min = 1, max = 16384)
   private String stackPolicyDuringUpdateBody;
+
+  @FieldRange(min = 1, max = 1350)
   private String stackPolicyDuringUpdateURL;
+
+  @FieldRange(min = 1, max = 1350)
   private String stackPolicyURL;
+
+  @FieldRange(max = 50)
   private Tags tags;
+
+  @FieldRange(min = 1)
   private String templateBody;
+
+  @FieldRange(min = 1, max = 1024)
   private String templateURL;
+
   private Boolean usePreviousTemplate;
 
-  public ResourceList getCapabilities( ) {
+  public Capabilities getCapabilities() {
     return capabilities;
   }
 
-  public void setCapabilities( ResourceList capabilities ) {
+  public void setCapabilities(final Capabilities capabilities) {
     this.capabilities = capabilities;
   }
 
-  public ResourceList getNotificationARNs( ) {
+  public String getClientRequestToken() {
+    return clientRequestToken;
+  }
+
+  public void setClientRequestToken(final String clientRequestToken) {
+    this.clientRequestToken = clientRequestToken;
+  }
+
+  public NotificationARNs getNotificationARNs() {
     return notificationARNs;
   }
 
-  public void setNotificationARNs( ResourceList notificationARNs ) {
+  public void setNotificationARNs(final NotificationARNs notificationARNs) {
     this.notificationARNs = notificationARNs;
   }
 
-  public Parameters getParameters( ) {
+  public Parameters getParameters() {
     return parameters;
   }
 
-  public void setParameters( Parameters parameters ) {
+  public void setParameters(final Parameters parameters) {
     this.parameters = parameters;
   }
 
-  public ResourceList getResourceTypes( ) {
+  public ResourceTypes getResourceTypes() {
     return resourceTypes;
   }
 
-  public void setResourceTypes( ResourceList resourceTypes ) {
+  public void setResourceTypes(final ResourceTypes resourceTypes) {
     this.resourceTypes = resourceTypes;
   }
 
-  public String getStackName( ) {
+  public String getRoleARN() {
+    return roleARN;
+  }
+
+  public void setRoleARN(final String roleARN) {
+    this.roleARN = roleARN;
+  }
+
+  public RollbackConfiguration getRollbackConfiguration() {
+    return rollbackConfiguration;
+  }
+
+  public void setRollbackConfiguration(final RollbackConfiguration rollbackConfiguration) {
+    this.rollbackConfiguration = rollbackConfiguration;
+  }
+
+  public String getStackName() {
     return stackName;
   }
 
-  public void setStackName( String stackName ) {
+  public void setStackName(final String stackName) {
     this.stackName = stackName;
   }
 
-  public String getStackPolicyBody( ) {
+  public String getStackPolicyBody() {
     return stackPolicyBody;
   }
 
-  public void setStackPolicyBody( String stackPolicyBody ) {
+  public void setStackPolicyBody(final String stackPolicyBody) {
     this.stackPolicyBody = stackPolicyBody;
   }
 
-  public String getStackPolicyDuringUpdateBody( ) {
+  public String getStackPolicyDuringUpdateBody() {
     return stackPolicyDuringUpdateBody;
   }
 
-  public void setStackPolicyDuringUpdateBody( String stackPolicyDuringUpdateBody ) {
+  public void setStackPolicyDuringUpdateBody(final String stackPolicyDuringUpdateBody) {
     this.stackPolicyDuringUpdateBody = stackPolicyDuringUpdateBody;
   }
 
-  public String getStackPolicyDuringUpdateURL( ) {
+  public String getStackPolicyDuringUpdateURL() {
     return stackPolicyDuringUpdateURL;
   }
 
-  public void setStackPolicyDuringUpdateURL( String stackPolicyDuringUpdateURL ) {
+  public void setStackPolicyDuringUpdateURL(final String stackPolicyDuringUpdateURL) {
     this.stackPolicyDuringUpdateURL = stackPolicyDuringUpdateURL;
   }
 
-  public String getStackPolicyURL( ) {
+  public String getStackPolicyURL() {
     return stackPolicyURL;
   }
 
-  public void setStackPolicyURL( String stackPolicyURL ) {
+  public void setStackPolicyURL(final String stackPolicyURL) {
     this.stackPolicyURL = stackPolicyURL;
   }
 
-  public Tags getTags( ) {
+  public Tags getTags() {
     return tags;
   }
 
-  public void setTags( Tags tags ) {
+  public void setTags(final Tags tags) {
     this.tags = tags;
   }
 
-  public String getTemplateBody( ) {
+  public String getTemplateBody() {
     return templateBody;
   }
 
-  public void setTemplateBody( String templateBody ) {
+  public void setTemplateBody(final String templateBody) {
     this.templateBody = templateBody;
   }
 
-  public String getTemplateURL( ) {
+  public String getTemplateURL() {
     return templateURL;
   }
 
-  public void setTemplateURL( String templateURL ) {
+  public void setTemplateURL(final String templateURL) {
     this.templateURL = templateURL;
   }
 
-  public Boolean getUsePreviousTemplate( ) {
+  public Boolean getUsePreviousTemplate() {
     return usePreviousTemplate;
   }
 
-  public void setUsePreviousTemplate( Boolean usePreviousTemplate ) {
+  public void setUsePreviousTemplate(final Boolean usePreviousTemplate) {
     this.usePreviousTemplate = usePreviousTemplate;
   }
+
 }

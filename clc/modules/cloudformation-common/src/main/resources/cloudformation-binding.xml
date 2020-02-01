@@ -1,40 +1,14 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" standalone="yes"?>
 <!--
-  Copyright 2009-2015 Ent. Services Development Corporation LP
+  Copyright 2020 AppScale Systems, Inc
 
-  Redistribution and use of this software in source and binary forms,
-  with or without modification, are permitted provided that the
-  following conditions are met:
-
-    Redistributions of source code must retain the above copyright
-    notice, this list of conditions and the following disclaimer.
-
-    Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions and the following disclaimer
-    in the documentation and/or other materials provided with the
-    distribution.
-
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
-  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-  POSSIBILITY OF SUCH DAMAGE.
+  Use of this source code is governed by a BSD-2-Clause
+  license that can be found in the LICENSE file or at
+  https://opensource.org/licenses/BSD-2-Clause
 -->
-<binding name="cloudformation_amazonaws_com_doc_2010_05_15" xmlns:tns="http://cloudformation.amazonaws.com/doc/2010-05-15/" force-classes="true" add-constructors="true">
+<binding name="cloudformation_amazonaws_com_doc_2010_05_15" force-classes="true" add-constructors="true">
   <namespace uri="http://cloudformation.amazonaws.com/doc/2010-05-15/" default="elements"/>
-    <format
-            type="java.util.Date"
-            deserializer="org.jibx.runtime.Utility.deserializeDateTime"
-            serializer="com.eucalyptus.ws.util.SerializationUtils.serializeDateTime"/>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage" abstract="true"/>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.ErrorDetail" abstract="true"/>
+  <format type="java.util.Date" deserializer="org.jibx.runtime.Utility.deserializeDateTime" serializer="com.eucalyptus.ws.util.SerializationUtils.serializeDateTime"/>
   <mapping class="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata" abstract="true">
     <value name="RequestId" field="requestId" usage="required"/>
   </mapping>
@@ -44,430 +18,198 @@
     <value name="Message" field="message" usage="required"/>
     <structure name="Detail" field="detail" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ErrorDetail"/>
   </mapping>
-  <mapping name="ErrorResponse" class="com.eucalyptus.cloudformation.common.msgs.CloudFormationErrorResponse" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ErrorDetail" abstract="true"/>
+  <mapping name="ErrorResponse" class="com.eucalyptus.cloudformation.common.msgs.ErrorResponse">
     <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <structure name="Error" field="error" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Error"/>
+    <collection field="error">
+      <structure name="Error" type="com.eucalyptus.cloudformation.common.msgs.Error"/>
+    </collection>
     <value name="RequestId" field="requestId" usage="required"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.ResourceList" abstract="true">
-    <collection field="member">
-      <value name="member" type="java.lang.String"/>
-    </collection>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage" abstract="true"/>
+  <mapping name="CancelUpdateStack" class="com.eucalyptus.cloudformation.common.msgs.CancelUpdateStackType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="ClientRequestToken" get-method="getClientRequestToken" set-method="setClientRequestToken" usage="optional"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.Output" abstract="true">
-    <value name="Description" field="description" usage="optional"/>
-    <value name="OutputKey" field="outputKey" usage="optional"/>
-    <value name="OutputValue" field="outputValue" usage="optional"/>
+  <mapping name="CancelUpdateStackResponse" class="com.eucalyptus.cloudformation.common.msgs.CancelUpdateStackResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.Outputs" abstract="true">
-    <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.Output"/>
-    </collection>
+  <mapping name="ContinueUpdateRollback" class="com.eucalyptus.cloudformation.common.msgs.ContinueUpdateRollbackType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="ClientRequestToken" get-method="getClientRequestToken" set-method="setClientRequestToken" usage="optional"/>
+    <structure get-method="getResourcesToSkip" set-method="setResourcesToSkip" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourcesToSkip" name="ResourcesToSkip"/>
+    <value name="RoleARN" get-method="getRoleARN" set-method="setRoleARN" usage="optional"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.Parameter" abstract="true">
-    <value name="ParameterKey" field="parameterKey" usage="optional"/>
-    <value name="ParameterValue" field="parameterValue" usage="optional"/>
-    <value name="UsePreviousValue" field="usePreviousValue" usage="optional"/>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.Parameters" abstract="true">
-    <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.Parameter"/>
-    </collection>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.ParameterConstraints" abstract="true">
-    <structure name="AllowedValues" field="allowedValues" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.ParameterDeclaration" abstract="true">
-    <value name="DefaultValue" field="defaultValue" usage="optional"/>
-    <value name="Description" field="description" usage="optional"/>
-    <value name="NoEcho" field="noEcho" usage="optional"/>
-    <structure name="ParameterConstraints" field="parameterConstraints" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ParameterConstraints"/>
-    <value name="ParameterKey" field="parameterKey" usage="optional"/>
-    <value name="ParameterType" field="parameterType" usage="optional"/>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.ParameterDeclarations" abstract="true">
-    <collection field="member">
-        <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.ParameterDeclaration"/>
-    </collection>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackEvent" abstract="true">
-    <value name="EventId" field="eventId" usage="required"/>
-    <value name="LogicalResourceId" field="logicalResourceId" usage="optional"/>
-    <value name="PhysicalResourceId" field="physicalResourceId" usage="optional"/>
-    <value name="ResourceProperties" field="resourceProperties" usage="optional"/>
-    <value name="ResourceStatus" field="resourceStatus" usage="optional"/>
-    <value name="ResourceStatusReason" field="resourceStatusReason" usage="optional"/>
-    <value name="ResourceType" field="resourceType" usage="optional"/>
-    <value name="StackId" field="stackId" usage="required"/>
-    <value name="StackName" field="stackName" usage="required"/>
-    <value name="Timestamp" field="timestamp" usage="required"/>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackEvents" abstract="true">
-    <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.StackEvent"/>
-    </collection>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackResource" abstract="true">
-    <value name="Description" field="description" usage="optional"/>
-    <value name="LogicalResourceId" field="logicalResourceId" usage="required"/>
-    <value name="PhysicalResourceId" field="physicalResourceId" usage="optional"/>
-    <value name="ResourceStatus" field="resourceStatus" usage="required"/>
-    <value name="ResourceStatusReason" field="resourceStatusReason" usage="optional"/>
-    <value name="ResourceType" field="resourceType" usage="required"/>
-    <value name="StackId" field="stackId" usage="optional"/>
-    <value name="StackName" field="stackName" usage="optional"/>
-    <value name="Timestamp" field="timestamp" usage="required"/>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackResources" abstract="true">
-    <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.StackResource"/>
-    </collection>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackResourceSummary" abstract="true">
-    <value name="LastUpdatedTimestamp" field="lastUpdatedTimestamp" usage="required"/>
-    <value name="LogicalResourceId" field="logicalResourceId" usage="required"/>
-    <value name="PhysicalResourceId" field="physicalResourceId" usage="optional"/>
-    <value name="ResourceStatus" field="resourceStatus" usage="required"/>
-    <value name="ResourceStatusReason" field="resourceStatusReason" usage="optional"/>
-    <value name="ResourceType" field="resourceType" usage="required"/>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackResourceSummaries" abstract="true">
-    <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.StackResourceSummary"/>
-    </collection>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackSummaries" abstract="true">
-    <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.StackSummary"/>
-    </collection>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.Tag" abstract="true">
-    <value name="Key" field="key" usage="optional"/>
-    <value name="Value" field="value" usage="optional"/>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.Tags" abstract="true">
-    <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.Tag"/>
-    </collection>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.TemplateParameter" abstract="true">
-    <value name="DefaultValue" field="defaultValue" usage="optional"/>
-    <value name="Description" field="description" usage="optional"/>
-    <value name="NoEcho" field="noEcho" usage="optional"/>
-    <value name="ParameterKey" field="parameterKey" usage="optional"/>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.TemplateParameters" abstract="true">
-    <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.TemplateParameter"/>
-    </collection>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.Stack" abstract="true">
-    <structure name="Capabilities" field="capabilities" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
-    <value name="CreationTime" field="creationTime" usage="required"/>
-    <value name="Description" field="description" usage="optional"/>
-    <value name="DisableRollback" field="disableRollback" usage="optional"/>
-    <value name="LastUpdatedTime" field="lastUpdatedTime" usage="optional"/>
-    <structure name="NotificationARNs" field="notificationARNs" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
-    <structure name="Outputs" field="outputs" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Outputs"/>
-    <structure name="Parameters" field="parameters" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Parameters"/>
-    <value name="StackId" field="stackId" usage="optional"/>
-    <value name="StackName" field="stackName" usage="required"/>
-    <value name="StackStatus" field="stackStatus" usage="required"/>
-    <value name="StackStatusReason" field="stackStatusReason" usage="optional"/>
-    <structure name="Tags" field="tags" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Tags"/>
-    <value name="TimeoutInMinutes" field="timeoutInMinutes" usage="optional"/>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.Stacks" abstract="true">
-    <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.Stack"/>
-    </collection>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.CancelUpdateStackResult" abstract="true"/>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.CreateStackResult" abstract="true">
-    <value name="StackId" field="stackId" usage="optional"/>
+  <mapping name="ContinueUpdateRollbackResponse" class="com.eucalyptus.cloudformation.common.msgs.ContinueUpdateRollbackResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="ContinueUpdateRollbackResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ContinueUpdateRollbackResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
   <mapping class="com.eucalyptus.cloudformation.common.msgs.ContinueUpdateRollbackResult" abstract="true"/>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.DeleteStackResult" abstract="true"/>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.DescribeStackEventsResult" abstract="true">
-    <value name="NextToken" field="nextToken" usage="optional"/>
-    <structure name="StackEvents" field="stackEvents" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackEvents"/>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackResourceDetail" abstract="true">
-    <value name="Description" field="description" usage="optional"/>
-    <value name="LastUpdatedTimestamp" field="lastUpdatedTimestamp" usage="required"/>
-    <value name="LogicalResourceId" field="logicalResourceId" usage="required"/>
-    <value name="Metadata" field="metadata" usage="optional"/>
-    <value name="PhysicalResourceId" field="physicalResourceId" usage="optional"/>
-    <value name="ResourceStatus" field="resourceStatus" usage="required"/>
-    <value name="ResourceStatusReason" field="resourceStatusReason" usage="optional"/>
-    <value name="ResourceType" field="resourceType" usage="required"/>
-    <value name="StackId" field="stackId" usage="optional"/>
-    <value name="StackName" field="stackName" usage="optional"/>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceResult" abstract="true">
-    <structure name="StackResourceDetail" field="stackResourceDetail" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackResourceDetail"/>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourcesResult" abstract="true">
-    <structure name="StackResources" field="stackResources" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackResources"/>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.DescribeStacksResult" abstract="true">
-    <value name="NextToken" field="nextToken" usage="optional"/>
-    <structure name="Stacks" field="stacks" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Stacks"/>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.EstimateTemplateCostResult" abstract="true">
-    <value name="Url" field="url" usage="optional"/>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.GetStackPolicyResult" abstract="true">
-    <value name="StackPolicyBody" field="stackPolicyBody" usage="optional"/>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.GetTemplateResult" abstract="true">
-    <value name="TemplateBody" field="templateBody" usage="optional"/>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.GetTemplateSummaryResult" abstract="true">
-    <structure name="Capabilities" field="capabilities" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
-    <value name="CapabilitiesReason" field="capabilitiesReason" usage="optional"/>
-    <value name="Description" field="description" usage="optional"/>
-    <value name="Metadata" field="metadata" usage="optional"/>
-    <structure name="ResourceTypes" field="resourceTypes" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
-    <structure name="Parameters" field="parameters" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ParameterDeclarations"/>
-    <value name="Version" field="version" usage="optional"/>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.ListStackResourcesResult" abstract="true">
-      <value name="NextToken" field="nextToken" usage="optional"/>
-      <structure name="StackResourceSummaries" field="stackResourceSummaries" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackResourceSummaries"/>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.ListStacksResult" abstract="true">
-    <value name="NextToken" field="nextToken" usage="optional"/>
-    <structure name="StackSummaries" field="stackSummaries" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackSummaries"/>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.SignalResourceResult" abstract="true"/>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackSummary" abstract="true">
-    <value name="CreationTime" field="creationTime" usage="required"/>
-    <value name="DeletionTime" field="deletionTime" usage="optional"/>
-    <value name="LastUpdatedTime" field="lastUpdatedTime" usage="optional"/>
-    <value name="StackId" field="stackId" usage="optional"/>
-    <value name="StackName" field="stackName" usage="required"/>
-    <value name="StackStatus" field="stackStatus" usage="required"/>
-    <value name="StackStatusReason" field="stackStatusReason" usage="optional"/>
-    <value name="TemplateDescription" field="templateDescription" usage="optional"/>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.UpdateStackResult" abstract="true">
-    <value name="StackId" field="stackId" usage="optional"/>
-  </mapping>
-  <mapping class="com.eucalyptus.cloudformation.common.msgs.ValidateTemplateResult" abstract="true">
-    <structure name="Capabilities" field="capabilities" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
-    <value name="CapabilitiesReason" field="capabilitiesReason" usage="optional"/>
-    <value name="Description" field="description" usage="optional"/>
-    <structure name="Parameters" field="parameters" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.TemplateParameters"/>
-  </mapping>
-  <mapping name="CancelUpdateStack" class="com.eucalyptus.cloudformation.common.msgs.CancelUpdateStackType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+  <mapping name="CreateChangeSet" class="com.eucalyptus.cloudformation.common.msgs.CreateChangeSetType">
     <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <value name="StackName" field="stackName" usage="required"/>
+    <structure get-method="getCapabilities" set-method="setCapabilities" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Capabilities" name="Capabilities"/>
+    <value name="ChangeSetName" get-method="getChangeSetName" set-method="setChangeSetName" usage="optional"/>
+    <value name="ChangeSetType" get-method="getChangeSetType" set-method="setChangeSetType" usage="optional"/>
+    <value name="ClientToken" get-method="getClientToken" set-method="setClientToken" usage="optional"/>
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <structure get-method="getNotificationARNs" set-method="setNotificationARNs" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.NotificationARNs" name="NotificationARNs"/>
+    <structure get-method="getParameters" set-method="setParameters" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Parameters" name="Parameters"/>
+    <structure get-method="getResourceTypes" set-method="setResourceTypes" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceTypes" name="ResourceTypes"/>
+    <structure get-method="getResourcesToImport" set-method="setResourcesToImport" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourcesToImport" name="ResourcesToImport"/>
+    <value name="RoleARN" get-method="getRoleARN" set-method="setRoleARN" usage="optional"/>
+    <structure get-method="getRollbackConfiguration" set-method="setRollbackConfiguration" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.RollbackConfiguration" name="RollbackConfiguration"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+    <structure get-method="getTags" set-method="setTags" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Tags" name="Tags"/>
+    <value name="TemplateBody" get-method="getTemplateBody" set-method="setTemplateBody" usage="optional"/>
+    <value name="TemplateURL" get-method="getTemplateURL" set-method="setTemplateURL" usage="optional"/>
+    <value name="UsePreviousTemplate" get-method="getUsePreviousTemplate" set-method="setUsePreviousTemplate" usage="optional"/>
   </mapping>
-  <mapping name="CancelUpdateStackResponse" class="com.eucalyptus.cloudformation.common.msgs.CancelUpdateStackResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+  <mapping name="CreateChangeSetResponse" class="com.eucalyptus.cloudformation.common.msgs.CreateChangeSetResponseType">
     <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <structure name="CancelUpdateStackResult" field="cancelUpdateStackResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.CancelUpdateStackResult"/>
+    <structure name="CreateChangeSetResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.CreateChangeSetResult"/>
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="ContinueUpdateRollback" class="com.eucalyptus.cloudformation.common.msgs.ContinueUpdateRollbackType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <value name="StackName" field="stackName" usage="required"/>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.CreateChangeSetResult" abstract="true">
+    <value name="Id" get-method="getId" set-method="setId" usage="optional"/>
+    <value name="StackId" get-method="getStackId" set-method="setStackId" usage="optional"/>
   </mapping>
-  <mapping name="ContinueUpdateRollbackResponse" class="com.eucalyptus.cloudformation.common.msgs.ContinueUpdateRollbackResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+  <mapping name="CreateStack" class="com.eucalyptus.cloudformation.common.msgs.CreateStackType">
     <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <structure name="ContinueUpdateRollbackResult" field="continueUpdateRollbackResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ContinueUpdateRollbackResult"/>
+    <structure get-method="getCapabilities" set-method="setCapabilities" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Capabilities" name="Capabilities"/>
+    <value name="ClientRequestToken" get-method="getClientRequestToken" set-method="setClientRequestToken" usage="optional"/>
+    <value name="DisableRollback" get-method="getDisableRollback" set-method="setDisableRollback" usage="optional"/>
+    <value name="EnableTerminationProtection" get-method="getEnableTerminationProtection" set-method="setEnableTerminationProtection" usage="optional"/>
+    <structure get-method="getNotificationARNs" set-method="setNotificationARNs" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.NotificationARNs" name="NotificationARNs"/>
+    <value name="OnFailure" get-method="getOnFailure" set-method="setOnFailure" usage="optional"/>
+    <structure get-method="getParameters" set-method="setParameters" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Parameters" name="Parameters"/>
+    <structure get-method="getResourceTypes" set-method="setResourceTypes" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceTypes" name="ResourceTypes"/>
+    <value name="RoleARN" get-method="getRoleARN" set-method="setRoleARN" usage="optional"/>
+    <structure get-method="getRollbackConfiguration" set-method="setRollbackConfiguration" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.RollbackConfiguration" name="RollbackConfiguration"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+    <value name="StackPolicyBody" get-method="getStackPolicyBody" set-method="setStackPolicyBody" usage="optional"/>
+    <value name="StackPolicyURL" get-method="getStackPolicyURL" set-method="setStackPolicyURL" usage="optional"/>
+    <structure get-method="getTags" set-method="setTags" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Tags" name="Tags"/>
+    <value name="TemplateBody" get-method="getTemplateBody" set-method="setTemplateBody" usage="optional"/>
+    <value name="TemplateURL" get-method="getTemplateURL" set-method="setTemplateURL" usage="optional"/>
+    <value name="TimeoutInMinutes" get-method="getTimeoutInMinutes" set-method="setTimeoutInMinutes" usage="optional"/>
+  </mapping>
+  <mapping name="CreateStackResponse" class="com.eucalyptus.cloudformation.common.msgs.CreateStackResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="CreateStackResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.CreateStackResult"/>
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="CreateStack" class="com.eucalyptus.cloudformation.common.msgs.CreateStackType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <structure name="Capabilities" field="capabilities" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
-    <value name="DisableRollback" field="disableRollback" usage="optional"/>
-    <structure name="NotificationARNs" field="notificationARNs" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
-    <value name="OnFailure" field="onFailure" usage="optional"/>
-    <structure name="Parameters" field="parameters" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Parameters"/>
-    <structure name="ResourceTypes" field="resourceTypes" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
-    <value name="StackName" field="stackName" usage="required"/>
-    <value name="StackPolicyBody" field="stackPolicyBody" usage="optional"/>
-    <value name="StackPolicyURL" field="stackPolicyURL" usage="optional"/>
-    <structure name="Tags" field="tags" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Tags"/>
-    <value name="TemplateBody" field="templateBody" usage="optional"/>
-    <value name="TemplateURL" field="templateURL" usage="optional"/>
-    <value name="TimeoutInMinutes" field="timeoutInMinutes" usage="optional"/>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.CreateStackResult" abstract="true">
+    <value name="StackId" get-method="getStackId" set-method="setStackId" usage="optional"/>
   </mapping>
-  <mapping name="CreateStackResponse" class="com.eucalyptus.cloudformation.common.msgs.CreateStackResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+  <mapping name="CreateStackInstances" class="com.eucalyptus.cloudformation.common.msgs.CreateStackInstancesType">
     <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <structure name="CreateStackResult" field="createStackResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.CreateStackResult"/>
+    <structure get-method="getAccounts" set-method="setAccounts" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.AccountList" name="Accounts"/>
+    <value name="OperationId" get-method="getOperationId" set-method="setOperationId" usage="optional"/>
+    <structure get-method="getOperationPreferences" set-method="setOperationPreferences" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackSetOperationPreferences" name="OperationPreferences"/>
+    <structure get-method="getParameterOverrides" set-method="setParameterOverrides" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Parameters" name="ParameterOverrides"/>
+    <structure get-method="getRegions" set-method="setRegions" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.RegionList" name="Regions"/>
+    <value name="StackSetName" get-method="getStackSetName" set-method="setStackSetName" usage="optional"/>
+  </mapping>
+  <mapping name="CreateStackInstancesResponse" class="com.eucalyptus.cloudformation.common.msgs.CreateStackInstancesResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="CreateStackInstancesResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.CreateStackInstancesResult"/>
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="DeleteStack" class="com.eucalyptus.cloudformation.common.msgs.DeleteStackType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <structure name="RetainResources" field="retainResources" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
-    <value name="StackName" field="stackName" usage="required"/>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.CreateStackInstancesResult" abstract="true">
+    <value name="OperationId" get-method="getOperationId" set-method="setOperationId" usage="optional"/>
   </mapping>
-  <mapping name="DeleteStackResponse" class="com.eucalyptus.cloudformation.common.msgs.DeleteStackResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+  <mapping name="CreateStackSet" class="com.eucalyptus.cloudformation.common.msgs.CreateStackSetType">
     <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <structure name="DeleteStackResult" field="deleteStackResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DeleteStackResult"/>
+    <value name="AdministrationRoleARN" get-method="getAdministrationRoleARN" set-method="setAdministrationRoleARN" usage="optional"/>
+    <structure get-method="getCapabilities" set-method="setCapabilities" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Capabilities" name="Capabilities"/>
+    <value name="ClientRequestToken" get-method="getClientRequestToken" set-method="setClientRequestToken" usage="optional"/>
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <value name="ExecutionRoleName" get-method="getExecutionRoleName" set-method="setExecutionRoleName" usage="optional"/>
+    <structure get-method="getParameters" set-method="setParameters" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Parameters" name="Parameters"/>
+    <value name="StackSetName" get-method="getStackSetName" set-method="setStackSetName" usage="optional"/>
+    <structure get-method="getTags" set-method="setTags" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Tags" name="Tags"/>
+    <value name="TemplateBody" get-method="getTemplateBody" set-method="setTemplateBody" usage="optional"/>
+    <value name="TemplateURL" get-method="getTemplateURL" set-method="setTemplateURL" usage="optional"/>
+  </mapping>
+  <mapping name="CreateStackSetResponse" class="com.eucalyptus.cloudformation.common.msgs.CreateStackSetResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="CreateStackSetResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.CreateStackSetResult"/>
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="DescribeStackEvents" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackEventsType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <value name="NextToken" field="nextToken" usage="optional"/>
-    <value name="StackName" field="stackName" usage="optional"/>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.CreateStackSetResult" abstract="true">
+    <value name="StackSetId" get-method="getStackSetId" set-method="setStackSetId" usage="optional"/>
   </mapping>
-  <mapping name="DescribeStackEventsResponse" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackEventsResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+  <mapping name="DeleteChangeSet" class="com.eucalyptus.cloudformation.common.msgs.DeleteChangeSetType">
     <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <structure name="DescribeStackEventsResult" field="describeStackEventsResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DescribeStackEventsResult"/>
+    <value name="ChangeSetName" get-method="getChangeSetName" set-method="setChangeSetName" usage="optional"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+  </mapping>
+  <mapping name="DeleteChangeSetResponse" class="com.eucalyptus.cloudformation.common.msgs.DeleteChangeSetResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="DeleteChangeSetResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DeleteChangeSetResult"/>
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="DescribeStackResource" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DeleteChangeSetResult" abstract="true"/>
+  <mapping name="DeleteStack" class="com.eucalyptus.cloudformation.common.msgs.DeleteStackType">
     <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <value name="LogicalResourceId" field="logicalResourceId" usage="required"/>
-    <value name="StackName" field="stackName" usage="required"/>
+    <value name="ClientRequestToken" get-method="getClientRequestToken" set-method="setClientRequestToken" usage="optional"/>
+    <structure get-method="getRetainResources" set-method="setRetainResources" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.RetainResources" name="RetainResources"/>
+    <value name="RoleARN" get-method="getRoleARN" set-method="setRoleARN" usage="optional"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
   </mapping>
-  <mapping name="DescribeStackResourceResponse" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <structure name="DescribeStackResourceResult" field="describeStackResourceResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
-  </mapping>
-  <mapping name="DescribeStackResources" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourcesType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <value name="LogicalResourceId" field="logicalResourceId" usage="optional"/>
-    <value name="PhysicalResourceId" field="physicalResourceId" usage="optional"/>
-    <value name="StackName" field="stackName" usage="optional"/>
-  </mapping>
-  <mapping name="DescribeStackResourcesResponse" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourcesResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <structure name="DescribeStackResourcesResult" field="describeStackResourcesResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourcesResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
-  </mapping>
-  <mapping name="DescribeStacks" class="com.eucalyptus.cloudformation.common.msgs.DescribeStacksType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <value name="NextToken" field="nextToken" usage="optional"/>
-    <value name="StackName" field="stackName" usage="optional"/>
-  </mapping>
-  <mapping name="DescribeStacksResponse" class="com.eucalyptus.cloudformation.common.msgs.DescribeStacksResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <structure name="DescribeStacksResult" field="describeStacksResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DescribeStacksResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
-  </mapping>
-  <mapping name="EstimateTemplateCost" class="com.eucalyptus.cloudformation.common.msgs.EstimateTemplateCostType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <structure name="Parameters" field="parameters" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Parameters"/>
-    <value name="TemplateBody" field="templateBody" usage="optional"/>
-    <value name="TemplateURL" field="templateURL" usage="optional"/>
-  </mapping>
-  <mapping name="EstimateTemplateCostResponse" class="com.eucalyptus.cloudformation.common.msgs.EstimateTemplateCostResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <structure name="EstimateTemplateCostResult" field="estimateTemplateCostResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.EstimateTemplateCostResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
-  </mapping>
-  <mapping name="GetStackPolicy" class="com.eucalyptus.cloudformation.common.msgs.GetStackPolicyType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <value name="StackName" field="stackName" usage="required"/>
-  </mapping>
-  <mapping name="GetStackPolicyResponse" class="com.eucalyptus.cloudformation.common.msgs.GetStackPolicyResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <structure name="GetStackPolicyResult" field="getStackPolicyResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.GetStackPolicyResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
-  </mapping>
-  <mapping name="GetTemplate" class="com.eucalyptus.cloudformation.common.msgs.GetTemplateType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <value name="StackName" field="stackName" usage="required"/>
-  </mapping>
-  <mapping name="GetTemplateResponse" class="com.eucalyptus.cloudformation.common.msgs.GetTemplateResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <structure name="GetTemplateResult" field="getTemplateResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.GetTemplateResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
-  </mapping>
-  <mapping name="GetTemplateSummary" class="com.eucalyptus.cloudformation.common.msgs.GetTemplateSummaryType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <value name="StackName" field="stackName" usage="optional"/>
-    <value name="TemplateBody" field="templateBody" usage="optional"/>
-    <value name="TemplateURL" field="templateURL" usage="optional"/>
-  </mapping>
-  <mapping name="GetTemplateSummaryResponse" class="com.eucalyptus.cloudformation.common.msgs.GetTemplateSummaryResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <structure name="GetTemplateSummaryResult" field="getTemplateSummaryResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.GetTemplateSummaryResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
-  </mapping>
-  <mapping name="ListStackResources" class="com.eucalyptus.cloudformation.common.msgs.ListStackResourcesType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <value name="NextToken" field="nextToken" usage="optional"/>
-    <value name="StackName" field="stackName" usage="required"/>
-  </mapping>
-  <mapping name="ListStackResourcesResponse" class="com.eucalyptus.cloudformation.common.msgs.ListStackResourcesResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <structure name="ListStackResourcesResult" field="listStackResourcesResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ListStackResourcesResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
-  </mapping>
-  <mapping name="ListStacks" class="com.eucalyptus.cloudformation.common.msgs.ListStacksType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <value name="NextToken" field="nextToken" usage="optional"/>
-    <structure name="StackStatusFilter" field="stackStatusFilter" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
-  </mapping>
-  <mapping name="ListStacksResponse" class="com.eucalyptus.cloudformation.common.msgs.ListStacksResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <structure name="ListStacksResult" field="listStacksResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ListStacksResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
-  </mapping>
-  <mapping name="SetStackPolicy" class="com.eucalyptus.cloudformation.common.msgs.SetStackPolicyType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <value name="StackName" field="stackName" usage="required"/>
-    <value name="StackPolicyBody" field="stackPolicyBody" usage="optional"/>
-    <value name="StackPolicyURL" field="stackPolicyURL" usage="optional"/>
-  </mapping>
-  <mapping name="SetStackPolicyResponse" class="com.eucalyptus.cloudformation.common.msgs.SetStackPolicyResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+  <mapping name="DeleteStackResponse" class="com.eucalyptus.cloudformation.common.msgs.DeleteStackResponseType">
     <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="SignalResource" class="com.eucalyptus.cloudformation.common.msgs.SignalResourceType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+  <mapping name="DeleteStackInstances" class="com.eucalyptus.cloudformation.common.msgs.DeleteStackInstancesType">
     <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <value name="LogicalResourceId" field="logicalResourceId" usage="required"/>
-    <value name="StackName" field="stackName" usage="required"/>
-    <value name="Status" field="status" usage="required"/>
-    <value name="UniqueId" field="uniqueId" usage="required"/>
+    <structure get-method="getAccounts" set-method="setAccounts" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.AccountList" name="Accounts"/>
+    <value name="OperationId" get-method="getOperationId" set-method="setOperationId" usage="optional"/>
+    <structure get-method="getOperationPreferences" set-method="setOperationPreferences" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackSetOperationPreferences" name="OperationPreferences"/>
+    <structure get-method="getRegions" set-method="setRegions" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.RegionList" name="Regions"/>
+    <value name="RetainStacks" get-method="getRetainStacks" set-method="setRetainStacks" usage="optional"/>
+    <value name="StackSetName" get-method="getStackSetName" set-method="setStackSetName" usage="optional"/>
   </mapping>
-  <mapping name="SignalResourceResponse" class="com.eucalyptus.cloudformation.common.msgs.SignalResourceResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+  <mapping name="DeleteStackInstancesResponse" class="com.eucalyptus.cloudformation.common.msgs.DeleteStackInstancesResponseType">
     <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <structure name="SignalResourceResult" field="signalResourceResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.SignalResourceResult"/>
+    <structure name="DeleteStackInstancesResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DeleteStackInstancesResult"/>
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="UpdateStack" class="com.eucalyptus.cloudformation.common.msgs.UpdateStackType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
-    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <structure name="Capabilities" field="capabilities" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
-    <structure name="NotificationARNs" field="notificationARNs" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
-    <structure name="Parameters" field="parameters" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Parameters"/>
-    <structure name="ResourceTypes" field="resourceTypes" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceList"/>
-    <value name="StackName" field="stackName" usage="required"/>
-    <value name="StackPolicyBody" field="stackPolicyBody" usage="optional"/>
-    <value name="StackPolicyDuringUpdateBody" field="stackPolicyDuringUpdateBody" usage="optional"/>
-    <value name="StackPolicyDuringUpdateURL" field="stackPolicyDuringUpdateURL" usage="optional"/>
-    <value name="StackPolicyURL" field="stackPolicyURL" usage="optional"/>
-    <structure name="Tags" field="tags" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Tags"/>
-    <value name="TemplateBody" field="templateBody" usage="optional"/>
-    <value name="TemplateURL" field="templateURL" usage="optional"/>
-    <value name="UsePreviousTemplate" field="usePreviousTemplate" usage="optional"/>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DeleteStackInstancesResult" abstract="true">
+    <value name="OperationId" get-method="getOperationId" set-method="setOperationId" usage="optional"/>
   </mapping>
-  <mapping name="UpdateStackResponse" class="com.eucalyptus.cloudformation.common.msgs.UpdateStackResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+  <mapping name="DeleteStackSet" class="com.eucalyptus.cloudformation.common.msgs.DeleteStackSetType">
     <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <structure name="UpdateStackResult" field="updateStackResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.UpdateStackResult"/>
+    <value name="StackSetName" get-method="getStackSetName" set-method="setStackSetName" usage="optional"/>
+  </mapping>
+  <mapping name="DeleteStackSetResponse" class="com.eucalyptus.cloudformation.common.msgs.DeleteStackSetResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="DeleteStackSetResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DeleteStackSetResult"/>
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="ValidateTemplate" class="com.eucalyptus.cloudformation.common.msgs.ValidateTemplateType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DeleteStackSetResult" abstract="true"/>
+  <mapping name="DeregisterType" class="com.eucalyptus.cloudformation.common.msgs.DeregisterTypeType">
     <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <value name="TemplateBody" field="templateBody" usage="optional"/>
-    <value name="TemplateURL" field="templateURL" usage="optional"/>
+    <value name="Arn" get-method="getArn" set-method="setArn" usage="optional"/>
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+    <value name="TypeName" get-method="getTypeName" set-method="setTypeName" usage="optional"/>
+    <value name="VersionId" get-method="getVersionId" set-method="setVersionId" usage="optional"/>
   </mapping>
-  <mapping name="ValidateTemplateResponse" class="com.eucalyptus.cloudformation.common.msgs.ValidateTemplateResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+  <mapping name="DeregisterTypeResponse" class="com.eucalyptus.cloudformation.common.msgs.DeregisterTypeResponseType">
     <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
-    <structure name="ValidateTemplateResult" field="validateTemplateResult" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ValidateTemplateResult"/>
+    <structure name="DeregisterTypeResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DeregisterTypeResult"/>
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="DescribeAccountLimits" class="com.eucalyptus.cloudformation.common.msgs.DescribeAccountLimitsType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DeregisterTypeResult" abstract="true"/>
+  <mapping name="DescribeAccountLimits" class="com.eucalyptus.cloudformation.common.msgs.DescribeAccountLimitsType">
     <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
     <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
   </mapping>
-  <mapping name="DescribeAccountLimitsResponse" class="com.eucalyptus.cloudformation.common.msgs.DescribeAccountLimitsResponseType" extends="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage">
+  <mapping name="DescribeAccountLimitsResponse" class="com.eucalyptus.cloudformation.common.msgs.DescribeAccountLimitsResponseType">
     <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
     <structure name="DescribeAccountLimitsResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DescribeAccountLimitsResult"/>
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
@@ -475,6 +217,689 @@
   <mapping class="com.eucalyptus.cloudformation.common.msgs.DescribeAccountLimitsResult" abstract="true">
     <structure get-method="getAccountLimits" set-method="setAccountLimits" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.AccountLimitList" name="AccountLimits"/>
     <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeChangeSet" class="com.eucalyptus.cloudformation.common.msgs.DescribeChangeSetType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="ChangeSetName" get-method="getChangeSetName" set-method="setChangeSetName" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeChangeSetResponse" class="com.eucalyptus.cloudformation.common.msgs.DescribeChangeSetResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="DescribeChangeSetResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DescribeChangeSetResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DescribeChangeSetResult" abstract="true">
+    <structure get-method="getCapabilities" set-method="setCapabilities" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Capabilities" name="Capabilities"/>
+    <value name="ChangeSetId" get-method="getChangeSetId" set-method="setChangeSetId" usage="optional"/>
+    <value name="ChangeSetName" get-method="getChangeSetName" set-method="setChangeSetName" usage="optional"/>
+    <structure get-method="getChanges" set-method="setChanges" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Changes" name="Changes"/>
+    <value name="CreationTime" get-method="getCreationTime" set-method="setCreationTime" usage="optional"/>
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <value name="ExecutionStatus" get-method="getExecutionStatus" set-method="setExecutionStatus" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getNotificationARNs" set-method="setNotificationARNs" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.NotificationARNs" name="NotificationARNs"/>
+    <structure get-method="getParameters" set-method="setParameters" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Parameters" name="Parameters"/>
+    <structure get-method="getRollbackConfiguration" set-method="setRollbackConfiguration" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.RollbackConfiguration" name="RollbackConfiguration"/>
+    <value name="StackId" get-method="getStackId" set-method="setStackId" usage="optional"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+    <value name="Status" get-method="getStatus" set-method="setStatus" usage="optional"/>
+    <value name="StatusReason" get-method="getStatusReason" set-method="setStatusReason" usage="optional"/>
+    <structure get-method="getTags" set-method="setTags" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Tags" name="Tags"/>
+  </mapping>
+  <mapping name="DescribeStackDriftDetectionStatus" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackDriftDetectionStatusType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="StackDriftDetectionId" get-method="getStackDriftDetectionId" set-method="setStackDriftDetectionId" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeStackDriftDetectionStatusResponse" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackDriftDetectionStatusResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="DescribeStackDriftDetectionStatusResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DescribeStackDriftDetectionStatusResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DescribeStackDriftDetectionStatusResult" abstract="true">
+    <value name="DetectionStatus" get-method="getDetectionStatus" set-method="setDetectionStatus" usage="optional"/>
+    <value name="DetectionStatusReason" get-method="getDetectionStatusReason" set-method="setDetectionStatusReason" usage="optional"/>
+    <value name="DriftedStackResourceCount" get-method="getDriftedStackResourceCount" set-method="setDriftedStackResourceCount" usage="optional"/>
+    <value name="StackDriftDetectionId" get-method="getStackDriftDetectionId" set-method="setStackDriftDetectionId" usage="optional"/>
+    <value name="StackDriftStatus" get-method="getStackDriftStatus" set-method="setStackDriftStatus" usage="optional"/>
+    <value name="StackId" get-method="getStackId" set-method="setStackId" usage="optional"/>
+    <value name="Timestamp" get-method="getTimestamp" set-method="setTimestamp" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeStackEvents" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackEventsType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeStackEventsResponse" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackEventsResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="DescribeStackEventsResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DescribeStackEventsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DescribeStackEventsResult" abstract="true">
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getStackEvents" set-method="setStackEvents" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackEvents" name="StackEvents"/>
+  </mapping>
+  <mapping name="DescribeStackInstance" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackInstanceType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="StackInstanceAccount" get-method="getStackInstanceAccount" set-method="setStackInstanceAccount" usage="optional"/>
+    <value name="StackInstanceRegion" get-method="getStackInstanceRegion" set-method="setStackInstanceRegion" usage="optional"/>
+    <value name="StackSetName" get-method="getStackSetName" set-method="setStackSetName" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeStackInstanceResponse" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackInstanceResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="DescribeStackInstanceResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DescribeStackInstanceResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DescribeStackInstanceResult" abstract="true">
+    <structure get-method="getStackInstance" set-method="setStackInstance" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackInstance" name="StackInstance"/>
+  </mapping>
+  <mapping name="DescribeStackResource" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="LogicalResourceId" get-method="getLogicalResourceId" set-method="setLogicalResourceId" usage="optional"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeStackResourceResponse" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="DescribeStackResourceResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceResult" abstract="true">
+    <structure get-method="getStackResourceDetail" set-method="setStackResourceDetail" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackResourceDetail" name="StackResourceDetail"/>
+  </mapping>
+  <mapping name="DescribeStackResourceDrifts" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceDriftsType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="MaxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+    <structure get-method="getStackResourceDriftStatusFilters" set-method="setStackResourceDriftStatusFilters" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackResourceDriftStatusFilters" name="StackResourceDriftStatusFilters"/>
+  </mapping>
+  <mapping name="DescribeStackResourceDriftsResponse" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceDriftsResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="DescribeStackResourceDriftsResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceDriftsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceDriftsResult" abstract="true">
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getStackResourceDrifts" set-method="setStackResourceDrifts" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackResourceDrifts" name="StackResourceDrifts"/>
+  </mapping>
+  <mapping name="DescribeStackResources" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourcesType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="LogicalResourceId" get-method="getLogicalResourceId" set-method="setLogicalResourceId" usage="optional"/>
+    <value name="PhysicalResourceId" get-method="getPhysicalResourceId" set-method="setPhysicalResourceId" usage="optional"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeStackResourcesResponse" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourcesResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="DescribeStackResourcesResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourcesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DescribeStackResourcesResult" abstract="true">
+    <structure get-method="getStackResources" set-method="setStackResources" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackResources" name="StackResources"/>
+  </mapping>
+  <mapping name="DescribeStackSet" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackSetType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="StackSetName" get-method="getStackSetName" set-method="setStackSetName" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeStackSetResponse" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackSetResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="DescribeStackSetResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DescribeStackSetResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DescribeStackSetResult" abstract="true">
+    <structure get-method="getStackSet" set-method="setStackSet" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackSet" name="StackSet"/>
+  </mapping>
+  <mapping name="DescribeStackSetOperation" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackSetOperationType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="OperationId" get-method="getOperationId" set-method="setOperationId" usage="optional"/>
+    <value name="StackSetName" get-method="getStackSetName" set-method="setStackSetName" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeStackSetOperationResponse" class="com.eucalyptus.cloudformation.common.msgs.DescribeStackSetOperationResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="DescribeStackSetOperationResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DescribeStackSetOperationResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DescribeStackSetOperationResult" abstract="true">
+    <structure get-method="getStackSetOperation" set-method="setStackSetOperation" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackSetOperation" name="StackSetOperation"/>
+  </mapping>
+  <mapping name="DescribeStacks" class="com.eucalyptus.cloudformation.common.msgs.DescribeStacksType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeStacksResponse" class="com.eucalyptus.cloudformation.common.msgs.DescribeStacksResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="DescribeStacksResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DescribeStacksResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DescribeStacksResult" abstract="true">
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getStacks" set-method="setStacks" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Stacks" name="Stacks"/>
+  </mapping>
+  <mapping name="DescribeType" class="com.eucalyptus.cloudformation.common.msgs.DescribeTypeType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="Arn" get-method="getArn" set-method="setArn" usage="optional"/>
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+    <value name="TypeName" get-method="getTypeName" set-method="setTypeName" usage="optional"/>
+    <value name="VersionId" get-method="getVersionId" set-method="setVersionId" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeTypeResponse" class="com.eucalyptus.cloudformation.common.msgs.DescribeTypeResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="DescribeTypeResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DescribeTypeResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DescribeTypeResult" abstract="true">
+    <value name="Arn" get-method="getArn" set-method="setArn" usage="optional"/>
+    <value name="DefaultVersionId" get-method="getDefaultVersionId" set-method="setDefaultVersionId" usage="optional"/>
+    <value name="DeprecatedStatus" get-method="getDeprecatedStatus" set-method="setDeprecatedStatus" usage="optional"/>
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <value name="DocumentationUrl" get-method="getDocumentationUrl" set-method="setDocumentationUrl" usage="optional"/>
+    <value name="ExecutionRoleArn" get-method="getExecutionRoleArn" set-method="setExecutionRoleArn" usage="optional"/>
+    <value name="LastUpdated" get-method="getLastUpdated" set-method="setLastUpdated" usage="optional"/>
+    <structure get-method="getLoggingConfig" set-method="setLoggingConfig" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.LoggingConfig" name="LoggingConfig"/>
+    <value name="ProvisioningType" get-method="getProvisioningType" set-method="setProvisioningType" usage="optional"/>
+    <value name="Schema" get-method="getSchema" set-method="setSchema" usage="optional"/>
+    <value name="SourceUrl" get-method="getSourceUrl" set-method="setSourceUrl" usage="optional"/>
+    <value name="TimeCreated" get-method="getTimeCreated" set-method="setTimeCreated" usage="optional"/>
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+    <value name="TypeName" get-method="getTypeName" set-method="setTypeName" usage="optional"/>
+    <value name="Visibility" get-method="getVisibility" set-method="setVisibility" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeTypeRegistration" class="com.eucalyptus.cloudformation.common.msgs.DescribeTypeRegistrationType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="RegistrationToken" get-method="getRegistrationToken" set-method="setRegistrationToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeTypeRegistrationResponse" class="com.eucalyptus.cloudformation.common.msgs.DescribeTypeRegistrationResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="DescribeTypeRegistrationResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DescribeTypeRegistrationResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DescribeTypeRegistrationResult" abstract="true">
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <value name="ProgressStatus" get-method="getProgressStatus" set-method="setProgressStatus" usage="optional"/>
+    <value name="TypeArn" get-method="getTypeArn" set-method="setTypeArn" usage="optional"/>
+    <value name="TypeVersionArn" get-method="getTypeVersionArn" set-method="setTypeVersionArn" usage="optional"/>
+  </mapping>
+  <mapping name="DetectStackDrift" class="com.eucalyptus.cloudformation.common.msgs.DetectStackDriftType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure get-method="getLogicalResourceIds" set-method="setLogicalResourceIds" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.LogicalResourceIds" name="LogicalResourceIds"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+  </mapping>
+  <mapping name="DetectStackDriftResponse" class="com.eucalyptus.cloudformation.common.msgs.DetectStackDriftResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="DetectStackDriftResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DetectStackDriftResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DetectStackDriftResult" abstract="true">
+    <value name="StackDriftDetectionId" get-method="getStackDriftDetectionId" set-method="setStackDriftDetectionId" usage="optional"/>
+  </mapping>
+  <mapping name="DetectStackResourceDrift" class="com.eucalyptus.cloudformation.common.msgs.DetectStackResourceDriftType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="LogicalResourceId" get-method="getLogicalResourceId" set-method="setLogicalResourceId" usage="optional"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+  </mapping>
+  <mapping name="DetectStackResourceDriftResponse" class="com.eucalyptus.cloudformation.common.msgs.DetectStackResourceDriftResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="DetectStackResourceDriftResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DetectStackResourceDriftResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DetectStackResourceDriftResult" abstract="true">
+    <structure get-method="getStackResourceDrift" set-method="setStackResourceDrift" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackResourceDrift" name="StackResourceDrift"/>
+  </mapping>
+  <mapping name="DetectStackSetDrift" class="com.eucalyptus.cloudformation.common.msgs.DetectStackSetDriftType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="OperationId" get-method="getOperationId" set-method="setOperationId" usage="optional"/>
+    <structure get-method="getOperationPreferences" set-method="setOperationPreferences" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackSetOperationPreferences" name="OperationPreferences"/>
+    <value name="StackSetName" get-method="getStackSetName" set-method="setStackSetName" usage="optional"/>
+  </mapping>
+  <mapping name="DetectStackSetDriftResponse" class="com.eucalyptus.cloudformation.common.msgs.DetectStackSetDriftResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="DetectStackSetDriftResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.DetectStackSetDriftResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.DetectStackSetDriftResult" abstract="true">
+    <value name="OperationId" get-method="getOperationId" set-method="setOperationId" usage="optional"/>
+  </mapping>
+  <mapping name="EstimateTemplateCost" class="com.eucalyptus.cloudformation.common.msgs.EstimateTemplateCostType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure get-method="getParameters" set-method="setParameters" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Parameters" name="Parameters"/>
+    <value name="TemplateBody" get-method="getTemplateBody" set-method="setTemplateBody" usage="optional"/>
+    <value name="TemplateURL" get-method="getTemplateURL" set-method="setTemplateURL" usage="optional"/>
+  </mapping>
+  <mapping name="EstimateTemplateCostResponse" class="com.eucalyptus.cloudformation.common.msgs.EstimateTemplateCostResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="EstimateTemplateCostResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.EstimateTemplateCostResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.EstimateTemplateCostResult" abstract="true">
+    <value name="Url" get-method="getUrl" set-method="setUrl" usage="optional"/>
+  </mapping>
+  <mapping name="ExecuteChangeSet" class="com.eucalyptus.cloudformation.common.msgs.ExecuteChangeSetType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="ChangeSetName" get-method="getChangeSetName" set-method="setChangeSetName" usage="optional"/>
+    <value name="ClientRequestToken" get-method="getClientRequestToken" set-method="setClientRequestToken" usage="optional"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+  </mapping>
+  <mapping name="ExecuteChangeSetResponse" class="com.eucalyptus.cloudformation.common.msgs.ExecuteChangeSetResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="ExecuteChangeSetResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ExecuteChangeSetResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ExecuteChangeSetResult" abstract="true"/>
+  <mapping name="GetStackPolicy" class="com.eucalyptus.cloudformation.common.msgs.GetStackPolicyType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+  </mapping>
+  <mapping name="GetStackPolicyResponse" class="com.eucalyptus.cloudformation.common.msgs.GetStackPolicyResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="GetStackPolicyResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.GetStackPolicyResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.GetStackPolicyResult" abstract="true">
+    <value name="StackPolicyBody" get-method="getStackPolicyBody" set-method="setStackPolicyBody" usage="optional"/>
+  </mapping>
+  <mapping name="GetTemplate" class="com.eucalyptus.cloudformation.common.msgs.GetTemplateType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="ChangeSetName" get-method="getChangeSetName" set-method="setChangeSetName" usage="optional"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+    <value name="TemplateStage" get-method="getTemplateStage" set-method="setTemplateStage" usage="optional"/>
+  </mapping>
+  <mapping name="GetTemplateResponse" class="com.eucalyptus.cloudformation.common.msgs.GetTemplateResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="GetTemplateResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.GetTemplateResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.GetTemplateResult" abstract="true">
+    <structure get-method="getStagesAvailable" set-method="setStagesAvailable" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StageList" name="StagesAvailable"/>
+    <value name="TemplateBody" get-method="getTemplateBody" set-method="setTemplateBody" usage="optional"/>
+  </mapping>
+  <mapping name="GetTemplateSummary" class="com.eucalyptus.cloudformation.common.msgs.GetTemplateSummaryType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+    <value name="StackSetName" get-method="getStackSetName" set-method="setStackSetName" usage="optional"/>
+    <value name="TemplateBody" get-method="getTemplateBody" set-method="setTemplateBody" usage="optional"/>
+    <value name="TemplateURL" get-method="getTemplateURL" set-method="setTemplateURL" usage="optional"/>
+  </mapping>
+  <mapping name="GetTemplateSummaryResponse" class="com.eucalyptus.cloudformation.common.msgs.GetTemplateSummaryResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="GetTemplateSummaryResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.GetTemplateSummaryResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.GetTemplateSummaryResult" abstract="true">
+    <structure get-method="getCapabilities" set-method="setCapabilities" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Capabilities" name="Capabilities"/>
+    <value name="CapabilitiesReason" get-method="getCapabilitiesReason" set-method="setCapabilitiesReason" usage="optional"/>
+    <structure get-method="getDeclaredTransforms" set-method="setDeclaredTransforms" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.TransformsList" name="DeclaredTransforms"/>
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <value name="Metadata" get-method="getMetadata" set-method="setMetadata" usage="optional"/>
+    <structure get-method="getParameters" set-method="setParameters" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ParameterDeclarations" name="Parameters"/>
+    <structure get-method="getResourceIdentifierSummaries" set-method="setResourceIdentifierSummaries" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceIdentifierSummaries" name="ResourceIdentifierSummaries"/>
+    <structure get-method="getResourceTypes" set-method="setResourceTypes" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceTypes" name="ResourceTypes"/>
+    <value name="Version" get-method="getVersion" set-method="setVersion" usage="optional"/>
+  </mapping>
+  <mapping name="ListChangeSets" class="com.eucalyptus.cloudformation.common.msgs.ListChangeSetsType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+  </mapping>
+  <mapping name="ListChangeSetsResponse" class="com.eucalyptus.cloudformation.common.msgs.ListChangeSetsResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="ListChangeSetsResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ListChangeSetsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ListChangeSetsResult" abstract="true">
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getSummaries" set-method="setSummaries" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ChangeSetSummaries" name="Summaries"/>
+  </mapping>
+  <mapping name="ListExports" class="com.eucalyptus.cloudformation.common.msgs.ListExportsType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping name="ListExportsResponse" class="com.eucalyptus.cloudformation.common.msgs.ListExportsResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="ListExportsResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ListExportsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ListExportsResult" abstract="true">
+    <structure get-method="getExports" set-method="setExports" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Exports" name="Exports"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping name="ListImports" class="com.eucalyptus.cloudformation.common.msgs.ListImportsType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="ExportName" get-method="getExportName" set-method="setExportName" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping name="ListImportsResponse" class="com.eucalyptus.cloudformation.common.msgs.ListImportsResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="ListImportsResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ListImportsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ListImportsResult" abstract="true">
+    <structure get-method="getImports" set-method="setImports" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Imports" name="Imports"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+  </mapping>
+  <mapping name="ListStackInstances" class="com.eucalyptus.cloudformation.common.msgs.ListStackInstancesType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="MaxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <value name="StackInstanceAccount" get-method="getStackInstanceAccount" set-method="setStackInstanceAccount" usage="optional"/>
+    <value name="StackInstanceRegion" get-method="getStackInstanceRegion" set-method="setStackInstanceRegion" usage="optional"/>
+    <value name="StackSetName" get-method="getStackSetName" set-method="setStackSetName" usage="optional"/>
+  </mapping>
+  <mapping name="ListStackInstancesResponse" class="com.eucalyptus.cloudformation.common.msgs.ListStackInstancesResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="ListStackInstancesResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ListStackInstancesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ListStackInstancesResult" abstract="true">
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getSummaries" set-method="setSummaries" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackInstanceSummaries" name="Summaries"/>
+  </mapping>
+  <mapping name="ListStackResources" class="com.eucalyptus.cloudformation.common.msgs.ListStackResourcesType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+  </mapping>
+  <mapping name="ListStackResourcesResponse" class="com.eucalyptus.cloudformation.common.msgs.ListStackResourcesResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="ListStackResourcesResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ListStackResourcesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ListStackResourcesResult" abstract="true">
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getStackResourceSummaries" set-method="setStackResourceSummaries" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackResourceSummaries" name="StackResourceSummaries"/>
+  </mapping>
+  <mapping name="ListStackSetOperationResults" class="com.eucalyptus.cloudformation.common.msgs.ListStackSetOperationResultsType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="MaxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <value name="OperationId" get-method="getOperationId" set-method="setOperationId" usage="optional"/>
+    <value name="StackSetName" get-method="getStackSetName" set-method="setStackSetName" usage="optional"/>
+  </mapping>
+  <mapping name="ListStackSetOperationResultsResponse" class="com.eucalyptus.cloudformation.common.msgs.ListStackSetOperationResultsResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="ListStackSetOperationResultsResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ListStackSetOperationResultsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ListStackSetOperationResultsResult" abstract="true">
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getSummaries" set-method="setSummaries" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackSetOperationResultSummaries" name="Summaries"/>
+  </mapping>
+  <mapping name="ListStackSetOperations" class="com.eucalyptus.cloudformation.common.msgs.ListStackSetOperationsType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="MaxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <value name="StackSetName" get-method="getStackSetName" set-method="setStackSetName" usage="optional"/>
+  </mapping>
+  <mapping name="ListStackSetOperationsResponse" class="com.eucalyptus.cloudformation.common.msgs.ListStackSetOperationsResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="ListStackSetOperationsResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ListStackSetOperationsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ListStackSetOperationsResult" abstract="true">
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getSummaries" set-method="setSummaries" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackSetOperationSummaries" name="Summaries"/>
+  </mapping>
+  <mapping name="ListStackSets" class="com.eucalyptus.cloudformation.common.msgs.ListStackSetsType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="MaxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <value name="Status" get-method="getStatus" set-method="setStatus" usage="optional"/>
+  </mapping>
+  <mapping name="ListStackSetsResponse" class="com.eucalyptus.cloudformation.common.msgs.ListStackSetsResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="ListStackSetsResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ListStackSetsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ListStackSetsResult" abstract="true">
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getSummaries" set-method="setSummaries" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackSetSummaries" name="Summaries"/>
+  </mapping>
+  <mapping name="ListStacks" class="com.eucalyptus.cloudformation.common.msgs.ListStacksType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getStackStatusFilter" set-method="setStackStatusFilter" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackStatusFilter" name="StackStatusFilter"/>
+  </mapping>
+  <mapping name="ListStacksResponse" class="com.eucalyptus.cloudformation.common.msgs.ListStacksResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="ListStacksResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ListStacksResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ListStacksResult" abstract="true">
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getStackSummaries" set-method="setStackSummaries" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackSummaries" name="StackSummaries"/>
+  </mapping>
+  <mapping name="ListTypeRegistrations" class="com.eucalyptus.cloudformation.common.msgs.ListTypeRegistrationsType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="MaxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <value name="RegistrationStatusFilter" get-method="getRegistrationStatusFilter" set-method="setRegistrationStatusFilter" usage="optional"/>
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+    <value name="TypeArn" get-method="getTypeArn" set-method="setTypeArn" usage="optional"/>
+    <value name="TypeName" get-method="getTypeName" set-method="setTypeName" usage="optional"/>
+  </mapping>
+  <mapping name="ListTypeRegistrationsResponse" class="com.eucalyptus.cloudformation.common.msgs.ListTypeRegistrationsResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="ListTypeRegistrationsResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ListTypeRegistrationsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ListTypeRegistrationsResult" abstract="true">
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getRegistrationTokenList" set-method="setRegistrationTokenList" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.RegistrationTokenList" name="RegistrationTokenList"/>
+  </mapping>
+  <mapping name="ListTypeVersions" class="com.eucalyptus.cloudformation.common.msgs.ListTypeVersionsType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="Arn" get-method="getArn" set-method="setArn" usage="optional"/>
+    <value name="DeprecatedStatus" get-method="getDeprecatedStatus" set-method="setDeprecatedStatus" usage="optional"/>
+    <value name="MaxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+    <value name="TypeName" get-method="getTypeName" set-method="setTypeName" usage="optional"/>
+  </mapping>
+  <mapping name="ListTypeVersionsResponse" class="com.eucalyptus.cloudformation.common.msgs.ListTypeVersionsResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="ListTypeVersionsResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ListTypeVersionsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ListTypeVersionsResult" abstract="true">
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getTypeVersionSummaries" set-method="setTypeVersionSummaries" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.TypeVersionSummaries" name="TypeVersionSummaries"/>
+  </mapping>
+  <mapping name="ListTypes" class="com.eucalyptus.cloudformation.common.msgs.ListTypesType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="DeprecatedStatus" get-method="getDeprecatedStatus" set-method="setDeprecatedStatus" usage="optional"/>
+    <value name="MaxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <value name="ProvisioningType" get-method="getProvisioningType" set-method="setProvisioningType" usage="optional"/>
+    <value name="Visibility" get-method="getVisibility" set-method="setVisibility" usage="optional"/>
+  </mapping>
+  <mapping name="ListTypesResponse" class="com.eucalyptus.cloudformation.common.msgs.ListTypesResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="ListTypesResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ListTypesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ListTypesResult" abstract="true">
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getTypeSummaries" set-method="setTypeSummaries" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.TypeSummaries" name="TypeSummaries"/>
+  </mapping>
+  <mapping name="RecordHandlerProgress" class="com.eucalyptus.cloudformation.common.msgs.RecordHandlerProgressType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="BearerToken" get-method="getBearerToken" set-method="setBearerToken" usage="optional"/>
+    <value name="ClientRequestToken" get-method="getClientRequestToken" set-method="setClientRequestToken" usage="optional"/>
+    <value name="CurrentOperationStatus" get-method="getCurrentOperationStatus" set-method="setCurrentOperationStatus" usage="optional"/>
+    <value name="ErrorCode" get-method="getErrorCode" set-method="setErrorCode" usage="optional"/>
+    <value name="OperationStatus" get-method="getOperationStatus" set-method="setOperationStatus" usage="optional"/>
+    <value name="ResourceModel" get-method="getResourceModel" set-method="setResourceModel" usage="optional"/>
+    <value name="StatusMessage" get-method="getStatusMessage" set-method="setStatusMessage" usage="optional"/>
+  </mapping>
+  <mapping name="RecordHandlerProgressResponse" class="com.eucalyptus.cloudformation.common.msgs.RecordHandlerProgressResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="RecordHandlerProgressResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.RecordHandlerProgressResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.RecordHandlerProgressResult" abstract="true"/>
+  <mapping name="RegisterType" class="com.eucalyptus.cloudformation.common.msgs.RegisterTypeType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="ClientRequestToken" get-method="getClientRequestToken" set-method="setClientRequestToken" usage="optional"/>
+    <value name="ExecutionRoleArn" get-method="getExecutionRoleArn" set-method="setExecutionRoleArn" usage="optional"/>
+    <structure get-method="getLoggingConfig" set-method="setLoggingConfig" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.LoggingConfig" name="LoggingConfig"/>
+    <value name="SchemaHandlerPackage" get-method="getSchemaHandlerPackage" set-method="setSchemaHandlerPackage" usage="optional"/>
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+    <value name="TypeName" get-method="getTypeName" set-method="setTypeName" usage="optional"/>
+  </mapping>
+  <mapping name="RegisterTypeResponse" class="com.eucalyptus.cloudformation.common.msgs.RegisterTypeResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="RegisterTypeResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.RegisterTypeResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.RegisterTypeResult" abstract="true">
+    <value name="RegistrationToken" get-method="getRegistrationToken" set-method="setRegistrationToken" usage="optional"/>
+  </mapping>
+  <mapping name="SetStackPolicy" class="com.eucalyptus.cloudformation.common.msgs.SetStackPolicyType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+    <value name="StackPolicyBody" get-method="getStackPolicyBody" set-method="setStackPolicyBody" usage="optional"/>
+    <value name="StackPolicyURL" get-method="getStackPolicyURL" set-method="setStackPolicyURL" usage="optional"/>
+  </mapping>
+  <mapping name="SetStackPolicyResponse" class="com.eucalyptus.cloudformation.common.msgs.SetStackPolicyResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping name="SetTypeDefaultVersion" class="com.eucalyptus.cloudformation.common.msgs.SetTypeDefaultVersionType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="Arn" get-method="getArn" set-method="setArn" usage="optional"/>
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+    <value name="TypeName" get-method="getTypeName" set-method="setTypeName" usage="optional"/>
+    <value name="VersionId" get-method="getVersionId" set-method="setVersionId" usage="optional"/>
+  </mapping>
+  <mapping name="SetTypeDefaultVersionResponse" class="com.eucalyptus.cloudformation.common.msgs.SetTypeDefaultVersionResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="SetTypeDefaultVersionResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.SetTypeDefaultVersionResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.SetTypeDefaultVersionResult" abstract="true"/>
+  <mapping name="SignalResource" class="com.eucalyptus.cloudformation.common.msgs.SignalResourceType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="LogicalResourceId" get-method="getLogicalResourceId" set-method="setLogicalResourceId" usage="optional"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+    <value name="Status" get-method="getStatus" set-method="setStatus" usage="optional"/>
+    <value name="UniqueId" get-method="getUniqueId" set-method="setUniqueId" usage="optional"/>
+  </mapping>
+  <mapping name="SignalResourceResponse" class="com.eucalyptus.cloudformation.common.msgs.SignalResourceResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping name="StopStackSetOperation" class="com.eucalyptus.cloudformation.common.msgs.StopStackSetOperationType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="OperationId" get-method="getOperationId" set-method="setOperationId" usage="optional"/>
+    <value name="StackSetName" get-method="getStackSetName" set-method="setStackSetName" usage="optional"/>
+  </mapping>
+  <mapping name="StopStackSetOperationResponse" class="com.eucalyptus.cloudformation.common.msgs.StopStackSetOperationResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="StopStackSetOperationResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.StopStackSetOperationResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StopStackSetOperationResult" abstract="true"/>
+  <mapping name="UpdateStack" class="com.eucalyptus.cloudformation.common.msgs.UpdateStackType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure get-method="getCapabilities" set-method="setCapabilities" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Capabilities" name="Capabilities"/>
+    <value name="ClientRequestToken" get-method="getClientRequestToken" set-method="setClientRequestToken" usage="optional"/>
+    <structure get-method="getNotificationARNs" set-method="setNotificationARNs" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.NotificationARNs" name="NotificationARNs"/>
+    <structure get-method="getParameters" set-method="setParameters" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Parameters" name="Parameters"/>
+    <structure get-method="getResourceTypes" set-method="setResourceTypes" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceTypes" name="ResourceTypes"/>
+    <value name="RoleARN" get-method="getRoleARN" set-method="setRoleARN" usage="optional"/>
+    <structure get-method="getRollbackConfiguration" set-method="setRollbackConfiguration" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.RollbackConfiguration" name="RollbackConfiguration"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+    <value name="StackPolicyBody" get-method="getStackPolicyBody" set-method="setStackPolicyBody" usage="optional"/>
+    <value name="StackPolicyDuringUpdateBody" get-method="getStackPolicyDuringUpdateBody" set-method="setStackPolicyDuringUpdateBody" usage="optional"/>
+    <value name="StackPolicyDuringUpdateURL" get-method="getStackPolicyDuringUpdateURL" set-method="setStackPolicyDuringUpdateURL" usage="optional"/>
+    <value name="StackPolicyURL" get-method="getStackPolicyURL" set-method="setStackPolicyURL" usage="optional"/>
+    <structure get-method="getTags" set-method="setTags" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Tags" name="Tags"/>
+    <value name="TemplateBody" get-method="getTemplateBody" set-method="setTemplateBody" usage="optional"/>
+    <value name="TemplateURL" get-method="getTemplateURL" set-method="setTemplateURL" usage="optional"/>
+    <value name="UsePreviousTemplate" get-method="getUsePreviousTemplate" set-method="setUsePreviousTemplate" usage="optional"/>
+  </mapping>
+  <mapping name="UpdateStackResponse" class="com.eucalyptus.cloudformation.common.msgs.UpdateStackResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="UpdateStackResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.UpdateStackResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.UpdateStackResult" abstract="true">
+    <value name="StackId" get-method="getStackId" set-method="setStackId" usage="optional"/>
+  </mapping>
+  <mapping name="UpdateStackInstances" class="com.eucalyptus.cloudformation.common.msgs.UpdateStackInstancesType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure get-method="getAccounts" set-method="setAccounts" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.AccountList" name="Accounts"/>
+    <value name="OperationId" get-method="getOperationId" set-method="setOperationId" usage="optional"/>
+    <structure get-method="getOperationPreferences" set-method="setOperationPreferences" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackSetOperationPreferences" name="OperationPreferences"/>
+    <structure get-method="getParameterOverrides" set-method="setParameterOverrides" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Parameters" name="ParameterOverrides"/>
+    <structure get-method="getRegions" set-method="setRegions" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.RegionList" name="Regions"/>
+    <value name="StackSetName" get-method="getStackSetName" set-method="setStackSetName" usage="optional"/>
+  </mapping>
+  <mapping name="UpdateStackInstancesResponse" class="com.eucalyptus.cloudformation.common.msgs.UpdateStackInstancesResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="UpdateStackInstancesResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.UpdateStackInstancesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.UpdateStackInstancesResult" abstract="true">
+    <value name="OperationId" get-method="getOperationId" set-method="setOperationId" usage="optional"/>
+  </mapping>
+  <mapping name="UpdateStackSet" class="com.eucalyptus.cloudformation.common.msgs.UpdateStackSetType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure get-method="getAccounts" set-method="setAccounts" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.AccountList" name="Accounts"/>
+    <value name="AdministrationRoleARN" get-method="getAdministrationRoleARN" set-method="setAdministrationRoleARN" usage="optional"/>
+    <structure get-method="getCapabilities" set-method="setCapabilities" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Capabilities" name="Capabilities"/>
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <value name="ExecutionRoleName" get-method="getExecutionRoleName" set-method="setExecutionRoleName" usage="optional"/>
+    <value name="OperationId" get-method="getOperationId" set-method="setOperationId" usage="optional"/>
+    <structure get-method="getOperationPreferences" set-method="setOperationPreferences" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackSetOperationPreferences" name="OperationPreferences"/>
+    <structure get-method="getParameters" set-method="setParameters" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Parameters" name="Parameters"/>
+    <structure get-method="getRegions" set-method="setRegions" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.RegionList" name="Regions"/>
+    <value name="StackSetName" get-method="getStackSetName" set-method="setStackSetName" usage="optional"/>
+    <structure get-method="getTags" set-method="setTags" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Tags" name="Tags"/>
+    <value name="TemplateBody" get-method="getTemplateBody" set-method="setTemplateBody" usage="optional"/>
+    <value name="TemplateURL" get-method="getTemplateURL" set-method="setTemplateURL" usage="optional"/>
+    <value name="UsePreviousTemplate" get-method="getUsePreviousTemplate" set-method="setUsePreviousTemplate" usage="optional"/>
+  </mapping>
+  <mapping name="UpdateStackSetResponse" class="com.eucalyptus.cloudformation.common.msgs.UpdateStackSetResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="UpdateStackSetResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.UpdateStackSetResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.UpdateStackSetResult" abstract="true">
+    <value name="OperationId" get-method="getOperationId" set-method="setOperationId" usage="optional"/>
+  </mapping>
+  <mapping name="UpdateTerminationProtection" class="com.eucalyptus.cloudformation.common.msgs.UpdateTerminationProtectionType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="EnableTerminationProtection" get-method="getEnableTerminationProtection" set-method="setEnableTerminationProtection" usage="optional"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+  </mapping>
+  <mapping name="UpdateTerminationProtectionResponse" class="com.eucalyptus.cloudformation.common.msgs.UpdateTerminationProtectionResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="UpdateTerminationProtectionResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.UpdateTerminationProtectionResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.UpdateTerminationProtectionResult" abstract="true">
+    <value name="StackId" get-method="getStackId" set-method="setStackId" usage="optional"/>
+  </mapping>
+  <mapping name="ValidateTemplate" class="com.eucalyptus.cloudformation.common.msgs.ValidateTemplateType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <value name="TemplateBody" get-method="getTemplateBody" set-method="setTemplateBody" usage="optional"/>
+    <value name="TemplateURL" get-method="getTemplateURL" set-method="setTemplateURL" usage="optional"/>
+  </mapping>
+  <mapping name="ValidateTemplateResponse" class="com.eucalyptus.cloudformation.common.msgs.ValidateTemplateResponseType">
+    <structure map-as="com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage"/>
+    <structure name="ValidateTemplateResult" field="result" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ValidateTemplateResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudformation.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ValidateTemplateResult" abstract="true">
+    <structure get-method="getCapabilities" set-method="setCapabilities" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Capabilities" name="Capabilities"/>
+    <value name="CapabilitiesReason" get-method="getCapabilitiesReason" set-method="setCapabilitiesReason" usage="optional"/>
+    <structure get-method="getDeclaredTransforms" set-method="setDeclaredTransforms" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.TransformsList" name="DeclaredTransforms"/>
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <structure get-method="getParameters" set-method="setParameters" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.TemplateParameters" name="Parameters"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.AccountGateResult" abstract="true">
+    <value name="Status" get-method="getStatus" set-method="setStatus" usage="optional"/>
+    <value name="StatusReason" get-method="getStatusReason" set-method="setStatusReason" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.cloudformation.common.msgs.AccountLimit" abstract="true">
     <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
@@ -485,5 +910,548 @@
       <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.AccountLimit"/>
     </collection>
   </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.AccountList" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.AllowedValues" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.Capabilities" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.Change" abstract="true">
+    <structure get-method="getResourceChange" set-method="setResourceChange" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceChange" name="ResourceChange"/>
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ChangeSetSummaries" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.ChangeSetSummary"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ChangeSetSummary" abstract="true">
+    <value name="ChangeSetId" get-method="getChangeSetId" set-method="setChangeSetId" usage="optional"/>
+    <value name="ChangeSetName" get-method="getChangeSetName" set-method="setChangeSetName" usage="optional"/>
+    <value name="CreationTime" get-method="getCreationTime" set-method="setCreationTime" usage="optional"/>
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <value name="ExecutionStatus" get-method="getExecutionStatus" set-method="setExecutionStatus" usage="optional"/>
+    <value name="StackId" get-method="getStackId" set-method="setStackId" usage="optional"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+    <value name="Status" get-method="getStatus" set-method="setStatus" usage="optional"/>
+    <value name="StatusReason" get-method="getStatusReason" set-method="setStatusReason" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.Changes" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.Change"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.Export" abstract="true">
+    <value name="ExportingStackId" get-method="getExportingStackId" set-method="setExportingStackId" usage="optional"/>
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+    <value name="Value" get-method="getValue" set-method="setValue" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.Exports" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.Export"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.Imports" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.LoggingConfig" abstract="true">
+    <value name="LogGroupName" get-method="getLogGroupName" set-method="setLogGroupName" usage="optional"/>
+    <value name="LogRoleArn" get-method="getLogRoleArn" set-method="setLogRoleArn" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.LogicalResourceIds" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.NotificationARNs" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.Output" abstract="true">
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <value name="ExportName" get-method="getExportName" set-method="setExportName" usage="optional"/>
+    <value name="OutputKey" get-method="getOutputKey" set-method="setOutputKey" usage="optional"/>
+    <value name="OutputValue" get-method="getOutputValue" set-method="setOutputValue" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.Outputs" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.Output"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.Parameter" abstract="true">
+    <value name="ParameterKey" get-method="getParameterKey" set-method="setParameterKey" usage="optional"/>
+    <value name="ParameterValue" get-method="getParameterValue" set-method="setParameterValue" usage="optional"/>
+    <value name="ResolvedValue" get-method="getResolvedValue" set-method="setResolvedValue" usage="optional"/>
+    <value name="UsePreviousValue" get-method="getUsePreviousValue" set-method="setUsePreviousValue" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ParameterConstraints" abstract="true">
+    <structure get-method="getAllowedValues" set-method="setAllowedValues" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.AllowedValues" name="AllowedValues"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ParameterDeclaration" abstract="true">
+    <value name="DefaultValue" get-method="getDefaultValue" set-method="setDefaultValue" usage="optional"/>
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <value name="NoEcho" get-method="getNoEcho" set-method="setNoEcho" usage="optional"/>
+    <structure get-method="getParameterConstraints" set-method="setParameterConstraints" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ParameterConstraints" name="ParameterConstraints"/>
+    <value name="ParameterKey" get-method="getParameterKey" set-method="setParameterKey" usage="optional"/>
+    <value name="ParameterType" get-method="getParameterType" set-method="setParameterType" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ParameterDeclarations" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.ParameterDeclaration"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.Parameters" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.Parameter"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.PhysicalResourceIdContext" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.PhysicalResourceIdContextKeyValuePair"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.PhysicalResourceIdContextKeyValuePair" abstract="true">
+    <value name="Key" get-method="getKey" set-method="setKey" usage="optional"/>
+    <value name="Value" get-method="getValue" set-method="setValue" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.PropertyDifference" abstract="true">
+    <value name="ActualValue" get-method="getActualValue" set-method="setActualValue" usage="optional"/>
+    <value name="DifferenceType" get-method="getDifferenceType" set-method="setDifferenceType" usage="optional"/>
+    <value name="ExpectedValue" get-method="getExpectedValue" set-method="setExpectedValue" usage="optional"/>
+    <value name="PropertyPath" get-method="getPropertyPath" set-method="setPropertyPath" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.PropertyDifferences" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.PropertyDifference"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.RegionList" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.RegistrationTokenList" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ResourceChange" abstract="true">
+    <value name="Action" get-method="getAction" set-method="setAction" usage="optional"/>
+    <structure get-method="getDetails" set-method="setDetails" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceChangeDetails" name="Details"/>
+    <value name="LogicalResourceId" get-method="getLogicalResourceId" set-method="setLogicalResourceId" usage="optional"/>
+    <value name="PhysicalResourceId" get-method="getPhysicalResourceId" set-method="setPhysicalResourceId" usage="optional"/>
+    <value name="Replacement" get-method="getReplacement" set-method="setReplacement" usage="optional"/>
+    <value name="ResourceType" get-method="getResourceType" set-method="setResourceType" usage="optional"/>
+    <structure get-method="getScope" set-method="setScope" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Scope" name="Scope"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ResourceChangeDetail" abstract="true">
+    <value name="CausingEntity" get-method="getCausingEntity" set-method="setCausingEntity" usage="optional"/>
+    <value name="ChangeSource" get-method="getChangeSource" set-method="setChangeSource" usage="optional"/>
+    <value name="Evaluation" get-method="getEvaluation" set-method="setEvaluation" usage="optional"/>
+    <structure get-method="getTarget" set-method="setTarget" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceTargetDefinition" name="Target"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ResourceChangeDetails" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.ResourceChangeDetail"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ResourceIdentifierProperties" abstract="true">
+    <collection field="entry">
+      <structure name="entry" type="com.eucalyptus.cloudformation.common.msgs.ResourceIdentifierPropertiesEntry"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ResourceIdentifierPropertiesEntry" abstract="true">
+    <value name="key" get-method="getKey" set-method="setKey" usage="optional"/>
+    <value name="value" get-method="getValue" set-method="setValue" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ResourceIdentifierSummaries" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.ResourceIdentifierSummary"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ResourceIdentifierSummary" abstract="true">
+    <structure get-method="getLogicalResourceIds" set-method="setLogicalResourceIds" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.LogicalResourceIds" name="LogicalResourceIds"/>
+    <structure get-method="getResourceIdentifiers" set-method="setResourceIdentifiers" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceIdentifiers" name="ResourceIdentifiers"/>
+    <value name="ResourceType" get-method="getResourceType" set-method="setResourceType" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ResourceIdentifiers" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ResourceTargetDefinition" abstract="true">
+    <value name="Attribute" get-method="getAttribute" set-method="setAttribute" usage="optional"/>
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+    <value name="RequiresRecreation" get-method="getRequiresRecreation" set-method="setRequiresRecreation" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ResourceToImport" abstract="true">
+    <value name="LogicalResourceId" get-method="getLogicalResourceId" set-method="setLogicalResourceId" usage="optional"/>
+    <structure get-method="getResourceIdentifier" set-method="setResourceIdentifier" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.ResourceIdentifierProperties" name="ResourceIdentifier"/>
+    <value name="ResourceType" get-method="getResourceType" set-method="setResourceType" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ResourceTypes" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ResourcesToImport" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.ResourceToImport"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.ResourcesToSkip" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.RetainResources" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.RollbackConfiguration" abstract="true">
+    <value name="MonitoringTimeInMinutes" get-method="getMonitoringTimeInMinutes" set-method="setMonitoringTimeInMinutes" usage="optional"/>
+    <structure get-method="getRollbackTriggers" set-method="setRollbackTriggers" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.RollbackTriggers" name="RollbackTriggers"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.RollbackTrigger" abstract="true">
+    <value name="Arn" get-method="getArn" set-method="setArn" usage="optional"/>
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.RollbackTriggers" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.RollbackTrigger"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.Scope" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.Stack" abstract="true">
+    <structure get-method="getCapabilities" set-method="setCapabilities" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Capabilities" name="Capabilities"/>
+    <value name="ChangeSetId" get-method="getChangeSetId" set-method="setChangeSetId" usage="optional"/>
+    <value name="CreationTime" get-method="getCreationTime" set-method="setCreationTime" usage="optional"/>
+    <value name="DeletionTime" get-method="getDeletionTime" set-method="setDeletionTime" usage="optional"/>
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <value name="DisableRollback" get-method="getDisableRollback" set-method="setDisableRollback" usage="optional"/>
+    <structure get-method="getDriftInformation" set-method="setDriftInformation" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackDriftInformation" name="DriftInformation"/>
+    <value name="EnableTerminationProtection" get-method="getEnableTerminationProtection" set-method="setEnableTerminationProtection" usage="optional"/>
+    <value name="LastUpdatedTime" get-method="getLastUpdatedTime" set-method="setLastUpdatedTime" usage="optional"/>
+    <structure get-method="getNotificationARNs" set-method="setNotificationARNs" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.NotificationARNs" name="NotificationARNs"/>
+    <structure get-method="getOutputs" set-method="setOutputs" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Outputs" name="Outputs"/>
+    <structure get-method="getParameters" set-method="setParameters" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Parameters" name="Parameters"/>
+    <value name="ParentId" get-method="getParentId" set-method="setParentId" usage="optional"/>
+    <value name="RoleARN" get-method="getRoleARN" set-method="setRoleARN" usage="optional"/>
+    <structure get-method="getRollbackConfiguration" set-method="setRollbackConfiguration" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.RollbackConfiguration" name="RollbackConfiguration"/>
+    <value name="RootId" get-method="getRootId" set-method="setRootId" usage="optional"/>
+    <value name="StackId" get-method="getStackId" set-method="setStackId" usage="optional"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+    <value name="StackStatus" get-method="getStackStatus" set-method="setStackStatus" usage="optional"/>
+    <value name="StackStatusReason" get-method="getStackStatusReason" set-method="setStackStatusReason" usage="optional"/>
+    <structure get-method="getTags" set-method="setTags" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Tags" name="Tags"/>
+    <value name="TimeoutInMinutes" get-method="getTimeoutInMinutes" set-method="setTimeoutInMinutes" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackDriftInformation" abstract="true">
+    <value name="LastCheckTimestamp" get-method="getLastCheckTimestamp" set-method="setLastCheckTimestamp" usage="optional"/>
+    <value name="StackDriftStatus" get-method="getStackDriftStatus" set-method="setStackDriftStatus" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackDriftInformationSummary" abstract="true">
+    <value name="LastCheckTimestamp" get-method="getLastCheckTimestamp" set-method="setLastCheckTimestamp" usage="optional"/>
+    <value name="StackDriftStatus" get-method="getStackDriftStatus" set-method="setStackDriftStatus" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackEvent" abstract="true">
+    <value name="ClientRequestToken" get-method="getClientRequestToken" set-method="setClientRequestToken" usage="optional"/>
+    <value name="EventId" get-method="getEventId" set-method="setEventId" usage="optional"/>
+    <value name="LogicalResourceId" get-method="getLogicalResourceId" set-method="setLogicalResourceId" usage="optional"/>
+    <value name="PhysicalResourceId" get-method="getPhysicalResourceId" set-method="setPhysicalResourceId" usage="optional"/>
+    <value name="ResourceProperties" get-method="getResourceProperties" set-method="setResourceProperties" usage="optional"/>
+    <value name="ResourceStatus" get-method="getResourceStatus" set-method="setResourceStatus" usage="optional"/>
+    <value name="ResourceStatusReason" get-method="getResourceStatusReason" set-method="setResourceStatusReason" usage="optional"/>
+    <value name="ResourceType" get-method="getResourceType" set-method="setResourceType" usage="optional"/>
+    <value name="StackId" get-method="getStackId" set-method="setStackId" usage="optional"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+    <value name="Timestamp" get-method="getTimestamp" set-method="setTimestamp" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackEvents" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.StackEvent"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackInstance" abstract="true">
+    <value name="Account" get-method="getAccount" set-method="setAccount" usage="optional"/>
+    <value name="DriftStatus" get-method="getDriftStatus" set-method="setDriftStatus" usage="optional"/>
+    <value name="LastDriftCheckTimestamp" get-method="getLastDriftCheckTimestamp" set-method="setLastDriftCheckTimestamp" usage="optional"/>
+    <structure get-method="getParameterOverrides" set-method="setParameterOverrides" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Parameters" name="ParameterOverrides"/>
+    <value name="Region" get-method="getRegion" set-method="setRegion" usage="optional"/>
+    <value name="StackId" get-method="getStackId" set-method="setStackId" usage="optional"/>
+    <value name="StackSetId" get-method="getStackSetId" set-method="setStackSetId" usage="optional"/>
+    <value name="Status" get-method="getStatus" set-method="setStatus" usage="optional"/>
+    <value name="StatusReason" get-method="getStatusReason" set-method="setStatusReason" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackInstanceSummaries" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.StackInstanceSummary"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackInstanceSummary" abstract="true">
+    <value name="Account" get-method="getAccount" set-method="setAccount" usage="optional"/>
+    <value name="DriftStatus" get-method="getDriftStatus" set-method="setDriftStatus" usage="optional"/>
+    <value name="LastDriftCheckTimestamp" get-method="getLastDriftCheckTimestamp" set-method="setLastDriftCheckTimestamp" usage="optional"/>
+    <value name="Region" get-method="getRegion" set-method="setRegion" usage="optional"/>
+    <value name="StackId" get-method="getStackId" set-method="setStackId" usage="optional"/>
+    <value name="StackSetId" get-method="getStackSetId" set-method="setStackSetId" usage="optional"/>
+    <value name="Status" get-method="getStatus" set-method="setStatus" usage="optional"/>
+    <value name="StatusReason" get-method="getStatusReason" set-method="setStatusReason" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackResource" abstract="true">
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <structure get-method="getDriftInformation" set-method="setDriftInformation" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackResourceDriftInformation" name="DriftInformation"/>
+    <value name="LogicalResourceId" get-method="getLogicalResourceId" set-method="setLogicalResourceId" usage="optional"/>
+    <value name="PhysicalResourceId" get-method="getPhysicalResourceId" set-method="setPhysicalResourceId" usage="optional"/>
+    <value name="ResourceStatus" get-method="getResourceStatus" set-method="setResourceStatus" usage="optional"/>
+    <value name="ResourceStatusReason" get-method="getResourceStatusReason" set-method="setResourceStatusReason" usage="optional"/>
+    <value name="ResourceType" get-method="getResourceType" set-method="setResourceType" usage="optional"/>
+    <value name="StackId" get-method="getStackId" set-method="setStackId" usage="optional"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+    <value name="Timestamp" get-method="getTimestamp" set-method="setTimestamp" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackResourceDetail" abstract="true">
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <structure get-method="getDriftInformation" set-method="setDriftInformation" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackResourceDriftInformation" name="DriftInformation"/>
+    <value name="LastUpdatedTimestamp" get-method="getLastUpdatedTimestamp" set-method="setLastUpdatedTimestamp" usage="optional"/>
+    <value name="LogicalResourceId" get-method="getLogicalResourceId" set-method="setLogicalResourceId" usage="optional"/>
+    <value name="Metadata" get-method="getMetadata" set-method="setMetadata" usage="optional"/>
+    <value name="PhysicalResourceId" get-method="getPhysicalResourceId" set-method="setPhysicalResourceId" usage="optional"/>
+    <value name="ResourceStatus" get-method="getResourceStatus" set-method="setResourceStatus" usage="optional"/>
+    <value name="ResourceStatusReason" get-method="getResourceStatusReason" set-method="setResourceStatusReason" usage="optional"/>
+    <value name="ResourceType" get-method="getResourceType" set-method="setResourceType" usage="optional"/>
+    <value name="StackId" get-method="getStackId" set-method="setStackId" usage="optional"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackResourceDrift" abstract="true">
+    <value name="ActualProperties" get-method="getActualProperties" set-method="setActualProperties" usage="optional"/>
+    <value name="ExpectedProperties" get-method="getExpectedProperties" set-method="setExpectedProperties" usage="optional"/>
+    <value name="LogicalResourceId" get-method="getLogicalResourceId" set-method="setLogicalResourceId" usage="optional"/>
+    <value name="PhysicalResourceId" get-method="getPhysicalResourceId" set-method="setPhysicalResourceId" usage="optional"/>
+    <structure get-method="getPhysicalResourceIdContext" set-method="setPhysicalResourceIdContext" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.PhysicalResourceIdContext" name="PhysicalResourceIdContext"/>
+    <structure get-method="getPropertyDifferences" set-method="setPropertyDifferences" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.PropertyDifferences" name="PropertyDifferences"/>
+    <value name="ResourceType" get-method="getResourceType" set-method="setResourceType" usage="optional"/>
+    <value name="StackId" get-method="getStackId" set-method="setStackId" usage="optional"/>
+    <value name="StackResourceDriftStatus" get-method="getStackResourceDriftStatus" set-method="setStackResourceDriftStatus" usage="optional"/>
+    <value name="Timestamp" get-method="getTimestamp" set-method="setTimestamp" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackResourceDriftInformation" abstract="true">
+    <value name="LastCheckTimestamp" get-method="getLastCheckTimestamp" set-method="setLastCheckTimestamp" usage="optional"/>
+    <value name="StackResourceDriftStatus" get-method="getStackResourceDriftStatus" set-method="setStackResourceDriftStatus" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackResourceDriftInformationSummary" abstract="true">
+    <value name="LastCheckTimestamp" get-method="getLastCheckTimestamp" set-method="setLastCheckTimestamp" usage="optional"/>
+    <value name="StackResourceDriftStatus" get-method="getStackResourceDriftStatus" set-method="setStackResourceDriftStatus" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackResourceDriftStatusFilters" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackResourceDrifts" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.StackResourceDrift"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackResourceSummaries" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.StackResourceSummary"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackResourceSummary" abstract="true">
+    <structure get-method="getDriftInformation" set-method="setDriftInformation" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackResourceDriftInformationSummary" name="DriftInformation"/>
+    <value name="LastUpdatedTimestamp" get-method="getLastUpdatedTimestamp" set-method="setLastUpdatedTimestamp" usage="optional"/>
+    <value name="LogicalResourceId" get-method="getLogicalResourceId" set-method="setLogicalResourceId" usage="optional"/>
+    <value name="PhysicalResourceId" get-method="getPhysicalResourceId" set-method="setPhysicalResourceId" usage="optional"/>
+    <value name="ResourceStatus" get-method="getResourceStatus" set-method="setResourceStatus" usage="optional"/>
+    <value name="ResourceStatusReason" get-method="getResourceStatusReason" set-method="setResourceStatusReason" usage="optional"/>
+    <value name="ResourceType" get-method="getResourceType" set-method="setResourceType" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackResources" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.StackResource"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackSet" abstract="true">
+    <value name="AdministrationRoleARN" get-method="getAdministrationRoleARN" set-method="setAdministrationRoleARN" usage="optional"/>
+    <structure get-method="getCapabilities" set-method="setCapabilities" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Capabilities" name="Capabilities"/>
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <value name="ExecutionRoleName" get-method="getExecutionRoleName" set-method="setExecutionRoleName" usage="optional"/>
+    <structure get-method="getParameters" set-method="setParameters" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Parameters" name="Parameters"/>
+    <value name="StackSetARN" get-method="getStackSetARN" set-method="setStackSetARN" usage="optional"/>
+    <structure get-method="getStackSetDriftDetectionDetails" set-method="setStackSetDriftDetectionDetails" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackSetDriftDetectionDetails" name="StackSetDriftDetectionDetails"/>
+    <value name="StackSetId" get-method="getStackSetId" set-method="setStackSetId" usage="optional"/>
+    <value name="StackSetName" get-method="getStackSetName" set-method="setStackSetName" usage="optional"/>
+    <value name="Status" get-method="getStatus" set-method="setStatus" usage="optional"/>
+    <structure get-method="getTags" set-method="setTags" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.Tags" name="Tags"/>
+    <value name="TemplateBody" get-method="getTemplateBody" set-method="setTemplateBody" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackSetDriftDetectionDetails" abstract="true">
+    <value name="DriftDetectionStatus" get-method="getDriftDetectionStatus" set-method="setDriftDetectionStatus" usage="optional"/>
+    <value name="DriftStatus" get-method="getDriftStatus" set-method="setDriftStatus" usage="optional"/>
+    <value name="DriftedStackInstancesCount" get-method="getDriftedStackInstancesCount" set-method="setDriftedStackInstancesCount" usage="optional"/>
+    <value name="FailedStackInstancesCount" get-method="getFailedStackInstancesCount" set-method="setFailedStackInstancesCount" usage="optional"/>
+    <value name="InProgressStackInstancesCount" get-method="getInProgressStackInstancesCount" set-method="setInProgressStackInstancesCount" usage="optional"/>
+    <value name="InSyncStackInstancesCount" get-method="getInSyncStackInstancesCount" set-method="setInSyncStackInstancesCount" usage="optional"/>
+    <value name="LastDriftCheckTimestamp" get-method="getLastDriftCheckTimestamp" set-method="setLastDriftCheckTimestamp" usage="optional"/>
+    <value name="TotalStackInstancesCount" get-method="getTotalStackInstancesCount" set-method="setTotalStackInstancesCount" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackSetOperation" abstract="true">
+    <value name="Action" get-method="getAction" set-method="setAction" usage="optional"/>
+    <value name="AdministrationRoleARN" get-method="getAdministrationRoleARN" set-method="setAdministrationRoleARN" usage="optional"/>
+    <value name="CreationTimestamp" get-method="getCreationTimestamp" set-method="setCreationTimestamp" usage="optional"/>
+    <value name="EndTimestamp" get-method="getEndTimestamp" set-method="setEndTimestamp" usage="optional"/>
+    <value name="ExecutionRoleName" get-method="getExecutionRoleName" set-method="setExecutionRoleName" usage="optional"/>
+    <value name="OperationId" get-method="getOperationId" set-method="setOperationId" usage="optional"/>
+    <structure get-method="getOperationPreferences" set-method="setOperationPreferences" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackSetOperationPreferences" name="OperationPreferences"/>
+    <value name="RetainStacks" get-method="getRetainStacks" set-method="setRetainStacks" usage="optional"/>
+    <structure get-method="getStackSetDriftDetectionDetails" set-method="setStackSetDriftDetectionDetails" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackSetDriftDetectionDetails" name="StackSetDriftDetectionDetails"/>
+    <value name="StackSetId" get-method="getStackSetId" set-method="setStackSetId" usage="optional"/>
+    <value name="Status" get-method="getStatus" set-method="setStatus" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackSetOperationPreferences" abstract="true">
+    <value name="FailureToleranceCount" get-method="getFailureToleranceCount" set-method="setFailureToleranceCount" usage="optional"/>
+    <value name="FailureTolerancePercentage" get-method="getFailureTolerancePercentage" set-method="setFailureTolerancePercentage" usage="optional"/>
+    <value name="MaxConcurrentCount" get-method="getMaxConcurrentCount" set-method="setMaxConcurrentCount" usage="optional"/>
+    <value name="MaxConcurrentPercentage" get-method="getMaxConcurrentPercentage" set-method="setMaxConcurrentPercentage" usage="optional"/>
+    <structure get-method="getRegionOrder" set-method="setRegionOrder" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.RegionList" name="RegionOrder"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackSetOperationResultSummaries" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.StackSetOperationResultSummary"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackSetOperationResultSummary" abstract="true">
+    <value name="Account" get-method="getAccount" set-method="setAccount" usage="optional"/>
+    <structure get-method="getAccountGateResult" set-method="setAccountGateResult" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.AccountGateResult" name="AccountGateResult"/>
+    <value name="Region" get-method="getRegion" set-method="setRegion" usage="optional"/>
+    <value name="Status" get-method="getStatus" set-method="setStatus" usage="optional"/>
+    <value name="StatusReason" get-method="getStatusReason" set-method="setStatusReason" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackSetOperationSummaries" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.StackSetOperationSummary"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackSetOperationSummary" abstract="true">
+    <value name="Action" get-method="getAction" set-method="setAction" usage="optional"/>
+    <value name="CreationTimestamp" get-method="getCreationTimestamp" set-method="setCreationTimestamp" usage="optional"/>
+    <value name="EndTimestamp" get-method="getEndTimestamp" set-method="setEndTimestamp" usage="optional"/>
+    <value name="OperationId" get-method="getOperationId" set-method="setOperationId" usage="optional"/>
+    <value name="Status" get-method="getStatus" set-method="setStatus" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackSetSummaries" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.StackSetSummary"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackSetSummary" abstract="true">
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <value name="DriftStatus" get-method="getDriftStatus" set-method="setDriftStatus" usage="optional"/>
+    <value name="LastDriftCheckTimestamp" get-method="getLastDriftCheckTimestamp" set-method="setLastDriftCheckTimestamp" usage="optional"/>
+    <value name="StackSetId" get-method="getStackSetId" set-method="setStackSetId" usage="optional"/>
+    <value name="StackSetName" get-method="getStackSetName" set-method="setStackSetName" usage="optional"/>
+    <value name="Status" get-method="getStatus" set-method="setStatus" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackStatusFilter" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackSummaries" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.StackSummary"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StackSummary" abstract="true">
+    <value name="CreationTime" get-method="getCreationTime" set-method="setCreationTime" usage="optional"/>
+    <value name="DeletionTime" get-method="getDeletionTime" set-method="setDeletionTime" usage="optional"/>
+    <structure get-method="getDriftInformation" set-method="setDriftInformation" usage="optional" type="com.eucalyptus.cloudformation.common.msgs.StackDriftInformationSummary" name="DriftInformation"/>
+    <value name="LastUpdatedTime" get-method="getLastUpdatedTime" set-method="setLastUpdatedTime" usage="optional"/>
+    <value name="ParentId" get-method="getParentId" set-method="setParentId" usage="optional"/>
+    <value name="RootId" get-method="getRootId" set-method="setRootId" usage="optional"/>
+    <value name="StackId" get-method="getStackId" set-method="setStackId" usage="optional"/>
+    <value name="StackName" get-method="getStackName" set-method="setStackName" usage="optional"/>
+    <value name="StackStatus" get-method="getStackStatus" set-method="setStackStatus" usage="optional"/>
+    <value name="StackStatusReason" get-method="getStackStatusReason" set-method="setStackStatusReason" usage="optional"/>
+    <value name="TemplateDescription" get-method="getTemplateDescription" set-method="setTemplateDescription" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.Stacks" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.Stack"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.StageList" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.Tag" abstract="true">
+    <value name="Key" get-method="getKey" set-method="setKey" usage="optional"/>
+    <value name="Value" get-method="getValue" set-method="setValue" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.Tags" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.Tag"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.TemplateParameter" abstract="true">
+    <value name="DefaultValue" get-method="getDefaultValue" set-method="setDefaultValue" usage="optional"/>
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <value name="NoEcho" get-method="getNoEcho" set-method="setNoEcho" usage="optional"/>
+    <value name="ParameterKey" get-method="getParameterKey" set-method="setParameterKey" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.TemplateParameters" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.TemplateParameter"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.TransformsList" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.TypeSummaries" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.TypeSummary"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.TypeSummary" abstract="true">
+    <value name="DefaultVersionId" get-method="getDefaultVersionId" set-method="setDefaultVersionId" usage="optional"/>
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <value name="LastUpdated" get-method="getLastUpdated" set-method="setLastUpdated" usage="optional"/>
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+    <value name="TypeArn" get-method="getTypeArn" set-method="setTypeArn" usage="optional"/>
+    <value name="TypeName" get-method="getTypeName" set-method="setTypeName" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.TypeVersionSummaries" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.cloudformation.common.msgs.TypeVersionSummary"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.cloudformation.common.msgs.TypeVersionSummary" abstract="true">
+    <value name="Arn" get-method="getArn" set-method="setArn" usage="optional"/>
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <value name="TimeCreated" get-method="getTimeCreated" set-method="setTimeCreated" usage="optional"/>
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+    <value name="TypeName" get-method="getTypeName" set-method="setTypeName" usage="optional"/>
+    <value name="VersionId" get-method="getVersionId" set-method="setVersionId" usage="optional"/>
+  </mapping>
 </binding>
-

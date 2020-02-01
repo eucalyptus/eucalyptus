@@ -7,19 +7,23 @@
  */
 package com.eucalyptus.cloudformation.common.msgs;
 
-import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import java.util.ArrayList;
+import com.eucalyptus.binding.HttpEmbedded;
+import com.eucalyptus.binding.HttpParameterMapping;
+import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
 
 public class AccountLimitList extends EucalyptusData {
 
+  @HttpEmbedded(multiple = true)
+  @HttpParameterMapping(parameter = "member")
   private ArrayList<AccountLimit> member = new ArrayList<>();
 
-  public ArrayList<AccountLimit> getMember( ) {
+  public ArrayList<AccountLimit> getMember() {
     return member;
   }
 
-  public void setMember( final ArrayList<AccountLimit> member ) {
+  public void setMember(final ArrayList<AccountLimit> member) {
     this.member = member;
   }
 }

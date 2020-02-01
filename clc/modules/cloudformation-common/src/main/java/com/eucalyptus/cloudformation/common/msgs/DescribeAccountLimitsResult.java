@@ -7,27 +7,30 @@
  */
 package com.eucalyptus.cloudformation.common.msgs;
 
+import com.eucalyptus.cloudformation.common.CloudFormationMessageValidation.FieldRange;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
 
 public class DescribeAccountLimitsResult extends EucalyptusData {
 
   private AccountLimitList accountLimits;
+
+  @FieldRange(min = 1, max = 1024)
   private String nextToken;
 
-  public AccountLimitList getAccountLimits( ) {
+  public AccountLimitList getAccountLimits() {
     return accountLimits;
   }
 
-  public void setAccountLimits( final AccountLimitList accountLimits ) {
+  public void setAccountLimits(final AccountLimitList accountLimits) {
     this.accountLimits = accountLimits;
   }
 
-  public String getNextToken( ) {
+  public String getNextToken() {
     return nextToken;
   }
 
-  public void setNextToken( final String nextToken ) {
+  public void setNextToken(final String nextToken) {
     this.nextToken = nextToken;
   }
 

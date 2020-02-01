@@ -7,16 +7,19 @@
  */
 package com.eucalyptus.cloudformation.common.msgs;
 
+import com.eucalyptus.cloudformation.common.CloudFormationMessageValidation.FieldRange;
+
 
 public class DescribeAccountLimitsType extends CloudFormationMessage {
 
+  @FieldRange(min = 1, max = 1024)
   private String nextToken;
 
-  public String getNextToken( ) {
+  public String getNextToken() {
     return nextToken;
   }
 
-  public void setNextToken( final String nextToken ) {
+  public void setNextToken(final String nextToken) {
     this.nextToken = nextToken;
   }
 
