@@ -29,12 +29,13 @@
 package com.eucalyptus.cloudformation.template;
 
 import com.eucalyptus.cloudformation.*;
+import com.eucalyptus.cloudformation.common.msgs.AllowedValues;
 import com.eucalyptus.cloudformation.common.msgs.GetTemplateSummaryResult;
 import com.eucalyptus.cloudformation.common.msgs.Parameter;
 import com.eucalyptus.cloudformation.common.msgs.ParameterConstraints;
 import com.eucalyptus.cloudformation.common.msgs.ParameterDeclaration;
 import com.eucalyptus.cloudformation.common.msgs.ParameterDeclarations;
-import com.eucalyptus.cloudformation.common.msgs.ResourceList;
+import com.eucalyptus.cloudformation.common.msgs.ResourceTypes;
 import com.eucalyptus.cloudformation.common.msgs.TemplateParameter;
 import com.eucalyptus.cloudformation.common.msgs.TemplateParameters;
 import com.eucalyptus.cloudformation.common.msgs.ValidateTemplateResult;
@@ -292,7 +293,7 @@ public class TemplateParser {
 
     GetTemplateSummaryResult getTemplateSummaryResult = new GetTemplateSummaryResult();
     getTemplateSummaryResult.setDescription(template.getDescription());
-    getTemplateSummaryResult.setCapabilities(new ResourceList());
+    getTemplateSummaryResult.setCapabilities(new com.eucalyptus.cloudformation.common.msgs.Capabilities());
     getTemplateSummaryResult.getCapabilities().setMember(Lists.newArrayList(requiredCapabilities));
     if (!requiredCapabilities.isEmpty()) {
       getTemplateSummaryResult.setCapabilitiesReason("The following resource(s) require capabilities: " + capabilitiesResourceTypes);
@@ -300,7 +301,7 @@ public class TemplateParser {
     getTemplateSummaryResult.setParameters(new ParameterDeclarations());
     getTemplateSummaryResult.getParameters().setMember(template.getParameterDeclarations());
     getTemplateSummaryResult.setMetadata(template.getMetadataJSON());
-    getTemplateSummaryResult.setResourceTypes(new ResourceList());
+    getTemplateSummaryResult.setResourceTypes(new ResourceTypes());
     getTemplateSummaryResult.getResourceTypes().setMember(Lists.newArrayList(resourceTypes));
     return getTemplateSummaryResult;
   }
@@ -626,7 +627,7 @@ public class TemplateParser {
       parameterDeclaration.setParameterKey(parameterName);
       if (allowedValues!=null) {
         ParameterConstraints parameterConstraints = new ParameterConstraints();
-        ResourceList allowedValuesResourceList = new ResourceList();
+        AllowedValues allowedValuesResourceList = new AllowedValues();
         allowedValuesResourceList.setMember(Lists.newArrayList(allowedValues));
         parameterConstraints.setAllowedValues(allowedValuesResourceList);
         parameterDeclaration.setParameterConstraints(parameterConstraints);

@@ -1,44 +1,19 @@
-/*************************************************************************
- * Copyright 2009-2014 Ent. Services Development Corporation LP
+/*
+ * Copyright 2020 AppScale Systems, Inc
  *
- * Redistribution and use of this software in source and binary forms,
- * with or without modification, are permitted provided that the
- * following conditions are met:
- *
- *   Redistributions of source code must retain the above copyright
- *   notice, this list of conditions and the following disclaimer.
- *
- *   Redistributions in binary form must reproduce the above copyright
- *   notice, this list of conditions and the following disclaimer
- *   in the documentation and/or other materials provided with the
- *   distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- ************************************************************************/
+ * Use of this source code is governed by a BSD-2-Clause
+ * license that can be found in the LICENSE file or at
+ * https://opensource.org/licenses/BSD-2-Clause
+ */
 package com.eucalyptus.cloudformation.common;
 
 import com.eucalyptus.auth.policy.annotation.PolicyResourceType;
-import com.eucalyptus.cloudformation.common.policy.CloudFormationPolicySpec;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.auth.type.RestrictedType;
+import com.eucalyptus.cloudformation.common.policy.CloudFormationPolicySpec;
 
-/**
- * Created by ethomas on 10/22/14.
- */
-@PolicyVendor( CloudFormationPolicySpec.VENDOR_CLOUDFORMATION )
+@PolicyVendor(CloudFormationPolicySpec.VENDOR_CLOUDFORMATION)
 public interface CloudFormationMetadata extends RestrictedType {
   @PolicyResourceType("stack")
   public interface StackMetadata extends CloudFormationMetadata {}
-
 }

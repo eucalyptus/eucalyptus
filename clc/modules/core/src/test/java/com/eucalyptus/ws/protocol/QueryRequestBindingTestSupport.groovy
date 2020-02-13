@@ -114,7 +114,9 @@ class QueryRequestBindingTestSupport {
         assertRecursiveEquality( action, prefix + field.getName() + '.', expectedValueObject, actualValueObject )
       } else if ( expectedValueObject instanceof ArrayList ) {
         ((List)expectedValueObject).eachWithIndex { Object item, Integer index ->
-          if ( ((List)actualValueObject).size() <= index ) fail( action + " property " + prefix + field.getName() + '.' + (index+1) + ' missing' );
+          if ( ((List)actualValueObject).size() <= index ) {
+            fail( action + " property " + prefix + field.getName() + '.' + (index+1) + ' missing' )
+          }
           if ( EucalyptusData.class.isInstance( item ) ) {
             assertRecursiveEquality( action, prefix + field.getName() + '.' + (index+1) + '.', item, ((List)actualValueObject).get(index) )
           } else {

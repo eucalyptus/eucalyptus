@@ -41,73 +41,8 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.tokens.SecurityTokenAWSCredentialsProvider;
-import com.eucalyptus.cloudformation.common.msgs.CancelUpdateStackResponseType;
-import com.eucalyptus.cloudformation.common.msgs.CancelUpdateStackType;
-import com.eucalyptus.cloudformation.common.msgs.ContinueUpdateRollbackResponseType;
-import com.eucalyptus.cloudformation.common.msgs.ContinueUpdateRollbackType;
-import com.eucalyptus.cloudformation.common.msgs.CreateStackResponseType;
-import com.eucalyptus.cloudformation.common.msgs.CreateStackResult;
-import com.eucalyptus.cloudformation.common.msgs.CreateStackType;
-import com.eucalyptus.cloudformation.common.msgs.DeleteStackResponseType;
-import com.eucalyptus.cloudformation.common.msgs.DeleteStackType;
-import com.eucalyptus.cloudformation.common.msgs.DescribeStackEventsResponseType;
-import com.eucalyptus.cloudformation.common.msgs.DescribeStackEventsResult;
-import com.eucalyptus.cloudformation.common.msgs.DescribeStackEventsType;
-import com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceResponseType;
-import com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceResult;
-import com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceType;
-import com.eucalyptus.cloudformation.common.msgs.DescribeStackResourcesResponseType;
-import com.eucalyptus.cloudformation.common.msgs.DescribeStackResourcesResult;
-import com.eucalyptus.cloudformation.common.msgs.DescribeStackResourcesType;
-import com.eucalyptus.cloudformation.common.msgs.DescribeStacksResponseType;
-import com.eucalyptus.cloudformation.common.msgs.DescribeStacksResult;
-import com.eucalyptus.cloudformation.common.msgs.DescribeStacksType;
-import com.eucalyptus.cloudformation.common.msgs.EstimateTemplateCostResponseType;
-import com.eucalyptus.cloudformation.common.msgs.EstimateTemplateCostType;
-import com.eucalyptus.cloudformation.common.msgs.GetStackPolicyResponseType;
-import com.eucalyptus.cloudformation.common.msgs.GetStackPolicyResult;
-import com.eucalyptus.cloudformation.common.msgs.GetStackPolicyType;
-import com.eucalyptus.cloudformation.common.msgs.GetTemplateResponseType;
-import com.eucalyptus.cloudformation.common.msgs.GetTemplateResult;
-import com.eucalyptus.cloudformation.common.msgs.GetTemplateSummaryResponseType;
-import com.eucalyptus.cloudformation.common.msgs.GetTemplateSummaryResult;
-import com.eucalyptus.cloudformation.common.msgs.GetTemplateSummaryType;
-import com.eucalyptus.cloudformation.common.msgs.GetTemplateType;
-import com.eucalyptus.cloudformation.common.msgs.ListStackResourcesResponseType;
-import com.eucalyptus.cloudformation.common.msgs.ListStackResourcesResult;
-import com.eucalyptus.cloudformation.common.msgs.ListStackResourcesType;
-import com.eucalyptus.cloudformation.common.msgs.ListStacksResponseType;
-import com.eucalyptus.cloudformation.common.msgs.ListStacksResult;
-import com.eucalyptus.cloudformation.common.msgs.ListStacksType;
-import com.eucalyptus.cloudformation.common.msgs.Output;
-import com.eucalyptus.cloudformation.common.msgs.Outputs;
-import com.eucalyptus.cloudformation.common.msgs.Parameter;
-import com.eucalyptus.cloudformation.common.msgs.Parameters;
-import com.eucalyptus.cloudformation.common.msgs.ResourceList;
-import com.eucalyptus.cloudformation.common.msgs.SetStackPolicyResponseType;
-import com.eucalyptus.cloudformation.common.msgs.SetStackPolicyType;
-import com.eucalyptus.cloudformation.common.msgs.SignalResourceResponseType;
-import com.eucalyptus.cloudformation.common.msgs.SignalResourceResult;
-import com.eucalyptus.cloudformation.common.msgs.SignalResourceType;
-import com.eucalyptus.cloudformation.common.msgs.Stack;
-import com.eucalyptus.cloudformation.common.msgs.StackEvent;
-import com.eucalyptus.cloudformation.common.msgs.StackEvents;
-import com.eucalyptus.cloudformation.common.msgs.StackResource;
-import com.eucalyptus.cloudformation.common.msgs.StackResourceDetail;
-import com.eucalyptus.cloudformation.common.msgs.StackResourceSummaries;
-import com.eucalyptus.cloudformation.common.msgs.StackResourceSummary;
-import com.eucalyptus.cloudformation.common.msgs.StackResources;
-import com.eucalyptus.cloudformation.common.msgs.StackSummaries;
-import com.eucalyptus.cloudformation.common.msgs.StackSummary;
-import com.eucalyptus.cloudformation.common.msgs.Stacks;
-import com.eucalyptus.cloudformation.common.msgs.Tag;
-import com.eucalyptus.cloudformation.common.msgs.Tags;
-import com.eucalyptus.cloudformation.common.msgs.UpdateStackResponseType;
-import com.eucalyptus.cloudformation.common.msgs.UpdateStackResult;
-import com.eucalyptus.cloudformation.common.msgs.UpdateStackType;
-import com.eucalyptus.cloudformation.common.msgs.ValidateTemplateResponseType;
-import com.eucalyptus.cloudformation.common.msgs.ValidateTemplateResult;
-import com.eucalyptus.cloudformation.common.msgs.ValidateTemplateType;
+import com.eucalyptus.cloudformation.common.CloudFormationMetadatas;
+import com.eucalyptus.cloudformation.common.msgs.*;
 import com.eucalyptus.cloudformation.common.policy.CloudFormationPolicySpec;
 import com.eucalyptus.cloudformation.config.CloudFormationProperties;
 import com.eucalyptus.cloudformation.entity.DeleteStackWorkflowExtraInfoEntity;
@@ -157,7 +92,6 @@ import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.IO;
 import com.eucalyptus.util.Json;
-import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.dns.DomainNames;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Joiner;
@@ -233,7 +167,7 @@ public class CloudFormationService {
         throw new ValidationErrorException("Stack " + stackName + " does not exist");
       }
 
-      if ( !RestrictedTypes.filterPrivileged( ).apply( stackEntity ) ) {
+      if ( !CloudFormationMetadatas.filterPrivileged( ).apply( stackEntity ) ) {
         throw new AccessDeniedException( "Not authorized." );
       }
       if (stackEntity.getStackStatus() != Status.UPDATE_IN_PROGRESS) {
@@ -277,7 +211,7 @@ public class CloudFormationService {
     return reply;
   }
 
-  public ContinueUpdateRollbackResponseType continueUpdateRollbackStackResponseType ( final ContinueUpdateRollbackType request ) throws CloudFormationException {
+  public ContinueUpdateRollbackResponseType continueUpdateRollback( final ContinueUpdateRollbackType request ) throws CloudFormationException {
     ContinueUpdateRollbackResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
@@ -294,7 +228,7 @@ public class CloudFormationService {
       if (stackEntity == null) {
         throw new ValidationErrorException("Stack " + stackName + " does not exist");
       }
-      if ( !RestrictedTypes.filterPrivileged( ).apply( stackEntity ) ) {
+      if ( !CloudFormationMetadatas.filterPrivileged( ).apply( stackEntity ) ) {
         throw new AccessDeniedException( "Not authorized." );
       }
 
@@ -514,7 +448,7 @@ public class CloudFormationService {
       };
 
       try {
-        final StackEntity stackEntity = RestrictedTypes.allocateUnitlessResource(allocator);
+        final StackEntity stackEntity = CloudFormationMetadatas.allocateUnitlessResource(allocator);
       } catch (AuthQuotaException e) {
         throw new LimitExceededException(e.getMessage());
       }
@@ -634,7 +568,7 @@ public class CloudFormationService {
         stackEntity = StackEntityManager.getNonDeletedStackByNameOrId(stackName, null);
       }
       if ( stackEntity != null ) {
-        if ( !RestrictedTypes.filterPrivileged( ).apply( stackEntity ) ) {
+        if ( !CloudFormationMetadatas.filterPrivileged( ).apply( stackEntity ) ) {
           throw new AccessDeniedException( "Not authorized." );
         }
         final String stackAccountId = stackEntity.getAccountId( );
@@ -772,6 +706,26 @@ public class CloudFormationService {
     return currentWorkflowRetainedResources;
   }
 
+  public DescribeAccountLimitsResponseType describeAccountLimits(final DescribeAccountLimitsType request ) throws CloudFormationException {
+    final DescribeAccountLimitsResponseType reply = request.getReply();
+    try {
+      final Context ctx = Contexts.lookup();
+      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_DESCRIBEACCOUNTLIMITS, ctx);
+
+      final AccountLimitList accountLimitList = new AccountLimitList();
+      final AccountLimit accountLimit = new AccountLimit();
+      accountLimit.setName("StackOutputsLimit");
+      accountLimit.setValue((int)Limits.MAX_OUTPUTS_PER_TEMPLATE);
+      accountLimitList.getMember().add(accountLimit);
+      final DescribeAccountLimitsResult describeAccountLimitsResult = new DescribeAccountLimitsResult();
+      describeAccountLimitsResult.setAccountLimits(accountLimitList);
+      reply.setDescribeAccountLimitsResult(describeAccountLimitsResult);
+    } catch (final Exception ex) {
+      handleException(ex);
+    }
+    return reply;
+  }
+
   public DescribeStackEventsResponseType describeStackEvents( final DescribeStackEventsType request ) throws CloudFormationException {
     DescribeStackEventsResponseType reply = request.getReply();
     try {
@@ -890,10 +844,10 @@ public class CloudFormationService {
           ctx.isAdministrator( ) && stackName!=null && ("verbose".equals(stackName) || stackName.startsWith( STACK_ID_PREFIX )) ? null : accountId,
           ctx.isAdministrator( ) && "verbose".equals(stackName) ? null : stackName );
       final ArrayList<Stack> stackList = new ArrayList<Stack>();
-      for ( final StackEntity stackEntity : Iterables.filter( stackEntities, RestrictedTypes.filterPrivileged( ) ) ) {
+      for ( final StackEntity stackEntity : Iterables.filter( stackEntities, CloudFormationMetadatas.filterPrivileged( ) ) ) {
         Stack stack = new Stack();
         if (stackEntity.getCapabilitiesJson() != null && !stackEntity.getCapabilitiesJson().isEmpty()) {
-          ResourceList capabilities = new ResourceList();
+          Capabilities capabilities = new Capabilities();
           ArrayList<String> member = StackEntityHelper.jsonToCapabilities(stackEntity.getCapabilitiesJson());
           capabilities.setMember(member);
           stack.setCapabilities(capabilities);
@@ -904,7 +858,7 @@ public class CloudFormationService {
         stack.setDisableRollback(stackEntity.getDisableRollback()); // TODO: how do we handle onFailure(?) field
         stack.setLastUpdatedTime(stackEntity.getLastUpdateTimestamp());
         if (stackEntity.getNotificationARNsJson() != null && !stackEntity.getNotificationARNsJson().isEmpty()) {
-          ResourceList notificationARNs = new ResourceList();
+          NotificationARNs notificationARNs = new NotificationARNs();
           ArrayList<String> member = StackEntityHelper.jsonToNotificationARNs(stackEntity.getNotificationARNsJson());
           notificationARNs.setMember(member);
           stack.setNotificationARNs(notificationARNs);
@@ -1129,7 +1083,7 @@ public class CloudFormationService {
       final Context ctx = Contexts.lookup();
       final User user = ctx.getUser();
       final String accountId = user.getAccountNumber();
-      final ResourceList stackStatusFilter = request.getStackStatusFilter();
+      final StackStatusFilter stackStatusFilter = request.getStackStatusFilter();
       final List<Status> statusFilterList = Lists.newArrayList();
       if (stackStatusFilter != null && stackStatusFilter.getMember() != null) {
         for (String statusFilterStr: stackStatusFilter.getMember()) {
@@ -1144,7 +1098,7 @@ public class CloudFormationService {
       // TODO: support next token
       List<StackEntity> stackEntities = StackEntityManager.listStacks(accountId, statusFilterList);
       ArrayList<StackSummary> stackSummaryList = new ArrayList<StackSummary>();
-      for ( final StackEntity stackEntity : Iterables.filter( stackEntities, RestrictedTypes.filterPrivileged( ) ) ) {
+      for ( final StackEntity stackEntity : Iterables.filter( stackEntities, CloudFormationMetadatas.filterPrivileged( ) ) ) {
         StackSummary stackSummary = new StackSummary();
         stackSummary.setCreationTime(stackEntity.getCreateOperationTimestamp());
         stackSummary.setDeletionTime(stackEntity.getDeleteOperationTimestamp());
@@ -1189,7 +1143,7 @@ public class CloudFormationService {
       if (stackEntity == null) {
         throw new ValidationErrorException("Stack " + stackName + " does not exist");
       }
-      if ( !RestrictedTypes.filterPrivileged( ).apply( stackEntity ) ) {
+      if ( !CloudFormationMetadatas.filterPrivileged( ).apply( stackEntity ) ) {
         throw new AccessDeniedException( "Not authorized." );
       }
       stackEntity.setStackPolicy(stackPolicyText);
@@ -1298,8 +1252,6 @@ public class CloudFormationService {
         signal.setStatus(SignalEntity.Status.valueOf(status));
         SignalEntityManager.addSignal(signal);
       }
-      SignalResourceResult signalResourceResult = new SignalResourceResult();
-      reply.setSignalResourceResult(signalResourceResult);
     } catch (Exception ex) {
       handleException(ex);
     }
@@ -1761,6 +1713,150 @@ public class CloudFormationService {
     return reply;
   }
 
+  public CreateChangeSetResponseType createChangeSet(final CreateChangeSetType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public CreateStackInstancesResponseType createStackInstances(final CreateStackInstancesType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public CreateStackSetResponseType createStackSet(final CreateStackSetType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DeleteChangeSetResponseType deleteChangeSet(final DeleteChangeSetType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DeleteStackInstancesResponseType deleteStackInstances(final DeleteStackInstancesType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DeleteStackSetResponseType deleteStackSet(final DeleteStackSetType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DeregisterTypeResponseType deregisterType(final DeregisterTypeType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DescribeChangeSetResponseType describeChangeSet(final DescribeChangeSetType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DescribeStackDriftDetectionStatusResponseType describeStackDriftDetectionStatus(final DescribeStackDriftDetectionStatusType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DescribeStackInstanceResponseType describeStackInstance(final DescribeStackInstanceType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DescribeStackResourceDriftsResponseType describeStackResourceDrifts(final DescribeStackResourceDriftsType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DescribeStackSetResponseType describeStackSet(final DescribeStackSetType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DescribeStackSetOperationResponseType describeStackSetOperation(final DescribeStackSetOperationType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DescribeTypeResponseType describeType( final DescribeTypeType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DescribeTypeRegistrationResponseType describeTypeRegistration( final DescribeTypeRegistrationType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DetectStackDriftResponseType detectStackDrift( final DetectStackDriftType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DetectStackResourceDriftResponseType detectStackResourceDrift( final DetectStackResourceDriftType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DetectStackSetDriftResponseType detectStackSetDrift( final DetectStackSetDriftType request ) throws CloudFormationException {
+    return request.getReply( );
+  }
+
+  public ExecuteChangeSetResponseType executeChangeSet( final ExecuteChangeSetType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public ListChangeSetsResponseType listChangeSets( final ListChangeSetsType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public ListExportsResponseType listExports( final ListExportsType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public ListImportsResponseType listImports( final ListImportsType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public ListStackInstancesResponseType listStackInstances( final ListStackInstancesType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public ListStackSetOperationResultsResponseType listStackSetOperationResults( final ListStackSetOperationResultsType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public ListStackSetOperationsResponseType listStackSetOperations( final ListStackSetOperationsType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public ListStackSetsResponseType listStackSets( final ListStackSetsType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public ListTypeRegistrationsResponseType listTypeRegistrations( final ListTypeRegistrationsType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public ListTypeVersionsResponseType listTypeVersions( final ListTypeVersionsType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public ListTypesResponseType listTypes( final ListTypesType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public RecordHandlerProgressResponseType recordHandlerProgress( final RecordHandlerProgressType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public RegisterTypeResponseType registerType( final RegisterTypeType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public SetTypeDefaultVersionResponseType setTypeDefaultVersion( final SetTypeDefaultVersionType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public StopStackSetOperationResponseType stopStackSetOperation( final StopStackSetOperationType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public UpdateStackInstancesResponseType updateStackInstances( final UpdateStackInstancesType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public UpdateStackSetResponseType updateStackSet( final UpdateStackSetType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public UpdateTerminationProtectionResponseType updateTerminationProtection( final UpdateTerminationProtectionType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
   public static String getRegion( ) {
     return Optional.fromNullable( Strings.emptyToNull( REGION ) )
         .or( RegionConfigurations.getRegionName( ) )
@@ -1776,6 +1872,18 @@ public class CloudFormationService {
         Strings.emptyToNull(CloudFormationProperties.PSEUDO_PARAM_URLSUFFIX),
         DomainNames.externalSubdomain().relativize(Name.root).toString()));
     return pseudoParameterValues;
+  }
+
+  private static <RESPONSE extends CloudFormationMessage> RESPONSE handleStub(
+      final CloudFormationMessage request
+  ) throws CloudFormationException {
+    try {
+      final Context ctx = Contexts.lookup();
+      checkActionPermission(CloudFormationMetadatas.getIamActionByMessageType(request), ctx);
+    } catch (final Exception ex) {
+      handleException(ex);
+    }
+    return request.getReply( );
   }
 
   private static void handleException(final Exception e)
@@ -1810,7 +1918,7 @@ public class CloudFormationService {
     if ( stackEntity == null && ctx.isAdministrator( ) && stackName.startsWith( STACK_ID_PREFIX ) ) {
       stackEntity = StackEntityManager.getAnyStackByNameOrId(stackName, null);
     }
-    if ( stackEntity != null && !RestrictedTypes.filterPrivileged().apply( stackEntity ) ) {
+    if ( stackEntity != null && !CloudFormationMetadatas.filterPrivileged().apply( stackEntity ) ) {
       boolean instanceAccessPermitted = false;
       if ( allowInstance && ctx.getSubject( ) != null ) {
         final Set<CfnIdentityDocumentCredential> credentials =

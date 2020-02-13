@@ -1,98 +1,107 @@
-/*************************************************************************
- * Copyright 2009-2014 Ent. Services Development Corporation LP
+/*
+ * Copyright 2020 AppScale Systems, Inc
  *
- * Redistribution and use of this software in source and binary forms,
- * with or without modification, are permitted provided that the
- * following conditions are met:
- *
- *   Redistributions of source code must retain the above copyright
- *   notice, this list of conditions and the following disclaimer.
- *
- *   Redistributions in binary form must reproduce the above copyright
- *   notice, this list of conditions and the following disclaimer
- *   in the documentation and/or other materials provided with the
- *   distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- ************************************************************************/
+ * Use of this source code is governed by a BSD-2-Clause
+ * license that can be found in the LICENSE file or at
+ * https://opensource.org/licenses/BSD-2-Clause
+ */
 package com.eucalyptus.cloudformation.common.msgs;
 
+import com.eucalyptus.cloudformation.common.CloudFormationMessageValidation.FieldRange;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
+
 
 public class GetTemplateSummaryResult extends EucalyptusData {
 
-  private ResourceList capabilities;
-  private ResourceList resourceTypes;
+  private Capabilities capabilities;
+
   private String capabilitiesReason;
+
+  private TransformsList declaredTransforms;
+
+  @FieldRange(min = 1, max = 1024)
   private String description;
+
   private String metadata;
+
   private ParameterDeclarations parameters;
+
+  private ResourceIdentifierSummaries resourceIdentifierSummaries;
+
+  private ResourceTypes resourceTypes;
+
   private String version;
 
-  public ResourceList getCapabilities( ) {
+  public Capabilities getCapabilities() {
     return capabilities;
   }
 
-  public void setCapabilities( ResourceList capabilities ) {
+  public void setCapabilities(final Capabilities capabilities) {
     this.capabilities = capabilities;
   }
 
-  public ResourceList getResourceTypes( ) {
-    return resourceTypes;
-  }
-
-  public void setResourceTypes( ResourceList resourceTypes ) {
-    this.resourceTypes = resourceTypes;
-  }
-
-  public String getCapabilitiesReason( ) {
+  public String getCapabilitiesReason() {
     return capabilitiesReason;
   }
 
-  public void setCapabilitiesReason( String capabilitiesReason ) {
+  public void setCapabilitiesReason(final String capabilitiesReason) {
     this.capabilitiesReason = capabilitiesReason;
   }
 
-  public String getDescription( ) {
+  public TransformsList getDeclaredTransforms() {
+    return declaredTransforms;
+  }
+
+  public void setDeclaredTransforms(final TransformsList declaredTransforms) {
+    this.declaredTransforms = declaredTransforms;
+  }
+
+  public String getDescription() {
     return description;
   }
 
-  public void setDescription( String description ) {
+  public void setDescription(final String description) {
     this.description = description;
   }
 
-  public String getMetadata( ) {
+  public String getMetadata() {
     return metadata;
   }
 
-  public void setMetadata( String metadata ) {
+  public void setMetadata(final String metadata) {
     this.metadata = metadata;
   }
 
-  public ParameterDeclarations getParameters( ) {
+  public ParameterDeclarations getParameters() {
     return parameters;
   }
 
-  public void setParameters( ParameterDeclarations parameters ) {
+  public void setParameters(final ParameterDeclarations parameters) {
     this.parameters = parameters;
   }
 
-  public String getVersion( ) {
+  public ResourceIdentifierSummaries getResourceIdentifierSummaries() {
+    return resourceIdentifierSummaries;
+  }
+
+  public void setResourceIdentifierSummaries(final ResourceIdentifierSummaries resourceIdentifierSummaries) {
+    this.resourceIdentifierSummaries = resourceIdentifierSummaries;
+  }
+
+  public ResourceTypes getResourceTypes() {
+    return resourceTypes;
+  }
+
+  public void setResourceTypes(final ResourceTypes resourceTypes) {
+    this.resourceTypes = resourceTypes;
+  }
+
+  public String getVersion() {
     return version;
   }
 
-  public void setVersion( String version ) {
+  public void setVersion(final String version) {
     this.version = version;
   }
+
 }

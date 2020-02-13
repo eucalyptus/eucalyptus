@@ -31,7 +31,7 @@ package com.eucalyptus.cloudformation
 import com.eucalyptus.binding.Binding
 import com.eucalyptus.binding.BindingException
 import com.eucalyptus.cloudformation.common.msgs.CancelUpdateStackType
-import com.eucalyptus.cloudformation.common.msgs.CloudFormationErrorResponse
+import com.eucalyptus.cloudformation.common.msgs.Capabilities
 import com.eucalyptus.cloudformation.common.msgs.CreateStackType
 import com.eucalyptus.cloudformation.common.msgs.DeleteStackType
 import com.eucalyptus.cloudformation.common.msgs.DescribeStackEventsType
@@ -39,25 +39,27 @@ import com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceType
 import com.eucalyptus.cloudformation.common.msgs.DescribeStackResourcesType
 import com.eucalyptus.cloudformation.common.msgs.DescribeStacksType
 import com.eucalyptus.cloudformation.common.msgs.Error
+import com.eucalyptus.cloudformation.common.msgs.ErrorResponse
 import com.eucalyptus.cloudformation.common.msgs.EstimateTemplateCostType
 import com.eucalyptus.cloudformation.common.msgs.GetStackPolicyType
 import com.eucalyptus.cloudformation.common.msgs.GetTemplateType
 import com.eucalyptus.cloudformation.common.msgs.ListStackResourcesType
 import com.eucalyptus.cloudformation.common.msgs.ListStacksType
+import com.eucalyptus.cloudformation.common.msgs.NotificationARNs
 import com.eucalyptus.cloudformation.common.msgs.Parameter
 import com.eucalyptus.cloudformation.common.msgs.Parameters
-import com.eucalyptus.cloudformation.common.msgs.ResourceList
 import com.eucalyptus.cloudformation.common.msgs.SetStackPolicyType
+import com.eucalyptus.cloudformation.common.msgs.StackStatusFilter
 import com.eucalyptus.cloudformation.common.msgs.Tag
 import com.eucalyptus.cloudformation.common.msgs.Tags
 import com.eucalyptus.cloudformation.common.msgs.UpdateStackType
 import com.eucalyptus.cloudformation.common.msgs.ValidateTemplateType
 import com.eucalyptus.cloudformation.ws.CloudFormationQueryBinding
 import com.eucalyptus.ws.protocol.QueryBindingTestSupport
+import com.google.common.base.Splitter
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import org.junit.Test
-
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*
 
 /**
  *
@@ -100,18 +102,18 @@ class CloudFormationBindingTest extends QueryBindingTestSupport {
       }
     }
 
-        // CancelUpdateStack
+    // CancelUpdateStack
     bindAndAssertObject( asb, CancelUpdateStackType.class, "CancelUpdateStack", new CancelUpdateStackType(
       stackName: 'Stack-Name'
     ), 1)
 
     // CreateStack
     bindAndAssertObject( asb, CreateStackType.class, "CreateStack", new CreateStackType(
-      capabilities: new ResourceList (
+      capabilities: new Capabilities (
         member: [ 'capability1', 'capability2' ],
       ),
       disableRollback: true,
-      notificationARNs: new ResourceList (
+      notificationARNs: new NotificationARNs (
         member: [ 'notificationARN1', 'notificationARN2', 'notificationARN3' ],
       ),
       onFailure: 'fail',
@@ -204,7 +206,7 @@ class CloudFormationBindingTest extends QueryBindingTestSupport {
     // ListStacks
     bindAndAssertObject( asb, ListStacksType.class, "ListStacks", new ListStacksType(
       nextToken: 'Next-Token',
-      stackStatusFilter: new ResourceList(
+      stackStatusFilter: new StackStatusFilter(
         member: ['Stack-Status-Filter-1', 'Stack-Status-Filter-2']
       )
     ), 3)
@@ -216,7 +218,7 @@ class CloudFormationBindingTest extends QueryBindingTestSupport {
     ), 3)
     // UpdateStack
     bindAndAssertObject( asb, UpdateStackType.class, "UpdateStack", new UpdateStackType(
-      capabilities: new ResourceList (
+      capabilities: new Capabilities (
         member: [ 'capability1', 'capability2' ],
       ),
       parameters: new Parameters (
@@ -266,16 +268,147 @@ class CloudFormationBindingTest extends QueryBindingTestSupport {
             "Message" : "Template file referenced by https://cf-template-429942273585-us-west-1.s3.amazonaws.com/cfn-as-launchconfig-paravirt-instanceprofile.json?Signature=W9mgzWRlMAqZe1n0%2BM9gmmFLIF8%3D&Expires=1425670813&AWSAccessKeyId=ASIAIPHT3XGEH2GINPHQ&x-amz-security-token=AQoDYXdzEN3//////////wEa8AHGhON5Y9xtxXv79F9WCUnNWHAo4We9n4GIQGsrOJ9HmW/Niksj/m7mliigTqw0GTQS48R/v8bVuRo5B8BYWMVBqPvJ%2BIEKozO%2B48grz17fjy8gflb%2BGbwv/N4Fb0KORiX51GCm0xosId5dMBcrbJH5pn2fvwItEz2CvEnYTG3WN/abDuJD6qJeqvRGqIgG%2BFtjP/voQDWeIw5%2BFSwhFXyd29tu3NX12E8oy1DsO/Nox6UO92%2Ba8T0%2B0zcwn3JPZsLlDHutpSgNEjV85xolGEAQQt1FYihnTn/lkTL2UXcISgNWUKbsmZ%2BJQZqQR0ocY04gm4DopwU%3D does not exist."
           }
         }'''.stripIndent( ),
-        CloudFormationQueryBinding.jsonWriter( ).withDefaultPrettyPrinter().writeValueAsString( new CloudFormationErrorResponse(
+        CloudFormationQueryBinding.jsonWriter( ).withDefaultPrettyPrinter().writeValueAsString( new ErrorResponse(
             effectiveUserId: '',
             _epoch: 42,
             requestId: 'edbe8968-c437-11e4-bac0-25d29c2758a9',
-            error: new Error(
+            error: [ new Error(
                 code: 'ValidationError',
                 message: 'Template file referenced by https://cf-template-429942273585-us-west-1.s3.amazonaws.com/cfn-as-launchconfig-paravirt-instanceprofile.json?Signature=W9mgzWRlMAqZe1n0%2BM9gmmFLIF8%3D&Expires=1425670813&AWSAccessKeyId=ASIAIPHT3XGEH2GINPHQ&x-amz-security-token=AQoDYXdzEN3//////////wEa8AHGhON5Y9xtxXv79F9WCUnNWHAo4We9n4GIQGsrOJ9HmW/Niksj/m7mliigTqw0GTQS48R/v8bVuRo5B8BYWMVBqPvJ%2BIEKozO%2B48grz17fjy8gflb%2BGbwv/N4Fb0KORiX51GCm0xosId5dMBcrbJH5pn2fvwItEz2CvEnYTG3WN/abDuJD6qJeqvRGqIgG%2BFtjP/voQDWeIw5%2BFSwhFXyd29tu3NX12E8oy1DsO/Nox6UO92%2Ba8T0%2B0zcwn3JPZsLlDHutpSgNEjV85xolGEAQQt1FYihnTn/lkTL2UXcISgNWUKbsmZ%2BJQZqQR0ocY04gm4DopwU%3D does not exist.',
                 type: 'Sender'
-            )
+            ) ]
         ) ) )
+  }
+
+  @Test
+  void testBindingsForAllActions(){
+    // https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_Operations.html
+    String actionsCopiedAndPastedFromAWSCFDocs = '''
+    CancelUpdateStack
+
+    ContinueUpdateRollback
+
+    CreateChangeSet
+
+    CreateStack
+
+    CreateStackInstances
+
+    CreateStackSet
+
+    DeleteChangeSet
+
+    DeleteStack
+
+    DeleteStackInstances
+
+    DeleteStackSet
+
+    DeregisterType
+
+    DescribeAccountLimits
+
+    DescribeChangeSet
+
+    DescribeStackDriftDetectionStatus
+
+    DescribeStackEvents
+
+    DescribeStackInstance
+
+    DescribeStackResource
+
+    DescribeStackResourceDrifts
+
+    DescribeStackResources
+
+    DescribeStacks
+
+    DescribeStackSet
+
+    DescribeStackSetOperation
+
+    DescribeType
+
+    DescribeTypeRegistration
+
+    DetectStackDrift
+
+    DetectStackResourceDrift
+
+    DetectStackSetDrift
+
+    EstimateTemplateCost
+
+    ExecuteChangeSet
+
+    GetStackPolicy
+
+    GetTemplate
+
+    GetTemplateSummary
+
+    ListChangeSets
+
+    ListExports
+
+    ListImports
+
+    ListStackInstances
+
+    ListStackResources
+
+    ListStacks
+
+    ListStackSetOperationResults
+
+    ListStackSetOperations
+
+    ListStackSets
+
+    ListTypeRegistrations
+
+    ListTypes
+
+    ListTypeVersions
+
+    RecordHandlerProgress
+
+    RegisterType
+
+    SetStackPolicy
+
+    SetTypeDefaultVersion
+
+    SignalResource
+
+    StopStackSetOperation
+
+    UpdateStack
+
+    UpdateStackInstances
+
+    UpdateStackSet
+
+    UpdateTerminationProtection
+
+    ValidateTemplate
+    '''
+
+    List<String> whitelist = [
+    ]
+    Splitter.on(' ').trimResults( ).omitEmptyStrings( ).split( actionsCopiedAndPastedFromAWSCFDocs ).each { String action ->
+      try {
+        Class.forName( "com.eucalyptus.cloudformation.common.msgs.${action}Type" )
+      } catch ( Exception e ) {
+        if ( !whitelist.contains(action) ) fail( "Message not found for ${action}" )
+      }
+      try {
+        Class.forName( "com.eucalyptus.cloudformation.common.msgs.${action}ResponseType" )
+      } catch ( Exception e ) {
+        if ( !whitelist.contains(action) ) fail( "Response message not found for ${action}" )
+      }
+    }
   }
 
   static class TestBean {

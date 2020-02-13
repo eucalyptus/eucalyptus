@@ -31,17 +31,18 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 
 import com.eucalyptus.cloudformation.common.CloudFormation;
 import com.eucalyptus.cloudformation.CloudFormationService;
+import com.eucalyptus.cloudformation.common.msgs.Capabilities;
 import com.eucalyptus.cloudformation.common.msgs.CreateStackResponseType;
 import com.eucalyptus.cloudformation.common.msgs.CreateStackType;
 import com.eucalyptus.cloudformation.common.msgs.DeleteStackResponseType;
 import com.eucalyptus.cloudformation.common.msgs.DeleteStackType;
 import com.eucalyptus.cloudformation.common.msgs.DescribeStacksResponseType;
 import com.eucalyptus.cloudformation.common.msgs.DescribeStacksType;
+import com.eucalyptus.cloudformation.common.msgs.NotificationARNs;
 import com.eucalyptus.cloudformation.common.msgs.Output;
 import com.eucalyptus.cloudformation.common.msgs.Outputs;
 import com.eucalyptus.cloudformation.common.msgs.Parameter;
 import com.eucalyptus.cloudformation.common.msgs.Parameters;
-import com.eucalyptus.cloudformation.common.msgs.ResourceList;
 import com.eucalyptus.cloudformation.common.msgs.Tag;
 import com.eucalyptus.cloudformation.common.msgs.Tags;
 import com.eucalyptus.cloudformation.common.msgs.UpdateStackResponseType;
@@ -133,7 +134,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
           createStackType.setTimeoutInMinutes(action.properties.getTimeoutInMinutes());
         }
         if (action.properties.getNotificationARNs() != null) {
-          ResourceList notificationARNs = new ResourceList();
+          NotificationARNs notificationARNs = new NotificationARNs();
           notificationARNs.getMember().addAll(action.properties.getNotificationARNs());
           createStackType.setNotificationARNs(notificationARNs);
         }
@@ -145,7 +146,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
             tag.setValue(cloudFormationResourceTag.getValue());
             tags.getMember().add(tag);
           }
-          ResourceList notificationARNs = new ResourceList();
+          NotificationARNs notificationARNs = new NotificationARNs();
           notificationARNs.getMember().addAll(action.properties.getNotificationARNs());
           createStackType.setTags(tags);
         }
@@ -170,7 +171,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         }
         createStackType.setTemplateURL(action.properties.getTemplateURL());
         // inherit outer stack capabilities
-        ResourceList capabilities = new ResourceList();
+        Capabilities capabilities = new Capabilities();
         List<String> stackCapabilities = StackEntityHelper.jsonToCapabilities(action.getStackEntity().getCapabilitiesJson());
         if (stackCapabilities != null) {
           capabilities.getMember().addAll(stackCapabilities);
@@ -446,7 +447,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         String stackName = newAction.info.getPhysicalResourceId();
         updateStackType.setStackName(stackName);
         if (newAction.properties.getNotificationARNs() != null) {
-          ResourceList notificationARNs = new ResourceList();
+          NotificationARNs notificationARNs = new NotificationARNs();
           notificationARNs.getMember().addAll(newAction.properties.getNotificationARNs());
           updateStackType.setNotificationARNs(notificationARNs);
         }
@@ -458,7 +459,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
             tag.setValue(cloudFormationResourceTag.getValue());
             tags.getMember().add(tag);
           }
-          ResourceList notificationARNs = new ResourceList();
+          NotificationARNs notificationARNs = new NotificationARNs();
           notificationARNs.getMember().addAll(newAction.properties.getNotificationARNs());
           updateStackType.setTags(tags);
         }
@@ -482,7 +483,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         }
         updateStackType.setTemplateURL(newAction.properties.getTemplateURL());
         // inherit outer stack capabilities
-        ResourceList capabilities = new ResourceList();
+        Capabilities capabilities = new Capabilities();
         List<String> stackCapabilities = StackEntityHelper.jsonToCapabilities(newAction.getStackEntity().getCapabilitiesJson());
         if (stackCapabilities != null) {
           capabilities.getMember().addAll(stackCapabilities);

@@ -1,162 +1,249 @@
-/*************************************************************************
- * Copyright 2009-2014 Ent. Services Development Corporation LP
+/*
+ * Copyright 2020 AppScale Systems, Inc
  *
- * Redistribution and use of this software in source and binary forms,
- * with or without modification, are permitted provided that the
- * following conditions are met:
- *
- *   Redistributions of source code must retain the above copyright
- *   notice, this list of conditions and the following disclaimer.
- *
- *   Redistributions in binary form must reproduce the above copyright
- *   notice, this list of conditions and the following disclaimer
- *   in the documentation and/or other materials provided with the
- *   distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- ************************************************************************/
+ * Use of this source code is governed by a BSD-2-Clause
+ * license that can be found in the LICENSE file or at
+ * https://opensource.org/licenses/BSD-2-Clause
+ */
 package com.eucalyptus.cloudformation.common.msgs;
 
-import java.util.Date;
+import javax.annotation.Nonnull;
+import com.eucalyptus.cloudformation.common.CloudFormationMessageValidation.FieldRange;
+import com.eucalyptus.cloudformation.common.CloudFormationMessageValidation.FieldRegex;
+import com.eucalyptus.cloudformation.common.CloudFormationMessageValidation.FieldRegexValue;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
+
 
 public class Stack extends EucalyptusData {
 
-  private ResourceList capabilities;
-  private Date creationTime;
+  private Capabilities capabilities;
+
+  @FieldRange(min = 1)
+  private String changeSetId;
+
+  @Nonnull
+  private java.util.Date creationTime;
+
+  private java.util.Date deletionTime;
+
+  @FieldRange(min = 1, max = 1024)
   private String description;
+
   private Boolean disableRollback;
-  private Date lastUpdatedTime;
-  private ResourceList notificationARNs;
+
+  private StackDriftInformation driftInformation;
+
+  private Boolean enableTerminationProtection;
+
+  private java.util.Date lastUpdatedTime;
+
+  @FieldRange(max = 5)
+  private NotificationARNs notificationARNs;
+
   private Outputs outputs;
+
   private Parameters parameters;
+
+  private String parentId;
+
+  @FieldRange(min = 20, max = 2048)
+  private String roleARN;
+
+  private RollbackConfiguration rollbackConfiguration;
+
+  private String rootId;
+
   private String stackId;
+
+  @Nonnull
   private String stackName;
+
+  @Nonnull
+  @FieldRegex(FieldRegexValue.ENUM_STACKSTATUS)
   private String stackStatus;
+
   private String stackStatusReason;
+
+  @FieldRange(max = 50)
   private Tags tags;
+
+  @FieldRange(min = 1)
   private Integer timeoutInMinutes;
 
-  public ResourceList getCapabilities( ) {
+  public Capabilities getCapabilities() {
     return capabilities;
   }
 
-  public void setCapabilities( ResourceList capabilities ) {
+  public void setCapabilities(final Capabilities capabilities) {
     this.capabilities = capabilities;
   }
 
-  public Date getCreationTime( ) {
+  public String getChangeSetId() {
+    return changeSetId;
+  }
+
+  public void setChangeSetId(final String changeSetId) {
+    this.changeSetId = changeSetId;
+  }
+
+  public java.util.Date getCreationTime() {
     return creationTime;
   }
 
-  public void setCreationTime( Date creationTime ) {
+  public void setCreationTime(final java.util.Date creationTime) {
     this.creationTime = creationTime;
   }
 
-  public String getDescription( ) {
+  public java.util.Date getDeletionTime() {
+    return deletionTime;
+  }
+
+  public void setDeletionTime(final java.util.Date deletionTime) {
+    this.deletionTime = deletionTime;
+  }
+
+  public String getDescription() {
     return description;
   }
 
-  public void setDescription( String description ) {
+  public void setDescription(final String description) {
     this.description = description;
   }
 
-  public Boolean getDisableRollback( ) {
+  public Boolean getDisableRollback() {
     return disableRollback;
   }
 
-  public void setDisableRollback( Boolean disableRollback ) {
+  public void setDisableRollback(final Boolean disableRollback) {
     this.disableRollback = disableRollback;
   }
 
-  public Date getLastUpdatedTime( ) {
+  public StackDriftInformation getDriftInformation() {
+    return driftInformation;
+  }
+
+  public void setDriftInformation(final StackDriftInformation driftInformation) {
+    this.driftInformation = driftInformation;
+  }
+
+  public Boolean getEnableTerminationProtection() {
+    return enableTerminationProtection;
+  }
+
+  public void setEnableTerminationProtection(final Boolean enableTerminationProtection) {
+    this.enableTerminationProtection = enableTerminationProtection;
+  }
+
+  public java.util.Date getLastUpdatedTime() {
     return lastUpdatedTime;
   }
 
-  public void setLastUpdatedTime( Date lastUpdatedTime ) {
+  public void setLastUpdatedTime(final java.util.Date lastUpdatedTime) {
     this.lastUpdatedTime = lastUpdatedTime;
   }
 
-  public ResourceList getNotificationARNs( ) {
+  public NotificationARNs getNotificationARNs() {
     return notificationARNs;
   }
 
-  public void setNotificationARNs( ResourceList notificationARNs ) {
+  public void setNotificationARNs(final NotificationARNs notificationARNs) {
     this.notificationARNs = notificationARNs;
   }
 
-  public Outputs getOutputs( ) {
+  public Outputs getOutputs() {
     return outputs;
   }
 
-  public void setOutputs( Outputs outputs ) {
+  public void setOutputs(final Outputs outputs) {
     this.outputs = outputs;
   }
 
-  public Parameters getParameters( ) {
+  public Parameters getParameters() {
     return parameters;
   }
 
-  public void setParameters( Parameters parameters ) {
+  public void setParameters(final Parameters parameters) {
     this.parameters = parameters;
   }
 
-  public String getStackId( ) {
+  public String getParentId() {
+    return parentId;
+  }
+
+  public void setParentId(final String parentId) {
+    this.parentId = parentId;
+  }
+
+  public String getRoleARN() {
+    return roleARN;
+  }
+
+  public void setRoleARN(final String roleARN) {
+    this.roleARN = roleARN;
+  }
+
+  public RollbackConfiguration getRollbackConfiguration() {
+    return rollbackConfiguration;
+  }
+
+  public void setRollbackConfiguration(final RollbackConfiguration rollbackConfiguration) {
+    this.rollbackConfiguration = rollbackConfiguration;
+  }
+
+  public String getRootId() {
+    return rootId;
+  }
+
+  public void setRootId(final String rootId) {
+    this.rootId = rootId;
+  }
+
+  public String getStackId() {
     return stackId;
   }
 
-  public void setStackId( String stackId ) {
+  public void setStackId(final String stackId) {
     this.stackId = stackId;
   }
 
-  public String getStackName( ) {
+  public String getStackName() {
     return stackName;
   }
 
-  public void setStackName( String stackName ) {
+  public void setStackName(final String stackName) {
     this.stackName = stackName;
   }
 
-  public String getStackStatus( ) {
+  public String getStackStatus() {
     return stackStatus;
   }
 
-  public void setStackStatus( String stackStatus ) {
+  public void setStackStatus(final String stackStatus) {
     this.stackStatus = stackStatus;
   }
 
-  public String getStackStatusReason( ) {
+  public String getStackStatusReason() {
     return stackStatusReason;
   }
 
-  public void setStackStatusReason( String stackStatusReason ) {
+  public void setStackStatusReason(final String stackStatusReason) {
     this.stackStatusReason = stackStatusReason;
   }
 
-  public Tags getTags( ) {
+  public Tags getTags() {
     return tags;
   }
 
-  public void setTags( Tags tags ) {
+  public void setTags(final Tags tags) {
     this.tags = tags;
   }
 
-  public Integer getTimeoutInMinutes( ) {
+  public Integer getTimeoutInMinutes() {
     return timeoutInMinutes;
   }
 
-  public void setTimeoutInMinutes( Integer timeoutInMinutes ) {
+  public void setTimeoutInMinutes(final Integer timeoutInMinutes) {
     this.timeoutInMinutes = timeoutInMinutes;
   }
+
 }
