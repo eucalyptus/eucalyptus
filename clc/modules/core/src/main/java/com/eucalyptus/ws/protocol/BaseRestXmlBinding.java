@@ -117,7 +117,9 @@ public abstract class BaseRestXmlBinding<ERROR_RESPONSE extends BaseMessage & We
             ((ExceptionResponseType)httpResponse.getMessage( )).getMessage() ) );
       } else {
         final RestBinding.RestResponse restResponse = RestBinding.toRest( message );
-        httpResponse.setStatus( HttpResponseStatus.valueOf( restResponse.getStatus( ) ) );
+        if (httpResponse.getStatus() == null || httpResponse.getStatus()==HttpResponseStatus.OK) {
+          httpResponse.setStatus( HttpResponseStatus.valueOf( restResponse.getStatus( ) ) );
+        }
         for ( final Map.Entry<String, String> header : restResponse.getHeaders( ).entrySet( ) ) {
           httpResponse.setHeader( header.getKey( ), header.getValue( ) );
         }
