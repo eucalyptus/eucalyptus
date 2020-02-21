@@ -9,8 +9,6 @@ package com.eucalyptus.route53.common.msgs;
 
 import javax.annotation.Nonnull;
 import com.eucalyptus.route53.common.Route53MessageValidation.FieldRange;
-import com.eucalyptus.route53.common.Route53MessageValidation.FieldRegex;
-import com.eucalyptus.route53.common.Route53MessageValidation.FieldRegexValue;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
 
@@ -22,7 +20,6 @@ public class AlarmIdentifier extends EucalyptusData {
 
   @Nonnull
   @FieldRange(min = 1, max = 64)
-  @FieldRegex(FieldRegexValue.ENUM_CLOUDWATCHREGION)
   private String region;
 
   public String getName() {

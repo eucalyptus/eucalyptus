@@ -31,20 +31,16 @@ public class Route53MessageValidation {
     ENUM_ACCOUNTLIMITTYPE("MAX_HEALTH_CHECKS_BY_OWNER|MAX_HOSTED_ZONES_BY_OWNER|MAX_TRAFFIC_POLICY_INSTANCES_BY_OWNER|MAX_REUSABLE_DELEGATION_SETS_BY_OWNER|MAX_TRAFFIC_POLICIES_BY_OWNER"),
     ENUM_CHANGEACTION("CREATE|DELETE|UPSERT"),
     ENUM_CHANGESTATUS("PENDING|INSYNC"),
-    ENUM_CLOUDWATCHREGION("us-east-1|us-east-2|us-west-1|us-west-2|ca-central-1|eu-central-1|eu-west-1|eu-west-2|eu-west-3|ap-east-1|me-south-1|ap-south-1|ap-southeast-1|ap-southeast-2|ap-northeast-1|ap-northeast-2|ap-northeast-3|eu-north-1|sa-east-1|cn-northwest-1|cn-north-1"),
     ENUM_COMPARISONOPERATOR("GreaterThanOrEqualToThreshold|GreaterThanThreshold|LessThanThreshold|LessThanOrEqualToThreshold"),
-    ENUM_HEALTHCHECKREGION("us-east-1|us-west-1|us-west-2|eu-west-1|ap-southeast-1|ap-southeast-2|ap-northeast-1|sa-east-1"),
     ENUM_HEALTHCHECKTYPE("HTTP|HTTPS|HTTP_STR_MATCH|HTTPS_STR_MATCH|TCP|CALCULATED|CLOUDWATCH_METRIC"),
     ENUM_HOSTEDZONELIMITTYPE("MAX_RRSETS_BY_ZONE|MAX_VPCS_ASSOCIATED_BY_ZONE"),
     ENUM_INSUFFICIENTDATAHEALTHSTATUS("Healthy|Unhealthy|LastKnownStatus"),
     ENUM_RRTYPE("SOA|A|TXT|NS|CNAME|MX|NAPTR|PTR|SRV|SPF|AAAA|CAA"),
     ENUM_RESETTABLEELEMENTNAME("FullyQualifiedDomainName|Regions|ResourcePath|ChildHealthChecks"),
     ENUM_RESOURCERECORDSETFAILOVER("PRIMARY|SECONDARY"),
-    ENUM_RESOURCERECORDSETREGION("us-east-1|us-east-2|us-west-1|us-west-2|ca-central-1|eu-west-1|eu-west-2|eu-west-3|eu-central-1|ap-southeast-1|ap-southeast-2|ap-northeast-1|ap-northeast-2|ap-northeast-3|eu-north-1|sa-east-1|cn-north-1|cn-northwest-1|ap-east-1|me-south-1|ap-south-1"),
     ENUM_REUSABLEDELEGATIONSETLIMITTYPE("MAX_ZONES_BY_REUSABLE_DELEGATION_SET"),
     ENUM_STATISTIC("Average|Sum|SampleCount|Maximum|Minimum"),
     ENUM_TAGRESOURCETYPE("healthcheck|hostedzone"),
-    ENUM_VPCREGION("us-east-1|us-east-2|us-west-1|us-west-2|eu-west-1|eu-west-2|eu-west-3|eu-central-1|ap-east-1|me-south-1|ap-southeast-1|ap-southeast-2|ap-south-1|ap-northeast-1|ap-northeast-2|ap-northeast-3|eu-north-1|sa-east-1|ca-central-1|cn-north-1"),
     ;
 
     private final Pattern pattern;

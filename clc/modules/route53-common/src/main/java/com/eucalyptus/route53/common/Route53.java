@@ -13,6 +13,7 @@ import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.annotation.Description;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PublicService;
+import com.eucalyptus.util.techpreview.TechPreview;
 
 /**
  *
@@ -22,6 +23,7 @@ import com.eucalyptus.component.annotation.PublicService;
 @PolicyVendor("route53")
 @Partition(value = Route53.class, manyToOne = true)
 @Description("Route 53 API service")
+@TechPreview(enableByDefaultProperty = "enable.route53.tech.preview")
 public class Route53 extends ComponentId {
 
   private static final long serialVersionUID = 1L;

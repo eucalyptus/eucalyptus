@@ -33,7 +33,6 @@ public class ResourceRecordSet extends EucalyptusData {
   private String name;
 
   @FieldRange(min = 1, max = 64)
-  @FieldRegex(FieldRegexValue.ENUM_RESOURCERECORDSETREGION)
   private String region;
 
   @FieldRange(min = 1)

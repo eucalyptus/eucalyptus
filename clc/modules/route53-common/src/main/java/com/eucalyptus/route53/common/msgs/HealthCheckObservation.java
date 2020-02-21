@@ -8,8 +8,6 @@
 package com.eucalyptus.route53.common.msgs;
 
 import com.eucalyptus.route53.common.Route53MessageValidation.FieldRange;
-import com.eucalyptus.route53.common.Route53MessageValidation.FieldRegex;
-import com.eucalyptus.route53.common.Route53MessageValidation.FieldRegexValue;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
 
@@ -19,7 +17,6 @@ public class HealthCheckObservation extends EucalyptusData {
   private String iPAddress;
 
   @FieldRange(min = 1, max = 64)
-  @FieldRegex(FieldRegexValue.ENUM_HEALTHCHECKREGION)
   private String region;
 
   private StatusReport statusReport;
