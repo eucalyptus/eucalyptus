@@ -1,0 +1,22 @@
+<?xml version="1.0" standalone="yes"?>
+<!--
+  Copyright 2020 AppScale Systems, Inc
+
+  Use of this source code is governed by a BSD-2-Clause
+  license that can be found in the LICENSE file or at
+  https://opensource.org/licenses/BSD-2-Clause
+-->
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:int="http://www.springframework.org/schema/integration" xsi:schemaLocation="   http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd   http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd">
+  <int:channel id="route53-error"/>
+  <int:chain id="route53-request-chain" input-channel="route53-request">
+    <int:header-enricher>
+      <int:error-channel ref="route53-error"/>
+    </int:header-enricher>
+    <int:service-activator ref="route53Service">
+      <int:request-handler-advice-chain>
+        <ref bean="route53MessageValidator"/>
+      </int:request-handler-advice-chain>
+    </int:service-activator>
+  </int:chain>
+  <int:service-activator input-channel="route53-error" ref="route53ErrorHandler"/>
+</beans>
