@@ -50,29 +50,41 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 /**
  * Created by ethomas on 9/21/14.
  */
 public class TagHelper {
 
-  public static List<CloudFormationResourceTag> getCloudFormationResourceSystemTags(ResourceInfo resourceInfo, VersionedStackEntity stackEntity) throws CloudFormationException {
-    List<CloudFormationResourceTag> tags = Lists.newArrayList();
+  public static List<CloudFormationResourceTag> getCloudFormationResourceSystemTags(
+      final ResourceInfo resourceInfo,
+      final VersionedStackEntity stackEntity
+  ) {
+    return getCloudFormationResourceSystemTags(resourceInfo, stackEntity, Function.identity());
+  }
+
+  public static <TAG> List<TAG> getCloudFormationResourceSystemTags(
+      final ResourceInfo resourceInfo,
+      final VersionedStackEntity stackEntity,
+      final Function<? super CloudFormationResourceTag, ? extends TAG> transform
+  ) {
+    List<TAG> tags = Lists.newArrayList();
 
     CloudFormationResourceTag logicalIdTag = new CloudFormationResourceTag();
     logicalIdTag.setKey("aws:cloudformation:logical-id");
     logicalIdTag.setValue(resourceInfo.getLogicalResourceId());
-    tags.add(logicalIdTag);
+    tags.add(transform.apply(logicalIdTag));
 
     CloudFormationResourceTag stackIdTag = new CloudFormationResourceTag();
     stackIdTag.setKey("aws:cloudformation:stack-id");
     stackIdTag.setValue(stackEntity.getStackId());
-    tags.add(stackIdTag);
+    tags.add(transform.apply(stackIdTag));
 
     CloudFormationResourceTag stackNameTag = new CloudFormationResourceTag();
     stackNameTag.setKey("aws:cloudformation:stack-name");
     stackNameTag.setValue(stackEntity.getStackName());
-    tags.add(stackNameTag);
+    tags.add(transform.apply(stackNameTag));
     return tags;
   }
 
@@ -92,14 +104,21 @@ public class TagHelper {
   }
 
   public static List<CloudFormationResourceTag> getCloudFormationResourceStackTags(VersionedStackEntity stackEntity) throws CloudFormationException {
-    List<CloudFormationResourceTag> tags = Lists.newArrayList();
+    return getCloudFormationResourceStackTags(stackEntity, Function.identity());
+  }
+
+  public static <TAG> List<TAG> getCloudFormationResourceStackTags(
+      final VersionedStackEntity stackEntity,
+      final Function<? super CloudFormationResourceTag, ? extends TAG> transform
+  ) throws CloudFormationException {
+    List<TAG> tags = Lists.newArrayList();
     if (stackEntity.getTagsJson() != null) {
       List<Tag> stackTags = StackEntityHelper.jsonToTags(stackEntity.getTagsJson());
       for (Tag stackTag : stackTags) {
         CloudFormationResourceTag cloudFormationResourceTag = new CloudFormationResourceTag();
         cloudFormationResourceTag.setKey(stackTag.getKey());
         cloudFormationResourceTag.setValue(stackTag.getValue());
-        tags.add(cloudFormationResourceTag);
+        tags.add(transform.apply(cloudFormationResourceTag));
       }
     }
     return tags;
@@ -156,6 +175,15 @@ public class TagHelper {
   }
 
   private static List<String> reservedPrefixes = Lists.newArrayList("euca:","aws:");
+  public static void checkReservedTemplateTags(Iterable<String> tagKeys) throws ValidationErrorException {
+    if (tagKeys == null) return;
+    for (final String tagKey : tagKeys) {
+      if (Iterables.any(reservedPrefixes, Strings.isPrefixOf(tagKey))) {
+        throw new ValidationErrorException("Tag " + tagKey + " uses a reserved prefix " + reservedPrefixes);
+      }
+    }
+  }
+
   public static void checkReservedAutoScalingTemplateTags(Collection<AutoScalingTag> tags) throws ValidationErrorException {
     if (tags == null) return;
     List<String> tagNames = Lists.newArrayList();
