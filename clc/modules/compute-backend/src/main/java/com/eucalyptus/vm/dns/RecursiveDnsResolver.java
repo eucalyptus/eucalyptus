@@ -248,7 +248,7 @@ public class RecursiveDnsResolver extends DnsResolver {
 
   @Override
   public int getOrder( ) {
-    return DEFAULT_ORDER + 1;
+    return DEFAULT_ORDER + 500;
   }
 
   @Override
