@@ -17,7 +17,6 @@
   </mapping>
   <mapping class="com.eucalyptus.route53.common.msgs.ErrorDetail" abstract="true"/>
   <mapping name="ErrorResponse" class="com.eucalyptus.route53.common.msgs.ErrorResponse">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <collection field="error">
       <structure name="Error" type="com.eucalyptus.route53.common.msgs.Error"/>
     </collection>
@@ -25,41 +24,32 @@
   </mapping>
   <mapping class="com.eucalyptus.route53.common.msgs.Route53Message" abstract="true"/>
   <mapping name="AssociateVPCWithHostedZoneRequest" class="com.eucalyptus.route53.common.msgs.AssociateVPCWithHostedZoneType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="Comment" get-method="getComment" set-method="setComment" usage="optional"/>
     <structure get-method="getVPC" set-method="setVPC" usage="optional" type="com.eucalyptus.route53.common.msgs.VPC" name="VPC"/>
   </mapping>
   <mapping name="AssociateVPCWithHostedZoneResponse" class="com.eucalyptus.route53.common.msgs.AssociateVPCWithHostedZoneResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getChangeInfo" set-method="setChangeInfo" usage="optional" type="com.eucalyptus.route53.common.msgs.ChangeInfo" name="ChangeInfo"/>
   </mapping>
   <mapping name="ChangeResourceRecordSetsRequest" class="com.eucalyptus.route53.common.msgs.ChangeResourceRecordSetsType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getChangeBatch" set-method="setChangeBatch" usage="optional" type="com.eucalyptus.route53.common.msgs.ChangeBatch" name="ChangeBatch"/>
   </mapping>
   <mapping name="ChangeResourceRecordSetsResponse" class="com.eucalyptus.route53.common.msgs.ChangeResourceRecordSetsResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getChangeInfo" set-method="setChangeInfo" usage="optional" type="com.eucalyptus.route53.common.msgs.ChangeInfo" name="ChangeInfo"/>
   </mapping>
   <mapping name="ChangeTagsForResourceRequest" class="com.eucalyptus.route53.common.msgs.ChangeTagsForResourceType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getAddTags" set-method="setAddTags" usage="optional" type="com.eucalyptus.route53.common.msgs.TagList" name="AddTags"/>
     <structure get-method="getRemoveTagKeys" set-method="setRemoveTagKeys" usage="optional" type="com.eucalyptus.route53.common.msgs.TagKeyList" name="RemoveTagKeys"/>
   </mapping>
   <mapping name="ChangeTagsForResourceResponse" class="com.eucalyptus.route53.common.msgs.ChangeTagsForResourceResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="CreateHealthCheckRequest" class="com.eucalyptus.route53.common.msgs.CreateHealthCheckType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="CallerReference" get-method="getCallerReference" set-method="setCallerReference" usage="optional"/>
     <structure get-method="getHealthCheckConfig" set-method="setHealthCheckConfig" usage="optional" type="com.eucalyptus.route53.common.msgs.HealthCheckConfig" name="HealthCheckConfig"/>
   </mapping>
   <mapping name="CreateHealthCheckResponse" class="com.eucalyptus.route53.common.msgs.CreateHealthCheckResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getHealthCheck" set-method="setHealthCheck" usage="optional" type="com.eucalyptus.route53.common.msgs.HealthCheck" name="HealthCheck"/>
   </mapping>
   <mapping name="CreateHostedZoneRequest" class="com.eucalyptus.route53.common.msgs.CreateHostedZoneType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="CallerReference" get-method="getCallerReference" set-method="setCallerReference" usage="optional"/>
     <value name="DelegationSetId" get-method="getDelegationSetId" set-method="setDelegationSetId" usage="optional"/>
     <structure get-method="getHostedZoneConfig" set-method="setHostedZoneConfig" usage="optional" type="com.eucalyptus.route53.common.msgs.HostedZoneConfig" name="HostedZoneConfig"/>
@@ -67,42 +57,34 @@
     <structure get-method="getVPC" set-method="setVPC" usage="optional" type="com.eucalyptus.route53.common.msgs.VPC" name="VPC"/>
   </mapping>
   <mapping name="CreateHostedZoneResponse" class="com.eucalyptus.route53.common.msgs.CreateHostedZoneResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getChangeInfo" set-method="setChangeInfo" usage="optional" type="com.eucalyptus.route53.common.msgs.ChangeInfo" name="ChangeInfo"/>
     <structure get-method="getDelegationSet" set-method="setDelegationSet" usage="optional" type="com.eucalyptus.route53.common.msgs.DelegationSet" name="DelegationSet"/>
     <structure get-method="getHostedZone" set-method="setHostedZone" usage="optional" type="com.eucalyptus.route53.common.msgs.HostedZone" name="HostedZone"/>
     <structure get-method="getVPC" set-method="setVPC" usage="optional" type="com.eucalyptus.route53.common.msgs.VPC" name="VPC"/>
   </mapping>
   <mapping name="CreateQueryLoggingConfigRequest" class="com.eucalyptus.route53.common.msgs.CreateQueryLoggingConfigType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="CloudWatchLogsLogGroupArn" get-method="getCloudWatchLogsLogGroupArn" set-method="setCloudWatchLogsLogGroupArn" usage="optional"/>
     <value name="HostedZoneId" get-method="getHostedZoneId" set-method="setHostedZoneId" usage="optional"/>
   </mapping>
   <mapping name="CreateQueryLoggingConfigResponse" class="com.eucalyptus.route53.common.msgs.CreateQueryLoggingConfigResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getQueryLoggingConfig" set-method="setQueryLoggingConfig" usage="optional" type="com.eucalyptus.route53.common.msgs.QueryLoggingConfig" name="QueryLoggingConfig"/>
   </mapping>
   <mapping name="CreateReusableDelegationSetRequest" class="com.eucalyptus.route53.common.msgs.CreateReusableDelegationSetType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="CallerReference" get-method="getCallerReference" set-method="setCallerReference" usage="optional"/>
     <value name="HostedZoneId" get-method="getHostedZoneId" set-method="setHostedZoneId" usage="optional"/>
   </mapping>
   <mapping name="CreateReusableDelegationSetResponse" class="com.eucalyptus.route53.common.msgs.CreateReusableDelegationSetResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getDelegationSet" set-method="setDelegationSet" usage="optional" type="com.eucalyptus.route53.common.msgs.DelegationSet" name="DelegationSet"/>
   </mapping>
   <mapping name="CreateTrafficPolicyRequest" class="com.eucalyptus.route53.common.msgs.CreateTrafficPolicyType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="Comment" get-method="getComment" set-method="setComment" usage="optional"/>
     <value name="Document" get-method="getDocument" set-method="setDocument" usage="optional"/>
     <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
   </mapping>
   <mapping name="CreateTrafficPolicyResponse" class="com.eucalyptus.route53.common.msgs.CreateTrafficPolicyResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getTrafficPolicy" set-method="setTrafficPolicy" usage="optional" type="com.eucalyptus.route53.common.msgs.TrafficPolicy" name="TrafficPolicy"/>
   </mapping>
   <mapping name="CreateTrafficPolicyInstanceRequest" class="com.eucalyptus.route53.common.msgs.CreateTrafficPolicyInstanceType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="HostedZoneId" get-method="getHostedZoneId" set-method="setHostedZoneId" usage="optional"/>
     <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
     <value name="TTL" get-method="getTTL" set-method="setTTL" usage="optional"/>
@@ -110,209 +92,152 @@
     <value name="TrafficPolicyVersion" get-method="getTrafficPolicyVersion" set-method="setTrafficPolicyVersion" usage="optional"/>
   </mapping>
   <mapping name="CreateTrafficPolicyInstanceResponse" class="com.eucalyptus.route53.common.msgs.CreateTrafficPolicyInstanceResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getTrafficPolicyInstance" set-method="setTrafficPolicyInstance" usage="optional" type="com.eucalyptus.route53.common.msgs.TrafficPolicyInstance" name="TrafficPolicyInstance"/>
   </mapping>
   <mapping name="CreateTrafficPolicyVersionRequest" class="com.eucalyptus.route53.common.msgs.CreateTrafficPolicyVersionType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="Comment" get-method="getComment" set-method="setComment" usage="optional"/>
     <value name="Document" get-method="getDocument" set-method="setDocument" usage="optional"/>
   </mapping>
   <mapping name="CreateTrafficPolicyVersionResponse" class="com.eucalyptus.route53.common.msgs.CreateTrafficPolicyVersionResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getTrafficPolicy" set-method="setTrafficPolicy" usage="optional" type="com.eucalyptus.route53.common.msgs.TrafficPolicy" name="TrafficPolicy"/>
   </mapping>
   <mapping name="CreateVPCAssociationAuthorizationRequest" class="com.eucalyptus.route53.common.msgs.CreateVPCAssociationAuthorizationType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getVPC" set-method="setVPC" usage="optional" type="com.eucalyptus.route53.common.msgs.VPC" name="VPC"/>
   </mapping>
   <mapping name="CreateVPCAssociationAuthorizationResponse" class="com.eucalyptus.route53.common.msgs.CreateVPCAssociationAuthorizationResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="HostedZoneId" get-method="getHostedZoneId" set-method="setHostedZoneId" usage="optional"/>
     <structure get-method="getVPC" set-method="setVPC" usage="optional" type="com.eucalyptus.route53.common.msgs.VPC" name="VPC"/>
   </mapping>
   <mapping name="DeleteHealthCheck" class="com.eucalyptus.route53.common.msgs.DeleteHealthCheckType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="DeleteHealthCheckResponse" class="com.eucalyptus.route53.common.msgs.DeleteHealthCheckResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="DeleteHostedZone" class="com.eucalyptus.route53.common.msgs.DeleteHostedZoneType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="DeleteHostedZoneResponse" class="com.eucalyptus.route53.common.msgs.DeleteHostedZoneResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getChangeInfo" set-method="setChangeInfo" usage="optional" type="com.eucalyptus.route53.common.msgs.ChangeInfo" name="ChangeInfo"/>
   </mapping>
   <mapping name="DeleteQueryLoggingConfig" class="com.eucalyptus.route53.common.msgs.DeleteQueryLoggingConfigType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="DeleteQueryLoggingConfigResponse" class="com.eucalyptus.route53.common.msgs.DeleteQueryLoggingConfigResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="DeleteReusableDelegationSet" class="com.eucalyptus.route53.common.msgs.DeleteReusableDelegationSetType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="DeleteReusableDelegationSetResponse" class="com.eucalyptus.route53.common.msgs.DeleteReusableDelegationSetResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="DeleteTrafficPolicy" class="com.eucalyptus.route53.common.msgs.DeleteTrafficPolicyType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="DeleteTrafficPolicyResponse" class="com.eucalyptus.route53.common.msgs.DeleteTrafficPolicyResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="DeleteTrafficPolicyInstance" class="com.eucalyptus.route53.common.msgs.DeleteTrafficPolicyInstanceType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="DeleteTrafficPolicyInstanceResponse" class="com.eucalyptus.route53.common.msgs.DeleteTrafficPolicyInstanceResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="DeleteVPCAssociationAuthorizationRequest" class="com.eucalyptus.route53.common.msgs.DeleteVPCAssociationAuthorizationType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getVPC" set-method="setVPC" usage="optional" type="com.eucalyptus.route53.common.msgs.VPC" name="VPC"/>
   </mapping>
   <mapping name="DeleteVPCAssociationAuthorizationResponse" class="com.eucalyptus.route53.common.msgs.DeleteVPCAssociationAuthorizationResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="DisassociateVPCFromHostedZoneRequest" class="com.eucalyptus.route53.common.msgs.DisassociateVPCFromHostedZoneType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="Comment" get-method="getComment" set-method="setComment" usage="optional"/>
     <structure get-method="getVPC" set-method="setVPC" usage="optional" type="com.eucalyptus.route53.common.msgs.VPC" name="VPC"/>
   </mapping>
   <mapping name="DisassociateVPCFromHostedZoneResponse" class="com.eucalyptus.route53.common.msgs.DisassociateVPCFromHostedZoneResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getChangeInfo" set-method="setChangeInfo" usage="optional" type="com.eucalyptus.route53.common.msgs.ChangeInfo" name="ChangeInfo"/>
   </mapping>
   <mapping name="GetAccountLimit" class="com.eucalyptus.route53.common.msgs.GetAccountLimitType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="GetAccountLimitResponse" class="com.eucalyptus.route53.common.msgs.GetAccountLimitResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="Count" get-method="getCount" set-method="setCount" usage="optional"/>
     <structure get-method="getLimit" set-method="setLimit" usage="optional" type="com.eucalyptus.route53.common.msgs.AccountLimit" name="Limit"/>
   </mapping>
   <mapping name="GetChange" class="com.eucalyptus.route53.common.msgs.GetChangeType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="GetChangeResponse" class="com.eucalyptus.route53.common.msgs.GetChangeResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getChangeInfo" set-method="setChangeInfo" usage="optional" type="com.eucalyptus.route53.common.msgs.ChangeInfo" name="ChangeInfo"/>
   </mapping>
   <mapping name="GetCheckerIpRanges" class="com.eucalyptus.route53.common.msgs.GetCheckerIpRangesType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="GetCheckerIpRangesResponse" class="com.eucalyptus.route53.common.msgs.GetCheckerIpRangesResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getCheckerIpRanges" set-method="setCheckerIpRanges" usage="optional" type="com.eucalyptus.route53.common.msgs.CheckerIpRanges" name="CheckerIpRanges"/>
   </mapping>
   <mapping name="GetGeoLocation" class="com.eucalyptus.route53.common.msgs.GetGeoLocationType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="GetGeoLocationResponse" class="com.eucalyptus.route53.common.msgs.GetGeoLocationResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getGeoLocationDetails" set-method="setGeoLocationDetails" usage="optional" type="com.eucalyptus.route53.common.msgs.GeoLocationDetails" name="GeoLocationDetails"/>
   </mapping>
   <mapping name="GetHealthCheck" class="com.eucalyptus.route53.common.msgs.GetHealthCheckType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="GetHealthCheckResponse" class="com.eucalyptus.route53.common.msgs.GetHealthCheckResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getHealthCheck" set-method="setHealthCheck" usage="optional" type="com.eucalyptus.route53.common.msgs.HealthCheck" name="HealthCheck"/>
   </mapping>
   <mapping name="GetHealthCheckCount" class="com.eucalyptus.route53.common.msgs.GetHealthCheckCountType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="GetHealthCheckCountResponse" class="com.eucalyptus.route53.common.msgs.GetHealthCheckCountResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="HealthCheckCount" get-method="getHealthCheckCount" set-method="setHealthCheckCount" usage="optional"/>
   </mapping>
   <mapping name="GetHealthCheckLastFailureReason" class="com.eucalyptus.route53.common.msgs.GetHealthCheckLastFailureReasonType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="GetHealthCheckLastFailureReasonResponse" class="com.eucalyptus.route53.common.msgs.GetHealthCheckLastFailureReasonResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getHealthCheckObservations" set-method="setHealthCheckObservations" usage="optional" type="com.eucalyptus.route53.common.msgs.HealthCheckObservations" name="HealthCheckObservations"/>
   </mapping>
   <mapping name="GetHealthCheckStatus" class="com.eucalyptus.route53.common.msgs.GetHealthCheckStatusType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="GetHealthCheckStatusResponse" class="com.eucalyptus.route53.common.msgs.GetHealthCheckStatusResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getHealthCheckObservations" set-method="setHealthCheckObservations" usage="optional" type="com.eucalyptus.route53.common.msgs.HealthCheckObservations" name="HealthCheckObservations"/>
   </mapping>
   <mapping name="GetHostedZone" class="com.eucalyptus.route53.common.msgs.GetHostedZoneType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="GetHostedZoneResponse" class="com.eucalyptus.route53.common.msgs.GetHostedZoneResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getDelegationSet" set-method="setDelegationSet" usage="optional" type="com.eucalyptus.route53.common.msgs.DelegationSet" name="DelegationSet"/>
     <structure get-method="getHostedZone" set-method="setHostedZone" usage="optional" type="com.eucalyptus.route53.common.msgs.HostedZone" name="HostedZone"/>
     <structure get-method="getVPCs" set-method="setVPCs" usage="optional" type="com.eucalyptus.route53.common.msgs.VPCs" name="VPCs"/>
   </mapping>
   <mapping name="GetHostedZoneCount" class="com.eucalyptus.route53.common.msgs.GetHostedZoneCountType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="GetHostedZoneCountResponse" class="com.eucalyptus.route53.common.msgs.GetHostedZoneCountResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="HostedZoneCount" get-method="getHostedZoneCount" set-method="setHostedZoneCount" usage="optional"/>
   </mapping>
   <mapping name="GetHostedZoneLimit" class="com.eucalyptus.route53.common.msgs.GetHostedZoneLimitType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="GetHostedZoneLimitResponse" class="com.eucalyptus.route53.common.msgs.GetHostedZoneLimitResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="Count" get-method="getCount" set-method="setCount" usage="optional"/>
     <structure get-method="getLimit" set-method="setLimit" usage="optional" type="com.eucalyptus.route53.common.msgs.HostedZoneLimit" name="Limit"/>
   </mapping>
   <mapping name="GetQueryLoggingConfig" class="com.eucalyptus.route53.common.msgs.GetQueryLoggingConfigType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="GetQueryLoggingConfigResponse" class="com.eucalyptus.route53.common.msgs.GetQueryLoggingConfigResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getQueryLoggingConfig" set-method="setQueryLoggingConfig" usage="optional" type="com.eucalyptus.route53.common.msgs.QueryLoggingConfig" name="QueryLoggingConfig"/>
   </mapping>
   <mapping name="GetReusableDelegationSet" class="com.eucalyptus.route53.common.msgs.GetReusableDelegationSetType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="GetReusableDelegationSetResponse" class="com.eucalyptus.route53.common.msgs.GetReusableDelegationSetResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getDelegationSet" set-method="setDelegationSet" usage="optional" type="com.eucalyptus.route53.common.msgs.DelegationSet" name="DelegationSet"/>
   </mapping>
   <mapping name="GetReusableDelegationSetLimit" class="com.eucalyptus.route53.common.msgs.GetReusableDelegationSetLimitType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="GetReusableDelegationSetLimitResponse" class="com.eucalyptus.route53.common.msgs.GetReusableDelegationSetLimitResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="Count" get-method="getCount" set-method="setCount" usage="optional"/>
     <structure get-method="getLimit" set-method="setLimit" usage="optional" type="com.eucalyptus.route53.common.msgs.ReusableDelegationSetLimit" name="Limit"/>
   </mapping>
   <mapping name="GetTrafficPolicy" class="com.eucalyptus.route53.common.msgs.GetTrafficPolicyType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="GetTrafficPolicyResponse" class="com.eucalyptus.route53.common.msgs.GetTrafficPolicyResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getTrafficPolicy" set-method="setTrafficPolicy" usage="optional" type="com.eucalyptus.route53.common.msgs.TrafficPolicy" name="TrafficPolicy"/>
   </mapping>
   <mapping name="GetTrafficPolicyInstance" class="com.eucalyptus.route53.common.msgs.GetTrafficPolicyInstanceType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="GetTrafficPolicyInstanceResponse" class="com.eucalyptus.route53.common.msgs.GetTrafficPolicyInstanceResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getTrafficPolicyInstance" set-method="setTrafficPolicyInstance" usage="optional" type="com.eucalyptus.route53.common.msgs.TrafficPolicyInstance" name="TrafficPolicyInstance"/>
   </mapping>
   <mapping name="GetTrafficPolicyInstanceCount" class="com.eucalyptus.route53.common.msgs.GetTrafficPolicyInstanceCountType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="GetTrafficPolicyInstanceCountResponse" class="com.eucalyptus.route53.common.msgs.GetTrafficPolicyInstanceCountResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="TrafficPolicyInstanceCount" get-method="getTrafficPolicyInstanceCount" set-method="setTrafficPolicyInstanceCount" usage="optional"/>
   </mapping>
   <mapping name="ListGeoLocations" class="com.eucalyptus.route53.common.msgs.ListGeoLocationsType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="ListGeoLocationsResponse" class="com.eucalyptus.route53.common.msgs.ListGeoLocationsResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getGeoLocationDetailsList" set-method="setGeoLocationDetailsList" usage="optional" type="com.eucalyptus.route53.common.msgs.GeoLocationDetailsList" name="GeoLocationDetailsList"/>
     <value name="IsTruncated" get-method="getIsTruncated" set-method="setIsTruncated" usage="optional"/>
     <value name="MaxItems" get-method="getMaxItems" set-method="setMaxItems" usage="optional"/>
@@ -321,10 +246,8 @@
     <value name="NextSubdivisionCode" get-method="getNextSubdivisionCode" set-method="setNextSubdivisionCode" usage="optional"/>
   </mapping>
   <mapping name="ListHealthChecks" class="com.eucalyptus.route53.common.msgs.ListHealthChecksType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="ListHealthChecksResponse" class="com.eucalyptus.route53.common.msgs.ListHealthChecksResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getHealthChecks" set-method="setHealthChecks" usage="optional" type="com.eucalyptus.route53.common.msgs.HealthChecks" name="HealthChecks"/>
     <value name="IsTruncated" get-method="getIsTruncated" set-method="setIsTruncated" usage="optional"/>
     <value name="Marker" get-method="getMarker" set-method="setMarker" usage="optional"/>
@@ -332,10 +255,8 @@
     <value name="NextMarker" get-method="getNextMarker" set-method="setNextMarker" usage="optional"/>
   </mapping>
   <mapping name="ListHostedZones" class="com.eucalyptus.route53.common.msgs.ListHostedZonesType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="ListHostedZonesResponse" class="com.eucalyptus.route53.common.msgs.ListHostedZonesResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getHostedZones" set-method="setHostedZones" usage="optional" type="com.eucalyptus.route53.common.msgs.HostedZones" name="HostedZones"/>
     <value name="IsTruncated" get-method="getIsTruncated" set-method="setIsTruncated" usage="optional"/>
     <value name="Marker" get-method="getMarker" set-method="setMarker" usage="optional"/>
@@ -343,10 +264,8 @@
     <value name="NextMarker" get-method="getNextMarker" set-method="setNextMarker" usage="optional"/>
   </mapping>
   <mapping name="ListHostedZonesByName" class="com.eucalyptus.route53.common.msgs.ListHostedZonesByNameType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="ListHostedZonesByNameResponse" class="com.eucalyptus.route53.common.msgs.ListHostedZonesByNameResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="DNSName" get-method="getDNSName" set-method="setDNSName" usage="optional"/>
     <value name="HostedZoneId" get-method="getHostedZoneId" set-method="setHostedZoneId" usage="optional"/>
     <structure get-method="getHostedZones" set-method="setHostedZones" usage="optional" type="com.eucalyptus.route53.common.msgs.HostedZones" name="HostedZones"/>
@@ -356,18 +275,14 @@
     <value name="NextHostedZoneId" get-method="getNextHostedZoneId" set-method="setNextHostedZoneId" usage="optional"/>
   </mapping>
   <mapping name="ListQueryLoggingConfigs" class="com.eucalyptus.route53.common.msgs.ListQueryLoggingConfigsType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="ListQueryLoggingConfigsResponse" class="com.eucalyptus.route53.common.msgs.ListQueryLoggingConfigsResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
     <structure get-method="getQueryLoggingConfigs" set-method="setQueryLoggingConfigs" usage="optional" type="com.eucalyptus.route53.common.msgs.QueryLoggingConfigs" name="QueryLoggingConfigs"/>
   </mapping>
   <mapping name="ListResourceRecordSets" class="com.eucalyptus.route53.common.msgs.ListResourceRecordSetsType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="ListResourceRecordSetsResponse" class="com.eucalyptus.route53.common.msgs.ListResourceRecordSetsResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="IsTruncated" get-method="getIsTruncated" set-method="setIsTruncated" usage="optional"/>
     <value name="MaxItems" get-method="getMaxItems" set-method="setMaxItems" usage="optional"/>
     <value name="NextRecordIdentifier" get-method="getNextRecordIdentifier" set-method="setNextRecordIdentifier" usage="optional"/>
@@ -376,10 +291,8 @@
     <structure get-method="getResourceRecordSets" set-method="setResourceRecordSets" usage="optional" type="com.eucalyptus.route53.common.msgs.ResourceRecordSets" name="ResourceRecordSets"/>
   </mapping>
   <mapping name="ListReusableDelegationSets" class="com.eucalyptus.route53.common.msgs.ListReusableDelegationSetsType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="ListReusableDelegationSetsResponse" class="com.eucalyptus.route53.common.msgs.ListReusableDelegationSetsResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getDelegationSets" set-method="setDelegationSets" usage="optional" type="com.eucalyptus.route53.common.msgs.DelegationSets" name="DelegationSets"/>
     <value name="IsTruncated" get-method="getIsTruncated" set-method="setIsTruncated" usage="optional"/>
     <value name="Marker" get-method="getMarker" set-method="setMarker" usage="optional"/>
@@ -387,35 +300,27 @@
     <value name="NextMarker" get-method="getNextMarker" set-method="setNextMarker" usage="optional"/>
   </mapping>
   <mapping name="ListTagsForResource" class="com.eucalyptus.route53.common.msgs.ListTagsForResourceType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="ListTagsForResourceResponse" class="com.eucalyptus.route53.common.msgs.ListTagsForResourceResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getResourceTagSet" set-method="setResourceTagSet" usage="optional" type="com.eucalyptus.route53.common.msgs.ResourceTagSet" name="ResourceTagSet"/>
   </mapping>
   <mapping name="ListTagsForResourcesRequest" class="com.eucalyptus.route53.common.msgs.ListTagsForResourcesType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getResourceIds" set-method="setResourceIds" usage="optional" type="com.eucalyptus.route53.common.msgs.TagResourceIdList" name="ResourceIds"/>
   </mapping>
   <mapping name="ListTagsForResourcesResponse" class="com.eucalyptus.route53.common.msgs.ListTagsForResourcesResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getResourceTagSets" set-method="setResourceTagSets" usage="optional" type="com.eucalyptus.route53.common.msgs.ResourceTagSetList" name="ResourceTagSets"/>
   </mapping>
   <mapping name="ListTrafficPolicies" class="com.eucalyptus.route53.common.msgs.ListTrafficPoliciesType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="ListTrafficPoliciesResponse" class="com.eucalyptus.route53.common.msgs.ListTrafficPoliciesResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="IsTruncated" get-method="getIsTruncated" set-method="setIsTruncated" usage="optional"/>
     <value name="MaxItems" get-method="getMaxItems" set-method="setMaxItems" usage="optional"/>
     <value name="TrafficPolicyIdMarker" get-method="getTrafficPolicyIdMarker" set-method="setTrafficPolicyIdMarker" usage="optional"/>
     <structure get-method="getTrafficPolicySummaries" set-method="setTrafficPolicySummaries" usage="optional" type="com.eucalyptus.route53.common.msgs.TrafficPolicySummaries" name="TrafficPolicySummaries"/>
   </mapping>
   <mapping name="ListTrafficPolicyInstances" class="com.eucalyptus.route53.common.msgs.ListTrafficPolicyInstancesType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="ListTrafficPolicyInstancesResponse" class="com.eucalyptus.route53.common.msgs.ListTrafficPolicyInstancesResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="HostedZoneIdMarker" get-method="getHostedZoneIdMarker" set-method="setHostedZoneIdMarker" usage="optional"/>
     <value name="IsTruncated" get-method="getIsTruncated" set-method="setIsTruncated" usage="optional"/>
     <value name="MaxItems" get-method="getMaxItems" set-method="setMaxItems" usage="optional"/>
@@ -424,10 +329,8 @@
     <structure get-method="getTrafficPolicyInstances" set-method="setTrafficPolicyInstances" usage="optional" type="com.eucalyptus.route53.common.msgs.TrafficPolicyInstances" name="TrafficPolicyInstances"/>
   </mapping>
   <mapping name="ListTrafficPolicyInstancesByHostedZone" class="com.eucalyptus.route53.common.msgs.ListTrafficPolicyInstancesByHostedZoneType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="ListTrafficPolicyInstancesByHostedZoneResponse" class="com.eucalyptus.route53.common.msgs.ListTrafficPolicyInstancesByHostedZoneResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="IsTruncated" get-method="getIsTruncated" set-method="setIsTruncated" usage="optional"/>
     <value name="MaxItems" get-method="getMaxItems" set-method="setMaxItems" usage="optional"/>
     <value name="TrafficPolicyInstanceNameMarker" get-method="getTrafficPolicyInstanceNameMarker" set-method="setTrafficPolicyInstanceNameMarker" usage="optional"/>
@@ -435,10 +338,8 @@
     <structure get-method="getTrafficPolicyInstances" set-method="setTrafficPolicyInstances" usage="optional" type="com.eucalyptus.route53.common.msgs.TrafficPolicyInstances" name="TrafficPolicyInstances"/>
   </mapping>
   <mapping name="ListTrafficPolicyInstancesByPolicy" class="com.eucalyptus.route53.common.msgs.ListTrafficPolicyInstancesByPolicyType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="ListTrafficPolicyInstancesByPolicyResponse" class="com.eucalyptus.route53.common.msgs.ListTrafficPolicyInstancesByPolicyResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="HostedZoneIdMarker" get-method="getHostedZoneIdMarker" set-method="setHostedZoneIdMarker" usage="optional"/>
     <value name="IsTruncated" get-method="getIsTruncated" set-method="setIsTruncated" usage="optional"/>
     <value name="MaxItems" get-method="getMaxItems" set-method="setMaxItems" usage="optional"/>
@@ -447,29 +348,23 @@
     <structure get-method="getTrafficPolicyInstances" set-method="setTrafficPolicyInstances" usage="optional" type="com.eucalyptus.route53.common.msgs.TrafficPolicyInstances" name="TrafficPolicyInstances"/>
   </mapping>
   <mapping name="ListTrafficPolicyVersions" class="com.eucalyptus.route53.common.msgs.ListTrafficPolicyVersionsType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="ListTrafficPolicyVersionsResponse" class="com.eucalyptus.route53.common.msgs.ListTrafficPolicyVersionsResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="IsTruncated" get-method="getIsTruncated" set-method="setIsTruncated" usage="optional"/>
     <value name="MaxItems" get-method="getMaxItems" set-method="setMaxItems" usage="optional"/>
     <structure get-method="getTrafficPolicies" set-method="setTrafficPolicies" usage="optional" type="com.eucalyptus.route53.common.msgs.TrafficPolicies" name="TrafficPolicies"/>
     <value name="TrafficPolicyVersionMarker" get-method="getTrafficPolicyVersionMarker" set-method="setTrafficPolicyVersionMarker" usage="optional"/>
   </mapping>
   <mapping name="ListVPCAssociationAuthorizations" class="com.eucalyptus.route53.common.msgs.ListVPCAssociationAuthorizationsType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="ListVPCAssociationAuthorizationsResponse" class="com.eucalyptus.route53.common.msgs.ListVPCAssociationAuthorizationsResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="HostedZoneId" get-method="getHostedZoneId" set-method="setHostedZoneId" usage="optional"/>
     <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
     <structure get-method="getVPCs" set-method="setVPCs" usage="optional" type="com.eucalyptus.route53.common.msgs.VPCs" name="VPCs"/>
   </mapping>
   <mapping name="TestDNSAnswer" class="com.eucalyptus.route53.common.msgs.TestDNSAnswerType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
   </mapping>
   <mapping name="TestDNSAnswerResponse" class="com.eucalyptus.route53.common.msgs.TestDNSAnswerResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="Nameserver" get-method="getNameserver" set-method="setNameserver" usage="optional"/>
     <value name="Protocol" get-method="getProtocol" set-method="setProtocol" usage="optional"/>
     <structure get-method="getRecordData" set-method="setRecordData" usage="optional" type="com.eucalyptus.route53.common.msgs.RecordData" name="RecordData"/>
@@ -478,7 +373,6 @@
     <value name="ResponseCode" get-method="getResponseCode" set-method="setResponseCode" usage="optional"/>
   </mapping>
   <mapping name="UpdateHealthCheckRequest" class="com.eucalyptus.route53.common.msgs.UpdateHealthCheckType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getAlarmIdentifier" set-method="setAlarmIdentifier" usage="optional" type="com.eucalyptus.route53.common.msgs.AlarmIdentifier" name="AlarmIdentifier"/>
     <structure get-method="getChildHealthChecks" set-method="setChildHealthChecks" usage="optional" type="com.eucalyptus.route53.common.msgs.ChildHealthCheckList" name="ChildHealthChecks"/>
     <value name="Disabled" get-method="getDisabled" set-method="setDisabled" usage="optional"/>
@@ -497,33 +391,26 @@
     <value name="SearchString" get-method="getSearchString" set-method="setSearchString" usage="optional"/>
   </mapping>
   <mapping name="UpdateHealthCheckResponse" class="com.eucalyptus.route53.common.msgs.UpdateHealthCheckResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getHealthCheck" set-method="setHealthCheck" usage="optional" type="com.eucalyptus.route53.common.msgs.HealthCheck" name="HealthCheck"/>
   </mapping>
   <mapping name="UpdateHostedZoneCommentRequest" class="com.eucalyptus.route53.common.msgs.UpdateHostedZoneCommentType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="Comment" get-method="getComment" set-method="setComment" usage="optional"/>
   </mapping>
   <mapping name="UpdateHostedZoneCommentResponse" class="com.eucalyptus.route53.common.msgs.UpdateHostedZoneCommentResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getHostedZone" set-method="setHostedZone" usage="optional" type="com.eucalyptus.route53.common.msgs.HostedZone" name="HostedZone"/>
   </mapping>
   <mapping name="UpdateTrafficPolicyCommentRequest" class="com.eucalyptus.route53.common.msgs.UpdateTrafficPolicyCommentType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="Comment" get-method="getComment" set-method="setComment" usage="optional"/>
   </mapping>
   <mapping name="UpdateTrafficPolicyCommentResponse" class="com.eucalyptus.route53.common.msgs.UpdateTrafficPolicyCommentResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getTrafficPolicy" set-method="setTrafficPolicy" usage="optional" type="com.eucalyptus.route53.common.msgs.TrafficPolicy" name="TrafficPolicy"/>
   </mapping>
   <mapping name="UpdateTrafficPolicyInstanceRequest" class="com.eucalyptus.route53.common.msgs.UpdateTrafficPolicyInstanceType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <value name="TTL" get-method="getTTL" set-method="setTTL" usage="optional"/>
     <value name="TrafficPolicyId" get-method="getTrafficPolicyId" set-method="setTrafficPolicyId" usage="optional"/>
     <value name="TrafficPolicyVersion" get-method="getTrafficPolicyVersion" set-method="setTrafficPolicyVersion" usage="optional"/>
   </mapping>
   <mapping name="UpdateTrafficPolicyInstanceResponse" class="com.eucalyptus.route53.common.msgs.UpdateTrafficPolicyInstanceResponseType" ordered="false">
-    <structure map-as="com.eucalyptus.route53.common.msgs.Route53Message"/>
     <structure get-method="getTrafficPolicyInstance" set-method="setTrafficPolicyInstance" usage="optional" type="com.eucalyptus.route53.common.msgs.TrafficPolicyInstance" name="TrafficPolicyInstance"/>
   </mapping>
   <mapping class="com.eucalyptus.route53.common.msgs.AccountLimit" abstract="true" ordered="false">
