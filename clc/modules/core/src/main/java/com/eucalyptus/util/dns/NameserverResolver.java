@@ -73,6 +73,7 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
+import io.vavr.Tuple2;
 import io.vavr.collection.Stream;
 import io.vavr.control.Option;
 
@@ -123,18 +124,15 @@ public class NameserverResolver extends DnsResolver {
         }
       }
     } else if ( RequestType.NS.apply( query ) ) {
-      final NavigableSet<ServiceConfiguration> nsServers = Components.lookup( Dns.class ).services( );
-      final Predicate<ServiceConfiguration> nsServerUsable = DomainNameRecords.activeNameserverPredicate( );
-      final Name domain = DomainNames.isInternalSubdomain( name ) ? DomainNames.internalSubdomain( ) : DomainNames.externalSubdomain( );
+      final Name domain = DomainNames.isInternalSubdomain( name ) ?
+          DomainNames.internalSubdomain( ) :
+          DomainNames.externalSubdomain( );
       final List<Record> aRecs = Lists.newArrayList( );
-      int idx = 1;
-      for ( final ServiceConfiguration conf : nsServers ) {
-        final int offset = idx++;
-        if ( nsServerUsable.test( conf ) ) {
-          aRecs.add( DomainNameRecords.addressRecord(
-              Name.fromConstantString( "ns" + offset + "." + domain ) ,
-              maphost( request.getLocalAddress( ), conf.getInetAddress( ) ) ) );
-        }
+      for( final Tuple2<Integer,InetAddress> nameserverByNumber :
+          DomainNameRecords.getNameserversByNumber() ) {
+        aRecs.add( DomainNameRecords.addressRecord(
+            Name.fromConstantString( "ns" + nameserverByNumber._1() + "." + domain ) ,
+            maphost( request.getLocalAddress( ), nameserverByNumber._2() ) ) );
       }
       return DnsResponse.forName( name )
                         .withAdditional( aRecs )

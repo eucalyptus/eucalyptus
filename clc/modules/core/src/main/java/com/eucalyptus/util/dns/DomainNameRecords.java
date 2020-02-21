@@ -54,12 +54,16 @@ import org.xbill.DNS.PTRRecord;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.ReverseMap;
 import org.xbill.DNS.SOARecord;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.google.common.collect.Lists;
 import com.google.common.net.InetAddresses;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 
 /**
  * @author chris grzegorczyk <grze@eucalyptus.com>
@@ -83,6 +87,19 @@ public class DomainNameRecords {
   public static Predicate<ServiceConfiguration> activeNameserverPredicate( ) {
     final Collection<ServiceConfiguration> enabledNsServers = Topology.enabledServices( Dns.class );
     return conf -> enabledNsServers.contains( conf ) || conf.isHostLocal( );
+  }
+
+  public static List<Tuple2<Integer, InetAddress>> getNameserversByNumber() {
+    final Predicate<ServiceConfiguration> nsServerUsable = activeNameserverPredicate( );
+    final List<Tuple2<Integer, InetAddress>> nsIdxs = Lists.newArrayList( );
+    int idx = 1;
+    for ( ServiceConfiguration conf : Components.lookup( Dns.class ).services( ) ) {
+      final int offset = idx++;
+      if ( nsServerUsable.test( conf ) ) {
+        nsIdxs.add(Tuple.of(offset, conf.getInetAddress( )));
+      }
+    }
+    return nsIdxs;
   }
 
   public static List<? extends Record> nameservers( Name subdomain ) {

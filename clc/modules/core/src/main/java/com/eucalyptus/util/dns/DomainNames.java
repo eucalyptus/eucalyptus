@@ -39,10 +39,10 @@
 
 package com.eucalyptus.util.dns;
 
+import java.net.InetAddress;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.function.Predicate;
 
 import org.apache.log4j.Logger;
 import org.xbill.DNS.DClass;
@@ -53,9 +53,6 @@ import org.xbill.DNS.TextParseException;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
@@ -65,6 +62,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
+import io.vavr.Tuple2;
 
 /**
  * Facade for interacting w/ the internal domain name handling.
@@ -231,19 +229,14 @@ public class DomainNames {
     }
 
     public List<NSRecord> getNameServers( ) {
-      final Predicate<ServiceConfiguration> nsServerUsable = DomainNameRecords.activeNameserverPredicate( );
       final List<NSRecord> nsRecs = Lists.newArrayList( );
-      int idx = 1;
-      for ( ServiceConfiguration conf : Components.lookup( Dns.class ).services( ) ) {
-        final int offset = idx++;
-        if ( nsServerUsable.test( conf ) ) {
-          nsRecs.add( new NSRecord(
-              this.get( ),
-              DClass.IN,
-              60,
-              Name.fromConstantString( "ns" + offset + "." + this.get( ).toString( ) )
-          ) );
-        }
+      for ( final Tuple2<Integer, InetAddress> offset : DomainNameRecords.getNameserversByNumber() ) {
+        nsRecs.add( new NSRecord(
+            this.get( ),
+            DClass.IN,
+            60,
+            Name.fromConstantString( "ns" + offset + "." + this.get( ).toString( ) )
+        ) );
       }
       return nsRecs; 
     }
@@ -287,5 +280,5 @@ public class DomainNames {
       throw Exceptions.toUndeclared( ex );
     }
   }
-  
+
 }
