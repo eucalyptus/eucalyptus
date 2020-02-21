@@ -20,8 +20,7 @@ import com.eucalyptus.ws.protocol.BaseRestXmlBinding;
 @ComponentPart(Route53.class)
 public class Route53RestXmlBinding extends BaseRestXmlBinding<ErrorResponse> {
 
-  //TODO verify namespace pattern is correct for ns https://route53.amazonaws.com/doc/2013-04-01/
-  static final String NAMESPACE_PATTERN = "http://route53.amazonaws.com/doc/%s/";
+  static final String NAMESPACE_PATTERN = "https://route53.amazonaws.com/doc/%s/";
 
   static final String DEFAULT_VERSION = "2013-04-01";
 
