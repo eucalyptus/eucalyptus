@@ -455,7 +455,7 @@ Resources:
     Properties:
       Name: t3.micro
       Enabled: !Ref EnableT3
-      Cpu: 1
+      Cpu: 2
       Disk: 10
       Memory: 1024
       NetworkInterfaces: 2
@@ -465,7 +465,7 @@ Resources:
     Properties:
       Name: t3.nano
       Enabled: !Ref EnableT3
-      Cpu: 1
+      Cpu: 2
       Disk: 5
       Memory: 512
       NetworkInterfaces: 2
@@ -475,7 +475,7 @@ Resources:
     Properties:
       Name: t3.small
       Enabled: !Ref EnableT3
-      Cpu: 1
+      Cpu: 2
       Disk: 10
       Memory: 2048
       NetworkInterfaces: 2
