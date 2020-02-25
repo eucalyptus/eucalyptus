@@ -40,6 +40,7 @@ import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.tokens.SecurityTokenAWSCredentialsProvider;
 import com.eucalyptus.compute.common.*;
 import com.eucalyptus.loadbalancing.*;
+import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.STATE;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
 import com.eucalyptus.loadbalancing.LoadBalancingSystemVpcs;
 
@@ -3359,9 +3360,10 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
                 LoadBalancerServoInstance.named(instanceId);
         final LoadBalancerServoInstance entity =
                 Entities.uniqueResult(sample);
-        entity.setActivityFailureCount(entity.getActivityFailureCount() + 1);
-        Entities.persist(entity);
-        db.commit();
+        if (entity.getState() != STATE.Pending) {
+          entity.setActivityFailureCount(entity.getActivityFailureCount() + 1);
+          db.commit();
+        }
       }
     }catch(final Exception ex) {
        LOG.warn(String.format("Failed to mark the VM (%s) as failed", instanceId), ex);
