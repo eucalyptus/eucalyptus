@@ -57,6 +57,16 @@ Resources:
       Disk: 470
       Memory: 124928
       NetworkInterfaces: 4
+  F14XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: F12XLARGE
+    Properties:
+      Name: f1.4xlarge
+      Enabled: !Ref EnableF1
+      Cpu: 16
+      Disk: 940
+      Memory: 249856
+      NetworkInterfaces: 4
   G22XLARGE:
     Type: AWS::EC2::InstanceType
     Properties:
