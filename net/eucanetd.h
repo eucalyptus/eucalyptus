@@ -272,6 +272,7 @@ typedef struct eucanetdConfig_t {
     boolean validate_mido_config;
 
     int debug;
+    boolean systemd;                 //!< Set to TRUE to indicate systemd mode (do not switch user or daemonize)
     int flushmode;
     char *flushmodearg;
     boolean multieucanetd_safe;
