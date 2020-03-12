@@ -1,0 +1,722 @@
+<?xml version="1.0" standalone="yes"?>
+<!--
+  Copyright 2020 AppScale Systems, Inc
+
+  Use of this source code is governed by a BSD-2-Clause
+  license that can be found in the LICENSE file or at
+  https://opensource.org/licenses/BSD-2-Clause
+-->
+<binding name="route53_amazonaws_com_doc_2013_04_01" force-classes="true" add-constructors="true">
+  <namespace uri="https://route53.amazonaws.com/doc/2013-04-01/" default="elements"/>
+  <format type="java.util.Date" deserializer="org.jibx.runtime.Utility.deserializeDateTime" serializer="com.eucalyptus.ws.util.SerializationUtils.serializeDateTime"/>
+  <mapping class="com.eucalyptus.route53.common.msgs.Error" abstract="true">
+    <value name="Type" field="type" usage="required"/>
+    <value name="Code" field="code" usage="required"/>
+    <value name="Message" field="message" usage="required"/>
+    <structure name="Detail" field="detail" usage="optional" type="com.eucalyptus.route53.common.msgs.ErrorDetail"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.ErrorDetail" abstract="true"/>
+  <mapping name="ErrorResponse" class="com.eucalyptus.route53.common.msgs.ErrorResponse">
+    <collection field="error">
+      <structure name="Error" type="com.eucalyptus.route53.common.msgs.Error"/>
+    </collection>
+    <value name="RequestId" field="requestId" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.Route53Message" abstract="true"/>
+  <mapping name="AssociateVPCWithHostedZoneRequest" class="com.eucalyptus.route53.common.msgs.AssociateVPCWithHostedZoneType" ordered="false">
+    <value name="Comment" get-method="getComment" set-method="setComment" usage="optional"/>
+    <structure get-method="getVPC" set-method="setVPC" usage="optional" type="com.eucalyptus.route53.common.msgs.VPC" name="VPC"/>
+  </mapping>
+  <mapping name="AssociateVPCWithHostedZoneResponse" class="com.eucalyptus.route53.common.msgs.AssociateVPCWithHostedZoneResponseType" ordered="false">
+    <structure get-method="getChangeInfo" set-method="setChangeInfo" usage="optional" type="com.eucalyptus.route53.common.msgs.ChangeInfo" name="ChangeInfo"/>
+  </mapping>
+  <mapping name="ChangeResourceRecordSetsRequest" class="com.eucalyptus.route53.common.msgs.ChangeResourceRecordSetsType" ordered="false">
+    <structure get-method="getChangeBatch" set-method="setChangeBatch" usage="optional" type="com.eucalyptus.route53.common.msgs.ChangeBatch" name="ChangeBatch"/>
+  </mapping>
+  <mapping name="ChangeResourceRecordSetsResponse" class="com.eucalyptus.route53.common.msgs.ChangeResourceRecordSetsResponseType" ordered="false">
+    <structure get-method="getChangeInfo" set-method="setChangeInfo" usage="optional" type="com.eucalyptus.route53.common.msgs.ChangeInfo" name="ChangeInfo"/>
+  </mapping>
+  <mapping name="ChangeTagsForResourceRequest" class="com.eucalyptus.route53.common.msgs.ChangeTagsForResourceType" ordered="false">
+    <structure get-method="getAddTags" set-method="setAddTags" usage="optional" type="com.eucalyptus.route53.common.msgs.TagList" name="AddTags"/>
+    <structure get-method="getRemoveTagKeys" set-method="setRemoveTagKeys" usage="optional" type="com.eucalyptus.route53.common.msgs.TagKeyList" name="RemoveTagKeys"/>
+  </mapping>
+  <mapping name="ChangeTagsForResourceResponse" class="com.eucalyptus.route53.common.msgs.ChangeTagsForResourceResponseType" ordered="false">
+  </mapping>
+  <mapping name="CreateHealthCheckRequest" class="com.eucalyptus.route53.common.msgs.CreateHealthCheckType" ordered="false">
+    <value name="CallerReference" get-method="getCallerReference" set-method="setCallerReference" usage="optional"/>
+    <structure get-method="getHealthCheckConfig" set-method="setHealthCheckConfig" usage="optional" type="com.eucalyptus.route53.common.msgs.HealthCheckConfig" name="HealthCheckConfig"/>
+  </mapping>
+  <mapping name="CreateHealthCheckResponse" class="com.eucalyptus.route53.common.msgs.CreateHealthCheckResponseType" ordered="false">
+    <structure get-method="getHealthCheck" set-method="setHealthCheck" usage="optional" type="com.eucalyptus.route53.common.msgs.HealthCheck" name="HealthCheck"/>
+  </mapping>
+  <mapping name="CreateHostedZoneRequest" class="com.eucalyptus.route53.common.msgs.CreateHostedZoneType" ordered="false">
+    <value name="CallerReference" get-method="getCallerReference" set-method="setCallerReference" usage="optional"/>
+    <value name="DelegationSetId" get-method="getDelegationSetId" set-method="setDelegationSetId" usage="optional"/>
+    <structure get-method="getHostedZoneConfig" set-method="setHostedZoneConfig" usage="optional" type="com.eucalyptus.route53.common.msgs.HostedZoneConfig" name="HostedZoneConfig"/>
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+    <structure get-method="getVPC" set-method="setVPC" usage="optional" type="com.eucalyptus.route53.common.msgs.VPC" name="VPC"/>
+  </mapping>
+  <mapping name="CreateHostedZoneResponse" class="com.eucalyptus.route53.common.msgs.CreateHostedZoneResponseType" ordered="false">
+    <structure get-method="getChangeInfo" set-method="setChangeInfo" usage="optional" type="com.eucalyptus.route53.common.msgs.ChangeInfo" name="ChangeInfo"/>
+    <structure get-method="getDelegationSet" set-method="setDelegationSet" usage="optional" type="com.eucalyptus.route53.common.msgs.DelegationSet" name="DelegationSet"/>
+    <structure get-method="getHostedZone" set-method="setHostedZone" usage="optional" type="com.eucalyptus.route53.common.msgs.HostedZone" name="HostedZone"/>
+    <structure get-method="getVPC" set-method="setVPC" usage="optional" type="com.eucalyptus.route53.common.msgs.VPC" name="VPC"/>
+  </mapping>
+  <mapping name="CreateQueryLoggingConfigRequest" class="com.eucalyptus.route53.common.msgs.CreateQueryLoggingConfigType" ordered="false">
+    <value name="CloudWatchLogsLogGroupArn" get-method="getCloudWatchLogsLogGroupArn" set-method="setCloudWatchLogsLogGroupArn" usage="optional"/>
+    <value name="HostedZoneId" get-method="getHostedZoneId" set-method="setHostedZoneId" usage="optional"/>
+  </mapping>
+  <mapping name="CreateQueryLoggingConfigResponse" class="com.eucalyptus.route53.common.msgs.CreateQueryLoggingConfigResponseType" ordered="false">
+    <structure get-method="getQueryLoggingConfig" set-method="setQueryLoggingConfig" usage="optional" type="com.eucalyptus.route53.common.msgs.QueryLoggingConfig" name="QueryLoggingConfig"/>
+  </mapping>
+  <mapping name="CreateReusableDelegationSetRequest" class="com.eucalyptus.route53.common.msgs.CreateReusableDelegationSetType" ordered="false">
+    <value name="CallerReference" get-method="getCallerReference" set-method="setCallerReference" usage="optional"/>
+    <value name="HostedZoneId" get-method="getHostedZoneId" set-method="setHostedZoneId" usage="optional"/>
+  </mapping>
+  <mapping name="CreateReusableDelegationSetResponse" class="com.eucalyptus.route53.common.msgs.CreateReusableDelegationSetResponseType" ordered="false">
+    <structure get-method="getDelegationSet" set-method="setDelegationSet" usage="optional" type="com.eucalyptus.route53.common.msgs.DelegationSet" name="DelegationSet"/>
+  </mapping>
+  <mapping name="CreateTrafficPolicyRequest" class="com.eucalyptus.route53.common.msgs.CreateTrafficPolicyType" ordered="false">
+    <value name="Comment" get-method="getComment" set-method="setComment" usage="optional"/>
+    <value name="Document" get-method="getDocument" set-method="setDocument" usage="optional"/>
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+  </mapping>
+  <mapping name="CreateTrafficPolicyResponse" class="com.eucalyptus.route53.common.msgs.CreateTrafficPolicyResponseType" ordered="false">
+    <structure get-method="getTrafficPolicy" set-method="setTrafficPolicy" usage="optional" type="com.eucalyptus.route53.common.msgs.TrafficPolicy" name="TrafficPolicy"/>
+  </mapping>
+  <mapping name="CreateTrafficPolicyInstanceRequest" class="com.eucalyptus.route53.common.msgs.CreateTrafficPolicyInstanceType" ordered="false">
+    <value name="HostedZoneId" get-method="getHostedZoneId" set-method="setHostedZoneId" usage="optional"/>
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+    <value name="TTL" get-method="getTTL" set-method="setTTL" usage="optional"/>
+    <value name="TrafficPolicyId" get-method="getTrafficPolicyId" set-method="setTrafficPolicyId" usage="optional"/>
+    <value name="TrafficPolicyVersion" get-method="getTrafficPolicyVersion" set-method="setTrafficPolicyVersion" usage="optional"/>
+  </mapping>
+  <mapping name="CreateTrafficPolicyInstanceResponse" class="com.eucalyptus.route53.common.msgs.CreateTrafficPolicyInstanceResponseType" ordered="false">
+    <structure get-method="getTrafficPolicyInstance" set-method="setTrafficPolicyInstance" usage="optional" type="com.eucalyptus.route53.common.msgs.TrafficPolicyInstance" name="TrafficPolicyInstance"/>
+  </mapping>
+  <mapping name="CreateTrafficPolicyVersionRequest" class="com.eucalyptus.route53.common.msgs.CreateTrafficPolicyVersionType" ordered="false">
+    <value name="Comment" get-method="getComment" set-method="setComment" usage="optional"/>
+    <value name="Document" get-method="getDocument" set-method="setDocument" usage="optional"/>
+  </mapping>
+  <mapping name="CreateTrafficPolicyVersionResponse" class="com.eucalyptus.route53.common.msgs.CreateTrafficPolicyVersionResponseType" ordered="false">
+    <structure get-method="getTrafficPolicy" set-method="setTrafficPolicy" usage="optional" type="com.eucalyptus.route53.common.msgs.TrafficPolicy" name="TrafficPolicy"/>
+  </mapping>
+  <mapping name="CreateVPCAssociationAuthorizationRequest" class="com.eucalyptus.route53.common.msgs.CreateVPCAssociationAuthorizationType" ordered="false">
+    <structure get-method="getVPC" set-method="setVPC" usage="optional" type="com.eucalyptus.route53.common.msgs.VPC" name="VPC"/>
+  </mapping>
+  <mapping name="CreateVPCAssociationAuthorizationResponse" class="com.eucalyptus.route53.common.msgs.CreateVPCAssociationAuthorizationResponseType" ordered="false">
+    <value name="HostedZoneId" get-method="getHostedZoneId" set-method="setHostedZoneId" usage="optional"/>
+    <structure get-method="getVPC" set-method="setVPC" usage="optional" type="com.eucalyptus.route53.common.msgs.VPC" name="VPC"/>
+  </mapping>
+  <mapping name="DeleteHealthCheck" class="com.eucalyptus.route53.common.msgs.DeleteHealthCheckType" ordered="false">
+  </mapping>
+  <mapping name="DeleteHealthCheckResponse" class="com.eucalyptus.route53.common.msgs.DeleteHealthCheckResponseType" ordered="false">
+  </mapping>
+  <mapping name="DeleteHostedZone" class="com.eucalyptus.route53.common.msgs.DeleteHostedZoneType" ordered="false">
+  </mapping>
+  <mapping name="DeleteHostedZoneResponse" class="com.eucalyptus.route53.common.msgs.DeleteHostedZoneResponseType" ordered="false">
+    <structure get-method="getChangeInfo" set-method="setChangeInfo" usage="optional" type="com.eucalyptus.route53.common.msgs.ChangeInfo" name="ChangeInfo"/>
+  </mapping>
+  <mapping name="DeleteQueryLoggingConfig" class="com.eucalyptus.route53.common.msgs.DeleteQueryLoggingConfigType" ordered="false">
+  </mapping>
+  <mapping name="DeleteQueryLoggingConfigResponse" class="com.eucalyptus.route53.common.msgs.DeleteQueryLoggingConfigResponseType" ordered="false">
+  </mapping>
+  <mapping name="DeleteReusableDelegationSet" class="com.eucalyptus.route53.common.msgs.DeleteReusableDelegationSetType" ordered="false">
+  </mapping>
+  <mapping name="DeleteReusableDelegationSetResponse" class="com.eucalyptus.route53.common.msgs.DeleteReusableDelegationSetResponseType" ordered="false">
+  </mapping>
+  <mapping name="DeleteTrafficPolicy" class="com.eucalyptus.route53.common.msgs.DeleteTrafficPolicyType" ordered="false">
+  </mapping>
+  <mapping name="DeleteTrafficPolicyResponse" class="com.eucalyptus.route53.common.msgs.DeleteTrafficPolicyResponseType" ordered="false">
+  </mapping>
+  <mapping name="DeleteTrafficPolicyInstance" class="com.eucalyptus.route53.common.msgs.DeleteTrafficPolicyInstanceType" ordered="false">
+  </mapping>
+  <mapping name="DeleteTrafficPolicyInstanceResponse" class="com.eucalyptus.route53.common.msgs.DeleteTrafficPolicyInstanceResponseType" ordered="false">
+  </mapping>
+  <mapping name="DeleteVPCAssociationAuthorizationRequest" class="com.eucalyptus.route53.common.msgs.DeleteVPCAssociationAuthorizationType" ordered="false">
+    <structure get-method="getVPC" set-method="setVPC" usage="optional" type="com.eucalyptus.route53.common.msgs.VPC" name="VPC"/>
+  </mapping>
+  <mapping name="DeleteVPCAssociationAuthorizationResponse" class="com.eucalyptus.route53.common.msgs.DeleteVPCAssociationAuthorizationResponseType" ordered="false">
+  </mapping>
+  <mapping name="DisassociateVPCFromHostedZoneRequest" class="com.eucalyptus.route53.common.msgs.DisassociateVPCFromHostedZoneType" ordered="false">
+    <value name="Comment" get-method="getComment" set-method="setComment" usage="optional"/>
+    <structure get-method="getVPC" set-method="setVPC" usage="optional" type="com.eucalyptus.route53.common.msgs.VPC" name="VPC"/>
+  </mapping>
+  <mapping name="DisassociateVPCFromHostedZoneResponse" class="com.eucalyptus.route53.common.msgs.DisassociateVPCFromHostedZoneResponseType" ordered="false">
+    <structure get-method="getChangeInfo" set-method="setChangeInfo" usage="optional" type="com.eucalyptus.route53.common.msgs.ChangeInfo" name="ChangeInfo"/>
+  </mapping>
+  <mapping name="GetAccountLimit" class="com.eucalyptus.route53.common.msgs.GetAccountLimitType" ordered="false">
+  </mapping>
+  <mapping name="GetAccountLimitResponse" class="com.eucalyptus.route53.common.msgs.GetAccountLimitResponseType" ordered="false">
+    <value name="Count" get-method="getCount" set-method="setCount" usage="optional"/>
+    <structure get-method="getLimit" set-method="setLimit" usage="optional" type="com.eucalyptus.route53.common.msgs.AccountLimit" name="Limit"/>
+  </mapping>
+  <mapping name="GetChange" class="com.eucalyptus.route53.common.msgs.GetChangeType" ordered="false">
+  </mapping>
+  <mapping name="GetChangeResponse" class="com.eucalyptus.route53.common.msgs.GetChangeResponseType" ordered="false">
+    <structure get-method="getChangeInfo" set-method="setChangeInfo" usage="optional" type="com.eucalyptus.route53.common.msgs.ChangeInfo" name="ChangeInfo"/>
+  </mapping>
+  <mapping name="GetCheckerIpRanges" class="com.eucalyptus.route53.common.msgs.GetCheckerIpRangesType" ordered="false">
+  </mapping>
+  <mapping name="GetCheckerIpRangesResponse" class="com.eucalyptus.route53.common.msgs.GetCheckerIpRangesResponseType" ordered="false">
+    <structure get-method="getCheckerIpRanges" set-method="setCheckerIpRanges" usage="optional" type="com.eucalyptus.route53.common.msgs.CheckerIpRanges" name="CheckerIpRanges"/>
+  </mapping>
+  <mapping name="GetGeoLocation" class="com.eucalyptus.route53.common.msgs.GetGeoLocationType" ordered="false">
+  </mapping>
+  <mapping name="GetGeoLocationResponse" class="com.eucalyptus.route53.common.msgs.GetGeoLocationResponseType" ordered="false">
+    <structure get-method="getGeoLocationDetails" set-method="setGeoLocationDetails" usage="optional" type="com.eucalyptus.route53.common.msgs.GeoLocationDetails" name="GeoLocationDetails"/>
+  </mapping>
+  <mapping name="GetHealthCheck" class="com.eucalyptus.route53.common.msgs.GetHealthCheckType" ordered="false">
+  </mapping>
+  <mapping name="GetHealthCheckResponse" class="com.eucalyptus.route53.common.msgs.GetHealthCheckResponseType" ordered="false">
+    <structure get-method="getHealthCheck" set-method="setHealthCheck" usage="optional" type="com.eucalyptus.route53.common.msgs.HealthCheck" name="HealthCheck"/>
+  </mapping>
+  <mapping name="GetHealthCheckCount" class="com.eucalyptus.route53.common.msgs.GetHealthCheckCountType" ordered="false">
+  </mapping>
+  <mapping name="GetHealthCheckCountResponse" class="com.eucalyptus.route53.common.msgs.GetHealthCheckCountResponseType" ordered="false">
+    <value name="HealthCheckCount" get-method="getHealthCheckCount" set-method="setHealthCheckCount" usage="optional"/>
+  </mapping>
+  <mapping name="GetHealthCheckLastFailureReason" class="com.eucalyptus.route53.common.msgs.GetHealthCheckLastFailureReasonType" ordered="false">
+  </mapping>
+  <mapping name="GetHealthCheckLastFailureReasonResponse" class="com.eucalyptus.route53.common.msgs.GetHealthCheckLastFailureReasonResponseType" ordered="false">
+    <structure get-method="getHealthCheckObservations" set-method="setHealthCheckObservations" usage="optional" type="com.eucalyptus.route53.common.msgs.HealthCheckObservations" name="HealthCheckObservations"/>
+  </mapping>
+  <mapping name="GetHealthCheckStatus" class="com.eucalyptus.route53.common.msgs.GetHealthCheckStatusType" ordered="false">
+  </mapping>
+  <mapping name="GetHealthCheckStatusResponse" class="com.eucalyptus.route53.common.msgs.GetHealthCheckStatusResponseType" ordered="false">
+    <structure get-method="getHealthCheckObservations" set-method="setHealthCheckObservations" usage="optional" type="com.eucalyptus.route53.common.msgs.HealthCheckObservations" name="HealthCheckObservations"/>
+  </mapping>
+  <mapping name="GetHostedZone" class="com.eucalyptus.route53.common.msgs.GetHostedZoneType" ordered="false">
+  </mapping>
+  <mapping name="GetHostedZoneResponse" class="com.eucalyptus.route53.common.msgs.GetHostedZoneResponseType" ordered="false">
+    <structure get-method="getDelegationSet" set-method="setDelegationSet" usage="optional" type="com.eucalyptus.route53.common.msgs.DelegationSet" name="DelegationSet"/>
+    <structure get-method="getHostedZone" set-method="setHostedZone" usage="optional" type="com.eucalyptus.route53.common.msgs.HostedZone" name="HostedZone"/>
+    <structure get-method="getVPCs" set-method="setVPCs" usage="optional" type="com.eucalyptus.route53.common.msgs.VPCs" name="VPCs"/>
+  </mapping>
+  <mapping name="GetHostedZoneCount" class="com.eucalyptus.route53.common.msgs.GetHostedZoneCountType" ordered="false">
+  </mapping>
+  <mapping name="GetHostedZoneCountResponse" class="com.eucalyptus.route53.common.msgs.GetHostedZoneCountResponseType" ordered="false">
+    <value name="HostedZoneCount" get-method="getHostedZoneCount" set-method="setHostedZoneCount" usage="optional"/>
+  </mapping>
+  <mapping name="GetHostedZoneLimit" class="com.eucalyptus.route53.common.msgs.GetHostedZoneLimitType" ordered="false">
+  </mapping>
+  <mapping name="GetHostedZoneLimitResponse" class="com.eucalyptus.route53.common.msgs.GetHostedZoneLimitResponseType" ordered="false">
+    <value name="Count" get-method="getCount" set-method="setCount" usage="optional"/>
+    <structure get-method="getLimit" set-method="setLimit" usage="optional" type="com.eucalyptus.route53.common.msgs.HostedZoneLimit" name="Limit"/>
+  </mapping>
+  <mapping name="GetQueryLoggingConfig" class="com.eucalyptus.route53.common.msgs.GetQueryLoggingConfigType" ordered="false">
+  </mapping>
+  <mapping name="GetQueryLoggingConfigResponse" class="com.eucalyptus.route53.common.msgs.GetQueryLoggingConfigResponseType" ordered="false">
+    <structure get-method="getQueryLoggingConfig" set-method="setQueryLoggingConfig" usage="optional" type="com.eucalyptus.route53.common.msgs.QueryLoggingConfig" name="QueryLoggingConfig"/>
+  </mapping>
+  <mapping name="GetReusableDelegationSet" class="com.eucalyptus.route53.common.msgs.GetReusableDelegationSetType" ordered="false">
+  </mapping>
+  <mapping name="GetReusableDelegationSetResponse" class="com.eucalyptus.route53.common.msgs.GetReusableDelegationSetResponseType" ordered="false">
+    <structure get-method="getDelegationSet" set-method="setDelegationSet" usage="optional" type="com.eucalyptus.route53.common.msgs.DelegationSet" name="DelegationSet"/>
+  </mapping>
+  <mapping name="GetReusableDelegationSetLimit" class="com.eucalyptus.route53.common.msgs.GetReusableDelegationSetLimitType" ordered="false">
+  </mapping>
+  <mapping name="GetReusableDelegationSetLimitResponse" class="com.eucalyptus.route53.common.msgs.GetReusableDelegationSetLimitResponseType" ordered="false">
+    <value name="Count" get-method="getCount" set-method="setCount" usage="optional"/>
+    <structure get-method="getLimit" set-method="setLimit" usage="optional" type="com.eucalyptus.route53.common.msgs.ReusableDelegationSetLimit" name="Limit"/>
+  </mapping>
+  <mapping name="GetTrafficPolicy" class="com.eucalyptus.route53.common.msgs.GetTrafficPolicyType" ordered="false">
+  </mapping>
+  <mapping name="GetTrafficPolicyResponse" class="com.eucalyptus.route53.common.msgs.GetTrafficPolicyResponseType" ordered="false">
+    <structure get-method="getTrafficPolicy" set-method="setTrafficPolicy" usage="optional" type="com.eucalyptus.route53.common.msgs.TrafficPolicy" name="TrafficPolicy"/>
+  </mapping>
+  <mapping name="GetTrafficPolicyInstance" class="com.eucalyptus.route53.common.msgs.GetTrafficPolicyInstanceType" ordered="false">
+  </mapping>
+  <mapping name="GetTrafficPolicyInstanceResponse" class="com.eucalyptus.route53.common.msgs.GetTrafficPolicyInstanceResponseType" ordered="false">
+    <structure get-method="getTrafficPolicyInstance" set-method="setTrafficPolicyInstance" usage="optional" type="com.eucalyptus.route53.common.msgs.TrafficPolicyInstance" name="TrafficPolicyInstance"/>
+  </mapping>
+  <mapping name="GetTrafficPolicyInstanceCount" class="com.eucalyptus.route53.common.msgs.GetTrafficPolicyInstanceCountType" ordered="false">
+  </mapping>
+  <mapping name="GetTrafficPolicyInstanceCountResponse" class="com.eucalyptus.route53.common.msgs.GetTrafficPolicyInstanceCountResponseType" ordered="false">
+    <value name="TrafficPolicyInstanceCount" get-method="getTrafficPolicyInstanceCount" set-method="setTrafficPolicyInstanceCount" usage="optional"/>
+  </mapping>
+  <mapping name="ListGeoLocations" class="com.eucalyptus.route53.common.msgs.ListGeoLocationsType" ordered="false">
+  </mapping>
+  <mapping name="ListGeoLocationsResponse" class="com.eucalyptus.route53.common.msgs.ListGeoLocationsResponseType" ordered="false">
+    <structure get-method="getGeoLocationDetailsList" set-method="setGeoLocationDetailsList" usage="optional" type="com.eucalyptus.route53.common.msgs.GeoLocationDetailsList" name="GeoLocationDetailsList"/>
+    <value name="IsTruncated" get-method="getIsTruncated" set-method="setIsTruncated" usage="optional"/>
+    <value name="MaxItems" get-method="getMaxItems" set-method="setMaxItems" usage="optional"/>
+    <value name="NextContinentCode" get-method="getNextContinentCode" set-method="setNextContinentCode" usage="optional"/>
+    <value name="NextCountryCode" get-method="getNextCountryCode" set-method="setNextCountryCode" usage="optional"/>
+    <value name="NextSubdivisionCode" get-method="getNextSubdivisionCode" set-method="setNextSubdivisionCode" usage="optional"/>
+  </mapping>
+  <mapping name="ListHealthChecks" class="com.eucalyptus.route53.common.msgs.ListHealthChecksType" ordered="false">
+  </mapping>
+  <mapping name="ListHealthChecksResponse" class="com.eucalyptus.route53.common.msgs.ListHealthChecksResponseType" ordered="false">
+    <structure get-method="getHealthChecks" set-method="setHealthChecks" usage="optional" type="com.eucalyptus.route53.common.msgs.HealthChecks" name="HealthChecks"/>
+    <value name="IsTruncated" get-method="getIsTruncated" set-method="setIsTruncated" usage="optional"/>
+    <value name="Marker" get-method="getMarker" set-method="setMarker" usage="optional"/>
+    <value name="MaxItems" get-method="getMaxItems" set-method="setMaxItems" usage="optional"/>
+    <value name="NextMarker" get-method="getNextMarker" set-method="setNextMarker" usage="optional"/>
+  </mapping>
+  <mapping name="ListHostedZones" class="com.eucalyptus.route53.common.msgs.ListHostedZonesType" ordered="false">
+  </mapping>
+  <mapping name="ListHostedZonesResponse" class="com.eucalyptus.route53.common.msgs.ListHostedZonesResponseType" ordered="false">
+    <structure get-method="getHostedZones" set-method="setHostedZones" usage="optional" type="com.eucalyptus.route53.common.msgs.HostedZones" name="HostedZones"/>
+    <value name="IsTruncated" get-method="getIsTruncated" set-method="setIsTruncated" usage="optional"/>
+    <value name="Marker" get-method="getMarker" set-method="setMarker" usage="optional"/>
+    <value name="MaxItems" get-method="getMaxItems" set-method="setMaxItems" usage="optional"/>
+    <value name="NextMarker" get-method="getNextMarker" set-method="setNextMarker" usage="optional"/>
+  </mapping>
+  <mapping name="ListHostedZonesByName" class="com.eucalyptus.route53.common.msgs.ListHostedZonesByNameType" ordered="false">
+  </mapping>
+  <mapping name="ListHostedZonesByNameResponse" class="com.eucalyptus.route53.common.msgs.ListHostedZonesByNameResponseType" ordered="false">
+    <value name="DNSName" get-method="getDNSName" set-method="setDNSName" usage="optional"/>
+    <value name="HostedZoneId" get-method="getHostedZoneId" set-method="setHostedZoneId" usage="optional"/>
+    <structure get-method="getHostedZones" set-method="setHostedZones" usage="optional" type="com.eucalyptus.route53.common.msgs.HostedZones" name="HostedZones"/>
+    <value name="IsTruncated" get-method="getIsTruncated" set-method="setIsTruncated" usage="optional"/>
+    <value name="MaxItems" get-method="getMaxItems" set-method="setMaxItems" usage="optional"/>
+    <value name="NextDNSName" get-method="getNextDNSName" set-method="setNextDNSName" usage="optional"/>
+    <value name="NextHostedZoneId" get-method="getNextHostedZoneId" set-method="setNextHostedZoneId" usage="optional"/>
+  </mapping>
+  <mapping name="ListQueryLoggingConfigs" class="com.eucalyptus.route53.common.msgs.ListQueryLoggingConfigsType" ordered="false">
+  </mapping>
+  <mapping name="ListQueryLoggingConfigsResponse" class="com.eucalyptus.route53.common.msgs.ListQueryLoggingConfigsResponseType" ordered="false">
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getQueryLoggingConfigs" set-method="setQueryLoggingConfigs" usage="optional" type="com.eucalyptus.route53.common.msgs.QueryLoggingConfigs" name="QueryLoggingConfigs"/>
+  </mapping>
+  <mapping name="ListResourceRecordSets" class="com.eucalyptus.route53.common.msgs.ListResourceRecordSetsType" ordered="false">
+  </mapping>
+  <mapping name="ListResourceRecordSetsResponse" class="com.eucalyptus.route53.common.msgs.ListResourceRecordSetsResponseType" ordered="false">
+    <value name="IsTruncated" get-method="getIsTruncated" set-method="setIsTruncated" usage="optional"/>
+    <value name="MaxItems" get-method="getMaxItems" set-method="setMaxItems" usage="optional"/>
+    <value name="NextRecordIdentifier" get-method="getNextRecordIdentifier" set-method="setNextRecordIdentifier" usage="optional"/>
+    <value name="NextRecordName" get-method="getNextRecordName" set-method="setNextRecordName" usage="optional"/>
+    <value name="NextRecordType" get-method="getNextRecordType" set-method="setNextRecordType" usage="optional"/>
+    <structure get-method="getResourceRecordSets" set-method="setResourceRecordSets" usage="optional" type="com.eucalyptus.route53.common.msgs.ResourceRecordSets" name="ResourceRecordSets"/>
+  </mapping>
+  <mapping name="ListReusableDelegationSets" class="com.eucalyptus.route53.common.msgs.ListReusableDelegationSetsType" ordered="false">
+  </mapping>
+  <mapping name="ListReusableDelegationSetsResponse" class="com.eucalyptus.route53.common.msgs.ListReusableDelegationSetsResponseType" ordered="false">
+    <structure get-method="getDelegationSets" set-method="setDelegationSets" usage="optional" type="com.eucalyptus.route53.common.msgs.DelegationSets" name="DelegationSets"/>
+    <value name="IsTruncated" get-method="getIsTruncated" set-method="setIsTruncated" usage="optional"/>
+    <value name="Marker" get-method="getMarker" set-method="setMarker" usage="optional"/>
+    <value name="MaxItems" get-method="getMaxItems" set-method="setMaxItems" usage="optional"/>
+    <value name="NextMarker" get-method="getNextMarker" set-method="setNextMarker" usage="optional"/>
+  </mapping>
+  <mapping name="ListTagsForResource" class="com.eucalyptus.route53.common.msgs.ListTagsForResourceType" ordered="false">
+  </mapping>
+  <mapping name="ListTagsForResourceResponse" class="com.eucalyptus.route53.common.msgs.ListTagsForResourceResponseType" ordered="false">
+    <structure get-method="getResourceTagSet" set-method="setResourceTagSet" usage="optional" type="com.eucalyptus.route53.common.msgs.ResourceTagSet" name="ResourceTagSet"/>
+  </mapping>
+  <mapping name="ListTagsForResourcesRequest" class="com.eucalyptus.route53.common.msgs.ListTagsForResourcesType" ordered="false">
+    <structure get-method="getResourceIds" set-method="setResourceIds" usage="optional" type="com.eucalyptus.route53.common.msgs.TagResourceIdList" name="ResourceIds"/>
+  </mapping>
+  <mapping name="ListTagsForResourcesResponse" class="com.eucalyptus.route53.common.msgs.ListTagsForResourcesResponseType" ordered="false">
+    <structure get-method="getResourceTagSets" set-method="setResourceTagSets" usage="optional" type="com.eucalyptus.route53.common.msgs.ResourceTagSetList" name="ResourceTagSets"/>
+  </mapping>
+  <mapping name="ListTrafficPolicies" class="com.eucalyptus.route53.common.msgs.ListTrafficPoliciesType" ordered="false">
+  </mapping>
+  <mapping name="ListTrafficPoliciesResponse" class="com.eucalyptus.route53.common.msgs.ListTrafficPoliciesResponseType" ordered="false">
+    <value name="IsTruncated" get-method="getIsTruncated" set-method="setIsTruncated" usage="optional"/>
+    <value name="MaxItems" get-method="getMaxItems" set-method="setMaxItems" usage="optional"/>
+    <value name="TrafficPolicyIdMarker" get-method="getTrafficPolicyIdMarker" set-method="setTrafficPolicyIdMarker" usage="optional"/>
+    <structure get-method="getTrafficPolicySummaries" set-method="setTrafficPolicySummaries" usage="optional" type="com.eucalyptus.route53.common.msgs.TrafficPolicySummaries" name="TrafficPolicySummaries"/>
+  </mapping>
+  <mapping name="ListTrafficPolicyInstances" class="com.eucalyptus.route53.common.msgs.ListTrafficPolicyInstancesType" ordered="false">
+  </mapping>
+  <mapping name="ListTrafficPolicyInstancesResponse" class="com.eucalyptus.route53.common.msgs.ListTrafficPolicyInstancesResponseType" ordered="false">
+    <value name="HostedZoneIdMarker" get-method="getHostedZoneIdMarker" set-method="setHostedZoneIdMarker" usage="optional"/>
+    <value name="IsTruncated" get-method="getIsTruncated" set-method="setIsTruncated" usage="optional"/>
+    <value name="MaxItems" get-method="getMaxItems" set-method="setMaxItems" usage="optional"/>
+    <value name="TrafficPolicyInstanceNameMarker" get-method="getTrafficPolicyInstanceNameMarker" set-method="setTrafficPolicyInstanceNameMarker" usage="optional"/>
+    <value name="TrafficPolicyInstanceTypeMarker" get-method="getTrafficPolicyInstanceTypeMarker" set-method="setTrafficPolicyInstanceTypeMarker" usage="optional"/>
+    <structure get-method="getTrafficPolicyInstances" set-method="setTrafficPolicyInstances" usage="optional" type="com.eucalyptus.route53.common.msgs.TrafficPolicyInstances" name="TrafficPolicyInstances"/>
+  </mapping>
+  <mapping name="ListTrafficPolicyInstancesByHostedZone" class="com.eucalyptus.route53.common.msgs.ListTrafficPolicyInstancesByHostedZoneType" ordered="false">
+  </mapping>
+  <mapping name="ListTrafficPolicyInstancesByHostedZoneResponse" class="com.eucalyptus.route53.common.msgs.ListTrafficPolicyInstancesByHostedZoneResponseType" ordered="false">
+    <value name="IsTruncated" get-method="getIsTruncated" set-method="setIsTruncated" usage="optional"/>
+    <value name="MaxItems" get-method="getMaxItems" set-method="setMaxItems" usage="optional"/>
+    <value name="TrafficPolicyInstanceNameMarker" get-method="getTrafficPolicyInstanceNameMarker" set-method="setTrafficPolicyInstanceNameMarker" usage="optional"/>
+    <value name="TrafficPolicyInstanceTypeMarker" get-method="getTrafficPolicyInstanceTypeMarker" set-method="setTrafficPolicyInstanceTypeMarker" usage="optional"/>
+    <structure get-method="getTrafficPolicyInstances" set-method="setTrafficPolicyInstances" usage="optional" type="com.eucalyptus.route53.common.msgs.TrafficPolicyInstances" name="TrafficPolicyInstances"/>
+  </mapping>
+  <mapping name="ListTrafficPolicyInstancesByPolicy" class="com.eucalyptus.route53.common.msgs.ListTrafficPolicyInstancesByPolicyType" ordered="false">
+  </mapping>
+  <mapping name="ListTrafficPolicyInstancesByPolicyResponse" class="com.eucalyptus.route53.common.msgs.ListTrafficPolicyInstancesByPolicyResponseType" ordered="false">
+    <value name="HostedZoneIdMarker" get-method="getHostedZoneIdMarker" set-method="setHostedZoneIdMarker" usage="optional"/>
+    <value name="IsTruncated" get-method="getIsTruncated" set-method="setIsTruncated" usage="optional"/>
+    <value name="MaxItems" get-method="getMaxItems" set-method="setMaxItems" usage="optional"/>
+    <value name="TrafficPolicyInstanceNameMarker" get-method="getTrafficPolicyInstanceNameMarker" set-method="setTrafficPolicyInstanceNameMarker" usage="optional"/>
+    <value name="TrafficPolicyInstanceTypeMarker" get-method="getTrafficPolicyInstanceTypeMarker" set-method="setTrafficPolicyInstanceTypeMarker" usage="optional"/>
+    <structure get-method="getTrafficPolicyInstances" set-method="setTrafficPolicyInstances" usage="optional" type="com.eucalyptus.route53.common.msgs.TrafficPolicyInstances" name="TrafficPolicyInstances"/>
+  </mapping>
+  <mapping name="ListTrafficPolicyVersions" class="com.eucalyptus.route53.common.msgs.ListTrafficPolicyVersionsType" ordered="false">
+  </mapping>
+  <mapping name="ListTrafficPolicyVersionsResponse" class="com.eucalyptus.route53.common.msgs.ListTrafficPolicyVersionsResponseType" ordered="false">
+    <value name="IsTruncated" get-method="getIsTruncated" set-method="setIsTruncated" usage="optional"/>
+    <value name="MaxItems" get-method="getMaxItems" set-method="setMaxItems" usage="optional"/>
+    <structure get-method="getTrafficPolicies" set-method="setTrafficPolicies" usage="optional" type="com.eucalyptus.route53.common.msgs.TrafficPolicies" name="TrafficPolicies"/>
+    <value name="TrafficPolicyVersionMarker" get-method="getTrafficPolicyVersionMarker" set-method="setTrafficPolicyVersionMarker" usage="optional"/>
+  </mapping>
+  <mapping name="ListVPCAssociationAuthorizations" class="com.eucalyptus.route53.common.msgs.ListVPCAssociationAuthorizationsType" ordered="false">
+  </mapping>
+  <mapping name="ListVPCAssociationAuthorizationsResponse" class="com.eucalyptus.route53.common.msgs.ListVPCAssociationAuthorizationsResponseType" ordered="false">
+    <value name="HostedZoneId" get-method="getHostedZoneId" set-method="setHostedZoneId" usage="optional"/>
+    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getVPCs" set-method="setVPCs" usage="optional" type="com.eucalyptus.route53.common.msgs.VPCs" name="VPCs"/>
+  </mapping>
+  <mapping name="TestDNSAnswer" class="com.eucalyptus.route53.common.msgs.TestDNSAnswerType" ordered="false">
+  </mapping>
+  <mapping name="TestDNSAnswerResponse" class="com.eucalyptus.route53.common.msgs.TestDNSAnswerResponseType" ordered="false">
+    <value name="Nameserver" get-method="getNameserver" set-method="setNameserver" usage="optional"/>
+    <value name="Protocol" get-method="getProtocol" set-method="setProtocol" usage="optional"/>
+    <structure get-method="getRecordData" set-method="setRecordData" usage="optional" type="com.eucalyptus.route53.common.msgs.RecordData" name="RecordData"/>
+    <value name="RecordName" get-method="getRecordName" set-method="setRecordName" usage="optional"/>
+    <value name="RecordType" get-method="getRecordType" set-method="setRecordType" usage="optional"/>
+    <value name="ResponseCode" get-method="getResponseCode" set-method="setResponseCode" usage="optional"/>
+  </mapping>
+  <mapping name="UpdateHealthCheckRequest" class="com.eucalyptus.route53.common.msgs.UpdateHealthCheckType" ordered="false">
+    <structure get-method="getAlarmIdentifier" set-method="setAlarmIdentifier" usage="optional" type="com.eucalyptus.route53.common.msgs.AlarmIdentifier" name="AlarmIdentifier"/>
+    <structure get-method="getChildHealthChecks" set-method="setChildHealthChecks" usage="optional" type="com.eucalyptus.route53.common.msgs.ChildHealthCheckList" name="ChildHealthChecks"/>
+    <value name="Disabled" get-method="getDisabled" set-method="setDisabled" usage="optional"/>
+    <value name="EnableSNI" get-method="getEnableSNI" set-method="setEnableSNI" usage="optional"/>
+    <value name="FailureThreshold" get-method="getFailureThreshold" set-method="setFailureThreshold" usage="optional"/>
+    <value name="FullyQualifiedDomainName" get-method="getFullyQualifiedDomainName" set-method="setFullyQualifiedDomainName" usage="optional"/>
+    <value name="HealthCheckVersion" get-method="getHealthCheckVersion" set-method="setHealthCheckVersion" usage="optional"/>
+    <value name="HealthThreshold" get-method="getHealthThreshold" set-method="setHealthThreshold" usage="optional"/>
+    <value name="IPAddress" get-method="getIPAddress" set-method="setIPAddress" usage="optional"/>
+    <value name="InsufficientDataHealthStatus" get-method="getInsufficientDataHealthStatus" set-method="setInsufficientDataHealthStatus" usage="optional"/>
+    <value name="Inverted" get-method="getInverted" set-method="setInverted" usage="optional"/>
+    <value name="Port" get-method="getPort" set-method="setPort" usage="optional"/>
+    <structure get-method="getRegions" set-method="setRegions" usage="optional" type="com.eucalyptus.route53.common.msgs.HealthCheckRegionList" name="Regions"/>
+    <structure get-method="getResetElements" set-method="setResetElements" usage="optional" type="com.eucalyptus.route53.common.msgs.ResettableElementNameList" name="ResetElements"/>
+    <value name="ResourcePath" get-method="getResourcePath" set-method="setResourcePath" usage="optional"/>
+    <value name="SearchString" get-method="getSearchString" set-method="setSearchString" usage="optional"/>
+  </mapping>
+  <mapping name="UpdateHealthCheckResponse" class="com.eucalyptus.route53.common.msgs.UpdateHealthCheckResponseType" ordered="false">
+    <structure get-method="getHealthCheck" set-method="setHealthCheck" usage="optional" type="com.eucalyptus.route53.common.msgs.HealthCheck" name="HealthCheck"/>
+  </mapping>
+  <mapping name="UpdateHostedZoneCommentRequest" class="com.eucalyptus.route53.common.msgs.UpdateHostedZoneCommentType" ordered="false">
+    <value name="Comment" get-method="getComment" set-method="setComment" usage="optional"/>
+  </mapping>
+  <mapping name="UpdateHostedZoneCommentResponse" class="com.eucalyptus.route53.common.msgs.UpdateHostedZoneCommentResponseType" ordered="false">
+    <structure get-method="getHostedZone" set-method="setHostedZone" usage="optional" type="com.eucalyptus.route53.common.msgs.HostedZone" name="HostedZone"/>
+  </mapping>
+  <mapping name="UpdateTrafficPolicyCommentRequest" class="com.eucalyptus.route53.common.msgs.UpdateTrafficPolicyCommentType" ordered="false">
+    <value name="Comment" get-method="getComment" set-method="setComment" usage="optional"/>
+  </mapping>
+  <mapping name="UpdateTrafficPolicyCommentResponse" class="com.eucalyptus.route53.common.msgs.UpdateTrafficPolicyCommentResponseType" ordered="false">
+    <structure get-method="getTrafficPolicy" set-method="setTrafficPolicy" usage="optional" type="com.eucalyptus.route53.common.msgs.TrafficPolicy" name="TrafficPolicy"/>
+  </mapping>
+  <mapping name="UpdateTrafficPolicyInstanceRequest" class="com.eucalyptus.route53.common.msgs.UpdateTrafficPolicyInstanceType" ordered="false">
+    <value name="TTL" get-method="getTTL" set-method="setTTL" usage="optional"/>
+    <value name="TrafficPolicyId" get-method="getTrafficPolicyId" set-method="setTrafficPolicyId" usage="optional"/>
+    <value name="TrafficPolicyVersion" get-method="getTrafficPolicyVersion" set-method="setTrafficPolicyVersion" usage="optional"/>
+  </mapping>
+  <mapping name="UpdateTrafficPolicyInstanceResponse" class="com.eucalyptus.route53.common.msgs.UpdateTrafficPolicyInstanceResponseType" ordered="false">
+    <structure get-method="getTrafficPolicyInstance" set-method="setTrafficPolicyInstance" usage="optional" type="com.eucalyptus.route53.common.msgs.TrafficPolicyInstance" name="TrafficPolicyInstance"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.AccountLimit" abstract="true" ordered="false">
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+    <value name="Value" get-method="getValue" set-method="setValue" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.AlarmIdentifier" abstract="true" ordered="false">
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+    <value name="Region" get-method="getRegion" set-method="setRegion" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.AliasTarget" abstract="true" ordered="false">
+    <value name="DNSName" get-method="getDNSName" set-method="setDNSName" usage="optional"/>
+    <value name="EvaluateTargetHealth" get-method="getEvaluateTargetHealth" set-method="setEvaluateTargetHealth" usage="optional"/>
+    <value name="HostedZoneId" get-method="getHostedZoneId" set-method="setHostedZoneId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.Change" abstract="true" ordered="false">
+    <value name="Action" get-method="getAction" set-method="setAction" usage="optional"/>
+    <structure get-method="getResourceRecordSet" set-method="setResourceRecordSet" usage="optional" type="com.eucalyptus.route53.common.msgs.ResourceRecordSet" name="ResourceRecordSet"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.ChangeBatch" abstract="true" ordered="false">
+    <structure get-method="getChanges" set-method="setChanges" usage="optional" type="com.eucalyptus.route53.common.msgs.Changes" name="Changes"/>
+    <value name="Comment" get-method="getComment" set-method="setComment" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.ChangeInfo" abstract="true" ordered="false">
+    <value name="Comment" get-method="getComment" set-method="setComment" usage="optional"/>
+    <value name="Id" get-method="getId" set-method="setId" usage="optional"/>
+    <value name="Status" get-method="getStatus" set-method="setStatus" usage="optional"/>
+    <value name="SubmittedAt" get-method="getSubmittedAt" set-method="setSubmittedAt" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.Changes" abstract="true">
+    <collection field="member">
+      <structure name="Change" type="com.eucalyptus.route53.common.msgs.Change"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.CheckerIpRanges" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.ChildHealthCheckList" abstract="true">
+    <collection field="member">
+      <value name="ChildHealthCheck" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.CloudWatchAlarmConfiguration" abstract="true" ordered="false">
+    <value name="ComparisonOperator" get-method="getComparisonOperator" set-method="setComparisonOperator" usage="optional"/>
+    <structure get-method="getDimensions" set-method="setDimensions" usage="optional" type="com.eucalyptus.route53.common.msgs.DimensionList" name="Dimensions"/>
+    <value name="EvaluationPeriods" get-method="getEvaluationPeriods" set-method="setEvaluationPeriods" usage="optional"/>
+    <value name="MetricName" get-method="getMetricName" set-method="setMetricName" usage="optional"/>
+    <value name="Namespace" get-method="getNamespace" set-method="setNamespace" usage="optional"/>
+    <value name="Period" get-method="getPeriod" set-method="setPeriod" usage="optional"/>
+    <value name="Statistic" get-method="getStatistic" set-method="setStatistic" usage="optional"/>
+    <value name="Threshold" get-method="getThreshold" set-method="setThreshold" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.DelegationSet" abstract="true" ordered="false">
+    <value name="CallerReference" get-method="getCallerReference" set-method="setCallerReference" usage="optional"/>
+    <value name="Id" get-method="getId" set-method="setId" usage="optional"/>
+    <structure get-method="getNameServers" set-method="setNameServers" usage="optional" type="com.eucalyptus.route53.common.msgs.DelegationSetNameServers" name="NameServers"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.DelegationSetNameServers" abstract="true">
+    <collection field="member">
+      <value name="NameServer" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.DelegationSets" abstract="true">
+    <collection field="member">
+      <structure name="DelegationSet" type="com.eucalyptus.route53.common.msgs.DelegationSet"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.Dimension" abstract="true" ordered="false">
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+    <value name="Value" get-method="getValue" set-method="setValue" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.DimensionList" abstract="true">
+    <collection field="member">
+      <structure name="Dimension" type="com.eucalyptus.route53.common.msgs.Dimension"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.ErrorMessages" abstract="true">
+    <collection field="member">
+      <value name="Message" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.GeoLocation" abstract="true" ordered="false">
+    <value name="ContinentCode" get-method="getContinentCode" set-method="setContinentCode" usage="optional"/>
+    <value name="CountryCode" get-method="getCountryCode" set-method="setCountryCode" usage="optional"/>
+    <value name="SubdivisionCode" get-method="getSubdivisionCode" set-method="setSubdivisionCode" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.GeoLocationDetails" abstract="true" ordered="false">
+    <value name="ContinentCode" get-method="getContinentCode" set-method="setContinentCode" usage="optional"/>
+    <value name="ContinentName" get-method="getContinentName" set-method="setContinentName" usage="optional"/>
+    <value name="CountryCode" get-method="getCountryCode" set-method="setCountryCode" usage="optional"/>
+    <value name="CountryName" get-method="getCountryName" set-method="setCountryName" usage="optional"/>
+    <value name="SubdivisionCode" get-method="getSubdivisionCode" set-method="setSubdivisionCode" usage="optional"/>
+    <value name="SubdivisionName" get-method="getSubdivisionName" set-method="setSubdivisionName" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.GeoLocationDetailsList" abstract="true">
+    <collection field="member">
+      <structure name="GeoLocationDetails" type="com.eucalyptus.route53.common.msgs.GeoLocationDetails"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.HealthCheck" abstract="true" ordered="false">
+    <value name="CallerReference" get-method="getCallerReference" set-method="setCallerReference" usage="optional"/>
+    <structure get-method="getCloudWatchAlarmConfiguration" set-method="setCloudWatchAlarmConfiguration" usage="optional" type="com.eucalyptus.route53.common.msgs.CloudWatchAlarmConfiguration" name="CloudWatchAlarmConfiguration"/>
+    <structure get-method="getHealthCheckConfig" set-method="setHealthCheckConfig" usage="optional" type="com.eucalyptus.route53.common.msgs.HealthCheckConfig" name="HealthCheckConfig"/>
+    <value name="HealthCheckVersion" get-method="getHealthCheckVersion" set-method="setHealthCheckVersion" usage="optional"/>
+    <value name="Id" get-method="getId" set-method="setId" usage="optional"/>
+    <structure get-method="getLinkedService" set-method="setLinkedService" usage="optional" type="com.eucalyptus.route53.common.msgs.LinkedService" name="LinkedService"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.HealthCheckConfig" abstract="true" ordered="false">
+    <structure get-method="getAlarmIdentifier" set-method="setAlarmIdentifier" usage="optional" type="com.eucalyptus.route53.common.msgs.AlarmIdentifier" name="AlarmIdentifier"/>
+    <structure get-method="getChildHealthChecks" set-method="setChildHealthChecks" usage="optional" type="com.eucalyptus.route53.common.msgs.ChildHealthCheckList" name="ChildHealthChecks"/>
+    <value name="Disabled" get-method="getDisabled" set-method="setDisabled" usage="optional"/>
+    <value name="EnableSNI" get-method="getEnableSNI" set-method="setEnableSNI" usage="optional"/>
+    <value name="FailureThreshold" get-method="getFailureThreshold" set-method="setFailureThreshold" usage="optional"/>
+    <value name="FullyQualifiedDomainName" get-method="getFullyQualifiedDomainName" set-method="setFullyQualifiedDomainName" usage="optional"/>
+    <value name="HealthThreshold" get-method="getHealthThreshold" set-method="setHealthThreshold" usage="optional"/>
+    <value name="IPAddress" get-method="getIPAddress" set-method="setIPAddress" usage="optional"/>
+    <value name="InsufficientDataHealthStatus" get-method="getInsufficientDataHealthStatus" set-method="setInsufficientDataHealthStatus" usage="optional"/>
+    <value name="Inverted" get-method="getInverted" set-method="setInverted" usage="optional"/>
+    <value name="MeasureLatency" get-method="getMeasureLatency" set-method="setMeasureLatency" usage="optional"/>
+    <value name="Port" get-method="getPort" set-method="setPort" usage="optional"/>
+    <structure get-method="getRegions" set-method="setRegions" usage="optional" type="com.eucalyptus.route53.common.msgs.HealthCheckRegionList" name="Regions"/>
+    <value name="RequestInterval" get-method="getRequestInterval" set-method="setRequestInterval" usage="optional"/>
+    <value name="ResourcePath" get-method="getResourcePath" set-method="setResourcePath" usage="optional"/>
+    <value name="SearchString" get-method="getSearchString" set-method="setSearchString" usage="optional"/>
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.HealthCheckObservation" abstract="true" ordered="false">
+    <value name="IPAddress" get-method="getIPAddress" set-method="setIPAddress" usage="optional"/>
+    <value name="Region" get-method="getRegion" set-method="setRegion" usage="optional"/>
+    <structure get-method="getStatusReport" set-method="setStatusReport" usage="optional" type="com.eucalyptus.route53.common.msgs.StatusReport" name="StatusReport"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.HealthCheckObservations" abstract="true">
+    <collection field="member">
+      <structure name="HealthCheckObservation" type="com.eucalyptus.route53.common.msgs.HealthCheckObservation"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.HealthCheckRegionList" abstract="true">
+    <collection field="member">
+      <value name="Region" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.HealthChecks" abstract="true">
+    <collection field="member">
+      <structure name="HealthCheck" type="com.eucalyptus.route53.common.msgs.HealthCheck"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.HostedZone" abstract="true" ordered="false">
+    <value name="CallerReference" get-method="getCallerReference" set-method="setCallerReference" usage="optional"/>
+    <structure get-method="getConfig" set-method="setConfig" usage="optional" type="com.eucalyptus.route53.common.msgs.HostedZoneConfig" name="Config"/>
+    <value name="Id" get-method="getId" set-method="setId" usage="optional"/>
+    <structure get-method="getLinkedService" set-method="setLinkedService" usage="optional" type="com.eucalyptus.route53.common.msgs.LinkedService" name="LinkedService"/>
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+    <value name="ResourceRecordSetCount" get-method="getResourceRecordSetCount" set-method="setResourceRecordSetCount" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.HostedZoneConfig" abstract="true" ordered="false">
+    <value name="Comment" get-method="getComment" set-method="setComment" usage="optional"/>
+    <value name="PrivateZone" get-method="getPrivateZone" set-method="setPrivateZone" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.HostedZoneLimit" abstract="true" ordered="false">
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+    <value name="Value" get-method="getValue" set-method="setValue" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.HostedZones" abstract="true">
+    <collection field="member">
+      <structure name="HostedZone" type="com.eucalyptus.route53.common.msgs.HostedZone"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.LinkedService" abstract="true" ordered="false">
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <value name="ServicePrincipal" get-method="getServicePrincipal" set-method="setServicePrincipal" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.QueryLoggingConfig" abstract="true" ordered="false">
+    <value name="CloudWatchLogsLogGroupArn" get-method="getCloudWatchLogsLogGroupArn" set-method="setCloudWatchLogsLogGroupArn" usage="optional"/>
+    <value name="HostedZoneId" get-method="getHostedZoneId" set-method="setHostedZoneId" usage="optional"/>
+    <value name="Id" get-method="getId" set-method="setId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.QueryLoggingConfigs" abstract="true">
+    <collection field="member">
+      <structure name="QueryLoggingConfig" type="com.eucalyptus.route53.common.msgs.QueryLoggingConfig"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.RecordData" abstract="true">
+    <collection field="member">
+      <value name="RecordDataEntry" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.ResettableElementNameList" abstract="true">
+    <collection field="member">
+      <value name="ResettableElementName" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.ResourceRecord" abstract="true" ordered="false">
+    <value name="Value" get-method="getValue" set-method="setValue" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.ResourceRecordSet" abstract="true" ordered="false">
+    <structure get-method="getAliasTarget" set-method="setAliasTarget" usage="optional" type="com.eucalyptus.route53.common.msgs.AliasTarget" name="AliasTarget"/>
+    <value name="Failover" get-method="getFailover" set-method="setFailover" usage="optional"/>
+    <structure get-method="getGeoLocation" set-method="setGeoLocation" usage="optional" type="com.eucalyptus.route53.common.msgs.GeoLocation" name="GeoLocation"/>
+    <value name="HealthCheckId" get-method="getHealthCheckId" set-method="setHealthCheckId" usage="optional"/>
+    <value name="MultiValueAnswer" get-method="getMultiValueAnswer" set-method="setMultiValueAnswer" usage="optional"/>
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+    <value name="Region" get-method="getRegion" set-method="setRegion" usage="optional"/>
+    <structure get-method="getResourceRecords" set-method="setResourceRecords" usage="optional" type="com.eucalyptus.route53.common.msgs.ResourceRecords" name="ResourceRecords"/>
+    <value name="SetIdentifier" get-method="getSetIdentifier" set-method="setSetIdentifier" usage="optional"/>
+    <value name="TTL" get-method="getTTL" set-method="setTTL" usage="optional"/>
+    <value name="TrafficPolicyInstanceId" get-method="getTrafficPolicyInstanceId" set-method="setTrafficPolicyInstanceId" usage="optional"/>
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+    <value name="Weight" get-method="getWeight" set-method="setWeight" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.ResourceRecordSets" abstract="true">
+    <collection field="member">
+      <structure name="ResourceRecordSet" type="com.eucalyptus.route53.common.msgs.ResourceRecordSet"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.ResourceRecords" abstract="true">
+    <collection field="member">
+      <structure name="ResourceRecord" type="com.eucalyptus.route53.common.msgs.ResourceRecord"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.ResourceTagSet" abstract="true" ordered="false">
+    <value name="ResourceId" get-method="getResourceId" set-method="setResourceId" usage="optional"/>
+    <value name="ResourceType" get-method="getResourceType" set-method="setResourceType" usage="optional"/>
+    <structure get-method="getTags" set-method="setTags" usage="optional" type="com.eucalyptus.route53.common.msgs.TagList" name="Tags"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.ResourceTagSetList" abstract="true">
+    <collection field="member">
+      <structure name="ResourceTagSet" type="com.eucalyptus.route53.common.msgs.ResourceTagSet"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.ReusableDelegationSetLimit" abstract="true" ordered="false">
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+    <value name="Value" get-method="getValue" set-method="setValue" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.StatusReport" abstract="true" ordered="false">
+    <value name="CheckedTime" get-method="getCheckedTime" set-method="setCheckedTime" usage="optional"/>
+    <value name="Status" get-method="getStatus" set-method="setStatus" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.Tag" abstract="true" ordered="false">
+    <value name="Key" get-method="getKey" set-method="setKey" usage="optional"/>
+    <value name="Value" get-method="getValue" set-method="setValue" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.TagKeyList" abstract="true">
+    <collection field="member">
+      <value name="Key" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.TagList" abstract="true">
+    <collection field="member">
+      <structure name="Tag" type="com.eucalyptus.route53.common.msgs.Tag"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.TagResourceIdList" abstract="true">
+    <collection field="member">
+      <value name="ResourceId" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.TrafficPolicies" abstract="true">
+    <collection field="member">
+      <structure name="TrafficPolicy" type="com.eucalyptus.route53.common.msgs.TrafficPolicy"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.TrafficPolicy" abstract="true" ordered="false">
+    <value name="Comment" get-method="getComment" set-method="setComment" usage="optional"/>
+    <value name="Document" get-method="getDocument" set-method="setDocument" usage="optional"/>
+    <value name="Id" get-method="getId" set-method="setId" usage="optional"/>
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+    <value name="Version" get-method="getVersion" set-method="setVersion" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.TrafficPolicyInstance" abstract="true" ordered="false">
+    <value name="HostedZoneId" get-method="getHostedZoneId" set-method="setHostedZoneId" usage="optional"/>
+    <value name="Id" get-method="getId" set-method="setId" usage="optional"/>
+    <value name="Message" get-method="getMessage" set-method="setMessage" usage="optional"/>
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+    <value name="State" get-method="getState" set-method="setState" usage="optional"/>
+    <value name="TTL" get-method="getTTL" set-method="setTTL" usage="optional"/>
+    <value name="TrafficPolicyId" get-method="getTrafficPolicyId" set-method="setTrafficPolicyId" usage="optional"/>
+    <value name="TrafficPolicyType" get-method="getTrafficPolicyType" set-method="setTrafficPolicyType" usage="optional"/>
+    <value name="TrafficPolicyVersion" get-method="getTrafficPolicyVersion" set-method="setTrafficPolicyVersion" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.TrafficPolicyInstances" abstract="true">
+    <collection field="member">
+      <structure name="TrafficPolicyInstance" type="com.eucalyptus.route53.common.msgs.TrafficPolicyInstance"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.TrafficPolicySummaries" abstract="true">
+    <collection field="member">
+      <structure name="TrafficPolicySummary" type="com.eucalyptus.route53.common.msgs.TrafficPolicySummary"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.TrafficPolicySummary" abstract="true" ordered="false">
+    <value name="Id" get-method="getId" set-method="setId" usage="optional"/>
+    <value name="LatestVersion" get-method="getLatestVersion" set-method="setLatestVersion" usage="optional"/>
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+    <value name="TrafficPolicyCount" get-method="getTrafficPolicyCount" set-method="setTrafficPolicyCount" usage="optional"/>
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.VPC" abstract="true" ordered="false">
+    <value name="VPCId" get-method="getVPCId" set-method="setVPCId" usage="optional"/>
+    <value name="VPCRegion" get-method="getVPCRegion" set-method="setVPCRegion" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.route53.common.msgs.VPCs" abstract="true">
+    <collection field="member">
+      <structure name="VPC" type="com.eucalyptus.route53.common.msgs.VPC"/>
+    </collection>
+  </mapping>
+</binding>
