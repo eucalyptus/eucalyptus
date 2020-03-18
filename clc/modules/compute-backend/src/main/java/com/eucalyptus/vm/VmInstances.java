@@ -69,7 +69,6 @@ import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.SimpleExpression;
 import org.xbill.DNS.Name;
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Storage;
@@ -150,6 +149,7 @@ import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaceAttachment;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterfaces;
 import com.eucalyptus.compute.common.internal.vpc.Subnet;
+import com.eucalyptus.compute.common.policy.ComputePolicySpec;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -1845,7 +1845,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
           public void fire( final VmInstance input ) {
             final VmInstance persistedInstance = Entities.persist( input );
             final List<ResourceTag> instanceTags =
-                TagHelper.tagsForResource( allocInfo.getRequest( ).getTagSpecification( ), PolicySpec.EC2_RESOURCE_INSTANCE );
+                TagHelper.tagsForResource( allocInfo.getRequest( ).getTagSpecification( ), ComputePolicySpec.EC2_RESOURCE_INSTANCE );
             TagHelper.createOrUpdateTags( allocInfo.getOwnerFullName( ), persistedInstance, instanceTags );
           }
         } );

@@ -50,6 +50,7 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.PolicyScope;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.CloudMetadata.AddressMetadata;
+import com.eucalyptus.compute.common.policy.ComputePolicySpec;
 import com.eucalyptus.util.RestrictedTypes;
 
 @PolicyKey( Keys.EC2_QUOTA_ADDRESS_NUMBER )
@@ -64,7 +65,7 @@ public class AddressNumberQuotaKey extends QuotaKey {
   
   @Override
   public boolean canApply( String action ) {
-    if ( PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, PolicySpec.EC2_ALLOCATEADDRESS ).equals( action ) ) {
+    if ( PolicySpec.qualifiedName( ComputePolicySpec.VENDOR_EC2, ComputePolicySpec.EC2_ALLOCATEADDRESS ).equals( action ) ) {
      return true;
    }
    return false;

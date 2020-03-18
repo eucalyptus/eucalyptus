@@ -51,6 +51,7 @@ import com.eucalyptus.auth.principal.PolicyScope;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.CloudMetadata.SnapshotMetadata;
 import com.eucalyptus.component.id.Euare;
+import com.eucalyptus.compute.common.policy.ComputePolicySpec;
 import com.eucalyptus.util.RestrictedTypes;
 
 /**
@@ -71,7 +72,7 @@ public class SnapshotNumberQuotaKey extends QuotaKey {
   
   @Override
   public boolean canApply( String action ) {
-    if ( PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, PolicySpec.EC2_CREATESNAPSHOT ).equals( action ) ) {
+    if ( PolicySpec.qualifiedName( ComputePolicySpec.VENDOR_EC2, ComputePolicySpec.EC2_CREATESNAPSHOT ).equals( action ) ) {
       return true;
     }
     return false;

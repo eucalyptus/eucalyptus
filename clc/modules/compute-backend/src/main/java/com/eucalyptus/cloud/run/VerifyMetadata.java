@@ -55,7 +55,6 @@ import com.eucalyptus.auth.AuthContextSupplier;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.euare.common.policy.IamPolicySpec;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccountFullName;
@@ -78,6 +77,7 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
 import com.eucalyptus.compute.common.internal.images.BootableImageInfo;
 import com.eucalyptus.compute.common.internal.images.DeviceMapping;
+import com.eucalyptus.compute.common.policy.ComputePolicySpec;
 import com.eucalyptus.images.Emis;
 import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.compute.common.internal.images.ImageInfo;
@@ -135,7 +135,7 @@ public class VerifyMetadata {
       };
     }
   }
-  
+
   enum VmTypeVerifier implements MetadataVerifier {
     INSTANCE;
     
@@ -292,7 +292,7 @@ public class VerifyMetadata {
           final AuthContextSupplier user = allocInfo.getAuthContext( );
           if ( !Permissions.isAuthorized(
               IamPolicySpec.VENDOR_IAM,
-              PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE,
+              IamPolicySpec.IAM_RESOURCE_INSTANCE_PROFILE,
               Accounts.getInstanceProfileFullName( profile ),
               AccountFullName.getInstance( profile.getAccountNumber( ) ),
               IamPolicySpec.IAM_LISTINSTANCEPROFILES,
@@ -306,7 +306,7 @@ public class VerifyMetadata {
           final Role role = profile.getRole( );
           if ( role != null && !Permissions.isAuthorized(
                   IamPolicySpec.VENDOR_IAM,
-                  PolicySpec.IAM_RESOURCE_ROLE,
+                  IamPolicySpec.IAM_RESOURCE_ROLE,
                   Accounts.getRoleFullName( role ),
                   AccountFullName.getInstance( role.getAccountNumber( ) ),
                   IamPolicySpec.IAM_PASSROLE,
@@ -441,7 +441,7 @@ public class VerifyMetadata {
       }
       final UserFullName userFullName = allocInfo.getOwnerFullName( );
       final AccountFullName accountFullName = userFullName.asAccountFullName( );
-      for ( final String resource : PolicySpec.EC2_RESOURCES ) {
+      for ( final String resource : ComputePolicySpec.EC2_RESOURCES ) {
         final List<ResourceTag> resourceTags = TagHelper.tagsForResource( allocInfo.getRequest( ).getTagSpecification( ), resource );
         if ( !resourceTags.isEmpty( ) ) {
           if ( !TagHelper.createTagsAuthorized( authContext, accountFullName, resource ) ) {

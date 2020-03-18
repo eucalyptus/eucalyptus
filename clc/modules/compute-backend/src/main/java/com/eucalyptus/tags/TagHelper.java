@@ -42,6 +42,7 @@ import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.ResourceTagSpecification;
 import com.eucalyptus.compute.common.internal.tags.TagSupport;
 import com.eucalyptus.compute.common.internal.util.MetadataException;
+import com.eucalyptus.compute.common.policy.ComputePolicySpec;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.Assert;
@@ -147,7 +148,7 @@ public class TagHelper {
       @Nullable final List<ResourceTagSpecification> tagSpecifications,
       @Nonnull  final String resource
   ) {
-    Assert.arg( PolicySpec.EC2_RESOURCES.contains( resource ), "Invalid EC2 resource: %1$s", resource );
+    Assert.arg( ComputePolicySpec.EC2_RESOURCES.contains( resource ), "Invalid EC2 resource: %1$s", resource );
     final List<ResourceTag> tags = Lists.newArrayList( );
     if ( tagSpecifications != null ) for( final ResourceTagSpecification tagSpecification : tagSpecifications ) {
       final List<ResourceTag> resourceTags = tagSpecification.getTagSet( );
@@ -208,11 +209,11 @@ public class TagHelper {
       @Nonnull final String resourceType
   ) {
     return Permissions.isAuthorized(
-        PolicySpec.VENDOR_EC2,
+        ComputePolicySpec.VENDOR_EC2,
         resourceType,
         "",
         accountFullName,
-        PolicySpec.EC2_CREATETAGS,
+        ComputePolicySpec.EC2_CREATETAGS,
         authContext );
   }
 

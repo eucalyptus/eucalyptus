@@ -55,7 +55,6 @@ import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotResponseType;
@@ -80,6 +79,7 @@ import com.eucalyptus.compute.common.internal.tags.Tag;
 import com.eucalyptus.compute.common.internal.tags.TagSupport;
 import com.eucalyptus.compute.common.internal.tags.Tags;
 import com.eucalyptus.compute.common.internal.util.MetadataException;
+import com.eucalyptus.compute.common.policy.ComputePolicySpec;
 import com.eucalyptus.tags.TagHelper;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
@@ -142,10 +142,10 @@ public class SnapshotManager {
     } catch ( MetadataException e ) {
       throw new ClientComputeException( "InvalidParameterValue", e.getMessage( ) );
     }
-    final List<ResourceTag> snapshotTags = TagHelper.tagsForResource( request.getTagSpecification( ), PolicySpec.EC2_RESOURCE_SNAPSHOT );
+    final List<ResourceTag> snapshotTags = TagHelper.tagsForResource( request.getTagSpecification( ), ComputePolicySpec.EC2_RESOURCE_SNAPSHOT );
 
     if ( !snapshotTags.isEmpty( ) ) {
-      if ( !TagHelper.createTagsAuthorized( ctx, PolicySpec.EC2_RESOURCE_SNAPSHOT ) ) {
+      if ( !TagHelper.createTagsAuthorized( ctx, ComputePolicySpec.EC2_RESOURCE_SNAPSHOT ) ) {
         throw new ClientUnauthorizedComputeException( "Not authorized to create tags by " + ctx.getUser( ).getName( ) );
       }
     }

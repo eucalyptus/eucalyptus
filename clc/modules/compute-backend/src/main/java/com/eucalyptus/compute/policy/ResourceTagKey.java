@@ -28,8 +28,6 @@
  ************************************************************************/
 package com.eucalyptus.compute.policy;
 
-import static com.eucalyptus.auth.policy.PolicySpec.EC2_CREATESNAPSHOT;
-import static com.eucalyptus.auth.policy.PolicySpec.EC2_DELETESNAPSHOT;
 import static com.eucalyptus.auth.policy.PolicySpec.qualifiedName;
 import static com.eucalyptus.compute.common.policy.ComputePolicySpec.*;
 import java.util.Map;

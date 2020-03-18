@@ -28,9 +28,9 @@
  ************************************************************************/
 package com.eucalyptus.compute.policy;
 
-import static com.eucalyptus.auth.policy.PolicySpec.EC2_RUNINSTANCES;
-import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_EC2;
 import static com.eucalyptus.auth.policy.PolicySpec.qualifiedName;
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.EC2_RUNINSTANCES;
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.VENDOR_EC2;
 import java.util.Set;
 import com.google.common.collect.ImmutableSet;
 

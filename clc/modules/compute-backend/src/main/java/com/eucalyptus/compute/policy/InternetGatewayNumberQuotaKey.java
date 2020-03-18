@@ -38,6 +38,7 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.PolicyScope;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.CloudMetadata;
+import com.eucalyptus.compute.common.policy.ComputePolicySpec;
 import com.eucalyptus.util.RestrictedTypes;
 import net.sf.json.JSONException;
 
@@ -56,7 +57,7 @@ public class InternetGatewayNumberQuotaKey extends QuotaKey {
 
   @Override
   public boolean canApply( String action ) {
-    if ( PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, PolicySpec.EC2_CREATEINTERNETGATEWAY ).equals( action ) ) {
+    if ( PolicySpec.qualifiedName( ComputePolicySpec.VENDOR_EC2, ComputePolicySpec.EC2_CREATEINTERNETGATEWAY ).equals( action ) ) {
       return true;
     }
     return false;
