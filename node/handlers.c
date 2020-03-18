@@ -592,7 +592,7 @@ static void printNCServiceStateInfo(void)
             LOGTRACE("Disabled Service - %s %s %s %s\n", nc_state.disabledServices[i].name, nc_state.disabledServices[i].partition, nc_state.disabledServices[i].type,
                      nc_state.disabledServices[i].uris[0]);
         }
-        for (i = 0; i < nc_state.servicesLen; i++) {
+        for (i = 0; i < nc_state.notreadyServicesLen; i++) {
             LOGTRACE("Notready Service - %s %s %s %s\n", nc_state.notreadyServices[i].name, nc_state.notreadyServices[i].partition, nc_state.notreadyServices[i].type,
                      nc_state.notreadyServices[i].uris[0]);
         }
@@ -626,7 +626,7 @@ static void printMsgServiceStateInfo(ncMetadata * pMeta)
                      pMeta->disabledServices[i].uris[0]);
         }
 
-        for (i = 0; i < pMeta->servicesLen; i++) {
+        for (i = 0; i < pMeta->notreadyServicesLen; i++) {
             LOGTRACE("Msg-Meta: Notready Service - %s %s %s %s\n", pMeta->notreadyServices[i].name, pMeta->notreadyServices[i].partition, pMeta->notreadyServices[i].type,
                      pMeta->notreadyServices[i].uris[0]);
         }
