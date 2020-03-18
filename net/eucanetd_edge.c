@@ -1182,7 +1182,7 @@ int do_edge_update_eips(edge_config *edge) {
                 // try arping up to 3 times
                 rc = EUCA_TIMEOUT_ERROR;
                 for (j = 1; j < 4 && rc != EUCA_OK; j++) {
-                    rc = euca_exec_wait(j, edge->config->cmdprefix, "arping", "-c", "1", "-U", "-I", edge->config->pubInterface, strptra, NULL);
+                    rc = euca_exec_wait(j, edge->config->cmdprefix, "arping", "-q", "-c", "1", "-U", "-I", edge->config->pubInterface, strptra, NULL);
                 }
             }
 
@@ -1287,8 +1287,10 @@ int do_edge_update_eips(edge_config *edge) {
                 strptra = hex2dot(edge->gni->public_ips[i]);
                 snprintf(cmd, EUCA_MAX_PATH, "%s/32", strptra);
                 EUCA_FREE(strptra);
-                if (euca_execlp_redirect(NULL, NULL, "/dev/null", FALSE, "/dev/null", FALSE, edge->config->cmdprefix,
-                                         "ip", "addr", "del", cmd, "dev", edge->config->pubInterface, NULL) != EUCA_OK) {
+                euca_execlp_redirect(&rc, NULL, "/dev/null", FALSE, "/dev/null", FALSE, edge->config->cmdprefix,
+                                     "ip", "addr", "del", cmd, "dev", edge->config->pubInterface, NULL);
+                rc = rc >> 8;
+                if (!(rc == 0 || rc == 2)) {
                     LOGERROR("could not execute: revoking no longer in use ips\n");
                     ret = 1;
                 }
