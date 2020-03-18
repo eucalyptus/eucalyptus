@@ -93,7 +93,7 @@ public class CloudFormationProperties {
       changeListener = PropertyChangeListeners.RegexMatchListener.class )
   @PropertyChangeListeners.RegexMatchListener.RegexMatch(
       message = "Invalid url suffix value, must be a valid domain with optional port",
-      regex = "[a-zA-Z0-9-]{3,64}(?:\\.[a-zA-Z0-9-]{3,64})*(?::[0-9]{1,5})?" )
+      regex = "[a-zA-Z0-9-]{2,64}(?:\\.[a-zA-Z0-9-]{2,64})*(?::[0-9]{1,5})?" )
   public static volatile String PSEUDO_PARAM_URLSUFFIX = "";
 
   // In case we are using AWS SWF
