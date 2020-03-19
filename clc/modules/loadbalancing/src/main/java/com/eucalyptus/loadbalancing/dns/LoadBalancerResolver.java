@@ -43,6 +43,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
+import org.xbill.DNS.TextParseException;
 
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -113,6 +114,14 @@ public class LoadBalancerResolver extends DnsResolvers.DnsResolver {
       return true;
     }
     return false;
+  }
+
+  static List<String> getIps(final String name) {
+    try {
+      return getIps(Name.fromString(name, Name.root));
+    } catch (ExecutionException | TextParseException e) {
+      return null;
+    }
   }
 
   private static List<String> resolveName(final Name name) {

@@ -9,6 +9,7 @@
         <dependency name="eucalyptus-resources" rev="latest.integration"/>
         <dependency name="eucalyptus-simpleworkflow-common" rev="latest.integration"/>
         <dependency name="eucalyptus-object-storage-common" rev="latest.integration"/>
+        <dependency name="eucalyptus-route53-common" rev="latest.integration"/>
     </dependencies>
 </ivy-module>
 

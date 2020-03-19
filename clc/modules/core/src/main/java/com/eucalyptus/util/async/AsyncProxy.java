@@ -147,10 +147,17 @@ public class AsyncProxy {
    * Create a system privileged client
    */
   public static <T> T privilegedClient( final Class<T> clientInterface ) {
+    return privilegedClient( clientInterface, AccountIdentifiers.SYSTEM_ACCOUNT );
+  }
+
+  /**
+   * Create a system privileged client
+   */
+  public static <T> T privilegedClient( final Class<T> clientInterface, final String accountAlias ) {
     final Function<String,String> idLookup =
         FUtils.memoizeLast( ThrowingFunction.undeclared( Accounts::lookupAccountIdByAlias ) );
     return client( clientInterface, ThrowingFunction.undeclared( request -> {
-      request.setUserId( idLookup.apply( AccountIdentifiers.SYSTEM_ACCOUNT ) );
+      request.setUserId( idLookup.apply( accountAlias ) );
       request.markPrivileged( );
       return request;
     } ) );

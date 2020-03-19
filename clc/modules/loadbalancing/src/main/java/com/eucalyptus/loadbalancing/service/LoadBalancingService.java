@@ -194,6 +194,7 @@ import com.eucalyptus.loadbalancing.workflow.LoadBalancingWorkflows;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -215,6 +216,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.net.HostSpecifier;
+import io.vavr.control.Option;
 
 /**
  * @author Sang-Min Park
@@ -525,6 +527,7 @@ public class LoadBalancingService {
     final Set<LoadBalancer> allowedLBs =
         Entities.asTransaction( LoadBalancer.class, lookupAccountLBs ).apply( requestedNames );
 
+    final Option<Pair<String,String>> hostedZoneNameAndId = LoadBalancingHostedZone.getHostedZoneNameAndId();
     final Function<Set<LoadBalancer>, Set<LoadBalancerDescription>> lookupLBDescriptions = new Function<Set<LoadBalancer>, Set<LoadBalancerDescription>> () {
       public Set<LoadBalancerDescription> apply (final Set<LoadBalancer> input){
         final Set<LoadBalancerDescription> descs = Sets.newHashSet();
@@ -538,6 +541,12 @@ public class LoadBalancingService {
 
           // dns name
           desc.setDnsName( LoadBalancers.getLoadBalancerDnsName( lb ) );
+
+          // hosted zone
+          if (hostedZoneNameAndId.isDefined()) {
+            desc.setCanonicalHostedZoneName(hostedZoneNameAndId.get().getLeft());
+            desc.setCanonicalHostedZoneNameID(hostedZoneNameAndId.get().getRight());
+          }
 
           // instances
           if(lb.getBackendInstances().size()>0){

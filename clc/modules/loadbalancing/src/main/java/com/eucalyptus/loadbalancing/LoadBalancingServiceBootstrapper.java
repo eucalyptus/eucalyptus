@@ -111,6 +111,14 @@ public class LoadBalancingServiceBootstrapper extends Bootstrapper.Simple {
             LOG.error("Failed to prepare system VPC for loadbalancing service", ex);
             return false;
         }
+        try{
+            if (!LoadBalancingHostedZone.check()) {
+                return false;
+            }
+        } catch (final Exception ex) {
+            LOG.error("Failed to prepare system hosted zone for loadbalancing service", ex);
+            return false;
+        }
         return true;
     }
 
