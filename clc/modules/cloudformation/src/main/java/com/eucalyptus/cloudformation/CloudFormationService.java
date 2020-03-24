@@ -1794,7 +1794,9 @@ public class CloudFormationService {
   }
 
   public ListExportsResponseType listExports( final ListExportsType request ) throws CloudFormationException {
-    return handleStub( request );
+    final ListExportsResponseType response = handleStub( request );
+    response.getListExportsResult().setExports(new Exports());
+    return response;
   }
 
   public ListImportsResponseType listImports( final ListImportsType request ) throws CloudFormationException {
