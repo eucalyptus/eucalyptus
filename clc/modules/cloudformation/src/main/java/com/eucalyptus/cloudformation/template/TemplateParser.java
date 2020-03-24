@@ -131,7 +131,8 @@ public class TemplateParser {
   private enum OutputKey {
     Description,
     Condition,
-    Value
+    Value,
+    Export,
   };
 
   public static final String AWS_ACCOUNT_ID = "AWS::AccountId";
@@ -1330,6 +1331,16 @@ public class TemplateParser {
 
           if (outputValueNode.isArray()) {
             throw new ValidationErrorException("The Value field of every Outputs member must evaluate to a String and not a List.");
+          }
+        }
+        final JsonNode outputExportNode = outputJsonNode.get(OutputKey.Export.toString());
+        if (outputExportNode != null) {
+          final Set<String> tempOutputExportKeys = Sets.newHashSet(outputExportNode.fieldNames());
+          if ( !tempOutputExportKeys.remove("Name") ) {
+            throw new ValidationErrorException("Outputs Export missing required Name");
+          }
+          if ( !tempOutputExportKeys.isEmpty() ) {
+            throw new ValidationErrorException("Invalid output/export property or properties " + tempOutputExportKeys);
           }
         }
 
