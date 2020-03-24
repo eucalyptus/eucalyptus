@@ -1844,8 +1844,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
           @Override
           public void fire( final VmInstance input ) {
             final VmInstance persistedInstance = Entities.persist( input );
-            final List<ResourceTag> instanceTags =
-                TagHelper.tagsForResource( allocInfo.getRequest( ).getTagSpecification( ), ComputePolicySpec.EC2_RESOURCE_INSTANCE );
+            final List<ResourceTag> instanceTags = allocInfo.getTagsForResource( ComputePolicySpec.EC2_RESOURCE_INSTANCE );
             TagHelper.createOrUpdateTags( allocInfo.getOwnerFullName( ), persistedInstance, instanceTags );
           }
         } );

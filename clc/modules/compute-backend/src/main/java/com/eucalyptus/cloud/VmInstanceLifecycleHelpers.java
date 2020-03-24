@@ -35,6 +35,7 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -43,6 +44,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
@@ -56,6 +58,7 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.type.RestrictedType;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
+import com.eucalyptus.cloud.run.Allocations.AllocationType;
 import com.eucalyptus.cluster.common.ResourceToken;
 import com.eucalyptus.cluster.common.msgs.NetworkConfigType;
 import com.eucalyptus.cluster.common.msgs.VmRunType.Builder;
@@ -65,7 +68,11 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.InstanceNetworkInterfaceSetItemRequestType;
 import com.eucalyptus.compute.common.InstanceNetworkInterfaceSetRequestType;
+import com.eucalyptus.compute.common.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest;
 import com.eucalyptus.compute.common.PrivateIpAddressesSetItemRequestType;
+import com.eucalyptus.compute.common.PrivateIpAddressesSetRequestType;
+import com.eucalyptus.compute.common.SecurityGroupIdSetItemType;
+import com.eucalyptus.compute.common.SecurityGroupIdSetType;
 import com.eucalyptus.compute.common.backend.RunInstancesType;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.common.internal.network.NetworkGroup;
@@ -121,6 +128,7 @@ import com.eucalyptus.network.PublicAddresses;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.CollectionUtils;
+import com.eucalyptus.util.CompatFunction;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LockResource;
 import com.eucalyptus.util.Ordered;
@@ -266,35 +274,90 @@ public class VmInstanceLifecycleHelpers {
       }
     }
 
-    @Nullable
-    public static InstanceNetworkInterfaceSetItemRequestType getPrimaryNetworkInterface(
-        final RunInstancesType runInstancesType
+    protected static List<InstanceNetworkInterfaceSetItemRequestType> getNetworkInterfaces(
+        final Allocation allocation
     ) {
+      List<InstanceNetworkInterfaceSetItemRequestType> interfaces = Lists.newArrayList( );
+      final RunInstancesType runInstancesType = allocation.getRunInstancesRequest();
       if ( runInstancesType != null &&
           runInstancesType.getNetworkInterfaceSet( ) != null &&
           runInstancesType.getNetworkInterfaceSet( ).getItem( ) != null ) {
-        for ( InstanceNetworkInterfaceSetItemRequestType item : runInstancesType.getNetworkInterfaceSet( ).getItem( ) ) {
-          if ( item.getDeviceIndex( ) != null && item.getDeviceIndex( ) == 0 ) {
-            return item;
-          }
+        interfaces = runInstancesType.getNetworkInterfaceSet( ).getItem( );
+      }
+      if ( allocation.getLaunchTemplateData( ) != null &&
+          allocation.getLaunchTemplateData( ).getNetworkInterfaces( ) != null &&
+          !allocation.getLaunchTemplateData( ).getNetworkInterfaces( ).getMember( ).isEmpty( ) ) {
+        if ( interfaces.isEmpty( ) ) {
+
+          final CompatFunction<LaunchTemplateInstanceNetworkInterfaceSpecificationRequest, InstanceNetworkInterfaceSetItemRequestType> mapper =
+              ltItem -> {
+                final InstanceNetworkInterfaceSetItemRequestType item = new InstanceNetworkInterfaceSetItemRequestType();
+                item.setAssociatePublicIpAddress(ltItem.getAssociatePublicIpAddress());
+                item.setDeleteOnTermination(ltItem.getDeleteOnTermination());
+                item.setDescription(ltItem.getDescription());
+                item.setDeviceIndex(ltItem.getDeviceIndex());
+                item.setNetworkInterfaceId(ltItem.getNetworkInterfaceId());
+                item.setPrivateIpAddress(ltItem.getPrivateIpAddress());
+                item.setSecondaryPrivateIpAddressCount(ltItem.getSecondaryPrivateIpAddressCount());
+                item.setSubnetId(ltItem.getSubnetId());
+                if (ltItem.getGroups() != null) {
+                  item.setGroupSet(new SecurityGroupIdSetType(ltItem.getGroups().getMember().stream()
+                      .map(SecurityGroupIdSetItemType.forGroupId())
+                      .collect(Collectors.toList())));
+                }
+                if (ltItem.getPrivateIpAddresses() != null) {
+                  final PrivateIpAddressesSetRequestType privateIpAddresses = new PrivateIpAddressesSetRequestType();
+                  privateIpAddresses.setItem(ltItem.getPrivateIpAddresses().getMember().stream()
+                      .map(ltIpSpec -> {
+                        PrivateIpAddressesSetItemRequestType privateIp = new PrivateIpAddressesSetItemRequestType();
+                        privateIp.setPrimary(ltIpSpec.getPrimary());
+                        privateIp.setPrivateIpAddress(ltIpSpec.getPrivateIpAddress());
+                        return privateIp;
+                      })
+                      .collect(Collectors.toCollection(ArrayList::new)));
+                  item.setPrivateIpAddressesSet(privateIpAddresses);
+
+                }
+                return item;
+              };
+          interfaces.addAll(allocation.getLaunchTemplateData().getNetworkInterfaces().getMember().stream()
+              .map(mapper)
+              .collect(Collectors.toList()));
+        } else {
+          allocation.setLaunchTemplateResource( false );
+        }
+      }
+      return interfaces;
+    }
+
+    @Nullable
+    public static InstanceNetworkInterfaceSetItemRequestType getPrimaryNetworkInterface(
+        final Allocation allocation
+    ) {
+      for ( InstanceNetworkInterfaceSetItemRequestType item : getNetworkInterfaces( allocation ) ) {
+        if ( item.getDeviceIndex( ) != null && item.getDeviceIndex( ) == 0 ) {
+          return item;
         }
       }
       return null;
     }
 
-    @Nullable
     public static Iterable<InstanceNetworkInterfaceSetItemRequestType> getSecondaryNetworkInterfaces(
-        final RunInstancesType runInstancesType
+        final Allocation allocation
     ) {
       final List<InstanceNetworkInterfaceSetItemRequestType> interfaces = Lists.newArrayList( );
-      final InstanceNetworkInterfaceSetItemRequestType primary = getPrimaryNetworkInterface( runInstancesType );
-      if ( runInstancesType != null && runInstancesType.getNetworkInterfaceSet( ) != null &&
-          runInstancesType.getNetworkInterfaceSet( ).getItem( ) != null ) {
-        interfaces.addAll( runInstancesType.getNetworkInterfaceSet( ).getItem( ) );
-        if ( primary != null ) {
-          interfaces.remove( primary );// check against primary in case multiple interfaces with device index 0
+      interfaces.addAll( getNetworkInterfaces( allocation ) );
+
+      // remove primary
+      final Iterator<InstanceNetworkInterfaceSetItemRequestType> niIter = interfaces.iterator();
+      while ( niIter.hasNext( ) ) {
+        InstanceNetworkInterfaceSetItemRequestType next = niIter.next( );
+        if ( MoreObjects.firstNonNull( next.getDeviceIndex( ), -1 ) == 0 ) {
+          niIter.remove( );
+          break;
         }
       }
+
       return interfaces;
     }
 
@@ -479,7 +542,7 @@ public class VmInstanceLifecycleHelpers {
       final String vpcId = ( vpc == null ? null : vpc.getDisplayName( ) );
       final Boolean isVpc = vpcId != null;
       final InstanceNetworkInterfaceSetItemRequestType instanceNetworkInterface =
-          getPrimaryNetworkInterface( ( (RunInstancesType) allocation.getRequest( ) ) );
+          getPrimaryNetworkInterface( ( allocation ) );
       final Boolean requestedAllocation = ( instanceNetworkInterface == null ?
           null :
           instanceNetworkInterface.getAssociatePublicIpAddress( ) );
@@ -552,9 +615,22 @@ public class VmInstanceLifecycleHelpers {
     @Override
     public void verifyAllocation( final Allocation allocation ) throws MetadataException {
       final AccountFullName accountFullName = allocation.getOwnerFullName( ).asAccountFullName( );
+      final boolean verifyTemplate = AllocationType.Verify.matches( allocation );
 
+      boolean checkAccess = true;
       final Set<String> networkNames = Sets.newLinkedHashSet( allocation.getRequest( ).securityGroupNames( ) );
       final Set<String> networkIds = Sets.newLinkedHashSet( allocation.getRequest( ).securityGroupsIds( ) );
+      if ( networkNames.isEmpty( ) && networkIds.isEmpty( ) ) {
+        if (allocation.getLaunchTemplateData().getSecurityGroups()!=null) {
+          networkNames.addAll(allocation.getLaunchTemplateData().getSecurityGroups().getMember());
+        }
+        if (allocation.getLaunchTemplateData().getSecurityGroupIds()!=null) {
+          networkIds.addAll(allocation.getLaunchTemplateData().getSecurityGroupIds().getMember());
+        }
+        checkAccess = allocation.isVerifyLaunchTemplateData();
+      } else {
+        allocation.setLaunchTemplateResource(false);
+      }
       final String defaultVpcId = getDefaultVpcId( accountFullName, allocation );
       final String vpcId = allocation.getSubnet( ) != null ? allocation.getSubnet( ).getVpc( ).getDisplayName( ) : defaultVpcId;
       final boolean isVpc = vpcId != null;
@@ -596,13 +672,14 @@ public class VmInstanceLifecycleHelpers {
         }
       }
 
-      if ( !Collections.singleton( vpcId ).equals( Sets.newHashSet( Iterables.transform( groups, NetworkGroup.vpcId( ) ) ) ) ) {
+      if ( !Collections.singleton( vpcId ).equals( Sets.newHashSet( Iterables.transform( groups, NetworkGroup.vpcId( ) ) ) ) &&
+          !verifyTemplate ) {
         throw new InvalidMetadataException( "Invalid security groups (inconsistent VPC)" );
       }
 
       final Map<String, NetworkGroup> networkRuleGroups = Maps.newHashMap( );
       for ( final NetworkGroup group : groups ) {
-        if ( !RestrictedTypes.filterPrivileged( ).apply( group ) ) {
+        if ( checkAccess && !RestrictedTypes.filterPrivileged( ).apply( group ) ) {
           throw new IllegalMetadataAccessException( "Not authorized to use network group " + group.getGroupId( ) + "/" + group.getDisplayName( ) + " for " + allocation.getOwnerFullName( ).getUserName( ) );
         }
         networkRuleGroups.put( group.getDisplayName( ), group );
@@ -673,11 +750,12 @@ public class VmInstanceLifecycleHelpers {
 
     @Override
     public void verifyAllocation( final Allocation allocation ) throws MetadataException {
-      final RunInstancesType runInstances = (RunInstancesType) allocation.getRequest( );
+      final RunInstancesType runInstances = allocation.getRunInstancesRequest( );
       final boolean allowMultiVpc = Principals.systemUser( ).getName( ).equals( runInstances.getEffectiveUserId( ) );
+      final boolean verifyTemplate = AllocationType.Verify.matches( allocation );
 
-      final InstanceNetworkInterfaceSetItemRequestType instanceNetworkInterface = getPrimaryNetworkInterface( runInstances );
-      final Iterable<InstanceNetworkInterfaceSetItemRequestType> secondaryNetworkInterfaces = getSecondaryNetworkInterfaces( runInstances );
+      final InstanceNetworkInterfaceSetItemRequestType instanceNetworkInterface = getPrimaryNetworkInterface( allocation );
+      final Iterable<InstanceNetworkInterfaceSetItemRequestType> secondaryNetworkInterfaces = getSecondaryNetworkInterfaces( allocation );
       final String privateIp = getPrimaryPrivateIp( instanceNetworkInterface, runInstances.getPrivateIpAddress( ) );
       final String id = ( instanceNetworkInterface == null ? null : instanceNetworkInterface.getSubnetId( ) );
       final String subnetId = normalizeIdentifier( !Strings.isNullOrEmpty( id ) ? id : runInstances.getSubnetId( ) );
@@ -711,10 +789,10 @@ public class VmInstanceLifecycleHelpers {
           }
 
           if ( MoreObjects.firstNonNull( instanceNetworkInterface.getAssociatePublicIpAddress( ), false ) &&
-              !Iterables.isEmpty( secondaryNetworkInterfaces ) ) {
+              !Iterables.isEmpty( secondaryNetworkInterfaces ) && !verifyTemplate ) {
             throw new InvalidParameterCombinationMetadataException( "The associatePublicIPAddress parameter cannot be specified when launching with multiple network interfaces." );
           }
-        } else if ( !Iterables.isEmpty( secondaryNetworkInterfaces ) ) {
+        } else if ( !Iterables.isEmpty( secondaryNetworkInterfaces ) && !verifyTemplate ) {
           throw new InvalidParameterCombinationMetadataException( "Primary network interface required when secondary network interface(s) specified" );
         }
 
@@ -737,7 +815,7 @@ public class VmInstanceLifecycleHelpers {
               throw new NoSuchNetworkInterfaceMetadataException( "Network interface (" + instanceNetworkInterface.getNetworkInterfaceId( ) + ") not found", e );
             }
 
-            if ( networkInterface.isAttached( ) ) {
+            if ( networkInterface.isAttached( ) && !verifyTemplate ) {
               throw new NetworkInterfaceInUseMetadataException( "Network interface (" + instanceNetworkInterface.getNetworkInterfaceId( ) + ") in use" );
             }
 
@@ -783,7 +861,7 @@ public class VmInstanceLifecycleHelpers {
         if ( !groups.isEmpty( ) && !Collections.singleton( subnet.getVpc( ).getDisplayName( ) ).equals( Sets.newHashSet( Iterables.transform( groups, NetworkGroup.vpcId( ) ) ) ) ) {
           throw new InvalidMetadataException( "Invalid security groups (inconsistent VPC)" );
         }
-        if ( groups.size( ) > VpcConfiguration.getSecurityGroupsPerNetworkInterface( ) ) {
+        if ( groups.size( ) > VpcConfiguration.getSecurityGroupsPerNetworkInterface( ) && !verifyTemplate ) {
           throw new SecurityGroupLimitMetadataException( );
         }
 
@@ -831,7 +909,7 @@ public class VmInstanceLifecycleHelpers {
                     "network interface",
                     secondaryNetworkInterfaceId,
                     NetworkInterface.class );
-                if ( secondaryNetworkInterface.isAttached( ) ) {
+                if ( secondaryNetworkInterface.isAttached( ) && !verifyTemplate ) {
                   throw new NetworkInterfaceInUseMetadataException( "Network interface (" + networkInterfaceItem.getNetworkInterfaceId( ) + ") in use" );
                 }
 
@@ -892,12 +970,12 @@ public class VmInstanceLifecycleHelpers {
                 throw new InvalidMetadataException( "Invalid security groups for device " + String.valueOf( networkInterfaceItem.getDeviceIndex( ) ) + " (inconsistent VPC)" );
               }
 
-              if ( secondaryGroups.size( ) > VpcConfiguration.getSecurityGroupsPerNetworkInterface( ) ) {
+              if ( secondaryGroups.size( ) > VpcConfiguration.getSecurityGroupsPerNetworkInterface( ) && !verifyTemplate ) {
                 throw new SecurityGroupLimitMetadataException( );
               }
             }
 
-            if ( deviceIndexes.size( ) > maxInterfaces ) {
+            if ( deviceIndexes.size( ) > maxInterfaces && !verifyTemplate ) {
               final VmType type = allocation.getVmType( );
               throw new InvalidMetadataException( "Interface count " + String.valueOf( deviceIndexes.size( ) ) + " exceeds the limit for " + ( type == null ? null : type.getName( ) ) );
             }
@@ -918,7 +996,7 @@ public class VmInstanceLifecycleHelpers {
         }
 
         allocation.setAttribute( secondaryNetworkInterfacesKey, ImmutableList.copyOf( secondaryNetworkInterfaces ) );
-      } else {
+      } else if ( !verifyTemplate ) {
         // Default VPC, lookup subnet for user specified or system selected partition
         final AccountFullName accountFullName = allocation.getOwnerFullName( ).asAccountFullName( );
         final String defaultVpcId = getDefaultVpcId( accountFullName, allocation );
@@ -959,8 +1037,7 @@ public class VmInstanceLifecycleHelpers {
               .map( VpcNetworkInterfaceResource.class::cast )
               .filter( resource -> resource.getOwnerId( ) != null );
           if ( resources.isEmpty( ) ) {
-            final RunInstancesType runInstances = ( (RunInstancesType) allocation.getRequest( ) );
-            final InstanceNetworkInterfaceSetItemRequestType instanceNetworkInterface = getPrimaryNetworkInterface( runInstances );
+            final InstanceNetworkInterfaceSetItemRequestType instanceNetworkInterface = getPrimaryNetworkInterface( allocation );
             if ( ( instanceNetworkInterface == null ? null : instanceNetworkInterface.getNetworkInterfaceId( ) ) != null ) {
               final VpcNetworkInterfaceResource resource = new VpcNetworkInterfaceResource(
                   token.getInstanceId( ),
@@ -969,6 +1046,7 @@ public class VmInstanceLifecycleHelpers {
               resource.setDeleteOnTerminate( MoreObjects.firstNonNull( instanceNetworkInterface.getDeleteOnTermination( ), false ) );
               resources = Stream.of( resource );
             } else {
+              final RunInstancesType runInstances = allocation.getRunInstancesRequest();
               final String identifier = ResourceIdentifiers.generateString( "eni" );
               final String mac = NetworkInterfaceHelper.mac( identifier );
               final String privateIp = getPrimaryPrivateIp( instanceNetworkInterface, runInstances.getPrivateIpAddress( ) );
@@ -1028,8 +1106,8 @@ public class VmInstanceLifecycleHelpers {
     ) {
       final Set<Pair<String, Integer>> privateAddressDeviceIndexPairs = Sets.newHashSet( );
 
-      final RunInstancesType runInstances = (RunInstancesType) allocation.getRequest( );
-      final InstanceNetworkInterfaceSetItemRequestType instanceNetworkInterface = getPrimaryNetworkInterface( runInstances );
+      final RunInstancesType runInstances = allocation.getRunInstancesRequest( );
+      final InstanceNetworkInterfaceSetItemRequestType instanceNetworkInterface = getPrimaryNetworkInterface( allocation );
       if ( instanceNetworkInterface != null ) {
         String privateIp = getPrimaryPrivateIp( instanceNetworkInterface, runInstances.getPrivateIpAddress( ) );
         if ( privateIp != null ) {

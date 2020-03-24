@@ -16,9 +16,9 @@ public class DescribeLaunchTemplatesType extends ComputeMessage {
   @HttpEmbedded( multiple = true )
   private ArrayList<Filter> filterSet = new ArrayList<Filter>( );
   @HttpParameterMapping( parameter = "LaunchTemplateId" )
-  private ValueStringList launchTemplateIds;
+  private ValueStringList launchTemplateIds = new ValueStringList();
   @HttpEmbedded
-  private LaunchTemplateNameStringList launchTemplateNames;
+  private LaunchTemplateNameStringList launchTemplateNames = new LaunchTemplateNameStringList();
   private Integer maxResults;
   private String nextToken;
 

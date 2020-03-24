@@ -43,6 +43,7 @@ import java.security.PublicKey;
 import java.util.NoSuchElementException;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 
@@ -454,9 +455,17 @@ public class Emis {
     return new BootableSet( new UnavailableImageInfo( platform ) );
   }
   
-  public static BootableSet newBootableSet( final String imageId ) throws MetadataException {
+  public static BootableSet newBootableSet(
+      final String imageId,
+      @Nullable final String kernelId,
+      @Nullable final String ramdiskId
+  ) throws MetadataException {
     try {
-      return new BootsetBuilder( ).imageId( imageId ).run( );
+      return new BootsetBuilder( )
+          .imageId( imageId )
+          .kernelId( kernelId )
+          .ramdiskId( ramdiskId )
+          .run( );
     } catch ( final MetadataException ex ) {
       throw ex;
     } catch ( final Exception ex ) {
@@ -485,8 +494,12 @@ public class Emis {
     }
     
     public BootableSet run( ) throws MetadataException {
-      final Function<String, BootableSet> create = Functions.compose( BootsetWithRamdisk.INSTANCE,
-                                                                Functions.compose( BootsetWithKernel.INSTANCE, BootsetFromId.INSTANCE ) );
+      final Function<String, BootableSet> create =
+          Functions.compose(
+              BootsetWithRamdisk.INSTANCE.apply(this.ramdiskId),
+              Functions.compose(
+                  BootsetWithKernel.INSTANCE.apply(this.kernelId),
+                  BootsetFromId.INSTANCE ) );
       return this.prepareBootset( create );
     }
     
@@ -577,78 +590,77 @@ public class Emis {
     
   }
   
-  enum BootsetWithRamdisk implements Function<BootableSet, BootableSet> {
+  enum BootsetWithRamdisk implements Function<String, Function<BootableSet, BootableSet>> {
     INSTANCE;
-    
-    @Override
-    public BootableSet apply( final BootableSet input ) {
-      if ( !input.isLinux( ) || input.isHvm()) {
-        return input;
-      } else {
-        String ramdiskId = null;
-        try {
-          ramdiskId = determineRamdiskId( input );
-          LOG.debug( "Determined the appropriate ramdiskId to be " + ramdiskId + " for " + input.toString( ) );
-          if ( ramdiskId == null ) {
-            return input;
-          } else {
-            final RamdiskImageInfo ramdisk = RestrictedTypes.doPrivilegedWithoutOwner( ramdiskId, LookupRamdisk.INSTANCE );
-            return new TrifectaBootableSet( input.getMachine( ), input.getKernel( ), ramdisk );
-          }
-        } catch ( final InvalidMetadataException ex ) {
+
+    public Function<BootableSet, BootableSet> apply(@Nullable final String overrideRamdiskId) {
+      return input -> {
+        if ( !input.isLinux( ) || input.isHvm()) {
           return input;
-        } catch ( final Exception ex ) {
-          if ( input.isBlockStorage( ) ) {
+        } else {
+          String ramdiskId = null;
+          try {
+            ramdiskId = determineRamdiskId( input, overrideRamdiskId );
+            LOG.debug( "Determined the appropriate ramdiskId to be " + ramdiskId + " for " + input.toString( ) );
+            if ( ramdiskId == null ) {
+              return input;
+            } else {
+              final RamdiskImageInfo ramdisk = RestrictedTypes.doPrivilegedWithoutOwner( ramdiskId, LookupRamdisk.INSTANCE );
+              return new TrifectaBootableSet( input.getMachine( ), input.getKernel( ), ramdisk );
+            }
+          } catch ( final InvalidMetadataException ex ) {
             return input;
-          } else {
-            throw Exceptions.toUndeclared( new NoSuchMetadataException( "Failed to lookup ramdisk image information: " + ramdiskId
-                                                                        + " because of: "
-                                                                        + ex.getMessage( ), ex ) );
+          } catch ( final Exception ex ) {
+            if ( input.isBlockStorage( ) ) {
+              return input;
+            } else {
+              throw Exceptions.toUndeclared( new NoSuchMetadataException( "Failed to lookup ramdisk image information: " + ramdiskId
+                                                                          + " because of: "
+                                                                          + ex.getMessage( ), ex ) );
+            }
           }
         }
-      }
+      };
     }
   }
   
-  enum BootsetWithKernel implements Function<BootableSet, BootableSet> {
+  enum BootsetWithKernel implements Function<String, Function<BootableSet, BootableSet>> {
     INSTANCE;
-    
+
     @Override
-    public BootableSet apply( final BootableSet input ) {
-      if ( !input.isLinux( ) || input.isHvm() ) {
-        return input;
-      } else {
-        String kernelId = "unknown";
-        try {
-          kernelId = determineKernelId( input );
-          LOG.debug( "Determined the appropriate kernelId to be " + kernelId + " for " + input.toString( ) );
-          final KernelImageInfo kernel = RestrictedTypes.doPrivilegedWithoutOwner( kernelId, LookupKernel.INSTANCE );
-          return new NoRamdiskBootableSet( input.getMachine( ), kernel );
-        } catch ( final Exception ex ) {
-          if ( input.isBlockStorage( ) ) {
-            return input;
-          } else if (input.isHvm()) {
-        	return input;  
-          } else {
-            throw Exceptions.toUndeclared( new NoSuchMetadataException( "Failed to lookup kernel image information " + kernelId
-                                                                        + " because of: "
-                                                                        + ex.getMessage( ), ex ) );
+    public Function<BootableSet, BootableSet> apply(@Nullable final String overrideKernelId) {
+      return input -> {
+        if ( !input.isLinux( ) || input.isHvm() ) {
+          return input;
+        } else {
+          String kernelId = "unknown";
+          try {
+            kernelId = determineKernelId( input, overrideKernelId );
+            LOG.debug( "Determined the appropriate kernelId to be " + kernelId + " for " + input.toString( ) );
+            final KernelImageInfo kernel = RestrictedTypes.doPrivilegedWithoutOwner( kernelId, LookupKernel.INSTANCE );
+            return new NoRamdiskBootableSet( input.getMachine( ), kernel );
+          } catch ( final Exception ex ) {
+            if ( input.isBlockStorage( ) ) {
+              return input;
+            } else if (input.isHvm()) {
+              return input;
+            } else {
+              throw Exceptions.toUndeclared( new NoSuchMetadataException( "Failed to lookup kernel image information " + kernelId
+                  + " because of: "
+                  + ex.getMessage( ), ex ) );
+            }
           }
         }
-      }
+      };
     }
-    
   }
   
-  private static String determineKernelId( final BootableSet bootSet ) throws MetadataException {
+  private static String determineKernelId( final BootableSet bootSet, final String overrideKernelId ) throws MetadataException {
     final BootableImageInfo disk = bootSet.getMachine( );
-    String kernelId = null;
+    String kernelId = overrideKernelId;
     Context ctx = null;
     try {
       ctx = Contexts.lookup( );
-      if ( ctx.getRequest( ) instanceof RunInstancesType ) {
-        kernelId = ( ( RunInstancesType ) ctx.getRequest( ) ).getKernelId( );
-      }
     } catch ( final IllegalContextAccessException ex ) {
       LOG.debug( "Context not found when determining kernel id:" + ex.getMessage( ) );
     }
@@ -670,21 +682,13 @@ public class Emis {
     return kernelId;
   }
   
-  private static String determineRamdiskId( final BootableSet bootSet ) throws MetadataException {
+  private static String determineRamdiskId( final BootableSet bootSet, final String overrideRamdiskId ) throws MetadataException {
     if ( !bootSet.hasKernel( ) ) {
       throw new InvalidMetadataException( "Image specified does not have a kernel: " + bootSet );
     }
     String ramdiskId = bootSet.getMachine( ).getRamdiskId( );//GRZE: use the ramdisk that is part of the registered image definition to start.
-    try {
-      final Context ctx = Contexts.lookup( );
-      if ( ctx.getRequest( ) instanceof RunInstancesType ) {
-        final RunInstancesType msg = ( RunInstancesType ) ctx.getRequest( );
-        if ( ( msg.getRamdiskId( ) != null ) && !"".equals( msg.getRamdiskId( ) ) ) {
-          ramdiskId = msg.getRamdiskId( );//GRZE: maybe update w/ a specific ramdisk user requests
-        }
-      }
-    } catch ( final IllegalContextAccessException ex ) {
-      LOG.debug( "Context not found when determining ramdisk id:" + ex.getMessage( ) );
+    if ( ( overrideRamdiskId != null ) && !"".equals( overrideRamdiskId ) ) {
+      ramdiskId = overrideRamdiskId;//GRZE: maybe update w/ a specific ramdisk user requests
     }
     //GRZE: perfectly legitimate for there to be no ramdisk, carry on. **/
     if ( ramdiskId == null ) {

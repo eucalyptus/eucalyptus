@@ -5,16 +5,20 @@
  */
 package com.eucalyptus.compute.common;
 
+import com.eucalyptus.binding.HttpEmbedded;
+import com.eucalyptus.binding.HttpParameterMapping;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
 
 public class RequestLaunchTemplateData extends EucalyptusData {
 
+  @HttpEmbedded
   private LaunchTemplateBlockDeviceMappingRequestList blockDeviceMappings;
   private LaunchTemplateCpuOptionsRequest cpuOptions;
   private CreditSpecificationRequest creditSpecification;
   private Boolean disableApiTermination;
   private Boolean ebsOptimized;
+  @HttpEmbedded
   private ElasticGpuSpecificationList elasticGpuSpecifications;
   private LaunchTemplateIamInstanceProfileSpecificationRequest iamInstanceProfile;
   private String imageId;
@@ -24,11 +28,15 @@ public class RequestLaunchTemplateData extends EucalyptusData {
   private String kernelId;
   private String keyName;
   private LaunchTemplatesMonitoringRequest monitoring;
+  @HttpEmbedded
   private LaunchTemplateInstanceNetworkInterfaceSpecificationRequestList networkInterfaces;
   private LaunchTemplatePlacementRequest placement;
   private String ramDiskId;
+  @HttpParameterMapping( parameter = "SecurityGroupId" )
   private SecurityGroupIdStringList securityGroupIds;
+  @HttpParameterMapping( parameter = "SecurityGroup" )
   private SecurityGroupStringList securityGroups;
+  @HttpEmbedded
   private LaunchTemplateTagSpecificationRequestList tagSpecifications;
   private String userData;
 

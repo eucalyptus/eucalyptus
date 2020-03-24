@@ -48,6 +48,7 @@ public interface ComputePolicySpec {
   String EC2_AUTHORIZESECURITYGROUPINGRESS = "authorizesecuritygroupingress";
   String EC2_CANCELCONVERSIONTASK = "cancelconversiontask";
   String EC2_CREATEINTERNETGATEWAY = "createinternetgateway";
+  String EC2_CREATELAUNCHTEMPLATE = "createlaunchtemplate";
   String EC2_CREATESECURITYGROUP = "createsecuritygroup";
   String EC2_CREATESNAPSHOT = "createsnapshot";
   String EC2_CREATETAGS = "createtags";
@@ -56,6 +57,7 @@ public interface ComputePolicySpec {
   String EC2_CREATEVPCPEERINGCONNECTION = "createvpcpeeringconnection";
   String EC2_DELETEDHCPOPTIONS = "deletedhcpoptions";
   String EC2_DELETEINTERNETGATEWAY = "deleteinternetgateway";
+  String EC2_DELETELAUNCHTEMPLATE = "deletelaunchtemplate";
   String EC2_DELETENATGATEWAY = "deletenatgateway";
   String EC2_DELETENETWORKACL = "deletenetworkacl";
   String EC2_DELETENETWORKACLENTRY = "deletenetworkaclentry";
@@ -96,6 +98,7 @@ public interface ComputePolicySpec {
   String EC2_RESOURCE_AVAILABILITYZONE = "availabilityzone";
   String EC2_RESOURCE_INSTANCE = "instance";
   String EC2_RESOURCE_KEYPAIR = "key-pair";
+  String EC2_RESOURCE_LAUNCHTEMPLATE = "launch-template";
   String EC2_RESOURCE_VOLUME = "volume";
   String EC2_RESOURCE_SNAPSHOT = "snapshot";
   String EC2_RESOURCE_VMTYPE = "vmtype";
@@ -120,6 +123,7 @@ public interface ComputePolicySpec {
       .add( EC2_RESOURCE_INSTANCE )
       .add( EC2_RESOURCE_KEYPAIR )
       .add( EC2_RESOURCE_KEYPAIR.replace( "-", "" ) ) // no '-' until v4.1
+      .add( EC2_RESOURCE_LAUNCHTEMPLATE )
       .add( EC2_RESOURCE_VOLUME )
       .add( EC2_RESOURCE_SNAPSHOT )
       .add( EC2_RESOURCE_VMTYPE )

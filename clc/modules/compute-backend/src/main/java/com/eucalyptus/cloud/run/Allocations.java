@@ -50,6 +50,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
@@ -62,6 +63,8 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.VmInstanceToken;
+import com.eucalyptus.compute.common.RequestLaunchTemplateData;
+import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.common.internal.util.MetadataException;
 import com.eucalyptus.component.Partition;
@@ -78,6 +81,7 @@ import com.eucalyptus.compute.common.internal.keys.KeyPairs;
 import com.eucalyptus.compute.common.internal.keys.SshKeyPair;
 import com.eucalyptus.compute.common.internal.network.NetworkGroup;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.TypedContext;
 import com.eucalyptus.util.TypedKey;
 import com.eucalyptus.util.UniqueIds;
@@ -85,8 +89,7 @@ import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.compute.common.internal.vm.VmNetworkConfig;
 import com.eucalyptus.compute.common.internal.vmtypes.VmType;
-import com.eucalyptus.vmtypes.VmTypes;
-import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -96,11 +99,20 @@ import com.google.common.collect.Sets;
 import com.eucalyptus.cluster.common.msgs.VmInfo;
 import edu.ucsb.eucalyptus.msgs.HasRequest;
 import com.eucalyptus.cluster.common.msgs.VmTypeInfo;
+import io.vavr.control.Option;
 
 public class Allocations {
   private static Logger LOG = Logger.getLogger(Allocations.class);
 
-  enum AllocationType { Run, Start, Restore }
+  private static ThreadLocal<Allocation> allocationThreadLocal = new ThreadLocal<>();
+
+  public enum AllocationType {
+    Run, Start, Restore, Verify;
+
+    public boolean matches(final Allocation allocation) {
+      return allocation != null && this==allocation.getAllocationType();
+    }
+  }
 
   public static class Allocation implements HasRequest {
     /** to be eliminated **/
@@ -109,6 +121,8 @@ public class Allocations {
     /** values determined by the request **/
     private final AllocationType allocationType;
     private final UserFullName ownerFullName;
+    private RequestLaunchTemplateData launchTemplateData = new RequestLaunchTemplateData();
+    private boolean verifyLaunchTemplateData;
     private byte[] userData;
     private String credential;
     private String rootDirective;
@@ -116,7 +130,7 @@ public class Allocations {
     private final int maxCount;
     private boolean usePrivateAddressing;
     private boolean disableApiTermination;
-    private final boolean monitoring;
+    private boolean monitoring;
     @Nullable
     private final String clientToken;
 
@@ -131,6 +145,8 @@ public class Allocations {
     private String iamInstanceProfileArn;
     private String iamInstanceProfileId;
     private String iamRoleArn;
+    private String launchTemplateArn;
+    private Boolean launchTemplateResource;
 
     /** intermediate allocation state **/
     private final String reservationId;
@@ -139,6 +155,7 @@ public class Allocations {
     private final Map<Integer, String> instanceIds;
     private final Map<Integer, String> instanceUuids;
     private Date expiration;
+    private Function<String,List<ResourceTag>> tagsForResourceFunction = __ -> Collections.emptyList();
 
     /** */
     private final TypedContext allocationContext = TypedContext.newTypedContext( );
@@ -153,21 +170,14 @@ public class Allocations {
       this.minCount = request.getMinCount();
       this.maxCount = request.getMaxCount();
       this.usePrivateAddressing = "private".equals(request.getAddressingType());
-      this.disableApiTermination = Optional.fromNullable( request.getDisableTerminate( ) ).or( Boolean.FALSE );
-      this.monitoring = request.getMonitoring() == null ? Boolean.FALSE
-          : request.getMonitoring();
+      this.disableApiTermination = false;
+      this.monitoring = false;
       this.clientToken = Strings.emptyToNull(request.getClientToken());
 
       this.ownerFullName = this.context.getUserFullName();
-      if ((this.request.getInstanceType() == null)
-          || "".equals(this.request.getInstanceType())) {
-        this.request.setInstanceType(VmTypes.defaultTypeName());
-      }
-
       this.reservationIndex = UniqueIds.nextIndex(VmInstance.class,
           (long) request.getMaxCount());
       this.reservationId = ResourceIdentifiers.generateString( "r" );
-      this.request.setMonitoring(this.monitoring);
       // GRZE:FIXME: moved all this encode/decode junk into util.UserDatas
       if (this.request.getUserData() != null) {
         try {
@@ -272,13 +282,40 @@ public class Allocations {
       this.request = inferRequest();
     }
 
+    /**
+     * Constructor for launch template metadata verification
+     */
+    private Allocation(final RequestLaunchTemplateData launchTemplateData) {
+      this.allocationType = AllocationType.Verify;
+      this.context = Contexts.lookup();
+      this.minCount = 1;
+      this.maxCount = 1;
+      this.ownerFullName = context.getUserFullName();
+      this.clientToken = null;
+      this.reservationId = ResourceIdentifiers.generateString( "r" );
+      this.reservationIndex = -1L;
+      this.instanceIds = Maps.newHashMap();
+      this.instanceUuids = Maps.newHashMap();
+      this.disableApiTermination = false;
+      this.monitoring = false;
+      this.launchTemplateData = launchTemplateData;
+      this.verifyLaunchTemplateData = true;
+      this.request = inferRequest();
+    }
+
     private RunInstancesType inferRequest( ) {
       final RunInstancesType runInstances = new RunInstancesType( );
       runInstances.setMinCount(1);
       runInstances.setMaxCount(1);
-      runInstances.setImageId(bootSet.getMachine().getDisplayName());
-      runInstances.setAvailabilityZone(partition.getName());
-      runInstances.setInstanceType(vmType.getName());
+      if (bootSet != null) {
+        runInstances.setImageId(bootSet.getMachine().getDisplayName());
+      }
+      if (partition != null) {
+        runInstances.setAvailabilityZone(partition.getName());
+      }
+      if (vmType != null) {
+        runInstances.setInstanceType(vmType.getName());
+      }
       return runInstances;
     }
 
@@ -302,11 +339,25 @@ public class Allocations {
           getPartition( ).getName( ),
           getIamInstanceProfileArn( ),
           getVmType( ).getName( ),
-          getBootSet().isBlockStorage( ) );
+          getBootSet().isBlockStorage( )
+      );
     }
 
     public NetworkGroup getPrimaryNetwork() {
       return this.primaryNetwork;
+    }
+
+    public boolean apply( final Predicate<Allocation> predicate ) {
+      allocationThreadLocal.set( this );
+      try {
+        return predicate.apply( this );
+      } finally {
+        allocationThreadLocal.set( null );
+      }
+    }
+
+    public static Option<Allocation> current( ) {
+      return Option.of( allocationThreadLocal.get( ) );
     }
 
     public void commit() throws Exception {
@@ -339,6 +390,23 @@ public class Allocations {
           db.rollback();
         }
       }
+    }
+
+    @Nullable
+    public RequestLaunchTemplateData getLaunchTemplateData() {
+      return launchTemplateData;
+    }
+
+    public void setLaunchTemplateData(final RequestLaunchTemplateData launchTemplateData) {
+      this.launchTemplateData = launchTemplateData;
+    }
+
+    public boolean isVerifyLaunchTemplateData() {
+      return verifyLaunchTemplateData;
+    }
+
+    public void setVerifyLaunchTemplateData(final boolean verifyLaunchTemplateData) {
+      this.verifyLaunchTemplateData = verifyLaunchTemplateData;
     }
 
     public List<NetworkGroup> getNetworkGroups() {
@@ -476,6 +544,22 @@ public class Allocations {
       this.iamRoleArn = iamRoleArn;
     }
 
+    public String getLaunchTemplateArn() {
+      return launchTemplateArn;
+    }
+
+    public void setLaunchTemplateArn(final String launchTemplateArn) {
+      this.launchTemplateArn = launchTemplateArn;
+    }
+
+    public Boolean isLaunchTemplateResource() {
+      return launchTemplateResource;
+    }
+
+    public void setLaunchTemplateResource(final Boolean launchTemplateResource) {
+      this.launchTemplateResource = launchTemplateResource;
+    }
+
     public int getMinCount() {
       return this.minCount;
     }
@@ -500,8 +584,12 @@ public class Allocations {
       this.disableApiTermination = disableApiTermination;
     }
 
-    public final boolean isMonitoring() {
+    public boolean isMonitoring() {
       return monitoring;
+    }
+
+    public void setMonitoring(final boolean monitoring) {
+      this.monitoring = monitoring;
     }
 
     @Nullable
@@ -542,7 +630,19 @@ public class Allocations {
       this.expiration = expiration;
     }
 
-    public <T> T getAttribute( final TypedKey<T> key ) {
+    public List<ResourceTag> getTagsForResource( final String resource ) {
+      return getTagsForResourceFunction().apply( resource );
+    }
+
+    public Function<String, List<ResourceTag>> getTagsForResourceFunction() {
+      return tagsForResourceFunction;
+    }
+
+    public void setTagsForResourceFunction(final Function<String, List<ResourceTag>> tagsForResourceFunction) {
+      this.tagsForResourceFunction = tagsForResourceFunction;
+    }
+
+    public <T> T getAttribute(final TypedKey<T> key ) {
       return allocationContext.get( key );
     }
 
@@ -565,6 +665,10 @@ public class Allocations {
 
   public static Allocation run(final RunInstancesType request) {
     return new Allocation(request);
+  }
+
+  public static Allocation verify(final RequestLaunchTemplateData launchTemplateData) {
+    return new Allocation(launchTemplateData);
   }
 
   public static Allocation start(final VmInstance vm) {

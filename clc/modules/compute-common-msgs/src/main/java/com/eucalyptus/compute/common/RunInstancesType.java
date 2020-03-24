@@ -62,6 +62,12 @@ public class RunInstancesType extends VmControlMessage implements HasTags {
   private String instanceType;
   private String kernelId;
   private String ramdiskId;
+  @HttpParameterMapping( parameter = "LaunchTemplate.LaunchTemplateId" )
+  private String launchTemplateId;
+  @HttpParameterMapping( parameter = "LaunchTemplate.LaunchTemplateName" )
+  private String launchTemplateName;
+  @HttpParameterMapping( parameter = "LaunchTemplate.Version" )
+  private String launchTemplateVersion;
   @HttpParameterMapping( parameter = "Placement.AvailabilityZone" )
   private String availabilityZone;
   @HttpParameterMapping( parameter = "Placement.GroupName" )
@@ -71,7 +77,7 @@ public class RunInstancesType extends VmControlMessage implements HasTags {
   @HttpEmbedded( multiple = true )
   private ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = Lists.newArrayList( );
   @HttpParameterMapping( parameter = "Monitoring.Enabled" )
-  private Boolean monitoring = false;
+  private Boolean monitoring;
   private String subnetId;
   @HttpParameterMapping( parameter = "DisableApiTermination" )
   private Boolean disableTerminate;
@@ -303,6 +309,30 @@ public class RunInstancesType extends VmControlMessage implements HasTags {
 
   public void setRamdiskId( String ramdiskId ) {
     this.ramdiskId = ramdiskId;
+  }
+
+  public String getLaunchTemplateId() {
+    return launchTemplateId;
+  }
+
+  public void setLaunchTemplateId(final String launchTemplateId) {
+    this.launchTemplateId = launchTemplateId;
+  }
+
+  public String getLaunchTemplateName() {
+    return launchTemplateName;
+  }
+
+  public void setLaunchTemplateName(final String launchTemplateName) {
+    this.launchTemplateName = launchTemplateName;
+  }
+
+  public String getLaunchTemplateVersion() {
+    return launchTemplateVersion;
+  }
+
+  public void setLaunchTemplateVersion(final String launchTemplateVersion) {
+    this.launchTemplateVersion = launchTemplateVersion;
   }
 
   public String getAvailabilityZone( ) {

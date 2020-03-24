@@ -456,7 +456,7 @@ public class ClusterAllocator implements Runnable {
                             return Volumes.createStorageVolume( sc, authenticatedArn, fullName, snapshotId, Ints.checkedCast( size ),
                                 volume -> {
                                   final List<ResourceTag> volumeTags =
-                                      TagHelper.tagsForResource( request.getTagSpecification( ), ComputePolicySpec.EC2_RESOURCE_VOLUME );
+                                      ClusterAllocator.this.allocInfo.getTagsForResource(ComputePolicySpec.EC2_RESOURCE_VOLUME );
                                   TagHelper.createOrUpdateTags( fullName, volume, volumeTags );
                                 } );
                           } catch ( ExecutionException ex ) {

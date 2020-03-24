@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 AppScale Systems, Inc
+ * Copyright 2020 AppScale Systems, Inc
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -20,4 +20,8 @@ public interface ComputeApi {
   DescribeTagsResponseType describeTags( DescribeTagsType request );
 
   ModifyInstanceTypeAttributeResponseType modifyInstanceType( ModifyInstanceTypeAttributeType request );
+
+  CreateLaunchTemplateResponseType createLaunchTemplate( CreateLaunchTemplateType request );
+
+  DeleteLaunchTemplateResponseType deleteLaunchTemplate( DeleteLaunchTemplateType request );
 }

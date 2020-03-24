@@ -43,12 +43,17 @@ import static com.eucalyptus.images.Images.DeviceMappingValidationOption.AllowEb
 import static com.eucalyptus.images.Images.DeviceMappingValidationOption.AllowSuppressMapping;
 import static com.eucalyptus.images.Images.DeviceMappingValidationOption.SkipExtraEphemeral;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthContextSupplier;
@@ -62,8 +67,16 @@ import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
+import com.eucalyptus.cloud.run.Allocations.AllocationType;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.compute.common.EbsDeviceMapping;
+import com.eucalyptus.compute.common.LaunchTemplateBlockDeviceMappingRequest;
+import com.eucalyptus.compute.common.LaunchTemplateEbsBlockDeviceRequest;
+import com.eucalyptus.compute.common.LaunchTemplateTagSpecificationRequestList;
+import com.eucalyptus.compute.common.RequestLaunchTemplateData;
 import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.compute.common.ResourceTagSpecification;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.common.internal.util.InvalidInstanceProfileMetadataException;
 import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
 import com.eucalyptus.compute.common.ImageMetadata.Platform;
@@ -71,13 +84,20 @@ import com.eucalyptus.compute.common.backend.RunInstancesType;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.compute.common.internal.util.IllegalMetadataAccessException;
 import com.eucalyptus.compute.common.internal.util.InvalidMetadataException;
+import com.eucalyptus.compute.common.internal.util.MetadataCreationException;
 import com.eucalyptus.compute.common.internal.util.MetadataException;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
 import com.eucalyptus.compute.common.internal.images.BootableImageInfo;
 import com.eucalyptus.compute.common.internal.images.DeviceMapping;
+import com.eucalyptus.compute.common.internal.util.NoSuchImageIdException;
+import com.eucalyptus.compute.common.internal.util.NoSuchMetadataException;
+import com.eucalyptus.compute.common.internal.vm.LaunchTemplate;
+import com.eucalyptus.compute.common.internal.vm.LaunchTemplates;
 import com.eucalyptus.compute.common.policy.ComputePolicySpec;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.images.Emis;
 import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.compute.common.internal.images.ImageInfo;
@@ -85,6 +105,7 @@ import com.eucalyptus.images.Images;
 import com.eucalyptus.compute.common.internal.keys.KeyPairs;
 import com.eucalyptus.compute.common.internal.keys.SshKeyPair;
 import com.eucalyptus.tags.TagHelper;
+import com.eucalyptus.util.CompatFunction;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.vm.VmInstances;
@@ -98,8 +119,10 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
+import io.vavr.control.Option;
 import net.sf.json.JSONException;
 
+@SuppressWarnings("Guava")
 public class VerifyMetadata {
   private static Logger LOG = Logger.getLogger( VerifyMetadata.class );
   private static final long BYTES_PER_GB = ( 1024L * 1024L * 1024L );
@@ -109,15 +132,16 @@ public class VerifyMetadata {
   }
 
   private interface MetadataVerifier {
-    public abstract boolean apply( Allocation allocInfo ) throws MetadataException, AuthException, VerificationException;
+    boolean apply( Allocation allocInfo ) throws MetadataException, AuthException, VerificationException;
   }
   
-  private static final ArrayList<? extends MetadataVerifier> verifiers = Lists.newArrayList( VmTypeVerifier.INSTANCE, PartitionVerifier.INSTANCE,
-                                                                                                ImageVerifier.INSTANCE, KeyPairVerifier.INSTANCE,
-                                                                                                NetworkResourceVerifier.INSTANCE, RoleVerifier.INSTANCE,
-                                                                                                BlockDeviceMapVerifier.INSTANCE, UserDataVerifier.INSTANCE,
-                                                                                                ResourceTagVerifier.INSTANCE );
+  private static final ArrayList<? extends MetadataVerifier> verifiers = Lists.newArrayList(
+      LaunchTemplateVerifier.INSTANCE, LaunchTemplateDataVerifier.INSTANCE,
+      VmTypeVerifier.INSTANCE, PartitionVerifier.INSTANCE, ImageVerifier.INSTANCE,
+      KeyPairVerifier.INSTANCE, NetworkResourceVerifier.INSTANCE, RoleVerifier.INSTANCE,
+      BlockDeviceMapVerifier.INSTANCE, UserDataVerifier.INSTANCE, ResourceTagVerifier.INSTANCE );
   
+  @SuppressWarnings("Convert2Lambda")
   private enum AsPredicate implements Function<MetadataVerifier, Predicate<Allocation>> {
     INSTANCE;
     @Override
@@ -136,14 +160,110 @@ public class VerifyMetadata {
     }
   }
 
+  enum LaunchTemplateVerifier implements MetadataVerifier {
+    INSTANCE;
+
+    @Override
+    public boolean apply( Allocation allocInfo ) throws MetadataException {
+      final UserFullName ownerFullName = allocInfo.getOwnerFullName();
+      final String id = ResourceIdentifiers.tryNormalize().apply(allocInfo.getRequest( ).getLaunchTemplateId( ));
+      final String name = allocInfo.getRequest( ).getLaunchTemplateName( );
+      if ( !Strings.isNullOrEmpty( id ) ||
+          !Strings.isNullOrEmpty( name ) ) {
+        try (@SuppressWarnings("unused") final TransactionResource tx = Entities.transactionFor(LaunchTemplate.class)) {
+          final LaunchTemplate template =
+              Entities.criteriaQuery(LaunchTemplates.restriction(ownerFullName, id, name)).uniqueResult();
+          allocInfo.setLaunchTemplateArn(template.getArn());
+          allocInfo.setLaunchTemplateData(template.readTemplateData());
+          allocInfo.setLaunchTemplateResource(true);
+          if (!RestrictedTypes.filterPrivileged( ).apply( template )) {
+            throw new IllegalMetadataAccessException( "Not authorized to use launch template for " +
+                allocInfo.getOwnerFullName() );
+          }
+        } catch (final NoSuchElementException e) {
+          throw new NoSuchMetadataException("Launch template not found");
+        } catch (final IOException e) {
+          throw new MetadataCreationException( "Launch template data error", e );
+        }
+      }
+      return true;
+    }
+  }
+
+  enum LaunchTemplateDataVerifier implements MetadataVerifier {
+    INSTANCE;
+
+    @Override
+    public boolean apply( final Allocation allocInfo ) {
+      final Boolean templateDisableTerminate;
+      final Boolean templateMonitoring;
+      final LaunchTemplateTagSpecificationRequestList templateTags;
+      final RequestLaunchTemplateData templateData = allocInfo.getLaunchTemplateData();
+      if ( templateData != null ) {
+        templateDisableTerminate = templateData.getDisableApiTermination();
+        templateMonitoring = templateData.getMonitoring()==null ?
+            null :
+            templateData.getMonitoring().getEnabled();
+        templateTags = templateData.getTagSpecifications();
+      } else {
+        templateDisableTerminate = null;
+        templateMonitoring = null;
+        templateTags = null;
+      }
+
+      final Boolean requestDisableTerminate = allocInfo.getRequest().getDisableTerminate();
+      if ( requestDisableTerminate != null ) {
+        allocInfo.setDisableApiTermination( requestDisableTerminate );
+        if ( templateDisableTerminate != null ) {
+          allocInfo.setLaunchTemplateResource(false);
+        }
+      } else if ( templateDisableTerminate != null ) {
+        allocInfo.setDisableApiTermination( templateDisableTerminate );
+      }
+
+      final Boolean requestMonitoring = allocInfo.getRequest( ).getMonitoring();
+      if ( requestMonitoring != null ) {
+        allocInfo.setMonitoring( requestMonitoring );
+        if ( templateMonitoring != null ) {
+          allocInfo.setLaunchTemplateResource(false);
+        }
+      } else if ( templateMonitoring != null ) {
+        allocInfo.setMonitoring( templateMonitoring );
+      }
+
+      final ArrayList<ResourceTagSpecification> requestTags = allocInfo.getRequest( ).getTagSpecification();
+      if ( requestTags != null && !requestTags.isEmpty( ) ) {
+        allocInfo.setTagsForResourceFunction(
+            resource -> TagHelper.tagsForResource( requestTags, resource ) );
+        if ( templateTags != null ) {
+          allocInfo.setLaunchTemplateResource(false);
+        }
+      } else if ( templateTags != null ) {
+        allocInfo.setTagsForResourceFunction(
+            resource -> TagHelper.tagsForResourceFromTemplate( templateTags.getMember(), resource ) );
+      }
+
+      return true;
+    }
+  }
+
   enum VmTypeVerifier implements MetadataVerifier {
     INSTANCE;
     
     @Override
     public boolean apply( Allocation allocInfo ) throws MetadataException {
       String instanceType = allocInfo.getRequest( ).getInstanceType( );
+      boolean checkAccess = true;
+      if (instanceType==null &&  allocInfo.getLaunchTemplateData()!=null) {
+        instanceType = allocInfo.getLaunchTemplateData().getInstanceType();
+        checkAccess = instanceType==null || allocInfo.isVerifyLaunchTemplateData(); // authorized if set via launch template
+      }
+      if (instanceType==null) {
+        instanceType = VmTypes.defaultTypeName();
+      }
+      allocInfo.getRequest().setInstanceType(instanceType);
       VmType vmType = VmTypes.lookup( instanceType );
-      if ( !vmType.getEnabled() || !RestrictedTypes.filterPrivileged( ).apply( vmType ) ) {
+      if ( !vmType.getEnabled() || (checkAccess && !RestrictedTypes.filterPrivileged( ).apply( vmType )) ) {
         throw new IllegalMetadataAccessException( "Not authorized to allocate vm type " + instanceType + " for " + allocInfo.getOwnerFullName() );
       }
       allocInfo.setVmType( vmType );
@@ -155,9 +275,17 @@ public class VerifyMetadata {
     INSTANCE;
     
     @Override
-    public boolean apply( Allocation allocInfo ) throws MetadataException {
+    public boolean apply( Allocation allocInfo ) {
       RunInstancesType request = allocInfo.getRequest( );
-      String zoneName = Strings.nullToEmpty( request.getAvailabilityZone( ) );
+      String zoneName = request.getAvailabilityZone( );
+      if (zoneName == null &&
+          allocInfo.getLaunchTemplateData()!=null &&
+          allocInfo.getLaunchTemplateData().getPlacement()!=null) {
+        zoneName = allocInfo.getLaunchTemplateData().getPlacement().getAvailabilityZone();
+      }
+      if (zoneName == null) {
+        zoneName = Partition.DEFAULT_NAME;
+      }
       if ( Clusters.list( ).isEmpty( ) ) {
         LOG.debug( "enabled values: " + Joiner.on( "\n" ).join( Clusters.list( ) ) );
         LOG.debug( "disabled values: " + Joiner.on( "\n" ).join( Clusters.listDisabled( ) ) );
@@ -179,12 +307,46 @@ public class VerifyMetadata {
     INSTANCE;
     
     @Override
-    public boolean apply( Allocation allocInfo ) throws MetadataException, AuthException, VerificationException {
+    public boolean apply( Allocation allocInfo ) throws MetadataException, VerificationException {
+      final boolean launchTemplateSpecifiesImage =
+          allocInfo.getLaunchTemplateData() != null && (
+          allocInfo.getLaunchTemplateData().getImageId() != null ||
+          allocInfo.getLaunchTemplateData().getKernelId() != null ||
+          allocInfo.getLaunchTemplateData().getRamDiskId() != null );
       RunInstancesType msg = allocInfo.getRequest( );
+
       String imageId = msg.getImageId( );
+      if ( launchTemplateSpecifiesImage ) {
+        if ( imageId==null ) {
+          imageId = allocInfo.getLaunchTemplateData().getImageId();
+        } else {
+          allocInfo.setLaunchTemplateResource(false);
+        }
+      }
+      if (imageId==null) {
+        if (AllocationType.Verify.matches(allocInfo)) {
+          return true;
+        }
+        throw new NoSuchImageIdException("Image identifier required");
+      }
+
+      String kernelId = msg.getKernelId();
+      if (kernelId==null) {
+        kernelId = allocInfo.getLaunchTemplateData().getKernelId();
+      } else if ( launchTemplateSpecifiesImage ) {
+        allocInfo.setLaunchTemplateResource(false);
+      }
+
+      String ramdiskId = msg.getRamdiskId();
+      if (ramdiskId==null) {
+        ramdiskId = allocInfo.getLaunchTemplateData().getRamDiskId();
+      } else if ( launchTemplateSpecifiesImage ) {
+        allocInfo.setLaunchTemplateResource(false);
+      }
+
       VmType vmType = allocInfo.getVmType( );
       try {
-        BootableSet bootSet = Emis.newBootableSet( imageId );
+        BootableSet bootSet = Emis.newBootableSet( imageId, kernelId, ramdiskId );
         allocInfo.setBootableSet( bootSet );
         
         // Add (1024L * 1024L * 10) to handle NTFS min requirements.
@@ -222,15 +384,23 @@ public class VerifyMetadata {
     
     @Override
     public boolean apply( Allocation allocInfo ) throws MetadataException {
-      if ( allocInfo.getRequest( ).getKeyName( ) == null || "".equals( allocInfo.getRequest( ).getKeyName( ) ) ) {
+      RunInstancesType request = allocInfo.getRequest( );
+      boolean checkAccess = true;
+      String keyName = Strings.emptyToNull(request.getKeyName( ));
+      if ( keyName == null && allocInfo.getLaunchTemplateData() != null ){
+        keyName = allocInfo.getLaunchTemplateData().getKeyName();
+        checkAccess = allocInfo.isVerifyLaunchTemplateData();
+      } else if ( allocInfo.getLaunchTemplateData() != null &&
+          allocInfo.getLaunchTemplateData().getKeyName() != null ) {
+        allocInfo.setLaunchTemplateResource(false);
+      }
+      if ( keyName == null ) {
         allocInfo.setSshKeyPair( KeyPairs.noKey( ) );
         return true;
       }
       UserFullName ownerFullName = allocInfo.getOwnerFullName( );
-      RunInstancesType request = allocInfo.getRequest( );
-      String keyName = request.getKeyName( );
       SshKeyPair key = KeyPairs.lookup( ownerFullName.asAccountFullName(), keyName );
-      if ( !RestrictedTypes.filterPrivileged( ).apply( key ) ) {
+      if ( checkAccess && !RestrictedTypes.filterPrivileged( ).apply( key ) ) {
         throw new IllegalMetadataAccessException( "Not authorized to use keypair " + keyName + " by " + ownerFullName.getUserName() );
       }
       allocInfo.setSshKeyPair( key );
@@ -254,8 +424,20 @@ public class VerifyMetadata {
     @Override
     public boolean apply( final Allocation allocInfo ) throws MetadataException {
       final UserFullName ownerFullName = allocInfo.getOwnerFullName();
-      final String instanceProfileArn = allocInfo.getRequest( ).getIamInstanceProfileArn( );
-      final String instanceProfileName = allocInfo.getRequest( ).getIamInstanceProfileName( );
+      String instanceProfileArn = allocInfo.getRequest( ).getIamInstanceProfileArn( );
+      String instanceProfileName = allocInfo.getRequest( ).getIamInstanceProfileName( );
+      boolean checkAccess = true;
+      if (instanceProfileArn==null && instanceProfileName==null &&
+          allocInfo.getLaunchTemplateData()!=null &&
+          allocInfo.getLaunchTemplateData().getIamInstanceProfile()!=null) {
+        instanceProfileArn = allocInfo.getLaunchTemplateData().getIamInstanceProfile().getArn();
+        instanceProfileName = allocInfo.getLaunchTemplateData().getIamInstanceProfile().getName();
+        checkAccess = allocInfo.isVerifyLaunchTemplateData();
+      } else if (allocInfo.getLaunchTemplateData()!=null &&
+          allocInfo.getLaunchTemplateData().getIamInstanceProfile()!=null) {
+        allocInfo.setLaunchTemplateResource(false);
+      }
+
       if ( !Strings.isNullOrEmpty( instanceProfileArn ) ||
           !Strings.isNullOrEmpty( instanceProfileName ) ) {
 
@@ -290,7 +472,7 @@ public class VerifyMetadata {
 
         try {
           final AuthContextSupplier user = allocInfo.getAuthContext( );
-          if ( !Permissions.isAuthorized(
+          if ( checkAccess && !Permissions.isAuthorized(
               IamPolicySpec.VENDOR_IAM,
               IamPolicySpec.IAM_RESOURCE_INSTANCE_PROFILE,
               Accounts.getInstanceProfileFullName( profile ),
@@ -304,7 +486,7 @@ public class VerifyMetadata {
           }
 
           final Role role = profile.getRole( );
-          if ( role != null && !Permissions.isAuthorized(
+          if ( role != null && checkAccess && !Permissions.isAuthorized(
                   IamPolicySpec.VENDOR_IAM,
                   IamPolicySpec.IAM_RESOURCE_ROLE,
                   Accounts.getRoleFullName( role ),
@@ -338,17 +520,50 @@ public class VerifyMetadata {
    * Populates the final set of device mappings for boot from ebs instances only. </p>
    * <p>Fixes EUCA-4047 and implements EUCA-4786</p> 
    */
+  @SuppressWarnings({"StaticPseudoFunctionalStyleMethod", "Convert2Lambda"})
   enum BlockDeviceMapVerifier implements MetadataVerifier {
     INSTANCE;
-    
-	@Override
+
+    private static final CompatFunction<LaunchTemplateEbsBlockDeviceRequest, EbsDeviceMapping> ebsTransform = ltEbs -> {
+      final EbsDeviceMapping ebs = new EbsDeviceMapping();
+      ebs.setDeleteOnTermination(ltEbs.getDeleteOnTermination());
+      ebs.setEncrypted(ltEbs.getEncrypted());
+      ebs.setIops(ltEbs.getIops());
+      ebs.setSnapshotId(ltEbs.getSnapshotId());
+      ebs.setVolumeSize(ltEbs.getVolumeSize());
+      ebs.setVolumeType(ltEbs.getVolumeType());
+      return ebs;
+    };
+
+    private static final CompatFunction<LaunchTemplateBlockDeviceMappingRequest, BlockDeviceMappingItemType> deviceTransform = ltDev -> {
+      final BlockDeviceMappingItemType item = new BlockDeviceMappingItemType();
+      item.setDeviceName(ltDev.getDeviceName());
+      item.setVirtualName(ltDev.getVirtualName());
+      item.setEbs(Option.of(ltDev.getEbs()).map(ebsTransform).getOrNull());
+      item.setNoDevice(ltDev.getNoDevice()==null?null:true);
+      return item;
+    };
+
+    @Override
     public boolean apply( Allocation allocInfo ) throws MetadataException {
-      
-      BootableImageInfo imageInfo = allocInfo.getBootSet().getMachine();   
-      final List<BlockDeviceMappingItemType> instanceMappings = allocInfo.getRequest().getBlockDeviceMapping() != null
-    		  													? allocInfo.getRequest().getBlockDeviceMapping() 
-    		  													: new ArrayList<BlockDeviceMappingItemType>()  ;
-      List<DeviceMapping> imageMappings = new ArrayList<DeviceMapping>(((ImageInfo) imageInfo).getDeviceMappings());
+      if (AllocationType.Verify.matches(allocInfo)) {
+        return true;
+      }
+
+      final BootableImageInfo imageInfo = allocInfo.getBootSet().getMachine();
+      final List<BlockDeviceMappingItemType> instanceMappings =
+          Option.of(allocInfo.getRequest().getBlockDeviceMapping()).getOrElse(ArrayList::new);
+      if ( allocInfo.getLaunchTemplateData() != null &&
+           allocInfo.getLaunchTemplateData().getBlockDeviceMappings() != null ) {
+        if ( instanceMappings.isEmpty() ) {
+          instanceMappings.addAll(allocInfo.getLaunchTemplateData().getBlockDeviceMappings().getMember().stream()
+              .map(deviceTransform)
+              .collect(Collectors.toList()));
+        } else {
+          allocInfo.setLaunchTemplateResource(false);
+        }
+      }
+      final List<DeviceMapping> imageMappings = new ArrayList<>(((ImageInfo) imageInfo).getDeviceMappings());
       // Is this an overkill?? Should I rather go with the above logic. Damn complexity seems same... 
       // probably m * n where m is the number of image mappings and n is the number of instance mappings
       instanceMappings.addAll(Lists.transform(Lists.newArrayList(Iterables.filter(imageMappings, new Predicate<DeviceMapping>(){
@@ -418,7 +633,21 @@ public class VerifyMetadata {
   
     @Override
     public boolean apply( Allocation allocInfo ) throws MetadataException {
-     byte[] userData = allocInfo.getUserData();
+      byte[] userData = allocInfo.getUserData();
+      boolean launchTemplateHasUserData = allocInfo.getLaunchTemplateData()!=null &&
+          Strings.emptyToNull(allocInfo.getLaunchTemplateData().getUserData())!=null;
+      if (userData == null) {
+        if (launchTemplateHasUserData) {
+          try {
+            allocInfo.setUserData(Base64.decode(allocInfo.getLaunchTemplateData().getUserData()));
+            allocInfo.getRequest().setUserData(new String(Base64.encode(allocInfo.getUserData())));
+            userData = allocInfo.getUserData();
+          } catch (Exception ignored) {
+          }
+        }
+      } else if (launchTemplateHasUserData) {
+        allocInfo.setLaunchTemplateResource(false);
+      }
       if (userData != null && userData.length > Integer.parseInt(VmInstances.USER_DATA_MAX_SIZE_KB) * 1024) {
         throw new InvalidMetadataException("User data may not exceed " + VmInstances.USER_DATA_MAX_SIZE_KB + " KB");
       }
@@ -432,6 +661,11 @@ public class VerifyMetadata {
     @Override
     public boolean apply( Allocation allocInfo ) throws MetadataException {
       TagHelper.validateTagSpecifications( allocInfo.getRequest( ).getTagSpecification( ) );
+      if ( AllocationType.Verify.matches(allocInfo) &&
+          allocInfo.getLaunchTemplateData( ) != null &&
+          allocInfo.getLaunchTemplateData( ).getTagSpecifications( ) != null ) {
+        TagHelper.validateTagSpecificationsForTemplate( allocInfo.getLaunchTemplateData().getTagSpecifications().getMember() );
+      }
 
       final  AuthContextSupplier authContext;
       try {
@@ -442,7 +676,7 @@ public class VerifyMetadata {
       final UserFullName userFullName = allocInfo.getOwnerFullName( );
       final AccountFullName accountFullName = userFullName.asAccountFullName( );
       for ( final String resource : ComputePolicySpec.EC2_RESOURCES ) {
-        final List<ResourceTag> resourceTags = TagHelper.tagsForResource( allocInfo.getRequest( ).getTagSpecification( ), resource );
+        final List<ResourceTag> resourceTags = allocInfo.getTagsForResource( resource );
         if ( !resourceTags.isEmpty( ) ) {
           if ( !TagHelper.createTagsAuthorized( authContext, accountFullName, resource ) ) {
             throw new IllegalMetadataAccessException( "Not authorized to create "+resource+" tags by " + userFullName.getUserName( ) );
