@@ -61,6 +61,7 @@ import com.eucalyptus.compute.common.DescribeNatGatewaysType;
 import com.eucalyptus.compute.common.DescribeTagsResponseType;
 import com.eucalyptus.compute.common.DescribeTagsType;
 import com.eucalyptus.compute.common.TagInfo;
+import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -80,6 +81,7 @@ import static com.eucalyptus.util.async.AsyncExceptions.asWebServiceErrorMessage
 /**
  * Created by ethomas on 2/3/14.
  */
+@ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
 public class AWSEC2NatGatewayResourceAction extends StepBasedResourceAction {
   private static final Logger LOG = Logger.getLogger(AWSEC2NatGatewayResourceAction.class);
   private AWSEC2NatGatewayProperties properties = new AWSEC2NatGatewayProperties();
