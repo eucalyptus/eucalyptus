@@ -428,7 +428,7 @@ public class LoadBalancers {
 	        				LoadBalancerListener.Builder builder = new LoadBalancerListener.Builder(lb, listener.getInstancePort(),
 											listener.getLoadBalancerPort(), LoadBalancerListener.PROTOCOL.valueOf(listener.getProtocol().toUpperCase()));
 	            			if(!Strings.isNullOrEmpty(listener.getInstanceProtocol()))
-	            				builder.instanceProtocol(PROTOCOL.valueOf(listener.getInstanceProtocol()));
+	            				builder.instanceProtocol(PROTOCOL.valueOf(listener.getInstanceProtocol().toUpperCase()));
 
 	            			if(!Strings.isNullOrEmpty(listener.getSSLCertificateId()))
 	            				builder.withSSLCerntificate(listener.getSSLCertificateId());
