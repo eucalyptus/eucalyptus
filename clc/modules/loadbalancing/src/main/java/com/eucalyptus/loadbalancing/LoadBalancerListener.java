@@ -154,7 +154,17 @@ public class LoadBalancerListener extends AbstractPersistent
 	public static String RESTRICTED_PORTS = DEFAULT_PORT_RESTRICTION;
 	
 	public enum PROTOCOL{
-		HTTP, HTTPS, TCP, SSL, NONE
+		HTTP,
+		HTTPS,
+		TCP,
+		SSL,
+		NONE,
+		;
+
+		public static PROTOCOL from(final String protocol) {
+			final String upperProtocol = protocol == null ? null : protocol.toUpperCase();
+			return PROTOCOL.valueOf(upperProtocol);
+		}
 	}
 
 	private static final long serialVersionUID = 1L;
@@ -250,13 +260,13 @@ public class LoadBalancerListener extends AbstractPersistent
 		if(this.instanceProtocol==null)
 			return PROTOCOL.NONE;
 		
-		return PROTOCOL.valueOf(this.instanceProtocol.toUpperCase());
+		return PROTOCOL.from(this.instanceProtocol);
 	}
 	public int getLoadbalancerPort(){
 		return this.loadbalancerPort;
 	}
 	public PROTOCOL getProtocol(){
-		return PROTOCOL.valueOf(this.protocol.toUpperCase());
+		return PROTOCOL.from(this.protocol);
 	}
 	public String getCertificateId(){
 		return this.sslCertificateArn;
@@ -300,7 +310,7 @@ public class LoadBalancerListener extends AbstractPersistent
 	
 	public static boolean protocolSupported(Listener listener){
 		try{
-			final PROTOCOL protocol = PROTOCOL.valueOf(listener.getProtocol().toUpperCase());
+			final PROTOCOL protocol = PROTOCOL.from(listener.getProtocol());
 			if(PROTOCOL.HTTP.equals(protocol) || PROTOCOL.TCP.equals(protocol) || PROTOCOL.HTTPS.equals(protocol) || PROTOCOL.SSL.equals(protocol))
 				return true;
 			else
@@ -317,9 +327,9 @@ public class LoadBalancerListener extends AbstractPersistent
 				!Strings.isNullOrEmpty(listener.getProtocol())))
 				return false;
 
-			PROTOCOL protocol = PROTOCOL.valueOf(listener.getProtocol().toUpperCase());
+			PROTOCOL protocol = PROTOCOL.from(listener.getProtocol());
 			if(!Strings.isNullOrEmpty(listener.getInstanceProtocol()))
-				protocol = PROTOCOL.valueOf(listener.getInstanceProtocol().toUpperCase());
+				protocol = PROTOCOL.from(listener.getInstanceProtocol());
 			return true;
 		}catch(Exception e){
 			return false;

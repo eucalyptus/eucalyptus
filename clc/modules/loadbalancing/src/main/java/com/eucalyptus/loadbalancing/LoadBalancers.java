@@ -387,7 +387,7 @@ public class LoadBalancers {
 				throw new InvalidConfigurationRequestException("Invalid port range");
 			if(!LoadBalancerListener.portAvailable(listener))
 				throw new EucalyptusCloudException("The specified port(s) " + LoadBalancerListener.RESTRICTED_PORTS + ", are restricted for use as a loadbalancer port.");
-			final PROTOCOL protocol = PROTOCOL.valueOf(listener.getProtocol().toUpperCase());
+			final PROTOCOL protocol = PROTOCOL.from(listener.getProtocol());
 			  if(protocol.equals(PROTOCOL.HTTPS) || protocol.equals(PROTOCOL.SSL)) {
 			  final String sslId = listener.getSSLCertificateId();
 			  if(sslId==null || sslId.length()<=0)
@@ -426,9 +426,9 @@ public class LoadBalancers {
 	    			try{
 	        			if(!lb.hasListener( listener.getLoadBalancerPort() )){
 	        				LoadBalancerListener.Builder builder = new LoadBalancerListener.Builder(lb, listener.getInstancePort(),
-											listener.getLoadBalancerPort(), LoadBalancerListener.PROTOCOL.valueOf(listener.getProtocol().toUpperCase()));
+											listener.getLoadBalancerPort(), LoadBalancerListener.PROTOCOL.from(listener.getProtocol()));
 	            			if(!Strings.isNullOrEmpty(listener.getInstanceProtocol()))
-	            				builder.instanceProtocol(PROTOCOL.valueOf(listener.getInstanceProtocol()));
+	            				builder.instanceProtocol(PROTOCOL.from(listener.getInstanceProtocol()));
 
 	            			if(!Strings.isNullOrEmpty(listener.getSSLCertificateId()))
 	            				builder.withSSLCerntificate(listener.getSSLCertificateId());

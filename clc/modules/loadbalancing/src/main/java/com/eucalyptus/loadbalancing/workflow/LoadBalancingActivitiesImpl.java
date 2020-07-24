@@ -955,7 +955,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     }
 
     for(Listener listener : listeners){
-      final PROTOCOL protocol = PROTOCOL.valueOf(listener.getProtocol().toUpperCase());
+      final PROTOCOL protocol = PROTOCOL.from(listener.getProtocol());
       if(protocol.equals(PROTOCOL.HTTPS) || protocol.equals(PROTOCOL.SSL)) {
         final String certArn = listener.getSSLCertificateId();
         if(certArn == null || certArn.length()<=0)
@@ -996,7 +996,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     final List<String> policyNames = Lists.newArrayList();
 
     for(final Listener listener : listeners){
-      final PROTOCOL protocol = PROTOCOL.valueOf(listener.getProtocol().toUpperCase());
+      final PROTOCOL protocol = PROTOCOL.from(listener.getProtocol());
       if(protocol.equals(PROTOCOL.HTTPS) || protocol.equals(PROTOCOL.SSL)) {
         certArns.add(listener.getSSLCertificateId());
       }
