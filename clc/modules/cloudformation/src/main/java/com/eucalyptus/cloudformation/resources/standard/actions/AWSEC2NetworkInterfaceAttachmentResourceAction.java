@@ -57,6 +57,7 @@ import com.eucalyptus.compute.common.ModifyNetworkInterfaceAttributeResponseType
 import com.eucalyptus.compute.common.ModifyNetworkInterfaceAttributeType;
 import com.eucalyptus.compute.common.NetworkInterfaceIdSetItemType;
 import com.eucalyptus.compute.common.NetworkInterfaceIdSetType;
+import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncExceptions.AsyncWebServiceError;
@@ -73,11 +74,12 @@ import java.util.Objects;
 /**
 * Created by ethomas on 2/3/14.
 */
+@ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
 public class AWSEC2NetworkInterfaceAttachmentResourceAction extends StepBasedResourceAction {
   private AWSEC2NetworkInterfaceAttachmentProperties properties = new AWSEC2NetworkInterfaceAttachmentProperties( );
   private AWSEC2NetworkInterfaceAttachmentResourceInfo info = new AWSEC2NetworkInterfaceAttachmentResourceInfo( );
 
-  @ConfigurableField(initial = "300", description = "The amount of time (in seconds) to wait for a network interface to be attached during createor update)")
+  @ConfigurableField(initial = "300", description = "The amount of time (in seconds) to wait for a network interface to be attached during create or update)")
   public static volatile Integer NETWORK_INTERFACE_ATTACHMENT_MAX_CREATE_OR_UPDATE_RETRY_SECS = 300;
 
   @ConfigurableField(initial = "300", description = "The amount of time (in seconds) to wait for a network interface to detach during delete or update)")

@@ -82,6 +82,7 @@ import com.eucalyptus.compute.common.SubnetIdSetItemType;
 import com.eucalyptus.compute.common.SubnetIdSetType;
 import com.eucalyptus.compute.common.TagInfo;
 import com.eucalyptus.compute.common.UnassignPrivateIpAddressesType;
+import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -99,6 +100,7 @@ import java.util.Set;
 /**
  * Created by ethomas on 2/3/14.
  */
+@ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
 public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceAction {
 
   private AWSEC2NetworkInterfaceProperties properties = new AWSEC2NetworkInterfaceProperties();
