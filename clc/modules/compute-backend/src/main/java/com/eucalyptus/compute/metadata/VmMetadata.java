@@ -77,6 +77,23 @@ public class VmMetadata {
   Logger                                                      LOG                       = Logger.getLogger( VmMetadata.class );
 
   private static//
+  Function<MetadataRequest, ByteArray>                        apiFunc                   = new Function<MetadataRequest, ByteArray>( ) {
+                                                                                          public ByteArray apply( MetadataRequest arg0 ) {
+                                                                                            try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
+                                                                                              final VmInstance instance = VmInstances.lookup( arg0.getVmInstanceId() );
+                                                                                              final String res = VmInstanceMetadata.getApiByKey( instance, arg0.getLocalPath() );
+                                                                                              if ( res != null ) {
+                                                                                                return ByteArray.newInstance( res );
+                                                                                              }
+                                                                                            } catch ( NoSuchElementException e ) {
+                                                                                              // fall through and throw
+                                                                                            }
+                                                                                            throw new NoSuchElementException( "Failed to lookup path: " + arg0.getLocalPath( ) );
+
+                                                                                          }
+                                                                                        };
+
+  private static//
   Function<MetadataRequest, ByteArray>                        dynamicFunc               = new Function<MetadataRequest, ByteArray>( ) {
                                                                                           public ByteArray apply( MetadataRequest arg0 ) {
                                                                                             try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
@@ -144,6 +161,7 @@ public class VmMetadata {
                                                                                                   String listing = "";
                                                                                                   for ( String key : keySet( ) ) try {
                                                                                                     if ( !"".equals( key )
+                                                                                                         && !"api".equals( key )
                                                                                                          && get( key ).apply( arg0 ) != null ) {
                                                                                                       listing += key + "\n";
                                                                                                     }
@@ -156,6 +174,7 @@ public class VmMetadata {
                                                                                                   return ByteArray.newInstance( listing );
                                                                                                 }
                                                                                               } );
+                                                                                            put( "api", cache( apiFunc, VmInstances.VM_METADATA_INSTANCE_CACHE ) );
                                                                                             put( "dynamic", cache( dynamicFunc, VmInstances.VM_METADATA_INSTANCE_CACHE ) );
                                                                                             put( "user-data", cache( userDataFunc, VmInstances.VM_METADATA_USER_DATA_CACHE ) );
                                                                                             put( "meta-data", cache( metaDataFunc, VmInstances.VM_METADATA_INSTANCE_CACHE ) );

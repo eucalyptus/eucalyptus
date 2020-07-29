@@ -64,6 +64,7 @@ import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.BaseInstanceProfile;
 import com.eucalyptus.auth.principal.BaseRole;
+import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
@@ -126,12 +127,17 @@ public class VmInstanceMetadata {
   private static final BaseEncoding B64_76 = BaseEncoding.base64( ).withSeparator( "\n", 76 );
 
   private enum Type {
+    Api,
     Instance,
     Dynamic
   }
 
   public static String getByKey( final VmInstance vm, final String pathArg ) {
     return getByKeyInternal( vm, pathArg, Type.Instance );
+  }
+
+  public static String getApiByKey( final VmInstance vm, final String pathArg ) {
+    return getByKeyInternal( vm, pathArg, Type.Api );
   }
 
   public static String getDynamicByKey( final VmInstance vm, final String pathArg ) {
@@ -445,6 +451,12 @@ public class VmInstanceMetadata {
     return m;
   }
 
+  private static Map<String, String> getApiMetadataMap( final VmInstance vm ) {
+    final Map<String, String> m = Maps.newHashMap();
+    m.put( "token", Identifiers.generateInstanceMetadataApiToken() );
+    return m;
+  }
+
   private enum VolumeAttachmentComparator implements Comparator<VmVolumeAttachment> {
     INSTANCE;
 
@@ -519,6 +531,12 @@ public class VmInstanceMetadata {
           throw Exceptions.toUndeclared( e ); // Cache load exception not expected
         }
       }
+    },
+    Api( Type.Api ) {
+        @Override
+        public Map<String, String> apply( final VmInstance instance ) {
+          return addListingEntries( instance, getApiMetadataMap( instance ), true, Optional.of( Type.Api ) );
+        }
     };
 
     private final Optional<String> prefix;

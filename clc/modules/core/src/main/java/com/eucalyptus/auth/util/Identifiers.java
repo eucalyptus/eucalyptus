@@ -55,6 +55,10 @@ public class Identifiers {
     return "AKI" + getRegionIdentifierPartition( ) + getRandomPart( ).substring( 1 ); // AKI is only 20 characters
   }
 
+  public static String generateInstanceMetadataApiToken( ) {
+    return "AQA" + getRegionIdentifierPartition( ) + getRandomPart( );
+  }
+
   public static String generateCertificateIdentifier( final X509Certificate certificate ) throws CertificateEncodingException {
     return identifierEncoding.encode( Digest.SHA1.digestBinary( certificate.getEncoded( ) ) );
   }
