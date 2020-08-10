@@ -153,20 +153,11 @@ public class NatGatewayHelper {
       if ( networkInterface.isAttached( ) ) {
         networkInterface.detach( );
       }
+
+      NetworkInterfaceHelper.release( networkInterface );
+
       if ( networkInterface.isAssociated( ) ) {
         networkInterface.disassociate( );
-      }
-    }
-    final String associationId = natGateway.getAssociationId( );
-    if ( associationId != null ) {
-      Address address;
-      try {
-        address = RestrictedTypes.resolver( Address.class ).apply( associationId );
-      } catch ( final Exception e ) {
-        address = null;
-      }
-      if ( address != null ) {
-        Addresses.getInstance( ).unassign( address, associationId );
       }
     }
     return Optional.fromNullable( networkInterface );

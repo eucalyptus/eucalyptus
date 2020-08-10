@@ -69,6 +69,7 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.event.SystemClock;
+import com.eucalyptus.network.PrivateAddresses;
 import com.google.common.base.Functions;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
@@ -160,7 +161,9 @@ public class VpcWorkflow {
             throw new ClientComputeException( "Gateway.NotAttached", "Internet gateway not found for VPC" );
           }
 
-          networkInterfaces.save( NatGatewayHelper.createNetworkInterface( natGateway, subnet ) );
+          final NetworkInterface networkInterface =
+              networkInterfaces.save( NatGatewayHelper.createNetworkInterface( natGateway, subnet ) );
+          PrivateAddresses.associate( networkInterface.getPrivateIpAddress(), networkInterface );
         } catch ( final ComputeException e ) { // NAT gateway creation failure
           cleanup = true;
           natGateway.markDeletion( );
