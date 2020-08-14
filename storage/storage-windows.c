@@ -324,7 +324,7 @@ int encryptWindowsPassword(char *pass, char *key, char **out, int *outsize)
         return (EUCA_MEMORY_ERROR);
     }
 
-    if (!BN_hex2bn(e, exponentbuf) || !BN_hex2bn(n, modbuf)) {
+    if (!BN_hex2bn(&e, exponentbuf) || !BN_hex2bn(&n, modbuf)) {
         BN_free(e);
         BN_free(n);
         RSA_free(r);
