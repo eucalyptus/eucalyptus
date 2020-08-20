@@ -118,6 +118,11 @@ public class DNSControl {
       changeListener = DnsAddressChangeListener.class )
   public static volatile String dns_listener_address_match = "";
 
+  @ConfigurableField( description = "Port number to listen on for DNS requests.",
+      initial = "53",
+      changeListener = WebServices.CheckNonNegativeIntegerPropertyChangeListener.class )
+  public static volatile Integer dns_listener_port = 53;
+
   @ConfigurableField( description = "Server worker thread pool max.",
       initial = "32",
       changeListener = WebServices.CheckNonNegativeIntegerPropertyChangeListener.class )
@@ -204,11 +209,11 @@ public class DNSControl {
 
   private static final ChannelGroup udpChannelGroup = new DefaultChannelGroup(
       DNSControl.class.getSimpleName( )
-          + ":udp:53" );
+          + ":udp" );
 
   private static final ChannelGroup tcpChannelGroup = new DefaultChannelGroup(
       DNSControl.class.getSimpleName( )
-          + ":tcp:53" );
+          + ":tcp" );
 
   private static DatagramChannelFactory udpChannelFactory = null;
 
@@ -309,7 +314,7 @@ public class DNSControl {
         }
         for ( final InetAddress listenAddr : listenAddresses ) {
           try {
-            Channel udpChannel = b.bind( new InetSocketAddress( listenAddr, 53 ) );
+            Channel udpChannel = b.bind( new InetSocketAddress( listenAddr, dns_listener_port ) );
             udpChannelGroup.add( udpChannel );
           } catch ( final Exception ex ) {
             continue;
@@ -373,7 +378,7 @@ public class DNSControl {
         b.setOption( "keepAlive", false );
         b.setOption( "reuseAddress", true );
         b.setOption( "connectTimeoutMillis", 3000 );
-        final Channel tcpChannel = b.bind( new InetSocketAddress( 53 ) );
+        final Channel tcpChannel = b.bind( new InetSocketAddress( dns_listener_port ) );
         tcpChannelGroup.add( tcpChannel );
       } catch ( final Exception ex ) {
         LOG.debug( ex, ex );
