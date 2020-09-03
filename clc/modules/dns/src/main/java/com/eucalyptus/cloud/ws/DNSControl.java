@@ -46,6 +46,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -75,18 +76,30 @@ import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
 import org.jboss.netty.handler.codec.frame.LengthFieldPrepender;
 import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.xbill.DNS.ResolverConfig;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Listeners;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Cidr;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.LockResource;
+import com.eucalyptus.util.Pair;
 import com.eucalyptus.ws.WebServices;
 import com.google.common.base.CharMatcher;
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
+import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -100,27 +113,27 @@ public class DNSControl {
 
   private static Logger LOG = Logger.getLogger( DNSControl.class );
 
+  private static final int STANDARD_PORT = 53;
+
   private static final AtomicReference<Collection<Cidr>> addressMatchers =
-      new AtomicReference<Collection<Cidr>>( Collections.<Cidr>emptySet( ) );
+      new AtomicReference<>(Collections.emptySet());
 
   private static final boolean useLegacyTcp =
       Boolean.valueOf( System.getProperty( "com.eucalyptus.dns.legacyTcp", "false" ) );
 
   private static final AtomicReference<Collection<TCPListener>> tcpListenerRef =
-      new AtomicReference<Collection<TCPListener>>( Collections.<TCPListener>emptySet( ) );
+      new AtomicReference<>(Collections.emptySet());
 
   private static final Lock listenerLock = new ReentrantLock( );
 
   @ConfigurableField( displayName = "dns_listener_address_match",
       description = "Additional address patterns to listen on for DNS requests.",
-      initial = "",
-      readonly = false,
       changeListener = DnsAddressChangeListener.class )
   public static volatile String dns_listener_address_match = "";
 
   @ConfigurableField( description = "Port number to listen on for DNS requests.",
       initial = "53",
-      changeListener = WebServices.CheckNonNegativeIntegerPropertyChangeListener.class )
+      changeListener = DnsPortChangeListener.class )
   public static volatile Integer dns_listener_port = 53;
 
   @ConfigurableField( description = "Server worker thread pool max.",
@@ -130,78 +143,80 @@ public class DNSControl {
 
   @ConfigurableField( displayName = "server",
       description = "Comma separated list of nameservers, OS settings used if none specified (change requires restart)",
-      initial = "",
-      readonly = false,
       changeListener = DnsServerChangeListener.class )
   public static volatile String server = "";
 
   @ConfigurableField( displayName = "search",
       description = "Comma separated list of domains to search, OS settings used if none specified (change requires restart)",
-      initial = "",
-      readonly = false,
       changeListener = DnsSearchChangeListener.class )
   public static volatile String search = "";
 
-  public static class DnsServerChangeListener implements PropertyChangeListener {
+  public static class DnsServerChangeListener implements PropertyChangeListener<String> {
 
     @Override
-    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
-      if ( newValue == null || ( newValue instanceof String ) ) {
-        try {
-          String newValueStr = (String) newValue;
-          if ( Strings.isNullOrEmpty( newValueStr ) ) {
-            LOG.debug( "Setting dns.server property to null (by clearing it)" );
-            System.clearProperty( "dns.server" );
-          } else {
-            LOG.debug( "Setting dns.server property to " + newValueStr );
-            System.setProperty( "dns.server", newValueStr );
-          }
-          ResolverConfig.refresh( );
-        } catch ( final Exception e ) {
-          throw new ConfigurablePropertyException( e.getMessage( ) );
+    public void fireChange( ConfigurableProperty t, String newValueStr ) throws ConfigurablePropertyException {
+      try {
+        if ( Strings.isNullOrEmpty( newValueStr ) ) {
+          LOG.debug( "Setting dns.server property to null (by clearing it)" );
+          System.clearProperty( "dns.server" );
+        } else {
+          LOG.debug( "Setting dns.server property to " + newValueStr );
+          System.setProperty( "dns.server", newValueStr );
         }
+        ResolverConfig.refresh( );
+      } catch ( final Exception e ) {
+        throw new ConfigurablePropertyException( e.getMessage( ) );
       }
     }
   }
 
-  public static class DnsSearchChangeListener implements PropertyChangeListener {
+  public static class DnsSearchChangeListener implements PropertyChangeListener<String> {
 
     @Override
-    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
-      if ( newValue == null || ( newValue instanceof String ) ) {
-        try {
-          String newValueStr = (String) newValue;
-          if ( Strings.isNullOrEmpty( newValueStr ) ) {
-            LOG.debug( "Setting dns.search property to null (by clearing it)" );
-            System.clearProperty( "dns.search" );
-          } else {
-            LOG.debug( "Setting dns.search property to " + newValueStr );
-            System.setProperty( "dns.search", newValueStr );
-          }
-          ResolverConfig.refresh( );
-        } catch ( final Exception e ) {
-          throw new ConfigurablePropertyException( e.getMessage( ) );
+    public void fireChange( ConfigurableProperty t, String newValueStr ) throws ConfigurablePropertyException {
+      try {
+        if ( Strings.isNullOrEmpty( newValueStr ) ) {
+          LOG.debug( "Setting dns.search property to null (by clearing it)" );
+          System.clearProperty( "dns.search" );
+        } else {
+          LOG.debug( "Setting dns.search property to " + newValueStr );
+          System.setProperty( "dns.search", newValueStr );
         }
+        ResolverConfig.refresh( );
+      } catch ( final Exception e ) {
+        throw new ConfigurablePropertyException( e.getMessage( ) );
       }
     }
   }
 
-  public static class DnsAddressChangeListener implements PropertyChangeListener {
+  public static class DnsAddressChangeListener implements PropertyChangeListener<String> {
+
+    @Override
+    public void fireChange( ConfigurableProperty t, String newValue ) throws ConfigurablePropertyException {
+      updateAddressMatchers( newValue );
+    }
+  }
+
+  public static class DnsPortChangeListener extends WebServices.CheckNonNegativeIntegerPropertyChangeListener {
 
     @Override
     public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
-      if ( newValue instanceof String ) {
-        updateAddressMatchers( (String) newValue );
-      }
+      super.fireChange(t, newValue);
     }
+  }
+
+  private static Iterable<Cidr> parse( final Function<String, Optional<Cidr>> cidrTransform,
+                                       final String cidrList ) {
+    return Optional.presentInstances( Iterables.transform(
+        Splitter.on( CharMatcher.anyOf( ", ;:" ) ).trimResults( ).omitEmptyStrings( ).split( cidrList ),
+        cidrTransform ) );
   }
 
   private static void updateAddressMatchers( final String addressCidrs ) throws ConfigurablePropertyException {
     try {
-      addressMatchers.set( ImmutableList.copyOf( Iterables.transform(
-          Splitter.on( CharMatcher.anyOf( ", ;:" ) ).trimResults( ).omitEmptyStrings( ).split( addressCidrs ),
-          Cidr.parseUnsafe( )
-      ) ) );
+      addressMatchers.set( ImmutableList.copyOf( parse(
+          Functions.compose( CollectionUtils.optionalUnit( ), Cidr.parseUnsafe( ) ),
+          Objects.toString( addressCidrs ) ) ) );
     } catch ( IllegalArgumentException e ) {
       throw new ConfigurablePropertyException( e.getMessage( ) );
     }
@@ -242,11 +257,44 @@ public class DNSControl {
     }
   }
 
+  public static class DNSListenerRestartCheck implements EventListener<ClockTick> {
+    private static Logger logger = Logger.getLogger( DNSListenerRestartCheck.class );
+
+    private static final AtomicReference<Pair<String,Integer>> configReference =
+        new AtomicReference<>();
+
+    public static void register( ) {
+      Listeners.register( ClockTick.class, new DNSListenerRestartCheck( ) );
+    }
+
+    @Override
+    public void fireEvent( final ClockTick event ) {
+      if ( configReference.get( ) == null ) {
+        if ( !udpChannelGroup.isEmpty( ) ) {
+          configReference.set( Pair.of( dns_listener_address_match, dns_listener_port ) );
+        }
+        return;
+      }
+      if ( Topology.isEnabledLocally( Dns.class ) && Bootstrap.isOperational( ) ) {
+        final Pair<String,Integer> runningConfig = configReference.get();
+        final Pair<String,Integer> currentConfig = Pair.of( dns_listener_address_match, dns_listener_port );
+        if ( !currentConfig.equals( runningConfig ) &&
+            configReference.compareAndSet( runningConfig, currentConfig ) ) {
+          try {
+            logger.info("Restarting DNS listeners with updated configuration");
+            restart( );
+          } catch ( final Exception e ) {
+            logger.error("Error restarting DNS listeners", e);
+          }
+        }
+      }
+    }
+  }
+
   private static class DnsTimestampWrapper implements ChannelUpstreamHandler {
 
     @Override
-    public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent ce )
-        throws Exception {
+    public void handleUpstream( ChannelHandlerContext ctx, ChannelEvent ce ) {
       if ( !( ce instanceof MessageEvent ) ) {
         return;
       }
@@ -257,8 +305,7 @@ public class DNSControl {
         wrappedRequest.receivedTime = ( new Date( ) ).getTime( );
         wrappedRequest.request = new byte[ buffer.readableBytes( ) ];
         buffer.getBytes( 0, wrappedRequest.request );
-        Channels.fireMessageReceived( ctx, wrappedRequest,
-            ( (InetSocketAddress) me.getRemoteAddress( ) ) );
+        Channels.fireMessageReceived( ctx, wrappedRequest, me.getRemoteAddress( ) );
       } catch ( final Exception ex ) {
         LOG.debug( ex, ex );
       }
@@ -274,12 +321,31 @@ public class DNSControl {
     }
 
     @Override
-    public ChannelPipeline getPipeline( ) throws Exception {
+    public ChannelPipeline getPipeline( ) {
       return Channels.pipeline( new DnsTimestampWrapper( ), this.execHandler, new DnsServerHandler( ) );
     }
   }
 
-  private static void initializeUDP( ) throws Exception {
+  private static Set<Pair<InetAddress,Integer>> listenerPairs( ) {
+    final Set<Pair<InetAddress,Integer>> listenerAddressAndPorts = Sets.newLinkedHashSet(  );
+    final Predicate<InetAddress> addressFilter;
+    if ( addressMatchers.get( ).isEmpty( ) ) {
+      addressFilter = Predicates.alwaysTrue( );
+    } else {
+      addressFilter = Predicates.or( addressMatchers.get( ) );
+    }
+    Iterables.addAll(
+        listenerAddressAndPorts,
+        Iterables.transform(
+            Iterables.filter(
+                Internets.getAllInetAddresses( ),
+                addressFilter ),
+            CollectionUtils.flipCurried( Pair.<InetAddress, Integer>pair() ).apply( dns_listener_port ) ) );
+    listenerAddressAndPorts.add( Pair.pair( Internets.localHostInetAddress(), STANDARD_PORT ) );
+    return listenerAddressAndPorts;
+  }
+
+  private static void initializeUDP( ) {
     if ( udpChannelFactory == null ) {
       try {
         udpChannelFactory = new NioDatagramChannelFactory(
@@ -300,24 +366,14 @@ public class DNSControl {
         b.setOption( "reuseAddress", true );
         b.setOption( "connectTimeoutMillis", 3000 );
 
-        final Set<InetAddress> listenAddresses = Sets.newLinkedHashSet( );
-        listenAddresses.add( Internets.localHostInetAddress( ) );
-
-        if ( addressMatchers.get( ).size( ) > 0 ) {
-          Iterables.addAll(
-              listenAddresses,
-              Iterables.filter( Internets.getAllInetAddresses( ), Predicates.or( addressMatchers.get( ) ) ) );
-        } else {
-          Iterables.addAll(
-              listenAddresses,
-              Internets.getAllInetAddresses( ) );
-        }
-        for ( final InetAddress listenAddr : listenAddresses ) {
+        for ( final Pair<InetAddress,Integer> listenAddrAndPort : listenerPairs( ) ) {
           try {
-            Channel udpChannel = b.bind( new InetSocketAddress( listenAddr, dns_listener_port ) );
+            Channel udpChannel = b.bind( new InetSocketAddress(
+                listenAddrAndPort.getLeft(),
+                listenAddrAndPort.getRight() ) );
             udpChannelGroup.add( udpChannel );
           } catch ( final Exception ex ) {
-            continue;
+            LOG.error("Error adding UDP listener: " + listenAddrAndPort, ex);
           }
         }
       } catch ( final Exception ex ) {
@@ -336,7 +392,7 @@ public class DNSControl {
     }
   }
 
-  private static void initializeTCP( ) throws Exception {
+  private static void initializeTCP( ) {
     if ( useLegacyTcp ) {
       initializeTCPSocket( );
     } else {
@@ -344,7 +400,7 @@ public class DNSControl {
     }
   }
 
-  private static void initializeTCPSocket( ) throws Exception {
+  private static void initializeTCPSocket( ) {
     initializeListeners( tcpListenerRef, "TCP", new ListenerBuilder<TCPListener>( ) {
       @Override
       public TCPListener build( final InetAddress address, final int port ) throws IOException {
@@ -353,7 +409,7 @@ public class DNSControl {
     } );
   }
 
-  private static void initializeTCPNetty( ) throws Exception {
+  private static void initializeTCPNetty( ) {
     if ( tcpChannelFactory == null ) {
       try {
         tcpChannelFactory =
@@ -362,7 +418,7 @@ public class DNSControl {
                 createWorkerPool( "tcp" ) );
         final ServerBootstrap b = new ServerBootstrap( tcpChannelFactory );
         b.setPipelineFactory( new ChannelPipelineFactory( ) {
-          public ChannelPipeline getPipeline( ) throws Exception {
+          public ChannelPipeline getPipeline( ) {
             ChannelPipeline p = Channels.pipeline( );
             p.addLast( "framer", new LengthFieldBasedFrameDecoder( 65536, 0, 2, 0, 2 ) );
             p.addLast( "prepender", new LengthFieldPrepender( 2 ) );
@@ -378,8 +434,17 @@ public class DNSControl {
         b.setOption( "keepAlive", false );
         b.setOption( "reuseAddress", true );
         b.setOption( "connectTimeoutMillis", 3000 );
-        final Channel tcpChannel = b.bind( new InetSocketAddress( dns_listener_port ) );
-        tcpChannelGroup.add( tcpChannel );
+
+        for ( final Pair<InetAddress,Integer> listenAddrAndPort : listenerPairs( ) ) {
+          try {
+            final Channel tcpChannel = b.bind( new InetSocketAddress(
+                listenAddrAndPort.getLeft(),
+                listenAddrAndPort.getRight() ) );
+            tcpChannelGroup.add( tcpChannel );
+          } catch ( final Exception ex ) {
+            LOG.error("Error adding TCP listener: " + listenAddrAndPort, ex);
+          }
+        }
       } catch ( final Exception ex ) {
         LOG.debug( ex, ex );
         tcpChannelGroup.close( ).awaitUninterruptibly( );
@@ -434,7 +499,7 @@ public class DNSControl {
     T build( InetAddress address, int port ) throws IOException;
   }
 
-  public static void initialize( ) throws Exception {
+  public static void initialize( ) {
     try {
       initializeUDP( );
       initializeTCP( );
@@ -444,9 +509,8 @@ public class DNSControl {
     }
   }
 
-  public static void stop( ) throws Exception {
-    if ( udpChannelGroup != null )
-      udpChannelGroup.close( ).awaitUninterruptibly( );
+  public static void stop( ) {
+    udpChannelGroup.close( ).awaitUninterruptibly( );
     if ( udpExecHandler != null ) {
       udpExecHandler.releaseExternalResources( );
       udpExecHandler = null;
@@ -455,8 +519,7 @@ public class DNSControl {
       udpChannelFactory.releaseExternalResources( );
       udpChannelFactory = null;
     }
-    if ( tcpChannelGroup != null )
-      tcpChannelGroup.close( ).awaitUninterruptibly( );
+    tcpChannelGroup.close( ).awaitUninterruptibly( );
     if ( tcpChannelFactory != null ) {
       tcpChannelFactory.releaseExternalResources( );
       tcpChannelFactory = null;
