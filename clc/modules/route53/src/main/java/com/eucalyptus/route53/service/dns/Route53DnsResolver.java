@@ -26,6 +26,7 @@ import org.xbill.DNS.DClass;
 import org.xbill.DNS.NSRecord;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
+import org.xbill.DNS.TXTRecord;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.compute.common.network.NetworkLookup;
 import com.eucalyptus.entities.EntityCache;
@@ -55,6 +56,7 @@ import com.google.common.collect.Sets;
 import com.google.common.net.InetAddresses;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
+import io.vavr.collection.Stream;
 import io.vavr.control.Option;
 
 /**
@@ -72,6 +74,9 @@ public class Route53DnsResolver extends DnsResolvers.DnsResolver {
       Suppliers.memoizeWithExpiration(cache::get, 30, TimeUnit.SECONDS);
 
   private static final WildcardNameMatcher publicZoneMatcher = new WildcardNameMatcher( );
+
+  private static final String ESCAPED_QUOTE_TEXT = "\\\"";
+  private static final String QUOTE_TEXT = "\"";
 
   @Override
   public int getOrder( ) {
@@ -94,10 +99,7 @@ public class Route53DnsResolver extends DnsResolvers.DnsResolver {
     }
 
     final Set<String> hostedZones = getHostedZoneNames(cacheSupplier.get());
-    return
-        hostedZones.contains(name.toString()) ||
-            (name.labels() > 2 &&
-             hostedZones.contains(new Name(name, 1).toString()));
+    return hostedZones.removeAll(getCandidateZoneNames(name));
   }
 
   @Override
@@ -105,9 +107,7 @@ public class Route53DnsResolver extends DnsResolvers.DnsResolver {
     final Record query = request.getQuery( );
     final Name name = query.getName( );
     final String nameString = name.toString();
-    final String parentNameString = name.labels() > 2 ?
-        new Name(name, 1).toString() :
-        nameString;
+    final Set<String> zoneNames = getCandidateZoneNames(name);
     final Iterable<HostedZoneComposite> zones = cacheSupplier.get();
     Record authority = null;
 
@@ -115,7 +115,7 @@ public class Route53DnsResolver extends DnsResolvers.DnsResolver {
     for (final HostedZoneComposite zoneAndRecords : zones) {
       final HostedZoneView zone = zoneAndRecords.getHostedZone();
       if (!zone.getPrivateZone() &&
-          (zone.getZoneName().equals(nameString) ||  zone.getZoneName().equals(parentNameString))) {
+          zoneNames.contains(zone.getZoneName())) {
         if (Subnets.isSystemManagedAddress(request.getRemoteAddress())) {
           // For system hosts, only return public zones if they are whitelisted or
           // a subdomain of the cloud (so under administrative control)
@@ -143,7 +143,7 @@ public class Route53DnsResolver extends DnsResolvers.DnsResolver {
           final HostedZoneView zone = zoneAndRecords.getHostedZone();
           if (zone.getPrivateZone() &&
               zone.getVpcIds().contains(vpcId.get()) &&
-              (zone.getZoneName().equals(nameString) ||  zone.getZoneName().equals(parentNameString))) {
+              zoneNames.contains(zone.getZoneName())) {
             final DnsResponse response = getZoneResponse(request, name, query.getType(), nameString, zoneAndRecords);
             if ( response != null ) {
               return response;
@@ -182,6 +182,14 @@ public class Route53DnsResolver extends DnsResolvers.DnsResolver {
         zones,
         hzc -> hzc.getHostedZone().getZoneName() )) );
     return hostedZoneNames;
+  }
+
+  public Set<String> getCandidateZoneNames(final Name name) {
+    final Set<String> zoneNames = Sets.newHashSet();
+    for (Name zoneName = name; zoneName.labels() > 1; zoneName = new Name(zoneName, 1)) {
+      zoneNames.add(zoneName.toString());
+    }
+    return zoneNames;
   }
 
   private DnsResponse response(
@@ -268,8 +276,26 @@ public class Route53DnsResolver extends DnsResolvers.DnsResolver {
           }
         }
         break;
+      case TXT:
+        response = DnsResponse.forName(name)
+            .answer(new TXTRecord(name, DClass.IN, rrSet.getTtl(), unquote(rrSet.getValues())));
+        break;
     }
     return response;
+  }
+
+  private static List<String> unquote(final List<String> values) {
+    return Stream.ofAll(values)
+        .flatMap(Route53DnsResolver::unquote)
+        .toJavaList();
+  }
+
+  private static Option<String> unquote(final String value) {
+    if (value.length() < 2 || !value.startsWith(QUOTE_TEXT) || !value.endsWith(QUOTE_TEXT)) {
+      return Option.none();
+    }
+    final String trimmed = value.substring(1, value.length()-1);
+    return Option.some(trimmed.replace(ESCAPED_QUOTE_TEXT, QUOTE_TEXT));
   }
 
   @Nullable

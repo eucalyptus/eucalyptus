@@ -12,6 +12,7 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -541,7 +542,14 @@ public class Route53Service {
   }
 
   public GetChangeResponseType getChange(final GetChangeType request) {
-    return request.getReply();
+    final GetChangeResponseType reply = request.getReply();
+    final ChangeInfo changeInfo = new ChangeInfo();
+    changeInfo.setComment("");
+    changeInfo.setId(request.getId());
+    changeInfo.setStatus("INSYNC");
+    changeInfo.setSubmittedAt(new Date(System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(1)));
+    reply.setChangeInfo(changeInfo);
+    return reply;
   }
 
   public GetCheckerIpRangesResponseType getCheckerIpRanges(final GetCheckerIpRangesType request) {

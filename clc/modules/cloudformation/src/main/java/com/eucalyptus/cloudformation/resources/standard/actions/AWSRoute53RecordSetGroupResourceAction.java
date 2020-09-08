@@ -163,7 +163,7 @@ public class AWSRoute53RecordSetGroupResourceAction extends StepBasedResourceAct
           listHostedZonesByName.setDNSName(hostedZoneName);
           final ListHostedZonesByNameResponseType zoneListing =
               route53.listHostedZonesByName(listHostedZonesByName);
-          if (zoneListing.getHostedZones()!=null && zoneListing.getHostedZones().getMember().size()==1) {
+          if (zoneListing.getHostedZones()!=null && !zoneListing.getHostedZones().getMember().isEmpty()) {
             hostedZoneId = Strings.substringAfter("/hostedzone/",
                 zoneListing.getHostedZones().getMember().get(0).getId());
           } else {

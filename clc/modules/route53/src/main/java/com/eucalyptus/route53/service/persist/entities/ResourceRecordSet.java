@@ -20,6 +20,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OrderColumn;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+import org.xbill.DNS.Type;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.route53.service.dns.Route53DnsHelper;
@@ -41,6 +42,7 @@ public class ResourceRecordSet extends AbstractOwnedPersistent implements Resour
     CNAME(org.xbill.DNS.Type.CNAME),
     NS(org.xbill.DNS.Type.NS),
     SOA(org.xbill.DNS.Type.SOA),
+    TXT(org.xbill.DNS.Type.TXT)
     ;
 
     private final int code;
