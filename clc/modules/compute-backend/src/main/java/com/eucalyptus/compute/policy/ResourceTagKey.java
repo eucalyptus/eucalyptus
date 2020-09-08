@@ -28,8 +28,6 @@
  ************************************************************************/
 package com.eucalyptus.compute.policy;
 
-import static com.eucalyptus.auth.policy.PolicySpec.EC2_CREATESNAPSHOT;
-import static com.eucalyptus.auth.policy.PolicySpec.EC2_DELETESNAPSHOT;
 import static com.eucalyptus.auth.policy.PolicySpec.qualifiedName;
 import static com.eucalyptus.compute.common.policy.ComputePolicySpec.*;
 import java.util.Map;
@@ -62,6 +60,7 @@ public class ResourceTagKey implements ComputeKey {
       .add( qualifiedName( VENDOR_EC2, EC2_CREATEVPCPEERINGCONNECTION ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETEDHCPOPTIONS ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETEINTERNETGATEWAY ) )
+      .add( qualifiedName( VENDOR_EC2, EC2_DELETELAUNCHTEMPLATE ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETENATGATEWAY ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETENETWORKACL ) )
       .add( qualifiedName( VENDOR_EC2, EC2_DELETENETWORKACLENTRY ) )

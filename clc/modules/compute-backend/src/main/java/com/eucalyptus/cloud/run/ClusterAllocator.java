@@ -62,7 +62,6 @@ import javax.crypto.spec.SecretKeySpec;
 import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.auth.AuthContextSupplier;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
@@ -74,6 +73,7 @@ import com.eucalyptus.compute.common.BlockDeviceMappingItemType;
 import com.eucalyptus.compute.common.backend.RunInstancesType;
 import com.eucalyptus.compute.common.backend.StartInstancesType;
 import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.compute.common.policy.ComputePolicySpec;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.tags.TagHelper;
 import com.eucalyptus.util.RestrictedTypes;
@@ -456,7 +456,7 @@ public class ClusterAllocator implements Runnable {
                             return Volumes.createStorageVolume( sc, authenticatedArn, fullName, snapshotId, Ints.checkedCast( size ),
                                 volume -> {
                                   final List<ResourceTag> volumeTags =
-                                      TagHelper.tagsForResource( request.getTagSpecification( ), PolicySpec.EC2_RESOURCE_VOLUME );
+                                      ClusterAllocator.this.allocInfo.getTagsForResource(ComputePolicySpec.EC2_RESOURCE_VOLUME );
                                   TagHelper.createOrUpdateTags( fullName, volume, volumeTags );
                                 } );
                           } catch ( ExecutionException ex ) {

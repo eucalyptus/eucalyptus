@@ -28,7 +28,8 @@
  ************************************************************************/
 package com.eucalyptus.compute.policy;
 
-import static com.eucalyptus.auth.policy.PolicySpec.*;
+import static com.eucalyptus.auth.policy.PolicySpec.qualifiedName;
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.*;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import com.eucalyptus.auth.AuthException;

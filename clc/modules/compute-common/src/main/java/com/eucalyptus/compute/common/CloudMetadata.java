@@ -106,6 +106,10 @@ public interface CloudMetadata extends RestrictedType {
   @CloudMetadataLongIdentifierConfigurable( prefix = "igw" )
   interface InternetGatewayMetadata extends CloudMetadata {}
 
+  @PolicyResourceType( "launch-template" )
+  @CloudMetadataLongIdentifierConfigurable( prefix = "lt" )
+  interface LaunchTemplateMetadata extends CloudMetadata {}
+
   @PolicyResourceType( "nat-gateway" )
   interface NatGatewayMetadata extends CloudMetadata {}
 

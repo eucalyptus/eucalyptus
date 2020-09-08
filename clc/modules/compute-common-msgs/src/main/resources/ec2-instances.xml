@@ -138,7 +138,7 @@
     </structure>
     <!--2009-04-04 -->
     <structure name="monitoring" usage="optional">
-      <value name="enabled" field="monitoring" />
+      <value name="enabled" field="monitoring" usage="optional"/>
     </structure>
     <!--2009-07-15 -->
     <value name="subnetId" field="subnetId" usage="optional" />

@@ -6,7 +6,7 @@
 package com.eucalyptus.compute.common;
 
 
-public class DeleteLaunchTemplateResponseType extends ComputeMessage {
+public class DeleteLaunchTemplateResponseType extends VmControlMessage {
 
   private LaunchTemplate launchTemplate;
 

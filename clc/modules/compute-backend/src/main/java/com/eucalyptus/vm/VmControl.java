@@ -76,8 +76,12 @@ import com.eucalyptus.compute.common.backend.BundleInstanceResponseType;
 import com.eucalyptus.compute.common.backend.BundleInstanceType;
 import com.eucalyptus.compute.common.backend.CancelBundleTaskResponseType;
 import com.eucalyptus.compute.common.backend.CancelBundleTaskType;
+import com.eucalyptus.compute.common.backend.CreateLaunchTemplateResponseType;
+import com.eucalyptus.compute.common.backend.CreateLaunchTemplateType;
 import com.eucalyptus.compute.common.backend.CreatePlacementGroupResponseType;
 import com.eucalyptus.compute.common.backend.CreatePlacementGroupType;
+import com.eucalyptus.compute.common.backend.DeleteLaunchTemplateResponseType;
+import com.eucalyptus.compute.common.backend.DeleteLaunchTemplateType;
 import com.eucalyptus.compute.common.backend.DeletePlacementGroupResponseType;
 import com.eucalyptus.compute.common.backend.DeletePlacementGroupType;
 import com.eucalyptus.compute.common.backend.DescribeBundleTasksResponseType;
@@ -110,6 +114,7 @@ import com.eucalyptus.compute.common.backend.TerminateInstancesResponseType;
 import com.eucalyptus.compute.common.backend.TerminateInstancesType;
 import com.eucalyptus.compute.common.backend.UnmonitorInstancesResponseType;
 import com.eucalyptus.compute.common.backend.UnmonitorInstancesType;
+import com.eucalyptus.compute.common.internal.ComputeMetadataNotFoundException;
 import com.eucalyptus.compute.common.internal.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.common.internal.images.BlockStorageImageInfo;
@@ -125,6 +130,8 @@ import com.eucalyptus.compute.common.internal.tags.Tag;
 import com.eucalyptus.compute.common.internal.tags.TagSupport;
 import com.eucalyptus.compute.common.internal.tags.Tags;
 import com.eucalyptus.compute.common.internal.util.*;
+import com.eucalyptus.compute.common.internal.vm.LaunchTemplate;
+import com.eucalyptus.compute.common.internal.vm.LaunchTemplates;
 import com.eucalyptus.compute.common.internal.vm.MigrationState;
 import com.eucalyptus.compute.common.internal.vm.VmBundleTask;
 import com.eucalyptus.compute.common.internal.vm.VmBundleTask.BundleState;
@@ -140,6 +147,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Hmac;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.PersistenceExceptions;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.images.Images;
@@ -169,6 +177,7 @@ import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.DecoderException;
 
+import javax.inject.Inject;
 import javax.persistence.EntityTransaction;
 import java.security.MessageDigest;
 import java.util.*;
@@ -185,7 +194,14 @@ public class VmControl {
 
   private static Logger LOG = Logger.getLogger( VmControl.class );
 
-  public static RunInstancesResponseType runInstances( RunInstancesType request ) throws Exception {
+  private final LaunchTemplates launchTemplates;
+
+  @Inject
+  public VmControl( final LaunchTemplates launchTemplates ) {
+    this.launchTemplates = launchTemplates;
+  }
+
+  public RunInstancesResponseType runInstances( final RunInstancesType request ) throws Exception {
     RunInstancesResponseType reply = request.getReply( );
     Allocation allocInfo = Allocations.run( request );
     final EntityTransaction db = Entities.get( VmInstance.class );
@@ -210,7 +226,7 @@ public class VmControl {
         }
       }
 
-      Predicates.and( VerifyMetadata.get( ), AdmissionControl.run( ), ContractEnforcement.run( ) ).apply( allocInfo );
+      allocInfo.apply( Predicates.and( VerifyMetadata.get( ), AdmissionControl.run( ), ContractEnforcement.run( ) ) );
       allocInfo.commit( );
 
       ReservationInfoType reservation = new ReservationInfoType(
@@ -468,6 +484,101 @@ public class VmControl {
   public GetConsoleScreenshotResponseType getConsoleScreenshot( final GetConsoleScreenshotType request ) throws EucalyptusCloudException {
     GetConsoleScreenshotResponseType reply = request.getReply();
     reply.setInstanceId( normalizeIdentifier( request.getInstanceId( ) ) );
+    return reply;
+  }
+
+  public CreateLaunchTemplateResponseType createLaunchTemplate( final CreateLaunchTemplateType request ) throws EucalyptusCloudException {
+    final Context context = Contexts.lookup( );
+    final CreateLaunchTemplateResponseType reply = request.getReply();
+    try {
+      VerifyMetadata.get( ).apply( Allocations.verify( request.getLaunchTemplateData( ) ) );
+      final AccountFullName accountFullName = context.getAccount();
+      final String id = ResourceIdentifiers.generateLongString( LaunchTemplate.ID_PREFIX );
+      final String clientToken = Strings.emptyToNull(Strings.nullToEmpty(request.getClientToken()).trim());
+      LaunchTemplate launchTemplate = null;
+      if ( clientToken != null ) try {
+        launchTemplate = launchTemplates.lookupByExample(
+            LaunchTemplate.exampleWithClientToken(accountFullName, clientToken),
+            accountFullName,
+            clientToken,
+            CloudMetadatas.filterPrivileged(),
+            Functions.identity() );
+        if (!launchTemplate.getName().equals(request.getLaunchTemplateName())) {
+          throw new ClientComputeException("IdempotentParameterMismatch", "Parameter mismatch");
+        }
+      } catch (final ComputeMetadataNotFoundException e) {
+        // new client token, initial create
+      }
+      if ( launchTemplate == null ) {
+        final Supplier<LaunchTemplate> allocator = new Supplier<LaunchTemplate>( ) {
+          @Override
+          public LaunchTemplate get() {
+            try {
+              final LaunchTemplate launchTemplate = LaunchTemplate.create(
+                  context.getUserFullName(),
+                  id,
+                  clientToken,
+                  request.getLaunchTemplateName(),
+                  request.getVersionDescription()
+              );
+              launchTemplate.writeTemplateData(request.getLaunchTemplateData());
+              launchTemplates.save( launchTemplate );
+              return launchTemplate;
+            } catch (final Exception e) {
+              throw Exceptions.toUndeclared(e);
+            }
+          }
+        };
+        launchTemplate = CloudMetadatas.allocateUnitlessResource( allocator );
+      }
+      reply.setLaunchTemplate(TypeMappers.transform(
+          launchTemplate,
+          com.eucalyptus.compute.common.LaunchTemplate.class));
+    } catch( Exception ex ) {
+      Exceptions.findAndRethrow( ex, ComputeException.class );
+      throwClientIfFound( ex, ImageInstanceTypeVerificationException.class, "InvalidParameterCombination" );
+      final IllegalMetadataAccessException e2 = Exceptions.findCause( ex, IllegalMetadataAccessException.class );
+      if ( e2 != null ) throw new ClientUnauthorizedComputeException( e2.getMessage( ) );
+      if ( PersistenceExceptions.classify( ex ) == PersistenceExceptions.ErrorCategory.CONSTRAINT ) {
+        throw new ClientComputeException("InvalidLaunchTemplateName.AlreadyExistsException", "Duplicate launch template name");
+      }
+      throwClientIfFound( ex, NoSuchKeyMetadataException.class, "InvalidKeyPair.NotFound" );
+      throwClientIfFound( ex, VpcRequiredMetadataException.class, "VPCIdNotSpecified", "Default VPC not found, please specify a subnet.");
+      throwClientIfFound( ex, InvalidParameterCombinationMetadataException.class, "InvalidParameterCombination" );
+      throwClientIfFound( ex, SecurityGroupLimitMetadataException.class, "SecurityGroupLimitExceeded", "Security group limit exceeded" );
+      throwClientIfFound( ex, InvalidMetadataException.class, "InvalidParameterValue" );
+      throwClientIfFound( ex, NoSuchImageIdException.class, "InvalidAMIID.NotFound" );
+      throwClientIfFound( ex, NoSuchSubnetMetadataException.class, "InvalidSubnetID.NotFound" );
+      throwClientIfFound( ex, NoSuchNetworkInterfaceMetadataException.class, "InvalidNetworkInterfaceID.NotFound" );
+      throwClientIfFound( ex, NoSuchGroupMetadataException.class, "InvalidGroup.NotFound" );
+      throwClientIfFound( ex, NoSuchMetadataException.class, "ResourceNotFound" );
+      LOG.error( ex, ex );
+      throw new ComputeException( "InternalError", "Error processing request: " + ex.getMessage( ) );
+    }
+    return reply;
+  }
+
+  public DeleteLaunchTemplateResponseType deleteLaunchTemplate( final DeleteLaunchTemplateType request ) throws EucalyptusCloudException {
+    final Context context = Contexts.lookup( );
+    final DeleteLaunchTemplateResponseType reply = request.getReply();
+    try {
+      final LaunchTemplate launchTemplate = launchTemplates.lookupByName(
+          context.getUserFullName().asAccountFullName(),
+          request.getLaunchTemplateId(),
+          CloudMetadatas.filterPrivileged(),
+          Functions.identity());
+      reply.setLaunchTemplate(TypeMappers.transform(
+          launchTemplate,
+          com.eucalyptus.compute.common.LaunchTemplate.class));
+      launchTemplates.delete(launchTemplate);
+    } catch( ComputeMetadataNotFoundException e ) {
+      throw new ClientComputeException(
+          "InvalidLaunchTemplateId.NotFound",
+          "The launch template '"+request.getLaunchTemplateId()+"' does not exist" );
+    } catch( Exception e ) {
+      LOG.error(e, e);
+      throw new ComputeException("InternalError", "Error processing request: " + e.getMessage());
+    }
     return reply;
   }
 

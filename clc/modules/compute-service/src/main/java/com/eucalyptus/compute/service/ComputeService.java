@@ -91,6 +91,7 @@ import com.eucalyptus.compute.common.internal.tags.Tag;
 import com.eucalyptus.compute.common.internal.tags.TagSupport;
 import com.eucalyptus.compute.common.internal.tags.Tags;
 import com.eucalyptus.compute.common.internal.util.MetadataException;
+import com.eucalyptus.compute.common.internal.vm.LaunchTemplates;
 import com.eucalyptus.compute.common.internal.vm.NetworkGroupId;
 import com.eucalyptus.compute.common.internal.vm.VmBootRecord;
 import com.eucalyptus.compute.common.internal.vm.VmBootVolumeAttachment;
@@ -174,6 +175,8 @@ import io.vavr.control.Option;
 public class ComputeService {
   private static Logger LOG = Logger.getLogger( ComputeService.class );
 
+  private final LaunchTemplates launchTemplates;
+
   private final DhcpOptionSets dhcpOptionSets;
   private final InternetGateways internetGateways;
   private final NatGateways natGateways;
@@ -186,6 +189,7 @@ public class ComputeService {
   @Inject
   public ComputeService( final DhcpOptionSets dhcpOptionSets,
                          final InternetGateways internetGateways,
+                         final LaunchTemplates launchTemplates,
                          final NatGateways natGateways,
                          final NetworkAcls networkAcls,
                          final NetworkInterfaces networkInterfaces,
@@ -194,6 +198,7 @@ public class ComputeService {
                          final Vpcs vpcs ) {
     this.dhcpOptionSets = dhcpOptionSets;
     this.internetGateways = internetGateways;
+    this.launchTemplates = launchTemplates;
     this.natGateways = natGateways;
     this.networkAcls = networkAcls;
     this.networkInterfaces = networkInterfaces;
@@ -1862,12 +1867,6 @@ public class ComputeService {
     return request.getReply( );
   }
 
-  public CreateLaunchTemplateResponseType createLaunchTemplate(
-      CreateLaunchTemplateType request
-  ) {
-    return request.getReply( );
-  }
-
   public CreateLaunchTemplateVersionResponseType createLaunchTemplateVersion(
       CreateLaunchTemplateVersionType request
   ) {
@@ -1900,12 +1899,6 @@ public class ComputeService {
 
   public DeleteFpgaImageResponseType deleteFpgaImage(
       DeleteFpgaImageType request
-  ) {
-    return request.getReply( );
-  }
-
-  public DeleteLaunchTemplateResponseType deleteLaunchTemplate(
-      DeleteLaunchTemplateType request
   ) {
     return request.getReply( );
   }
@@ -1977,9 +1970,58 @@ public class ComputeService {
   }
 
   public DescribeLaunchTemplatesResponseType describeLaunchTemplates(
-      DescribeLaunchTemplatesType request
-  ) {
-    return request.getReply( );
+      final DescribeLaunchTemplatesType request
+  ) throws EucalyptusCloudException {
+    final Context context = Contexts.lookup( );
+    final DescribeLaunchTemplatesResponseType response = request.getReply( );
+    boolean showAll = request.getLaunchTemplateIds( ).getMember().remove( "verbose" ) ||
+        !request.getLaunchTemplateIds( ).getMember().isEmpty( );
+    final Collection<String> identifiers = normalizeLaunchTemplateIdentifiers(
+        request.getLaunchTemplateIds( ).getMember() );
+    final Collection<String> names = request.getLaunchTemplateNames( ).getMember( );
+    final Filter filter = Filters
+        .generateFor( request.getFilterSet(),
+                      com.eucalyptus.compute.common.internal.vm.LaunchTemplate.class )
+        .withOptionalInternalFilter("launch-template-id", identifiers )
+        .withOptionalInternalFilter("launch-template-name", names )
+        .generate();
+    final Filter persistenceFilter = getPersistenceFilter(
+        com.eucalyptus.compute.common.internal.vm.LaunchTemplate.class,
+        identifiers, "launch-template-id", filter );
+    final Predicate<? super com.eucalyptus.compute.common.internal.vm.LaunchTemplate> requestedAndAccessible =
+        CloudMetadatas.filteringFor( com.eucalyptus.compute.common.internal.vm.LaunchTemplate.class )
+        .byId( identifiers ) // filters without wildcard support
+        .byPredicate( Predicates.and(
+            new TrackingPredicate<>( identifiers ),
+            Predicates.and(
+                lt -> names.isEmpty( ) || names.contains( lt.getName( ) ),
+                filter.asPredicate( ) ) ) )
+        .byPrivileges()
+        .buildPredicate();
+    final OwnerFullName ownerFullName = ( context.isAdministrator( ) && showAll )
+        ? null
+        : context.getUserFullName( ).asAccountFullName( );
+    try ( final TransactionResource db = Entities.readOnlyDistinctTransactionFor( com.eucalyptus.compute.common.internal.vm.LaunchTemplate.class ) ) {
+      final List<com.eucalyptus.compute.common.internal.vm.LaunchTemplate> ltrs =
+          launchTemplates.list( ownerFullName, persistenceFilter.asCriterion(), Collections.emptyMap(), requestedAndAccessible, Functions.identity() );
+      errorIfNotFound( "InvalidLaunchTemplateID.NotFound", "launch template ID", identifiers );
+      final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( com.eucalyptus.compute.common.internal.vm.LaunchTemplate.class )
+          .getResourceTagMap(  AccountFullName.getInstance( context.getAccountNumber() ),
+              Iterables.transform( ltrs, CloudMetadatas.toDisplayName() ) );
+
+      for ( final com.eucalyptus.compute.common.internal.vm.LaunchTemplate lt : ltrs ) {
+        final LaunchTemplate ltr =  TypeMappers.transform( lt, LaunchTemplate.class );
+        Tags.addFromTags( ltr.getTagSet(), ResourceTag.class, tagsMap.get( lt.getDisplayName() ) );
+        response.getLaunchTemplates( ).getMember( ).add( ltr );
+      }
+    } catch ( final Exception e ) {
+      Exceptions.findAndRethrow( e, ComputeServiceException.class );
+      LOG.error( e );
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( e.getMessage( ) );
+    }
+
+    return response;
   }
 
   public DescribeLaunchTemplateVersionsResponseType describeLaunchTemplateVersions(
@@ -2356,6 +2398,18 @@ public class ComputeService {
       throw new ComputeServiceClientException(
           "InvalidParameterValue",
           "Value ("+e.getIdentifier()+") for parameter snapshots is invalid. Expected: 'snap-...'." );
+    }
+  }
+
+  private static List<String> normalizeLaunchTemplateIdentifiers( final List<String> identifiers ) throws EucalyptusCloudException {
+    try {
+      return ResourceIdentifiers.normalize(
+          com.eucalyptus.compute.common.internal.vm.LaunchTemplate.ID_PREFIX,
+          identifiers );
+    } catch ( final InvalidResourceIdentifier e ) {
+      throw new ComputeServiceClientException(
+          "InvalidParameterValue",
+          "Value ("+e.getIdentifier()+") for parameter launch template ids is invalid. Expected: 'lt-...'." );
     }
   }
 

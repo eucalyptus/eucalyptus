@@ -43,13 +43,13 @@ import java.util.Date;
 import org.apache.log4j.Logger;
 import net.sf.json.JSONException;
 import com.eucalyptus.auth.Contract;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.auth.policy.condition.NumericEquals;
 import com.eucalyptus.auth.policy.key.ContractKey;
 import com.eucalyptus.auth.policy.key.KeyUtils;
 import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.PolicyKey;
+import com.eucalyptus.compute.common.policy.ComputePolicySpec;
 
 @PolicyKey( Keys.EC2_KEEPALIVE )
 public class KeepAlive extends ContractKey<Date> {
@@ -58,7 +58,7 @@ public class KeepAlive extends ContractKey<Date> {
   
   private static final String KEY = Keys.EC2_KEEPALIVE;
   
-  private static final String ACTION_RUNINSTANCES = PolicySpec.VENDOR_EC2 + ":" + PolicySpec.EC2_RUNINSTANCES;
+  private static final String ACTION_RUNINSTANCES = ComputePolicySpec.VENDOR_EC2 + ":" + ComputePolicySpec.EC2_RUNINSTANCES;
   
   private static final long YEAR = 1000L * 60L * 60L * 24L * 365L; // one year by default
   private static final long MINUTE = 1000L * 60L; // minute

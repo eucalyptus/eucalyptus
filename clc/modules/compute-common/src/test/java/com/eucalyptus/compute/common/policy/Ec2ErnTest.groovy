@@ -33,8 +33,8 @@ import com.eucalyptus.auth.policy.ern.Ern
 import org.junit.BeforeClass
 import org.junit.Test
 
-import static com.eucalyptus.auth.policy.PolicySpec.EC2_RESOURCE_SUBNET
-import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_EC2
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.EC2_RESOURCE_SUBNET
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.VENDOR_EC2
 import static com.eucalyptus.auth.policy.PolicySpec.qualifiedName
 import static org.junit.Assert.assertEquals
 

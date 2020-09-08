@@ -28,8 +28,9 @@
  ************************************************************************/
 package com.eucalyptus.compute.policy;
 
-import static com.eucalyptus.auth.policy.PolicySpec.*;
+import static com.eucalyptus.auth.policy.PolicySpec.qualifiedName;
 import static com.eucalyptus.compute.common.policy.ComputePolicySpec.EC2_ATTACHVOLUME;
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.EC2_CREATETAGS;
 import static com.eucalyptus.compute.common.policy.ComputePolicySpec.EC2_CREATEVOLUME;
 import static com.eucalyptus.compute.common.policy.ComputePolicySpec.EC2_DELETEVOLUME;
 import static com.eucalyptus.compute.common.policy.ComputePolicySpec.EC2_DETACHVOLUME;

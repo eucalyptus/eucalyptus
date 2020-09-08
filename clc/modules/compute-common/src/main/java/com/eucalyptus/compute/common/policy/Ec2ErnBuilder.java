@@ -60,18 +60,18 @@ public class Ec2ErnBuilder extends ServiceErnBuilder {
     final Matcher matcher = RESOURCE_PATTERN.matcher( resource );
     if ( matcher.matches( ) ) {
       String type = matcher.group( ARN_PATTERNGROUP_EC2_TYPE ).toLowerCase( );
-      if ( !PolicySpec.EC2_RESOURCES.contains( type ) ) {
+      if ( !ComputePolicySpec.EC2_RESOURCES.contains( type ) ) {
         throw new JSONException( "EC2 type '" + type + "' is not supported" );
       }
       String id = matcher.group( ARN_PATTERNGROUP_EC2_ID ).toLowerCase( );
-      if ( PolicySpec.EC2_RESOURCE_ADDRESS.equals( type ) ) {
+      if ( ComputePolicySpec.EC2_RESOURCE_ADDRESS.equals( type ) ) {
         AddressUtil.validateAddressRange( id );
       }
       // allow for pre-v4.1 type names
       if ( "keypair".equals( type ) ) {
-        type = PolicySpec.EC2_RESOURCE_KEYPAIR;
+        type = ComputePolicySpec.EC2_RESOURCE_KEYPAIR;
       } else if ( "securitygroup".equals( type ) ) {
-        type = PolicySpec.EC2_RESOURCE_SECURITYGROUP;
+        type = ComputePolicySpec.EC2_RESOURCE_SECURITYGROUP;
       }
       return new Ec2ResourceName( region, account, type, id );
     }

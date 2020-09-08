@@ -556,12 +556,12 @@
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.compute.common.LaunchTemplate" abstract="true">
-    <value name="CreateTime" get-method="getCreateTime" set-method="setCreateTime" usage="optional"/>
-    <value name="CreatedBy" get-method="getCreatedBy" set-method="setCreatedBy" usage="optional"/>
-    <value name="DefaultVersionNumber" get-method="getDefaultVersionNumber" set-method="setDefaultVersionNumber" usage="optional"/>
-    <value name="LatestVersionNumber" get-method="getLatestVersionNumber" set-method="setLatestVersionNumber" usage="optional"/>
-    <value name="LaunchTemplateId" get-method="getLaunchTemplateId" set-method="setLaunchTemplateId" usage="optional"/>
-    <value name="LaunchTemplateName" get-method="getLaunchTemplateName" set-method="setLaunchTemplateName" usage="optional"/>
+    <value name="createTime" get-method="getCreateTime" set-method="setCreateTime" usage="optional"/>
+    <value name="createdBy" get-method="getCreatedBy" set-method="setCreatedBy" usage="optional"/>
+    <value name="defaultVersionNumber" get-method="getDefaultVersionNumber" set-method="setDefaultVersionNumber" usage="optional"/>
+    <value name="latestVersionNumber" get-method="getLatestVersionNumber" set-method="setLatestVersionNumber" usage="optional"/>
+    <value name="launchTemplateId" get-method="getLaunchTemplateId" set-method="setLaunchTemplateId" usage="optional"/>
+    <value name="launchTemplateName" get-method="getLaunchTemplateName" set-method="setLaunchTemplateName" usage="optional"/>
     <structure name="tagSet" usage="optional">
       <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="tagSet">
         <structure name="item" map-as="com.eucalyptus.compute.common.ResourceTag" />
@@ -1318,7 +1318,7 @@
   <mapping name="CreateLaunchTemplateResponse" class="com.eucalyptus.compute.common.CreateLaunchTemplateResponseType"
            extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
-    <structure get-method="getLaunchTemplate" set-method="setLaunchTemplate" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplate" name="LaunchTemplate"/>
+    <structure get-method="getLaunchTemplate" set-method="setLaunchTemplate" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplate" name="launchTemplate"/>
   </mapping>
   <mapping name="CreateLaunchTemplateVersion" class="com.eucalyptus.compute.common.CreateLaunchTemplateVersionType"
            extends="com.eucalyptus.compute.common.ComputeMessage">
@@ -1344,7 +1344,7 @@
   <mapping name="DeleteLaunchTemplateResponse" class="com.eucalyptus.compute.common.DeleteLaunchTemplateResponseType"
            extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
-    <structure get-method="getLaunchTemplate" set-method="setLaunchTemplate" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplate" name="LaunchTemplate"/>
+    <structure get-method="getLaunchTemplate" set-method="setLaunchTemplate" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplate" name="launchTemplate"/>
   </mapping>
   <mapping name="DeleteLaunchTemplateVersions" class="com.eucalyptus.compute.common.DeleteLaunchTemplateVersionsType"
            extends="com.eucalyptus.compute.common.ComputeMessage">
@@ -1375,8 +1375,8 @@
   <mapping name="DescribeLaunchTemplatesResponse" class="com.eucalyptus.compute.common.DescribeLaunchTemplatesResponseType"
            extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
-    <structure get-method="getLaunchTemplates" set-method="setLaunchTemplates" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplateSet" name="LaunchTemplates"/>
-    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getLaunchTemplates" set-method="setLaunchTemplates" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplateSet" name="launchTemplates"/>
+    <value name="nextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
   </mapping>
   <mapping name="DescribeLaunchTemplateVersions" class="com.eucalyptus.compute.common.DescribeLaunchTemplateVersionsType"
            extends="com.eucalyptus.compute.common.ComputeMessage">
@@ -1421,7 +1421,7 @@
   <mapping name="ModifyLaunchTemplateResponse" class="com.eucalyptus.compute.common.ModifyLaunchTemplateResponseType"
            extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
-    <structure get-method="getLaunchTemplate" set-method="setLaunchTemplate" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplate" name="LaunchTemplate"/>
+    <structure get-method="getLaunchTemplate" set-method="setLaunchTemplate" usage="optional" type="com.eucalyptus.compute.common.LaunchTemplate" name="launchTemplate"/>
   </mapping>
   <mapping name="DescribeAggregateIdFormat" class="com.eucalyptus.compute.common.DescribeAggregateIdFormatType"
            extends="com.eucalyptus.compute.common.ComputeMessage">

@@ -39,6 +39,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cluster.common.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.compute.common.CloudMetadataLimitedType;
+import com.eucalyptus.compute.common.policy.ComputePolicySpec;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.auth.principal.OwnerFullName;
@@ -67,12 +68,12 @@ public class DiskTotalSizeQuotaKey extends QuotaKey {
 
   @Override
   public boolean canApply( String action, String resourceType) {
-    if ( PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RUNINSTANCES ).equals( action )
-      && PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, POLICY_RESOURCE_TYPE).equals(resourceType) ) {
+    if ( PolicySpec.qualifiedName( ComputePolicySpec.VENDOR_EC2, ComputePolicySpec.EC2_RUNINSTANCES ).equals( action )
+      && PolicySpec.qualifiedName( ComputePolicySpec.VENDOR_EC2, POLICY_RESOURCE_TYPE).equals(resourceType) ) {
       return true;
     }
-    if ( PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, PolicySpec.EC2_STARTINSTANCES ).equals( action )
-      && PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, POLICY_RESOURCE_TYPE).equals(resourceType) ) {
+    if ( PolicySpec.qualifiedName( ComputePolicySpec.VENDOR_EC2, ComputePolicySpec.EC2_STARTINSTANCES ).equals( action )
+      && PolicySpec.qualifiedName( ComputePolicySpec.VENDOR_EC2, POLICY_RESOURCE_TYPE).equals(resourceType) ) {
       return true;
     }
     return false;

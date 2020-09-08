@@ -9,7 +9,7 @@ package com.eucalyptus.compute.common;
 public class DescribeLaunchTemplatesResponseType extends ComputeMessage {
 
 
-  private LaunchTemplateSet launchTemplates;
+  private LaunchTemplateSet launchTemplates = new LaunchTemplateSet();
   private String nextToken;
 
   public LaunchTemplateSet getLaunchTemplates( ) {

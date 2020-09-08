@@ -8,7 +8,7 @@ package com.eucalyptus.compute.common;
 import javax.annotation.Nonnull;
 
 
-public class CreateLaunchTemplateType extends ComputeMessage {
+public class CreateLaunchTemplateType extends VmControlMessage {
 
   private String clientToken;
   @Nonnull

@@ -38,10 +38,12 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.CloudMetadata;
+import com.eucalyptus.compute.common.LaunchTemplateTagSpecificationRequest;
 import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.ResourceTagSpecification;
 import com.eucalyptus.compute.common.internal.tags.TagSupport;
 import com.eucalyptus.compute.common.internal.util.MetadataException;
+import com.eucalyptus.compute.common.policy.ComputePolicySpec;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.Assert;
@@ -104,6 +106,28 @@ public class TagHelper {
   }
 
   /**
+   * Validate any key/value pairs present in the given specification for the current context.
+   *
+   * @param tagSpecifications The optional tag specification to validate
+   * @throws MetadataException
+   */
+  public static void validateTagSpecificationsForTemplate(
+      @Nullable final List<LaunchTemplateTagSpecificationRequest> tagSpecifications
+  ) throws MetadataException {
+    if ( tagSpecifications != null ) {
+      final Set<String> resourceTypes = Sets.newHashSet( );
+      for ( final LaunchTemplateTagSpecificationRequest tagSpecification : tagSpecifications ) {
+        if ( tagSpecification.getResourceType( ) != null &&
+            !resourceTypes.add( tagSpecification.getResourceType( ) ) ) {
+          throw new InvalidTagMetadataException(
+              "The same resource type may not be specified more than once in tag specifications" );
+        }
+        TagHelper.validateTags( tagSpecification.getTagSet( ) );
+      }
+    }
+  }
+
+  /**
    * Validate the given list of tags for the current context.
    *
    * @param resourceTags
@@ -147,9 +171,32 @@ public class TagHelper {
       @Nullable final List<ResourceTagSpecification> tagSpecifications,
       @Nonnull  final String resource
   ) {
-    Assert.arg( PolicySpec.EC2_RESOURCES.contains( resource ), "Invalid EC2 resource: %1$s", resource );
+    Assert.arg( ComputePolicySpec.EC2_RESOURCES.contains( resource ), "Invalid EC2 resource: %1$s", resource );
     final List<ResourceTag> tags = Lists.newArrayList( );
     if ( tagSpecifications != null ) for( final ResourceTagSpecification tagSpecification : tagSpecifications ) {
+      final List<ResourceTag> resourceTags = tagSpecification.getTagSet( );
+      if ( resourceTags != null && resource.equals( tagSpecification.getResourceType( ) ) ) {
+        tags.addAll( resourceTags );
+      }
+    }
+    return tags;
+  }
+
+  /**
+   * Get the tags for the specified resource.
+   *
+   * @param tagSpecifications The optional specifications
+   * @param resource The resource type
+   * @return tags for the resource type (may be empty)
+   */
+  @Nonnull
+  public static List<ResourceTag> tagsForResourceFromTemplate(
+      @Nullable final List<LaunchTemplateTagSpecificationRequest> tagSpecifications,
+      @Nonnull  final String resource
+  ) {
+    Assert.arg( ComputePolicySpec.EC2_RESOURCES.contains( resource ), "Invalid EC2 resource: %1$s", resource );
+    final List<ResourceTag> tags = Lists.newArrayList( );
+    if ( tagSpecifications != null ) for( final LaunchTemplateTagSpecificationRequest tagSpecification : tagSpecifications ) {
       final List<ResourceTag> resourceTags = tagSpecification.getTagSet( );
       if ( resourceTags != null && resource.equals( tagSpecification.getResourceType( ) ) ) {
         tags.addAll( resourceTags );
@@ -208,11 +255,11 @@ public class TagHelper {
       @Nonnull final String resourceType
   ) {
     return Permissions.isAuthorized(
-        PolicySpec.VENDOR_EC2,
+        ComputePolicySpec.VENDOR_EC2,
         resourceType,
         "",
         accountFullName,
-        PolicySpec.EC2_CREATETAGS,
+        ComputePolicySpec.EC2_CREATETAGS,
         authContext );
   }
 

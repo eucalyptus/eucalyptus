@@ -39,8 +39,9 @@
 
 package com.eucalyptus.cluster;
 
-import static com.eucalyptus.auth.policy.PolicySpec.*;
+import static com.eucalyptus.auth.policy.PolicySpec.qualifiedName;
 import static com.eucalyptus.compute.common.internal.vm.VmInstances.TerminatedInstanceException;
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.*;
 
 import java.net.URI;
 import java.util.ArrayList;

@@ -49,7 +49,6 @@ import javax.annotation.Nullable;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthQuotaException;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.ClientUnauthorizedComputeException;
 import com.eucalyptus.compute.ComputeException;
@@ -77,6 +76,7 @@ import com.eucalyptus.compute.common.internal.tags.Tag;
 import com.eucalyptus.compute.common.internal.tags.TagSupport;
 import com.eucalyptus.compute.common.internal.tags.Tags;
 import com.eucalyptus.compute.common.internal.util.MetadataException;
+import com.eucalyptus.compute.common.policy.ComputePolicySpec;
 import com.eucalyptus.tags.TagHelper;
 import com.google.common.base.Predicates;
 
@@ -154,10 +154,10 @@ public class VolumeManager {
     } catch ( MetadataException e ) {
       throw new ClientComputeException( "InvalidParameterValue", e.getMessage( ) );
     }
-    final List<ResourceTag> volumeTags = TagHelper.tagsForResource( request.getTagSpecification( ), PolicySpec.EC2_RESOURCE_VOLUME );
+    final List<ResourceTag> volumeTags = TagHelper.tagsForResource( request.getTagSpecification( ), ComputePolicySpec.EC2_RESOURCE_VOLUME );
 
     if ( !volumeTags.isEmpty( ) ) {
-      if ( !TagHelper.createTagsAuthorized( ctx, PolicySpec.EC2_RESOURCE_VOLUME ) ) {
+      if ( !TagHelper.createTagsAuthorized( ctx, ComputePolicySpec.EC2_RESOURCE_VOLUME ) ) {
         throw new ClientUnauthorizedComputeException( "Not authorized to create tags by " + ctx.getUser( ).getName( ) );
       }
     }

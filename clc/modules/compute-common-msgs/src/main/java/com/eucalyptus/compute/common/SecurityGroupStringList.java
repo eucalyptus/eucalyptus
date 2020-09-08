@@ -7,10 +7,12 @@ package com.eucalyptus.compute.common;
 
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import java.util.ArrayList;
+import com.eucalyptus.binding.HttpValue;
 
 
 public class SecurityGroupStringList extends EucalyptusData {
 
+  @HttpValue
   private ArrayList<String> member = new ArrayList<String>();
 
   public ArrayList<String> getMember( ) {
