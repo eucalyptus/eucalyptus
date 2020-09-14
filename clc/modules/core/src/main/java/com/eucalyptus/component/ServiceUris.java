@@ -241,7 +241,7 @@ public class ServiceUris {
         ? this.scheme.getSecureScheme( )
         : this.scheme.getScheme( );
       String hostNameString = this.componentId.isPublicService() ? (StackConfiguration.USE_DNS_DELEGATION
-        ? this.componentId.name( ) + "." + StackConfiguration.lookupDnsDomain( )
+        ? this.componentId.getServiceNames( ).stream( ).findFirst( ).orElse(this.componentId.name( )) + "." + StackConfiguration.lookupDnsDomain( )
         : this.address.getHostAddress( )) : this.address.getHostAddress();
       String pathString = this.componentId.isPublicService() ? (StackConfiguration.USE_DNS_DELEGATION
         ? "/" : "/" + this.path)
