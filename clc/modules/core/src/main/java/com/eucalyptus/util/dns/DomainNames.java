@@ -235,7 +235,7 @@ public class DomainNames {
             this.get( ),
             DClass.IN,
             60,
-            Name.fromConstantString( "ns" + offset + "." + this.get( ).toString( ) )
+            Name.fromConstantString( "ns" + offset._1() + "." + this.get( ).toString( ) )
         ) );
       }
       return nsRecs; 
