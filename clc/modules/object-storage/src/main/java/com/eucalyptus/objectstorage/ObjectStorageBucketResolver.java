@@ -73,6 +73,9 @@ public class ObjectStorageBucketResolver extends DnsResolver {
       throw new NoSuchElementException( "Failed to lookup name: " + name );
     }
     if ( !RequestType.A.apply( query ) ) {
+      if ( RequestType.TXT.apply( query ) ) {
+        return null;
+      }
       return DnsResponse.forName( query.getName( ) ).answer( Collections.emptyList( ) );
     }
     try {
