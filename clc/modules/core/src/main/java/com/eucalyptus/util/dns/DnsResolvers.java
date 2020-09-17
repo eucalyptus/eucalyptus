@@ -144,6 +144,7 @@ public class DnsResolvers extends ServiceJarDiscovery {
     MAILB( 253 ),
     MAILA( 254 ),
     ANY( 255 ),
+    CAA( 257 ),
     DLV( 32769 );
     
     private static final Supplier<Map<Integer, RequestType>> backingMap = new Supplier( ) {
