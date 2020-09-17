@@ -144,7 +144,9 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> e
                 channel.writeAndFlush( ioMessage ).addListener( new ChannelFutureListener( ) {
                   @Override
                   public void operationComplete( final ChannelFuture future ) throws Exception {
-                    AsyncRequestHandler.this.writeComplete.set( true );
+                    if (future.isSuccess()) {
+                      AsyncRequestHandler.this.writeComplete.set(true);
+                    }
                     
                     Logs.extreme( ).debug(
                       EventRecord.here(
