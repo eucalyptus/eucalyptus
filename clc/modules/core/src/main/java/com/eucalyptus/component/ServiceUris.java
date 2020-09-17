@@ -236,12 +236,15 @@ public class ServiceUris {
       checkParam( this.path, notNullValue() );
       if ( this.scheme == null ) this.scheme = BasicTransport.HTTP;
       if ( this.port == null ) this.port = this.componentId.getPort( );
+      if ( this.componentId.isPublicService() && this.port.equals(StackConfiguration.INTERNAL_PORT) ) {
+        this.port = StackConfiguration.PORT;
+      }
       if ( this.internal ) this.path = this.componentId.getInternalServicePath( this.path );
       String schemeString = StackConfiguration.DEFAULT_HTTPS_ENABLED
         ? this.scheme.getSecureScheme( )
         : this.scheme.getScheme( );
       String hostNameString = this.componentId.isPublicService() ? (StackConfiguration.USE_DNS_DELEGATION
-        ? this.componentId.name( ) + "." + StackConfiguration.lookupDnsDomain( )
+        ? this.componentId.getServiceNames( ).stream( ).findFirst( ).orElse(this.componentId.name( )) + "." + StackConfiguration.lookupDnsDomain( )
         : this.address.getHostAddress( )) : this.address.getHostAddress();
       String pathString = this.componentId.isPublicService() ? (StackConfiguration.USE_DNS_DELEGATION
         ? "/" : "/" + this.path)
