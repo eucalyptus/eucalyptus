@@ -87,6 +87,9 @@ public abstract class AbstractKeyStore implements com.eucalyptus.crypto.KeyStore
   public KeyPair getKeyPair( final String alias, final String password ) throws GeneralSecurityException {
     final Certificate cert = this.keyStore.getCertificate( alias );
     final PrivateKey privateKey = ( PrivateKey ) this.keyStore.getKey( alias, password.toCharArray( ) );
+    if ( cert == null || privateKey == null ) {
+      throw new KeyStoreException("Key pair not found: " + alias);
+    }
     final KeyPair kp = new KeyPair( cert.getPublicKey( ), privateKey );
     return kp;
   }
