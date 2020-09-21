@@ -159,12 +159,16 @@ public class Cidr implements Predicate<InetAddress> {
     return ( cidr.ip & prefixMask( prefix ) ) == this.ip && cidr.prefix >= this.prefix;
   }
 
-  public Predicate<Cidr> contains( ) {
+  public CompatPredicate<Cidr> contains( ) {
     return cidr -> contains( cidr );
   }
 
-  public Predicate<Cidr> containedBy( ) {
+  public CompatPredicate<Cidr> containedBy( ) {
     return cidr -> cidr.contains( this );
+  }
+
+  public CompatPredicate<Cidr> conflicts( ) {
+    return CompatPredicate.of(contains().or(containedBy()));
   }
 
   public Iterable<Cidr> split( final int parts ) {

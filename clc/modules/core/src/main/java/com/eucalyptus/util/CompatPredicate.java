@@ -35,6 +35,17 @@ import java.util.function.Predicate;
  */
 public interface CompatPredicate<T> extends Predicate<T>, com.google.common.base.Predicate<T> {
 
+  static <T> CompatPredicate<T> of( final Predicate<T> pred ) {
+    //noinspection TrivialMethodReference
+    return pred::test;
+  }
+
+  @SuppressWarnings( "Guava" )
+  static <F, T> CompatPredicate<T> of( final com.google.common.base.Predicate<T> pred ) {
+    //noinspection TrivialMethodReference
+    return pred::apply;
+  }
+
   @Override
   default boolean test( T t ) {
     return apply( t );
