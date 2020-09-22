@@ -36,7 +36,7 @@
   <include path="classpath:ec2-image-attr.xml" />
   <include path="classpath:ec2-import-13-10-15.xml" />
   <include path="classpath:ec2-export-12-05-01.xml" />
-  <include path="classpath:ec2-ips-15-04-15.xml" />
+  <include path="classpath:ec2-ips-16-11-15.xml" />
   <include path="classpath:ec2-keypairs-10-08-31.xml" />
   <include path="classpath:ec2-security-16-11-15.xml" />
   <include path="classpath:ec2-zones-10-08-31.xml" />

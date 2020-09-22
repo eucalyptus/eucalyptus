@@ -69,6 +69,7 @@ import com.eucalyptus.network.PublicAddresses;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.compute.common.internal.tags.Filters;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
@@ -111,17 +112,22 @@ public class AddressManager {
 
   public AllocateAddressResponseType allocateAddress( final AllocateAddressType request ) throws Exception {
     final AllocateAddressResponseType reply = request.getReply( );
+    final String requestedAddress = request.getAddress();
     try {
       final String defaultVpcId = getDefaultVpcId( );
       final AddressDomain domain = Optional.fromNullable( request.getDomain( ) )
           .transform( FUtils.valueOfFunction( AddressDomain.class ) )
           .or( defaultVpcId != null ? AddressDomain.vpc : AddressDomain.standard );
-      final Addresses.Allocator allocator = addresses.allocator( domain );
+      final Addresses.Allocator allocator = addresses.allocator( domain, requestedAddress );
       final Address address = RestrictedTypes.allocateNamedUnitlessResources( 1, allocator, allocator ).get( 0 );
       reply.setPublicIp( address.getName( ) );
       reply.setAllocationId( address.getAllocationId( ) );
       reply.setDomain( domain.name( ) );
     } catch( final RuntimeException e ) {
+      if ( requestedAddress != null && Exceptions.isCausedBy( e, NotEnoughResourcesException.class ) ) {
+        throw new ClientComputeException(
+            "InvalidAddressID.NotFound", "The requested IP address does not exist or is unavailable");
+      }
       if( e.getCause( ) != null ) {
         throw new EucalyptusCloudException( e.getCause() );
       } else {
