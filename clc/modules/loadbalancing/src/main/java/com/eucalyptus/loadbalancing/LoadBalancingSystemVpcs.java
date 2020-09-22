@@ -65,11 +65,10 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
 import java.util.Date;
-import java.util.LinkedList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiPredicate;
@@ -77,6 +76,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import io.vavr.collection.Stream;
 
 @ConfigurableClass(root = "services.loadbalancing", description = "Parameters controlling loadbalancing")
 public class LoadBalancingSystemVpcs {
@@ -208,7 +208,7 @@ public class LoadBalancingSystemVpcs {
         final Map<String, Set<String>> subnetCidrBlocks = Maps.newHashMap();
         for (final Cidr vpcCidr : SystemVpcCidrs() ) {
             final String vpcCidrBlock = vpcCidr.toString( );
-            subnetCidrBlocks.put(vpcCidrBlock, Sets.newHashSet());
+            subnetCidrBlocks.put(vpcCidrBlock, Sets.newLinkedHashSet());
 
             for (final Cidr subnetCidr : vpcCidr.split( subnetParts )) {
                 subnetCidrBlocks.get(vpcCidrBlock).add(subnetCidr.toString());
@@ -790,28 +790,28 @@ public class LoadBalancingSystemVpcs {
 
     private static Map<String, String> getSubnets(final String vpcId, final Set<String> subnetBlocks,
                                                   final List<String> availabilityZones) {
-        final Queue<String> availableBlocks =
-                new LinkedList<String>(subnetBlocks);
-
         final EucalyptusActivityTasks client = EucalyptusActivityTasks.getInstance();
         final List<SubnetType> subnets =
-                client.describeSubnetsByZone(vpcId, null, availabilityZones);
+                client.describeSubnetsByZone(vpcId, null, null);
         final Map<String, String> azToSubnet = Maps.newHashMap();
         for (final String az : availabilityZones) {
             azToSubnet.put(az, null);
         }
+        Predicate<Cidr> cidrInUsePredicate = __ -> false;
         for (final SubnetType subnet : subnets) {
             final String cidrBlock = subnet.getCidrBlock();
-            if (subnetBlocks.contains(cidrBlock)) {
+            cidrInUsePredicate = cidrInUsePredicate.or(Cidr.parse(cidrBlock).conflicts());
+            if (subnetBlocks.contains(cidrBlock) && availabilityZones.contains(subnet.getAvailabilityZone())) {
                 azToSubnet.put(subnet.getAvailabilityZone(), subnet.getSubnetId());
-                availableBlocks.remove(cidrBlock);
             }
         }
 
+        final Iterator<Cidr> availableBlocks =
+            Stream.ofAll(subnetBlocks).map(Cidr.parseUnsafe()).filter(cidrInUsePredicate.negate()).iterator();
         for (final String az : azToSubnet.keySet()) {
             if (azToSubnet.get(az) == null) {
-                final String cidr = availableBlocks.remove();
-                final String subnet = client.createSystemSubnet(vpcId, az, cidr);
+                final Cidr cidr = availableBlocks.next();
+                final String subnet = client.createSystemSubnet(vpcId, az, cidr.toString());
                 azToSubnet.put(az, subnet);
             }
         }
