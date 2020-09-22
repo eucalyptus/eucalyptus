@@ -31,7 +31,17 @@ package com.eucalyptus.compute.common;
 
 public class AllocateAddressType extends VmAddressMessage {
 
+  private String address;
+
   private String domain;
+
+  public String getAddress( ) {
+    return address;
+  }
+
+  public void setAddress( String address ) {
+    this.address = address;
+  }
 
   public String getDomain( ) {
     return domain;

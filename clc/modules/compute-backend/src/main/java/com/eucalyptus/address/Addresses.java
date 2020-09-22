@@ -157,12 +157,14 @@ public class Addresses {
     return addressRegistry.lookup( ip );
   }
 
-  public Allocator allocator( final AddressDomain domain ) {
-    return new Allocator( this, domain );
+  public Allocator allocator( final AddressDomain domain, final String address ) {
+    return new Allocator( this, domain, address==null ?
+        Predicates.alwaysTrue() :
+        candidateAddress -> candidateAddress.getAddress().equals(address) );
   }
 
-  public Address allocateNext( final UserFullName userId, final AddressDomain domain ) throws NotEnoughResourcesException {
-    final Predicate<Address> predicate = RestrictedTypes.filterPrivileged( );
+  public Address allocateNext( final UserFullName userId, final AddressDomain domain, final Predicate<Address> filter ) throws NotEnoughResourcesException {
+    final Predicate<Address> predicate = Predicates.and(RestrictedTypes.filterPrivileged( ), filter);
     final Address address;
     try {
       address = addressRegistry.enableFirst( predicate );
@@ -856,17 +858,19 @@ public class Addresses {
   public static class Allocator implements Supplier<Address>, Predicate<Address> {
     private final Addresses addresses;
     private final AddressDomain domain;
+    private final Predicate<Address> predicate;
 
-    private Allocator( final Addresses addresses, final AddressDomain domain ) {
+    private Allocator( final Addresses addresses, final AddressDomain domain, final Predicate<Address> predicate ) {
       this.addresses = addresses;
       this.domain = domain;
+      this.predicate = predicate;
     }
 
     @Override
     public Address get( ) {
       final Context ctx = Contexts.lookup( );
       try {
-        return addresses.allocateNext( ctx.getUserFullName( ), domain );
+        return addresses.allocateNext( ctx.getUserFullName( ), domain, predicate );
       } catch ( final Exception ex ) {
         throw Exceptions.toUndeclared( ex );
       }
