@@ -44,11 +44,13 @@ import static com.eucalyptus.auth.principal.AccessKeyCredential.SignatureVersion
 import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
 import static com.eucalyptus.ws.util.HmacUtils.headerLookup;
 import static com.eucalyptus.ws.util.HmacUtils.parameterLookup;
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Supplier;
 import javax.annotation.Nonnull;
 import com.eucalyptus.auth.principal.AccessKeyCredential;
 import com.eucalyptus.crypto.Hmac;
@@ -64,7 +66,7 @@ public class HmacCredentials extends WrappedCredentials<String> {
   private final String servicePath;
   private final Map<String,List<String>> parameters;
   private final Map<String, List<String>> headers;
-  private final String body;
+  private final Supplier<ByteBuffer> body;
   private String headerHost;
   private String headerPort;
   private final String queryId;
@@ -78,7 +80,7 @@ public class HmacCredentials extends WrappedCredentials<String> {
                           final Map<String,List<String>> headers,
                           final String verb,
                           final String servicePath,
-                          final String body ) throws AuthenticationException {
+                          final Supplier<ByteBuffer> body ) throws AuthenticationException {
     super( correlationId, variant.getSignature( headerLookup(headers), parameterLookup( parameters ) ) );
     final Function<String,List<String>> headerLookup = headerLookup( headers );
     final Function<String,List<String>> parameterLookup = parameterLookup( parameters );
@@ -156,8 +158,8 @@ public class HmacCredentials extends WrappedCredentials<String> {
     return this.parameters;
   }
 
-  public String getBody() {
-    return body;
+  public ByteBuffer getBody() {
+    return body.get( );
   }
 
   public Map<String, List<String>> getHeaders() {
