@@ -12,7 +12,6 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -21,6 +20,7 @@ import org.hibernate.exception.ConstraintViolationException;
 import org.xbill.DNS.Name;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.util.Identifiers;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.Context;
@@ -29,7 +29,9 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.route53.common.Route53Metadatas;
 import com.eucalyptus.route53.common.msgs.*;
 import com.eucalyptus.route53.service.dns.Route53DnsHelper;
+import com.eucalyptus.route53.service.persist.ChangeInfos;
 import com.eucalyptus.route53.service.persist.HostedZones;
+import com.eucalyptus.route53.service.persist.Route53MetadataException;
 import com.eucalyptus.route53.service.persist.Route53MetadataNotFoundException;
 import com.eucalyptus.route53.service.persist.entities.ResourceRecordSet.Type;
 import com.eucalyptus.util.CompatFunction;
@@ -65,12 +67,15 @@ public class Route53Service {
   private static final Set<String> reservedTagPrefixes =
       ImmutableSet.<String>builder().add("aws:").add("euca:").build();
 
+  private final ChangeInfos changeInfos;
   private final HostedZones hostedZones;
 
   @Inject
   public Route53Service(
+      final ChangeInfos changeInfos,
       final HostedZones hostedZones
   ) {
+    this.changeInfos = changeInfos;
     this.hostedZones = hostedZones;
   }
 
@@ -91,6 +96,7 @@ public class Route53Service {
         throw new Route53ClientException("InvalidVPCId", "Invalid vpc identifier: " + vpcId );
       }
 
+      final ChangeInfo changeInfo = persistChangeInfo(ownerFullName, comment);
       hostedZones.withRetries().updateByExample(
           com.eucalyptus.route53.service.persist.entities.HostedZone.exampleWithName(ownerFullName, id),
           ownerFullName, id,
@@ -113,11 +119,6 @@ public class Route53Service {
             return zone;
           });
 
-      final ChangeInfo changeInfo = new ChangeInfo();
-      changeInfo.setComment(comment);
-      changeInfo.setId(Identifiers.generateIdentifier( "C" ).substring(0,14));
-      changeInfo.setStatus("INSYNC");
-      changeInfo.setSubmittedAt(new Date());
       reply.setChangeInfo(changeInfo);
     } catch ( final Route53MetadataNotFoundException e ) {
       throw new Route53NotFoundClientException( "NoSuchHostedZone", "Hosted zone not found" );
@@ -133,11 +134,13 @@ public class Route53Service {
     final ChangeResourceRecordSetsResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup( );
     try {
-      final OwnerFullName ownerFullName = ctx.getUserFullName( ).asAccountFullName( );
+      final UserFullName userFullName = ctx.getUserFullName( );
+      final OwnerFullName ownerFullName = userFullName.asAccountFullName( );
       final String id = request.getHostedZoneId();
       final ChangeBatch changeBatch = request.getChangeBatch();
       final String comment = changeBatch == null ? null : changeBatch.getComment();
 
+      final ChangeInfo changeInfo = persistChangeInfo(userFullName, comment);
       if ( changeBatch != null ) {
         hostedZones.withRetries().updateByExample(
             com.eucalyptus.route53.service.persist.entities.HostedZone.exampleWithName(ownerFullName, id),
@@ -228,11 +231,6 @@ public class Route53Service {
               return zone;
             });
       }
-      final ChangeInfo changeInfo = new ChangeInfo();
-      changeInfo.setComment(comment);
-      changeInfo.setId(Identifiers.generateIdentifier( "C" ).substring(0,14));
-      changeInfo.setStatus("INSYNC");
-      changeInfo.setSubmittedAt(new Date());
       reply.setChangeInfo(changeInfo);
     } catch ( final Route53MetadataNotFoundException e ) {
       throw new Route53NotFoundClientException( "NoSuchHostedZone", "Hosted zone not found" );
@@ -502,6 +500,7 @@ public class Route53Service {
         throw new Route53ClientException("InvalidVPCId", "Invalid vpc identifier: " + vpcId );
       }
 
+      final ChangeInfo changeInfo = persistChangeInfo(ownerFullName, comment);
       hostedZones.withRetries().updateByExample(
           com.eucalyptus.route53.service.persist.entities.HostedZone.exampleWithName(ownerFullName, id),
           ownerFullName, id,
@@ -523,11 +522,6 @@ public class Route53Service {
             return zone;
           });
 
-      final ChangeInfo changeInfo = new ChangeInfo();
-      changeInfo.setComment(comment);
-      changeInfo.setId(Identifiers.generateIdentifier( "C" ).substring(0,14));
-      changeInfo.setStatus("INSYNC");
-      changeInfo.setSubmittedAt(new Date());
       reply.setChangeInfo(changeInfo);
     } catch ( final Route53MetadataNotFoundException e ) {
       throw new Route53NotFoundClientException( "NoSuchHostedZone", "Hosted zone not found" );
@@ -541,14 +535,20 @@ public class Route53Service {
     return request.getReply();
   }
 
-  public GetChangeResponseType getChange(final GetChangeType request) {
+  public GetChangeResponseType getChange(final GetChangeType request) throws Route53Exception {
     final GetChangeResponseType reply = request.getReply();
-    final ChangeInfo changeInfo = new ChangeInfo();
-    changeInfo.setComment("");
-    changeInfo.setId(request.getId());
-    changeInfo.setStatus("INSYNC");
-    changeInfo.setSubmittedAt(new Date(System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(1)));
-    reply.setChangeInfo(changeInfo);
+    final Context ctx = Contexts.lookup( );
+    final OwnerFullName ownerFullName = ctx.getUserFullName().asAccountFullName();
+    try {
+      final String id = request.getId();
+      final com.eucalyptus.route53.service.persist.entities.ChangeInfo changeInfo =
+          changeInfos.lookupByName(ownerFullName, id, Route53Metadatas.filterPrivileged(), Functions.identity());
+      reply.setChangeInfo(TypeMappers.transform(changeInfo, ChangeInfo.class));
+    } catch ( final Route53MetadataNotFoundException e ) {
+      throw new Route53NotFoundClientException("NoSuchChange", "Change not found");
+    } catch ( final Exception e ) {
+      handleException( e );
+    }
     return reply;
   }
 
@@ -938,6 +938,21 @@ public class Route53Service {
 
   public UpdateTrafficPolicyInstanceResponseType updateTrafficPolicyInstance(final UpdateTrafficPolicyInstanceType request) {
     return request.getReply();
+  }
+
+  private ChangeInfo persistChangeInfo(
+      final OwnerFullName ownerFullName,
+      final String comment
+  ) throws Route53MetadataException {
+    final String id = Identifiers.generateIdentifier( "C" ).substring(0,14);
+    com.eucalyptus.route53.service.persist.entities.ChangeInfo changeInfo =
+        com.eucalyptus.route53.service.persist.entities.ChangeInfo.create(
+            ownerFullName,
+            id,
+            comment
+        );
+    changeInfos.withRetries().save(changeInfo);
+    return TypeMappers.transform( changeInfo, ChangeInfo.class );
   }
 
   @Nullable

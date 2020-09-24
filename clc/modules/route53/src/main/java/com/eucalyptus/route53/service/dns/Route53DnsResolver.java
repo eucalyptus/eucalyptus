@@ -165,7 +165,7 @@ public class Route53DnsResolver extends DnsResolvers.DnsResolver {
       final String lookupName,
       final HostedZoneComposite zoneAndRecords) {
     for (final ResourceRecordSetView rrSet : zoneAndRecords.getResourceRecordSets()) {
-      if (rrSet.getName().equals(lookupName) && matchType(rrSet.getType(), queryType)) {
+      if (rrSet.getName().equalsIgnoreCase(lookupName) && matchType(rrSet.getType(), queryType)) {
         return response(request, queryName, rrSet, zoneAndRecords);
       }
     }
@@ -187,7 +187,7 @@ public class Route53DnsResolver extends DnsResolvers.DnsResolver {
   public Set<String> getCandidateZoneNames(final Name name) {
     final Set<String> zoneNames = Sets.newHashSet();
     for (Name zoneName = name; zoneName.labels() > 1; zoneName = new Name(zoneName, 1)) {
-      zoneNames.add(zoneName.toString());
+      zoneNames.add(zoneName.toString().toLowerCase());
     }
     return zoneNames;
   }
@@ -344,7 +344,7 @@ public class Route53DnsResolver extends DnsResolvers.DnsResolver {
   ) {
     final String lookupName = name.toString();
     for (final ResourceRecordSetView rrSet : zoneAndRecords.getResourceRecordSets()) {
-      if (rrSet.getName().equals(lookupName) && rrSet.getType()==Type.NS) {
+      if (rrSet.getName().equalsIgnoreCase(lookupName) && rrSet.getType()==Type.NS) {
         return getNameserverRecordsAndAdditionals(request, name, rrSet,
             getMatchingRRSets(Type.A, rrSet.getValues(), zoneAndRecords.getResourceRecordSets()));
       }
