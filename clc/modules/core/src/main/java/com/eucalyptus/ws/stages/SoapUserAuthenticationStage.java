@@ -50,11 +50,6 @@ public class SoapUserAuthenticationStage implements UnrollableStage {
   }
 
   @Override
-  public int compareTo( UnrollableStage o ) {
-    return this.getName( ).compareTo( o.getName( ) );
-  }
-
-  @Override
   public String getName( ) {
     return "soap-user-authentication";
   }

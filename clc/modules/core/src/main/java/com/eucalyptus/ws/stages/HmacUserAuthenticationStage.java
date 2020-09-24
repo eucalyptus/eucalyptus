@@ -75,10 +75,4 @@ public class HmacUserAuthenticationStage implements UnrollableStage {
     pipeline.addLast( "hmac-v2-verify", new HmacHandler( allowedTemporaryCredentials, allowedSignatureVersions ) );
     pipeline.addLast( "timestamp-verify", new QueryTimestampHandler( ) );
   }
-
-  @Override
-  public int compareTo( UnrollableStage o ) {
-    return this.getName( ).compareTo( o.getName( ) );
-  }
-
 }

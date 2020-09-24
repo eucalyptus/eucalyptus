@@ -66,11 +66,6 @@ public class IdentitySoapAuthenticationStage implements UnrollableStage {
   }
 
   @Override
-  public int compareTo( UnrollableStage o ) {
-    return this.getName( ).compareTo( o.getName( ) );
-  }
-
-  @Override
   public String getName( ) {
     return "identity-soap-authentication";
   }

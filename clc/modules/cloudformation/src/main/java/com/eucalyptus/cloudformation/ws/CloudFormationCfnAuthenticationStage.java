@@ -47,9 +47,4 @@ public class CloudFormationCfnAuthenticationStage implements UnrollableStage {
   public String getName( ) {
     return "cloudformation-cfn-authentication";
   }
-
-  @Override
-  public int compareTo( UnrollableStage o ) {
-    return this.getName( ).compareTo( o.getName( ) );
-  }
 }
