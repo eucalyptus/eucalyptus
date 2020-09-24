@@ -43,6 +43,31 @@ import org.jboss.netty.channel.ChannelPipeline;
 import com.eucalyptus.util.HasName;
 
 public interface UnrollableStage extends HasName<UnrollableStage> {
-  public void unrollStage( ChannelPipeline pipeline );
-  public String getName();    
+
+  void unrollStage( ChannelPipeline pipeline );
+
+  String getName( );
+
+  @Override
+  default int compareTo( final UnrollableStage o ) {
+    return this.getName( ).compareTo( o.getName( ) );
+  }
+
+  static UnrollableStage empty( ) {
+    return EmptyUnrollableStage.INSTANCE;
+  }
+
+  final class EmptyUnrollableStage implements UnrollableStage {
+     private static final EmptyUnrollableStage INSTANCE = new EmptyUnrollableStage();
+
+     private EmptyUnrollableStage( ) { }
+
+     @Override
+     public void unrollStage( final ChannelPipeline pipeline ) { }
+
+     @Override
+     public String getName( ) {
+       return "empty";
+     }
+  }
 }

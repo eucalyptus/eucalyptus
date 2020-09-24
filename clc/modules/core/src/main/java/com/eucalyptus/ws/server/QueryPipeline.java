@@ -30,18 +30,11 @@ package com.eucalyptus.ws.server;
 
 import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
 import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 
 import com.eucalyptus.ws.Handlers;
-import com.eucalyptus.ws.handlers.MessageStackHandler;
-import org.apache.commons.codec.DecoderException;
-import org.apache.commons.codec.net.URLCodec;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.Strings;
@@ -50,7 +43,6 @@ import com.eucalyptus.ws.stages.UnrollableStage;
 import com.eucalyptus.ws.util.HmacUtils.SignatureVersion;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
 
 /**
  *
@@ -101,40 +93,16 @@ public abstract class QueryPipeline extends FilteredPipeline {
     return auth;
   }
 
+  protected UnrollableStage getDecompressionStage( ) {
+    return Handlers.optionalQueryDecompressionStage( );
+  }
+
   @Override
   public ChannelPipeline addHandlers( final ChannelPipeline pipeline ) {
-    pipeline.addLast( "aggregator", Handlers.newQueryHttpChunkAggregator());
-    pipeline.addLast( "parse-query-parameters",new MessageStackHandler( ){
-      @Override
-      public void incomingMessage( final MessageEvent event ) throws Exception {
-        if ( event.getMessage( ) instanceof  MappingHttpRequest ) {
-          final MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
-          if ( httpRequest.getMethod( ).equals( HttpMethod.POST ) ) {
-            final Map<String, String> parameters = new HashMap<String, String>( httpRequest.getParameters( ) );
-            final Set<String> nonQueryParameters = Sets.newHashSet( );
-            final String query = httpRequest.getContentAsString( true );
-            for ( String p : query.split( "&" ) ) {
-              String[] splitParam = p.split( "=", 2 );
-              String lhs = splitParam[ 0 ];
-              String rhs = splitParam.length == 2 ? splitParam[ 1 ] : null;
-              try {
-                if ( lhs != null ) lhs = new URLCodec( ).decode( lhs );
-              } catch ( DecoderException e ) {
-              }
-              try {
-                if ( rhs != null ) rhs = new URLCodec( ).decode( rhs );
-              } catch ( DecoderException e ) {
-              }
-              parameters.put( lhs, rhs );
-              nonQueryParameters.add( lhs );
-            }
-            httpRequest.getParameters( ).putAll( parameters );
-            httpRequest.addNonQueryParameterKeys( nonQueryParameters );
-          }
-        }
-      }
-    } );
+    pipeline.addLast( "aggregator", Handlers.newQueryHttpChunkAggregator( ) );
+    pipeline.addLast( "parameters", Handlers.queryParameterHandler( ) );
     getAuthenticationStage( ).unrollStage( pipeline );
+    getDecompressionStage( ).unrollStage( pipeline );
     return null;
   }
 

@@ -53,6 +53,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 
 import com.eucalyptus.ws.handlers.InternalXmlBindingHandler;
+import com.eucalyptus.ws.handlers.QueryParameterHandler;
+import com.eucalyptus.ws.stages.QueryDecompressionStage;
+import com.eucalyptus.ws.stages.UnrollableStage;
 import com.google.common.base.*;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -112,6 +115,7 @@ public class Handlers {
   private static Logger                                      LOG                      = Logger.getLogger( Handlers.class );
   private static final ExecutionHandler                      pipelineExecutionHandler = new ExecutionHandler( new OrderedMemoryAwareThreadPoolExecutor( StackConfiguration.SERVER_POOL_MAX_THREADS, 0, 0, 30L, TimeUnit.SECONDS, Threads.threadFactory( "web-services-pipeline-%d" ) ) );
   private static final ExecutionHandler                      serviceExecutionHandler  = new ExecutionHandler( new OrderedMemoryAwareThreadPoolExecutor( StackConfiguration.SERVER_POOL_MAX_THREADS, 0, 0, 30L, TimeUnit.SECONDS, Threads.threadFactory( "web-services-exec-%d" ) ) );
+  private static final ChannelHandler                        queryParameterHandler    = new QueryParameterHandler( );
   private static final ChannelHandler                        queryTimestampHandler    = new QueryTimestampHandler( );
   private static final ChannelHandler                        soapMarshallingHandler   = new SoapMarshallingHandler( );
   private static final ChannelHandler                        internalWsSecHandler     = new InternalWsSecHandler( );
@@ -690,6 +694,20 @@ public class Handlers {
 
   public static ExecutionHandler serviceExecutionHandler( ) {
     return serviceExecutionHandler;
+  }
+
+  public static UnrollableStage optionalQueryDecompressionStage( ) {
+    return StackConfiguration.PIPELINE_ENABLE_QUERY_DECOMPRESS ?
+        newQueryDecompressionStage( ) :
+        UnrollableStage.empty( );
+  }
+
+  public static UnrollableStage newQueryDecompressionStage( ) {
+    return new QueryDecompressionStage();
+  }
+
+  public static ChannelHandler queryParameterHandler() {
+    return queryParameterHandler;
   }
 
   public static ChannelHandler queryTimestamphandler( ) {
