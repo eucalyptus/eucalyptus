@@ -47,11 +47,6 @@ import com.eucalyptus.ws.stages.UnrollableStage;
 public class ObjectStorageUserAuthenticationStage implements UnrollableStage {
 
   @Override
-  public int compareTo(UnrollableStage o) {
-    return this.getName().compareTo(o.getName());
-  }
-
-  @Override
   public String getName() {
     return "objectstorage-user-authentication";
   }

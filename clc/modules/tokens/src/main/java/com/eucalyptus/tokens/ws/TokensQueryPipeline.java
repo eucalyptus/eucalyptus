@@ -117,11 +117,6 @@ public class TokensQueryPipeline extends QueryPipeline {
     public String getName() {
       return "tokens-user-authentication";
     }
-
-    @Override
-    public int compareTo( UnrollableStage o ) {
-      return this.getName( ).compareTo( o.getName( ) );
-    }
   }
 
   public static class TokensAuthenticationHandler extends MessageStackHandler {

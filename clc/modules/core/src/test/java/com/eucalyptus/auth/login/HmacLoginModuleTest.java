@@ -44,6 +44,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -51,6 +54,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -586,7 +590,7 @@ public class HmacLoginModuleTest {
               values -> Lists.transform(Lists.newArrayList(values), value -> Iterables.get(Splitter.on(":").limit(2).split(value), 1))),
           verb,
           Iterables.get(Splitter.on("?").limit(2).split(pathWithQuery), 0),
-          Iterables.get(Splitter.on("\n\n").limit(2).split(sreq), 1, "")
+          body( Iterables.get(Splitter.on("\n\n").limit(2).split(sreq), 1, "" ))
       );
       assertTrue("Authentication successful " + testName, hmacV4LoginModule().authenticate(creds));
     }
@@ -615,7 +619,7 @@ public class HmacLoginModuleTest {
             .build(),
         "POST",
         "/services/Euare/",
-        "Action=ListGroups&Version=2010-05-08"
+        body( "Action=ListGroups&Version=2010-05-08" )
     );
     assertTrue("Authentication successful", hmacV4LoginModule("ea9nMgw6353ANsJeylVkNIIzuCU0hz0xtErRbcj0").authenticate(creds));
   }
@@ -636,7 +640,7 @@ public class HmacLoginModuleTest {
             .build(),
         "GET",
         "/",
-        ""
+        body( "" )
     );
     assertTrue("Authentication successful", hmacV4LoginModule("vNhDy9ERZQP5WXCdmPR7ZbbzZwdlQXETeZ6wM64i").authenticate(creds));
   }
@@ -702,13 +706,17 @@ public class HmacLoginModuleTest {
         Collections.singletonMap( "host", Collections.singletonList(headerHost) ), 
         verb, 
         servicePath, 
-        "" );
+        body( "" ) );
 
     if ( signatureVersion == 1 || ( signatureVersion == 2 && !paramMap.containsKey( SecurityParameter.SignatureMethod.parameter() ) ) ) {
       creds.setSignatureMethod( hmacType );
     }
 
     return creds;
+  }
+
+  private Supplier<ByteBuffer> body( final String text ) {
+    return () -> StandardCharsets.UTF_8.encode( CharBuffer.wrap( text ) );
   }
 
   //TODO:MOCKING

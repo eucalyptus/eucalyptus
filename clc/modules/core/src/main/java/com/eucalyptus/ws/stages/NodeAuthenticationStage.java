@@ -36,11 +36,6 @@ import com.eucalyptus.ws.handlers.NodeWsSecHandler;
 public class NodeAuthenticationStage implements UnrollableStage {
 
 	@Override
-	public int compareTo(UnrollableStage o) {
-		return this.getName( ).compareTo( o.getName( ) );		
-	}
-
-	@Override
 	public void unrollStage(ChannelPipeline pipeline) {
 		pipeline.addLast( "node-soap-authentication", new NodeWsSecHandler( ) );
 	}

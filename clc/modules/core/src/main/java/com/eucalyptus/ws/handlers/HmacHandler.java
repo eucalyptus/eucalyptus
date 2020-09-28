@@ -41,10 +41,12 @@ package com.eucalyptus.ws.handlers;
 
 import com.eucalyptus.auth.principal.AccessKeyCredential;
 import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
+import java.nio.ByteBuffer;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.MessageEvent;
@@ -87,7 +89,7 @@ public class HmacHandler extends MessageStackHandler {
     if ( event.getMessage( ) instanceof MappingHttpRequest ) {
       final MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
       final Map<String,String> parameters = httpRequest.getParameters();
-      final String body = httpRequest.getContentAsString( );
+      final Supplier<ByteBuffer> body = () -> httpRequest.getContent().toByteBuffer();
       final Function<String,List<String>> headerLookup = SignatureHandlerUtils.headerLookup( httpRequest );
       final Function<String,List<String>> parameterLookup = SignatureHandlerUtils.parameterLookup( httpRequest );
       final HmacUtils.SignatureVariant variant = HmacUtils.detectSignatureVariant( headerLookup, parameterLookup );

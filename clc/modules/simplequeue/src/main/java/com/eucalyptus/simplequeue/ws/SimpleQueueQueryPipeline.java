@@ -118,11 +118,6 @@ public class SimpleQueueQueryPipeline extends QueryPipeline {
     public String getName() {
       return "simplequeue-user-authentication";
     }
-
-    @Override
-    public int compareTo( UnrollableStage o ) {
-      return this.getName( ).compareTo( o.getName( ) );
-    }
   }
 
   public static class SimpleQueueAuthenticationHandler extends MessageStackHandler {

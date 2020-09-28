@@ -197,8 +197,11 @@ public class StackConfiguration extends AbstractPersistent {
 
   @ConfigurableField( description = "Maximum Query Pipeline http chunk size (bytes).",
                       initial = "307200")
-  public static Integer       PIPELINE_MAX_QUERY_REQUEST_SIZE    = 30 * 10 * 1024;
-  
+  public static Integer       PIPELINE_MAX_QUERY_REQUEST_SIZE   = 30 * 10 * 1024;
+
+  @ConfigurableField( description = "Enable Query Pipeline http request decompression.", initial = "true" )
+  public static Boolean       PIPELINE_ENABLE_QUERY_DECOMPRESS  = Boolean.TRUE;
+
   @ConfigurableField( description = "Maximum HTTP initial line size (bytes).", initial = "4096" )
   public static Integer       HTTP_MAX_INITIAL_LINE_BYTES       = 4 * 1024;
   

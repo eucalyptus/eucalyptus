@@ -53,6 +53,7 @@ import com.eucalyptus.crypto.Hmac;
 import com.eucalyptus.crypto.util.SecurityHeader;
 import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.crypto.util.Timestamps;
+import com.eucalyptus.util.Pair;
 import com.eucalyptus.ws.util.HmacUtils;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
@@ -85,13 +86,16 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
     final UserPrincipal user = accessKey.getPrincipal( );
     final String secretKey = accessKey.getSecretKey( );
     final byte[] signatureKey = getSignatureKey( secretKey, signatureCredential );
-    final CharSequence canonicalString = this.makeSubjectString( credentials, signatureCredential, authorizationParameters, date, false );
-    final byte[] computedSig = this.getHmacSHA256( signatureKey, canonicalString );
+    final Pair<CharSequence,CharSequence> canonicalString = this.makeSubjectString( credentials, signatureCredential, authorizationParameters, date, false );
+    final byte[] computedSig = this.getHmacSHA256( signatureKey, canonicalString.getLeft() );
     final byte[] providedSig = BaseEncoding.base16( ).lowerCase( ).decode( sig );
     if ( !MessageDigest.isEqual( computedSig, providedSig ) ) {
-      final CharSequence canonicalStringNoPath = this.makeSubjectString( credentials, signatureCredential, authorizationParameters, date, true );
-      final byte[] computedSigNoPath = this.getHmacSHA256( signatureKey, canonicalStringNoPath );
+      final Pair<CharSequence,CharSequence> canonicalStringNoPath = this.makeSubjectString( credentials, signatureCredential, authorizationParameters, date, true );
+      final byte[] computedSigNoPath = this.getHmacSHA256( signatureKey, canonicalStringNoPath.getLeft() );
       if( !MessageDigest.isEqual( computedSigNoPath, providedSig ) ) {
+        if ( LOG.isDebugEnabled() ) {
+          LOG.debug( "Signature validation failed for: " + canonicalString.getLeft() + "\nCanonical request: " + canonicalString.getRight() );
+        }
         throw new InvalidSignatureAuthException( "Signature validation failed" );
       }
     }
@@ -101,19 +105,20 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
     return true;
   }
 
-  private CharSequence makeSubjectString( @Nonnull final HmacCredentials credentials,
-                                          @Nonnull final SignatureCredential signatureCredential,
-                                          @Nonnull final Map<String,String> authorizationParameters,
-                                          @Nonnull final Date date,
-                                          final boolean skipPath ) throws Exception {
+  private Pair<CharSequence,CharSequence> makeSubjectString(@Nonnull final HmacCredentials credentials,
+                                                            @Nonnull final SignatureCredential signatureCredential,
+                                                            @Nonnull final Map<String,String> authorizationParameters,
+                                                            @Nonnull final Date date,
+                                                            final boolean skipPath ) throws Exception {
     final String timestamp = Timestamps.formatShortIso8601Timestamp( date );
     final StringBuilder sb = new StringBuilder( 256 );
     sb.append( SecurityHeader.Value.AWS4_HMAC_SHA256.value() ).append( '\n' );
     sb.append( timestamp ).append( '\n' );
     sb.append( signatureCredential.getCredentialScope() ).append( '\n' );
-    sb.append( digestUTF8( makeCanonicalRequest( credentials, authorizationParameters, skipPath ) ) );
+    final CharSequence canonicalRequest = makeCanonicalRequest( credentials, authorizationParameters, skipPath );
+    sb.append( digestUTF8( canonicalRequest ) );
     if ( signatureLogger.isTraceEnabled( ) ) signatureLogger.trace( "VERSION4: " + sb.toString( ) );
-    return sb;
+    return Pair.of(sb, canonicalRequest);
   }
 
   private CharSequence makeCanonicalRequest( @Nonnull final HmacCredentials credentials,
@@ -160,11 +165,17 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
   }
 
   /**
+   * Returns a hex encoded SHA256 hash of the bytes
+   */
+  public static String digestUTF8( final ByteBuffer byteBuffer ) {
+    return BaseEncoding.base16( ).lowerCase( ).encode( Digest.SHA256.digestBinary( byteBuffer ) );
+  }
+
+  /**
    * Returns a hex encoded SHA256 hash of the {@code text}.
    */
   public static String digestUTF8( final CharSequence text ) {
-    final ByteBuffer byteBuffer = StandardCharsets.UTF_8.encode( CharBuffer.wrap( text ) );
-    return BaseEncoding.base16( ).lowerCase( ).encode( Digest.SHA256.digestBinary( byteBuffer ) );
+    return digestUTF8( StandardCharsets.UTF_8.encode( CharBuffer.wrap( text ) ) );
   }
 
   private static String pathencode( final String path ) {
