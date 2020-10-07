@@ -42,6 +42,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 
+import com.eucalyptus.cluster.service.vm.ClusterVmMigrationState;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.common.broadcast.BNI;
@@ -617,6 +618,22 @@ public class ClusterServiceImpl implements ClusterFullService {
     logger.info( String.format( "Run vm requested, instance %s, type %s ",
         request.getInstanceId( ), request.getVmTypeInfo( ).getName( ) ) );
     final ClusterEucaConf conf = clusterEucaConfLoader.load( clock.millis( ) );
+    clusterNodes.nodeWithVm( request.getInstanceId( ) ).forEach( nodeAndVm -> {
+      final ClusterNode node = nodeAndVm._1();
+      final ClusterVm vm = nodeAndVm._2();
+      if ( !"Teardown".equals( vm.getState( ) ) || !ClusterVmMigrationState.none( ).equals( vm.getMigrationState( ) ) ) {
+        logger.warn( "Rejecting run for known instance " + vm.getId( ) + " in state " +
+            vm.getState( ) + " migration state " + vm.getMigrationState( ) + " for node " + node.getNode( ) );
+        response.set_return(false);
+      } else {
+        logger.info( "Removing old metadata on run vm, instance " + vm.getId( ) + " in state " + vm.getState( ) +
+            " migration state " + vm.getMigrationState( ) + " for node " + node.getNode( ) );
+        node.rvm( vm );
+      }
+    } );
+    if ( !response.get_return( ) ) {
+      return response;
+    }
     try ( final ScheduleResource scheduleResource = Schedulers.context( ) ) {
       final long currentTime = clock.millis( );
       final ClusterVm vm = ClusterVm.create( request, currentTime );
