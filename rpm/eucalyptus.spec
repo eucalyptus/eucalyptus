@@ -540,8 +540,6 @@ cp -Rp admin-tools/conf/* $RPM_BUILD_ROOT/%{_sysconfdir}/eucalyptus-admin
 /etc/eucalyptus/cloud.d/scripts/
 %{_libexecdir}/eucalyptus/euca-upgrade
 /usr/sbin/eucalyptus-cloud
-%ghost /var/lib/eucalyptus/services
-%attr(-,eucalyptus,eucalyptus) /var/lib/eucalyptus/webapps/
 %{_sysctldir}/70-eucalyptus-cloud.conf
 %{_unitdir}/eucalyptus-cloud.service
 %{_unitdir}/eucalyptus-cloud-upgrade.service
@@ -717,6 +715,9 @@ usermod -a -G libvirt eucalyptus || :
 
 
 %changelog
+* Fri Oct  9 2020 Steve Jones <steve.jones@appscale.com> - 5.0
+- Remove packaging for no longer used directories
+
 * Wed Mar 27 2019 Steve Jones <steve.jones@appscale.com> - 5.0
 - Update requires for eucalyptus java deps and selinux packages
 
