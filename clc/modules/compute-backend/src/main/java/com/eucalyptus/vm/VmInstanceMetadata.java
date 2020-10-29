@@ -327,8 +327,7 @@ public class VmInstanceMetadata {
       // Iterate through the list of volume attachments and populate ebs mappings
       for (VmVolumeAttachment attachment : volAttachments ) {
         if (attachment.getIsRootDevice()) {
-          m.put( "block-device-mapping/ami", attachment.getShortDeviceName() );
-          m.put( "block-device-mapping/emi", attachment.getShortDeviceName() );
+          m.put( "block-device-mapping/" + VmInstances.getEbsRootDeviceName( ), attachment.getShortDeviceName() );
           m.put( "block-device-mapping/root", attachment.getDevice() );
         }
         // add only volumes added at start up time and don't list root see EUCA-8636
@@ -349,8 +348,7 @@ public class VmInstanceMetadata {
     } else if (vm.getBootRecord().getMachine() instanceof MachineImageInfo) {
       MachineImageInfo mii = (MachineImageInfo) vm.getBootRecord().getMachine();
       String s = mii.getRootDeviceName();
-      m.put( "block-device-mapping/emi", mii.getShortRootDeviceName() );
-      m.put( "block-device-mapping/ami", mii.getShortRootDeviceName() );
+      m.put( "block-device-mapping/" + VmInstances.getEbsRootDeviceName(), mii.getShortRootDeviceName() );
       m.put( "block-device-mapping/root", s );
       if ( ImageManager.isPathAPartition( s )) {
         m.put( "block-device-mapping/ephemeral0", "sda2" );

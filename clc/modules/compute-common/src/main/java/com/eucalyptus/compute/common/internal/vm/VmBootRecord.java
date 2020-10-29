@@ -249,7 +249,7 @@ public class VmBootRecord {
 
   @Nonnull
   public String getDisplayMachineImageId( ) {
-    return displayName( machineImageId, machineImage, ResourceIdentifiers.tryNormalize().apply( "emi-00000000" ) );
+    return displayName( machineImageId, machineImage, ResourceIdentifiers.tryNormalize().apply( "ami-00000000" ) );
   }
 
   @Nullable

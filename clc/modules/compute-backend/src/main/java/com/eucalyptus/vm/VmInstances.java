@@ -555,9 +555,9 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
   public static Integer   EBS_VOLUME_CREATION_TIMEOUT   = 30;
 
   @ConfigurableField( description = "Name for root block device mapping",
-                      initial = "emi",
+                      initial = "ami",
                       changeListener = EbsRootDeviceChangeListener.class )
-  public static volatile String EBS_ROOT_DEVICE_NAME    = "emi";
+  public static volatile String EBS_ROOT_DEVICE_NAME    = "ami";
 
   @ConfigurableField( description = "Amount of time (in seconds) to let instance state settle after a transition to either stopping or shutting-down.",
                       initial = "40" )
@@ -623,7 +623,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
       if ( newValue != null && !"[a-zA-Z0-9]{1,128}".matches( String.valueOf( newValue ) ) ) {
         throw new ConfigurablePropertyException( "Invalid ebs root device name: " + newValue );
       }
-      ebsRootDeviceName.set( String.valueOf( MoreObjects.firstNonNull( newValue, MoreObjects.firstNonNull( EBS_ROOT_DEVICE_NAME, "emi" ) ) ) );
+      ebsRootDeviceName.set( String.valueOf( MoreObjects.firstNonNull( newValue, MoreObjects.firstNonNull( EBS_ROOT_DEVICE_NAME, "ami" ) ) ) );
     }
   }
 

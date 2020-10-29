@@ -468,8 +468,8 @@ public class Allocations {
     public void setRootDirective() {
       if ( ! bootSet.isBlockStorage( ) ) {
         try {
-          final MachineImageInfo emi = LookupMachine.INSTANCE.apply( this.getRequest( ).getImageId());
-          rootDirective = emi.getRootDirective();
+          final MachineImageInfo mi = LookupMachine.INSTANCE.apply( this.getRequest( ).getImageId());
+          rootDirective = mi.getRootDirective();
         } catch (Exception ex) {}
       }
     }
