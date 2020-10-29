@@ -727,7 +727,7 @@ public class VpcManager {
               mac,
               ip,
               vpc.getDnsHostnames( ) ?
-                  VmInstances.dnsName( ip, DomainNames.internalSubdomain( ) ) :
+                  VmInstances.dnsName( ip, VmInstances.dnsPrivatePrefix( ), DomainNames.internalSubdomain( ) ) :
                   null,
               firstNonNull( request.getDescription( ), "" ) ) );
           PrivateAddresses.associate( ip, networkInterface );

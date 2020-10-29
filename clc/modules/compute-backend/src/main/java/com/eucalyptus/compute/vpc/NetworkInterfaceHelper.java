@@ -131,7 +131,10 @@ public class NetworkInterfaceHelper {
         address.getOwnerAccountNumber( ),
         address.getDisplayName( ),
         networkInterface.getVpc( ).getDnsHostnames( ) ?
-            VmInstances.dnsName( address.getDisplayName( ), DomainNames.externalSubdomain( ) ) :
+            VmInstances.dnsName(
+                address.getDisplayName( ),
+                VmInstances.dnsPublicPrefix( ),
+                DomainNames.externalSubdomain( ) ) :
             null ) );
     if ( instanceOption.isPresent( ) &&
         networkInterface.isAttached( ) && networkInterface.getAttachment( ).getDeviceIndex( ) == 0 ) {

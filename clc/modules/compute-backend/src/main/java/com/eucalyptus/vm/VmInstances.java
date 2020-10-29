@@ -534,9 +534,15 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
   public static String    MAC_PREFIX                    = "d0:0d";
 
   @ConfigurableField( description = "Subdomain to use for instance DNS.",
-                      initial = ".eucalyptus",
+                      initial = ".compute",
                       changeListener = SubdomainListener.class )
-  public static String    INSTANCE_SUBDOMAIN            = ".eucalyptus";
+  public static String    INSTANCE_SUBDOMAIN            = ".compute";
+
+  @ConfigurableField( description = "Public name prefix for instance DNS.", initial = "ec2-" )
+  public static String    INSTANCE_PUBLIC_PREFIX        = "ec2-";
+
+  @ConfigurableField( description = "Private name prefix for instance DNS.", initial = "ip-" )
+  public static String    INSTANCE_PRIVATE_PREFIX       = "ip-";
 
   @ConfigurableField( description = "Period (in seconds) between state updates for actively changing state.",
                       initial = "9223372036854775807" )
@@ -1149,7 +1155,7 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
   public static void updatePublicAddress( final VmInstance vm, final String publicAddress ) {
     vm.updatePublicAddress(
         ipOrDefault( publicAddress ),
-        generateDnsName( publicAddress, DomainNames.externalSubdomain() )
+        generateDnsName( publicAddress, dnsPublicPrefix(), DomainNames.externalSubdomain() )
     );
   }
 
@@ -1159,19 +1165,27 @@ public class VmInstances extends com.eucalyptus.compute.common.internal.vm.VmIns
   public static void updatePrivateAddress( final VmInstance vm, final String privateAddress ) {
     vm.updatePrivateAddress(
         ipOrDefault( privateAddress ),
-        generateDnsName( privateAddress, DomainNames.internalSubdomain() )
+        generateDnsName( privateAddress, dnsPrivatePrefix(), DomainNames.internalSubdomain() )
     );
   }
 
-  public static String dnsName( final String ip, final Name domain ) {
-    final String suffix = domain.relativize( Name.root ).toString( );
-    return "euca-" + ip.replace( '.', '-' ) + VmInstances.INSTANCE_SUBDOMAIN + "." + suffix;
+  public static String dnsPublicPrefix() {
+    return VmInstances.INSTANCE_PUBLIC_PREFIX;
   }
 
-  public static String generateDnsName( String ip, Name domain ) {
+  public static String dnsPrivatePrefix() {
+    return VmInstances.INSTANCE_PRIVATE_PREFIX;
+  }
+
+  public static String dnsName( final String ip, final String prefix, final Name domain ) {
+    final String suffix = domain.relativize( Name.root ).toString( );
+    return prefix + ip.replace( '.', '-' ) + VmInstances.INSTANCE_SUBDOMAIN + "." + suffix;
+  }
+
+  public static String generateDnsName( String ip, final String prefix, Name domain ) {
     return VmNetworkConfig.DEFAULT_IP.equals( ip ) ?
         "" :
-        dnsName( ip, domain );
+        dnsName( ip, prefix,domain );
   }
 
   private static String ipOrDefault( final String ip ) {

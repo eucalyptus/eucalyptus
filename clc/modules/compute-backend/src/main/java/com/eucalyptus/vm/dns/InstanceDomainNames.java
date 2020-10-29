@@ -48,8 +48,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.xbill.DNS.Name;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.dns.DomainNames;
+import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -73,6 +75,11 @@ public enum InstanceDomainNames implements Function<Name, InetAddress> {
     @Override
     public Name get( ) {
       return this.externalInstanceSubdomain.get( );
+    }
+
+    @Override
+    public String getPrefix() {
+      return VmInstances.dnsPublicPrefix( );
     }
   },
   INTERNAL {
@@ -129,18 +136,17 @@ public enum InstanceDomainNames implements Function<Name, InetAddress> {
   };
   private static final int        INSTANCE_DOMAIN_REFRESH = 30;
   private static final String     DNS_TO_IP_REGEX         = "$1.$2.$3.$4";
-  private static final String     INSTANCE_DNS_REGEX      = "euca-(.+{3})-(.+{3})-(.+{3})-(.+{3})";
-  private static final Pattern    PATTERN                 = Pattern.compile( INSTANCE_DNS_REGEX + ".*" );
-  private final Supplier<Pattern> instancePattern         = new Supplier<Pattern>( ) {
-                                                            
-                                                            @Override
-                                                            public Pattern get( ) {
-                                                              final String DNS_SUFFIX = InstanceDomainNames.this.get( )
-                                                                                                                .toString( )
-                                                                                                                .replace( ".", "\\." );
-                                                              return Pattern.compile( INSTANCE_DNS_REGEX + "\\." + DNS_SUFFIX );
-                                                            }
-                                                          };
+  private static final String     INSTANCE_DNS_REGEX      = "(.+{3})-(.+{3})-(.+{3})-(.+{3})";
+
+  private static final Function<String,Pattern> PATTERN_FUNCTION = FUtils.memoizeLast( Pattern::compile );
+  private static final Supplier<Pattern> PATTERN =
+      () -> PATTERN_FUNCTION.apply(
+          "(?:" + Pattern.quote(VmInstances.dnsPublicPrefix()) + "|" + Pattern.quote(VmInstances.dnsPrivatePrefix()) + ")" +
+          INSTANCE_DNS_REGEX + ".*" );
+
+  private final Function<String,Pattern> instancePatternFunction = FUtils.memoizeLast( Pattern::compile );
+  private final Supplier<Pattern> instancePattern  =
+      () -> instancePatternFunction.apply( Pattern.quote(getPrefix()) + INSTANCE_DNS_REGEX + Pattern.quote("." + InstanceDomainNames.this.get( )) );
   
   private boolean matches( Name name ) {
     return this.instancePattern.get( ).matcher( name.toString( ) ).matches( );
@@ -152,13 +158,13 @@ public enum InstanceDomainNames implements Function<Name, InetAddress> {
   }
   
   public static InetAddress toInetAddress( Name name ) {
-    return InetAddresses.forString( PATTERN.matcher( name.toString( ) ).replaceAll( DNS_TO_IP_REGEX ) );
+    return InetAddresses.forString( PATTERN.get().matcher( name.toString( ) ).replaceAll( DNS_TO_IP_REGEX ) );
   }
   
   @Override
   public InetAddress apply( Name input ) {
     try {
-      final Matcher matcher = PATTERN.matcher( input.toString( ) );
+      final Matcher matcher = PATTERN.get().matcher( input.toString( ) );
       String parsedIp = matcher.replaceAll( DNS_TO_IP_REGEX );
       return InetAddress.getByName( parsedIp );
     } catch ( UnknownHostException ex ) {
@@ -167,7 +173,11 @@ public enum InstanceDomainNames implements Function<Name, InetAddress> {
   }
   
   public abstract Name get( );
-  
+
+  public String getPrefix( ) {
+    return VmInstances.dnsPrivatePrefix( );
+  }
+
   private static Name lookupInstanceSubdomainProperty( ) {
     return Name.fromConstantString( INSTANCE_SUBDOMAIN.replaceFirst( "^\\.", "" ) );
   }
@@ -178,7 +188,7 @@ public enum InstanceDomainNames implements Function<Name, InetAddress> {
    * @throws NoSuchElementException
    */
   public static Name lookupInstanceDomain( Name name ) throws NoSuchElementException {
-    if ( PATTERN.matcher( name.toString( ) ).matches( ) ) {
+    if ( PATTERN.get().matcher( name.toString( ) ).matches( ) ) {
       for ( InstanceDomainNames dom : InstanceDomainNames.values( ) ) {
         if ( name.subdomain( dom.get( ) ) ) {
           return dom.get( );
@@ -193,7 +203,7 @@ public enum InstanceDomainNames implements Function<Name, InetAddress> {
    * domain.
    */
   public static boolean isInstanceDomainName( Name name ) {
-    if ( PATTERN.matcher( name.toString( ) ).matches( ) ) {
+    if ( PATTERN.get().matcher( name.toString( ) ).matches( ) ) {
       for ( InstanceDomainNames dom : InstanceDomainNames.values( ) ) {
         if ( dom.matches( name ) ) {
           return true;
@@ -207,7 +217,7 @@ public enum InstanceDomainNames implements Function<Name, InetAddress> {
    * Test the given name to determine whether it is in some instance domain.
    */
   public static boolean isInstanceSubdomain( Name name ) {
-    if ( PATTERN.matcher( name.toString( ) ).matches( ) ) {
+    if ( PATTERN.get().matcher( name.toString( ) ).matches( ) ) {
       for ( InstanceDomainNames dom : InstanceDomainNames.values( ) ) {
         if ( name.subdomain( dom.get( ) ) ) {
           return true;
