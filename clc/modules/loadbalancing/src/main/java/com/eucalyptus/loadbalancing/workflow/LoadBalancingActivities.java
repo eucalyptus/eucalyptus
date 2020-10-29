@@ -144,9 +144,9 @@ public interface LoadBalancingActivities {
   /***** END ApplySecurityGroups activities ****/
   
   /***** ModifyProperties activities *****/
-  void modifyServicePropertiesValidateRequest(String emi, String instanceType,
+  void modifyServicePropertiesValidateRequest(String machineImageId, String instanceType,
       String keyname, String initScript) throws LoadBalancingActivityException;
-  void modifyServicePropertiesUpdateScalingGroup(String emi, String instanceType,
+  void modifyServicePropertiesUpdateScalingGroup(String machineImageId, String instanceType,
       String keyname, String initScript) throws LoadBalancingActivityException;
   
   /***** Activities for ELB VMs *****/

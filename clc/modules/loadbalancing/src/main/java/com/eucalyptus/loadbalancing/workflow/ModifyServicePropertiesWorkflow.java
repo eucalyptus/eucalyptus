@@ -42,7 +42,7 @@ import com.amazonaws.services.simpleworkflow.flow.annotations.WorkflowRegistrati
 defaultTaskStartToCloseTimeoutSeconds = 60)
 public interface ModifyServicePropertiesWorkflow {
   @Execute(name = "ModifyServiceProperties", version = "1.0")
-  void modifyServiceProperties(String emi, String instanceType,
+  void modifyServiceProperties(String machineImageId, String instanceType,
       String keyname, String initScript);
   
   @GetState

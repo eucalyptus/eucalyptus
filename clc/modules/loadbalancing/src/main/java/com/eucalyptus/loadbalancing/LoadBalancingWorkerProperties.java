@@ -58,7 +58,7 @@ public class LoadBalancingWorkerProperties {
   private static Logger  LOG     = Logger.getLogger( LoadBalancingWorkerProperties.class );
 
   @ConfigurableField( displayName = "image", 
-      description = "EMI containing haproxy and the controller",
+      description = "Machine image containing haproxy and the controller",
       initial = "NULL", 
       readonly = false,
       type = ConfigurableFieldType.KEYVALUE,
@@ -176,7 +176,7 @@ public class LoadBalancingWorkerProperties {
             onPropertyChange((String)newValue, null, null, null);
         }
       } catch ( final Exception e ) {
-        throw new ConfigurablePropertyException("Could not change EMI ID due to: " + e.getMessage());
+        throw new ConfigurablePropertyException("Could not change image ID due to: " + e.getMessage());
       }
     }
   }
@@ -253,14 +253,14 @@ public class LoadBalancingWorkerProperties {
     }
   }
 
-  private static void onPropertyChange(final String emi, final String instanceType,
+  private static void onPropertyChange(final String machineImageIdentifier, final String instanceType,
       final String keyname, String initScript) throws EucalyptusCloudException{
     if (!( Bootstrap.isOperational()  && Topology.isEnabled( Compute.class ) ) )
       return;
-    if ((emi!=null && emi.length()>0) ||
+    if ((machineImageIdentifier!=null && machineImageIdentifier.length()>0) ||
         (instanceType!=null && instanceType.length()>0) ||
         (keyname!=null) || (initScript != null) ){
-      if(!LoadBalancingWorkflows.modifyServicePropertiesSync(emi, instanceType, 
+      if(!LoadBalancingWorkflows.modifyServicePropertiesSync(machineImageIdentifier, instanceType,
           keyname, initScript)) {
         throw new EucalyptusCloudException("Failed to modify properties. Check log files for error details");
       }
