@@ -43,6 +43,10 @@ public class JsonPipeline extends FilteredPipeline {
     return auth;
   }
 
+  protected UnrollableStage getDecompressionStage( ) {
+    return Handlers.optionalQueryDecompressionStage( );
+  }
+
   @Override
   public String getName( ) {
     return name;
@@ -52,6 +56,7 @@ public class JsonPipeline extends FilteredPipeline {
   public ChannelPipeline addHandlers( final ChannelPipeline pipeline ) {
     pipeline.addLast( "aggregator", Handlers.newQueryHttpChunkAggregator());
     getAuthenticationStage( ).unrollStage( pipeline );
+    getDecompressionStage( ).unrollStage( pipeline );
     return pipeline;
   }
 
