@@ -42,6 +42,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.inject.Inject;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.common.msgs.InstanceType;
 import com.eucalyptus.cluster.common.msgs.NcDescribeInstancesResponseType;
@@ -362,7 +363,8 @@ public class ClusterNodes {
               vm.destinationMigrateState( now, ClusterVmMigrationState.none().getState( ), null, null )
                   .forEach( update -> logger.info( "Destination migration state for " + vm.getId( ) + " updated (migrated) from/to " + update ) );
             } else {
-              logger.info( "Ignoring instance " + vm.getId( ) + " report from unexpected node " + node.getNode( ) );
+              logger.log( "Teardown".equals( nodeVm.getStateName( ) ) ? Level.DEBUG : Level.INFO,
+                  "Ignoring instance " + vm.getId( ) + " report from unexpected node " + node.getNode( ) );
               return vm;
             }
           }
