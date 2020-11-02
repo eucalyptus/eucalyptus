@@ -171,7 +171,6 @@
 		<mkdir dir="${DESTDIR}${euca.var.dir}/keys" />
 		<mkdir dir="${DESTDIR}${euca.log.dir}" />
 		<chmod dir="${DESTDIR}${euca.log.dir}" perm="0750" />
-		<mkdir dir="${DESTDIR}${euca.var.dir}/webapps" />
 		<mkdir dir="${DESTDIR}${euca.var.dir}/modules" />
 		<mkdir dir="${DESTDIR}${euca.run.dir}" />
 		<call-module-target target="install"/>

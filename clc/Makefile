@@ -178,7 +178,6 @@ deploy: install
 uninstall:
 	$(RM) -rf $(DESTDIR)$(etcdir)/eucalyptus/cloud.d
 	$(RM) -rf $(DESTDIR)$(datarootdir)/eucalyptus/*jar
-	$(RM) -rf $(DESTDIR)$(vardir)/eucalyptus/webapps
 
 # cleaning up after run-test currently requires a few iterations of:
 #   dmsetup table | cut -d':' -f 1 | sort | uniq | xargs -L 1 dmsetup remove ; losetup -a | cut -d':' -f 1 | xargs -L 1 losetup -d; losetup -a
