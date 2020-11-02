@@ -86,6 +86,12 @@ String        gossipBindAddr             = Internets.localHostAddress( );
 Integer       tcpFailurePortBase         = 8779;
 Integer       tcpFailurePortRange        = 50
 /**
+ * Diagnostics
+ */
+Integer       diagnosticsPort            = 7500;
+Boolean       diagnosticsEnabled         = Boolean.valueOf( System.getProperty('euca.mcast.diagnostics.enable','true') );
+String        diagnosticsPasscode        = null;
+/**
  * General Transport thread configuration
  */
 Integer       threadPoolMaxThreads       = 25;
@@ -177,6 +183,9 @@ if ( !BootstrapArgs.parseBootstrapHosts( ).isEmpty( ) ) {
 
 TP transport = transportSupplier()
 transport.setValue( "singleton_name", SystemIds.membershipUdpMcastTransportName( ) );
+transport.setValue( "enable_diagnostics", diagnosticsEnabled );
+transport.setValue( "diagnostics_passcode", diagnosticsPasscode );
+transport.setValue( "diagnostics_port", diagnosticsPort );
 //transport.setDefaultThreadPool( defaultThreads );
 transport.setDefaultThreadPoolThreadFactory( defaultThreads );
 //transport thread factories
