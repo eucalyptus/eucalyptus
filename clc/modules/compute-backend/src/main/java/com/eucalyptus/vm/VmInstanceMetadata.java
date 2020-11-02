@@ -272,7 +272,7 @@ public class VmInstanceMetadata {
             networkInterface.getPrivateIpAddress( ) );
       }
       final String privateIp = networkInterface.getPrivateIpAddress( );
-      m.put( prefix + "local-hostname", VmInstances.dnsName( privateIp, DomainNames.internalSubdomain( ) ) );
+      m.put( prefix + "local-hostname", VmInstances.dnsName( privateIp, VmInstances.dnsPrivatePrefix( ), DomainNames.internalSubdomain( ) ) );
       m.put( prefix + "local-ipv4s", privateIp );
       m.put( prefix + "mac", networkInterface.getMacAddress( ) );
       m.put( prefix + "owner-id", networkInterface.getOwnerAccountNumber( ) );

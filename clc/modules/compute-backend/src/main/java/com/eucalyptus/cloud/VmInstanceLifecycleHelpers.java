@@ -1219,7 +1219,10 @@ public class VmInstanceLifecycleHelpers {
                     resource.getMac( ),
                     resource.getPrivateIp( ),
                     instance.getBootRecord( ).getVpc( ).getDnsHostnames( ) ?
-                        VmInstances.dnsName( resource.getPrivateIp( ), DomainNames.internalSubdomain( ) ) :
+                        VmInstances.dnsName(
+                            resource.getPrivateIp( ),
+                            VmInstances.dnsPrivatePrefix( ),
+                            DomainNames.internalSubdomain( ) ) :
                         (String) null,
                     MoreObjects.firstNonNull( resource.getDescription( ), "" )
                 ) );
@@ -1278,7 +1281,10 @@ public class VmInstanceLifecycleHelpers {
                       secondaryResource.getMac( ),
                       secondaryResource.getPrivateIp( ),
                       instance.getBootRecord( ).getVpc( ).getDnsHostnames( ) ?
-                          VmInstances.dnsName( secondaryResource.getPrivateIp( ), DomainNames.internalSubdomain( ) ) :
+                          VmInstances.dnsName(
+                              secondaryResource.getPrivateIp( ),
+                              VmInstances.dnsPrivatePrefix( ),
+                              DomainNames.internalSubdomain( ) ) :
                           (String) null,
                       MoreObjects.firstNonNull( secondaryResource.getDescription( ), "" )
                   ) );
