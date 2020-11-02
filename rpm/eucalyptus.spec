@@ -480,7 +480,6 @@ cp -Rp admin-tools/conf/* $RPM_BUILD_ROOT/%{_sysconfdir}/eucalyptus-admin
 
 %files
 %license LICENSE
-%doc INSTALL README.md
 
 %attr(-,eucalyptus,eucalyptus) %dir /etc/eucalyptus
 %config(noreplace) /etc/eucalyptus/eucalyptus.conf
