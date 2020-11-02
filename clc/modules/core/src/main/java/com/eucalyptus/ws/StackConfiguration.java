@@ -251,12 +251,6 @@ public class StackConfiguration extends AbstractPersistent {
   @Deprecated  //GRZE: this field will be superceded by new eucarc support in 3.4: DO NOT USE IT!
   public static String        DEFAULT_EUARE_URI_SCHEME          = "http";                                      //GRZE: there references to specific services are not in the right scope here.
 
-  @ConfigurableField( description = "Default EUSTORE_URL in eucarc.",
-                      changeListener = UriChangeListener.class,
-                      initial = "http://emis.eucalyptus.com/" )
-  @Deprecated  //GRZE: this field will be superceded by new eucarc support in 3.4: DO NOT USE IT!
-  public static String        DEFAULT_EUSTORE_URL               = "http://emis.eucalyptus.com/";               //GRZE: there references to specific services are not in the right scope here.
-
   @ConfigurableField( description = "Request unknown parameter handling (default|ignore|error).", initial = "default" )
   public static String        UNKNOWN_PARAMETER_HANDLING        = "default";
 
