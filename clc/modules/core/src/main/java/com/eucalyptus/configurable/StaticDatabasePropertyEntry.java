@@ -842,6 +842,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
           "bootstrap.webservices.client_pool_max_mem_per_conn",
           "bootstrap.webservices.client_pool_timeout_millis",
           "bootstrap.webservices.client_pool_total_mem",
+          "bootstrap.webservices.default_eustore_url",
           "cloudformation.swf_client_config",
           "cloud.vmstate.network_metadata_refresh_time",
           "reporting.data_collection_enabled",
@@ -863,7 +864,9 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       ) );
 
       UpgradeUtils.updatePropertyValues( LOG, ImmutableList.of(
-          Tuple.of( "bootstrap.webservices.cluster_connect_timeout_millis", "2000", "3000" )
+          Tuple.of( "bootstrap.webservices.cluster_connect_timeout_millis", "2000", "3000" ),
+          Tuple.of( "cloud.identifier_canonicalizer", "lower", "lower,exi" ),
+          Tuple.of( "cloud.identifier_canonicalizer", "upper", "upper,exi" )
       ) );
 
       UpgradeUtils.createOrOverwriteProperties( LOG, ImmutableList.of(

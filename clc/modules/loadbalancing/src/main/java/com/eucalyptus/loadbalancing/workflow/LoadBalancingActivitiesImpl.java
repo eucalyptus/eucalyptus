@@ -166,14 +166,14 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
 
   @Override
   public boolean createLbAdmissionControl(final String accountNumber, final String lbName, final String[] zones) throws LoadBalancingActivityException {
-    final String emi = LoadBalancingWorkerProperties.IMAGE;
+    final String machineImageId = LoadBalancingWorkerProperties.IMAGE;
     List<ImageDetails> images;
     try{
-      images = EucalyptusActivityTasks.getInstance().describeImagesWithVerbose(Lists.newArrayList(emi));
-      if(images==null || images.size()<=0 ||! images.get(0).getImageId().toLowerCase().equals(emi.toLowerCase()))
-        throw new Exception("No loadbalancer EMI is found");
+      images = EucalyptusActivityTasks.getInstance().describeImagesWithVerbose(Lists.newArrayList(machineImageId));
+      if(images==null || images.size()<=0 ||! images.get(0).getImageId().toLowerCase().equals(machineImageId.toLowerCase()))
+        throw new Exception("No loadbalancer image is found");
     }catch(final Exception ex){
-      throw new LoadBalancingActivityException("failed to validate the loadbalancer EMI", ex);
+      throw new LoadBalancingActivityException("failed to validate the loadbalancer image", ex);
     }
 
     // zones: is the CC found?
@@ -604,7 +604,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
                                                                    final String lbName, String instanceProfileName,
                                                                    String securityGroupName, List<String> zones, Map<String,String> zoneToSubnetIdMap) throws LoadBalancingActivityException {
     if(LoadBalancingWorkerProperties.IMAGE == null)
-      throw new LoadBalancingActivityException("Loadbalancer's EMI is not configured");
+      throw new LoadBalancingActivityException("Loadbalancer's image is not configured");
     final AutoscalingGroupSetupActivityResult activityResult = new AutoscalingGroupSetupActivityResult();
     final LoadBalancer lbEntity;
     final LoadBalancer.LoadBalancerCoreView lb;
@@ -2331,21 +2331,23 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   }
 
   @Override
-  public void modifyServicePropertiesValidateRequest(final String emi,
-                                                           final String instanceType, final String keyname, final String initScript)
+  public void modifyServicePropertiesValidateRequest(final String machineImageId,
+                                                     final String instanceType,
+                                                     final String keyname,
+                                                     final String initScript)
           throws LoadBalancingActivityException {
-    if(emi!=null){
+    if(machineImageId!=null){
       try{
         final List<ImageDetails> images =
-                EucalyptusActivityTasks.getInstance().describeImagesWithVerbose(Lists.newArrayList(emi));
+                EucalyptusActivityTasks.getInstance().describeImagesWithVerbose(Lists.newArrayList(machineImageId));
         if(images == null || images.size()<=0)
-          throw new LoadBalancingActivityException("No such EMI is found in the system");
-        if(! images.get(0).getImageId().toLowerCase().equals(emi.toLowerCase()))
-          throw new LoadBalancingActivityException("No such EMI is found in the system");
+          throw new LoadBalancingActivityException("No such image is found in the system");
+        if(! images.get(0).getImageId().toLowerCase().equals(machineImageId.toLowerCase()))
+          throw new LoadBalancingActivityException("No such image is found in the system");
       }catch(final LoadBalancingActivityException ex){
         throw ex;
       }catch(final Exception ex){
-        throw new LoadBalancingActivityException("Failed to verify EMI in the system");
+        throw new LoadBalancingActivityException("Failed to verify image in the system");
       }
     }
     // validate instance type
@@ -2407,8 +2409,10 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
 
 
   @Override
-  public void modifyServicePropertiesUpdateScalingGroup(final String emi,
-      final String instanceType, final String keyname, final String initScript)
+  public void modifyServicePropertiesUpdateScalingGroup(final String machineImageId,
+                                                        final String instanceType,
+                                                        final String keyname,
+                                                        final String initScript)
           throws LoadBalancingActivityException {
     final List<LoadBalancer> lbs = LoadBalancers.listLoadbalancers();
     for(final LoadBalancer lb : lbs){
@@ -2445,7 +2449,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
                       lb.getDisplayName(), asg.getAvailabilityZone());
             }while(launchConfigName.equals(asgType.getLaunchConfigurationName()));
 
-            final String newEmi = emi != null? emi : lc.getImageId();
+            final String newEmi = machineImageId != null? machineImageId : lc.getImageId();
             final String newType = instanceType != null? instanceType : lc.getInstanceType();
             String newKeyname = keyname != null ? keyname : lc.getKeyName();
 
@@ -2472,10 +2476,10 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
               LOG.warn("unable to delete the old launch configuration", ex);
             }
             // copy all tags from new image to ASG
-            if ( emi != null ) {
+            if ( machineImageId != null ) {
               try {
                 final List<ImageDetails> images =
-                    EucalyptusActivityTasks.getInstance().describeImagesWithVerbose(Lists.newArrayList(emi));
+                    EucalyptusActivityTasks.getInstance().describeImagesWithVerbose(Lists.newArrayList(machineImageId));
                 // image should exist at this point
                 for(ResourceTag tag:images.get(0).getTagSet()){
                   EucalyptusActivityTasks.getInstance().createOrUpdateAutoscalingTags(tag.getKey(), tag.getValue(), asgName, lb.useSystemAccount());

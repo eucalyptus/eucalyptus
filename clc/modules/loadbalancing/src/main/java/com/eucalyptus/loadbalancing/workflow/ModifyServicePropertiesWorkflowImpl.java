@@ -52,14 +52,14 @@ public class ModifyServicePropertiesWorkflowImpl
   TryCatchFinally task = null;
   
   @Override
-  public void modifyServiceProperties(final String emi, final String instanceType,
+  public void modifyServiceProperties(final String machineImageId, final String instanceType,
       final String keyname, final String initScript) {
     task = new TryCatchFinally() {
       @Override
       protected void doTry() throws Throwable {
         final Promise<Void> validator = 
-            client.modifyServicePropertiesValidateRequest(emi, instanceType, keyname, initScript);
-        client.modifyServicePropertiesUpdateScalingGroup(emi, instanceType, 
+            client.modifyServicePropertiesValidateRequest(machineImageId, instanceType, keyname, initScript);
+        client.modifyServicePropertiesUpdateScalingGroup(machineImageId, instanceType,
             keyname, initScript, validator);
       }
       

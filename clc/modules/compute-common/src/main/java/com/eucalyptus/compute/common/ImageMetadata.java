@@ -46,7 +46,7 @@ import com.eucalyptus.util.CompatFunction;
 import com.eucalyptus.util.CompatPredicate;
 
 @PolicyResourceType( "image" )
-@CloudMetadataLongIdentifierConfigurable( prefix = "emi", relatedPrefixes = {"eki", "eri", "ami", "aki", "ari"})
+@CloudMetadataLongIdentifierConfigurable( prefix = "ami", relatedPrefixes = {"aki", "ari", "emi", "eki", "eri" })
 public interface ImageMetadata extends CloudMetadata {
   
   String TYPE_MANIFEST_XPATH = "/manifest/image/type/text()";
@@ -58,7 +58,7 @@ public interface ImageMetadata extends CloudMetadata {
        */
       @Override
       public String getTypePrefix( ) {
-        return "emi";
+        return "ami";
       }
       
       @Override
@@ -72,7 +72,7 @@ public interface ImageMetadata extends CloudMetadata {
        */
       @Override
       public String getTypePrefix( ) {
-        return "eki";
+        return "aki";
       }
       
       @Override
@@ -91,7 +91,7 @@ public interface ImageMetadata extends CloudMetadata {
        */
       @Override
       public String getTypePrefix( ) {
-        return "eri";
+        return "ari";
       }
       
       @Override

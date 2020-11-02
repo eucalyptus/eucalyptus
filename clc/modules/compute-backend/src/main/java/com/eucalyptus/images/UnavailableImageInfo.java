@@ -74,7 +74,7 @@ class UnavailableImageInfo implements BootableImageInfo {
 
   @Override
   public String getDisplayName() {
-    return ResourceIdentifiers.tryNormalize( ).apply( "emi-00000000" );
+    return ResourceIdentifiers.tryNormalize( ).apply( "ami-00000000" );
   }
 
   @Override

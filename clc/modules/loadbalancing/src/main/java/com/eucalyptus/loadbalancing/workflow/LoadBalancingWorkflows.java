@@ -324,11 +324,11 @@ public class LoadBalancingWorkflows {
     };
   }
   
-  public static Boolean modifyServicePropertiesSync(final String emi, final String instanceType,
+  public static Boolean modifyServicePropertiesSync(final String machineImageId, final String instanceType,
       final String keyname, final String initScript ) {
     final  Future<Boolean> task = 
         Threads.enqueue(LoadBalancing.class, LoadBalancingWorkflows.class,  
-            modifyServicePropertiesImpl( emi, instanceType, keyname, initScript ));
+            modifyServicePropertiesImpl( machineImageId, instanceType, keyname, initScript ));
     try{ 
       return task.get();
     }catch(final Exception ex) {
@@ -337,20 +337,20 @@ public class LoadBalancingWorkflows {
     }
   }
   
-  public static void modifyServicePropertiesAsync( final String emi, final String instanceType,
+  public static void modifyServicePropertiesAsync( final String machineImageId, final String instanceType,
       final String keyname, final String initScript ) {
     Threads.enqueue(LoadBalancing.class, LoadBalancingWorkflows.class,  
-        modifyServicePropertiesImpl( emi, instanceType, keyname, initScript ));
+        modifyServicePropertiesImpl( machineImageId, instanceType, keyname, initScript ));
   }
       
-  private static Callable<Boolean> modifyServicePropertiesImpl( final String emi, final String instanceType,
+  private static Callable<Boolean> modifyServicePropertiesImpl( final String machineImageId, final String instanceType,
       final String keyname, final String initScript ) {
     return new Callable<Boolean>() {
       @Override
       public Boolean call() throws Exception {
         final ModifyServicePropertiesWorkflowClientExternal workflow =
             WorkflowClients.getModifyServicePropertiesClient();
-        workflow.modifyServiceProperties(emi, instanceType, keyname, initScript);
+        workflow.modifyServiceProperties(machineImageId, instanceType, keyname, initScript);
         return waitFor(new Supplier<ElbWorkflowState>() {
           @Override
           public ElbWorkflowState get() {

@@ -77,7 +77,7 @@ public class VmInstances {
   private static final Logger LOG = Logger.getLogger( VmInstances.class );
 
 
-  protected static final AtomicReference<String> ebsRootDeviceName = new AtomicReference<String>( "emi" );
+  protected static final AtomicReference<String> ebsRootDeviceName = new AtomicReference<String>( "ami" );
 
   public static String getEbsRootDeviceName( ) {
     return ebsRootDeviceName.get( );
