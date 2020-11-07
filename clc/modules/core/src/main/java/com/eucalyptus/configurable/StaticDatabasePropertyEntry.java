@@ -875,7 +875,13 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
                     "10" ),
           Tuple.of( "com.eucalyptus.loadbalancing.LoadBalancingServiceProperties.max_tags",
                     "services.loadbalancing.max_tags",
-                    "10" )
+                    "10" ),
+          Tuple.of( "com.eucalyptus.vm.VmInstances.instance_private_prefix",
+                    "cloud.vmstate.instance_private_prefix",
+                    "euca-" ),
+          Tuple.of( "com.eucalyptus.vm.VmInstances.instance_public_prefix",
+                    "cloud.vmstate.instance_public_prefix",
+                    "euca-" )
       ) );
 
       return true;
