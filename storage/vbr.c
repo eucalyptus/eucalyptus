@@ -2066,7 +2066,7 @@ f_out:
             char buf[32];              // first part of artifact ID
             char *art_pref;
             if (strcmp(vbr->id, "none") == 0) {
-                if (snprintf(buf, sizeof(buf), "prt-%05lld%s", vbr->sizeBytes / 1048576, vbr->formatName) >= sizeof(buf))   // output was truncated
+                if (snprintf(buf, sizeof(buf), "prt-%02d-%05lld%s", vbr->diskNumber, vbr->sizeBytes / 1048576, vbr->formatName) >= sizeof(buf))   // output was truncated
                     break;
                 art_pref = buf;
             } else {
