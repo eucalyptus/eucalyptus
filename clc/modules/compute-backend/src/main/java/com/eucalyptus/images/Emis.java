@@ -41,6 +41,7 @@ package com.eucalyptus.images;
 
 import java.security.PublicKey;
 import java.util.NoSuchElementException;
+import java.util.function.Supplier;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -78,6 +79,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.NonNullFunction;
+import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
@@ -326,8 +328,25 @@ public class Emis {
     
     public VmTypeInfo populateVirtualBootRecord( final VmType vmType, final Partition partition,
     		final String reservationId) throws MetadataException {
-      final VmTypeInfo vmTypeInfo = VmTypes.asVmTypeInfo( vmType, this.getMachine( ) );
+      final Supplier<Pair<String,String>> rootInfoSupplier = () -> {
+        if ( this.getMachine( ) instanceof StaticDiskImage ) { // BootableImage+StaticDiskImage = MachineImageInfo
+          try {
+            final StaticDiskImage diskImage = (StaticDiskImage) this.getMachine( );
+            if (!Strings.isNullOrEmpty( diskImage.getManifestHash() )
+                && !diskImage.getManifestHash().equals( ImageManifests.getManifestHash(diskImage.getManifestLocation() )) ) {
+              throw new MetadataException("Instance manifest was changed after registration");
+            }
+            return Pair.of(
+                diskImage.getDisplayName( ),
+                this.getImageDownloadManifest(partition.getNodeCertificate().getPublicKey(), partition.getName()) );
+          } catch ( Exception e ) {
+            throw Exceptions.toUndeclared( e );
+          }
+        }
+        throw Exceptions.toUndeclared( new MetadataException("Instance manifest location not available") );
+      };
       try {
+        final VmTypeInfo vmTypeInfo = VmTypes.asVmTypeInfo( vmType, this.getMachine( ), rootInfoSupplier );
         if ( this.isLinux( ) ) {
           if ( this.hasKernel( ) ) {
             String manifestLocation = this.getKernelDownloadManifest(partition.getNodeCertificate().getPublicKey(), partition.getName());
@@ -340,20 +359,11 @@ public class Emis {
                                    this.getRamdisk( ).getImageSizeBytes() );
           }
         }
-        if ( this.getMachine( ) instanceof StaticDiskImage ) { // BootableImage+StaticDiskImage = MachineImageInfo
-          StaticDiskImage diskImage = (StaticDiskImage) this.getMachine( );
-          if (!Strings.isNullOrEmpty( diskImage.getManifestHash() )
-              && !diskImage.getManifestHash().equals( ImageManifests.getManifestHash(
-                                                      diskImage.getManifestLocation() )) )
-            throw new MetadataException("Instance manifest was changed after registration");
-            String manifestLocation = this.getImageDownloadManifest(partition.getNodeCertificate().getPublicKey(), partition.getName());
-          vmTypeInfo.setRoot( diskImage.getDisplayName( ), manifestLocation,
-                              this.getMachine( ).getImageSizeBytes() );
-        }
+        return vmTypeInfo;
       } catch (Exception ex){
+        Exceptions.findAndRethrow( ex, MetadataException.class );
         throw new MetadataException(ex);
       }
-      return vmTypeInfo;
     }
   }
 

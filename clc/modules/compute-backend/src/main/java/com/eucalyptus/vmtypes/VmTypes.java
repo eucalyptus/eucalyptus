@@ -48,6 +48,7 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicMarkableReference;
+import java.util.function.Supplier;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -81,6 +82,7 @@ import com.eucalyptus.compute.common.internal.images.MachineImageInfo;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.LockResource;
+import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Enums;
@@ -569,7 +571,11 @@ public class VmTypes {
 
   }
   
-  public static VmTypeInfo asVmTypeInfo( VmType vmType, BootableImageInfo img ) throws MetadataException {
+  public static VmTypeInfo asVmTypeInfo(
+      final VmType vmType,
+      final BootableImageInfo img,
+      final Supplier<Pair<String,String>> rootInfoSupplier
+  ) throws MetadataException {
     Long imgSize = img.getImageSizeBytes( );
     Long diskSize = vmType.getDisk( ) * 1024L * 1024L * 1024L;
     
@@ -579,16 +585,22 @@ public class VmTypes {
     }
     VmTypeInfo vmTypeInfo;
     if ( img instanceof MachineImageInfo ) { // instance-store image
+      final Pair<String,String> nameAndManifestLocation = rootInfoSupplier.get( );
       if ( ImageMetadata.Platform.windows.equals( img.getPlatform( ) ) ) {
         vmTypeInfo = VmTypes.InstanceStoreWindowsVmTypeInfoMapper.INSTANCE.apply( vmType );
         vmTypeInfo.setEphemeral( 0, "sdb", diskSize - imgSize, "none" );
       } else if( !ImageManager.isPathAPartition( img.getRootDeviceName() ) ){
         vmTypeInfo = VmTypes.InstanceStoreLinuxHvmVmTypeInfoMapper.INSTANCE.apply(vmType);
-        if (diskSize - imgSize > 0)
-          vmTypeInfo.setEphemeral( 0, "sdb", diskSize - imgSize,
-              FORMAT_EPHEMERAL_STORAGE ? EphemeralDisk.Format.ext3.toString() : EphemeralDisk.Format.none.toString() );
+        vmTypeInfo.setRoot(
+            nameAndManifestLocation.getLeft(),
+            nameAndManifestLocation.getRight(),
+            diskSize );
       } else {
         vmTypeInfo = VmTypes.InstanceStoreVmTypeInfoMapper.INSTANCE.apply( vmType );
+        vmTypeInfo.setRoot(
+            nameAndManifestLocation.getLeft(),
+            nameAndManifestLocation.getRight(),
+            img.getImageSizeBytes() );
         long ephemeralSize = diskSize - imgSize - SWAP_SIZE_BYTES;
         if ( ephemeralSize < MIN_EPHEMERAL_SIZE_BYTES ) {
           throw new InvalidMetadataException( "image too large to accommodate swap and ephemeral [size="
