@@ -109,9 +109,9 @@ public class VmTypes {
                       initial = "t2.micro" )
   public static String         DEFAULT_TYPE_NAME        = "t2.micro";
 
-  @ConfigurableField( description = "Format first ephemeral disk by default with ext3", initial = "true",
+  @ConfigurableField( description = "Format first ephemeral disk by default with ext3", initial = "false",
       changeListener = PropertyChangeListeners.IsBoolean.class)
-  public static Boolean        FORMAT_EPHEMERAL_STORAGE = true;
+  public static Boolean        FORMAT_EPHEMERAL_STORAGE = false;
 
   @ConfigurableField( description = "Format swap disk by default. The property will be deprecated in next major release.",
       initial = "false", changeListener = PropertyChangeListeners.IsBoolean.class)
