@@ -55,6 +55,7 @@ Resources:
       Enabled: !Ref EnableR3
       Cpu: 8
       Disk: 160
+      DiskCount: 1
       Memory: 62464
       NetworkInterfaces: 4
   R34XLARGE:
@@ -65,6 +66,7 @@ Resources:
       Enabled: !Ref EnableR3
       Cpu: 16
       Disk: 320
+      DiskCount: 1
       Memory: 124928
       NetworkInterfaces: 8
   R38XLARGE:
@@ -75,6 +77,7 @@ Resources:
       Enabled: !Ref EnableR3
       Cpu: 32
       Disk: 640
+      DiskCount: 2
       Memory: 249856
       NetworkInterfaces: 8
   R3LARGE:
@@ -85,6 +88,7 @@ Resources:
       Enabled: !Ref EnableR3
       Cpu: 2
       Disk: 32
+      DiskCount: 1
       Memory: 15616
       NetworkInterfaces: 3
   R3XLARGE:
@@ -95,6 +99,7 @@ Resources:
       Enabled: !Ref EnableR3
       Cpu: 4
       Disk: 80
+      DiskCount: 1
       Memory: 31232
       NetworkInterfaces: 4
   R416XLARGE:
@@ -222,6 +227,7 @@ Resources:
       Enabled: !Ref EnableR5D
       Cpu: 48
       Disk: 1800
+      DiskCount: 2
       Memory: 393216
       NetworkInterfaces: 8
   R5D24XLARGE:
@@ -232,6 +238,7 @@ Resources:
       Enabled: !Ref EnableR5D
       Cpu: 96
       Disk: 3600
+      DiskCount: 4
       Memory: 786432
       NetworkInterfaces: 15
   R5D2XLARGE:
@@ -242,6 +249,7 @@ Resources:
       Enabled: !Ref EnableR5D
       Cpu: 8
       Disk: 300
+      DiskCount: 1
       Memory: 65536
       NetworkInterfaces: 4
   R5D4XLARGE:
@@ -252,6 +260,7 @@ Resources:
       Enabled: !Ref EnableR5D
       Cpu: 16
       Disk: 600
+      DiskCount: 2
       Memory: 131072
       NetworkInterfaces: 8
   R5DLARGE:
@@ -262,6 +271,7 @@ Resources:
       Enabled: !Ref EnableR5D
       Cpu: 2
       Disk: 75
+      DiskCount: 1
       Memory: 16384
       NetworkInterfaces: 3
   R5DXLARGE:
@@ -272,6 +282,7 @@ Resources:
       Enabled: !Ref EnableR5D
       Cpu: 4
       Disk: 150
+      DiskCount: 1
       Memory: 32768
       NetworkInterfaces: 4
   X116XLARGE:
@@ -281,6 +292,7 @@ Resources:
       Enabled: !Ref EnableX1
       Cpu: 64
       Disk: 1920
+      DiskCount: 1
       Memory: 999424
       NetworkInterfaces: 8
   X132XLARGE:
@@ -291,6 +303,7 @@ Resources:
       Enabled: !Ref EnableX1
       Cpu: 128
       Disk: 3840
+      DiskCount: 2
       Memory: 1998848
       NetworkInterfaces: 8
   X1E16XLARGE:
@@ -300,6 +313,7 @@ Resources:
       Enabled: !Ref EnableX1E
       Cpu: 64
       Disk: 1920
+      DiskCount: 1
       Memory: 1998848
       NetworkInterfaces: 8
   X1E2XLARGE:
@@ -310,6 +324,7 @@ Resources:
       Enabled: !Ref EnableX1E
       Cpu: 8
       Disk: 240
+      DiskCount: 1
       Memory: 249856
       NetworkInterfaces: 4
   X1E32XLARGE:
@@ -320,6 +335,7 @@ Resources:
       Enabled: !Ref EnableX1E
       Cpu: 128
       Disk: 3840
+      DiskCount: 2
       Memory: 3997696
       NetworkInterfaces: 8
   X1E4XLARGE:
@@ -330,6 +346,7 @@ Resources:
       Enabled: !Ref EnableX1E
       Cpu: 16
       Disk: 480
+      DiskCount: 1
       Memory: 499712
       NetworkInterfaces: 4
   X1E8XLARGE:
@@ -340,6 +357,7 @@ Resources:
       Enabled: !Ref EnableX1E
       Cpu: 32
       Disk: 960
+      DiskCount: 1
       Memory: 999424
       NetworkInterfaces: 4
   X1EXLARGE:
@@ -350,6 +368,7 @@ Resources:
       Enabled: !Ref EnableX1E
       Cpu: 4
       Disk: 120
+      DiskCount: 1
       Memory: 124928
       NetworkInterfaces: 3
   Z1D12XLARGE:
@@ -359,6 +378,7 @@ Resources:
       Enabled: !Ref EnableZ1D
       Cpu: 48
       Disk: 1800
+      DiskCount: 2
       Memory: 393216
       NetworkInterfaces: 15
   Z1D2XLARGE:
@@ -369,6 +389,7 @@ Resources:
       Enabled: !Ref EnableZ1D
       Cpu: 8
       Disk: 300
+      DiskCount: 1
       Memory: 65536
       NetworkInterfaces: 4
   Z1D3XLARGE:
@@ -379,6 +400,7 @@ Resources:
       Enabled: !Ref EnableZ1D
       Cpu: 12
       Disk: 450
+      DiskCount: 1
       Memory: 98304
       NetworkInterfaces: 8
   Z1D6XLARGE:
@@ -389,6 +411,7 @@ Resources:
       Enabled: !Ref EnableZ1D
       Cpu: 24
       Disk: 900
+      DiskCount: 1
       Memory: 196608
       NetworkInterfaces: 8
   Z1DLARGE:
@@ -399,6 +422,7 @@ Resources:
       Enabled: !Ref EnableZ1D
       Cpu: 2
       Disk: 75
+      DiskCount: 1
       Memory: 16384
       NetworkInterfaces: 3
   Z1DXLARGE:
@@ -409,5 +433,6 @@ Resources:
       Enabled: !Ref EnableZ1D
       Cpu: 4
       Disk: 150
+      DiskCount: 1
       Memory: 32768
       NetworkInterfaces: 4

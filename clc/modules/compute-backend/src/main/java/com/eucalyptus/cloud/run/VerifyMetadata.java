@@ -45,7 +45,6 @@ import static com.eucalyptus.images.Images.DeviceMappingValidationOption.SkipExt
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -111,6 +110,8 @@ import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.compute.common.internal.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
+import com.eucalyptus.vmtypes.VmTypes.SizeUnit;
+import com.eucalyptus.vmtypes.VmTypes.VmTypeEphemeralStorageLayout;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -351,19 +352,20 @@ public class VerifyMetadata {
         
         // Add (1024L * 1024L * 10) to handle NTFS min requirements.
         if ( ! bootSet.isBlockStorage( ) ) {
+          final VmTypeEphemeralStorageLayout ephemeralLayout = VmTypes.getEphemeralLayout( vmType, bootSet.getMachine() );
           if ( Platform.windows.equals( bootSet.getMachine( ).getPlatform( ) ) &&
-            bootSet.getMachine( ).getImageSizeBytes( ) > ( ( 1024L * 1024L * 1024L * vmType.getDisk( ) ) + ( 1024L * 1024L * 10 ) ) ) {
+            bootSet.getMachine( ).getImageSizeBytes( ) > ( ephemeralLayout.getRootDiskSize(SizeUnit.B) + ( 1024L * 1024L * 10 ) ) ) {
           throw new ImageInstanceTypeVerificationException(
               "Unable to run instance " + bootSet.getMachine( ).getDisplayName( ) +
               " in which the size " + bootSet.getMachine( ).getImageSizeBytes( ) +
               " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) +
-              " size " + vmType.getDisk( ) + " GB." );
-          } else if ( bootSet.getMachine( ).getImageSizeBytes( ) > ( ( 1024L * 1024L * 1024L * vmType.getDisk( ) ) ) ) {
+              " size " + ephemeralLayout.getRootDiskSize(SizeUnit.GiB) + " GB." );
+          } else if ( bootSet.getMachine( ).getImageSizeBytes( ) > ephemeralLayout.getRootDiskSize(SizeUnit.B) ) {
             throw new ImageInstanceTypeVerificationException(
                 "Unable to run instance " + bootSet.getMachine( ).getDisplayName( ) +
                 " in which the size " + bootSet.getMachine( ).getImageSizeBytes( ) +
                 " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) +
-                " size " + vmType.getDisk( ) + " GB." );
+                " size " + ephemeralLayout.getRootDiskSize(SizeUnit.GiB) + " GB." );
           }
         }
       } catch ( VerificationException e ) {

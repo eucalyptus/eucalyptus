@@ -46,6 +46,7 @@ public class AWSEC2InstanceTypeResourceAction extends StepBasedResourceAction {
         modifyInstanceType.setName(action.properties.getName());
         modifyInstanceType.setCpu(action.properties.getCpu());
         modifyInstanceType.setDisk(action.properties.getDisk());
+        modifyInstanceType.setDiskCount(action.properties.getDiskCount());
         modifyInstanceType.setEnabled(action.properties.getEnabled());
         modifyInstanceType.setMemory(action.properties.getMemory());
         modifyInstanceType.setNetworkInterfaces(action.properties.getNetworkInterfaces());
@@ -79,6 +80,7 @@ public class AWSEC2InstanceTypeResourceAction extends StepBasedResourceAction {
         modifyInstanceType.setName(newAction.properties.getName( ));
         modifyInstanceType.setCpu(newAction.properties.getCpu());
         modifyInstanceType.setDisk(newAction.properties.getDisk());
+        modifyInstanceType.setDiskCount(newAction.properties.getDiskCount());
         modifyInstanceType.setEnabled(newAction.properties.getEnabled());
         modifyInstanceType.setMemory(newAction.properties.getMemory());
         modifyInstanceType.setNetworkInterfaces(newAction.properties.getNetworkInterfaces());

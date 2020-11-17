@@ -36,6 +36,7 @@ public class VmTypeDetails extends EucalyptusData {
   private String name;
   private Integer cpu;
   private Integer disk;
+  private Integer diskCount;
   private Integer memory;
   private Integer networkInterfaces;
   private ArrayList<VmTypeZoneStatus> availability = new ArrayList<VmTypeZoneStatus>( );
@@ -63,6 +64,14 @@ public class VmTypeDetails extends EucalyptusData {
 
   public void setDisk( Integer disk ) {
     this.disk = disk;
+  }
+
+  public Integer getDiskCount( ) {
+    return diskCount;
+  }
+
+  public void setDiskCount( Integer diskCount ) {
+    this.diskCount = diskCount;
   }
 
   public Integer getMemory( ) {

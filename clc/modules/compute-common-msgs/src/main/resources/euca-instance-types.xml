@@ -36,6 +36,7 @@
         <value name="name" field="name" usage="optional" style="element"/>
         <value name="cpu" field="cpu" usage="optional" style="element"/>
         <value name="disk" field="disk" usage="optional" style="element"/>
+        <value name="diskCount" field="diskCount" usage="optional" style="element"/>
         <value name="memory" field="memory" usage="optional" style="element"/>
         <value name="networkInterfaces" field="networkInterfaces" usage="optional" style="element"/>
         <structure name="availability" usage="optional">
@@ -69,6 +70,7 @@
         <value name="name" field="name" usage="optional" style="element"/>
         <value name="cpu" field="cpu" usage="optional" style="element"/>
         <value name="disk" field="disk" usage="optional" style="element"/>
+        <value name="diskCount" field="diskCount" usage="optional" style="element"/>
         <value name="memory" field="memory" usage="optional" style="element"/>
     </mapping>
     <mapping name="ModifyInstanceTypeAttributeResponseType"

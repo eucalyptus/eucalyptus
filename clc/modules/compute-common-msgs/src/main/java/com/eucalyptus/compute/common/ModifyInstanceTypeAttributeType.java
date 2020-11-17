@@ -41,6 +41,8 @@ public class ModifyInstanceTypeAttributeType extends VmTypeMessage {
   private Integer cpu;
   @ComputeMessageValidation.FieldRange( min = 1l )
   private Integer disk;
+  @ComputeMessageValidation.FieldRange( min = 0l )
+  private Integer diskCount;
   @ComputeMessageValidation.FieldRange( min = 1l )
   private Integer memory;
   @ComputeMessageValidation.FieldRange( min = 1l, max = 15l )
@@ -85,6 +87,14 @@ public class ModifyInstanceTypeAttributeType extends VmTypeMessage {
 
   public void setDisk( Integer disk ) {
     this.disk = disk;
+  }
+
+  public Integer getDiskCount( ) {
+    return diskCount;
+  }
+
+  public void setDiskCount( final Integer diskCount ) {
+    this.diskCount = diskCount;
   }
 
   public Integer getMemory( ) {

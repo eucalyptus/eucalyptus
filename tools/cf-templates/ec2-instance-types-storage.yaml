@@ -50,6 +50,7 @@ Resources:
       Enabled: !Ref EnableD2
       Cpu: 8
       Disk: 12000
+      DiskCount: 6
       Memory: 62464
       NetworkInterfaces: 4
   D24XLARGE:
@@ -60,6 +61,7 @@ Resources:
       Enabled: !Ref EnableD2
       Cpu: 16
       Disk: 24000
+      DiskCount: 12
       Memory: 124928
       NetworkInterfaces: 8
   D28XLARGE:
@@ -70,6 +72,7 @@ Resources:
       Enabled: !Ref EnableD2
       Cpu: 36
       Disk: 48000
+      DiskCount: 24
       Memory: 249856
       NetworkInterfaces: 8
   D2XLARGE:
@@ -80,6 +83,7 @@ Resources:
       Enabled: !Ref EnableD2
       Cpu: 4
       Disk: 6000
+      DiskCount: 3
       Memory: 31232
       NetworkInterfaces: 4
   H116XLARGE:
@@ -89,6 +93,7 @@ Resources:
       Enabled: !Ref EnableH1
       Cpu: 64
       Disk: 16000
+      DiskCount: 8
       Memory: 262144
       NetworkInterfaces: 15
   H12XLARGE:
@@ -99,6 +104,7 @@ Resources:
       Enabled: !Ref EnableH1
       Cpu: 8
       Disk: 2000
+      DiskCount: 1
       Memory: 32768
       NetworkInterfaces: 4
   H14XLARGE:
@@ -109,6 +115,7 @@ Resources:
       Enabled: !Ref EnableH1
       Cpu: 16
       Disk: 4000
+      DiskCount: 2
       Memory: 65536
       NetworkInterfaces: 8
   H18XLARGE:
@@ -119,6 +126,7 @@ Resources:
       Enabled: !Ref EnableH1
       Cpu: 32
       Disk: 8000
+      DiskCount: 4
       Memory: 131072
       NetworkInterfaces: 8
   HI14XLARGE:
@@ -128,6 +136,7 @@ Resources:
       Enabled: !Ref EnableHI1
       Cpu: 48
       Disk: 24000
+      DiskCount: 2
       Memory: 119808
       NetworkInterfaces: 8
   HS18XLARGE:
@@ -137,6 +146,7 @@ Resources:
       Enabled: !Ref EnableHS1
       Cpu: 16
       Disk: 48000
+      DiskCount: 24
       Memory: 119808
       NetworkInterfaces: 8
   I22XLARGE:
@@ -146,6 +156,7 @@ Resources:
       Enabled: !Ref EnableI2
       Cpu: 8
       Disk: 1600
+      DiskCount: 2
       Memory: 62464
       NetworkInterfaces: 4
   I24XLARGE:
@@ -156,6 +167,7 @@ Resources:
       Enabled: !Ref EnableI2
       Cpu: 16
       Disk: 3200
+      DiskCount: 4
       Memory: 124928
       NetworkInterfaces: 8
   I28XLARGE:
@@ -166,6 +178,7 @@ Resources:
       Enabled: !Ref EnableI2
       Cpu: 32
       Disk: 6400
+      DiskCount: 8
       Memory: 249856
       NetworkInterfaces: 8
   I2XLARGE:
@@ -176,6 +189,7 @@ Resources:
       Enabled: !Ref EnableI2
       Cpu: 4
       Disk: 800
+      DiskCount: 1
       Memory: 31232
       NetworkInterfaces: 4
   I316XLARGE:
@@ -185,6 +199,7 @@ Resources:
       Enabled: !Ref EnableI3
       Cpu: 64
       Disk: 15200
+      DiskCount: 8
       Memory: 499712
       NetworkInterfaces: 15
   I32XLARGE:
@@ -195,6 +210,7 @@ Resources:
       Enabled: !Ref EnableI3
       Cpu: 8
       Disk: 1900
+      DiskCount: 1
       Memory: 62464
       NetworkInterfaces: 4
   I34XLARGE:
@@ -205,6 +221,7 @@ Resources:
       Enabled: !Ref EnableI3
       Cpu: 16
       Disk: 3800
+      DiskCount: 2
       Memory: 124928
       NetworkInterfaces: 8
   I38XLARGE:
@@ -215,6 +232,7 @@ Resources:
       Enabled: !Ref EnableI3
       Cpu: 32
       Disk: 7600
+      DiskCount: 4
       Memory: 249856
       NetworkInterfaces: 8
   I3LARGE:
@@ -225,6 +243,7 @@ Resources:
       Enabled: !Ref EnableI3
       Cpu: 2
       Disk: 475
+      DiskCount: 1
       Memory: 15616
       NetworkInterfaces: 3
   I3XLARGE:
@@ -235,5 +254,6 @@ Resources:
       Enabled: !Ref EnableI3
       Cpu: 4
       Disk: 950
+      DiskCount: 1
       Memory: 31232
       NetworkInterfaces: 4

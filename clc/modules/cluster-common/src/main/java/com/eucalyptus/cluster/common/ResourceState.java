@@ -411,7 +411,7 @@ public class ResourceState {
     
     static class ZeroTypeAvailability extends VmTypeAvailability {
       ZeroTypeAvailability( ) {
-        super( VmType.create( "ZERO", -1, -1, -1, -1, false ), 0, 0 );
+        super( VmType.create( "ZERO", -1, -1, -1, -1, -1, false ), 0, 0 );
       }
       
       @Override
