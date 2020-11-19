@@ -60,6 +60,7 @@ Resources:
       Enabled: !Ref EnableC1
       Cpu: 2
       Disk: 350
+      DiskCount: 1
       Memory: 1741
       NetworkInterfaces: 2
   C1XLARGE:
@@ -70,6 +71,7 @@ Resources:
       Enabled: !Ref EnableC1
       Cpu: 8
       Disk: 1680
+      DiskCount: 4
       Memory: 7168
       NetworkInterfaces: 4
   C32XLARGE:
@@ -79,6 +81,7 @@ Resources:
       Enabled: !Ref EnableC3
       Cpu: 8
       Disk: 160
+      DiskCount: 2
       Memory: 15360
       NetworkInterfaces: 4
   C34XLARGE:
@@ -89,6 +92,7 @@ Resources:
       Enabled: !Ref EnableC3
       Cpu: 16
       Disk: 320
+      DiskCount: 2
       Memory: 30720
       NetworkInterfaces: 8
   C38XLARGE:
@@ -99,6 +103,7 @@ Resources:
       Enabled: !Ref EnableC3
       Cpu: 32
       Disk: 640
+      DiskCount: 2
       Memory: 61440
       NetworkInterfaces: 8
   C3LARGE:
@@ -109,6 +114,7 @@ Resources:
       Enabled: !Ref EnableC3
       Cpu: 2
       Disk: 32
+      DiskCount: 2
       Memory: 3840
       NetworkInterfaces: 3
   C3XLARGE:
@@ -119,6 +125,7 @@ Resources:
       Enabled: !Ref EnableC3
       Cpu: 4
       Disk: 80
+      DiskCount: 2
       Memory: 7680
       NetworkInterfaces: 4
   C42XLARGE:
@@ -236,6 +243,7 @@ Resources:
       Enabled: !Ref EnableC5D
       Cpu: 72
       Disk: 1800
+      DiskCount: 2
       Memory: 147456
       NetworkInterfaces: 15
   C5D2XLARGE:
@@ -246,6 +254,7 @@ Resources:
       Enabled: !Ref EnableC5D
       Cpu: 8
       Disk: 200
+      DiskCount: 1
       Memory: 16384
       NetworkInterfaces: 4
   C5D4XLARGE:
@@ -256,6 +265,7 @@ Resources:
       Enabled: !Ref EnableC5D
       Cpu: 16
       Disk: 400
+      DiskCount: 1
       Memory: 32768
       NetworkInterfaces: 8
   C5D9XLARGE:
@@ -266,6 +276,7 @@ Resources:
       Enabled: !Ref EnableC5D
       Cpu: 36
       Disk: 900
+      DiskCount: 1
       Memory: 73728
       NetworkInterfaces: 8
   C5DLARGE:
@@ -276,6 +287,7 @@ Resources:
       Enabled: !Ref EnableC5D
       Cpu: 2
       Disk: 50
+      DiskCount: 1
       Memory: 4096
       NetworkInterfaces: 3
   C5DXLARGE:
@@ -286,6 +298,7 @@ Resources:
       Enabled: !Ref EnableC5D
       Cpu: 4
       Disk: 100
+      DiskCount: 1
       Memory: 8192
       NetworkInterfaces: 4
   CC28XLARGE:
@@ -295,6 +308,7 @@ Resources:
       Enabled: !Ref EnableCC2
       Cpu: 32
       Disk: 3360
+      DiskCount: 4
       Memory: 61952
       NetworkInterfaces: 8
   CG14XLARGE:
@@ -304,6 +318,7 @@ Resources:
       Enabled: !Ref EnableCG1
       Cpu: 16
       Disk: 200
+      DiskCount: 1
       Memory: 12288
       NetworkInterfaces: 8
   CR18XLARGE:
@@ -313,5 +328,6 @@ Resources:
       Enabled: !Ref EnableCR1
       Cpu: 32
       Disk: 240
+      DiskCount: 2
       Memory: 249856
       NetworkInterfaces: 8

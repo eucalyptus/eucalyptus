@@ -881,7 +881,10 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
                     "euca-" ),
           Tuple.of( "com.eucalyptus.vm.VmInstances.instance_public_prefix",
                     "cloud.vmstate.instance_public_prefix",
-                    "euca-" )
+                    "euca-" ),
+          Tuple.of( "com.eucalyptus.vmtypes.VmTypes.merge_ephemeral_storage",
+                    "cloud.vmtypes.merge_ephemeral_storage",
+                    "true" )
       ) );
 
       return true;

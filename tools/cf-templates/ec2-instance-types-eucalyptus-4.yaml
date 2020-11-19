@@ -37,6 +37,7 @@ Resources:
       Enabled: !Ref EnableCompat
       Cpu: 2
       Disk: 10
+      DiskCount: 1
       Memory: 512
       NetworkInterfaces: 2
   C1XLARGE:
@@ -47,6 +48,7 @@ Resources:
       Enabled: !Ref EnableCompat
       Cpu: 2
       Disk: 10
+      DiskCount: 1
       Memory: 2048
       NetworkInterfaces: 4
   CC28XLARGE:
@@ -56,6 +58,7 @@ Resources:
       Enabled: !Ref EnableCompat
       Cpu: 16
       Disk: 120
+      DiskCount: 4
       Memory: 6144
       NetworkInterfaces: 8
   CG14XLARGE:
@@ -65,6 +68,7 @@ Resources:
       Enabled: !Ref EnableCompat
       Cpu: 16
       Disk: 200
+      DiskCount: 1
       Memory: 12288
       NetworkInterfaces: 8
   CR18XLARGE:
@@ -74,6 +78,7 @@ Resources:
       Enabled: !Ref EnableCompat
       Cpu: 16
       Disk: 240
+      DiskCount: 2
       Memory: 16384
       NetworkInterfaces: 8
   HI14XLARGE:
@@ -82,7 +87,8 @@ Resources:
       Name: hi1.4xlarge
       Enabled: !Ref EnableCompat
       Cpu: 8
-      Disk: 120
+      Disk: 2000
+      DiskCount: 2
       Memory: 6144
       NetworkInterfaces: 8
   HS18XLARGE:
@@ -92,6 +98,7 @@ Resources:
       Enabled: !Ref EnableCompat
       Cpu: 48
       Disk: 24000
+      DiskCount: 24
       Memory: 119808
       NetworkInterfaces: 8
   M1LARGE:
@@ -101,6 +108,7 @@ Resources:
       Enabled: !Ref EnableCompat
       Cpu: 2
       Disk: 10
+      DiskCount: 1
       Memory: 512
       NetworkInterfaces: 3
   M1MEDIUM:
@@ -111,6 +119,7 @@ Resources:
       Enabled: !Ref EnableCompat
       Cpu: 1
       Disk: 10
+      DiskCount: 1
       Memory: 512
       NetworkInterfaces: 2
   M1SMALL:
@@ -121,6 +130,7 @@ Resources:
       Enabled: !Ref EnableCompat
       Cpu: 1
       Disk: 5
+      DiskCount: 1
       Memory: 256
       NetworkInterfaces: 2
   M1XLARGE:
@@ -131,6 +141,7 @@ Resources:
       Enabled: !Ref EnableCompat
       Cpu: 2
       Disk: 10
+      DiskCount: 1
       Memory: 1024
       NetworkInterfaces: 4
   M22XLARGE:
@@ -140,6 +151,7 @@ Resources:
       Enabled: !Ref EnableCompat
       Cpu: 2
       Disk: 30
+      DiskCount: 1
       Memory: 4096
       NetworkInterfaces: 4
   M24XLARGE:
@@ -150,6 +162,7 @@ Resources:
       Enabled: !Ref EnableCompat
       Cpu: 8
       Disk: 60
+      DiskCount: 2
       Memory: 4096
       NetworkInterfaces: 8
   M2XLARGE:
@@ -160,6 +173,7 @@ Resources:
       Enabled: !Ref EnableCompat
       Cpu: 2
       Disk: 10
+      DiskCount: 1
       Memory: 2048
       NetworkInterfaces: 4
   M32XLARGE:
@@ -169,6 +183,7 @@ Resources:
       Enabled: !Ref EnableCompat
       Cpu: 4
       Disk: 30
+      DiskCount: 2
       Memory: 4096
       NetworkInterfaces: 4
   M3XLARGE:
@@ -179,6 +194,7 @@ Resources:
       Enabled: !Ref EnableCompat
       Cpu: 4
       Disk: 15
+      DiskCount: 1
       Memory: 2048
       NetworkInterfaces: 4
   M512XLARGE:

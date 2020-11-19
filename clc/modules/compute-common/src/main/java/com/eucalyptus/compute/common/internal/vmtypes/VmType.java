@@ -63,6 +63,7 @@ import com.eucalyptus.auth.principal.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.base.Function;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
@@ -115,7 +116,10 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
   
   @Column( name = "config_vm_type_disk" )
   private Integer            disk;
-  
+
+  @Column( name = "config_vm_type_disk_count" )
+  private Integer            diskCount;
+
   @Column( name = "config_vm_type_memory" )
   private Integer            memory;
   
@@ -149,6 +153,7 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
       final String name,
       final Integer cpu,
       final Integer disk,
+      final Integer diskCount,
       final Integer memory,
       final Integer networkInterfaces,
       final Boolean enabled
@@ -156,6 +161,7 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
     this( name );
     this.cpu = cpu;
     this.disk = disk;
+    this.diskCount = diskCount;
     this.memory = memory;
     this.networkInterfaces = networkInterfaces;
     this.enabled = enabled;
@@ -196,7 +202,18 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
   public void setDisk( final Integer disk ) {
     this.disk = disk;
   }
-  
+
+  /**
+   * A disk count of zero means there is no ephemeral disk when used with an ebs image.
+   */
+  public Integer getDiskCount( ) {
+    return diskCount;
+  }
+
+  public void setDiskCount( final Integer diskCount ) {
+    this.diskCount = diskCount;
+  }
+
   @Override
   public Integer getMemory( ) {
     return this.memory;
@@ -408,8 +425,8 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
     return new VmType.EphemeralBuilder( this );
   }
   
-  public static VmType create( String name, Integer cpu, Integer disk, Integer memory, Integer networkInterfaces, Boolean enabled ) {
-    return new VmType( name, cpu, disk, memory, networkInterfaces, enabled );
+  public static VmType create( String name, Integer cpu, Integer disk, Integer diskCount, Integer memory, Integer networkInterfaces, Boolean enabled ) {
+    return new VmType( name, cpu, disk, diskCount, memory, networkInterfaces, enabled );
   }
   
   public static VmType named( String name ) {

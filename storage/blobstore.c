@@ -4277,6 +4277,9 @@ int blockblob_clone(blockblob * bb, const blockmap * map, unsigned int map_size)
         const blockmap *m = map + i;
         const char *dev;
 
+        if (m->len_blocks <= 0)
+            continue;
+
         switch (m->source_type) {
         case BLOBSTORE_DEVICE:
             dev = m->source.device_path;

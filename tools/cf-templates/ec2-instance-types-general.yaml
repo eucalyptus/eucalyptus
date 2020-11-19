@@ -65,6 +65,7 @@ Resources:
       Enabled: !Ref EnableM1
       Cpu: 2
       Disk: 840
+      DiskCount: 2
       Memory: 7680
       NetworkInterfaces: 3
   M1MEDIUM:
@@ -75,6 +76,7 @@ Resources:
       Enabled: !Ref EnableM1
       Cpu: 1
       Disk: 410
+      DiskCount: 1
       Memory: 3840
       NetworkInterfaces: 2
   M1SMALL:
@@ -85,6 +87,7 @@ Resources:
       Enabled: !Ref EnableM1
       Cpu: 1
       Disk: 160
+      DiskCount: 1
       Memory: 1741
       NetworkInterfaces: 2
   M1XLARGE:
@@ -95,6 +98,7 @@ Resources:
       Enabled: !Ref EnableM1
       Cpu: 4
       Disk: 1680
+      DiskCount: 4
       Memory: 15360
       NetworkInterfaces: 4
   M22XLARGE:
@@ -104,6 +108,7 @@ Resources:
       Enabled: !Ref EnableM2
       Cpu: 4
       Disk: 850
+      DiskCount: 1
       Memory: 35021
       NetworkInterfaces: 4
   M24XLARGE:
@@ -114,6 +119,7 @@ Resources:
       Enabled: !Ref EnableM2
       Cpu: 8
       Disk: 1680
+      DiskCount: 2
       Memory: 70042
       NetworkInterfaces: 8
   M2XLARGE:
@@ -124,6 +130,7 @@ Resources:
       Enabled: !Ref EnableM2
       Cpu: 2
       Disk: 420
+      DiskCount: 1
       Memory: 17510
       NetworkInterfaces: 4
   M32XLARGE:
@@ -133,6 +140,7 @@ Resources:
       Enabled: !Ref EnableM3
       Cpu: 8
       Disk: 160
+      DiskCount: 2
       Memory: 30720
       NetworkInterfaces: 4
   M3LARGE:
@@ -143,6 +151,7 @@ Resources:
       Enabled: !Ref EnableM3
       Cpu: 2
       Disk: 32
+      DiskCount: 1
       Memory: 7680
       NetworkInterfaces: 3
   M3MEDIUM:
@@ -153,6 +162,7 @@ Resources:
       Enabled: !Ref EnableM3
       Cpu: 1
       Disk: 4
+      DiskCount: 1
       Memory: 3840
       NetworkInterfaces: 2
   M3XLARGE:
@@ -163,6 +173,7 @@ Resources:
       Enabled: !Ref EnableM3
       Cpu: 4
       Disk: 80
+      DiskCount: 2
       Memory: 15360
       NetworkInterfaces: 4
   M410XLARGE:
@@ -290,6 +301,7 @@ Resources:
       Enabled: !Ref EnableM5D
       Cpu: 48
       Disk: 1800
+      DiskCount: 2
       Memory: 196608
       NetworkInterfaces: 8
   M5D24XLARGE:
@@ -300,6 +312,7 @@ Resources:
       Enabled: !Ref EnableM5D
       Cpu: 96
       Disk: 3600
+      DiskCount: 4
       Memory: 393216
       NetworkInterfaces: 15
   M5D2XLARGE:
@@ -310,6 +323,7 @@ Resources:
       Enabled: !Ref EnableM5D
       Cpu: 8
       Disk: 300
+      DiskCount: 1
       Memory: 32768
       NetworkInterfaces: 4
   M5D4XLARGE:
@@ -320,6 +334,7 @@ Resources:
       Enabled: !Ref EnableM5D
       Cpu: 16
       Disk: 600
+      DiskCount: 2
       Memory: 65536
       NetworkInterfaces: 8
   M5DLARGE:
@@ -330,6 +345,7 @@ Resources:
       Enabled: !Ref EnableM5D
       Cpu: 2
       Disk: 75
+      DiskCount: 1
       Memory: 8192
       NetworkInterfaces: 3
   M5DXLARGE:
@@ -340,6 +356,7 @@ Resources:
       Enabled: !Ref EnableM5D
       Cpu: 4
       Disk: 150
+      DiskCount: 1
       Memory: 16384
       NetworkInterfaces: 4
   T1MICRO:

@@ -77,6 +77,9 @@ import com.eucalyptus.compute.common.policy.ComputePolicySpec;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.tags.TagHelper;
 import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.vmtypes.VmTypes;
+import com.eucalyptus.vmtypes.VmTypes.SizeUnit;
+import com.eucalyptus.vmtypes.VmTypes.VmTypeEphemeralStorageLayout;
 import com.google.common.base.Function;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
@@ -658,11 +661,14 @@ public class ClusterAllocator implements Runnable {
         if (!volumeAttachmentTokenMap.isEmpty()) {
           VmInstances.updateAttachmentToken( vm, volumeAttachmentTokenMap );
         }
-    	
-    	// FIXME: multiple ephemerals will result in wrong disk sizes
-    	for( String deviceName : token.getEphemeralDisks().keySet()  ) {
-    		childVmInfo.setEphemeral( 0, deviceName, (this.allocInfo.getVmType().getDisk( ) * BYTES_PER_GB), "none" );
-    	}
+
+      final VmTypeEphemeralStorageLayout ephemeralLayout =
+          VmTypes.getEphemeralLayout( this.allocInfo.getVmType(),  this.allocInfo.getBootSet( ).getMachine( ) );
+      int diskIndex = 0;
+      for( final String deviceName : token.getEphemeralDisks().keySet()  ) {
+        if ( diskIndex >= ephemeralLayout.getOtherDiskCount( ) ) break;
+        childVmInfo.addEphemeral( deviceName, ephemeralLayout.getOtherDiskSize(diskIndex, SizeUnit.B), "none" );
+      }
     	
     	LOG.debug("Instance information: " + childVmInfo.dump());
     }

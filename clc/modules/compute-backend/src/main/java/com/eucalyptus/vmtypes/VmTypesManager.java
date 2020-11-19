@@ -95,6 +95,7 @@ public class VmTypesManager {
           {
             this.setName( v.getName( ) );
             this.setDisk( v.getDisk( ) );
+            this.setDiskCount( v.getDiskCount( ) );
             this.setCpu( v.getCpu( ) );
             this.setMemory( v.getMemory( ) );
             this.setNetworkInterfaces( v.getNetworkInterfaces( ) );
@@ -134,11 +135,13 @@ public class VmTypesManager {
               PredefinedTypes defaultVmType = PredefinedTypes.valueOf( vmTypeName.toUpperCase( ).replace( ".", "" ) );
               vmType.setCpu( defaultVmType.getCpu( ) );
               vmType.setDisk( defaultVmType.getDisk( ) );
+              vmType.setDiskCount( defaultVmType.getDiskCount( ) );
               vmType.setMemory( defaultVmType.getMemory( ) );
               vmType.setNetworkInterfaces( defaultVmType.getEthernetInterfaceLimit( ) );
             } else {
               vmType.setCpu( MoreObjects.firstNonNull( request.getCpu( ), vmType.getCpu( ) ) );
               vmType.setDisk( MoreObjects.firstNonNull( request.getDisk( ), vmType.getDisk( ) ) );
+              vmType.setDiskCount( MoreObjects.firstNonNull( request.getDiskCount( ), vmType.getDiskCount( ) ) );
               vmType.setMemory( MoreObjects.firstNonNull( request.getMemory( ), vmType.getMemory( ) ) );
               vmType.setNetworkInterfaces( MoreObjects.firstNonNull( request.getNetworkInterfaces( ), vmType.getNetworkInterfaces( ) ) );
               vmType.setEnabled( MoreObjects.firstNonNull( request.getEnabled( ), vmType.getEnabled( ) ) );

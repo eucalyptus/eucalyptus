@@ -23,6 +23,9 @@ public class AWSEC2InstanceTypeProperties implements ResourceProperties {
   private Integer disk;
 
   @Property
+  private Integer diskCount;
+
+  @Property
   private Integer memory;
 
   @Property
@@ -55,6 +58,14 @@ public class AWSEC2InstanceTypeProperties implements ResourceProperties {
     this.disk = disk;
   }
 
+  public Integer getDiskCount( ) {
+    return diskCount;
+  }
+
+  public void setDiskCount( final Integer diskCount ) {
+    this.diskCount = diskCount;
+  }
+
   public Integer getMemory( ) {
     return memory;
   }
@@ -85,6 +96,7 @@ public class AWSEC2InstanceTypeProperties implements ResourceProperties {
         .add( "name", name )
         .add( "cpu", cpu )
         .add( "disk", disk )
+        .add( "diskCount", diskCount )
         .add( "memory", memory )
         .add( "networkInterfaces", networkInterfaces )
         .add( "enabled", enabled )
