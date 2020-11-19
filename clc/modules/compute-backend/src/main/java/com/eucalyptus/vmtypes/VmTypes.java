@@ -40,6 +40,7 @@
 package com.eucalyptus.vmtypes;
 
 import static com.eucalyptus.upgrade.Upgrades.Version.v4_3_0;
+import static com.eucalyptus.upgrade.Upgrades.Version.v5_0_0;
 
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
@@ -804,6 +805,29 @@ public class VmTypes {
             final Integer networkInterfaces = predefinedType.get( ).getEthernetInterfaceLimit( );
             logger.info( "Updating instance type " + type.getName( ) + " with max enis " + networkInterfaces );
             type.setNetworkInterfaces( networkInterfaces );
+          }
+        }
+        tx.commit( );
+      }
+      return true;
+    }
+  }
+
+  @EntityUpgrade( entities = VmType.class,  since = v5_0_0, value = Compute.class )
+  public enum VmType500Upgrade implements Predicate<Class<?>> {
+    INSTANCE;
+    private static Logger logger = Logger.getLogger( VmType500Upgrade.class );
+
+    @Override
+    public boolean apply( Class entityClass ) {
+      try ( final TransactionResource tx = Entities.transactionFor( VmType.class ) ) {
+        for ( final VmType type : Entities.criteriaQuery( VmType.class ).list( ) ) {
+          final Optional<PredefinedTypes> predefinedType =
+              Enums.getIfPresent( PredefinedTypes.class, type.getName( ).toUpperCase( ).replace( ".", "" ) );
+          if ( predefinedType.isPresent( ) && type.getDiskCount( ) == null ) {
+            final Integer diskCount = predefinedType.get( ).getDiskCount( );
+            logger.info( "Updating instance type " + type.getName( ) + " with disk count " + diskCount );
+            type.setDiskCount( diskCount );
           }
         }
         tx.commit( );
