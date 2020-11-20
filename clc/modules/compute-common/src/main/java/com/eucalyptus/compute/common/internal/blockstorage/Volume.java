@@ -41,6 +41,7 @@ package com.eucalyptus.compute.common.internal.blockstorage;
 
 import java.util.Collection;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
@@ -167,7 +168,13 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
         return "unavailable";
     }
   }
-  
+
+  public synchronized long getSplitTime( final TimeUnit units ) {
+    final long time = System.currentTimeMillis( );
+    final long split = time - super.getLastUpdateTimestamp( ).getTime( );
+    return units.convert( split, TimeUnit.MILLISECONDS );
+  }
+
   public com.eucalyptus.compute.common.Volume morph( final com.eucalyptus.compute.common.Volume vol ) {
     vol.setAvailabilityZone( this.getPartition( ) );
     vol.setCreateTime( this.getCreationTimestamp( ) );

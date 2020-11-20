@@ -67,6 +67,8 @@ import com.eucalyptus.compute.common.internal.blockstorage.State;
 import com.eucalyptus.compute.common.internal.blockstorage.Volume;
 import com.eucalyptus.compute.common.internal.blockstorage.VolumeTag;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
@@ -92,8 +94,15 @@ import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.cloud.VolumeSizeExceededException;
 
+@ConfigurableClass( root = "cloud.volumes",
+    description = "Parameters controlling storage volumes." )
 public class Volumes {
-  private static Logger     LOG                   = Logger.getLogger( Volumes.class );
+  private static final Logger     LOG                   = Logger.getLogger( Volumes.class );
+
+  @ConfigurableField( description = "Amount of time (in minutes) that a deleted volume will continue to be reported.",
+      initial = "60" )
+  public static Integer   DELETED_TIME                  = 60;
+
 
   @QuantityMetricFunction( VolumeMetadata.class )
   public enum CountVolumes implements Function<OwnerFullName, Long> {

@@ -183,6 +183,10 @@ public class VolumeUpdateEventListener implements EventListener<ClockTick>, Call
             size = Integer.parseInt( storageVolume.getSize( ) );
           }
           if ( newState.isPresent( ) ) {
+            if ( State.ANNIHILATED == newState.get( ) && isDeleteExpired( volumeToUpdate ) ) {
+              Entities.delete( volumeToUpdate );
+              return volumeToUpdate;
+            }
             volumeState = newState.get( );
           }
           volumeToUpdate.setState( volumeState );
@@ -197,10 +201,6 @@ public class VolumeUpdateEventListener implements EventListener<ClockTick>, Call
             LOG.error( ex );
             Logs.extreme( ).error( ex, ex );
           }
-          //TODO:GRZE: expire deleted/failed volumes in the future.
-          //            if ( State.ANNIHILATED.equals( v.getState( ) ) && State.ANNIHILATED.equals( v.getState( ) ) && v.lastUpdateMillis( ) > VOLUME_DELETE_TIMEOUT ) {
-          //              Entities.delete( v );
-          //            }
           buf.append( " Resulting new-state: [" ).append( volumeToUpdate.getState( ) ).append("]");
           LOG.debug( buf.toString( ) );
           return volumeToUpdate;
@@ -233,11 +233,17 @@ public class VolumeUpdateEventListener implements EventListener<ClockTick>, Call
     }
 
     if ( volume.getSize( ) <= 0 ||
+        isDeleteExpired( volume ) ||
         ( newState.isPresent( ) && newState.get( ) != volume.getState( ) ) ) {
       Entities.asTransaction( Volume.class, updateVolume ).apply( volume.getDisplayName( ) );
     } else {
       LOG.debug( buf.toString( ) + " unchanged" );
     }
+  }
+
+  static boolean isDeleteExpired( final Volume volume ) {
+    return State.ANNIHILATED == volume.getState( )
+        && volume.getSplitTime( TimeUnit.MINUTES ) > Volumes.DELETED_TIME;
   }
 
   static Optional<State> calculateState( final Volume volumeToUpdate, final String storageStatus ) {
