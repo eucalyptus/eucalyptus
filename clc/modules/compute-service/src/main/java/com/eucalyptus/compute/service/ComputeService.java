@@ -845,7 +845,6 @@ public class ComputeService {
         // build response volumes
         for ( final Volume foundVol : filteredVolumes ) {
           if ( State.ANNIHILATED.equals( foundVol.getState( ) ) ) {
-            Entities.delete( foundVol );
             if ( filterPredicate.apply( foundVol ) ) {
               replyVolumes.add( foundVol.morph( new com.eucalyptus.compute.common.Volume( ) ) );
             }
@@ -923,9 +922,6 @@ public class ComputeService {
             volumes,
             Predicates.and( new TrackingPredicate<>( volumeIds ), requestedAndAccessible ) );
         for ( final Volume foundVol : filteredVolumes ) {
-          if ( State.ANNIHILATED.equals( foundVol.getState( ) ) ) {
-            Entities.delete( foundVol );
-          }
           replyVolumes.add( volumeTransform.apply( foundVol ) );
         }
         return replyVolumes;
