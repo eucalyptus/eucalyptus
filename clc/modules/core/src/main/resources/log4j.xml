@@ -259,6 +259,9 @@
   <category name="org.apache.commons.httpclient">
     <priority value="ERROR" />
   </category>
+  <category name="org.apache.http">
+    <priority value="INFO" />
+  </category>
   <category name="httpclient.wire">
     <priority value="ERROR" />
   </category>
