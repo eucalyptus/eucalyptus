@@ -62,7 +62,9 @@ public interface DatabaseBootstrapper {
   void destroy( ) throws Exception;
   
   boolean isRunning( );
-  
+
+  boolean isLocal( );
+
   void hup( );
 
   List<String> listDatabases( );

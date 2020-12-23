@@ -965,7 +965,11 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
     }
     true
   }
-  
+
+  boolean isLocal( ) {
+    true
+  }
+
   void hup( ) {
     if( !stop() ) {
       LOG.fatal("Unable to stop the postgresql server")

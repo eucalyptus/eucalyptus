@@ -94,10 +94,11 @@ try {
           "hibernate.cache.use_query_cache": "false",
           "hibernate.discriminator.ignore_explicit_for_joined": "true", // HHH-6911
     ]
+    final String databaseHost = System.getProperty( 'euca.db.host', '127.0.0.1' )
     for ( String ctx : PersistenceContexts.list( ) ) {
       final String databaseName = PersistenceContexts.toDatabaseName( ).apply( ctx )
       final String schemaName = PersistenceContexts.toSchemaName( ).apply( ctx )
-      final String ctxUrl = "jdbc:${ServiceUris.remote(Database.class, InetAddress.getByName('127.0.0.1'), databaseName)}";
+      final String ctxUrl = "jdbc:${ServiceUris.remote(Database.class, InetAddress.getByName(databaseHost), databaseName)}";
       props.put( "hibernate.connection.url", ctxUrl );
       if ( schemaName != null ) props.put( 'hibernate.default_schema', schemaName )
       final PersistenceContextConfiguration config = new PersistenceContextConfiguration(

@@ -150,6 +150,9 @@ JAVA_OPTS="${JAVA_OPTS} -Deuca.db.home=${EUCA_DB_HOME}"
 if [ -n "${EUCA_DB_SUFFIX}" ] ; then
   JAVA_OPTS="${JAVA_OPTS} -Deuca.db.suffix=${EUCA_DB_SUFFIX}"
 fi
+if [ -n "${CLOUD_DB_HOST}" ] ; then
+  JAVA_OPTS="${JAVA_OPTS} -Deuca.db.script=setup_extdb -Deuca.db.host=${CLOUD_DB_HOST} -Deuca.db.pass=${CLOUD_DB_PASSWORD}"
+fi
 JAVA_OPTS="${JAVA_OPTS} -Deuca.version=${EUCA_VERSION}"
 if [ -n "${EUCA_EXTRA_VERSION}" ] ; then
   JAVA_OPTS="${JAVA_OPTS} -Deuca.extra_version=${EUCA_EXTRA_VERSION}"

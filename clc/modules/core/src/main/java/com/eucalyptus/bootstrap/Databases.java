@@ -133,6 +133,13 @@ public class Databases {
     }
   }
 
+  /**
+   * Eucalyptus host(s) required for database
+   */
+  public static boolean hosted( ) {
+    return getBootstrapper().isLocal();
+  }
+
   static boolean shouldInitialize( ) {//GRZE:WARNING:HACKHACKHACK do not duplicate pls thanks.
     final String context = "eucalyptus_config";
     final String databaseName = PersistenceContexts.toDatabaseName( ).apply( context );
@@ -255,7 +262,7 @@ public class Databases {
     
     public ScriptedDbBootstrapper( ) {
       try {
-        this.db = Groovyness.newInstance( "setup_db" );
+        this.db = Groovyness.newInstance( System.getProperty("euca.db.script", "setup_db") );
       } catch ( ScriptExecutionFailedException ex ) {
         LOG.error( ex, ex );
       }
@@ -287,7 +294,12 @@ public class Databases {
     public boolean isRunning( ) {
       return this.db.isRunning( );
     }
-    
+
+    @Override
+    public boolean isLocal( ) {
+      return this.db.isLocal( );
+    }
+
     @Override
     public void hup( ) {
       this.db.hup( );

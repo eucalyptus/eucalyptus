@@ -49,13 +49,14 @@ import com.eucalyptus.component.ServiceUris
 import com.eucalyptus.component.id.Database
 
 
-Logger LOG = Logger.getLogger( 'com.eucalyptus.scripts.setup_dbpool' );
+Logger LOG = Logger.getLogger( 'com.eucalyptus.scripts.setup_dbpool' )
 
-ClassLoader.getSystemClassLoader().loadClass('org.logicalcobwebs.proxool.ProxoolDriver');
+ClassLoader.getSystemClassLoader().loadClass('org.logicalcobwebs.proxool.ProxoolDriver')
 
-String pool_db_driver = Databases.driverName;
+String pool_db_driver = Databases.driverName
 String db_user = Databases.userName
 String db_pass = Databases.password
+Boolean hosted = Databases.hosted()
 
 default_pool_props = [
       'proxool.simultaneous-build-throttle': '1000000',
@@ -74,8 +75,8 @@ default_pool_props = [
 
 def setupDbPool = { String db_name ->
   // Setup proxool
-  proxool_config = new Properties();
-  proxool_config.putAll(default_pool_props);
+  proxool_config = new Properties()
+  proxool_config.putAll(default_pool_props)
   if ( DatabaseNamingStrategy.SHARED_DATABASE_NAME == db_name ) {
     // properties for database pool shared between contexts
     proxool_config.setProperty( 'proxool.minimum-connection-count', '16' )
@@ -85,22 +86,28 @@ def setupDbPool = { String db_name ->
     proxool_config.setProperty( 'proxool.maximum-connection-count', '8' )
     proxool_config.setProperty( 'proxool.prototype-count', '1' )
   }
-  Host host = BootstrapArgs.cloudController ? 
-      Hosts.localHost( ) : 
-      Hosts.listActiveDatabases( ).get( 0 )
-  String url = "proxool.${db_name}:${pool_db_driver}:jdbc:${ServiceUris.remote(Database.class,host.isLocalHost()?InetAddress.getByName('127.0.0.1'):host.getBindAddress( ), db_name ).toASCIIString( )}";
+  String url
+  if ( hosted ) {
+    Host host = BootstrapArgs.cloudController ?
+        Hosts.localHost( ) :
+        Hosts.listActiveDatabases( ).get( 0 )
+    url = "proxool.${db_name}:${pool_db_driver}:jdbc:${ServiceUris.remote(Database.class,host.isLocalHost()?InetAddress.getByName('127.0.0.1'):host.getBindAddress( ), db_name ).toASCIIString( )}"
+  } else {
+    String host = System.getProperty( 'euca.db.host', '127.0.0.1' )
+    url = "proxool.${db_name}:${pool_db_driver}:jdbc:${ServiceUris.remote(Database.class,InetAddress.getByName(host), db_name ).toASCIIString( )}"
+  }
   LOG.info( "${db_name} Preparing connection pool:     ${url}" )
 
   // Register proxool
   LOG.trace( proxool_config )
-  ProxoolFacade.registerConnectionPool(url, proxool_config);
+  ProxoolFacade.registerConnectionPool(url, proxool_config)
   if ( 'database_events' != db_name ) ProxoolFacade.addStateListener(
       db_name, 
       { Integer state -> Databases.setVolatile( 
           state == StateListenerIF.STATE_DOWN ||
           state == StateListenerIF.STATE_OVERLOADED ) 
       } as StateListenerIF )
-  ProxoolFacade.disableShutdownHook();
+  ProxoolFacade.disableShutdownHook()
 }
 
 Databases.databases( ).each{ String database ->
