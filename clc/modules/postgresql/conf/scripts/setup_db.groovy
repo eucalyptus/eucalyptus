@@ -105,7 +105,7 @@ class PostgresqlBootstrapper extends Bootstrapper.Simple implements DatabaseBoot
   private static final String PG_STOP = 'stop'
   private static final String PG_STATUS = 'status'
   private static final String PG_MODE = '-mf'
-  private static final String PG_PORT = 8777
+  private static final Integer PG_PORT = 8777
   private static final String PG_HOST = BootstrapArgs.isInitializeSystem() || BootstrapArgs.isUpgradeSystem() ?
       '127.0.0.1' :
       System.getProperty( 'euca.db.host', "127.0.0.1,${Internets.localHostAddress( )}")
@@ -574,7 +574,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
           LOG.info( "Updating database password" )
           String oldPassword = Signatures.SHA256withRSA.trySign( Eucalyptus.class, "eucalyptus".getBytes( ) )
           try {
-            withConnection( getConnectionInternal( InetAddress.getByName('127.0.0.1'), 'postgres', null, userName, oldPassword ) ) { Sql sql ->
+            withConnection( getConnectionInternal( new InetSocketAddress( InetAddress.getByName( '127.0.0.1' ), PG_PORT ), 'postgres', null, userName, oldPassword ) ) { Sql sql ->
               sql.execute( "ALTER ROLE " + getUserName( ) + " WITH PASSWORD \'" + getPassword( ) + "\'" )
             }
             dbExecute( 'postgres', PG_TEST_QUERY )
@@ -738,15 +738,15 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   }
 
   Sql getConnection( String database, String schema ) throws Exception {
-    getConnectionInternal( InetAddress.getByName('127.0.0.1'), database, schema )
+    getConnectionInternal( new InetSocketAddress( InetAddress.getByName( '127.0.0.1' ), PG_PORT ), database, schema )
   }
 
-  private Sql getConnectionInternal( InetAddress host, String database, String schema ) throws Exception {
-    getConnectionInternal( host, database, schema, userName, password )
+  private Sql getConnectionInternal( InetSocketAddress address, String database, String schema ) throws Exception {
+    getConnectionInternal( address, database, schema, userName, password )
   }
 
-  private Sql getConnectionInternal( InetAddress host, String database, String schema, String connUserName, String connPassword ) throws Exception {
-    String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, host, database ) )
+  private Sql getConnectionInternal( InetSocketAddress address, String database, String schema, String connUserName, String connPassword ) throws Exception {
+    String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, address, database ) )
     Sql sql = Sql.newInstance( url, connUserName, connPassword, driverName )
     if ( schema ) sql.execute( "SET search_path TO ${schema}" as String )
     sql
@@ -779,16 +779,16 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   
   @Override
   List<String> listDatabases( ) {
-    listDatabases( InetAddress.getByName('127.0.0.1') )
+    listDatabases( new InetSocketAddress( InetAddress.getByName( '127.0.0.1' ), PG_PORT ) )
   }
 
   @SuppressWarnings("GroovyAssignabilityCheck")
   @Override
-  List<String> listDatabases( InetAddress host ) {
+  List<String> listDatabases( InetSocketAddress address ) {
     List<String> lines = []
     Sql sql = null
     try {
-      sql = getConnectionInternal( host, "postgres", null )
+      sql = getConnectionInternal( address, "postgres", null )
       sql.query("select datname from pg_database") { ResultSet rs ->
         while (rs.next()) lines.add(rs.toRowResult().datname)
       }
@@ -800,16 +800,16 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
 
   @Override
   List<String> listSchemas( String database ) {
-    listSchemas( InetAddress.getByName('127.0.0.1'), database )
+    listSchemas( new InetSocketAddress( InetAddress.getByName( '127.0.0.1' ), PG_PORT ), database )
   }
 
   @SuppressWarnings("GroovyAssignabilityCheck")
   @Override
-  List<String> listSchemas( InetAddress host, String database ) {
+  List<String> listSchemas( InetSocketAddress address, String database ) {
     List<String> lines = []
     Sql sql = null
     try {
-      sql = getConnectionInternal( host, database, null )
+      sql = getConnectionInternal( address, database, null )
       sql.connection.metaData.schemas.with{ ResultSet rs ->
         while (rs.next()) lines.add(rs.toRowResult().table_schem )
       }

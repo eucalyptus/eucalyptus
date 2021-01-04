@@ -172,15 +172,15 @@ class ExternalPostgresqlBootstrapper extends Bootstrapper.Simple implements Data
   }
 
   Sql getConnection( String database, String schema ) throws Exception {
-    getConnectionInternal( InetAddress.getByName(PG_HOST), database, schema )
+    getConnectionInternal( new InetSocketAddress( InetAddress.getByName( PG_HOST ), PG_PORT ), database, schema )
   }
 
-  private Sql getConnectionInternal( InetAddress host, String database, String schema ) throws Exception {
-    getConnectionInternal( host, database, schema, userName, password )
+  private Sql getConnectionInternal( InetSocketAddress address, String database, String schema ) throws Exception {
+    getConnectionInternal( address, database, schema, userName, password )
   }
 
-  private Sql getConnectionInternal( InetAddress host, String database, String schema, String connUserName, String connPassword ) throws Exception {
-    String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, host, database ) )
+  private Sql getConnectionInternal( InetSocketAddress address, String database, String schema, String connUserName, String connPassword ) throws Exception {
+    String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, address, database ) )
     Sql sql = Sql.newInstance( url, connUserName, connPassword, driverName )
     if ( schema ) sql.execute( "SET search_path TO ${schema}" as String )
     sql
@@ -213,16 +213,16 @@ class ExternalPostgresqlBootstrapper extends Bootstrapper.Simple implements Data
 
   @Override
   List<String> listDatabases( ) {
-    listDatabases( InetAddress.getByName(PG_HOST) )
+    listDatabases( new InetSocketAddress( InetAddress.getByName( PG_HOST ), PG_PORT ) )
   }
 
   @SuppressWarnings("GroovyAssignabilityCheck")
   @Override
-  List<String> listDatabases( InetAddress host ) {
+  List<String> listDatabases( InetSocketAddress address ) {
     List<String> lines = []
     Sql sql = null
     try {
-      sql = getConnectionInternal( host, "postgres", null )
+      sql = getConnectionInternal( address, "postgres", null )
       sql.query("select datname from pg_database") { ResultSet rs ->
         while (rs.next()) lines.add(rs.toRowResult().datname)
       }
@@ -234,16 +234,16 @@ class ExternalPostgresqlBootstrapper extends Bootstrapper.Simple implements Data
 
   @Override
   List<String> listSchemas( String database ) {
-    listSchemas( InetAddress.getByName(PG_HOST), database )
+    listSchemas( new InetSocketAddress( InetAddress.getByName( PG_HOST ), PG_PORT ), database )
   }
 
   @SuppressWarnings("GroovyAssignabilityCheck")
   @Override
-  List<String> listSchemas( InetAddress host, String database ) {
+  List<String> listSchemas( InetSocketAddress address, String database ) {
     List<String> lines = []
     Sql sql = null
     try {
-      sql = getConnectionInternal( host, database, null )
+      sql = getConnectionInternal( address, database, null )
       sql.connection.metaData.schemas.with{ ResultSet rs ->
         while (rs.next()) lines.add(rs.toRowResult().table_schem )
       }

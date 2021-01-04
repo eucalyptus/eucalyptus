@@ -41,6 +41,8 @@ import com.eucalyptus.bootstrap.BootstrapArgs
 import com.eucalyptus.bootstrap.Host
 import com.eucalyptus.bootstrap.Hosts
 import com.eucalyptus.component.annotation.DatabaseNamingStrategy
+import com.google.common.base.MoreObjects
+import com.google.common.primitives.Ints
 import org.apache.log4j.Logger
 import org.logicalcobwebs.proxool.ProxoolFacade
 import org.logicalcobwebs.proxool.StateListenerIF
@@ -94,7 +96,8 @@ def setupDbPool = { String db_name ->
     url = "proxool.${db_name}:${pool_db_driver}:jdbc:${ServiceUris.remote(Database.class,host.isLocalHost()?InetAddress.getByName('127.0.0.1'):host.getBindAddress( ), db_name ).toASCIIString( )}"
   } else {
     String host = System.getProperty( 'euca.db.host', '127.0.0.1' )
-    url = "proxool.${db_name}:${pool_db_driver}:jdbc:${ServiceUris.remote(Database.class,InetAddress.getByName(host), db_name ).toASCIIString( )}"
+    Integer port = MoreObjects.firstNonNull(Ints.tryParse(System.getProperty( 'euca.db.port', '' )), 8777)
+    url = "proxool.${db_name}:${pool_db_driver}:jdbc:${ServiceUris.remote(Database.class, new InetSocketAddress(InetAddress.getByName(host), port), db_name ).toASCIIString( )}"
   }
   LOG.info( "${db_name} Preparing connection pool:     ${url}" )
 

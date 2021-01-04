@@ -40,7 +40,7 @@
 package com.eucalyptus.bootstrap;
 
 import groovy.sql.Sql;
-import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
 
@@ -69,11 +69,11 @@ public interface DatabaseBootstrapper {
 
   List<String> listDatabases( );
 
-  List<String> listDatabases( InetAddress host );
+  List<String> listDatabases( InetSocketAddress address );
 
   List<String> listSchemas( String database );
 
-  List<String> listSchemas( InetAddress host, String database );
+  List<String> listSchemas( InetSocketAddress address, String database );
 
   List<String> listTables( String database, String schema );
 

@@ -40,6 +40,7 @@
 package com.eucalyptus.component;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
@@ -306,11 +307,19 @@ public class ServiceUris {
   public static URI internal( ComponentId compId, final InetAddress host, Integer port, String... pathParts ) {
     return makeInternal( compId, host, port, pathParts ).get( );
   }
-  
+
+  public static URI remote(final Class<? extends ComponentId> idClass, final InetSocketAddress address, String... pathParts ) {
+    return remote( Components.lookup( idClass ), address, pathParts );
+  }
+
+  public static URI remote( final Component comp, final InetSocketAddress address, String... pathParts ) {
+    return remote( comp.getComponentId( ), address, pathParts );
+  }
+
   public static URI remote( final Class<? extends ComponentId> idClass, final InetAddress host, String... pathParts ) {
     return remote( Components.lookup( idClass ), host, pathParts );
   }
-  
+
   public static URI remote( Component comp, final InetAddress host, String... pathParts ) {
     return remote( comp.getComponentId( ), host, pathParts );
   }
@@ -330,7 +339,11 @@ public class ServiceUris {
   public static URI remote( ServiceConfiguration config, String... pathParts ) {
     return remote( config.getComponentId( ), config.getInetAddress( ), config.getPort( ), pathParts );
   }
-  
+
+  public static URI remote( ComponentId compId, final InetSocketAddress address, String... pathParts ) {
+    return remote( compId, address.getAddress(), address.getPort( ), pathParts );
+  }
+
   public static URI remote( ComponentId compId, final InetAddress host, String... pathParts ) {
     return remote( compId, host, compId.getPort( ), pathParts );
   }
