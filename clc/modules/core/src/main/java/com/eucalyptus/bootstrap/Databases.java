@@ -52,6 +52,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.ServiceUris;
@@ -96,7 +97,21 @@ public class Databases {
   public enum Events {
     INSTANCE;
     public static Sql getConnection( ) throws Exception {
-      return Databases.getBootstrapper( ).getConnection( INSTANCE.getName( ), null );
+      return Databases.getBootstrapper( ).getConnection( INSTANCE.getDatabase( ), INSTANCE.getSchema( ) );
+    }
+
+    @Nullable
+    public String getDatabase( ) {
+      return getBootstrapper( ).isLocal( ) ?
+          getName( ) :
+          null;
+    }
+
+    @Nullable
+    public String getSchema( ) {
+      return getBootstrapper( ).isLocal( ) ?
+          null :
+          getName( );
     }
 
     public String getName( ) {
@@ -104,11 +119,22 @@ public class Databases {
     }
 
     public static void create( ) {
-      if ( !getBootstrapper( ).listDatabases( ).contains( INSTANCE.getName( ) ) ) {
-        try {
-          getBootstrapper( ).createDatabase( INSTANCE.getName( ) );
-        } catch ( Exception ex ) {
-          LOG.error( ex , ex );
+      final DatabaseBootstrapper bootstrapper = getBootstrapper();
+      if ( bootstrapper.isLocal( ) ) {
+        if ( !bootstrapper.listDatabases( ).contains( INSTANCE.getName( ) ) ) {
+          try {
+            bootstrapper.createDatabase( INSTANCE.getName( ) );
+          } catch ( Exception ex ) {
+            LOG.error( ex , ex );
+          }
+        }
+      } else {
+        if ( !bootstrapper.listSchemas( null ).contains( INSTANCE.getName( ) ) ) {
+          try {
+            bootstrapper.createSchema( null, INSTANCE.getName( ) );
+          } catch ( Exception ex ) {
+            LOG.error( ex , ex );
+          }
         }
       }
     }
@@ -350,8 +376,8 @@ public class Databases {
     }
 
     @Override
-    public List<String> listDatabases() {
-      return db.listDatabases();
+    public List<String> listDatabases( ) {
+      return db.listDatabases( );
     }
 
     @Override
@@ -372,6 +398,11 @@ public class Databases {
     @Override
     public List<String> listTables( final String database, final String schema ) {
       return db.listTables( database, schema );
+    }
+
+    @Override
+    public void createSchema( final String database, final String schema ) {
+      db.createSchema( database, schema );
     }
 
     @Override

@@ -97,6 +97,8 @@ public interface DatabaseBootstrapper {
                            String destinationDatabase,
                            String destinationSchema );
 
+  void createSchema( String database, String schema );
+
   Sql getConnection( String context ) throws Exception;
 
   Sql getConnection( String database, String schema ) throws Exception;

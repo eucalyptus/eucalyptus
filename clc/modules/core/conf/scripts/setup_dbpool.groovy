@@ -116,4 +116,6 @@ def setupDbPool = { String db_name ->
 Databases.databases( ).each{ String database ->
   setupDbPool( database )
 }
-setupDbPool('database_events')
+if ( hosted ) {
+  setupDbPool( 'database_events' )
+}

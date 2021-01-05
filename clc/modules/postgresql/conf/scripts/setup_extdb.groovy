@@ -62,7 +62,7 @@ class ExternalPostgresqlBootstrapper extends Bootstrapper.Simple implements Data
     try {
       initDBFile()
 
-      if ( !createSchema( ) ) {
+      if ( !createSchemas( ) ) {
         throw new RuntimeException("Unable to create the eucalyptus database tables")
       }
 
@@ -92,7 +92,7 @@ class ExternalPostgresqlBootstrapper extends Bootstrapper.Simple implements Data
         Pair.robuilder( PersistenceContexts.toDatabaseName( ), PersistenceContexts.toSchemaName( ) ) )
   }
 
-  private boolean createSchema( ) throws Exception {
+  private boolean createSchemas( ) throws Exception {
     final Set<String> createdDatabases = Sets.newHashSet( )
     final Set<Pair<String,String>> createdSchemas = Sets.newHashSet( )
     for ( Pair<String,Optional<String>> databasePair : databases( ) ) {
@@ -147,7 +147,7 @@ class ExternalPostgresqlBootstrapper extends Bootstrapper.Simple implements Data
       throw new Exception("Unable to start postgresql")
     }
 
-    if ( !createSchema( ) ) {
+    if ( !createSchemas( ) ) {
       throw new Exception("Unable to create the eucalyptus database tables")
     }
 
@@ -180,7 +180,7 @@ class ExternalPostgresqlBootstrapper extends Bootstrapper.Simple implements Data
   }
 
   private Sql getConnectionInternal( InetSocketAddress address, String database, String schema, String connUserName, String connPassword ) throws Exception {
-    String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, address, database ) )
+    String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, address, database?:'eucalyptus_shared' ) )
     Sql sql = Sql.newInstance( url, connUserName, connPassword, driverName )
     if ( schema ) sql.execute( "SET search_path TO ${schema}" as String )
     sql
@@ -267,6 +267,21 @@ class ExternalPostgresqlBootstrapper extends Bootstrapper.Simple implements Data
       sql?.close()
     }
     lines
+  }
+
+
+  @Override
+  void createSchema( String database, String schema ) {
+    LOG.info("Creating schema ${schema} in database ${database?:'DEFAULT'}")
+    try {
+      dbExecute(database, "CREATE SCHEMA \"${schema}\" AUTHORIZATION \"${userName}\"" )
+    } catch( Exception ex ) {
+      if ( !ex.getMessage().contains("already exists") ) {
+        LOG.error( "Creating schema ${schema} failed because of: ${ex.message}" )
+        throw ex
+      }
+    }
+    LOG.info("Scheama ${schema} created successfully")
   }
 
   @Override
