@@ -7,3 +7,4 @@
 -XX:+HeapDumpOnOutOfMemoryError
 -Djava.net.preferIPv4Stack=true
 -Djava.awt.headless=true
+-Djdk.tls.ephemeralDHKeySize=matched
