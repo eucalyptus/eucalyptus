@@ -319,6 +319,11 @@
     <mapping name="AccelerateConfiguration" class="com.eucalyptus.storage.msgs.s3.AccelerateConfiguration">
     </mapping>
 
+    <!-- BUCKET NOTIFICATION CONFIGURATION  -->
+
+    <mapping name="NotificationConfiguration" class="com.eucalyptus.storage.msgs.s3.NotificationConfiguration">
+    </mapping>
+
     <!-- BUCKET REQUESTER PAYS  -->
 
     <mapping name="RequestPaymentConfiguration" class="com.eucalyptus.storage.msgs.s3.RequestPaymentConfiguration">

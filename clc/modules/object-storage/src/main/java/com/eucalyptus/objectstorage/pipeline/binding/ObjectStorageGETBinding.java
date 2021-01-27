@@ -75,6 +75,7 @@ public class ObjectStorageGETBinding extends ObjectStorageRESTBinding {
     .put(BUCKET + HttpMethod.GET + BucketParameter.cors.toString(), "GetBucketCors")
     .put(BUCKET + HttpMethod.GET + BucketParameter.policy.toString(), "GetBucketPolicy")
     .put(BUCKET + HttpMethod.GET + BucketParameter.accelerate.toString(), "GetBucketAccelerateConfiguration")
+    .put(BUCKET + HttpMethod.GET + BucketParameter.notification.toString(), "GetBucketNotificationConfiguration")
     .put(BUCKET + HttpMethod.GET + BucketParameter.requestPayment.toString().toLowerCase(), "GetBucketRequestPayment")
 
     // Multipart uploads
@@ -100,8 +101,6 @@ public class ObjectStorageGETBinding extends ObjectStorageRESTBinding {
 
   private static final ImmutableMap<String, String> UNSUPPORTED_OPS = ImmutableMap.<String,String>builder( )
     // Bucket operations
-    // Notification
-    .put(BUCKET + HttpMethod.GET + BucketParameter.notification.toString(), "GET Bucket notification")
     // Website
     .put(BUCKET + HttpMethod.GET + BucketParameter.website.toString(), OP_GET_BUCKET_WEBSITE)
     // Metrics

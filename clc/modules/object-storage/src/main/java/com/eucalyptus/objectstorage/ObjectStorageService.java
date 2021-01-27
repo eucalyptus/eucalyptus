@@ -66,6 +66,8 @@ import com.eucalyptus.objectstorage.msgs.GetBucketLocationResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLocationType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLoggingStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLoggingStatusType;
+import com.eucalyptus.objectstorage.msgs.GetBucketNotificationConfigurationResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketNotificationConfigurationType;
 import com.eucalyptus.objectstorage.msgs.GetBucketPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketPolicyType;
 import com.eucalyptus.objectstorage.msgs.GetBucketRequestPaymentResponseType;
@@ -225,6 +227,8 @@ public interface ObjectStorageService {
   DeleteMultipleObjectsResponseType deleteMultipleObjects(DeleteMultipleObjectsType request) throws S3Exception;
 
   GetBucketAccelerateConfigurationResponseType getBucketAccelerateConfiguration(GetBucketAccelerateConfigurationType request) throws S3Exception;
+
+  GetBucketNotificationConfigurationResponseType getBucketNotificationConfiguration(GetBucketNotificationConfigurationType request) throws S3Exception;
 
   GetBucketRequestPaymentResponseType getBucketRequestPayment(GetBucketRequestPaymentType request) throws S3Exception;
 }

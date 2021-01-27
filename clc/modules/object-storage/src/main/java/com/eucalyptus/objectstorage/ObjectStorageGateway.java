@@ -41,7 +41,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 
 import javax.annotation.Nonnull;
@@ -153,6 +152,8 @@ import com.eucalyptus.objectstorage.msgs.GetBucketLocationResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLocationType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLoggingStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLoggingStatusType;
+import com.eucalyptus.objectstorage.msgs.GetBucketNotificationConfigurationResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketNotificationConfigurationType;
 import com.eucalyptus.objectstorage.msgs.GetBucketPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketPolicyType;
 import com.eucalyptus.objectstorage.msgs.GetBucketRequestPaymentResponseType;
@@ -247,6 +248,7 @@ import com.eucalyptus.storage.msgs.s3.LifecycleConfiguration;
 import com.eucalyptus.storage.msgs.s3.LifecycleRule;
 import com.eucalyptus.storage.msgs.s3.ListAllMyBucketsList;
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
+import com.eucalyptus.storage.msgs.s3.NotificationConfiguration;
 import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.storage.msgs.s3.PreflightRequest;
 import com.eucalyptus.storage.msgs.s3.PreflightResponse;
@@ -2531,6 +2533,14 @@ public class ObjectStorageGateway implements ObjectStorageService {
     final GetBucketAccelerateConfigurationResponseType reply = request.getReply( );
     getBucketAndCheckAuthorization( request );
     reply.setAccelerateConfiguration( new AccelerateConfiguration( ) );
+    return reply;
+  }
+
+  @Override
+  public GetBucketNotificationConfigurationResponseType getBucketNotificationConfiguration( final GetBucketNotificationConfigurationType request ) throws S3Exception {
+    final GetBucketNotificationConfigurationResponseType reply = request.getReply( );
+    getBucketAndCheckAuthorization( request );
+    reply.setNotificationConfiguration( new NotificationConfiguration( ) );
     return reply;
   }
 

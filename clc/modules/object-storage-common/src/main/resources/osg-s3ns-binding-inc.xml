@@ -796,6 +796,14 @@
         usage="optional"/>
   </mapping>
 
+  <mapping name="GetBucketNotificationConfiguration"
+           class="com.eucalyptus.objectstorage.msgs.GetBucketNotificationConfigurationType"
+           extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
+    <structure
+        map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
+        usage="optional"/>
+  </mapping>
+
   <mapping name="GetBucketRequestPayment"
            class="com.eucalyptus.objectstorage.msgs.GetBucketRequestPaymentType"
            extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
