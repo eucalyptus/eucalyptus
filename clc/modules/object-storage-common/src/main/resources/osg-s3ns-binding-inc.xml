@@ -786,5 +786,23 @@
            class="com.eucalyptus.objectstorage.msgs.DeleteBucketPolicyResponseType">
   </mapping>
 
+  <!-- BUCKET OTHER -->
+
+  <mapping name="GetBucketAccelerateConfiguration"
+           class="com.eucalyptus.objectstorage.msgs.GetBucketAccelerateConfigurationType"
+           extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
+    <structure
+        map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
+        usage="optional"/>
+  </mapping>
+
+  <mapping name="GetBucketRequestPayment"
+           class="com.eucalyptus.objectstorage.msgs.GetBucketRequestPaymentType"
+           extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
+    <structure
+        map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
+        usage="optional"/>
+  </mapping>
+
 </binding>
 

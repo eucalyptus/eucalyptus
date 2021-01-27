@@ -313,4 +313,16 @@
         <value name="Code" field="code"/>
         <value name="Message" field="message"/>
     </mapping>
+
+    <!-- BUCKET ACCELERATION CONFIGURATION  -->
+
+    <mapping name="AccelerateConfiguration" class="com.eucalyptus.storage.msgs.s3.AccelerateConfiguration">
+    </mapping>
+
+    <!-- BUCKET REQUESTER PAYS  -->
+
+    <mapping name="RequestPaymentConfiguration" class="com.eucalyptus.storage.msgs.s3.RequestPaymentConfiguration">
+        <value name="Payer" constant="BucketOwner" usage="optional"/>
+    </mapping>
+
 </binding>

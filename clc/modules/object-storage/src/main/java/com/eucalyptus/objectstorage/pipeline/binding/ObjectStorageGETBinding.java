@@ -72,6 +72,8 @@ public class ObjectStorageGETBinding extends ObjectStorageRESTBinding {
     .put(BUCKET + HttpMethod.GET + BucketParameter.tagging.toString(), "GetBucketTagging")
     .put(BUCKET + HttpMethod.GET + BucketParameter.cors.toString(), "GetBucketCors")
     .put(BUCKET + HttpMethod.GET + BucketParameter.policy.toString(), "GetBucketPolicy")
+    .put(BUCKET + HttpMethod.GET + BucketParameter.accelerate.toString(), "GetBucketAccelerateConfiguration")
+    .put(BUCKET + HttpMethod.GET + BucketParameter.requestPayment.toString().toLowerCase(), "GetBucketRequestPayment")
 
     // Multipart uploads
     .put(BUCKET + HttpMethod.GET + BucketParameter.uploads.toString(), "ListMultipartUploads")
@@ -90,12 +92,8 @@ public class ObjectStorageGETBinding extends ObjectStorageRESTBinding {
     // Bucket operations
     // Notification
     .put(BUCKET + HttpMethod.GET + BucketParameter.notification.toString(), "GET Bucket notification")
-    // Request Payments // TODO HACK! binding code converts parameters to lower case. Fix that issue!
-    .put(BUCKET + HttpMethod.GET + BucketParameter.requestPayment.toString().toLowerCase(), "GET Bucket requestPayment")
     // Website
     .put(BUCKET + HttpMethod.GET + BucketParameter.website.toString(), "GET Bucket website")
-    // Accelerate
-    .put(BUCKET + HttpMethod.GET + BucketParameter.accelerate.toString(), "GET Bucket accelerate")
     // Metrics
     .put(BUCKET + HttpMethod.GET + BucketParameter.metrics.toString(), "GET Bucket metrics")
     // Analytics

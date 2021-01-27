@@ -48,6 +48,7 @@ public interface S3PolicySpec {
   String S3_DELETEBUCKETWEBSITE = "deletebucketwebsite";
   String S3_DELETEOBJECT = "deleteobject";
   String S3_DELETEOBJECTVERSION = "deleteobjectversion";
+  String S3_GETBUCKETACCELERATECONFIGURATION = "getbucketaccelerateconfiguration";
   String S3_GETBUCKETACL = "getbucketacl";
   String S3_GETBUCKETCORS = "getbucketcors";
   String S3_GETBUCKETLOCATION = "getbucketlocation";

@@ -141,6 +141,8 @@ import com.eucalyptus.objectstorage.msgs.DeleteObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteObjectType;
 import com.eucalyptus.objectstorage.msgs.DeleteVersionResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteVersionType;
+import com.eucalyptus.objectstorage.msgs.GetBucketAccelerateConfigurationResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketAccelerateConfigurationType;
 import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyType;
 import com.eucalyptus.objectstorage.msgs.GetBucketCorsResponseType;
@@ -153,6 +155,8 @@ import com.eucalyptus.objectstorage.msgs.GetBucketLoggingStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLoggingStatusType;
 import com.eucalyptus.objectstorage.msgs.GetBucketPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketPolicyType;
+import com.eucalyptus.objectstorage.msgs.GetBucketRequestPaymentResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketRequestPaymentType;
 import com.eucalyptus.objectstorage.msgs.GetBucketTaggingResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketTaggingType;
 import com.eucalyptus.objectstorage.msgs.GetBucketVersioningStatusResponseType;
@@ -221,6 +225,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.S3ObjectEvent;
 import com.eucalyptus.storage.common.DateFormatter;
 import com.eucalyptus.storage.config.ConfigurationCache;
+import com.eucalyptus.storage.msgs.s3.AccelerateConfiguration;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.AllowedCorsMethods;
@@ -245,6 +250,7 @@ import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
 import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.storage.msgs.s3.PreflightRequest;
 import com.eucalyptus.storage.msgs.s3.PreflightResponse;
+import com.eucalyptus.storage.msgs.s3.RequestPaymentConfiguration;
 import com.eucalyptus.storage.msgs.s3.TaggingConfiguration;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.storage.msgs.s3.Upload;
@@ -2520,7 +2526,23 @@ public class ObjectStorageGateway implements ObjectStorageService {
     return reply;
   }
 
-  private Bucket getBucketAndCheckAuthorization( ObjectStorageRequestType request) throws S3Exception {
+  @Override
+  public GetBucketAccelerateConfigurationResponseType getBucketAccelerateConfiguration( final GetBucketAccelerateConfigurationType request ) throws S3Exception {
+    final GetBucketAccelerateConfigurationResponseType reply = request.getReply( );
+    getBucketAndCheckAuthorization( request );
+    reply.setAccelerateConfiguration( new AccelerateConfiguration( ) );
+    return reply;
+  }
+
+  @Override
+  public GetBucketRequestPaymentResponseType getBucketRequestPayment( final GetBucketRequestPaymentType request ) throws S3Exception {
+    final GetBucketRequestPaymentResponseType reply = request.getReply( );
+    getBucketAndCheckAuthorization( request );
+    reply.setPaymentConfiguration( new RequestPaymentConfiguration( ) );
+    return reply;
+  }
+
+  private Bucket getBucketAndCheckAuthorization(ObjectStorageRequestType request) throws S3Exception {
     logRequest(request);
     Bucket bucket = ensureBucketExists(request.getBucket());
     if (!authorizationHandler.operationAllowed(request, bucket, null, 0)) {

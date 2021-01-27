@@ -54,6 +54,8 @@ import com.eucalyptus.objectstorage.msgs.DeleteObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteObjectType;
 import com.eucalyptus.objectstorage.msgs.DeleteVersionResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteVersionType;
+import com.eucalyptus.objectstorage.msgs.GetBucketAccelerateConfigurationResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketAccelerateConfigurationType;
 import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyType;
 import com.eucalyptus.objectstorage.msgs.GetBucketCorsResponseType;
@@ -66,6 +68,8 @@ import com.eucalyptus.objectstorage.msgs.GetBucketLoggingStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLoggingStatusType;
 import com.eucalyptus.objectstorage.msgs.GetBucketPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketPolicyType;
+import com.eucalyptus.objectstorage.msgs.GetBucketRequestPaymentResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketRequestPaymentType;
 import com.eucalyptus.objectstorage.msgs.GetBucketTaggingResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketTaggingType;
 import com.eucalyptus.objectstorage.msgs.GetBucketVersioningStatusResponseType;
@@ -219,4 +223,8 @@ public interface ObjectStorageService {
   DeleteBucketPolicyResponseType deleteBucketPolicy(DeleteBucketPolicyType request) throws S3Exception;
 
   DeleteMultipleObjectsResponseType deleteMultipleObjects(DeleteMultipleObjectsType request) throws S3Exception;
+
+  GetBucketAccelerateConfigurationResponseType getBucketAccelerateConfiguration(GetBucketAccelerateConfigurationType request) throws S3Exception;
+
+  GetBucketRequestPaymentResponseType getBucketRequestPayment(GetBucketRequestPaymentType request) throws S3Exception;
 }
