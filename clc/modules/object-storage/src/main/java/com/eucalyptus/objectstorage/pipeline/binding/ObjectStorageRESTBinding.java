@@ -672,8 +672,8 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         continue;
       // Add subresource params to the operationKey
       for (ObjectStorageProperties.SubResource subResource : ObjectStorageProperties.SubResource.values()) {
-        if (keyString.toLowerCase().equals(subResource.toString().toLowerCase())) {
-          operationKey += keyString.toLowerCase();
+        if (keyString.toLowerCase().replace('-','_').equals(subResource.toString().toLowerCase())) {
+          operationKey += keyString.toLowerCase().replace('-','_');
           if ( Strings.isNullOrEmpty( value ) ) {
             paramsToRemove.add(key);
             continue params;
@@ -716,11 +716,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
             delimiter = "/";
           }
         }
-        NotImplementedException e = new NotImplementedException();
-        e.setResource(resource);
-        e.setResourceType(resourceType);
-        e.setMessage(unsupportedOp + " is not implemented");
-        throw e;
+        throw buildUnsupportedOperationError( unsupportedOp, resource, resourceType );
       }
     }
 
@@ -730,6 +726,18 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         operationParams.put("LocationConstraint", locationConstraint);
     }
     return operationName;
+  }
+
+  protected S3Exception buildUnsupportedOperationError(
+      final String unsupportedOp,
+      final String resource,
+      final String resourceType
+  ) {
+    final NotImplementedException e = new NotImplementedException( );
+    e.setResource( resource );
+    e.setResourceType( resourceType );
+    e.setMessage( unsupportedOp + " is not implemented" );
+    return e;
   }
 
   private static final Ordering<String> STRING_COMPARATOR = Ordering.natural();

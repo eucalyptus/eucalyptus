@@ -42,7 +42,9 @@ package com.eucalyptus.objectstorage.pipeline.binding;
 import java.util.Map;
 
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.BucketParameter;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.ObjectParameter;
 import com.google.common.collect.ImmutableMap;
@@ -88,12 +90,20 @@ public class ObjectStorageGETBinding extends ObjectStorageRESTBinding {
     .put(OBJECT + HttpMethod.GET + ObjectParameter.uploadId.toString().toLowerCase(), "ListParts")
     .build( );
 
+  private static final String OP_GET_BUCKET_ENCRYPTION = "GET Bucket encryption";
+
+  private static final String OP_GET_BUCKET_OBJECT_LOCK = "GET Bucket object-lock";
+
+  private static final String OP_GET_BUCKET_REPLICATION = "GET Bucket replication";
+
+  private static final String OP_GET_BUCKET_WEBSITE = "GET Bucket website";
+
   private static final ImmutableMap<String, String> UNSUPPORTED_OPS = ImmutableMap.<String,String>builder( )
     // Bucket operations
     // Notification
     .put(BUCKET + HttpMethod.GET + BucketParameter.notification.toString(), "GET Bucket notification")
     // Website
-    .put(BUCKET + HttpMethod.GET + BucketParameter.website.toString(), "GET Bucket website")
+    .put(BUCKET + HttpMethod.GET + BucketParameter.website.toString(), OP_GET_BUCKET_WEBSITE)
     // Metrics
     .put(BUCKET + HttpMethod.GET + BucketParameter.metrics.toString(), "GET Bucket metrics")
     // Analytics
@@ -101,7 +111,11 @@ public class ObjectStorageGETBinding extends ObjectStorageRESTBinding {
     // Inventory
     .put(BUCKET + HttpMethod.GET + BucketParameter.inventory.toString(), "GET Bucket inventory")
     // Replication
-    .put(BUCKET + HttpMethod.GET + BucketParameter.replication.toString(), "GET Bucket replication")
+    .put(BUCKET + HttpMethod.GET + BucketParameter.replication.toString(), OP_GET_BUCKET_REPLICATION)
+    // Encryption
+    .put(BUCKET + HttpMethod.GET + BucketParameter.encryption.toString(), OP_GET_BUCKET_ENCRYPTION)
+    // Object Lock
+    .put(BUCKET + HttpMethod.GET + BucketParameter.object_lock.toString(), OP_GET_BUCKET_OBJECT_LOCK)
     .build( );
 
   @Override
@@ -112,5 +126,42 @@ public class ObjectStorageGETBinding extends ObjectStorageRESTBinding {
   @Override
   protected Map<String, String> populateUnsupportedOperationMap() {
     return UNSUPPORTED_OPS;
+  }
+
+  @Override
+  protected S3Exception buildUnsupportedOperationError(
+      final String unsupportedOp,
+      final String resource,
+      final String resourceType
+  ) {
+    final S3Exception exception;
+    switch ( unsupportedOp ) {
+      case OP_GET_BUCKET_ENCRYPTION:
+        exception = new S3Exception(
+            "ServerSideEncryptionConfigurationNotFoundError",
+            "The server side encryption configuration was not found", HttpResponseStatus.NOT_FOUND );
+        break;
+      case OP_GET_BUCKET_OBJECT_LOCK:
+        exception = new S3Exception(
+            "ObjectLockConfigurationNotFoundError",
+            "Object Lock configuration does not exist for this bucket", HttpResponseStatus.NOT_FOUND );
+        break;
+      case OP_GET_BUCKET_REPLICATION:
+        exception = new S3Exception(
+            "ReplicationConfigurationNotFoundError",
+            "The replication configuration was not found", HttpResponseStatus.NOT_FOUND );
+        break;
+      case OP_GET_BUCKET_WEBSITE:
+        exception = new S3Exception(
+            "NoSuchWebsiteConfiguration",
+            "The specified bucket does not have a website configuration", HttpResponseStatus.NOT_FOUND );
+        break;
+      default:
+        exception = super.buildUnsupportedOperationError(unsupportedOp, resource, resourceType);
+        break;
+    }
+    exception.setResource( resource );
+    exception.setResourceType( resourceType );
+    return exception;
   }
 }
