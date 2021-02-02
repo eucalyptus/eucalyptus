@@ -26,7 +26,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
-package com.eucalyptus.loadbalancing;
+package com.eucalyptus.loadbalancing.service.persist.entities;
 
 import static com.eucalyptus.loadbalancing.common.LoadBalancingMetadata.LoadBalancerMetadata;
 import static com.eucalyptus.util.Strings.isPrefixOf;
@@ -67,26 +67,26 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreViewTransform;
-import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreViewTransform;
-import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreViewTransform;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreViewTransform;
-import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreViewTransform;
-import com.eucalyptus.loadbalancing.LoadBalancers.DeploymentVersion;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreViewTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreViewTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreViewTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener.LoadBalancerListenerCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener.LoadBalancerListenerCoreViewTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreViewTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerZone.LoadBalancerZoneCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerZone.LoadBalancerZoneCoreViewTransform;
+import com.eucalyptus.loadbalancing.LoadBalancerDeploymentVersion;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreViewTransform;
 import com.eucalyptus.loadbalancing.common.msgs.AccessLog;
 import com.eucalyptus.loadbalancing.common.msgs.ConnectionDraining;
 import com.eucalyptus.loadbalancing.common.msgs.ConnectionSettings;
 import com.eucalyptus.loadbalancing.common.msgs.CrossZoneLoadBalancing;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerAttributes;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerView;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.FullName;
@@ -116,7 +116,7 @@ import com.google.common.collect.Maps;
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_loadbalancer" )
-public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements LoadBalancerMetadata {
+public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements LoadBalancerMetadata, LoadBalancerView {
 
 	public enum Scheme {
 		Internal,
@@ -159,14 +159,14 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		super(userFullName, lbName);
 	}
 	
-	static LoadBalancer newInstance(final OwnerFullName userFullName, final String lbName){
+	public static LoadBalancer newInstance(final OwnerFullName userFullName, final String lbName){
 		final LoadBalancer instance= new LoadBalancer(userFullName, lbName);
 		if(userFullName!=null)
 			instance.setOwnerAccountNumber(userFullName.getAccountNumber());
 		return instance;
 	}
 	
-	static LoadBalancer named(){
+	public static LoadBalancer named(){
 		return new LoadBalancer();
 	}
 	
@@ -376,7 +376,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	
 	public boolean useSystemAccount(){
     return this.getLoadbalancerDeploymentVersion() != null &&
-        DeploymentVersion.getVersion(this.getLoadbalancerDeploymentVersion()).isEqualOrLaterThan(DeploymentVersion.v4_2_0);
+        LoadBalancerDeploymentVersion.getVersion(this.getLoadbalancerDeploymentVersion()).isEqualOrLaterThan(LoadBalancerDeploymentVersion.v4_2_0);
 	}
 
 	public LoadBalancerCoreView getCoreView( ) {

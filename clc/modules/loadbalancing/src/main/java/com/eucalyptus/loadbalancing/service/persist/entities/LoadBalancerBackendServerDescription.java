@@ -26,7 +26,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
-package com.eucalyptus.loadbalancing;
+package com.eucalyptus.loadbalancing.service.persist.entities;
 
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -49,8 +49,8 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreViewTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreViewTransform;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;

@@ -26,7 +26,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
-package com.eucalyptus.loadbalancing;
+package com.eucalyptus.loadbalancing.service.persist.entities;
 
 import java.util.Collection;
 import javax.annotation.Nonnull;
@@ -41,13 +41,15 @@ import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.auth.type.RestrictedType;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreViewTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer.LoadBalancerCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreViewTransform;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.util.TypeMapper;
@@ -63,7 +65,7 @@ import com.google.common.collect.ImmutableList;
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_group" )
-public class LoadBalancerSecurityGroup extends AbstractPersistent {
+public class LoadBalancerSecurityGroup extends AbstractPersistent implements RestrictedType {
 
 	public enum STATE { InService, OutOfService }
 
@@ -105,7 +107,12 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 		instance.uniqueName = instance.createUniqueName();
 		return instance;
 	}
-	
+
+	public static LoadBalancerSecurityGroup named(OwnerFullName ownerFullName, String groupName){
+		final String ownerAccountId = ownerFullName==null ? null : ownerFullName.getAccountNumber();
+		return new LoadBalancerSecurityGroup(null, ownerAccountId, groupName);
+	}
+
 	public static LoadBalancerSecurityGroup withState(STATE state){
 		final LoadBalancerSecurityGroup instance = new LoadBalancerSecurityGroup();
 		instance.state = state.name();
@@ -158,7 +165,17 @@ public class LoadBalancerSecurityGroup extends AbstractPersistent {
 	public STATE getState(){
 		return Enum.valueOf(STATE.class, this.state);
 	}
-	
+
+	@Override
+	public String getDisplayName( ) {
+		return getName();
+	}
+
+	@Override
+	public OwnerFullName getOwner( ) {
+		return AccountFullName.getInstance( getGroupOwnerAccountId( ) );
+	}
+
 	@PrePersist
 	private void generateOnCommit( ) {
 		if(this.uniqueName==null)

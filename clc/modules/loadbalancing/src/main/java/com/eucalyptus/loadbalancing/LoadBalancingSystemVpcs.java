@@ -44,9 +44,10 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerAutoScalingGroup;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer;
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.CompatSupplier;
 import com.eucalyptus.util.Exceptions;
@@ -473,7 +474,7 @@ public class LoadBalancingSystemVpcs {
 
             LoadBalancerServoInstance instance = null;
             try {
-                instance = LoadBalancers.lookupServoInstance(instanceId);
+                instance = LoadBalancerHelper.lookupServoInstance(instanceId);
             }catch(final Exception ex) {
                 throw Exceptions.toUndeclared("Faild to lookup loadbalancer VM named: " + instanceId);
             }

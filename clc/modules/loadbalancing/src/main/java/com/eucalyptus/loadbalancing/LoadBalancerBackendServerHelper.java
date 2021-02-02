@@ -34,16 +34,18 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionEntityTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendServerDescription;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionEntityTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer;
 import com.google.common.collect.Lists;
 
 /**
  * @author Sang-Min Park
  *
  */
-public class LoadBalancerBackendServers {
-  private static Logger    LOG     = Logger.getLogger( LoadBalancerBackendServers.class );
+public class LoadBalancerBackendServerHelper {
+  private static Logger    LOG     = Logger.getLogger( LoadBalancerBackendServerHelper.class );
 
   public static List<LoadBalancerBackendServerDescription> getLoadBalancerBackendServerDescription(final LoadBalancer lb) {
       final List<LoadBalancerBackendServerDescription> backends = Lists.newArrayList();

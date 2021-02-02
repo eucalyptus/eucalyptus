@@ -26,7 +26,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
-package com.eucalyptus.loadbalancing;
+package com.eucalyptus.loadbalancing.service.persist.entities;
 
 import java.io.Serializable;
 import javax.annotation.Nonnull;

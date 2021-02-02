@@ -28,8 +28,8 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.workflow;
 
-import static com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView.name;
-import static com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView.subnetId;
+import static com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerZone.LoadBalancerZoneCoreView.name;
+import static com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerZone.LoadBalancerZoneCoreView.subnetId;
 import static com.eucalyptus.loadbalancing.service.LoadBalancingService.MAX_HEALTHCHECK_INTERVAL_SEC;
 
 import com.amazonaws.services.s3.model.CannedAccessControlList;
@@ -40,7 +40,7 @@ import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.tokens.SecurityTokenAWSCredentialsProvider;
 import com.eucalyptus.compute.common.*;
 import com.eucalyptus.loadbalancing.*;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.STATE;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance.STATE;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
 import com.eucalyptus.loadbalancing.LoadBalancingSystemVpcs;
 
@@ -56,6 +56,14 @@ import javax.annotation.Nullable;
 
 import com.eucalyptus.loadbalancing.common.msgs.HealthCheck;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyDescription;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendInstance;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendServerDescription;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerSecurityGroup;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerSecurityGroupRef;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerZone;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import com.eucalyptus.ws.StackConfiguration;
@@ -82,26 +90,26 @@ import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerEntityTransform;
-import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceEntityTransform;
-import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerEntityTransform;
-import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupEntityTransform;
-import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer.LoadBalancerCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer.LoadBalancerEntityTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendInstance.LoadBalancerBackendInstanceEntityTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener.LoadBalancerListenerCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener.LoadBalancerListenerEntityTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener.PROTOCOL;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupEntityTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerZone.LoadBalancerZoneCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerZone.LoadBalancerZoneEntityTransform;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityException;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupEntityTransform;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceEntityTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerAutoScalingGroup;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupEntityTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance.LoadBalancerServoInstanceEntityTransform;
 import com.eucalyptus.loadbalancing.common.msgs.Listener;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescription;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyAttribute;
@@ -369,7 +377,8 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   public static String getSecurityGroupName(final String ownerAccountNumber, final String lbName) {
     return String.format( "euca-internal-%s-%s", ownerAccountNumber, lbName );
   }
-  private static String generateDefaultVPCSecurityGroupName( final String vpcId ) {
+
+  public static String generateDefaultVPCSecurityGroupName( final String vpcId ) {
     return String.format( "default_elb_%s", UUID.nameUUIDFromBytes( vpcId.getBytes( StandardCharsets.UTF_8 ) ).toString( ) );
   }
 
@@ -380,7 +389,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     LoadBalancer lbEntity;
     LoadBalancerCoreView lb;
     try{
-      lbEntity = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lbEntity = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
       lb = lbEntity.getCoreView( );
     }catch(NoSuchElementException ex){
       throw new LoadBalancingActivityException("Could not find the loadbalancer with name="+lbName, ex);
@@ -497,7 +506,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     if(sgroupId!=null){
       final boolean tagGroup;
       try{
-        final LoadBalancer lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+        final LoadBalancer lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
         tagGroup = lb.getVpcId( ) == null;
       }catch(NoSuchElementException ex){
         throw new LoadBalancingActivityException("Failed to find the loadbalancer "+ lbName, ex);
@@ -609,7 +618,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     final LoadBalancer lbEntity;
     final LoadBalancer.LoadBalancerCoreView lb;
     try{
-      lbEntity = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lbEntity = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
       lb = lbEntity.getCoreView( );
       if ( zoneToSubnetIdMap == null ) {
         zoneToSubnetIdMap = CollectionUtils.putAll(
@@ -766,7 +775,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     // set security group with the loadbalancer; update db
     LoadBalancer lb;
     try{
-      lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
     } catch(Exception ex){
       return;
     }
@@ -809,7 +818,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       String lbName, AutoscalingGroupSetupActivityResult result) {
     LoadBalancer lb;
     try{
-      lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
     }catch(Exception ex){
       LOG.error("failed to find the loadbalancer: " + lbName);
       return;
@@ -845,7 +854,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
           throws LoadBalancingActivityException {
     LoadBalancer lb;
     try{
-      lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
     }catch(NoSuchElementException ex){
       throw new LoadBalancingActivityException("Could not find the loadbalancer with name="+ lbName, ex);
     }catch(Exception ex){
@@ -883,7 +892,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
 
     LoadBalancer lb;
     try{
-      lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
     }catch(NoSuchElementException ex){
       LOG.warn("Could not find the loadbalancer with name="+ lbName, ex);
       return;
@@ -912,7 +921,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
           throws LoadBalancingActivityException {
     LoadBalancer lb;
     try{
-      lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
     }catch(NoSuchElementException ex){
       LOG.warn("Could not find the loadbalancer with name="+ lbName, ex);
       return;
@@ -923,7 +932,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
 
     try{
       for(final String enabledZone : enabledZones) {
-        final LoadBalancerZone zone = LoadBalancers.findZone(lb, enabledZone);
+        final LoadBalancerZone zone = LoadBalancerHelper.findZone(lb, enabledZone);
         for(final LoadBalancerBackendInstanceCoreView instance : zone.getBackendInstances()){
           try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
             final LoadBalancerBackendInstance update = Entities.uniqueResult(
@@ -949,7 +958,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
           throws LoadBalancingActivityException {
     LoadBalancer lb;
     try{
-      lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
     }catch(Exception ex){
       throw new LoadBalancingActivityException("could not find the loadbalancer", ex);
     }
@@ -1006,7 +1015,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
 
     LoadBalancer lb = null;
     try{
-      lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
     }catch(Exception ex){
       throw new LoadBalancingActivityException("could not find the loadbalancer", ex);
     }
@@ -1047,7 +1056,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     if(roleName!=null && policyNames!=null && policyNames.size()>0){
       LoadBalancer lb = null;
       try{
-        lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+        lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
       }catch(Exception ex){
         return;
       }
@@ -1071,7 +1080,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     LoadBalancer lb;
     String groupName = null;
     try{
-      lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
       final LoadBalancerSecurityGroupCoreView group = lb.getGroup();
       if(group!=null)
         groupName = group.getName();
@@ -1139,7 +1148,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     LoadBalancer lb = null;
     String groupName = null;
     try{
-      lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
       final LoadBalancerSecurityGroupCoreView group = lb.getGroup();
       if(group!=null)
         groupName = group.getName();
@@ -1169,7 +1178,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
           throws LoadBalancingActivityException {
     LoadBalancer lb;
     try{
-      lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
     }catch(final NoSuchElementException ex){
       throw new LoadBalancingActivityException("Could not find the loadbalancer with name="+ lbName, ex);
     }catch(final Exception ex){
@@ -1215,7 +1224,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
           throws LoadBalancingActivityException {
     LoadBalancer lb;
     try{
-      lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
     }catch(NoSuchElementException ex){
       throw new LoadBalancingActivityException("Could not find the loadbalancer with name="+lbName, ex);
     }catch(Exception ex){
@@ -1234,9 +1243,9 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
 
     try{
       /// this will load the sample policies into memory
-      if(LoadBalancerPolicies.LATEST_SECURITY_POLICY_NAME == null) {
-        LoadBalancerPolicies.getSamplePolicyDescription();
-        if(LoadBalancerPolicies.LATEST_SECURITY_POLICY_NAME == null)
+      if(LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME == null) {
+        LoadBalancerPolicyHelper.getSamplePolicyDescription();
+        if(LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME == null)
           throw new LoadBalancingActivityException("Latest security policy is not found");
       }
 
@@ -1245,7 +1254,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       if(policies != null) {
         for (final LoadBalancerPolicyDescriptionCoreView view : policies ) {
           if ("SSLNegotiationPolicyType".equals(view.getPolicyTypeName()) &&
-              LoadBalancerPolicies.LATEST_SECURITY_POLICY_NAME.equals(view.getPolicyName())) {
+              LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME.equals(view.getPolicyName())) {
             policyCreated = true;
             break;
           }
@@ -1254,11 +1263,11 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       if(! policyCreated) {
         final PolicyAttribute attr = new PolicyAttribute();
         attr.setAttributeName("Reference-Security-Policy");
-        attr.setAttributeValue(LoadBalancerPolicies.LATEST_SECURITY_POLICY_NAME);
-        LoadBalancerPolicies.addLoadBalancerPolicy(lb, LoadBalancerPolicies.LATEST_SECURITY_POLICY_NAME, "SSLNegotiationPolicyType",
+        attr.setAttributeValue(LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME);
+        LoadBalancerPolicyHelper.addLoadBalancerPolicy(lb, LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME, "SSLNegotiationPolicyType",
             Lists.newArrayList(attr));
         try{ // reload with the newly created policy
-          lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+          lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
         }catch(NoSuchElementException ex){
           throw new LoadBalancingActivityException("Could not find the loadbalancer with name="+ lbName, ex);
         }catch(Exception ex){
@@ -1272,9 +1281,9 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
 
     try{
       final LoadBalancerPolicyDescription policy =
-          LoadBalancerPolicies.getLoadBalancerPolicyDescription(lb, LoadBalancerPolicies.LATEST_SECURITY_POLICY_NAME);
+          LoadBalancerPolicyHelper.getLoadBalancerPolicyDescription(lb, LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME);
       if(policy==null)
-        throw new LoadBalancingActivityException("No such policy is found: "+LoadBalancerPolicies.LATEST_SECURITY_POLICY_NAME);
+        throw new LoadBalancingActivityException("No such policy is found: "+ LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME);
 
       final Collection<LoadBalancerListenerCoreView> lbListeners = lb.getListeners();
       for(final Listener l : listeners) {
@@ -1294,7 +1303,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
           if(listenerPolicies!=null) {
             for(final LoadBalancerPolicyDescriptionCoreView listenerPolicy : listenerPolicies ) {
               if( "SSLNegotiationPolicyType".equals(listenerPolicy.getPolicyTypeName()) &&
-                  LoadBalancerPolicies.LATEST_SECURITY_POLICY_NAME.equals(listenerPolicy.getPolicyName()))
+                  LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME.equals(listenerPolicy.getPolicyName()))
               {
                 policyAttached = true;
                 break;
@@ -1303,7 +1312,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
           }
 
           if(!policyAttached && listener!=null && policy!=null) {
-            LoadBalancerPolicies.addPoliciesToListener(listener, Lists.newArrayList(policy));
+            LoadBalancerPolicyHelper.addPoliciesToListener(listener, Lists.newArrayList(policy));
           }
         }
       }
@@ -1317,7 +1326,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
           throws LoadBalancingActivityException {
     try {
       final LoadBalancer lb =
-              LoadBalancers.getLoadbalancer(accountNumber, lbName);
+              LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
       final HealthCheck hc = new HealthCheck();
       hc.setHealthyThreshold(lb.getHealthyThreshold());
       hc.setInterval(lb.getHealthCheckInterval());
@@ -1342,7 +1351,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     String monitoringZone = null;
     try {
       final LoadBalancerServoInstance servo =
-              LoadBalancers.lookupServoInstance(servoInstanceId);
+              LoadBalancerHelper.lookupServoInstance(servoInstanceId);
       monitoringZone = servo.getAvailabilityZone().getName();
     } catch (final Exception ex) {
       throw new LoadBalancingActivityException("Failed to lookup the servo instance with id="+servoInstanceId);
@@ -1351,7 +1360,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     final Map<String, String> instanceToZone = Maps.newHashMap();
     final Set<String> stoppedInstances = Sets.newHashSet();
     try{
-      final LoadBalancer lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      final LoadBalancer lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
       lb.getBackendInstances().stream().forEach ( instance -> instanceToZone.put(instance.getInstanceId(), instance.getPartition()));
       stoppedInstances.addAll(lb.getBackendInstances().stream()
               .filter(v -> LoadBalancerBackendInstanceStates.InstanceStopped.isInstanceState(v))
@@ -1408,7 +1417,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     boolean updated = false;
     boolean committed = false;
     final int TRANSACTION_RETRY = 5;
-    final LoadBalancer lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+    final LoadBalancer lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
     for (int i = 1; i <= TRANSACTION_RETRY; i++) {
       try (final TransactionResource db = Entities.transactionFor(LoadBalancerBackendInstance.class)) {
         for (final String instanceId : verifiedStatusMap.keySet()) {
@@ -1466,7 +1475,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
 
     //TODO: SCALE
     try{
-      lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
       backendInstances= Lists.transform(Lists.newArrayList(lb.getBackendInstances()),
           LoadBalancerBackendInstanceEntityTransform.INSTANCE);
     }catch(final Exception ex) {
@@ -1477,9 +1486,9 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     for(final LoadBalancerBackendInstance backend: backendInstances){
       final String zoneName = backend.getAvailabilityZone().getName();
       if(backend.getState().equals(LoadBalancerBackendInstance.STATE.InService)){
-        LoadBalancerCwatchMetrics.getInstance().updateHealthy(lb.getCoreView(), zoneName, backend.getInstanceId());
+        LoadBalancerMetricsHelper.getInstance().updateHealthy(lb.getCoreView(), zoneName, backend.getInstanceId());
       }else if (backend.getState().equals(LoadBalancerBackendInstance.STATE.OutOfService)){
-        LoadBalancerCwatchMetrics.getInstance().updateUnHealthy(lb.getCoreView(), zoneName, backend.getInstanceId());
+        LoadBalancerMetricsHelper.getInstance().updateUnHealthy(lb.getCoreView(), zoneName, backend.getInstanceId());
       }
     }
   }
@@ -1512,7 +1521,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
         }
         if (zone!=null) {
           try{
-              LoadBalancerCwatchMetrics.getInstance().addMetric(zone, data);
+              LoadBalancerMetricsHelper.getInstance().addMetric(zone, data);
             }catch(Exception ex){
               LOG.error("Failed to add ELB cloudwatch metric", ex);
             }
@@ -1524,12 +1533,12 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   @Override
   public List<String> listLoadBalancerPolicies(final String accountNumber, final String lbName) throws LoadBalancingActivityException {
     try {
-      final LoadBalancer lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      final LoadBalancer lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
       final List<LoadBalancerListener> listeners = lb.getListeners().stream()
               .map(view -> LoadBalancerListenerEntityTransform.INSTANCE.apply(view))
               .collect(Collectors.toList());
       final List<LoadBalancerBackendServerDescription> backendServers =
-              LoadBalancerBackendServers.getLoadBalancerBackendServerDescription(lb);
+              LoadBalancerBackendServerHelper.getLoadBalancerBackendServerDescription(lb);
 
       final List<String> listenerPolicies = listeners.stream()
               .map(l -> l.getPolicies())
@@ -1563,10 +1572,10 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   public PolicyDescription getLoadBalancerPolicy(final String accountNumber, final String lbName, final String policyName)
           throws LoadBalancingActivityException {
     try {
-      final LoadBalancer lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      final LoadBalancer lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
       final LoadBalancerPolicyDescription policy =
-              LoadBalancerPolicies.getLoadBalancerPolicyDescription(lb, policyName);
-      return LoadBalancerPolicies.AsPolicyDescription.INSTANCE.apply(policy);
+              LoadBalancerPolicyHelper.getLoadBalancerPolicyDescription(lb, policyName);
+      return LoadBalancerPolicyHelper.AsPolicyDescription.INSTANCE.apply(policy);
     } catch(final Exception ex) {
       throw new LoadBalancingActivityException("Failed to lookup loadbalancer policies", ex);
     }
@@ -1578,13 +1587,13 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       throws LoadBalancingActivityException {
     final Map<String, LoadBalancerServoDescription> result = Maps.newHashMap();
     try{
-      final LoadBalancer lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      final LoadBalancer lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
       for(final LoadBalancerZoneCoreView zoneView: lb.getZones()) {
         if (! LoadBalancerZone.STATE.InService.equals(zoneView.getState()))
           continue;
 
         final LoadBalancerServoDescription desc =
-            LoadBalancers.getServoDescription(accountNumber, lbName, zoneView.getName());
+            LoadBalancerHelper.getServoDescription(accountNumber, lbName, zoneView.getName());
         final LoadBalancerZone zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
         for(final LoadBalancerServoInstanceCoreView servoView : zone.getServoInstances()) {
           result.put(servoView.getInstanceId(), desc);
@@ -1601,7 +1610,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       String lbName, List<Integer> portsToDelete) throws LoadBalancingActivityException {
     LoadBalancer lb;
     try{
-      lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
     }catch(Exception ex){
       throw new LoadBalancingActivityException("could not find the loadbalancer", ex);
     }
@@ -1651,7 +1660,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     LoadBalancer lb;
     String groupName = null;
     try{
-      lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
       final LoadBalancerSecurityGroupCoreView group = lb.getGroup();
       if(group!=null)
         groupName = group.getName();
@@ -1682,7 +1691,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
           throws LoadBalancingActivityException {
     LoadBalancer lb;
     try{
-      lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
     }catch(NoSuchElementException ex){
       throw new LoadBalancingActivityException("Could not find the loadbalancer with name="+lbName, ex);
     }catch(Exception ex){
@@ -1757,7 +1766,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     final List<String> updatedZones = Lists.newArrayList();
     LoadBalancer lb;
     try{
-      lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
     }catch(NoSuchElementException ex){
       throw new LoadBalancingActivityException("Could not find the loadbalancer with name="+lbName, ex);
     }catch(Exception ex){
@@ -1803,7 +1812,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
 
     LoadBalancer lb;
     try{
-      lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
     }catch(NoSuchElementException ex){
       LOG.error("Could not find the loadbalancer with name="+lbName, ex);
       return;
@@ -1846,7 +1855,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
           throws LoadBalancingActivityException {
     LoadBalancer lb;
     try{
-      lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
     }catch(NoSuchElementException ex){
       throw new LoadBalancingActivityException("Could not find the loadbalancer with name="+lbName, ex);
     }catch(Exception ex){
@@ -1872,7 +1881,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
           throws LoadBalancingActivityException {
     LoadBalancer lb;
     try{
-      lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
     }catch(NoSuchElementException ex){
       throw new LoadBalancingActivityException("Could not find the loadbalancer with name="+lbName, ex);
     }catch(Exception ex){
@@ -1883,7 +1892,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       return;
 
     for(final String removedZone : zonesToDisable){
-      final LoadBalancerZone zone = LoadBalancers.findZone(lb, removedZone);
+      final LoadBalancerZone zone = LoadBalancerHelper.findZone(lb, removedZone);
       for(final LoadBalancerBackendInstanceCoreView instance : zone.getBackendInstances()){
         try ( TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ){
           final LoadBalancerBackendInstance update = Entities.uniqueResult(
@@ -1910,7 +1919,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     LoadBalancer lb;
     final List<LoadBalancerServoInstanceCoreView> servos = Lists.newArrayList();
     try{
-      lb= LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb= LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
       if(lb.getZones()!=null){
         for(final LoadBalancerZoneCoreView zoneView : lb.getZones()){
           LoadBalancerZone zone;
@@ -1958,7 +1967,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       String lbName) throws LoadBalancingActivityException {
     LoadBalancer lb;
     try{
-      lb= LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb= LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
     }catch(NoSuchElementException ex){
       return;
     }catch(Exception ex){
@@ -2066,7 +2075,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
 
     LoadBalancer lb = null;
     try{
-      lb= LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb= LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
     }catch(NoSuchElementException ex){
       return;
     }catch(Exception ex){
@@ -2094,7 +2103,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     final String roleName = getRoleName(accountNumber, lbName);
     LoadBalancer lb = null;
     try{
-      lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
     }catch(NoSuchElementException ex){
       return;
     }catch(Exception ex){
@@ -2132,7 +2141,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     LoadBalancer lb;
     LoadBalancerSecurityGroupCoreView groupView = null;
     try{
-      lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
       if(lb.getGroup()!=null){
         groupView = lb.getGroup();
       }
@@ -2371,7 +2380,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
           throws LoadBalancingActivityException {
     final LoadBalancer lb;
     try{
-      lb = LoadBalancers.getLoadbalancer( accountNumber, lbName );
+      lb = LoadBalancerHelper.getLoadbalancer( accountNumber, lbName );
     }catch(NoSuchElementException ex){
       throw new LoadBalancingActivityException("Failed to find the loadbalancer " + lbName, ex);
     }catch(Exception ex){
@@ -2414,7 +2423,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
                                                         final String keyname,
                                                         final String initScript)
           throws LoadBalancingActivityException {
-    final List<LoadBalancer> lbs = LoadBalancers.listLoadbalancers();
+    final List<LoadBalancer> lbs = LoadBalancerHelper.listLoadbalancers();
     for(final LoadBalancer lb : lbs){
       final Collection<LoadBalancerAutoScalingGroupCoreView> groups = lb.getAutoScaleGroups();
       for(final LoadBalancerAutoScalingGroupCoreView asg : groups) {
@@ -3271,7 +3280,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   public void runContinousWorkflows() throws LoadBalancingActivityException {
     List<LoadBalancer> loadbalancers = null;
     try{
-      loadbalancers = LoadBalancers.listLoadbalancers();
+      loadbalancers = LoadBalancerHelper.listLoadbalancers();
     }catch(final Exception ex) {
       LOG.error("Failed to list all loadbalancers", ex);
       return;
@@ -3294,7 +3303,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       final String lbName) throws LoadBalancingActivityException {
     final LoadBalancer lb;
     try{
-      lb = LoadBalancers.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
     }catch(final Exception ex) {
       throw new LoadBalancingActivityException("Failed to lookup loadbalancer");
     }
@@ -3326,8 +3335,8 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   @Override
   public void upgrade4_4() throws LoadBalancingActivityException {
     final List<LoadBalancer> oldLBs =
-            LoadBalancers.listLoadbalancers().stream()
-                    .filter( lb -> !LoadBalancers.v4_4_0.apply(lb) )
+            LoadBalancerHelper.listLoadbalancers().stream()
+                    .filter( lb -> !LoadBalancerHelper.v4_4_0.apply(lb) )
                     .collect(Collectors.toList());
 
     for (final LoadBalancer lb : oldLBs) {

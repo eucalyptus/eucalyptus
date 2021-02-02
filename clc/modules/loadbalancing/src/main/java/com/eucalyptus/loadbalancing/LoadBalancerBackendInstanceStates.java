@@ -28,7 +28,8 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing;
 
-import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.STATE;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendInstance;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendInstance.STATE;
 
 public enum LoadBalancerBackendInstanceStates {
   HealthCheckSuccess(STATE.InService, "", ""),

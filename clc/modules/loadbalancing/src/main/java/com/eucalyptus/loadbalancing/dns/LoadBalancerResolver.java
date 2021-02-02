@@ -28,8 +28,8 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.dns;
 
-import static com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupEntityTransform.*;
-import static com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
+import static com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupEntityTransform.*;
+import static com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
 import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
 import static com.eucalyptus.util.dns.DnsResolvers.DnsResponse;
 
@@ -50,10 +50,10 @@ import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.loadbalancing.LoadBalancer;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
-import com.eucalyptus.loadbalancing.LoadBalancers;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerHelper;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.dns.DnsResolvers;
 import com.eucalyptus.util.dns.DomainNameRecords;
@@ -132,7 +132,7 @@ public class LoadBalancerResolver extends DnsResolvers.DnsResolver {
       final Pair<String,String> accountNamePair = domainName.get( ).toScopedLoadBalancerName( hostName );
       try ( final TransactionResource tx = Entities.transactionFor( LoadBalancer.class ) ) {
         final LoadBalancer loadBalancer =
-            LoadBalancers.getLoadbalancerCaseInsensitive( accountNamePair.getLeft( ), accountNamePair.getRight( ) );
+            LoadBalancerHelper.getLoadbalancerCaseInsensitive( accountNamePair.getLeft( ), accountNamePair.getRight( ) );
         final Predicate<LoadBalancerServoInstanceCoreView> canResolve = 
             new Predicate<LoadBalancerServoInstanceCoreView>(){
           @Override

@@ -27,7 +27,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
 
-package com.eucalyptus.loadbalancing;
+package com.eucalyptus.loadbalancing.service.persist.entities;
 
 import java.security.cert.X509Certificate;
 import java.util.List;
@@ -52,14 +52,15 @@ import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreViewTransform;
-import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreViewTransform;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAttributeDescriptionCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAttributeDescriptionCoreViewTransform;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAtttributeDescriptionEntityTransform;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeTypeDescription.LoadBalancerPolicyAttributeTypeDescriptionCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerPolicyHelper;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreViewTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener.LoadBalancerListenerCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener.LoadBalancerListenerCoreViewTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAttributeDescriptionCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAttributeDescriptionCoreViewTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAtttributeDescriptionEntityTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyAttributeTypeDescription.LoadBalancerPolicyAttributeTypeDescriptionCoreView;
 import com.eucalyptus.loadbalancing.service.InvalidConfigurationRequestException;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
@@ -139,7 +140,7 @@ public class LoadBalancerPolicyDescription extends AbstractPersistent {
   
   public LoadBalancerPolicyTypeDescription getPolicyTypeDescription(){
     if(this.policyType == null){
-      this.policyType = LoadBalancerPolicies.findLoadBalancerPolicyTypeDescription(this.policyTypeName);
+      this.policyType = LoadBalancerPolicyHelper.findLoadBalancerPolicyTypeDescription(this.policyTypeName);
     }
     return this.policyType;
   }
@@ -156,7 +157,7 @@ public class LoadBalancerPolicyDescription extends AbstractPersistent {
       }
       if(attrType==null)
          throw new InvalidConfigurationRequestException(String.format("Attribute %s is not defined in the policy type", attrName));
-      if(!LoadBalancerPolicies.isAttributeValueValid(attrType.getAttributeType(), attrType.getCardinality(), attrValue))
+      if(!LoadBalancerPolicyHelper.isAttributeValueValid(attrType.getAttributeType(), attrType.getCardinality(), attrValue))
         throw new InvalidConfigurationRequestException(String.format("Attribute value %s is not valid", attrValue));
      
       /* check for cardinality

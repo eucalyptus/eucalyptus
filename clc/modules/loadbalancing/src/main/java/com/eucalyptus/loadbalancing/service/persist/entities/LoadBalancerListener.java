@@ -26,7 +26,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
-package com.eucalyptus.loadbalancing;
+package com.eucalyptus.loadbalancing.service.persist.entities;
 
 import java.util.List;
 import java.util.Set;
@@ -57,9 +57,9 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreViewTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer.LoadBalancerCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreViewTransform;
 import com.eucalyptus.loadbalancing.common.msgs.Listener;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMapper;
@@ -144,11 +144,9 @@ public class LoadBalancerListener extends AbstractPersistent
 	};
 	
 	private final static String DEFAULT_PORT_RESTRICTION = "22";
-	@ConfigurableField( displayName = "loadbalancer_restricted_ports",
+	@ConfigurableField( displayName = "restricted_ports",
 			description = "The ports restricted for use as a loadbalancer port. Format should be port(, port) or [port-port]",
 			initial = DEFAULT_PORT_RESTRICTION,
-			readonly = false,
-			type = ConfigurableFieldType.KEYVALUE,
 			changeListener = ELBPortRestrictionChangeListener.class
 			)
 	public static String RESTRICTED_PORTS = DEFAULT_PORT_RESTRICTION;

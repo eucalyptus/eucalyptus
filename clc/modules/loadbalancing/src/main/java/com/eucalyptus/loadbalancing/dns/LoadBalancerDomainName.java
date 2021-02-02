@@ -28,7 +28,7 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.dns;
 
-import static com.eucalyptus.loadbalancing.LoadBalancer.Scheme;
+import static com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer.Scheme;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;

@@ -44,14 +44,19 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAttributeDescriptionCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeTypeDescription.Cardinality;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeTypeDescription.LoadBalancerPolicyAttributeTypeDescriptionCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionEntityTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendServerDescription;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener.LoadBalancerListenerCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener.PROTOCOL;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyAttributeDescription;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAttributeDescriptionCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyAttributeTypeDescription;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyAttributeTypeDescription.Cardinality;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyAttributeTypeDescription.LoadBalancerPolicyAttributeTypeDescriptionCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionEntityTransform;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyAttribute;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyAttributeDescription;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyAttributeDescriptions;
@@ -63,6 +68,8 @@ import com.eucalyptus.loadbalancing.service.DuplicatePolicyNameException;
 import com.eucalyptus.loadbalancing.service.InvalidConfigurationRequestException;
 import com.eucalyptus.loadbalancing.service.LoadBalancingException;
 import com.eucalyptus.loadbalancing.service.PolicyTypeNotFoundException;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyTypeDescription;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Strings;
@@ -80,8 +87,8 @@ import com.google.common.base.Predicate;
  * @author Sang-Min Park
  *
  */
-public class LoadBalancerPolicies {
-  private static Logger    LOG     = Logger.getLogger( LoadBalancerPolicies.class );
+public class LoadBalancerPolicyHelper {
+  private static Logger    LOG     = Logger.getLogger( LoadBalancerPolicyHelper.class );
 
   public static String LATEST_SECURITY_POLICY_NAME = null;
   /**
@@ -311,7 +318,7 @@ public class LoadBalancerPolicies {
   }
 
   public static void addLoadBalancerPolicy(final LoadBalancer lb, final String policyName, final String policyTypeName,
-      final List<PolicyAttribute> policyAttributes) throws LoadBalancingException
+                                           final List<PolicyAttribute> policyAttributes) throws LoadBalancingException
   {
       for(final LoadBalancerPolicyDescriptionCoreView current : lb.getPolicies()){
         if(policyName.equals(current.getPolicyName()))
@@ -340,7 +347,7 @@ public class LoadBalancerPolicies {
         }
         if(refPolicy!=null) {
           PolicyDescription predefinedPolicy = null;
-          List<PolicyDescription> predefinedPolicies = LoadBalancerPolicies.getSamplePolicyDescription();
+          List<PolicyDescription> predefinedPolicies = LoadBalancerPolicyHelper.getSamplePolicyDescription();
           for(final PolicyDescription policy : predefinedPolicies) {
             if(refPolicy.equals(policy.getPolicyName())) {
               predefinedPolicy = policy;

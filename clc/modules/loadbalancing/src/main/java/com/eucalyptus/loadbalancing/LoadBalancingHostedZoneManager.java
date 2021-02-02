@@ -9,7 +9,6 @@ package com.eucalyptus.loadbalancing;
 
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Name;
@@ -38,9 +37,9 @@ import io.vavr.control.Option;
 /**
  *
  */
-public class LoadBalancingHostedZone {
+public class LoadBalancingHostedZoneManager {
 
-  private static final Logger LOG = Logger.getLogger(LoadBalancingHostedZone.class);
+  private static final Logger LOG = Logger.getLogger(LoadBalancingHostedZoneManager.class);
 
   private static final AtomicReference<Pair<String,String>> zoneNameAndId = new AtomicReference<>();
   private static final long zoneCheckInterval = MoreObjects.firstNonNull(

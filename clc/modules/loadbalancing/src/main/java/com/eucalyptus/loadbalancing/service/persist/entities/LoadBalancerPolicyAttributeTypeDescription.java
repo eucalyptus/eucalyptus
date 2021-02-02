@@ -27,7 +27,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
 
-package com.eucalyptus.loadbalancing;
+package com.eucalyptus.loadbalancing.service.persist.entities;
 
 import javax.persistence.Column;
 import javax.persistence.Embeddable;

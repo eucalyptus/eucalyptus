@@ -39,6 +39,7 @@ import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer;
 import com.eucalyptus.loadbalancing.workflow.LoadBalancingWorkflows;
 import com.eucalyptus.resources.client.Ec2Client;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -205,7 +206,7 @@ public class LoadBalancingWorkerProperties {
           if ( keyname != null && !keyname.isEmpty() ) {
             // find out if there are any old elbs are deployed
             boolean oldElbExist = false;
-            for (LoadBalancer lb:LoadBalancers.listLoadbalancers()){
+            for (LoadBalancer lb: LoadBalancerHelper.listLoadbalancers()){
               if (!lb.useSystemAccount()) {
                 oldElbExist = true;
                 break;

@@ -27,7 +27,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
 
-package com.eucalyptus.loadbalancing;
+package com.eucalyptus.loadbalancing.service.persist.entities;
 
 import java.util.List;
 
@@ -42,8 +42,8 @@ import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeTypeDescription.LoadBalancerPolicyAttributeTypeDescriptionCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeTypeDescription.LoadBalancerPolicyAttributeTypeDescriptionCoreViewTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyAttributeTypeDescription.LoadBalancerPolicyAttributeTypeDescriptionCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyAttributeTypeDescription.LoadBalancerPolicyAttributeTypeDescriptionCoreViewTransform;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -113,14 +113,14 @@ public class LoadBalancerPolicyTypeDescription extends AbstractPersistent{
 	  return this.view.getAttributeTypeDescription();
 	}
 	
-	void addPolicyAttributeTypeDescription(final LoadBalancerPolicyAttributeTypeDescription attrDesc){
+	public void addPolicyAttributeTypeDescription(final LoadBalancerPolicyAttributeTypeDescription attrDesc){
 	  if(this.policyAttributeTypeDescriptions==null)
 	    this.policyAttributeTypeDescriptions = Lists.newArrayList();
 	  this.removePolicyAttributeTypeDescription(attrDesc);
 	  this.policyAttributeTypeDescriptions.add(attrDesc);
 	}
 	
-	void removePolicyAttributeTypeDescription(final LoadBalancerPolicyAttributeTypeDescription attrDesc){
+	public void removePolicyAttributeTypeDescription(final LoadBalancerPolicyAttributeTypeDescription attrDesc){
 	   if(this.policyAttributeTypeDescriptions==null)
 	     return;
 	   this.policyAttributeTypeDescriptions.remove(attrDesc);

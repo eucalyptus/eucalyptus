@@ -26,7 +26,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
-package com.eucalyptus.loadbalancing.activities;
+package com.eucalyptus.loadbalancing.service.persist.entities;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -45,12 +45,9 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.loadbalancing.LoadBalancer;
-import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerEntityTransform;
-import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
-import com.eucalyptus.loadbalancing.LoadBalancerZone;
-import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer.LoadBalancerEntityTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerZone.LoadBalancerZoneCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
@@ -94,7 +91,7 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 
     @ManyToOne
     @JoinColumn( name = "metadata_asg_fk", nullable=true)
-    private LoadBalancerAutoScalingGroup autoscaling_group = null; 
+    private LoadBalancerAutoScalingGroup autoscaling_group = null;
        
     @Transient
     private LoadBalancer loadbalancer = null;

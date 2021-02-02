@@ -38,6 +38,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerZone;
 import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
 
@@ -46,7 +47,7 @@ import com.eucalyptus.cloudwatch.common.msgs.Dimensions;
 import com.eucalyptus.cloudwatch.common.msgs.MetricData;
 import com.eucalyptus.cloudwatch.common.msgs.MetricDatum;
 import com.eucalyptus.cloudwatch.common.msgs.StatisticSet;
-import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer.LoadBalancerCoreView;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
@@ -57,10 +58,10 @@ import com.google.common.collect.Lists;
  * @author Sang-Min Park
  *
  */
-public class LoadBalancerCwatchMetrics {
-	private static Logger    LOG     = Logger.getLogger( LoadBalancerCwatchMetrics.class );
+public class LoadBalancerMetricsHelper {
+	private static Logger    LOG     = Logger.getLogger( LoadBalancerMetricsHelper.class );
 
-	private static LoadBalancerCwatchMetrics _instance = new LoadBalancerCwatchMetrics();
+	private static LoadBalancerMetricsHelper _instance = new LoadBalancerMetricsHelper();
 	private Map<ElbDimension, ElbAggregate> metricsMap = new ConcurrentHashMap<ElbDimension, ElbAggregate>();
 	
 	private Map<BackendInstance, Boolean> instanceHealthMap = new ConcurrentHashMap<BackendInstance, Boolean>();
@@ -73,8 +74,8 @@ public class LoadBalancerCwatchMetrics {
 	private final String CLOUDWATCH_ELB_METRIC_NAMESPACE = "AWS/ELB";
 	
 	private Object lock = new Object();
-	private LoadBalancerCwatchMetrics(){	}
-	public static LoadBalancerCwatchMetrics getInstance(){
+	private LoadBalancerMetricsHelper(){	}
+	public static LoadBalancerMetricsHelper getInstance(){
 		return _instance;
 	}
 	

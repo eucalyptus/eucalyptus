@@ -94,7 +94,7 @@ public class LoadBalancingServiceBootstrapper extends Bootstrapper.Simple {
         if (!isImageConfigured())
             return false;
         try {
-            LoadBalancerPolicies.initialize();
+            LoadBalancerPolicyHelper.initialize();
         } catch (final Exception ex) {
             LOG.error("Unable to initialize ELB policy types", ex);
             return false;
@@ -112,7 +112,7 @@ public class LoadBalancingServiceBootstrapper extends Bootstrapper.Simple {
             return false;
         }
         try{
-            if (!LoadBalancingHostedZone.check()) {
+            if (!LoadBalancingHostedZoneManager.check()) {
                 return false;
             }
         } catch (final Exception ex) {

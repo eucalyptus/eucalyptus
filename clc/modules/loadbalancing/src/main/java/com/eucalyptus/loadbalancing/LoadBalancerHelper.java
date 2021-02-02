@@ -29,9 +29,7 @@
 
 package com.eucalyptus.loadbalancing;
 
-import static com.eucalyptus.loadbalancing.LoadBalancer.Scheme;
-import static com.eucalyptus.loadbalancing.common.LoadBalancingMetadata.LoadBalancerMetadata;
-import static com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
+import static com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer.Scheme;
 import static com.eucalyptus.util.Strings.nonNull;
 
 import java.util.ArrayList;
@@ -58,21 +56,33 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionEntityTransform;
-import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerEntityTransform;
-import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.STATE;
-import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
-import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
+import com.eucalyptus.loadbalancing.service.persist.LoadBalancerSecurityGroups;
+import com.eucalyptus.loadbalancing.service.persist.LoadBalancers;
+import com.eucalyptus.loadbalancing.service.persist.LoadBalancingMetadataException;
+import com.eucalyptus.loadbalancing.service.persist.LoadBalancingMetadataNotFoundException;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer.LoadBalancerCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendInstance;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendServerDescription;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionEntityTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener.LoadBalancerListenerCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener.LoadBalancerListenerEntityTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener.PROTOCOL;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerSecurityGroup;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerSecurityGroup.STATE;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerSecurityGroupRef;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerZone;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerZone.LoadBalancerZoneCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerZone.LoadBalancerZoneEntityTransform;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
-import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceEntityTransform;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance.LoadBalancerServoInstanceEntityTransform;
 import com.eucalyptus.loadbalancing.common.msgs.AvailabilityZones;
 import com.eucalyptus.loadbalancing.common.msgs.BackendInstance;
 import com.eucalyptus.loadbalancing.common.msgs.BackendInstances;
@@ -98,15 +108,16 @@ import com.eucalyptus.loadbalancing.service.InvalidConfigurationRequestException
 import com.eucalyptus.loadbalancing.service.ListenerNotFoundException;
 import com.eucalyptus.loadbalancing.service.LoadBalancingException;
 import com.eucalyptus.loadbalancing.service.UnsupportedParameterException;
+import com.eucalyptus.loadbalancing.service.persist.views.ImmutableLoadBalancerView;
 import com.eucalyptus.loadbalancing.workflow.LoadBalancingActivitiesImpl;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
@@ -116,8 +127,8 @@ import com.google.common.collect.Sets;
 /**
  * @author Sang-Min Park
  */
-public class LoadBalancers {
-	private static Logger    LOG     = Logger.getLogger( LoadBalancers.class );
+public class LoadBalancerHelper {
+	private static Logger    LOG     = Logger.getLogger( LoadBalancerHelper.class );
 
 	public static List<LoadBalancer> listLoadbalancers(){
 		 try ( final TransactionResource db = Entities.transactionFor( LoadBalancer.class ) ) {
@@ -142,7 +153,7 @@ public class LoadBalancers {
 	// a loadbalancer is per-account resource; per-user access is governed by IAM policy
 	@Nonnull
 	public static LoadBalancer getLoadbalancer(final Context ctx, final String lbName){
-		return LoadBalancers.getLoadbalancer( ctx.getAccount().getAccountNumber(), lbName );
+		return LoadBalancerHelper.getLoadbalancer( ctx.getAccount().getAccountNumber(), lbName );
 	}
 
 	public static LoadBalancer getLoadbalancer(final String accountNumber, final String lbName) {
@@ -201,11 +212,11 @@ public class LoadBalancers {
 			if ( domainName.isPresent( ) ) {
 				final Pair<String, String> accountNamePair = domainName.get( ).toScopedLoadBalancerName( hostName );
 				try {
-					return LoadBalancers.getLoadbalancer( accountNamePair.getLeft( ), accountNamePair.getRight( ) );
+					return LoadBalancerHelper.getLoadbalancer( accountNamePair.getLeft( ), accountNamePair.getRight( ) );
 				} catch ( NoSuchElementException e ) {
 					if ( domainName.get( ) == LoadBalancerDomainName.INTERNAL ) { // perhaps it was an external balancer named "internal-..."
 						final Pair<String, String> externalAccountNamePair = LoadBalancerDomainName.EXTERNAL.toScopedLoadBalancerName( hostName );
-						return LoadBalancers.getLoadbalancer( externalAccountNamePair.getLeft( ), externalAccountNamePair.getRight( ) );
+						return LoadBalancerHelper.getLoadbalancer( externalAccountNamePair.getLeft( ), externalAccountNamePair.getRight( ) );
 					} else {
 						throw e;
 					}
@@ -218,81 +229,38 @@ public class LoadBalancers {
 		}
 	}
 
-	public static void checkVersion(final LoadBalancer lb, DeploymentVersion minVersion) throws LoadBalancerVersionException {
+	public static void checkVersion(final LoadBalancer lb, LoadBalancerDeploymentVersion minVersion) throws LoadBalancerVersionException {
 		if(lb.getLoadbalancerDeploymentVersion() == null ||
-				! DeploymentVersion.getVersion(
+				! LoadBalancerDeploymentVersion.getVersion(
 						lb.getLoadbalancerDeploymentVersion()).isEqualOrLaterThan(minVersion)) {
 			throw new LoadBalancerVersionException(minVersion);
 		}
 	}
 
 	public static Predicate<LoadBalancer> v4_2_0 = (lb) -> {
-		return versionOnOrLater(lb, DeploymentVersion.v4_2_0);
+		return versionOnOrLater(lb, LoadBalancerDeploymentVersion.v4_2_0);
 	};
 
 	public static Predicate<LoadBalancer> v4_3_0 = (lb) -> {
-		return versionOnOrLater(lb, DeploymentVersion.v4_3_0);
+		return versionOnOrLater(lb, LoadBalancerDeploymentVersion.v4_3_0);
 	};
 
 	public static Predicate<LoadBalancer> v4_4_0 = (lb) -> {
-		return versionOnOrLater(lb, DeploymentVersion.v4_4_0);
+		return versionOnOrLater(lb, LoadBalancerDeploymentVersion.v4_4_0);
 	};
 
-	private static boolean versionOnOrLater(final LoadBalancer lb, DeploymentVersion version) {
+	private static boolean versionOnOrLater(final LoadBalancer lb, LoadBalancerDeploymentVersion version) {
 		if (lb.getLoadbalancerDeploymentVersion() == null) {
 			return false;
 		} else {
-			return DeploymentVersion.getVersion(
+			return LoadBalancerDeploymentVersion.getVersion(
 					lb.getLoadbalancerDeploymentVersion()).isEqualOrLaterThan(version);
 		}
 	}
 
-	public enum DeploymentVersion {
-		v4_1_0,
-		v4_2_0, // the version is checked from 4.2.0
-		v4_3_0,
-		v4_4_0;
-
-		public static DeploymentVersion Latest = v4_4_0;
-
-		public String toVersionString(){
-			return this.name( ).substring( 1 ).replace( "_", "." );
-		}
-
-		public static DeploymentVersion getVersion(final String version) {
-			if( version == null || version.length() <= 0)
-				return DeploymentVersion.v4_1_0;
-
-			return DeploymentVersion.valueOf( "v" + version.replace( ".", "_" ) );
-		}
-
-		public boolean isLaterThan(final DeploymentVersion other) {
-			if(other==null)
-				return false;
-
-			String[] thisVersionDigits = this.name().substring(1).split("_");
-			String[] otherVersionDigits = other.name().substring(1).split("_");
-
-			for(int i=0; i<thisVersionDigits.length; i++){
-				int thisDigit = Integer.parseInt(thisVersionDigits[i]);
-				int otherDigit = 0;
-				if(i < otherVersionDigits.length)
-					otherDigit = Integer.parseInt(otherVersionDigits[i]);
-
-				if(thisDigit > otherDigit)
-					return true;
-				else if(thisDigit < otherDigit)
-					return false;
-			}
-			return false;
-		}
-
-		public boolean isEqualOrLaterThan(final DeploymentVersion other) {
-			return this.equals(other) || this.isLaterThan(other);
-		}
-	}
-
   public static LoadBalancer addLoadbalancer(
+      final LoadBalancers loadBalancers,
+      final LoadBalancerSecurityGroups securityGroups,
       final UserFullName user,
       final String lbName,
       final String vpcId,
@@ -300,7 +268,7 @@ public class LoadBalancers {
       final Map<String,String> securityGroupIdsToNames,
       final Map<String,String> tags ) throws LoadBalancingException {
 
-    final List<LoadBalancer> accountLbs = LoadBalancers.listLoadbalancers(user.getAccountNumber());
+    final List<LoadBalancer> accountLbs = LoadBalancerHelper.listLoadbalancers(user.getAccountNumber());
     for(final LoadBalancer lb : accountLbs) {
       if (lbName.toLowerCase().equals(lb.getDisplayName().toLowerCase()))
         throw new DuplicateAccessPointName( );
@@ -311,48 +279,43 @@ public class LoadBalancers {
       ///FIXME: not a sane reference
       final String securityGroupName =
           LoadBalancingActivitiesImpl.getSecurityGroupName(user.getAccountNumber(), lbName);
-      try ( final TransactionResource db = Entities.transactionFor(LoadBalancerSecurityGroup.class)) {
-        try{
-          final List<LoadBalancerSecurityGroup> groups =
-              Entities.query(LoadBalancerSecurityGroup.withState(STATE.OutOfService));
-          for(final LoadBalancerSecurityGroup group : groups) {
-            if (securityGroupName.equals(group.getName())) {
-              throw new InternalFailureException("Cleaning up the previous ELB with the same name. Retry in a few minutes.");
-            }
-          }
-        }catch(final NoSuchElementException e )  {
-          ;
+      try {
+        if ( securityGroups.listByExample(
+            LoadBalancerSecurityGroup.withState(STATE.OutOfService),
+            Predicates.alwaysTrue(),
+            LoadBalancerSecurityGroup::getName).contains(securityGroupName) ) {
+          throw new InternalFailureException("Cleaning up the previous ELB with the same name. Retry in a few minutes.");
         }
+      } catch (LoadBalancingMetadataException e) {
+        LOG.error("Error checking for previous ELB with the same name", e);
+        throw new InternalFailureException("Error checking for previous ELB with the same name");
       }
     }
-    try ( final TransactionResource db = Entities.transactionFor( LoadBalancer.class ) ) {
+    try {
       try {
-        if( Entities.uniqueResult( LoadBalancer.namedByAccountId( user.getAccountNumber(), lbName ) ) != null )
-          throw new DuplicateAccessPointName( );
-      } catch ( final NoSuchElementException e ) {
-        final List<LoadBalancerSecurityGroupRef> refs = Lists.newArrayList( );
-        for ( final Map.Entry<String,String> groupIdToNameEntry : securityGroupIdsToNames.entrySet( ) ) {
-          refs.add( new LoadBalancerSecurityGroupRef( groupIdToNameEntry.getKey( ), groupIdToNameEntry.getValue( ) ) );
-        }
-        Collections.sort( refs, Ordering.natural( ).onResultOf( LoadBalancerSecurityGroupRef.groupId( ) ) );
-
-        final LoadBalancer lb = LoadBalancer.newInstance(user, lbName );
-        lb.setVpcId( vpcId );
-        lb.setScheme( scheme );
-        lb.setSecurityGroupRefs( refs );
-        lb.setTags( tags );
-        lb.setLoadbalancerDeploymentVersion(DeploymentVersion.Latest.toVersionString());
-        Entities.persist( lb );
-        db.commit( );
-        return lb;
+        loadBalancers.lookupByName( user.asAccountFullName(), lbName, ImmutableLoadBalancerView::copyOf );
+        throw new DuplicateAccessPointName( );
+      } catch ( final LoadBalancingMetadataNotFoundException e ) { }
+      final List<LoadBalancerSecurityGroupRef> refs = Lists.newArrayList( );
+      for ( final Map.Entry<String,String> groupIdToNameEntry : securityGroupIdsToNames.entrySet( ) ) {
+        refs.add( new LoadBalancerSecurityGroupRef( groupIdToNameEntry.getKey( ), groupIdToNameEntry.getValue( ) ) );
       }
-    }catch(LoadBalancingException ex){
+      Collections.sort( refs, Ordering.natural( ).onResultOf( LoadBalancerSecurityGroupRef.groupId( ) ) );
+
+      final LoadBalancer lb = LoadBalancer.newInstance(user, lbName );
+      lb.setVpcId( vpcId );
+      lb.setScheme( scheme );
+      lb.setSecurityGroupRefs( refs );
+      lb.setTags( tags );
+      lb.setLoadbalancerDeploymentVersion(LoadBalancerDeploymentVersion.Latest.toVersionString());
+      loadBalancers.save( lb );
+      return lb;
+    } catch( LoadBalancingException ex ) {
       throw ex;
-    }catch ( Exception ex ) {
-      LOG.error("failed to persist a new loadbalancer", ex);
+    } catch ( Exception ex ) {
+      LOG.error("Failed to persist a new loadbalancer", ex);
       throw new LoadBalancingException("Failed to persist a new load-balancer because of: " + ex.getMessage(), ex);
     }
-    throw new LoadBalancingException("Failed to create a new load-balancer instance");
   }
 
 	public static void deleteLoadbalancer(final UserFullName user, final String lbName) throws LoadBalancingException {
@@ -411,7 +374,7 @@ public class LoadBalancers {
 			throws LoadBalancingException, EucalyptusCloudException {
 	    LoadBalancer lb;
     	try{
-    		lb= LoadBalancers.getLoadbalancer(ctx, lbName);
+    		lb= LoadBalancerHelper.getLoadbalancer(ctx, lbName);
     	}catch(Exception ex){
     		throw new InternalFailure400Exception("unable to find the loadbalancer");
 	    }
@@ -452,7 +415,7 @@ public class LoadBalancers {
 	) throws LoadBalancingException {
 		LoadBalancer lb;
 		try{
-			lb = LoadBalancers.getLoadbalancer(ctx, lbName);
+			lb = LoadBalancerHelper.getLoadbalancer(ctx, lbName);
 		}catch(Exception ex){
 			throw new AccessPointNotFoundException();
 		}
@@ -483,7 +446,7 @@ public class LoadBalancers {
 	public static void removeZone(final String lbName, final Context ctx, final Collection<String> zones) throws LoadBalancingException{
 	 	LoadBalancer lb;
     	try{
-    		lb = LoadBalancers.getLoadbalancer(ctx, lbName);
+    		lb = LoadBalancerHelper.getLoadbalancer(ctx, lbName);
     	}catch(Exception ex){
 	    	throw new AccessPointNotFoundException();
 	    }
@@ -623,7 +586,7 @@ public class LoadBalancers {
           accountId, lbName, oldCertName);
      LoadBalancer lb;
      try{
-       lb= LoadBalancers.getLoadbalancer(accountId, lbName);
+       lb= LoadBalancerHelper.getLoadbalancer(accountId, lbName);
      }catch(Exception ex){
        throw new LoadBalancingException("Failed to find the loadbalancer named " + lbName, ex);
      }
@@ -710,7 +673,7 @@ public class LoadBalancers {
 		desc.setCreatedTime(lb.getCreationTimestamp());/// createdtime
 
 		/// dns name
-		desc.setDnsName(LoadBalancers.getLoadBalancerDnsName(lb));
+		desc.setDnsName(LoadBalancerHelper.getLoadBalancerDnsName(lb));
 
 		// attributes
 		desc.setLoadBalancerAttributes(TypeMappers.transform(lb, LoadBalancerAttributes.class));
@@ -888,7 +851,7 @@ public class LoadBalancers {
 			if (policiesOfListener.contains(lbPolicy.getPolicyName())
 					|| policiesForBackendServer.contains(lbPolicy.getPolicyName())
 					|| "PublicKeyPolicyType".equals(lbPolicy.getPolicyTypeName()))
-				policies.add(LoadBalancerPolicies.AsPolicyDescription.INSTANCE.apply(lbPolicy));
+				policies.add(LoadBalancerPolicyHelper.AsPolicyDescription.INSTANCE.apply(lbPolicy));
 		}
 		final PolicyDescriptions policyDescs = new PolicyDescriptions();
 		policyDescs.setMember((ArrayList<PolicyDescription>) policies);
@@ -938,16 +901,4 @@ public class LoadBalancers {
 			throw new LoadBalancingException("Error while checking loadbalancing worker's certificate expiration", ex);
 		}
 	}
-
-  @QuantityMetricFunction( LoadBalancerMetadata.class )
-  public enum CountLoadBalancers implements Function<OwnerFullName, Long> {
-    INSTANCE;
-
-    @Override
-    public Long apply( final OwnerFullName input ) {
-      try ( final TransactionResource db = Entities.transactionFor( LoadBalancer.class ) ) {
-        return Entities.count( LoadBalancer.named( input, null ) );
-      }
-    }
-  }
 }
