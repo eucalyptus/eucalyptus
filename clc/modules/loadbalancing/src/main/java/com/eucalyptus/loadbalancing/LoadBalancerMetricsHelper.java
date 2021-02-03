@@ -39,6 +39,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nullable;
 
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerZone;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerView;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerZoneView;
 import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
 
@@ -47,7 +49,6 @@ import com.eucalyptus.cloudwatch.common.msgs.Dimensions;
 import com.eucalyptus.cloudwatch.common.msgs.MetricData;
 import com.eucalyptus.cloudwatch.common.msgs.MetricDatum;
 import com.eucalyptus.cloudwatch.common.msgs.StatisticSet;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer.LoadBalancerCoreView;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
@@ -79,9 +80,8 @@ public class LoadBalancerMetricsHelper {
 		return _instance;
 	}
 	
-	public void addMetric(final LoadBalancerZone lbZone, final MetricData metric){
+	public void addMetric(final LoadBalancerView lb, final LoadBalancerZoneView lbZone, final MetricData metric){
 		// based on the servo Id, find the loadbalancer and the availability zone
-		LoadBalancerCoreView lb = lbZone.getLoadbalancer();
 		final String userId = lb.getOwnerUserId();
 		final String lbName = lb.getDisplayName();
 		final String zoneName = lbZone.getName();
@@ -99,7 +99,7 @@ public class LoadBalancerMetricsHelper {
 		}
 	}
 	
-	public void updateHealthy(final LoadBalancerCoreView lb, final String zone, final String instanceId){
+	public void updateHealthy(final LoadBalancerView lb, final String zone, final String instanceId){
 		final ElbDimension dim = new ElbDimension(lb.getOwnerUserId(), lb.getDisplayName(), zone);
 		final BackendInstance key = new BackendInstance(lb, instanceId);
 
@@ -112,7 +112,7 @@ public class LoadBalancerMetricsHelper {
 		}
 	}
 	
-	public void updateUnHealthy(final LoadBalancerCoreView lb, final String zone, final String instanceId){
+	public void updateUnHealthy(final LoadBalancerView lb, final String zone, final String instanceId){
 		final ElbDimension dim = new ElbDimension(lb.getOwnerUserId(), lb.getDisplayName(), zone);
 		final BackendInstance key = new BackendInstance(lb, instanceId);
 		
@@ -485,7 +485,7 @@ public class LoadBalancerMetricsHelper {
 		private String userId = null;
 		private String loadbalancerName = null;
 		
-		private BackendInstance(final LoadBalancerCoreView lb, final String instanceId){
+		private BackendInstance(final LoadBalancerView lb, final String instanceId){
 			this.instanceId = instanceId;
 			this.userId = lb.getOwnerUserId();
 			this.loadbalancerName = lb.getDisplayName();

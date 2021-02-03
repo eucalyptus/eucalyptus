@@ -26,12 +26,9 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
-
 package com.eucalyptus.loadbalancing.service.persist.entities;
 
-import java.security.cert.X509Certificate;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -42,44 +39,22 @@ import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
-import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.loadbalancing.LoadBalancerPolicyHelper;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreViewTransform;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener.LoadBalancerListenerCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener.LoadBalancerListenerCoreViewTransform;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAttributeDescriptionCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAttributeDescriptionCoreViewTransform;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAtttributeDescriptionEntityTransform;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyAttributeTypeDescription.LoadBalancerPolicyAttributeTypeDescriptionCoreView;
-import com.eucalyptus.loadbalancing.service.InvalidConfigurationRequestException;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Exceptions;
-import com.google.common.base.Charsets;
-import com.google.common.base.Function;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.ImmutableList;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerPolicyDescriptionView;
 import com.google.common.collect.Lists;
+
 
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_policy_description" )
-public class LoadBalancerPolicyDescription extends AbstractPersistent {
+public class LoadBalancerPolicyDescription extends AbstractPersistent implements LoadBalancerPolicyDescriptionView {
   private static Logger    LOG     = Logger.getLogger( LoadBalancerPolicyDescription.class );
 
   private static final long serialVersionUID = 1L;
-  
-  @Transient
-  private LoadBalancerPolicyDescriptionRelationView view = null;
   
   @ManyToOne
   @JoinColumn( name = "metadata_loadbalancer_fk", nullable=false )
@@ -94,7 +69,7 @@ public class LoadBalancerPolicyDescription extends AbstractPersistent {
   @Column( name = "policy_name", nullable=false)
   private String policyName = null;
   
-  @Column( name = "policy_type_name", nullable=true)
+  @Column( name = "policy_type_name" )
   private String policyTypeName = null;
 
   @Column( name = "unique_name", unique=true, nullable=false)
@@ -102,9 +77,6 @@ public class LoadBalancerPolicyDescription extends AbstractPersistent {
 
   @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, mappedBy = "policyDescription")
   private List<LoadBalancerPolicyAttributeDescription> policyAttrDescription = null;
-  
-  @Transient
-  private LoadBalancerPolicyTypeDescription policyType = null;
   
   private LoadBalancerPolicyDescription(){}
   
@@ -138,101 +110,26 @@ public class LoadBalancerPolicyDescription extends AbstractPersistent {
     return this.policyTypeName;
   }
   
-  public LoadBalancerPolicyTypeDescription getPolicyTypeDescription(){
-    if(this.policyType == null){
-      this.policyType = LoadBalancerPolicyHelper.findLoadBalancerPolicyTypeDescription(this.policyTypeName);
-    }
-    return this.policyType;
-  }
-  
-  public void addPolicyAttributeDescription(final String attrName, String attrValue) 
-      throws InvalidConfigurationRequestException {
-    if(this.getPolicyTypeDescription() != null){
-      LoadBalancerPolicyAttributeTypeDescriptionCoreView attrType = null;
-      for(final LoadBalancerPolicyAttributeTypeDescriptionCoreView type: this.policyType.getPolicyAttributeTypeDescriptions()){
-        if(attrName.equals(type.getAttributeName())){
-          attrType = type;
-          break;
-        }
-      }
-      if(attrType==null)
-         throw new InvalidConfigurationRequestException(String.format("Attribute %s is not defined in the policy type", attrName));
-      if(!LoadBalancerPolicyHelper.isAttributeValueValid(attrType.getAttributeType(), attrType.getCardinality(), attrValue))
-        throw new InvalidConfigurationRequestException(String.format("Attribute value %s is not valid", attrValue));
-     
-      /* check for cardinality
-       * ONE(1) : Single value required
-        ZERO_OR_ONE(0..1) : Up to one value can be supplied
-        ZERO_OR_MORE(0..*) : Optional. Multiple values are allowed
-        ONE_OR_MORE(1..*0) : Required. Multiple values are allowed
-       */
-      final String cardinality = attrType.getCardinality();
-      if(this.policyAttrDescription != null && ("ONE".equals(cardinality) || "ZERO_OR_ONE".equals(cardinality))) {
-        for(final LoadBalancerPolicyAttributeDescription existing : this.policyAttrDescription) {
-          if(attrName.equals(existing.getAttributeName()))
-            throw new InvalidConfigurationRequestException(String.format("More than one attribute(%s) is found (Cardinality: %s)", attrName, cardinality));
-        }
-      }
-      
-      if ("PublicKeyPolicyType".equals(this.policyType.getPolicyTypeName()) &&
-          "PublicKey".equals(attrName)) {
-        try{
-          String certString = attrValue.trim();
-          if(! certString.startsWith("-----BEGIN CERTIFICATE-----"))
-            certString = String.format("-----BEGIN CERTIFICATE-----\n%s", certString);
-          if(! certString.endsWith("-----END CERTIFICATE-----"))
-            certString = String.format("%s\n-----END CERTIFICATE-----", certString);
-          final X509Certificate cert = PEMFiles.getCert(certString.getBytes( Charsets.UTF_8 ));
-          if(cert==null)
-            throw new EucalyptusCloudException("Malformed cert");
-          attrValue = certString;
-        }catch(final Exception ex){
-          throw new InvalidConfigurationRequestException("PublicKey is invalid");
-        }
-      }
-    }
-    
+  public void addPolicyAttributeDescription(final String attrName, String attrValue) {
     final LoadBalancerPolicyAttributeDescription attr = new LoadBalancerPolicyAttributeDescription(this, attrName, attrValue);
     if(this.policyAttrDescription == null)
       this.policyAttrDescription = Lists.newArrayList();
     this.policyAttrDescription.add(attr);
   }
-  
-  public void removePolicyAttributeDescription(final LoadBalancerPolicyAttributeDescription desc){
-    if(this.policyAttrDescription == null)
-      return;
-    this.policyAttrDescription.remove(desc);
+
+  public List<LoadBalancerPolicyAttributeDescription> getPolicyAttributeDescriptions(){
+    return this.policyAttrDescription;
+  }
+
+  public List<LoadBalancerListener> getListeners(){
+    return this.listeners;
   }
   
-  public List<LoadBalancerPolicyAttributeDescriptionCoreView> getPolicyAttributeDescription(){
-    return this.view.getPolicyAttributeDescription();
+  public List<LoadBalancerBackendServerDescription> getBackendServers(){
+    return this.backendServers;
   }
   
-  public List<LoadBalancerPolicyAttributeDescription> findAttributeDescription(final String attrName) throws NoSuchElementException{
-    final List<LoadBalancerPolicyAttributeDescription> attributes = Lists.newArrayList();
-    for (final LoadBalancerPolicyAttributeDescriptionCoreView attrView : this.getPolicyAttributeDescription()){
-      if(attrView.getAttributeName().equals(attrName)) {
-        attributes.add(LoadBalancerPolicyAtttributeDescriptionEntityTransform.INSTANCE.apply(attrView));
-      }
-    }
-    return attributes;
-  }
-  
-  public List<LoadBalancerListenerCoreView> getListeners(){
-    return this.view.getListeners();
-  }
-  
-  public List<LoadBalancerBackendServerDescriptionCoreView> getBackendServers(){
-    return this.view.getBackendServers();
-  }
-  
-  @PostLoad
-  private void onLoad(){
-    if(this.view==null)
-      this.view = new LoadBalancerPolicyDescriptionRelationView(this);
-  }
-  
- @PrePersist
+  @PrePersist
   private void generateOnCommit( ) {
     if(this.uniqueName==null)
       this.uniqueName = createUniqueName( );
@@ -299,80 +196,5 @@ public class LoadBalancerPolicyDescription extends AbstractPersistent {
   @Override
   public String toString(){
     return String.format("LoadBalancer Policy Description for (%s):%s-%s", this.loadbalancer, this.policyName, this.policyTypeName);
-  }
-  
-  public static class LoadBalancerPolicyDescriptionRelationView{
-    private LoadBalancerPolicyDescription policyDesc = null;
-    private ImmutableList<LoadBalancerPolicyAttributeDescriptionCoreView> policyAttrDesc = null;
-    private ImmutableList<LoadBalancerListenerCoreView> listeners = null;
-    private ImmutableList<LoadBalancerBackendServerDescriptionCoreView> backendServers = null;
-    LoadBalancerPolicyDescriptionRelationView(final LoadBalancerPolicyDescription desc){
-      this.policyDesc = desc;
-      if(desc.policyAttrDescription != null)
-        this.policyAttrDesc = ImmutableList.copyOf(Collections2.transform(desc.policyAttrDescription,
-            LoadBalancerPolicyAttributeDescriptionCoreViewTransform.INSTANCE));
-      if(desc.listeners!= null)
-        this.listeners = ImmutableList.copyOf(Collections2.transform(desc.listeners, 
-            LoadBalancerListenerCoreViewTransform.INSTANCE));
-      
-      if(desc.backendServers!=null)
-        this.backendServers = ImmutableList.copyOf(Collections2.transform(desc.backendServers,
-            LoadBalancerBackendServerDescriptionCoreViewTransform.INSTANCE));
-    }
-    
-    public ImmutableList<LoadBalancerPolicyAttributeDescriptionCoreView> getPolicyAttributeDescription(){
-      return this.policyAttrDesc;
-    }
-    
-    public ImmutableList<LoadBalancerListenerCoreView> getListeners(){
-      return this.listeners;
-    }
-    
-    public ImmutableList<LoadBalancerBackendServerDescriptionCoreView> getBackendServers(){
-      return this.backendServers;
-    }
-  }
-  
-  public static class LoadBalancerPolicyDescriptionCoreView {
-    private LoadBalancerPolicyDescription policyDesc = null;
-    LoadBalancerPolicyDescriptionCoreView(final LoadBalancerPolicyDescription desc){
-      this.policyDesc = desc;
-    }
-    
-    public String getPolicyName(){
-      return this.policyDesc.policyName;
-    }
-    
-    public String getPolicyTypeName(){
-      return this.policyDesc.policyTypeName;
-    }
-  }
-  
-  public enum LoadBalancerPolicyDescriptionCoreViewTransform implements 
-    Function<LoadBalancerPolicyDescription, LoadBalancerPolicyDescriptionCoreView>{
-    INSTANCE;
-
-    @Override
-    public LoadBalancerPolicyDescriptionCoreView apply(
-        LoadBalancerPolicyDescription arg0) {
-      return new LoadBalancerPolicyDescriptionCoreView(arg0);
-    }
-  }
-  
-  public enum LoadBalancerPolicyDescriptionEntityTransform implements
-    Function<LoadBalancerPolicyDescriptionCoreView, LoadBalancerPolicyDescription>{
-    INSTANCE;
-
-    @Override
-    public LoadBalancerPolicyDescription apply(
-        LoadBalancerPolicyDescriptionCoreView arg0) {
-      try ( final TransactionResource db = Entities.transactionFor( LoadBalancerPolicyDescription.class ) ) {
-        return Entities.uniqueResult(arg0.policyDesc);
-      }catch(final NoSuchElementException ex){
-        throw ex;
-      }catch (final Exception ex) {
-        throw Exceptions.toUndeclared(ex);
-      }
-    }
   }
 }

@@ -40,10 +40,13 @@ import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer.Scheme;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerAutoScalingGroup;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
@@ -472,26 +475,26 @@ public class LoadBalancingSystemVpcs {
         final RunningInstancesItemType vmInstance = vmInstanceOpt.get();
         if(! instanceAttachedToUserVpc.test(vmInstance) ) {
 
-            LoadBalancerServoInstance instance = null;
-            try {
-                instance = LoadBalancerHelper.lookupServoInstance(instanceId);
-            }catch(final Exception ex) {
-                throw Exceptions.toUndeclared("Faild to lookup loadbalancer VM named: " + instanceId);
+            final String userSubnetId;
+            final Set<String> userSecurityGroupIds;
+            final Scheme scheme;
+            try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
+                final LoadBalancerServoInstance instance = LoadBalancerHelper.lookupServoInstance(instanceId);
+                final LoadBalancerAutoScalingGroup autoscaleGroup = instance.getAutoScalingGroup();
+                final LoadBalancer loadBalancer = autoscaleGroup.getLoadBalancer();
+
+                userSubnetId = autoscaleGroup.getUserSubnetId();
+                userSecurityGroupIds = LoadBalancerHelper.getSecurityGroupIdsToNames( loadBalancer ).keySet( );
+                scheme = loadBalancer.getScheme();
+            } catch( final Exception ex ) {
+                throw Exceptions.toUndeclared("Failed to lookup loadbalancer VM named: " + instanceId, ex);
             }
 
-            final LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView
-                    autoscaleGroupView = instance.getAutoScalingGroup();
             // 1. find out this servo VM's user subnet ID
-            final String userSubnetId = autoscaleGroupView.getUserSubnetId();
             if(userSubnetId == null)
                 throw Exceptions.toUndeclared("User subnet ID of the loadbalancer instance is null");
 
             // 2. also find out the ELB's security group ID
-            final LoadBalancerAutoScalingGroup autoscaleGroup =
-                    LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupEntityTransform.INSTANCE.apply(autoscaleGroupView);
-            final LoadBalancer.LoadBalancerCoreView lbView = autoscaleGroup.getLoadBalancer();
-            final Set<String> userSecurityGroupIds = lbView.getSecurityGroupIdsToNames().keySet();
-
             // 3. create ENI from the subnet ID, associated with the security group ID
             //    the creation of ENI out of user subnet is EUCA-only exception
             NetworkInterfaceType attachedENI = null;
@@ -518,7 +521,7 @@ public class LoadBalancingSystemVpcs {
                     attachedENI = availableInteface;
 
                     // re-load the interface address for source ip check
-                    controlInterfaceCache.invalidate(instance.getInstanceId());
+                    controlInterfaceCache.invalidate(instanceId);
                 }catch(final Exception ex) {
                     LOG.warn("Failed to attach user vpc interface; will retry", ex);
                     attachedENI = null;
@@ -533,7 +536,7 @@ public class LoadBalancingSystemVpcs {
 
             // 4. for non-internal ELB, allocate and associate EIP to the secondary interface
             if( attachedENI!=null) {
-                if (lbView.getScheme() != LoadBalancer.Scheme.Internal) {
+                if (scheme != LoadBalancer.Scheme.Internal) {
                     final String allocationId = client.describeSystemAddresses(true).stream()
                             .filter(addr -> addr.getAssociationId() == null
                                     && addr.getInstanceId() == null

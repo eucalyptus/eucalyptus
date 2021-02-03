@@ -32,11 +32,7 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendServerDescription;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionEntityTransform;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer;
 import com.google.common.collect.Lists;
 
@@ -48,55 +44,32 @@ public class LoadBalancerBackendServerHelper {
   private static Logger    LOG     = Logger.getLogger( LoadBalancerBackendServerHelper.class );
 
   public static List<LoadBalancerBackendServerDescription> getLoadBalancerBackendServerDescription(final LoadBalancer lb) {
-      final List<LoadBalancerBackendServerDescription> backends = Lists.newArrayList();
-      for(final LoadBalancerBackendServerDescriptionCoreView view : lb.getBackendServers()) {
-        backends.add(LoadBalancerBackendServerDescriptionEntityTransform.INSTANCE.apply(view));
-      }
-      return backends;
+      return Lists.newArrayList( lb.getBackendServers( ) );
   }
-  
+
+  /**
+   * Caller must have transaction for load balancer
+   */
   public static boolean hasBackendServerDescription(final LoadBalancer lb, int instancePort) {
     boolean found = false;
-    for(final LoadBalancerBackendServerDescriptionCoreView view : lb.getBackendServers()) {
-      if(view.getInstancePort().intValue() == instancePort) {
+    for(final LoadBalancerBackendServerDescription backendServerDescription : lb.getBackendServers()) {
+      if(backendServerDescription.getInstancePort() == instancePort) {
         found =true;
         break;
       }
     }
     return found;
   }
-  
-  public static LoadBalancerBackendServerDescription createBackendServerDescription(final LoadBalancer lb, final int instancePort) {
-    LoadBalancerBackendServerDescription backend = null;
-    try ( final TransactionResource db = 
-        Entities.transactionFor( LoadBalancerBackendServerDescription.class ) ) {
-      backend = LoadBalancerBackendServerDescription.named(lb, instancePort);
-      Entities.persist(backend);
-      db.commit();
-    }
-    
-    try ( final TransactionResource db = 
-        Entities.transactionFor( LoadBalancerBackendServerDescription.class ) ) {
-      try{
-        backend = Entities.uniqueResult(backend);
-      }catch(final Exception ex) {
-        backend = null;
-      }
-    }
-    return backend;
-  }
-  
+
+  /**
+   * Caller must have transaction for load balancer
+   */
   public static LoadBalancerBackendServerDescription getBackendServerDescription(final LoadBalancer lb, final int instancePort) {
     // look for existing back-end server description; if none, create one
     LoadBalancerBackendServerDescription backend = null;
-    for(final LoadBalancerBackendServerDescriptionCoreView backendView : lb.getBackendServers()){
-      if(backendView.getInstancePort().intValue() == instancePort) {
-        try{
-          backend = LoadBalancerBackendServerDescriptionEntityTransform.INSTANCE.apply(backendView);
-        }catch(final Exception ex){
-          LOG.error("Failed to load loadbalancer backend server description", ex);
-          return null;
-        }
+    for(final LoadBalancerBackendServerDescription backendServerDescription : lb.getBackendServers()){
+      if(backendServerDescription.getInstancePort() == instancePort) {
+        backend = backendServerDescription;
         break;
       }
     }

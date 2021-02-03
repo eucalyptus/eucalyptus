@@ -28,8 +28,6 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.workflow;
 
-import static com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerZone.LoadBalancerZoneCoreView.name;
-import static com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerZone.LoadBalancerZoneCoreView.subnetId;
 import static com.eucalyptus.loadbalancing.service.LoadBalancingService.MAX_HEALTHCHECK_INTERVAL_SEC;
 
 import com.amazonaws.services.s3.model.CannedAccessControlList;
@@ -40,6 +38,11 @@ import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.tokens.SecurityTokenAWSCredentialsProvider;
 import com.eucalyptus.compute.common.*;
 import com.eucalyptus.loadbalancing.*;
+import com.eucalyptus.loadbalancing.service.LoadBalancingException;
+import com.eucalyptus.loadbalancing.service.persist.ImmutableLoadBalancingPersistence;
+import com.eucalyptus.loadbalancing.service.persist.LoadBalancers;
+import com.eucalyptus.loadbalancing.service.persist.LoadBalancingMetadataNotFoundException;
+import com.eucalyptus.loadbalancing.service.persist.LoadBalancingPersistence;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance.STATE;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
 import com.eucalyptus.loadbalancing.LoadBalancingSystemVpcs;
@@ -64,8 +67,29 @@ import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyD
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerSecurityGroupRef;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerZone;
+import com.eucalyptus.loadbalancing.service.persist.entities.PersistenceLoadBalancerSecurityGroups;
+import com.eucalyptus.loadbalancing.service.persist.entities.PersistenceLoadBalancers;
+import com.eucalyptus.loadbalancing.service.persist.views.ImmutableLoadBalancerAutoScalingGroupView;
+import com.eucalyptus.loadbalancing.service.persist.views.ImmutableLoadBalancerBackendInstanceView;
+import com.eucalyptus.loadbalancing.service.persist.views.ImmutableLoadBalancerListenerView;
+import com.eucalyptus.loadbalancing.service.persist.views.ImmutableLoadBalancerSecurityGroupView;
+import com.eucalyptus.loadbalancing.service.persist.views.ImmutableLoadBalancerServoInstanceView;
+import com.eucalyptus.loadbalancing.service.persist.views.ImmutableLoadBalancerView;
+import com.eucalyptus.loadbalancing.service.persist.views.ImmutableLoadBalancerZoneView;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerAutoScalingGroupView;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerBackendInstanceView;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerListenerView;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerPolicyDescriptionFullView;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerPolicyDescriptionView;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerSecurityGroupView;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerServoInstanceView;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerView;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerZoneFullView;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerZoneView;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerZonesView;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
+import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.ws.StackConfiguration;
 import org.apache.log4j.Logger;
 
@@ -90,26 +114,11 @@ import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer.LoadBalancerCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer.LoadBalancerEntityTransform;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendInstance.LoadBalancerBackendInstanceEntityTransform;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener.LoadBalancerListenerCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener.LoadBalancerListenerEntityTransform;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener.PROTOCOL;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupEntityTransform;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerZone.LoadBalancerZoneCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerZone.LoadBalancerZoneEntityTransform;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityException;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerAutoScalingGroup;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupEntityTransform;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance.LoadBalancerServoInstanceEntityTransform;
 import com.eucalyptus.loadbalancing.common.msgs.Listener;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescription;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyAttribute;
@@ -117,7 +126,6 @@ import com.eucalyptus.resources.client.Ec2Client;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.Exceptions;
-import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
@@ -129,6 +137,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
+import io.vavr.collection.Stream;
+
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
@@ -137,6 +149,11 @@ import com.google.common.collect.Sets;
 @ComponentPart(LoadBalancing.class)
 public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   private static Logger LOG  = Logger.getLogger( LoadBalancingActivitiesImpl.class );
+
+  private LoadBalancingPersistence persistence = ImmutableLoadBalancingPersistence.builder()
+      .balancers( new PersistenceLoadBalancers( ) )
+      .balancerSecurityGroups( new PersistenceLoadBalancerSecurityGroups( ))
+      .build();
 
   private static int findAvailableResources(final List<ClusterInfoType> clusters, final String zoneName, final String instanceType){
     // parse euca-describe-availability-zones verbose response
@@ -158,8 +175,6 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
                   strNum="0";
 
                 return Integer.parseInt(strNum);
-              }catch(final NumberFormatException ex){
-                break;
               }catch(final Exception ex){
                 break;
               }
@@ -386,11 +401,19 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   public SecurityGroupSetupActivityResult securityGroupSetup(final String accountNumber, final String lbName)
       throws LoadBalancingActivityException {
     final SecurityGroupSetupActivityResult result = new SecurityGroupSetupActivityResult();
-    LoadBalancer lbEntity;
-    LoadBalancerCoreView lb;
-    try{
-      lbEntity = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
-      lb = lbEntity.getCoreView( );
+    final LoadBalancerView lb;
+    final boolean lbHasSecurityGroups;
+    try {
+      final Tuple2<LoadBalancerView,Boolean> lbData = LoadBalancerHelper.getLoadbalancer(
+          persistence,
+          Predicates.alwaysTrue( ),
+          loadBalancer -> Tuple.of(
+                LoadBalancers.CORE_VIEW.apply( loadBalancer ),
+                !loadBalancer.getSecurityGroupRefs( ).isEmpty() ),
+          accountNumber,
+          lbName );
+      lb = lbData._1();
+      lbHasSecurityGroups = lbData._2();
     }catch(NoSuchElementException ex){
       throw new LoadBalancingActivityException("Could not find the loadbalancer with name="+lbName, ex);
     }catch(Exception ex){
@@ -442,6 +465,8 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
         throw new LoadBalancingActivityException("Failed to create the security group for loadbalancer");
 
       try ( final TransactionResource db = Entities.transactionFor( LoadBalancerSecurityGroup.class ) ) {
+        final LoadBalancer lbEntity =
+            Entities.uniqueResult( LoadBalancer.namedByAccountId( accountNumber, lbName ) );
         try {
           Entities.uniqueResult( LoadBalancerSecurityGroup.named( lbEntity,
               result.getGroupOwnerAccountId(), result.getGroupName() ) );
@@ -453,7 +478,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
         throw new LoadBalancingActivityException("Error while persisting security group", ex);
       }
       /// END OF NON-VPC CASE
-    } else if ( lb.getSecurityGroupIdsToNames( ).isEmpty( ) ) {
+    } else if ( !lbHasSecurityGroups ) {
       final String groupName = generateDefaultVPCSecurityGroupName( lb.getVpcId( ) );
       final String groupDesc = String.format( "ELB created security group used when no security group is specified during ELB creation - modifications could impact traffic to future ELBs" );
       final AccountFullName accountFullName = AccountFullName.getInstance(accountNumber);
@@ -506,7 +531,8 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     if(sgroupId!=null){
       final boolean tagGroup;
       try{
-        final LoadBalancer lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
+        final LoadBalancerView lb =
+            LoadBalancerHelper.getLoadbalancer(persistence, Predicates.alwaysTrue(), LoadBalancers.CORE_VIEW, accountNumber, lbName);
         tagGroup = lb.getVpcId( ) == null;
       }catch(NoSuchElementException ex){
         throw new LoadBalancingActivityException("Failed to find the loadbalancer "+ lbName, ex);
@@ -609,24 +635,31 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   private static final String TAG_KEY = "service-type";
   private static final String TAG_VALUE = "loadbalancing";
   @Override
-  public AutoscalingGroupSetupActivityResult autoscalingGroupSetup(final String accountNumber,
-                                                                   final String lbName, String instanceProfileName,
-                                                                   String securityGroupName, List<String> zones, Map<String,String> zoneToSubnetIdMap) throws LoadBalancingActivityException {
+  public AutoscalingGroupSetupActivityResult autoscalingGroupSetup(
+      final String accountNumber,
+      final String lbName,
+      final String instanceProfileName,
+      final String securityGroupName,
+      final List<String> zones,
+      Map<String,String> zoneToSubnetIdMap
+  ) throws LoadBalancingActivityException {
     if(LoadBalancingWorkerProperties.IMAGE == null)
       throw new LoadBalancingActivityException("Loadbalancer's image is not configured");
+
     final AutoscalingGroupSetupActivityResult activityResult = new AutoscalingGroupSetupActivityResult();
-    final LoadBalancer lbEntity;
-    final LoadBalancer.LoadBalancerCoreView lb;
-    try{
-      lbEntity = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
-      lb = lbEntity.getCoreView( );
+    final LoadBalancerView lb;
+    final Map<String,String> lbSecurityGroupIdsToNames;
+    try ( final TransactionResource tx = Entities.transactionFor(LoadBalancer.class) ) {
+      final LoadBalancer lbEntity = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
       if ( zoneToSubnetIdMap == null ) {
         zoneToSubnetIdMap = CollectionUtils.putAll(
-            Iterables.filter( lbEntity.getZones( ), Predicates.compose( Predicates.notNull( ), subnetId( ) ) ),
+            Iterables.filter( lbEntity.getZones( ), Predicates.compose( Predicates.notNull( ), LoadBalancerZone::getSubnetId ) ),
             Maps.<String, String>newHashMap( ),
-            name( ),
-            subnetId( ) );
+            LoadBalancerZone::getName,
+            LoadBalancerZone::getSubnetId );
       }
+      lb = lbEntity;
+      lbSecurityGroupIdsToNames = LoadBalancerHelper.getSecurityGroupIdsToNames( lbEntity );
     }catch(NoSuchElementException ex){
       throw new LoadBalancingActivityException("Failed to find the loadbalancer "+ lbName, ex);
     }catch(Exception ex){
@@ -679,8 +712,8 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
           Set<String> securityGroupNamesOrIds = null;
           if (systemVpcZoneIdentifier == null ) {
             securityGroupNamesOrIds = Sets.newHashSet();
-            if (!lb.getSecurityGroupIdsToNames().isEmpty()) {
-              securityGroupNamesOrIds.addAll(lb.getSecurityGroupIdsToNames().keySet());
+            if (!lbSecurityGroupIdsToNames.isEmpty()) {
+              securityGroupNamesOrIds.addAll(lbSecurityGroupIdsToNames.keySet());
             } else {
               if (securityGroupName != null) {
                 securityGroupNamesOrIds.add(securityGroupName);
@@ -749,6 +782,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       }
       // commit ASG record to the database
       try ( final TransactionResource db = Entities.transactionFor( LoadBalancerAutoScalingGroup.class ) ) {
+        final LoadBalancer lbEntity = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
         try {
           final LoadBalancerAutoScalingGroup group = Entities.uniqueResult( LoadBalancerAutoScalingGroup.named( lbEntity, availabilityZone ) );
           if ( capacity != null ) group.setCapacity( capacity );
@@ -773,12 +807,6 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     if(result.getCreatedGroupName() == null || !result.getShouldRollback())
       return;
     // set security group with the loadbalancer; update db
-    LoadBalancer lb;
-    try{
-      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
-    } catch(Exception ex){
-      return;
-    }
 
     try{
       EucalyptusActivityTasks.getInstance().deleteSystemSecurityGroup( result.getCreatedGroupName() );
@@ -788,12 +816,11 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     }
 
     try ( final TransactionResource db = Entities.transactionFor( LoadBalancerSecurityGroup.class ) ) {
-      final LoadBalancerSecurityGroup group =
-          Entities.uniqueResult(LoadBalancerSecurityGroup.named(lb,
-              result.getGroupOwnerAccountId(), result.getCreatedGroupName()));
+      final LoadBalancerSecurityGroup group = Entities.uniqueResult(LoadBalancerSecurityGroup.named(
+          AccountFullName.getInstance(result.getGroupOwnerAccountId()),
+          result.getCreatedGroupName()));
       group.setState(LoadBalancerSecurityGroup.STATE.OutOfService);
       group.setLoadBalancer(null);
-      Entities.persist(group);
       db.commit();
     }catch(NoSuchElementException ex){
     }catch(Exception ex){
@@ -816,9 +843,9 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   @Override
   public void autoscalingGroupSetupRollback(String accountNumber,
       String lbName, AutoscalingGroupSetupActivityResult result) {
-    LoadBalancer lb;
+    LoadBalancerView lb;
     try{
-      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
     }catch(Exception ex){
       LOG.error("failed to find the loadbalancer: " + lbName);
       return;
@@ -852,9 +879,8 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   public List<String> enableAvailabilityZonesPersistUpdatedZones(String accountNumber,
       String lbName, List<String> zonesToEnable, Map<String, String> zoneToSubnetIdMap)
           throws LoadBalancingActivityException {
-    LoadBalancer lb;
     try{
-      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
+      LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
     }catch(NoSuchElementException ex){
       throw new LoadBalancingActivityException("Could not find the loadbalancer with name="+ lbName, ex);
     }catch(Exception ex){
@@ -865,6 +891,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     if(zonesToEnable!= null) {
       for(final String zone : zonesToEnable){
         try ( final TransactionResource db = Entities.transactionFor( LoadBalancerZone.class ) ) {
+          final LoadBalancer lb = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
           try {
             final LoadBalancerZone exist = Entities.uniqueResult( LoadBalancerZone.named( lb, zone ) );
             exist.setState( LoadBalancerZone.STATE.InService );
@@ -890,28 +917,26 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     if(zonesToRollback==null || zonesToRollback.size()<=0)
       return;
 
-    LoadBalancer lb;
     try{
-      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
-    }catch(NoSuchElementException ex){
+      persistence.balancers( ).updateByExample(
+          LoadBalancer.namedByAccountId( accountNumber, lbName ),
+          AccountFullName.getInstance(accountNumber),
+          lbName,
+          Predicates.alwaysTrue( ),
+          lb -> {
+            for(final LoadBalancerZone zone: lb.getZones()){
+              if( zonesToRollback.contains(zone.getName()) ) {
+                zone.setState( LoadBalancerZone.STATE.OutOfService );
+              }
+            }
+            return lb;
+          });
+    }catch(LoadBalancingMetadataNotFoundException ex){
       LOG.warn("Could not find the loadbalancer with name="+ lbName, ex);
       return;
     }catch(Exception ex){
-      LOG.warn("Error while looking for loadbalancer with name="+ lbName, ex);
+      LOG.error("could not mark loadbalancer ("+lbName+") out of state for the zone", ex);
       return;
-    }
-
-    for(final LoadBalancerZoneCoreView zoneView : lb.getZones()){
-      if(zonesToRollback.contains(zoneView.getName())) {
-        try ( final TransactionResource db = Entities.transactionFor( LoadBalancerZone.class ) ) {
-          final LoadBalancerZone sample = LoadBalancerZone.named(lb,  zoneView.getName());
-          final LoadBalancerZone update = Entities.uniqueResult(sample);
-          update.setState( LoadBalancerZone.STATE.OutOfService );
-          db.commit();
-        }catch(final Exception ex){
-          LOG.error("could not mark out of state for the zone", ex);
-        }
-      }
     }
   }
 
@@ -919,9 +944,8 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   public void enableAvailabilityZonesPersistBackendInstanceState(
       String accountNumber, String lbName, List<String> enabledZones)
           throws LoadBalancingActivityException {
-    LoadBalancer lb;
     try{
-      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
+      LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
     }catch(NoSuchElementException ex){
       LOG.warn("Could not find the loadbalancer with name="+ lbName, ex);
       return;
@@ -932,19 +956,18 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
 
     try{
       for(final String enabledZone : enabledZones) {
-        final LoadBalancerZone zone = LoadBalancerHelper.findZone(lb, enabledZone);
-        for(final LoadBalancerBackendInstanceCoreView instance : zone.getBackendInstances()){
-          try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
-            final LoadBalancerBackendInstance update = Entities.uniqueResult(
-                LoadBalancerBackendInstance.named(lb, instance.getInstanceId()));
-            update.setReasonCode( "" );
-            update.setDescription( "" );
-            db.commit();
-          }catch(final NoSuchElementException ex){
-            LOG.warn("failed to find the backend instance");
-          }catch(final Exception ex){
-            LOG.warn("failed to query the backend instance", ex);
+        try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ) {
+          final LoadBalancer lb = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
+          final LoadBalancerZone zone = LoadBalancerHelper.findZone(lb, enabledZone);
+          for(final LoadBalancerBackendInstance instance : zone.getBackendInstances()){
+            instance.setReasonCode( "" );
+            instance.setDescription( "" );
           }
+          db.commit();
+        }catch(final NoSuchElementException ex){
+          LOG.warn("failed to find the backend instance");
+        }catch(final Exception ex){
+          LOG.warn("failed to query the backend instance", ex);
         }
       }
     }catch(final Exception ex){
@@ -956,9 +979,9 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   public void createListenerCheckSSLCertificateId(String accountNumber,
       String lbName, Listener[] listeners)
           throws LoadBalancingActivityException {
-    LoadBalancer lb;
+    LoadBalancerView lb;
     try{
-      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
     }catch(Exception ex){
       throw new LoadBalancingActivityException("could not find the loadbalancer", ex);
     }
@@ -1013,9 +1036,9 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     if(certArns.size() <= 0)
       return result;
 
-    LoadBalancer lb = null;
+    LoadBalancerView lb = null;
     try{
-      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
     }catch(Exception ex){
       throw new LoadBalancingActivityException("could not find the loadbalancer", ex);
     }
@@ -1054,9 +1077,9 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     final List<String> policyNames = result.getPolicyNames();
 
     if(roleName!=null && policyNames!=null && policyNames.size()>0){
-      LoadBalancer lb = null;
+      LoadBalancerView lb;
       try{
-        lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
+        lb = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
       }catch(Exception ex){
         return;
       }
@@ -1077,19 +1100,19 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
           throws LoadBalancingActivityException {
     final AuthorizeIngressRuleActivityResult result = new AuthorizeIngressRuleActivityResult();
     result.setListeners(Lists.<Listener>newArrayList());
-    LoadBalancer lb;
-    String groupName = null;
-    try{
-      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
-      final LoadBalancerSecurityGroupCoreView group = lb.getGroup();
-      if(group!=null)
-        groupName = group.getName();
+    final LoadBalancerView lb;
+    final String groupName;
+    final Map<String,String> securityGroupIdsToNames;
+    try ( final TransactionResource tx = Entities.transactionFor(LoadBalancer.class) ){
+      final LoadBalancer lbEntity = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
+      final LoadBalancerSecurityGroupView group = lbEntity.getSecurityGroup();
+      groupName = group==null ? null : group.getName();
+      securityGroupIdsToNames = LoadBalancerHelper.getSecurityGroupIdsToNames( lbEntity );
+      lb = lbEntity;
     }catch(Exception ex){
       throw new LoadBalancingActivityException("could not find the loadbalancer", ex);
     }
 
-    final Map<String,String> securityGroupIdsToNames =
-        lb.getCoreView( ).getSecurityGroupIdsToNames( );
     String protocol = "tcp"; /// Loadbalancer listeners protocols: HTTP, HTTPS, TCP, SSL -> all tcp
     if ( lb.getVpcId( ) == null ) {
       if ( groupName == null )
@@ -1145,15 +1168,15 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     if (listeners == null || listeners.size() <= 0)
       return;
 
-    LoadBalancer lb = null;
-    String groupName = null;
-    try{
-      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
-      final LoadBalancerSecurityGroupCoreView group = lb.getGroup();
-      if(group!=null)
-        groupName = group.getName();
-    }catch(Exception ex){
-      ;
+    final LoadBalancerView lb;
+    final String groupName;
+    try ( final TransactionResource tx = Entities.transactionFor(LoadBalancer.class) ){
+      final LoadBalancer lbEntity = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
+      final LoadBalancerSecurityGroupView group = lbEntity.getSecurityGroup();
+      groupName = group==null ? null : group.getName();
+      lb = lbEntity;
+    }catch(NoSuchElementException ex){
+      return;
     }
 
     if(groupName == null)
@@ -1176,9 +1199,9 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   public void createListenerUpdateHealthCheckConfig(String accountNumber,
       String lbName, Listener[] listeners)
           throws LoadBalancingActivityException {
-    LoadBalancer lb;
+    LoadBalancerView lb;
     try{
-      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
     }catch(final NoSuchElementException ex){
       throw new LoadBalancingActivityException("Could not find the loadbalancer with name="+ lbName, ex);
     }catch(final Exception ex){
@@ -1194,130 +1217,126 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     "Target": "TCP:8000",
     "Timeout": 5,
     "UnhealthyThreshold": 2 */
-    try{
-      lb.getHealthCheckTarget();
-      lb.getHealthCheckInterval();
-      lb.getHealthCheckTimeout();
-      lb.getHealthCheckUnhealthyThreshold();
-      lb.getHealthyThreshold();
-    }catch(final IllegalStateException ex){ /// only when the health check is not previously configured
+    if ( !lb.hasHealthCheckConfig() ) { /// only when the health check is not previously configured
       if(listeners==null || listeners.length<=0)
         throw new LoadBalancingActivityException("No listener requested");
 
       final Listener firstListener = listeners[0];
       final String target = String.format( "TCP:%d", firstListener.getInstancePort() );
       try ( final TransactionResource db = Entities.transactionFor( LoadBalancer.class ) ) {
-        final LoadBalancer update = Entities.uniqueResult(lb);
+        final LoadBalancer update = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
         update.setHealthCheck( DEFAULT_HEALTHY_THRESHOLD, DEFAULT_INTERVAL, target, DEFAULT_TIMEOUT, DEFAULT_UNHEALTHY_THRESHOLD );
         db.commit();
       }catch(final NoSuchElementException exx){
         LOG.warn("Loadbalancer not found in the database");
-      }catch(final Exception exx){
+      }catch(final Exception ex){
         LOG.warn("Unable to query the loadbalancer", ex);
       }
     }
   }
 
   @Override
-  public void createListenerAddDefaultSSLPolicy(String accountNumber,
-      String lbName, Listener[] listeners)
-          throws LoadBalancingActivityException {
-    LoadBalancer lb;
-    try{
-      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
-    }catch(NoSuchElementException ex){
-      throw new LoadBalancingActivityException("Could not find the loadbalancer with name="+lbName, ex);
-    }catch(Exception ex){
-      throw new LoadBalancingActivityException("Error while looking for loadbalancer with name="+lbName, ex);
-    }
-    boolean sslListener = false;
-    for(final Listener l : listeners) {
-      final String protocol = l.getProtocol().toLowerCase();
-      if("https".equals(protocol) || "ssl".equals(protocol)) {
-        sslListener = true;
-        break;
-      }
-    }
-    if(!sslListener)
-      return;
+  public void createListenerAddDefaultSSLPolicy(
+      final String accountNumber,
+      final String lbName,
+      final Listener[] listeners
+  ) throws LoadBalancingActivityException {
+    final AccountFullName accountFullName = AccountFullName.getInstance( accountNumber );
 
-    try{
-      /// this will load the sample policies into memory
-      if(LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME == null) {
-        LoadBalancerPolicyHelper.getSamplePolicyDescription();
-        if(LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME == null)
-          throw new LoadBalancingActivityException("Latest security policy is not found");
-      }
-
-      boolean policyCreated = false;
-      final Collection<LoadBalancerPolicyDescriptionCoreView> policies = lb.getPolicies();
-      if(policies != null) {
-        for (final LoadBalancerPolicyDescriptionCoreView view : policies ) {
-          if ("SSLNegotiationPolicyType".equals(view.getPolicyTypeName()) &&
-              LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME.equals(view.getPolicyName())) {
-            policyCreated = true;
-            break;
-          }
-        }
-      }
-      if(! policyCreated) {
-        final PolicyAttribute attr = new PolicyAttribute();
-        attr.setAttributeName("Reference-Security-Policy");
-        attr.setAttributeValue(LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME);
-        LoadBalancerPolicyHelper.addLoadBalancerPolicy(lb, LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME, "SSLNegotiationPolicyType",
-            Lists.newArrayList(attr));
-        try{ // reload with the newly created policy
-          lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
-        }catch(NoSuchElementException ex){
-          throw new LoadBalancingActivityException("Could not find the loadbalancer with name="+ lbName, ex);
-        }catch(Exception ex){
-          throw new LoadBalancingActivityException("Error while looking for loadbalancer with name="+ lbName, ex);
-        }
-      }
-    }catch (final Exception ex) {
-      LOG.warn("Failed to create default security policy for https/ssl listeners", ex);
-      return;
+    /// this will load the sample policies into memory
+    if(LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME == null) {
+      LoadBalancerPolicyHelper.getSamplePolicyDescription();
+      if(LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME == null)
+        throw new LoadBalancingActivityException("Latest security policy is not found");
     }
 
-    try{
-      final LoadBalancerPolicyDescription policy =
-          LoadBalancerPolicyHelper.getLoadBalancerPolicyDescription(lb, LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME);
-      if(policy==null)
-        throw new LoadBalancingActivityException("No such policy is found: "+ LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME);
-
-      final Collection<LoadBalancerListenerCoreView> lbListeners = lb.getListeners();
-      for(final Listener l : listeners) {
-        final String protocol = l.getProtocol().toLowerCase();
-        if("https".equals(protocol) || "ssl".equals(protocol)) {
-          LoadBalancerListener listener = null;
-          for(final LoadBalancerListenerCoreView view : lbListeners){
-            if(view.getLoadbalancerPort() == l.getLoadBalancerPort()){
-              listener = LoadBalancerListenerEntityTransform.INSTANCE.apply(view);
-              break;
-            }
-          }
-          if(listener == null)
-            throw new LoadBalancingActivityException("No such listener is found");
-          boolean policyAttached=false;
-          final List<LoadBalancerPolicyDescriptionCoreView> listenerPolicies = listener.getPolicies();
-          if(listenerPolicies!=null) {
-            for(final LoadBalancerPolicyDescriptionCoreView listenerPolicy : listenerPolicies ) {
-              if( "SSLNegotiationPolicyType".equals(listenerPolicy.getPolicyTypeName()) &&
-                  LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME.equals(listenerPolicy.getPolicyName()))
-              {
-                policyAttached = true;
+    try {
+      persistence.balancers( ).updateByExample(
+          LoadBalancer.namedByAccountId( accountNumber, lbName ),
+          accountFullName,
+          lbName,
+          Predicates.alwaysTrue( ),
+          lb -> {
+            // Verify SSL listener
+            boolean sslListener = false;
+            for(final Listener l : listeners) {
+              final String protocol = l.getProtocol().toLowerCase();
+              if("https".equals(protocol) || "ssl".equals(protocol)) {
+                sslListener = true;
                 break;
               }
             }
-          }
+            if(!sslListener)
+              return lb;
 
-          if(!policyAttached && listener!=null && policy!=null) {
-            LoadBalancerPolicyHelper.addPoliciesToListener(listener, Lists.newArrayList(policy));
-          }
-        }
-      }
-    }catch(final Exception ex) {
-      LOG.warn("Failed to set default security policy to https/ssl listeners", ex);
+            // Create load balancer policy if not present
+            boolean policyExists = false;
+            final Collection<LoadBalancerPolicyDescription> policies = lb.getPolicyDescriptions();
+            if(policies != null) {
+              for (final LoadBalancerPolicyDescriptionView view : policies ) {
+                if ("SSLNegotiationPolicyType".equals(view.getPolicyTypeName()) &&
+                    LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME.equals(view.getPolicyName())) {
+                  policyExists = true;
+                  break;
+                }
+              }
+            }
+            if( !policyExists ) {
+              final PolicyAttribute attr = new PolicyAttribute();
+              attr.setAttributeName("Reference-Security-Policy");
+              attr.setAttributeValue(LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME);
+              try {
+                LoadBalancerPolicyHelper.addLoadBalancerPolicy(
+                    lb,
+                    LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME,
+                    "SSLNegotiationPolicyType",
+                    Lists.newArrayList(attr));
+              } catch (final LoadBalancingException ex) {
+                throw Exceptions.toUndeclared(ex);
+              }
+            }
+
+            // Attach policy to listeners
+            final LoadBalancerPolicyDescription policy;
+            try {
+              policy = LoadBalancerPolicyHelper.getLoadBalancerPolicyDescription(lb, LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME);
+            } catch (NoSuchElementException e) {
+              throw Exceptions.toUndeclared(new LoadBalancingActivityException("No such policy is found: "+ LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME));
+            }
+
+            final Collection<LoadBalancerListener> lbListeners = lb.getListeners();
+            for( final Listener l : listeners ) {
+              final String protocol = l.getProtocol().toLowerCase();
+              if("https".equals(protocol) || "ssl".equals(protocol)) {
+                final LoadBalancerListener listener = LoadBalancerHelper.findListener(lb, l.getLoadBalancerPort());
+                if( listener == null ) {
+                  throw Exceptions.toUndeclared(new LoadBalancingActivityException("No such listener is found"));
+                }
+                boolean policyAttached = false;
+                for(final LoadBalancerPolicyDescription listenerPolicy : listener.getPolicyDescriptions() ) {
+                  if( "SSLNegotiationPolicyType".equals(listenerPolicy.getPolicyTypeName()) &&
+                      LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME.equals(listenerPolicy.getPolicyName())) {
+                    policyAttached = true;
+                    break;
+                  }
+                }
+
+                if( !policyAttached ) {
+                  try {
+                    LoadBalancerPolicyHelper.addPoliciesToListener(listener, Lists.newArrayList(policy));
+                  } catch (final LoadBalancingException ex) {
+                    throw Exceptions.toUndeclared(ex);
+                  }
+                }
+              }
+            }
+            return lb;
+          } );
+    } catch (final LoadBalancingMetadataNotFoundException ex) {
+      throw new LoadBalancingActivityException("Could not find the loadbalancer with name="+lbName, ex);
+    } catch (final Exception ex) {
+      Exceptions.findAndRethrow( ex, LoadBalancingActivityException.class );
+      LOG.warn("Failed to add default security policy for https/ssl listeners", ex);
     }
   }
 
@@ -1325,14 +1344,17 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   public HealthCheck lookupLoadBalancerHealthCheck(final String accountNumber, final String lbName)
           throws LoadBalancingActivityException {
     try {
-      final LoadBalancer lb =
-              LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
+      final LoadBalancerView lb =
+              LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
+      if ( !lb.hasHealthCheckConfig()) {
+        throw new IllegalStateException("health check is not configured");
+      }
       final HealthCheck hc = new HealthCheck();
-      hc.setHealthyThreshold(lb.getHealthyThreshold());
-      hc.setInterval(lb.getHealthCheckInterval());
-      hc.setTarget(lb.getHealthCheckTarget());
-      hc.setTimeout(lb.getHealthCheckTimeout());
-      hc.setUnhealthyThreshold(lb.getHealthCheckUnhealthyThreshold());
+      hc.setHealthyThreshold(lb.getHealthCheckConfig().getHealthyThreshold());
+      hc.setInterval(lb.getHealthCheckConfig().getInterval());
+      hc.setTarget(lb.getHealthCheckConfig().getTarget());
+      hc.setTimeout(lb.getHealthCheckConfig().getTimeout());
+      hc.setUnhealthyThreshold(lb.getHealthCheckConfig().getUnhealthyThreshold());
       return hc;
     }catch(final Exception ex) {
       throw new LoadBalancingActivityException(String.format("Failed to lookup loadbalancer (%s:%s",
@@ -1360,15 +1382,22 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     final Map<String, String> instanceToZone = Maps.newHashMap();
     final Set<String> stoppedInstances = Sets.newHashSet();
     try{
-      final LoadBalancer lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
-      lb.getBackendInstances().stream().forEach ( instance -> instanceToZone.put(instance.getInstanceId(), instance.getPartition()));
-      stoppedInstances.addAll(lb.getBackendInstances().stream()
-              .filter(v -> LoadBalancerBackendInstanceStates.InstanceStopped.isInstanceState(v))
-              .map(v -> v.getInstanceId())
-              .collect(Collectors.toList())
-      );
+      final List<LoadBalancerBackendInstanceView> backendInstances =
+          LoadBalancerHelper.getLoadbalancer(
+              persistence,
+              Predicates.alwaysTrue(),
+              loadBalancer -> Stream.ofAll( loadBalancer.getBackendInstances() )
+                  .<LoadBalancerBackendInstanceView>map( ImmutableLoadBalancerBackendInstanceView::copyOf )
+                  .toJavaList(),
+              accountNumber,
+              lbName);
+      backendInstances.stream().forEach ( instance -> instanceToZone.put(instance.getInstanceId(), instance.getPartition()));
+      stoppedInstances.addAll(Stream.ofAll( backendInstances )
+              .filter(LoadBalancerBackendInstanceStates.InstanceStopped::isInstanceState)
+              .map(LoadBalancerBackendInstanceView::getInstanceId)
+              .toJavaList());
     }catch(final Exception ex) {
-      throw new LoadBalancingActivityException("Failed to lookup the loadbalancer with name="+lbName);
+      throw new LoadBalancingActivityException("Failed to lookup the loadbalancer with name="+lbName, ex);
     }
 
     final Set<String> validStates = Sets.newHashSet(
@@ -1417,33 +1446,33 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     boolean updated = false;
     boolean committed = false;
     final int TRANSACTION_RETRY = 5;
-    final LoadBalancer lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
+    LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName); // fail if not found
     for (int i = 1; i <= TRANSACTION_RETRY; i++) {
       try (final TransactionResource db = Entities.transactionFor(LoadBalancerBackendInstance.class)) {
+        final LoadBalancer lb = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
         for (final String instanceId : verifiedStatusMap.keySet()) {
           final LoadBalancerBackendInstance sample = LoadBalancerBackendInstance.named(lb, instanceId);
           final LoadBalancerBackendInstance update = Entities.uniqueResult(sample);
           final String newStatus = verifiedStatusMap.get(instanceId);
           final LoadBalancerBackendInstance.STATE oldState =
-                  update.getBackendState();
+              update.getBackendState();
           final LoadBalancerBackendInstance.STATE newState =
-                  LoadBalancerBackendInstance.STATE.valueOf(newStatus);
+              LoadBalancerBackendInstance.STATE.valueOf(newStatus);
           if (!oldState.equals(newState))
             updated = true;
           update.setBackendState(newState);
           final LoadBalancerBackendInstanceStates failure =
-                  LoadBalancerBackendInstanceStates.HealthCheckFailure;
+              LoadBalancerBackendInstanceStates.HealthCheckFailure;
           final LoadBalancerBackendInstanceStates success =
-                  LoadBalancerBackendInstanceStates.HealthCheckSuccess;
+              LoadBalancerBackendInstanceStates.HealthCheckSuccess;
           if (success.getState().equals(newState)) {
             update.setReasonCode(success.getReasonCode());
             update.setDescription(success.getDescription());
-          } else if ( failure.getState().equals(newState)) {
+          } else if (failure.getState().equals(newState)) {
             update.setReasonCode(failure.getReasonCode());
             update.setDescription(failure.getDescription());
           }
           update.updateInstanceStateTimestamp();
-          Entities.persist(update);
         }
         db.commit();
       } catch (final Exception ex) {
@@ -1468,27 +1497,33 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   }
 
   @Override
-  public void putCloudWatchInstanceHealth(String accountNumber, String lbName)
-      throws LoadBalancingActivityException {
-    List<LoadBalancerBackendInstance> backendInstances = Lists.newArrayList();
-    LoadBalancer lb = null;
-
-    //TODO: SCALE
+  public void putCloudWatchInstanceHealth(String accountNumber, String lbName) throws LoadBalancingActivityException {
+    final LoadBalancerView lb;
+    final Collection<LoadBalancerBackendInstanceView> backendInstances;
     try{
-      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
-      backendInstances= Lists.transform(Lists.newArrayList(lb.getBackendInstances()),
-          LoadBalancerBackendInstanceEntityTransform.INSTANCE);
+      Tuple2<LoadBalancerView,Collection<LoadBalancerBackendInstanceView>> lbData =
+          LoadBalancerHelper.getLoadbalancer(
+              persistence,
+              Predicates.alwaysTrue(),
+              loadBalancer -> Tuple.of(
+                  LoadBalancers.CORE_VIEW.apply( loadBalancer ),
+                  Lists.newArrayList( Iterables.transform( loadBalancer.getBackendInstances( ), ImmutableLoadBalancerBackendInstanceView::copyOf ))
+              ),
+              accountNumber,
+              lbName);
+      lb = lbData._1();
+      backendInstances = lbData._2();
     }catch(final Exception ex) {
       LOG.error("failed to retrieve loadbalancer's backend instances", ex);
       return;
     }
     /// Update Cloudwatch
-    for(final LoadBalancerBackendInstance backend: backendInstances){
-      final String zoneName = backend.getAvailabilityZone().getName();
+    for(final LoadBalancerBackendInstanceView backend: backendInstances){
+      final String zoneName = backend.getPartition( );
       if(backend.getState().equals(LoadBalancerBackendInstance.STATE.InService)){
-        LoadBalancerMetricsHelper.getInstance().updateHealthy(lb.getCoreView(), zoneName, backend.getInstanceId());
+        LoadBalancerMetricsHelper.getInstance().updateHealthy(lb, zoneName, backend.getInstanceId());
       }else if (backend.getState().equals(LoadBalancerBackendInstance.STATE.OutOfService)){
-        LoadBalancerMetricsHelper.getInstance().updateUnHealthy(lb.getCoreView(), zoneName, backend.getInstanceId());
+        LoadBalancerMetricsHelper.getInstance().updateUnHealthy(lb, zoneName, backend.getInstanceId());
       }
     }
   }
@@ -1508,20 +1543,22 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
         if(data.getMember()== null || data.getMember().size()<=0)
           continue;
 
-        LoadBalancerZone zone = null;
+        LoadBalancerView balancer = null;
+        LoadBalancerZoneView zone = null;
         /// TODO: SCALE
         try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
           final LoadBalancerServoInstance sample =
               LoadBalancerServoInstance.named(instanceId);
           final LoadBalancerServoInstance entity =
               Entities.uniqueResult(sample);
-          zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(entity.getAvailabilityZone());
+          zone = ImmutableLoadBalancerZoneView.copyOf( entity.getAvailabilityZone( ) );
+          balancer = ImmutableLoadBalancerView.copyOf( entity.getAvailabilityZone( ).getLoadbalancer( ) );
         }catch(final Exception ex) {
           LOG.error("Failed to lookup servo instance named: " + instanceId);;
         }
         if (zone!=null) {
           try{
-              LoadBalancerMetricsHelper.getInstance().addMetric(zone, data);
+              LoadBalancerMetricsHelper.getInstance().addMetric(balancer, zone, data);
             }catch(Exception ex){
               LOG.error("Failed to add ELB cloudwatch metric", ex);
             }
@@ -1533,69 +1570,83 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   @Override
   public List<String> listLoadBalancerPolicies(final String accountNumber, final String lbName) throws LoadBalancingActivityException {
     try {
-      final LoadBalancer lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
-      final List<LoadBalancerListener> listeners = lb.getListeners().stream()
-              .map(view -> LoadBalancerListenerEntityTransform.INSTANCE.apply(view))
-              .collect(Collectors.toList());
-      final List<LoadBalancerBackendServerDescription> backendServers =
-              LoadBalancerBackendServerHelper.getLoadBalancerBackendServerDescription(lb);
+      final List<String> loadBalancerPolicies = LoadBalancerHelper.getLoadbalancer(
+          persistence,
+          Predicates.alwaysTrue(),
+          lb -> {
+            final List<LoadBalancerListener> listeners = Lists.newArrayList(lb.getListeners());
+            final List<LoadBalancerBackendServerDescription> backendServers =
+                LoadBalancerBackendServerHelper.getLoadBalancerBackendServerDescription(lb);
 
-      final List<String> listenerPolicies = listeners.stream()
-              .map(l -> l.getPolicies())
-              .flatMap(p -> p.stream())
-              .map(p -> p.getPolicyName())
-              .distinct()
-              .collect(Collectors.toList());
+            final List<String> listenerPolicies = Stream.ofAll( listeners )
+                .flatMap(LoadBalancerListener::getPolicyDescriptions)
+                .map(LoadBalancerPolicyDescription::getPolicyName)
+                .distinct()
+                .toJavaList();
 
-      final List<String> backendPolicies = backendServers.stream()
-              .map(s -> s.getPolicyDescriptions())
-              .flatMap(p -> p.stream())
-              .map(p -> p.getPolicyName())
-              .distinct()
-              .collect(Collectors.toList());
+            final List<String> backendPolicies =  Stream.ofAll( backendServers )
+                .flatMap(LoadBalancerBackendServerDescription::getPolicyDescriptions)
+                .map(LoadBalancerPolicyDescription::getPolicyName)
+                .distinct()
+                .toJavaList();
 
-      final List<String> publicKeyPolicies = lb.getPolicies().stream()
-              .filter(p -> "PublicKeyPolicyType".equals(p.getPolicyTypeName()))
-              .map(p -> p.getPolicyName())
-              .distinct()
-              .collect(Collectors.toList());
-      final List<String> policies = Lists.newArrayList(listenerPolicies);
-      policies.addAll(backendPolicies);
-      policies.addAll(publicKeyPolicies);
-      return policies.stream().distinct().collect(Collectors.toList());
+            final List<String> publicKeyPolicies = Stream.ofAll( lb.getPolicyDescriptions() )
+                .filter(p -> "PublicKeyPolicyType".equals(p.getPolicyTypeName()))
+                .map(LoadBalancerPolicyDescription::getPolicyName)
+                .distinct()
+                .toJavaList();
+
+            final List<String> policies = Lists.newArrayList();
+            policies.addAll(listenerPolicies);
+            policies.addAll(backendPolicies);
+            policies.addAll(publicKeyPolicies);
+
+            return policies;
+          },
+          accountNumber,
+          lbName);
+
+      return Stream.ofAll( loadBalancerPolicies ).distinct( ).toJavaList( );
     }catch(final Exception ex) {
       throw new LoadBalancingActivityException("Failed to lookup loadbalancer policies", ex);
     }
   }
 
   @Override
-  public PolicyDescription getLoadBalancerPolicy(final String accountNumber, final String lbName, final String policyName)
-          throws LoadBalancingActivityException {
+  public PolicyDescription getLoadBalancerPolicy(
+      final String accountNumber,
+      final String lbName,
+      final String policyName
+  ) throws LoadBalancingActivityException {
     try {
-      final LoadBalancer lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
-      final LoadBalancerPolicyDescription policy =
-              LoadBalancerPolicyHelper.getLoadBalancerPolicyDescription(lb, policyName);
-      return LoadBalancerPolicyHelper.AsPolicyDescription.INSTANCE.apply(policy);
+      final LoadBalancerPolicyDescriptionFullView policyDescription = LoadBalancerHelper.getLoadbalancer(
+          persistence,
+          Predicates.alwaysTrue( ),
+          loadBalancer -> LoadBalancers.POLICY_DESCRIPTION_FULL_VIEW.apply(
+              LoadBalancerPolicyHelper.getLoadBalancerPolicyDescription(loadBalancer, policyName) ),
+          accountNumber,
+          lbName );
+      return LoadBalancerPolicyHelper.AsPolicyDescription.INSTANCE.apply( policyDescription );
     } catch(final Exception ex) {
       throw new LoadBalancingActivityException("Failed to lookup loadbalancer policies", ex);
     }
   }
 
-  // TODO: SCALE
   @Override
-  public Map<String, LoadBalancerServoDescription> lookupLoadBalancerDescription(final String accountNumber, final String lbName)
-      throws LoadBalancingActivityException {
+  public Map<String, LoadBalancerServoDescription> lookupLoadBalancerDescription(
+      final String accountNumber,
+      final String lbName
+  ) throws LoadBalancingActivityException {
     final Map<String, LoadBalancerServoDescription> result = Maps.newHashMap();
-    try{
-      final LoadBalancer lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
-      for(final LoadBalancerZoneCoreView zoneView: lb.getZones()) {
-        if (! LoadBalancerZone.STATE.InService.equals(zoneView.getState()))
+    try ( final TransactionResource tx = Entities.transactionFor( LoadBalancer.class ) ) {
+      final LoadBalancer lb = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
+      for(final LoadBalancerZone zone: lb.getZones()) {
+        if (! LoadBalancerZone.STATE.InService.equals(zone.getState()))
           continue;
 
         final LoadBalancerServoDescription desc =
-            LoadBalancerHelper.getServoDescription(accountNumber, lbName, zoneView.getName());
-        final LoadBalancerZone zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
-        for(final LoadBalancerServoInstanceCoreView servoView : zone.getServoInstances()) {
+            LoadBalancerHelper.getServoDescription(persistence, accountNumber, lbName, zone.getName());
+        for(final LoadBalancerServoInstanceView servoView : zone.getServoInstances()) {
           result.put(servoView.getInstanceId(), desc);
         }
       }
@@ -1608,16 +1659,21 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   @Override
   public void deleteListenerRevokeSSLCertificatePolicy(String accountNumber,
       String lbName, List<Integer> portsToDelete) throws LoadBalancingActivityException {
-    LoadBalancer lb;
-    try{
-      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
+    final LoadBalancerView lb;
+    final Collection<LoadBalancerListenerView> lbListeners;
+    try ( final TransactionResource tx = Entities.transactionFor(LoadBalancer.class) ) {
+      final LoadBalancer lbEntity = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
+      lb = lbEntity;
+      lbListeners = Stream.ofAll( lbEntity.getListeners() )
+          .<LoadBalancerListenerView>map(ImmutableLoadBalancerListenerView::copyOf )
+          .toJavaList();
     }catch(Exception ex){
       throw new LoadBalancingActivityException("could not find the loadbalancer", ex);
     }
 
     final Set<String> allArns = Sets.newHashSet();
     final Set<String> arnsToKeep = Sets.newHashSet();
-    for(final LoadBalancerListenerCoreView listener : lb.getListeners()){
+    for(final LoadBalancerListenerView listener : lbListeners){
       final PROTOCOL protocol = listener.getProtocol();
       if(protocol.equals(PROTOCOL.HTTPS) || protocol.equals(PROTOCOL.SSL)) {
         allArns.add(listener.getCertificateId());
@@ -1657,13 +1713,13 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   @Override
   public void deleteListenerRevokeIngressRule(String accountNumber,
       String lbName, List<Integer> portsToDelete) throws LoadBalancingActivityException {
-    LoadBalancer lb;
-    String groupName = null;
+    final LoadBalancerView lb;
+    final String groupName;
     try{
-      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
-      final LoadBalancerSecurityGroupCoreView group = lb.getGroup();
-      if(group!=null)
-        groupName = group.getName();
+      final LoadBalancer lbEntity = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
+      final LoadBalancerSecurityGroup group = lbEntity.getSecurityGroup();
+      lb = lbEntity;
+      groupName = group==null ? null : group.getName();
     }catch(Exception ex){
       throw new LoadBalancingActivityException("could not find the loadbalancer", ex);
     }
@@ -1689,53 +1745,33 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   public List<String> disableAvailabilityZonesPersistRetiredServoInstances(
       String accountNumber, String lbName, List<String> zonesToDisable)
           throws LoadBalancingActivityException {
-    LoadBalancer lb;
-    try{
-      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
-    }catch(NoSuchElementException ex){
+
+    try {
+      return persistence.balancers().updateByExample(
+          LoadBalancer.namedByAccountId(accountNumber, lbName),
+          null,
+          lbName,
+          Predicates.alwaysTrue(),
+          lb -> {
+            List<String> retiredInstances = Lists.newArrayList();
+            for(final LoadBalancerZone zone : lb.getZones()){
+              if(zonesToDisable.contains(zone.getName())){ // the zone will be disabled
+                for( final LoadBalancerServoInstance update : zone.getServoInstances( ) ){
+                    update.setState(LoadBalancerServoInstance.STATE.Retired);
+                    update.setDnsState(LoadBalancerServoInstance.DNS_STATE.Deregistered);
+                    retiredInstances.add(update.getInstanceId());
+                }
+              }
+            }
+            return retiredInstances;
+          }
+      );
+    } catch (LoadBalancingMetadataNotFoundException ex) {
       throw new LoadBalancingActivityException("Could not find the loadbalancer with name="+lbName, ex);
-    }catch(Exception ex){
-      throw new LoadBalancingActivityException("Error while looking for loadbalancer with name="+lbName, ex);
+    } catch(Exception ex){
+      throw new LoadBalancingActivityException("Error while updating loadbalancer with name="+lbName, ex);
     }
-
-    List<String> retiredInstances = Lists.newArrayList();
-    final List<LoadBalancerZoneCoreView> currentZones = Lists.newArrayList(lb.getZones());
-    for(final LoadBalancerZoneCoreView zoneView : currentZones){
-      if(zonesToDisable.contains(zoneView.getName())){ // the zone will be disabled
-        LoadBalancerZone zone;
-        try{
-          zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
-        }catch(final Exception ex){
-          LOG.error("unable to transform zone from the view", ex);
-          continue;
-        }
-        for(final LoadBalancerServoInstanceCoreView instanceView : zone.getServoInstances()){
-          LoadBalancerServoInstance instance;
-          try{
-            instance = LoadBalancerServoInstanceEntityTransform.INSTANCE.apply(instanceView);
-          }catch(final Exception ex){
-            LOG.error("unable to transfrom servo-instance from the view", ex);
-            continue;
-          }
-
-          try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
-            final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
-            update.setState(LoadBalancerServoInstance.STATE.Retired);
-            update.setDnsState(LoadBalancerServoInstance.DNS_STATE.Deregistered);
-            Entities.persist(update);
-            db.commit();
-            retiredInstances.add(update.getInstanceId());
-          }catch(final NoSuchElementException ex){
-            LOG.warn("Failed to update the servo instance's state: no such instance found");
-          }catch(final Exception ex){
-            LOG.warn("Failed to update the servo instance's state", ex);
-          }
-        }
-      }
-    }
-    return retiredInstances;
   }
-
 
   @Override
   public void disableAvailabilityZonesPersistRetiredServoInstancesRollback(
@@ -1748,7 +1784,6 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
         final LoadBalancerServoInstance sample = LoadBalancerServoInstance.named(instanceId);
         final LoadBalancerServoInstance update = Entities.uniqueResult(sample);
         update.setState(LoadBalancerServoInstance.STATE.InService);
-        Entities.persist(update);
         db.commit();
       }catch(final NoSuchElementException ex){
         LOG.warn("Failed to update the servo instance's state: no such instance found");
@@ -1758,23 +1793,26 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     }
   }
 
-
   @Override
   public List<String> disableAvailabilityZonesUpdateAutoScalingGroup(
       String accountNumber, String lbName, List<String> zonesToDisable)
           throws LoadBalancingActivityException {
     final List<String> updatedZones = Lists.newArrayList();
-    LoadBalancer lb;
-    try{
-      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
+    final LoadBalancerView lbView;
+    final Collection<LoadBalancerAutoScalingGroupView> groups;
+    try (final TransactionResource tx = Entities.transactionFor(LoadBalancer.class)) {
+      final LoadBalancer lbEntity = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
+      lbView = lbEntity;
+      groups = Stream.ofAll( lbEntity.getAutoScaleGroups() )
+          .<LoadBalancerAutoScalingGroupView>map( ImmutableLoadBalancerAutoScalingGroupView::copyOf )
+          .toJavaList();
     }catch(NoSuchElementException ex){
       throw new LoadBalancingActivityException("Could not find the loadbalancer with name="+lbName, ex);
     }catch(Exception ex){
       throw new LoadBalancingActivityException("Error while looking for loadbalancer with name="+lbName, ex);
     }
 
-    final Collection<LoadBalancerAutoScalingGroupCoreView> groups = lb.getAutoScaleGroups();
-    for(final LoadBalancerAutoScalingGroupCoreView group : groups) {
+    for(final LoadBalancerAutoScalingGroupView group : groups) {
       if (! zonesToDisable.contains(group.getAvailabilityZone()))
           continue;
 
@@ -1782,16 +1820,16 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       final int capacity = 0;
       try{
         EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(groupName, null, capacity,
-            lb.useSystemAccount());
+            lbView.useSystemAccount());
       }catch(final Exception ex) {
         LOG.error("Failed to change the capacity of ELB's autoscaling group", ex);
       }
 
       try ( final TransactionResource db = Entities.transactionFor( LoadBalancerAutoScalingGroup.class ) ){
+        final LoadBalancer lb = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
         final LoadBalancerAutoScalingGroup update =
             Entities.uniqueResult(LoadBalancerAutoScalingGroup.named(lb, group.getAvailabilityZone()));
         update.setCapacity(capacity);
-        Entities.persist(update);
         db.commit();
       }catch(NoSuchElementException ex){
         LOG.error("failed to find the autoscaling group record", ex);
@@ -1803,16 +1841,20 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     return updatedZones;
   }
 
-
   @Override
   public void disableAvailabilityZonesUpdateAutoScalingGroupRollback(
       String accountNumber, String lbName, List<String> updatedZones) {
     if(updatedZones == null || updatedZones.size()<=0)
       return;
 
-    LoadBalancer lb;
-    try{
-      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
+    final LoadBalancerView lbView;
+    final Collection<LoadBalancerAutoScalingGroupView> groups;
+    try (final TransactionResource tx = Entities.transactionFor(LoadBalancer.class)) {
+      final LoadBalancer lbEntity = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
+      lbView = lbEntity;
+      groups = Stream.ofAll( lbEntity.getAutoScaleGroups() )
+          .<LoadBalancerAutoScalingGroupView>map( ImmutableLoadBalancerAutoScalingGroupView::copyOf )
+          .toJavaList();
     }catch(NoSuchElementException ex){
       LOG.error("Could not find the loadbalancer with name="+lbName, ex);
       return;
@@ -1821,8 +1863,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       return;
     }
 
-    final Collection<LoadBalancerAutoScalingGroupCoreView> groups = lb.getAutoScaleGroups();
-    for(final LoadBalancerAutoScalingGroupCoreView group : groups) {
+    for(final LoadBalancerAutoScalingGroupView group : groups) {
       if (! updatedZones.contains(group.getAvailabilityZone()))
           continue;
 
@@ -1830,16 +1871,16 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       final int capacity =  LoadBalancingServiceProperties.getCapacityPerZone();
       try{
         EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(groupName, null, capacity,
-            lb.useSystemAccount());
+            lbView.useSystemAccount());
       }catch(final Exception ex) {
         LOG.error("Failed to change the capacity of ELB's autoscaling group", ex);
       }
 
       try ( final TransactionResource db = Entities.transactionFor( LoadBalancerAutoScalingGroup.class ) ){
+        final LoadBalancer lb = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
         final LoadBalancerAutoScalingGroup update =
             Entities.uniqueResult(LoadBalancerAutoScalingGroup.named(lb, group.getAvailabilityZone()));
         update.setCapacity(capacity);
-        Entities.persist(update);
         db.commit();
       }catch(NoSuchElementException ex){
         LOG.error("failed to find the autoscaling group record", ex);
@@ -1853,9 +1894,8 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   public void disableAvailabilityZonesPersistUpdatedZones(String accountNumber,
       String lbName, List<String> zonesToDisable)
           throws LoadBalancingActivityException {
-    LoadBalancer lb;
     try{
-      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
+      LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
     }catch(NoSuchElementException ex){
       throw new LoadBalancingActivityException("Could not find the loadbalancer with name="+lbName, ex);
     }catch(Exception ex){
@@ -1866,6 +1906,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       return;
     for(final String zone : zonesToDisable) {
       try ( final TransactionResource db = Entities.transactionFor( LoadBalancerZone.class ) ) {
+        final LoadBalancer lb = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
         final LoadBalancerZone update = Entities.uniqueResult(LoadBalancerZone.named(lb, zone));
         update.setState( LoadBalancerZone.STATE.OutOfService );
         db.commit();
@@ -1879,9 +1920,8 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   public void disableAvailabilityZonesPersistBackendInstanceState(
       String accountNumber, String lbName, List<String> zonesToDisable)
           throws LoadBalancingActivityException {
-    LoadBalancer lb;
     try{
-      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
+      LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
     }catch(NoSuchElementException ex){
       throw new LoadBalancingActivityException("Could not find the loadbalancer with name="+lbName, ex);
     }catch(Exception ex){
@@ -1892,42 +1932,35 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       return;
 
     for(final String removedZone : zonesToDisable){
-      final LoadBalancerZone zone = LoadBalancerHelper.findZone(lb, removedZone);
-      for(final LoadBalancerBackendInstanceCoreView instance : zone.getBackendInstances()){
-        try ( TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ){
-          final LoadBalancerBackendInstance update = Entities.uniqueResult(
-              LoadBalancerBackendInstance.named(lb, instance.getInstanceId()));
+      try ( TransactionResource db = Entities.transactionFor( LoadBalancerBackendInstance.class ) ){
+        final LoadBalancer lb = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
+        final LoadBalancerZone zone = LoadBalancerHelper.findZone(lb, removedZone);
+        for(final LoadBalancerBackendInstance instance : zone.getBackendInstances()) {
           final LoadBalancerBackendInstanceStates azDisabled =
-                  LoadBalancerBackendInstanceStates.AvailabilityZoneDisabled;
-          update.setState(azDisabled.getState());
-          update.setReasonCode(azDisabled.getReasonCode());
-          update.setDescription(azDisabled.getDescription());
-          Entities.persist(update);
+              LoadBalancerBackendInstanceStates.AvailabilityZoneDisabled;
+          instance.setState(azDisabled.getState());
+          instance.setReasonCode(azDisabled.getReasonCode());
+          instance.setDescription(azDisabled.getDescription());
           db.commit();
-        }catch(final NoSuchElementException ex){
-          LOG.warn("failed to find the backend instance");
-        }catch(final Exception ex){
-          LOG.warn("failed to query the backend instance", ex);
         }
+      }catch(final NoSuchElementException ex){
+        LOG.warn("failed to find the zone");
+      }catch(final Exception ex){
+        LOG.warn("failed to query the backend instance", ex);
       }
     }
   }
 
   @Override
-  public void deleteLoadBalancerDeactivateDns(String accountNumber,
-      String lbName) {
-    LoadBalancer lb;
-    final List<LoadBalancerServoInstanceCoreView> servos = Lists.newArrayList();
-    try{
-      lb= LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
+  public void deleteLoadBalancerDeactivateDns(
+      final String accountNumber,
+      final String lbName
+  ) {
+    final List<LoadBalancerServoInstanceView> servos = Lists.newArrayList();
+    try (final TransactionResource tx = Entities.transactionFor(LoadBalancer.class)) {
+      LoadBalancer lb = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
       if(lb.getZones()!=null){
-        for(final LoadBalancerZoneCoreView zoneView : lb.getZones()){
-          LoadBalancerZone zone;
-          try{
-            zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
-          }catch(final Exception ex){
-            continue;
-          }
+        for(final LoadBalancerZone zone : lb.getZones()){
           servos.addAll(zone.getServoInstances());
         }
       }
@@ -1938,7 +1971,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       return;
     }
 
-    for(final LoadBalancerServoInstanceCoreView instance: servos){
+    for(final LoadBalancerServoInstanceView instance: servos){
       final String  address = instance.getAddress();
       if(address==null || address.length()<=0)
         continue;
@@ -1963,24 +1996,37 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   }
 
   @Override
-  public void deleteLoadBalancerDeleteScalingGroup(String accountNumber,
-      String lbName) throws LoadBalancingActivityException {
-    LoadBalancer lb;
+  public void deleteLoadBalancerDeleteScalingGroup(
+      final String accountNumber,
+      final String lbName
+  ) throws LoadBalancingActivityException {
+    final LoadBalancerView lb;
+    final Collection<LoadBalancerAutoScalingGroupView> groups;
     try{
-      lb= LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
+      final Tuple2<LoadBalancerView,Collection<LoadBalancerAutoScalingGroupView>> lbData =
+          LoadBalancerHelper.getLoadbalancer(
+              persistence,
+              Predicates.alwaysTrue(),
+              loadBalancer -> Tuple.of(
+                  LoadBalancers.CORE_VIEW.apply( loadBalancer ),
+                  Lists.newArrayList( Iterables.transform( loadBalancer.getAutoScaleGroups(), ImmutableLoadBalancerAutoScalingGroupView::copyOf ))
+              ),
+              accountNumber,
+              lbName);
+      lb = lbData._1();
+      groups = lbData._2();
     }catch(NoSuchElementException ex){
       return;
     }catch(Exception ex){
       LOG.warn("Failed to find the loadbalancer named " + lbName, ex);
       return;
     }
-    final Collection<LoadBalancerAutoScalingGroupCoreView> groups = lb.getAutoScaleGroups();
     if(groups == null || groups.isEmpty()){
       LOG.warn(String.format("Loadbalancer %s had no autoscale group associated with it", lb.getDisplayName()));
       return;
     }
 
-    for (final LoadBalancerAutoScalingGroupCoreView group : groups) {
+    for (final LoadBalancerAutoScalingGroupView group : groups) {
       final String groupName = group.getName();
       String launchConfigName = null;
 
@@ -2031,33 +2077,19 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
         }
       }
 
-      LoadBalancerAutoScalingGroup scaleGroup = null;
-      try{
-        scaleGroup = LoadBalancerAutoScalingGroupEntityTransform.INSTANCE.apply(group);
-      }catch(final Exception ex){
-        LOG.error("falied to update servo instance record", ex);
-      }
-
-      if(scaleGroup==null)
-        return;
-
       try ( TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
-        for(final LoadBalancerServoInstanceCoreView instanceView : scaleGroup.getServos()){
-          LoadBalancerServoInstance instance;
-          try{
-            instance=LoadBalancerServoInstanceEntityTransform.INSTANCE.apply(instanceView);
-          }catch(final Exception ex){
-            continue;
-          }
-          final LoadBalancerServoInstance found = Entities.uniqueResult(instance);
-          found.setAvailabilityZone(null);
-          found.setAutoScalingGroup(null);
+        final LoadBalancer loadBalancer =
+            LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
+        final LoadBalancerAutoScalingGroup scaleGroup =
+            Iterables.find( loadBalancer.getAutoScaleGroups(), asg -> groupName.equals(asg.getName()) );
+        for(final LoadBalancerServoInstance instance : scaleGroup.getServos()){
+          instance.setAvailabilityZone(null);
+          instance.setAutoScalingGroup(null);
           // InService --> Retired
           // Pending --> Retired
           // OutOfService --> Retired
           // Error --> Retired
-          found.setState(LoadBalancerServoInstance.STATE.Retired);
-          Entities.persist(found);
+          instance.setState(LoadBalancerServoInstance.STATE.Retired);
         }
         db.commit();
       }catch(final Exception ex){
@@ -2073,9 +2105,9 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     final String instanceProfileName =  getInstanceProfileName(accountNumber, lbName);
     final String roleName = getRoleName(accountNumber, lbName);
 
-    LoadBalancer lb = null;
+    LoadBalancerView lb = null;
     try{
-      lb= LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
+      lb= LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
     }catch(NoSuchElementException ex){
       return;
     }catch(Exception ex){
@@ -2101,9 +2133,9 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   public void deleteLoadBalancerDeleteIamRole(String accountNumber,
       String lbName) {
     final String roleName = getRoleName(accountNumber, lbName);
-    LoadBalancer lb = null;
+    LoadBalancerView lb;
     try{
-      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
     }catch(NoSuchElementException ex){
       return;
     }catch(Exception ex){
@@ -2136,15 +2168,18 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   }
 
   @Override
-  public void deleteLoadBalancerDeleteSecurityGroup(String accountNumber,
-      String lbName) {
-    LoadBalancer lb;
-    LoadBalancerSecurityGroupCoreView groupView = null;
-    try{
-      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
-      if(lb.getGroup()!=null){
-        groupView = lb.getGroup();
+  public void deleteLoadBalancerDeleteSecurityGroup(
+      final String accountNumber,
+      final String lbName
+  ) {
+    LoadBalancerView lb;
+    LoadBalancerSecurityGroupView groupView = null;
+    try (final TransactionResource tx = Entities.transactionFor(LoadBalancer.class)) {
+      final LoadBalancer lbEntity = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
+      if(lbEntity.getSecurityGroup()!=null){
+        groupView = lbEntity.getSecurityGroup();
       }
+      lb = lbEntity;
     }catch(NoSuchElementException ex){
       return;
     }catch(Exception ex){
@@ -2152,17 +2187,10 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       return;
     }
 
-    if ( lb.getVpcId( ) == null ) {
-      LoadBalancerSecurityGroup group;
-      try {
-        group = LoadBalancerSecurityGroupEntityTransform.INSTANCE.apply( groupView );
-      } catch ( final Exception ex ) {
-        LOG.error( "Erorr while looking for loadbalancer group", ex );
-        return;
-      }
-
+    if ( lb.getVpcId( ) == null && groupView != null ) {
       try ( TransactionResource db = Entities.transactionFor( LoadBalancerSecurityGroup.class ) ) {
-        final LoadBalancerSecurityGroup update = Entities.uniqueResult( group );
+        final LoadBalancerSecurityGroup update =
+            Entities.uniqueResult( LoadBalancerSecurityGroup.named(AccountFullName.getInstance(accountNumber), groupView.getName()) );
         update.setLoadBalancer( null );  // this allows the loadbalancer to be deleted
         update.setState( LoadBalancerSecurityGroup.STATE.OutOfService );
         Entities.persist( update );
@@ -2378,16 +2406,21 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   public void applySecurityGroupUpdateSecurityGroup(final String accountNumber,
                                                     final String lbName, final Map<String, String> groupIdToNames)
           throws LoadBalancingActivityException {
-    final LoadBalancer lb;
-    try{
-      lb = LoadBalancerHelper.getLoadbalancer( accountNumber, lbName );
+    final LoadBalancerView lb;
+    final Collection<LoadBalancerAutoScalingGroupView> groups;
+    try (final TransactionResource tx = Entities.transactionFor(LoadBalancer.class)) {
+      final LoadBalancer lbEntity = LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
+      lb = lbEntity;
+      groups = Stream.ofAll( lbEntity.getAutoScaleGroups() )
+          .<LoadBalancerAutoScalingGroupView>map( ImmutableLoadBalancerAutoScalingGroupView::copyOf )
+          .toJavaList();
     }catch(NoSuchElementException ex){
       throw new LoadBalancingActivityException("Failed to find the loadbalancer " + lbName, ex);
     }catch(Exception ex){
       throw new LoadBalancingActivityException("Unable to access loadbalancer metadata", ex);
     }
 
-    for(final LoadBalancerAutoScalingGroupCoreView group : lb.getAutoScaleGroups()) {
+    for(final LoadBalancerAutoScalingGroupView group : groups) {
       final String groupName = group.getName();
       final DescribeAutoScalingGroupsResponseType response =
               EucalyptusActivityTasks.getInstance().describeAutoScalingGroups( Lists.newArrayList( groupName ), lb.useSystemAccount() );
@@ -2423,10 +2456,20 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
                                                         final String keyname,
                                                         final String initScript)
           throws LoadBalancingActivityException {
-    final List<LoadBalancer> lbs = LoadBalancerHelper.listLoadbalancers();
-    for(final LoadBalancer lb : lbs){
-      final Collection<LoadBalancerAutoScalingGroupCoreView> groups = lb.getAutoScaleGroups();
-      for(final LoadBalancerAutoScalingGroupCoreView asg : groups) {
+    final Collection<Tuple2<LoadBalancerView,Collection<LoadBalancerAutoScalingGroupView>>> balancersAndGroups = Lists.newArrayList();
+    try (final TransactionResource tx = Entities.transactionFor(LoadBalancer.class)) {
+      final List<LoadBalancer> lbs = LoadBalancerHelper.listLoadbalancers( persistence, Functions.identity( ) );
+      for(final LoadBalancer lb : lbs) {
+        balancersAndGroups.add( Tuple.of(
+            LoadBalancers.CORE_VIEW.apply( lb ),
+            Stream.ofAll( lb.getAutoScaleGroups() )
+                .<LoadBalancerAutoScalingGroupView>map( ImmutableLoadBalancerAutoScalingGroupView::copyOf )
+                .toJavaList( ) ) );
+      }
+    }
+    for(final Tuple2<LoadBalancerView,Collection<LoadBalancerAutoScalingGroupView>> lbAndAsg : balancersAndGroups) {
+      final LoadBalancerView lb = lbAndAsg._1();
+      for (final LoadBalancerAutoScalingGroupView asg : lbAndAsg._2()) {
         if(asg==null || asg.getName()==null)
           continue;
 
@@ -2503,50 +2546,32 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
           throw new LoadBalancingActivityException("Failed to apply ELB property changes", ex);
         }
       } // for all autoscaling groups of LB
-    } // for all LBs
+    }
   }
 
 
-  private LoadBalancerServoInstance newInstance(final Instance instance, final LoadBalancerAutoScalingGroup group) throws Exception {
+  /**
+   * Caller must have tx for group
+   */
+  private LoadBalancerServoInstance newInstance(
+      final Instance instance,
+      final LoadBalancerAutoScalingGroup group
+  ) throws Exception {
     final String instanceId = instance.getInstanceId();
-    final LoadBalancerCoreView lbView = group.getLoadBalancer();
-    LoadBalancer lb;
-    try{
-      lb=LoadBalancerEntityTransform.INSTANCE.apply(lbView);
-    }catch(final Exception ex){
-      LOG.error("unable to transfrom loadbalancer from the viewer", ex);
-      throw ex;
-    }
-
-    LoadBalancerZoneCoreView zoneView = null;
-    for(final LoadBalancerZoneCoreView z : lb.getZones()){
-      if(z.getName().equals(instance.getAvailabilityZone())){
-        zoneView = z;
-        break;
-      }
-    }
-    if(zoneView == null)
+    final LoadBalancer lb = group.getLoadBalancer();
+    final LoadBalancerZone zone = LoadBalancerHelper.findZone( lb, instance.getAvailabilityZone() );
+    if(zone == null)
       throw new Exception("No availability zone with name="+instance.getAvailabilityZone()+" found for loadbalancer "+lb.getDisplayName());
-    final LoadBalancerSecurityGroupCoreView sgroupView = lb.getGroup();
-    if(sgroupView == null && lb.getVpcId()==null)
+    final LoadBalancerSecurityGroup sgroup = lb.getSecurityGroup();
+    if(sgroup == null && lb.getVpcId()==null)
       throw new Exception("No security group is found for loadbalancer "+lb.getDisplayName());
-
-    LoadBalancerZone zone;
-    LoadBalancerSecurityGroup sgroup;
-    try{
-      zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
-      sgroup = sgroupView == null ? null : LoadBalancerSecurityGroupEntityTransform.INSTANCE.apply(sgroupView);
-    }catch(final Exception ex){
-      LOG.error("Unable to transform entity", ex);
-      throw ex;
-    }
 
     // for faster inclusion into DNS response, update status as soon as servo is running
     String ipAddr = null;
     String privateIpAddr = null;
     try{
-      List<RunningInstancesItemType> result = null;
-      result = EucalyptusActivityTasks.getInstance().describeSystemInstancesWithVerbose(Lists.newArrayList(instance.getInstanceId()));
+      final List<RunningInstancesItemType> result =
+          EucalyptusActivityTasks.getInstance().describeSystemInstancesWithVerbose(Lists.newArrayList(instanceId));
       if(result!=null && result.size()>0){
         ipAddr = result.get(0).getIpAddress();
         privateIpAddr = result.get(0).getPrivateIpAddress();
@@ -2559,12 +2584,14 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
         LoadBalancerServoInstance.newInstance(zone, sgroup, group,
                 Integer.parseInt(LoadBalancingWorkerProperties.EXPIRATION_DAYS), instanceId);
     if("Healthy".equals(instance.getHealthStatus()) &&
-        "InService".equals(instance.getLifecycleState()))
+        "InService".equals(instance.getLifecycleState())) {
       newInstance.setState(LoadBalancerServoInstance.STATE.InService);
+    }
     newInstance.setAddress(ipAddr);
     newInstance.setPrivateIp(privateIpAddr);
-    if (!(ipAddr == null && privateIpAddr == null))
+    if (!(ipAddr == null && privateIpAddr == null)) {
       newInstance.setDnsState(LoadBalancerServoInstance.DNS_STATE.Registered);
+    }
     return newInstance;
   }
 
@@ -2581,7 +2608,6 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
           update.setAddress(publicIp.get());
         if(privateIp.isPresent())
           update.setPrivateIp(privateIp.get());
-        Entities.persist(update);
         db.commit();
       }catch(final Exception ex) {
         LOG.error("Failed to update instance's IP addresses", ex);
@@ -2593,22 +2619,19 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   public void checkServoInstances() throws LoadBalancingActivityException {
     final int NUM_ASGS_TO_DESCRIBE = 8;
     // lookup all LoadBalancerAutoScalingGroup records
-    List<LoadBalancerAutoScalingGroup> groups = Lists.newArrayList();
-    Map<String, LoadBalancerAutoScalingGroup> allGroupMap = new ConcurrentHashMap<>();
+    final Map<String, LoadBalancerAutoScalingGroupView> allGroupMap = new ConcurrentHashMap<>();
     try ( final TransactionResource db = Entities.transactionFor( LoadBalancerAutoScalingGroup.class ) ) {
-      groups = Entities.query(LoadBalancerAutoScalingGroup.named(), true);
-      for(LoadBalancerAutoScalingGroup g : groups){
+      final List<LoadBalancerAutoScalingGroupView> groups = Entities.query(LoadBalancerAutoScalingGroup.named(), true);
+      for(LoadBalancerAutoScalingGroupView g : groups){
         allGroupMap.put(g.getName(), g);
       }
     }catch(Exception ex){
       throw new LoadBalancingActivityException("Failed to query loadbalancer autoscaing groups", ex);
     }
 
-    final Map<String, LoadBalancerAutoScalingGroup> groupToQuery = allGroupMap;
     // describe as group and find the unknown instance Ids
-    List<AutoScalingGroupType> queriedGroups = Lists.newArrayList();
-
-    for(final List<String> partition : Iterables.partition(groupToQuery.keySet(), NUM_ASGS_TO_DESCRIBE)) {
+    final List<AutoScalingGroupType> queriedGroups = Lists.newArrayList();
+    for(final List<String> partition : Iterables.partition(allGroupMap.keySet(), NUM_ASGS_TO_DESCRIBE)) {
       try{
         DescribeAutoScalingGroupsResponseType response =
                 EucalyptusActivityTasks.getInstance().describeAutoScalingGroupsWithVerbose(partition);
@@ -2621,10 +2644,10 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     }
 
     /// lookup all servoInstances in the DB
-    Map<String, LoadBalancerServoInstance> servoMap = new ConcurrentHashMap<>();
+    final Map<String, LoadBalancerServoInstanceView> servoMap = new ConcurrentHashMap<>();
     try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
-      final List<LoadBalancerServoInstance> result = Entities.query(LoadBalancerServoInstance.named(), true);
-      for(LoadBalancerServoInstance inst : result){
+      final List<LoadBalancerServoInstanceView> result = Entities.query(LoadBalancerServoInstance.named(), true);
+      for(LoadBalancerServoInstanceView inst : result){
         servoMap.put(inst.getInstanceId(), inst);
       }
     }catch(Exception ex){
@@ -2633,8 +2656,8 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
 
     /// for all found instances that's not in the servo instance DB
     ///     create servo record
-    final List<LoadBalancerServoInstance> newServos = Lists.newArrayList();
     final Map<String, Instance> foundInstances = new ConcurrentHashMap<>();
+    final Map<String, String> newInstanceIdsToAsg = Maps.newLinkedHashMap();
     for(final AutoScalingGroupType asg : queriedGroups){
       Instances instances = asg.getInstances();
       if(instances!=null && instances.getMember() != null && instances.getMember().size() >0){
@@ -2642,87 +2665,87 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
           final String instanceId = instance.getInstanceId();
           foundInstances.put(instanceId, instance);
           if(!servoMap.containsKey(instanceId)){ /// new instance found
-            try{
-              final LoadBalancerAutoScalingGroup group= allGroupMap.get(asg.getAutoScalingGroupName());
-              if(group==null)
-                throw new IllegalArgumentException("The group with name "+ asg.getAutoScalingGroupName()+ " not found in the database");
-              final LoadBalancerServoInstance newInstance = newInstance(instance, group);
-              newServos.add(newInstance); /// persist later
-            }catch(final Exception ex) {
-              LOG.error("Failed to construct servo instance entity", ex);
-              continue;
-            }
+            newInstanceIdsToAsg.put(instanceId, asg.getAutoScalingGroupName());
           }
         }
       }
     }
 
     // CASE 1: NEW INSTANCES WITHIN THE AS GROUP FOUND
-    if(newServos.size()>0){
-      try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
-        for(LoadBalancerServoInstance instance : newServos){
-          Entities.persist(instance);
+    final List<LoadBalancerServoInstanceView> newServos = Lists.newArrayList();
+    final List<LoadBalancerServoInstanceView> oldServos = Lists.newArrayList();
+    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
+      final Map<String,LoadBalancerAutoScalingGroup> asgEntities = Maps.newHashMap();
+      for (final LoadBalancerAutoScalingGroup group : Entities.query( LoadBalancerAutoScalingGroup.named( ))) {
+        asgEntities.put( group.getName( ), group );
+        oldServos.addAll( Collections2.transform( group.getServos( ), ImmutableLoadBalancerServoInstanceView::copyOf ) );
+      }
+
+      if(newInstanceIdsToAsg.size()>0) {
+        for (final Map.Entry<String, String> instanceIdAndAsg : newInstanceIdsToAsg.entrySet()) {
+          final Instance instance = foundInstances.get(instanceIdAndAsg.getKey());
+          final String autoScalingGroupName = instanceIdAndAsg.getValue();
+          try {
+            final LoadBalancerAutoScalingGroup group = asgEntities.get(autoScalingGroupName);
+            if (group == null) {
+              throw new IllegalArgumentException("The group with name " + autoScalingGroupName + " not found in the database");
+            }
+            final LoadBalancerServoInstance newInstance = newInstance(instance, group);
+            newServos.add(newInstance);
+            Entities.persist(newInstance);
+          } catch (final Exception ex) {
+            LOG.error("Failed to construct servo instance entity", ex);
+            continue;
+          }
         }
         db.commit();
-      }catch(Exception ex){
-        LOG.error("Failed to persist the servo instance record", ex);
       }
-      if (LoadBalancingSystemVpcs.isCloudVpc().isPresent()
-              && LoadBalancingSystemVpcs.isCloudVpc().get()) {
-        try {
-          newServos.stream()
-                  .filter(instance -> LoadBalancerServoInstance.STATE.InService.equals(
-                          instance.getState()))
-                  .forEach(instance -> LoadBalancingSystemVpcs.setupUserVpcInterface(instance.getInstanceId()));
-        } catch (final Exception ex) {
-          LOG.error("Failed to attach secondary network interface to ELB instances", ex);
-        }
-        try { // if servo is in VPC, update ip addresses using the secondary interface's address
-          newServos.stream()
-                  .filter(instance -> LoadBalancerServoInstance.STATE.InService.equals(
-                          instance.getState()))
-                  .forEach(instance -> {
-                    updateIpAddressesInVpc(instance.getInstanceId());
-                  });
-        } catch (final Exception ex) {
-          LOG.error("Failed to retrieve IP addresses of secondary network interface");
-        }
-      }
+    }catch(Exception ex){
+      LOG.error("Failed to persist the servo instance record", ex);
     }
-
-    List<LoadBalancerServoInstanceCoreView> servoRecords = Lists.newArrayList();
-    for(String groupName : groupToQuery.keySet()){
-      final LoadBalancerAutoScalingGroup group = groupToQuery.get(groupName);
-      servoRecords.addAll(group.getServos());
+    if (!newServos.isEmpty()
+        && LoadBalancingSystemVpcs.isCloudVpc().isPresent()
+        && LoadBalancingSystemVpcs.isCloudVpc().get()) {
+      try {
+        newServos.stream()
+                .filter(instance -> LoadBalancerServoInstance.STATE.InService.equals(
+                        instance.getState()))
+                .forEach(instance -> LoadBalancingSystemVpcs.setupUserVpcInterface(instance.getInstanceId()));
+      } catch (final Exception ex) {
+        LOG.error("Failed to attach secondary network interface to ELB instances", ex);
+      }
+      try { // if servo is in VPC, update ip addresses using the secondary interface's address
+        newServos.stream()
+                .filter(instance -> LoadBalancerServoInstance.STATE.InService.equals(
+                        instance.getState()))
+                .forEach(instance -> {
+                  updateIpAddressesInVpc(instance.getInstanceId());
+                });
+      } catch (final Exception ex) {
+        LOG.error("Failed to retrieve IP addresses of secondary network interface");
+      }
     }
 
     //final List<LoadBalancerServoInstance> registerDnsARec = Lists.newArrayList();
-    for(LoadBalancerServoInstanceCoreView instanceView : servoRecords){
+    for(LoadBalancerServoInstanceView instance: oldServos){
       /// CASE 2: EXISTING SERVO INSTANCES ARE NOT FOUND IN THE ASG QUERY RESPONSE
-      if(! foundInstances.containsKey(instanceView.getInstanceId()) &&
-              ! instanceView.getState().equals(LoadBalancerServoInstance.STATE.Retired)){
-        LoadBalancerServoInstance instance;
-        try{
-          instance = LoadBalancerServoInstanceEntityTransform.INSTANCE.apply(instanceView);
-        }catch(final Exception ex){
-          LOG.error("Failed to transform servo instance from the view", ex);
-          continue;
-        }
+      if(! foundInstances.containsKey(instance.getInstanceId()) &&
+              ! instance.getState().equals(LoadBalancerServoInstance.STATE.Retired)){
         try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
-          final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
+          final LoadBalancerServoInstance update =
+              Entities.uniqueResult( LoadBalancerServoInstance.named( instance.getInstanceId() ) );
           update.setState(LoadBalancerServoInstance.STATE.Error);
-          Entities.persist(update);
           db.commit();
         }catch(Exception ex){
           LOG.error(String.format("Failed to mark the servo instance's state to ERROR (%s)",
                   instance.getInstanceId()));
         }
-      } else if (foundInstances.containsKey(instanceView.getInstanceId())) {
+      } else if (foundInstances.containsKey(instance.getInstanceId())) {
         /// CASE 3: INSTANCE STATE UPDATED
-        Instance instanceCurrent = foundInstances.get(instanceView.getInstanceId());
+        final Instance instanceCurrent = foundInstances.get(instance.getInstanceId());
         final String healthState = instanceCurrent.getHealthStatus();
         final String lifecycleState = instanceCurrent.getLifecycleState();
-        LoadBalancerServoInstance.STATE curState = instanceView.getState();
+        final LoadBalancerServoInstance.STATE curState = instance.getState();
         LoadBalancerServoInstance.STATE newState = curState;
 
         if(healthState != null && ! healthState.equals("Healthy")){
@@ -2747,15 +2770,9 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
 
         if(!curState.equals(LoadBalancerServoInstance.STATE.Retired) &&
                 !curState.equals(newState)){
-          LoadBalancerServoInstance instance;
-          try{
-            instance = LoadBalancerServoInstanceEntityTransform.INSTANCE.apply(instanceView);
-          }catch(final Exception ex){
-            LOG.error("Failed to transform servo instance from the view", ex);
-            continue;
-          }
           try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
-            final LoadBalancerServoInstance update = Entities.uniqueResult(instance);
+            final LoadBalancerServoInstance update =
+                Entities.uniqueResult( LoadBalancerServoInstance.named( instance.getInstanceId() ) );
             update.setState(newState);
             Entities.persist(update);
             db.commit();
@@ -3103,22 +3120,23 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
 
   @Override
   public void cleanupSecurityGroups() throws LoadBalancingActivityException {
-  /// find all security group whose member instances are empty
-    List<LoadBalancerSecurityGroup> allGroups = null;
+    // find all security group whose member instances are empty
+    final List<LoadBalancerSecurityGroupView> toDelete = Lists.newArrayList();
     try ( TransactionResource db = Entities.transactionFor( LoadBalancerSecurityGroup.class ) ) {
-      allGroups = Entities.query(LoadBalancerSecurityGroup.withState(LoadBalancerSecurityGroup.STATE.OutOfService));
-    }catch(Exception ex){ /* retry later */ }
-    if(allGroups==null || allGroups.size()<=0)
-      return;
-    final List<LoadBalancerSecurityGroup> toDelete = Lists.newArrayList();
-    for(LoadBalancerSecurityGroup group : allGroups){
-      Collection<LoadBalancerServoInstanceCoreView> instances = group.getServoInstances();
-      if(instances == null || instances.size()<=0)
-        toDelete.add(group);
+      final List<LoadBalancerSecurityGroup> allGroups =
+          Entities.query(LoadBalancerSecurityGroup.withState(LoadBalancerSecurityGroup.STATE.OutOfService));
+      for(final LoadBalancerSecurityGroup  group : allGroups){
+        Collection<LoadBalancerServoInstance> instances = group.getServoInstances();
+        if(instances == null || instances.size()<=0) {
+          toDelete.add(ImmutableLoadBalancerSecurityGroupView.copyOf( group ));
+        }
+      }
+    }catch(Exception ex){
+      return; /* retry later */
     }
 
-    /// delete them from euca
-    for(final LoadBalancerSecurityGroup group : toDelete){
+    // delete them from euca
+    for(final LoadBalancerSecurityGroupView group : toDelete){
       boolean deleted = false;
       try{
         final List<SecurityGroupItemType> existingGroups =
@@ -3147,7 +3165,9 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       }
       if (deleted) {
         try ( final TransactionResource db = Entities.transactionFor( LoadBalancerSecurityGroup.class ) ) {
-          final LoadBalancerSecurityGroup g =  Entities.uniqueResult(group);
+          final LoadBalancerSecurityGroup g = Entities.uniqueResult( LoadBalancerSecurityGroup.named(
+              AccountFullName.getInstance( group.getGroupOwnerAccountId() ),
+              group.getName( ) ) );
           Entities.delete(g);
           db.commit();
         }catch(NoSuchElementException ex){
@@ -3268,8 +3288,17 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       }
 
       for (final String instanceId : unhealthyInstances) {
-       EucalyptusActivityTasks.getInstance().terminateInstances(Lists.newArrayList(instanceId));
-        LOG.debug(String.format("Unhealthy loadbalancer VM is detected and terminated (%s)", instanceId));
+        try {
+          EucalyptusActivityTasks.getInstance().terminateInstances(Lists.newArrayList(instanceId));
+          LOG.debug(String.format("Unhealthy loadbalancer VM detected and terminated (%s)", instanceId));
+        } catch( final Exception ex ) {
+          if ( AsyncExceptions.isWebServiceErrorCode( ex, "InvalidInstanceID.NotFound" ) ) {
+            LOG.debug(String.format("Unhealthy loadbalancer VM detected and was not found (%s)", instanceId));
+          } else {
+            LOG.warn(String.format("Unhealthy loadbalancer VM detected and terminate failed (%s): %s",
+                instanceId, ex.getMessage()));
+          }
+        }
       }
     } catch(final Exception ex) {
       LOG.error("Failed to recycle unhealthy worker VMs", ex);
@@ -3278,14 +3307,14 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
 
   @Override
   public void runContinousWorkflows() throws LoadBalancingActivityException {
-    List<LoadBalancer> loadbalancers = null;
+    List<LoadBalancerView> loadbalancers = null;
     try{
-      loadbalancers = LoadBalancerHelper.listLoadbalancers();
+      loadbalancers = LoadBalancerHelper.listLoadbalancers( persistence, Functions.identity( ) );
     }catch(final Exception ex) {
       LOG.error("Failed to list all loadbalancers", ex);
       return;
     }
-    for(final LoadBalancer lb : loadbalancers) {
+    for(final LoadBalancerView lb : loadbalancers) {
       final String accountId = lb.getOwnerAccountNumber();
       final String lbName = lb.getDisplayName();
       try{
@@ -3301,27 +3330,28 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   @Override
   public List<String> lookupServoInstances(final String accountNumber,
       final String lbName) throws LoadBalancingActivityException {
-    final LoadBalancer lb;
+    final LoadBalancerZonesView lb;
     try{
-      lb = LoadBalancerHelper.getLoadbalancer(accountNumber, lbName);
+      lb = LoadBalancerHelper.getLoadbalancer(
+          persistence,
+          Predicates.alwaysTrue(),
+          LoadBalancers.ZONES_VIEW,
+          accountNumber,
+          lbName);
     }catch(final Exception ex) {
       throw new LoadBalancingActivityException("Failed to lookup loadbalancer");
     }
 
     final List<String> instances = Lists.newArrayList();
     try{
-      for(final LoadBalancerZoneCoreView zoneView : lb.getZones()) {
+      for(final LoadBalancerZoneFullView zoneFullView : lb.getZones()) {
+        final LoadBalancerZoneView zoneView = zoneFullView.getZone( );
         if(LoadBalancerZone.STATE.OutOfService.equals(zoneView.getState()))
           continue;
 
-        final LoadBalancerZone zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
-        instances.addAll(Collections2.transform(zone.getServoInstances(),
-            new Function<LoadBalancerServoInstanceCoreView, String>(){
-          @Override
-          public String apply(LoadBalancerServoInstanceCoreView arg0) {
-            return arg0.getInstanceId();
-          }
-        }));
+        instances.addAll(Collections2.transform(
+            zoneFullView.getServoInstances(),
+            LoadBalancerServoInstanceView::getInstanceId));
       }
     }catch(final Exception ex) {
       throw new LoadBalancingActivityException("Failed to lookup servo instance records", ex);
@@ -3334,12 +3364,12 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   // to make sure that all ELB VMs have the right role policy
   @Override
   public void upgrade4_4() throws LoadBalancingActivityException {
-    final List<LoadBalancer> oldLBs =
-            LoadBalancerHelper.listLoadbalancers().stream()
+    final List<LoadBalancerView> oldLBs =
+            LoadBalancerHelper.listLoadbalancers( persistence, Functions.identity( ) ).stream()
                     .filter( lb -> !LoadBalancerHelper.v4_4_0.apply(lb) )
                     .collect(Collectors.toList());
 
-    for (final LoadBalancer lb : oldLBs) {
+    for (final LoadBalancerView lb : oldLBs) {
       final String accountNumber = lb.getOwnerAccountNumber();
       final String lbName = lb.getDisplayName();
       final String roleName = getRoleName(accountNumber, lbName);
@@ -3368,16 +3398,19 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   @Override
   public void recordInstanceTaskFailure(final String instanceId) throws LoadBalancingActivityException {
     try {
-      try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
-        final LoadBalancerServoInstance sample =
-                LoadBalancerServoInstance.named(instanceId);
-        final LoadBalancerServoInstance entity =
-                Entities.uniqueResult(sample);
+      final Predicate<String> update = id -> {
+        final LoadBalancerServoInstance entity;
+        try {
+          entity = Entities.uniqueResult( LoadBalancerServoInstance.named( id ) );
+        } catch ( final TransactionException ex ) {
+          throw Exceptions.toUndeclared( ex );
+        }
         if (entity.getState() != STATE.Pending) {
           entity.setActivityFailureCount(entity.getActivityFailureCount() + 1);
-          db.commit();
         }
-      }
+        return true;
+      };
+      Entities.asTransaction( LoadBalancerServoInstance.class, update ).apply(instanceId);
     }catch(final Exception ex) {
        LOG.warn(String.format("Failed to mark the VM (%s) as failed", instanceId), ex);
     }

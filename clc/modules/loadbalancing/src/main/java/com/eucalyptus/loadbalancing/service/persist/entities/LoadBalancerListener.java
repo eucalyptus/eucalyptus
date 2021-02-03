@@ -41,10 +41,8 @@ import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
-import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
@@ -55,23 +53,17 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer.LoadBalancerCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreViewTransform;
 import com.eucalyptus.loadbalancing.common.msgs.Listener;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerListenerView;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.ContiguousSet;
 import com.google.common.collect.DiscreteDomain;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Lists;
+
 
 /**
  * @author Sang-Min Park
@@ -82,7 +74,7 @@ import com.google.common.collect.Lists;
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_listener" )
-public class LoadBalancerListener extends AbstractPersistent
+public class LoadBalancerListener extends AbstractPersistent implements LoadBalancerListenerView
 {
 	private static Logger    LOG     = Logger.getLogger( LoadBalancerListener.class );
 	
@@ -166,15 +158,6 @@ public class LoadBalancerListener extends AbstractPersistent
 	}
 
 	private static final long serialVersionUID = 1L;
-	
-	@Transient
-	private LoadBalancerListenerRelationView view = null;
-	
-	@PostLoad
-	private void onLoad(){
-		if(this.view==null)
-			this.view = new LoadBalancerListenerRelationView(this);
-	}
 	
 	private LoadBalancerListener(){}
 	public static LoadBalancerListener named(final LoadBalancer lb, int lbPort){
@@ -269,7 +252,7 @@ public class LoadBalancerListener extends AbstractPersistent
 	public String getCertificateId(){
 		return this.sslCertificateArn;
 	}
-	
+
 	public void addPolicy(final LoadBalancerPolicyDescription policy){
 	  if(this.policies==null){
 	    this.policies = Lists.newArrayList();
@@ -301,11 +284,11 @@ public class LoadBalancerListener extends AbstractPersistent
 	    return;
 	  this.policies.clear();
 	}
-	
-	public List<LoadBalancerPolicyDescriptionCoreView> getPolicies(){
-	  return this.view.getPolicies();
+
+	public List<LoadBalancerPolicyDescription> getPolicyDescriptions() {
+		return this.policies;
 	}
-	
+
 	public static boolean protocolSupported(Listener listener){
 		try{
 			final PROTOCOL protocol = PROTOCOL.from(listener.getProtocol());
@@ -385,80 +368,5 @@ public class LoadBalancerListener extends AbstractPersistent
 	public String toString(){
 		return String.format("Listener for %s: %nProtocol=%s, Port=%d, InstancePort=%d, InstanceProtocol=%s, CertId=%s", 
 				this.loadbalancer.getDisplayName(), this.protocol, this.loadbalancerPort, this.instancePort, this.instanceProtocol, this.sslCertificateArn);
-	}
-	
-	public static class LoadBalancerListenerCoreView {
-		private LoadBalancerListener listener = null;
-		
-		LoadBalancerListenerCoreView(LoadBalancerListener listener){
-			this.listener = listener;
-		}
-		
-		public int getInstancePort(){
-			return this.listener.getInstancePort();
-		}
-		public PROTOCOL getInstanceProtocol(){
-			return this.listener.getInstanceProtocol();
-		}
-		public int getLoadbalancerPort(){
-			return this.listener.getLoadbalancerPort();
-		}
-		public PROTOCOL getProtocol(){
-			return this.listener.getProtocol();
-		}
-		public String getCertificateId(){
-			return this.listener.getCertificateId();
-		}
-	}
-
-	@TypeMapper
-	public enum LoadBalancerListenerCoreViewTransform implements Function<LoadBalancerListener, LoadBalancerListenerCoreView> {
-		INSTANCE;
-
-		@Override
-		@Nullable
-		public LoadBalancerListenerCoreView apply(
-				@Nullable LoadBalancerListener arg0) {
-			return new LoadBalancerListenerCoreView(arg0);
-		}
-	}
-
-	public enum LoadBalancerListenerEntityTransform implements Function<LoadBalancerListenerCoreView, LoadBalancerListener> {
-		INSTANCE;
-
-		@Override
-		@Nullable
-		public LoadBalancerListener apply(
-				@Nullable LoadBalancerListenerCoreView arg0) {
-			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerListener.class ) ) {
-				return Entities.uniqueResult(arg0.listener);
-			}catch(final Exception ex){
-				throw Exceptions.toUndeclared(ex);
-			}
-			
-		}
-	}
-	
-	public static class LoadBalancerListenerRelationView {
-		private LoadBalancer loadbalancer = null;
-		private ImmutableList<LoadBalancerPolicyDescriptionCoreView> policies = null;
-		private LoadBalancerListenerRelationView(final LoadBalancerListener listener){
-			if(listener.loadbalancer!=null) {
-				Entities.initialize( listener.loadbalancer );
-				this.loadbalancer = listener.loadbalancer;
-			}
-			if(listener.policies!=null){
-			   this.policies = ImmutableList.copyOf(Collections2.transform(listener.policies,
-	            LoadBalancerPolicyDescriptionCoreViewTransform.INSTANCE)); 
-			}
-		}
-		
-		public LoadBalancerCoreView getLoadBalancer(){
-			return this.loadbalancer.getCoreView( );
-		}
-		
-		public ImmutableList<LoadBalancerPolicyDescriptionCoreView> getPolicies(){
-		  return this.policies;
-		}
 	}
 }

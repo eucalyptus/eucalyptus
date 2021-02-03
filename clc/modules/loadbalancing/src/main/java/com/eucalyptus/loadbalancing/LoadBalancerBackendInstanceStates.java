@@ -30,6 +30,7 @@ package com.eucalyptus.loadbalancing;
 
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendInstance;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendInstance.STATE;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerBackendInstanceView;
 
 public enum LoadBalancerBackendInstanceStates {
   HealthCheckSuccess(STATE.InService, "", ""),
@@ -65,7 +66,7 @@ public enum LoadBalancerBackendInstanceStates {
     return this.isInstanceState(instance.getState(), instance.getReasonCode(), instance.getDescription());
   }
 
-  public boolean isInstanceState(final LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreView instance) {
+  public boolean isInstanceState(final LoadBalancerBackendInstanceView instance) {
     return this.isInstanceState(instance.getBackendState(), instance.getReasonCode(), instance.getDescription());
   }
 

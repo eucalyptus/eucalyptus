@@ -28,8 +28,6 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.service.persist.entities;
 
-import java.util.NoSuchElementException;
-
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
@@ -41,10 +39,8 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Type;
 
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.util.Exceptions;
-import com.google.common.base.Function;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerPolicyAttributeDescriptionView;
+
 
 /**
  * @author Sang-Min Park
@@ -53,7 +49,7 @@ import com.google.common.base.Function;
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_policy_attr_description" )
-public class LoadBalancerPolicyAttributeDescription extends AbstractPersistent{
+public class LoadBalancerPolicyAttributeDescription extends AbstractPersistent implements LoadBalancerPolicyAttributeDescriptionView {
   private static Logger    LOG     = Logger.getLogger( LoadBalancerPolicyAttributeDescription.class );
 
   private static final long serialVersionUID = 1L;
@@ -163,47 +159,5 @@ public class LoadBalancerPolicyAttributeDescription extends AbstractPersistent{
   @Override
   public String toString(){
     return String.format("LoadBalancer Policy Attribute Description %s: %s-%s", this.policyDescription.getPolicyName(), this.attributeName, this.attributeValue);
-  }
-  
-  public static class LoadBalancerPolicyAttributeDescriptionCoreView {
-    private LoadBalancerPolicyAttributeDescription policyDesc = null;
-    public LoadBalancerPolicyAttributeDescriptionCoreView(final LoadBalancerPolicyAttributeDescription policyDesc){
-     this.policyDesc = policyDesc; 
-    }
-    
-    public String getAttributeName(){
-      return this.policyDesc.attributeName;
-    }
-    
-    public String getAttributeValue(){
-      return this.policyDesc.attributeValue;
-    }
-  }
-  
-  public enum LoadBalancerPolicyAttributeDescriptionCoreViewTransform implements Function<LoadBalancerPolicyAttributeDescription, LoadBalancerPolicyAttributeDescriptionCoreView> {
-    INSTANCE;
-
-    @Override
-    public LoadBalancerPolicyAttributeDescriptionCoreView apply(
-        LoadBalancerPolicyAttributeDescription arg0) {
-      return new LoadBalancerPolicyAttributeDescriptionCoreView(arg0);
-    }
-  }
-
-  public enum LoadBalancerPolicyAtttributeDescriptionEntityTransform implements
-  Function<LoadBalancerPolicyAttributeDescriptionCoreView, LoadBalancerPolicyAttributeDescription>{
-    INSTANCE;
-
-    @Override
-    public LoadBalancerPolicyAttributeDescription apply(
-        LoadBalancerPolicyAttributeDescriptionCoreView arg0) {
-      try ( TransactionResource db = Entities.transactionFor( LoadBalancerPolicyAttributeDescription.class ) ) {
-        return Entities.uniqueResult(arg0.policyDesc);
-      }catch(final NoSuchElementException ex){
-        throw ex;
-      }catch (final Exception ex) {
-        throw Exceptions.toUndeclared(ex);
-      }
-    }
   }
 }

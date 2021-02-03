@@ -26,7 +26,6 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
-
 package com.eucalyptus.loadbalancing.service.persist.entities;
 
 import javax.persistence.Column;
@@ -34,11 +33,11 @@ import javax.persistence.Embeddable;
 
 import org.hibernate.annotations.Parent;
 
-import com.eucalyptus.util.TypeMapper;
-import com.google.common.base.Function;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerPolicyAttributeTypeDescriptionView;
+
 
 @Embeddable
-public class LoadBalancerPolicyAttributeTypeDescription {
+public class LoadBalancerPolicyAttributeTypeDescription implements LoadBalancerPolicyAttributeTypeDescriptionView {
 	public enum Cardinality {
 		   ONE ( "ONE" ), ZERO_OR_ONE( "ZERO_OR_ONE" ), ZERO_OR_MORE( "ZERO_OR_MORE"), ONE_OR_MORE("ONE_OR_MORE");
 		   
@@ -96,35 +95,35 @@ public class LoadBalancerPolicyAttributeTypeDescription {
 	  this.policyType = type;
 	}
 	
-	private String getAttributeName(){
+	public String getAttributeName(){
 	  return this.attributeName;
 	}
-	
-	private String getAttributeType(){
+
+	public String getAttributeType(){
 	  return this.attributeType;
 	}
 	
 	public void setCardinality(final Cardinality c){
 	  this.cardinality = c.toString();
 	}
-	
-	private String getCardinality(){
+
+	public String getCardinality(){
 	  return this.cardinality;
 	}
 	
 	public void setDefaultValue(final String defaultValue){
 	  this.defaultValue = defaultValue;
 	}
-	
-	private String getDefaultValue(){
+
+	public String getDefaultValue(){
 	  return this.defaultValue;
 	}
 	
 	public void setDescription(final String description){
 	  this.description = description;
 	}
-	
-	private String getDescription(){
+
+	public String getDescription(){
 	  return this.description;
 	}
 	
@@ -171,43 +170,4 @@ public class LoadBalancerPolicyAttributeTypeDescription {
       : this.attributeType.hashCode( ) );
     return result;
 	}
-	
-	public static class LoadBalancerPolicyAttributeTypeDescriptionCoreView {
-	  LoadBalancerPolicyAttributeTypeDescription description = null;
-	  public LoadBalancerPolicyAttributeTypeDescriptionCoreView(final LoadBalancerPolicyAttributeTypeDescription description){
-	    this.description = description;
-	  }
-	  
-	  public String getAttributeName(){
-	    return this.description.getAttributeName();
-	  }
-	  
-	  public String getAttributeType(){
-	    return this.description.getAttributeType();
-	  }
-	  
-	  public String getCardinality(){
-	    return this.description.getCardinality();
-	  }
-	  
-	  public String getDefaultValue(){
-	    return this.description.getDefaultValue();
-	  }
-	  
-	  public String getDescription(){
-	    return this.description.getDescription();
-	  }
-	}
-	
-	@TypeMapper
-	public enum  LoadBalancerPolicyAttributeTypeDescriptionCoreViewTransform implements Function<LoadBalancerPolicyAttributeTypeDescription, LoadBalancerPolicyAttributeTypeDescriptionCoreView> {
-	  INSTANCE;
-
-    @Override
-    public LoadBalancerPolicyAttributeTypeDescriptionCoreView apply(
-      LoadBalancerPolicyAttributeTypeDescription arg0) {
-        return new LoadBalancerPolicyAttributeTypeDescriptionCoreView(arg0);
-    }
-	}
-	
 }

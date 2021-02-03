@@ -26,7 +26,6 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
-
 package com.eucalyptus.loadbalancing.service.persist.entities;
 
 import java.util.List;
@@ -36,28 +35,21 @@ import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
-import javax.persistence.PostLoad;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyAttributeTypeDescription.LoadBalancerPolicyAttributeTypeDescriptionCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyAttributeTypeDescription.LoadBalancerPolicyAttributeTypeDescriptionCoreViewTransform;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.ImmutableList;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerPolicyTypeDescriptionView;
 import com.google.common.collect.Lists;
+
 
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_policy_type_description" )
-public class LoadBalancerPolicyTypeDescription extends AbstractPersistent{
+public class LoadBalancerPolicyTypeDescription extends AbstractPersistent implements LoadBalancerPolicyTypeDescriptionView {
 	private static Logger    LOG     = Logger.getLogger( LoadBalancerPolicyTypeDescription.class );
 
 	private static final long serialVersionUID = 1L;
-	
-	@Transient
-	private LoadBalancerPolicyTypeDescriptionRelationView view = null;
 	
 	@Column( name = "description", nullable=true)
 	private String description = null;
@@ -73,7 +65,6 @@ public class LoadBalancerPolicyTypeDescription extends AbstractPersistent{
 	
 	public LoadBalancerPolicyTypeDescription(final String typeName){
 	  this.policyTypeName = typeName;
-	  this.view = new LoadBalancerPolicyTypeDescriptionRelationView(this);
 	}
   
 	public LoadBalancerPolicyTypeDescription(final String typeName, final String description){
@@ -91,12 +82,6 @@ public class LoadBalancerPolicyTypeDescription extends AbstractPersistent{
     return new LoadBalancerPolicyTypeDescription(typeName);
   }
 
-  @PostLoad
-  private void onLoad(){
-    if(this.view==null)
-      this.view = new LoadBalancerPolicyTypeDescriptionRelationView(this);
-  }
-
 	public String getPolicyTypeName(){
 	  return this.policyTypeName;
 	}
@@ -109,8 +94,8 @@ public class LoadBalancerPolicyTypeDescription extends AbstractPersistent{
 	  return this.description;
 	}
 	
-	public List<LoadBalancerPolicyAttributeTypeDescriptionCoreView> getPolicyAttributeTypeDescriptions(){
-	  return this.view.getAttributeTypeDescription();
+	public List<LoadBalancerPolicyAttributeTypeDescription> getPolicyAttributeTypeDescriptions(){
+	  return this.policyAttributeTypeDescriptions;
 	}
 	
 	public void addPolicyAttributeTypeDescription(final LoadBalancerPolicyAttributeTypeDescription attrDesc){
@@ -162,20 +147,5 @@ public class LoadBalancerPolicyTypeDescription extends AbstractPersistent{
     }
     
     return true;
-	}
-	
-	public static class LoadBalancerPolicyTypeDescriptionRelationView {
-	  private ImmutableList<LoadBalancerPolicyAttributeTypeDescriptionCoreView> attrTypeDescs = null;
-	  
-	  private LoadBalancerPolicyTypeDescriptionRelationView(final LoadBalancerPolicyTypeDescription policyDesc){
-	    if(policyDesc.policyAttributeTypeDescriptions != null){
-	      attrTypeDescs = ImmutableList.copyOf(Collections2.transform(policyDesc.policyAttributeTypeDescriptions,
-	          LoadBalancerPolicyAttributeTypeDescriptionCoreViewTransform.INSTANCE));
-	    }
-	  }
-
-	  public ImmutableList<LoadBalancerPolicyAttributeTypeDescriptionCoreView> getAttributeTypeDescription(){
-	    return this.attrTypeDescs;
-	  }
 	}
 }

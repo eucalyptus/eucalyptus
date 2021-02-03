@@ -32,31 +32,28 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FilenameFilter;
 import java.io.InputStream;
+import java.security.cert.X509Certificate;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import javax.annotation.Nonnull;
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.loadbalancing.service.persist.LoadBalancerPolicyTypeDescriptions;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendServerDescription;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreView;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener.LoadBalancerListenerCoreView;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener.PROTOCOL;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyAttributeDescription;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAttributeDescriptionCoreView;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyAttributeTypeDescription;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyAttributeTypeDescription.Cardinality;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyAttributeTypeDescription.LoadBalancerPolicyAttributeTypeDescriptionCoreView;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionEntityTransform;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyAttribute;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyAttributeDescription;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyAttributeDescriptions;
@@ -70,11 +67,19 @@ import com.eucalyptus.loadbalancing.service.LoadBalancingException;
 import com.eucalyptus.loadbalancing.service.PolicyTypeNotFoundException;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyTypeDescription;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerPolicyAttributeDescriptionView;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerPolicyAttributeTypeDescriptionView;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerPolicyDescriptionFullView;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerPolicyDescriptionView;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerPolicyTypeDescriptionFullView;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerPolicyTypeDescriptionView;
 import com.eucalyptus.system.BaseDirectory;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Strings;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
@@ -83,6 +88,8 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.base.Predicate;
+import io.vavr.collection.Stream;
+
 /**
  * @author Sang-Min Park
  *
@@ -276,9 +283,11 @@ public class LoadBalancerPolicyHelper {
     return requiredPolicyTypes;
   }
 
-  public static List<LoadBalancerPolicyTypeDescription> getLoadBalancerPolicyTypeDescriptions(){
+  public static List<LoadBalancerPolicyTypeDescriptionFullView> getLoadBalancerPolicyTypeDescriptions(){
     try ( final TransactionResource db = Entities.transactionFor( LoadBalancerPolicyTypeDescription.class ) ) {
-      return Entities.query(new LoadBalancerPolicyTypeDescription());
+      return Stream.ofAll( Entities.query(new LoadBalancerPolicyTypeDescription() ) )
+          .map( LoadBalancerPolicyTypeDescriptions.FULL_VIEW )
+          .toJavaList( );
     }catch(final NoSuchElementException ex){
       return Lists.newArrayList();
     }catch(final Exception ex){
@@ -309,7 +318,6 @@ public class LoadBalancerPolicyHelper {
       }else if(attrType.toLowerCase().equals("long")){
         Long.parseLong(attrValue);
       }else if(attrType.toLowerCase().equals("string")){
-        ;
       }
     }catch(final Exception ex){
       return false;
@@ -317,18 +325,26 @@ public class LoadBalancerPolicyHelper {
     return true;
   }
 
-  public static void addLoadBalancerPolicy(final LoadBalancer lb, final String policyName, final String policyTypeName,
-                                           final List<PolicyAttribute> policyAttributes) throws LoadBalancingException
-  {
-      for(final LoadBalancerPolicyDescriptionCoreView current : lb.getPolicies()){
+  /**
+   * Caller must have tx for load balancer
+   */
+  public static LoadBalancerPolicyDescription addLoadBalancerPolicy(
+      final LoadBalancer lb,
+      final String policyName,
+      final String policyTypeName,
+      final List<PolicyAttribute> policyAttributes
+  ) throws LoadBalancingException {
+      for(final LoadBalancerPolicyDescription current : lb.getPolicyDescriptions()){
         if(policyName.equals(current.getPolicyName()))
           throw new DuplicatePolicyNameException();
       }
 
-      LoadBalancerPolicyTypeDescription policyType = null;
-      for(final LoadBalancerPolicyTypeDescription type : getLoadBalancerPolicyTypeDescriptions()){
-          if(policyTypeName.equals(type.getPolicyTypeName())){
-            policyType = type;
+    LoadBalancerPolicyTypeDescriptionFullView policyTypeFull = null;
+    LoadBalancerPolicyTypeDescriptionView policyType = null;
+      for(final LoadBalancerPolicyTypeDescriptionFullView type : getLoadBalancerPolicyTypeDescriptions()){
+          if(policyTypeName.equals(type.getPolicyTypeDescription().getPolicyTypeName())){
+            policyTypeFull = type;
+            policyType = type.getPolicyTypeDescription();
             break;
           }
       }
@@ -357,16 +373,13 @@ public class LoadBalancerPolicyHelper {
           if (predefinedPolicy == null) {
             throw new InvalidConfigurationRequestException(String.format("Referenced security policy %s is not found", refPolicy));
           }else {
-            attributes = Lists.transform(predefinedPolicy.getPolicyAttributeDescriptions().getMember(),
-               new Function<PolicyAttributeDescription,PolicyAttribute>() {
-                @Override
-                public PolicyAttribute apply(PolicyAttributeDescription arg0) {
+            attributes = Stream.ofAll(predefinedPolicy.getPolicyAttributeDescriptions().getMember())
+                .map( arg0 -> {
                   final PolicyAttribute attr = new PolicyAttribute();
                   attr.setAttributeName(arg0.getAttributeName());
                   attr.setAttributeValue(arg0.getAttributeValue());
-                  return attr;
-                }
-            });
+                  return attr; } )
+                .toJavaList();
           }
         }
       }
@@ -380,9 +393,9 @@ public class LoadBalancerPolicyHelper {
         ZERO_OR_MORE(0..*) : Optional. Multiple values are allowed
         ONE_OR_MORE(1..*0) : Required. Multiple values are allowed
        */
-      final List<LoadBalancerPolicyAttributeTypeDescriptionCoreView> policyAttrTypes =
-          policyType.getPolicyAttributeTypeDescriptions();
-      for (final LoadBalancerPolicyAttributeTypeDescriptionCoreView policyAttrType : policyAttrTypes) {
+      final List<LoadBalancerPolicyAttributeTypeDescriptionView> policyAttrTypes =
+          policyTypeFull.getPolicyAttributeTypeDescriptions();
+      for (final LoadBalancerPolicyAttributeTypeDescriptionView policyAttrType : policyAttrTypes) {
         if("ONE".equals(policyAttrType.getCardinality()) || "ONE_OR_MORE".equals(policyAttrType.getCardinality())) {
           boolean attrFound = false;
           for(final PolicyAttribute attr : attributes) {
@@ -398,70 +411,105 @@ public class LoadBalancerPolicyHelper {
 
       final LoadBalancerPolicyDescription policyDesc = new LoadBalancerPolicyDescription(lb, policyName, policyTypeName);
       for(final PolicyAttribute attr : attributes){
-        policyDesc.addPolicyAttributeDescription(attr.getAttributeName(), attr.getAttributeValue());
+        final LoadBalancerPolicyTypeDescription policyTypeDescription =
+            LoadBalancerPolicyHelper.findLoadBalancerPolicyTypeDescription(policyDesc.getPolicyTypeName());
+
+        String value = validatePolicyAttributeDescription(
+            policyTypeDescription, policyDesc.getPolicyAttributeDescriptions(),attr.getAttributeName(), attr.getAttributeValue() );
+
+        policyDesc.addPolicyAttributeDescription(attr.getAttributeName(), value);
       }
-      try ( final TransactionResource db = Entities.transactionFor( LoadBalancerPolicyDescription.class ) ) {
-        Entities.persist(policyDesc);
-        db.commit();
-      }
+      return policyDesc;
   }
 
-  public static void deleteLoadBalancerPolicy(final LoadBalancer lb, final String policyName)
-    throws LoadBalancingException
-  {
-    // FIXME: spark - for some reason, Entities.delete does not delete the queried object
-    // To work around, had to use deleteAll with where clause
+  private static String validatePolicyAttributeDescription(
+      final LoadBalancerPolicyTypeDescription policyTypeDescription,
+      final List<LoadBalancerPolicyAttributeDescription> policyAttrDescriptions,
+      final String attrName,
+      final String attrValue
+  ) throws InvalidConfigurationRequestException {
+    String value = attrValue;
+    LoadBalancerPolicyAttributeTypeDescriptionView attrType = null;
+    for(final LoadBalancerPolicyAttributeTypeDescriptionView type: policyTypeDescription.getPolicyAttributeTypeDescriptions()){
+      if(attrName.equals(type.getAttributeName())){
+        attrType = type;
+        break;
+      }
+    }
+    if(attrType==null)
+      throw new InvalidConfigurationRequestException(String.format("Attribute %s is not defined in the policy type", attrName));
+    if(!LoadBalancerPolicyHelper.isAttributeValueValid(attrType.getAttributeType(), attrType.getCardinality(), attrValue))
+      throw new InvalidConfigurationRequestException(String.format("Attribute value %s is not valid", attrValue));
+
+    /* check for cardinality
+     * ONE(1) : Single value required
+      ZERO_OR_ONE(0..1) : Up to one value can be supplied
+      ZERO_OR_MORE(0..*) : Optional. Multiple values are allowed
+      ONE_OR_MORE(1..*0) : Required. Multiple values are allowed
+     */
+    final String cardinality = attrType.getCardinality();
+    if(policyAttrDescriptions != null && ("ONE".equals(cardinality) || "ZERO_OR_ONE".equals(cardinality))) {
+      for(final LoadBalancerPolicyAttributeDescription existing : policyAttrDescriptions) {
+        if(attrName.equals(existing.getAttributeName()))
+          throw new InvalidConfigurationRequestException(String.format("More than one attribute(%s) is found (Cardinality: %s)", attrName, cardinality));
+      }
+    }
+
+    if ("PublicKeyPolicyType".equals(policyTypeDescription.getPolicyTypeName()) &&
+        "PublicKey".equals(attrName)) {
+      try{
+        String certString = attrValue.trim();
+        if(! certString.startsWith("-----BEGIN CERTIFICATE-----"))
+          certString = String.format("-----BEGIN CERTIFICATE-----\n%s", certString);
+        if(! certString.endsWith("-----END CERTIFICATE-----"))
+          certString = String.format("%s\n-----END CERTIFICATE-----", certString);
+        final X509Certificate cert = PEMFiles.getCert(certString.getBytes( Charsets.UTF_8 ));
+        if(cert==null)
+          throw new EucalyptusCloudException("Malformed cert");
+        value = certString;
+      }catch(final Exception ex){
+        throw new InvalidConfigurationRequestException("PublicKey is invalid");
+      }
+    }
+    return value;
+  }
+
+  /**
+   * Caller must have transaction for loadbalancer
+   */
+  public static void deleteLoadBalancerPolicy(
+      final LoadBalancer lb,
+      final String policyName
+  ) throws LoadBalancingException {
     final List<LoadBalancerPolicyDescription> policies=
         getLoadBalancerPolicyDescription(lb, Lists.newArrayList(policyName));
-    if(policies == null || policies.size()<=0)
+    if(policies.size()<=0)
       return;
     final LoadBalancerPolicyDescription toDelete = policies.get(0);
 
     // check policy - listener association
-    final List<LoadBalancerListenerCoreView> listeners = toDelete.getListeners();
+    final List<LoadBalancerListener> listeners = toDelete.getListeners();
     if(listeners!=null && listeners.size()>0)
       throw new InvalidConfigurationRequestException("The policy is enabled for listeners");
 
     // check policy - backend association
-    final List<LoadBalancerBackendServerDescriptionCoreView> backends = toDelete.getBackendServers();
+    final List<LoadBalancerBackendServerDescription> backends = toDelete.getBackendServers();
     if(backends!=null && backends.size()>0)
       throw new InvalidConfigurationRequestException("The policy is enabled for backend servers");
 
-    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerPolicyAttributeDescription.class ) ) {
-      Entities.deleteAllMatching(LoadBalancerPolicyAttributeDescription.class,
-          "WHERE metadata_policy_desc_fk = :metadata_policy_desc_fk",
-          Collections.singletonMap("metadata_policy_desc_fk", toDelete.getRecordId()));
-      db.commit();
-    }catch(final Exception ex){
-      LOG.error( "Failed to delete policy attributes", ex );
-    }
-
-    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerPolicyDescription.class ) ) {
-      Entities.deleteAllMatching(LoadBalancerPolicyDescription.class,
-          "WHERE unique_name = :unique_name",
-          Collections.singletonMap("unique_name", toDelete.getUniqueName()));
-      db.commit();
-    }catch(final Exception ex){
-      throw Exceptions.toUndeclared(ex);
-    }
+    Entities.delete( toDelete );
   }
 
-  public static List<LoadBalancerPolicyDescription> getLoadBalancerPolicyDescription(final LoadBalancer lb){
-   final List<LoadBalancerPolicyDescriptionCoreView> policyViews = Lists.newArrayList(lb.getPolicies());
-   final List<LoadBalancerPolicyDescription> policies = Lists.newArrayList();
-   for(final LoadBalancerPolicyDescriptionCoreView policyView: policyViews){
-     policies.add(LoadBalancerPolicyDescriptionEntityTransform.INSTANCE.apply(policyView));
-   }
-   return policies;
-  }
-
+  /**
+   * Caller must have transaction for loadbalancer
+   */
   public static LoadBalancerPolicyDescription getLoadBalancerPolicyDescription(final LoadBalancer lb, final String policyName)
     throws NoSuchElementException
   {
     LoadBalancerPolicyDescription policy = null;
-    for(final LoadBalancerPolicyDescriptionCoreView p : lb.getPolicies()){
+    for(final LoadBalancerPolicyDescription p : lb.getPolicyDescriptions()){
       if(p.getPolicyName().equals(policyName)){
-        policy = LoadBalancerPolicyDescriptionEntityTransform.INSTANCE.apply(p);
+        policy = p;
         break;
       }
     }
@@ -471,39 +519,16 @@ public class LoadBalancerPolicyHelper {
       throw new NoSuchElementException();
   }
 
+  /**
+   * Caller must have transaction for loadbalancer
+   */
   public static List<LoadBalancerPolicyDescription> getLoadBalancerPolicyDescription(final LoadBalancer lb, final List<String> policyNames){
-    final List<LoadBalancerPolicyDescription> allPolicies = getLoadBalancerPolicyDescription(lb);
-    final List<LoadBalancerPolicyDescription> filtered = Lists.newArrayList(Collections2.filter(allPolicies, new Predicate<LoadBalancerPolicyDescription>(){
+    return Lists.newArrayList(Collections2.filter(lb.getPolicyDescriptions(), new Predicate<LoadBalancerPolicyDescription>(){
       @Override
       public boolean apply(LoadBalancerPolicyDescription arg0) {
         return policyNames.contains(arg0.getPolicyName());
       }
     }));
-    return filtered;
-  }
-
-  public static List<LoadBalancerPolicyDescription> getPoliciesOfListener(final LoadBalancerListener listener){
-    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerListener.class ) ) {
-      final LoadBalancerListener found = Entities.uniqueResult(listener);
-      final List<LoadBalancerPolicyDescriptionCoreView> policies=found.getPolicies();
-      db.commit();
-      return Lists.transform(policies, LoadBalancerPolicyDescriptionEntityTransform.INSTANCE);
-    }catch(final NoSuchElementException ex){
-      return Lists.newArrayList();
-    }catch(final Exception ex){
-      throw Exceptions.toUndeclared(ex);
-    }
-  }
-
-  public static void removePoliciesFromListener(final LoadBalancerListener listener){
-    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerListener.class ) ) {
-      final LoadBalancerListener update = Entities.uniqueResult(listener);
-      update.resetPolicies();
-      Entities.persist(update);
-      db.commit();
-    }catch(final Exception ex){
-      throw Exceptions.toUndeclared(ex);
-    }
   }
 
   public static void addPoliciesToBackendServer(final LoadBalancerBackendServerDescription server, final List<LoadBalancerPolicyDescription> policies)
@@ -524,78 +549,64 @@ public class LoadBalancerPolicyHelper {
     }
   }
 
-
+  /**
+   * Caller must have transaction for backend
+   */
   public static void removePoliciesFromBackendServer(final LoadBalancerBackendServerDescription backend, final List<String> policyNames)
       throws LoadBalancingException {
     final List<LoadBalancerPolicyDescription> policyToRemove = Lists.newArrayList();
-    for(final LoadBalancerPolicyDescriptionCoreView pview : backend.getPolicyDescriptions()) {
-      if(policyNames.contains(pview.getPolicyName()))
-        policyToRemove.add(LoadBalancerPolicyDescriptionEntityTransform.INSTANCE.apply(pview));
+    for(final LoadBalancerPolicyDescription policyDescription : backend.getPolicyDescriptions()) {
+      if(policyNames.contains(policyDescription.getPolicyName()))
+        policyToRemove.add(policyDescription);
     }
 
     if(policyToRemove.size() < policyNames.size())
-      throw new InvalidConfigurationRequestException("Unknow policy names found");
+      throw new InvalidConfigurationRequestException("Unknown policy names found");
 
-    try ( final TransactionResource db =
-        Entities.transactionFor( LoadBalancerBackendServerDescription.class ) ) {
-      try{
-        final LoadBalancerBackendServerDescription entity = Entities.uniqueResult(backend);
-        for(final LoadBalancerPolicyDescription p : policyToRemove)
-          entity.removePolicy(p);
-        Entities.persist(entity);
-        db.commit();
-      }catch(final NoSuchElementException ex){
-        throw new InvalidConfigurationRequestException("Backend server description is not found on db");
-      }catch(final Exception ex){
-        throw new InvalidConfigurationRequestException("Unknown error ocrrued while updating db");
-      }
+    for(final LoadBalancerPolicyDescription p : policyToRemove) {
+      backend.removePolicy(p);
     }
   }
 
+  /**
+   * Caller must have transaction for backend
+   */
   public static void clearPoliciesFromBackendServer(final LoadBalancerBackendServerDescription backend) throws LoadBalancingException {
     if (backend == null)
       throw new InvalidConfigurationRequestException("Backend server description is not found");
-    final List<String> allPolicies = Lists.transform( backend.getPolicyDescriptions(),
-        new Function<LoadBalancerPolicyDescriptionCoreView, String> () {
-          @Override
-          public String apply(LoadBalancerPolicyDescriptionCoreView arg0) {
-            return arg0.getPolicyName();
-          }
-        });
-    removePoliciesFromBackendServer(backend, allPolicies);
+    final List<String> policyNames =
+        Stream.ofAll( backend.getPolicyDescriptions() ).map( LoadBalancerPolicyDescription::getPolicyName ).toJavaList( );
+    removePoliciesFromBackendServer(backend, policyNames);
   }
 
-  public static void addPoliciesToListener(final LoadBalancerListener listener,
-      final List<LoadBalancerPolicyDescription> policies) throws LoadBalancingException{
+  /**
+   * Caller must have transaction for listener
+   */
+  public static void addPoliciesToListener(
+      @Nonnull final LoadBalancerListener listener,
+      @Nonnull final List<LoadBalancerPolicyDescription> policies
+  ) throws LoadBalancingException {
     // either one not both of LBCookieStickinessPolicy and AppCookieStickinessPolicy is allowed
-    if(policies!=null && policies.size()>0){
-      int numCookies = 0;
-      for(final LoadBalancerPolicyDescription policy : policies){
-        if("LBCookieStickinessPolicyType".equals(policy.getPolicyTypeName())){
-          numCookies ++;
-          if( !( listener.getProtocol().equals(PROTOCOL.HTTP) || listener.getProtocol().equals(PROTOCOL.HTTPS)))
-            throw new InvalidConfigurationRequestException("Session stickiness policy can be associated with only HTTP/HTTPS");
-        }
-        else if("AppCookieStickinessPolicyType".equals(policy.getPolicyTypeName())){
-          numCookies ++;
-          if( !( listener.getProtocol().equals(PROTOCOL.HTTP) || listener.getProtocol().equals(PROTOCOL.HTTPS)))
-            throw new InvalidConfigurationRequestException("Session stickiness policy can be associated with only HTTP/HTTPS");
-        }
+    int numCookies = 0;
+    for(final LoadBalancerPolicyDescription policy : policies){
+      if("LBCookieStickinessPolicyType".equals(policy.getPolicyTypeName())){
+        numCookies ++;
+        if( !( listener.getProtocol().equals(PROTOCOL.HTTP) || listener.getProtocol().equals(PROTOCOL.HTTPS)))
+          throw new InvalidConfigurationRequestException("Session stickiness policy can be associated with only HTTP/HTTPS");
       }
-      if(numCookies > 1){
-        throw new InvalidConfigurationRequestException("Only one cookie stickiness policy can be set");
+      else if("AppCookieStickinessPolicyType".equals(policy.getPolicyTypeName())){
+        numCookies ++;
+        if( !( listener.getProtocol().equals(PROTOCOL.HTTP) || listener.getProtocol().equals(PROTOCOL.HTTPS)))
+          throw new InvalidConfigurationRequestException("Session stickiness policy can be associated with only HTTP/HTTPS");
       }
     }
+    if(numCookies > 1){
+      throw new InvalidConfigurationRequestException("Only one cookie stickiness policy can be set");
+    }
 
-    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerListener.class ) ) {
-      final LoadBalancerListener update = Entities.uniqueResult(listener);
-      for(final LoadBalancerPolicyDescription policy : policies){
-        update.removePolicy(policy);
-        update.addPolicy(policy);
-      }
-      db.commit();
-    }catch(final Exception ex){
-      throw Exceptions.toUndeclared(ex);
+    for(final LoadBalancerPolicyDescription policy : policies){
+      listener.removePolicy(policy);
+      listener.addPolicy(policy);
     }
   }
 
@@ -635,8 +646,8 @@ public class LoadBalancerPolicyHelper {
         throw new Exception("PolicyName and PolicyTypeName must not be null");
       policyDesc.setPolicyName(policyName);
       policyDesc.setPolicyTypeName(policyTypeName);
-      final List<PolicyAttributeDescription> policyAttrs = Lists.newArrayList(Iterables.filter(
-          Lists.transform(policy.PolicyAttributeDescriptions, new Function<AttributeNameValuePair, PolicyAttributeDescription>(){
+      final ArrayList<PolicyAttributeDescription> policyAttrs = Lists.newArrayList(Iterables.filter(
+          Iterables.transform(policy.PolicyAttributeDescriptions, new Function<AttributeNameValuePair, PolicyAttributeDescription>(){
         @Override
         public PolicyAttributeDescription apply(AttributeNameValuePair arg0) {
           if(arg0.AttributeName==null || arg0.AttributeValue==null)
@@ -648,7 +659,7 @@ public class LoadBalancerPolicyHelper {
         }
       }), Predicates.notNull()));
       final PolicyAttributeDescriptions descs = new PolicyAttributeDescriptions();
-      descs.setMember((ArrayList<PolicyAttributeDescription>) policyAttrs);
+      descs.setMember(policyAttrs);
       policyDesc.setPolicyAttributeDescriptions(descs);
       return policyDesc;
     }catch(final Exception ex){
@@ -661,7 +672,7 @@ public class LoadBalancerPolicyHelper {
   private static List<PolicyDescription> getSamplePolicyDescription42(){
     if(samplePolicyDescription.isEmpty()){
       samplePolicyDescription = getSamplePolicyDescription40();
-      PolicyDescription policyDesc = null;
+      PolicyDescription policyDesc;
       String[] policyFiles = null;
       final Set<String> policyNames = Sets.newHashSet();
       final String dir = String.format("%s/elb-security-policy", BaseDirectory.ETC);
@@ -695,7 +706,6 @@ public class LoadBalancerPolicyHelper {
                 LATEST_SECURITY_POLICY_NAME = policyDesc.getPolicyName();
               }
             }catch(final Exception ex){
-              ;
             }
           } else {
             LOG.warn("Policy with dupilcate policy name found: "+ policyDesc.getPolicyName());
@@ -734,46 +744,49 @@ public class LoadBalancerPolicyHelper {
     return sampleList;
   }
 
-  public enum AsPolicyDescription implements Function<LoadBalancerPolicyDescription, PolicyDescription> {
+  public enum AsPolicyDescription implements Function<LoadBalancerPolicyDescriptionFullView, PolicyDescription> {
     INSTANCE;
 
     @Override
-    public PolicyDescription apply(LoadBalancerPolicyDescription arg0) {
-      if(arg0==null)
+    public PolicyDescription apply(final LoadBalancerPolicyDescriptionFullView policyDescriptionFull) {
+      if(policyDescriptionFull==null)
         return null;
+      final LoadBalancerPolicyDescriptionView policyDescription = policyDescriptionFull.getPolicyDescription();
       final PolicyDescription policy = new PolicyDescription();
-      policy.setPolicyName(arg0.getPolicyName());
-      policy.setPolicyTypeName(arg0.getPolicyTypeName());
+      policy.setPolicyName(policyDescription.getPolicyName());
+      policy.setPolicyTypeName(policyDescription.getPolicyTypeName());
 
-      final List<PolicyAttributeDescription> attrDescs = Lists.newArrayList();
-      for(final LoadBalancerPolicyAttributeDescriptionCoreView descView : arg0.getPolicyAttributeDescription()){
+      final ArrayList<PolicyAttributeDescription> attrDescs = Lists.newArrayList();
+      for(final LoadBalancerPolicyAttributeDescriptionView descView : policyDescriptionFull.getPolicyAttributeDescriptions()){
         final PolicyAttributeDescription desc = new PolicyAttributeDescription();
         desc.setAttributeName(descView.getAttributeName());
         desc.setAttributeValue(descView.getAttributeValue());
         attrDescs.add(desc);
       }
       final PolicyAttributeDescriptions descs = new PolicyAttributeDescriptions();
-      descs.setMember((ArrayList<PolicyAttributeDescription>) attrDescs);
+      descs.setMember(attrDescs);
       descs.getMember().sort(Ordering.natural().onResultOf(Strings.nonNull(PolicyAttributeDescription::getAttributeName)));
       policy.setPolicyAttributeDescriptions(descs);
       return policy;
     }
   }
 
-  public enum AsPolicyTypeDescription implements Function<LoadBalancerPolicyTypeDescription, PolicyTypeDescription>{
+  public enum AsPolicyTypeDescription implements Function<LoadBalancerPolicyTypeDescriptionFullView, PolicyTypeDescription>{
     INSTANCE;
     @Override
-    public PolicyTypeDescription apply(LoadBalancerPolicyTypeDescription arg0) {
-      if(arg0 == null)
+    public PolicyTypeDescription apply(final LoadBalancerPolicyTypeDescriptionFullView policyTypeDescriptionFull) {
+      if(policyTypeDescriptionFull == null)
         return null;
+      final LoadBalancerPolicyTypeDescriptionView policyTypeDescription =
+          policyTypeDescriptionFull.getPolicyTypeDescription();
       final PolicyTypeDescription policyType = new PolicyTypeDescription();
-      policyType.setPolicyTypeName(arg0.getPolicyTypeName());
-      policyType.setDescription(arg0.getDescription());
-      final List<LoadBalancerPolicyAttributeTypeDescriptionCoreView> policyAttributeTypeDesc  =
-          arg0.getPolicyAttributeTypeDescriptions();
+      policyType.setPolicyTypeName(policyTypeDescription.getPolicyTypeName());
+      policyType.setDescription(policyTypeDescription.getDescription());
+      final List<LoadBalancerPolicyAttributeTypeDescriptionView> policyAttributeTypeDesc  =
+          policyTypeDescriptionFull.getPolicyAttributeTypeDescriptions();
       if(policyAttributeTypeDesc != null && policyAttributeTypeDesc.size()>0){
-        final List<PolicyAttributeTypeDescription> attrTypes = Lists.newArrayList();
-        for(final LoadBalancerPolicyAttributeTypeDescriptionCoreView from : policyAttributeTypeDesc){
+        final ArrayList<PolicyAttributeTypeDescription> attrTypes = Lists.newArrayList();
+        for(final LoadBalancerPolicyAttributeTypeDescriptionView from : policyAttributeTypeDesc){
           final PolicyAttributeTypeDescription to = new PolicyAttributeTypeDescription();
           to.setAttributeName(from.getAttributeName());
           to.setAttributeType(from.getAttributeType());
@@ -783,7 +796,7 @@ public class LoadBalancerPolicyHelper {
           attrTypes.add(to);
         }
         final PolicyAttributeTypeDescriptions attrDescs = new PolicyAttributeTypeDescriptions();
-        attrDescs.setMember((ArrayList<PolicyAttributeTypeDescription>) attrTypes);
+        attrDescs.setMember(attrTypes);
         policyType.setPolicyAttributeTypeDescriptions(attrDescs);
       }
       return policyType;

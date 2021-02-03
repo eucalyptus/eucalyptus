@@ -39,7 +39,12 @@ import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer;
+import com.eucalyptus.loadbalancing.service.persist.ImmutableLoadBalancingPersistence;
+import com.eucalyptus.loadbalancing.service.persist.LoadBalancers;
+import com.eucalyptus.loadbalancing.service.persist.LoadBalancingPersistence;
+import com.eucalyptus.loadbalancing.service.persist.entities.PersistenceLoadBalancerSecurityGroups;
+import com.eucalyptus.loadbalancing.service.persist.entities.PersistenceLoadBalancers;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerView;
 import com.eucalyptus.loadbalancing.workflow.LoadBalancingWorkflows;
 import com.eucalyptus.resources.client.Ec2Client;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -57,6 +62,11 @@ import org.springframework.util.StringUtils;
 @ConfigurableClass(root = "services.loadbalancing.worker", description = "Parameters controlling loadbalancing")
 public class LoadBalancingWorkerProperties {
   private static Logger  LOG     = Logger.getLogger( LoadBalancingWorkerProperties.class );
+
+  private static LoadBalancingPersistence persistence = ImmutableLoadBalancingPersistence.builder()
+      .balancers( new PersistenceLoadBalancers( ) )
+      .balancerSecurityGroups( new PersistenceLoadBalancerSecurityGroups( ))
+      .build();
 
   @ConfigurableField( displayName = "image", 
       description = "Machine image containing haproxy and the controller",
@@ -206,7 +216,7 @@ public class LoadBalancingWorkerProperties {
           if ( keyname != null && !keyname.isEmpty() ) {
             // find out if there are any old elbs are deployed
             boolean oldElbExist = false;
-            for (LoadBalancer lb: LoadBalancerHelper.listLoadbalancers()){
+            for (LoadBalancerView lb: LoadBalancerHelper.listLoadbalancers(persistence, LoadBalancers.CORE_VIEW)){
               if (!lb.useSystemAccount()) {
                 oldElbExist = true;
                 break;

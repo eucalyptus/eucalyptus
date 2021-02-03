@@ -29,7 +29,6 @@
 package com.eucalyptus.loadbalancing.service.persist.entities;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -40,21 +39,12 @@ import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
-import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreViewTransform;
-import com.eucalyptus.util.Exceptions;
-import com.google.common.base.Function;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.ImmutableList;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerBackendServerDescriptionView;
 import com.google.common.collect.Lists;
 
 /**
@@ -64,13 +54,10 @@ import com.google.common.collect.Lists;
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_backend_server_description" )
-public class LoadBalancerBackendServerDescription extends AbstractPersistent {
+public class LoadBalancerBackendServerDescription extends AbstractPersistent implements LoadBalancerBackendServerDescriptionView {
   private static Logger    LOG     = Logger.getLogger( LoadBalancerBackendServerDescription.class );
 
   private static final long serialVersionUID = 1L;
-  
-  @Transient
-  private LoadBalancerBackendServerDescriptionRelationView view = null;
   
   @ManyToOne
   @JoinColumn( name = "metadata_loadbalancer_fk", nullable=false )
@@ -108,11 +95,11 @@ public class LoadBalancerBackendServerDescription extends AbstractPersistent {
   public Integer getInstancePort(){
     return this.instancePort;
   }
-  
-  public List<LoadBalancerPolicyDescriptionCoreView> getPolicyDescriptions() {
-    return this.view.getPolicyDescriptions();
+
+  public List<LoadBalancerPolicyDescription> getPolicyDescriptions() {
+    return this.policyDescriptions;
   }
-  
+
   public void addPolicy(final LoadBalancerPolicyDescription policy){
     if(this.policyDescriptions==null){
       this.policyDescriptions = Lists.newArrayList();
@@ -127,12 +114,6 @@ public class LoadBalancerBackendServerDescription extends AbstractPersistent {
     this.policyDescriptions.remove(policy);
   }
 
-  @PostLoad
-  private void onLoad(){
-    if(this.view==null)
-      this.view = new LoadBalancerBackendServerDescriptionRelationView(this);
-  }
-  
   @PrePersist
   private void generateOnCommit( ) {
     if(this.uniqueName==null)
@@ -200,63 +181,5 @@ public class LoadBalancerBackendServerDescription extends AbstractPersistent {
   public String toString(){
     return String.format("[%s] Backend Server Description - instance port: %d", 
         this.loadbalancer, this.instancePort);
-  }
-  
-  
-  public static class LoadBalancerBackendServerDescriptionCoreView{
-    private LoadBalancerBackendServerDescription backendDesc = null;
-    
-    public LoadBalancerBackendServerDescriptionCoreView(LoadBalancerBackendServerDescription desc) {
-      this.backendDesc = desc;
-    }
-    
-    public Integer getInstancePort() {
-      return this.backendDesc.instancePort;
-    }
-  }
-  
-  public enum LoadBalancerBackendServerDescriptionCoreViewTransform implements 
-    Function<LoadBalancerBackendServerDescription, LoadBalancerBackendServerDescriptionCoreView>
-  {
-    INSTANCE;
-
-    @Override
-    public LoadBalancerBackendServerDescriptionCoreView apply(
-        LoadBalancerBackendServerDescription arg0) {
-      return new LoadBalancerBackendServerDescriptionCoreView(arg0);
-    }
-  }
-
-  public static class LoadBalancerBackendServerDescriptionRelationView{
-    private LoadBalancerBackendServerDescription backendServerDesc = null;
-    private ImmutableList<LoadBalancerPolicyDescriptionCoreView> policyDesc = null;
-    LoadBalancerBackendServerDescriptionRelationView(final LoadBalancerBackendServerDescription desc){
-      this.backendServerDesc = desc;
-      if(desc.policyDescriptions != null)
-        this.policyDesc = ImmutableList.copyOf(Collections2.transform(desc.policyDescriptions,
-            LoadBalancerPolicyDescriptionCoreViewTransform.INSTANCE));
-    }
-    
-    public ImmutableList<LoadBalancerPolicyDescriptionCoreView> getPolicyDescriptions(){
-      return this.policyDesc;
-    }
-  }
-  
-
-  public enum LoadBalancerBackendServerDescriptionEntityTransform implements
-    Function<LoadBalancerBackendServerDescriptionCoreView, LoadBalancerBackendServerDescription>{
-    INSTANCE;
-
-    @Override
-    public LoadBalancerBackendServerDescription apply(
-        LoadBalancerBackendServerDescriptionCoreView arg0) {
-      try ( final TransactionResource db = Entities.transactionFor( LoadBalancerBackendServerDescription.class ) ) {
-        return Entities.uniqueResult(arg0.backendDesc);
-      }catch(final NoSuchElementException ex){
-        throw ex;
-      }catch (final Exception ex) {
-        throw Exceptions.toUndeclared(ex);
-      }
-    }
   }
 }

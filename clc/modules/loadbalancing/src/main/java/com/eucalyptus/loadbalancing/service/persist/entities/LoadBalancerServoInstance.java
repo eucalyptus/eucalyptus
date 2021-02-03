@@ -31,27 +31,16 @@ package com.eucalyptus.loadbalancing.service.persist.entities;
 import java.util.Calendar;
 import java.util.Date;
 
-import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
-import javax.persistence.PostLoad;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer.LoadBalancerEntityTransform;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerZone.LoadBalancerZoneCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
-import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.TypeMapper;
-import com.eucalyptus.util.TypeMappers;
-import com.google.common.base.Function;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerServoInstanceView;
 
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
@@ -60,19 +49,10 @@ import com.google.common.base.Function;
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_servo_instance" )
-public class LoadBalancerServoInstance extends AbstractPersistent {
+public class LoadBalancerServoInstance extends AbstractPersistent implements LoadBalancerServoInstanceView {
 	private static Logger    LOG     = Logger.getLogger( LoadBalancerServoInstance.class );
 
 	private static final long serialVersionUID = 1L;
-	
-	@Transient
-	private LoadBalancerServoInstanceRelationView view = null;
-	
-	@PostLoad
-	private void onLoad(){
-		if(this.view==null)
-			this.view = new LoadBalancerServoInstanceRelationView(this);
-	}
 	
 	public enum STATE {
 		Pending, InService, Error, OutOfService, Retired
@@ -93,9 +73,6 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     @JoinColumn( name = "metadata_asg_fk", nullable=true)
     private LoadBalancerAutoScalingGroup autoscaling_group = null;
        
-    @Transient
-    private LoadBalancer loadbalancer = null;
-    
     @Column(name="metadata_instance_id", nullable=false, unique=true)
     private String instanceId = null;
     
@@ -126,20 +103,10 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     private LoadBalancerServoInstance(final LoadBalancerZone lbzone){
     	this.state = STATE.Pending.name();
     	this.zone = lbzone;
-    	try{
-	    	this.loadbalancer = LoadBalancerEntityTransform.INSTANCE.apply(zone.getLoadbalancer());
-    	}catch(final Exception ex){
-    		throw Exceptions.toUndeclared(ex);
-    	}
     }
     private LoadBalancerServoInstance(final LoadBalancerZone lbzone, final LoadBalancerSecurityGroup group){
     	this.state = STATE.Pending.name();
     	this.zone = lbzone;
-    	try{
-	    	this.loadbalancer = LoadBalancerEntityTransform.INSTANCE.apply(zone.getLoadbalancer());
-    	}catch(final Exception ex){
-    		throw Exceptions.toUndeclared(ex);
-    	}
     	this.security_group = group;
     }
     
@@ -180,7 +147,7 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     	sample.state = state;
     	return sample;
     }
-    
+
     public void setInstanceId(String id){
     	this.instanceId = id;
     }
@@ -217,11 +184,11 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
     	this.zone = zone;
     }
     
-    public LoadBalancerZoneCoreView getAvailabilityZone(){
-    	return this.view.getZone();
+    public LoadBalancerZone getAvailabilityZone(){
+    	return this.zone;
     }
 
-	public LoadBalancerAutoScalingGroupCoreView getAutoScalingGroup() { return this.view.getAutoScalingGroup(); }
+	public LoadBalancerAutoScalingGroup getAutoScalingGroup() { return this.autoscaling_group; }
 
     public String getPrivateIp(){
     	return this.privateIp;
@@ -273,104 +240,5 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 	public String toString(){
 		String id = this.instanceId==null? "unassigned" : this.instanceId;
 		return String.format("Servo-instance (%s) for %s", id, this.zone.getName());
-	}
-	
-	public static class LoadBalancerServoInstanceCoreView {
-		private LoadBalancerServoInstance entity = null;
-		LoadBalancerServoInstanceCoreView(final LoadBalancerServoInstance servo){
-			this.entity = servo;
-		}
-
-		public String getInstanceId(){
-			return this.entity.getInstanceId();
-		}
-
-		public STATE getState(){
-				return this.entity.getState();
-			}
-
-		public String getAddress(){
-			return this.entity. getAddress();
-		}
-
-		public String getPrivateIp(){
-				return this.entity.getPrivateIp();
-		}
-
-		public Date getCertificateExpirationDate() { return this.entity.getCertificateExpiration(); }
-		public boolean isCertificateExpired() { return this.entity.isCertificateExpired(); }
-
-    public boolean canResolveDns(){
-      return DNS_STATE.Registered.equals(this.entity.getDnsState()) && 
-            STATE.InService.equals(this.entity.getState());
-    }
-
-		public static Function<LoadBalancerServoInstanceCoreView,String> address( ) {
-			return StringFunctions.ADDRESS;
-		}
-
-		public static Function<LoadBalancerServoInstanceCoreView,String> privateIp( ) {
-			return StringFunctions.PRIVATE_IP;
-		}
-		
-		private enum StringFunctions implements Function<LoadBalancerServoInstanceCoreView,String> {
-			ADDRESS {
-				@Nullable
-				@Override
-				public String apply(@Nullable final LoadBalancerServoInstanceCoreView loadBalancerServoInstanceCoreView) {
-					return loadBalancerServoInstanceCoreView.getAddress();
-				}
-			},
-			PRIVATE_IP {
-				@Nullable
-				@Override
-				public String apply(@Nullable final LoadBalancerServoInstanceCoreView loadBalancerServoInstanceCoreView) {
-					return loadBalancerServoInstanceCoreView.getPrivateIp();
-				}
-			},;
-		}
-	}
-
-	@TypeMapper
-	public enum LoadBalancerServoInstanceCoreViewTransform implements Function<LoadBalancerServoInstance, LoadBalancerServoInstanceCoreView> {
-		INSTANCE;
-	
-		@Override
-		public LoadBalancerServoInstanceCoreView apply( final LoadBalancerServoInstance servo ) {
-			return new LoadBalancerServoInstanceCoreView( servo );
-		}
-	}
-	
-	public enum LoadBalancerServoInstanceEntityTransform implements Function<LoadBalancerServoInstanceCoreView, LoadBalancerServoInstance> {
-		INSTANCE;
-
-		@Override
-		@Nullable
-		public LoadBalancerServoInstance apply(
-				@Nullable LoadBalancerServoInstanceCoreView arg0) {
-			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerServoInstance.class ) ) {
-				return Entities.uniqueResult(arg0.entity);
-			}catch(final Exception ex){
-				throw Exceptions.toUndeclared(ex);
-			}
-		}
-	}
-	
-	public static class LoadBalancerServoInstanceRelationView {
-	    private LoadBalancerZoneCoreView zone = null;
-	    private LoadBalancerAutoScalingGroupCoreView autoscaling_group = null;
-	    
-		private LoadBalancerServoInstanceRelationView(final LoadBalancerServoInstance servo){
-			if(servo.zone!=null)
-				this.zone = TypeMappers.transform(servo.zone, LoadBalancerZoneCoreView.class);
-			if(servo.autoscaling_group!=null)
-				this.autoscaling_group = TypeMappers.transform(servo.autoscaling_group, LoadBalancerAutoScalingGroupCoreView.class);
-		}
-		
-		public LoadBalancerZoneCoreView getZone(){
-			return this.zone;
-		}
-
-		public LoadBalancerAutoScalingGroupCoreView getAutoScalingGroup() { return this.autoscaling_group; }
 	}
 }

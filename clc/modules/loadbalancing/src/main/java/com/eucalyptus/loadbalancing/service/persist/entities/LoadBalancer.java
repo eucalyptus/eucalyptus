@@ -33,13 +33,9 @@ import static com.eucalyptus.util.Strings.isPrefixOf;
 import static com.eucalyptus.util.Strings.trimPrefix;
 
 import java.util.Collection;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
@@ -56,63 +52,29 @@ import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.OrderColumn;
 import javax.persistence.PersistenceContext;
-import javax.persistence.PostLoad;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 
 import org.hibernate.annotations.Parent;
 
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.UserMetadata;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreViewTransform;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendServerDescription.LoadBalancerBackendServerDescriptionCoreViewTransform;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener.LoadBalancerListenerCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener.LoadBalancerListenerCoreViewTransform;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreViewTransform;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerZone.LoadBalancerZoneCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerZone.LoadBalancerZoneCoreViewTransform;
-import com.eucalyptus.loadbalancing.LoadBalancerDeploymentVersion;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreViewTransform;
-import com.eucalyptus.loadbalancing.common.msgs.AccessLog;
-import com.eucalyptus.loadbalancing.common.msgs.ConnectionDraining;
-import com.eucalyptus.loadbalancing.common.msgs.ConnectionSettings;
-import com.eucalyptus.loadbalancing.common.msgs.CrossZoneLoadBalancing;
-import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerAttributes;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerHealthCheckConfigView;
 import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerView;
-import com.eucalyptus.util.CollectionUtils;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.FullName;
-import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.auth.principal.OwnerFullName;
-import com.eucalyptus.util.TypeMapper;
-import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Enums;
-import com.google.common.base.Function;
-import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+
 
 /**
  * @author Sang-Min Park
  *
  */
-
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_loadbalancer" )
@@ -132,25 +94,12 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		}
 	}
 
-	@Transient
-	private transient LoadBalancerCoreView coreView = null;
-	@Transient
-	private transient LoadBalancerRelationView relationView = null;
-	
-	@PostLoad
-	private void onLoad(){
-		if(this.coreView==null)
-			this.coreView = new LoadBalancerCoreView(this);
-		if(this.relationView==null)
-			this.relationView = new LoadBalancerRelationView(this);
-	}
-
 	private static final long serialVersionUID = 1L;
 	
 	public enum STATE {
 		pending, available, failed
-	} // TODO: SPARK: what's the state for loadbalancer?
-	
+	}
+
 	private LoadBalancer(){
 		super(null, null);
 	}
@@ -338,59 +287,38 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
     this.tags = tags;
   }
 
-	public LoadBalancerBackendInstanceCoreView findBackendInstance(final String instanceId){
-		return this.relationView.findBackendInstance(instanceId);
-	}
-	
-	public boolean hasBackendInstance(final String instanceId){
-		return this.relationView.hasBackendInstance(instanceId);
-	}
-	
-	public Collection<LoadBalancerBackendInstanceCoreView> getBackendInstances(){
-		return this.relationView.getBackendInstances();
-	}
-	
-	public LoadBalancerListenerCoreView findListener(final int lbPort){
-		return this.relationView.findListener(lbPort);
-	}
-	
-	public boolean hasListener(final int lbPort){
-		return this.relationView.hasListener(lbPort);
-	}
-	
-	public Collection<LoadBalancerListenerCoreView> getListeners(){
-		return this.relationView.getListeners();
-	}
-	
-	public Collection<LoadBalancerZoneCoreView> getZones(){
-		return this.relationView.getZones();
-	}
-	
-	public LoadBalancerSecurityGroupCoreView getGroup(){
-		return this.relationView.getGroup();
-	}
-	
-	public Collection<LoadBalancerAutoScalingGroupCoreView> getAutoScaleGroups(){
-		return this.relationView.getAutoScaleGroups();
-	}
-	
-	public boolean useSystemAccount(){
-    return this.getLoadbalancerDeploymentVersion() != null &&
-        LoadBalancerDeploymentVersion.getVersion(this.getLoadbalancerDeploymentVersion()).isEqualOrLaterThan(LoadBalancerDeploymentVersion.v4_2_0);
+	public Collection<LoadBalancerBackendInstance> getBackendInstances() {
+		return this.backendInstances;
 	}
 
-	public LoadBalancerCoreView getCoreView( ) {
-		return coreView;
+	public Collection<LoadBalancerListener> getListeners(){
+		return this.listeners;
 	}
 
-	public Collection<LoadBalancerPolicyDescriptionCoreView> getPolicies(){
-	  return this.relationView.getPolicies();
+	public Collection<LoadBalancerZone> getZones( ) {
+		return zones;
+	}
+
+	public LoadBalancerSecurityGroup getSecurityGroup(){
+		return this.group;
+	}
+
+	public Collection<LoadBalancerAutoScalingGroup> getAutoScalingGroups() {
+		return autoscale_groups;
+	}
+
+	public Collection<LoadBalancerAutoScalingGroup> getAutoScaleGroups(){
+		return this.autoscale_groups;
 	}
 	
-	public Collection<LoadBalancerBackendServerDescriptionCoreView> getBackendServers(){
-	  return this.relationView.getBackendServers();
+	public Collection<LoadBalancerPolicyDescription> getPolicyDescriptions(){
+		return this.policies;
 	}
-	
+
+	public Collection<LoadBalancerBackendServerDescription> getBackendServers() {
+		return this.backendServers;
+	}
+
 	public void setHealthCheck(int healthyThreshold, int interval, String target, int timeout, int unhealthyThreshold)
 		throws IllegalArgumentException
 	{
@@ -438,14 +366,11 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		this.healthConfig = new LoadBalancerHealthCheckConfig(healthyThreshold, interval, canonicalizedTarget, timeout,unhealthyThreshold);
 		this.healthConfig.setLoadBalancer(this);
 	}
-	
-	public boolean isHealthcheckConfigured(){
-		if (this.healthConfig==null)
-			return false;
-		else
-			return true;
+
+	public LoadBalancerHealthCheckConfig getHealthCheckConfig() {
+		return this.healthConfig;
 	}
-	
+
 	public int getHealthyThreshold() {
 		if(this.healthConfig!=null)
 			return this.healthConfig.HealthyThreshold;
@@ -488,7 +413,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	private LoadBalancerHealthCheckConfig healthConfig = null;
 	
 	@Embeddable
-	public static class LoadBalancerHealthCheckConfig {
+	public static class LoadBalancerHealthCheckConfig implements LoadBalancerHealthCheckConfigView {
 		@Parent
 		private LoadBalancer loadBalancer = null;
 		
@@ -522,6 +447,46 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		LoadBalancer getLoadBalancer(){
 			return this.loadBalancer;
 		}
+
+		public Integer getHealthyThreshold() {
+			return HealthyThreshold;
+		}
+
+		public void setHealthyThreshold(final Integer healthyThreshold) {
+			HealthyThreshold = healthyThreshold;
+		}
+
+		public Integer getInterval() {
+			return Interval;
+		}
+
+		public void setInterval(final Integer interval) {
+			Interval = interval;
+		}
+
+		public String getTarget() {
+			return Target;
+		}
+
+		public void setTarget(final String target) {
+			Target = target;
+		}
+
+		public Integer getTimeout() {
+			return Timeout;
+		}
+
+		public void setTimeout(final Integer timeout) {
+			Timeout = timeout;
+		}
+
+		public Integer getUnhealthyThreshold() {
+			return UnhealthyThreshold;
+		}
+
+		public void setUnhealthyThreshold(final Integer unhealthyThreshold) {
+			UnhealthyThreshold = unhealthyThreshold;
+		}
 	}
 	
 	@Override
@@ -536,254 +501,4 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 				.namespace( this.getOwnerAccountNumber( ) )
 				.relativeId( "loadbalancer", this.getDisplayName( ) );
 	} 
-	
-	public static class LoadBalancerRelationView {
-		private LoadBalancer loadbalancer = null;
-		private LoadBalancerSecurityGroupCoreView group = null;
-		private ImmutableList<LoadBalancerAutoScalingGroupCoreView> autoscale_groups = null;
-		private ImmutableList<LoadBalancerBackendInstanceCoreView> backendInstances = null;
-		private ImmutableList<LoadBalancerListenerCoreView> listeners = null;
-		private ImmutableList<LoadBalancerZoneCoreView> zones = null;
-		private ImmutableList<LoadBalancerPolicyDescriptionCoreView> policies = null;
-		private ImmutableList<LoadBalancerBackendServerDescriptionCoreView> backendServers = null;
-		LoadBalancerRelationView(final LoadBalancer lb){
-			this.loadbalancer = lb;
-
-			if(lb.group!=null)
-				this.group = TypeMappers.transform(lb.group, LoadBalancerSecurityGroupCoreView.class);
-			if(lb.autoscale_groups!=null)
-				this.autoscale_groups = ImmutableList.copyOf(Collections2.transform(lb.autoscale_groups, LoadBalancerAutoScalingGroupCoreViewTransform.INSTANCE));
-			if(lb.backendInstances!=null)
-				this.backendInstances = ImmutableList.copyOf(Collections2.transform(lb.backendInstances, LoadBalancerBackendInstanceCoreViewTransform.INSTANCE));
-			if(lb.listeners!=null)
-				this.listeners = ImmutableList.copyOf(Collections2.transform(lb.listeners, LoadBalancerListenerCoreViewTransform.INSTANCE));
-			if(lb.zones!=null)
-				this.zones = ImmutableList.copyOf(Collections2.transform(lb.zones,  LoadBalancerZoneCoreViewTransform.INSTANCE));
-			if(lb.policies!=null)
-			  this.policies = ImmutableList.copyOf(Collections2.transform(lb.policies, LoadBalancerPolicyDescriptionCoreViewTransform.INSTANCE));
-			if(lb.backendServers!=null)
-			  this.backendServers =  ImmutableList.copyOf(Collections2.transform(lb.backendServers, LoadBalancerBackendServerDescriptionCoreViewTransform.INSTANCE));
-		}
-		
-
-		public LoadBalancerBackendInstanceCoreView findBackendInstance(final String instanceId){
-			  if(this.backendInstances!=null){
-				  try{
-					  return Iterables.find(this.backendInstances, new Predicate<LoadBalancerBackendInstanceCoreView>(){
-					  @Override
-					  public boolean apply(final LoadBalancerBackendInstanceCoreView input){
-						  return input.getInstanceId().contentEquals(instanceId);
-				 	  }
-				  	});
-				  }catch(NoSuchElementException ex){
-					  return null;
-					  }
-				  }
-			  return null;
-
-		}
-		
-		public boolean hasBackendInstance(final String instanceId){
-			 return this.findBackendInstance(instanceId) != null;
-		}
-		
-		public Collection<LoadBalancerBackendInstanceCoreView> getBackendInstances(){
-			return this.backendInstances;
-		}
-		
-		public LoadBalancerListenerCoreView findListener(final int lbPort){
-			if(this.listeners!=null){
-				try{
-					return Iterables.find(this.listeners, new Predicate<LoadBalancerListenerCoreView>(){
-				  @Override
-				  	public boolean apply(final LoadBalancerListenerCoreView input){
-					  return input.getLoadbalancerPort() == lbPort;
-				  	}
-				  });
-				}catch(NoSuchElementException ex){
-				 	return null;
-				}
-			}
-			return null;
-		}
-		
-		public boolean hasListener(final int lbPort){
-			return this.findListener(lbPort)!=null;
-		}
-
-		public Collection<LoadBalancerListenerCoreView> getListeners(){
-			return this.listeners;
-		}
-		
-		public Collection<LoadBalancerZoneCoreView> getZones(){
-			return this.zones;
-		}
-		
-		public LoadBalancerSecurityGroupCoreView getGroup(){
-			return this.group;
-		}
-		
-		public Collection<LoadBalancerAutoScalingGroupCoreView> getAutoScaleGroups(){
-			return this.autoscale_groups;
-		}
-		
-		public Collection<LoadBalancerPolicyDescriptionCoreView> getPolicies(){
-		  return this.policies;
-		}
-		
-		public Collection<LoadBalancerBackendServerDescriptionCoreView> getBackendServers(){
-		  return this.backendServers;
-		}
-	}
-	
-	public static class LoadBalancerCoreView {
-		private LoadBalancer loadbalancer;
-		private ImmutableMap<String,String> securityGroupIdsToNames;
-		LoadBalancerCoreView(final LoadBalancer lb){
-			this.loadbalancer = lb;
-			this.securityGroupIdsToNames = ImmutableMap.copyOf( CollectionUtils.putAll(
-					lb.getSecurityGroupRefs( ),
-					Maps.<String,String>newLinkedHashMap( ),
-					LoadBalancerSecurityGroupRef.groupId( ),
-					LoadBalancerSecurityGroupRef.groupName( ) ) );
-		}
-		
-		public String getDisplayName(){
-			return this.loadbalancer.getDisplayName();
-		}
-		
-		public String getOwnerUserId(){
-			return this.loadbalancer.getOwnerUserId();
-		}
-		
-		public String getOwnerUserName(){
-			return this.loadbalancer.getOwnerUserName();
-		}
-
-		public String getOwnerAccountNumber() {
-			return this.loadbalancer.getOwnerAccountNumber();
-		}
-
-		public Date getCreationTimestamp(){
-			return this.loadbalancer.getCreationTimestamp();
-		}
-
-		public String getVpcId() {
-			return this.loadbalancer.getVpcId(  );
-		}
-
-		public Scheme getScheme(){
-			return this.loadbalancer.getScheme();
-		}
-
-		public Integer getConnectionIdleTimeout( ) {
-			return this.loadbalancer.getConnectionIdleTimeout( );
-		}
-		
-		public Boolean getCrossZoneLoadbalancingEnabled( ) {
-		  return this.loadbalancer.getCrossZoneLoadbalancingEnabled();
-		}
-		
-		public Boolean getAccessLogEnabled( ) {
-		  return this.loadbalancer.getAccessLogEnabled();
-		}
-		
-		public String getAccessLogS3BucketName( ) {
-		  return this.loadbalancer.getAccessLogS3BucketName();
-		}
-		
-		public String getAccessLogS3BucketPrefix( ) {
-		  return this.loadbalancer.getAccessLogS3BucketPrefix();
-		}
-		
-		public Integer getAccessLogEmitInterval( ) {
-		  return this.loadbalancer.getAccessLogEmitInterval();
-		}
-		
-		public String getLoadbalancerDeploymentVersion() {
-		  return this.loadbalancer.getLoadbalancerDeploymentVersion();
-		}
-
-		public Map<String,String> getSecurityGroupIdsToNames( ) {
-			return this.securityGroupIdsToNames;
-		}
-
-		public boolean isHealthcheckConfigured(){
-			return this.loadbalancer.isHealthcheckConfigured();
-		}
-		
-		public int getHealthyThreshold() {	
-			return this.loadbalancer.getHealthyThreshold();
-		}
-		
-		public int getHealthCheckInterval(){
-			return this.loadbalancer.getHealthCheckInterval();
-		}
-		
-		public String getHealthCheckTarget(){
-			return this.loadbalancer.getHealthCheckTarget();
-		}
-		
-		public int getHealthCheckTimeout(){
-			return this.loadbalancer.getHealthCheckTimeout();
-		}
-		
-		public int getHealthCheckUnhealthyThreshold(){
-			return this.loadbalancer.getHealthCheckUnhealthyThreshold();
-		}
-		
-		public boolean useSystemAccount(){
-		  return this.loadbalancer.useSystemAccount();
-		}
-	}
-
-	@TypeMapper
-	public enum LoadBalancerCoreViewToLoadBalancerAttributesTransform
-			implements Function<LoadBalancer,LoadBalancerAttributes> {
-		INSTANCE;
-
-		@Nullable
-		@Override
-		public LoadBalancerAttributes apply( @Nullable final LoadBalancer loadBalancer ) {
-			LoadBalancerAttributes attributes = null;
-			if ( loadBalancer != null ) {
-				attributes = new LoadBalancerAttributes( );
-
-					final ConnectionDraining connectionDraining = new ConnectionDraining( );
-				connectionDraining.setEnabled( false );
-				attributes.setConnectionDraining( connectionDraining );
-
-				final ConnectionSettings connectionSettings = new ConnectionSettings( );
-				connectionSettings.setIdleTimeout(
-						MoreObjects.firstNonNull( loadBalancer.getConnectionIdleTimeout( ), 60 ) );
-				attributes.setConnectionSettings( connectionSettings );
-
-				final CrossZoneLoadBalancing crossZoneLoadBalancing = new CrossZoneLoadBalancing( );
-				crossZoneLoadBalancing.setEnabled( 
-				    MoreObjects.firstNonNull(loadBalancer.getCrossZoneLoadbalancingEnabled(), false) );
-				attributes.setCrossZoneLoadBalancing( crossZoneLoadBalancing );
-				
-				final AccessLog accessLog = new AccessLog();
-				accessLog.setEnabled(MoreObjects.firstNonNull(loadBalancer.getAccessLogEnabled(), false));
-				accessLog.setEmitInterval(loadBalancer.getAccessLogEmitInterval());
-				accessLog.setS3BucketName(loadBalancer.getAccessLogS3BucketName());
-				accessLog.setS3BucketPrefix(loadBalancer.getAccessLogS3BucketPrefix());
-				attributes.setAccessLog( accessLog );
-			}
-			return attributes;
-		}
-	}
-
-	public enum LoadBalancerEntityTransform implements NonNullFunction<LoadBalancerCoreView, LoadBalancer> {
-		INSTANCE;
-		@Nonnull
-		@Override
-		public LoadBalancer apply( LoadBalancerCoreView arg0) {
-			try ( final TransactionResource db = Entities.transactionFor( LoadBalancer.class ) ) {
-				return Entities.uniqueResult(arg0.loadbalancer);
-			}catch(final Exception ex){
-				throw Exceptions.toUndeclared(ex);
-			}
-		}
-	}
 }

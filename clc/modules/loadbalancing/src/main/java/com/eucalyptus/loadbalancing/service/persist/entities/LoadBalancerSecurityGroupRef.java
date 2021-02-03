@@ -34,6 +34,7 @@ import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import com.eucalyptus.compute.common.SecurityGroupItemType;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerSecurityGroupRefView;
 import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
@@ -43,7 +44,7 @@ import com.google.common.base.MoreObjects;
  * Reference to a VPC security group.
  */
 @Embeddable
-public class LoadBalancerSecurityGroupRef  implements Serializable {
+public class LoadBalancerSecurityGroupRef implements LoadBalancerSecurityGroupRefView, Serializable {
   private static final long serialVersionUID = 1L;
 
   @Column( name = "metadata_group_id", nullable = false, updatable = false )
@@ -141,7 +142,5 @@ public class LoadBalancerSecurityGroupRef  implements Serializable {
           null :
           new LoadBalancerSecurityGroupRef( securityGroupItemType.getGroupId( ), securityGroupItemType.getGroupName( ) );
     }
-
-
   }
 }

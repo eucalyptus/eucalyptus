@@ -28,8 +28,6 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.dns;
 
-import static com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupEntityTransform.*;
-import static com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
 import static com.eucalyptus.util.dns.DnsResolvers.DnsRequest;
 import static com.eucalyptus.util.dns.DnsResolvers.DnsResponse;
 
@@ -50,10 +48,16 @@ import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.loadbalancing.service.persist.ImmutableLoadBalancingPersistence;
+import com.eucalyptus.loadbalancing.service.persist.LoadBalancingPersistence;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
 import com.eucalyptus.loadbalancing.LoadBalancerHelper;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerAutoScalingGroup;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance;
+import com.eucalyptus.loadbalancing.service.persist.entities.PersistenceLoadBalancerSecurityGroups;
+import com.eucalyptus.loadbalancing.service.persist.entities.PersistenceLoadBalancers;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerServoInstanceView;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.dns.DnsResolvers;
 import com.eucalyptus.util.dns.DomainNameRecords;
@@ -79,6 +83,12 @@ import com.google.common.net.InetAddresses;
 public class LoadBalancerResolver extends DnsResolvers.DnsResolver {
 
   private static final Logger logger = Logger.getLogger( LoadBalancerResolver.class );
+
+  private static LoadBalancingPersistence persistence = ImmutableLoadBalancingPersistence.builder()
+      .balancers( new PersistenceLoadBalancers( ) )
+      .balancerSecurityGroups( new PersistenceLoadBalancerSecurityGroups( ))
+      .build();
+
   private static final int QUERY_ANSWER_EXPIRE_AFTER_SEC = 5;
   private static final LoadingCache<Name, List<String>> cachedAnswers =   CacheBuilder.newBuilder()
       .maximumSize(1000)
@@ -132,28 +142,26 @@ public class LoadBalancerResolver extends DnsResolvers.DnsResolver {
       final Pair<String,String> accountNamePair = domainName.get( ).toScopedLoadBalancerName( hostName );
       try ( final TransactionResource tx = Entities.transactionFor( LoadBalancer.class ) ) {
         final LoadBalancer loadBalancer =
-            LoadBalancerHelper.getLoadbalancerCaseInsensitive( accountNamePair.getLeft( ), accountNamePair.getRight( ) );
-        final Predicate<LoadBalancerServoInstanceCoreView> canResolve = 
-            new Predicate<LoadBalancerServoInstanceCoreView>(){
+            LoadBalancerHelper.getLoadbalancerCaseInsensitive( persistence, accountNamePair.getLeft( ), accountNamePair.getRight( ) );
+        final Predicate<LoadBalancerServoInstanceView> canResolve =
+            new Predicate<LoadBalancerServoInstanceView>(){
           @Override
-          public boolean apply(LoadBalancerServoInstanceCoreView arg0) {
+          public boolean apply(LoadBalancerServoInstanceView arg0) {
             return arg0.canResolveDns();
           }
         };
 
-        final List<LoadBalancerServoInstanceCoreView> servos = Lists.newArrayList();
-        for(final LoadBalancerAutoScalingGroupCoreView group : loadBalancer.getAutoScaleGroups()) {
-          servos.addAll(INSTANCE.apply( group ).getServos());
+        final List<LoadBalancerServoInstance> servos = Lists.newArrayList();
+        for(final LoadBalancerAutoScalingGroup group : loadBalancer.getAutoScaleGroups()) {
+          servos.addAll( group.getServos( ) );
         }
-        final Function<LoadBalancerServoInstanceCoreView,String> ipExtractor =
+        final Function<LoadBalancerServoInstance,String> ipExtractor =
             loadBalancer.getScheme( ) == LoadBalancer.Scheme.Internal ?
-                LoadBalancerServoInstanceCoreView.privateIp( ) :
-                  LoadBalancerServoInstanceCoreView.address( );
-                Iterables.addAll( ips, Iterables.transform(
-                    Collections2.filter(
-                        servos,
-                        canResolve),
-                        ipExtractor ) );
+                LoadBalancerServoInstance::getPrivateIp :
+                LoadBalancerServoInstance::getAddress;
+        Iterables.addAll( ips, Iterables.transform(
+            Collections2.filter( servos, canResolve ),
+            ipExtractor ) );
       }
     }
 

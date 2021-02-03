@@ -30,8 +30,6 @@ package com.eucalyptus.loadbalancing.service.persist.entities;
 
 import java.util.Collection;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -40,25 +38,11 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
-import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer.LoadBalancerCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreViewTransform;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreViewTransform;
-import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.NonNullFunction;
-import com.eucalyptus.util.TypeMapper;
-import com.google.common.base.Function;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.ImmutableList;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerZoneView;
 
 /**
  * @author Sang-Min Park
@@ -67,7 +51,7 @@ import com.google.common.collect.ImmutableList;
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_zone" )
-public class LoadBalancerZone extends AbstractPersistent {
+public class LoadBalancerZone extends AbstractPersistent implements LoadBalancerZoneView {
 
 	public enum STATE {
 		InService, OutOfService
@@ -75,15 +59,6 @@ public class LoadBalancerZone extends AbstractPersistent {
 	
 	private static final long serialVersionUID = 1L;
 
-	@Transient
-	private transient LoadBalancerZoneRelationView view;
-	
-	@PostLoad
-	private void onLoad(){
-		if(this.view==null)
-			this.view = new LoadBalancerZoneRelationView(this);
-	}
-	
 	protected LoadBalancerZone(){ }
 	
 	private LoadBalancerZone(
@@ -95,7 +70,6 @@ public class LoadBalancerZone extends AbstractPersistent {
 		this.zoneName=zone;
 		this.subnetId = subnetId;
 		this.uniqueName = this.createUniqueName();
-		view = new LoadBalancerZoneRelationView(this);
 	}
 
 	public static LoadBalancerZone create(
@@ -118,7 +92,7 @@ public class LoadBalancerZone extends AbstractPersistent {
 	private LoadBalancer loadbalancer = null;
 	
 	
-	@Column(name="autoscaling_group", nullable=true)
+	@Column(name="autoscaling_group")
 	private String autoscalingGroup = null;	
 
 	@Column(name="zone_name", nullable=false)
@@ -130,14 +104,14 @@ public class LoadBalancerZone extends AbstractPersistent {
 	@Column(name="unique_name", nullable=false, unique=true)
 	private String uniqueName;
 	
-	@Column(name="zone_state", nullable=true)
+	@Column(name="zone_state")
 	private String zoneState;
 
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "zone")
 	private Collection<LoadBalancerServoInstance> servoInstances = null;
 
 	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, mappedBy = "zone")
-	private Collection<LoadBalancerBackendInstance> backendInstances;
+	private Collection<LoadBalancerBackendInstance> backendInstances = null;
 		
 	public String getName( ){
 		return this.zoneName;
@@ -147,16 +121,16 @@ public class LoadBalancerZone extends AbstractPersistent {
 		return subnetId;
 	}
 
-  public LoadBalancerCoreView getLoadbalancer(){
-		return this.view.getLoadBalancer();
+  public LoadBalancer getLoadbalancer(){
+		return this.loadbalancer;
 	} 
-  
-	public Collection<LoadBalancerServoInstanceCoreView> getServoInstances(){
-		return this.view.getServoInstances();
+
+	public Collection<LoadBalancerServoInstance> getServoInstances( ) {
+		return servoInstances;
 	}
-	
-	public Collection<LoadBalancerBackendInstanceCoreView> getBackendInstances(){
-		return this.view.getBackendInstances();
+
+	public Collection<LoadBalancerBackendInstance> getBackendInstances(){
+		return this.backendInstances;
 	}
 	
 	public void setState(STATE state){
@@ -191,109 +165,5 @@ public class LoadBalancerZone extends AbstractPersistent {
 		if(this.loadbalancer!=null && this.zoneName!=null)
 			name = String.format("loadbalancer-zone-%s-%s", this.loadbalancer.getDisplayName(), this.zoneName);
 		return name;
-	}
-	
-	public static class LoadBalancerZoneCoreView {
-		private final LoadBalancerZone zone;
-		LoadBalancerZoneCoreView(final LoadBalancerZone zone){
-			this.zone = zone;
-		}
-		
-		public String getName( ){
-			return zone.getName( );
-		}
-
-		public String getSubnetId( ){
-			return zone.getSubnetId( );
-		}
-
-		public STATE getState( ){
-			return this.zone.getState( );
-		}
-		
-		public String getAutoscalingGroup(){
-		  return this.zone.getAutoscalingGroup();
-		}
-
-		public static NonNullFunction<LoadBalancerZoneCoreView,String> name( ) {
-			return StringPropertyFunctions.Name;
-		}
-
-		public static NonNullFunction<LoadBalancerZoneCoreView,String> subnetId( ) {
-			return StringPropertyFunctions.SubnetId;
-		}
-
-		private enum StringPropertyFunctions implements NonNullFunction<LoadBalancerZoneCoreView,String> {
-			Name {
-				@Nonnull
-				@Override
-				public String apply( final LoadBalancerZoneCoreView loadBalancerZoneCoreView ) {
-					return loadBalancerZoneCoreView.getName( );
-				}
-			},
-			SubnetId {
-				@Nonnull
-				@Override
-				public String apply( final LoadBalancerZoneCoreView loadBalancerZoneCoreView ) {
-					return loadBalancerZoneCoreView.getSubnetId( );
-				}
-			},
-		}
-	}
-
-	@TypeMapper
-	public enum LoadBalancerZoneCoreViewTransform implements Function<LoadBalancerZone, LoadBalancerZoneCoreView> {
-		INSTANCE;
-
-		@Override
-		@Nullable
-		public LoadBalancerZoneCoreView apply(@Nullable LoadBalancerZone arg0) {
-			return new LoadBalancerZoneCoreView(arg0);
-		}
-	}
-	
-	public enum LoadBalancerZoneEntityTransform implements NonNullFunction<LoadBalancerZoneCoreView, LoadBalancerZone> {
-		INSTANCE;
-
-		@Nonnull
-		@Override
-		public LoadBalancerZone apply( LoadBalancerZoneCoreView arg0) {
-			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerZone.class ) ) {
-				return Entities.uniqueResult(arg0.zone);
-			}catch(final Exception ex){
-				throw Exceptions.toUndeclared(ex);
-			}
-		}
-	}
-	
-	public static class LoadBalancerZoneRelationView {
-		private LoadBalancer loadbalancer= null;
-		private ImmutableList<LoadBalancerBackendInstanceCoreView> backendInstances = null;
-		private ImmutableList<LoadBalancerServoInstanceCoreView> servoInstances = null;
-		
-		LoadBalancerZoneRelationView(final LoadBalancerZone zone){
-			if(zone.loadbalancer!=null) {
-				Entities.initialize( zone.loadbalancer );
-				loadbalancer = zone.loadbalancer;
-			}
-			
-			if(zone.backendInstances!=null)
-				this.backendInstances = ImmutableList.copyOf(Collections2.transform(zone.backendInstances, LoadBalancerBackendInstanceCoreViewTransform.INSTANCE));
-			
-			if(zone.servoInstances!=null)
-				this.servoInstances = ImmutableList.copyOf(Collections2.transform(zone.servoInstances, LoadBalancerServoInstanceCoreViewTransform.INSTANCE));
-		}
-		
-		public ImmutableList<LoadBalancerBackendInstanceCoreView> getBackendInstances() {
-			return this.backendInstances;
-		}
-		
-		public ImmutableList<LoadBalancerServoInstanceCoreView> getServoInstances() {
-			return this.servoInstances;
-		}
-		
-		public LoadBalancerCoreView getLoadBalancer(){
-			return this.loadbalancer.getCoreView();
-		}
 	}
 }

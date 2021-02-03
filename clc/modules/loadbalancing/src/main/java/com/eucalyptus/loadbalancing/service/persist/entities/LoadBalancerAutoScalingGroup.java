@@ -29,10 +29,7 @@
 package com.eucalyptus.loadbalancing.service.persist.entities;
 
 import java.util.Collection;
-import java.util.List;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -40,24 +37,13 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
-import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer.LoadBalancerCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreViewTransform;
-import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.NonNullFunction;
-import com.eucalyptus.util.TypeMapper;
-import com.google.common.base.Function;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.ImmutableList;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerAutoScalingGroupView;
+
 
 /**
  * @author Sang-Min Park
@@ -66,20 +52,10 @@ import com.google.common.collect.ImmutableList;
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_autoscale_group" )
-public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
+public class LoadBalancerAutoScalingGroup extends AbstractPersistent implements LoadBalancerAutoScalingGroupView {
 	private static Logger    LOG     = Logger.getLogger( LoadBalancerAutoScalingGroup.class );
 
 	private static final long serialVersionUID = 1L;
-
-	@Transient
-	private LoadBalancerAutoScalingGroupRelationView view = null;
-
-	@PostLoad
-	private void onLoad(){
-		if(this.view==null)
-			this.view = new LoadBalancerAutoScalingGroupRelationView(this);
-	}
-	
 
   @ManyToOne
   @JoinColumn( name = "metadata_loadbalancer_fk", nullable=false )
@@ -119,7 +95,6 @@ public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
 		this.groupName = groupName;		
 		this.launchConfig = launchConfig;
 		this.uniqueName = this.createUniqueName();
-		view = new LoadBalancerAutoScalingGroupRelationView(this);
 	}
 
 	private LoadBalancerAutoScalingGroup(final LoadBalancer lb, final String availabilityZone,
@@ -131,7 +106,6 @@ public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
 		this.groupName = groupName;
 		this.launchConfig = launchConfig;
 		this.uniqueName = this.createUniqueName();
-		view = new LoadBalancerAutoScalingGroupRelationView(this);
 	}
 
 	public static LoadBalancerAutoScalingGroup newInstance(final LoadBalancer lb, final String availabilityZone,
@@ -186,16 +160,16 @@ public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
 
 	public void setSystemSubnetId(final String subnetId) { this.systemSubnetId = subnetId; }
 	
-	public List<LoadBalancerServoInstanceCoreView> getServos(){
-		return view.getServos();
+	public Collection<LoadBalancerServoInstance> getServos(){
+		return this.servos;
 	}
 	
     public void setLoadBalancer(LoadBalancer lb){
     	this.loadbalancer = lb;
     }
     
-    public LoadBalancerCoreView getLoadBalancer(){
-    	return this.view.getLoadBalancer();
+    public LoadBalancer getLoadBalancer(){
+    	return this.loadbalancer;
     }
     
     @PrePersist
@@ -210,78 +184,4 @@ public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
     	    this.loadbalancer.getDisplayName(),
     	    this.availabilityZone);
     }
-    
-    public static class LoadBalancerAutoScalingGroupCoreView {
-    	private LoadBalancerAutoScalingGroup group = null;
-    	
-    	LoadBalancerAutoScalingGroupCoreView(LoadBalancerAutoScalingGroup group){
-    		this.group = group;
-    	}
-    	
-    	public String getName(){
-    		return this.group.getName();
-    	}
-    	
-    	public int getCapacity(){
-    		return this.group.getCapacity();
-    	}    	
-    	
-    	public String getAvailabilityZone() {
-    	  return this.group.getAvailabilityZone();
-    	}
-
-		public String getUserSubnetId() { return this.group.getUserSubnetId(); }
-
-		public String getSystemSubnetId() { return this.group.getSystemSubnetId(); }
-    }
-    
-	@TypeMapper
-    public enum LoadBalancerAutoScalingGroupCoreViewTransform implements Function<LoadBalancerAutoScalingGroup, LoadBalancerAutoScalingGroupCoreView>{
-    	INSTANCE;
-
-		@Override
-		@Nullable
-		public LoadBalancerAutoScalingGroupCoreView apply(
-				@Nullable LoadBalancerAutoScalingGroup arg0) {
-			return new LoadBalancerAutoScalingGroupCoreView(arg0);
-		}
-    }
-
-	public enum LoadBalancerAutoScalingGroupEntityTransform implements NonNullFunction<LoadBalancerAutoScalingGroupCoreView, LoadBalancerAutoScalingGroup> {
-		INSTANCE;
-
-		@Nonnull
-    @Override
-		public LoadBalancerAutoScalingGroup apply(
-				@Nullable LoadBalancerAutoScalingGroupCoreView arg0) {
-			try ( final TransactionResource db = Entities.transactionFor( LoadBalancerAutoScalingGroup.class ) ) {
-				return Entities.uniqueResult(arg0.group);
-			}catch(final Exception ex){
-				throw Exceptions.toUndeclared(ex);
-			}
-		}
-	}
-	
-	public static class LoadBalancerAutoScalingGroupRelationView {
-		private ImmutableList<LoadBalancerServoInstanceCoreView> servos = null;
-		private LoadBalancer loadbalancer = null;
-
-		LoadBalancerAutoScalingGroupRelationView(
-				LoadBalancerAutoScalingGroup group) {
-			if(group.servos!=null)
-				servos = ImmutableList.copyOf(Collections2.transform(group.servos, LoadBalancerServoInstanceCoreViewTransform.INSTANCE));
-			if(group.loadbalancer!=null) {
-				Entities.initialize( group.loadbalancer );
-				loadbalancer = group.loadbalancer;
-			}
-		}
-		
-		public ImmutableList<LoadBalancerServoInstanceCoreView> getServos(){
-			return servos;
-		}
-		
-		public LoadBalancerCoreView getLoadBalancer(){
-			return loadbalancer.getCoreView( );
-		}
-	}
 }
