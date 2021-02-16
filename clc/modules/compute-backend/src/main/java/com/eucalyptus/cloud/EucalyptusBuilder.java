@@ -145,7 +145,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
       public boolean apply( ServiceConfiguration config ) {
         if ( config.isVmLocal( ) ) {
 
-          if ( BootstrapArgs.isCloudController( ) ) {
+          if ( BootstrapArgs.isCloudController( ) && Databases.hosted( ) ) {
             LOG.fatal( "MULTIPLE CONTROLLERS -- FAIL-STOP FOR UNSUPPORTED TOPOLOGY." );
             LOG.fatal( "MULTIPLE CONTROLLERS -- Shutting down secondary CLC." );
             System.exit( 1 );

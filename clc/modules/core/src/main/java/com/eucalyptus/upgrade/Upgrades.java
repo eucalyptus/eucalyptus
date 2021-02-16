@@ -364,7 +364,7 @@ public class Upgrades {
                                      "    upgrade_to_version character varying(255),\n" +
                                      "    upgrade_state character varying(255)\n" +
                                      ");\n" +
-                                     "ALTER TABLE public." + this.tableName + " OWNER TO %1$s;";
+                                     "ALTER TABLE " + this.tableName + " OWNER TO %1$s;";
     
     public void logEvent( Version fromVersion, Version toVersion, UpgradeState state ) {
       Sql sql = null;
@@ -447,7 +447,10 @@ public class Upgrades {
     }
 
     public static boolean exists( ) {
-      return Databases.getBootstrapper( ).listTables( Databases.Events.INSTANCE.getName( ), null ).contains( UpgradeEventLog.INSTANCE.tableName );
+      return Databases.getBootstrapper( ).listTables(
+          Databases.Events.INSTANCE.getDatabase( ),
+          Databases.Events.INSTANCE.getSchema( )
+      ).contains( UpgradeEventLog.INSTANCE.tableName );
     }
   }
   

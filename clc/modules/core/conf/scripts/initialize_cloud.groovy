@@ -39,6 +39,8 @@
 
 
 import com.eucalyptus.upgrade.Upgrades
+import com.google.common.base.MoreObjects
+import com.google.common.primitives.Ints
 import org.apache.log4j.Logger
 import com.eucalyptus.bootstrap.Bootstrap
 import com.eucalyptus.bootstrap.BootstrapArgs
@@ -60,21 +62,21 @@ import com.eucalyptus.entities.PersistenceContexts
 import com.eucalyptus.system.DirectoryBootstrapper
 import com.eucalyptus.util.Internets
 
-Logger LOG = Logger.getLogger( Bootstrap.class );
+Logger LOG = Logger.getLogger( Bootstrap.class )
 
 if( BootstrapArgs.isInitializeSystem( ) ) {
-  new DirectoryBootstrapper( ).load( );
-  ServiceJarDiscovery.doSingleDiscovery(  new ComponentDiscovery( ) );
+  new DirectoryBootstrapper( ).load( )
+  ServiceJarDiscovery.doSingleDiscovery(  new ComponentDiscovery( ) )
   [
     new ServiceBuilderDiscovery( ),
     new PersistenceContextDiscovery( )
   ].each{
-    ServiceJarDiscovery.runDiscovery( it );
+    ServiceJarDiscovery.runDiscovery( it )
   }
-  SystemCredentials.initialize( );
+  SystemCredentials.initialize( )
 }
 try {
-  Databases.initialize( );
+  Databases.initialize( )
   try {
     Map<String,String> props = [
           "hibernate.show_sql": "false",
@@ -94,35 +96,37 @@ try {
           "hibernate.cache.use_query_cache": "false",
           "hibernate.discriminator.ignore_explicit_for_joined": "true", // HHH-6911
     ]
+    final String databaseHost = System.getProperty( 'euca.db.host', '127.0.0.1' )
+    final Integer port = MoreObjects.firstNonNull( Ints.tryParse( System.getProperty( 'euca.db.port', '' ) ), 8777 )
     for ( String ctx : PersistenceContexts.list( ) ) {
       final String databaseName = PersistenceContexts.toDatabaseName( ).apply( ctx )
       final String schemaName = PersistenceContexts.toSchemaName( ).apply( ctx )
-      final String ctxUrl = "jdbc:${ServiceUris.remote(Database.class, InetAddress.getByName('127.0.0.1'), databaseName)}";
-      props.put( "hibernate.connection.url", ctxUrl );
+      final String ctxUrl = "jdbc:${ServiceUris.remote(Database.class, new InetSocketAddress(InetAddress.getByName(databaseHost), port), databaseName)}"
+      props.put( "hibernate.connection.url", ctxUrl )
       if ( schemaName != null ) props.put( 'hibernate.default_schema', schemaName )
       final PersistenceContextConfiguration config = new PersistenceContextConfiguration(
           ctx,
           PersistenceContexts.listEntities( ctx ),
           PersistenceContexts.listAuxiliaryDatabaseObjects( ctx ),
           props
-      );
-      PersistenceContexts.registerPersistenceContext( config );
+      )
+      PersistenceContexts.registerPersistenceContext( config )
     }
     if( BootstrapArgs.isInitializeSystem( ) ) {
       Upgrades.init( )
-      ServiceBuilder sb = ServiceBuilders.lookup( Eucalyptus.class );
-      final ServiceConfiguration newComponent = sb.newInstance( Eucalyptus.INSTANCE.name( ), Internets.localHostAddress( ), Internets.localHostAddress( ), 8773 );
-      ServiceConfigurations.store( newComponent );
-      LOG.info( "Added registration for this cloud controller: " + newComponent.toString() );
+      ServiceBuilder sb = ServiceBuilders.lookup( Eucalyptus.class )
+      final ServiceConfiguration newComponent = sb.newInstance( Eucalyptus.INSTANCE.name( ), Internets.localHostAddress( ), Internets.localHostAddress( ), 8773 )
+      ServiceConfigurations.store( newComponent )
+      LOG.info( "Added registration for this cloud controller: " + newComponent.toString() )
     }
-    Databases.getBootstrapper( ).destroy( );
+    Databases.getBootstrapper( ).destroy( )
   } catch( Exception ex ) {
-    Databases.getBootstrapper( ).destroy( );
-    LOG.error( ex, ex );
-    System.exit( 123 );
+    Databases.getBootstrapper( ).destroy( )
+    LOG.error( ex, ex )
+    System.exit( 123 )
   }
 } catch( Exception ex ) {
-  Databases.getBootstrapper( ).destroy( );
-  LOG.fatal( "", ex );
-  System.exit( 37 );
+  Databases.getBootstrapper( ).destroy( )
+  LOG.fatal( "", ex )
+  System.exit( 37 )
 }

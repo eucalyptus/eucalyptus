@@ -87,6 +87,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Longs;
+import io.vavr.control.Option;
 
 /**
  * egrep 'contentsSet|entrySet|entryRemoved|viewChange|Hosts.values' /disk1/storage/hi.log | sed
@@ -1348,7 +1349,9 @@ public class Hosts {
 
   static void awaitDatabases( ) throws InterruptedException {
     if ( !BootstrapArgs.isCloudController( ) ) {
-      while ( list( FILTER_BOOTED_DBS ).isEmpty( ) ) {
+      while ( ( Databases.hosted( ) && list( FILTER_BOOTED_DBS ).isEmpty( ) )
+          || ( !Databases.hosted( ) &&
+               Option.of( Hosts.getCoordinator( ) ).map( Host::hasBootstrapped ).getOrElse( Boolean.FALSE ) ) ) {
         TimeUnit.SECONDS.sleep( 3 );//GRZE: db state check sleep time
         LOG.info( "Waiting for system view with database..." );
         LOG.info( HostMapStateListener.INSTANCE.printMap( "Hosts.awaitDatabases():" ) );

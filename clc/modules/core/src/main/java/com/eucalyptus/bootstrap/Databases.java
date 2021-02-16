@@ -41,7 +41,7 @@ package com.eucalyptus.bootstrap;
 
 import groovy.sql.Sql;
 
-import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -49,10 +49,10 @@ import java.sql.ResultSet;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.ServiceUris;
@@ -65,7 +65,6 @@ import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.Strings;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
@@ -98,7 +97,21 @@ public class Databases {
   public enum Events {
     INSTANCE;
     public static Sql getConnection( ) throws Exception {
-      return Databases.getBootstrapper( ).getConnection( INSTANCE.getName( ), null );
+      return Databases.getBootstrapper( ).getConnection( INSTANCE.getDatabase( ), INSTANCE.getSchema( ) );
+    }
+
+    @Nullable
+    public String getDatabase( ) {
+      return getBootstrapper( ).isLocal( ) ?
+          getName( ) :
+          null;
+    }
+
+    @Nullable
+    public String getSchema( ) {
+      return getBootstrapper( ).isLocal( ) ?
+          null :
+          getName( );
     }
 
     public String getName( ) {
@@ -106,11 +119,22 @@ public class Databases {
     }
 
     public static void create( ) {
-      if ( !getBootstrapper( ).listDatabases( ).contains( INSTANCE.getName( ) ) ) {
-        try {
-          getBootstrapper( ).createDatabase( INSTANCE.getName( ) );
-        } catch ( Exception ex ) {
-          LOG.error( ex , ex );
+      final DatabaseBootstrapper bootstrapper = getBootstrapper();
+      if ( bootstrapper.isLocal( ) ) {
+        if ( !bootstrapper.listDatabases( ).contains( INSTANCE.getName( ) ) ) {
+          try {
+            bootstrapper.createDatabase( INSTANCE.getName( ) );
+          } catch ( Exception ex ) {
+            LOG.error( ex , ex );
+          }
+        }
+      } else {
+        if ( !bootstrapper.listSchemas( null ).contains( INSTANCE.getName( ) ) ) {
+          try {
+            bootstrapper.createSchema( null, INSTANCE.getName( ) );
+          } catch ( Exception ex ) {
+            LOG.error( ex , ex );
+          }
         }
       }
     }
@@ -131,6 +155,13 @@ public class Databases {
       Groovyness.run( "setup_dbpool" );
       return true;
     }
+  }
+
+  /**
+   * Eucalyptus host(s) required for database
+   */
+  public static boolean hosted( ) {
+    return getBootstrapper().isLocal();
   }
 
   static boolean shouldInitialize( ) {//GRZE:WARNING:HACKHACKHACK do not duplicate pls thanks.
@@ -159,26 +190,6 @@ public class Databases {
     return false;
   }
 
-  /**
-   * List all known databases.
-   */
-  static Set<String> listDatabases( ) {
-    final Set<String> dbNames = Sets.newHashSet();
-    final Predicate<String> dbNamePredicate = Predicates.or(
-        Strings.startsWith( "eucalyptus_" ),
-        Predicates.equalTo( "database_events" ) );
-
-    for ( final Host h : Hosts.listActiveDatabases( ) ) {
-      Iterables.addAll(
-          dbNames,
-          Iterables.filter(
-              Databases.getBootstrapper().listDatabases( h.getBindAddress( ) ),
-              dbNamePredicate ) );
-    }
-
-    return dbNames;
-  }
-  
   public static Boolean isVolatile( ) {
     return  !BootstrapArgs.isUpgradeSystem( ) && !Bootstrap.isShuttingDown( ) && volatileAtomic.get( );
   }
@@ -255,7 +266,7 @@ public class Databases {
     
     public ScriptedDbBootstrapper( ) {
       try {
-        this.db = Groovyness.newInstance( "setup_db" );
+        this.db = Groovyness.newInstance( System.getProperty("euca.db.script", "setup_db") );
       } catch ( ScriptExecutionFailedException ex ) {
         LOG.error( ex, ex );
       }
@@ -287,7 +298,12 @@ public class Databases {
     public boolean isRunning( ) {
       return this.db.isRunning( );
     }
-    
+
+    @Override
+    public boolean isLocal( ) {
+      return this.db.isLocal( );
+    }
+
     @Override
     public void hup( ) {
       this.db.hup( );
@@ -360,13 +376,13 @@ public class Databases {
     }
 
     @Override
-    public List<String> listDatabases() {
-      return db.listDatabases();
+    public List<String> listDatabases( ) {
+      return db.listDatabases( );
     }
 
     @Override
-    public List<String> listDatabases( final InetAddress host ) {
-      return db.listDatabases( host );
+    public List<String> listDatabases( final InetSocketAddress address ) {
+      return db.listDatabases( address );
     }
 
     @Override
@@ -375,13 +391,18 @@ public class Databases {
     }
 
     @Override
-    public List<String> listSchemas( final InetAddress host, final String database ) {
-      return db.listSchemas( host, database );
+    public List<String> listSchemas( final InetSocketAddress address, final String database ) {
+      return db.listSchemas( address, database );
     }
 
     @Override
     public List<String> listTables( final String database, final String schema ) {
       return db.listTables( database, schema );
+    }
+
+    @Override
+    public void createSchema( final String database, final String schema ) {
+      db.createSchema( database, schema );
     }
 
     @Override
