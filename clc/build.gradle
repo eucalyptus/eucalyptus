@@ -82,7 +82,10 @@ subprojects {
   }
 
   repositories {
-    jcenter( )
+    mavenCentral( )
+    maven {
+      url 'https://pkgs.dev.azure.com/sjones4/eucalyptus/_packaging/maven/maven/v1'
+    }
   }
 
   configurations {
