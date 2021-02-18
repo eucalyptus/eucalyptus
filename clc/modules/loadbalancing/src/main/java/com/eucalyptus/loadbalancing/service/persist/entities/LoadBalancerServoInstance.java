@@ -44,201 +44,214 @@ import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerServoInsta
 
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
- *
  */
 @Entity
-@PersistenceContext( name = "eucalyptus_loadbalancing" )
-@Table( name = "metadata_servo_instance" )
-public class LoadBalancerServoInstance extends AbstractPersistent implements LoadBalancerServoInstanceView {
-	private static Logger    LOG     = Logger.getLogger( LoadBalancerServoInstance.class );
+@PersistenceContext(name = "eucalyptus_loadbalancing")
+@Table(name = "metadata_servo_instance")
+public class LoadBalancerServoInstance extends AbstractPersistent
+    implements LoadBalancerServoInstanceView {
+  private static Logger LOG = Logger.getLogger(LoadBalancerServoInstance.class);
 
-	private static final long serialVersionUID = 1L;
-	
-	public enum STATE {
-		Pending, InService, Error, OutOfService, Retired
-	}
-	public enum DNS_STATE {
-		Registered, Deregistered, None
-	}
-	
-    @ManyToOne
-    @JoinColumn( name = "metadata_zone_fk", nullable=true)
-    private LoadBalancerZone zone = null;
-    
-    @ManyToOne
-    @JoinColumn( name = "metadata_group_fk", nullable=true)
-    private LoadBalancerSecurityGroup security_group = null;
+  private static final long serialVersionUID = 1L;
 
-    @ManyToOne
-    @JoinColumn( name = "metadata_asg_fk", nullable=true)
-    private LoadBalancerAutoScalingGroup autoscaling_group = null;
-       
-    @Column(name="metadata_instance_id", nullable=false, unique=true)
-    private String instanceId = null;
-    
-    @Column(name="metadata_state", nullable=false)
-    private String state = null;
-    
-    @Column(name="metadata_address", nullable=true)
-    private String address = null;
+  public enum STATE {
+    Pending, InService, Error, OutOfService, Retired
+  }
 
-    @Column(name="metadata_private_ip", nullable=true)
-    private String privateIp = null;
-    
-    @Column(name="metadata_dns_state", nullable=true)
-		private String dnsState = null;
+  public enum DNS_STATE {
+    Registered, Deregistered, None
+  }
 
-	@Column(name="metadata_certificate_expiration_date", nullable=true)
-	private Date certificateExpirationDate = null;
+  @ManyToOne
+  @JoinColumn(name = "metadata_zone_fk", nullable = true)
+  private LoadBalancerZone zone = null;
 
-	@Column(name="metadata_activity_failure_count", nullable=true)
-	private Integer activityFailureCount = null;
+  @ManyToOne
+  @JoinColumn(name = "metadata_group_fk", nullable = true)
+  private LoadBalancerSecurityGroup security_group = null;
 
-	@Column(name="metadata_activity_failure_update_time", nullable=true)
-	private Date activityFailureUpdateTime = null;
+  @ManyToOne
+  @JoinColumn(name = "metadata_asg_fk", nullable = true)
+  private LoadBalancerAutoScalingGroup autoscaling_group = null;
 
-	private LoadBalancerServoInstance(){
-    }
-    
-    private LoadBalancerServoInstance(final LoadBalancerZone lbzone){
-    	this.state = STATE.Pending.name();
-    	this.zone = lbzone;
-    }
-    private LoadBalancerServoInstance(final LoadBalancerZone lbzone, final LoadBalancerSecurityGroup group){
-    	this.state = STATE.Pending.name();
-    	this.zone = lbzone;
-    	this.security_group = group;
-    }
-    
-    public static LoadBalancerServoInstance newInstance(final LoadBalancerZone lbzone,
-														final LoadBalancerSecurityGroup group,
-														final LoadBalancerAutoScalingGroup as_group,
-														final int certExpirationDays,
-														String instanceId)
-    {
-    	final LoadBalancerServoInstance instance = new LoadBalancerServoInstance(lbzone, group);
-    	instance.setInstanceId(instanceId);
-    	instance.setAutoScalingGroup(as_group);
-    	instance.dnsState = DNS_STATE.None.name();
-		final Calendar cal = Calendar.getInstance();
-		cal.setTime(new Date());
-		cal.add(Calendar.DATE, certExpirationDays);
-		instance.setCertificateExpiration(cal.getTime());
-    	return instance;
-    }
-    
-    public static LoadBalancerServoInstance named(final LoadBalancerZone lbzone){
-    	final LoadBalancerServoInstance sample = new LoadBalancerServoInstance(lbzone);
-    	return sample;
-    }
-    
-    public static LoadBalancerServoInstance named(String instanceId){
-    	final LoadBalancerServoInstance sample = new LoadBalancerServoInstance();
-    	sample.instanceId = instanceId;
-    	return sample;
-    }
-    
-    public static LoadBalancerServoInstance named(){
-    	return new LoadBalancerServoInstance();
-    }
-    
-    public static LoadBalancerServoInstance withState(String state){
-    	final LoadBalancerServoInstance sample = new LoadBalancerServoInstance();
-    	sample.state = state;
-    	return sample;
-    }
+  @Column(name = "metadata_instance_id", nullable = false, unique = true)
+  private String instanceId = null;
 
-    public void setInstanceId(String id){
-    	this.instanceId = id;
-    }
-    
-    public String getInstanceId(){
-    	return this.instanceId;
-    }
-    
-    public void setState(STATE update){
-    	this.state = update.name();
-    }
-    
-    public STATE getState(){
-    	return Enum.valueOf(STATE.class, this.state);
-    }
-    
-    public void setAddress(String address){
-    	this.address=address;
-    }
-    
-    public String getAddress(){
-    	return this.address; 
-    }
-    
-    public void setSecurityGroup(LoadBalancerSecurityGroup group){
-    	this.security_group=group;
-    }
-    
-    public void setAutoScalingGroup(LoadBalancerAutoScalingGroup group){
-    	this.autoscaling_group = group;
-    }
-    
-    public void setAvailabilityZone(LoadBalancerZone zone){
-    	this.zone = zone;
-    }
-    
-    public LoadBalancerZone getAvailabilityZone(){
-    	return this.zone;
-    }
+  @Column(name = "metadata_state", nullable = false)
+  private String state = null;
 
-	public LoadBalancerAutoScalingGroup getAutoScalingGroup() { return this.autoscaling_group; }
+  @Column(name = "metadata_address", nullable = true)
+  private String address = null;
 
-    public String getPrivateIp(){
-    	return this.privateIp;
+  @Column(name = "metadata_private_ip", nullable = true)
+  private String privateIp = null;
+
+  @Column(name = "metadata_dns_state", nullable = true)
+  private String dnsState = null;
+
+  @Column(name = "metadata_certificate_expiration_date", nullable = true)
+  private Date certificateExpirationDate = null;
+
+  @Column(name = "metadata_activity_failure_count", nullable = true)
+  private Integer activityFailureCount = null;
+
+  @Column(name = "metadata_activity_failure_update_time", nullable = true)
+  private Date activityFailureUpdateTime = null;
+
+  private LoadBalancerServoInstance() {
+  }
+
+  private LoadBalancerServoInstance(final LoadBalancerZone lbzone) {
+    this.state = STATE.Pending.name();
+    this.zone = lbzone;
+  }
+
+  private LoadBalancerServoInstance(final LoadBalancerZone lbzone,
+      final LoadBalancerSecurityGroup group) {
+    this.state = STATE.Pending.name();
+    this.zone = lbzone;
+    this.security_group = group;
+  }
+
+  public static LoadBalancerServoInstance newInstance(final LoadBalancerZone lbzone,
+      final LoadBalancerSecurityGroup group,
+      final LoadBalancerAutoScalingGroup as_group,
+      final int certExpirationDays,
+      String instanceId) {
+    final LoadBalancerServoInstance instance = new LoadBalancerServoInstance(lbzone, group);
+    instance.setInstanceId(instanceId);
+    instance.setAutoScalingGroup(as_group);
+    instance.dnsState = DNS_STATE.None.name();
+    final Calendar cal = Calendar.getInstance();
+    cal.setTime(new Date());
+    cal.add(Calendar.DATE, certExpirationDays);
+    instance.setCertificateExpiration(cal.getTime());
+    return instance;
+  }
+
+  public static LoadBalancerServoInstance named(final LoadBalancerZone lbzone) {
+    final LoadBalancerServoInstance sample = new LoadBalancerServoInstance(lbzone);
+    return sample;
+  }
+
+  public static LoadBalancerServoInstance named(String instanceId) {
+    final LoadBalancerServoInstance sample = new LoadBalancerServoInstance();
+    sample.instanceId = instanceId;
+    return sample;
+  }
+
+  public static LoadBalancerServoInstance named() {
+    return new LoadBalancerServoInstance();
+  }
+
+  public static LoadBalancerServoInstance withState(String state) {
+    final LoadBalancerServoInstance sample = new LoadBalancerServoInstance();
+    sample.state = state;
+    return sample;
+  }
+
+  public void setInstanceId(String id) {
+    this.instanceId = id;
+  }
+
+  public String getInstanceId() {
+    return this.instanceId;
+  }
+
+  public void setState(STATE update) {
+    this.state = update.name();
+  }
+
+  public STATE getState() {
+    return Enum.valueOf(STATE.class, this.state);
+  }
+
+  public void setAddress(String address) {
+    this.address = address;
+  }
+
+  public String getAddress() {
+    return this.address;
+  }
+
+  public void setSecurityGroup(LoadBalancerSecurityGroup group) {
+    this.security_group = group;
+  }
+
+  public void setAutoScalingGroup(LoadBalancerAutoScalingGroup group) {
+    this.autoscaling_group = group;
+  }
+
+  public void setAvailabilityZone(LoadBalancerZone zone) {
+    this.zone = zone;
+  }
+
+  public LoadBalancerZone getAvailabilityZone() {
+    return this.zone;
+  }
+
+  public LoadBalancerAutoScalingGroup getAutoScalingGroup() {
+    return this.autoscaling_group;
+  }
+
+  public String getPrivateIp() {
+    return this.privateIp;
+  }
+
+  public void setPrivateIp(final String ipAddr) {
+    this.privateIp = ipAddr;
+  }
+
+  public void setDnsState(final DNS_STATE dnsState) {
+    this.dnsState = dnsState.toString();
+  }
+
+  public DNS_STATE getDnsState() {
+    return Enum.valueOf(DNS_STATE.class, this.dnsState);
+  }
+
+  public void setCertificateExpiration(final Date expirationDate) {
+    this.certificateExpirationDate = expirationDate;
+  }
+
+  public Date getCertificateExpiration() {
+    return this.certificateExpirationDate;
+  }
+
+  public boolean isCertificateExpired() {
+    if (this.certificateExpirationDate == null) {
+      return false;
     }
-    
-    public void setPrivateIp(final String ipAddr){
-    	this.privateIp = ipAddr;
+    if ((new Date()).after(this.certificateExpirationDate)) {
+      return true;
+    } else {
+      return false;
     }
-    
-    public void setDnsState(final DNS_STATE dnsState){
-    	this.dnsState = dnsState.toString();
+  }
+
+  public int getActivityFailureCount() {
+    if (this.activityFailureCount == null) {
+      return 0;
+    } else {
+      return this.activityFailureCount;
     }
-    
-    public DNS_STATE getDnsState(){
-    	return Enum.valueOf(DNS_STATE.class, this.dnsState);
-    }
+  }
 
-	public void setCertificateExpiration(final Date expirationDate)  { this.certificateExpirationDate = expirationDate; }
-	public Date getCertificateExpiration() { return this.certificateExpirationDate; }
-	public boolean isCertificateExpired() {
-		if (this.certificateExpirationDate == null)
-			return false;
-		if ((new Date()).after(this.certificateExpirationDate))
-			return true;
-		else
-			return false;
-	}
+  public void setActivityFailureCount(final int count) {
+    this.activityFailureCount = count;
+  }
 
-	public int getActivityFailureCount() {
-		if (this.activityFailureCount == null )
-			return 0;
-		else
-			return this.activityFailureCount;
-	}
+  public Date getActivityFailureUpdateTime() {
+    return this.activityFailureUpdateTime;
+  }
 
-	public void setActivityFailureCount(final int count) {
-		this.activityFailureCount = count;
-	}
+  public void setActivityFailureUpdateTime(final Date updateTime) {
+    this.activityFailureUpdateTime = updateTime;
+  }
 
-	public Date getActivityFailureUpdateTime() {
-		return this.activityFailureUpdateTime;
-	}
-
-	public void setActivityFailureUpdateTime(final Date updateTime) {
-		this.activityFailureUpdateTime = updateTime;
-	}
-
-	@Override
-	public String toString(){
-		String id = this.instanceId==null? "unassigned" : this.instanceId;
-		return String.format("Servo-instance (%s) for %s", id, this.zone.getName());
-	}
+  @Override
+  public String toString() {
+    String id = this.instanceId == null ? "unassigned" : this.instanceId;
+    return String.format("Servo-instance (%s) for %s", id, this.zone.getName());
+  }
 }

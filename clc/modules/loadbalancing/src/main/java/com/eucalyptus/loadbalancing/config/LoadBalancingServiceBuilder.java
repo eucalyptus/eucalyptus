@@ -40,41 +40,44 @@ import com.eucalyptus.component.annotation.ComponentPart;
 /**
  *
  */
-@ComponentPart( LoadBalancing.class )
-public class LoadBalancingServiceBuilder extends AbstractServiceBuilder<LoadBalancingConfiguration> {
-  private static final Logger LOG = Logger.getLogger( LoadBalancingServiceBuilder.class );
+@ComponentPart(LoadBalancing.class)
+public class LoadBalancingServiceBuilder
+    extends AbstractServiceBuilder<LoadBalancingConfiguration> {
+  private static final Logger LOG = Logger.getLogger(LoadBalancingServiceBuilder.class);
 
   @Override
-  public LoadBalancingConfiguration newInstance( ) {
-    return new LoadBalancingConfiguration( );
+  public LoadBalancingConfiguration newInstance() {
+    return new LoadBalancingConfiguration();
   }
 
   @Override
-  public LoadBalancingConfiguration newInstance( String partition, String name, String host, Integer port ) {
-    return new LoadBalancingConfiguration( partition, name, host, port );
+  public LoadBalancingConfiguration newInstance(String partition, String name, String host,
+      Integer port) {
+    return new LoadBalancingConfiguration(partition, name, host, port);
   }
 
   @Override
-  public ComponentId getComponentId( ) {
-    return ComponentIds.lookup( LoadBalancing.class );
+  public ComponentId getComponentId() {
+    return ComponentIds.lookup(LoadBalancing.class);
   }
 
   @Override
-  public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException { }
-
-  @Override
-  public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException { }
-
-
-  @Override
-  public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {
+  public void fireStart(ServiceConfiguration config) throws ServiceRegistrationException {
   }
 
   @Override
-  public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {
+  public void fireStop(ServiceConfiguration config) throws ServiceRegistrationException {
   }
 
   @Override
-  public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {
+  public void fireCheck(ServiceConfiguration config) throws ServiceRegistrationException {
+  }
+
+  @Override
+  public void fireEnable(ServiceConfiguration config) throws ServiceRegistrationException {
+  }
+
+  @Override
+  public void fireDisable(ServiceConfiguration config) throws ServiceRegistrationException {
   }
 }

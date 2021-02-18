@@ -9,7 +9,6 @@ import java.util.List;
 import org.immutables.value.Value.Immutable;
 import io.vavr.collection.Stream;
 
-
 @Immutable
 public interface LoadBalancerPolicyDescriptionFullView {
 
@@ -17,10 +16,11 @@ public interface LoadBalancerPolicyDescriptionFullView {
 
   List<LoadBalancerPolicyAttributeDescriptionView> getPolicyAttributeDescriptions();
 
-  default List<LoadBalancerPolicyAttributeDescriptionView> findAttributeDescription( final String name ) {
-    return Stream.ofAll( getPolicyAttributeDescriptions( ) )
-        .filter( policyAttributeDescription -> name.equals(policyAttributeDescription.getAttributeName( )) )
+  default List<LoadBalancerPolicyAttributeDescriptionView> findAttributeDescription(
+      final String name) {
+    return Stream.ofAll(getPolicyAttributeDescriptions())
+        .filter(policyAttributeDescription -> name.equals(
+            policyAttributeDescription.getAttributeName()))
         .toJavaList();
   }
-
 }

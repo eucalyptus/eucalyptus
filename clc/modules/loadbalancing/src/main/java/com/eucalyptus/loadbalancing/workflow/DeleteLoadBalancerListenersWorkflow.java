@@ -35,16 +35,15 @@ import com.amazonaws.services.simpleworkflow.flow.annotations.WorkflowRegistrati
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
 @Workflow
-@WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 120, 
-defaultTaskStartToCloseTimeoutSeconds = 60)
+@WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 120,
+    defaultTaskStartToCloseTimeoutSeconds = 60)
 public interface DeleteLoadBalancerListenersWorkflow {
   @Execute(name = "DeleteLoadBalancerListeners", version = "1.0")
-  void deleteLoadBalancerListeners(final String accountId, final String loadbalancer, 
+  void deleteLoadBalancerListeners(final String accountId, final String loadbalancer,
       final Integer[] ports);
-  
+
   @GetState
   ElbWorkflowState getState();
 }

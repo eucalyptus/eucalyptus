@@ -41,43 +41,53 @@ public class LoadBalancingHostedZoneManager {
 
   private static final Logger LOG = Logger.getLogger(LoadBalancingHostedZoneManager.class);
 
-  private static final AtomicReference<Pair<String,String>> zoneNameAndId = new AtomicReference<>();
+  private static final AtomicReference<Pair<String, String>> zoneNameAndId =
+      new AtomicReference<>();
   private static final long zoneCheckInterval = MoreObjects.firstNonNull(
-      Longs.tryParse( System.getProperty( "com.eucalyptus.loadbalancing.hostedZoneCheckInterval", "" ) ),
-      15L * 60L );
-  private static final CompatFunction<String, Supplier<Pair<String,String>>> zoneSupplier =
-      FUtils.memoizeLast( zone -> Suppliers.memoizeWithExpiration(
-          () -> getOrCreateHostedZone(zone), zoneCheckInterval, TimeUnit.SECONDS ));
+      Longs.tryParse(
+          System.getProperty("com.eucalyptus.loadbalancing.hostedZoneCheckInterval", "")),
+      15L * 60L);
+  private static final CompatFunction<String, Supplier<Pair<String, String>>> zoneSupplier =
+      FUtils.memoizeLast(zone -> Suppliers.memoizeWithExpiration(
+          () -> getOrCreateHostedZone(zone), zoneCheckInterval, TimeUnit.SECONDS));
 
-  public static Option<Pair<String,String>> getHostedZoneNameAndId() {
+  public static Option<Pair<String, String>> getHostedZoneNameAndId() {
     return Option.of(zoneNameAndId.get());
   }
 
   static boolean check() {
     if (Topology.isEnabled(Route53.class)) {
-      final String zoneName = LoadBalancerDomainName.getLoadBalancerSubdomain().relativize(Name.root).toString();
-      final Pair<String,String> currentZoneAndId = zoneNameAndId.get();
-      final Pair<String,String> newZoneAndId = zoneSupplier.apply(zoneName).get();
+      final String zoneName =
+          LoadBalancerDomainName.getLoadBalancerSubdomain().relativize(Name.root).toString();
+      final Pair<String, String> currentZoneAndId = zoneNameAndId.get();
+      final Pair<String, String> newZoneAndId = zoneSupplier.apply(zoneName).get();
       if (newZoneAndId != null &&
           !newZoneAndId.equals(currentZoneAndId) &&
           zoneNameAndId.compareAndSet(currentZoneAndId, newZoneAndId)) {
-        LOG.info("Using route53 hosted zone " + newZoneAndId.getLeft() + "/" + newZoneAndId.getRight());
+        LOG.info(
+            "Using route53 hosted zone " + newZoneAndId.getLeft() + "/" + newZoneAndId.getRight());
       }
     }
     return true;
   }
 
-  private static Pair<String,String> getOrCreateHostedZone(final String zoneName) {
-    final Route53Api route53 = AsyncProxy.privilegedClient(Route53Api.class, AccountIdentifiers.ELB_SYSTEM_ACCOUNT);
-    for (int n=0; n<3; n++) {
-      final ListHostedZonesByNameResponseType zones = route53.listHostedZonesByName(listZonesRequest(zoneName));
+  private static Pair<String, String> getOrCreateHostedZone(final String zoneName) {
+    final Route53Api route53 =
+        AsyncProxy.privilegedClient(Route53Api.class, AccountIdentifiers.ELB_SYSTEM_ACCOUNT);
+    for (int n = 0; n < 3; n++) {
+      final ListHostedZonesByNameResponseType zones =
+          route53.listHostedZonesByName(listZonesRequest(zoneName));
       if (zones.getHostedZones() != null && !zones.getHostedZones().getMember().isEmpty()) {
         return pair(zones.getHostedZones().getMember().get(0), zoneName);
       } else {
         try {
-          final CreateHostedZoneResponseType createResponse = route53.createHostedZone(createZoneRequest(zoneName));
-          final Pair<String,String> newZoneAndId = pair(createResponse.getHostedZone(), zoneName);
-          LOG.info("Created route53 hosted zone " + newZoneAndId.getLeft() + "/" + newZoneAndId.getRight());
+          final CreateHostedZoneResponseType createResponse =
+              route53.createHostedZone(createZoneRequest(zoneName));
+          final Pair<String, String> newZoneAndId = pair(createResponse.getHostedZone(), zoneName);
+          LOG.info("Created route53 hosted zone "
+              + newZoneAndId.getLeft()
+              + "/"
+              + newZoneAndId.getRight());
           return newZoneAndId;
         } catch (final Exception e) {
           if (AsyncExceptions.isWebServiceErrorCode(e, "HostedZoneAlreadyExists")) {
@@ -103,7 +113,7 @@ public class LoadBalancingHostedZoneManager {
     return createZone;
   }
 
-  private static Pair<String,String> pair(final HostedZone zone, final String name) {
+  private static Pair<String, String> pair(final HostedZone zone, final String name) {
     return Pair.of(name, Strings.trimPrefix("/hostedzone/", zone.getId()));
   }
 }

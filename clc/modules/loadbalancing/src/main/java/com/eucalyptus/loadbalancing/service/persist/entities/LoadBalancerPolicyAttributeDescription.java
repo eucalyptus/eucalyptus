@@ -41,123 +41,126 @@ import org.hibernate.annotations.Type;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerPolicyAttributeDescriptionView;
 
-
 /**
  * @author Sang-Min Park
- *
  */
 @Entity
-@PersistenceContext( name = "eucalyptus_loadbalancing" )
-@Table( name = "metadata_policy_attr_description" )
-public class LoadBalancerPolicyAttributeDescription extends AbstractPersistent implements LoadBalancerPolicyAttributeDescriptionView {
-  private static Logger    LOG     = Logger.getLogger( LoadBalancerPolicyAttributeDescription.class );
+@PersistenceContext(name = "eucalyptus_loadbalancing")
+@Table(name = "metadata_policy_attr_description")
+public class LoadBalancerPolicyAttributeDescription extends AbstractPersistent
+    implements LoadBalancerPolicyAttributeDescriptionView {
+  private static Logger LOG = Logger.getLogger(LoadBalancerPolicyAttributeDescription.class);
 
   private static final long serialVersionUID = 1L;
- 
+
   @ManyToOne
-  @JoinColumn( name = "metadata_policy_desc_fk", nullable=false )
+  @JoinColumn(name = "metadata_policy_desc_fk", nullable = false)
   LoadBalancerPolicyDescription policyDescription = null;
-  
-  @Column( name = "attribute_name", nullable=true)
+
+  @Column(name = "attribute_name", nullable = true)
   private String attributeName = null;
 
-  @Type(type="text")
-  @Column( name = "attribute_value", nullable=true)
+  @Type(type = "text")
+  @Column(name = "attribute_value", nullable = true)
   private String attributeValue = null;
-  
-  private LoadBalancerPolicyAttributeDescription(){}
-  
-  public LoadBalancerPolicyAttributeDescription(final LoadBalancerPolicyDescription policyDesc, final String attrName, final String attrValue){
+
+  private LoadBalancerPolicyAttributeDescription() {
+  }
+
+  public LoadBalancerPolicyAttributeDescription(final LoadBalancerPolicyDescription policyDesc,
+      final String attrName, final String attrValue) {
     this.policyDescription = policyDesc;
     this.attributeName = attrName;
     this.attributeValue = attrValue;
   }
-  
-  public LoadBalancerPolicyDescription getPolicyDescription(){
+
+  public LoadBalancerPolicyDescription getPolicyDescription() {
     return this.policyDescription;
   }
-  
-  public void setPolicyDescription( final LoadBalancerPolicyDescription desc ){
+
+  public void setPolicyDescription(final LoadBalancerPolicyDescription desc) {
     this.policyDescription = desc;
   }
-  
-  public void setAttributeName(final String attrName){
+
+  public void setAttributeName(final String attrName) {
     this.attributeName = attrName;
   }
-  
-  public void setAttributeValue(final String attrValue){
-    this.attributeValue= attrValue;
+
+  public void setAttributeValue(final String attrValue) {
+    this.attributeValue = attrValue;
   }
-  
-  public String getAttributeName(){
+
+  public String getAttributeName() {
     return this.attributeName;
   }
-  
-  public String getAttributeValue(){
+
+  public String getAttributeValue() {
     return this.attributeValue;
   }
-  
+
   @Override
-  public boolean equals(final Object obj){
-    if ( this == obj ) {
+  public boolean equals(final Object obj) {
+    if (this == obj) {
       return true;
     }
-    if ( obj == null ) {
+    if (obj == null) {
       return false;
     }
-    if ( getClass( ) != obj.getClass( ) ) {
+    if (getClass() != obj.getClass()) {
       return false;
     }
-    
-    final LoadBalancerPolicyAttributeDescription other = (LoadBalancerPolicyAttributeDescription) obj;
-    
-    if ( this.policyDescription == null ) {
-      if ( other.policyDescription != null ) {
+
+    final LoadBalancerPolicyAttributeDescription other =
+        (LoadBalancerPolicyAttributeDescription) obj;
+
+    if (this.policyDescription == null) {
+      if (other.policyDescription != null) {
         return false;
       }
-    } else if ( !this.policyDescription.equals( other.policyDescription ) ) {
+    } else if (!this.policyDescription.equals(other.policyDescription)) {
       return false;
     }
-    
-    if ( this.attributeName == null ) {
-      if ( other.attributeName != null ) {
+
+    if (this.attributeName == null) {
+      if (other.attributeName != null) {
         return false;
       }
-    } else if ( !this.attributeName.equals( other.attributeName ) ) {
+    } else if (!this.attributeName.equals(other.attributeName)) {
       return false;
     }
-    
-    if ( this.attributeValue == null ) {
-      if ( other.attributeValue != null ) {
+
+    if (this.attributeValue == null) {
+      if (other.attributeValue != null) {
         return false;
       }
-    } else if ( !this.attributeValue.equals( other.attributeValue ) ) {
+    } else if (!this.attributeValue.equals(other.attributeValue)) {
       return false;
     }
 
     return true;
   }
-  
+
   @Override
-  public int hashCode(){
+  public int hashCode() {
     final int prime = 31;
     int result = 1;
-    result = prime * result +  ( ( this.policyDescription == null )
-      ? 0
-      : this.policyDescription.hashCode( ) );
-    
-    result = prime * result + ( ( this.attributeName == null )
-      ? 0
-      : this.attributeName.hashCode( ) );
-    
-    result = prime * result + ( ( this.attributeValue == null )
+    result = prime * result + ((this.policyDescription == null)
         ? 0
-        : this.attributeValue.hashCode( ) );
+        : this.policyDescription.hashCode());
+
+    result = prime * result + ((this.attributeName == null)
+        ? 0
+        : this.attributeName.hashCode());
+
+    result = prime * result + ((this.attributeValue == null)
+        ? 0
+        : this.attributeValue.hashCode());
     return result;
   }
-  
+
   @Override
-  public String toString(){
-    return String.format("LoadBalancer Policy Attribute Description %s: %s-%s", this.policyDescription.getPolicyName(), this.attributeName, this.attributeValue);
+  public String toString() {
+    return String.format("LoadBalancer Policy Attribute Description %s: %s-%s",
+        this.policyDescription.getPolicyName(), this.attributeName, this.attributeValue);
   }
 }

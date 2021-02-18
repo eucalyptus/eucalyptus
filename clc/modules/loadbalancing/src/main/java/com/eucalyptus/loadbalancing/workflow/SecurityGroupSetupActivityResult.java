@@ -30,7 +30,7 @@ package com.eucalyptus.loadbalancing.workflow;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 
-@JsonAutoDetect( isGetterVisibility = JsonAutoDetect.Visibility.NONE, getterVisibility = JsonAutoDetect.Visibility.ANY )
+@JsonAutoDetect(isGetterVisibility = JsonAutoDetect.Visibility.NONE, getterVisibility = JsonAutoDetect.Visibility.ANY)
 public class SecurityGroupSetupActivityResult {
 
   private String createdGroupName = null;
@@ -40,55 +40,55 @@ public class SecurityGroupSetupActivityResult {
   private String groupOwnerAccountId = null;
   private boolean shouldRollback = true;
 
-  public String getCreatedGroupName( ) {
+  public String getCreatedGroupName() {
     return createdGroupName;
   }
 
-  public void setCreatedGroupName( String createdGroupName ) {
+  public void setCreatedGroupName(String createdGroupName) {
     this.createdGroupName = createdGroupName;
   }
 
-  public String getCreatedGroupId( ) {
+  public String getCreatedGroupId() {
     return createdGroupId;
   }
 
-  public void setCreatedGroupId( String createdGroupId ) {
+  public void setCreatedGroupId(String createdGroupId) {
     this.createdGroupId = createdGroupId;
   }
 
-  public String getGroupName( ) {
+  public String getGroupName() {
     return groupName;
   }
 
-  public void setGroupName( String groupName ) {
+  public void setGroupName(String groupName) {
     this.groupName = groupName;
   }
 
-  public String getGroupId( ) {
+  public String getGroupId() {
     return groupId;
   }
 
-  public void setGroupId( String groupId ) {
+  public void setGroupId(String groupId) {
     this.groupId = groupId;
   }
 
-  public String getGroupOwnerAccountId( ) {
+  public String getGroupOwnerAccountId() {
     return groupOwnerAccountId;
   }
 
-  public void setGroupOwnerAccountId( String groupOwnerAccountId ) {
+  public void setGroupOwnerAccountId(String groupOwnerAccountId) {
     this.groupOwnerAccountId = groupOwnerAccountId;
   }
 
-  public boolean getShouldRollback( ) {
+  public boolean getShouldRollback() {
     return shouldRollback;
   }
 
-  public boolean isShouldRollback( ) {
+  public boolean isShouldRollback() {
     return shouldRollback;
   }
 
-  public void setShouldRollback( boolean shouldRollback ) {
+  public void setShouldRollback(boolean shouldRollback) {
     this.shouldRollback = shouldRollback;
   }
 }

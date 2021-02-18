@@ -17,10 +17,13 @@ import io.vavr.collection.Stream;
  *
  */
 public interface LoadBalancerPolicyTypeDescriptions {
-  CompatFunction<LoadBalancerPolicyTypeDescription, LoadBalancerPolicyTypeDescriptionFullView> FULL_VIEW =
+  CompatFunction<LoadBalancerPolicyTypeDescription, LoadBalancerPolicyTypeDescriptionFullView>
+      FULL_VIEW =
       policyTypeDescription -> ImmutableLoadBalancerPolicyTypeDescriptionFullView.builder()
-          .policyTypeDescription( ImmutableLoadBalancerPolicyTypeDescriptionView.copyOf( policyTypeDescription ) )
-          .policyAttributeTypeDescriptions( Stream.ofAll( policyTypeDescription.getPolicyAttributeTypeDescriptions() )
-              .map( ImmutableLoadBalancerPolicyAttributeTypeDescriptionView::copyOf ) )
+          .policyTypeDescription(
+              ImmutableLoadBalancerPolicyTypeDescriptionView.copyOf(policyTypeDescription))
+          .policyAttributeTypeDescriptions(
+              Stream.ofAll(policyTypeDescription.getPolicyAttributeTypeDescriptions())
+                  .map(ImmutableLoadBalancerPolicyAttributeTypeDescriptionView::copyOf))
           .build();
 }

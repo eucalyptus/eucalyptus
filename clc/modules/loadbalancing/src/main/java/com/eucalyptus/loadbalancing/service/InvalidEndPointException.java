@@ -33,12 +33,12 @@ import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 /**
  * @author Sang-Min Park
- *
  */
-@QueryBindingInfo( statusCode = 400 )
+@QueryBindingInfo(statusCode = 400)
 public class InvalidEndPointException extends LoadBalancingException {
-	private static final long serialVersionUID = 1L;
-	  public InvalidEndPointException( ){
-	    super( "InvalidEndPoint", Role.Sender, "The specified EndPoint (instance) is not valid");
-	  }
+  private static final long serialVersionUID = 1L;
+
+  public InvalidEndPointException() {
+    super("InvalidEndPoint", Role.Sender, "The specified EndPoint (instance) is not valid");
+  }
 }

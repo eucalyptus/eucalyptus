@@ -34,12 +34,13 @@ import com.amazonaws.services.simpleworkflow.flow.annotations.Workflow;
 import com.amazonaws.services.simpleworkflow.flow.annotations.WorkflowRegistrationOptions;
 
 @Workflow
-@WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 120, 
-defaultTaskStartToCloseTimeoutSeconds = 60)
+@WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 120,
+    defaultTaskStartToCloseTimeoutSeconds = 60)
 public interface CreateLoadBalancerWorkflow {
   @Execute(name = "CreateLoadBalancer", version = "1.0")
-  void createLoadBalancer(final String accountId, final String loadbalancer, final String[] availabilityZones);
- 
+  void createLoadBalancer(final String accountId, final String loadbalancer,
+      final String[] availabilityZones);
+
   @GetState
   ElbWorkflowState getState();
 }

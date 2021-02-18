@@ -40,69 +40,75 @@ import com.eucalyptus.loadbalancing.common.LoadBalancing;
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
 @ComponentPart(LoadBalancing.class)
-public class CreateLoadBalancerListenersWorkflowImpl implements CreateLoadBalancerListenersWorkflow {
-  private static Logger    LOG     = Logger.getLogger(  CreateLoadBalancerListenersWorkflowImpl.class );
-  
-  final LoadBalancingActivitiesClient client = 
-      new LoadBalancingActivitiesClientImpl(null, LoadBalancingJsonDataConverter.getDefault(), null);
-  private ElbWorkflowState state = 
+public class CreateLoadBalancerListenersWorkflowImpl
+    implements CreateLoadBalancerListenersWorkflow {
+  private static Logger LOG = Logger.getLogger(CreateLoadBalancerListenersWorkflowImpl.class);
+
+  final LoadBalancingActivitiesClient client =
+      new LoadBalancingActivitiesClientImpl(null, LoadBalancingJsonDataConverter.getDefault(),
+          null);
+  private ElbWorkflowState state =
       ElbWorkflowState.WORKFLOW_RUNNING;
   TryCatchFinally task = null;
- 
+
   private Promise<AuthorizeSSLCertificateActivityResult> authCert = null;
   private Promise<AuthorizeIngressRuleActivityResult> ingressRule = null;
+
   @Override
   public void createLoadBalancerListeners(final String accountId, final String loadbalancer,
       final Listener[] listeners) {
-    task = new TryCatchFinally(){
+    task = new TryCatchFinally() {
       @Override
       protected void doTry() throws Throwable {
-        Promise<Void> checkSSL = client.createListenerCheckSSLCertificateId(accountId, loadbalancer, listeners);
-        authCert = 
-            client.createListenerAuthorizeSSLCertificate(Promise.asPromise(accountId), 
+        Promise<Void> checkSSL =
+            client.createListenerCheckSSLCertificateId(accountId, loadbalancer, listeners);
+        authCert =
+            client.createListenerAuthorizeSSLCertificate(Promise.asPromise(accountId),
                 Promise.asPromise(loadbalancer), Promise.asPromise(listeners), checkSSL);
-        ingressRule = client.createListenerAuthorizeIngressRule(Promise.asPromise(accountId), 
+        ingressRule = client.createListenerAuthorizeIngressRule(Promise.asPromise(accountId),
             Promise.asPromise(loadbalancer), Promise.asPromise(listeners), checkSSL);
-        
-        Promise<Void> healthCheck = client.createListenerUpdateHealthCheckConfig(Promise.asPromise(accountId),
-            Promise.asPromise(loadbalancer), Promise.asPromise(listeners), checkSSL);
-        Promise<Void> sslDefaultPolicy = client.createListenerAddDefaultSSLPolicy(Promise.asPromise(accountId),
-            Promise.asPromise(loadbalancer), Promise.asPromise(listeners), checkSSL);
+
+        Promise<Void> healthCheck =
+            client.createListenerUpdateHealthCheckConfig(Promise.asPromise(accountId),
+                Promise.asPromise(loadbalancer), Promise.asPromise(listeners), checkSSL);
+        Promise<Void> sslDefaultPolicy =
+            client.createListenerAddDefaultSSLPolicy(Promise.asPromise(accountId),
+                Promise.asPromise(loadbalancer), Promise.asPromise(listeners), checkSSL);
       }
-      
+
       @Override
       protected void doCatch(Throwable e) throws Throwable {
-        if ( e instanceof CancellationException) {
+        if (e instanceof CancellationException) {
           LOG.warn("Workflow for creating ELB listener is cancelled");
           state = ElbWorkflowState.WORKFLOW_CANCELLED;
           return;
         }
         // rollback activities
-        if(authCert!=null && authCert.isReady()) {
-          client.createListenerAuthorizeSSLCertificateRollback(Promise.asPromise(accountId), 
+        if (authCert != null && authCert.isReady()) {
+          client.createListenerAuthorizeSSLCertificateRollback(Promise.asPromise(accountId),
               Promise.asPromise(loadbalancer), authCert);
         }
-        
-        if(ingressRule!=null && ingressRule.isReady()) {
-          client.createListenerAuthorizeIngressRuleRollback(Promise.asPromise(accountId), 
+
+        if (ingressRule != null && ingressRule.isReady()) {
+          client.createListenerAuthorizeIngressRuleRollback(Promise.asPromise(accountId),
               Promise.asPromise(loadbalancer), ingressRule);
         }
-       
+
         state = ElbWorkflowState.WORKFLOW_FAILED;
         LOG.error("Workflow for creating loadbalancer listener failed", e);
       }
 
       @Override
       protected void doFinally() throws Throwable {
-        if (state == ElbWorkflowState.WORKFLOW_RUNNING)
-          state = ElbWorkflowState.WORKFLOW_SUCCESS;   
+        if (state == ElbWorkflowState.WORKFLOW_RUNNING) {
+          state = ElbWorkflowState.WORKFLOW_SUCCESS;
+        }
       }
     };
   }
-  
+
   @Override
   public ElbWorkflowState getState() {
     return state;

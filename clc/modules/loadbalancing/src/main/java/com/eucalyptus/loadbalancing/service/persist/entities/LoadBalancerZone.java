@@ -46,124 +46,127 @@ import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerZoneView;
 
 /**
  * @author Sang-Min Park
-*
-*/
+ */
 @Entity
-@PersistenceContext( name = "eucalyptus_loadbalancing" )
-@Table( name = "metadata_zone" )
+@PersistenceContext(name = "eucalyptus_loadbalancing")
+@Table(name = "metadata_zone")
 public class LoadBalancerZone extends AbstractPersistent implements LoadBalancerZoneView {
 
-	public enum STATE {
-		InService, OutOfService
-	}
-	
-	private static final long serialVersionUID = 1L;
+  public enum STATE {
+    InService, OutOfService
+  }
 
-	protected LoadBalancerZone(){ }
-	
-	private LoadBalancerZone(
-		final LoadBalancer lb,
-		final String zone,
-		final String subnetId
-	){
-		this.loadbalancer = lb;
-		this.zoneName=zone;
-		this.subnetId = subnetId;
-		this.uniqueName = this.createUniqueName();
-	}
+  private static final long serialVersionUID = 1L;
 
-	public static LoadBalancerZone create(
-		final LoadBalancer lb,
-		final String zone,
-		final String subnetId
-	){
-		return new LoadBalancerZone(lb, zone, subnetId);
-	}
+  protected LoadBalancerZone() {
+  }
 
-	public static LoadBalancerZone named(
-		final LoadBalancer lb,
-		final String zone
-	){
-		return new LoadBalancerZone(lb, zone, null);
-	}
-	
-	@ManyToOne
-	@JoinColumn( name = "metadata_loadbalancer_fk", nullable=false )
-	private LoadBalancer loadbalancer = null;
-	
-	
-	@Column(name="autoscaling_group")
-	private String autoscalingGroup = null;	
+  private LoadBalancerZone(
+      final LoadBalancer lb,
+      final String zone,
+      final String subnetId
+  ) {
+    this.loadbalancer = lb;
+    this.zoneName = zone;
+    this.subnetId = subnetId;
+    this.uniqueName = this.createUniqueName();
+  }
 
-	@Column(name="zone_name", nullable=false)
-	private String zoneName;
+  public static LoadBalancerZone create(
+      final LoadBalancer lb,
+      final String zone,
+      final String subnetId
+  ) {
+    return new LoadBalancerZone(lb, zone, subnetId);
+  }
 
-	@Column(name="subnetId")
-	private String subnetId;
+  public static LoadBalancerZone named(
+      final LoadBalancer lb,
+      final String zone
+  ) {
+    return new LoadBalancerZone(lb, zone, null);
+  }
 
-	@Column(name="unique_name", nullable=false, unique=true)
-	private String uniqueName;
-	
-	@Column(name="zone_state")
-	private String zoneState;
+  @ManyToOne
+  @JoinColumn(name = "metadata_loadbalancer_fk", nullable = false)
+  private LoadBalancer loadbalancer = null;
 
-	@OneToMany(fetch = FetchType.LAZY, mappedBy = "zone")
-	private Collection<LoadBalancerServoInstance> servoInstances = null;
+  @Column(name = "autoscaling_group")
+  private String autoscalingGroup = null;
 
-	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, mappedBy = "zone")
-	private Collection<LoadBalancerBackendInstance> backendInstances = null;
-		
-	public String getName( ){
-		return this.zoneName;
-	}
+  @Column(name = "zone_name", nullable = false)
+  private String zoneName;
 
-	public String getSubnetId( ) {
-		return subnetId;
-	}
+  @Column(name = "subnetId")
+  private String subnetId;
 
-  public LoadBalancer getLoadbalancer(){
-		return this.loadbalancer;
-	} 
+  @Column(name = "unique_name", nullable = false, unique = true)
+  private String uniqueName;
 
-	public Collection<LoadBalancerServoInstance> getServoInstances( ) {
-		return servoInstances;
-	}
+  @Column(name = "zone_state")
+  private String zoneState;
 
-	public Collection<LoadBalancerBackendInstance> getBackendInstances(){
-		return this.backendInstances;
-	}
-	
-	public void setState(STATE state){
-		this.zoneState = state.name();
-	}
-	
-	public STATE getState(){
-		return Enum.valueOf(STATE.class, this.zoneState);
-	}
-	
-	public String getAutoscalingGroup() {
-	  return this.autoscalingGroup;
-	}
-	
-	public void setAutoscalingGroup(final String group) {
-	  this.autoscalingGroup = group;
-	}
+  @OneToMany(fetch = FetchType.LAZY, mappedBy = "zone")
+  private Collection<LoadBalancerServoInstance> servoInstances = null;
 
-	@PrePersist
-	private void generateOnCommit( ) {
-		if(this.uniqueName==null)
-			this.uniqueName = createUniqueName( );
-	}
+  @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, mappedBy = "zone")
+  private Collection<LoadBalancerBackendInstance> backendInstances = null;
 
-	protected String createUniqueName( ) {
-		return String.format("zone-%s-%s-%s", this.loadbalancer.getOwnerAccountNumber(), this.loadbalancer.getDisplayName(), this.zoneName);
-	}
-	  
-	@Override
-	public String toString(){
-		String name="unassigned";
-		if(this.loadbalancer!=null && this.zoneName!=null)
-			name = String.format("loadbalancer-zone-%s-%s", this.loadbalancer.getDisplayName(), this.zoneName);
-		return name;
-	}
+  public String getName() {
+    return this.zoneName;
+  }
+
+  public String getSubnetId() {
+    return subnetId;
+  }
+
+  public LoadBalancer getLoadbalancer() {
+    return this.loadbalancer;
+  }
+
+  public Collection<LoadBalancerServoInstance> getServoInstances() {
+    return servoInstances;
+  }
+
+  public Collection<LoadBalancerBackendInstance> getBackendInstances() {
+    return this.backendInstances;
+  }
+
+  public void setState(STATE state) {
+    this.zoneState = state.name();
+  }
+
+  public STATE getState() {
+    return Enum.valueOf(STATE.class, this.zoneState);
+  }
+
+  public String getAutoscalingGroup() {
+    return this.autoscalingGroup;
+  }
+
+  public void setAutoscalingGroup(final String group) {
+    this.autoscalingGroup = group;
+  }
+
+  @PrePersist
+  private void generateOnCommit() {
+    if (this.uniqueName == null) {
+      this.uniqueName = createUniqueName();
+    }
+  }
+
+  protected String createUniqueName() {
+    return String.format("zone-%s-%s-%s", this.loadbalancer.getOwnerAccountNumber(),
+        this.loadbalancer.getDisplayName(), this.zoneName);
+  }
+
+  @Override
+  public String toString() {
+    String name = "unassigned";
+    if (this.loadbalancer != null && this.zoneName != null) {
+      name = String.format("loadbalancer-zone-%s-%s", this.loadbalancer.getDisplayName(),
+          this.zoneName);
+    }
+    return name;
+  }
 }

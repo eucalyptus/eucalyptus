@@ -34,20 +34,20 @@ import com.eucalyptus.simpleworkflow.common.client.WorkflowStarterException;
 import org.apache.log4j.Logger;
 
 public class UpgradeLoadBalancerWorkflowStarter implements WorkflowStarter {
-  private static Logger LOG     =
-          Logger.getLogger(  UpgradeLoadBalancerWorkflowStarter.class );
+  private static Logger LOG =
+      Logger.getLogger(UpgradeLoadBalancerWorkflowStarter.class);
   private static final String ELB_UPGRADE_LOADBALANCER_WORKFLOW_ID =
-          "upgrade-loadbalancer-workflow-01";
+      "upgrade-loadbalancer-workflow-01";
 
   @Override
   public void start() throws WorkflowStarterException {
     try {
       final UpgradeLoadBalancerWorkflowClientExternal workflow =
-              WorkflowClients.getUpgradeLoadBalancerClient(ELB_UPGRADE_LOADBALANCER_WORKFLOW_ID);
+          WorkflowClients.getUpgradeLoadBalancerClient(ELB_UPGRADE_LOADBALANCER_WORKFLOW_ID);
       workflow.upgradeLoadBalancer();
-    } catch(final WorkflowExecutionAlreadyStartedException ex ) {
+    } catch (final WorkflowExecutionAlreadyStartedException ex) {
       ;
-    }catch(final Exception ex) {
+    } catch (final Exception ex) {
       throw new WorkflowStarterException("Failed to start loadbalancing upgrade workflow", ex);
     }
   }

@@ -9,18 +9,16 @@ import javax.annotation.Nullable;
 import org.immutables.value.Value.Immutable;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerZone.STATE;
 
-
 @Immutable
 public interface LoadBalancerZoneView {
 
-  String getName( );
+  String getName();
 
   @Nullable
-  String getSubnetId( );
+  String getSubnetId();
 
-  STATE getState( );
+  STATE getState();
 
   @Nullable
-  String getAutoscalingGroup( );
-
+  String getAutoscalingGroup();
 }

@@ -10,30 +10,28 @@ import javax.annotation.Nullable;
 import org.immutables.value.Value.Immutable;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendInstance.STATE;
 
-
 @Immutable
 public interface LoadBalancerBackendInstanceView {
 
-  String getDisplayName( );
+  String getDisplayName();
 
-  STATE getState( );
+  STATE getState();
 
-  String getInstanceId( );
+  String getInstanceId();
 
-  STATE getBackendState( );
+  STATE getBackendState();
 
-  String getReasonCode( );
+  String getReasonCode();
 
-  String getDescription( );
-
-  @Nullable
-  String getIpAddress( );
+  String getDescription();
 
   @Nullable
-  String getPartition( );
+  String getIpAddress();
 
-  Date getInstanceUpdateTimestamp( );
+  @Nullable
+  String getPartition();
 
-  Date getCreationTimestamp( );
+  Date getInstanceUpdateTimestamp();
 
+  Date getCreationTimestamp();
 }

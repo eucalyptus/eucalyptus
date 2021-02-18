@@ -34,9 +34,9 @@ import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.simpleworkflow.common.client.Config;
 import com.eucalyptus.util.Exceptions;
+
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
 @ConfigurableClass(root = "services.loadbalancing", description = "Parameters controlling loadbalancing")
 public class LoadBalancingServiceProperties {
@@ -47,55 +47,55 @@ public class LoadBalancingServiceProperties {
   private static final String DEFAULT_SWF_WORKFLOW_WORKER_CONFIG =
       "{ \"DomainRetentionPeriodInDays\": 1, \"PollThreadCount\": 4, \"MaximumPollRateIntervalMilliseconds\": 50, \"MaximumPollRatePerSecond\": 20 }";
 
-  @ConfigurableField( displayName = "number_of_vm_per_zone",
+  @ConfigurableField(displayName = "number_of_vm_per_zone",
       description = "number of VMs per loadbalancer zone",
       initial = "1",
       readonly = false,
       type = ConfigurableFieldType.KEYVALUE
-      )
+  )
   public static String VM_PER_ZONE = "1";
 
   @ConfigurableField(
       initial = "LoadbalancingDomain",
       description = "The simple workflow service domain for ELB",
-      changeListener = Config.NameValidatingChangeListener.class )
+      changeListener = Config.NameValidatingChangeListener.class)
   public static volatile String SWF_DOMAIN = "LoadbalancingDomain";
 
   @ConfigurableField(
       initial = "LoadBalancerTasks",
       description = "The simple workflow service task list for ELB",
-      changeListener = Config.NameValidatingChangeListener.class )
+      changeListener = Config.NameValidatingChangeListener.class)
   public static volatile String SWF_TASKLIST = "LoadBalancerTasks";
 
   @ConfigurableField(
       initial = DEFAULT_SWF_ACTIVITY_WORKER_CONFIG,
       description = "JSON configuration for the ELB simple workflow activity worker",
-      changeListener = Config.ActivityWorkerConfigurationValidatingChangeListener.class )
+      changeListener = Config.ActivityWorkerConfigurationValidatingChangeListener.class)
   public static volatile String SWF_ACTIVITY_WORKER_CONFIG = DEFAULT_SWF_ACTIVITY_WORKER_CONFIG;
 
   @ConfigurableField(
       initial = DEFAULT_SWF_WORKFLOW_WORKER_CONFIG,
       description = "JSON configuration for the ELB simple workflow decision worker",
-      changeListener = Config.WorkflowWorkerConfigurationValidatingChangeListener.class )
+      changeListener = Config.WorkflowWorkerConfigurationValidatingChangeListener.class)
   public static volatile String SWF_WORKFLOW_WORKER_CONFIG = DEFAULT_SWF_WORKFLOW_WORKER_CONFIG;
 
   @ConfigurableField(
       initial = "50",
       description = "Maximum number of user defined tags for a load balancer.",
-      changeListener = PropertyChangeListeners.IsNonNegativeInteger.class  )
+      changeListener = PropertyChangeListeners.IsNonNegativeInteger.class)
   public static volatile int MAX_TAGS = 50;
 
-  public static int getCapacityPerZone( ) {
+  public static int getCapacityPerZone() {
     int numVm = 1;
-    try{
+    try {
       numVm = Integer.parseInt(VM_PER_ZONE);
-    }catch(NumberFormatException ex){
+    } catch (NumberFormatException ex) {
       throw Exceptions.toUndeclared("unable to parse loadbalancer_num_vm");
     }
     return numVm;
   }
 
-  public static int getMaxTags( ) {
+  public static int getMaxTags() {
     return MAX_TAGS;
   }
 }

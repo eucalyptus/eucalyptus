@@ -7,12 +7,10 @@ package com.eucalyptus.loadbalancing.service.persist.views;
 
 import org.immutables.value.Value.Immutable;
 
-
 @Immutable
 public interface LoadBalancerSecurityGroupRefView {
 
-  String getGroupName( );
+  String getGroupName();
 
-  String getGroupId( );
-
+  String getGroupId();
 }

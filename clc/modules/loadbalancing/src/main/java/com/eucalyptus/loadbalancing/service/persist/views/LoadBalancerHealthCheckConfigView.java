@@ -7,17 +7,16 @@ package com.eucalyptus.loadbalancing.service.persist.views;
 
 import org.immutables.value.Value.Immutable;
 
-
 @Immutable
 public interface LoadBalancerHealthCheckConfigView {
 
   Integer getHealthyThreshold();
 
-  Integer getInterval( );
+  Integer getInterval();
 
-  String getTarget( );
+  String getTarget();
 
-  Integer getTimeout( );
+  Integer getTimeout();
 
-  Integer getUnhealthyThreshold( );
+  Integer getUnhealthyThreshold();
 }

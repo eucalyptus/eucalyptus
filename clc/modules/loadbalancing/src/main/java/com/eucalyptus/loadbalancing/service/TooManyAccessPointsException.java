@@ -34,10 +34,12 @@ import com.eucalyptus.ws.protocol.QueryBindingInfo;
 /**
  *
  */
-@QueryBindingInfo( statusCode = 400 )
+@QueryBindingInfo(statusCode = 400)
 public class TooManyAccessPointsException extends LoadBalancingException {
   private static final long serialVersionUID = 1L;
-  public TooManyAccessPointsException(){
-    super( "TooManyAccessPoints", Role.Sender, "The quota for the number of LoadBalancers has already been reached." );
+
+  public TooManyAccessPointsException() {
+    super("TooManyAccessPoints", Role.Sender,
+        "The quota for the number of LoadBalancers has already been reached.");
   }
 }

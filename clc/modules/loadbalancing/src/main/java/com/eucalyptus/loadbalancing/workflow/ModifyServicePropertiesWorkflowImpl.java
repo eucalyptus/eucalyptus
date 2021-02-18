@@ -37,42 +37,44 @@ import com.eucalyptus.loadbalancing.common.LoadBalancing;
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
 @ComponentPart(LoadBalancing.class)
 public class ModifyServicePropertiesWorkflowImpl
     implements ModifyServicePropertiesWorkflow {
 
-  private static Logger    LOG     = Logger.getLogger(  ModifyServicePropertiesWorkflowImpl.class );
+  private static Logger LOG = Logger.getLogger(ModifyServicePropertiesWorkflowImpl.class);
 
-  final LoadBalancingActivitiesClient client = 
-      new LoadBalancingActivitiesClientImpl(null, LoadBalancingJsonDataConverter.getDefault(), null);
-  private ElbWorkflowState state = 
+  final LoadBalancingActivitiesClient client =
+      new LoadBalancingActivitiesClientImpl(null, LoadBalancingJsonDataConverter.getDefault(),
+          null);
+  private ElbWorkflowState state =
       ElbWorkflowState.WORKFLOW_RUNNING;
   TryCatchFinally task = null;
-  
+
   @Override
   public void modifyServiceProperties(final String machineImageId, final String instanceType,
       final String keyname, final String initScript) {
     task = new TryCatchFinally() {
       @Override
       protected void doTry() throws Throwable {
-        final Promise<Void> validator = 
-            client.modifyServicePropertiesValidateRequest(machineImageId, instanceType, keyname, initScript);
+        final Promise<Void> validator =
+            client.modifyServicePropertiesValidateRequest(machineImageId, instanceType, keyname,
+                initScript);
         client.modifyServicePropertiesUpdateScalingGroup(machineImageId, instanceType,
             keyname, initScript, validator);
       }
-      
+
       @Override
       protected void doCatch(Throwable e) throws Throwable {
         state = ElbWorkflowState.WORKFLOW_FAILED;
-        LOG.error("Workflow for modifying ELB service properties has failed: ", e);   
+        LOG.error("Workflow for modifying ELB service properties has failed: ", e);
       }
 
       @Override
       protected void doFinally() throws Throwable {
-        if (state == ElbWorkflowState.WORKFLOW_RUNNING)
+        if (state == ElbWorkflowState.WORKFLOW_RUNNING) {
           state = ElbWorkflowState.WORKFLOW_SUCCESS;
+        }
       }
     };
   }

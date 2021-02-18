@@ -16,7 +16,7 @@ import com.google.common.base.Predicate;
 public interface LoadBalancerSecurityGroups {
 
   <T> List<T> listByExample(LoadBalancerSecurityGroup example,
-                            Predicate<? super LoadBalancerSecurityGroup> filter,
-                            Function<? super LoadBalancerSecurityGroup, T> transform) throws LoadBalancingMetadataException;
-
+      Predicate<? super LoadBalancerSecurityGroup> filter,
+      Function<? super LoadBalancerSecurityGroup, T> transform)
+      throws LoadBalancingMetadataException;
 }

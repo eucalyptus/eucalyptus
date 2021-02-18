@@ -8,20 +8,18 @@ package com.eucalyptus.loadbalancing.service.persist.views;
 import javax.annotation.Nullable;
 import org.immutables.value.Value.Immutable;
 
-
 @Immutable
 public interface LoadBalancerAutoScalingGroupView {
 
-  String getName( );
+  String getName();
 
-  int getCapacity( );
+  int getCapacity();
 
-  String getAvailabilityZone( );
-
-  @Nullable
-  String getUserSubnetId( );
+  String getAvailabilityZone();
 
   @Nullable
-  String getSystemSubnetId( );
+  String getUserSubnetId();
 
+  @Nullable
+  String getSystemSubnetId();
 }

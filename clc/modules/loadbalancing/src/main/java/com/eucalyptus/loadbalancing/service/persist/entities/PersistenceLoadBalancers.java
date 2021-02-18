@@ -14,10 +14,11 @@ import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 
-
 @ComponentNamed
-public class PersistenceLoadBalancers extends LoadBalancingPersistenceSupport<LoadBalancerMetadata, LoadBalancer> implements LoadBalancers {
-  
+public class PersistenceLoadBalancers
+    extends LoadBalancingPersistenceSupport<LoadBalancerMetadata, LoadBalancer>
+    implements LoadBalancers {
+
   public PersistenceLoadBalancers() {
     super("loadbalancer");
   }
@@ -30,13 +31,14 @@ public class PersistenceLoadBalancers extends LoadBalancingPersistenceSupport<Lo
       final Predicate<? super LoadBalancer> filter,
       final Function<? super LoadBalancer, T> updateTransform
   ) throws LoadBalancingMetadataException {
-    return updateByExample( example, ownerFullName, key, balancer -> {
-      if ( !filter.apply( balancer ) ) {
-        throw Exceptions.toUndeclared( notFoundException(
-            qualifyOwner( "Filter denied "+typeDescription+" '"+key+"'", ownerFullName ), null ) );
+    return updateByExample(example, ownerFullName, key, balancer -> {
+      if (!filter.apply(balancer)) {
+        throw Exceptions.toUndeclared(notFoundException(
+            qualifyOwner("Filter denied " + typeDescription + " '" + key + "'", ownerFullName),
+            null));
       }
-      return updateTransform.apply( balancer );
-    } );
+      return updateTransform.apply(balancer);
+    });
   }
 
   @Override

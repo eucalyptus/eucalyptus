@@ -9,19 +9,17 @@ import javax.annotation.Nullable;
 import org.immutables.value.Value.Immutable;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener.PROTOCOL;
 
-
 @Immutable
 public interface LoadBalancerListenerView {
 
-  int getInstancePort( );
+  int getInstancePort();
 
-  PROTOCOL getInstanceProtocol( );
+  PROTOCOL getInstanceProtocol();
 
-  int getLoadbalancerPort( );
+  int getLoadbalancerPort();
 
-  PROTOCOL getProtocol( );
+  PROTOCOL getProtocol();
 
   @Nullable
-  String getCertificateId( );
-
+  String getCertificateId();
 }

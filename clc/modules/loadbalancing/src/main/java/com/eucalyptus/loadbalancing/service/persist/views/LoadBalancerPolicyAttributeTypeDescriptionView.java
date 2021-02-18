@@ -8,20 +8,18 @@ package com.eucalyptus.loadbalancing.service.persist.views;
 import javax.annotation.Nullable;
 import org.immutables.value.Value.Immutable;
 
-
 @Immutable
 public interface LoadBalancerPolicyAttributeTypeDescriptionView {
 
-  String getAttributeName( );
+  String getAttributeName();
 
-  String getAttributeType( );
+  String getAttributeType();
 
-  String getCardinality( );
-
-  @Nullable
-  String getDefaultValue( );
+  String getCardinality();
 
   @Nullable
-  String getDescription( );
+  String getDefaultValue();
 
+  @Nullable
+  String getDescription();
 }

@@ -47,154 +47,163 @@ import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerPolicyDescriptionView;
 import com.google.common.collect.Lists;
 
-
 @Entity
-@PersistenceContext( name = "eucalyptus_loadbalancing" )
-@Table( name = "metadata_policy_description" )
-public class LoadBalancerPolicyDescription extends AbstractPersistent implements LoadBalancerPolicyDescriptionView {
-  private static Logger    LOG     = Logger.getLogger( LoadBalancerPolicyDescription.class );
+@PersistenceContext(name = "eucalyptus_loadbalancing")
+@Table(name = "metadata_policy_description")
+public class LoadBalancerPolicyDescription extends AbstractPersistent
+    implements LoadBalancerPolicyDescriptionView {
+  private static Logger LOG = Logger.getLogger(LoadBalancerPolicyDescription.class);
 
   private static final long serialVersionUID = 1L;
-  
+
   @ManyToOne
-  @JoinColumn( name = "metadata_loadbalancer_fk", nullable=false )
+  @JoinColumn(name = "metadata_loadbalancer_fk", nullable = false)
   private LoadBalancer loadbalancer = null;
-  
-  @ManyToMany( fetch = FetchType.LAZY, mappedBy="policies")
+
+  @ManyToMany(fetch = FetchType.LAZY, mappedBy = "policies")
   private List<LoadBalancerListener> listeners = null;
 
-  @ManyToMany( fetch = FetchType.LAZY, mappedBy="policyDescriptions" )
+  @ManyToMany(fetch = FetchType.LAZY, mappedBy = "policyDescriptions")
   private List<LoadBalancerBackendServerDescription> backendServers = null;
-  
-  @Column( name = "policy_name", nullable=false)
+
+  @Column(name = "policy_name", nullable = false)
   private String policyName = null;
-  
-  @Column( name = "policy_type_name" )
+
+  @Column(name = "policy_type_name")
   private String policyTypeName = null;
 
-  @Column( name = "unique_name", unique=true, nullable=false)
+  @Column(name = "unique_name", unique = true, nullable = false)
   private String uniqueName = null;
 
   @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, mappedBy = "policyDescription")
   private List<LoadBalancerPolicyAttributeDescription> policyAttrDescription = null;
-  
-  private LoadBalancerPolicyDescription(){}
-  
-  private LoadBalancerPolicyDescription(final LoadBalancer lb, final String policyName){
+
+  private LoadBalancerPolicyDescription() {
+  }
+
+  private LoadBalancerPolicyDescription(final LoadBalancer lb, final String policyName) {
     this.loadbalancer = lb;
     this.policyName = policyName;
   }
-  
-  public LoadBalancerPolicyDescription(final LoadBalancer lb, final String policyName, final String policyTypeName){
+
+  public LoadBalancerPolicyDescription(final LoadBalancer lb, final String policyName,
+      final String policyTypeName) {
     this(lb, policyName);
     this.policyTypeName = policyTypeName;
   }
-  
-  public LoadBalancerPolicyDescription(final LoadBalancer lb, final String policyName, 
-      final String policyTypeName, final List<LoadBalancerPolicyAttributeDescription> descs){
+
+  public LoadBalancerPolicyDescription(final LoadBalancer lb, final String policyName,
+      final String policyTypeName, final List<LoadBalancerPolicyAttributeDescription> descs) {
     this(lb, policyName, policyTypeName);
     this.policyAttrDescription = descs;
-  } 
-  
-  public static LoadBalancerPolicyDescription named(final LoadBalancer lb, final String policyName){
-    final LoadBalancerPolicyDescription instance = new LoadBalancerPolicyDescription(lb, policyName);
+  }
+
+  public static LoadBalancerPolicyDescription named(final LoadBalancer lb,
+      final String policyName) {
+    final LoadBalancerPolicyDescription instance =
+        new LoadBalancerPolicyDescription(lb, policyName);
     instance.uniqueName = instance.createUniqueName();
     return instance;
   }
-  
-  public String getPolicyName(){
+
+  public String getPolicyName() {
     return this.policyName;
   }
-  
-  public String getPolicyTypeName(){
+
+  public String getPolicyTypeName() {
     return this.policyTypeName;
   }
-  
+
   public void addPolicyAttributeDescription(final String attrName, String attrValue) {
-    final LoadBalancerPolicyAttributeDescription attr = new LoadBalancerPolicyAttributeDescription(this, attrName, attrValue);
-    if(this.policyAttrDescription == null)
+    final LoadBalancerPolicyAttributeDescription attr =
+        new LoadBalancerPolicyAttributeDescription(this, attrName, attrValue);
+    if (this.policyAttrDescription == null) {
       this.policyAttrDescription = Lists.newArrayList();
+    }
     this.policyAttrDescription.add(attr);
   }
 
-  public List<LoadBalancerPolicyAttributeDescription> getPolicyAttributeDescriptions(){
+  public List<LoadBalancerPolicyAttributeDescription> getPolicyAttributeDescriptions() {
     return this.policyAttrDescription;
   }
 
-  public List<LoadBalancerListener> getListeners(){
+  public List<LoadBalancerListener> getListeners() {
     return this.listeners;
   }
-  
-  public List<LoadBalancerBackendServerDescription> getBackendServers(){
+
+  public List<LoadBalancerBackendServerDescription> getBackendServers() {
     return this.backendServers;
   }
-  
+
   @PrePersist
-  private void generateOnCommit( ) {
-    if(this.uniqueName==null)
-      this.uniqueName = createUniqueName( );
+  private void generateOnCommit() {
+    if (this.uniqueName == null) {
+      this.uniqueName = createUniqueName();
+    }
   }
 
-  protected String createUniqueName( ) {
-    return String.format("policy-%s-%s-%s", this.loadbalancer.getOwnerAccountNumber(), this.loadbalancer.getDisplayName(), this.policyName);
+  protected String createUniqueName() {
+    return String.format("policy-%s-%s-%s", this.loadbalancer.getOwnerAccountNumber(),
+        this.loadbalancer.getDisplayName(), this.policyName);
   }
-  
-  public String getUniqueName(){
+
+  public String getUniqueName() {
     return this.uniqueName;
   }
-  
+
   @Override
-  public boolean equals(final Object obj){
-    if ( this == obj ) {
+  public boolean equals(final Object obj) {
+    if (this == obj) {
       return true;
     }
-    if ( obj == null ) {
+    if (obj == null) {
       return false;
     }
-    if ( getClass( ) != obj.getClass( ) ) {
+    if (getClass() != obj.getClass()) {
       return false;
     }
     final LoadBalancerPolicyDescription other = (LoadBalancerPolicyDescription) obj;
-    if(this.loadbalancer==null){
-      if( other.loadbalancer!=null){
+    if (this.loadbalancer == null) {
+      if (other.loadbalancer != null) {
         return false;
       }
-    }else if(!this.loadbalancer.equals(other.loadbalancer)){
+    } else if (!this.loadbalancer.equals(other.loadbalancer)) {
       return false;
     }
-    
-    if ( this.policyName == null ) {
-      if ( other.policyName != null ) {
+
+    if (this.policyName == null) {
+      if (other.policyName != null) {
         return false;
       }
-    } else if ( !this.policyName.equals( other.policyName ) ) {
+    } else if (!this.policyName.equals(other.policyName)) {
       return false;
     }
-    
+
     return true;
   }
-  
-  public final String getRecordId(){
+
+  public final String getRecordId() {
     return this.getId();
   }
-  
+
   @Override
-  public int hashCode(){
+  public int hashCode() {
     final int prime = 31;
     int result = 1;
 
-    result = prime * result +  ( ( this.loadbalancer == null )
-      ? 0
-      : this.loadbalancer.hashCode( ) );
-    
-    result = prime * result + ( ( this.policyName == null )
-      ? 0
-      : this.policyName.hashCode( ) );
+    result = prime * result + ((this.loadbalancer == null)
+        ? 0
+        : this.loadbalancer.hashCode());
+
+    result = prime * result + ((this.policyName == null)
+        ? 0
+        : this.policyName.hashCode());
     return result;
   }
-  
+
   @Override
-  public String toString(){
-    return String.format("LoadBalancer Policy Description for (%s):%s-%s", this.loadbalancer, this.policyName, this.policyTypeName);
+  public String toString() {
+    return String.format("LoadBalancer Policy Description for (%s):%s-%s", this.loadbalancer,
+        this.policyName, this.policyTypeName);
   }
 }

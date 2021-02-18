@@ -46,126 +46,136 @@ import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerSecurityGr
 
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
- *
  */
 
 @Entity
-@PersistenceContext( name = "eucalyptus_loadbalancing" )
-@Table( name = "metadata_group" )
-public class LoadBalancerSecurityGroup extends AbstractPersistent implements LoadBalancerSecurityGroupView, RestrictedType {
+@PersistenceContext(name = "eucalyptus_loadbalancing")
+@Table(name = "metadata_group")
+public class LoadBalancerSecurityGroup extends AbstractPersistent
+    implements LoadBalancerSecurityGroupView, RestrictedType {
 
-	public enum STATE { InService, OutOfService }
+  public enum STATE {InService, OutOfService}
 
-	private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 1L;
 
-	private LoadBalancerSecurityGroup(){}
+  private LoadBalancerSecurityGroup() {
+  }
 
-	private LoadBalancerSecurityGroup(LoadBalancer lb, String ownerAccountId, String groupName){
-		this.loadbalancer = lb;
-		this.groupName = groupName;
-		this.ownerAccountId = ownerAccountId;
-		this.state= STATE.InService.name();
-	}
-	
-	public static LoadBalancerSecurityGroup create(LoadBalancer lb, String ownerAccountId, String groupName){
-		final LoadBalancerSecurityGroup instance = new LoadBalancerSecurityGroup(lb, ownerAccountId, groupName);
-		instance.uniqueName = instance.createUniqueName();
-		return instance;
-	}
+  private LoadBalancerSecurityGroup(LoadBalancer lb, String ownerAccountId, String groupName) {
+    this.loadbalancer = lb;
+    this.groupName = groupName;
+    this.ownerAccountId = ownerAccountId;
+    this.state = STATE.InService.name();
+  }
 
-	public static LoadBalancerSecurityGroup named(LoadBalancer lb, String ownerAccountId, String groupName){
-		final LoadBalancerSecurityGroup instance = new LoadBalancerSecurityGroup(lb, ownerAccountId, groupName);
-		instance.uniqueName = instance.createUniqueName();
-		return instance;
-	}
+  public static LoadBalancerSecurityGroup create(LoadBalancer lb, String ownerAccountId,
+      String groupName) {
+    final LoadBalancerSecurityGroup instance =
+        new LoadBalancerSecurityGroup(lb, ownerAccountId, groupName);
+    instance.uniqueName = instance.createUniqueName();
+    return instance;
+  }
 
-	public static LoadBalancerSecurityGroup named(LoadBalancer lb, String ownerAccountId, String groupName, STATE state){
-		final LoadBalancerSecurityGroup instance = new LoadBalancerSecurityGroup(lb, ownerAccountId, groupName);
-		instance.state = state.name();
-		instance.uniqueName = instance.createUniqueName();
-		return instance;
-	}
+  public static LoadBalancerSecurityGroup named(LoadBalancer lb, String ownerAccountId,
+      String groupName) {
+    final LoadBalancerSecurityGroup instance =
+        new LoadBalancerSecurityGroup(lb, ownerAccountId, groupName);
+    instance.uniqueName = instance.createUniqueName();
+    return instance;
+  }
 
-	public static LoadBalancerSecurityGroup named(OwnerFullName ownerFullName, String groupName){
-		final String ownerAccountId = ownerFullName==null ? null : ownerFullName.getAccountNumber();
-		return new LoadBalancerSecurityGroup(null, ownerAccountId, groupName);
-	}
+  public static LoadBalancerSecurityGroup named(LoadBalancer lb, String ownerAccountId,
+      String groupName, STATE state) {
+    final LoadBalancerSecurityGroup instance =
+        new LoadBalancerSecurityGroup(lb, ownerAccountId, groupName);
+    instance.state = state.name();
+    instance.uniqueName = instance.createUniqueName();
+    return instance;
+  }
 
-	public static LoadBalancerSecurityGroup withState(STATE state){
-		final LoadBalancerSecurityGroup instance = new LoadBalancerSecurityGroup();
-		instance.state = state.name();
-		return instance;
-	}
-	
-	@OneToOne
-	@JoinColumn( name = "metadata_loadbalancer_fk", nullable=true)
-	private LoadBalancer loadbalancer = null;
+  public static LoadBalancerSecurityGroup named(OwnerFullName ownerFullName, String groupName) {
+    final String ownerAccountId = ownerFullName == null ? null : ownerFullName.getAccountNumber();
+    return new LoadBalancerSecurityGroup(null, ownerAccountId, groupName);
+  }
 
-	@Column(name="group_name", nullable=false)
-	private String groupName = null;
+  public static LoadBalancerSecurityGroup withState(STATE state) {
+    final LoadBalancerSecurityGroup instance = new LoadBalancerSecurityGroup();
+    instance.state = state.name();
+    return instance;
+  }
 
-	@Column(name="group_owner_account_id", nullable=false)
-	private String ownerAccountId = null;
-	
-	@Column(name="metadata_state", nullable=false)
-	private String state = null;
-    
-	@OneToMany(fetch = FetchType.LAZY, mappedBy = "security_group")
-	private Collection<LoadBalancerServoInstance> servoInstances = null;
+  @OneToOne
+  @JoinColumn(name = "metadata_loadbalancer_fk", nullable = true)
+  private LoadBalancer loadbalancer = null;
 
-	@Column(name="metadata_unique_name", nullable=false, unique=true)
-	private String uniqueName = null;
-	
-	public String getName(){
-		return this.groupName;
-	}
-	
-	public String getGroupOwnerAccountId(){
-		return this.ownerAccountId;
-	}
-	
-	public Collection<LoadBalancerServoInstance> getServoInstances(){
-		return this.servoInstances;
-	}
-	
-	public LoadBalancer getLoadBalancer(){
-		return this.loadbalancer;
-	}
+  @Column(name = "group_name", nullable = false)
+  private String groupName = null;
 
-	public void setLoadBalancer(final LoadBalancer lb){
-		this.loadbalancer = lb;
-	}
-	
-	public void setState(STATE state){
-		this.state = state.name();
-	}
-	
-	public STATE getState(){
-		return Enum.valueOf(STATE.class, this.state);
-	}
+  @Column(name = "group_owner_account_id", nullable = false)
+  private String ownerAccountId = null;
 
-	@Override
-	public String getDisplayName( ) {
-		return getName();
-	}
+  @Column(name = "metadata_state", nullable = false)
+  private String state = null;
 
-	@Override
-	public OwnerFullName getOwner( ) {
-		return AccountFullName.getInstance( getGroupOwnerAccountId( ) );
-	}
+  @OneToMany(fetch = FetchType.LAZY, mappedBy = "security_group")
+  private Collection<LoadBalancerServoInstance> servoInstances = null;
 
-	@PrePersist
-	private void generateOnCommit( ) {
-		if(this.uniqueName==null)
-			this.uniqueName = createUniqueName( );
-	}
+  @Column(name = "metadata_unique_name", nullable = false, unique = true)
+  private String uniqueName = null;
 
-	private String createUniqueName(){
-		return String.format("loadbalancer-sgroup-%s-%s-%s-%s", this.loadbalancer.getOwnerAccountNumber(), this.loadbalancer.getDisplayName(), this.ownerAccountId, this.groupName);
-	}
-	
-	@Override
-	public String toString(){
-		return this.uniqueName;
-	}
+  public String getName() {
+    return this.groupName;
+  }
+
+  public String getGroupOwnerAccountId() {
+    return this.ownerAccountId;
+  }
+
+  public Collection<LoadBalancerServoInstance> getServoInstances() {
+    return this.servoInstances;
+  }
+
+  public LoadBalancer getLoadBalancer() {
+    return this.loadbalancer;
+  }
+
+  public void setLoadBalancer(final LoadBalancer lb) {
+    this.loadbalancer = lb;
+  }
+
+  public void setState(STATE state) {
+    this.state = state.name();
+  }
+
+  public STATE getState() {
+    return Enum.valueOf(STATE.class, this.state);
+  }
+
+  @Override
+  public String getDisplayName() {
+    return getName();
+  }
+
+  @Override
+  public OwnerFullName getOwner() {
+    return AccountFullName.getInstance(getGroupOwnerAccountId());
+  }
+
+  @PrePersist
+  private void generateOnCommit() {
+    if (this.uniqueName == null) {
+      this.uniqueName = createUniqueName();
+    }
+  }
+
+  private String createUniqueName() {
+    return String.format("loadbalancer-sgroup-%s-%s-%s-%s",
+        this.loadbalancer.getOwnerAccountNumber(), this.loadbalancer.getDisplayName(),
+        this.ownerAccountId, this.groupName);
+  }
+
+  @Override
+  public String toString() {
+    return this.uniqueName;
+  }
 }

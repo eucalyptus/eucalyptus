@@ -7,9 +7,9 @@ package com.eucalyptus.loadbalancing.service.persist;
 
 import org.immutables.value.Value.Immutable;
 
-
 @Immutable
 public interface LoadBalancingPersistence {
   LoadBalancers balancers();
+
   LoadBalancerSecurityGroups balancerSecurityGroups();
 }

@@ -1,14 +1,14 @@
 <aspectj>
 
-   <aspects>
-     <!-- declare two existing aspects to the weaver -->
-     <aspect name="com.amazonaws.services.simpleworkflow.flow.aspectj.AsynchronousAspect"/>
-     <aspect name="com.amazonaws.services.simpleworkflow.flow.aspectj.ExponentialRetryAspect"/>
-   </aspects>
+  <aspects>
+    <!-- declare two existing aspects to the weaver -->
+    <aspect name="com.amazonaws.services.simpleworkflow.flow.aspectj.AsynchronousAspect"/>
+    <aspect name="com.amazonaws.services.simpleworkflow.flow.aspectj.ExponentialRetryAspect"/>
+  </aspects>
 
-   <weaver options="-warn:none">
-     <include within="com.eucalyptus.loadbalancing.workflow..*"/>
-   </weaver>
+  <weaver options="-warn:none">
+    <include within="com.eucalyptus.loadbalancing.workflow..*"/>
+  </weaver>
 
- </aspectj>
+</aspectj>
 

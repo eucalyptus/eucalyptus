@@ -11,30 +11,28 @@ import org.immutables.value.Value.Immutable;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance.DNS_STATE;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance.STATE;
 
-
 @Immutable
 public interface LoadBalancerServoInstanceView {
 
-  String getInstanceId( );
+  String getInstanceId();
 
-  STATE getState( );
+  STATE getState();
 
   DNS_STATE getDnsState();
 
   @Nullable
-  String getAddress( );
+  String getAddress();
 
   @Nullable
-  String getPrivateIp( );
+  String getPrivateIp();
 
-  Date getCertificateExpiration( );
+  Date getCertificateExpiration();
 
-  boolean isCertificateExpired( );
+  boolean isCertificateExpired();
 
   default boolean canResolveDns() {
     return
         DNS_STATE.Registered.equals(getDnsState()) &&
-        STATE.InService.equals(getState());
+            STATE.InService.equals(getState());
   }
-
 }

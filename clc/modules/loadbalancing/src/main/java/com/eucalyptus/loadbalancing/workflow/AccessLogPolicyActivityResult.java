@@ -30,38 +30,38 @@ package com.eucalyptus.loadbalancing.workflow;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 
-@JsonAutoDetect( isGetterVisibility = JsonAutoDetect.Visibility.NONE, getterVisibility = JsonAutoDetect.Visibility.ANY )
+@JsonAutoDetect(isGetterVisibility = JsonAutoDetect.Visibility.NONE, getterVisibility = JsonAutoDetect.Visibility.ANY)
 public class AccessLogPolicyActivityResult {
 
   private String roleName = null;
   private String policyName = null;
   private boolean shouldRollback = true;
 
-  public String getRoleName( ) {
+  public String getRoleName() {
     return roleName;
   }
 
-  public void setRoleName( String roleName ) {
+  public void setRoleName(String roleName) {
     this.roleName = roleName;
   }
 
-  public String getPolicyName( ) {
+  public String getPolicyName() {
     return policyName;
   }
 
-  public void setPolicyName( String policyName ) {
+  public void setPolicyName(String policyName) {
     this.policyName = policyName;
   }
 
-  public boolean getShouldRollback( ) {
+  public boolean getShouldRollback() {
     return shouldRollback;
   }
 
-  public boolean isShouldRollback( ) {
+  public boolean isShouldRollback() {
     return shouldRollback;
   }
 
-  public void setShouldRollback( boolean shouldRollback ) {
+  public void setShouldRollback(boolean shouldRollback) {
     this.shouldRollback = shouldRollback;
   }
 }

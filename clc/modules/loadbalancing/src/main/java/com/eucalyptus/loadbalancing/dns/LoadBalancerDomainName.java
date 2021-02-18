@@ -29,6 +29,7 @@
 package com.eucalyptus.loadbalancing.dns;
 
 import static com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer.Scheme;
+
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
@@ -45,47 +46,48 @@ import com.google.common.base.Predicate;
  */
 public enum LoadBalancerDomainName implements Predicate<Name> {
 
-  INTERNAL( "internal-([a-zA-Z0-9-]{1,255})-([0-9]{12})", "internal-%s-%s" ), // most specific first for matching
-  EXTERNAL( "([a-zA-Z0-9-]{1,255})-([0-9]{12})", "%s-%s" ),
+  INTERNAL("internal-([a-zA-Z0-9-]{1,255})-([0-9]{12})",
+      "internal-%s-%s"), // most specific first for matching
+  EXTERNAL("([a-zA-Z0-9-]{1,255})-([0-9]{12})", "%s-%s"),
   ;
 
   private final Pattern hostPattern;
   private final String hostFormat;
 
-  private LoadBalancerDomainName( final String pattern, final String format ) {
-    hostPattern = Pattern.compile( pattern );
+  private LoadBalancerDomainName(final String pattern, final String format) {
+    hostPattern = Pattern.compile(pattern);
     hostFormat = format;
   }
 
-  public static Name getLoadBalancerSubdomain( ) {
+  public static Name getLoadBalancerSubdomain() {
     return DomainNames.absolute(
-        lookupLoadBalancerSubdomainProperty( ),
-        DomainNames.externalSubdomain( ) );
+        lookupLoadBalancerSubdomainProperty(),
+        DomainNames.externalSubdomain());
   }
 
-  public static LoadBalancerDomainName forScheme( @Nullable final Scheme scheme ) {
-    if ( Scheme.Internal == scheme ) {
+  public static LoadBalancerDomainName forScheme(@Nullable final Scheme scheme) {
+    if (Scheme.Internal == scheme) {
       return INTERNAL;
     }
     return EXTERNAL;
   }
 
-  public static Optional<LoadBalancerDomainName> findMatching( final Name name ) {
-    for ( final LoadBalancerDomainName domainName : values( ) ) {
-      if ( domainName.apply( name ) ) {
-        return Optional.of( domainName );
+  public static Optional<LoadBalancerDomainName> findMatching(final Name name) {
+    for (final LoadBalancerDomainName domainName : values()) {
+      if (domainName.apply(name)) {
+        return Optional.of(domainName);
       }
     }
-    return Optional.absent( );
+    return Optional.absent();
   }
 
-  public String generate( String loadBalancerName, String accountNumber ) {
-    final String dnsPrefix = String.format( hostFormat, loadBalancerName, accountNumber );
-    return Joiner.on('.').join( dnsPrefix, getLoadBalancerSubdomain( ).relativize( Name.root ) );
+  public String generate(String loadBalancerName, String accountNumber) {
+    final String dnsPrefix = String.format(hostFormat, loadBalancerName, accountNumber);
+    return Joiner.on('.').join(dnsPrefix, getLoadBalancerSubdomain().relativize(Name.root));
   }
 
-  private Matcher matcher( final Name name ) {
-    return hostPattern.matcher( name.toString( ) );
+  private Matcher matcher(final Name name) {
+    return hostPattern.matcher(name.toString());
   }
 
   /**
@@ -94,18 +96,18 @@ public enum LoadBalancerDomainName implements Predicate<Name> {
    * @param name The DNS name
    * @return A pair of account number and load balancer name
    */
-  public Pair<String,String> toScopedLoadBalancerName( final Name name ) {
-    final Matcher nameMatcher = matcher( name );
-    nameMatcher.matches( );
-    return Pair.pair( nameMatcher.group( 2 ), nameMatcher.group( 1 ) );
+  public Pair<String, String> toScopedLoadBalancerName(final Name name) {
+    final Matcher nameMatcher = matcher(name);
+    nameMatcher.matches();
+    return Pair.pair(nameMatcher.group(2), nameMatcher.group(1));
   }
 
-  private static Name lookupLoadBalancerSubdomainProperty( ) {
-    return Name.fromConstantString( LoadBalancerDnsRecord.DNS_SUBDOMAIN );
+  private static Name lookupLoadBalancerSubdomainProperty() {
+    return Name.fromConstantString(LoadBalancerDnsRecord.DNS_SUBDOMAIN);
   }
 
   @Override
-  public boolean apply( @Nullable final Name name ) {
-    return name != null && matcher( name ).matches( );
+  public boolean apply(@Nullable final Name name) {
+    return name != null && matcher(name).matches();
   }
 }

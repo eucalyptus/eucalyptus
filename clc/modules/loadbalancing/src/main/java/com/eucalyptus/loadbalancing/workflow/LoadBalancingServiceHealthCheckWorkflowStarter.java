@@ -32,21 +32,22 @@ import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionAlreadyStart
 import com.eucalyptus.simpleworkflow.common.client.WorkflowStarter;
 import org.apache.log4j.Logger;
 
-public class LoadBalancingServiceHealthCheckWorkflowStarter implements  WorkflowStarter {
-  private static Logger LOG     =
-          Logger.getLogger(  LoadBalancingServiceHealthCheckWorkflowStarter.class );
+public class LoadBalancingServiceHealthCheckWorkflowStarter implements WorkflowStarter {
+  private static Logger LOG =
+      Logger.getLogger(LoadBalancingServiceHealthCheckWorkflowStarter.class);
 
   private static final String ELB_SERVICE_STATE_WORKFLOW_ID =
-          "loadbalancing-service-state-workflow-01";
+      "loadbalancing-service-state-workflow-01";
+
   @Override
   public void start() {
-    try{
+    try {
       final LoadBalancingServiceHealthCheckWorkflowClientExternal workflow =
-              WorkflowClients.getServiceStateWorkflowClient(ELB_SERVICE_STATE_WORKFLOW_ID);
+          WorkflowClients.getServiceStateWorkflowClient(ELB_SERVICE_STATE_WORKFLOW_ID);
       workflow.performServiceHealthCheck();
-    }catch(final WorkflowExecutionAlreadyStartedException ex ) {
+    } catch (final WorkflowExecutionAlreadyStartedException ex) {
       ;
-    }catch(final Exception ex) {
+    } catch (final Exception ex) {
       LOG.error("Failed to start loadbalancing service state workflow", ex);
     }
   }

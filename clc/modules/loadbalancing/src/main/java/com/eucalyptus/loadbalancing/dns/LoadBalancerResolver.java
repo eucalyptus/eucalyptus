@@ -82,45 +82,46 @@ import com.google.common.net.InetAddresses;
 )
 public class LoadBalancerResolver extends DnsResolvers.DnsResolver {
 
-  private static final Logger logger = Logger.getLogger( LoadBalancerResolver.class );
+  private static final Logger logger = Logger.getLogger(LoadBalancerResolver.class);
 
   private static LoadBalancingPersistence persistence = ImmutableLoadBalancingPersistence.builder()
-      .balancers( new PersistenceLoadBalancers( ) )
-      .balancerSecurityGroups( new PersistenceLoadBalancerSecurityGroups( ))
+      .balancers(new PersistenceLoadBalancers())
+      .balancerSecurityGroups(new PersistenceLoadBalancerSecurityGroups())
       .build();
 
   private static final int QUERY_ANSWER_EXPIRE_AFTER_SEC = 5;
-  private static final LoadingCache<Name, List<String>> cachedAnswers =   CacheBuilder.newBuilder()
+  private static final LoadingCache<Name, List<String>> cachedAnswers = CacheBuilder.newBuilder()
       .maximumSize(1000)
       .expireAfterWrite(QUERY_ANSWER_EXPIRE_AFTER_SEC, TimeUnit.SECONDS)
-      .build(new CacheLoader<Name, List<String>> () {
+      .build(new CacheLoader<Name, List<String>>() {
         @Override
         public List<String> load(final Name name) throws Exception {
           return resolveName(name);
         }
       });
-  
+
   /// the LoadingCache is used to set the hard limit on memory usage
-  private static final LoadingCache<Name, IpPermutation> nameToIpPermutations = CacheBuilder.newBuilder()
-      .maximumSize(1000)
-      .expireAfterAccess(1, TimeUnit.HOURS)
-      .build(new CacheLoader<Name, IpPermutation> () {
-        @Override
-        public IpPermutation load(Name name) throws Exception {
-          final List<String> ips = cachedAnswers.get(name);
-          return new IpPermutation(ips);
-        }
-      });
-  
-  @ConfigurableField( description = "Enable the load balancing DNS resolver.  Note: dns.enable must also be 'true'", initial = "true" )
+  private static final LoadingCache<Name, IpPermutation> nameToIpPermutations =
+      CacheBuilder.newBuilder()
+          .maximumSize(1000)
+          .expireAfterAccess(1, TimeUnit.HOURS)
+          .build(new CacheLoader<Name, IpPermutation>() {
+            @Override
+            public IpPermutation load(Name name) throws Exception {
+              final List<String> ips = cachedAnswers.get(name);
+              return new IpPermutation(ips);
+            }
+          });
+
+  @ConfigurableField(description = "Enable the load balancing DNS resolver.  Note: dns.enable must also be 'true'", initial = "true")
   public static Boolean dns_resolver_enabled = Boolean.TRUE;
 
   @Override
-  public boolean checkAccepts( final DnsRequest request ) {
-    final Record query = request.getQuery( );
-    if ( !Bootstrap.isOperational( ) || !dns_resolver_enabled ) {
+  public boolean checkAccepts(final DnsRequest request) {
+    final Record query = request.getQuery();
+    if (!Bootstrap.isOperational() || !dns_resolver_enabled) {
       return false;
-    } else if ( query.getName( ).subdomain( LoadBalancerDomainName.getLoadBalancerSubdomain() ) ) {
+    } else if (query.getName().subdomain(LoadBalancerDomainName.getLoadBalancerSubdomain())) {
       return true;
     }
     return false;
@@ -135,33 +136,36 @@ public class LoadBalancerResolver extends DnsResolvers.DnsResolver {
   }
 
   private static List<String> resolveName(final Name name) {
-    final Name hostName = name.relativize( LoadBalancerDomainName.getLoadBalancerSubdomain( ) );
-    final Optional<LoadBalancerDomainName> domainName = LoadBalancerDomainName.findMatching( hostName );
-    final Set<String> ips = Sets.newTreeSet( );
-    if ( domainName.isPresent( ) ) {
-      final Pair<String,String> accountNamePair = domainName.get( ).toScopedLoadBalancerName( hostName );
-      try ( final TransactionResource tx = Entities.transactionFor( LoadBalancer.class ) ) {
+    final Name hostName = name.relativize(LoadBalancerDomainName.getLoadBalancerSubdomain());
+    final Optional<LoadBalancerDomainName> domainName =
+        LoadBalancerDomainName.findMatching(hostName);
+    final Set<String> ips = Sets.newTreeSet();
+    if (domainName.isPresent()) {
+      final Pair<String, String> accountNamePair =
+          domainName.get().toScopedLoadBalancerName(hostName);
+      try (final TransactionResource tx = Entities.transactionFor(LoadBalancer.class)) {
         final LoadBalancer loadBalancer =
-            LoadBalancerHelper.getLoadbalancerCaseInsensitive( persistence, accountNamePair.getLeft( ), accountNamePair.getRight( ) );
+            LoadBalancerHelper.getLoadbalancerCaseInsensitive(persistence,
+                accountNamePair.getLeft(), accountNamePair.getRight());
         final Predicate<LoadBalancerServoInstanceView> canResolve =
-            new Predicate<LoadBalancerServoInstanceView>(){
-          @Override
-          public boolean apply(LoadBalancerServoInstanceView arg0) {
-            return arg0.canResolveDns();
-          }
-        };
+            new Predicate<LoadBalancerServoInstanceView>() {
+              @Override
+              public boolean apply(LoadBalancerServoInstanceView arg0) {
+                return arg0.canResolveDns();
+              }
+            };
 
         final List<LoadBalancerServoInstance> servos = Lists.newArrayList();
-        for(final LoadBalancerAutoScalingGroup group : loadBalancer.getAutoScaleGroups()) {
-          servos.addAll( group.getServos( ) );
+        for (final LoadBalancerAutoScalingGroup group : loadBalancer.getAutoScaleGroups()) {
+          servos.addAll(group.getServos());
         }
-        final Function<LoadBalancerServoInstance,String> ipExtractor =
-            loadBalancer.getScheme( ) == LoadBalancer.Scheme.Internal ?
+        final Function<LoadBalancerServoInstance, String> ipExtractor =
+            loadBalancer.getScheme() == LoadBalancer.Scheme.Internal ?
                 LoadBalancerServoInstance::getPrivateIp :
                 LoadBalancerServoInstance::getAddress;
-        Iterables.addAll( ips, Iterables.transform(
-            Collections2.filter( servos, canResolve ),
-            ipExtractor ) );
+        Iterables.addAll(ips, Iterables.transform(
+            Collections2.filter(servos, canResolve),
+            ipExtractor));
       }
     }
 
@@ -169,63 +173,67 @@ public class LoadBalancerResolver extends DnsResolvers.DnsResolver {
     Collections.sort(ipList);
     return ipList;
   }
-  
+
   private static class IpPermutation {
     private List<String> ips = null;
     private List<List<String>> ipPermutations = null;
     private int idx = 0;
+
     private IpPermutation(final List<String> ips) {
       this.ips = ips;
       ipPermutations = Lists.newArrayList(Collections2.permutations(ips));
       Collections.shuffle(ipPermutations);
     }
-   
+
     public synchronized List<String> getNext() {
-      try{
+      try {
         final List<String> next = ipPermutations.get(idx);
-        if (++idx >= ipPermutations.size())
+        if (++idx >= ipPermutations.size()) {
           idx = 0;
+        }
         return next;
-      }catch(final Exception ex) {
+      } catch (final Exception ex) {
         return Lists.newArrayList();
       }
     }
-    
+
     public boolean isPermuatationFrom(final List<String> ips) {
       return this.ips.equals(ips);
     }
   }
-  
-  private static List<String> getIps (final Name name) throws ExecutionException{
+
+  private static List<String> getIps(final Name name) throws ExecutionException {
     final List<String> ips = cachedAnswers.get(name);
     final IpPermutation old = nameToIpPermutations.get(name);
-    if(!old.isPermuatationFrom(ips))
+    if (!old.isPermuatationFrom(ips)) {
       nameToIpPermutations.invalidate(name);
+    }
     return nameToIpPermutations.get(name).getNext();
   }
-  
+
   @Override
-  public DnsResponse lookupRecords( final DnsRequest request ) {
-    final Record query = request.getQuery( );
+  public DnsResponse lookupRecords(final DnsRequest request) {
+    final Record query = request.getQuery();
     try {
-      final Name name = query.getName( );
+      final Name name = query.getName();
       final List<String> ips = getIps(name);
-      final List<Record> records = Lists.newArrayList( );
-      for ( String ip : ips ) {
-        final InetAddress inetAddress = InetAddresses.forString( ip );
-        records.add( DomainNameRecords.addressRecord(
+      final List<Record> records = Lists.newArrayList();
+      for (String ip : ips) {
+        final InetAddress inetAddress = InetAddresses.forString(ip);
+        records.add(DomainNameRecords.addressRecord(
             name,
             inetAddress,
-            LoadBalancerDnsRecord.getLoadbalancerTTL( ) ) );
+            LoadBalancerDnsRecord.getLoadbalancerTTL()));
       }
-      if(DnsResolvers.RequestType.A.apply( query ))
-        return DnsResponse.forName( name ).answer( records );
-      else
-        return DnsResponse.forName( name ).answer(Lists.<Record>newArrayList());
-    } catch ( Exception ex ) {
-      
-      logger.debug( ex );
+      if (DnsResolvers.RequestType.A.apply(query)) {
+        return DnsResponse.forName(name).answer(records);
+      } else {
+        return DnsResponse.forName(name).answer(Lists.<Record>newArrayList());
+      }
+    } catch (Exception ex) {
+
+      logger.debug(ex);
     }
-    return DnsResponse.forName( query.getName( ) ).nxdomain( );
+    return DnsResponse.forName(query.getName()).nxdomain();
   }
 }

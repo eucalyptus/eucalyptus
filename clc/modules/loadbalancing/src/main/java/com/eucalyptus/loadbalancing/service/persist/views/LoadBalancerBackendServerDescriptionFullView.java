@@ -8,11 +8,10 @@ package com.eucalyptus.loadbalancing.service.persist.views;
 import java.util.List;
 import org.immutables.value.Value.Immutable;
 
-
 @Immutable
 public interface LoadBalancerBackendServerDescriptionFullView {
 
   LoadBalancerBackendServerDescriptionView getBackendServer();
-  
+
   List<LoadBalancerPolicyDescriptionView> getPolicyDescriptions();
 }

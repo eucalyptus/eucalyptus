@@ -40,7 +40,7 @@ import org.apache.log4j.Logger;
  *
  */
 public class WorkflowClientManager {
-  private static Logger LOG  = Logger.getLogger( WorkflowClientManager.class );
+  private static Logger LOG = Logger.getLogger(WorkflowClientManager.class);
 
   private static volatile WorkflowClient workflowClient;
 
@@ -51,7 +51,7 @@ public class WorkflowClientManager {
     return workflowClient != null && workflowClient.isRunning();
   }
 
-  public static void start( ) throws Exception {
+  public static void start() throws Exception {
     final AmazonSimpleWorkflow simpleWorkflowClient;
     simpleWorkflowClient = Config.buildClient(
         LoadBalancingAWSCredentialsProvider.LoadBalancingUserSupplier.INSTANCE
@@ -63,14 +63,14 @@ public class WorkflowClientManager {
         DOMAIN,
         TASK_LIST,
         LoadBalancingServiceProperties.SWF_WORKFLOW_WORKER_CONFIG,
-        LoadBalancingServiceProperties.SWF_ACTIVITY_WORKER_CONFIG );
-    workflowClient.start( );
+        LoadBalancingServiceProperties.SWF_ACTIVITY_WORKER_CONFIG);
+    workflowClient.start();
     LOG.debug("LoadBalancing SWF client has started");
   }
 
-  public static void stop( ) throws Exception {
-    if ( workflowClient != null ) {
-      workflowClient.stop( );
+  public static void stop() throws Exception {
+    if (workflowClient != null) {
+      workflowClient.stop();
     }
   }
 }

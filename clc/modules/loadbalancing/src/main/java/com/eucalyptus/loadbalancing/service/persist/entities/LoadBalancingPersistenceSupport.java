@@ -12,8 +12,7 @@ import com.eucalyptus.loadbalancing.service.persist.LoadBalancingMetadataExcepti
 import com.eucalyptus.loadbalancing.service.persist.LoadBalancingMetadataNotFoundException;
 import com.eucalyptus.util.Exceptions;
 
-
-public abstract class LoadBalancingPersistenceSupport <RT extends RestrictedType, AP extends AbstractPersistent & RestrictedType>
+public abstract class LoadBalancingPersistenceSupport<RT extends RestrictedType, AP extends AbstractPersistent & RestrictedType>
     extends AbstractPersistentSupport<RT, AP, LoadBalancingMetadataException> {
 
   protected LoadBalancingPersistenceSupport(final String typeDescription) {
@@ -21,7 +20,8 @@ public abstract class LoadBalancingPersistenceSupport <RT extends RestrictedType
   }
 
   @Override
-  protected LoadBalancingMetadataException notFoundException(final String message, final Throwable cause) {
+  protected LoadBalancingMetadataException notFoundException(final String message,
+      final Throwable cause) {
     final LoadBalancingMetadataNotFoundException existingException =
         Exceptions.findCause(cause, LoadBalancingMetadataNotFoundException.class);
     if (existingException != null) {
@@ -32,7 +32,8 @@ public abstract class LoadBalancingPersistenceSupport <RT extends RestrictedType
   }
 
   @Override
-  protected LoadBalancingMetadataException metadataException(final String message, final Throwable cause) {
+  protected LoadBalancingMetadataException metadataException(final String message,
+      final Throwable cause) {
     final LoadBalancingMetadataException existingException =
         Exceptions.findCause(cause, LoadBalancingMetadataException.class);
     if (existingException != null) {

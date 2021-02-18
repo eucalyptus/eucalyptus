@@ -92,37 +92,37 @@ import io.vavr.collection.Stream;
 
 /**
  * @author Sang-Min Park
- *
  */
 public class LoadBalancerPolicyHelper {
-  private static Logger    LOG     = Logger.getLogger( LoadBalancerPolicyHelper.class );
+  private static Logger LOG = Logger.getLogger(LoadBalancerPolicyHelper.class);
 
   public static String LATEST_SECURITY_POLICY_NAME = null;
+
   /**
-   * initialize the policy types that ELB will support
-   * this method is idempotent
+   * initialize the policy types that ELB will support this method is idempotent
    */
-  public static void initialize(){
+  public static void initialize() {
     final List<LoadBalancerPolicyTypeDescription> requiredPolicyTypes =
         Lists.newArrayList(initialize42());
 
-    for(final LoadBalancerPolicyTypeDescription policyType : requiredPolicyTypes){
-      try ( final TransactionResource db = Entities.transactionFor( LoadBalancerPolicyTypeDescription.class ) ) {
+    for (final LoadBalancerPolicyTypeDescription policyType : requiredPolicyTypes) {
+      try (final TransactionResource db = Entities.transactionFor(
+          LoadBalancerPolicyTypeDescription.class)) {
         try {
-          Entities.uniqueResult( policyType );
-        }catch( final NoSuchElementException ex ){
-          Entities.persist( policyType );
+          Entities.uniqueResult(policyType);
+        } catch (final NoSuchElementException ex) {
+          Entities.persist(policyType);
           db.commit();
           LOG.debug(String.format("New policy type has been added: %s", policyType));
         }
-      }catch(final Exception ex){
+      } catch (final Exception ex) {
         throw Exceptions.toUndeclared(ex);
       }
     }
   }
 
   // initialize ELB policy types in version 4.0
-  private static List<LoadBalancerPolicyTypeDescription> initialize40(){
+  private static List<LoadBalancerPolicyTypeDescription> initialize40() {
     final List<LoadBalancerPolicyTypeDescription> requiredPolicyTypes =
         Lists.newArrayList();
     requiredPolicyTypes.add(
@@ -230,29 +230,41 @@ public class LoadBalancerPolicyHelper {
       "EXP-RC4-MD5",
       "EXP-KRB5-RC4-SHA",
       "EXP-KRB5-RC4-MD5"
-      );
+  );
 
-  private static List<LoadBalancerPolicyTypeDescription> initialize42(){
+  private static List<LoadBalancerPolicyTypeDescription> initialize42() {
     final List<LoadBalancerPolicyTypeDescription> requiredPolicyTypes =
         initialize40();
-    final LoadBalancerPolicyTypeDescription sslNego =   new LoadBalancerPolicyTypeDescription(
+    final LoadBalancerPolicyTypeDescription sslNego = new LoadBalancerPolicyTypeDescription(
         "SSLNegotiationPolicyType",
         "Listener policy that defines the ciphers and protocols that will be accepted by the load balancer. This policy can be associated only with HTTPS/SSL listeners."
-        );
-
-    final List<LoadBalancerPolicyAttributeTypeDescription> sslNegoAttributeTypes = Lists.newArrayList(
-        new LoadBalancerPolicyAttributeTypeDescription("Protocol-SSLv2", "Boolean", Cardinality.ZERO_OR_ONE),
-        new LoadBalancerPolicyAttributeTypeDescription("Protocol-TLSv1", "Boolean", Cardinality.ZERO_OR_ONE),
-        new LoadBalancerPolicyAttributeTypeDescription("Protocol-SSLv3", "Boolean", Cardinality.ZERO_OR_ONE),
-        new LoadBalancerPolicyAttributeTypeDescription("Protocol-TLSv1.1", "Boolean", Cardinality.ZERO_OR_ONE, "A description for Protocol-TLSv1.1"),
-        new LoadBalancerPolicyAttributeTypeDescription("Protocol-TLSv1.2", "Boolean", Cardinality.ZERO_OR_ONE, "A description for Protocol-TLSv1.2"),
-        new LoadBalancerPolicyAttributeTypeDescription("Reference-Security-Policy", "String", Cardinality.ZERO_OR_ONE, "The value of this attribute is the name of our sample policy (referring to our sample policy"),
-        new LoadBalancerPolicyAttributeTypeDescription("Server-Defined-Cipher-Order", "Boolean", Cardinality.ZERO_OR_ONE, "The value true means the policy will follow the cipher order")
     );
-    for(final String name : cipherNamesIn42){
-      sslNegoAttributeTypes.add(new LoadBalancerPolicyAttributeTypeDescription(name, "Boolean", Cardinality.ZERO_OR_ONE, String.format("A description for %s", name)));
+
+    final List<LoadBalancerPolicyAttributeTypeDescription> sslNegoAttributeTypes =
+        Lists.newArrayList(
+            new LoadBalancerPolicyAttributeTypeDescription("Protocol-SSLv2", "Boolean",
+                Cardinality.ZERO_OR_ONE),
+            new LoadBalancerPolicyAttributeTypeDescription("Protocol-TLSv1", "Boolean",
+                Cardinality.ZERO_OR_ONE),
+            new LoadBalancerPolicyAttributeTypeDescription("Protocol-SSLv3", "Boolean",
+                Cardinality.ZERO_OR_ONE),
+            new LoadBalancerPolicyAttributeTypeDescription("Protocol-TLSv1.1", "Boolean",
+                Cardinality.ZERO_OR_ONE, "A description for Protocol-TLSv1.1"),
+            new LoadBalancerPolicyAttributeTypeDescription("Protocol-TLSv1.2", "Boolean",
+                Cardinality.ZERO_OR_ONE, "A description for Protocol-TLSv1.2"),
+            new LoadBalancerPolicyAttributeTypeDescription("Reference-Security-Policy", "String",
+                Cardinality.ZERO_OR_ONE,
+                "The value of this attribute is the name of our sample policy (referring to our sample policy"),
+            new LoadBalancerPolicyAttributeTypeDescription("Server-Defined-Cipher-Order", "Boolean",
+                Cardinality.ZERO_OR_ONE,
+                "The value true means the policy will follow the cipher order")
+        );
+    for (final String name : cipherNamesIn42) {
+      sslNegoAttributeTypes.add(
+          new LoadBalancerPolicyAttributeTypeDescription(name, "Boolean", Cardinality.ZERO_OR_ONE,
+              String.format("A description for %s", name)));
     }
-    for(final LoadBalancerPolicyAttributeTypeDescription attrType : sslNegoAttributeTypes){
+    for (final LoadBalancerPolicyAttributeTypeDescription attrType : sslNegoAttributeTypes) {
       sslNego.addPolicyAttributeTypeDescription(attrType);
     }
 
@@ -264,62 +276,69 @@ public class LoadBalancerPolicyHelper {
         "BackendServerAuthenticationPolicyType",
         "Policy that controls authentication to back-end server(s) and contains one or more policies, such as an instance of a PublicKeyPolicyType. This policy can be associated only with back-end servers that are using HTTPS/SSL.",
         Lists.newArrayList(
-            new LoadBalancerPolicyAttributeTypeDescription("PublicKeyPolicyName", "PolicyName", Cardinality.ONE_OR_MORE))
-            ));
+            new LoadBalancerPolicyAttributeTypeDescription("PublicKeyPolicyName", "PolicyName",
+                Cardinality.ONE_OR_MORE))
+    ));
 
     requiredPolicyTypes.add(new LoadBalancerPolicyTypeDescription(
         "ProxyProtocolPolicyType",
         "Policy that controls whether to include the IP address and port of the originating request for TCP messages. This policy operates on TCP/SSL listeners only",
         Lists.newArrayList(
-            new LoadBalancerPolicyAttributeTypeDescription("ProxyProtocol", "Boolean", Cardinality.ONE))
-            ));
+            new LoadBalancerPolicyAttributeTypeDescription("ProxyProtocol", "Boolean",
+                Cardinality.ONE))
+    ));
     // policy type for containing the list of public key when authenticating back-end servers
     requiredPolicyTypes.add(new LoadBalancerPolicyTypeDescription(
         "PublicKeyPolicyType",
         "Policy containing a list of public keys to accept when authenticating the back-end server(s). This policy cannot be applied directly to back-end servers or listeners but must be part of a BackendServerAuthenticationPolicyType.",
         Lists.newArrayList(
             new LoadBalancerPolicyAttributeTypeDescription("PublicKey", "String", Cardinality.ONE))
-        ));
+    ));
     return requiredPolicyTypes;
   }
 
-  public static List<LoadBalancerPolicyTypeDescriptionFullView> getLoadBalancerPolicyTypeDescriptions(){
-    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerPolicyTypeDescription.class ) ) {
-      return Stream.ofAll( Entities.query(new LoadBalancerPolicyTypeDescription() ) )
-          .map( LoadBalancerPolicyTypeDescriptions.FULL_VIEW )
-          .toJavaList( );
-    }catch(final NoSuchElementException ex){
+  public static List<LoadBalancerPolicyTypeDescriptionFullView> getLoadBalancerPolicyTypeDescriptions() {
+    try (final TransactionResource db = Entities.transactionFor(
+        LoadBalancerPolicyTypeDescription.class)) {
+      return Stream.ofAll(Entities.query(new LoadBalancerPolicyTypeDescription()))
+          .map(LoadBalancerPolicyTypeDescriptions.FULL_VIEW)
+          .toJavaList();
+    } catch (final NoSuchElementException ex) {
       return Lists.newArrayList();
-    }catch(final Exception ex){
+    } catch (final Exception ex) {
       throw ex;
     }
   }
 
-  public static LoadBalancerPolicyTypeDescription findLoadBalancerPolicyTypeDescription(final String policyTypeName)
+  public static LoadBalancerPolicyTypeDescription findLoadBalancerPolicyTypeDescription(
+      final String policyTypeName)
       throws NoSuchElementException {
-    try ( final TransactionResource db = Entities.transactionFor( LoadBalancerPolicyTypeDescription.class ) ) {
+    try (final TransactionResource db = Entities.transactionFor(
+        LoadBalancerPolicyTypeDescription.class)) {
       return Entities.uniqueResult(LoadBalancerPolicyTypeDescription.named(policyTypeName));
-    }catch(final NoSuchElementException ex){
+    } catch (final NoSuchElementException ex) {
       throw ex;
-    }catch(final Exception ex){
+    } catch (final Exception ex) {
       throw Exceptions.toUndeclared(ex);
     }
   }
 
-  public static boolean isAttributeValueValid(final String attrType, final String cardinality, final String attrValue){
-    if(attrType ==null)
+  public static boolean isAttributeValueValid(final String attrType, final String cardinality,
+      final String attrValue) {
+    if (attrType == null) {
       return true;
+    }
 
-    try{
-      if(attrType.toLowerCase().equals("boolean")){
+    try {
+      if (attrType.toLowerCase().equals("boolean")) {
         Boolean.parseBoolean(attrValue);
-      }else if(attrType.toLowerCase().equals("integer")){
+      } else if (attrType.toLowerCase().equals("integer")) {
         Integer.parseInt(attrValue);
-      }else if(attrType.toLowerCase().equals("long")){
+      } else if (attrType.toLowerCase().equals("long")) {
         Long.parseLong(attrValue);
-      }else if(attrType.toLowerCase().equals("string")){
+      } else if (attrType.toLowerCase().equals("string")) {
       }
-    }catch(final Exception ex){
+    } catch (final Exception ex) {
       return false;
     }
     return true;
@@ -334,58 +353,64 @@ public class LoadBalancerPolicyHelper {
       final String policyTypeName,
       final List<PolicyAttribute> policyAttributes
   ) throws LoadBalancingException {
-      for(final LoadBalancerPolicyDescription current : lb.getPolicyDescriptions()){
-        if(policyName.equals(current.getPolicyName()))
-          throw new DuplicatePolicyNameException();
+    for (final LoadBalancerPolicyDescription current : lb.getPolicyDescriptions()) {
+      if (policyName.equals(current.getPolicyName())) {
+        throw new DuplicatePolicyNameException();
       }
+    }
 
     LoadBalancerPolicyTypeDescriptionFullView policyTypeFull = null;
     LoadBalancerPolicyTypeDescriptionView policyType = null;
-      for(final LoadBalancerPolicyTypeDescriptionFullView type : getLoadBalancerPolicyTypeDescriptions()){
-          if(policyTypeName.equals(type.getPolicyTypeDescription().getPolicyTypeName())){
-            policyTypeFull = type;
-            policyType = type.getPolicyTypeDescription();
-            break;
-          }
+    for (final LoadBalancerPolicyTypeDescriptionFullView type : getLoadBalancerPolicyTypeDescriptions()) {
+      if (policyTypeName.equals(type.getPolicyTypeDescription().getPolicyTypeName())) {
+        policyTypeFull = type;
+        policyType = type.getPolicyTypeDescription();
+        break;
       }
-      if(policyType == null)
-        throw new PolicyTypeNotFoundException();
+    }
+    if (policyType == null) {
+      throw new PolicyTypeNotFoundException();
+    }
 
-      List<PolicyAttribute> attributes = null;
-      // Check Reference-Security-Policy
-      if ("SSLNegotiationPolicyType".equals(policyType.getPolicyTypeName())) {
-        String refPolicy = null;
-        for(final PolicyAttribute attr : policyAttributes) {
-          if("Reference-Security-Policy".equals(attr.getAttributeName())) {
-            refPolicy = attr.getAttributeValue();
+    List<PolicyAttribute> attributes = null;
+    // Check Reference-Security-Policy
+    if ("SSLNegotiationPolicyType".equals(policyType.getPolicyTypeName())) {
+      String refPolicy = null;
+      for (final PolicyAttribute attr : policyAttributes) {
+        if ("Reference-Security-Policy".equals(attr.getAttributeName())) {
+          refPolicy = attr.getAttributeValue();
+          break;
+        }
+      }
+      if (refPolicy != null) {
+        PolicyDescription predefinedPolicy = null;
+        List<PolicyDescription> predefinedPolicies =
+            LoadBalancerPolicyHelper.getSamplePolicyDescription();
+        for (final PolicyDescription policy : predefinedPolicies) {
+          if (refPolicy.equals(policy.getPolicyName())) {
+            predefinedPolicy = policy;
             break;
           }
         }
-        if(refPolicy!=null) {
-          PolicyDescription predefinedPolicy = null;
-          List<PolicyDescription> predefinedPolicies = LoadBalancerPolicyHelper.getSamplePolicyDescription();
-          for(final PolicyDescription policy : predefinedPolicies) {
-            if(refPolicy.equals(policy.getPolicyName())) {
-              predefinedPolicy = policy;
-              break;
-            }
-          }
-          if (predefinedPolicy == null) {
-            throw new InvalidConfigurationRequestException(String.format("Referenced security policy %s is not found", refPolicy));
-          }else {
-            attributes = Stream.ofAll(predefinedPolicy.getPolicyAttributeDescriptions().getMember())
-                .map( arg0 -> {
-                  final PolicyAttribute attr = new PolicyAttribute();
-                  attr.setAttributeName(arg0.getAttributeName());
-                  attr.setAttributeValue(arg0.getAttributeValue());
-                  return attr; } )
-                .toJavaList();
-          }
+        if (predefinedPolicy == null) {
+          throw new InvalidConfigurationRequestException(
+              String.format("Referenced security policy %s is not found", refPolicy));
+        } else {
+          attributes = Stream.ofAll(predefinedPolicy.getPolicyAttributeDescriptions().getMember())
+              .map(arg0 -> {
+                final PolicyAttribute attr = new PolicyAttribute();
+                attr.setAttributeName(arg0.getAttributeName());
+                attr.setAttributeValue(arg0.getAttributeValue());
+                return attr;
+              })
+              .toJavaList();
         }
       }
+    }
 
-      if(attributes == null)
-        attributes = policyAttributes;
+    if (attributes == null) {
+      attributes = policyAttributes;
+    }
 
       /* check for cardinality
        * ONE(1) : Single value required
@@ -393,33 +418,41 @@ public class LoadBalancerPolicyHelper {
         ZERO_OR_MORE(0..*) : Optional. Multiple values are allowed
         ONE_OR_MORE(1..*0) : Required. Multiple values are allowed
        */
-      final List<LoadBalancerPolicyAttributeTypeDescriptionView> policyAttrTypes =
-          policyTypeFull.getPolicyAttributeTypeDescriptions();
-      for (final LoadBalancerPolicyAttributeTypeDescriptionView policyAttrType : policyAttrTypes) {
-        if("ONE".equals(policyAttrType.getCardinality()) || "ONE_OR_MORE".equals(policyAttrType.getCardinality())) {
-          boolean attrFound = false;
-          for(final PolicyAttribute attr : attributes) {
-            if(policyAttrType.getAttributeName().equals(attr.getAttributeName()) && attr.getAttributeValue()!=null){
-              attrFound = true;
-              break;
-            }
+    final List<LoadBalancerPolicyAttributeTypeDescriptionView> policyAttrTypes =
+        policyTypeFull.getPolicyAttributeTypeDescriptions();
+    for (final LoadBalancerPolicyAttributeTypeDescriptionView policyAttrType : policyAttrTypes) {
+      if ("ONE".equals(policyAttrType.getCardinality()) || "ONE_OR_MORE".equals(
+          policyAttrType.getCardinality())) {
+        boolean attrFound = false;
+        for (final PolicyAttribute attr : attributes) {
+          if (policyAttrType.getAttributeName().equals(attr.getAttributeName())
+              && attr.getAttributeValue() != null) {
+            attrFound = true;
+            break;
           }
-          if (!attrFound)
-            throw new InvalidConfigurationRequestException(String.format("There is no attribute %s found (Cardinality: %s)", policyAttrType.getAttributeName(), policyAttrType.getCardinality()));
-        } // other rules are enforced in addPolicyAttributeDescription
-      }
+        }
+        if (!attrFound) {
+          throw new InvalidConfigurationRequestException(
+              String.format("There is no attribute %s found (Cardinality: %s)",
+                  policyAttrType.getAttributeName(), policyAttrType.getCardinality()));
+        }
+      } // other rules are enforced in addPolicyAttributeDescription
+    }
 
-      final LoadBalancerPolicyDescription policyDesc = new LoadBalancerPolicyDescription(lb, policyName, policyTypeName);
-      for(final PolicyAttribute attr : attributes){
-        final LoadBalancerPolicyTypeDescription policyTypeDescription =
-            LoadBalancerPolicyHelper.findLoadBalancerPolicyTypeDescription(policyDesc.getPolicyTypeName());
+    final LoadBalancerPolicyDescription policyDesc =
+        new LoadBalancerPolicyDescription(lb, policyName, policyTypeName);
+    for (final PolicyAttribute attr : attributes) {
+      final LoadBalancerPolicyTypeDescription policyTypeDescription =
+          LoadBalancerPolicyHelper.findLoadBalancerPolicyTypeDescription(
+              policyDesc.getPolicyTypeName());
 
-        String value = validatePolicyAttributeDescription(
-            policyTypeDescription, policyDesc.getPolicyAttributeDescriptions(),attr.getAttributeName(), attr.getAttributeValue() );
+      String value = validatePolicyAttributeDescription(
+          policyTypeDescription, policyDesc.getPolicyAttributeDescriptions(),
+          attr.getAttributeName(), attr.getAttributeValue());
 
-        policyDesc.addPolicyAttributeDescription(attr.getAttributeName(), value);
-      }
-      return policyDesc;
+      policyDesc.addPolicyAttributeDescription(attr.getAttributeName(), value);
+    }
+    return policyDesc;
   }
 
   private static String validatePolicyAttributeDescription(
@@ -430,16 +463,21 @@ public class LoadBalancerPolicyHelper {
   ) throws InvalidConfigurationRequestException {
     String value = attrValue;
     LoadBalancerPolicyAttributeTypeDescriptionView attrType = null;
-    for(final LoadBalancerPolicyAttributeTypeDescriptionView type: policyTypeDescription.getPolicyAttributeTypeDescriptions()){
-      if(attrName.equals(type.getAttributeName())){
+    for (final LoadBalancerPolicyAttributeTypeDescriptionView type : policyTypeDescription.getPolicyAttributeTypeDescriptions()) {
+      if (attrName.equals(type.getAttributeName())) {
         attrType = type;
         break;
       }
     }
-    if(attrType==null)
-      throw new InvalidConfigurationRequestException(String.format("Attribute %s is not defined in the policy type", attrName));
-    if(!LoadBalancerPolicyHelper.isAttributeValueValid(attrType.getAttributeType(), attrType.getCardinality(), attrValue))
-      throw new InvalidConfigurationRequestException(String.format("Attribute value %s is not valid", attrValue));
+    if (attrType == null) {
+      throw new InvalidConfigurationRequestException(
+          String.format("Attribute %s is not defined in the policy type", attrName));
+    }
+    if (!LoadBalancerPolicyHelper.isAttributeValueValid(attrType.getAttributeType(),
+        attrType.getCardinality(), attrValue)) {
+      throw new InvalidConfigurationRequestException(
+          String.format("Attribute value %s is not valid", attrValue));
+    }
 
     /* check for cardinality
      * ONE(1) : Single value required
@@ -448,26 +486,33 @@ public class LoadBalancerPolicyHelper {
       ONE_OR_MORE(1..*0) : Required. Multiple values are allowed
      */
     final String cardinality = attrType.getCardinality();
-    if(policyAttrDescriptions != null && ("ONE".equals(cardinality) || "ZERO_OR_ONE".equals(cardinality))) {
-      for(final LoadBalancerPolicyAttributeDescription existing : policyAttrDescriptions) {
-        if(attrName.equals(existing.getAttributeName()))
-          throw new InvalidConfigurationRequestException(String.format("More than one attribute(%s) is found (Cardinality: %s)", attrName, cardinality));
+    if (policyAttrDescriptions != null && ("ONE".equals(cardinality) || "ZERO_OR_ONE".equals(
+        cardinality))) {
+      for (final LoadBalancerPolicyAttributeDescription existing : policyAttrDescriptions) {
+        if (attrName.equals(existing.getAttributeName())) {
+          throw new InvalidConfigurationRequestException(
+              String.format("More than one attribute(%s) is found (Cardinality: %s)", attrName,
+                  cardinality));
+        }
       }
     }
 
     if ("PublicKeyPolicyType".equals(policyTypeDescription.getPolicyTypeName()) &&
         "PublicKey".equals(attrName)) {
-      try{
+      try {
         String certString = attrValue.trim();
-        if(! certString.startsWith("-----BEGIN CERTIFICATE-----"))
+        if (!certString.startsWith("-----BEGIN CERTIFICATE-----")) {
           certString = String.format("-----BEGIN CERTIFICATE-----\n%s", certString);
-        if(! certString.endsWith("-----END CERTIFICATE-----"))
+        }
+        if (!certString.endsWith("-----END CERTIFICATE-----")) {
           certString = String.format("%s\n-----END CERTIFICATE-----", certString);
-        final X509Certificate cert = PEMFiles.getCert(certString.getBytes( Charsets.UTF_8 ));
-        if(cert==null)
+        }
+        final X509Certificate cert = PEMFiles.getCert(certString.getBytes(Charsets.UTF_8));
+        if (cert == null) {
           throw new EucalyptusCloudException("Malformed cert");
+        }
         value = certString;
-      }catch(final Exception ex){
+      } catch (final Exception ex) {
         throw new InvalidConfigurationRequestException("PublicKey is invalid");
       }
     }
@@ -481,69 +526,77 @@ public class LoadBalancerPolicyHelper {
       final LoadBalancer lb,
       final String policyName
   ) throws LoadBalancingException {
-    final List<LoadBalancerPolicyDescription> policies=
+    final List<LoadBalancerPolicyDescription> policies =
         getLoadBalancerPolicyDescription(lb, Lists.newArrayList(policyName));
-    if(policies.size()<=0)
+    if (policies.size() <= 0) {
       return;
+    }
     final LoadBalancerPolicyDescription toDelete = policies.get(0);
 
     // check policy - listener association
     final List<LoadBalancerListener> listeners = toDelete.getListeners();
-    if(listeners!=null && listeners.size()>0)
+    if (listeners != null && listeners.size() > 0) {
       throw new InvalidConfigurationRequestException("The policy is enabled for listeners");
+    }
 
     // check policy - backend association
     final List<LoadBalancerBackendServerDescription> backends = toDelete.getBackendServers();
-    if(backends!=null && backends.size()>0)
+    if (backends != null && backends.size() > 0) {
       throw new InvalidConfigurationRequestException("The policy is enabled for backend servers");
+    }
 
-    Entities.delete( toDelete );
+    Entities.delete(toDelete);
   }
 
   /**
    * Caller must have transaction for loadbalancer
    */
-  public static LoadBalancerPolicyDescription getLoadBalancerPolicyDescription(final LoadBalancer lb, final String policyName)
-    throws NoSuchElementException
-  {
+  public static LoadBalancerPolicyDescription getLoadBalancerPolicyDescription(
+      final LoadBalancer lb, final String policyName)
+      throws NoSuchElementException {
     LoadBalancerPolicyDescription policy = null;
-    for(final LoadBalancerPolicyDescription p : lb.getPolicyDescriptions()){
-      if(p.getPolicyName().equals(policyName)){
+    for (final LoadBalancerPolicyDescription p : lb.getPolicyDescriptions()) {
+      if (p.getPolicyName().equals(policyName)) {
         policy = p;
         break;
       }
     }
-    if(policy!=null)
+    if (policy != null) {
       return policy;
-    else
+    } else {
       throw new NoSuchElementException();
+    }
   }
 
   /**
    * Caller must have transaction for loadbalancer
    */
-  public static List<LoadBalancerPolicyDescription> getLoadBalancerPolicyDescription(final LoadBalancer lb, final List<String> policyNames){
-    return Lists.newArrayList(Collections2.filter(lb.getPolicyDescriptions(), new Predicate<LoadBalancerPolicyDescription>(){
-      @Override
-      public boolean apply(LoadBalancerPolicyDescription arg0) {
-        return policyNames.contains(arg0.getPolicyName());
-      }
-    }));
+  public static List<LoadBalancerPolicyDescription> getLoadBalancerPolicyDescription(
+      final LoadBalancer lb, final List<String> policyNames) {
+    return Lists.newArrayList(Collections2.filter(lb.getPolicyDescriptions(),
+        new Predicate<LoadBalancerPolicyDescription>() {
+          @Override
+          public boolean apply(LoadBalancerPolicyDescription arg0) {
+            return policyNames.contains(arg0.getPolicyName());
+          }
+        }));
   }
 
-  public static void addPoliciesToBackendServer(final LoadBalancerBackendServerDescription server, final List<LoadBalancerPolicyDescription> policies)
+  public static void addPoliciesToBackendServer(final LoadBalancerBackendServerDescription server,
+      final List<LoadBalancerPolicyDescription> policies)
       throws LoadBalancingException {
-    try ( final TransactionResource db =
-        Entities.transactionFor( LoadBalancerBackendServerDescription.class ) ) {
-      try{
+    try (final TransactionResource db =
+             Entities.transactionFor(LoadBalancerBackendServerDescription.class)) {
+      try {
         final LoadBalancerBackendServerDescription entity = Entities.uniqueResult(server);
-        for(final LoadBalancerPolicyDescription p : policies)
+        for (final LoadBalancerPolicyDescription p : policies)
           entity.addPolicy(p);
         Entities.persist(entity);
         db.commit();
-      }catch(final NoSuchElementException ex){
-        throw new InvalidConfigurationRequestException("Backend server description is not found on db");
-      }catch(final Exception ex){
+      } catch (final NoSuchElementException ex) {
+        throw new InvalidConfigurationRequestException(
+            "Backend server description is not found on db");
+      } catch (final Exception ex) {
         throw new InvalidConfigurationRequestException("Unknown error ocrrued while updating db");
       }
     }
@@ -552,18 +605,21 @@ public class LoadBalancerPolicyHelper {
   /**
    * Caller must have transaction for backend
    */
-  public static void removePoliciesFromBackendServer(final LoadBalancerBackendServerDescription backend, final List<String> policyNames)
+  public static void removePoliciesFromBackendServer(
+      final LoadBalancerBackendServerDescription backend, final List<String> policyNames)
       throws LoadBalancingException {
     final List<LoadBalancerPolicyDescription> policyToRemove = Lists.newArrayList();
-    for(final LoadBalancerPolicyDescription policyDescription : backend.getPolicyDescriptions()) {
-      if(policyNames.contains(policyDescription.getPolicyName()))
+    for (final LoadBalancerPolicyDescription policyDescription : backend.getPolicyDescriptions()) {
+      if (policyNames.contains(policyDescription.getPolicyName())) {
         policyToRemove.add(policyDescription);
+      }
     }
 
-    if(policyToRemove.size() < policyNames.size())
+    if (policyToRemove.size() < policyNames.size()) {
       throw new InvalidConfigurationRequestException("Unknown policy names found");
+    }
 
-    for(final LoadBalancerPolicyDescription p : policyToRemove) {
+    for (final LoadBalancerPolicyDescription p : policyToRemove) {
       backend.removePolicy(p);
     }
   }
@@ -571,11 +627,15 @@ public class LoadBalancerPolicyHelper {
   /**
    * Caller must have transaction for backend
    */
-  public static void clearPoliciesFromBackendServer(final LoadBalancerBackendServerDescription backend) throws LoadBalancingException {
-    if (backend == null)
+  public static void clearPoliciesFromBackendServer(
+      final LoadBalancerBackendServerDescription backend) throws LoadBalancingException {
+    if (backend == null) {
       throw new InvalidConfigurationRequestException("Backend server description is not found");
+    }
     final List<String> policyNames =
-        Stream.ofAll( backend.getPolicyDescriptions() ).map( LoadBalancerPolicyDescription::getPolicyName ).toJavaList( );
+        Stream.ofAll(backend.getPolicyDescriptions())
+            .map(LoadBalancerPolicyDescription::getPolicyName)
+            .toJavaList();
     removePoliciesFromBackendServer(backend, policyNames);
   }
 
@@ -588,32 +648,37 @@ public class LoadBalancerPolicyHelper {
   ) throws LoadBalancingException {
     // either one not both of LBCookieStickinessPolicy and AppCookieStickinessPolicy is allowed
     int numCookies = 0;
-    for(final LoadBalancerPolicyDescription policy : policies){
-      if("LBCookieStickinessPolicyType".equals(policy.getPolicyTypeName())){
-        numCookies ++;
-        if( !( listener.getProtocol().equals(PROTOCOL.HTTP) || listener.getProtocol().equals(PROTOCOL.HTTPS)))
-          throw new InvalidConfigurationRequestException("Session stickiness policy can be associated with only HTTP/HTTPS");
-      }
-      else if("AppCookieStickinessPolicyType".equals(policy.getPolicyTypeName())){
-        numCookies ++;
-        if( !( listener.getProtocol().equals(PROTOCOL.HTTP) || listener.getProtocol().equals(PROTOCOL.HTTPS)))
-          throw new InvalidConfigurationRequestException("Session stickiness policy can be associated with only HTTP/HTTPS");
+    for (final LoadBalancerPolicyDescription policy : policies) {
+      if ("LBCookieStickinessPolicyType".equals(policy.getPolicyTypeName())) {
+        numCookies++;
+        if (!(listener.getProtocol().equals(PROTOCOL.HTTP) || listener.getProtocol()
+            .equals(PROTOCOL.HTTPS))) {
+          throw new InvalidConfigurationRequestException(
+              "Session stickiness policy can be associated with only HTTP/HTTPS");
+        }
+      } else if ("AppCookieStickinessPolicyType".equals(policy.getPolicyTypeName())) {
+        numCookies++;
+        if (!(listener.getProtocol().equals(PROTOCOL.HTTP) || listener.getProtocol()
+            .equals(PROTOCOL.HTTPS))) {
+          throw new InvalidConfigurationRequestException(
+              "Session stickiness policy can be associated with only HTTP/HTTPS");
+        }
       }
     }
-    if(numCookies > 1){
-      throw new InvalidConfigurationRequestException("Only one cookie stickiness policy can be set");
+    if (numCookies > 1) {
+      throw new InvalidConfigurationRequestException(
+          "Only one cookie stickiness policy can be set");
     }
 
-    for(final LoadBalancerPolicyDescription policy : policies){
+    for (final LoadBalancerPolicyDescription policy : policies) {
       listener.removePolicy(policy);
       listener.addPolicy(policy);
     }
   }
 
-  public static List<PolicyDescription> getSamplePolicyDescription(){
+  public static List<PolicyDescription> getSamplePolicyDescription() {
     return Lists.newArrayList(getSamplePolicyDescription42());
   }
-
 
   private static class AttributeNameValuePair {
     @JsonProperty("AttributeName")
@@ -635,80 +700,89 @@ public class LoadBalancerPolicyHelper {
   }
 
   private static PolicyDescription getPolicyDescription(final String pathToAttributeJson) {
-    try{
+    try {
       final InputStream fileStream = new FileInputStream(pathToAttributeJson);
       final ObjectMapper objectMapper = new ObjectMapper();
       final SSLSecurityPolicy policy = objectMapper.readValue(fileStream, SSLSecurityPolicy.class);
       final PolicyDescription policyDesc = new PolicyDescription();
       final String policyName = policy.PolicyName;
       final String policyTypeName = policy.PolicyTypeName;
-      if(policyName == null || policyTypeName==null)
+      if (policyName == null || policyTypeName == null) {
         throw new Exception("PolicyName and PolicyTypeName must not be null");
+      }
       policyDesc.setPolicyName(policyName);
       policyDesc.setPolicyTypeName(policyTypeName);
       final ArrayList<PolicyAttributeDescription> policyAttrs = Lists.newArrayList(Iterables.filter(
-          Iterables.transform(policy.PolicyAttributeDescriptions, new Function<AttributeNameValuePair, PolicyAttributeDescription>(){
-        @Override
-        public PolicyAttributeDescription apply(AttributeNameValuePair arg0) {
-          if(arg0.AttributeName==null || arg0.AttributeValue==null)
-            return null;
-          final PolicyAttributeDescription attr = new PolicyAttributeDescription();
-          attr.setAttributeName(arg0.AttributeName);
-          attr.setAttributeValue(arg0.AttributeValue);
-          return attr;
-        }
-      }), Predicates.notNull()));
+          Iterables.transform(policy.PolicyAttributeDescriptions,
+              new Function<AttributeNameValuePair, PolicyAttributeDescription>() {
+                @Override
+                public PolicyAttributeDescription apply(AttributeNameValuePair arg0) {
+                  if (arg0.AttributeName == null || arg0.AttributeValue == null) {
+                    return null;
+                  }
+                  final PolicyAttributeDescription attr = new PolicyAttributeDescription();
+                  attr.setAttributeName(arg0.AttributeName);
+                  attr.setAttributeValue(arg0.AttributeValue);
+                  return attr;
+                }
+              }), Predicates.notNull()));
       final PolicyAttributeDescriptions descs = new PolicyAttributeDescriptions();
       descs.setMember(policyAttrs);
       policyDesc.setPolicyAttributeDescriptions(descs);
       return policyDesc;
-    }catch(final Exception ex){
-      LOG.warn(String.format("Unable to read ELB security policy file: %s", pathToAttributeJson), ex);
+    } catch (final Exception ex) {
+      LOG.warn(String.format("Unable to read ELB security policy file: %s", pathToAttributeJson),
+          ex);
       return null;
     }
   }
 
   private static List<PolicyDescription> samplePolicyDescription = Lists.newArrayList();
-  private static List<PolicyDescription> getSamplePolicyDescription42(){
-    if(samplePolicyDescription.isEmpty()){
+
+  private static List<PolicyDescription> getSamplePolicyDescription42() {
+    if (samplePolicyDescription.isEmpty()) {
       samplePolicyDescription = getSamplePolicyDescription40();
       PolicyDescription policyDesc;
       String[] policyFiles = null;
       final Set<String> policyNames = Sets.newHashSet();
       final String dir = String.format("%s/elb-security-policy", BaseDirectory.ETC);
-      try{
+      try {
         final File policyDirectory = new File(dir);
         policyFiles = policyDirectory.list(new FilenameFilter() {
           @Override
           public boolean accept(File dir, String name) {
-            if(name!=null && name.toLowerCase().endsWith(".json"))
+            if (name != null && name.toLowerCase().endsWith(".json")) {
               return true;
-            else
+            } else {
               return false;
-          }});
-        if(policyFiles == null)
-          throw new Exception("The directory '"+dir+"' is not found");
-      }catch(final Exception ex) {
+            }
+          }
+        });
+        if (policyFiles == null) {
+          throw new Exception("The directory '" + dir + "' is not found");
+        }
+      } catch (final Exception ex) {
         LOG.error("Failed to find ELB security policy files", ex);
       }
       Date latest = new Date(Long.MIN_VALUE);
-      for(final String policyFileName : policyFiles) {
+      for (final String policyFileName : policyFiles) {
         final String policyFilePath = String.format("%s/%s", dir, policyFileName);
-        if ((policyDesc = getPolicyDescription(policyFilePath))!=null) {
-          if(!policyNames.contains(policyDesc.getPolicyName())) {
+        if ((policyDesc = getPolicyDescription(policyFilePath)) != null) {
+          if (!policyNames.contains(policyDesc.getPolicyName())) {
             samplePolicyDescription.add(policyDesc);
             policyNames.add(policyDesc.getPolicyName());
-            try{
+            try {
               final SimpleDateFormat df = new SimpleDateFormat("yyyy-MM");
-              final Date policyDate = df.parse(policyDesc.getPolicyName().substring(policyDesc.getPolicyName().length()-7));
+              final Date policyDate = df.parse(
+                  policyDesc.getPolicyName().substring(policyDesc.getPolicyName().length() - 7));
               if (policyDate.after(latest)) {
                 latest = policyDate;
                 LATEST_SECURITY_POLICY_NAME = policyDesc.getPolicyName();
               }
-            }catch(final Exception ex){
+            } catch (final Exception ex) {
             }
           } else {
-            LOG.warn("Policy with dupilcate policy name found: "+ policyDesc.getPolicyName());
+            LOG.warn("Policy with dupilcate policy name found: " + policyDesc.getPolicyName());
           }
         }
       }
@@ -716,7 +790,7 @@ public class LoadBalancerPolicyHelper {
     return samplePolicyDescription;
   }
 
-  private static List<PolicyDescription> getSamplePolicyDescription40(){
+  private static List<PolicyDescription> getSamplePolicyDescription40() {
     final List<PolicyDescription> sampleList = Lists.newArrayList();
 
     final PolicyDescription appCookieStick = new PolicyDescription();
@@ -744,20 +818,24 @@ public class LoadBalancerPolicyHelper {
     return sampleList;
   }
 
-  public enum AsPolicyDescription implements Function<LoadBalancerPolicyDescriptionFullView, PolicyDescription> {
+  public enum AsPolicyDescription
+      implements Function<LoadBalancerPolicyDescriptionFullView, PolicyDescription> {
     INSTANCE;
 
     @Override
-    public PolicyDescription apply(final LoadBalancerPolicyDescriptionFullView policyDescriptionFull) {
-      if(policyDescriptionFull==null)
+    public PolicyDescription apply(
+        final LoadBalancerPolicyDescriptionFullView policyDescriptionFull) {
+      if (policyDescriptionFull == null) {
         return null;
-      final LoadBalancerPolicyDescriptionView policyDescription = policyDescriptionFull.getPolicyDescription();
+      }
+      final LoadBalancerPolicyDescriptionView policyDescription =
+          policyDescriptionFull.getPolicyDescription();
       final PolicyDescription policy = new PolicyDescription();
       policy.setPolicyName(policyDescription.getPolicyName());
       policy.setPolicyTypeName(policyDescription.getPolicyTypeName());
 
       final ArrayList<PolicyAttributeDescription> attrDescs = Lists.newArrayList();
-      for(final LoadBalancerPolicyAttributeDescriptionView descView : policyDescriptionFull.getPolicyAttributeDescriptions()){
+      for (final LoadBalancerPolicyAttributeDescriptionView descView : policyDescriptionFull.getPolicyAttributeDescriptions()) {
         final PolicyAttributeDescription desc = new PolicyAttributeDescription();
         desc.setAttributeName(descView.getAttributeName());
         desc.setAttributeValue(descView.getAttributeValue());
@@ -765,28 +843,34 @@ public class LoadBalancerPolicyHelper {
       }
       final PolicyAttributeDescriptions descs = new PolicyAttributeDescriptions();
       descs.setMember(attrDescs);
-      descs.getMember().sort(Ordering.natural().onResultOf(Strings.nonNull(PolicyAttributeDescription::getAttributeName)));
+      descs.getMember()
+          .sort(Ordering.natural()
+              .onResultOf(Strings.nonNull(PolicyAttributeDescription::getAttributeName)));
       policy.setPolicyAttributeDescriptions(descs);
       return policy;
     }
   }
 
-  public enum AsPolicyTypeDescription implements Function<LoadBalancerPolicyTypeDescriptionFullView, PolicyTypeDescription>{
+  public enum AsPolicyTypeDescription
+      implements Function<LoadBalancerPolicyTypeDescriptionFullView, PolicyTypeDescription> {
     INSTANCE;
+
     @Override
-    public PolicyTypeDescription apply(final LoadBalancerPolicyTypeDescriptionFullView policyTypeDescriptionFull) {
-      if(policyTypeDescriptionFull == null)
+    public PolicyTypeDescription apply(
+        final LoadBalancerPolicyTypeDescriptionFullView policyTypeDescriptionFull) {
+      if (policyTypeDescriptionFull == null) {
         return null;
+      }
       final LoadBalancerPolicyTypeDescriptionView policyTypeDescription =
           policyTypeDescriptionFull.getPolicyTypeDescription();
       final PolicyTypeDescription policyType = new PolicyTypeDescription();
       policyType.setPolicyTypeName(policyTypeDescription.getPolicyTypeName());
       policyType.setDescription(policyTypeDescription.getDescription());
-      final List<LoadBalancerPolicyAttributeTypeDescriptionView> policyAttributeTypeDesc  =
+      final List<LoadBalancerPolicyAttributeTypeDescriptionView> policyAttributeTypeDesc =
           policyTypeDescriptionFull.getPolicyAttributeTypeDescriptions();
-      if(policyAttributeTypeDesc != null && policyAttributeTypeDesc.size()>0){
+      if (policyAttributeTypeDesc != null && policyAttributeTypeDesc.size() > 0) {
         final ArrayList<PolicyAttributeTypeDescription> attrTypes = Lists.newArrayList();
-        for(final LoadBalancerPolicyAttributeTypeDescriptionView from : policyAttributeTypeDesc){
+        for (final LoadBalancerPolicyAttributeTypeDescriptionView from : policyAttributeTypeDesc) {
           final PolicyAttributeTypeDescription to = new PolicyAttributeTypeDescription();
           to.setAttributeName(from.getAttributeName());
           to.setAttributeType(from.getAttributeType());

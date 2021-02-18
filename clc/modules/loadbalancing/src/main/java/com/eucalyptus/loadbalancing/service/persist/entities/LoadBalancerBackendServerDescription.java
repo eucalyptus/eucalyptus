@@ -49,50 +49,54 @@ import com.google.common.collect.Lists;
 
 /**
  * @author Sang-Min Park
- *
  */
 @Entity
-@PersistenceContext( name = "eucalyptus_loadbalancing" )
-@Table( name = "metadata_backend_server_description" )
-public class LoadBalancerBackendServerDescription extends AbstractPersistent implements LoadBalancerBackendServerDescriptionView {
-  private static Logger    LOG     = Logger.getLogger( LoadBalancerBackendServerDescription.class );
+@PersistenceContext(name = "eucalyptus_loadbalancing")
+@Table(name = "metadata_backend_server_description")
+public class LoadBalancerBackendServerDescription extends AbstractPersistent
+    implements LoadBalancerBackendServerDescriptionView {
+  private static Logger LOG = Logger.getLogger(LoadBalancerBackendServerDescription.class);
 
   private static final long serialVersionUID = 1L;
-  
+
   @ManyToOne
-  @JoinColumn( name = "metadata_loadbalancer_fk", nullable=false )
+  @JoinColumn(name = "metadata_loadbalancer_fk", nullable = false)
   private LoadBalancer loadbalancer = null;
-  
-  @Column( name = "instance_port", nullable=false)
+
+  @Column(name = "instance_port", nullable = false)
   private Integer instancePort = null;
-  
-  @Column(name="unique_name", nullable=false, unique=true)
+
+  @Column(name = "unique_name", nullable = false, unique = true)
   private String uniqueName = null;
- 
-  @ManyToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE )
-  @JoinTable( name = "metadata_policy_set_for_backends", joinColumns = { @JoinColumn( name = "metadata_backend_fk" ) },  inverseJoinColumns = @JoinColumn( name = "metadata_policy_fk" ) )
+
+  @ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE)
+  @JoinTable(name = "metadata_policy_set_for_backends", joinColumns = {
+      @JoinColumn(name = "metadata_backend_fk")}, inverseJoinColumns = @JoinColumn(name = "metadata_policy_fk"))
   private List<LoadBalancerPolicyDescription> policyDescriptions = null;
-  
-  private LoadBalancerBackendServerDescription() { }
-  
-  public LoadBalancerBackendServerDescription(final LoadBalancer lb, final int instancePort){
+
+  private LoadBalancerBackendServerDescription() {
+  }
+
+  public LoadBalancerBackendServerDescription(final LoadBalancer lb, final int instancePort) {
     this.loadbalancer = lb;
     this.instancePort = instancePort;
   }
-  
-  public LoadBalancerBackendServerDescription(final LoadBalancer lb, final int instancePort, 
-      final List<LoadBalancerPolicyDescription> policyDescriptions){
+
+  public LoadBalancerBackendServerDescription(final LoadBalancer lb, final int instancePort,
+      final List<LoadBalancerPolicyDescription> policyDescriptions) {
     this(lb, instancePort);
     this.policyDescriptions = policyDescriptions;
   }
-  
-  public static LoadBalancerBackendServerDescription named(final LoadBalancer lb, final int instancePort){
-    final LoadBalancerBackendServerDescription backend = new LoadBalancerBackendServerDescription(lb, instancePort);
+
+  public static LoadBalancerBackendServerDescription named(final LoadBalancer lb,
+      final int instancePort) {
+    final LoadBalancerBackendServerDescription backend =
+        new LoadBalancerBackendServerDescription(lb, instancePort);
     backend.uniqueName = backend.createUniqueName();
     return backend;
   }
-  
-  public Integer getInstancePort(){
+
+  public Integer getInstancePort() {
     return this.instancePort;
   }
 
@@ -100,86 +104,88 @@ public class LoadBalancerBackendServerDescription extends AbstractPersistent imp
     return this.policyDescriptions;
   }
 
-  public void addPolicy(final LoadBalancerPolicyDescription policy){
-    if(this.policyDescriptions==null){
+  public void addPolicy(final LoadBalancerPolicyDescription policy) {
+    if (this.policyDescriptions == null) {
       this.policyDescriptions = Lists.newArrayList();
     }
-    if(!this.policyDescriptions.contains(policy))
+    if (!this.policyDescriptions.contains(policy)) {
       this.policyDescriptions.add(policy);
+    }
   }
-  
-  public void removePolicy(final LoadBalancerPolicyDescription policy){
-    if(this.policyDescriptions==null || policy==null)
+
+  public void removePolicy(final LoadBalancerPolicyDescription policy) {
+    if (this.policyDescriptions == null || policy == null) {
       return;
+    }
     this.policyDescriptions.remove(policy);
   }
 
   @PrePersist
-  private void generateOnCommit( ) {
-    if(this.uniqueName==null)
-      this.uniqueName = createUniqueName( );
+  private void generateOnCommit() {
+    if (this.uniqueName == null) {
+      this.uniqueName = createUniqueName();
+    }
   }
 
-  protected String createUniqueName( ) {
-    return String.format("backend-server-%s-%s-%d", this.loadbalancer.getOwnerAccountNumber(), 
-        this.loadbalancer.getDisplayName(), 
+  protected String createUniqueName() {
+    return String.format("backend-server-%s-%s-%d", this.loadbalancer.getOwnerAccountNumber(),
+        this.loadbalancer.getDisplayName(),
         this.instancePort);
   }
-  
-  public String getUniqueName(){
+
+  public String getUniqueName() {
     return this.uniqueName;
   }
-  
+
   @Override
-  public boolean equals(final Object obj){
-    if ( this == obj ) {
+  public boolean equals(final Object obj) {
+    if (this == obj) {
       return true;
     }
-    if ( obj == null ) {
+    if (obj == null) {
       return false;
     }
-    if ( getClass( ) != obj.getClass( ) ) {
+    if (getClass() != obj.getClass()) {
       return false;
     }
     final LoadBalancerBackendServerDescription other = (LoadBalancerBackendServerDescription) obj;
-    if(this.loadbalancer==null){
-      if( other.loadbalancer!=null){
+    if (this.loadbalancer == null) {
+      if (other.loadbalancer != null) {
         return false;
       }
-    }else if(!this.loadbalancer.equals(other.loadbalancer)){
+    } else if (!this.loadbalancer.equals(other.loadbalancer)) {
       return false;
     }
-    
-    if ( this.instancePort == null ) {
-      if ( other.instancePort != null ) {
+
+    if (this.instancePort == null) {
+      if (other.instancePort != null) {
         return false;
       }
-    } else if ( !this.instancePort.equals(other.instancePort)) {
+    } else if (!this.instancePort.equals(other.instancePort)) {
       return false;
     }
-    
+
     return true;
   }
-  
-  
+
   @Override
-  public int hashCode(){
+  public int hashCode() {
     final int prime = 31;
     int result = 1;
 
-    result = prime * result +  ( ( this.loadbalancer == null )
-      ? 0
-      : this.loadbalancer.hashCode( ) );
-    
-    result = prime * result + ( ( this.instancePort == null )
-      ? 0
-      : this.instancePort.hashCode( ) );
+    result = prime * result + ((this.loadbalancer == null)
+        ? 0
+        : this.loadbalancer.hashCode());
+
+    result = prime * result + ((this.instancePort == null)
+        ? 0
+        : this.instancePort.hashCode());
     return result;
   }
-  
+
   @Override
-  public String toString(){
-    return String.format("[%s] Backend Server Description - instance port: %d", 
+  public String toString() {
+    return String.format("[%s] Backend Server Description - instance port: %d",
         this.loadbalancer, this.instancePort);
   }
 }

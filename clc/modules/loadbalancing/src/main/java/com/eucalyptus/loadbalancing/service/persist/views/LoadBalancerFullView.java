@@ -9,7 +9,6 @@ import java.util.List;
 import javax.annotation.Nullable;
 import org.immutables.value.Value.Immutable;
 
-
 @Immutable
 public interface LoadBalancerFullView {
 
@@ -18,7 +17,7 @@ public interface LoadBalancerFullView {
   @Nullable
   LoadBalancerSecurityGroupView getSecurityGroup();
 
-  List<LoadBalancerAutoScalingGroupView>  getAutoScalingGroups();
+  List<LoadBalancerAutoScalingGroupView> getAutoScalingGroups();
 
   List<LoadBalancerBackendInstanceView> getBackendInstances();
 
@@ -31,5 +30,4 @@ public interface LoadBalancerFullView {
   List<LoadBalancerSecurityGroupRefView> getSecurityGroupRefs();
 
   List<LoadBalancerZoneView> getZones();
-
 }

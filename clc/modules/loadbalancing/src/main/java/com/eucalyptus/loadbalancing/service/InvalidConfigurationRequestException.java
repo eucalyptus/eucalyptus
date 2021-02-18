@@ -27,17 +27,20 @@
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
 package com.eucalyptus.loadbalancing.service;
+
 import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
-@QueryBindingInfo( statusCode = 409 )
+@QueryBindingInfo(statusCode = 409)
 public class InvalidConfigurationRequestException extends LoadBalancingException {
-	private static final long serialVersionUID = 1L;
-	public InvalidConfigurationRequestException(){
-		super("InvalidConfigurationRequest", Role.Sender, "Requested configuration change is invalid");
-	}
-	
-	public InvalidConfigurationRequestException(final String reason){
-		super("InvalidConfigurationRequest", Role.Sender, String.format("Requested configuration change is invalid: %s", reason));
-	}
+  private static final long serialVersionUID = 1L;
+
+  public InvalidConfigurationRequestException() {
+    super("InvalidConfigurationRequest", Role.Sender, "Requested configuration change is invalid");
+  }
+
+  public InvalidConfigurationRequestException(final String reason) {
+    super("InvalidConfigurationRequest", Role.Sender,
+        String.format("Requested configuration change is invalid: %s", reason));
+  }
 }

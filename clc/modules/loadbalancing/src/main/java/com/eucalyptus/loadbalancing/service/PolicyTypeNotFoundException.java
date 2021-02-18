@@ -33,12 +33,13 @@ import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 /**
  * @author Sang-Min Park
- *
  */
-@QueryBindingInfo( statusCode = 400 )
+@QueryBindingInfo(statusCode = 400)
 public class PolicyTypeNotFoundException extends LoadBalancingException {
   private static final long serialVersionUID = 1L;
-  public PolicyTypeNotFoundException(){
-    super("PolicyTypeNotFound", Role.Sender, "One or more of the specified policy types do not exist.");
+
+  public PolicyTypeNotFoundException() {
+    super("PolicyTypeNotFound", Role.Sender,
+        "One or more of the specified policy types do not exist.");
   }
 }

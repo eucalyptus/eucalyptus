@@ -38,13 +38,13 @@ import com.google.common.collect.Lists;
 
 /**
  * @author Sang-Min Park
- *
  */
 public class LoadBalancerBackendServerHelper {
-  private static Logger    LOG     = Logger.getLogger( LoadBalancerBackendServerHelper.class );
+  private static Logger LOG = Logger.getLogger(LoadBalancerBackendServerHelper.class);
 
-  public static List<LoadBalancerBackendServerDescription> getLoadBalancerBackendServerDescription(final LoadBalancer lb) {
-      return Lists.newArrayList( lb.getBackendServers( ) );
+  public static List<LoadBalancerBackendServerDescription> getLoadBalancerBackendServerDescription(
+      final LoadBalancer lb) {
+    return Lists.newArrayList(lb.getBackendServers());
   }
 
   /**
@@ -52,9 +52,9 @@ public class LoadBalancerBackendServerHelper {
    */
   public static boolean hasBackendServerDescription(final LoadBalancer lb, int instancePort) {
     boolean found = false;
-    for(final LoadBalancerBackendServerDescription backendServerDescription : lb.getBackendServers()) {
-      if(backendServerDescription.getInstancePort() == instancePort) {
-        found =true;
+    for (final LoadBalancerBackendServerDescription backendServerDescription : lb.getBackendServers()) {
+      if (backendServerDescription.getInstancePort() == instancePort) {
+        found = true;
         break;
       }
     }
@@ -64,15 +64,16 @@ public class LoadBalancerBackendServerHelper {
   /**
    * Caller must have transaction for load balancer
    */
-  public static LoadBalancerBackendServerDescription getBackendServerDescription(final LoadBalancer lb, final int instancePort) {
+  public static LoadBalancerBackendServerDescription getBackendServerDescription(
+      final LoadBalancer lb, final int instancePort) {
     // look for existing back-end server description; if none, create one
     LoadBalancerBackendServerDescription backend = null;
-    for(final LoadBalancerBackendServerDescription backendServerDescription : lb.getBackendServers()){
-      if(backendServerDescription.getInstancePort() == instancePort) {
+    for (final LoadBalancerBackendServerDescription backendServerDescription : lb.getBackendServers()) {
+      if (backendServerDescription.getInstancePort() == instancePort) {
         backend = backendServerDescription;
         break;
       }
     }
-    return backend; 
+    return backend;
   }
 }

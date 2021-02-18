@@ -5,7 +5,6 @@
  */
 package com.eucalyptus.loadbalancing.service.persist;
 
-
 public class LoadBalancingMetadataNotFoundException extends LoadBalancingMetadataException {
   private static final long serialVersionUID = 1L;
 

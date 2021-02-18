@@ -10,10 +10,10 @@ import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.loadbalancing.common.LoadBalancingMetadata.LoadBalancerSecurityGroupMetadata;
 import com.eucalyptus.loadbalancing.service.persist.LoadBalancerSecurityGroups;
 
-
 @ComponentNamed
 public class PersistenceLoadBalancerSecurityGroups
-    extends LoadBalancingPersistenceSupport<LoadBalancerSecurityGroupMetadata, LoadBalancerSecurityGroup>
+    extends
+    LoadBalancingPersistenceSupport<LoadBalancerSecurityGroupMetadata, LoadBalancerSecurityGroup>
     implements LoadBalancerSecurityGroups {
 
   public PersistenceLoadBalancerSecurityGroups() {
@@ -26,7 +26,8 @@ public class PersistenceLoadBalancerSecurityGroups
   }
 
   @Override
-  protected LoadBalancerSecurityGroup exampleWithName(final OwnerFullName ownerFullName, final String name) {
+  protected LoadBalancerSecurityGroup exampleWithName(final OwnerFullName ownerFullName,
+      final String name) {
     return LoadBalancerSecurityGroup.named(ownerFullName, name);
   }
 }

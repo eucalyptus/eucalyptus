@@ -36,7 +36,7 @@ import com.eucalyptus.ws.server.SoapPipeline;
 /**
  *
  */
-@ComponentPart( LoadBalancing.class )
+@ComponentPart(LoadBalancing.class)
 public class LoadBalancingSoapPipeline extends SoapPipeline {
 
   public LoadBalancingSoapPipeline() {
@@ -45,6 +45,6 @@ public class LoadBalancingSoapPipeline extends SoapPipeline {
         LoadBalancing.class,
         LoadBalancingConfiguration.SERVICE_PATH,
         LoadBalancingQueryBinding.BALANCING_DEFAULT_NAMESPACE,
-        "http://elasticloadbalancing.amazonaws.com/doc/\\d\\d\\d\\d-\\d\\d-\\d\\d/" );
+        "http://elasticloadbalancing.amazonaws.com/doc/\\d\\d\\d\\d-\\d\\d-\\d\\d/");
   }
 }

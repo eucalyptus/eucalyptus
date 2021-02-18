@@ -36,18 +36,20 @@ import static com.amazonaws.services.simpleworkflow.flow.common.FlowConstants.NO
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
-@Activities(version="1.0")
+@Activities(version = "1.0")
 @ActivityRegistrationOptions(
-        defaultTaskHeartbeatTimeoutSeconds = FlowConstants.NONE,
-        defaultTaskScheduleToCloseTimeoutSeconds = 120,
-        defaultTaskScheduleToStartTimeoutSeconds = 60,
-        defaultTaskStartToCloseTimeoutSeconds = 60,
-        defaultTaskList = NO_DEFAULT_TASK_LIST)
+    defaultTaskHeartbeatTimeoutSeconds = FlowConstants.NONE,
+    defaultTaskScheduleToCloseTimeoutSeconds = 120,
+    defaultTaskScheduleToStartTimeoutSeconds = 60,
+    defaultTaskStartToCloseTimeoutSeconds = 60,
+    defaultTaskList = NO_DEFAULT_TASK_LIST)
 public interface LoadBalancingVmActivities {
   void setPolicy(String policy) throws LoadBalancingActivityException;
+
   void setLoadBalancer(String loadbalancer) throws LoadBalancingActivityException;
+
   String getCloudWatchMetrics() throws LoadBalancingActivityException;
+
   String getInstanceStatus() throws LoadBalancingActivityException;
 }

@@ -8,7 +8,6 @@ package com.eucalyptus.loadbalancing.service.persist.views;
 import java.util.List;
 import org.immutables.value.Value.Immutable;
 
-
 @Immutable
 public interface LoadBalancerZoneFullView {
 
@@ -17,5 +16,4 @@ public interface LoadBalancerZoneFullView {
   List<LoadBalancerBackendInstanceView> getBackendInstances();
 
   List<LoadBalancerServoInstanceView> getServoInstances();
-  
 }

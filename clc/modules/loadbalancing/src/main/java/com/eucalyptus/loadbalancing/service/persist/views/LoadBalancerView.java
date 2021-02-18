@@ -11,7 +11,6 @@ import org.immutables.value.Value.Immutable;
 import com.eucalyptus.loadbalancing.LoadBalancerDeploymentVersion;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer;
 
-
 @Immutable
 public interface LoadBalancerView {
 
@@ -29,7 +28,7 @@ public interface LoadBalancerView {
   LoadBalancer.Scheme getScheme();
 
   @Nullable
-  String getVpcId( );
+  String getVpcId();
 
   @Nullable
   LoadBalancerHealthCheckConfigView getHealthCheckConfig();
@@ -61,6 +60,7 @@ public interface LoadBalancerView {
 
   default boolean useSystemAccount() {
     return getLoadbalancerDeploymentVersion() != null &&
-        LoadBalancerDeploymentVersion.getVersion(getLoadbalancerDeploymentVersion()).isEqualOrLaterThan(LoadBalancerDeploymentVersion.v4_2_0);
+        LoadBalancerDeploymentVersion.getVersion(getLoadbalancerDeploymentVersion())
+            .isEqualOrLaterThan(LoadBalancerDeploymentVersion.v4_2_0);
   }
 }

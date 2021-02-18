@@ -35,15 +35,13 @@ import com.amazonaws.services.simpleworkflow.flow.annotations.WorkflowRegistrati
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
 @Workflow
-@WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 7200, 
-defaultTaskStartToCloseTimeoutSeconds = 60)
+@WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 7200,
+    defaultTaskStartToCloseTimeoutSeconds = 60)
 public interface InstanceStatusWorkflow {
   @Execute(name = "PollInstanceStatus", version = "1.0")
   void pollInstanceStatus(final String accountId, final String loadbalancer);
-
 
   @Signal
   void pollImmediately();

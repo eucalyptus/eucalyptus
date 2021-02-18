@@ -8,14 +8,12 @@ package com.eucalyptus.loadbalancing.service.persist.views;
 import org.immutables.value.Value.Immutable;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerSecurityGroup.STATE;
 
-
 @Immutable
 public interface LoadBalancerSecurityGroupView {
 
-  String getName( );
+  String getName();
 
-  String getGroupOwnerAccountId( );
+  String getGroupOwnerAccountId();
 
-  STATE getState( );
-
+  STATE getState();
 }

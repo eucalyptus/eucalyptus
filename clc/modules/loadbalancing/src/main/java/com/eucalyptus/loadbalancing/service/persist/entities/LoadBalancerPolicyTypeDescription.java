@@ -42,110 +42,115 @@ import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerPolicyTypeDescriptionView;
 import com.google.common.collect.Lists;
 
-
 @Entity
-@PersistenceContext( name = "eucalyptus_loadbalancing" )
-@Table( name = "metadata_policy_type_description" )
-public class LoadBalancerPolicyTypeDescription extends AbstractPersistent implements LoadBalancerPolicyTypeDescriptionView {
-	private static Logger    LOG     = Logger.getLogger( LoadBalancerPolicyTypeDescription.class );
+@PersistenceContext(name = "eucalyptus_loadbalancing")
+@Table(name = "metadata_policy_type_description")
+public class LoadBalancerPolicyTypeDescription extends AbstractPersistent
+    implements LoadBalancerPolicyTypeDescriptionView {
+  private static Logger LOG = Logger.getLogger(LoadBalancerPolicyTypeDescription.class);
 
-	private static final long serialVersionUID = 1L;
-	
-	@Column( name = "description", nullable=true)
-	private String description = null;
-	
-	@Column( name = "policy_type_name", nullable=true)
-	private String policyTypeName = null;
-	
-	@ElementCollection
-	@CollectionTable( name = "metadata_policy_attr_type_description" )
-	private List<LoadBalancerPolicyAttributeTypeDescription> policyAttributeTypeDescriptions = null;
-	
-	public LoadBalancerPolicyTypeDescription(){ }
-	
-	public LoadBalancerPolicyTypeDescription(final String typeName){
-	  this.policyTypeName = typeName;
-	}
-  
-	public LoadBalancerPolicyTypeDescription(final String typeName, final String description){
+  private static final long serialVersionUID = 1L;
+
+  @Column(name = "description", nullable = true)
+  private String description = null;
+
+  @Column(name = "policy_type_name", nullable = true)
+  private String policyTypeName = null;
+
+  @ElementCollection
+  @CollectionTable(name = "metadata_policy_attr_type_description")
+  private List<LoadBalancerPolicyAttributeTypeDescription> policyAttributeTypeDescriptions = null;
+
+  public LoadBalancerPolicyTypeDescription() {
+  }
+
+  public LoadBalancerPolicyTypeDescription(final String typeName) {
+    this.policyTypeName = typeName;
+  }
+
+  public LoadBalancerPolicyTypeDescription(final String typeName, final String description) {
     this(typeName);
     this.description = description;
   }
-  
-  public LoadBalancerPolicyTypeDescription(final String typeName, final String description, 
-      final List<LoadBalancerPolicyAttributeTypeDescription> attributeTypes){
+
+  public LoadBalancerPolicyTypeDescription(final String typeName, final String description,
+      final List<LoadBalancerPolicyAttributeTypeDescription> attributeTypes) {
     this(typeName, description);
     this.policyAttributeTypeDescriptions = attributeTypes;
   }
-  
-  public static LoadBalancerPolicyTypeDescription named(final String typeName){
+
+  public static LoadBalancerPolicyTypeDescription named(final String typeName) {
     return new LoadBalancerPolicyTypeDescription(typeName);
   }
 
-	public String getPolicyTypeName(){
-	  return this.policyTypeName;
-	}
-	
-	public void setDescription(final String description){
-	  this.description = description;
-	}
+  public String getPolicyTypeName() {
+    return this.policyTypeName;
+  }
 
-	public String getDescription(){
-	  return this.description;
-	}
-	
-	public List<LoadBalancerPolicyAttributeTypeDescription> getPolicyAttributeTypeDescriptions(){
-	  return this.policyAttributeTypeDescriptions;
-	}
-	
-	public void addPolicyAttributeTypeDescription(final LoadBalancerPolicyAttributeTypeDescription attrDesc){
-	  if(this.policyAttributeTypeDescriptions==null)
-	    this.policyAttributeTypeDescriptions = Lists.newArrayList();
-	  this.removePolicyAttributeTypeDescription(attrDesc);
-	  this.policyAttributeTypeDescriptions.add(attrDesc);
-	}
-	
-	public void removePolicyAttributeTypeDescription(final LoadBalancerPolicyAttributeTypeDescription attrDesc){
-	   if(this.policyAttributeTypeDescriptions==null)
-	     return;
-	   this.policyAttributeTypeDescriptions.remove(attrDesc);
-	}
-	
-	@Override
-	public String toString(){
-	  return String.format("PolicyTypeDescription: %s", this.policyTypeName);
-	}
-	
-	@Override
-	public int hashCode(){
-	  final int prime = 31;
+  public void setDescription(final String description) {
+    this.description = description;
+  }
+
+  public String getDescription() {
+    return this.description;
+  }
+
+  public List<LoadBalancerPolicyAttributeTypeDescription> getPolicyAttributeTypeDescriptions() {
+    return this.policyAttributeTypeDescriptions;
+  }
+
+  public void addPolicyAttributeTypeDescription(
+      final LoadBalancerPolicyAttributeTypeDescription attrDesc) {
+    if (this.policyAttributeTypeDescriptions == null) {
+      this.policyAttributeTypeDescriptions = Lists.newArrayList();
+    }
+    this.removePolicyAttributeTypeDescription(attrDesc);
+    this.policyAttributeTypeDescriptions.add(attrDesc);
+  }
+
+  public void removePolicyAttributeTypeDescription(
+      final LoadBalancerPolicyAttributeTypeDescription attrDesc) {
+    if (this.policyAttributeTypeDescriptions == null) {
+      return;
+    }
+    this.policyAttributeTypeDescriptions.remove(attrDesc);
+  }
+
+  @Override
+  public String toString() {
+    return String.format("PolicyTypeDescription: %s", this.policyTypeName);
+  }
+
+  @Override
+  public int hashCode() {
+    final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( this.policyTypeName == null )
-      ? 0
-      : this.policyTypeName.hashCode( ) );
+    result = prime * result + ((this.policyTypeName == null)
+        ? 0
+        : this.policyTypeName.hashCode());
     return result;
-	}
-	
-	@Override
-	public boolean equals(final Object obj){
-	  if ( this == obj ) {
+  }
+
+  @Override
+  public boolean equals(final Object obj) {
+    if (this == obj) {
       return true;
     }
-    if ( obj == null ) {
+    if (obj == null) {
       return false;
     }
-    if ( getClass( ) != obj.getClass( ) ) {
+    if (getClass() != obj.getClass()) {
       return false;
     }
-    LoadBalancerPolicyTypeDescription other = ( LoadBalancerPolicyTypeDescription ) obj;
-    if ( this.policyTypeName == null ) {
-      if ( other.policyTypeName != null ) {
+    LoadBalancerPolicyTypeDescription other = (LoadBalancerPolicyTypeDescription) obj;
+    if (this.policyTypeName == null) {
+      if (other.policyTypeName != null) {
         return false;
       }
-    } else if ( !this.policyTypeName.equals( other.policyTypeName ) ) {
+    } else if (!this.policyTypeName.equals(other.policyTypeName)) {
       return false;
     }
-    
+
     return true;
-	}
+  }
 }

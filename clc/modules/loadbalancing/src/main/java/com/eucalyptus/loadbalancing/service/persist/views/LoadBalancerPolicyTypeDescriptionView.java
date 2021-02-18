@@ -7,12 +7,10 @@ package com.eucalyptus.loadbalancing.service.persist.views;
 
 import org.immutables.value.Value.Immutable;
 
-
 @Immutable
 public interface LoadBalancerPolicyTypeDescriptionView {
 
-  String getDescription( );
+  String getDescription();
 
-  String getPolicyTypeName( );
-
+  String getPolicyTypeName();
 }
