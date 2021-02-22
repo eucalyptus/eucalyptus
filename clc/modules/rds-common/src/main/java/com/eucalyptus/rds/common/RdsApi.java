@@ -5,9 +5,11 @@
  */
 package com.eucalyptus.rds.common;
 
+import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.rds.common.msgs.*;
 
 
+@ComponentPart(Rds.class)
 public interface RdsApi {
 
   AddRoleToDBClusterResponseType addRoleToDBCluster(final AddRoleToDBClusterType request);

@@ -1,0 +1,161 @@
+---
+# RDS DB Instance template for PostgreSQL
+#
+# Required:
+#
+# - CentOS 7 Atomic Machine Image
+# - VPC and Subnet for creating resources in
+# - Volume for data
+#
+# Optional:
+#
+# - SSH key name allowing debug connection to db instance
+#
+# PostgreSQL parameters as per RDS, plus version suffix allowing use of
+# regular (empty string) or alpine (default) image variants.
+#
+AWSTemplateFormatVersion: 2010-09-09
+Description: PostgreSQL database instance template
+
+Parameters:
+  PostgresUser:
+    Description: Postgres user
+    Type: String
+    Default: postgres
+  PostgresPassword:
+    Description: Postgres password
+    Type: String
+    Default: changeme
+  PostgresDatabase:
+    Description: Postgres database
+    Type: String
+    Default: postgres
+  PostgresVersion:
+    Description: Postgres version
+    Type: String
+    Default: 11
+  PostgresVersionSuffix:
+    Description: Postgres version suffix
+    Type: String
+    Default: "-alpine"
+  PostgresPort:
+    Description: Postgres listen port
+    Type: String
+    Default: 5432
+  InstanceType:
+    Description: Instance type to use
+    Type: String
+    Default: t2.small
+  ImageId:
+    Description: Identifier for the Fedora CoreOS image
+    Type: String
+  KeyName:
+    Description: EC2 keypair for instance SSH access
+    Type: String
+    Default: ''
+  SubnetId:
+    Description:
+    Type: String
+  VolumeId:
+    Description: The volume to use for database content
+    Type: String
+  VpcId:
+    Description: The vpc to use
+    Type: String
+
+Conditions:
+  UseKeyNameParameter: !Not
+    - !Equals
+      - !Ref KeyName
+      - ''
+
+Resources:
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Postgres security group
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: '0.0.0.0/0'
+        - IpProtocol: tcp
+          FromPort: !Ref PostgresPort
+          ToPort: !Ref PostgresPort
+          CidrIp: '0.0.0.0/0'
+
+  Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref 'ImageId'
+      InstanceType: !Ref 'InstanceType'
+      KeyName: !If
+        - UseKeyNameParameter
+        - !Ref 'KeyName'
+        - !Ref 'AWS::NoValue'
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          SubnetId: !Ref SubnetId
+          GroupSet:
+            - !Ref SecurityGroup
+      Volumes:
+        - VolumeId: !Ref VolumeId
+          Device: /dev/sdf
+      UserData:
+        Fn::Base64: !Sub |
+          #cloud-config
+          bootcmd:
+          - test ! -z "$(blkid /dev/vdb)" || mkfs -t ext4 -L euca-rdsfs /dev/vdb
+          - test -d /var/mnt/rds || mkdir -pv /var/mnt/rds
+          mounts:
+          - ["LABEL=euca-rdsfs", "/var/mnt/rds", "ext4", "defaults,nofail", "0", "2"]
+          write_files:
+          - path: /etc/sysconfig/postgres-container
+            permissions: "0644"
+            owner: root
+            content: |
+              POSTGRES_VERSION=${PostgresVersion}
+              POSTGRES_VERSION_SUFFIX=${PostgresVersionSuffix}
+              POSTGRES_DB=${PostgresDatabase}
+              POSTGRES_PORT=${PostgresPort}
+              POSTGRES_USER=${PostgresUser}
+              POSTGRES_PASSWORD=${PostgresPassword}
+          - path: /etc/systemd/system/postgres-container.service
+            permissions: "0644"
+            owner: root
+            content: |
+              [Unit]
+              Description=PostgreSQL container
+
+              [Service]
+              Restart=on-failure
+              Environment=POSTGRES_VERSION_SUFFIX=-alpine POSTGRES_VERSION=11 POSTGRES_PORT=5432 PGDATA=/var/lib/postgres/rds/pgdata
+              EnvironmentFile=/etc/sysconfig/postgres-container
+              ExecStartPre=-/bin/mkdir -pv /var/mnt/rds/data
+              ExecStartPre=/usr/bin/rm -f /%t/%n-pid /%t/%n-cid
+              ExecStart=/usr/bin/podman run \
+                --conmon-pidfile /%t/%n-pid \
+                --cidfile /%t/%n-cid \
+                --detach \
+                --env-file /etc/sysconfig/postgres-container \
+                --network host \
+                --env PGDATA --env PGPORT=${!POSTGRES_PORT} --env POSTGRES_DB --env POSTGRES_USER --env POSTGRES_PASSWORD \
+                --volume /var/mnt/rds/data:/var/lib/postgres/rds:z \
+                registry.hub.docker.com/library/postgres:${!POSTGRES_VERSION}${!POSTGRES_VERSION_SUFFIX}
+              ExecStop=/usr/bin/sh -c "/usr/bin/podman rm -f `cat /%t/%n-cid`"
+              KillMode=none
+              Type=forking
+              PIDFile=/%t/%n-pid
+
+              [Install]
+              WantedBy=multi-user.target
+          runcmd:
+          - systemctl enable --now postgres-container.service
+Outputs:
+  InstanceId:
+    Description: Postgres instance identifier
+    Value: !Ref Instance
+  PrivateIp:
+    Description: Postgres instance private ip
+    Value: !GetAtt Instance.PrivateIp

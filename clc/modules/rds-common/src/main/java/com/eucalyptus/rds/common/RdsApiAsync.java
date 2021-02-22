@@ -5,9 +5,11 @@
  */
 package com.eucalyptus.rds.common;
 
+import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.rds.common.msgs.*;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 
+@ComponentPart(Rds.class)
 public interface RdsApiAsync {
 
   CheckedListenableFuture<AddRoleToDBClusterResponseType> addRoleToDBClusterAsync(final AddRoleToDBClusterType request);

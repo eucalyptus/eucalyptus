@@ -14,6 +14,7 @@
     </int:header-enricher>
     <int:service-activator ref="rdsService">
       <int:request-handler-advice-chain>
+        <ref bean="rdsServiceAuthAdvice"/>
         <ref bean="rdsMessageValidator"/>
       </int:request-handler-advice-chain>
     </int:service-activator>

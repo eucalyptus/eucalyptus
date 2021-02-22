@@ -5,14 +5,58 @@
  */
 package com.eucalyptus.rds.service;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Set;
+import java.util.function.Function;
+import javax.inject.Inject;
+import org.apache.log4j.Logger;
+import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.component.annotation.ComponentNamed;
+import com.eucalyptus.compute.common.ComputeApi;
+import com.eucalyptus.compute.common.SubnetType;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.rds.common.RdsMetadatas;
 import com.eucalyptus.rds.common.msgs.*;
+import com.eucalyptus.rds.service.engine.RdsEngine;
+import com.eucalyptus.rds.service.persist.RdsMetadataNotFoundException;
+import com.eucalyptus.rds.service.persist.entities.DBInstance.Status;
+import com.eucalyptus.rds.service.persist.entities.DBSubnet;
+import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.util.async.AsyncProxy;
+import com.google.common.base.Functions;
+import com.google.common.base.MoreObjects;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import io.vavr.Tuple;
+import io.vavr.Tuple2;
 
 /**
  *
  */
 @ComponentNamed
 public class RdsService {
+  private static final Logger logger = Logger.getLogger( RdsService.class );
+
+  private final com.eucalyptus.rds.service.persist.DBInstances dbInstances;
+  private final com.eucalyptus.rds.service.persist.DBSubnetGroups dbSubnetGroups;
+
+  @Inject
+  public RdsService(
+      final com.eucalyptus.rds.service.persist.DBInstances dbInstances,
+      final com.eucalyptus.rds.service.persist.DBSubnetGroups dbSubnetGroups
+  ) {
+    this.dbInstances = dbInstances;
+    this.dbSubnetGroups = dbSubnetGroups;
+  }
 
   public AddRoleToDBClusterResponseType addRoleToDBCluster(final AddRoleToDBClusterType request) {
     return request.getReply();
@@ -86,8 +130,67 @@ public class RdsService {
     return request.getReply();
   }
 
-  public CreateDBInstanceResponseType createDBInstance(final CreateDBInstanceType request) {
-    return request.getReply();
+  public CreateDBInstanceResponseType createDBInstance(final CreateDBInstanceType request) throws RdsException {
+    final CreateDBInstanceResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final OwnerFullName ownerFullName = ctx.getUserFullName( );
+    try {
+      final String instanceName = request.getDBInstanceIdentifier();
+      final String instanceClass = request.getDBInstanceClass();
+      final String subnetGroupName = request.getDBSubnetGroupName();
+      final RdsEngine engine = RdsEngine.postgres;
+      final Set<String> vpcSecurityGroups = request.getVpcSecurityGroupIds()==null ?
+          Collections.emptySet() :
+          Sets.newTreeSet(request.getVpcSecurityGroupIds().getMember());
+
+      final Supplier<com.eucalyptus.rds.service.persist.entities.DBInstance> allocator =
+          new Supplier<com.eucalyptus.rds.service.persist.entities.DBInstance>( ) {
+            @Override
+            public com.eucalyptus.rds.service.persist.entities.DBInstance get( ) {
+              try {
+                final com.eucalyptus.rds.service.persist.entities.DBSubnetGroup group =
+                    subnetGroupName == null ?
+                        null :
+                        dbSubnetGroups.lookupByName(
+                            ctx.getUserFullName( ).asAccountFullName(),
+                            subnetGroupName,
+                            RdsMetadatas.filterPrivileged( ),
+                            Functions.identity( ));
+
+                final com.eucalyptus.rds.service.persist.entities.DBInstance instance =
+                    com.eucalyptus.rds.service.persist.entities.DBInstance.create(
+                        ownerFullName,
+                        instanceName,
+                        MoreObjects.firstNonNull( request.getAllocatedStorage(), 20 ),
+                        MoreObjects.firstNonNull( request.getCopyTagsToSnapshot(), Boolean.FALSE ),
+                        MoreObjects.firstNonNull( request.getDBName(), engine.getDefaultDatabaseName()),
+                        MoreObjects.firstNonNull(request.getPort(), engine.getDefaultDatabasePort()),
+                         instanceClass,
+                        engine.name(),
+                        MoreObjects.firstNonNull(request.getEngineVersion(), engine.getDefaultDatabaseVersion()),
+                        MoreObjects.firstNonNull(request.getPubliclyAccessible(), Boolean.FALSE)
+                    );
+
+                instance.setAvailabilityZone(request.getAvailabilityZone());
+                instance.setMasterUsername(request.getMasterUsername());
+                instance.setMasterUserPassword(request.getMasterUserPassword());
+                instance.setVpcSecurityGroups(Lists.newArrayList(vpcSecurityGroups));
+                instance.setDbSubnetGroup(group);
+                return dbInstances.save(instance);
+              } catch ( Exception ex ) {
+                throw new RuntimeException( ex );
+              }
+            }
+          };
+
+      final com.eucalyptus.rds.service.persist.entities.DBInstance instance =
+          RdsMetadatas.allocateUnitlessResource( allocator );
+      reply.getCreateDBInstanceResult().setDBInstance(
+          TypeMappers.transform(instance, DBInstance.class));
+    } catch ( final Exception e ) {
+      handleException( e, __ -> new RdsClientException("DBInstanceAlreadyExists", "Instance already exists"));
+    }
+    return reply;
   }
 
   public CreateDBInstanceReadReplicaResponseType createDBInstanceReadReplica(final CreateDBInstanceReadReplicaType request) {
@@ -110,8 +213,66 @@ public class RdsService {
     return request.getReply();
   }
 
-  public CreateDBSubnetGroupResponseType createDBSubnetGroup(final CreateDBSubnetGroupType request) {
-    return request.getReply();
+  public CreateDBSubnetGroupResponseType createDBSubnetGroup(final CreateDBSubnetGroupType request) throws RdsException {
+    final CreateDBSubnetGroupResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final OwnerFullName ownerFullName = ctx.getUserFullName( );
+    try {
+      final String name = request.getDBSubnetGroupName();
+      final String desc = request.getDBSubnetGroupDescription();
+      final Collection<String> subnetIds = request.getSubnetIds().getMember();
+
+      if (subnetIds.isEmpty()) {
+        throw new RdsClientException("DBSubnetGroupDoesNotCoverEnoughAZs", "No subnets");
+      }
+
+      final Set<String> vpcIds = Sets.newHashSet();
+      final Set<Tuple2<String,String>> subnetsToZones = Sets.newHashSet();
+      final ComputeApi client = AsyncProxy.client( ComputeApi.class );
+      for ( final SubnetType subnetType : client.describeSubnets( subnetIds ).getSubnetSet().getItem( ) ) {
+        vpcIds.add( subnetType.getVpcId( ) );
+        subnetsToZones.add(Tuple.of(subnetType.getSubnetId(), subnetType.getAvailabilityZone()));
+      }
+      if (subnetsToZones.isEmpty()) {
+        throw new RdsClientException("InvalidSubnet", "Subnet(s) not found");
+      }
+      if (vpcIds.size()!=1) {
+        throw new RdsClientException("InvalidSubnet", "Subnets vpc invalid");
+      }
+
+      final Supplier<com.eucalyptus.rds.service.persist.entities.DBSubnetGroup> allocator =
+          new Supplier<com.eucalyptus.rds.service.persist.entities.DBSubnetGroup>( ) {
+        @Override
+        public com.eucalyptus.rds.service.persist.entities.DBSubnetGroup get( ) {
+          try {
+            final com.eucalyptus.rds.service.persist.entities.DBSubnetGroup group =
+                com.eucalyptus.rds.service.persist.entities.DBSubnetGroup.create(
+                    ownerFullName,
+                    name,
+                    desc
+                );
+
+            final List<DBSubnet> dbSubnets = Lists.newArrayList();
+            for ( final Tuple2<String,String> subnetAndZone : subnetsToZones ) {
+              dbSubnets.add( DBSubnet.create( group, subnetAndZone._1(), subnetAndZone._2() ) );
+            }
+            group.setVpcId(vpcIds.iterator().next());
+            group.setSubnets(dbSubnets);
+            return dbSubnetGroups.save(group);
+          } catch ( Exception ex ) {
+            throw new RuntimeException( ex );
+          }
+        }
+      };
+
+      final com.eucalyptus.rds.service.persist.entities.DBSubnetGroup group =
+          RdsMetadatas.allocateUnitlessResource( allocator );
+      reply.getCreateDBSubnetGroupResult().setDBSubnetGroup(
+          TypeMappers.transform(group, DBSubnetGroup.class));
+    } catch ( final Exception e ) {
+      handleException( e, __ -> new RdsClientException("DBSubnetGroupAlreadyExists", "Group already exists"));
+    }
+    return reply;
   }
 
   public CreateEventSubscriptionResponseType createEventSubscription(final CreateEventSubscriptionType request) {
@@ -146,8 +307,31 @@ public class RdsService {
     return request.getReply();
   }
 
-  public DeleteDBInstanceResponseType deleteDBInstance(final DeleteDBInstanceType request) {
-    return request.getReply();
+  public DeleteDBInstanceResponseType deleteDBInstance(final DeleteDBInstanceType request) throws RdsException {
+    final DeleteDBInstanceResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    try {
+      final OwnerFullName ownerFullName = ctx.getUserFullName( ).asAccountFullName( );
+      final String name = request.getDBInstanceIdentifier();
+
+      final DBInstance instance = dbInstances.updateByExample(
+          com.eucalyptus.rds.service.persist.entities.DBInstance.exampleWithName(ownerFullName, name),
+          ownerFullName,
+          name,
+          dbInstance -> {
+            if (!RdsMetadatas.filterPrivileged().apply(dbInstance)) {
+              throw new NoSuchElementException();
+            }
+            dbInstance.setState(Status.deleting);
+            return TypeMappers.transform(dbInstance, DBInstance.class);
+          });
+      reply.getDeleteDBInstanceResult().setDBInstance(instance);
+    } catch ( final RdsMetadataNotFoundException e ) {
+      throw new RdsClientException( "DBInstanceNotFound", "DB Instance Not Found" );
+    } catch ( final Exception e ) {
+      handleException( e, __ -> new RdsClientException("InvalidDBInstanceState", "Invalid state for delete") );
+    }
+    return reply;
   }
 
   public DeleteDBInstanceAutomatedBackupResponseType deleteDBInstanceAutomatedBackup(final DeleteDBInstanceAutomatedBackupType request) {
@@ -170,8 +354,23 @@ public class RdsService {
     return request.getReply();
   }
 
-  public DeleteDBSubnetGroupResponseType deleteDBSubnetGroup(final DeleteDBSubnetGroupType request) {
-    return request.getReply();
+  public DeleteDBSubnetGroupResponseType deleteDBSubnetGroup(final DeleteDBSubnetGroupType request) throws RdsException {
+    final DeleteDBSubnetGroupResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    try {
+      final OwnerFullName ownerFullName = ctx.getUserFullName( ).asAccountFullName( );
+      final String name = request.getDBSubnetGroupName();
+
+      final com.eucalyptus.rds.service.persist.entities.DBSubnetGroup group =
+          dbSubnetGroups.lookupByName( ownerFullName, name, RdsMetadatas.filterPrivileged(), Functions.identity());
+
+      dbSubnetGroups.deleteByExample( group );
+    } catch ( final RdsMetadataNotFoundException e ) {
+      throw new RdsClientException( "DBSubnetGroupNotFoundFault", "DB Subnet Group Not Found" );
+    } catch ( final Exception e ) {
+      handleException( e, __ -> new RdsClientException("InvalidDBSubnetGroupStateFault", "Group in use") );
+    }
+    return reply;
   }
 
   public DeleteEventSubscriptionResponseType deleteEventSubscription(final DeleteEventSubscriptionType request) {
@@ -234,16 +433,59 @@ public class RdsService {
     return request.getReply();
   }
 
-  public DescribeDBEngineVersionsResponseType describeDBEngineVersions(final DescribeDBEngineVersionsType request) {
-    return request.getReply();
+  public DescribeDBEngineVersionsResponseType describeDBEngineVersions(final DescribeDBEngineVersionsType request) throws RdsException {
+    final DescribeDBEngineVersionsResponseType reply = request.getReply();
+    try {
+      final DBEngineVersionList versionList = new DBEngineVersionList();
+      for (final RdsEngine engine : RdsEngine.values()) {
+        final DBEngineVersion engineVersion = new DBEngineVersion();
+        engineVersion.setEngine(engine.toString());
+        engineVersion.setDBEngineDescription(engine.getDescription());
+        engineVersion.setEngineVersion(engine.getDefaultDatabaseVersion());
+        engineVersion.setDBEngineVersionDescription(engine.getDefaultDatabaseVersionDescription());
+        versionList.getMember().add(engineVersion);
+      }
+      reply.getDescribeDBEngineVersionsResult().setDBEngineVersions(versionList);
+    } catch ( Exception e ) {
+      handleException( e );
+    }
+    return reply;
   }
 
   public DescribeDBInstanceAutomatedBackupsResponseType describeDBInstanceAutomatedBackups(final DescribeDBInstanceAutomatedBackupsType request) {
     return request.getReply();
   }
 
-  public DescribeDBInstancesResponseType describeDBInstances(final DescribeDBInstancesType request) {
-    return request.getReply();
+  public DescribeDBInstancesResponseType describeDBInstances(final DescribeDBInstancesType request) throws RdsException {
+    final DescribeDBInstancesResponseType reply = request.getReply();
+
+    final Context ctx = Contexts.lookup( );
+    //TODO describe db instances filters - request.getFilters()
+    final boolean showAll = "verbose".equals( request.getDBInstanceIdentifier() );
+    final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll ?
+        null :
+        ctx.getUserFullName( ).asAccountFullName( );
+
+    try {
+      final Predicate<com.eucalyptus.rds.service.persist.entities.DBInstance> requestedAndAccessible =
+          Predicates.and(
+              RdsMetadatas.filterPrivileged( ),
+              RdsMetadatas.filterById( request.getDBInstanceIdentifier() == null ?
+                  Collections.emptySet() :
+                  Collections.singleton( request.getDBInstanceIdentifier( )  ) )
+          );
+
+      final DBInstanceList resultDBInstances = new DBInstanceList();
+      resultDBInstances.getMember().addAll( dbInstances.list(
+          ownerFullName,
+          requestedAndAccessible,
+          TypeMappers.lookup( com.eucalyptus.rds.service.persist.entities.DBInstance.class, DBInstance.class ) ) );
+      reply.getDescribeDBInstancesResult().setDBInstances(resultDBInstances);
+    } catch ( Exception e ) {
+      handleException( e );
+    }
+
+    return reply;
   }
 
   public DescribeDBLogFilesResponseType describeDBLogFiles(final DescribeDBLogFilesType request) {
@@ -282,8 +524,35 @@ public class RdsService {
     return request.getReply();
   }
 
-  public DescribeDBSubnetGroupsResponseType describeDBSubnetGroups(final DescribeDBSubnetGroupsType request) {
-    return request.getReply();
+  public DescribeDBSubnetGroupsResponseType describeDBSubnetGroups(final DescribeDBSubnetGroupsType request) throws RdsException {
+    final DescribeDBSubnetGroupsResponseType reply = request.getReply();
+
+    final Context ctx = Contexts.lookup( );
+    final boolean showAll = "verbose".equals( request.getDBSubnetGroupName() );
+    final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll ?
+        null :
+        ctx.getUserFullName( ).asAccountFullName( );
+
+    try {
+      final Predicate<com.eucalyptus.rds.service.persist.entities.DBSubnetGroup> requestedAndAccessible =
+          Predicates.and(
+              RdsMetadatas.filterPrivileged( ),
+              RdsMetadatas.filterById( request.getDBSubnetGroupName() == null ?
+                  Collections.emptySet() :
+                  Collections.singleton( request.getDBSubnetGroupName( )  ) )
+          );
+
+      final DBSubnetGroups resultSubnetGroups = new DBSubnetGroups();
+      resultSubnetGroups.getMember().addAll( dbSubnetGroups.list(
+          ownerFullName,
+          requestedAndAccessible,
+          TypeMappers.lookup( com.eucalyptus.rds.service.persist.entities.DBSubnetGroup.class, DBSubnetGroup.class ) ) );
+      reply.getDescribeDBSubnetGroupsResult().setDBSubnetGroups(resultSubnetGroups);
+    } catch ( Exception e ) {
+      handleException( e );
+    }
+
+    return reply;
   }
 
   public DescribeEngineDefaultClusterParametersResponseType describeEngineDefaultClusterParameters(final DescribeEngineDefaultClusterParametersType request) {
@@ -534,4 +803,32 @@ public class RdsService {
     return request.getReply();
   }
 
+  private static void handleException( final Exception e ) throws RdsException {
+    handleException( e,  null );
+  }
+
+  private static void handleException(
+      final Exception e,
+      final Function<ConstraintViolationException, RdsException> constraintExceptionBuilder
+  ) throws RdsException {
+    final RdsServiceException cause = Exceptions.findCause( e, RdsServiceException.class );
+    if ( cause != null ) {
+      throw cause;
+    }
+
+    final ConstraintViolationException constraintViolationException =
+        Exceptions.findCause( e, ConstraintViolationException.class );
+    if ( constraintViolationException != null && constraintExceptionBuilder != null ) {
+      throw constraintExceptionBuilder.apply( constraintViolationException );
+    }
+
+    logger.error( e, e );
+
+    final RdsServiceException exception =
+        new RdsServiceException( "InternalFailure", String.valueOf(e.getMessage()) );
+    if ( Contexts.lookup( ).hasAdministrativePrivileges() ) {
+      exception.initCause( e );
+    }
+    throw exception;
+  }
 }
