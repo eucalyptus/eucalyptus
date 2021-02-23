@@ -44,6 +44,9 @@ public class AWSIAMInstanceProfileProperties implements ResourceProperties {
   @Property
   private ArrayList<String> roles = Lists.newArrayList( );
 
+  @Property
+  private String instanceProfileName;
+
   public String getPath( ) {
     return path;
   }
@@ -60,11 +63,20 @@ public class AWSIAMInstanceProfileProperties implements ResourceProperties {
     this.roles = roles;
   }
 
+  public String getInstanceProfileName( ) {
+    return instanceProfileName;
+  }
+
+  public void setInstanceProfileName( String instanceProfileName ) {
+    this.instanceProfileName = instanceProfileName;
+  }
+
   @Override
   public String toString( ) {
     return MoreObjects.toStringHelper( this )
         .add( "path", path )
         .add( "roles", roles )
+        .add( "instanceProfileName", instanceProfileName )
         .toString( );
   }
 }

@@ -48,7 +48,11 @@ public class AWSIAMInstanceProfileResourceInfo extends ResourceInfo {
   @Override
   public Collection<String> getRequiredCapabilities( JsonNode propertiesJson ) {
     ArrayList<String> capabilities = new ArrayList<String>( );
-    capabilities.add( Capabilities.CAPABILITY_IAM.toString( ) );
+    if ( propertiesJson != null && propertiesJson.isObject( ) && propertiesJson.has( "InstanceProfileName" ) ) {
+      capabilities.add( Capabilities.CAPABILITY_NAMED_IAM.toString( ) );
+    } else {
+      capabilities.add( Capabilities.CAPABILITY_IAM.toString( ) );
+    }
     return capabilities;
   }
 

@@ -53,6 +53,7 @@ import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
 import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
+import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Euare;
@@ -61,7 +62,9 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
 
+import com.google.common.collect.Maps;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -75,6 +78,11 @@ public class AWSIAMInstanceProfileResourceAction extends StepBasedResourceAction
 
   public AWSIAMInstanceProfileResourceAction() {
     super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class),fromUpdateEnum(UpdateNoInterruptionSteps.class), null);
+    // In this case, update with replacement has a precondition check before essentially the same steps as "create".  We add both.
+    Map<String, UpdateStep> updateWithReplacementMap = Maps.newLinkedHashMap();
+    updateWithReplacementMap.putAll(fromUpdateEnum(AWSIAMInstanceProfileResourceAction.UpdateWithReplacementPreCreateSteps.class));
+    updateWithReplacementMap.putAll(createStepsToUpdateWithReplacementSteps(fromEnum(AWSIAMInstanceProfileResourceAction.CreateSteps.class)));
+    setUpdateSteps(UpdateTypeAndDirection.UPDATE_WITH_REPLACEMENT, updateWithReplacementMap);
   }
 
   @Override
@@ -87,6 +95,9 @@ public class AWSIAMInstanceProfileResourceAction extends StepBasedResourceAction
     if (!Objects.equals(properties.getRoles(), otherAction.properties.getRoles())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
+    if (!Objects.equals(properties.getInstanceProfileName(), otherAction.properties.getInstanceProfileName())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
     return updateType;
   }
 
@@ -96,7 +107,9 @@ public class AWSIAMInstanceProfileResourceAction extends StepBasedResourceAction
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSIAMInstanceProfileResourceAction action = (AWSIAMInstanceProfileResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        String instanceProfileName = action.getDefaultPhysicalResourceId();
+        String instanceProfileName = action.properties.getInstanceProfileName() != null ?
+            action.properties.getInstanceProfileName() :
+            action.getDefaultPhysicalResourceId();
         CreateInstanceProfileType createInstanceProfileType = MessageHelper.createMessage(CreateInstanceProfileType.class, action.info.getEffectiveUserId());
         createInstanceProfileType.setPath(MoreObjects.firstNonNull(action.properties.getPath(), DEFAULT_PATH));
         createInstanceProfileType.setInstanceProfileName(instanceProfileName);
@@ -209,6 +222,21 @@ public class AWSIAMInstanceProfileResourceAction extends StepBasedResourceAction
             addRoleToInstanceProfileType.setRoleName(roleName);
             AsyncRequests.<AddRoleToInstanceProfileType,AddRoleToInstanceProfileResponseType> sendSync(configuration, addRoleToInstanceProfileType);
           }
+        }
+        return newAction;
+      }
+    }
+  }
+
+
+  private enum UpdateWithReplacementPreCreateSteps implements UpdateStep {
+    CHECK_CHANGED_PROFILE_NAME {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        AWSIAMInstanceProfileResourceAction oldAction = (AWSIAMInstanceProfileResourceAction) oldResourceAction;
+        AWSIAMInstanceProfileResourceAction newAction = (AWSIAMInstanceProfileResourceAction) newResourceAction;
+        if (Objects.equals(oldAction.properties.getInstanceProfileName(), newAction.properties.getInstanceProfileName()) && oldAction.properties.getInstanceProfileName() != null) {
+          throw new ValidationErrorException("CloudFormation cannot update a stack when a custom-named resource requires replacing. Rename "+oldAction.properties.getInstanceProfileName()+" and update the stack again.");
         }
         return newAction;
       }
