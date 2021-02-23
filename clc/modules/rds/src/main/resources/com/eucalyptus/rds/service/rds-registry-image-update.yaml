@@ -1,0 +1,156 @@
+---
+# RDS container registry image create / update
+#
+# Required:
+#
+# - Eucalyptus container image
+# - Bucket name
+# - Instance profile for bucket update
+#
+# Optional:
+#
+# - Container images to update
+#
+# The stack will launch an instance that updates the registry content and then shuts down.
+#
+AWSTemplateFormatVersion: 2010-09-09
+Description: RDS container registry bucket update
+
+Parameters:
+
+  BucketName:
+    Description: S3 bucket for container registry storage
+    Type: String
+
+  ImageId:
+    Description: Identifier for the Eucalyptus Container image
+    Type: String
+
+  InstanceProfile:
+    Description: Instance profile to use
+    Type: String
+
+  InstanceType:
+    Description: Instance type to use
+    Type: String
+    Default: t2.small
+
+  KeyName:
+    Description: EC2 keypair for instance SSH access
+    Type: String
+    Default: ''
+
+  ContainerImageTags:
+    Description: Container images for registry
+    Type: String
+    Default: >-2
+      docker.io/library/mariadb:10.5,
+      docker.io/library/mariadb:10.4,
+      docker.io/library/mariadb:10.3,
+      docker.io/library/mariadb:10.2,
+      docker.io/library/mariadb:10.1,
+      docker.io/library/postgres:9.5,
+      docker.io/library/postgres:9.6,
+      docker.io/library/postgres:10,
+      docker.io/library/postgres:11,
+      docker.io/library/postgres:12
+
+Conditions:
+
+  UseKeyNameParameter: !Not
+    - !Equals
+      - !Ref KeyName
+      - ''
+
+Resources:
+
+  WaitConditionHandle:
+    Type: AWS::CloudFormation::WaitConditionHandle
+
+  WaitCondition:
+    Type: AWS::CloudFormation::WaitCondition
+    Properties:
+      Handle: !Ref WaitConditionHandle
+      Timeout: 3600
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Container registry update security group
+
+  Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      IamInstanceProfile: !Ref InstanceProfile
+      ImageId: !Ref 'ImageId'
+      InstanceType: !Ref 'InstanceType'
+      KeyName: !If
+        - UseKeyNameParameter
+        - !Ref KeyName
+        - !Ref 'AWS::NoValue'
+      UserData:
+        Fn::Base64: !Sub |
+          #cloud-config
+          write_files:
+          - path: /etc/containers/registries.conf
+            permissions: "0644"
+            owner: root
+            content: |
+              [[registry]]
+              location = "docker.io"
+              [[registry.mirror]]
+              location = "127.0.0.1:5000"
+              insecure = true
+          - path: /etc/sysconfig/registry-container-bucket
+            permissions: "0644"
+            owner: root
+            content: |
+              REGISTRY_STORAGE_S3_MULTIPARTCOPYTHRESHOLDSIZE=100663296
+              REGISTRY_STORAGE_S3_BUCKET=${BucketName}
+          - path: /usr/local/bin/registry-container-start
+            permissions: "0755"
+            owner: root
+            content: |
+              #!/bin/bash
+              # Load registry image and start system registry service
+              set -eux
+              podman load docker.io/library/registry:2 < \
+                  /usr/local/share/registry-container/registry.tar
+              podman create --name registry \
+                  --env-file /etc/sysconfig/registry-container \
+                  --env-file /etc/sysconfig/registry-container-bucket \
+                  --env-file /etc/sysconfig/registry-container-proxy \
+                  --publish 127.0.0.1:5000:5000 \
+                  docker.io/library/registry:2
+              podman generate systemd --name --timeout 60 --restart-policy always registry > \
+                  /etc/systemd/system/registry-container.service
+              systemctl enable --now registry-container.service
+          - path: /usr/local/bin/registry-container-load
+            permissions: "0755"
+            owner: root
+            content: |
+              #!/bin/bash
+              # Load specified images to container registry storage
+              set -eux
+              WAITCONDURL="${WaitConditionHandle}"
+              COND_STATUS="FAILURE"
+              COND_DATA="none"
+              COND_REASON="Image pull failure"
+              function cleanup {
+                curl -s -X PUT -H "Content-Type:" \
+                  --data-binary '{"Status": "'"${!COND_STATUS}"'", "UniqueId": "loader", "Data": "'"${!COND_DATA}"'", "Reason": "'"${!COND_REASON}"'" }' \
+                  ${!WAITCONDURL}
+              }
+              trap cleanup EXIT
+              CONTAINER_IMAGES="${ContainerImageTags}"
+              for CONTAINER_IMAGE in ${!CONTAINER_IMAGES//,/ }; do
+                COND_DATA="${!CONTAINER_IMAGE}"
+                podman pull ${!CONTAINER_IMAGE}
+              done
+              COND_STATUS="SUCCESS"
+              COND_DATA="none"
+              COND_REASON="completed"
+              shutdown
+          runcmd:
+            - /usr/local/bin/registry-container-start
+            - /usr/local/bin/registry-container-load
