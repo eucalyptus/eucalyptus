@@ -13,7 +13,7 @@ import com.google.common.collect.Maps;
  *
  */
 public enum RdsEngine {
-  postgres("PostgreSQL", 5432, "11.5"){
+  postgres("PostgreSQL", 5432, "12"){
     @Override
     public Map<String, String> getStackParameters(final DBInstanceView dbInstance) {
       final Map<String,String> parameters = Maps.newTreeMap();
@@ -22,6 +22,18 @@ public enum RdsEngine {
       putIfNotNull(parameters, "PostgresDatabase", dbInstance.getDbName());
       putIfNotNull(parameters, "PostgresVersion", dbInstance.getEngineVersion());
       putIfNotNull(parameters, "PostgresPort", dbInstance.getDbPort());
+      return parameters;
+    }
+  },
+  mariadb("MariaDB", 3306, "10.5"){
+    @Override
+    public Map<String, String> getStackParameters(final DBInstanceView dbInstance) {
+      final Map<String,String> parameters = Maps.newTreeMap();
+      putIfNotNull(parameters, "MariadbUser", dbInstance.getMasterUsername());
+      putIfNotNull(parameters, "MariadbPassword", dbInstance.getMasterUserPassword());
+      putIfNotNull(parameters, "MariadbDatabase", dbInstance.getDbName());
+      putIfNotNull(parameters, "MariadbVersion", dbInstance.getEngineVersion());
+      putIfNotNull(parameters, "MariadbPort", dbInstance.getDbPort());
       return parameters;
     }
   },

@@ -49,12 +49,15 @@ import com.eucalyptus.cloudformation.common.msgs.CloudFormationMessage;
 import com.eucalyptus.cloudformation.common.msgs.CreateStackResponseType;
 import com.eucalyptus.cloudformation.common.msgs.CreateStackType;
 import com.eucalyptus.cloudformation.common.msgs.DeleteStackType;
+import com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceResponseType;
+import com.eucalyptus.cloudformation.common.msgs.DescribeStackResourceType;
 import com.eucalyptus.cloudformation.common.msgs.DescribeStacksResponseType;
 import com.eucalyptus.cloudformation.common.msgs.DescribeStacksResult;
 import com.eucalyptus.cloudformation.common.msgs.DescribeStacksType;
 import com.eucalyptus.cloudformation.common.msgs.Parameter;
 import com.eucalyptus.cloudformation.common.msgs.Parameters;
 import com.eucalyptus.cloudformation.common.msgs.Stack;
+import com.eucalyptus.cloudformation.common.msgs.StackResourceDetail;
 import com.eucalyptus.cloudformation.common.msgs.Stacks;
 import com.eucalyptus.cloudformation.common.msgs.Tag;
 import com.eucalyptus.cloudformation.common.msgs.Tags;
@@ -129,6 +132,7 @@ import com.eucalyptus.compute.common.ModifyNetworkInterfaceAttachmentType;
 import com.eucalyptus.compute.common.ModifyNetworkInterfaceAttributeType;
 import com.eucalyptus.compute.common.NatGatewayType;
 import com.eucalyptus.compute.common.NetworkInterfaceType;
+import com.eucalyptus.compute.common.ReleaseAddressType;
 import com.eucalyptus.compute.common.ReservationInfoType;
 import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.ResourceTagSpecification;
@@ -540,6 +544,14 @@ public class RdsActivityTasks {
     );
   }
 
+  public StackResourceDetail describeSystemStackResource(final String stackName, final String resourceName) {
+    return resultOf(
+        new CloudFormationDescribeResourceTask(stackName, resourceName),
+        new CloudFormationSystemActivity(),
+        "failed to describe stack resource"
+    );
+  }
+
   public List<SubnetType> describeSubnets(final Collection<String> subnetIds ){
     return resultOf(
         new EucaDescribeSubnetsTask( subnetIds ),
@@ -571,6 +583,19 @@ public class RdsActivityTasks {
     return resultOf(
         new EucaDescribeAddressesTask( vpc? "vpc" : "standard", publicIp),
         new ComputeSystemActivity(),
+        "failed to describe addresses"
+    );
+  }
+
+  public List<AddressInfoType> describeAddresses(
+      final AccountFullName accountFullName,
+      final boolean vpc,
+      @Nullable final String publicIp,
+      @Nullable final String allocationId
+  ) {
+    return resultOf(
+        new EucaDescribeAddressesTask( vpc? "vpc" : "standard", publicIp, allocationId),
+        new ComputeUserActivity(accountFullName),
         "failed to describe addresses"
     );
   }
@@ -830,11 +855,27 @@ public class RdsActivityTasks {
     );
   }
 
+  public AllocateAddressResponseType allocateVpcAddress(final AccountFullName accountFullName) {
+    return resultOf(
+        new EucaAllocateAddressTask(true),
+        new ComputeUserActivity(accountFullName),
+        "failed to allocate address"
+    );
+  }
+
   public AllocateAddressResponseType allocateSystemVpcAddress() {
     return resultOf(
         new EucaAllocateAddressTask(true),
         new ComputeSystemActivity(),
         "failed to allocate address"
+    );
+  }
+
+  public void associateVpcAddress(final AccountFullName accountFullName, final String allocationId, final String networkInterfaceId) {
+    checkResult(
+        new EucaAssociateAddressTask(allocationId, networkInterfaceId),
+        new ComputeUserActivity(accountFullName),
+        "failed to associate EIP address with network interface"
     );
   }
 
@@ -851,6 +892,14 @@ public class RdsActivityTasks {
         new EucaDisassociateAddressTask(publicIp),
         new ComputeSystemActivity(),
         "failed to disassociate EIP address"
+    );
+  }
+
+  public void releaseVpcAddress(final AccountFullName accountFullName, final String allocationId) {
+    checkResult(
+        new EucaReleaseAddressTask(null, allocationId),
+        new ComputeUserActivity(accountFullName),
+        "failed to release EIP address"
     );
   }
 
@@ -1285,6 +1334,7 @@ public class RdsActivityTasks {
   private class EucaDescribeAddressesTask extends RdsActivityTaskWithResult<ComputeMessage, Compute, List<AddressInfoType>> {
     private String domain = null;
     private String publicIp = null;
+    private String allocationId = null;
     private EucaDescribeAddressesTask() {}
 
     private EucaDescribeAddressesTask(final String domain) {
@@ -1296,6 +1346,12 @@ public class RdsActivityTasks {
       this.publicIp = publicIp;
     }
 
+    private EucaDescribeAddressesTask(final String domain, final String publicIp, final String allocationId) {
+      this.domain = domain;
+      this.publicIp = publicIp;
+      this.allocationId = allocationId;
+    }
+
     ComputeMessage getRequest( ) {
       final DescribeAddressesType req = new DescribeAddressesType();
       if(this.domain!=null) {
@@ -1303,6 +1359,9 @@ public class RdsActivityTasks {
       }
       if(this.publicIp!=null) {
         req.getFilterSet().add( filter("public-ip", this.publicIp));
+      }
+      if(this.allocationId!=null) {
+        req.getFilterSet().add( filter("allocation-id", this.allocationId));
       }
       return req;
     }
@@ -1331,6 +1390,32 @@ public class RdsActivityTasks {
       final AllocateAddressResponseType response =
           (AllocateAddressResponseType) resp;
       return response;
+    }
+  }
+
+  private class EucaReleaseAddressTask extends RdsActivityTaskWithResult<ComputeMessage, Compute, Boolean> {
+    private String publicIp;
+    private String allocationId;
+
+    private EucaReleaseAddressTask(final String publicIp, final String allocationId) {
+      this.publicIp = publicIp;
+      this.allocationId = allocationId;
+    }
+
+    ComputeMessage getRequest() {
+      final ReleaseAddressType req = new ReleaseAddressType();
+      req.setPublicIp(publicIp);
+      req.setAllocationId(allocationId);
+      return req;
+    }
+
+    @Override
+    Boolean extractResult(final ComputeMessage response) {
+      return Boolean.FALSE;
+    }
+
+    Boolean getFailureResult( final String errorCode ) {
+      return "InvalidAddressID.NotFound".equals(errorCode) ? Boolean.TRUE : null;
     }
   }
 
@@ -1820,6 +1905,7 @@ public class RdsActivityTasks {
 
       final Capabilities capabilities = new Capabilities();
       capabilities.getMember().add("CAPABILITY_IAM");
+      capabilities.getMember().add("CAPABILITY_NAMED_IAM");
       req.setCapabilities(capabilities);
 
       if ( parameters != null && !parameters.isEmpty() ) {
@@ -1862,6 +1948,28 @@ public class RdsActivityTasks {
       final DeleteStackType req = new DeleteStackType();
       req.setStackName(stack);
       return req;
+    }
+  }
+
+  private class CloudFormationDescribeResourceTask extends RdsActivityTaskWithResult<CloudFormationMessage, CloudFormation, StackResourceDetail> {
+    private final String stack;
+    private final String resource;
+
+    private CloudFormationDescribeResourceTask(final String stack, final String resource){
+      this.stack = stack;
+      this.resource = resource;
+    }
+
+    CloudFormationMessage getRequest( ){
+      final DescribeStackResourceType req = new DescribeStackResourceType();
+      req.setStackName(stack);
+      req.setLogicalResourceId(resource);
+      return req;
+    }
+
+    @Override StackResourceDetail extractResult(final CloudFormationMessage response) {
+      final DescribeStackResourceResponseType resp = (DescribeStackResourceResponseType) response;
+      return resp.getDescribeStackResourceResult().getStackResourceDetail();
     }
   }
 

@@ -5,6 +5,7 @@
  */
 package com.eucalyptus.rds.service;
 
+import java.util.Collection;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -23,6 +24,7 @@ import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AddressInfoType;
+import com.eucalyptus.compute.common.ClusterInfoType;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.InstanceNetworkInterfaceSetItemType;
 import com.eucalyptus.compute.common.InternetGatewayType;
@@ -58,7 +60,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import io.vavr.collection.Stream;
+import io.vavr.control.Option;
 import io.vavr.Tuple;
+import io.vavr.Tuple2;
 import io.vavr.Tuple3;
 
 /**
@@ -146,14 +151,14 @@ public class RdsSystemVpcs {
       changeListener = SystemVpcCidrListChangeListener.class )
   public static volatile String vpc_cidrs = "10.254.0.0/16, 192.168.0.0/16";
 
-  private static List<String> SystemVpcCidrBlocks() {
+  private static List<String> systemVpcCidrBlocks() {
     return Lists.newArrayList( LIST_SPLITTER.split( vpc_cidrs ) );
   }
 
-  private static List<Cidr> SystemVpcCidrs( ) {
+  private static List<Cidr> systemVpcCidrs( ) {
     //noinspection StaticPseudoFunctionalStyleMethod
     return Lists.newArrayList( com.google.common.base.Optional.presentInstances(
-        Iterables.transform( SystemVpcCidrBlocks(), Cidr.parse( ) ) ) );
+        Iterables.transform( systemVpcCidrBlocks(), Cidr.parse( ) ) ) );
   }
 
   private static final Splitter LIST_SPLITTER =
@@ -191,7 +196,7 @@ public class RdsSystemVpcs {
 
   private static Map<String, Set<String>> buildVpcSubnetMap( final int subnetParts ) {
     final Map<String, Set<String>> subnetCidrBlocks = Maps.newHashMap();
-    for (final Cidr vpcCidr : SystemVpcCidrs() ) {
+    for (final Cidr vpcCidr : systemVpcCidrs() ) {
       final String vpcCidrBlock = vpcCidr.toString( );
       subnetCidrBlocks.put(vpcCidrBlock, Sets.newHashSet());
 
@@ -210,7 +215,7 @@ public class RdsSystemVpcs {
     final RdsActivityTasks client = RdsActivityTasks.getInstance();
     final List<VpcType> vpcs = client.describeSystemVpcs(null);
     final Set<String> result = vpcs.stream()
-        .filter(vpc -> SystemVpcCidrBlocks().contains(vpc.getCidrBlock()))
+        .filter(vpc -> systemVpcCidrBlocks().contains(vpc.getCidrBlock()))
         .map(vpc -> vpc.getVpcId())
         .collect(Collectors.toSet());
     systemVpcs = () -> result;
@@ -323,31 +328,41 @@ public class RdsSystemVpcs {
         return optSgroupId.get();
       };
 
-  private static Function<String, Tuple3<String,String,String>> userSubnetTosystemVpcPrivateSubnet =
-      (userSubnetId) -> {
+  private static Function<Option<String>, Tuple3<String,String,String>> userSubnetTosystemVpcPrivateSubnet =
+      (userSubnetIdOption) -> {
         final RdsActivityTasks client = RdsActivityTasks.getInstance();
 
-        // describe user subnet
-        final Optional<SubnetType> optUserSubnet =
-            client.describeSubnets(Lists.newArrayList(userSubnetId)).stream()
-                .findFirst();
-        if(!optUserSubnet.isPresent())
-          throw Exceptions.toUndeclared("No such user subnet is found: " + userSubnetId);
-        final SubnetType userSubnet = optUserSubnet.get();
-        final String az = userSubnet.getAvailabilityZone();
-        final String userVpcId = userSubnet.getVpcId();
+        final String systemCidrBlock;
+        final String az;
+        if (userSubnetIdOption.isDefined()) {
+          final String userSubnetId = userSubnetIdOption.get();
 
-        final Optional<VpcType> userVpc =
-            client.describeSystemVpcs(Lists.newArrayList(userVpcId)).stream()
-                .findAny();
-        if(! userVpc.isPresent())
-          throw Exceptions.toUndeclared("No user VPC is found: "+userVpcId);
+          // describe user subnet
+          final Optional<SubnetType> optUserSubnet =
+              client.describeSubnets(Lists.newArrayList(userSubnetId)).stream()
+                  .findFirst();
+          if (!optUserSubnet.isPresent())
+            throw Exceptions.toUndeclared("No such user subnet is found: " + userSubnetId);
+          final SubnetType userSubnet = optUserSubnet.get();
+          final String userVpcId = userSubnet.getVpcId();
 
-        final String userVpcCidrBlock = userVpc.get().getCidrBlock();
-        // find system VPC with no-overlapping cidr block
-        final String systemCidrBlock = SystemVpcCidrBlocks().stream().filter((systemCidr ->
-            ! cidrBlockInclusive.test(systemCidr, userVpcCidrBlock)
-        )).findFirst().get();
+          final Optional<VpcType> userVpc =
+              client.describeSystemVpcs(Lists.newArrayList(userVpcId)).stream()
+                  .findAny();
+          if (!userVpc.isPresent())
+            throw Exceptions.toUndeclared("No user VPC is found: " + userVpcId);
+
+          final String userVpcCidrBlock = userVpc.get().getCidrBlock();
+          // find system VPC with no-overlapping cidr block
+          systemCidrBlock = systemVpcCidrBlocks().stream().filter((systemCidr ->
+              !cidrBlockInclusive.test(systemCidr, userVpcCidrBlock)
+          )).findFirst().get();
+          az = userSubnet.getAvailabilityZone();
+        } else {
+          systemCidrBlock = systemVpcCidrBlocks().stream().findFirst().get();
+          az = Stream.ofAll(client.describeAvailabilityZones())
+              .map(ClusterInfoType::getZoneName).head();
+        }
 
         final Optional<String> vpcId =
             client.describeSystemVpcs(null).stream()
@@ -366,13 +381,17 @@ public class RdsSystemVpcs {
         return Tuple.of(vpcId.get(), privateSubnets.get(az), az);
       };
 
+  public static Tuple3<String,String,String> getSystemVpcd() {
+    return userSubnetTosystemVpcPrivateSubnet.apply(Option.none());
+  }
+
   /**
    * Map the users vpc subnet identifier to the corresponding system vpc information
    *
    * @returns tuple of vpc identifer, subnet identifier and availability zone
    */
   public static Tuple3<String,String,String> getSystemVpcSubnetId(final String userSubnetId) {
-    return userSubnetTosystemVpcPrivateSubnet.apply(userSubnetId);
+    return userSubnetTosystemVpcPrivateSubnet.apply(Option.some(userSubnetId));
   }
 
   // given the system vpc's subnet ID, return the security group ID for the VPC.
@@ -418,10 +437,10 @@ public class RdsSystemVpcs {
       final Map<String, VpcType> cidrToVpc = Maps.newHashMap();
       final Map<String, String> vpcToCidr = Maps.newHashMap();
       for (final VpcType vpc : vpcs) {
-        if (SystemVpcCidrBlocks().contains(vpc.getCidrBlock()))
+        if (systemVpcCidrBlocks().contains(vpc.getCidrBlock()))
           cidrToVpc.put(vpc.getCidrBlock(), vpc);
       }
-      for (final String cidrBlock : SystemVpcCidrBlocks()) {
+      for (final String cidrBlock : systemVpcCidrBlocks()) {
         if (!cidrToVpc.containsKey(cidrBlock)) {
           final String vpcId = client.createSystemVpc(cidrBlock);
           final List<VpcType> result = client.describeSystemVpcs(Lists.newArrayList(vpcId));
@@ -429,7 +448,7 @@ public class RdsSystemVpcs {
           cidrToVpc.put(cidrBlock, vpc);
         }
       }
-      if (SystemVpcCidrBlocks().size() != cidrToVpc.size()) {
+      if (systemVpcCidrBlocks().size() != cidrToVpc.size()) {
         throw new Exception("Could not find some system VPCs");
       }
 
@@ -678,19 +697,21 @@ public class RdsSystemVpcs {
     }
 
     final int servicePort = StackConfiguration.PORT;
-    if (! egressRules.stream().filter(ip -> "tcp".equals(ip.getIpProtocol()) && servicePort == ip.getFromPort()).findAny().isPresent())
-      client.authorizeSystemSecurityGroupEgressRule(groupId, "tcp",  servicePort, servicePort, "0.0.0.0/0");
-
-    final int dnsPort = 53;
-    if (! egressRules.stream().filter(ip -> "udp".equals(ip.getIpProtocol()) && dnsPort == ip.getFromPort()).findAny().isPresent())
-      client.authorizeSystemSecurityGroupEgressRule(groupId, "udp", dnsPort, dnsPort, "0.0.0.0/0");
-
-    final int ntpPort = 123;
-    if (! egressRules.stream().filter(ip -> "udp".equals(ip.getIpProtocol()) && ntpPort == ip.getFromPort()).findAny().isPresent())
-      client.authorizeSystemSecurityGroupEgressRule(groupId, "udp", ntpPort, ntpPort, "0.0.0.0/0");
-
-    if (! egressRules.stream().filter(ip -> "icmp".equals(ip.getIpProtocol())).findAny().isPresent())
-      client.authorizeSystemSecurityGroupEgressRule(groupId, "icmp", -1, -1, "0.0.0.0/0");
+    @SuppressWarnings("unchecked")
+    final Collection<Tuple2<String,Integer>> egressProtocolAndPorts = Sets.newLinkedHashSet(Lists.newArrayList(
+        Tuple.of( "tcp", servicePort ), // cloud services
+        Tuple.of( "tcp", 8773 ), // cloud services cluster port
+        Tuple.of( "tcp", 53 ),  // dns
+        Tuple.of( "udp", 53 ),  // dns
+        Tuple.of( "udp", 123 ), // ntp
+        Tuple.of( "icmp", -1 )
+    ));
+    for ( Tuple2<String,Integer> protocolAndPort : egressProtocolAndPorts ) {
+      if (!egressRules.stream().anyMatch(ip -> protocolAndPort._1().equals(ip.getIpProtocol()) && servicePort == ip.getFromPort())) {
+        client.authorizeSystemSecurityGroupEgressRule(
+            groupId, protocolAndPort._1(), protocolAndPort._2(), protocolAndPort._2(), "0.0.0.0/0");
+      }
+    }
   }
 
   private static Set<String> KnownAvailabilityZones = Sets.newHashSet();

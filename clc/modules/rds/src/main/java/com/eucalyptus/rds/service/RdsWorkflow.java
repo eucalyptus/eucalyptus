@@ -10,17 +10,22 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.cloudformation.common.CloudFormation;
 import com.eucalyptus.cloudformation.common.msgs.Output;
 import com.eucalyptus.cloudformation.common.msgs.Stack;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.NetworkInterfaceType;
+import com.eucalyptus.compute.common.AddressInfoType;
+import com.eucalyptus.compute.common.AllocateAddressResponseType;
 import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.compute.common.Volume;
 import com.eucalyptus.entities.PersistenceExceptions;
@@ -55,6 +60,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
+import io.vavr.collection.Stream;
+import io.vavr.control.Option;
 import io.vavr.Tuple3;
 
 /**
@@ -64,6 +71,10 @@ import io.vavr.Tuple3;
 public class RdsWorkflow {
 
   private static final Logger logger = Logger.getLogger(RdsWorkflow.class);
+
+  private static final String STACK_NAME_RESOURCES = "rds-registry-resources";
+
+  private static final String STACK_NAME_IMAGES = "rds-registry-image-update";
 
   private final DBInstances dbInstances;
 
@@ -76,6 +87,8 @@ public class RdsWorkflow {
       .add(new WorkflowTask( 10, "DBInstances.Delete"        ){@Override void doWork(){ dbInstanceDelete(); }})
       .add(new WorkflowTask( 30, "DBInstances.FailureCleanup"){@Override void doWork(){ dbInstanceFailureCleanup( ); }})
       .add(new WorkflowTask(300, "DBInstances.Timeout"       ){@Override void doWork(){ dbInstanceTimeout( ); }})
+      .add(new WorkflowTask( 60, "Registry.Setup"            ){@Override void doWork(){ registrySetup(); }})
+      .add(new WorkflowTask( 60, "Registry.LoadImages"       ){@Override void doWork(){ registryLoadImages(); }})
       .build();
 
   public RdsWorkflow(
@@ -219,6 +232,15 @@ public class RdsWorkflow {
         continue; // wait until available
       }
 
+      final String bucketName;
+      try {
+        bucketName =
+            rdsActivityTasks.describeSystemStackResource(STACK_NAME_RESOURCES, "Bucket").getPhysicalResourceId();
+      } catch (final Exception e) {
+        logger.warn("Skipping db instance create due to registry bucket not available " + dbInstanceUuid);
+        continue;
+      }
+
       final String userAccount = dbInstance.getOwnerAccountNumber();
       final String dbIdentifier = dbInstance.getDisplayName();
       final String stackName = getStackName(dbInstance);
@@ -231,10 +253,12 @@ public class RdsWorkflow {
         parameters.put("InstanceType", Strings.trimPrefix("db.", dbInstance.getInstanceClass()));
         parameters.put("ImageId", RdsWorkerProperties.IMAGE);
         parameters.put("KeyName", RdsWorkerProperties.KEYNAME);
-        //TODO:STEVE: ntp?
+        //TODO:STEVE: ntp? ssh cidr?
         parameters.put("SubnetId", dbInstanceRuntime.getSystemSubnetId());
         parameters.put("VolumeId", dbInstanceRuntime.getSystemVolumeId());
         parameters.put("VpcId", dbInstanceRuntime.getSystemVpcId());
+        parameters.put("BucketName", bucketName);
+        parameters.put("InstanceProfile", "registry-read");
 
         final String stackId = rdsActivityTasks.createSystemStack(
             stackName,
@@ -291,9 +315,13 @@ public class RdsWorkflow {
   }
 
   private String getTemplate(final DBInstanceView dbInstance) {
+    return getTemplate("rds-db-instance-" + dbInstance.getEngine());
+  }
+
+  private String getTemplate(final String name) {
     try {
       return Resources.toString(
-          Resources.getResource( RdsWorkflow.class, "rds-db-instance-" + dbInstance.getEngine() + ".yaml" ),
+          Resources.getResource( RdsWorkflow.class, name + ".yaml" ),
           Charsets.UTF_8 );
     } catch (IOException e) {
       throw Exceptions.toUndeclared(e);
@@ -349,8 +377,43 @@ public class RdsWorkflow {
         networkInterfaceId = dbInstanceRuntime.getUserNetworkInterfaceId();
       }
 
-      if ( dbInstance.getPubliclyAccessible() && dbInstanceRuntime.getPublicIp()==null ) {
-        // TODO:STEVE: allocate, associate, and record public ip for user eni
+      if (dbInstance.getPubliclyAccessible() && dbInstanceRuntime.getPublicIp()==null) {
+        final String allocationId;
+        String publicIp;
+        if (dbInstanceRuntime.getPublicIpAllocationId() == null) {
+          final AllocateAddressResponseType allocationResponse =
+              rdsActivityTasks.allocateVpcAddress(accountFullName);
+          allocationId = allocationResponse.getAllocationId();
+          publicIp = allocationResponse.getPublicIp();
+          try {
+            dbInstances.updateByView(dbInstance, instance -> {
+              final DBInstanceRuntime instanceRuntime = instance.getDbInstanceRuntime();
+              instanceRuntime.setPublicIpAllocationId(allocationId);
+              return null;
+            });
+          } catch (final Exception e) {
+            logger.error("Error recording public ip allocation id "+allocationId+" on db instance create " + dbInstanceUuid, e);
+            continue;
+          }
+        } else {
+          allocationId = dbInstanceRuntime.getPublicIpAllocationId();
+          publicIp = Stream.ofAll(rdsActivityTasks.describeAddresses(accountFullName, true, null, allocationId))
+              .map(AddressInfoType::getPublicIp)
+              .singleOption().get( );
+        }
+
+        rdsActivityTasks.associateVpcAddress(accountFullName, allocationId, networkInterfaceId);
+
+        try {
+          dbInstances.updateByView(dbInstance, instance -> {
+            final DBInstanceRuntime instanceRuntime = instance.getDbInstanceRuntime();
+            instanceRuntime.setPublicIp(publicIp);
+            return null;
+          });
+        } catch (final Exception e) {
+          logger.error("Error recording public ip  "+publicIp+" on db instance create " + dbInstanceUuid, e);
+          continue;
+        }
       }
 
       rdsActivityTasks.attachNetworkInterface(
@@ -481,6 +544,24 @@ public class RdsWorkflow {
       } catch ( final Exception e ) {
         logger.debug( "Error clearing user network interface after delete (will retry)", e );
       }
+    } else if ( dbInstance.getRuntime().getPublicIpAllocationId()!=null ) {
+      rdsActivityTasks.releaseVpcAddress(
+          AccountFullName.getInstance(dbInstance.getInstance().getOwnerAccountNumber()),
+          dbInstance.getRuntime().getPublicIpAllocationId());
+      try {
+        dbInstances.updateByView(dbInstance.getInstance(), instance -> {
+          final DBInstanceRuntime runtime = instance.getDbInstanceRuntime();
+          runtime.setPublicIpAllocationId(null);
+          return null;
+        });
+        return dbInstanceReleaseResources(
+            ImmutableDBInstanceRuntimeComposite.copyOf(dbInstance)
+                .withRuntime(ImmutableDBInstanceRuntimeView
+                    .copyOf(dbInstance.getRuntime())
+                    .withPublicIpAllocationId(null)));
+      } catch ( final Exception e ) {
+        logger.debug( "Error clearing user public ip after delete (will retry)", e );
+      }
     } else if ( dbInstance.getRuntime().getSystemVolumeId()!=null ) {
       if ( rdsActivityTasks.deleteSystemVolume(dbInstance.getRuntime().getSystemVolumeId()) ) {
         try {
@@ -548,6 +629,70 @@ public class RdsWorkflow {
     }
   }
 
+  private boolean shouldCreateStack(final String desc, final String name) {
+    final Option<Stack> stackOption =
+        Stream.ofAll(rdsActivityTasks.describeSystemStacks(name)).headOption();
+    boolean createStack = true;
+    for (final Stack stack : stackOption) {
+      final String stackStatus = Objects.toString(stack.getStackStatus(), "");
+      if ("CREATE_COMPLETE".equals(stackStatus) || "UPDATE_COMPLETE".equals(stackStatus)) {
+        createStack = false;
+      } else if (stackStatus.endsWith("_IN_PROGRESS")) {
+        logger.debug(desc + " stack activity in progress: " + stackStatus);
+        createStack = false;
+      } else if (!"DELETE_COMPLETE".equals( stackStatus)) {
+        logger.error(desc + " stack deleting due to status " + stackStatus + " reason " + stack.getStackStatusReason());
+        createStack = false;
+        rdsActivityTasks.deleteSystemStack(name);
+      }
+    }
+    return createStack;
+  }
+
+  private void registrySetup() {
+     if (shouldCreateStack("Registry resources", STACK_NAME_RESOURCES)) {
+       rdsActivityTasks.createSystemStack(
+           STACK_NAME_RESOURCES,
+           getTemplate(STACK_NAME_RESOURCES),
+           Collections.emptyMap(),
+           Collections.emptyMap()
+       );
+     }
+  }
+
+  private void registryLoadImages() {
+    if (shouldCreateStack("Registry image update", STACK_NAME_IMAGES)) {
+      final String bucketName;
+      try {
+        bucketName =
+            rdsActivityTasks.describeSystemStackResource(STACK_NAME_RESOURCES, "Bucket").getPhysicalResourceId();
+      } catch (final Exception e) {
+        logger.debug("Skipping registry image load due to resources not yet available");
+        return;
+      }
+
+      final Tuple3<String,String,String> vpcInfo = RdsSystemVpcs.getSystemVpcd();
+      final String dbVpcId = vpcInfo._1();
+      final String dbSubnetId = vpcInfo._2();
+
+      final Map<String, String> parameters = Maps.newTreeMap();
+      parameters.put("BucketName", bucketName);
+      parameters.put("ImageId", RdsWorkerProperties.IMAGE);
+      parameters.put("InstanceProfile", "registry-admin");
+      parameters.put("KeyName", RdsWorkerProperties.KEYNAME);
+      parameters.put("SubnetId", dbSubnetId);
+      parameters.put("VpcId", dbVpcId);
+
+      rdsActivityTasks.createSystemStack(
+          STACK_NAME_IMAGES,
+          getTemplate(STACK_NAME_IMAGES),
+          parameters,
+          Collections.emptyMap()
+      );
+    }
+  }
+
+
   private static abstract class WorkflowTask {
 
     private volatile int count = 0;
@@ -590,7 +735,9 @@ public class RdsWorkflow {
     public void fireEvent(final ClockTick event) {
       if (Bootstrap.isOperational() &&
           Topology.isEnabledLocally(Eucalyptus.class) &&
-          Topology.isEnabled(Rds.class)) {
+          Topology.isEnabled(Rds.class) &&
+          Topology.isEnabled(Compute.class) &&
+          Topology.isEnabled(CloudFormation.class)) {
         rdsWorkflow.doWorkflow();
       }
     }

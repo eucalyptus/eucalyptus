@@ -43,6 +43,9 @@ public class DBInstanceRuntime implements DBInstanceRuntimeView {
   @Column( name = "rds_db_run_public_ip" )
   private String publicIp;
 
+  @Column( name = "rds_db_run_public_ip_alloc_id" )
+  private String publicIpAllocationId;
+
   @Column( name = "rds_db_run_private_ip" )
   private String privateIp;
 
@@ -123,6 +126,14 @@ public class DBInstanceRuntime implements DBInstanceRuntimeView {
 
   public void setPublicIp(final String publicIp) {
     this.publicIp = publicIp;
+  }
+
+  public String getPublicIpAllocationId() {
+    return publicIpAllocationId;
+  }
+
+  public void setPublicIpAllocationId(final String publicIpAllocationId) {
+    this.publicIpAllocationId = publicIpAllocationId;
   }
 
   public String getPrivateIp() {

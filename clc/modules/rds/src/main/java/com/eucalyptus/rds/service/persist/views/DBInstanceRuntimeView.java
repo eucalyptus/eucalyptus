@@ -39,5 +39,8 @@ public interface DBInstanceRuntimeView {
   String getPublicIp();
 
   @Nullable
+  String getPublicIpAllocationId();
+
+  @Nullable
   String getPrivateIp();
 }

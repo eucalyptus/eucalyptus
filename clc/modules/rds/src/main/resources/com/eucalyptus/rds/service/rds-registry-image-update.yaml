@@ -40,6 +40,14 @@ Parameters:
     Type: String
     Default: ''
 
+  SubnetId:
+    Description: The subnet to use
+    Type: String
+
+  VpcId:
+    Description: The vpc to use
+    Type: String
+
   ContainerImageTags:
     Description: Container images for registry
     Type: String
@@ -77,6 +85,12 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Container registry update security group
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: "22"
+          ToPort: "22"
+          CidrIp: "0.0.0.0/0"
 
   Instance:
     Type: AWS::EC2::Instance
@@ -88,6 +102,11 @@ Resources:
         - UseKeyNameParameter
         - !Ref KeyName
         - !Ref 'AWS::NoValue'
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          SubnetId: !Ref SubnetId
+          GroupSet:
+            - !Ref SecurityGroup
       UserData:
         Fn::Base64: !Sub |
           #cloud-config
@@ -105,7 +124,6 @@ Resources:
             permissions: "0644"
             owner: root
             content: |
-              REGISTRY_STORAGE_S3_MULTIPARTCOPYTHRESHOLDSIZE=100663296
               REGISTRY_STORAGE_S3_BUCKET=${BucketName}
           - path: /usr/local/bin/registry-container-start
             permissions: "0755"

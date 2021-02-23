@@ -138,7 +138,7 @@ public class RdsService {
       final String instanceName = request.getDBInstanceIdentifier();
       final String instanceClass = request.getDBInstanceClass();
       final String subnetGroupName = request.getDBSubnetGroupName();
-      final RdsEngine engine = RdsEngine.postgres;
+      final RdsEngine engine = RdsEngine.valueOf(request.getEngine());
       final Set<String> vpcSecurityGroups = request.getVpcSecurityGroupIds()==null ?
           Collections.emptySet() :
           Sets.newTreeSet(request.getVpcSecurityGroupIds().getMember());

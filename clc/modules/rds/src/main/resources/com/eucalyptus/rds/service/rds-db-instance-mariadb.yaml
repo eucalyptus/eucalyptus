@@ -1,5 +1,5 @@
 ---
-# RDS DB Instance template for PostgreSQL
+# RDS DB Instance template for MariaDB
 #
 # Required:
 #
@@ -11,41 +11,41 @@
 #
 # Optional:
 #
-# - Postgres parameters
+# - MariaDB parameters
 # - Instance type
 # - SSH key name allowing debug connection to db instance
 #
-# PostgreSQL parameters as per RDS.
+# MariaDB parameters as per RDS.
 #
 AWSTemplateFormatVersion: 2010-09-09
-Description: PostgreSQL database instance template
+Description: MariaDB database instance template
 
 Parameters:
 
-  PostgresUser:
-    Description: Postgres user
+  MariadbUser:
+    Description: MariaDB user
     Type: String
-    Default: postgres
+    Default: mariadb
 
-  PostgresPassword:
-    Description: Postgres password
+  MariadbPassword:
+    Description: MariaDB password
     Type: String
-    Default: changeme
+    Default: ""
 
-  PostgresDatabase:
-    Description: Postgres database
+  MariadbDatabase:
+    Description: MariaDB database
     Type: String
-    Default: postgres
+    Default: mariadb
 
-  PostgresVersion:
-    Description: Postgres version
+  MariadbVersion:
+    Description: MariaDB version
     Type: String
-    Default: 12
+    Default: 10.5
 
-  PostgresPort:
-    Description: Postgres listen port
+  MariadbPort:
+    Description: MariaDB listen port
     Type: String
-    Default: 5432
+    Default: 3306
 
   BucketName:
     Description: S3 bucket for container registry storage
@@ -82,7 +82,7 @@ Parameters:
     Type: String
 
 Conditions:
-  
+
   UseKeyNameParameter: !Not
     - !Equals
       - !Ref KeyName
@@ -102,7 +102,7 @@ Resources:
   SecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Postgres security group
+      GroupDescription: MariaDB security group
       VpcId: !Ref VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
@@ -110,8 +110,8 @@ Resources:
           ToPort: "22"
           CidrIp: "0.0.0.0/0"
         - IpProtocol: tcp
-          FromPort: !Ref PostgresPort
-          ToPort: !Ref PostgresPort
+          FromPort: !Ref MariadbPort
+          ToPort: !Ref MariadbPort
           CidrIp: "0.0.0.0/0"
 
   Instance:
@@ -191,34 +191,35 @@ Resources:
               podman generate systemd --name --timeout 60 --restart-policy always registry > \
                   /etc/systemd/system/registry-container.service
               systemctl enable --now registry-container.service
-          - path: /etc/sysconfig/postgres-container
+          - path: /etc/sysconfig/mariadb-container
             permissions: "0644"
             owner: root
             content: |
-              POSTGRES_VERSION=${PostgresVersion}
-              POSTGRES_DB=${PostgresDatabase}
-              POSTGRES_PORT=${PostgresPort}
-              POSTGRES_USER=${PostgresUser}
-              POSTGRES_PASSWORD=${PostgresPassword}
-          - path: /usr/local/bin/postgres-container-start
+              MARIADB_VERSION=${MariadbVersion}
+              MARIADB_DB=${MariadbDatabase}
+              MARIADB_PORT=${MariadbPort}
+              MARIADB_USER=${MariadbUser}
+              MARIADB_PASSWORD=${MariadbPassword}
+          - path: /usr/local/bin/mariadb-container-start
             permissions: "0755"
             owner: root
             content: |
               #!/bin/bash
-              # Create postgres container and systemd service
+              # Create mariadb container and systemd service
               set -eux
-              source /etc/sysconfig/postgres-container
+              source /etc/sysconfig/mariadb-container
               mkdir -pv /var/mnt/rds/data
-              podman create --name postgres \
-                  --env-file /etc/sysconfig/postgres-container \
-                  --env PGDATA=/var/lib/postgres/rds/pgdata \
-                  --env PGPORT=${!POSTGRES_PORT} \
+              podman create --name mariadb \
+                  --env MYSQL_RANDOM_ROOT_PASSWORD="yes" \
+                  --env MYSQL_DATABASE="${!MARIADB_DB}" \
+                  --env MYSQL_USER="${!MARIADB_USER}" \
+                  --env MYSQL_PASSWORD="${!MARIADB_PASSWORD}" \
                   --network host \
-                  --volume /var/mnt/rds/data:/var/lib/postgres/rds:z \
-                  docker.io/library/postgres:${!POSTGRES_VERSION}
-              podman generate systemd --name --timeout 60 --restart-policy always postgres > \
-                  /etc/systemd/system/postgres-container.service
-              systemctl enable --now postgres-container.service
+                  --volume /var/mnt/rds/data:/var/lib/mysql:z \
+                  docker.io/library/mariadb:${!MARIADB_VERSION}
+              podman generate systemd --name --timeout 60 --restart-policy always mariadb > \
+                  /etc/systemd/system/mariadb-container.service
+              systemctl enable --now mariadb-container.service
           - path: /usr/local/bin/rds-up
             permissions: "0755"
             owner: root
@@ -237,8 +238,8 @@ Resources:
               trap cleanup EXIT
               COND_DATA="registry-container"
               systemctl is-active --quiet registry-container.service
-              COND_DATA="postgres-container"
-              systemctl is-active --quiet postgres-container.service
+              COND_DATA="mariadb-container"
+              systemctl is-active --quiet mariadb-container.service
               COND_DATA="ec2net-ifup@eth1"
               [ ! -r /etc/udev/rules.d/75-persistent-net-generator.rules ] || rm -fv /etc/udev/rules.d/75-persistent-net-generator.rules
               [ ! -r /sys/class/net/eth1 ] || systemctl enable --now ec2net-ifup@eth1.service
@@ -250,15 +251,15 @@ Resources:
               COND_REASON="completed"
           runcmd:
           - /usr/local/bin/registry-container-start
-          - /usr/local/bin/postgres-container-start
+          - /usr/local/bin/mariadb-container-start
           - /usr/local/bin/rds-up
 
 Outputs:
 
   InstanceId:
-    Description: PostgreSQL instance identifier
+    Description: MariaDB instance identifier
     Value: !Ref Instance
-    
+
   PrivateIp:
-    Description: PostgreSQL instance private ip
+    Description: MariaDB instance private ip
     Value: !GetAtt Instance.PrivateIp
