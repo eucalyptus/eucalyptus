@@ -33,6 +33,7 @@ import static java.lang.String.valueOf;
 import static java.lang.System.getProperty;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.primitives.Ints.tryParse;
+
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Date;
@@ -73,7 +74,6 @@ import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType;
 import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadType;
 import com.eucalyptus.objectstorage.msgs.CopyObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.CopyObjectType;
-import com.eucalyptus.objectstorage.msgs.DeleteObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteObjectType;
 import com.eucalyptus.objectstorage.msgs.GetObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.GetObjectType;
@@ -82,6 +82,8 @@ import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.msgs.PutObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.PutObjectType;
+import com.eucalyptus.objectstorage.msgs.UploadPartCopyResponseType;
+import com.eucalyptus.objectstorage.msgs.UploadPartCopyType;
 import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
 import com.eucalyptus.objectstorage.msgs.UploadPartType;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient;
@@ -731,6 +733,82 @@ public class ObjectFactoryImpl implements ObjectFactory {
       LOG.error("Failed to update object metadata for finalization. Failing PUT operation", e);
       throw new InternalErrorException(entity.getResourceFullName());
     }
+  }
+
+  /**
+   * Create the named object part in metadata and on the backend.
+   *
+   * @return the PartEntity object representing the successfully created part
+   */
+  @Override
+  public PartEntity copyObjectPart(ObjectStorageProviderClient provider, ObjectEntity mpuEntity,
+      PartEntity entity, UploadPartCopyType request, User requestUser) throws S3Exception {
+      // Initialize metadata for the object
+      if (BucketState.extant.equals(entity.getBucket().getState())) {
+        // Initialize the object metadata.
+        try {
+          entity = MpuPartMetadataManagers.getInstance().initiatePartCreation(entity);
+        } catch (Exception e) {
+          // Metadata failure
+          LOG.error("Error initializing metadata for object creation: " + entity.getResourceFullName());
+          InternalErrorException ex = new InternalErrorException(entity.getResourceFullName());
+          ex.initCause(e);
+          throw ex;
+        }
+      } else {
+        throw new NoSuchBucketException(entity.getBucket().getBucketName());
+      }
+
+      final Date lastModified;
+      final String etag;
+      UploadPartCopyResponseType response;
+
+      try {
+        final PartEntity uploadingObject = entity;
+        request.setBucket(uploadingObject.getBucket().getBucketUuid());
+        request.setKey(mpuEntity.getObjectUuid());
+        request.setUser(requestUser);
+        request.setPartNumber(valueOf(entity.getPartNumber()));
+        request.setUploadId(entity.getUploadId());
+
+        Callable<UploadPartCopyResponseType> putCallable = () -> provider.uploadPartCopy(request);
+
+        // Send the data
+        final FutureTask<UploadPartCopyResponseType> putTask = new FutureTask<>(putCallable);
+        PUT_OBJECT_SERVICE.execute(putTask);
+        final long failTime = System.currentTimeMillis() + ObjectStorageProperties.OBJECT_CREATION_EXPIRATION_INTERVAL_SEC;
+        final long checkIntervalSec = ObjectStorageProperties.OBJECT_CREATION_EXPIRATION_INTERVAL_SEC + 10;
+        final AtomicReference<PartEntity> entityRef = new AtomicReference<>(uploadingObject);
+        Callable updateTimeout = () -> entityRef.get();
+
+        response = waitForCompletion(putTask, uploadingObject.getPartUuid(), updateTimeout, failTime, checkIntervalSec);
+        entity = entityRef.get(); // Get the latest if it was updated
+        lastModified = new Date();
+        etag = response.getEtag();
+
+      } catch (Exception e) {
+        LOG.error("Data PUT failure to backend for bucketuuid / objectuuid : " + entity.getBucket().getBucketUuid() + "/" + entity.getPartUuid(), e);
+
+        // Remove metadata and return failure
+        try {
+          MpuPartMetadataManagers.getInstance().transitionPartToState(entity, ObjectState.deleting);
+        } catch (Exception ex) {
+          LOG.error("Failed to mark failed object entity in deleting state on failure rollback. Will be cleaned later.", e);
+        }
+
+        // ObjectMetadataManagers.getInstance().delete(objectEntity);
+        throw new InternalErrorException(entity.getObjectKey());
+      }
+
+      try {
+        // Update metadata to "extant". Retry as necessary
+        return MpuPartMetadataManagers.getInstance().finalizeCreation(entity, lastModified, etag);
+      } catch (Exception e) {
+
+        // Return failure to user, let normal cleanup handle this case since we can't update the metadata
+        LOG.error("Failed to update object metadata for finalization. Failing PUT operation", e);
+        throw new InternalErrorException(entity.getResourceFullName());
+      }
   }
 
   /**

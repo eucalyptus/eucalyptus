@@ -39,6 +39,7 @@ import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.objectstorage.entities.PartEntity;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.msgs.CopyObjectType;
+import com.eucalyptus.objectstorage.msgs.UploadPartCopyType;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
@@ -98,6 +99,14 @@ public interface ObjectFactory {
    * @return the ObjectEntity object representing the successfully created object
    */
   public PartEntity createObjectPart(ObjectStorageProviderClient provider, ObjectEntity mpuEntity, PartEntity entity, InputStream content,
+      User requestUser) throws S3Exception;
+
+  /**
+   * Create the named object part in metadata and on the backend.
+   *
+   * @return the PartEntity object representing the successfully created part
+   */
+  public PartEntity copyObjectPart(ObjectStorageProviderClient provider, ObjectEntity mpuEntity, PartEntity entity, UploadPartCopyType request,
       User requestUser) throws S3Exception;
 
   /**

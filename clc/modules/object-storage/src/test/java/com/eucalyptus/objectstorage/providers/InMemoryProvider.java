@@ -111,6 +111,8 @@ import com.eucalyptus.objectstorage.msgs.SetBucketVersioningStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketVersioningStatusType;
 import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyType;
+import com.eucalyptus.objectstorage.msgs.UploadPartCopyResponseType;
+import com.eucalyptus.objectstorage.msgs.UploadPartCopyType;
 import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
 import com.eucalyptus.objectstorage.msgs.UploadPartType;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
@@ -805,6 +807,12 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
         throw new InternalErrorException(e);
       }
     }
+  }
+
+  @Override
+  public UploadPartCopyResponseType uploadPartCopy(UploadPartCopyType request)
+      throws S3Exception {
+    throw new NotImplementedException();
   }
 
   @Override
