@@ -1,0 +1,907 @@
+<?xml version="1.0" standalone="yes"?>
+<!--
+  Copyright 2021 AppScale Systems, Inc
+
+  SPDX-License-Identifier: BSD-2-Clause
+-->
+<binding name="elasticloadbalancing_amazonaws_com_doc_2015_12_01" force-classes="true" add-constructors="true">
+  <namespace uri="http://elasticloadbalancing.amazonaws.com/doc/2015-12-01/" default="elements"/>
+  <format type="java.util.Date" deserializer="org.jibx.runtime.Utility.deserializeDateTime" serializer="com.eucalyptus.ws.util.SerializationUtils.serializeDateTime"/>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata" abstract="true">
+    <value name="RequestId" field="requestId" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.Error" abstract="true">
+    <value name="Type" field="type" usage="required"/>
+    <value name="Code" field="code" usage="required"/>
+    <value name="Message" field="message" usage="required"/>
+    <structure name="Detail" field="detail" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.ErrorDetail"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.ErrorDetail" abstract="true"/>
+  <mapping name="ErrorResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.ErrorResponse">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <collection field="error">
+      <structure name="Error" type="com.eucalyptus.loadbalancingv2.common.msgs.Error"/>
+    </collection>
+    <value name="RequestId" field="requestId" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message" abstract="true"/>
+  <mapping name="AddListenerCertificates" class="com.eucalyptus.loadbalancingv2.common.msgs.AddListenerCertificatesType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure get-method="getCertificates" set-method="setCertificates" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.CertificateList" name="Certificates"/>
+    <value name="ListenerArn" get-method="getListenerArn" set-method="setListenerArn" usage="optional"/>
+  </mapping>
+  <mapping name="AddListenerCertificatesResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.AddListenerCertificatesResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="AddListenerCertificatesResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.AddListenerCertificatesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.AddListenerCertificatesResult" abstract="true">
+    <structure get-method="getCertificates" set-method="setCertificates" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.CertificateList" name="Certificates"/>
+  </mapping>
+  <mapping name="AddTags" class="com.eucalyptus.loadbalancingv2.common.msgs.AddTagsType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure get-method="getResourceArns" set-method="setResourceArns" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.ResourceArns" name="ResourceArns"/>
+    <structure get-method="getTags" set-method="setTags" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.TagList" name="Tags"/>
+  </mapping>
+  <mapping name="AddTagsResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.AddTagsResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="AddTagsResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.AddTagsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.AddTagsResult" abstract="true"/>
+  <mapping name="CreateListener" class="com.eucalyptus.loadbalancingv2.common.msgs.CreateListenerType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure get-method="getCertificates" set-method="setCertificates" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.CertificateList" name="Certificates"/>
+    <structure get-method="getDefaultActions" set-method="setDefaultActions" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.Actions" name="DefaultActions"/>
+    <value name="LoadBalancerArn" get-method="getLoadBalancerArn" set-method="setLoadBalancerArn" usage="optional"/>
+    <value name="Port" get-method="getPort" set-method="setPort" usage="optional"/>
+    <value name="Protocol" get-method="getProtocol" set-method="setProtocol" usage="optional"/>
+    <value name="SslPolicy" get-method="getSslPolicy" set-method="setSslPolicy" usage="optional"/>
+  </mapping>
+  <mapping name="CreateListenerResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.CreateListenerResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="CreateListenerResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.CreateListenerResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.CreateListenerResult" abstract="true">
+    <structure get-method="getListeners" set-method="setListeners" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.Listeners" name="Listeners"/>
+  </mapping>
+  <mapping name="CreateLoadBalancer" class="com.eucalyptus.loadbalancingv2.common.msgs.CreateLoadBalancerType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <value name="IpAddressType" get-method="getIpAddressType" set-method="setIpAddressType" usage="optional"/>
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+    <value name="Scheme" get-method="getScheme" set-method="setScheme" usage="optional"/>
+    <structure get-method="getSecurityGroups" set-method="setSecurityGroups" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.SecurityGroups" name="SecurityGroups"/>
+    <structure get-method="getSubnetMappings" set-method="setSubnetMappings" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.SubnetMappings" name="SubnetMappings"/>
+    <structure get-method="getSubnets" set-method="setSubnets" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.Subnets" name="Subnets"/>
+    <structure get-method="getTags" set-method="setTags" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.TagList" name="Tags"/>
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+  </mapping>
+  <mapping name="CreateLoadBalancerResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.CreateLoadBalancerResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="CreateLoadBalancerResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.CreateLoadBalancerResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.CreateLoadBalancerResult" abstract="true">
+    <structure get-method="getLoadBalancers" set-method="setLoadBalancers" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancers" name="LoadBalancers"/>
+  </mapping>
+  <mapping name="CreateRule" class="com.eucalyptus.loadbalancingv2.common.msgs.CreateRuleType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure get-method="getActions" set-method="setActions" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.Actions" name="Actions"/>
+    <structure get-method="getConditions" set-method="setConditions" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.RuleConditionList" name="Conditions"/>
+    <value name="ListenerArn" get-method="getListenerArn" set-method="setListenerArn" usage="optional"/>
+    <value name="Priority" get-method="getPriority" set-method="setPriority" usage="optional"/>
+  </mapping>
+  <mapping name="CreateRuleResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.CreateRuleResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="CreateRuleResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.CreateRuleResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.CreateRuleResult" abstract="true">
+    <structure get-method="getRules" set-method="setRules" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.Rules" name="Rules"/>
+  </mapping>
+  <mapping name="CreateTargetGroup" class="com.eucalyptus.loadbalancingv2.common.msgs.CreateTargetGroupType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <value name="HealthCheckEnabled" get-method="getHealthCheckEnabled" set-method="setHealthCheckEnabled" usage="optional"/>
+    <value name="HealthCheckIntervalSeconds" get-method="getHealthCheckIntervalSeconds" set-method="setHealthCheckIntervalSeconds" usage="optional"/>
+    <value name="HealthCheckPath" get-method="getHealthCheckPath" set-method="setHealthCheckPath" usage="optional"/>
+    <value name="HealthCheckPort" get-method="getHealthCheckPort" set-method="setHealthCheckPort" usage="optional"/>
+    <value name="HealthCheckProtocol" get-method="getHealthCheckProtocol" set-method="setHealthCheckProtocol" usage="optional"/>
+    <value name="HealthCheckTimeoutSeconds" get-method="getHealthCheckTimeoutSeconds" set-method="setHealthCheckTimeoutSeconds" usage="optional"/>
+    <value name="HealthyThresholdCount" get-method="getHealthyThresholdCount" set-method="setHealthyThresholdCount" usage="optional"/>
+    <structure get-method="getMatcher" set-method="setMatcher" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.Matcher" name="Matcher"/>
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+    <value name="Port" get-method="getPort" set-method="setPort" usage="optional"/>
+    <value name="Protocol" get-method="getProtocol" set-method="setProtocol" usage="optional"/>
+    <value name="TargetType" get-method="getTargetType" set-method="setTargetType" usage="optional"/>
+    <value name="UnhealthyThresholdCount" get-method="getUnhealthyThresholdCount" set-method="setUnhealthyThresholdCount" usage="optional"/>
+    <value name="VpcId" get-method="getVpcId" set-method="setVpcId" usage="optional"/>
+  </mapping>
+  <mapping name="CreateTargetGroupResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.CreateTargetGroupResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="CreateTargetGroupResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.CreateTargetGroupResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.CreateTargetGroupResult" abstract="true">
+    <structure get-method="getTargetGroups" set-method="setTargetGroups" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.TargetGroups" name="TargetGroups"/>
+  </mapping>
+  <mapping name="DeleteListener" class="com.eucalyptus.loadbalancingv2.common.msgs.DeleteListenerType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <value name="ListenerArn" get-method="getListenerArn" set-method="setListenerArn" usage="optional"/>
+  </mapping>
+  <mapping name="DeleteListenerResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.DeleteListenerResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="DeleteListenerResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.DeleteListenerResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.DeleteListenerResult" abstract="true"/>
+  <mapping name="DeleteLoadBalancer" class="com.eucalyptus.loadbalancingv2.common.msgs.DeleteLoadBalancerType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <value name="LoadBalancerArn" get-method="getLoadBalancerArn" set-method="setLoadBalancerArn" usage="optional"/>
+  </mapping>
+  <mapping name="DeleteLoadBalancerResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.DeleteLoadBalancerResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="DeleteLoadBalancerResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.DeleteLoadBalancerResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.DeleteLoadBalancerResult" abstract="true"/>
+  <mapping name="DeleteRule" class="com.eucalyptus.loadbalancingv2.common.msgs.DeleteRuleType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <value name="RuleArn" get-method="getRuleArn" set-method="setRuleArn" usage="optional"/>
+  </mapping>
+  <mapping name="DeleteRuleResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.DeleteRuleResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="DeleteRuleResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.DeleteRuleResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.DeleteRuleResult" abstract="true"/>
+  <mapping name="DeleteTargetGroup" class="com.eucalyptus.loadbalancingv2.common.msgs.DeleteTargetGroupType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <value name="TargetGroupArn" get-method="getTargetGroupArn" set-method="setTargetGroupArn" usage="optional"/>
+  </mapping>
+  <mapping name="DeleteTargetGroupResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.DeleteTargetGroupResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="DeleteTargetGroupResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.DeleteTargetGroupResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.DeleteTargetGroupResult" abstract="true"/>
+  <mapping name="DeregisterTargets" class="com.eucalyptus.loadbalancingv2.common.msgs.DeregisterTargetsType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <value name="TargetGroupArn" get-method="getTargetGroupArn" set-method="setTargetGroupArn" usage="optional"/>
+    <structure get-method="getTargets" set-method="setTargets" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.TargetDescriptions" name="Targets"/>
+  </mapping>
+  <mapping name="DeregisterTargetsResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.DeregisterTargetsResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="DeregisterTargetsResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.DeregisterTargetsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.DeregisterTargetsResult" abstract="true"/>
+  <mapping name="DescribeAccountLimits" class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeAccountLimitsType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <value name="Marker" get-method="getMarker" set-method="setMarker" usage="optional"/>
+    <value name="PageSize" get-method="getPageSize" set-method="setPageSize" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeAccountLimitsResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeAccountLimitsResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="DescribeAccountLimitsResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.DescribeAccountLimitsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeAccountLimitsResult" abstract="true">
+    <structure get-method="getLimits" set-method="setLimits" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.Limits" name="Limits"/>
+    <value name="NextMarker" get-method="getNextMarker" set-method="setNextMarker" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeListenerCertificates" class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeListenerCertificatesType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <value name="ListenerArn" get-method="getListenerArn" set-method="setListenerArn" usage="optional"/>
+    <value name="Marker" get-method="getMarker" set-method="setMarker" usage="optional"/>
+    <value name="PageSize" get-method="getPageSize" set-method="setPageSize" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeListenerCertificatesResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeListenerCertificatesResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="DescribeListenerCertificatesResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.DescribeListenerCertificatesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeListenerCertificatesResult" abstract="true">
+    <structure get-method="getCertificates" set-method="setCertificates" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.CertificateList" name="Certificates"/>
+    <value name="NextMarker" get-method="getNextMarker" set-method="setNextMarker" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeListeners" class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeListenersType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure get-method="getListenerArns" set-method="setListenerArns" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.ListenerArns" name="ListenerArns"/>
+    <value name="LoadBalancerArn" get-method="getLoadBalancerArn" set-method="setLoadBalancerArn" usage="optional"/>
+    <value name="Marker" get-method="getMarker" set-method="setMarker" usage="optional"/>
+    <value name="PageSize" get-method="getPageSize" set-method="setPageSize" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeListenersResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeListenersResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="DescribeListenersResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.DescribeListenersResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeListenersResult" abstract="true">
+    <structure get-method="getListeners" set-method="setListeners" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.Listeners" name="Listeners"/>
+    <value name="NextMarker" get-method="getNextMarker" set-method="setNextMarker" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeLoadBalancerAttributes" class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeLoadBalancerAttributesType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <value name="LoadBalancerArn" get-method="getLoadBalancerArn" set-method="setLoadBalancerArn" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeLoadBalancerAttributesResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeLoadBalancerAttributesResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="DescribeLoadBalancerAttributesResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.DescribeLoadBalancerAttributesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeLoadBalancerAttributesResult" abstract="true">
+    <structure get-method="getAttributes" set-method="setAttributes" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancerAttributes" name="Attributes"/>
+  </mapping>
+  <mapping name="DescribeLoadBalancers" class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeLoadBalancersType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure get-method="getLoadBalancerArns" set-method="setLoadBalancerArns" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancerArns" name="LoadBalancerArns"/>
+    <value name="Marker" get-method="getMarker" set-method="setMarker" usage="optional"/>
+    <structure get-method="getNames" set-method="setNames" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancerNames" name="Names"/>
+    <value name="PageSize" get-method="getPageSize" set-method="setPageSize" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeLoadBalancersResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeLoadBalancersResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="DescribeLoadBalancersResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.DescribeLoadBalancersResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeLoadBalancersResult" abstract="true">
+    <structure get-method="getLoadBalancers" set-method="setLoadBalancers" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancers" name="LoadBalancers"/>
+    <value name="NextMarker" get-method="getNextMarker" set-method="setNextMarker" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeRules" class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeRulesType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <value name="ListenerArn" get-method="getListenerArn" set-method="setListenerArn" usage="optional"/>
+    <value name="Marker" get-method="getMarker" set-method="setMarker" usage="optional"/>
+    <value name="PageSize" get-method="getPageSize" set-method="setPageSize" usage="optional"/>
+    <structure get-method="getRuleArns" set-method="setRuleArns" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.RuleArns" name="RuleArns"/>
+  </mapping>
+  <mapping name="DescribeRulesResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeRulesResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="DescribeRulesResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.DescribeRulesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeRulesResult" abstract="true">
+    <value name="NextMarker" get-method="getNextMarker" set-method="setNextMarker" usage="optional"/>
+    <structure get-method="getRules" set-method="setRules" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.Rules" name="Rules"/>
+  </mapping>
+  <mapping name="DescribeSSLPolicies" class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeSSLPoliciesType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <value name="Marker" get-method="getMarker" set-method="setMarker" usage="optional"/>
+    <structure get-method="getNames" set-method="setNames" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.SslPolicyNames" name="Names"/>
+    <value name="PageSize" get-method="getPageSize" set-method="setPageSize" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeSSLPoliciesResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeSSLPoliciesResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="DescribeSSLPoliciesResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.DescribeSSLPoliciesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeSSLPoliciesResult" abstract="true">
+    <value name="NextMarker" get-method="getNextMarker" set-method="setNextMarker" usage="optional"/>
+    <structure get-method="getSslPolicies" set-method="setSslPolicies" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.SslPolicies" name="SslPolicies"/>
+  </mapping>
+  <mapping name="DescribeTags" class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeTagsType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure get-method="getResourceArns" set-method="setResourceArns" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.ResourceArns" name="ResourceArns"/>
+  </mapping>
+  <mapping name="DescribeTagsResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeTagsResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="DescribeTagsResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.DescribeTagsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeTagsResult" abstract="true">
+    <structure get-method="getTagDescriptions" set-method="setTagDescriptions" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.TagDescriptions" name="TagDescriptions"/>
+  </mapping>
+  <mapping name="DescribeTargetGroupAttributes" class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeTargetGroupAttributesType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <value name="TargetGroupArn" get-method="getTargetGroupArn" set-method="setTargetGroupArn" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeTargetGroupAttributesResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeTargetGroupAttributesResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="DescribeTargetGroupAttributesResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.DescribeTargetGroupAttributesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeTargetGroupAttributesResult" abstract="true">
+    <structure get-method="getAttributes" set-method="setAttributes" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupAttributes" name="Attributes"/>
+  </mapping>
+  <mapping name="DescribeTargetGroups" class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeTargetGroupsType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <value name="LoadBalancerArn" get-method="getLoadBalancerArn" set-method="setLoadBalancerArn" usage="optional"/>
+    <value name="Marker" get-method="getMarker" set-method="setMarker" usage="optional"/>
+    <structure get-method="getNames" set-method="setNames" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupNames" name="Names"/>
+    <value name="PageSize" get-method="getPageSize" set-method="setPageSize" usage="optional"/>
+    <structure get-method="getTargetGroupArns" set-method="setTargetGroupArns" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupArns" name="TargetGroupArns"/>
+  </mapping>
+  <mapping name="DescribeTargetGroupsResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeTargetGroupsResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="DescribeTargetGroupsResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.DescribeTargetGroupsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeTargetGroupsResult" abstract="true">
+    <value name="NextMarker" get-method="getNextMarker" set-method="setNextMarker" usage="optional"/>
+    <structure get-method="getTargetGroups" set-method="setTargetGroups" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.TargetGroups" name="TargetGroups"/>
+  </mapping>
+  <mapping name="DescribeTargetHealth" class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeTargetHealthType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <value name="TargetGroupArn" get-method="getTargetGroupArn" set-method="setTargetGroupArn" usage="optional"/>
+    <structure get-method="getTargets" set-method="setTargets" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.TargetDescriptions" name="Targets"/>
+  </mapping>
+  <mapping name="DescribeTargetHealthResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeTargetHealthResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="DescribeTargetHealthResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.DescribeTargetHealthResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.DescribeTargetHealthResult" abstract="true">
+    <structure get-method="getTargetHealthDescriptions" set-method="setTargetHealthDescriptions" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.TargetHealthDescriptions" name="TargetHealthDescriptions"/>
+  </mapping>
+  <mapping name="ModifyListener" class="com.eucalyptus.loadbalancingv2.common.msgs.ModifyListenerType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure get-method="getCertificates" set-method="setCertificates" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.CertificateList" name="Certificates"/>
+    <structure get-method="getDefaultActions" set-method="setDefaultActions" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.Actions" name="DefaultActions"/>
+    <value name="ListenerArn" get-method="getListenerArn" set-method="setListenerArn" usage="optional"/>
+    <value name="Port" get-method="getPort" set-method="setPort" usage="optional"/>
+    <value name="Protocol" get-method="getProtocol" set-method="setProtocol" usage="optional"/>
+    <value name="SslPolicy" get-method="getSslPolicy" set-method="setSslPolicy" usage="optional"/>
+  </mapping>
+  <mapping name="ModifyListenerResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.ModifyListenerResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="ModifyListenerResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ModifyListenerResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.ModifyListenerResult" abstract="true">
+    <structure get-method="getListeners" set-method="setListeners" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.Listeners" name="Listeners"/>
+  </mapping>
+  <mapping name="ModifyLoadBalancerAttributes" class="com.eucalyptus.loadbalancingv2.common.msgs.ModifyLoadBalancerAttributesType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure get-method="getAttributes" set-method="setAttributes" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancerAttributes" name="Attributes"/>
+    <value name="LoadBalancerArn" get-method="getLoadBalancerArn" set-method="setLoadBalancerArn" usage="optional"/>
+  </mapping>
+  <mapping name="ModifyLoadBalancerAttributesResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.ModifyLoadBalancerAttributesResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="ModifyLoadBalancerAttributesResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ModifyLoadBalancerAttributesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.ModifyLoadBalancerAttributesResult" abstract="true">
+    <structure get-method="getAttributes" set-method="setAttributes" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancerAttributes" name="Attributes"/>
+  </mapping>
+  <mapping name="ModifyRule" class="com.eucalyptus.loadbalancingv2.common.msgs.ModifyRuleType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure get-method="getActions" set-method="setActions" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.Actions" name="Actions"/>
+    <structure get-method="getConditions" set-method="setConditions" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.RuleConditionList" name="Conditions"/>
+    <value name="RuleArn" get-method="getRuleArn" set-method="setRuleArn" usage="optional"/>
+  </mapping>
+  <mapping name="ModifyRuleResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.ModifyRuleResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="ModifyRuleResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ModifyRuleResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.ModifyRuleResult" abstract="true">
+    <structure get-method="getRules" set-method="setRules" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.Rules" name="Rules"/>
+  </mapping>
+  <mapping name="ModifyTargetGroup" class="com.eucalyptus.loadbalancingv2.common.msgs.ModifyTargetGroupType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <value name="HealthCheckEnabled" get-method="getHealthCheckEnabled" set-method="setHealthCheckEnabled" usage="optional"/>
+    <value name="HealthCheckIntervalSeconds" get-method="getHealthCheckIntervalSeconds" set-method="setHealthCheckIntervalSeconds" usage="optional"/>
+    <value name="HealthCheckPath" get-method="getHealthCheckPath" set-method="setHealthCheckPath" usage="optional"/>
+    <value name="HealthCheckPort" get-method="getHealthCheckPort" set-method="setHealthCheckPort" usage="optional"/>
+    <value name="HealthCheckProtocol" get-method="getHealthCheckProtocol" set-method="setHealthCheckProtocol" usage="optional"/>
+    <value name="HealthCheckTimeoutSeconds" get-method="getHealthCheckTimeoutSeconds" set-method="setHealthCheckTimeoutSeconds" usage="optional"/>
+    <value name="HealthyThresholdCount" get-method="getHealthyThresholdCount" set-method="setHealthyThresholdCount" usage="optional"/>
+    <structure get-method="getMatcher" set-method="setMatcher" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.Matcher" name="Matcher"/>
+    <value name="TargetGroupArn" get-method="getTargetGroupArn" set-method="setTargetGroupArn" usage="optional"/>
+    <value name="UnhealthyThresholdCount" get-method="getUnhealthyThresholdCount" set-method="setUnhealthyThresholdCount" usage="optional"/>
+  </mapping>
+  <mapping name="ModifyTargetGroupResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.ModifyTargetGroupResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="ModifyTargetGroupResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ModifyTargetGroupResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.ModifyTargetGroupResult" abstract="true">
+    <structure get-method="getTargetGroups" set-method="setTargetGroups" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.TargetGroups" name="TargetGroups"/>
+  </mapping>
+  <mapping name="ModifyTargetGroupAttributes" class="com.eucalyptus.loadbalancingv2.common.msgs.ModifyTargetGroupAttributesType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure get-method="getAttributes" set-method="setAttributes" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupAttributes" name="Attributes"/>
+    <value name="TargetGroupArn" get-method="getTargetGroupArn" set-method="setTargetGroupArn" usage="optional"/>
+  </mapping>
+  <mapping name="ModifyTargetGroupAttributesResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.ModifyTargetGroupAttributesResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="ModifyTargetGroupAttributesResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ModifyTargetGroupAttributesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.ModifyTargetGroupAttributesResult" abstract="true">
+    <structure get-method="getAttributes" set-method="setAttributes" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupAttributes" name="Attributes"/>
+  </mapping>
+  <mapping name="RegisterTargets" class="com.eucalyptus.loadbalancingv2.common.msgs.RegisterTargetsType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <value name="TargetGroupArn" get-method="getTargetGroupArn" set-method="setTargetGroupArn" usage="optional"/>
+    <structure get-method="getTargets" set-method="setTargets" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.TargetDescriptions" name="Targets"/>
+  </mapping>
+  <mapping name="RegisterTargetsResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.RegisterTargetsResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="RegisterTargetsResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.RegisterTargetsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.RegisterTargetsResult" abstract="true"/>
+  <mapping name="RemoveListenerCertificates" class="com.eucalyptus.loadbalancingv2.common.msgs.RemoveListenerCertificatesType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure get-method="getCertificates" set-method="setCertificates" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.CertificateList" name="Certificates"/>
+    <value name="ListenerArn" get-method="getListenerArn" set-method="setListenerArn" usage="optional"/>
+  </mapping>
+  <mapping name="RemoveListenerCertificatesResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.RemoveListenerCertificatesResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="RemoveListenerCertificatesResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.RemoveListenerCertificatesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.RemoveListenerCertificatesResult" abstract="true"/>
+  <mapping name="RemoveTags" class="com.eucalyptus.loadbalancingv2.common.msgs.RemoveTagsType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure get-method="getResourceArns" set-method="setResourceArns" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.ResourceArns" name="ResourceArns"/>
+    <structure get-method="getTagKeys" set-method="setTagKeys" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.TagKeys" name="TagKeys"/>
+  </mapping>
+  <mapping name="RemoveTagsResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.RemoveTagsResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="RemoveTagsResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.RemoveTagsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.RemoveTagsResult" abstract="true"/>
+  <mapping name="SetIpAddressType" class="com.eucalyptus.loadbalancingv2.common.msgs.SetIpAddressTypeType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <value name="IpAddressType" get-method="getIpAddressType" set-method="setIpAddressType" usage="optional"/>
+    <value name="LoadBalancerArn" get-method="getLoadBalancerArn" set-method="setLoadBalancerArn" usage="optional"/>
+  </mapping>
+  <mapping name="SetIpAddressTypeResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.SetIpAddressTypeResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="SetIpAddressTypeResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.SetIpAddressTypeResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.SetIpAddressTypeResult" abstract="true">
+    <value name="IpAddressType" get-method="getIpAddressType" set-method="setIpAddressType" usage="optional"/>
+  </mapping>
+  <mapping name="SetRulePriorities" class="com.eucalyptus.loadbalancingv2.common.msgs.SetRulePrioritiesType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure get-method="getRulePriorities" set-method="setRulePriorities" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.RulePriorityList" name="RulePriorities"/>
+  </mapping>
+  <mapping name="SetRulePrioritiesResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.SetRulePrioritiesResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="SetRulePrioritiesResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.SetRulePrioritiesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.SetRulePrioritiesResult" abstract="true">
+    <structure get-method="getRules" set-method="setRules" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.Rules" name="Rules"/>
+  </mapping>
+  <mapping name="SetSecurityGroups" class="com.eucalyptus.loadbalancingv2.common.msgs.SetSecurityGroupsType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <value name="LoadBalancerArn" get-method="getLoadBalancerArn" set-method="setLoadBalancerArn" usage="optional"/>
+    <structure get-method="getSecurityGroups" set-method="setSecurityGroups" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.SecurityGroups" name="SecurityGroups"/>
+  </mapping>
+  <mapping name="SetSecurityGroupsResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.SetSecurityGroupsResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="SetSecurityGroupsResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.SetSecurityGroupsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.SetSecurityGroupsResult" abstract="true">
+    <structure get-method="getSecurityGroupIds" set-method="setSecurityGroupIds" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.SecurityGroups" name="SecurityGroupIds"/>
+  </mapping>
+  <mapping name="SetSubnets" class="com.eucalyptus.loadbalancingv2.common.msgs.SetSubnetsType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <value name="LoadBalancerArn" get-method="getLoadBalancerArn" set-method="setLoadBalancerArn" usage="optional"/>
+    <structure get-method="getSubnetMappings" set-method="setSubnetMappings" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.SubnetMappings" name="SubnetMappings"/>
+    <structure get-method="getSubnets" set-method="setSubnets" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.Subnets" name="Subnets"/>
+  </mapping>
+  <mapping name="SetSubnetsResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.SetSubnetsResponseType">
+    <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
+    <structure name="SetSubnetsResult" field="result" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.SetSubnetsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancingv2.common.msgs.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.SetSubnetsResult" abstract="true">
+    <structure get-method="getAvailabilityZones" set-method="setAvailabilityZones" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.AvailabilityZones" name="AvailabilityZones"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.Action" abstract="true">
+    <structure get-method="getAuthenticateCognitoConfig" set-method="setAuthenticateCognitoConfig" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.AuthenticateCognitoActionConfig" name="AuthenticateCognitoConfig"/>
+    <structure get-method="getAuthenticateOidcConfig" set-method="setAuthenticateOidcConfig" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.AuthenticateOidcActionConfig" name="AuthenticateOidcConfig"/>
+    <structure get-method="getFixedResponseConfig" set-method="setFixedResponseConfig" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.FixedResponseActionConfig" name="FixedResponseConfig"/>
+    <structure get-method="getForwardConfig" set-method="setForwardConfig" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.ForwardActionConfig" name="ForwardConfig"/>
+    <value name="Order" get-method="getOrder" set-method="setOrder" usage="optional"/>
+    <structure get-method="getRedirectConfig" set-method="setRedirectConfig" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.RedirectActionConfig" name="RedirectConfig"/>
+    <value name="TargetGroupArn" get-method="getTargetGroupArn" set-method="setTargetGroupArn" usage="optional"/>
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.Actions" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancingv2.common.msgs.Action"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.AuthenticateCognitoActionAuthenticationRequestExtraParams" abstract="true">
+    <collection field="entry">
+      <structure name="entry" type="com.eucalyptus.loadbalancingv2.common.msgs.AuthenticateCognitoActionAuthenticationRequestExtraParamsEntry"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.AuthenticateCognitoActionAuthenticationRequestExtraParamsEntry" abstract="true">
+    <value name="key" get-method="getKey" set-method="setKey" usage="optional"/>
+    <value name="value" get-method="getValue" set-method="setValue" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.AuthenticateCognitoActionConfig" abstract="true">
+    <structure get-method="getAuthenticationRequestExtraParams" set-method="setAuthenticationRequestExtraParams" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.AuthenticateCognitoActionAuthenticationRequestExtraParams" name="AuthenticationRequestExtraParams"/>
+    <value name="OnUnauthenticatedRequest" get-method="getOnUnauthenticatedRequest" set-method="setOnUnauthenticatedRequest" usage="optional"/>
+    <value name="Scope" get-method="getScope" set-method="setScope" usage="optional"/>
+    <value name="SessionCookieName" get-method="getSessionCookieName" set-method="setSessionCookieName" usage="optional"/>
+    <value name="SessionTimeout" get-method="getSessionTimeout" set-method="setSessionTimeout" usage="optional"/>
+    <value name="UserPoolArn" get-method="getUserPoolArn" set-method="setUserPoolArn" usage="optional"/>
+    <value name="UserPoolClientId" get-method="getUserPoolClientId" set-method="setUserPoolClientId" usage="optional"/>
+    <value name="UserPoolDomain" get-method="getUserPoolDomain" set-method="setUserPoolDomain" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.AuthenticateOidcActionAuthenticationRequestExtraParams" abstract="true">
+    <collection field="entry">
+      <structure name="entry" type="com.eucalyptus.loadbalancingv2.common.msgs.AuthenticateOidcActionAuthenticationRequestExtraParamsEntry"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.AuthenticateOidcActionAuthenticationRequestExtraParamsEntry" abstract="true">
+    <value name="key" get-method="getKey" set-method="setKey" usage="optional"/>
+    <value name="value" get-method="getValue" set-method="setValue" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.AuthenticateOidcActionConfig" abstract="true">
+    <structure get-method="getAuthenticationRequestExtraParams" set-method="setAuthenticationRequestExtraParams" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.AuthenticateOidcActionAuthenticationRequestExtraParams" name="AuthenticationRequestExtraParams"/>
+    <value name="AuthorizationEndpoint" get-method="getAuthorizationEndpoint" set-method="setAuthorizationEndpoint" usage="optional"/>
+    <value name="ClientId" get-method="getClientId" set-method="setClientId" usage="optional"/>
+    <value name="ClientSecret" get-method="getClientSecret" set-method="setClientSecret" usage="optional"/>
+    <value name="Issuer" get-method="getIssuer" set-method="setIssuer" usage="optional"/>
+    <value name="OnUnauthenticatedRequest" get-method="getOnUnauthenticatedRequest" set-method="setOnUnauthenticatedRequest" usage="optional"/>
+    <value name="Scope" get-method="getScope" set-method="setScope" usage="optional"/>
+    <value name="SessionCookieName" get-method="getSessionCookieName" set-method="setSessionCookieName" usage="optional"/>
+    <value name="SessionTimeout" get-method="getSessionTimeout" set-method="setSessionTimeout" usage="optional"/>
+    <value name="TokenEndpoint" get-method="getTokenEndpoint" set-method="setTokenEndpoint" usage="optional"/>
+    <value name="UseExistingClientSecret" get-method="getUseExistingClientSecret" set-method="setUseExistingClientSecret" usage="optional"/>
+    <value name="UserInfoEndpoint" get-method="getUserInfoEndpoint" set-method="setUserInfoEndpoint" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.AvailabilityZone" abstract="true">
+    <structure get-method="getLoadBalancerAddresses" set-method="setLoadBalancerAddresses" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancerAddresses" name="LoadBalancerAddresses"/>
+    <value name="SubnetId" get-method="getSubnetId" set-method="setSubnetId" usage="optional"/>
+    <value name="ZoneName" get-method="getZoneName" set-method="setZoneName" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.AvailabilityZones" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancingv2.common.msgs.AvailabilityZone"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.Certificate" abstract="true">
+    <value name="CertificateArn" get-method="getCertificateArn" set-method="setCertificateArn" usage="optional"/>
+    <value name="IsDefault" get-method="getIsDefault" set-method="setIsDefault" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.CertificateList" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancingv2.common.msgs.Certificate"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.Cipher" abstract="true">
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+    <value name="Priority" get-method="getPriority" set-method="setPriority" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.Ciphers" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancingv2.common.msgs.Cipher"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.FixedResponseActionConfig" abstract="true">
+    <value name="ContentType" get-method="getContentType" set-method="setContentType" usage="optional"/>
+    <value name="MessageBody" get-method="getMessageBody" set-method="setMessageBody" usage="optional"/>
+    <value name="StatusCode" get-method="getStatusCode" set-method="setStatusCode" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.ForwardActionConfig" abstract="true">
+    <structure get-method="getTargetGroupStickinessConfig" set-method="setTargetGroupStickinessConfig" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupStickinessConfig" name="TargetGroupStickinessConfig"/>
+    <structure get-method="getTargetGroups" set-method="setTargetGroups" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupList" name="TargetGroups"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.HostHeaderConditionConfig" abstract="true">
+    <structure get-method="getValues" set-method="setValues" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.ListOfString" name="Values"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.HttpHeaderConditionConfig" abstract="true">
+    <value name="HttpHeaderName" get-method="getHttpHeaderName" set-method="setHttpHeaderName" usage="optional"/>
+    <structure get-method="getValues" set-method="setValues" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.ListOfString" name="Values"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.HttpRequestMethodConditionConfig" abstract="true">
+    <structure get-method="getValues" set-method="setValues" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.ListOfString" name="Values"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.Limit" abstract="true">
+    <value name="Max" get-method="getMax" set-method="setMax" usage="optional"/>
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.Limits" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancingv2.common.msgs.Limit"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.ListOfString" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.Listener" abstract="true">
+    <structure get-method="getCertificates" set-method="setCertificates" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.CertificateList" name="Certificates"/>
+    <structure get-method="getDefaultActions" set-method="setDefaultActions" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.Actions" name="DefaultActions"/>
+    <value name="ListenerArn" get-method="getListenerArn" set-method="setListenerArn" usage="optional"/>
+    <value name="LoadBalancerArn" get-method="getLoadBalancerArn" set-method="setLoadBalancerArn" usage="optional"/>
+    <value name="Port" get-method="getPort" set-method="setPort" usage="optional"/>
+    <value name="Protocol" get-method="getProtocol" set-method="setProtocol" usage="optional"/>
+    <value name="SslPolicy" get-method="getSslPolicy" set-method="setSslPolicy" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.ListenerArns" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.Listeners" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancingv2.common.msgs.Listener"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancer" abstract="true">
+    <structure get-method="getAvailabilityZones" set-method="setAvailabilityZones" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.AvailabilityZones" name="AvailabilityZones"/>
+    <value name="CanonicalHostedZoneId" get-method="getCanonicalHostedZoneId" set-method="setCanonicalHostedZoneId" usage="optional"/>
+    <value name="CreatedTime" get-method="getCreatedTime" set-method="setCreatedTime" usage="optional"/>
+    <value name="DNSName" get-method="getDNSName" set-method="setDNSName" usage="optional"/>
+    <value name="IpAddressType" get-method="getIpAddressType" set-method="setIpAddressType" usage="optional"/>
+    <value name="LoadBalancerArn" get-method="getLoadBalancerArn" set-method="setLoadBalancerArn" usage="optional"/>
+    <value name="LoadBalancerName" get-method="getLoadBalancerName" set-method="setLoadBalancerName" usage="optional"/>
+    <value name="Scheme" get-method="getScheme" set-method="setScheme" usage="optional"/>
+    <structure get-method="getSecurityGroups" set-method="setSecurityGroups" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.SecurityGroups" name="SecurityGroups"/>
+    <structure get-method="getState" set-method="setState" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancerState" name="State"/>
+    <value name="Type" get-method="getType" set-method="setType" usage="optional"/>
+    <value name="VpcId" get-method="getVpcId" set-method="setVpcId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancerAddress" abstract="true">
+    <value name="AllocationId" get-method="getAllocationId" set-method="setAllocationId" usage="optional"/>
+    <value name="IpAddress" get-method="getIpAddress" set-method="setIpAddress" usage="optional"/>
+    <value name="PrivateIPv4Address" get-method="getPrivateIPv4Address" set-method="setPrivateIPv4Address" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancerAddresses" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancerAddress"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancerArns" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancerAttribute" abstract="true">
+    <value name="Key" get-method="getKey" set-method="setKey" usage="optional"/>
+    <value name="Value" get-method="getValue" set-method="setValue" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancerAttributes" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancerAttribute"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancerNames" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancerState" abstract="true">
+    <value name="Code" get-method="getCode" set-method="setCode" usage="optional"/>
+    <value name="Reason" get-method="getReason" set-method="setReason" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancers" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancer"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.Matcher" abstract="true">
+    <value name="HttpCode" get-method="getHttpCode" set-method="setHttpCode" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.PathPatternConditionConfig" abstract="true">
+    <structure get-method="getValues" set-method="setValues" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.ListOfString" name="Values"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.QueryStringConditionConfig" abstract="true">
+    <structure get-method="getValues" set-method="setValues" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.QueryStringKeyValuePairList" name="Values"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.QueryStringKeyValuePair" abstract="true">
+    <value name="Key" get-method="getKey" set-method="setKey" usage="optional"/>
+    <value name="Value" get-method="getValue" set-method="setValue" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.QueryStringKeyValuePairList" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancingv2.common.msgs.QueryStringKeyValuePair"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.RedirectActionConfig" abstract="true">
+    <value name="Host" get-method="getHost" set-method="setHost" usage="optional"/>
+    <value name="Path" get-method="getPath" set-method="setPath" usage="optional"/>
+    <value name="Port" get-method="getPort" set-method="setPort" usage="optional"/>
+    <value name="Protocol" get-method="getProtocol" set-method="setProtocol" usage="optional"/>
+    <value name="Query" get-method="getQuery" set-method="setQuery" usage="optional"/>
+    <value name="StatusCode" get-method="getStatusCode" set-method="setStatusCode" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.ResourceArns" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.Rule" abstract="true">
+    <structure get-method="getActions" set-method="setActions" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.Actions" name="Actions"/>
+    <structure get-method="getConditions" set-method="setConditions" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.RuleConditionList" name="Conditions"/>
+    <value name="IsDefault" get-method="getIsDefault" set-method="setIsDefault" usage="optional"/>
+    <value name="Priority" get-method="getPriority" set-method="setPriority" usage="optional"/>
+    <value name="RuleArn" get-method="getRuleArn" set-method="setRuleArn" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.RuleArns" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.RuleCondition" abstract="true">
+    <value name="Field" get-method="getField" set-method="setField" usage="optional"/>
+    <structure get-method="getHostHeaderConfig" set-method="setHostHeaderConfig" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.HostHeaderConditionConfig" name="HostHeaderConfig"/>
+    <structure get-method="getHttpHeaderConfig" set-method="setHttpHeaderConfig" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.HttpHeaderConditionConfig" name="HttpHeaderConfig"/>
+    <structure get-method="getHttpRequestMethodConfig" set-method="setHttpRequestMethodConfig" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.HttpRequestMethodConditionConfig" name="HttpRequestMethodConfig"/>
+    <structure get-method="getPathPatternConfig" set-method="setPathPatternConfig" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.PathPatternConditionConfig" name="PathPatternConfig"/>
+    <structure get-method="getQueryStringConfig" set-method="setQueryStringConfig" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.QueryStringConditionConfig" name="QueryStringConfig"/>
+    <structure get-method="getSourceIpConfig" set-method="setSourceIpConfig" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.SourceIpConditionConfig" name="SourceIpConfig"/>
+    <structure get-method="getValues" set-method="setValues" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.ListOfString" name="Values"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.RuleConditionList" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancingv2.common.msgs.RuleCondition"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.RulePriorityList" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancingv2.common.msgs.RulePriorityPair"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.RulePriorityPair" abstract="true">
+    <value name="Priority" get-method="getPriority" set-method="setPriority" usage="optional"/>
+    <value name="RuleArn" get-method="getRuleArn" set-method="setRuleArn" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.Rules" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancingv2.common.msgs.Rule"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.SecurityGroups" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.SourceIpConditionConfig" abstract="true">
+    <structure get-method="getValues" set-method="setValues" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.ListOfString" name="Values"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.SslPolicies" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancingv2.common.msgs.SslPolicy"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.SslPolicy" abstract="true">
+    <structure get-method="getCiphers" set-method="setCiphers" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.Ciphers" name="Ciphers"/>
+    <value name="Name" get-method="getName" set-method="setName" usage="optional"/>
+    <structure get-method="getSslProtocols" set-method="setSslProtocols" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.SslProtocols" name="SslProtocols"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.SslPolicyNames" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.SslProtocols" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.SubnetMapping" abstract="true">
+    <value name="AllocationId" get-method="getAllocationId" set-method="setAllocationId" usage="optional"/>
+    <value name="PrivateIPv4Address" get-method="getPrivateIPv4Address" set-method="setPrivateIPv4Address" usage="optional"/>
+    <value name="SubnetId" get-method="getSubnetId" set-method="setSubnetId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.SubnetMappings" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancingv2.common.msgs.SubnetMapping"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.Subnets" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.Tag" abstract="true">
+    <value name="Key" get-method="getKey" set-method="setKey" usage="optional"/>
+    <value name="Value" get-method="getValue" set-method="setValue" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.TagDescription" abstract="true">
+    <value name="ResourceArn" get-method="getResourceArn" set-method="setResourceArn" usage="optional"/>
+    <structure get-method="getTags" set-method="setTags" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.TagList" name="Tags"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.TagDescriptions" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancingv2.common.msgs.TagDescription"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.TagKeys" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.TagList" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancingv2.common.msgs.Tag"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.TargetDescription" abstract="true">
+    <value name="AvailabilityZone" get-method="getAvailabilityZone" set-method="setAvailabilityZone" usage="optional"/>
+    <value name="Id" get-method="getId" set-method="setId" usage="optional"/>
+    <value name="Port" get-method="getPort" set-method="setPort" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.TargetDescriptions" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancingv2.common.msgs.TargetDescription"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.TargetGroup" abstract="true">
+    <value name="HealthCheckEnabled" get-method="getHealthCheckEnabled" set-method="setHealthCheckEnabled" usage="optional"/>
+    <value name="HealthCheckIntervalSeconds" get-method="getHealthCheckIntervalSeconds" set-method="setHealthCheckIntervalSeconds" usage="optional"/>
+    <value name="HealthCheckPath" get-method="getHealthCheckPath" set-method="setHealthCheckPath" usage="optional"/>
+    <value name="HealthCheckPort" get-method="getHealthCheckPort" set-method="setHealthCheckPort" usage="optional"/>
+    <value name="HealthCheckProtocol" get-method="getHealthCheckProtocol" set-method="setHealthCheckProtocol" usage="optional"/>
+    <value name="HealthCheckTimeoutSeconds" get-method="getHealthCheckTimeoutSeconds" set-method="setHealthCheckTimeoutSeconds" usage="optional"/>
+    <value name="HealthyThresholdCount" get-method="getHealthyThresholdCount" set-method="setHealthyThresholdCount" usage="optional"/>
+    <structure get-method="getLoadBalancerArns" set-method="setLoadBalancerArns" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancerArns" name="LoadBalancerArns"/>
+    <structure get-method="getMatcher" set-method="setMatcher" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.Matcher" name="Matcher"/>
+    <value name="Port" get-method="getPort" set-method="setPort" usage="optional"/>
+    <value name="Protocol" get-method="getProtocol" set-method="setProtocol" usage="optional"/>
+    <value name="TargetGroupArn" get-method="getTargetGroupArn" set-method="setTargetGroupArn" usage="optional"/>
+    <value name="TargetGroupName" get-method="getTargetGroupName" set-method="setTargetGroupName" usage="optional"/>
+    <value name="TargetType" get-method="getTargetType" set-method="setTargetType" usage="optional"/>
+    <value name="UnhealthyThresholdCount" get-method="getUnhealthyThresholdCount" set-method="setUnhealthyThresholdCount" usage="optional"/>
+    <value name="VpcId" get-method="getVpcId" set-method="setVpcId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupArns" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupAttribute" abstract="true">
+    <value name="Key" get-method="getKey" set-method="setKey" usage="optional"/>
+    <value name="Value" get-method="getValue" set-method="setValue" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupAttributes" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupAttribute"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupList" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupTuple"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupNames" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupStickinessConfig" abstract="true">
+    <value name="DurationSeconds" get-method="getDurationSeconds" set-method="setDurationSeconds" usage="optional"/>
+    <value name="Enabled" get-method="getEnabled" set-method="setEnabled" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupTuple" abstract="true">
+    <value name="TargetGroupArn" get-method="getTargetGroupArn" set-method="setTargetGroupArn" usage="optional"/>
+    <value name="Weight" get-method="getWeight" set-method="setWeight" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.TargetGroups" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancingv2.common.msgs.TargetGroup"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.TargetHealth" abstract="true">
+    <value name="Description" get-method="getDescription" set-method="setDescription" usage="optional"/>
+    <value name="Reason" get-method="getReason" set-method="setReason" usage="optional"/>
+    <value name="State" get-method="getState" set-method="setState" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.TargetHealthDescription" abstract="true">
+    <value name="HealthCheckPort" get-method="getHealthCheckPort" set-method="setHealthCheckPort" usage="optional"/>
+    <structure get-method="getTarget" set-method="setTarget" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.TargetDescription" name="Target"/>
+    <structure get-method="getTargetHealth" set-method="setTargetHealth" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.TargetHealth" name="TargetHealth"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.TargetHealthDescriptions" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancingv2.common.msgs.TargetHealthDescription"/>
+    </collection>
+  </mapping>
+</binding>
