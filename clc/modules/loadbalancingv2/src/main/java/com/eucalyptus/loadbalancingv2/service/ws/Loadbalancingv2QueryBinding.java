@@ -16,8 +16,7 @@ import com.eucalyptus.ws.protocol.OperationParameter;
 @ComponentPart(Loadbalancingv2.class)
 public class Loadbalancingv2QueryBinding extends BaseQueryBinding<OperationParameter> {
 
-  //TODO verify namespace pattern is correct for ns http://elasticloadbalancing.amazonaws.com/doc/2015-12-01/
-  static final String NAMESPACE_PATTERN = "http://loadbalancingv2.amazonaws.com/doc/%s/";
+  static final String NAMESPACE_PATTERN = "http://elasticloadbalancing.amazonaws.com/doc/%s/";
 
   static final String DEFAULT_VERSION = "2015-12-01";
 

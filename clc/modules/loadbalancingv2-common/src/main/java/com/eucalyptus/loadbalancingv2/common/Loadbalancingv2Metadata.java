@@ -5,6 +5,7 @@
  */
 package com.eucalyptus.loadbalancingv2.common;
 
+import com.eucalyptus.auth.policy.annotation.PolicyResourceType;
 import com.eucalyptus.auth.policy.annotation.PolicyVendor;
 import com.eucalyptus.auth.type.RestrictedType;
 import com.eucalyptus.loadbalancingv2.common.policy.Loadbalancingv2PolicySpec;
@@ -12,8 +13,16 @@ import com.eucalyptus.loadbalancingv2.common.policy.Loadbalancingv2PolicySpec;
 @PolicyVendor(Loadbalancingv2PolicySpec.VENDOR_LOADBALANCINGV2)
 public interface Loadbalancingv2Metadata extends RestrictedType {
 
-  //TODO add policy resource types
-  //@PolicyResourceType( "lower_case_name-here" )
-  //interface XXXMetadata extends Loadbalancingv2Metadata {}
+  @PolicyResourceType( "listener" )
+  interface ListenerMetadata extends Loadbalancingv2Metadata {}
+
+  @PolicyResourceType( "listener-rule" )
+  interface ListenerRuleMetadata extends Loadbalancingv2Metadata {}
+
+  @PolicyResourceType( "loadbalancer" )
+  interface LoadbalancerMetadata extends Loadbalancingv2Metadata {}
+
+  @PolicyResourceType( "targetgroup" )
+  interface TargetgroupMetadata extends Loadbalancingv2Metadata {}
 
 }
