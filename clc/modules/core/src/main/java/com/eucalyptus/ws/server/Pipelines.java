@@ -88,7 +88,8 @@ public class Pipelines {
   //GRZE:TODO: this is not happy ==> {@link DomainNames}
   private static final Supplier<String> subDomain = () -> SystemConfiguration.getSystemConfiguration( ).getDnsDomain( );
 
-
+  private static final boolean REGION_MATCHING_ENABLED =
+      Boolean.parseBoolean(System.getProperty("com.eucalyptus.ws.matchRegionEndpoint", "true"));
 
   /**
    * Finds and returns a pipeline that accepts the {@code request} by checking registered pipelines.
@@ -134,10 +135,11 @@ public class Pipelines {
     if ( hostHeader != null && ( lowerHostHeader.contains( "amazonaws.com" ) || lowerHostHeader.contains( subDomain.get( ) ) ) ) {
       final String host = hostHeader.indexOf( ':' ) > 0 ? hostHeader.substring( 0, hostHeader.indexOf( ':' ) ) : hostHeader;
       LOG.debug( "Trying to intercept request for " + hostHeader );
+      FilteredPipeline regionMatchPipeline = null;
       for ( final FilteredPipeline f : pipelines ) {
         if ( Ats.from( f ).has( ComponentPart.class ) ) {
-          Class<? extends ComponentId> compIdClass = Ats.from( f ).get( ComponentPart.class ).value( );
-          ComponentId compId = ComponentIds.lookup( compIdClass );
+          final Class<? extends ComponentId> compIdClass = Ats.from( f ).get( ComponentPart.class ).value( );
+          final ComponentId compId = ComponentIds.lookup( compIdClass );
           if ( Ats.from( compIdClass ).has( PublicService.class ) ) {
             if ( request.getHeaderNames().contains( "SOAPAction" ) && f.addHandlers( Channels.pipeline( ) ).get( SoapHandler.class ) == null ) {
               continue;//Skip pipeline which doesn't handle SOAP for this SOAP request
@@ -150,9 +152,16 @@ public class Pipelines {
               return f;//Return pipeline which can handle the request for ${service}.${region}.amazonaws.com
             } else if ( host.matches( "(?i)[\\w.-]*" + compId.name( ) + "\\." + Pattern.quote(subDomain.get( )) ) ) {
               return f;//Return pipeline which can handle the request for ${service}.${system.dns.dnsdomain}
+            } else if ( REGION_MATCHING_ENABLED && regionMatchPipeline == null
+                && (host.matches( "(?i)[\\w.-]*" + compId.name( ) + "\\.[\\w-]+\\." + Pattern.quote(subDomain.get( )))
+                 || host.matches( "(?i)[\\w.-]*" + compId.getAwsServiceName( ) + "\\.[\\w-]+\\." + Pattern.quote(subDomain.get( ))))) {
+              regionMatchPipeline = f; //Stash pipeline which can handle the request for ${service}.${region}.${system.dns.dnsdomain}
             }
           }
         }
+      }
+      if ( regionMatchPipeline != null ) {
+        return regionMatchPipeline;
       }
     }
 
