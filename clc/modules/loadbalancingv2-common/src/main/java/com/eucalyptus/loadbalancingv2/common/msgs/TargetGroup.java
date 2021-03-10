@@ -42,6 +42,9 @@ public class TargetGroup extends EucalyptusData {
   @FieldRegex(FieldRegexValue.ENUM_PROTOCOLENUM)
   private String protocol;
 
+  @FieldRegex(FieldRegexValue.ENUM_PROTOCOLVERSIONENUM)
+  private String protocolVersion;
+
   private String targetGroupArn;
 
   private String targetGroupName;
@@ -140,6 +143,14 @@ public class TargetGroup extends EucalyptusData {
 
   public void setProtocol(final String protocol) {
     this.protocol = protocol;
+  }
+
+  public String getProtocolVersion() {
+    return protocolVersion;
+  }
+
+  public void setProtocolVersion(String protocolVersion) {
+    this.protocolVersion = protocolVersion;
   }
 
   public String getTargetGroupArn() {

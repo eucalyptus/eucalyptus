@@ -9,10 +9,6 @@ import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.loadbalancing.common.LoadBalancingMetadata.LoadBalancerMetadata;
 import com.eucalyptus.loadbalancing.service.persist.LoadBalancers;
-import com.eucalyptus.loadbalancing.service.persist.LoadBalancingMetadataException;
-import com.eucalyptus.util.Exceptions;
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 
 @ComponentNamed
 public class PersistenceLoadBalancers
@@ -21,24 +17,6 @@ public class PersistenceLoadBalancers
 
   public PersistenceLoadBalancers() {
     super("loadbalancer");
-  }
-
-  @Override
-  public <T> T updateByExample(
-      final LoadBalancer example,
-      final OwnerFullName ownerFullName,
-      final String key,
-      final Predicate<? super LoadBalancer> filter,
-      final Function<? super LoadBalancer, T> updateTransform
-  ) throws LoadBalancingMetadataException {
-    return updateByExample(example, ownerFullName, key, balancer -> {
-      if (!filter.apply(balancer)) {
-        throw Exceptions.toUndeclared(notFoundException(
-            qualifyOwner("Filter denied " + typeDescription + " '" + key + "'", ownerFullName),
-            null));
-      }
-      return updateTransform.apply(balancer);
-    });
   }
 
   @Override

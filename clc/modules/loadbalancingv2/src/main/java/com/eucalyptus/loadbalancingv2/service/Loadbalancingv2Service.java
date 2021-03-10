@@ -5,7 +5,19 @@
  */
 package com.eucalyptus.loadbalancingv2.service;
 
+import com.eucalyptus.auth.AuthQuotaException;
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.component.annotation.ComponentNamed;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.loadbalancingv2.service.persist.Loadbalancingv2MetadataException;
+import com.eucalyptus.loadbalancingv2.service.persist.Loadbalancingv2MetadataNotFoundException;
+import com.eucalyptus.loadbalancingv2.service.persist.TargetGroups;
+import com.eucalyptus.loadbalancingv2.service.persist.entities.TargetGroup;
+import com.eucalyptus.loadbalancingv2.service.persist.views.TargetGroupView;
+import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2Metadatas;
+import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2ResourceName;
 import com.eucalyptus.loadbalancingv2.common.msgs.AddListenerCertificatesResponseType;
 import com.eucalyptus.loadbalancingv2.common.msgs.AddListenerCertificatesType;
 import com.eucalyptus.loadbalancingv2.common.msgs.AddTagsResponseType;
@@ -74,12 +86,33 @@ import com.eucalyptus.loadbalancingv2.common.msgs.SetSecurityGroupsResponseType;
 import com.eucalyptus.loadbalancingv2.common.msgs.SetSecurityGroupsType;
 import com.eucalyptus.loadbalancingv2.common.msgs.SetSubnetsResponseType;
 import com.eucalyptus.loadbalancingv2.common.msgs.SetSubnetsType;
+import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.NonNullFunction;
+import com.eucalyptus.util.TypeMappers;
+import com.google.common.base.Enums;
+import com.google.common.base.Functions;
+import com.google.common.base.Supplier;
+import java.util.Objects;
+import javax.inject.Inject;
+import org.apache.log4j.Logger;
+import org.hibernate.exception.ConstraintViolationException;
 
 /**
  *
  */
 @ComponentNamed
 public class Loadbalancingv2Service {
+
+  private static final Logger logger = Logger.getLogger(Loadbalancingv2Service.class);
+
+  private final TargetGroups targetGroups;
+
+  @Inject
+  public Loadbalancingv2Service(
+      final TargetGroups targetGroups
+  ) {
+    this.targetGroups = targetGroups;
+  }
 
   public AddListenerCertificatesResponseType addListenerCertificates(final AddListenerCertificatesType request) {
     return request.getReply();
@@ -101,8 +134,59 @@ public class Loadbalancingv2Service {
     return request.getReply();
   }
 
-  public CreateTargetGroupResponseType createTargetGroup(final CreateTargetGroupType request) {
-    return request.getReply();
+  public CreateTargetGroupResponseType createTargetGroup(final CreateTargetGroupType request) throws Loadbalancingv2Exception {
+    final CreateTargetGroupResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup( );
+
+    final TargetGroup.TargetType targetType =
+        Enums.getIfPresent(TargetGroup.TargetType.class, Objects.toString(request.getTargetType(), "instance"))
+            .or(TargetGroup.TargetType.instance);
+    final TargetGroup.Protocol protocol = request.getProtocol()==null ?
+        null :
+        Enums.getIfPresent(TargetGroup.Protocol.class, request.getProtocol()).orNull();
+    final TargetGroup.ProtocolVersion protocolVersion = request.getProtocolVersion()==null ?
+        null :
+        Enums.getIfPresent(TargetGroup.ProtocolVersion.class, request.getProtocolVersion())
+            .or(TargetGroup.ProtocolVersion.HTTP1);
+    final Integer port = request.getPort();
+
+    final TargetGroup targetGroup;
+    try {
+      @SuppressWarnings({"Guava", "Convert2Lambda"})
+      final Supplier<TargetGroup> allocator = new Supplier<TargetGroup>(){
+        @Override public TargetGroup get() {
+          final TargetGroup newTargetGroup = TargetGroup.create(
+              ctx.getUserFullName(),
+              request.getName(),  // maximum of 32 characters, must contain only alphanumeric characters or hyphens, and must not begin or end with a hyphen.
+              targetType,
+              request.getVpcId(),  //TODO:STEVE: validate vpc etc
+              protocol,
+              protocolVersion,
+              port
+          );
+
+          try {
+            return targetGroups.save(newTargetGroup);
+          } catch (Loadbalancingv2MetadataException e) {
+            throw Exceptions.toUndeclared(e);
+          }
+        }
+      };
+
+      targetGroup = Loadbalancingv2Metadatas.allocateUnitlessResource(allocator);
+    } catch (Exception ex) {
+      throw handleException("TooManyTargetGroups",
+          ex, __ -> new Loadbalancingv2ClientException("DuplicateTargetGroupName", "Duplicate name") );
+    }
+
+    final com.eucalyptus.loadbalancingv2.common.msgs.TargetGroups targetGroups =
+        new com.eucalyptus.loadbalancingv2.common.msgs.TargetGroups();
+    targetGroups.getMember().add(TypeMappers.transform(
+        targetGroup,
+        com.eucalyptus.loadbalancingv2.common.msgs.TargetGroup.class));
+    reply.getCreateTargetGroupResult().setTargetGroups(targetGroups);
+
+    return reply;
   }
 
   public DeleteListenerResponseType deleteListener(final DeleteListenerType request) {
@@ -117,8 +201,33 @@ public class Loadbalancingv2Service {
     return request.getReply();
   }
 
-  public DeleteTargetGroupResponseType deleteTargetGroup(final DeleteTargetGroupType request) {
-    return request.getReply();
+  public DeleteTargetGroupResponseType deleteTargetGroup(final DeleteTargetGroupType request) throws Loadbalancingv2Exception {
+    final DeleteTargetGroupResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup( );
+    try {
+      final Loadbalancingv2ResourceName arn;
+      try {
+        arn = Loadbalancingv2ResourceName.parse(request.getTargetGroupArn(), Loadbalancingv2ResourceName.Type.targetgroup);
+      } catch (final Loadbalancingv2ResourceName.InvalidResourceNameException ex) {
+        throw new Loadbalancingv2ClientException("InvalidParameterValue", "Invalid target group ARN");
+      }
+      final OwnerFullName ownerFullName =
+          ctx.isAdministrator( ) ?
+              AccountFullName.getInstance(arn.getNamespace()) :
+              ctx.getAccount();
+      final TargetGroup targetGroup =
+          targetGroups.lookupByName(
+              ownerFullName,
+              arn.getName(),
+              Loadbalancingv2Metadatas.filterPrivileged(),
+              Functions.identity());
+      targetGroups.delete( targetGroup );
+    } catch ( final Loadbalancingv2MetadataNotFoundException e ) {
+      throw new Loadbalancingv2ClientException( "TargetGroupNotFound", "Target group not found" );
+    } catch ( final Exception e ) {
+      handleException( e, __ -> new Loadbalancingv2ClientException("ResourceInUse", "Target group in use") );
+    }
+    return reply;
   }
 
   public DeregisterTargetsResponseType deregisterTargets(final DeregisterTargetsType request) {
@@ -161,8 +270,30 @@ public class Loadbalancingv2Service {
     return request.getReply();
   }
 
-  public DescribeTargetGroupsResponseType describeTargetGroups(final DescribeTargetGroupsType request) {
-    return request.getReply();
+  public DescribeTargetGroupsResponseType describeTargetGroups(final DescribeTargetGroupsType request) throws Loadbalancingv2Exception {
+    final DescribeTargetGroupsResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup( );
+    final boolean showAll = request.getNames()!=null
+        && ctx.isAdministrator( )
+        && request.getNames().getMember().remove("verbose");
+    final OwnerFullName ownerFullName = showAll ?
+        null :
+        ctx.getUserFullName( ).asAccountFullName( );
+
+    try {
+      final com.eucalyptus.loadbalancingv2.common.msgs.TargetGroups resultTargetGroups =
+          new com.eucalyptus.loadbalancingv2.common.msgs.TargetGroups();
+      resultTargetGroups.getMember().addAll( targetGroups.listByExample(
+          TargetGroup.named(ownerFullName, null),
+          Loadbalancingv2Metadatas.filterPrivileged( ), //TODO:STEVE: filter by target group name/arn and loadBalancerArn
+          TypeMappers.lookup(
+              TargetGroupView.class,
+              com.eucalyptus.loadbalancingv2.common.msgs.TargetGroup.class ) ) );
+      reply.getDescribeTargetGroupsResult().setTargetGroups(resultTargetGroups);
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
+    return reply;
   }
 
   public DescribeTargetHealthResponseType describeTargetHealth(final DescribeTargetHealthType request) {
@@ -217,4 +348,54 @@ public class Loadbalancingv2Service {
     return request.getReply();
   }
 
+  /**
+   * Method always throws, signature allows use of "throw handleException ..."
+   */
+  private static Loadbalancingv2Exception handleException(
+      final String quotaCode,
+      final Exception e,
+      final NonNullFunction<ConstraintViolationException, Loadbalancingv2Exception> constraintExceptionBuilder
+  ) throws Loadbalancingv2Exception {
+    final AuthQuotaException quotaCause = Exceptions.findCause( e, AuthQuotaException.class );
+    if ( quotaCause != null ) {
+      throw new Loadbalancingv2ClientException( quotaCode, "Request would exceed limit" );
+    }
+
+    return handleException(e, constraintExceptionBuilder);
+  }
+
+  /**
+   * Method always throws, signature allows use of "throw handleException ..."
+   */
+  private static Loadbalancingv2Exception handleException( final Exception e ) throws Loadbalancingv2Exception {
+    return handleException( e,  null );
+  }
+
+  /**
+   * Method always throws, signature allows use of "throw handleException ..."
+   */
+  private static Loadbalancingv2Exception handleException(
+      final Exception e,
+      final NonNullFunction<ConstraintViolationException, Loadbalancingv2Exception> constraintExceptionBuilder
+  ) throws Loadbalancingv2Exception {
+    final Loadbalancingv2Exception cause = Exceptions.findCause( e, Loadbalancingv2Exception.class );
+    if ( cause != null ) {
+      throw cause;
+    }
+
+    final ConstraintViolationException constraintViolationException =
+        Exceptions.findCause( e, ConstraintViolationException.class );
+    if ( constraintViolationException != null && constraintExceptionBuilder != null ) {
+      throw constraintExceptionBuilder.apply( constraintViolationException );
+    }
+
+    logger.error( e, e );
+
+    final Loadbalancingv2ServiceException exception =
+        new Loadbalancingv2ServiceException( "InternalFailure", String.valueOf(e.getMessage()) );
+    if ( Contexts.lookup( ).hasAdministrativePrivileges() ) {
+      exception.initCause( e );
+    }
+    throw exception;
+  }
 }

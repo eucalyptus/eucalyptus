@@ -43,6 +43,9 @@ public class CreateTargetGroupType extends Loadbalancingv2Message {
   @FieldRegex(FieldRegexValue.ENUM_PROTOCOLENUM)
   private String protocol;
 
+  @FieldRegex(FieldRegexValue.ENUM_PROTOCOLVERSIONENUM)
+  private String protocolVersion;
+
   @FieldRegex(FieldRegexValue.ENUM_TARGETTYPEENUM)
   private String targetType;
 
@@ -137,6 +140,14 @@ public class CreateTargetGroupType extends Loadbalancingv2Message {
 
   public void setProtocol(final String protocol) {
     this.protocol = protocol;
+  }
+
+  public String getProtocolVersion() {
+    return protocolVersion;
+  }
+
+  public void setProtocolVersion(String protocolVersion) {
+    this.protocolVersion = protocolVersion;
   }
 
   public String getTargetType() {

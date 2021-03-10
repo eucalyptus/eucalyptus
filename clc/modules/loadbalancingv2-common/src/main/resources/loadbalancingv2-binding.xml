@@ -687,6 +687,7 @@
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.Matcher" abstract="true">
+    <value name="GrpcCode" get-method="getGrpcCode" set-method="setGrpcCode" usage="optional"/>
     <value name="HttpCode" get-method="getHttpCode" set-method="setHttpCode" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.loadbalancingv2.common.msgs.PathPatternConditionConfig" abstract="true">
@@ -846,6 +847,7 @@
     <structure get-method="getMatcher" set-method="setMatcher" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.Matcher" name="Matcher"/>
     <value name="Port" get-method="getPort" set-method="setPort" usage="optional"/>
     <value name="Protocol" get-method="getProtocol" set-method="setProtocol" usage="optional"/>
+    <value name="ProtocolVersion" get-method="getProtocolVersion" set-method="setProtocolVersion" usage="optional"/>
     <value name="TargetGroupArn" get-method="getTargetGroupArn" set-method="setTargetGroupArn" usage="optional"/>
     <value name="TargetGroupName" get-method="getTargetGroupName" set-method="setTargetGroupName" usage="optional"/>
     <value name="TargetType" get-method="getTargetType" set-method="setTargetType" usage="optional"/>

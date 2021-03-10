@@ -7,7 +7,7 @@
 <ivy-module version="2.0">
   <info organisation="com.eucalyptus" module="eucalyptus-loadbalancingv2"/>
   <dependencies>
-    <dependency name="eucalyptus-loadbalancingv2-common" rev="latest.integration"/>
+    <dependency name="eucalyptus-loadbalancing" rev="latest.integration"/>
     <dependency name="eucalyptus-core" rev="latest.integration"/>
   </dependencies>
 </ivy-module>

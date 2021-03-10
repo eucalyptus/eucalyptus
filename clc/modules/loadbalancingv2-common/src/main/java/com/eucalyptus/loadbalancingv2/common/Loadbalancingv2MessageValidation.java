@@ -34,6 +34,7 @@ public class Loadbalancingv2MessageValidation {
     ENUM_LOADBALANCERSTATEENUM("active|provisioning|active_impaired|failed"),
     ENUM_LOADBALANCERTYPEENUM("application|network"),
     ENUM_PROTOCOLENUM("HTTP|HTTPS|TCP|TLS|UDP|TCP_UDP"),
+    ENUM_PROTOCOLVERSIONENUM("GRPC|HTTP1|HTTP2"),
     ENUM_REDIRECTACTIONSTATUSCODEENUM("HTTP_301|HTTP_302"),
     ENUM_TARGETHEALTHREASONENUM("Elb.RegistrationInProgress|Elb.InitialHealthChecking|Target.ResponseCodeMismatch|Target.Timeout|Target.FailedHealthChecks|Target.NotRegistered|Target.NotInUse|Target.DeregistrationInProgress|Target.InvalidState|Target.IpUnusable|Target.HealthCheckDisabled|Elb.InternalError"),
     ENUM_TARGETHEALTHSTATEENUM("initial|healthy|unhealthy|unused|draining|unavailable"),
