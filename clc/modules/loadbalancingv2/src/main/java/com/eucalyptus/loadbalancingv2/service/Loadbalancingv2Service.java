@@ -9,12 +9,18 @@ import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.component.annotation.ComponentNamed;
+import com.eucalyptus.compute.common.ComputeApi;
+import com.eucalyptus.compute.common.SecurityGroupItemType;
+import com.eucalyptus.compute.common.SubnetType;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.loadbalancingv2.service.persist.LoadBalancers;
 import com.eucalyptus.loadbalancingv2.service.persist.Loadbalancingv2MetadataException;
 import com.eucalyptus.loadbalancingv2.service.persist.Loadbalancingv2MetadataNotFoundException;
 import com.eucalyptus.loadbalancingv2.service.persist.TargetGroups;
+import com.eucalyptus.loadbalancingv2.service.persist.entities.LoadBalancer;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.TargetGroup;
+import com.eucalyptus.loadbalancingv2.service.persist.views.LoadBalancerView;
 import com.eucalyptus.loadbalancingv2.service.persist.views.TargetGroupView;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2Metadatas;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2ResourceName;
@@ -89,10 +95,15 @@ import com.eucalyptus.loadbalancingv2.common.msgs.SetSubnetsType;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.util.async.AsyncProxy;
 import com.google.common.base.Enums;
 import com.google.common.base.Functions;
 import com.google.common.base.Supplier;
+import io.vavr.collection.Stream;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import javax.inject.Inject;
 import org.apache.log4j.Logger;
 import org.hibernate.exception.ConstraintViolationException;
@@ -105,12 +116,15 @@ public class Loadbalancingv2Service {
 
   private static final Logger logger = Logger.getLogger(Loadbalancingv2Service.class);
 
+  private final LoadBalancers loadBalancers;
   private final TargetGroups targetGroups;
 
   @Inject
   public Loadbalancingv2Service(
+      final LoadBalancers loadBalancers,
       final TargetGroups targetGroups
   ) {
+    this.loadBalancers = loadBalancers;
     this.targetGroups = targetGroups;
   }
 
@@ -126,8 +140,84 @@ public class Loadbalancingv2Service {
     return request.getReply();
   }
 
-  public CreateLoadBalancerResponseType createLoadBalancer(final CreateLoadBalancerType request) {
-    return request.getReply();
+  public CreateLoadBalancerResponseType createLoadBalancer(final CreateLoadBalancerType request) throws Loadbalancingv2Exception {
+    final CreateLoadBalancerResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup( );
+
+    final LoadBalancer.Type type =
+        Enums.getIfPresent(LoadBalancer.Type.class, Objects.toString(request.getType(), "application"))
+            .or(LoadBalancer.Type.application);
+    final LoadBalancer.Scheme scheme =
+        Enums.getIfPresent(LoadBalancer.Scheme.class, Objects.toString(request.getScheme(), "internet-facing").replace('-', '_'))
+            .or(LoadBalancer.Scheme.internet_facing);
+    final LoadBalancer.IpAddressType ipAddressType =
+        Enums.getIfPresent(LoadBalancer.IpAddressType.class, Objects.toString(request.getIpAddressType(), "ipv4"))
+            .or(LoadBalancer.IpAddressType.ipv4);
+
+    final ComputeApi computeApi = AsyncProxy.client(ComputeApi.class);
+
+    final List<SecurityGroupItemType> securityGroupItems =
+        request.getSecurityGroups() != null && !request.getSecurityGroups().getMember().isEmpty()?
+            computeApi.describeSecurityGroups(request.getSecurityGroups().getMember()).getSecurityGroupInfo() :
+            Collections.emptyList();
+    if (securityGroupItems.isEmpty()) {
+      throw new Loadbalancingv2ClientException("InvalidConfigurationRequest", "Invalid security groups");
+    }
+
+    final List<SubnetType> subnetItems =
+        request.getSubnets() != null && !request.getSubnets().getMember().isEmpty()?
+            computeApi.describeSubnets(request.getSubnets().getMember()).getSubnetSet().getItem() :
+            Collections.emptyList();
+    if (subnetItems.isEmpty()) {
+      throw new Loadbalancingv2ClientException("InvalidConfigurationRequest", "Invalid subnets");
+    }
+
+    final Set<String> vpcIds = Stream.ofAll(subnetItems).map(SubnetType::getVpcId).toJavaSet();
+    if (vpcIds.size() != 1) {
+      throw new Loadbalancingv2ClientException("InvalidConfigurationRequest", "Inconsistent subnet vpc");
+    }
+
+    final LoadBalancer loadBalancer;
+    try {
+      @SuppressWarnings({"Guava", "Convert2Lambda"})
+      final Supplier<LoadBalancer> allocator = new Supplier<LoadBalancer>(){
+        @Override public LoadBalancer get() {
+          final LoadBalancer newLoadBalancer = LoadBalancer.create(
+              ctx.getUserFullName(),
+              request.getName(),  //TODO:STEVE: validation
+              type,
+              scheme
+          );
+
+          newLoadBalancer.setIpAddressType(ipAddressType);
+          newLoadBalancer.setSecurityGroupIds(
+              Stream.ofAll(securityGroupItems).map(SecurityGroupItemType::getGroupId).toJavaList());
+          newLoadBalancer.setSubnetIds(
+              Stream.ofAll(subnetItems).map(SubnetType::getSubnetId).toJavaList());
+          newLoadBalancer.setVpcId(vpcIds.iterator().next());
+
+          try {
+            return loadBalancers.save(newLoadBalancer);
+          } catch (Loadbalancingv2MetadataException e) {
+            throw Exceptions.toUndeclared(e);
+          }
+        }
+      };
+
+      loadBalancer = Loadbalancingv2Metadatas.allocateUnitlessResource(allocator);
+    } catch (Exception ex) {
+      throw handleException("TooManyLoadBalancers",
+          ex, __ -> new Loadbalancingv2ClientException("DuplicateLoadBalancerName", "Duplicate name") );
+    }
+
+    final com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancers loadBalancers =
+        new com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancers();
+    loadBalancers.getMember().add(TypeMappers.transform(
+        loadBalancer,
+        com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancer.class));
+    reply.getCreateLoadBalancerResult().setLoadBalancers(loadBalancers);
+
+    return reply;
   }
 
   public CreateRuleResponseType createRule(final CreateRuleType request) {
@@ -193,8 +283,33 @@ public class Loadbalancingv2Service {
     return request.getReply();
   }
 
-  public DeleteLoadBalancerResponseType deleteLoadBalancer(final DeleteLoadBalancerType request) {
-    return request.getReply();
+  public DeleteLoadBalancerResponseType deleteLoadBalancer(final DeleteLoadBalancerType request) throws Loadbalancingv2Exception {
+    final DeleteLoadBalancerResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup( );
+    try {
+      final Loadbalancingv2ResourceName arn;
+      try {
+        arn = Loadbalancingv2ResourceName.parse(request.getLoadBalancerArn(), Loadbalancingv2ResourceName.Type.loadbalancer);
+      } catch (final Loadbalancingv2ResourceName.InvalidResourceNameException ex) {
+        throw new Loadbalancingv2ClientException("InvalidParameterValue", "Invalid loadbalancer ARN");
+      }
+      final OwnerFullName ownerFullName =
+          ctx.isAdministrator( ) ?
+              AccountFullName.getInstance(arn.getNamespace()) :
+              ctx.getAccount();
+      final LoadBalancer loadBalancer =
+          loadBalancers.lookupByName(
+              ownerFullName,
+              arn.getName(),
+              Loadbalancingv2Metadatas.filterPrivileged(),
+              Functions.identity());
+      loadBalancers.delete(loadBalancer);
+    } catch ( final Loadbalancingv2MetadataNotFoundException e ) {
+      throw new Loadbalancingv2ClientException( "LoadBalancerNotFound", "Loadbalancer not found" );
+    } catch ( final Exception e ) {
+      handleException( e, __ -> new Loadbalancingv2ClientException("ResourceInUse", "Loadbalancer in use") );
+    }
+    return reply;
   }
 
   public DeleteRuleResponseType deleteRule(final DeleteRuleType request) {
@@ -250,8 +365,30 @@ public class Loadbalancingv2Service {
     return request.getReply();
   }
 
-  public DescribeLoadBalancersResponseType describeLoadBalancers(final DescribeLoadBalancersType request) {
-    return request.getReply();
+  public DescribeLoadBalancersResponseType describeLoadBalancers(final DescribeLoadBalancersType request) throws Loadbalancingv2Exception {
+    final DescribeLoadBalancersResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup( );
+    final boolean showAll = request.getNames()!=null
+        && ctx.isAdministrator( )
+        && request.getNames().getMember().remove("verbose");
+    final OwnerFullName ownerFullName = showAll ?
+        null :
+        ctx.getUserFullName( ).asAccountFullName( );
+
+    try {
+      final com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancers resultLoadBalancers =
+          new com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancers();
+      resultLoadBalancers.getMember().addAll( loadBalancers.listByExample(
+          LoadBalancer.named(ownerFullName, null),
+          Loadbalancingv2Metadatas.filterPrivileged( ), //TODO:STEVE: filtering on request properties
+          TypeMappers.lookup(
+              LoadBalancerView.class,
+              com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancer.class ) ) );
+      reply.getDescribeLoadBalancersResult().setLoadBalancers(resultLoadBalancers);
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
+    return reply;
   }
 
   public DescribeRulesResponseType describeRules(final DescribeRulesType request) {

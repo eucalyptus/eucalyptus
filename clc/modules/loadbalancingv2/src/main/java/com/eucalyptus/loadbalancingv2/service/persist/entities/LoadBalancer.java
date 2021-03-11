@@ -1,0 +1,208 @@
+/*
+ * Copyright 2021 AppScale Systems, Inc
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+package com.eucalyptus.loadbalancingv2.service.persist.entities;
+
+import com.eucalyptus.auth.principal.FullName;
+import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.entities.UserMetadata;
+import com.eucalyptus.loadbalancing.dns.LoadBalancerDomainName;
+import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2Metadata;
+import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2ResourceName;
+import com.eucalyptus.loadbalancingv2.service.persist.views.LoadBalancerView;
+import com.google.common.collect.Lists;
+import java.util.List;
+import javax.persistence.CollectionTable;
+import javax.persistence.Column;
+import javax.persistence.ElementCollection;
+import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.JoinColumn;
+import javax.persistence.OrderColumn;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+
+@Entity(name = "LoadBalancerV2")
+@PersistenceContext(name = "eucalyptus_loadbalancing")
+@Table(name = "metadata_v2_loadbalancer")
+public class LoadBalancer extends UserMetadata<LoadBalancer.State>
+    implements Loadbalancingv2Metadata.LoadbalancerMetadata, LoadBalancerView {
+
+  private static final long serialVersionUID = 1L;
+
+
+  public enum State {
+    provisioning,
+    active,
+    active_impaired,
+    failed,
+  }
+
+  public enum Scheme {
+    internet_facing(LoadBalancerDomainName.EXTERNAL),
+    internal(LoadBalancerDomainName.INTERNAL),
+    ;
+
+    private final LoadBalancerDomainName schemev1;
+
+    Scheme(final LoadBalancerDomainName schemev1) {
+      this.schemev1 = schemev1;
+    }
+
+    public LoadBalancerDomainName schemev1() {
+      return schemev1;
+    }
+
+    public String toString() {
+      return name().replace('_', '-');
+    }
+  }
+
+  public enum Type {
+    application("app"),
+    network("net"),
+    gateway("gwy"),
+    ;
+
+    private final String code;
+
+    Type(String code) {
+      this.code = code;
+    }
+
+    public String getCode() {
+      return code;
+    }
+  }
+
+  public enum IpAddressType {
+    dualstack,
+    ipv4,
+  }
+
+  @Column(name = "loadbalancer_type", nullable = false, updatable = false)
+  @Enumerated(EnumType.STRING)
+  private LoadBalancer.Type type;
+
+  @Column(name = "loadbalancer_scheme", updatable = false)
+  @Enumerated(EnumType.STRING)
+  private LoadBalancer.Scheme scheme;
+
+  @Column(name = "loadbalancer_ip_address_type")
+  @Enumerated(EnumType.STRING)
+  private LoadBalancer.IpAddressType ipAddressType;
+
+  @Column(name = "loadbalancer_vpc_id")
+  private String vpcId;
+
+  @ElementCollection
+  @CollectionTable( name = "metadata_v2_loadbalancer_security_groups", joinColumns = @JoinColumn( name = "metadata_loadbalancer_id" ) )
+  @Column( name = "metadata_security_group_id" )
+  @OrderColumn( name = "metadata_security_group_index")
+  private List<String> securityGroupIds = Lists.newArrayList();
+
+  @ElementCollection
+  @CollectionTable( name = "metadata_v2_loadbalancer_subnets", joinColumns = @JoinColumn( name = "metadata_loadbalancer_id" ) )
+  @Column( name = "metadata_subnet_id" )
+  @OrderColumn( name = "metadata_subnet_index")
+  private List<String> subnetIds = Lists.newArrayList();
+
+  protected LoadBalancer() {
+  }
+
+  protected LoadBalancer(
+      final OwnerFullName owner,
+      final String displayName
+  ) {
+    super(owner, displayName);
+  }
+
+  public static LoadBalancer create(
+      final OwnerFullName owner,
+      final String displayName,
+      final LoadBalancer.Type type,
+      final LoadBalancer.Scheme scheme
+  ) {
+    LoadBalancer loadBalancer = new LoadBalancer(owner, displayName);
+    loadBalancer.setNaturalId(Loadbalancingv2ResourceName.generateId());
+    loadBalancer.setState(State.provisioning);
+    loadBalancer.setType(type);
+    loadBalancer.setScheme(scheme);
+    return loadBalancer;
+  }
+
+  public static LoadBalancer named(final OwnerFullName userFullName, final String lbName) {
+    final LoadBalancer example = new LoadBalancer(null, lbName);
+    if (userFullName != null) {
+      example.setOwnerAccountNumber(userFullName.getAccountNumber());
+    }
+    return example;
+  }
+
+  public Type getType() {
+    return type;
+  }
+
+  public void setType(Type type) {
+    this.type = type;
+  }
+
+  public Scheme getScheme() {
+    return scheme;
+  }
+
+  public void setScheme(Scheme scheme) {
+    this.scheme = scheme;
+  }
+
+  public IpAddressType getIpAddressType() {
+    return ipAddressType;
+  }
+
+  public void setIpAddressType(
+      IpAddressType ipAddressType) {
+    this.ipAddressType = ipAddressType;
+  }
+
+  public String getVpcId() {
+    return vpcId;
+  }
+
+  public void setVpcId(String vpcId) {
+    this.vpcId = vpcId;
+  }
+
+  public List<String> getSecurityGroupIds() {
+    return securityGroupIds;
+  }
+
+  public void setSecurityGroupIds(List<String> securityGroupIds) {
+    this.securityGroupIds = securityGroupIds;
+  }
+
+  public List<String> getSubnetIds() {
+    return subnetIds;
+  }
+
+  public void setSubnetIds(List<String> subnetIds) {
+    this.subnetIds = subnetIds;
+  }
+
+  @Override
+  public String getPartition() {
+    return ComponentIds.lookup(Eucalyptus.class).name();
+  }
+
+  @Override
+  public FullName getFullName() {
+    return FullName.create.vendor("euca")
+        .region(ComponentIds.lookup(Eucalyptus.class).name())
+        .namespace(this.getOwnerAccountNumber())
+        .relativeId("targetgroup", this.getDisplayName());
+  }
+}
