@@ -1730,6 +1730,17 @@ public class Entities {
     }
 
     /**
+     * @see CriteriaBuilder#in(Expression)
+     */
+    public <V> EntityRestrictionBuilder<E> in(
+        @Nonnull final SingularAttribute<? super E, V> attribute,
+        @Nonnull final Collection<V> values
+    ) {
+      restrictions.add( new EntityRestriction.InPropertyEntityValuesRestriction<>( entityClass, attribute, values ) );
+      return this;
+    }
+
+    /**
      * @see CriteriaBuilder#equal(Expression, Object)
      */
     public <V> EntityRestrictionBuilder<E> equal(
