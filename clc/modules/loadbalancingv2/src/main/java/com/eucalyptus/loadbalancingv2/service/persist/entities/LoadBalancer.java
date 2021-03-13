@@ -15,14 +15,20 @@ import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2Metadata;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2ResourceName;
 import com.eucalyptus.loadbalancingv2.service.persist.views.LoadBalancerView;
 import com.google.common.collect.Lists;
+import io.vavr.collection.Stream;
+import io.vavr.control.Option;
 import java.util.List;
+import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
+import javax.persistence.OneToMany;
+import javax.persistence.OrderBy;
 import javax.persistence.OrderColumn;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
@@ -112,6 +118,10 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.State>
   @OrderColumn( name = "metadata_subnet_index")
   private List<String> subnetIds = Lists.newArrayList();
 
+  @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, orphanRemoval = true, mappedBy = "loadbalancer")
+  @OrderBy( "port" )
+  private List<Listener> listeners;
+
   protected LoadBalancer() {
   }
 
@@ -191,6 +201,18 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.State>
 
   public void setSubnetIds(List<String> subnetIds) {
     this.subnetIds = subnetIds;
+  }
+
+  public List<Listener> getListeners() {
+    return listeners;
+  }
+
+  public void setListeners(List<Listener> listeners) {
+    this.listeners = listeners;
+  }
+
+  public Option<Listener> findListener(final String naturalId) {
+    return Stream.ofAll(getListeners()).find(listener -> naturalId.equals(listener.getNaturalId()));
   }
 
   @Override

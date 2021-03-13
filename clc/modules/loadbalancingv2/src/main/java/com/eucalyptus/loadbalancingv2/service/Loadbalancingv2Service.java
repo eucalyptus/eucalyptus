@@ -14,12 +14,23 @@ import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.compute.common.SubnetType;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.loadbalancingv2.common.msgs.Listeners;
+import com.eucalyptus.loadbalancingv2.common.msgs.Rules;
+import com.eucalyptus.loadbalancingv2.service.persist.JsonEncoding;
 import com.eucalyptus.loadbalancingv2.service.persist.LoadBalancers;
 import com.eucalyptus.loadbalancingv2.service.persist.Loadbalancingv2MetadataException;
 import com.eucalyptus.loadbalancingv2.service.persist.Loadbalancingv2MetadataNotFoundException;
 import com.eucalyptus.loadbalancingv2.service.persist.TargetGroups;
+import com.eucalyptus.loadbalancingv2.service.persist.entities.Listener;
+import com.eucalyptus.loadbalancingv2.service.persist.entities.ListenerRule;
+import com.eucalyptus.loadbalancingv2.service.persist.entities.ListenerRule_;
+import com.eucalyptus.loadbalancingv2.service.persist.entities.Listener_;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.LoadBalancer;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.TargetGroup;
+import com.eucalyptus.loadbalancingv2.service.persist.views.ListenerRuleView;
+import com.eucalyptus.loadbalancingv2.service.persist.views.ListenerView;
 import com.eucalyptus.loadbalancingv2.service.persist.views.LoadBalancerView;
 import com.eucalyptus.loadbalancingv2.service.persist.views.TargetGroupView;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2Metadatas;
@@ -92,14 +103,19 @@ import com.eucalyptus.loadbalancingv2.common.msgs.SetSecurityGroupsResponseType;
 import com.eucalyptus.loadbalancingv2.common.msgs.SetSecurityGroupsType;
 import com.eucalyptus.loadbalancingv2.common.msgs.SetSubnetsResponseType;
 import com.eucalyptus.loadbalancingv2.common.msgs.SetSubnetsType;
+import com.eucalyptus.util.CompatFunction;
+import com.eucalyptus.util.CompatSupplier;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.NonNullFunction;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncProxy;
 import com.google.common.base.Enums;
 import com.google.common.base.Functions;
+import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Lists;
 import io.vavr.collection.Stream;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -136,8 +152,52 @@ public class Loadbalancingv2Service {
     return request.getReply();
   }
 
-  public CreateListenerResponseType createListener(final CreateListenerType request) {
-    return request.getReply();
+  public CreateListenerResponseType createListener(final CreateListenerType request) throws Loadbalancingv2Exception {
+    final CreateListenerResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup( );
+
+    final Loadbalancingv2ResourceName arn;
+    try {
+      arn = Loadbalancingv2ResourceName.parse(request.getLoadBalancerArn(), Loadbalancingv2ResourceName.Type.loadbalancer);
+    } catch (final Loadbalancingv2ResourceName.InvalidResourceNameException ex) {
+      throw new Loadbalancingv2ClientException("InvalidParameterValue", "Invalid loadbalancer ARN");
+    }
+
+    final OwnerFullName ownerFullName =
+        ctx.isAdministrator( ) ?
+            AccountFullName.getInstance(arn.getNamespace()) :
+            ctx.getAccount();
+
+    final Integer port = request.getPort();
+    final Listener.Protocol protocol = request.getProtocol()==null ?
+        null :
+        Enums.getIfPresent(Listener.Protocol.class, request.getProtocol()).orNull();
+
+    final com.eucalyptus.loadbalancingv2.common.msgs.Listener resultListener;
+    try {
+      resultListener = loadBalancers.updateByExample(
+          LoadBalancer.named(ownerFullName, arn.getName()),
+          ownerFullName,
+          arn.getName(),
+          Loadbalancingv2Metadatas.filterPrivileged(),
+          loadbalancer -> {
+            final Listener listener = Listener.create(loadbalancer, port, protocol);
+            listener.setDefaultActions(JsonEncoding.write(request.getDefaultActions()));
+            loadbalancer.getListeners().add(listener);
+            return TypeMappers.transform(
+                listener, com.eucalyptus.loadbalancingv2.common.msgs.Listener.class);
+          }
+      );
+    } catch (final Loadbalancingv2MetadataNotFoundException ex) {
+      throw loadbalancerNotFound().get();
+    } catch (final Exception ex) {
+      throw handleException(ex);
+    }
+    final Listeners listeners = new Listeners();
+    listeners.getMember().add(resultListener);
+    reply.getCreateListenerResult().setListeners(listeners);
+
+    return reply;
   }
 
   public CreateLoadBalancerResponseType createLoadBalancer(final CreateLoadBalancerType request) throws Loadbalancingv2Exception {
@@ -220,8 +280,56 @@ public class Loadbalancingv2Service {
     return reply;
   }
 
-  public CreateRuleResponseType createRule(final CreateRuleType request) {
-    return request.getReply();
+  public CreateRuleResponseType createRule(final CreateRuleType request) throws Loadbalancingv2Exception {
+    final CreateRuleResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup( );
+
+    final Loadbalancingv2ResourceName arn;
+    try {
+      arn = Loadbalancingv2ResourceName.parse(request.getListenerArn(), Loadbalancingv2ResourceName.Type.listener);
+    } catch (final Loadbalancingv2ResourceName.InvalidResourceNameException ex) {
+      throw new Loadbalancingv2ClientException("InvalidParameterValue", "Invalid loadbalancer ARN");
+    }
+
+    final OwnerFullName ownerFullName =
+        ctx.isAdministrator( ) ?
+            AccountFullName.getInstance(arn.getNamespace()) :
+            ctx.getAccount();
+    final String listenerId = arn.getId(Loadbalancingv2ResourceName.Type.listener);
+
+    final Integer priority = request.getPriority();
+
+    final com.eucalyptus.loadbalancingv2.common.msgs.Rule resultRule;
+    try {
+      resultRule = loadBalancers.updateByExample(
+          LoadBalancer.named(ownerFullName, arn.getName()),
+          ownerFullName,
+          arn.getName(),
+          Loadbalancingv2Metadatas.filterPrivileged(),
+          loadbalancer -> {
+            final Listener listener =
+                loadbalancer.findListener(listenerId).getOrElseThrow(runtime(listenerNotFound()));
+            final ListenerRule rule = ListenerRule.create(listener, priority);
+            rule.setActions(JsonEncoding.write(request.getActions()));
+            rule.setConditions(JsonEncoding.write(request.getConditions()));
+            listener.getListenerRules().add(rule);
+            listener.updateTimeStamps();
+            loadbalancer.updateTimeStamps();
+            return TypeMappers.transform(
+                rule, com.eucalyptus.loadbalancingv2.common.msgs.Rule.class);
+          }
+      );
+    } catch (final Exception ex) {
+      if(Exceptions.isCausedBy(ex, Loadbalancingv2MetadataNotFoundException.class)) {
+        throw listenerNotFound().get( );
+      }
+      throw handleException(ex);
+    }
+    final Rules rules = new Rules();
+    rules.getMember().add(resultRule);
+    reply.getCreateRuleResult().setRules(rules);
+
+    return reply;
   }
 
   public CreateTargetGroupResponseType createTargetGroup(final CreateTargetGroupType request) throws Loadbalancingv2Exception {
@@ -279,8 +387,45 @@ public class Loadbalancingv2Service {
     return reply;
   }
 
-  public DeleteListenerResponseType deleteListener(final DeleteListenerType request) {
-    return request.getReply();
+  public DeleteListenerResponseType deleteListener(final DeleteListenerType request) throws Loadbalancingv2Exception {
+    final DeleteListenerResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup( );
+
+    final Loadbalancingv2ResourceName arn;
+    try {
+      arn = Loadbalancingv2ResourceName.parse(request.getListenerArn(), Loadbalancingv2ResourceName.Type.listener);
+    } catch (final Loadbalancingv2ResourceName.InvalidResourceNameException ex) {
+      throw new Loadbalancingv2ClientException("InvalidParameterValue", "Invalid listener ARN");
+    }
+
+    final OwnerFullName ownerFullName =
+        ctx.isAdministrator( ) ?
+            AccountFullName.getInstance(arn.getNamespace()) :
+            ctx.getAccount();
+    final String listenerId = arn.getId(Loadbalancingv2ResourceName.Type.listener);
+
+    try {
+      loadBalancers.updateByExample(
+          LoadBalancer.named(ownerFullName, arn.getName()),
+          ownerFullName,
+          arn.getName(),
+          Loadbalancingv2Metadatas.filterPrivileged(),
+          loadbalancer -> {
+            final Listener listener =
+                loadbalancer.findListener(listenerId).getOrElseThrow(runtime(listenerNotFound()));
+            Entities.delete(listener);
+            loadbalancer.getListeners().remove(listener);
+            loadbalancer.updateTimeStamps();
+            return null;
+          }
+      );
+    } catch (final Exception ex) {
+      if(Exceptions.isCausedBy(ex, Loadbalancingv2MetadataNotFoundException.class)) {
+        throw listenerNotFound().get();
+      }
+      throw handleException(ex);
+    }
+    return reply;
   }
 
   public DeleteLoadBalancerResponseType deleteLoadBalancer(final DeleteLoadBalancerType request) throws Loadbalancingv2Exception {
@@ -305,15 +450,54 @@ public class Loadbalancingv2Service {
               Functions.identity());
       loadBalancers.delete(loadBalancer);
     } catch ( final Loadbalancingv2MetadataNotFoundException e ) {
-      throw new Loadbalancingv2ClientException( "LoadBalancerNotFound", "Loadbalancer not found" );
+      throw listenerNotFound().get();
     } catch ( final Exception e ) {
       handleException( e, __ -> new Loadbalancingv2ClientException("ResourceInUse", "Loadbalancer in use") );
     }
     return reply;
   }
 
-  public DeleteRuleResponseType deleteRule(final DeleteRuleType request) {
-    return request.getReply();
+  public DeleteRuleResponseType deleteRule(final DeleteRuleType request) throws Loadbalancingv2Exception {
+    final DeleteRuleResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup( );
+
+    final Loadbalancingv2ResourceName arn;
+    try {
+      arn = Loadbalancingv2ResourceName.parse(request.getRuleArn(), Loadbalancingv2ResourceName.Type.listener_rule);
+    } catch (final Loadbalancingv2ResourceName.InvalidResourceNameException ex) {
+      throw new Loadbalancingv2ClientException("InvalidParameterValue", "Invalid listener rule ARN");
+    }
+
+    final OwnerFullName ownerFullName =
+        ctx.isAdministrator( ) ?
+            AccountFullName.getInstance(arn.getNamespace()) :
+            ctx.getAccount();
+    final String listenerId = arn.getId(Loadbalancingv2ResourceName.Type.listener);
+    final String ruleId = arn.getId(Loadbalancingv2ResourceName.Type.listener_rule);
+
+    try {
+      loadBalancers.updateByExample(
+          LoadBalancer.named(ownerFullName, arn.getName()),
+          ownerFullName,
+          arn.getName(),
+          Loadbalancingv2Metadatas.filterPrivileged(),
+          loadbalancer -> {
+            final Listener listener = loadbalancer.findListener(listenerId).getOrElseThrow(runtime(ruleNotFound()));
+            final ListenerRule rule = listener.findListenerRule(ruleId).getOrElseThrow(runtime(ruleNotFound()));
+            Entities.delete(rule);
+            listener.getListenerRules().remove(rule);
+            listener.updateTimeStamps();
+            loadbalancer.updateTimeStamps();
+            return null;
+          }
+      );
+    } catch (final Exception ex) {
+      if(Exceptions.isCausedBy(ex, Loadbalancingv2MetadataNotFoundException.class)) {
+        throw ruleNotFound().get();
+      }
+      throw handleException(ex);
+    }
+    return reply;
   }
 
   public DeleteTargetGroupResponseType deleteTargetGroup(final DeleteTargetGroupType request) throws Loadbalancingv2Exception {
@@ -357,8 +541,74 @@ public class Loadbalancingv2Service {
     return request.getReply();
   }
 
-  public DescribeListenersResponseType describeListeners(final DescribeListenersType request) {
-    return request.getReply();
+  public DescribeListenersResponseType describeListeners(final DescribeListenersType request) throws Loadbalancingv2Exception {
+    final DescribeListenersResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup( );
+
+    final Loadbalancingv2ResourceName loadbalancerArn;
+    if (request.getLoadBalancerArn() != null) {
+      try {
+        loadbalancerArn = Loadbalancingv2ResourceName.parse(
+            request.getLoadBalancerArn(), Loadbalancingv2ResourceName.Type.loadbalancer);
+      } catch (final Loadbalancingv2ResourceName.InvalidResourceNameException ex) {
+        throw new Loadbalancingv2ClientException("InvalidParameterValue", "Invalid loadbalancer ARN");
+      }
+    } else {
+      loadbalancerArn = null;
+    }
+
+    final List<Loadbalancingv2ResourceName> listenerArns = Lists.newArrayList();
+    if (request.getListenerArns() != null) {
+      try {
+        for (final String listenerArn : request.getListenerArns().getMember()) {
+          listenerArns.add(Loadbalancingv2ResourceName.parse(
+              listenerArn, Loadbalancingv2ResourceName.Type.listener));
+        }
+      } catch (final Loadbalancingv2ResourceName.InvalidResourceNameException ex) {
+        throw new Loadbalancingv2ClientException("InvalidParameterValue", "Invalid listener ARN");
+      }
+    }
+
+    final CompatFunction<Loadbalancingv2ResourceName,OwnerFullName> ownerFn = arn ->
+        ctx.isAdministrator() ? AccountFullName.getInstance(arn.getNamespace()) : ctx.getAccount();
+    try {
+      final com.eucalyptus.loadbalancingv2.common.msgs.Listeners resultListeners =
+          new com.eucalyptus.loadbalancingv2.common.msgs.Listeners();
+
+      Collection<com.eucalyptus.loadbalancingv2.common.msgs.Listener> listeners =
+          Collections.emptyList();
+      if (!listenerArns.isEmpty()) {
+        final OwnerFullName ownerFullName = ownerFn.apply(listenerArns.get(0));
+        final List<String> listenerIds = Stream.ofAll(listenerArns)
+            .map(Loadbalancingv2ResourceName.Type.listener.id())
+            .toJavaList();
+        try (final TransactionResource tx = Entities.transactionFor(Listener.class)) {
+          final List<Listener> listenerEntities = Entities.criteriaQuery(Listener.class)
+              .whereEqual(Listener_.ownerAccountNumber, ownerFullName.getAccountNumber())
+              .whereRestriction(builder -> builder.in(Listener_.naturalId, listenerIds))
+              .list();
+          listeners = Stream.ofAll(listenerEntities)
+              .filter(Loadbalancingv2Metadatas.filterPrivileged())
+              .map(TypeMappers.lookupF(ListenerView.class,com.eucalyptus.loadbalancingv2.common.msgs.Listener.class))
+              .toJavaList();
+        }
+      } else if (loadbalancerArn != null) {
+        final OwnerFullName ownerFullName =  ownerFn.apply(loadbalancerArn);
+        listeners = loadBalancers.lookupByName(
+            ownerFullName,
+            loadbalancerArn.getName(),
+            Predicates.alwaysTrue(),
+            loadbalancer -> Stream.ofAll(loadbalancer.getListeners())
+                .filter(Loadbalancingv2Metadatas.filterPrivileged())
+                .map(TypeMappers.lookupF(ListenerView.class,com.eucalyptus.loadbalancingv2.common.msgs.Listener.class))
+                .toJavaList());
+      }
+      resultListeners.getMember().addAll(listeners);
+      reply.getDescribeListenersResult().setListeners(resultListeners);
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
+    return reply;
   }
 
   public DescribeLoadBalancerAttributesResponseType describeLoadBalancerAttributes(final DescribeLoadBalancerAttributesType request) {
@@ -391,8 +641,76 @@ public class Loadbalancingv2Service {
     return reply;
   }
 
-  public DescribeRulesResponseType describeRules(final DescribeRulesType request) {
-    return request.getReply();
+  public DescribeRulesResponseType describeRules(final DescribeRulesType request) throws Loadbalancingv2Exception {
+    final DescribeRulesResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup( );
+
+    final Loadbalancingv2ResourceName listenerArn;
+    if (request.getListenerArn() != null) {
+      try {
+        listenerArn = Loadbalancingv2ResourceName.parse(
+            request.getListenerArn(), Loadbalancingv2ResourceName.Type.listener);
+      } catch (final Loadbalancingv2ResourceName.InvalidResourceNameException ex) {
+        throw new Loadbalancingv2ClientException("InvalidParameterValue", "Invalid listener ARN");
+      }
+    } else {
+      listenerArn = null;
+    }
+
+    final List<Loadbalancingv2ResourceName> ruleArns = Lists.newArrayList();
+    if (request.getRuleArns() != null) {
+      try {
+        for (final String ruleArn : request.getRuleArns().getMember()) {
+          ruleArns.add(Loadbalancingv2ResourceName.parse(
+              ruleArn, Loadbalancingv2ResourceName.Type.listener_rule));
+        }
+      } catch (final Loadbalancingv2ResourceName.InvalidResourceNameException ex) {
+        throw new Loadbalancingv2ClientException("InvalidParameterValue", "Invalid listener rule ARN");
+      }
+    }
+
+    final CompatFunction<Loadbalancingv2ResourceName,OwnerFullName> ownerFn = arn ->
+        ctx.isAdministrator() ? AccountFullName.getInstance(arn.getNamespace()) : ctx.getAccount();
+    try {
+      final com.eucalyptus.loadbalancingv2.common.msgs.Rules resultRules =
+          new com.eucalyptus.loadbalancingv2.common.msgs.Rules();
+
+      Collection<com.eucalyptus.loadbalancingv2.common.msgs.Rule> rules =
+          Collections.emptyList();
+      if (!ruleArns.isEmpty()) {
+        final OwnerFullName ownerFullName = ownerFn.apply(ruleArns.get(0));
+        final List<String> listenerRuleIds = Stream.ofAll(ruleArns)
+            .map(Loadbalancingv2ResourceName.Type.listener_rule.id())
+            .toJavaList();
+        try (final TransactionResource tx = Entities.transactionFor(Listener.class)) {
+          final List<ListenerRule> listenerRuleEntities = Entities.criteriaQuery(ListenerRule.class)
+              .whereEqual(ListenerRule_.ownerAccountNumber, ownerFullName.getAccountNumber())
+              .whereRestriction(builder -> builder.in(ListenerRule_.naturalId, listenerRuleIds))
+              .list();
+          rules = Stream.ofAll(listenerRuleEntities)
+              .filter(Loadbalancingv2Metadatas.filterPrivileged())
+              .map(TypeMappers.lookupF(ListenerRuleView.class,com.eucalyptus.loadbalancingv2.common.msgs.Rule.class))
+              .toJavaList();
+        }
+      } else if (listenerArn != null) {
+        final OwnerFullName ownerFullName = ownerFn.apply(listenerArn);
+        final String listenerId = listenerArn.getId(Loadbalancingv2ResourceName.Type.listener);
+        rules = loadBalancers.lookupByName(
+            ownerFullName,
+            listenerArn.getName(),
+            Predicates.alwaysTrue(),
+            loadbalancer ->
+                Stream.ofAll(loadbalancer.findListener(listenerId).getOrElseThrow(runtime(listenerNotFound())).getListenerRules())
+                .filter(Loadbalancingv2Metadatas.filterPrivileged( ))
+                .map(TypeMappers.lookupF(ListenerRuleView.class,com.eucalyptus.loadbalancingv2.common.msgs.Rule.class))
+                .toJavaList());
+      }
+      resultRules.getMember().addAll(rules);
+      reply.getDescribeRulesResult().setRules(resultRules);
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
+    return reply;
   }
 
   public DescribeSSLPoliciesResponseType describeSSLPolicies(final DescribeSSLPoliciesType request) {
@@ -483,6 +801,22 @@ public class Loadbalancingv2Service {
 
   public SetSubnetsResponseType setSubnets(final SetSubnetsType request) {
     return request.getReply();
+  }
+
+  private static CompatSupplier<Loadbalancingv2ClientException> loadbalancerNotFound() {
+    return () -> new Loadbalancingv2ClientException("LoadBalancerNotFound", "Loadbalancer not found");
+  }
+
+  private static CompatSupplier<Loadbalancingv2ClientException> listenerNotFound() {
+    return () -> new Loadbalancingv2ClientException("ListenerNotFound", "Listener not found");
+  }
+
+  private static CompatSupplier<Loadbalancingv2ClientException> ruleNotFound() {
+    return () -> new Loadbalancingv2ClientException("RuleNotFound", "Listener rule not found");
+  }
+
+  private static CompatSupplier<RuntimeException> runtime(CompatSupplier<? extends Exception> supplier) {
+    return () -> Exceptions.toUndeclared(supplier.get());
   }
 
   /**

@@ -14,6 +14,8 @@ import com.eucalyptus.loadbalancingv2.common.msgs.AvailabilityZones;
 import com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancerState;
 import com.eucalyptus.loadbalancingv2.common.msgs.SecurityGroups;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.LoadBalancer;
+import com.eucalyptus.loadbalancingv2.service.persist.views.ListenerRuleView;
+import com.eucalyptus.loadbalancingv2.service.persist.views.ListenerView;
 import com.eucalyptus.loadbalancingv2.service.persist.views.LoadBalancerView;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMapper;
@@ -96,6 +98,48 @@ public interface LoadBalancers {
 
       }
       return balancer;
+    }
+  }
+
+  @TypeMapper
+  enum ListenerViewToListenerTransform
+      implements Function<ListenerView, com.eucalyptus.loadbalancingv2.common.msgs.Listener> {
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public com.eucalyptus.loadbalancingv2.common.msgs.Listener apply(@Nullable final ListenerView view) {
+      com.eucalyptus.loadbalancingv2.common.msgs.Listener listener = null;
+      if (view != null) {
+        listener = new com.eucalyptus.loadbalancingv2.common.msgs.Listener();
+        listener.setListenerArn(view.getArn());
+        listener.setLoadBalancerArn(view.getLoadbalancerArn());
+        listener.setPort(view.getPort());
+        listener.setProtocol(Objects.toString(view.getProtocol(), null));
+        listener.setDefaultActions(view.getListenerDefaultActions());
+      }
+      return listener;
+    }
+  }
+
+  @TypeMapper
+  enum ListenerRuleViewToRuleTransform
+      implements Function<ListenerRuleView, com.eucalyptus.loadbalancingv2.common.msgs.Rule> {
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public com.eucalyptus.loadbalancingv2.common.msgs.Rule apply(@Nullable final ListenerRuleView view) {
+      com.eucalyptus.loadbalancingv2.common.msgs.Rule rule = null;
+      if (view != null) {
+        rule = new com.eucalyptus.loadbalancingv2.common.msgs.Rule();
+        rule.setRuleArn(view.getArn());
+        rule.setIsDefault(false); //TODO:STEVE: default rule
+        rule.setPriority(Objects.toString(view.getPriority(), null)); // or "default"
+        rule.setActions(view.getRuleActions());
+        rule.setConditions(view.getRuleConditions());
+      }
+      return rule;
     }
   }
 
