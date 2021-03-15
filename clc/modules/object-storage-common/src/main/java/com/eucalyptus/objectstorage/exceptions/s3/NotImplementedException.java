@@ -32,12 +32,24 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 public class NotImplementedException extends S3Exception {
 
+  private static final String ERROR_STATUS_CODE_PROPERTY = "com.eucalyptus.objectstorage.notImplementedErrorCode";
+  private static final HttpResponseStatus ERROR_STATUS_CODE = initErrorStatusCode();
+
   public NotImplementedException( ) {
-    super( S3ErrorCodeStrings.NotImplemented, "A header you provided implies functionality that is not implemented.", HttpResponseStatus.NOT_IMPLEMENTED );
+    super( S3ErrorCodeStrings.NotImplemented, "A header you provided implies functionality that is not implemented.", ERROR_STATUS_CODE );
   }
 
   public NotImplementedException( String resource ) {
     this( );
     this.setResource( resource );
+  }
+
+  private static HttpResponseStatus initErrorStatusCode( ) {
+    HttpResponseStatus status = HttpResponseStatus.NOT_IMPLEMENTED;
+    try {
+      status = HttpResponseStatus.valueOf( Integer.getInteger( ERROR_STATUS_CODE_PROPERTY, status.getCode( ) ) );
+    } catch ( final Exception ignore ) {
+    }
+    return status;
   }
 }
