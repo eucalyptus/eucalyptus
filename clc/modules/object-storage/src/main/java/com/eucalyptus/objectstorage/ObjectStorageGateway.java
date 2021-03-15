@@ -29,6 +29,7 @@
 
 package com.eucalyptus.objectstorage;
 
+import io.vavr.Tuple2;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -213,6 +214,8 @@ import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyResponseTyp
 import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyType;
 import com.eucalyptus.objectstorage.msgs.UpdateObjectStorageConfigurationResponseType;
 import com.eucalyptus.objectstorage.msgs.UpdateObjectStorageConfigurationType;
+import com.eucalyptus.objectstorage.msgs.UploadPartCopyResponseType;
+import com.eucalyptus.objectstorage.msgs.UploadPartCopyType;
 import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
 import com.eucalyptus.objectstorage.msgs.UploadPartType;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient;
@@ -2641,6 +2644,159 @@ public class ObjectStorageGateway implements ObjectStorageService {
       }
     } else {
       throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());
+    }
+  }
+
+  @Override
+  public UploadPartCopyResponseType uploadPartCopy(final UploadPartCopyType request) throws S3Exception {
+    logRequest(request);
+
+    String sourceBucket = request.getSourceBucket();
+    String sourceKey = request.getSourceObject();
+    String sourceVersionId = request.getSourceVersionId();
+    UserPrincipal requestUser = Contexts.lookup().getUser();
+
+    // Check for source bucket
+    final Bucket srcBucket = ensureBucketExists(sourceBucket);
+
+    // Check for source object
+    final ObjectEntity srcObject;
+    try {
+      srcObject = ObjectMetadataManagers.getInstance().lookupObject(srcBucket, sourceKey, sourceVersionId);
+    } catch (NoSuchElementException e) {
+      throw new NoSuchKeyException(sourceBucket + "/" + sourceKey);
+    } catch (Exception e) {
+      throw new InternalErrorException(sourceBucket);
+    }
+
+    // Check authorization for GET operation on source bucket and object
+    if (authorizationHandler.operationAllowed(request.getGetObjectRequest(), srcBucket, srcObject, 0)) {
+      Bucket bucket;
+      try {
+        bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(request.getBucket());
+      } catch (NoSuchEntityException e) {
+        throw new NoSuchBucketException(request.getBucket());
+      } catch (Exception e) {
+        throw new InternalErrorException();
+      }
+
+      int partNumber;
+      if (!Strings.isNullOrEmpty(request.getPartNumber())) {
+        try {
+          partNumber = Integer.parseInt(request.getPartNumber());
+          if (partNumber < ObjectStorageProperties.MIN_PART_NUMBER || partNumber > ObjectStorageProperties.MAX_PART_NUMBER) {
+            throw new InvalidArgumentException("PartNumber", "Part number must be an integer between " + ObjectStorageProperties.MIN_PART_NUMBER
+                + " and " + ObjectStorageProperties.MAX_PART_NUMBER + ", inclusive");
+          }
+        } catch (NumberFormatException e) {
+          throw new InvalidArgumentException("PartNumber", "Part number must be an integer between " + ObjectStorageProperties.MIN_PART_NUMBER
+              + " and " + ObjectStorageProperties.MAX_PART_NUMBER + ", inclusive");
+        }
+      } else {
+        throw new InvalidArgumentException("PartNumber", "Part number must be an integer between " + ObjectStorageProperties.MIN_PART_NUMBER + " and "
+            + ObjectStorageProperties.MAX_PART_NUMBER + ", inclusive");
+      }
+
+      final long maxObjectSize = srcObject.getSize();
+      long objectSize;
+      try {
+        final Tuple2<Long,Long> requestedSourceRange = request.copySourceRangeAsTuple();
+        if (requestedSourceRange == null) {
+          objectSize = maxObjectSize;
+        } else {
+          objectSize = requestedSourceRange._2() - requestedSourceRange._1();
+          if (objectSize < 0 || objectSize > maxObjectSize) {
+            throw new Exception("Invalid copy source range");
+          }
+        }
+      } catch (Exception e) {
+        LOG.error("Could not parse copy source range: " + request.getCopySourceRange(), e);
+        throw new InvalidArgumentException(request.getBucket() + "/" + request.getKey())
+            .withArgumentName("x-amz-copy-source-range");
+      }
+
+      ObjectEntity objectEntity;
+      try {
+        objectEntity = ObjectMetadataManagers.getInstance().lookupUpload(bucket, request.getKey(), request.getUploadId());
+      } catch (NoSuchEntityException | NoSuchElementException e) {
+        throw new NoSuchUploadException(request.getUploadId());
+      } catch (Exception e) {
+        throw new InternalErrorException("Error during upload lookup: " + request.getBucket() + "/" + request.getKey() + "?uploadId="
+            + request.getUploadId(), e);
+      }
+
+      // upload part hast to be authorize based on account that initiated upload
+      if (authorizationHandler.operationAllowed(request, bucket, objectEntity, objectSize)) {
+        // Check copy conditions
+        final String copyIfMatch = request.getCopySourceIfMatch();
+        if (copyIfMatch != null) {
+          if (!copyIfMatch.equals(srcObject.geteTag())) {
+            throw new PreconditionFailedException(sourceKey + " CopySourceIfMatch: " + copyIfMatch);
+          }
+        }
+
+        final String copyIfNoneMatch = request.getCopySourceIfNoneMatch();
+        if (copyIfNoneMatch != null) {
+          if (copyIfNoneMatch.equals(srcObject.geteTag())) {
+            throw new PreconditionFailedException(sourceKey + " CopySourceIfNoneMatch: " + copyIfNoneMatch);
+          }
+        }
+
+        final Date copyIfUnmodifiedSince = request.getCopySourceIfUnmodifiedSince();
+        if (copyIfUnmodifiedSince != null) {
+          if (copyIfUnmodifiedSince.getTime() < srcObject.getObjectModifiedTimestamp().getTime()) {
+            throw new PreconditionFailedException(sourceKey + " CopySourceIfUnmodifiedSince: " + copyIfUnmodifiedSince.toString());
+          }
+        }
+
+        final Date copyIfModifiedSince = request.getCopySourceIfModifiedSince();
+        if (copyIfModifiedSince != null) {
+          if (copyIfModifiedSince.getTime() > srcObject.getObjectModifiedTimestamp().getTime()) {
+            throw new PreconditionFailedException(sourceKey + " CopySourceIfModifiedSince: " + copyIfModifiedSince.toString());
+          }
+        }
+
+        PartEntity partEntity;
+        try {
+          partEntity = PartEntity.newInitializedForCreate(bucket, request.getKey(), request.getUploadId(), partNumber, objectSize, requestUser);
+        } catch (Exception e) {
+          LOG.error("Error initializing entity for persisting part metadata for " + request.getBucket() + "/" + request.getKey() + " uploadId: "
+              + request.getUploadId() + " partNumber: " + partNumber);
+          throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
+        }
+
+        // Prep the request to be sent to the backend
+        request.setSourceObject(srcObject.getObjectUuid());
+        request.setSourceBucket(srcBucket.getBucketUuid());
+        request.setSourceVersionId(ObjectStorageProperties.NULL_VERSION_ID);
+
+        try {
+          PartEntity updatedEntity = OsgObjectFactory.getFactory().copyObjectPart(
+              ospClient,
+              objectEntity,
+              partEntity,
+              request,
+              requestUser);
+          final UploadPartCopyResponseType response = request.getReply();
+          response.setLastModified(updatedEntity.getObjectModifiedTimestamp());
+          response.setEtag(updatedEntity.geteTag());
+          response.setCopySourceVersionId(sourceVersionId != null ?
+              sourceVersionId :
+              (!srcObject.getVersionId().equals(ObjectStorageProperties.NULL_VERSION_ID) ?
+                  srcObject.getVersionId() :
+                  null));
+          setCorsInfo(request, response, bucket);
+          return response;
+        } catch (Exception e) {
+          // Wrap the error from back-end with a 500 error
+          LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);
+          throw new InternalErrorException(partEntity.getResourceFullName(), e);
+        }
+      } else {
+        throw new AccessDeniedException(sourceBucket + "/" + sourceKey);
+      }
+    } else {
+      throw new AccessDeniedException(sourceBucket + "/" + sourceKey);
     }
   }
 

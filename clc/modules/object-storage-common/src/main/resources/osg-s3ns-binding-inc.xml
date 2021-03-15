@@ -559,6 +559,25 @@
            class="com.eucalyptus.objectstorage.msgs.UploadPartResponseType">
   </mapping>
 
+  <mapping name="CopyPart"
+      class="com.eucalyptus.objectstorage.msgs.UploadPartCopyType">
+    <value name="SourceBucket" field="sourceBucket"/>
+    <value name="SourceObject" field="sourceObject"/>
+    <value name="SourceVersionId" field="sourceVersionId" usage="optional"/>
+    <value name="CopySourceRange" field="copySourceRange"/>
+    <value name="CopySourceIfMatch" field="copySourceIfMatch"/>
+    <value name="CopySourceIfNoneMatch" field="copySourceIfNoneMatch"/>
+    <value name="CopySourceIfModifiedSince" field="copySourceIfModifiedSince"/>
+    <value name="CopySourceIfUnmodifiedSince" field="copySourceIfUnmodifiedSince"/>
+    <value name="PartNumber" field="partNumber" usage="optional"/>
+    <value name="UploadId" field="uploadId" usage="optional"/>
+  </mapping>
+
+  <mapping name="CopyPartResult"
+           class="com.eucalyptus.objectstorage.msgs.UploadPartCopyResponseType">
+    <value name="ETag" field="etag" usage="optional"/>
+    <value name="LastModified" field="lastModified" usage="optional"/>
+  </mapping>
 
   <mapping name="CompleteMultipartUpload"
            class="com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadType">

@@ -387,6 +387,10 @@ public class ObjectStorageProperties {
     CopySourceIfMatch, CopySourceIfNoneMatch, CopySourceIfUnmodifiedSince, CopySourceIfModifiedSince
   }
 
+  public enum PartCopyHeaders {
+    CopySourceIfMatch, CopySourceIfNoneMatch, CopySourceIfUnmodifiedSince, CopySourceIfModifiedSince, CopySourceRange
+  }
+
   public enum MetadataDirective {
     COPY, REPLACE
   }

@@ -29,7 +29,6 @@
 
 package com.eucalyptus.objectstorage.providers.s3;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -42,6 +41,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 import javax.annotation.Nonnull;
+import io.vavr.Tuple2;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -60,6 +60,8 @@ import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.CopyObjectResult;
+import com.amazonaws.services.s3.model.CopyPartRequest;
+import com.amazonaws.services.s3.model.CopyPartResult;
 import com.amazonaws.services.s3.model.EmailAddressGrantee;
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
@@ -156,6 +158,8 @@ import com.eucalyptus.objectstorage.msgs.SetBucketVersioningStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketVersioningStatusType;
 import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyType;
+import com.eucalyptus.objectstorage.msgs.UploadPartCopyResponseType;
+import com.eucalyptus.objectstorage.msgs.UploadPartCopyType;
 import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
 import com.eucalyptus.objectstorage.msgs.UploadPartType;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient;
@@ -1156,6 +1160,66 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
         throw S3ExceptionMapper.fromAWSJavaSDK(e);
       }
       UploadPartResponseType reply = request.getReply();
+      reply.setEtag(result.getETag());
+      reply.setLastModified(new Date());
+      return reply;
+    } catch (AmazonServiceException e) {
+      LOG.debug("Error from backend", e);
+      throw S3ExceptionMapper.fromAWSJavaSDK(e);
+    }
+  }
+
+  @Override
+  public UploadPartCopyResponseType uploadPartCopy(
+      final UploadPartCopyType request
+  ) throws S3Exception {
+    final User requestUser = getRequestUser(request);
+
+    final String sourceBucket = request.getSourceBucket();
+    final String sourceKey = request.getSourceObject();
+    final String sourceVersionId =
+        request.getSourceVersionId().equals(ObjectStorageProperties.NULL_VERSION_ID) ?
+            null :
+            request.getSourceVersionId();
+    final Tuple2<Long,Long> copySourceRangeAsTuple = request.copySourceRangeAsTuple();
+    final String copyIfMatch = request.getCopySourceIfMatch();
+    final String copyIfNoneMatch = request.getCopySourceIfNoneMatch();
+    final Date copyIfUnmodifiedSince = request.getCopySourceIfUnmodifiedSince();
+    final Date copyIfModifiedSince = request.getCopySourceIfModifiedSince();
+
+    try {
+      final OsgInternalS3Client internalS3Client = getS3Client(requestUser);
+      final AmazonS3Client s3Client = internalS3Client.getS3Client();
+
+      final CopyPartResult result;
+      final CopyPartRequest copyPartRequest = new CopyPartRequest();
+      copyPartRequest.setDestinationBucketName(request.getBucket());
+      copyPartRequest.setDestinationKey(request.getKey());
+      copyPartRequest.setUploadId(request.getUploadId());
+      copyPartRequest.setPartNumber(Integer.valueOf(request.getPartNumber()));
+      copyPartRequest.setSourceBucketName(sourceBucket);
+      copyPartRequest.setSourceKey(sourceKey);
+      copyPartRequest.setSourceVersionId(sourceVersionId);
+      if (copySourceRangeAsTuple != null){
+        copyPartRequest.setFirstByte(copySourceRangeAsTuple._1());
+        copyPartRequest.setLastByte(copySourceRangeAsTuple._2());
+      }
+      copyPartRequest.setModifiedSinceConstraint(copyIfModifiedSince);
+      copyPartRequest.setUnmodifiedSinceConstraint(copyIfUnmodifiedSince);
+      if (copyIfMatch != null) {
+        copyPartRequest.setMatchingETagConstraints(Lists.newArrayList(copyIfMatch));
+      }
+      if (copyIfNoneMatch != null) {
+        copyPartRequest.setNonmatchingETagConstraints(Lists.newArrayList(copyIfNoneMatch));
+      }
+
+      try {
+        result = s3Client.copyPart(copyPartRequest);
+      } catch (AmazonServiceException e) {
+        LOG.debug("Error from backend", e);
+        throw S3ExceptionMapper.fromAWSJavaSDK(e);
+      }
+      UploadPartCopyResponseType reply = request.getReply();
       reply.setEtag(result.getETag());
       reply.setLastModified(new Date());
       return reply;

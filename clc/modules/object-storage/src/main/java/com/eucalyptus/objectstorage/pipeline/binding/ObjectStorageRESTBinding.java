@@ -485,20 +485,29 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
 
               operationParams.put("SourceBucket", sourceTarget[0]);
               operationParams.put("SourceObject", sourceObjectKey);
-              operationParams.put("DestinationBucket", operationParams.remove("Bucket"));
-              operationParams.put("DestinationObject", operationParams.remove("Key"));
 
-              String metaDataDirective = httpRequest.getHeader(ObjectStorageProperties.METADATA_DIRECTIVE.toString());
-              if (metaDataDirective != null) {
-                operationParams.put("MetadataDirective", metaDataDirective);
+              final Object[] copyHeaders;
+              if (params.containsKey(ObjectStorageProperties.ObjectParameter.partNumber.toString())) {
+                copyHeaders = ObjectStorageProperties.PartCopyHeaders.values();
+              } else {
+                copyHeaders = ObjectStorageProperties.CopyHeaders.values();
+
+                operationParams.put("DestinationBucket", operationParams.remove("Bucket"));
+                operationParams.put("DestinationObject", operationParams.remove("Key"));
+
+                String metaDataDirective = httpRequest.getHeader(ObjectStorageProperties.METADATA_DIRECTIVE.toString());
+                if (metaDataDirective != null) {
+                  operationParams.put("MetadataDirective", metaDataDirective);
+                }
               }
 
               operationKey += ObjectStorageProperties.COPY_SOURCE.toString();
               Set<String> headerNames = httpRequest.getHeaderNames();
-              for (String key : headerNames) {
+              for (final String keyOrig : headerNames) {
+                final String key = keyOrig.toLowerCase();
                 if (key.startsWith("x-amz-")) {
                   String stripped = key.replaceFirst("x-amz-", "");
-                  for (ObjectStorageProperties.CopyHeaders header : ObjectStorageProperties.CopyHeaders.values()) {
+                  for (Object header : copyHeaders) {
                     if (stripped.replaceAll("-", "").equals(header.toString().toLowerCase())) {
                       String value = httpRequest.getHeader(key);
                       parseExtendedHeaders(operationParams, header.toString(), value);
