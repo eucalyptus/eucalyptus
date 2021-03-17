@@ -8,10 +8,13 @@ package com.eucalyptus.loadbalancingv2.service.persist;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.loadbalancingv2.common.msgs.TargetDescription;
+import com.eucalyptus.loadbalancingv2.common.msgs.TargetHealth;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.TargetGroup;
 import com.eucalyptus.loadbalancingv2.service.persist.views.TargetGroupView;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2Metadata;
 import com.eucalyptus.loadbalancingv2.common.msgs.Matcher;
+import com.eucalyptus.loadbalancingv2.service.persist.views.TargetView;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
@@ -83,6 +86,34 @@ public interface TargetGroups {
         targetGroup.setUnhealthyThresholdCount(view.getUnhealthyThresholdCount());
       }
       return targetGroup;
+    }
+  }
+
+  @TypeMapper
+  enum TargetViewToHealthDescriptionTransform implements Function<TargetView, com.eucalyptus.loadbalancingv2.common.msgs.TargetHealthDescription> {
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public com.eucalyptus.loadbalancingv2.common.msgs.TargetHealthDescription apply(@Nullable final TargetView view) {
+      com.eucalyptus.loadbalancingv2.common.msgs.TargetHealthDescription description = null;
+      if (view != null) {
+        description = new com.eucalyptus.loadbalancingv2.common.msgs.TargetHealthDescription();
+        description.setHealthCheckPort(Objects.toString(view.getHealthCheckPort(), null));
+
+        final TargetDescription targetDescription = new TargetDescription();
+        targetDescription.setAvailabilityZone(view.getAvailabilityZone());
+        targetDescription.setId(view.getTargetId());
+        targetDescription.setPort(view.getPort());
+        description.setTarget(targetDescription);
+
+        final TargetHealth targetHealth = new TargetHealth();
+        targetHealth.setDescription(view.getTargetHealthDescription());
+        targetHealth.setReason(view.getTargetHealthReason());
+        targetHealth.setState(Objects.toString(view.getTargetHealthState(), null));
+        description.setTargetHealth(targetHealth);
+      }
+      return description;
     }
   }
 

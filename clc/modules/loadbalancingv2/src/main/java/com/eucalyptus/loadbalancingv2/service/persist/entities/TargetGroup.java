@@ -13,11 +13,17 @@ import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.loadbalancingv2.service.persist.views.TargetGroupView;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2Metadata;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2ResourceName;
+import io.vavr.collection.Stream;
+import io.vavr.control.Option;
+import java.util.List;
 import javax.annotation.Nullable;
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.OneToMany;
+import javax.persistence.OrderBy;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
@@ -149,6 +155,10 @@ public class TargetGroup extends UserMetadata<TargetGroup.State> implements Load
 
   @Column(name = "targetgroup_unhealthy_threshold_count")
   private Integer unhealthyThresholdCount;
+
+  @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, orphanRemoval = true, mappedBy = "targetGroup")
+  @OrderBy("targetId")
+  private List<Target> targets;
 
   protected TargetGroup() {
   }
@@ -307,6 +317,18 @@ public class TargetGroup extends UserMetadata<TargetGroup.State> implements Load
 
   public void setUnhealthyThresholdCount(Integer unhealthyThresholdCount) {
     this.unhealthyThresholdCount = unhealthyThresholdCount;
+  }
+
+  public List<Target> getTargets() {
+    return targets;
+  }
+
+  public void setTargets(List<Target> targets) {
+    this.targets = targets;
+  }
+
+  public Option<Target> findTarget(final String id) {
+    return Stream.ofAll(getTargets()).find(target -> target.getTargetId().equals(id));
   }
 
   @Override

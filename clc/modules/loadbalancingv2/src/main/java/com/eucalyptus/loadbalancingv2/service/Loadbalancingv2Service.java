@@ -18,6 +18,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancingv2.common.msgs.Listeners;
 import com.eucalyptus.loadbalancingv2.common.msgs.Rules;
+import com.eucalyptus.loadbalancingv2.common.msgs.TargetDescription;
 import com.eucalyptus.loadbalancingv2.service.persist.JsonEncoding;
 import com.eucalyptus.loadbalancingv2.service.persist.LoadBalancers;
 import com.eucalyptus.loadbalancingv2.service.persist.Loadbalancingv2MetadataException;
@@ -28,11 +29,13 @@ import com.eucalyptus.loadbalancingv2.service.persist.entities.ListenerRule;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.ListenerRule_;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.Listener_;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.LoadBalancer;
+import com.eucalyptus.loadbalancingv2.service.persist.entities.Target;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.TargetGroup;
 import com.eucalyptus.loadbalancingv2.service.persist.views.ListenerRuleView;
 import com.eucalyptus.loadbalancingv2.service.persist.views.ListenerView;
 import com.eucalyptus.loadbalancingv2.service.persist.views.LoadBalancerView;
 import com.eucalyptus.loadbalancingv2.service.persist.views.TargetGroupView;
+import com.eucalyptus.loadbalancingv2.service.persist.views.TargetView;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2Metadatas;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2ResourceName;
 import com.eucalyptus.loadbalancingv2.common.msgs.AddListenerCertificatesResponseType;
@@ -529,8 +532,43 @@ public class Loadbalancingv2Service {
     return reply;
   }
 
-  public DeregisterTargetsResponseType deregisterTargets(final DeregisterTargetsType request) {
-    return request.getReply();
+  public DeregisterTargetsResponseType deregisterTargets(final DeregisterTargetsType request) throws Loadbalancingv2Exception {
+    final DeregisterTargetsResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup( );
+    final List<TargetDescription> targetDescriptions = request.getTargets().getMember();
+    try {
+      final Loadbalancingv2ResourceName arn;
+      try {
+        arn = Loadbalancingv2ResourceName.parse(request.getTargetGroupArn(), Loadbalancingv2ResourceName.Type.targetgroup);
+      } catch (final Loadbalancingv2ResourceName.InvalidResourceNameException ex) {
+        throw new Loadbalancingv2ClientException("InvalidParameterValue", "Invalid target group ARN");
+      }
+      final OwnerFullName ownerFullName =
+          ctx.isAdministrator( ) ?
+              AccountFullName.getInstance(arn.getNamespace()) :
+              ctx.getAccount();
+
+      targetGroups.updateByExample(
+          TargetGroup.named(ownerFullName, arn.getName()),
+          ownerFullName,
+          arn.getName(),
+          Loadbalancingv2Metadatas.filterPrivileged(),
+          targetGroup -> {
+            for (final TargetDescription description : targetDescriptions) {
+              final Target target = targetGroup.findTarget(description.getId())
+                  .getOrElseThrow(runtime(targetInvalid()));
+              Entities.delete(target);
+              targetGroup.getTargets().remove(target);
+            }
+            targetGroup.updateTimeStamps();
+            return null;
+          });
+    } catch ( final Loadbalancingv2MetadataNotFoundException e ) {
+      throw new Loadbalancingv2ClientException( "TargetGroupNotFound", "Target group not found" );
+    } catch ( final Exception e ) {
+      throw handleException( e );
+    }
+    return reply;
   }
 
   public DescribeAccountLimitsResponseType describeAccountLimits(final DescribeAccountLimitsType request) {
@@ -751,8 +789,42 @@ public class Loadbalancingv2Service {
     return reply;
   }
 
-  public DescribeTargetHealthResponseType describeTargetHealth(final DescribeTargetHealthType request) {
-    return request.getReply();
+  public DescribeTargetHealthResponseType describeTargetHealth(final DescribeTargetHealthType request) throws Loadbalancingv2Exception {
+    final DescribeTargetHealthResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup( );
+
+    final List<TargetDescription> targetDescriptions = request.getTargets()==null ?
+        Collections.emptyList() :
+        request.getTargets().getMember();
+    try {
+      final Loadbalancingv2ResourceName arn;
+      try {
+        arn = Loadbalancingv2ResourceName.parse(request.getTargetGroupArn(), Loadbalancingv2ResourceName.Type.targetgroup);
+      } catch (final Loadbalancingv2ResourceName.InvalidResourceNameException ex) {
+        throw new Loadbalancingv2ClientException("InvalidParameterValue", "Invalid target group ARN");
+      }
+
+      final OwnerFullName ownerFullName =
+          ctx.isAdministrator( ) ?
+              AccountFullName.getInstance(arn.getNamespace()) :
+              ctx.getAccount();
+
+      final com.eucalyptus.loadbalancingv2.common.msgs.TargetHealthDescriptions  resultDescriptions =
+          new com.eucalyptus.loadbalancingv2.common.msgs.TargetHealthDescriptions();
+
+      resultDescriptions.getMember().addAll(targetGroups.lookupByName(
+          ownerFullName,
+          arn.getName(),
+          Loadbalancingv2Metadatas.filterPrivileged(),
+          targetGroup -> Stream.ofAll(targetGroup.getTargets())
+              // TODO:STEVE: filter based on targetDescriptions
+              .map(TypeMappers.lookupF(TargetView.class,com.eucalyptus.loadbalancingv2.common.msgs.TargetHealthDescription.class))
+              .toJavaList()));
+      reply.getDescribeTargetHealthResult().setTargetHealthDescriptions(resultDescriptions);
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
+    return reply;
   }
 
   public ModifyListenerResponseType modifyListener(final ModifyListenerType request) {
@@ -775,8 +847,47 @@ public class Loadbalancingv2Service {
     return request.getReply();
   }
 
-  public RegisterTargetsResponseType registerTargets(final RegisterTargetsType request) {
-    return request.getReply();
+  public RegisterTargetsResponseType registerTargets(final RegisterTargetsType request) throws Loadbalancingv2Exception {
+    final RegisterTargetsResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup( );
+    final List<TargetDescription> targetDescriptions = request.getTargets().getMember();
+    try {
+      final Loadbalancingv2ResourceName arn;
+      try {
+        arn = Loadbalancingv2ResourceName.parse(request.getTargetGroupArn(), Loadbalancingv2ResourceName.Type.targetgroup);
+      } catch (final Loadbalancingv2ResourceName.InvalidResourceNameException ex) {
+        throw new Loadbalancingv2ClientException("InvalidParameterValue", "Invalid target group ARN");
+      }
+      final OwnerFullName ownerFullName =
+          ctx.isAdministrator( ) ?
+              AccountFullName.getInstance(arn.getNamespace()) :
+              ctx.getAccount();
+
+      //TODO:STEVE: instance targets must be running when registered
+
+      targetGroups.updateByExample(
+          TargetGroup.named(ownerFullName, arn.getName()),
+          ownerFullName,
+          arn.getName(),
+          Loadbalancingv2Metadatas.filterPrivileged(),
+          group -> {
+            for (final TargetDescription description : targetDescriptions) {
+              if (group.findTarget(description.getId()).isEmpty()) {
+                final Target target = Target.create(group, description.getId());
+                target.setPort(description.getPort());
+                target.setAvailabilityZone(description.getAvailabilityZone());
+                group.getTargets().add(target);
+              }
+            }
+            group.updateTimeStamps();
+            return null;
+          });
+    } catch ( final Loadbalancingv2MetadataNotFoundException e ) {
+      throw new Loadbalancingv2ClientException( "TargetGroupNotFound", "Target group not found" );
+    } catch ( final Exception e ) {
+      throw handleException( e );
+    }
+    return reply;
   }
 
   public RemoveListenerCertificatesResponseType removeListenerCertificates(final RemoveListenerCertificatesType request) {
@@ -813,6 +924,10 @@ public class Loadbalancingv2Service {
 
   private static CompatSupplier<Loadbalancingv2ClientException> ruleNotFound() {
     return () -> new Loadbalancingv2ClientException("RuleNotFound", "Listener rule not found");
+  }
+
+  private static CompatSupplier<Loadbalancingv2ClientException> targetInvalid() {
+    return () -> new Loadbalancingv2ClientException("InvalidTarget", "Target invalid");
   }
 
   private static CompatSupplier<RuntimeException> runtime(CompatSupplier<? extends Exception> supplier) {
