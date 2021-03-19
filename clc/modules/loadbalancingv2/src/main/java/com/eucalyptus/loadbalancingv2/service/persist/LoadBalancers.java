@@ -5,6 +5,7 @@
  */
 package com.eucalyptus.loadbalancingv2.service.persist;
 
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
@@ -25,13 +26,30 @@ import io.vavr.collection.Stream;
 import java.util.List;
 import java.util.Objects;
 import javax.annotation.Nullable;
-
+import org.hibernate.criterion.Criterion;
 
 public interface LoadBalancers {
+
+  long EXPIRY_AGE = 900_000L;
+
+  <T> T lookupByExample(
+      LoadBalancer example,
+      @Nullable final OwnerFullName ownerFullName,
+      String key,
+      Predicate<? super LoadBalancer> filter,
+      Function<? super LoadBalancer,T> transform
+  ) throws Loadbalancingv2MetadataException;
 
   <T> T lookupByName(
       @Nullable OwnerFullName ownerFullName,
       String name,
+      Predicate<? super LoadBalancer> filter,
+      Function<? super LoadBalancer, T> transform
+  ) throws Loadbalancingv2MetadataException;
+
+  <T> List<T> list(
+      @Nullable OwnerFullName ownerFullName,
+      Criterion criterion,
       Predicate<? super LoadBalancer> filter,
       Function<? super LoadBalancer, T> transform
   ) throws Loadbalancingv2MetadataException;
@@ -49,6 +67,21 @@ public interface LoadBalancers {
       Predicate<? super LoadBalancer> filter,
       Function<? super LoadBalancer, T> updateTransform
   ) throws Loadbalancingv2MetadataException;
+
+  default <T> T updateByView(
+      final LoadBalancerView view,
+      final Predicate<? super LoadBalancer> filter,
+      final Function<? super LoadBalancer, T> updateTransform
+  ) throws Loadbalancingv2MetadataException {
+    final AccountFullName accountFullName = AccountFullName.getInstance(view.getOwnerAccountNumber());
+    return updateByExample(
+        LoadBalancer.named(accountFullName, view.getDisplayName()),
+        accountFullName,
+        view.getDisplayName(),
+        filter,
+        updateTransform
+    );
+  }
 
   LoadBalancer save(LoadBalancer loadBalancer) throws Loadbalancingv2MetadataException;
 

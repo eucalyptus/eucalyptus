@@ -14,13 +14,24 @@ import com.eucalyptus.loadbalancingv2.service.persist.Loadbalancingv2MetadataNot
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-
+import java.util.Collections;
+import java.util.List;
+import org.hibernate.criterion.Criterion;
 
 public abstract class Loadbalancingv2PersistenceSupport<RT extends RestrictedType, AP extends AbstractPersistent & RestrictedType>
     extends AbstractPersistentSupport<RT, AP, Loadbalancingv2MetadataException> {
 
   protected Loadbalancingv2PersistenceSupport(final String typeDescription) {
     super(typeDescription);
+  }
+
+  public <T> List<T> list(
+      final OwnerFullName ownerFullName,
+      Criterion criterion,
+      Predicate<? super AP> filter,
+      Function<? super AP, T> transform
+  ) throws Loadbalancingv2MetadataException {
+    return list(ownerFullName, criterion, Collections.emptyMap(), filter, transform);
   }
 
   public <T> T updateByExample(

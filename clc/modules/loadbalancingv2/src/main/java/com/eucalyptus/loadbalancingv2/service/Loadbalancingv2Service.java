@@ -445,13 +445,17 @@ public class Loadbalancingv2Service {
           ctx.isAdministrator( ) ?
               AccountFullName.getInstance(arn.getNamespace()) :
               ctx.getAccount();
-      final LoadBalancer loadBalancer =
-          loadBalancers.lookupByName(
-              ownerFullName,
-              arn.getName(),
-              Loadbalancingv2Metadatas.filterPrivileged(),
-              Functions.identity());
-      loadBalancers.delete(loadBalancer);
+
+      loadBalancers.updateByExample(
+          LoadBalancer.named(ownerFullName, arn.getName()),
+          ownerFullName,
+          arn.getName(),
+          Loadbalancingv2Metadatas.filterPrivileged(),
+          loadbalancer -> {
+            loadbalancer.setState(LoadBalancer.State.deleted); //TODO:STEVE: need an in-use check?
+            return null;
+          }
+      );
     } catch ( final Loadbalancingv2MetadataNotFoundException e ) {
       throw listenerNotFound().get();
     } catch ( final Exception e ) {

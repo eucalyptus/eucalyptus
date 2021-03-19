@@ -47,6 +47,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.State>
     active,
     active_impaired,
     failed,
+    deleted,
   }
 
   public enum Scheme {
@@ -150,6 +151,22 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.State>
     final LoadBalancer example = new LoadBalancer(null, lbName);
     if (userFullName != null) {
       example.setOwnerAccountNumber(userFullName.getAccountNumber());
+    }
+    return example;
+  }
+
+  public static LoadBalancer exampleWithId(final String id) {
+    final LoadBalancer example = new LoadBalancer();
+    example.setNaturalId(id);
+    return example;
+  }
+
+  public static LoadBalancer exampleWithState(final LoadBalancer.State state) {
+    final LoadBalancer example = new LoadBalancer();
+    if (state != null) {
+      example.setState(state);
+      example.setLastState(null);
+      example.setStateChangeStack(null);
     }
     return example;
   }
