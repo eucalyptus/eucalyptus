@@ -432,11 +432,15 @@ public class LoadBalancingWorkflows {
   }
 
   public static void runUpdateLoadBalancer(final String accountId, final String loadbalancer) {
-    final String workflowId = getUpdateLoadBalancerWorkflowId(accountId, loadbalancer);
+    runUpdateLoadBalancer(accountId, loadbalancer, loadbalancer);
+  }
+
+  public static void runUpdateLoadBalancer(final String accountId, final String loadbalancerDesc, final String loadbalancerNameOrArn) {
+    final String workflowId = getUpdateLoadBalancerWorkflowId(accountId, loadbalancerDesc);
     try {
       final UpdateLoadBalancerWorkflowClientExternal workflow =
-          WorkflowClients.getUpdateLoadBalancerWorkflowClient(accountId, loadbalancer, workflowId);
-      workflow.updateLoadBalancer(accountId, loadbalancer);
+          WorkflowClients.getUpdateLoadBalancerWorkflowClient(accountId, loadbalancerDesc, workflowId);
+      workflow.updateLoadBalancer(accountId, loadbalancerNameOrArn);
     } catch (final WorkflowExecutionAlreadyStartedException ex) {
       ;
     } catch (final Exception ex) {

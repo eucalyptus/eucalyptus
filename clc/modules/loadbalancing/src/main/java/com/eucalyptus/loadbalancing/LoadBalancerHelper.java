@@ -32,6 +32,8 @@ package com.eucalyptus.loadbalancing;
 import static com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer.Scheme;
 import static com.eucalyptus.util.Strings.nonNull;
 
+import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerAutoScalingGroup;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
@@ -42,6 +44,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -58,18 +61,23 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.loadbalancing.service.persist.ImmutableLoadBalancingPersistence;
 import com.eucalyptus.loadbalancing.service.persist.LoadBalancers;
 import com.eucalyptus.loadbalancing.service.persist.LoadBalancingMetadataException;
 import com.eucalyptus.loadbalancing.service.persist.LoadBalancingMetadataNotFoundException;
 import com.eucalyptus.loadbalancing.service.persist.LoadBalancingPersistence;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendInstance;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendServerDescription;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener.PROTOCOL;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerSecurityGroup.STATE;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerSecurityGroupRef;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerZone;
+import com.eucalyptus.loadbalancing.service.persist.entities.PersistenceLoadBalancerSecurityGroups;
+import com.eucalyptus.loadbalancing.service.persist.entities.PersistenceLoadBalancers;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance;
 import com.eucalyptus.loadbalancing.common.msgs.AvailabilityZones;
@@ -139,7 +147,10 @@ import io.vavr.collection.Stream;
  */
 @SuppressWarnings("Guava")
 public class LoadBalancerHelper {
-  private static Logger LOG = Logger.getLogger(LoadBalancerHelper.class);
+  private static final Logger LOG = Logger.getLogger(LoadBalancerHelper.class);
+
+  private static final AtomicReference<ServoMetadataSource> metadataSource =
+      new AtomicReference<>(new ClassicServoMetadataSource());
 
   public static <T> List<T> listLoadbalancers(
       final LoadBalancingPersistence persistence,
@@ -1045,6 +1056,170 @@ public class LoadBalancerHelper {
     } catch (final Exception ex) {
       throw new LoadBalancingException(
           "Error while checking loadbalancing worker's certificate expiration", ex);
+    }
+  }
+
+  public static ServoMetadataSource getServoMetadataSource() {
+    return metadataSource.get();
+  }
+
+  public static void setServoMetadataSource(final ServoMetadataSource source) {
+    metadataSource.set(source);
+  }
+
+  public interface ServoMetadataSource {
+    List<String> listPoliciesForLoadBalancer(String accountNumber, String loadBalancerNameOrArn);
+
+    PolicyDescription getLoadBalancerPolicy(
+        String accountNumber, String loadBalancerNameOrArn, String policyName);
+
+    Map<String, LoadBalancerServoDescription> getLoadBalancerServoDescriptions(
+        String accountNumber, String loadBalancerNameOrArn);
+
+    Set<String> resolveIpsForLoadBalancer(String accountNumber, String loadBalancerName);
+
+    void notifyServoInstanceFailure(String instanceId);
+  }
+
+  public static class ClassicServoMetadataSource implements ServoMetadataSource {
+    private LoadBalancingPersistence persistence = ImmutableLoadBalancingPersistence.builder()
+        .balancers(new PersistenceLoadBalancers())
+        .balancerSecurityGroups(new PersistenceLoadBalancerSecurityGroups())
+        .build();
+
+    @Override
+    public List<String> listPoliciesForLoadBalancer(
+        final String accountNumber,
+        final String lbName) {
+      return LoadBalancerHelper.getLoadbalancer(
+          persistence,
+          Predicates.alwaysTrue(),
+          lb -> {
+            final List<LoadBalancerListener> listeners = Lists.newArrayList(lb.getListeners());
+            final List<LoadBalancerBackendServerDescription> backendServers =
+                LoadBalancerBackendServerHelper.getLoadBalancerBackendServerDescription(lb);
+
+            final List<String> listenerPolicies = Stream.ofAll(listeners)
+                .flatMap(LoadBalancerListener::getPolicyDescriptions)
+                .map(LoadBalancerPolicyDescription::getPolicyName)
+                .distinct()
+                .toJavaList();
+
+            final List<String> backendPolicies = Stream.ofAll(backendServers)
+                .flatMap(LoadBalancerBackendServerDescription::getPolicyDescriptions)
+                .map(LoadBalancerPolicyDescription::getPolicyName)
+                .distinct()
+                .toJavaList();
+
+            final List<String> publicKeyPolicies = Stream.ofAll(lb.getPolicyDescriptions())
+                .filter(p -> "PublicKeyPolicyType".equals(p.getPolicyTypeName()))
+                .map(LoadBalancerPolicyDescription::getPolicyName)
+                .distinct()
+                .toJavaList();
+
+            final List<String> policies = Lists.newArrayList();
+            policies.addAll(listenerPolicies);
+            policies.addAll(backendPolicies);
+            policies.addAll(publicKeyPolicies);
+
+            return policies;
+          },
+          accountNumber,
+          lbName);
+    }
+
+    @Override
+    public PolicyDescription getLoadBalancerPolicy(
+        final String accountNumber,
+        final String lbName,
+        final String policyName
+    ) {
+      final LoadBalancerPolicyDescriptionFullView policyDescription =
+          LoadBalancerHelper.getLoadbalancer(
+              persistence,
+              Predicates.alwaysTrue(),
+              loadBalancer -> LoadBalancers.POLICY_DESCRIPTION_FULL_VIEW.apply(
+                  LoadBalancerPolicyHelper.getLoadBalancerPolicyDescription(loadBalancer,
+                      policyName)),
+              accountNumber,
+              lbName);
+      return LoadBalancerPolicyHelper.AsPolicyDescription.INSTANCE.apply(policyDescription);
+    }
+
+    @Override
+    public Map<String, LoadBalancerServoDescription> getLoadBalancerServoDescriptions(
+        final String accountNumber,
+        final String lbName
+    ) {
+      final Map<String, LoadBalancerServoDescription> result = Maps.newHashMap();
+      try (final TransactionResource tx = Entities.transactionFor(LoadBalancer.class)) {
+        final LoadBalancer lb =
+            LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
+        for (final LoadBalancerZone zone : lb.getZones()) {
+          if (!LoadBalancerZone.STATE.InService.equals(zone.getState())) {
+            continue;
+          }
+
+          final LoadBalancerServoDescription desc =
+              LoadBalancerHelper.getServoDescription(persistence, accountNumber, lbName,
+                  zone.getName());
+          for (final LoadBalancerServoInstanceView servoView : zone.getServoInstances()) {
+            result.put(servoView.getInstanceId(), desc);
+          }
+        }
+      } catch (final Exception ex) {
+        throw Exceptions.toUndeclared(ex);
+      }
+      return result;
+    }
+
+    @Override
+    public Set<String> resolveIpsForLoadBalancer(
+        final String accountNumber,
+        final String loadBalancerName
+    ) {
+      final Set<String> ips = Sets.newTreeSet();
+      try (final TransactionResource tx = Entities.transactionFor(LoadBalancer.class)) {
+        final LoadBalancer loadBalancer =
+            LoadBalancerHelper.getLoadbalancerCaseInsensitive(persistence, accountNumber, loadBalancerName);
+        final Predicate<LoadBalancerServoInstanceView> canResolve =
+            new Predicate<LoadBalancerServoInstanceView>() {
+              @Override
+              public boolean apply(LoadBalancerServoInstanceView arg0) {
+                return arg0.canResolveDns();
+              }
+            };
+
+        final List<LoadBalancerServoInstance> servos = Lists.newArrayList();
+        for (final LoadBalancerAutoScalingGroup group : loadBalancer.getAutoScaleGroups()) {
+          servos.addAll(group.getServos());
+        }
+        final Function<LoadBalancerServoInstance, String> ipExtractor =
+            loadBalancer.getScheme() == LoadBalancer.Scheme.Internal ?
+                LoadBalancerServoInstance::getPrivateIp :
+                LoadBalancerServoInstance::getAddress;
+        Iterables.addAll(ips, Iterables.transform(
+            Collections2.filter(servos, canResolve),
+            ipExtractor));
+      }
+      return ips;
+    }
+
+    @Override
+    public void notifyServoInstanceFailure(final String instanceId) {
+      final Predicate<String> update = id -> {
+        final LoadBalancerServoInstance entity;
+        try {
+          entity = Entities.uniqueResult(LoadBalancerServoInstance.named(id));
+        } catch (final TransactionException ex) {
+          throw Exceptions.toUndeclared(ex);
+        }
+        if (entity.getState() != LoadBalancerServoInstance.STATE.Pending) {
+          entity.setActivityFailureCount(entity.getActivityFailureCount() + 1);
+        }
+        return true;
+      };
+      Entities.asTransaction(LoadBalancerServoInstance.class, update).apply(instanceId);
     }
   }
 }

@@ -1725,41 +1725,8 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   public List<String> listLoadBalancerPolicies(final String accountNumber, final String lbName)
       throws LoadBalancingActivityException {
     try {
-      final List<String> loadBalancerPolicies = LoadBalancerHelper.getLoadbalancer(
-          persistence,
-          Predicates.alwaysTrue(),
-          lb -> {
-            final List<LoadBalancerListener> listeners = Lists.newArrayList(lb.getListeners());
-            final List<LoadBalancerBackendServerDescription> backendServers =
-                LoadBalancerBackendServerHelper.getLoadBalancerBackendServerDescription(lb);
-
-            final List<String> listenerPolicies = Stream.ofAll(listeners)
-                .flatMap(LoadBalancerListener::getPolicyDescriptions)
-                .map(LoadBalancerPolicyDescription::getPolicyName)
-                .distinct()
-                .toJavaList();
-
-            final List<String> backendPolicies = Stream.ofAll(backendServers)
-                .flatMap(LoadBalancerBackendServerDescription::getPolicyDescriptions)
-                .map(LoadBalancerPolicyDescription::getPolicyName)
-                .distinct()
-                .toJavaList();
-
-            final List<String> publicKeyPolicies = Stream.ofAll(lb.getPolicyDescriptions())
-                .filter(p -> "PublicKeyPolicyType".equals(p.getPolicyTypeName()))
-                .map(LoadBalancerPolicyDescription::getPolicyName)
-                .distinct()
-                .toJavaList();
-
-            final List<String> policies = Lists.newArrayList();
-            policies.addAll(listenerPolicies);
-            policies.addAll(backendPolicies);
-            policies.addAll(publicKeyPolicies);
-
-            return policies;
-          },
-          accountNumber,
-          lbName);
+      final List<String> loadBalancerPolicies = LoadBalancerHelper.getServoMetadataSource()
+          .listPoliciesForLoadBalancer(accountNumber, lbName);
 
       return Stream.ofAll(loadBalancerPolicies).distinct().toJavaList();
     } catch (final Exception ex) {
@@ -1774,16 +1741,8 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       final String policyName
   ) throws LoadBalancingActivityException {
     try {
-      final LoadBalancerPolicyDescriptionFullView policyDescription =
-          LoadBalancerHelper.getLoadbalancer(
-              persistence,
-              Predicates.alwaysTrue(),
-              loadBalancer -> LoadBalancers.POLICY_DESCRIPTION_FULL_VIEW.apply(
-                  LoadBalancerPolicyHelper.getLoadBalancerPolicyDescription(loadBalancer,
-                      policyName)),
-              accountNumber,
-              lbName);
-      return LoadBalancerPolicyHelper.AsPolicyDescription.INSTANCE.apply(policyDescription);
+      return LoadBalancerHelper.getServoMetadataSource()
+          .getLoadBalancerPolicy(accountNumber, lbName, policyName);
     } catch (final Exception ex) {
       throw new LoadBalancingActivityException("Failed to lookup loadbalancer policies", ex);
     }
@@ -1794,26 +1753,12 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       final String accountNumber,
       final String lbName
   ) throws LoadBalancingActivityException {
-    final Map<String, LoadBalancerServoDescription> result = Maps.newHashMap();
-    try (final TransactionResource tx = Entities.transactionFor(LoadBalancer.class)) {
-      final LoadBalancer lb =
-          LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
-      for (final LoadBalancerZone zone : lb.getZones()) {
-        if (!LoadBalancerZone.STATE.InService.equals(zone.getState())) {
-          continue;
-        }
-
-        final LoadBalancerServoDescription desc =
-            LoadBalancerHelper.getServoDescription(persistence, accountNumber, lbName,
-                zone.getName());
-        for (final LoadBalancerServoInstanceView servoView : zone.getServoInstances()) {
-          result.put(servoView.getInstanceId(), desc);
-        }
-      }
+    try {
+      return LoadBalancerHelper.getServoMetadataSource()
+          .getLoadBalancerServoDescriptions(accountNumber, lbName);
     } catch (final Exception ex) {
       throw new LoadBalancingActivityException("Failed to lookup loadbalancer descriptions", ex);
     }
-    return result;
   }
 
   @Override
@@ -3731,19 +3676,7 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   public void recordInstanceTaskFailure(final String instanceId)
       throws LoadBalancingActivityException {
     try {
-      final Predicate<String> update = id -> {
-        final LoadBalancerServoInstance entity;
-        try {
-          entity = Entities.uniqueResult(LoadBalancerServoInstance.named(id));
-        } catch (final TransactionException ex) {
-          throw Exceptions.toUndeclared(ex);
-        }
-        if (entity.getState() != STATE.Pending) {
-          entity.setActivityFailureCount(entity.getActivityFailureCount() + 1);
-        }
-        return true;
-      };
-      Entities.asTransaction(LoadBalancerServoInstance.class, update).apply(instanceId);
+      LoadBalancerHelper.getServoMetadataSource().notifyServoInstanceFailure(instanceId);
     } catch (final Exception ex) {
       LOG.warn(String.format("Failed to mark the VM (%s) as failed", instanceId), ex);
     }

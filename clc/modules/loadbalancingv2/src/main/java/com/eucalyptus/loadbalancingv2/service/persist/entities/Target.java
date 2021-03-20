@@ -50,6 +50,9 @@ public class Target extends AbstractPersistent implements TargetView {
   @Column(name = "availability_zone")
   private String availabilityZone;
 
+  @Column(name = "ip_address", nullable = false)
+  private String ipAddress;
+
   @Column(name = "port")
   private Integer port;
 
@@ -71,13 +74,15 @@ public class Target extends AbstractPersistent implements TargetView {
 
   public static Target create(
       final TargetGroup targetGroup,
-      final String id
+      final String id,
+      final String ipAddress
   ) {
     final Target target = new Target();
     target.setTargetGroup(targetGroup);
     target.setTargetGroupName(targetGroup.getDisplayName());
     target.setTargetGroupId(targetGroup.getNaturalId());
     target.setTargetId(id);
+    target.setIpAddress(ipAddress);
     target.setTargetHealthReason("Elb.InitialHealthChecking");
     target.setTargetHealthState(State.initial);
     return target;
@@ -123,6 +128,15 @@ public class Target extends AbstractPersistent implements TargetView {
 
   public void setAvailabilityZone(String availabilityZone) {
     this.availabilityZone = availabilityZone;
+  }
+
+  @Override
+  public String getIpAddress() {
+    return ipAddress;
+  }
+
+  public void setIpAddress(String ipAddress) {
+    this.ipAddress = ipAddress;
   }
 
   @Override

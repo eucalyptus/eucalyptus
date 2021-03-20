@@ -6,6 +6,7 @@
 package com.eucalyptus.loadbalancingv2.service;
 
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cloudformation.common.CloudFormation;
@@ -19,6 +20,11 @@ import com.eucalyptus.cloudformation.common.msgs.Parameter;
 import com.eucalyptus.cloudformation.common.msgs.Parameters;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.AddressInfoType;
+import com.eucalyptus.compute.common.AllocateAddressResponseType;
+import com.eucalyptus.compute.common.AllocateAddressType;
+import com.eucalyptus.compute.common.AssociateAddressResponseType;
+import com.eucalyptus.compute.common.AssociateAddressType;
 import com.eucalyptus.compute.common.AttachNetworkInterfaceResponseType;
 import com.eucalyptus.compute.common.AttachNetworkInterfaceType;
 import com.eucalyptus.compute.common.Compute;
@@ -30,6 +36,8 @@ import com.eucalyptus.compute.common.DeleteNetworkInterfaceResponseType;
 import com.eucalyptus.compute.common.DeleteNetworkInterfaceType;
 import com.eucalyptus.compute.common.DeleteTagsResponseType;
 import com.eucalyptus.compute.common.DeleteTagsType;
+import com.eucalyptus.compute.common.DescribeAddressesResponseType;
+import com.eucalyptus.compute.common.DescribeAddressesType;
 import com.eucalyptus.compute.common.DescribeInstancesResponseType;
 import com.eucalyptus.compute.common.DescribeInstancesType;
 import com.eucalyptus.compute.common.DescribeNetworkInterfacesResponseType;
@@ -43,6 +51,8 @@ import com.eucalyptus.compute.common.InstanceNetworkInterfaceSetItemType;
 import com.eucalyptus.compute.common.ModifyNetworkInterfaceAttachmentType;
 import com.eucalyptus.compute.common.ModifyNetworkInterfaceAttributeResponseType;
 import com.eucalyptus.compute.common.ModifyNetworkInterfaceAttributeType;
+import com.eucalyptus.compute.common.ReleaseAddressResponseType;
+import com.eucalyptus.compute.common.ReleaseAddressType;
 import com.eucalyptus.compute.common.ReservationInfoType;
 import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.RunningInstancesItemType;
@@ -53,6 +63,7 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.event.SystemClock;
+import com.eucalyptus.loadbalancing.LoadBalancerHelper;
 import com.eucalyptus.loadbalancing.LoadBalancingSystemVpcs;
 import com.eucalyptus.loadbalancing.LoadBalancingWorkerProperties;
 import com.eucalyptus.loadbalancing.workflow.LoadBalancingWorkflows;
@@ -63,6 +74,8 @@ import com.eucalyptus.loadbalancingv2.service.persist.entities.LoadBalancer;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.PersistenceLoadBalancers;
 import com.eucalyptus.loadbalancingv2.service.persist.views.ImmutableLoadBalancerView;
 import com.eucalyptus.loadbalancingv2.service.persist.views.LoadBalancerView;
+import com.eucalyptus.loadbalancingv2.service.servo.ServoCache;
+import com.eucalyptus.loadbalancingv2.service.servo.SwitchedServoMetadataSource;
 import com.eucalyptus.util.CompatFunction;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FUtils;
@@ -86,6 +99,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
@@ -96,11 +110,15 @@ public class Loadbalancingv2Workflow {
   private static final Logger logger = Logger.getLogger(Loadbalancingv2Workflow.class);
 
   private final LoadBalancers loadBalancers;
+  private final AtomicBoolean loaded = new AtomicBoolean(false);
 
   private final List<WorkflowTask> workflowTasks = ImmutableList.<WorkflowTask>builder()
       .add(new WorkflowTask( 10, "ELB.Provision")      {@Override void doWork() { loadBalancersProvision(); }})
+      .add(new WorkflowTask( 10, "ELB.Load")           {@Override void doWork() { loadBalancersLoad(); }})
       .add(new WorkflowTask( 10, "ELB.Track")          {@Override void doWork() { loadBalancersTrack(); }})
       .add(new WorkflowTask( 10, "ELB.Delete")         {@Override void doWork() { loadBalancersDelete(); }})
+      .add(new WorkflowTask( 30, "ELB.ReleaseAddress") {@Override void doWork() { addressesRelease(); }})
+      .add(new WorkflowTask( 60, "ELB.Worflows")       {@Override void doWork() { loadBalancersWorkflow(); }})
       .add(new WorkflowTask(300, "ELB.Timeout")        {@Override void doWork() { loadBalancersTimeout(); }})
       .build();
 
@@ -127,6 +145,10 @@ public class Loadbalancingv2Workflow {
         logger.error(e, e);
       }
     }
+  }
+
+  private void halted() {
+    loaded.set(false);
   }
 
   private List<String> listLoadBalancerIds(final LoadBalancer.State state) {
@@ -212,9 +234,10 @@ public class Loadbalancingv2Workflow {
         continue; // check for stack complete next time
       }
 
-      LoadBalancingWorkflows.updateLoadBalancer(
+      LoadBalancingWorkflows.runUpdateLoadBalancer(
           loadBalancer.getOwnerAccountNumber(),
-          loadBalancer.getDisplayName());
+          loadBalancer.getDisplayName(),
+          loadBalancer.getArn());
 
       try {
         loadBalancers.updateByView(loadBalancer, Predicates.alwaysTrue(), balancer -> {
@@ -229,6 +252,76 @@ public class Loadbalancingv2Workflow {
         }
       }
     }
+  }
+
+  private void loadBalancersLoad() {
+    if (loaded.get()) return;
+
+    final LoadBalancingComputeApi ec2;
+    final DescribeInstancesResponseType describeInstancesResponse;
+    try {
+      ec2 = AsyncProxy.client(LoadBalancingComputeApi.class,
+          loadBalancingAuthTransform, () -> Topology.lookup(Compute.class));
+      final Map<String, String> filters = Maps.newHashMap();
+      filters.put("instance-state-name", "running");
+      filters.put("tag-key", "loadbalancer-id");
+      filters.put("tag:user-interface-status", "attached");
+      describeInstancesResponse = ec2.describeInstances(describeInstancesMessage(filters));
+    } catch (final Exception e) {
+      logger.warn("Error describing instances to populate load balancer servos: " + e.getMessage());
+      return;
+    }
+
+    int servoInstanceCount = 0;
+    int notifiedCount = 0;
+    for (final ReservationInfoType reservationInfo : describeInstancesResponse.getReservationSet()) {
+      for (final RunningInstancesItemType runningInstance : reservationInfo.getInstancesSet()) {
+        servoInstanceCount++;
+
+        final String instanceId = runningInstance.getInstanceId();
+        try {
+          String loadBalancerId = null;
+          for (final ResourceTag tag : runningInstance.getTagSet()) {
+            if ("loadbalancer-id".equals(tag.getKey())) {
+              loadBalancerId = Objects.toString(tag.getValue(), loadBalancerId);
+              break;
+            }
+          }
+
+          String loadBalancerServoIp = null;
+          for (final InstanceNetworkInterfaceSetItemType networkInterface : runningInstance.getNetworkInterfaceSet().getItem()) {
+            if (1 == networkInterface.getAttachment().getDeviceIndex()) {
+              if (networkInterface.getAssociation() == null) {
+                loadBalancerServoIp = networkInterface.getPrivateIpAddress();
+              } else {
+                loadBalancerServoIp = networkInterface.getAssociation().getPublicIp();
+              }
+              break;
+            }
+          }
+
+          if (loadBalancerId == null || loadBalancerServoIp == null) {
+            continue;
+          }
+
+          final LoadBalancerView loadBalancer = lookupLoadBalancerById(loadBalancerId);
+          ServoCache.notifyServo(
+              runningInstance.getInstanceId(),
+              loadBalancer.getNaturalId(),
+              loadBalancer.getDisplayName(),
+              loadBalancer.getOwnerAccountNumber(),
+              runningInstance.getPlacement(),
+              loadBalancerServoIp);
+          notifiedCount++;
+        } catch (final Exception e) {
+          logger.warn("Error initializing load balancer servo " + instanceId, e);
+        }
+      }
+    }
+
+    logger.info("Initialized servo cache for " + notifiedCount + "/" + servoInstanceCount + " instances");
+
+    loaded.set(true);
   }
 
   /**
@@ -258,18 +351,22 @@ public class Loadbalancingv2Workflow {
           // check for user interface
           String networkInterfaceId = null;
           String attachmentId = null;
+          String privateIp = null;
           boolean hasUserNetworkInterface = false;
           for (final InstanceNetworkInterfaceSetItemType networkInterface : runningInstance.getNetworkInterfaceSet().getItem()) {
             if (1 == networkInterface.getAttachment().getDeviceIndex()) {
               hasUserNetworkInterface = true;
-              if (!networkInterface.getAttachment().getDeleteOnTermination()) {
+              if (!networkInterface.getAttachment().getDeleteOnTermination() ||
+                  networkInterface.getAssociation() == null) {
                 networkInterfaceId = networkInterface.getNetworkInterfaceId();
                 attachmentId = networkInterface.getAttachment().getAttachmentId();
+                privateIp = networkInterface.getPrivateIpAddress();
               }
               break;
             }
           }
 
+          LoadBalancerView loadBalancer = null;
           if (!hasUserNetworkInterface) {
             logger.info("Creating user network interface for servo instance: " + instanceId);
 
@@ -278,7 +375,7 @@ public class Loadbalancingv2Workflow {
                 loadBalancerId = Objects.toString(tag.getValue(), loadBalancerId);
               }
             }
-            final LoadBalancerView loadBalancer = lookupLoadBalancerById(loadBalancerId);
+            loadBalancer = lookupLoadBalancerById(loadBalancerId);
             final List<String> subnetId = loadBalancer.getSubnetIds();
             final List<String> securityGroupIds = loadBalancer.getSecurityGroupIds();
 
@@ -287,14 +384,45 @@ public class Loadbalancingv2Workflow {
                     .getNetworkInterface().getNetworkInterfaceId();
 
             attachmentId = ec2.attachNetworkInterface(
-                attachNetworkInterfaceMessage(instanceId, 0, networkInterfaceId)).getAttachmentId();
+                attachNetworkInterfaceMessage(instanceId, 1, networkInterfaceId)).getAttachmentId();
           }
 
           if (attachmentId != null) {
+            if (loadBalancer == null) {
+              loadBalancer = lookupLoadBalancerById(loadBalancerId);
+            }
+
+            String loadBalancerServoIp = null;
+            if (loadBalancer.getScheme() != LoadBalancer.Scheme.internal) {
+              logger.info("Allocating public ip for servo instance: " + instanceId);
+
+              final AllocateAddressResponseType allocateResponse =
+                  ec2.allocateAddress(allocateAddressMessage());
+              final String allocationId = allocateResponse.getAllocationId();
+              loadBalancerServoIp = allocateResponse.getPublicIp();
+
+              final Map<String,String> tags = Maps.newHashMap();
+              tags.put("loadbalancer-id", loadBalancerId);
+              ec2.createTags(createTagsMessage(allocationId, tags));
+
+              ec2.associateAddress(assocateAddressMessage(allocationId, networkInterfaceId));
+            } else {
+              loadBalancerServoIp = privateIp;
+            }
+
             logger.info("Modifying user network interface for servo instance: " + instanceId);
 
             ec2.modifyNetworkInterfaceAttribute(
                 modifyNetworkInterfaceAttributeMessage(networkInterfaceId, attachmentId, true));
+
+            // notify cache
+            ServoCache.notifyServo(
+                runningInstance.getInstanceId(),
+                loadBalancer.getNaturalId(),
+                loadBalancer.getDisplayName(),
+                loadBalancer.getOwnerAccountNumber(),
+                runningInstance.getPlacement(),
+                loadBalancerServoIp);
           }
 
           // update tag to record attachment complete
@@ -349,15 +477,17 @@ public class Loadbalancingv2Workflow {
     return deleteStack;
   }
 
+  private Filter filter(final String name, final String value) {
+    final Filter filter = new Filter();
+    filter.setName(name);
+    filter.setValueSet(Lists.newArrayList(value));
+    return filter;
+  }
+
   private DescribeInstancesType describeInstancesMessage(final Map<String,String> filters) {
     final DescribeInstancesType describeInstancesType = new DescribeInstancesType();
     Stream.ofAll(filters.entrySet())
-        .map(entry -> {
-          final Filter filter = new Filter();
-          filter.setName(entry.getKey());
-          filter.setValueSet(Lists.newArrayList(entry.getValue()));
-          return filter;
-        })
+        .map(entry -> filter(entry.getKey(), entry.getValue()))
         .forEach(describeInstancesType.getFilterSet()::add);
     return describeInstancesType;
   }
@@ -404,6 +534,36 @@ public class Loadbalancingv2Workflow {
     return modifyNetworkInterfaceAttribute;
   }
 
+  private AllocateAddressType allocateAddressMessage() {
+    final AllocateAddressType allocateAddress = new AllocateAddressType();
+    allocateAddress.setDomain("vpc");
+    return allocateAddress;
+  }
+
+  private AssociateAddressType assocateAddressMessage(
+      final String allocationId,
+      final String networkInterfaceId
+  ) {
+    final AssociateAddressType associateAddress = new AssociateAddressType();
+    associateAddress.setAllocationId(allocationId);
+    associateAddress.setNetworkInterfaceId(networkInterfaceId);
+    return associateAddress;
+  }
+
+  private DescribeAddressesType describeAddressesMessage(final Map<String,String> filters) {
+    final DescribeAddressesType describeAddresses = new DescribeAddressesType();
+    Stream.ofAll(filters.entrySet())
+        .map(entry -> filter(entry.getKey(), entry.getValue()))
+        .forEach(describeAddresses.getFilterSet()::add);
+    return describeAddresses;
+  }
+
+  private ReleaseAddressType releaseAddressMessage(final String allocationId) {
+    final ReleaseAddressType releaseAddress = new ReleaseAddressType();
+    releaseAddress.setAllocationId(allocationId);
+    return releaseAddress;
+  }
+
   private CreateTagsType createTagsMessage(final String resourceId, final Map<String,String> tags) {
     final CreateTagsType createTags = new CreateTagsType();
     createTags.getResourcesSet().add(resourceId);
@@ -413,17 +573,18 @@ public class Loadbalancingv2Workflow {
     return createTags;
   }
 
+  //TODO:STEVE: role name length is an issue, can the stack name be shorter?
   private String getStackName(final LoadBalancerView loadBalancer, final String zone) {  //TODO:STEVE: zone support
     final String userAccount = loadBalancer.getOwnerAccountNumber();
     final String name = loadBalancer.getDisplayName();
-    return "loadbalancer-" + loadBalancer.getType() + "-" + userAccount + "-" + name;
+    return "loadbalancer-" + loadBalancer.getType().getCode() + "-" + userAccount + "-" + name;
   }
 
   private String getTemplate(final LoadBalancerView loadBalancer) {
     try {
       return Resources.toString(
           Resources.getResource(Loadbalancingv2Workflow.class,
-              "loadbalancer-" + loadBalancer.getType() + "-zone.yaml"),
+              "loadbalancer-" + loadBalancer.getType().getCode() + "-zone.yaml"),
           StandardCharsets.UTF_8);
     } catch (IOException e) {
       throw Exceptions.toUndeclared(e);
@@ -445,7 +606,9 @@ public class Loadbalancingv2Workflow {
       }
 
       try {
-        loadBalancers.delete(LoadBalancer.exampleWithId(loadBalancerId));
+        loadBalancers.delete(LoadBalancer.named(
+            AccountFullName.getInstance(loadBalancer.getOwnerAccountNumber()),
+            loadBalancer.getDisplayName()));
       } catch (Exception e) {
         if (PersistenceExceptions.isStaleUpdate(e)) {
           logger.debug("Conflict deleting load balancer " + loadBalancerId + " (will retry)");
@@ -486,6 +649,45 @@ public class Loadbalancingv2Workflow {
     cf.deleteStack(deleteStackMessage(getStackName(loadBalancer, null)));
 
     return releasedAll;
+  }
+
+  private void addressesRelease() {
+    try {
+      final LoadBalancingComputeApi ec2 = AsyncProxy.client(LoadBalancingComputeApi.class,
+          loadBalancingAuthTransform, () -> Topology.lookup(Compute.class));
+
+      final Map<String,String> filters = Maps.newHashMap();
+      filters.put("tag-key", "loadbalancer-id");
+      final DescribeAddressesResponseType describeAddressesResponse =
+          ec2.describeAddresses(describeAddressesMessage(filters));
+
+      //TODO:STEVE: track addresses allocated for v2 elbs [need tags on allocate address]
+      for (final AddressInfoType addressInfo : describeAddressesResponse.getAddressesSet()) {
+        if (addressInfo.getAssociationId() == null) {
+          logger.info("Releasing address: " + addressInfo.getAllocationId() + "/" + addressInfo.getPublicIp());
+          ec2.releaseAddress(releaseAddressMessage(addressInfo.getAllocationId()));
+        }
+      }
+    } catch (final Exception e) {
+      logger.warn("Error during address release", e);
+    }
+  }
+
+  private void loadBalancersWorkflow() {
+    try {
+      final List<LoadBalancerView> views = Lists.newArrayList(loadBalancers.listByExample(
+          LoadBalancer.named(null,null),
+          Predicates.alwaysTrue(),
+          ImmutableLoadBalancerView::copyOf));
+      for (final LoadBalancerView loadBalancer : views) {
+        LoadBalancingWorkflows.runUpdateLoadBalancer(
+            loadBalancer.getOwnerAccountNumber(),
+            loadBalancer.getDisplayName(),
+            loadBalancer.getArn());
+      }
+    } catch (final Exception e) {
+      logger.warn("Error during continuous workflow start", e);
+    }
   }
 
   private void loadBalancersTimeout() {
@@ -534,8 +736,13 @@ public class Loadbalancingv2Workflow {
     }
   }
 
-  private interface LoadBalancingComputeApi {
+  public interface LoadBalancingComputeApi {
     DescribeInstancesResponseType describeInstances(DescribeInstancesType request);
+
+    AllocateAddressResponseType allocateAddress(AllocateAddressType request);
+    AssociateAddressResponseType associateAddress(AssociateAddressType request);
+    DescribeAddressesResponseType describeAddresses(DescribeAddressesType request);
+    ReleaseAddressResponseType releaseAddress(ReleaseAddressType request);
 
     CreateNetworkInterfaceResponseType createNetworkInterface(CreateNetworkInterfaceType request);
     AttachNetworkInterfaceResponseType attachNetworkInterface(AttachNetworkInterfaceType request);
@@ -579,6 +786,10 @@ public class Loadbalancingv2Workflow {
 
   public static class Loadbalancingv2WorkflowEventListener implements EventListener<ClockTick> {
 
+    static {
+      LoadBalancerHelper.setServoMetadataSource(new SwitchedServoMetadataSource());
+    }
+
     private final Loadbalancingv2Workflow loadbalancingv2Workflow = new Loadbalancingv2Workflow(
         new PersistenceLoadBalancers()
     );
@@ -595,6 +806,8 @@ public class Loadbalancingv2Workflow {
           Topology.isEnabled(CloudFormation.class) &&
           Topology.isEnabled(Loadbalancingv2.class)) {
         loadbalancingv2Workflow.doWorkflow();
+      }  else {
+        loadbalancingv2Workflow.halted();
       }
     }
   }

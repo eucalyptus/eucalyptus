@@ -1,5 +1,5 @@
 ---
-# ELB Application LoadBalancer for an availability zone
+# ELB Network LoadBalancer for an availability zone
 #
 # Required:
 #
@@ -20,7 +20,7 @@
 # - SSH key name allowing debug connection to db instance
 #
 AWSTemplateFormatVersion: 2010-09-09
-Description: Application LoadBalancer zone template
+Description: Network LoadBalancer zone template
 
 Parameters:
 

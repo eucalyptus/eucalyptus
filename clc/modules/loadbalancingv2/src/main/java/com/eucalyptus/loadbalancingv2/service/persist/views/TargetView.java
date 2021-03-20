@@ -15,6 +15,8 @@ public interface TargetView {
   @Nullable
   String getAvailabilityZone();
 
+  String getIpAddress();
+
   @Nullable
   Integer getPort();
 

@@ -8,8 +8,13 @@ package com.eucalyptus.loadbalancingv2.service;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentNamed;
+import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.ComputeApi;
+import com.eucalyptus.compute.common.DescribeInstancesResponseType;
+import com.eucalyptus.compute.common.DescribeInstancesType;
+import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.compute.common.SubnetType;
 import com.eucalyptus.context.Context;
@@ -110,6 +115,7 @@ import com.eucalyptus.util.CompatFunction;
 import com.eucalyptus.util.CompatSupplier;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.NonNullFunction;
+import com.eucalyptus.util.ThrowingFunction;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncProxy;
 import com.google.common.base.Enums;
@@ -117,10 +123,13 @@ import com.google.common.base.Functions;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import edu.ucsb.eucalyptus.msgs.CallerContext;
 import io.vavr.collection.Stream;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import javax.inject.Inject;
@@ -868,6 +877,31 @@ public class Loadbalancingv2Service {
               ctx.getAccount();
 
       //TODO:STEVE: instance targets must be running when registered
+      final Map<String,String> ipAddresses = Maps.newHashMap();
+      for (final TargetDescription description : targetDescriptions) {
+        if (description.getId().startsWith("i-")) {
+          // resolve instance ip address
+          final Loadbalancingv2Workflow.LoadBalancingComputeApi ec2 =
+              AsyncProxy.client(Loadbalancingv2Workflow.LoadBalancingComputeApi.class,
+                  ThrowingFunction.undeclared( req -> {
+                    final CallerContext callerContext = new CallerContext( Contexts.lookup( ) );
+                    callerContext.apply( req );
+                    return req;
+                  } ), () -> Topology.lookup(Compute.class));
+
+          final DescribeInstancesType describeInstancesType = new DescribeInstancesType();
+          final Filter filter = new Filter();
+          filter.setName("instance-id");
+          filter.setValueSet(Lists.newArrayList(description.getId()));
+          describeInstancesType.getFilterSet().add(filter);
+          final DescribeInstancesResponseType response = ec2.describeInstances(describeInstancesType);
+          ipAddresses.put(
+              description.getId(),
+              response.getReservationSet().get(0).getInstancesSet().get(0).getPrivateIpAddress());
+        } else {
+          ipAddresses.put(description.getId(), description.getId());
+        }
+      }
 
       targetGroups.updateByExample(
           TargetGroup.named(ownerFullName, arn.getName()),
@@ -877,7 +911,8 @@ public class Loadbalancingv2Service {
           group -> {
             for (final TargetDescription description : targetDescriptions) {
               if (group.findTarget(description.getId()).isEmpty()) {
-                final Target target = Target.create(group, description.getId());
+                final Target target =
+                    Target.create(group, description.getId(), ipAddresses.get(description.getId()));
                 target.setPort(description.getPort());
                 target.setAvailabilityZone(description.getAvailabilityZone());
                 group.getTargets().add(target);
