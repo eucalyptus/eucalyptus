@@ -36,6 +36,13 @@ import org.springframework.core.OrderComparator;
  */
 public interface Ordered extends org.springframework.core.Ordered {
 
+  int DEFAULT_ORDER = 0;
+
+  @Override
+  default int getOrder() {
+    return DEFAULT_ORDER;
+  }
+
   static Comparator<Object> comparator( ) {
     return new OrderComparator( );
   }
