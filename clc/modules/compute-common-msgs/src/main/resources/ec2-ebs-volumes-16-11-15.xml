@@ -224,23 +224,23 @@
 
   <mapping class="com.eucalyptus.compute.common.VolumeIdStringList" abstract="true">
     <collection field="member">
-      <value name="VolumeId" type="java.lang.String"/>
+      <value name="volumeId" type="java.lang.String"/>
     </collection>
   </mapping>
 
   <mapping class="com.eucalyptus.compute.common.VolumeModification" abstract="true">
-    <value name="EndTime" get-method="getEndTime" set-method="setEndTime" usage="optional"/>
-    <value name="ModificationState" get-method="getModificationState" set-method="setModificationState" usage="optional"/>
-    <value name="OriginalIops" get-method="getOriginalIops" set-method="setOriginalIops" usage="optional"/>
-    <value name="OriginalSize" get-method="getOriginalSize" set-method="setOriginalSize" usage="optional"/>
-    <value name="OriginalVolumeType" get-method="getOriginalVolumeType" set-method="setOriginalVolumeType" usage="optional"/>
-    <value name="Progress" get-method="getProgress" set-method="setProgress" usage="optional"/>
-    <value name="StartTime" get-method="getStartTime" set-method="setStartTime" usage="optional"/>
-    <value name="StatusMessage" get-method="getStatusMessage" set-method="setStatusMessage" usage="optional"/>
-    <value name="TargetIops" get-method="getTargetIops" set-method="setTargetIops" usage="optional"/>
-    <value name="TargetSize" get-method="getTargetSize" set-method="setTargetSize" usage="optional"/>
-    <value name="TargetVolumeType" get-method="getTargetVolumeType" set-method="setTargetVolumeType" usage="optional"/>
-    <value name="VolumeId" get-method="getVolumeId" set-method="setVolumeId" usage="optional"/>
+    <value name="endTime" get-method="getEndTime" set-method="setEndTime" usage="optional"/>
+    <value name="modificationState" get-method="getModificationState" set-method="setModificationState" usage="optional"/>
+    <value name="originalIops" get-method="getOriginalIops" set-method="setOriginalIops" usage="optional"/>
+    <value name="originalSize" get-method="getOriginalSize" set-method="setOriginalSize" usage="optional"/>
+    <value name="originalVolumeType" get-method="getOriginalVolumeType" set-method="setOriginalVolumeType" usage="optional"/>
+    <value name="progress" get-method="getProgress" set-method="setProgress" usage="optional"/>
+    <value name="startTime" get-method="getStartTime" set-method="setStartTime" usage="optional"/>
+    <value name="statusMessage" get-method="getStatusMessage" set-method="setStatusMessage" usage="optional"/>
+    <value name="targetIops" get-method="getTargetIops" set-method="setTargetIops" usage="optional"/>
+    <value name="targetSize" get-method="getTargetSize" set-method="setTargetSize" usage="optional"/>
+    <value name="targetVolumeType" get-method="getTargetVolumeType" set-method="setTargetVolumeType" usage="optional"/>
+    <value name="volumeId" get-method="getVolumeId" set-method="setVolumeId" usage="optional"/>
   </mapping>
 
   <mapping class="com.eucalyptus.compute.common.VolumeModificationList" abstract="true">
@@ -257,31 +257,31 @@
         <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
       </collection>
     </structure>
-    <value name="MaxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
-    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
-    <structure get-method="getVolumeIds" set-method="setVolumeIds" usage="optional" type="com.eucalyptus.compute.common.VolumeIdStringList" name="VolumeIds"/>
+    <value name="maxResults" get-method="getMaxResults" set-method="setMaxResults" usage="optional"/>
+    <value name="nextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getVolumeIds" set-method="setVolumeIds" usage="optional" type="com.eucalyptus.compute.common.VolumeIdStringList" name="volumeIds"/>
   </mapping>
 
   <mapping name="DescribeVolumesModificationsResponse" class="com.eucalyptus.compute.common.DescribeVolumesModificationsResponseType"
            extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
-    <value name="NextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
-    <structure get-method="getVolumesModifications" set-method="setVolumesModifications" usage="optional" type="com.eucalyptus.compute.common.VolumeModificationList" name="VolumesModifications"/>
+    <value name="nextToken" get-method="getNextToken" set-method="setNextToken" usage="optional"/>
+    <structure get-method="getVolumesModifications" set-method="setVolumesModifications" usage="optional" type="com.eucalyptus.compute.common.VolumeModificationList" name="volumeModificationSet"/>
   </mapping>
 
   <mapping name="ModifyVolume" class="com.eucalyptus.compute.common.ModifyVolumeType"
            extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
-    <value name="Iops" get-method="getIops" set-method="setIops" usage="optional"/>
-    <value name="Size" get-method="getSize" set-method="setSize" usage="optional"/>
-    <value name="VolumeId" get-method="getVolumeId" set-method="setVolumeId" usage="optional"/>
-    <value name="VolumeType" get-method="getVolumeType" set-method="setVolumeType" usage="optional"/>
+    <value name="iops" get-method="getIops" set-method="setIops" usage="optional"/>
+    <value name="size" get-method="getSize" set-method="setSize" usage="optional"/>
+    <value name="volumeId" get-method="getVolumeId" set-method="setVolumeId" usage="optional"/>
+    <value name="volumeType" get-method="getVolumeType" set-method="setVolumeType" usage="optional"/>
   </mapping>
 
   <mapping name="ModifyVolumeResponse" class="com.eucalyptus.compute.common.ModifyVolumeResponseType"
            extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
-    <structure get-method="getVolumeModification" set-method="setVolumeModification" usage="optional" type="com.eucalyptus.compute.common.VolumeModification" name="VolumeModification"/>
+    <structure get-method="getVolumeModification" set-method="setVolumeModification" usage="optional" type="com.eucalyptus.compute.common.VolumeModification" name="volumeModification"/>
   </mapping>
 
 </binding>

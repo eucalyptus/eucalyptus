@@ -115,6 +115,34 @@ public class CephRbdFormatTwoAdapter implements CephRbdAdapter {
   }
 
   @Override
+  public void resizeImage(final String imageName, final String poolName, final long imageSize) {
+    LOG.debug("Resize ceph-rbd image imageName=" + imageName + ", poolName=" + poolName + ", imageSize=" + imageSize);
+    executeRbdOpInPool((Function<CephRbdConnectionManager, String>) connectionManager -> {
+      RbdImage image = null;
+      try {
+        LOG.trace("Opening image=" + imageName + ", pool=" + connectionManager.getPool() + ", mode=read-write");
+        image = connectionManager.getRbd().open(imageName);
+        if (imageSize > image.stat().size) {
+          image.resize(imageSize);
+        }
+        return null;
+      } catch (RbdException e) {
+        LOG.warn("Caught error while checking and or resizing image " + imageName + " in pool " + poolName + ": " + e.getMessage());
+        throw new EucalyptusCephException("Caught error while checking and or resizing image " + imageName + " in pool " + poolName, e);
+      } finally {
+        if (image != null) {
+          try {
+            LOG.trace("Closing image=" + imageName + ", pool=" + connectionManager.getPool());
+            connectionManager.getRbd().close(image);
+          } catch (Exception e) {
+            LOG.debug("Caught exception closing image " + imageName, e);
+          }
+        }
+      }
+    }, poolName);
+  }
+
+  @Override
   public void deleteImage(final String imageName, final String poolName) {
     LOG.debug("Delete ceph-rbd image imageName=" + imageName + ", poolName=" + poolName);
     executeRbdOpInPool(new Function<CephRbdConnectionManager, String>() {

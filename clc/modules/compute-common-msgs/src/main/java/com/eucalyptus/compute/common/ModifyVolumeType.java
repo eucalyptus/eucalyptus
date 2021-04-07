@@ -8,7 +8,7 @@ package com.eucalyptus.compute.common;
 import javax.annotation.Nonnull;
 
 
-public class ModifyVolumeType extends ComputeMessage {
+public class ModifyVolumeType extends BlockVolumeMessage {
 
   private Integer iops;
   private Integer size;

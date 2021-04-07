@@ -193,6 +193,31 @@ public class CephRbdProvider implements SANProvider {
   }
 
   @Override
+  public int resizeVolume(final String volumeId, final String volumeIqn, final int size) throws EucalyptusCloudException {
+    LOG.info("Resizing volume volumeId=" + volumeId + ", volumeIqn=" + volumeIqn + ", size=" + size + "GB");
+    final long sizeInBytes = size * StorageProperties.GB; // need to go from gb to bytes
+    try {
+      // volumeIqn is of the form pool/image, get the pool information
+      final CanonicalRbdObject can = CanonicalRbdObject.parse(volumeIqn);
+      if (can == null || can.getPool()==null) {
+        throw new EucalyptusCloudException("Error resizing volume, invalid iqn");
+      }
+
+      final long resultSizeInBytes;
+      if (size == -1) {
+        resultSizeInBytes = new CephRbdResource(volumeId, can.toCanonicalString()).getSize();
+      } else {
+        rbdService.resizeImage(volumeId, can.getPool(), sizeInBytes);
+        resultSizeInBytes = sizeInBytes;
+      }
+
+      return (int)(resultSizeInBytes / StorageProperties.GB);
+    } catch (final Exception e) {
+      throw new EucalyptusCloudException("Error resizing volume", e);
+    }
+  }
+
+  @Override
   public StorageResource connectTarget(String iqn, String lun) throws EucalyptusCloudException {
     LOG.debug("Connecting iqn=" + iqn + ", lun=" + lun + ". This is a no-op");
     // iqn and lun are be the same, use one of them

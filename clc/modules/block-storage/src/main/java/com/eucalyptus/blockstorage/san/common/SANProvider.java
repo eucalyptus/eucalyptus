@@ -106,6 +106,16 @@ public interface SANProvider {
   public String cloneVolume(String volumeId, String parentVolumeId, String parentVolumeIqn) throws EucalyptusCloudException;
 
   /**
+   * Change the size of a volume.
+   *
+   * @param volumeId The volume to change
+   * @param size The new size for the volume in gigabytes (-1 to get current size only)
+   * @return The current or updated size in gigabytes
+   * @throws EucalyptusCloudException If the volume resize fails
+   */
+  public int resizeVolume(String volumeId, String volumeIqn, int size) throws EucalyptusCloudException;
+
+  /**
    * Connect to the lun specified by the given iqn.
    * 
    * <p>
