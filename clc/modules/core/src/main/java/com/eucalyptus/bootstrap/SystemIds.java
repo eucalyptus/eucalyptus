@@ -67,7 +67,7 @@ public class SystemIds {
   public static String createCloudUniqueName( String subName ) {
     return Joiner.on( "." ).join(
         Eucalyptus.class.getSimpleName( ),
-        BillOfMaterials.getVersion( ),
+        BillOfMaterials.getMajorVersion( ),
         subName,
         Signatures.SHA256withRSA.trySign( Eucalyptus.class, subName.getBytes( ) ) );
   }
@@ -76,7 +76,7 @@ public class SystemIds {
     try {
       return Joiner.on( "." ).join(
           Eucalyptus.class.getSimpleName( ),
-          BillOfMaterials.getVersion( ),
+          BillOfMaterials.getMajorVersion( ),
           subName,
           Digest.SHA256.digestHex( Signatures.SHA256withRSA.signBinary( Eucalyptus.class, subName.getBytes( ) ) ) );
     } catch ( Exception e ) {

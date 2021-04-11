@@ -198,6 +198,14 @@ public class BillOfMaterials {
     return RequiredFields.VERSION.getValue( );
   }
 
+  public static String getMajorVersion( ) {
+    final String version = getVersion();
+    final int dotIndex = version.indexOf('.');
+    return dotIndex > 0 ?
+        version.substring(0, dotIndex) :
+        version;
+  }
+
   public static String getExtraVersion( ) {
     return RequiredFields.EXTRA_VERSION.getValue( );
   }
