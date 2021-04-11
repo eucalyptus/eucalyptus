@@ -1,0 +1,19 @@
+<?xml version="1.0" standalone="yes"?>
+<!--
+  Copyright 2020 AppScale Systems, Inc
+
+  Use of this source code is governed by a BSD-2-Clause
+  license that can be found in the LICENSE file or at
+  https://opensource.org/licenses/BSD-2-Clause
+-->
+<ivy-module version="2.0">
+  <info organisation="com.eucalyptus" module="eucalyptus-rds"/>
+  <dependencies>
+    <dependency name="eucalyptus-rds-common" rev="latest.integration"/>
+    <dependency name="eucalyptus-core" rev="latest.integration"/>
+    <dependency name="eucalyptus-cloudformation-common" rev="latest.integration"/>
+    <dependency name="eucalyptus-compute-common" rev="latest.integration"/>
+    <dependency name="eucalyptus-euare-common" rev="latest.integration"/>
+    <dependency name="eucalyptus-resources" rev="latest.integration"/>
+  </dependencies>
+</ivy-module>

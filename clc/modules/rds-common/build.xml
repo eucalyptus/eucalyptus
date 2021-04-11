@@ -1,0 +1,11 @@
+<?xml version="1.0" standalone="yes"?>
+<!--
+  Copyright 2020 AppScale Systems, Inc
+
+  Use of this source code is governed by a BSD-2-Clause
+  license that can be found in the LICENSE file or at
+  https://opensource.org/licenses/BSD-2-Clause
+-->
+<project name="eucalyptus-rds-common" basedir=".">
+  <import file="../module-inc.xml"/>
+</project>

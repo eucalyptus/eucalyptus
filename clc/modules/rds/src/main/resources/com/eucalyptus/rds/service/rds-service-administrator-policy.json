@@ -1,0 +1,11 @@
+{
+  "Statement":[
+    {
+      "Effect": "Allow",
+      "Action": [ "ec2:*KeyPair*", "ec2:*SecurityGroup*", "ec2:*Instances" ],
+      "Resource": [ "arn:aws:ec2::<AccountNumber>:key-pair/*",
+        "arn:aws:ec2::<AccountNumber>:security-group/*",
+        "arn:aws:ec2::<AccountNumber>:instance/*" ]
+    }
+  ]
+}
