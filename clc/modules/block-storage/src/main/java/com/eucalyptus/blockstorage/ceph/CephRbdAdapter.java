@@ -63,6 +63,15 @@ public interface CephRbdAdapter {
   public String createImage(String imageName, long imageSize);
 
   /**
+   * Change the size of an existing RBD image
+   *
+   * @param imageName Name of the image to modify
+   * @param poolName Name of the pool to which the image belongs
+   * @param imageSize Desired size of the image in bytes
+   */
+  public void resizeImage(String imageName, String poolName, long imageSize);
+
+  /**
    * Delete RBD image
    * 
    * @param imageName Name of the image to be deleted

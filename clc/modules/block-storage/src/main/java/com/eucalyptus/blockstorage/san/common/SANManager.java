@@ -528,6 +528,35 @@ public class SANManager implements LogicalStorageManager {
     return size;
   }
 
+  @Override
+  public int resizeVolume(final String volumeId, final int size) throws EucalyptusCloudException {
+    final SANVolumeInfo volumeInfo = lookup(volumeId);
+    final String sanVolumeId = volumeInfo.getSanVolumeId();
+
+    LOG.info("Resizing " + sanVolumeId + " to size " + size);
+    final int resultSize;
+    try {
+      resultSize = connectionManager.resizeVolume(sanVolumeId, volumeInfo.getIqn(), size);
+    } catch (Exception ex) {
+      LOG.warn("Failed to resize volume " + volumeId, ex);
+      throw new EucalyptusCloudException("Failed resize for " + volumeId, ex);
+    }
+
+    if (resultSize != volumeInfo.getSize()) {
+      try (TransactionResource tran = Entities.transactionFor(SANVolumeInfo.class)) {
+        final SANVolumeInfo existingVol = Entities.uniqueResult(volumeInfo);
+        existingVol.setSize(size);
+        tran.commit();
+      } catch (Exception ex) {
+        LOG.warn("Failed to update database record with size for " + volumeId);
+        throw new EucalyptusCloudException(
+            "Failed to update database record with size for " + volumeId, ex);
+      }
+    }
+
+    return resultSize;
+  }
+
   public void cloneVolume(String volumeId, String parentVolumeId) throws EucalyptusCloudException {
     String sanVolumeId = resourceIdOnSan(volumeId);
     SANVolumeInfo volInfo = new SANVolumeInfo(volumeId);

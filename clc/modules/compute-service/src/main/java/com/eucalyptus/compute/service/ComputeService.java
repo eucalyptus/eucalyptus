@@ -2092,12 +2092,6 @@ public class ComputeService {
     return request.getReply( );
   }
 
-  public ModifyVolumeResponseType modifyVolume(
-      ModifyVolumeType request
-  ) {
-    return request.getReply( );
-  }
-
   public ModifyVpcEndpointConnectionNotificationResponseType modifyVpcEndpointConnectionNotification(
       ModifyVpcEndpointConnectionNotificationType request
   ) {

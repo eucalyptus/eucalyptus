@@ -39,7 +39,10 @@
 
 package com.eucalyptus.blockstorage;
 
+import com.eucalyptus.compute.common.VolumeModification;
+import com.eucalyptus.util.CompatFunction;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -66,6 +69,8 @@ import com.eucalyptus.compute.common.backend.EnableVolumeIOResponseType;
 import com.eucalyptus.compute.common.backend.EnableVolumeIOType;
 import com.eucalyptus.compute.common.backend.ModifyVolumeAttributeResponseType;
 import com.eucalyptus.compute.common.backend.ModifyVolumeAttributeType;
+import com.eucalyptus.compute.common.backend.ModifyVolumeResponseType;
+import com.eucalyptus.compute.common.backend.ModifyVolumeType;
 import com.eucalyptus.compute.common.internal.blockstorage.Snapshot;
 import com.eucalyptus.compute.common.internal.blockstorage.Snapshots;
 import com.eucalyptus.compute.common.internal.blockstorage.State;
@@ -90,6 +95,7 @@ import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeType;
 import com.eucalyptus.blockstorage.msgs.DetachStorageVolumeType;
 import com.eucalyptus.blockstorage.msgs.GetVolumeTokenResponseType;
 import com.eucalyptus.blockstorage.msgs.GetVolumeTokenType;
+import com.eucalyptus.blockstorage.msgs.ModifyStorageVolumeType;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.cluster.callback.VolumeAttachCallback;
 import com.eucalyptus.cluster.callback.VolumeDetachCallback;
@@ -121,6 +127,7 @@ import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment.AttachmentState;
 import com.google.common.base.Function;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
@@ -232,7 +239,126 @@ public class VolumeManager {
     }
     throw new EucalyptusCloudException( "Failed to create volume after " + VOL_CREATE_RETRIES + " because of: " + lastEx, lastEx );
   }
-  
+
+
+  public ModifyVolumeResponseType modifyVolume(final ModifyVolumeType request) throws EucalyptusCloudException {
+    final ModifyVolumeResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final AccountFullName accountFullName = ctx.getAccount();
+    final String volumeId = normalizeVolumeIdentifier( request.getVolumeId() );
+    final int requestedSize = MoreObjects.firstNonNull(request.getSize(), 0);
+
+    Volume volume;
+    try {
+      volume = Volumes.lookup(accountFullName, volumeId);
+    } catch(final NoSuchElementException ex){
+      try {
+        volume = Volumes.lookup( null, volumeId );
+      } catch ( NoSuchElementException e ) {
+        throw new ClientComputeException( "InvalidVolume.NotFound", "The volume '"+request.getVolumeId()+"' does not exist" );
+      }
+    }
+    final AccountFullName volumeAccount = AccountFullName.getInstance(volume.getOwnerAccountNumber());
+    final String volumeZone = volume.getPartition();
+    final int volumeSize = volume.getSize();
+
+    if (!RestrictedTypes.filterPrivileged().apply(volume)) {
+      throw new ClientUnauthorizedComputeException( "Not authorized to modify volume " + volumeId + " by " + ctx.getUser( ).getName( ) );
+    }
+
+    if (requestedSize < 1) {
+      throw new ClientComputeException("InvalidParameterValue",
+          "Value ("+requestedSize+") for parameter size is invalid. Value must be a positive integer.");
+    }
+
+    final VolumeModification modification = new VolumeModification();
+    modification.setVolumeId(volumeId);
+    modification.setOriginalVolumeType("standard");
+    modification.setTargetVolumeType("standard");
+    modification.setOriginalSize(volumeSize);
+    modification.setTargetSize(volumeSize);
+
+    try {
+      final Date startTime = new Date();
+      if (requestedSize > volumeSize) {
+        if (State.EXTANT != volume.getState()) {
+          throw new ClientComputeException("InvalidParameterValue", "Volume must be in available state");
+        }
+
+        final int sizeIncrease = requestedSize - volumeSize;
+        modification.setTargetSize(requestedSize);
+
+        final CompatFunction<Long, Volume> allocator = new CompatFunction<Long, Volume>() {
+          @Override
+          public Volume apply(final Long size) {
+            final CompatFunction<String, Volume> modifyVolume = input -> {
+              try {
+                final Volume vol = Entities.uniqueResult(Volume.named(volumeAccount, input));
+                vol.setSize(requestedSize);
+                return vol;
+              } catch (Exception ex) {
+                throw Exceptions.toUndeclared("Updating volume failed.", ex);
+              }
+            };
+            return Entities.asTransaction(Volume.class, modifyVolume).apply(volumeId);
+          }
+        };
+
+        RestrictedTypes.allocateMeasurableResource(
+            (long) sizeIncrease,
+            allocator,
+            Volume.exampleResource(volumeAccount, null, volumeZone, sizeIncrease));
+        reply.set_return(true);
+
+        try {
+          ServiceConfiguration sc =
+              Topology.lookup(Storage.class, Partitions.lookupByName(volume.getPartition()));
+          AsyncRequests.sendSync(sc,
+              new ModifyStorageVolumeType(volume.getDisplayName(), requestedSize));
+        } catch (Exception ex) {
+          // attempt to rollback volume metadata
+          try {
+            final CompatFunction<String, Volume> revertVolume = input -> {
+              try {
+                final Volume revert = Entities.uniqueResult(Volume.named(volumeAccount, input));
+                if (revert.getSize() == requestedSize) {
+                  revert.setSize(volumeSize);
+                }
+              } catch (Exception ignore) {
+              }
+              return null;
+            };
+            Entities.asTransaction(Volume.class, revertVolume).apply(volumeId);
+          } catch (Exception ignore) {
+          }
+          if ("Size modification not supported".equals(Exceptions.getCauseMessage(ex))) {
+            throw new ClientComputeException("Unsupported", "Resize not supported for volume");
+          }
+          throw Exceptions.toUndeclared("Modifying volume size failed.", ex);
+        }
+      } else if (requestedSize == volumeSize) { // resend in case backend resize failed after allocation
+        try {
+          ServiceConfiguration sc =
+              Topology.lookup(Storage.class, Partitions.lookupByName(volume.getPartition()));
+          AsyncRequests.sendSync(sc,
+              new ModifyStorageVolumeType(volume.getDisplayName(), requestedSize));
+        } catch (Exception ex) {
+          throw Exceptions.toUndeclared("Modifying volume size failed.", ex);
+        }
+      } else if (requestedSize != 0) {
+        throw new ClientComputeException("InvalidParameterValue", "New size cannot be smaller than existing size");
+      }
+      final Date endTime = new Date();
+      modification.setModificationState("completed");
+      modification.setStartTime(startTime);
+      modification.setEndTime(endTime);
+      reply.setVolumeModification(modification);
+      return reply;
+    } catch (final Exception e) {
+      throw handleException(e);
+    }
+  }
+
   public DeleteVolumeResponseType DeleteVolume( final DeleteVolumeType request ) throws EucalyptusCloudException {
     DeleteVolumeResponseType reply = ( DeleteVolumeResponseType ) request.getReply( );
     final Context ctx = Contexts.lookup( );

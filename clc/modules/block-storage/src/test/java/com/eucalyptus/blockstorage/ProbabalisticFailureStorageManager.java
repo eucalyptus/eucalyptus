@@ -111,6 +111,11 @@ public class ProbabalisticFailureStorageManager implements LogicalStorageManager
   }
 
   @Override
+  public int resizeVolume(String volumeId, int size) throws EucalyptusCloudException {
+    return -1;
+  }
+
+  @Override
   public void cloneVolume(String volumeId, String parentVolumeId) throws EucalyptusCloudException {
     // TODO Auto-generated method stub
 
