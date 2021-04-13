@@ -2034,8 +2034,38 @@ public class ComputeService {
 
   public DescribeVolumesModificationsResponseType describeVolumesModifications(
       DescribeVolumesModificationsType request
-  ) {
-    return request.getReply( );
+  ) throws EucalyptusCloudException {
+    final DescribeVolumesModificationsResponseType reply = request.getReply();
+    final Context ctx = checkAuthorized( );
+    final List<String> volumeIdList =
+        request.getVolumeIds() == null ? Lists.newArrayList() : request.getVolumeIds().getMember();
+    final boolean showAll = volumeIdList.remove( "verbose" );
+    final Set<String> volumeIds = Sets.newLinkedHashSet( normalizeVolumeIdentifiers( volumeIdList ) );
+    final AccountFullName ownerFullName = ( ctx.isAdministrator( ) && ( showAll || !volumeIds.isEmpty( ) ) ) ?
+        null :
+        ctx.getUserFullName( ).asAccountFullName( );
+    final Class<com.eucalyptus.compute.common.internal.blockstorage.VolumeModification> volumeModificationClass =
+        com.eucalyptus.compute.common.internal.blockstorage.VolumeModification.class;
+    final Filters.FiltersBuilder  filtersBuilder = Filters.generateFor(request.getFilterSet( ), volumeModificationClass);
+    final Filter filter = filtersBuilder.generate( );
+    final Filter persistenceFilter = getPersistenceFilter(volumeModificationClass, volumeIds, "volume-id", filter);
+    final Predicate<? super com.eucalyptus.compute.common.internal.blockstorage.VolumeModification> filterPredicate = filter.asPredicate( );
+    final Predicate<? super com.eucalyptus.compute.common.internal.blockstorage.VolumeModification> idPredicate =
+        CloudMetadatas.filterByProperty(volumeIdList, com.eucalyptus.compute.common.internal.blockstorage.VolumeModification::getVolumeId);
+    final VolumeModificationList modifications = new VolumeModificationList();
+    try {
+      final List<VolumeModification> volumeModifications = Transactions.filteredTransform(
+          com.eucalyptus.compute.common.internal.blockstorage.VolumeModification.exampleWithOwner(ownerFullName),
+          persistenceFilter.asCriterion( ),
+          persistenceFilter.getAliases( ),
+          Predicates.and(idPredicate, filterPredicate),
+          TypeMappers.lookup(volumeModificationClass, VolumeModification.class));
+      modifications.getMember().addAll(volumeModifications);
+    } catch (Exception e) {
+      throw handleException(e);
+    }
+    reply.setVolumesModifications(modifications);
+    return reply;
   }
 
   public DescribeVpcEndpointConnectionNotificationsResponseType describeVpcEndpointConnectionNotifications(

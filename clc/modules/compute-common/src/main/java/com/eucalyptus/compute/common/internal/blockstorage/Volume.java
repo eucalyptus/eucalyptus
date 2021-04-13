@@ -50,6 +50,7 @@ import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Index;
 import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -62,7 +63,6 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
-import com.eucalyptus.compute.common.internal.vm.VmInstance;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.auth.principal.FullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
@@ -79,6 +79,8 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
 
   @Column( name = "metadata_volume_size" )
   private Integer  size;
+  @Column( name = "metadata_pending_size" )
+  private Integer pendingSizeIncrement;
   @Deprecated
   @Column( name = "metadata_volume_sc_name" )
   private String   scName;
@@ -97,6 +99,8 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   private FullName fullName;
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "volume" )
   private Collection<VolumeTag> tags;
+  @OneToOne( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "volume" )
+  private VolumeModification volumeModification;
 
   protected Volume( ) {
     super( );
@@ -141,6 +145,15 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
       @Override public String getPartition( ) { return partition; }
       @Override public Integer getSize( ) { return size; }
     };
+  }
+
+  @Nullable
+  public VolumeModification getVolumeModification( ) {
+    return volumeModification;
+  }
+
+  public void setVolumeModification( final VolumeModification volumeModification ) {
+    this.volumeModification = volumeModification;
   }
 
   @Override
@@ -191,18 +204,27 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
     return this.size;
   }
   
-  public String getScName( ) {
-    return this.scName;
-  }
-  
   public void setSize( final Integer size ) {
     this.size = size;
   }
-  
+
+  @Nullable
+  public Integer getPendingSizeIncrement( ) {
+    return pendingSizeIncrement;
+  }
+
+  public void setPendingSizeIncrement( final Integer pendingSizeIncrement) {
+    this.pendingSizeIncrement = pendingSizeIncrement;
+  }
+
+  public String getScName( ) {
+    return this.scName;
+  }
+
   protected void setScName( final String scName ) {
     this.scName = scName;
   }
-  
+
   public String getParentSnapshot( ) {
     return this.parentSnapshot;
   }

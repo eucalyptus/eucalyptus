@@ -43,6 +43,7 @@ import static com.eucalyptus.reporting.event.VolumeEvent.VolumeAction;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.Date;
 import java.util.function.Consumer;
@@ -65,6 +66,7 @@ import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.VolumeStatusItemType;
 import com.eucalyptus.compute.common.internal.blockstorage.State;
 import com.eucalyptus.compute.common.internal.blockstorage.Volume;
+import com.eucalyptus.compute.common.internal.blockstorage.VolumeModification;
 import com.eucalyptus.compute.common.internal.blockstorage.VolumeTag;
 import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -78,8 +80,10 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.EventActionInfo;
 import com.eucalyptus.reporting.event.VolumeEvent;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.CompatFunction;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.FUtils;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.RestrictedTypes.UsageMetricFunction;
@@ -136,6 +140,7 @@ public class Volumes {
                                           .list( );
         for ( final Volume v : vols ) {
           size += v.getSize( );
+          size += v.getPendingSizeIncrement( ) == null ? 0 : v.getPendingSizeIncrement( );
         }
       } finally {
         db.rollback( );
@@ -491,5 +496,51 @@ public class Volumes {
         return MoreObjects.firstNonNull( vol.getSystemManaged( ), Boolean.FALSE );
       }
     },
+  }
+
+  @TypeMapper
+  public enum VolumeModificationToVolumeModificationTypeTransform implements Function<VolumeModification, com.eucalyptus.compute.common.VolumeModification> {
+    INSTANCE;
+
+    @Override
+    public com.eucalyptus.compute.common.VolumeModification apply(final VolumeModification modification) {
+      final com.eucalyptus.compute.common.VolumeModification modificationType = new com.eucalyptus.compute.common.VolumeModification( );
+      modificationType.setVolumeId(modification.getVolumeId());
+      modificationType.setModificationState(Objects.toString(modification.getState(), null));
+      modificationType.setStatusMessage(modification.getStatusMessage());
+      modificationType.setProgress(modification.getProgress()==null ? 0 : modification.getProgress().longValue());
+      modificationType.setStartTime(modification.getStartTime());
+      modificationType.setEndTime(modification.getEndTime());
+      modificationType.setOriginalIops(modification.getOriginalIops());
+      modificationType.setTargetIops(modification.getTargetIops());
+      modificationType.setOriginalSize(modification.getOriginalSize());
+      modificationType.setTargetSize(modification.getTargetSize());
+      modificationType.setOriginalVolumeType(modification.getOriginalVolumeType());
+      modificationType.setTargetVolumeType(modification.getTargetVolumeType());
+      return modificationType;
+    }
+  }
+
+  public static class VolumeModificationFilterSupport extends FilterSupport<VolumeModification>{
+    public VolumeModificationFilterSupport(){
+      super(builderFor(VolumeModification.class)
+          .withStringProperty("volume-id", VolumeModification::getVolumeId)
+          .withStringProperty("modification-state", CompatFunction.of(FUtils.chain(VolumeModification::getState, String::valueOf)))
+          .withDateProperty("start-time", VolumeModification::getStartTime)
+          .withIntegerProperty("original-iops", VolumeModification::getOriginalIops)
+          .withIntegerProperty("original-size", VolumeModification::getOriginalSize)
+          .withStringProperty("original-volume-type", VolumeModification::getOriginalVolumeType)
+          .withIntegerProperty("target-iops", VolumeModification::getTargetIops)
+          .withIntegerProperty("target-size", VolumeModification::getTargetSize)
+          .withStringProperty("target-volume-type", VolumeModification::getTargetVolumeType)
+          .withPersistenceFilter("volume-id", "displayName")
+          .withPersistenceFilter("start-time", "startTime", PersistenceFilter.Type.Date)
+          .withPersistenceFilter("original-iops", "originalIops", PersistenceFilter.Type.Integer)
+          .withPersistenceFilter("original-size", "originalSize", PersistenceFilter.Type.Integer)
+          .withPersistenceFilter("original-volume-type", "originalVolumeType")
+          .withPersistenceFilter("target-iops", "targetIops", PersistenceFilter.Type.Integer)
+          .withPersistenceFilter("target-size", "targetSize", PersistenceFilter.Type.Integer)
+          .withPersistenceFilter("target-volume-type", "targetVolumeType"));
+    }
   }
 }

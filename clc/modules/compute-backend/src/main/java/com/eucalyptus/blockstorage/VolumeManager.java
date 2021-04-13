@@ -39,8 +39,6 @@
 
 package com.eucalyptus.blockstorage;
 
-import com.eucalyptus.compute.common.VolumeModification;
-import com.eucalyptus.util.CompatFunction;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -57,6 +55,7 @@ import com.eucalyptus.compute.ClientUnauthorizedComputeException;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.common.AttachedVolume;
 import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.compute.common.VolumeModification;
 import com.eucalyptus.compute.common.backend.AttachVolumeResponseType;
 import com.eucalyptus.compute.common.backend.AttachVolumeType;
 import com.eucalyptus.compute.common.backend.CreateVolumeResponseType;
@@ -75,6 +74,7 @@ import com.eucalyptus.compute.common.internal.blockstorage.Snapshot;
 import com.eucalyptus.compute.common.internal.blockstorage.Snapshots;
 import com.eucalyptus.compute.common.internal.blockstorage.State;
 import com.eucalyptus.compute.common.internal.blockstorage.Volume;
+import com.eucalyptus.compute.common.internal.blockstorage.VolumeModification.ModificationState;
 import com.eucalyptus.compute.common.internal.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.common.internal.tags.Tag;
@@ -95,7 +95,6 @@ import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeType;
 import com.eucalyptus.blockstorage.msgs.DetachStorageVolumeType;
 import com.eucalyptus.blockstorage.msgs.GetVolumeTokenResponseType;
 import com.eucalyptus.blockstorage.msgs.GetVolumeTokenType;
-import com.eucalyptus.blockstorage.msgs.ModifyStorageVolumeType;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.cluster.callback.VolumeAttachCallback;
 import com.eucalyptus.cluster.callback.VolumeDetachCallback;
@@ -115,9 +114,11 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.VolumeEvent;
+import com.eucalyptus.util.CompatFunction;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.compute.common.internal.vm.MigrationState;
 import com.eucalyptus.compute.common.internal.vm.VmEphemeralAttachment;
@@ -266,17 +267,10 @@ public class VolumeManager {
       throw new ClientUnauthorizedComputeException( "Not authorized to modify volume " + volumeId + " by " + ctx.getUser( ).getName( ) );
     }
 
-    if (requestedSize < 1) {
+    if (request.getSize() != null && requestedSize < 1) {
       throw new ClientComputeException("InvalidParameterValue",
           "Value ("+requestedSize+") for parameter size is invalid. Value must be a positive integer.");
     }
-
-    final VolumeModification modification = new VolumeModification();
-    modification.setVolumeId(volumeId);
-    modification.setOriginalVolumeType("standard");
-    modification.setTargetVolumeType("standard");
-    modification.setOriginalSize(volumeSize);
-    modification.setTargetSize(volumeSize);
 
     try {
       final Date startTime = new Date();
@@ -286,15 +280,31 @@ public class VolumeManager {
         }
 
         final int sizeIncrease = requestedSize - volumeSize;
-        modification.setTargetSize(requestedSize);
-
         final CompatFunction<Long, Volume> allocator = new CompatFunction<Long, Volume>() {
           @Override
           public Volume apply(final Long size) {
             final CompatFunction<String, Volume> modifyVolume = input -> {
               try {
                 final Volume vol = Entities.uniqueResult(Volume.named(volumeAccount, input));
-                vol.setSize(requestedSize);
+                vol.setPendingSizeIncrement(sizeIncrease);
+                com.eucalyptus.compute.common.internal.blockstorage.VolumeModification volumeModification =
+                    vol.getVolumeModification();
+                if ( volumeModification == null ) {
+                  volumeModification = com.eucalyptus.compute.common.internal.blockstorage.VolumeModification.create(vol.getOwner(), vol);
+                  Entities.persist(volumeModification);
+                  vol.setVolumeModification(volumeModification);
+                } else if ( volumeModification.getState( ).isActive( ) ) {
+                  throw Exceptions.toUndeclared(new ClientComputeException(
+                      "IncorrectModificationState",
+                      "Volume modification in progress"));
+                } else {
+                  volumeModification.markStart();
+                }
+                volumeModification.setOriginalVolumeType("standard");
+                volumeModification.setTargetVolumeType("standard");
+                volumeModification.setOriginalSize(volumeSize);
+                volumeModification.setTargetSize(requestedSize);
+                reply.setVolumeModification(TypeMappers.transform(volumeModification, VolumeModification.class));
                 return vol;
               } catch (Exception ex) {
                 throw Exceptions.toUndeclared("Updating volume failed.", ex);
@@ -309,50 +319,20 @@ public class VolumeManager {
             allocator,
             Volume.exampleResource(volumeAccount, null, volumeZone, sizeIncrease));
         reply.set_return(true);
-
-        try {
-          ServiceConfiguration sc =
-              Topology.lookup(Storage.class, Partitions.lookupByName(volume.getPartition()));
-          AsyncRequests.sendSync(sc,
-              new ModifyStorageVolumeType(volume.getDisplayName(), requestedSize));
-        } catch (Exception ex) {
-          // attempt to rollback volume metadata
-          try {
-            final CompatFunction<String, Volume> revertVolume = input -> {
-              try {
-                final Volume revert = Entities.uniqueResult(Volume.named(volumeAccount, input));
-                if (revert.getSize() == requestedSize) {
-                  revert.setSize(volumeSize);
-                }
-              } catch (Exception ignore) {
-              }
-              return null;
-            };
-            Entities.asTransaction(Volume.class, revertVolume).apply(volumeId);
-          } catch (Exception ignore) {
-          }
-          if ("Size modification not supported".equals(Exceptions.getCauseMessage(ex))) {
-            throw new ClientComputeException("Unsupported", "Resize not supported for volume");
-          }
-          throw Exceptions.toUndeclared("Modifying volume size failed.", ex);
-        }
-      } else if (requestedSize == volumeSize) { // resend in case backend resize failed after allocation
-        try {
-          ServiceConfiguration sc =
-              Topology.lookup(Storage.class, Partitions.lookupByName(volume.getPartition()));
-          AsyncRequests.sendSync(sc,
-              new ModifyStorageVolumeType(volume.getDisplayName(), requestedSize));
-        } catch (Exception ex) {
-          throw Exceptions.toUndeclared("Modifying volume size failed.", ex);
-        }
-      } else if (requestedSize != 0) {
+      } else if (requestedSize != volumeSize && requestedSize != 0) {
         throw new ClientComputeException("InvalidParameterValue", "New size cannot be smaller than existing size");
       }
-      final Date endTime = new Date();
-      modification.setModificationState("completed");
-      modification.setStartTime(startTime);
-      modification.setEndTime(endTime);
-      reply.setVolumeModification(modification);
+      if (reply.getVolumeModification() == null) {
+        // stub response for unsupported modification action
+        final VolumeModification modification = new VolumeModification();
+        final Date endTime = new Date();
+        modification.setVolumeId(volumeId);
+        modification.setProgress(100L);
+        modification.setModificationState("completed");
+        modification.setStartTime(startTime);
+        modification.setEndTime(endTime);
+        reply.setVolumeModification(modification);
+      }
       return reply;
     } catch (final Exception e) {
       throw handleException(e);
