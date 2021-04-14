@@ -891,10 +891,10 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     }
   }
 
-  @EntityUpgrade( entities = StaticDatabasePropertyEntry.class, since = Version.v5_1_0, value = Empyrean.class )
-  public enum StaticPropertyEntryUpgrade510 implements Predicate<Class> {
+  @EntityUpgrade( entities = StaticDatabasePropertyEntry.class, since = Version.v6_0_0, value = Empyrean.class )
+  public enum StaticPropertyEntryUpgrade600 implements Predicate<Class> {
     INSTANCE;
-    private static Logger LOG = Logger.getLogger( StaticPropertyEntryUpgrade510.class );
+    private static Logger LOG = Logger.getLogger( StaticPropertyEntryUpgrade600.class );
 
     @Override
     public boolean apply( final Class arg0 ) {
