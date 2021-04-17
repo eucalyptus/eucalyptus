@@ -71,10 +71,10 @@ import io.vavr.Tuple2;
 @ConfigurableClass( root = "dns",
                     description = "Configuration options controlling the behaviour of DNS features." )
 public class DomainNameRecords {
-  @ConfigurableField( description = "Time-to-live for all authoritative records" )
-  private final static long TTL = 60L;
-  @ConfigurableField( description = "Time-to-live for negative caching on authoritative records" )
-  private final static long NEGATIVE_TTL = 5L;
+  @ConfigurableField( description = "Time-to-live for all authoritative records", initialInt = 60 )
+  public static long TTL = 60L;
+  @ConfigurableField( description = "Time-to-live for negative caching on authoritative records", initialInt = 5 )
+  public static long NEGATIVE_TTL = 5L;
   
   public static long ttl( ) {
     return TTL;
@@ -111,16 +111,7 @@ public class DomainNameRecords {
     final Name ns = DomainNames.nameServerRecords( name ).get( 0 ).getTarget( );
     SOARecord soaRecord = new SOARecord( name, DClass.IN, TTL, ns,
                                          Name.fromConstantString( "root." + soa ),
-                                         DomainNameRecords.serial( ), 1200L, 180L, 2419200L, NEGATIVE_TTL );
-    return soaRecord;
-  }
-  
-  public static SOARecord sourceOfAuthorityStaticSerial( Name name ) {
-    final Name soa = DomainNames.sourceOfAuthority( name );
-    final Name ns = DomainNames.nameServerRecords( name ).get( 0 ).getTarget( );
-    final SOARecord soaRecord = new SOARecord( name, DClass.IN, TTL, ns,
-        Name.fromConstantString( "root." + soa ),
-        1, 3600L, 600L, 86400L, 3600L);
+                                         1L, 1200L, 180L, 2419200L, NEGATIVE_TTL );
     return soaRecord;
   }
   
@@ -155,11 +146,4 @@ public class DomainNameRecords {
   public static Record addressRecord( Name name, InetAddress ip, long ttl ) {
     return new ARecord( name, DClass.IN, ttl, ip );
   }
-
-  static long serial( ) {
-    return Long.parseLong( DomainNameRecords.SERIALFORMATTER.format( new Date( ) ) );
-  }
-  
-  static final DateFormat SERIALFORMATTER = new SimpleDateFormat( "yyMMddHHmm" );
-  
 }
