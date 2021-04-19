@@ -76,13 +76,13 @@ public class GenericDnsResolver extends DnsResolver {
     final Name name = query.getName( );
     if( RequestType.SOA.apply(query)){
       if(DomainNames.externalSubdomain().equals(name)){
-        final Record soaRec = DomainNameRecords.sourceOfAuthorityStaticSerial(name);
+        final Record soaRec = DomainNameRecords.sourceOfAuthority(name);
         return DnsResponse.forName( name ).answer( soaRec );
       }
     }else if (RequestType.ANY.apply(query)){
       if(DomainNames.externalSubdomain().equals(name)){
         final List<Record> answers = Lists.newArrayList();
-        answers.add(DomainNameRecords.sourceOfAuthorityStaticSerial(name));
+        answers.add(DomainNameRecords.sourceOfAuthority(name));
         final Predicate<ServiceConfiguration> nsServerUsable = DomainNameRecords.activeNameserverPredicate( );
         NavigableSet<ServiceConfiguration> nsServers = Components.lookup( Dns.class ).services( );
         List<Record> additional = Lists.newArrayList( );
