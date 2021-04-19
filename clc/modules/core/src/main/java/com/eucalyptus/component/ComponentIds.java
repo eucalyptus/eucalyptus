@@ -39,6 +39,7 @@
 
 package com.eucalyptus.component;
 
+import com.eucalyptus.util.techpreview.TechPreviews;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -71,9 +72,12 @@ public class ComponentIds {
     if ( !compIdMap.containsKey( compIdClass ) ) {
       T newInstance = Classes.newInstance( compIdClass );
       compIdMap.putInstance( compIdClass, newInstance );
+
       compIdName.put( newInstance.name( ), compIdClass );
-      for ( final String name : newInstance.getServiceNames( ) ) {
-        compIdNames.put( name, compIdClass );
+      if ( !TechPreviews.isTechPreview( compIdClass ) ) {
+        for ( final String name : newInstance.getServiceNames( ) ) {
+          compIdNames.put( name, compIdClass );
+        }
       }
       LOG.debug( "Registered ComponentId: " + compIdClass.toString( ) );
       return newInstance;
