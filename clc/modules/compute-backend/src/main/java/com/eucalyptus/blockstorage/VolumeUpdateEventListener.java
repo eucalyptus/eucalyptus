@@ -40,6 +40,7 @@ package com.eucalyptus.blockstorage;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -50,6 +51,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 import com.eucalyptus.blockstorage.msgs.DescribeStorageVolumesResponseType;
 import com.eucalyptus.blockstorage.msgs.DescribeStorageVolumesType;
+import com.eucalyptus.blockstorage.msgs.ModifyStorageVolumeType;
 import com.eucalyptus.blockstorage.msgs.StorageVolume;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Partitions;
@@ -58,6 +60,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.internal.blockstorage.State;
 import com.eucalyptus.compute.common.internal.blockstorage.Volume;
+import com.eucalyptus.compute.common.internal.blockstorage.VolumeModification;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionResource;
@@ -216,6 +219,72 @@ public class VolumeUpdateEventListener implements EventListener<ClockTick>, Call
       }
     };
 
+    final Function<String, Volume> updateVolumeSize   = new Function<String, Volume>( ) {
+      @Override
+      public Volume apply( final String input ) {
+        try {
+          final Volume volumeToUpdate = Entities.uniqueResult( Volume.named( null, input ) );
+          final VolumeModification modification = volumeToUpdate.getVolumeModification();
+          if (modification == null) {
+            volumeToUpdate.setPendingSizeIncrement(null);
+          } else if (modification.getState()==VolumeModification.ModificationState.modifying) {
+            // request resize on backend and set to optimizing to track progress
+            try {
+              final ServiceConfiguration sc =
+                  Topology.lookup(Storage.class, Partitions.lookupByName(volumeToUpdate.getPartition()));
+              AsyncRequests.sendSync(sc,
+                  new ModifyStorageVolumeType(volumeToUpdate.getDisplayName(), modification.getTargetSize()));
+              modification.setState(VolumeModification.ModificationState.optimizing);
+              modification.setProgress(20);
+            } catch (Exception ex) {
+              if ("Size modification not supported".equals(Exceptions.getCauseMessage(ex))) {
+                volumeToUpdate.setPendingSizeIncrement(null);
+                modification.setState(VolumeModification.ModificationState.failed);
+                modification.setStatusMessage("Resize not supported for volume");
+                modification.setProgress(null);
+                modification.setEndTime(new Date());
+              } else if (modification.getStartTime().getTime() < (System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(5))) {
+                volumeToUpdate.setPendingSizeIncrement(null);
+                modification.setState(VolumeModification.ModificationState.failed);
+                modification.setStatusMessage(ex.getMessage());
+                modification.setProgress(null);
+                modification.setEndTime(new Date());
+              }
+            }
+          } else if (modification.getState()==VolumeModification.ModificationState.optimizing) {
+            if ( storageVolume != null ) {
+              final int storageSize = Integer.parseInt( storageVolume.getSize( ) );
+              if ( storageSize == modification.getTargetSize() ) {
+                volumeToUpdate.setSize(modification.getTargetSize());
+                volumeToUpdate.setPendingSizeIncrement(null);
+                modification.setState(VolumeModification.ModificationState.completed);
+                modification.setProgress(100);
+                modification.setEndTime(new Date());
+              }
+            }
+            if ( modification.getEndTime() == null &&
+                modification.getStartTime().getTime() < (System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(5)) ) {
+              volumeToUpdate.setPendingSizeIncrement(null);
+              modification.setState(VolumeModification.ModificationState.failed);
+              modification.setStatusMessage("Modification did not complete");
+              modification.setProgress(null);
+              modification.setEndTime(new Date());
+            }
+          } else { // completed or failed, so clear any pending size change
+            volumeToUpdate.setPendingSizeIncrement(null);
+          }
+          return volumeToUpdate;
+        } catch ( final TransactionException ex ) {
+          LOG.error( buf.toString( ) + " failed because of " + ex.getMessage( ) );
+          Logs.extreme( ).error( buf.toString( ) + " failed because of " + ex.getMessage( ), ex );
+          throw Exceptions.toUndeclared( ex );
+        } catch ( final NoSuchElementException ex ) {
+          LOG.error( buf.toString( ) + " failed because of " + ex.getMessage( ) );
+          Logs.extreme( ).error( buf.toString( ) + " failed because of " + ex.getMessage( ), ex );
+          throw ex;
+        }
+      }
+    };
     final Optional<State> newState = calculateState( volume, storageVolume==null ? null : storageVolume.getStatus( ) );
 
     buf.append( "VolumeStateUpdate: Current Volume Info: [" )
@@ -236,6 +305,8 @@ public class VolumeUpdateEventListener implements EventListener<ClockTick>, Call
         isDeleteExpired( volume ) ||
         ( newState.isPresent( ) && newState.get( ) != volume.getState( ) ) ) {
       Entities.asTransaction( Volume.class, updateVolume ).apply( volume.getDisplayName( ) );
+    } else if ( volume.getPendingSizeIncrement() != null && volume.getPendingSizeIncrement( ) > 0 ) {
+      Entities.asTransaction( Volume.class, updateVolumeSize ).apply( volume.getDisplayName( ) );
     } else {
       LOG.debug( buf.toString( ) + " unchanged" );
     }
