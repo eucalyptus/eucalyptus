@@ -164,10 +164,19 @@ public class Route53DnsResolver extends DnsResolvers.DnsResolver {
       final int queryType,
       final String lookupName,
       final HostedZoneComposite zoneAndRecords) {
+    boolean sawIp = false;
     for (final ResourceRecordSetView rrSet : zoneAndRecords.getResourceRecordSets()) {
-      if (rrSet.getName().equalsIgnoreCase(lookupName) && matchType(rrSet.getType(), queryType)) {
-        return response(request, queryName, rrSet, zoneAndRecords);
+      if (rrSet.getName().equalsIgnoreCase(lookupName)) {
+        if (matchType(rrSet.getType(), queryType)) {
+          return response(request, queryName, rrSet, zoneAndRecords);
+        }
+        if (rrSet.getType() == Type.A || rrSet.getType() == Type.AAAA) {
+          sawIp = true;
+        }
       }
+    }
+    if (sawIp && (queryType == Type.AAAA.code() || queryType == Type.A.code())) {
+       return DnsResponse.forName(queryName).answer();
     }
     return null;
   }
