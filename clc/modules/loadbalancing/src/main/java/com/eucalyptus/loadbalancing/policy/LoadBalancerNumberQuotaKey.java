@@ -29,6 +29,7 @@
 package com.eucalyptus.loadbalancing.policy;
 
 import static com.eucalyptus.loadbalancing.common.LoadBalancingMetadata.LoadBalancerMetadata;
+
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.key.KeyUtils;
@@ -45,43 +46,43 @@ import net.sf.json.JSONException;
 /**
  *
  */
-@PolicyKey( LoadBalancerNumberQuotaKey.KEY )
+@PolicyKey(LoadBalancerNumberQuotaKey.KEY)
 public class LoadBalancerNumberQuotaKey extends QuotaKey {
 
   public static final String KEY = "elasticloadbalancing:quota-loadbalancernumber";
 
   @Override
-  public final void validateValueType( String value ) throws JSONException {
-    KeyUtils.validateIntegerValue( value, KEY );
+  public final void validateValueType(String value) throws JSONException {
+    KeyUtils.validateIntegerValue(value, KEY);
   }
 
   @Override
-  public final boolean canApply( String action ) {
+  public final boolean canApply(String action) {
     return PolicySpec.qualifiedName(
         LoadBalancingPolicySpec.VENDOR_LOADBALANCING,
-        LoadBalancingPolicySpec.LOADBALANCING_CREATELOADBALANCER ).equals( action );
+        LoadBalancingPolicySpec.LOADBALANCING_CREATELOADBALANCER).equals(action);
   }
 
   @Override
-  public final String value( final PolicyScope scope,
-                             final String id,
-                             final String resource,
-                             final Long quantity ) throws AuthException {
+  public final String value(final PolicyScope scope,
+      final String id,
+      final String resource,
+      final Long quantity) throws AuthException {
     final OwnerFullName name;
-    switch ( scope ) {
+    switch (scope) {
       case Account:
-        name = AccountFullName.getInstance( id );
+        name = AccountFullName.getInstance(id);
         break;
       case Group:
         return NOT_SUPPORTED;
       case User:
-        name = UserFullName.getInstance( id );
+        name = UserFullName.getInstance(id);
         break;
       default:
-        throw new AuthException( "Invalid scope" );
+        throw new AuthException("Invalid scope");
     }
     return Long.toString(
-        RestrictedTypes.quantityMetricFunction( LoadBalancerMetadata.class ).apply( name ) +
-            quantity );
+        RestrictedTypes.quantityMetricFunction(LoadBalancerMetadata.class).apply(name) +
+            quantity);
   }
 }

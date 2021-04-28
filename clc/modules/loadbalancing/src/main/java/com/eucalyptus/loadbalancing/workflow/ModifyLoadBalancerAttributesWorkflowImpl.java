@@ -41,19 +41,19 @@ import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerAttributes;
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
 @ComponentPart(LoadBalancing.class)
 public class ModifyLoadBalancerAttributesWorkflowImpl
     implements ModifyLoadBalancerAttributesWorkflow {
-private static Logger    LOG     = Logger.getLogger(  ModifyLoadBalancerAttributesWorkflowImpl.class );
-  
-  final LoadBalancingActivitiesClient client = 
-      new LoadBalancingActivitiesClientImpl(null, LoadBalancingJsonDataConverter.getDefault(), null);
-  private ElbWorkflowState state = 
+  private static Logger LOG = Logger.getLogger(ModifyLoadBalancerAttributesWorkflowImpl.class);
+
+  final LoadBalancingActivitiesClient client =
+      new LoadBalancingActivitiesClientImpl(null, LoadBalancingJsonDataConverter.getDefault(),
+          null);
+  private ElbWorkflowState state =
       ElbWorkflowState.WORKFLOW_RUNNING;
   TryCatchFinally task = null;
-  private  Promise<AccessLogPolicyActivityResult> policyCreator = null;
+  private Promise<AccessLogPolicyActivityResult> policyCreator = null;
   private String accountNumber = null;
   private String loadbalancer = null;
 
@@ -65,67 +65,73 @@ private static Logger    LOG     = Logger.getLogger(  ModifyLoadBalancerAttribut
     task = new TryCatchFinally() {
       @Override
       protected void doTry() throws Throwable {
-        if(attributes.getAccessLog() == null)
+        if (attributes.getAccessLog() == null) {
           return;
-        
-        if(attributes.getAccessLog().getEnabled()) {
+        }
+
+        if (attributes.getAccessLog().getEnabled()) {
           policyCreator =
-              client.modifyLoadBalancerAttributesCreateAccessLogPolicy(accountNumber, 
+              client.modifyLoadBalancerAttributesCreateAccessLogPolicy(accountNumber,
                   loadbalancer, attributes.getAccessLog().getEnabled(),
-                      attributes.getAccessLog().getS3BucketName(),
-                      attributes.getAccessLog().getS3BucketPrefix() != null ?  attributes.getAccessLog().getS3BucketPrefix() : "",
-                      attributes.getAccessLog().getEmitInterval());
+                  attributes.getAccessLog().getS3BucketName(),
+                  attributes.getAccessLog().getS3BucketPrefix() != null ? attributes.getAccessLog()
+                      .getS3BucketPrefix() : "",
+                  attributes.getAccessLog().getEmitInterval());
         } else {
           final Promise<Void> policyRemover =
-              client.modifyLoadBalancerAttributesDeleteAccessLogPolicy(accountNumber, 
+              client.modifyLoadBalancerAttributesDeleteAccessLogPolicy(accountNumber,
                   loadbalancer, attributes.getAccessLog().getEnabled(),
-                      attributes.getAccessLog().getS3BucketName(),
-                      attributes.getAccessLog().getS3BucketPrefix() != null ?  attributes.getAccessLog().getS3BucketPrefix() : "",
-                      attributes.getAccessLog().getEmitInterval());
+                  attributes.getAccessLog().getS3BucketName(),
+                  attributes.getAccessLog().getS3BucketPrefix() != null ? attributes.getAccessLog()
+                      .getS3BucketPrefix() : "",
+                  attributes.getAccessLog().getEmitInterval());
         }
-        
+
         final Promise<Void> persistence =
-            client.modifyLoadBalancerAttributesPersistAttributes(accountNumber, 
+            client.modifyLoadBalancerAttributesPersistAttributes(accountNumber,
                 loadbalancer, attributes.getAccessLog().getEnabled(),
-                    attributes.getAccessLog().getS3BucketName(),
-                    attributes.getAccessLog().getS3BucketPrefix() != null ?  attributes.getAccessLog().getS3BucketPrefix() : "",
-                    attributes.getAccessLog().getEmitInterval());
+                attributes.getAccessLog().getS3BucketName(),
+                attributes.getAccessLog().getS3BucketPrefix() != null ? attributes.getAccessLog()
+                    .getS3BucketPrefix() : "",
+                attributes.getAccessLog().getEmitInterval());
       }
 
       @Override
       protected void doCatch(Throwable e) throws Throwable {
-        if ( e instanceof CancellationException) {
+        if (e instanceof CancellationException) {
           LOG.warn("Workflow for modifying attributes is cancelled");
           state = ElbWorkflowState.WORKFLOW_CANCELLED;
           return;
         }
-        
+
         // rollback if necessary
         if (policyCreator != null) {
           rollback(policyCreator);
         }
-        
+
         state = ElbWorkflowState.WORKFLOW_FAILED;
-        LOG.error("Workflow for modifying attributes has failed", e);        
+        LOG.error("Workflow for modifying attributes has failed", e);
       }
 
       @Override
       protected void doFinally() throws Throwable {
-        if (state == ElbWorkflowState.WORKFLOW_RUNNING)
-          state = ElbWorkflowState.WORKFLOW_SUCCESS;        
-      }      
+        if (state == ElbWorkflowState.WORKFLOW_RUNNING) {
+          state = ElbWorkflowState.WORKFLOW_SUCCESS;
+        }
+      }
     };
   }
 
   @Asynchronous
   void rollback(final Promise<AccessLogPolicyActivityResult> policyActivity) {
     final AccessLogPolicyActivityResult result = policyActivity.get();
-    if(result.isShouldRollback()) {
-      client.modifyLoadBalancerAttributesCreateAccessLogPolicyRollback(Promise.asPromise(accountNumber), 
+    if (result.isShouldRollback()) {
+      client.modifyLoadBalancerAttributesCreateAccessLogPolicyRollback(
+          Promise.asPromise(accountNumber),
           Promise.asPromise(loadbalancer), policyCreator);
     }
   }
-  
+
   @Override
   public ElbWorkflowState getState() {
     return state;

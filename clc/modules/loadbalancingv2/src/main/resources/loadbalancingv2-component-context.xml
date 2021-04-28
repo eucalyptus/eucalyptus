@@ -1,0 +1,20 @@
+<?xml version="1.0" standalone="yes"?>
+<!--
+  Copyright 2021 AppScale Systems, Inc
+
+  SPDX-License-Identifier: BSD-2-Clause
+-->
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:int="http://www.springframework.org/schema/integration" xsi:schemaLocation="   http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd   http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd">
+  <int:channel id="loadbalancingv2-error"/>
+  <int:chain id="loadbalancingv2-request-chain" input-channel="loadbalancingv2-request">
+    <int:header-enricher>
+      <int:error-channel ref="loadbalancingv2-error"/>
+    </int:header-enricher>
+    <int:service-activator ref="loadbalancingv2Service">
+      <int:request-handler-advice-chain>
+        <ref bean="loadbalancingv2MessageValidator"/>
+      </int:request-handler-advice-chain>
+    </int:service-activator>
+  </int:chain>
+  <int:service-activator input-channel="loadbalancingv2-error" ref="loadbalancingv2ErrorHandler"/>
+</beans>

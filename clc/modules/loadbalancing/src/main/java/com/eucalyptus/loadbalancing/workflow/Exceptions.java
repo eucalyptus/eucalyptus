@@ -31,7 +31,7 @@ package com.eucalyptus.loadbalancing.workflow;
 class Exceptions {
   static LoadBalancingActivityException lookupActivityException(final Throwable fromException) {
     Throwable e = fromException;
-    while ( e != null ) {
+    while (e != null) {
       if (e instanceof LoadBalancingActivityException) {
         return (LoadBalancingActivityException) e;
       }

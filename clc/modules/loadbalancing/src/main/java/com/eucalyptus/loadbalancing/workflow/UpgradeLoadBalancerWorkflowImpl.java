@@ -40,20 +40,21 @@ import java.util.concurrent.CancellationException;
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
 @ComponentPart(LoadBalancing.class)
 @Once(value = UpgradeLoadBalancerWorkflowStarter.class, dependsOn = LoadBalancing.class)
-public class UpgradeLoadBalancerWorkflowImpl implements  UpgradeLoadBalancerWorkflow {
-  private static Logger LOG     =
-          Logger.getLogger(  UpgradeLoadBalancerWorkflowImpl.class );
+public class UpgradeLoadBalancerWorkflowImpl implements UpgradeLoadBalancerWorkflow {
+  private static Logger LOG =
+      Logger.getLogger(UpgradeLoadBalancerWorkflowImpl.class);
 
   private final LoadBalancingActivitiesClient client =
-          new LoadBalancingActivitiesClientImpl(null, LoadBalancingJsonDataConverter.getDefault(), null);
+      new LoadBalancingActivitiesClientImpl(null, LoadBalancingJsonDataConverter.getDefault(),
+          null);
   private ElbWorkflowState state =
-          ElbWorkflowState.WORKFLOW_RUNNING;
+      ElbWorkflowState.WORKFLOW_RUNNING;
 
   private TryCatchFinally task = null;
+
   @Override
   public void upgradeLoadBalancer() {
     final Settable<Boolean> exception = new Settable<Boolean>();
@@ -67,9 +68,9 @@ public class UpgradeLoadBalancerWorkflowImpl implements  UpgradeLoadBalancerWork
       protected void doCatch(final Throwable ex) throws Throwable {
         if (ex instanceof ActivityTaskTimedOutException) {
           LOG.warn("Workflow for upgrading loadbalancers has timed-out");
-        }else if (ex instanceof CancellationException) {
+        } else if (ex instanceof CancellationException) {
           LOG.warn("Workflow for upgrading loadbalancers has been cancelled");
-        }else {
+        } else {
           LOG.warn("Workflow for upgrading loadbalancers has failed");
         }
         state = ElbWorkflowState.WORKFLOW_FAILED;
@@ -79,8 +80,9 @@ public class UpgradeLoadBalancerWorkflowImpl implements  UpgradeLoadBalancerWork
 
       @Override
       protected void doFinally() throws Throwable {
-        if (state == ElbWorkflowState.WORKFLOW_RUNNING)
+        if (state == ElbWorkflowState.WORKFLOW_RUNNING) {
           state = ElbWorkflowState.WORKFLOW_SUCCESS;
+        }
       }
     };
   }

@@ -37,16 +37,15 @@ import com.amazonaws.services.simpleworkflow.flow.annotations.WorkflowRegistrati
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
 @Workflow
 @WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 120,
-defaultTaskStartToCloseTimeoutSeconds = 60)
+    defaultTaskStartToCloseTimeoutSeconds = 60)
 public interface ApplySecurityGroupsWorkflow {
   @Execute(name = "ApplySecurityGroups", version = "1.0")
-  void applySecurityGroups(final String accountId, final String loadbalancer, 
-      final Map<String,String> groupIdToNameMap);
- 
+  void applySecurityGroups(final String accountId, final String loadbalancer,
+      final Map<String, String> groupIdToNameMap);
+
   @GetState
   ElbWorkflowState getState();
 }

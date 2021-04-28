@@ -35,16 +35,15 @@ import com.amazonaws.services.simpleworkflow.flow.annotations.WorkflowRegistrati
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
 @Workflow
-@WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 120, 
-defaultTaskStartToCloseTimeoutSeconds = 60)
+@WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 120,
+    defaultTaskStartToCloseTimeoutSeconds = 60)
 public interface ModifyServicePropertiesWorkflow {
   @Execute(name = "ModifyServiceProperties", version = "1.0")
   void modifyServiceProperties(String machineImageId, String instanceType,
       String keyname, String initScript);
-  
+
   @GetState
   ElbWorkflowState getState();
 }

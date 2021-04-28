@@ -33,11 +33,10 @@ import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 /**
  * @author Sang-Min Park
- *
  */
-@QueryBindingInfo( statusCode = 400 )
+@QueryBindingInfo(statusCode = 400)
 public class PolicyNotFoundException extends LoadBalancingException {
-  public PolicyNotFoundException(){
+  public PolicyNotFoundException() {
     super("PolicyNotFound", Role.Sender, "One or more specified policies were not found.");
   }
 }

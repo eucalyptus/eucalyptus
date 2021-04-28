@@ -39,6 +39,9 @@ import com.eucalyptus.auth.type.RestrictedType;
 public interface LoadBalancingMetadata extends RestrictedType {
 
   @PolicyResourceType("loadbalancer")
-  public interface LoadBalancerMetadata extends LoadBalancingMetadata {}
+  interface LoadBalancerMetadata extends LoadBalancingMetadata {}
+
+  @PolicyResourceType("securitygroup")
+  interface LoadBalancerSecurityGroupMetadata extends LoadBalancingMetadata {}
 
 }

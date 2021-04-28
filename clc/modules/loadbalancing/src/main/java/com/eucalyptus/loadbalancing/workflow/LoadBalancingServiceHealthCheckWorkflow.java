@@ -35,15 +35,14 @@ import com.amazonaws.services.simpleworkflow.flow.annotations.WorkflowRegistrati
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
 @Workflow
-@WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 7200, 
-defaultTaskStartToCloseTimeoutSeconds = 60)
+@WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 7200,
+    defaultTaskStartToCloseTimeoutSeconds = 60)
 public interface LoadBalancingServiceHealthCheckWorkflow {
   @Execute(name = "PerformServiceHealthCheck", version = "1.0")
   void performServiceHealthCheck();
-  
+
   @GetState
   ElbWorkflowState getState();
 }

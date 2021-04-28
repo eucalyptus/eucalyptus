@@ -52,28 +52,30 @@ import com.google.common.collect.Lists;
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
 @ComponentPart(LoadBalancing.class)
 public class InstanceStatusWorkflowImpl implements InstanceStatusWorkflow {
-  private static Logger    LOG     = Logger.getLogger(  InstanceStatusWorkflowImpl.class );
-  
+  private static Logger LOG = Logger.getLogger(InstanceStatusWorkflowImpl.class);
+
   private String accountId = null;
   private String loadbalancer = null;
 
-  final LoadBalancingVmActivitiesClient vmClient = 
-      new LoadBalancingVmActivitiesClientImpl(null, LoadBalancingJsonDataConverter.getDefault(), null);
+  final LoadBalancingVmActivitiesClient vmClient =
+      new LoadBalancingVmActivitiesClientImpl(null, LoadBalancingJsonDataConverter.getDefault(),
+          null);
   final LoadBalancingActivitiesClient client =
-      new LoadBalancingActivitiesClientImpl(null, LoadBalancingJsonDataConverter.getDefault(), null);
+      new LoadBalancingActivitiesClientImpl(null, LoadBalancingJsonDataConverter.getDefault(),
+          null);
   final InstanceStatusWorkflowSelfClient selfClient =
-      new InstanceStatusWorkflowSelfClientImpl(null, LoadBalancingJsonDataConverter.getDefault(), null);
+      new InstanceStatusWorkflowSelfClientImpl(null, LoadBalancingJsonDataConverter.getDefault(),
+          null);
 
   TryCatchFinally task = null;
   private DecisionContextProvider contextProvider
-       = new DecisionContextProviderImpl();
+      = new DecisionContextProviderImpl();
   private Settable<Boolean> signalReceived = new Settable<Boolean>();
   final WorkflowClock clock =
-          contextProvider.getDecisionContext().getWorkflowClock();
+      contextProvider.getDecisionContext().getWorkflowClock();
 
   // continuous workflow generates enormous amount of history
   // ideally we should use continueAsNewWorkflow, but the current EUCA SWF lacks it
@@ -81,28 +83,28 @@ public class InstanceStatusWorkflowImpl implements InstanceStatusWorkflow {
   private int MAX_POLL_PER_WORKFLOW = 10;
   static public final int MIN_POLLING_PERIOD_SEC = 10;
   private int pollingPeriodSec = MIN_POLLING_PERIOD_SEC;
-  
+
   @Override
   public void pollInstanceStatus(final String accountId, final String loadbalancer) {
     this.accountId = accountId;
-    this.loadbalancer = loadbalancer;    
+    this.loadbalancer = loadbalancer;
     final Settable<Boolean> exception = new Settable<Boolean>();
     task = new TryCatchFinally() {
       @Override
       protected void doTry() throws Throwable {
-       final Promise<HealthCheck> healthCheck =
-               client.lookupLoadBalancerHealthCheck(Promise.asPromise(accountId),
-                       Promise.asPromise(loadbalancer));
-       pollInstanceStatus(healthCheck);
+        final Promise<HealthCheck> healthCheck =
+            client.lookupLoadBalancerHealthCheck(Promise.asPromise(accountId),
+                Promise.asPromise(loadbalancer));
+        pollInstanceStatus(healthCheck);
       }
-      
+
       @Override
       protected void doCatch(Throwable ex) throws Throwable {
         if (ex instanceof ActivityTaskTimedOutException) {
           LOG.warn("Instance polling task timed out");
-        }else if (ex instanceof CancellationException){
+        } else if (ex instanceof CancellationException) {
           ;
-        }else {
+        } else {
           LOG.warn("Instance polling workflow failed", ex);
         }
         exception.set(true);
@@ -111,16 +113,16 @@ public class InstanceStatusWorkflowImpl implements InstanceStatusWorkflow {
 
       @Override
       protected void doFinally() throws Throwable {
-        if(exception.isReady() && exception.get())
+        if (exception.isReady() && exception.get()) {
           return;
-        else if (task.isCancelRequested())
+        } else if (task.isCancelRequested()) {
           return;
-        else {
+        } else {
           selfClient.getSchedulingOptions().setTagList(
-              Lists.newArrayList(String.format("account:%s", accountId), 
+              Lists.newArrayList(String.format("account:%s", accountId),
                   String.format("loadbalancer:%s", loadbalancer)));
           selfClient.pollInstanceStatus(accountId, loadbalancer);
-        }  
+        }
       }
     };
   }
@@ -128,48 +130,49 @@ public class InstanceStatusWorkflowImpl implements InstanceStatusWorkflow {
   @Asynchronous
   private void pollInstanceStatus(final Promise<HealthCheck> healthCheck) {
     final HealthCheck hc = healthCheck.get();
-    if ( hc != null && hc.getInterval() != null ) {
+    if (hc != null && hc.getInterval() != null) {
       this.pollingPeriodSec = Math.max(MIN_POLLING_PERIOD_SEC, hc.getInterval().intValue());
     }
     pollInstanceStatusPeriodic(0);
   }
-  
-  @Asynchronous 
+
+  @Asynchronous
   private void pollInstanceStatusPeriodic(final int count,
-                                          Promise<?>... waitFor) {
-   if (signalReceived.isReady()  || count >= MAX_POLL_PER_WORKFLOW) {
+      Promise<?>... waitFor) {
+    if (signalReceived.isReady() || count >= MAX_POLL_PER_WORKFLOW) {
       return;
-   }
-   final Promise<List<String>> servoInstances = client.lookupServoInstances(this.accountId, this.loadbalancer);
-   doPollStatus(count, servoInstances);   
+    }
+    final Promise<List<String>> servoInstances =
+        client.lookupServoInstances(this.accountId, this.loadbalancer);
+    doPollStatus(count, servoInstances);
   }
-  
+
   @Asynchronous
   private void doPollStatus(final int count, final Promise<List<String>> servoInstances) {
     final List<String> instances = servoInstances.get();
     final List<Promise<Void>> activities = Lists.newArrayList();
-    for(final String instanceId : instances) {
+    for (final String instanceId : instances) {
       activities.add(
-              client.updateInstanceStatus(
-                      Promise.asPromise(accountId),
-                      Promise.asPromise(loadbalancer),
-                      client.filterInstanceStatus(
-                              Promise.asPromise(accountId),
-                              Promise.asPromise(loadbalancer),
-                              Promise.asPromise(instanceId),
-                              pollStatusFromVM(instanceId)
-                      )
+          client.updateInstanceStatus(
+              Promise.asPromise(accountId),
+              Promise.asPromise(loadbalancer),
+              client.filterInstanceStatus(
+                  Promise.asPromise(accountId),
+                  Promise.asPromise(loadbalancer),
+                  Promise.asPromise(instanceId),
+                  pollStatusFromVM(instanceId)
               )
+          )
       );
     }
 
     final Promise<Void> timer = startDaemonTimer(this.pollingPeriodSec);
     final OrPromise waitOrSignal = new OrPromise(timer, signalReceived);
-    pollInstanceStatusPeriodic(count+1,
-            new AndPromise(
-                    Promises.listOfPromisesToPromise(activities),
-                    waitOrSignal
-            )
+    pollInstanceStatusPeriodic(count + 1,
+        new AndPromise(
+            Promises.listOfPromisesToPromise(activities),
+            waitOrSignal
+        )
     );
   }
 
@@ -181,7 +184,7 @@ public class InstanceStatusWorkflowImpl implements InstanceStatusWorkflow {
     new TryCatchFinally() {
       protected void doTry() throws Throwable {
         final ActivitySchedulingOptions scheduler =
-                new ActivitySchedulingOptions();
+            new ActivitySchedulingOptions();
         scheduler.setTaskList(instanceId);
         scheduler.setScheduleToCloseTimeoutSeconds(120L); /// account for VM startup delay
         scheduler.setStartToCloseTimeoutSeconds(10L);
@@ -193,9 +196,9 @@ public class InstanceStatusWorkflowImpl implements InstanceStatusWorkflow {
       }
 
       protected void doFinally() throws Throwable {
-        if ( result.isReady() ) {
+        if (result.isReady()) {
           failure.set(null);
-        } else if ( failure.isReady()) {
+        } else if (failure.isReady()) {
           result.set(null);
         } else {
           result.set(null);
@@ -208,7 +211,7 @@ public class InstanceStatusWorkflowImpl implements InstanceStatusWorkflow {
 
   @Asynchronous
   private Promise<String> done(final Settable<String> result, final Settable<String> failure) {
-    if (result.get() != null ) {
+    if (result.get() != null) {
       return Promise.asPromise(result.get());
     } else if (failure.get() != null) {
       return checkInstanceFailure(failure);
@@ -234,7 +237,8 @@ public class InstanceStatusWorkflowImpl implements InstanceStatusWorkflow {
 
   @Override
   public void pollImmediately() {
-    if(!signalReceived.isReady())
+    if (!signalReceived.isReady()) {
       signalReceived.set(true);
+    }
   }
 }

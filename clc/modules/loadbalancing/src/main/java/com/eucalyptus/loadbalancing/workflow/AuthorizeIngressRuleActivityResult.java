@@ -35,11 +35,11 @@ public class AuthorizeIngressRuleActivityResult {
 
   private List<Listener> listeners = null;
 
-  public List<Listener> getListeners( ) {
+  public List<Listener> getListeners() {
     return listeners;
   }
 
-  public void setListeners( List<Listener> listeners ) {
+  public void setListeners(List<Listener> listeners) {
     this.listeners = listeners;
   }
 }

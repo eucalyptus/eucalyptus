@@ -39,15 +39,15 @@ import com.eucalyptus.loadbalancing.common.LoadBalancing;
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
 @ComponentPart(LoadBalancing.class)
 public class DeleteLoadBalancerWorkflowImpl implements DeleteLoadBalancerWorkflow {
-  private static Logger    LOG     = Logger.getLogger(  DeleteLoadBalancerWorkflowImpl.class );
-  
-  final LoadBalancingActivitiesClient client = 
-      new LoadBalancingActivitiesClientImpl(null, LoadBalancingJsonDataConverter.getDefault(), null);
-  private ElbWorkflowState state = 
+  private static Logger LOG = Logger.getLogger(DeleteLoadBalancerWorkflowImpl.class);
+
+  final LoadBalancingActivitiesClient client =
+      new LoadBalancingActivitiesClientImpl(null, LoadBalancingJsonDataConverter.getDefault(),
+          null);
+  private ElbWorkflowState state =
       ElbWorkflowState.WORKFLOW_RUNNING;
   TryCatchFinally task = null;
 
@@ -57,28 +57,33 @@ public class DeleteLoadBalancerWorkflowImpl implements DeleteLoadBalancerWorkflo
       @Override
       protected void doTry() throws Throwable {
         final Promise<Void> dns = client.deleteLoadBalancerDeactivateDns(accountId, loadbalancer);
-        final Promise<Void> scalingGroup = client.deleteLoadBalancerDeleteScalingGroup(accountId, loadbalancer);
-        final Promise<Void> instanceProfile = client.deleteLoadBalancerDeleteInstanceProfile(accountId, loadbalancer, scalingGroup);
-        final Promise<Void> iam = client.deleteLoadBalancerDeleteIamRole(accountId, loadbalancer, instanceProfile);
-        final Promise<Void> securityGroup = client.deleteLoadBalancerDeleteSecurityGroup(accountId, loadbalancer, scalingGroup);
+        final Promise<Void> scalingGroup =
+            client.deleteLoadBalancerDeleteScalingGroup(accountId, loadbalancer);
+        final Promise<Void> instanceProfile =
+            client.deleteLoadBalancerDeleteInstanceProfile(accountId, loadbalancer, scalingGroup);
+        final Promise<Void> iam =
+            client.deleteLoadBalancerDeleteIamRole(accountId, loadbalancer, instanceProfile);
+        final Promise<Void> securityGroup =
+            client.deleteLoadBalancerDeleteSecurityGroup(accountId, loadbalancer, scalingGroup);
       }
-      
+
       @Override
       protected void doCatch(Throwable e) throws Throwable {
-        if ( e instanceof CancellationException) {
+        if (e instanceof CancellationException) {
           LOG.warn("Workflow for deleting ELB is cancelled");
           state = ElbWorkflowState.WORKFLOW_CANCELLED;
           return;
         }
-  
+
         state = ElbWorkflowState.WORKFLOW_FAILED;
         LOG.error("Workflow for deleting ELB has failed", e);
       }
 
       @Override
       protected void doFinally() throws Throwable {
-        if (state == ElbWorkflowState.WORKFLOW_RUNNING)
+        if (state == ElbWorkflowState.WORKFLOW_RUNNING) {
           state = ElbWorkflowState.WORKFLOW_SUCCESS;
+        }
       }
     };
   }
@@ -87,5 +92,4 @@ public class DeleteLoadBalancerWorkflowImpl implements DeleteLoadBalancerWorkflo
   public ElbWorkflowState getState() {
     return state;
   }
-
 }

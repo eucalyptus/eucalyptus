@@ -39,16 +39,16 @@ import com.google.common.collect.Lists;
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
 @ComponentPart(LoadBalancing.class)
 public class DeleteLoadBalancerListenersWorkflowImpl
     implements DeleteLoadBalancerListenersWorkflow {
-  private static Logger    LOG     = Logger.getLogger(  DeleteLoadBalancerListenersWorkflowImpl.class );
-  
-  final LoadBalancingActivitiesClient client = 
-      new LoadBalancingActivitiesClientImpl(null, LoadBalancingJsonDataConverter.getDefault(), null);
-  private ElbWorkflowState state = 
+  private static Logger LOG = Logger.getLogger(DeleteLoadBalancerListenersWorkflowImpl.class);
+
+  final LoadBalancingActivitiesClient client =
+      new LoadBalancingActivitiesClientImpl(null, LoadBalancingJsonDataConverter.getDefault(),
+          null);
+  private ElbWorkflowState state =
       ElbWorkflowState.WORKFLOW_RUNNING;
   TryCatchFinally task = null;
 
@@ -58,13 +58,15 @@ public class DeleteLoadBalancerListenersWorkflowImpl
     task = new TryCatchFinally() {
       @Override
       protected void doTry() throws Throwable {
-        client.deleteListenerRevokeSSLCertificatePolicy(accountId, loadbalancer, Lists.newArrayList(portsToDelete));
-        client.deleteListenerRevokeIngressRule(accountId, loadbalancer, Lists.newArrayList(portsToDelete));
+        client.deleteListenerRevokeSSLCertificatePolicy(accountId, loadbalancer,
+            Lists.newArrayList(portsToDelete));
+        client.deleteListenerRevokeIngressRule(accountId, loadbalancer,
+            Lists.newArrayList(portsToDelete));
       }
 
       @Override
       protected void doCatch(Throwable e) throws Throwable {
-        if ( e instanceof CancellationException) {
+        if (e instanceof CancellationException) {
           LOG.warn("Workflow for deleting ELB listener is cancelled");
           state = ElbWorkflowState.WORKFLOW_CANCELLED;
           return;
@@ -75,12 +77,13 @@ public class DeleteLoadBalancerListenersWorkflowImpl
 
       @Override
       protected void doFinally() throws Throwable {
-        if (state == ElbWorkflowState.WORKFLOW_RUNNING)
+        if (state == ElbWorkflowState.WORKFLOW_RUNNING) {
           state = ElbWorkflowState.WORKFLOW_SUCCESS;
-      }      
+        }
+      }
     };
   }
-  
+
   @Override
   public ElbWorkflowState getState() {
     return state;

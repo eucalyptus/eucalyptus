@@ -31,8 +31,8 @@ package com.eucalyptus.loadbalancing.upgrade;
 import java.util.List;
 import java.util.concurrent.Callable;
 import com.eucalyptus.entities.AccountMetadata;
-import com.eucalyptus.loadbalancing.LoadBalancer;
-import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer;
+import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendInstance;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
 import com.eucalyptus.upgrade.Upgrades;
 import com.google.common.collect.ImmutableList;
@@ -40,17 +40,18 @@ import com.google.common.collect.ImmutableList;
 /**
  * Update entities to clear possibly incorrect account names
  */
-@Upgrades.PostUpgrade( value = LoadBalancing.class, since = Upgrades.Version.v4_0_0 )
-public class AccountName400Upgrade extends AccountMetadata.AccountName400UpgradeSupport implements Callable<Boolean> {
+@Upgrades.PostUpgrade(value = LoadBalancing.class, since = Upgrades.Version.v4_0_0)
+public class AccountName400Upgrade extends AccountMetadata.AccountName400UpgradeSupport
+    implements Callable<Boolean> {
 
   private static final List<Class<? extends AccountMetadata>> accountMetadataClasses =
       ImmutableList.<Class<? extends AccountMetadata>>builder()
-          .add( LoadBalancer.class )
-          .add( LoadBalancerBackendInstance.class )
+          .add(LoadBalancer.class)
+          .add(LoadBalancerBackendInstance.class)
           .build();
 
   @Override
-  protected List<Class<? extends AccountMetadata>> getAccountMetadataClasses( ) {
+  protected List<Class<? extends AccountMetadata>> getAccountMetadataClasses() {
     return accountMetadataClasses;
   }
 }

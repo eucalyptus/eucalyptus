@@ -35,7 +35,7 @@ import com.eucalyptus.ws.Role;
  * Error responses for LoadBalancing service extend this class.
  *
  * <p>An example error code for load balancing is "AccessPointNotFound".</p>
- *
+ * <p>
  * http://docs.aws.amazon.com/ElasticLoadBalancing/latest/APIReference/CommonErrors.html
  *
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
@@ -43,22 +43,22 @@ import com.eucalyptus.ws.Role;
 public class LoadBalancingException extends EucalyptusWebServiceException {
   private static final long serialVersionUID = 1L;
 
-	public static final Role DEFAULT_ROLE = Role.Receiver;
-	public static final String DEFAULT_CODE = "InternalFailure";
+  public static final Role DEFAULT_ROLE = Role.Receiver;
+  public static final String DEFAULT_CODE = "InternalFailure";
 
-  public LoadBalancingException(final String message){
-		this(DEFAULT_CODE, DEFAULT_ROLE, message);
-	}
-	public LoadBalancingException(final String message, Throwable inner){
-		this(DEFAULT_CODE, DEFAULT_ROLE, message);
-		this.initCause(inner);
-	}
- 	public LoadBalancingException( 
-                               final String code, 
-                               final Role role, 
-                               final String message ) {
- 		 super( code, role, message );
-  	}
+  public LoadBalancingException(final String message) {
+    this(DEFAULT_CODE, DEFAULT_ROLE, message);
+  }
 
+  public LoadBalancingException(final String message, Throwable inner) {
+    this(DEFAULT_CODE, DEFAULT_ROLE, message);
+    this.initCause(inner);
+  }
 
+  public LoadBalancingException(
+      final String code,
+      final Role role,
+      final String message) {
+    super(code, role, message);
+  }
 }

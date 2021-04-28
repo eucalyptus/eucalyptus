@@ -37,7 +37,7 @@ import com.google.common.collect.ImmutableList;
  */
 public class LoadBalancingSystemAccountProvider extends ClassPathSystemAccountProvider {
 
-  public LoadBalancingSystemAccountProvider( ) {
+  public LoadBalancingSystemAccountProvider() {
     super(
         AccountIdentifiers.ELB_SYSTEM_ACCOUNT,
         false,
@@ -46,7 +46,7 @@ public class LoadBalancingSystemAccountProvider extends ClassPathSystemAccountPr
                 "LoadbalancingServiceAdministrator",
                 "/loadbalancing",
                 ImmutableList.<AttachedPolicy>of(
-                    newAttachedPolicy( "LoadbalancingServiceAdministrator" )
+                    newAttachedPolicy("LoadbalancingServiceAdministrator")
                 )
             )
         )

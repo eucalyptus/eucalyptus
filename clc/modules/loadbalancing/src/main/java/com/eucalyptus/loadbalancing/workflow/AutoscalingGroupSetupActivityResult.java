@@ -38,43 +38,43 @@ public class AutoscalingGroupSetupActivityResult {
   private Set<String> createdLaunchConfigNames = null;
   private Integer numVMsPerZone = null;
 
-  public Set<String> getGroupNames( ) {
+  public Set<String> getGroupNames() {
     return groupNames;
   }
 
-  public void setGroupNames( Set<String> groupNames ) {
+  public void setGroupNames(Set<String> groupNames) {
     this.groupNames = groupNames;
   }
 
-  public Set<String> getLaunchConfigNames( ) {
+  public Set<String> getLaunchConfigNames() {
     return launchConfigNames;
   }
 
-  public void setLaunchConfigNames( Set<String> launchConfigNames ) {
+  public void setLaunchConfigNames(Set<String> launchConfigNames) {
     this.launchConfigNames = launchConfigNames;
   }
 
-  public Set<String> getCreatedGroupNames( ) {
+  public Set<String> getCreatedGroupNames() {
     return createdGroupNames;
   }
 
-  public void setCreatedGroupNames( Set<String> createdGroupNames ) {
+  public void setCreatedGroupNames(Set<String> createdGroupNames) {
     this.createdGroupNames = createdGroupNames;
   }
 
-  public Set<String> getCreatedLaunchConfigNames( ) {
+  public Set<String> getCreatedLaunchConfigNames() {
     return createdLaunchConfigNames;
   }
 
-  public void setCreatedLaunchConfigNames( Set<String> createdLaunchConfigNames ) {
+  public void setCreatedLaunchConfigNames(Set<String> createdLaunchConfigNames) {
     this.createdLaunchConfigNames = createdLaunchConfigNames;
   }
 
-  public Integer getNumVMsPerZone( ) {
+  public Integer getNumVMsPerZone() {
     return numVMsPerZone;
   }
 
-  public void setNumVMsPerZone( Integer numVMsPerZone ) {
+  public void setNumVMsPerZone(Integer numVMsPerZone) {
     this.numVMsPerZone = numVMsPerZone;
   }
 }

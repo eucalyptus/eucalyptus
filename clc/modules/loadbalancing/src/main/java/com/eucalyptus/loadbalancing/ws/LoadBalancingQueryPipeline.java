@@ -39,20 +39,20 @@ import com.eucalyptus.ws.server.QueryPipeline;
 /**
  *
  */
-@ComponentPart( LoadBalancing.class )
+@ComponentPart(LoadBalancing.class)
 public class LoadBalancingQueryPipeline extends QueryPipeline {
 
   public LoadBalancingQueryPipeline() {
     super(
         "loadbalancing-query",
         LoadBalancingConfiguration.SERVICE_PATH,
-        EnumSet.allOf( TemporaryAccessKey.TemporaryKeyType.class ) );
+        EnumSet.allOf(TemporaryAccessKey.TemporaryKeyType.class));
   }
 
   @Override
-  public ChannelPipeline addHandlers( final ChannelPipeline pipeline ) {
-    super.addHandlers( pipeline );
-    pipeline.addLast( "loadbalancing-query-binding", new LoadBalancingQueryBinding( ) );
+  public ChannelPipeline addHandlers(final ChannelPipeline pipeline) {
+    super.addHandlers(pipeline);
+    pipeline.addLast("loadbalancing-query-binding", new LoadBalancingQueryBinding());
     return pipeline;
   }
 }

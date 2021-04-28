@@ -890,5 +890,21 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       return true;
     }
   }
-}
 
+  @EntityUpgrade( entities = StaticDatabasePropertyEntry.class, since = Version.v6_0_0, value = Empyrean.class )
+  public enum StaticPropertyEntryUpgrade600 implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( StaticPropertyEntryUpgrade600.class );
+
+    @Override
+    public boolean apply( final Class arg0 ) {
+      UpgradeUtils.updateMovedProperties( LOG, ImmutableList.of(
+          Tuple.of( "services.loadbalancing.restricted_ports",
+              "com.eucalyptus.loadbalancing.LoadBalancerListener.restricted_ports",
+              "com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener.restricted_ports" )
+      ) );
+
+      return true;
+    }
+  }
+}

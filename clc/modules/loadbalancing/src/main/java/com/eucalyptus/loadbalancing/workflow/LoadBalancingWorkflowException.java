@@ -32,7 +32,8 @@ public class LoadBalancingWorkflowException extends Exception {
   private static final long serialVersionUID = 1L;
   private int statusCode = 500;
 
-  public LoadBalancingWorkflowException() { }
+  public LoadBalancingWorkflowException() {
+  }
 
   public LoadBalancingWorkflowException(final String message) {
     super(message);

@@ -27,13 +27,15 @@
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
 package com.eucalyptus.loadbalancing.service;
+
 import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
-@QueryBindingInfo( statusCode = 400 )
+@QueryBindingInfo(statusCode = 400)
 public class AccessPointNotFoundException extends LoadBalancingException {
-	private static final long serialVersionUID = 1L;
-	public AccessPointNotFoundException(){
-		super("AccessPointNotFound", Role.Sender, "The specified LoadBalancer could not be found");
-	}
+  private static final long serialVersionUID = 1L;
+
+  public AccessPointNotFoundException() {
+    super("AccessPointNotFound", Role.Sender, "The specified LoadBalancer could not be found");
+  }
 }

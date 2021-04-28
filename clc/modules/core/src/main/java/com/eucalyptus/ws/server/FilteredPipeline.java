@@ -39,7 +39,9 @@
 
 package com.eucalyptus.ws.server;
 
+import com.google.common.collect.Ordering;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -59,6 +61,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Filterable;
 import com.eucalyptus.util.HasName;
+import com.eucalyptus.util.Ordered;
 import com.eucalyptus.util.dns.DomainNames;
 import com.google.common.base.Splitter;
 import com.google.common.base.Supplier;
@@ -66,11 +69,15 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
-public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Filterable<HttpRequest> {
+public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Filterable<HttpRequest>, Ordered {
   private static Logger LOG = Logger.getLogger( FilteredPipeline.class );
   private static final Splitter hostSplitter = Splitter.on( ':' ).limit( 2 );
   private final Supplier<Set<Name>> nameSupplier =
       Suppliers.memoizeWithExpiration( new NamesSupplier( getClass() ), 15, TimeUnit.SECONDS );
+
+  public static Comparator<FilteredPipeline> comparator() {
+    return Ordering.from(Ordered.comparator()).compound(Ordering.natural());
+  }
 
   protected abstract static class InternalPipeline extends FilteredPipeline {
     private final ComponentId componentId;
@@ -119,7 +126,7 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
   
   @Override
   public final int compareTo( final FilteredPipeline o ) {
-    return this.getName( ).compareTo( this.getName( ) );
+    return this.getName( ).compareTo( o.getName( ) );
   }
 
   protected boolean resolvesByHost( @Nullable final String host ) {

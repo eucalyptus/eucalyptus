@@ -1,4 +1,4 @@
- /*************************************************************************
+/*************************************************************************
  * Copyright 2009-2013 Ent. Services Development Corporation LP
  *
  * Redistribution and use of this software in source and binary forms,
@@ -30,17 +30,19 @@
 package com.eucalyptus.loadbalancing.activities;
 
 import com.eucalyptus.util.EucalyptusCloudException;
+
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
- *
  */
 public class EucalyptusActivityException extends EucalyptusCloudException {
-	
-	private static final long serialVersionUID = 1L;
-	public EucalyptusActivityException(String message){
-		super(message);
-	}
-	public EucalyptusActivityException(String message, Throwable cause){
-		super(message, cause);
-	}
+
+  private static final long serialVersionUID = 1L;
+
+  public EucalyptusActivityException(String message) {
+    super(message);
+  }
+
+  public EucalyptusActivityException(String message, Throwable cause) {
+    super(message, cause);
+  }
 }

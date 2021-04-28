@@ -84,7 +84,7 @@ import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 public class Pipelines {
   private static final Logger                                                    LOG               = Logger.getLogger( Pipelines.class );
   private static final Set<FilteredPipeline>                                     internalPipelines = Sets.newHashSet( );
-  private static final Set<FilteredPipeline>                                     pipelines         = Sets.newHashSet( );
+  private static final Set<FilteredPipeline>                                     pipelines         = Sets.newTreeSet( FilteredPipeline.comparator() );
   //GRZE:TODO: this is not happy ==> {@link DomainNames}
   private static final Supplier<String> subDomain = () -> SystemConfiguration.getSystemConfiguration( ).getDnsDomain( );
 

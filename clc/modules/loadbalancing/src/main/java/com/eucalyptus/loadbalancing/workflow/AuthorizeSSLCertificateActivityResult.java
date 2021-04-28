@@ -35,19 +35,19 @@ public class AuthorizeSSLCertificateActivityResult {
   private String roleName = null;
   private List<String> policyNames = null;
 
-  public String getRoleName( ) {
+  public String getRoleName() {
     return roleName;
   }
 
-  public void setRoleName( String roleName ) {
+  public void setRoleName(String roleName) {
     this.roleName = roleName;
   }
 
-  public List<String> getPolicyNames( ) {
+  public List<String> getPolicyNames() {
     return policyNames;
   }
 
-  public void setPolicyNames( List<String> policyNames ) {
+  public void setPolicyNames(List<String> policyNames) {
     this.policyNames = policyNames;
   }
 }

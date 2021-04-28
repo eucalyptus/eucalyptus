@@ -39,6 +39,12 @@ import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.loadbalancing.service.persist.ImmutableLoadBalancingPersistence;
+import com.eucalyptus.loadbalancing.service.persist.LoadBalancers;
+import com.eucalyptus.loadbalancing.service.persist.LoadBalancingPersistence;
+import com.eucalyptus.loadbalancing.service.persist.entities.PersistenceLoadBalancerSecurityGroups;
+import com.eucalyptus.loadbalancing.service.persist.entities.PersistenceLoadBalancers;
+import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerView;
 import com.eucalyptus.loadbalancing.workflow.LoadBalancingWorkflows;
 import com.eucalyptus.resources.client.Ec2Client;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -48,24 +54,27 @@ import com.google.common.net.HostSpecifier;
 import org.apache.log4j.Logger;
 import org.springframework.util.StringUtils;
 
-
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
 @ConfigurableClass(root = "services.loadbalancing.worker", description = "Parameters controlling loadbalancing")
 public class LoadBalancingWorkerProperties {
-  private static Logger  LOG     = Logger.getLogger( LoadBalancingWorkerProperties.class );
+  private static Logger LOG = Logger.getLogger(LoadBalancingWorkerProperties.class);
 
-  @ConfigurableField( displayName = "image", 
+  private static LoadBalancingPersistence persistence = ImmutableLoadBalancingPersistence.builder()
+      .balancers(new PersistenceLoadBalancers())
+      .balancerSecurityGroups(new PersistenceLoadBalancerSecurityGroups())
+      .build();
+
+  @ConfigurableField(displayName = "image",
       description = "Machine image containing haproxy and the controller",
-      initial = "NULL", 
+      initial = "NULL",
       readonly = false,
       type = ConfigurableFieldType.KEYVALUE,
       changeListener = ElbEmiChangeListener.class)
   public static String IMAGE = "NULL";
 
-  @ConfigurableField( displayName = "instance_type", 
+  @ConfigurableField(displayName = "instance_type",
       description = "instance type for loadbalancer instances",
       initial = "t2.nano",
       readonly = false,
@@ -73,22 +82,22 @@ public class LoadBalancingWorkerProperties {
       changeListener = ElbInstanceTypeChangeListener.class)
   public static String INSTANCE_TYPE = "t2.nano";
 
-  @ConfigurableField( displayName = "keyname", 
+  @ConfigurableField(displayName = "keyname",
       description = "keyname to use when debugging loadbalancer VMs",
       readonly = false,
       type = ConfigurableFieldType.KEYVALUE,
       changeListener = ElbKeyNameChangeListener.class)
   public static String KEYNAME = null;
 
-  @ConfigurableField( displayName = "ntp_server", 
-      description = "the address of the NTP server used by loadbalancer VMs", 
+  @ConfigurableField(displayName = "ntp_server",
+      description = "the address of the NTP server used by loadbalancer VMs",
       readonly = false,
       type = ConfigurableFieldType.KEYVALUE,
       changeListener = ElbNTPServerChangeListener.class
-      )
+  )
   public static String NTP_SERVER = null;
 
-  @ConfigurableField( displayName = "app_cookie_duration",
+  @ConfigurableField(displayName = "app_cookie_duration",
       description = "duration of app-controlled cookie to be kept in-memory (hours)",
       initial = "24", // 24 hours by default 
       readonly = false,
@@ -96,7 +105,7 @@ public class LoadBalancingWorkerProperties {
       changeListener = ElbAppCookieDurationChangeListener.class)
   public static String APP_COOKIE_DURATION = "24";
 
-  @ConfigurableField( displayName = "expiration_days",
+  @ConfigurableField(displayName = "expiration_days",
       description = "the days after which the loadbalancer Vms expire",
       initial = "365", // 1 year by default 
       readonly = false,
@@ -111,20 +120,20 @@ public class LoadBalancingWorkerProperties {
       changeListener = InitScriptChangeListener.class)
   public static String INIT_SCRIPT = null;
 
-  @ConfigurableField( displayName = "failure_threshold_for_recycle",
-          description = "number of activity failure that will trigger recycling workers",
-          initial = "24", // 24 hours by default
-          readonly = false,
-          type = ConfigurableFieldType.KEYVALUE,
-          changeListener = FailureThresholdChangeListener.class)
+  @ConfigurableField(displayName = "failure_threshold_for_recycle",
+      description = "number of activity failure that will trigger recycling workers",
+      initial = "24", // 24 hours by default
+      readonly = false,
+      type = ConfigurableFieldType.KEYVALUE,
+      changeListener = FailureThresholdChangeListener.class)
   public static String FAILURE_THRESHOLD_FOR_RECYCLE = "24";
 
-  @ConfigurableField( displayName = "use_elastic_ip",
-          description = "flag to indicate the workers use elastic IP",
-          initial = "false", // 24 hours by default
-          readonly = false,
-          type = ConfigurableFieldType.KEYVALUE,
-          changeListener = UseElasticIpChangeListener.class)
+  @ConfigurableField(displayName = "use_elastic_ip",
+      description = "flag to indicate the workers use elastic IP",
+      initial = "false", // 24 hours by default
+      readonly = false,
+      type = ConfigurableFieldType.KEYVALUE,
+      changeListener = UseElasticIpChangeListener.class)
   public static String USE_ELASTIC_IP = "false";
 
   public static boolean useElasticIp() {
@@ -134,8 +143,8 @@ public class LoadBalancingWorkerProperties {
   public static class UseElasticIpChangeListener implements PropertyChangeListener<String> {
     @Override
     public void fireChange(ConfigurableProperty t, String newValue)
-            throws ConfigurablePropertyException {
-       if (!("true".equals(newValue) || "false".equals(newValue))) {
+        throws ConfigurablePropertyException {
+      if (!("true".equals(newValue) || "false".equals(newValue))) {
         throw new ConfigurablePropertyException("The value must be true or false");
       }
     }
@@ -144,10 +153,10 @@ public class LoadBalancingWorkerProperties {
   public static class FailureThresholdChangeListener implements PropertyChangeListener<String> {
     @Override
     public void fireChange(ConfigurableProperty t, String newValue)
-            throws ConfigurablePropertyException {
-      try{
+        throws ConfigurablePropertyException {
+      try {
         final int threshold = Integer.parseInt(newValue);
-      }catch(final Exception ex) {
+      } catch (final Exception ex) {
         throw new ConfigurablePropertyException("The value must be number type");
       }
     }
@@ -159,8 +168,9 @@ public class LoadBalancingWorkerProperties {
         throws ConfigurablePropertyException {
       try {
         // init script can be empty
-        if (t.getValue() != null && !t.getValue().equals(newValue))
+        if (t.getValue() != null && !t.getValue().equals(newValue)) {
           onPropertyChange(null, null, null, (String) newValue);
+        }
       } catch (final Exception e) {
         throw new ConfigurablePropertyException("Could not change init script", e);
       }
@@ -169,43 +179,52 @@ public class LoadBalancingWorkerProperties {
 
   public static class ElbEmiChangeListener implements PropertyChangeListener {
     @Override
-    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+    public void fireChange(ConfigurableProperty t, Object newValue)
+        throws ConfigurablePropertyException {
       try {
-        if ( newValue instanceof String  ) {
-          if(t.getValue()!=null && ! t.getValue().equals(newValue))
-            onPropertyChange((String)newValue, null, null, null);
+        if (newValue instanceof String) {
+          if (t.getValue() != null && !t.getValue().equals(newValue)) {
+            onPropertyChange((String) newValue, null, null, null);
+          }
         }
-      } catch ( final Exception e ) {
-        throw new ConfigurablePropertyException("Could not change image ID due to: " + e.getMessage());
+      } catch (final Exception e) {
+        throw new ConfigurablePropertyException(
+            "Could not change image ID due to: " + e.getMessage());
       }
     }
   }
 
   public static class ElbInstanceTypeChangeListener implements PropertyChangeListener {
     @Override
-    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+    public void fireChange(ConfigurableProperty t, Object newValue)
+        throws ConfigurablePropertyException {
       try {
-        if ( newValue instanceof String ) {
-          if( newValue.equals( "" ) )
+        if (newValue instanceof String) {
+          if (newValue.equals("")) {
             throw new EucalyptusCloudException("Instance type cannot be unset");
-          if(t.getValue()!=null && ! t.getValue().equals(newValue))
-            onPropertyChange(null, (String)newValue, null, null);
+          }
+          if (t.getValue() != null && !t.getValue().equals(newValue)) {
+            onPropertyChange(null, (String) newValue, null, null);
+          }
         }
-      } catch ( final Exception e ) {
-        throw new ConfigurablePropertyException("Could not change instance type due to: " + e.getMessage());
+      } catch (final Exception e) {
+        throw new ConfigurablePropertyException(
+            "Could not change instance type due to: " + e.getMessage());
       }
     }
   }
 
   public static class ElbKeyNameChangeListener implements PropertyChangeListener<String> {
     @Override
-    public void fireChange( ConfigurableProperty t, String keyname ) throws ConfigurablePropertyException {
+    public void fireChange(ConfigurableProperty t, String keyname)
+        throws ConfigurablePropertyException {
       try {
-        if(t.getValue()!=null && !t.getValue().equals(keyname)) {
-          if ( keyname != null && !keyname.isEmpty() ) {
+        if (t.getValue() != null && !t.getValue().equals(keyname)) {
+          if (keyname != null && !keyname.isEmpty()) {
             // find out if there are any old elbs are deployed
             boolean oldElbExist = false;
-            for (LoadBalancer lb:LoadBalancers.listLoadbalancers()){
+            for (LoadBalancerView lb : LoadBalancerHelper.listLoadbalancers(persistence,
+                LoadBalancers.CORE_VIEW)) {
               if (!lb.useSystemAccount()) {
                 oldElbExist = true;
                 break;
@@ -213,28 +232,31 @@ public class LoadBalancingWorkerProperties {
             }
             try {
               Ec2Client.getInstance().describeKeyPairs(Accounts.lookupSystemAccountByAlias(
-                  AccountIdentifiers.ELB_SYSTEM_ACCOUNT ).getUserId( ), Lists.newArrayList(keyname));
-            } catch(Exception ex) {
-              throw new ConfigurablePropertyException("Could not change key name due to: " + ex.getMessage() 
-              + ". Do you have keypair " + keyname + " that belongs to "
-              + AccountIdentifiers.ELB_SYSTEM_ACCOUNT + " account?");
+                  AccountIdentifiers.ELB_SYSTEM_ACCOUNT).getUserId(), Lists.newArrayList(keyname));
+            } catch (Exception ex) {
+              throw new ConfigurablePropertyException(
+                  "Could not change key name due to: " + ex.getMessage()
+                      + ". Do you have keypair " + keyname + " that belongs to "
+                      + AccountIdentifiers.ELB_SYSTEM_ACCOUNT + " account?");
             }
             if (oldElbExist) {
               try {
                 Ec2Client.getInstance().describeKeyPairs(null,
                     Lists.newArrayList(keyname));
-              } catch(Exception ex) {
-                throw new ConfigurablePropertyException("Could not change key name due to: " + ex.getMessage()
-                + ". Do you have keypair " + keyname + " that belongs to system account?");
+              } catch (Exception ex) {
+                throw new ConfigurablePropertyException(
+                    "Could not change key name due to: " + ex.getMessage()
+                        + ". Do you have keypair " + keyname + " that belongs to system account?");
               }
             }
           }
           onPropertyChange(null, null, keyname, null);
         }
-      } catch ( final ConfigurablePropertyException e ) {
+      } catch (final ConfigurablePropertyException e) {
         throw e;
-      } catch ( final Exception e ) {
-        throw new ConfigurablePropertyException("Could not change key name due to: " + e.getMessage());
+      } catch (final Exception e) {
+        throw new ConfigurablePropertyException(
+            "Could not change key name due to: " + e.getMessage());
       }
     }
   }
@@ -243,75 +265,87 @@ public class LoadBalancingWorkerProperties {
     @Override
     public void fireChange(ConfigurableProperty t, String newValue)
         throws ConfigurablePropertyException {
-      try{
+      try {
         final int newExp = Integer.parseInt(newValue);
-        if(newExp <= 0 )
+        if (newExp <= 0) {
           throw new Exception();
-      }catch(final Exception ex) {
+        }
+      } catch (final Exception ex) {
         throw new ConfigurablePropertyException("The value must be number type and bigger than 0");
       }
     }
   }
 
-  private static void onPropertyChange(final String machineImageIdentifier, final String instanceType,
-      final String keyname, String initScript) throws EucalyptusCloudException{
-    if (!( Bootstrap.isOperational()  && Topology.isEnabled( Compute.class ) ) )
+  private static void onPropertyChange(final String machineImageIdentifier,
+      final String instanceType,
+      final String keyname, String initScript) throws EucalyptusCloudException {
+    if (!(Bootstrap.isOperational() && Topology.isEnabled(Compute.class))) {
       return;
-    if ((machineImageIdentifier!=null && machineImageIdentifier.length()>0) ||
-        (instanceType!=null && instanceType.length()>0) ||
-        (keyname!=null) || (initScript != null) ){
-      if(!LoadBalancingWorkflows.modifyServicePropertiesSync(machineImageIdentifier, instanceType,
+    }
+    if ((machineImageIdentifier != null && machineImageIdentifier.length() > 0) ||
+        (instanceType != null && instanceType.length() > 0) ||
+        (keyname != null) || (initScript != null)) {
+      if (!LoadBalancingWorkflows.modifyServicePropertiesSync(machineImageIdentifier, instanceType,
           keyname, initScript)) {
-        throw new EucalyptusCloudException("Failed to modify properties. Check log files for error details");
+        throw new EucalyptusCloudException(
+            "Failed to modify properties. Check log files for error details");
       }
     }
-  } 
+  }
 
   public static class ElbNTPServerChangeListener implements PropertyChangeListener {
     @Override
-    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+    public void fireChange(ConfigurableProperty t, Object newValue)
+        throws ConfigurablePropertyException {
       try {
-        if ( newValue instanceof String ) {
-          if(((String) newValue).contains(",")){
-            final String[] addresses = ((String)newValue).split(",");
-            if((addresses.length-1) != StringUtils.countOccurrencesOf((String) newValue, ","))
+        if (newValue instanceof String) {
+          if (((String) newValue).contains(",")) {
+            final String[] addresses = ((String) newValue).split(",");
+            if ((addresses.length - 1) != StringUtils.countOccurrencesOf((String) newValue, ",")) {
               throw new EucalyptusCloudException("Invalid address");
-
-            for(final String address : addresses){
-              if(!HostSpecifier.isValid(String.format("%s.com",address)))
-                throw new EucalyptusCloudException("Invalid address");
             }
-          }else{
-            final String address = (String) newValue;
-            if( !address.equals("") ){
-              if(!HostSpecifier.isValid(String.format("%s.com", address)))
+
+            for (final String address : addresses) {
+              if (!HostSpecifier.isValid(String.format("%s.com", address))) {
                 throw new EucalyptusCloudException("Invalid address");
+              }
+            }
+          } else {
+            final String address = (String) newValue;
+            if (!address.equals("")) {
+              if (!HostSpecifier.isValid(String.format("%s.com", address))) {
+                throw new EucalyptusCloudException("Invalid address");
+              }
             }
           }
-        }else
+        } else {
           throw new EucalyptusCloudException("Address is not string type");
-      } catch ( final Exception e ) {
+        }
+      } catch (final Exception e) {
         throw new ConfigurablePropertyException("Could not change ntp server address", e);
       }
     }
-  } 
+  }
 
   public static class ElbAppCookieDurationChangeListener implements PropertyChangeListener {
     @Override
-    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+    public void fireChange(ConfigurableProperty t, Object newValue)
+        throws ConfigurablePropertyException {
       try {
-        if ( newValue instanceof String ) {
-          try{
-            final int appCookieDuration = Integer.parseInt((String)newValue);
-            if(appCookieDuration <= 0)
+        if (newValue instanceof String) {
+          try {
+            final int appCookieDuration = Integer.parseInt((String) newValue);
+            if (appCookieDuration <= 0) {
               throw new Exception();
-          }catch(final NumberFormatException ex){
-            throw new ConfigurablePropertyException("Duration must be in number type and bigger than 0 (in hours)");
+            }
+          } catch (final NumberFormatException ex) {
+            throw new ConfigurablePropertyException(
+                "Duration must be in number type and bigger than 0 (in hours)");
           }
         }
-      }catch (final ConfigurablePropertyException ex){
+      } catch (final ConfigurablePropertyException ex) {
         throw ex;
-      }catch (final Exception ex) {
+      } catch (final Exception ex) {
         throw new ConfigurablePropertyException("Could not change ELB app cookie duration", ex);
       }
     }

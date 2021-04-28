@@ -39,6 +39,7 @@
 
 package com.eucalyptus.compute.metadata;
 
+import com.eucalyptus.util.Ordered;
 import java.net.InetSocketAddress;
 import java.util.Set;
 import org.apache.log4j.Logger;
@@ -95,7 +96,13 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
   public MetadataPipeline( ) {
     super( );
   }
-  
+
+  @Override
+  public int getOrder() {
+    // lower priority since url matching is broad
+    return Ordered.DEFAULT_ORDER + 1000;
+  }
+
   @Override
   public boolean checkAccepts( HttpRequest message ) {
     return

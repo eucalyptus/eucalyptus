@@ -43,28 +43,28 @@ import com.eucalyptus.loadbalancing.common.LoadBalancing;
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
 @ComponentPart(LoadBalancing.class)
 @Repeating(value = LoadBalancingServiceHealthCheckWorkflowStarter.class, sleepSeconds = 60, dependsOn = LoadBalancing.class)
 public class LoadBalancingServiceHealthCheckWorkflowImpl
-implements LoadBalancingServiceHealthCheckWorkflow {
-  private static Logger    LOG     = 
-      Logger.getLogger(  LoadBalancingServiceHealthCheckWorkflowImpl.class );
+    implements LoadBalancingServiceHealthCheckWorkflow {
+  private static Logger LOG =
+      Logger.getLogger(LoadBalancingServiceHealthCheckWorkflowImpl.class);
 
-  final LoadBalancingActivitiesClient client = 
-      new LoadBalancingActivitiesClientImpl(null, LoadBalancingJsonDataConverter.getDefault(), null);
-  private ElbWorkflowState state = 
+  final LoadBalancingActivitiesClient client =
+      new LoadBalancingActivitiesClientImpl(null, LoadBalancingJsonDataConverter.getDefault(),
+          null);
+  private ElbWorkflowState state =
       ElbWorkflowState.WORKFLOW_RUNNING;
   TryCatchFinally task = null;
-  private DecisionContextProvider contextProvider = 
+  private DecisionContextProvider contextProvider =
       new DecisionContextProviderImpl();
-  final WorkflowClock clock = 
+  final WorkflowClock clock =
       contextProvider.getDecisionContext().getWorkflowClock();
   private final int MAX_UPDATE_PER_WORKFLOW = 10;
   //// TODO: Make this configurable for scale
   private final int UPDATE_PERIOD_SEC = 60;
- 
+
   @Override
   public void performServiceHealthCheck() {
     task = new TryCatchFinally() {
@@ -76,19 +76,20 @@ implements LoadBalancingServiceHealthCheckWorkflow {
       @Override
       protected void doCatch(Throwable e) throws Throwable {
         state = ElbWorkflowState.WORKFLOW_FAILED;
-        LOG.error("Workflow for updating ELB service state has failed: ", e);   
+        LOG.error("Workflow for updating ELB service state has failed: ", e);
       }
 
       @Override
       protected void doFinally() throws Throwable {
-        if (state == ElbWorkflowState.WORKFLOW_RUNNING)
+        if (state == ElbWorkflowState.WORKFLOW_RUNNING) {
           state = ElbWorkflowState.WORKFLOW_SUCCESS;
+        }
       }
     };
   }
 
   @Asynchronous
-  void performServiceHealthCheckPeriodic(final int count,  final Promise<?>... waitFor)  {
+  void performServiceHealthCheckPeriodic(final int count, final Promise<?>... waitFor) {
     if (count >= MAX_UPDATE_PER_WORKFLOW) {
       return;
     }
@@ -101,15 +102,15 @@ implements LoadBalancingServiceHealthCheckWorkflow {
     final Promise<Void> cleanupServo = client.cleanupServoInstances(checkBackend);
     final Promise<Void> cleanupSecurityGroup = client.cleanupSecurityGroups(cleanupServo);
     final Promise<Void> recycleServo = client.recycleFailedServoInstances(cleanupSecurityGroup);
-    performServiceHealthCheckPeriodic(count+1, new AndPromise(timer, recycleServo));
+    performServiceHealthCheckPeriodic(count + 1, new AndPromise(timer, recycleServo));
   }
 
   @Asynchronous(daemon = true)
   private Promise<Void> startDaemonTimer(int seconds) {
-      Promise<Void> timer = clock.createTimer(seconds);
-      return timer;
+    Promise<Void> timer = clock.createTimer(seconds);
+    return timer;
   }
-  
+
   @Override
   public ElbWorkflowState getState() {
     return state;

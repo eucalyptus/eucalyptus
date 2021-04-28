@@ -302,6 +302,39 @@ public abstract class EntityRestriction<E> {
     }
   }
 
+  static abstract class PropertyEntityValuesRestrictionSupport<E,V> extends PropertyEntityRestrictionSupport<E,V> {
+    private final Collection<V> values;
+
+    PropertyEntityValuesRestrictionSupport(
+        final Class<E> entityClass,
+        final SingularAttribute<? super E, V> attribute,
+        final Collection<V> values
+    ) {
+      super( entityClass, attribute );
+      this.values = values;
+    }
+
+    public Collection<V> getValues( ) {
+      return values;
+    }
+  }
+
+  static final class InPropertyEntityValuesRestriction<E,V> extends PropertyEntityValuesRestrictionSupport<E,V> {
+    InPropertyEntityValuesRestriction(
+        final Class<E> entityClass,
+        final SingularAttribute<? super E, V> attribute,
+        final Collection<V> values
+    ) {
+      super( entityClass, attribute, values );
+    }
+
+    public Expression<Boolean> build( CriteriaBuilder builder, Path<E> root ) {
+      final CriteriaBuilder.In<V> in = builder.in( root.get( getAttribute( ) ) );
+      getValues( ).forEach( in::value );
+      return in;
+    }
+  }
+
   static final class NullPropertyEntityRestriction<E,V> extends PropertyEntityRestrictionSupport<E,V> {
     NullPropertyEntityRestriction(
         final Class<E> entityClass,

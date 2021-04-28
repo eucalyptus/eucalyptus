@@ -34,14 +34,13 @@ import com.amazonaws.services.simpleworkflow.flow.annotations.WorkflowRegistrati
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
 
 @Workflow
-@WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 7200, 
-defaultTaskStartToCloseTimeoutSeconds = 60)
+@WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 7200,
+    defaultTaskStartToCloseTimeoutSeconds = 60)
 public interface CloudWatchPutMetricWorkflow {
   @Execute(name = "PutCloudWatchMetric", version = "1.0")
-  void putCloudWatchMetric(final String accountId, 
+  void putCloudWatchMetric(final String accountId,
       final String loadbalancer);
 }
