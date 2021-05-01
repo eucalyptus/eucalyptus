@@ -2704,8 +2704,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
         if (requestedSourceRange == null) {
           objectSize = maxObjectSize;
         } else {
-          objectSize = requestedSourceRange._2() - requestedSourceRange._1();
-          if (objectSize < 0 || objectSize > maxObjectSize) {
+          objectSize = (requestedSourceRange._2() - requestedSourceRange._1()) + 1;
+          if (objectSize < 1 || objectSize > maxObjectSize) {
             throw new Exception("Invalid copy source range");
           }
         }
