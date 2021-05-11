@@ -42,7 +42,6 @@ import com.eucalyptus.ws.WebServices;
 import com.eucalyptus.ws.WebServicesException;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
-import com.eucalyptus.ws.stages.SoapUserAuthenticationStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -56,7 +55,6 @@ public abstract class SoapPipeline extends FilteredPipeline {
   private final Set<String> servicePaths;
   private final String defaultNamespace;
   private final String namespacePattern;
-  private final UnrollableStage auth = new SoapUserAuthenticationStage( ); // default, see getAuthenticationStage
 
   protected SoapPipeline( final String name,
                           final Class<? extends ComponentId> component,
@@ -118,8 +116,5 @@ public abstract class SoapPipeline extends FilteredPipeline {
     return pipeline;
   }
 
-  protected UnrollableStage getAuthenticationStage( ) {
-    return auth;
-  }
-
+  abstract protected UnrollableStage getAuthenticationStage( );
 }
