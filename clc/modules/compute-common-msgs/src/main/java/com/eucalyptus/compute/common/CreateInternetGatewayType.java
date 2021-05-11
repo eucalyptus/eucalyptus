@@ -28,6 +28,37 @@
  ************************************************************************/
 package com.eucalyptus.compute.common;
 
-public class CreateInternetGatewayType extends VpcMessage {
+import com.eucalyptus.binding.HttpEmbedded;
+import edu.ucsb.eucalyptus.msgs.HasTags;
+import java.util.ArrayList;
+import java.util.Set;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
+public class CreateInternetGatewayType extends VpcMessage implements HasTags {
+
+  @HttpEmbedded( multiple = true )
+  private ArrayList<ResourceTagSpecification> tagSpecification = new ArrayList<ResourceTagSpecification>( );
+
+  @Override
+  public Set<String> getTagKeys( @Nullable String resourceType, @Nullable String resourceId ) {
+    return getTagKeys( tagSpecification, resourceType, resourceId );
+  }
+
+  @Override
+  public String getTagValue(
+      @Nullable String resourceType,
+      @Nullable String resourceId,
+      @Nonnull final String tagKey
+  ) {
+    return getTagValue( tagSpecification, resourceType, resourceId, tagKey );
+  }
+
+  public ArrayList<ResourceTagSpecification> getTagSpecification( ) {
+    return tagSpecification;
+  }
+
+  public void setTagSpecification( ArrayList<ResourceTagSpecification> tagSpecification ) {
+    this.tagSpecification = tagSpecification;
+  }
 }
