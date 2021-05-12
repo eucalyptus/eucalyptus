@@ -1411,11 +1411,13 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
               attr.setAttributeName("Reference-Security-Policy");
               attr.setAttributeValue(LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME);
               try {
-                LoadBalancerPolicyHelper.addLoadBalancerPolicy(
+                final LoadBalancerPolicyDescription policyDesc = LoadBalancerPolicyHelper.addLoadBalancerPolicy(
                     lb,
                     LoadBalancerPolicyHelper.LATEST_SECURITY_POLICY_NAME,
                     "SSLNegotiationPolicyType",
                     Lists.newArrayList(attr));
+                Entities.persist(policyDesc);
+                lb.getPolicyDescriptions().add(policyDesc);
               } catch (final LoadBalancingException ex) {
                 throw Exceptions.toUndeclared(ex);
               }
