@@ -95,6 +95,7 @@ public interface ComputePolicySpec {
   String EC2_RESOURCE_IMAGE = "image";
   String EC2_RESOURCE_SECURITYGROUP = "security-group";
   String EC2_RESOURCE_ADDRESS = "address";
+  String EC2_RESOURCE_ELASTICIP = "elastic-ip";
   String EC2_RESOURCE_AVAILABILITYZONE = "availabilityzone";
   String EC2_RESOURCE_INSTANCE = "instance";
   String EC2_RESOURCE_KEYPAIR = "key-pair";
@@ -119,6 +120,7 @@ public interface ComputePolicySpec {
       .add( EC2_RESOURCE_SECURITYGROUP )
       .add( EC2_RESOURCE_SECURITYGROUP.replace( "-", "" ) ) // no '-' until v4.1
       .add( EC2_RESOURCE_ADDRESS )
+      .add( EC2_RESOURCE_ELASTICIP )
       .add( EC2_RESOURCE_AVAILABILITYZONE )
       .add( EC2_RESOURCE_INSTANCE )
       .add( EC2_RESOURCE_KEYPAIR )

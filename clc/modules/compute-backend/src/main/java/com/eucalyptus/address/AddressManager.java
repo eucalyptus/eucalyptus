@@ -40,7 +40,12 @@
 package com.eucalyptus.address;
 
 import static com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet;
+
+import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.compute.common.policy.ComputePolicySpec;
+import com.eucalyptus.tags.TagHelper;
 import java.util.Collections;
+import java.util.List;
 import java.util.NoSuchElementException;
 import javax.inject.Inject;
 import org.apache.log4j.Logger;
@@ -118,7 +123,10 @@ public class AddressManager {
       final AddressDomain domain = Optional.fromNullable( request.getDomain( ) )
           .transform( FUtils.valueOfFunction( AddressDomain.class ) )
           .or( defaultVpcId != null ? AddressDomain.vpc : AddressDomain.standard );
-      final Addresses.Allocator allocator = addresses.allocator( domain, requestedAddress );
+      final List<ResourceTag> resourceTags = TagHelper.tagsForResourceWithValidation(
+          Contexts.lookup( ), request.getTagSpecification( ), ComputePolicySpec.EC2_RESOURCE_ELASTICIP );
+      final Addresses.Allocator allocator = addresses.allocator( domain, requestedAddress,
+          allocatedAddress -> TagHelper.createOrUpdateTags( allocatedAddress, resourceTags ) );
       final Address address = RestrictedTypes.allocateNamedUnitlessResources( 1, allocator, allocator ).get( 0 );
       reply.setPublicIp( address.getName( ) );
       reply.setAllocationId( address.getAllocationId( ) );
