@@ -108,6 +108,7 @@ public interface ComputePolicySpec {
   String EC2_RESOURCE_CUSTOMERGATEWAY = "customer-gateway";
   String EC2_RESOURCE_DHCPOPTIONS = "dhcp-options";
   String EC2_RESOURCE_INTERNETGATEWAY = "internet-gateway";
+  String EC2_RESOURCE_NATGATEWAY = "nat-gateway";
   String EC2_RESOURCE_NETWORKACL = "network-acl";
   String EC2_RESOURCE_NETWORKINTERFACE = "network-interface";
   String EC2_RESOURCE_ROUTETABLE = "route-table";
@@ -134,6 +135,7 @@ public interface ComputePolicySpec {
       .add( EC2_RESOURCE_CUSTOMERGATEWAY )
       .add( EC2_RESOURCE_DHCPOPTIONS )
       .add( EC2_RESOURCE_INTERNETGATEWAY )
+      .add( EC2_RESOURCE_NATGATEWAY )
       .add( EC2_RESOURCE_NETWORKACL )
       .add( EC2_RESOURCE_NETWORKINTERFACE )
       .add( EC2_RESOURCE_ROUTETABLE )
