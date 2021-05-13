@@ -39,6 +39,9 @@
 
 package com.eucalyptus.network;
 
+import com.eucalyptus.compute.common.ResourceTag;
+import com.eucalyptus.compute.common.policy.ComputePolicySpec;
+import com.eucalyptus.tags.TagHelper;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -124,6 +127,8 @@ public class NetworkGroupManager {
     } else if ( vpcId != null && !NetworkGroups.VPC_GROUP_DESC_PATTERN.matcher( groupDescription ).matches( ) ) {
       throw new ClientComputeException("InvalidParameterValue", "Invalid security group description. Valid descriptions are strings less than 256 characters from the following set:  a-zA-Z0-9. _-:/()#,@[]+=&;{}!$*");
     }
+    final List<ResourceTag> resourceTags = TagHelper.tagsForResourceWithValidation(
+        ctx, request.getTagSpecification( ), ComputePolicySpec.EC2_RESOURCE_SECURITYGROUP );
     final CreateSecurityGroupResponseType reply = request.getReply( );
     try {
       Supplier<NetworkGroup> allocator = new Supplier<NetworkGroup>( ) {
@@ -143,6 +148,7 @@ public class NetworkGroupManager {
                       null/*peers*/, Collections.singleton( NetworkCidr.create( "0.0.0.0/0" ) ) )
               ) );
             }
+            TagHelper.createOrUpdateTags( group, resourceTags );
             tx.commit();
             return group;
           } catch ( NoSuchElementException e ) {
