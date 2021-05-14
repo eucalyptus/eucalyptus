@@ -5,6 +5,8 @@
  */
 package com.eucalyptus.loadbalancingv2.common.msgs;
 
+import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2MessageValidation.FieldRegex;
+import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2MessageValidation.FieldRegexValue;
 import java.util.ArrayList;
 import com.eucalyptus.binding.HttpParameterMapping;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
@@ -12,6 +14,7 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
 public class SecurityGroups extends EucalyptusData {
 
+  @FieldRegex(FieldRegexValue.EC2_SECURITYGROUP)
   @HttpParameterMapping(parameter = "member")
   private ArrayList<String> member = new ArrayList<>();
 

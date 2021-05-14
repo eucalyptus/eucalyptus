@@ -19,6 +19,7 @@ public class CreateListenerType extends Loadbalancingv2Message {
   private Actions defaultActions;
 
   @Nonnull
+  @FieldRegex(FieldRegexValue.LOADBALANCING_ARN)
   private String loadBalancerArn;
 
   @Nonnull
@@ -29,6 +30,7 @@ public class CreateListenerType extends Loadbalancingv2Message {
   @FieldRegex(FieldRegexValue.ENUM_PROTOCOLENUM)
   private String protocol;
 
+  @FieldRegex(FieldRegexValue.SECURITY_POLICY)
   private String sslPolicy;
 
   public CertificateList getCertificates() {

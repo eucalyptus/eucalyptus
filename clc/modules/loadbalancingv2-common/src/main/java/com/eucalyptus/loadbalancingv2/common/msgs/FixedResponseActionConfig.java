@@ -7,6 +7,8 @@ package com.eucalyptus.loadbalancingv2.common.msgs;
 
 import javax.annotation.Nonnull;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2MessageValidation.FieldRange;
+import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2MessageValidation.FieldRegex;
+import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2MessageValidation.FieldRegexValue;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
 
@@ -19,6 +21,7 @@ public class FixedResponseActionConfig extends EucalyptusData {
   private String messageBody;
 
   @Nonnull
+  @FieldRegex(FieldRegexValue.HTTP_STATUSCODE)
   private String statusCode;
 
   public String getContentType() {

@@ -6,7 +6,6 @@
 package com.eucalyptus.loadbalancingv2.common.msgs;
 
 import javax.annotation.Nonnull;
-import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2MessageValidation.FieldRange;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2MessageValidation.FieldRegex;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2MessageValidation.FieldRegexValue;
 
@@ -17,6 +16,7 @@ public class CreateLoadBalancerType extends Loadbalancingv2Message {
   private String ipAddressType;
 
   @Nonnull
+  @FieldRegex(FieldRegexValue.LOADBALANCING_NAME)
   private String name;
 
   @FieldRegex(FieldRegexValue.ENUM_LOADBALANCERSCHEMEENUM)
@@ -28,7 +28,6 @@ public class CreateLoadBalancerType extends Loadbalancingv2Message {
 
   private Subnets subnets;
 
-  @FieldRange(min = 1)
   private TagList tags;
 
   @FieldRegex(FieldRegexValue.ENUM_LOADBALANCERTYPEENUM)

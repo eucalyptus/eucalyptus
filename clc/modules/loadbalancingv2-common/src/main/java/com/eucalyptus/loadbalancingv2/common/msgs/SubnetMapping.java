@@ -5,15 +5,20 @@
  */
 package com.eucalyptus.loadbalancingv2.common.msgs;
 
+import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2MessageValidation.FieldRegex;
+import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2MessageValidation.FieldRegexValue;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
 
 public class SubnetMapping extends EucalyptusData {
 
+  @FieldRegex(FieldRegexValue.EC2_EIPALLOC)
   private String allocationId;
 
+  @FieldRegex(FieldRegexValue.IP_ADDRESS)
   private String privateIPv4Address;
 
+  @FieldRegex(FieldRegexValue.EC2_SUBNET)
   private String subnetId;
 
   public String getAllocationId() {

@@ -11,7 +11,6 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
 public class DescribeLoadBalancerAttributesResult extends EucalyptusData {
 
-  @FieldRange(max = 20)
   private LoadBalancerAttributes attributes;
 
   public LoadBalancerAttributes getAttributes() {

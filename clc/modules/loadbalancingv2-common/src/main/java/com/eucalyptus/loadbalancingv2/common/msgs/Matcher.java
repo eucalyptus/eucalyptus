@@ -5,23 +5,24 @@
  */
 package com.eucalyptus.loadbalancingv2.common.msgs;
 
-import javax.annotation.Nonnull;
+import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2MessageValidation.FieldRegex;
+import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2MessageValidation.FieldRegexValue;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
 
 public class Matcher extends EucalyptusData {
 
-  @Nonnull
+  @FieldRegex(FieldRegexValue.CODE_VALUES_OR_RANGE)
   private String grpcCode;
 
-  @Nonnull
+  @FieldRegex(FieldRegexValue.CODE_VALUES_OR_RANGE)
   private String httpCode;
 
-  @Nonnull public String getGrpcCode() {
+  public String getGrpcCode() {
     return grpcCode;
   }
 
-  public void setGrpcCode(@Nonnull String grpcCode) {
+  public void setGrpcCode(String grpcCode) {
     this.grpcCode = grpcCode;
   }
 

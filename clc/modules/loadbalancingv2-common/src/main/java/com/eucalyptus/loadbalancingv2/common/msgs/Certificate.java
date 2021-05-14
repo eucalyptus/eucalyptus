@@ -5,11 +5,14 @@
  */
 package com.eucalyptus.loadbalancingv2.common.msgs;
 
+import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2MessageValidation.FieldRegex;
+import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2MessageValidation.FieldRegexValue;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
 
 public class Certificate extends EucalyptusData {
 
+  @FieldRegex(FieldRegexValue.IAM_ARN)
   private String certificateArn;
 
   private Boolean isDefault;
