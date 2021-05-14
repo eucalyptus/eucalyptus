@@ -86,14 +86,17 @@ public class MessageValidation {
       // validate range
       final Pair<Long, Long> range = validationAssistant.range( fieldAts );
       if ( range != null && value instanceof Number ) {
-        Long longValue = ( (Number) value ).longValue( );
+        long longValue = ( (Number) value ).longValue( );
         if ( longValue < range.getLeft( ) || longValue > range.getRight( ) ) {
           errorMap.put( displayName, String.valueOf( value ) + " for parameter " + displayName + " is invalid" );
         }
-      }
-
-      if ( range != null && value instanceof List ) {
-        Long longValue = (long) ( (List) value ).size( );
+      } else if ( range != null && value instanceof String ) {
+        long longValue = ( (String) value ).length( );
+        if ( longValue < range.getLeft( ) || longValue > range.getRight( ) ) {
+          errorMap.put( displayName, "Length out of range " + display(range) + " for parameter " + displayName );
+        }
+      } else if ( range != null && value instanceof List ) {
+        long longValue = (long) ( (List) value ).size( );
         if ( longValue < range.getLeft( ) && range.getLeft( ) == 1 ) {
           errorMap.put( displayName + ".1", displayName + ".1 is required" );
         } else if ( longValue < range.getLeft( ) ) {
@@ -118,6 +121,10 @@ public class MessageValidation {
     }
 
     return errorMap;
+  }
+
+  public static String display( final Pair<Long,Long> range ) {
+    return "(" + range.getLeft() + "-" + range.getRight( ) + ")";
   }
 
   public static String displayName( Field field ) {
