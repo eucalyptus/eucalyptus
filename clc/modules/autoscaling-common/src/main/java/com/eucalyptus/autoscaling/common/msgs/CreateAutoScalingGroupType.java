@@ -54,6 +54,8 @@ public class CreateAutoScalingGroupType extends AutoScalingMessage {
   private Integer defaultCooldown;
   private AvailabilityZones availabilityZones;
   private LoadBalancerNames loadBalancerNames;
+  @HttpParameterMapping( parameter = "TargetGroupARNs" )
+  private TargetGroupArns targetGroupArns;
   @AutoScalingMessageValidation.FieldRegex( AutoScalingMessageValidation.FieldRegexValue.HEALTH_CHECK )
   private String healthCheckType;
   @AutoScalingMessageValidation.FieldRange
@@ -75,6 +77,11 @@ public class CreateAutoScalingGroupType extends AutoScalingMessage {
   public Collection<String> loadBalancerNames( ) {
     final LoadBalancerNames names = loadBalancerNames;
     return ( names == null ? null : names.getMember( ) );
+  }
+
+  public Collection<String> targetGroupArns( ) {
+    final TargetGroupArns arns = targetGroupArns;
+    return ( arns == null ? null : arns.getMember( ) );
   }
 
   public Collection<String> terminationPolicies( ) {
@@ -170,6 +177,14 @@ public class CreateAutoScalingGroupType extends AutoScalingMessage {
 
   public void setLoadBalancerNames( LoadBalancerNames loadBalancerNames ) {
     this.loadBalancerNames = loadBalancerNames;
+  }
+
+  public TargetGroupArns getTargetGroupArns( ) {
+    return targetGroupArns;
+  }
+
+  public void setTargetGroupArns( TargetGroupArns targetGroupArns ) {
+    this.targetGroupArns = targetGroupArns;
   }
 
   public String getHealthCheckType( ) {

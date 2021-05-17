@@ -155,6 +155,13 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   private List<String> loadBalancerNames = Lists.newArrayList();
 
   @ElementCollection
+  @CollectionTable( name = "metadata_auto_scaling_group_target_groups" )
+  @Column( name = "metadata_target_group_arn", length = 512 )
+  @JoinColumn( name = "metadata_auto_scaling_group_id" )
+  @OrderColumn( name = "metadata_target_group_index")
+  private List<String> targetGroupArns = Lists.newArrayList();
+
+  @ElementCollection
   @CollectionTable( name = "metadata_auto_scaling_group_suspended_processes" )
   @JoinColumn( name = "metadata_auto_scaling_group_id" )
   private Set<SuspendedProcess> suspendedProcesses = Sets.newHashSet();
@@ -319,6 +326,14 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
     this.loadBalancerNames = loadBalancerNames;
   }
 
+  public List<String> getTargetGroupArns() {
+    return targetGroupArns;
+  }
+
+  public void setTargetGroupArns(List<String> targetGroupArns) {
+    this.targetGroupArns = targetGroupArns;
+  }
+
   public Set<SuspendedProcess> getSuspendedProcesses() {
     return suspendedProcesses;
   }
@@ -475,6 +490,7 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
     private Map<String,String> subnetsByZone = Maps.newHashMap();
     private Set<TerminationPolicyType> terminationPolicies = Sets.newLinkedHashSet();
     private Set<String> loadBalancerNames = Sets.newLinkedHashSet();
+    private Set<String> targetGroupArns = Sets.newLinkedHashSet();
     private List<AutoScalingGroupTag> tags = Lists.newArrayList();
 
     BaseBuilder( final OwnerFullName ownerFullName,
@@ -544,6 +560,13 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
       return builder();
     }
 
+    public T withTargetGroupArns( final Iterable<String> targetGroupArns ) {
+      if ( targetGroupArns != null ) {
+        Iterables.addAll( this.targetGroupArns, targetGroupArns );
+      }
+      return builder();
+    }
+
     public T withTags( final Iterable<AutoScalingGroupTag> tags ) {
       if ( tags != null ) {
         Iterables.addAll( this.tags, tags );
@@ -565,6 +588,7 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
           Collections.singletonList(TerminationPolicyType.Default) :
           Lists.newArrayList( terminationPolicies ) );
       group.setLoadBalancerNames( Lists.newArrayList( loadBalancerNames ) );
+      group.setTargetGroupArns( Lists.newArrayList( targetGroupArns ) );
       group.setScalingRequired( group.getDesiredCapacity() > 0 );
       return group;
     }

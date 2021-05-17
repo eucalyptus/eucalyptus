@@ -45,6 +45,7 @@ import com.eucalyptus.autoscaling.common.msgs.ProcessType;
 import com.eucalyptus.autoscaling.common.msgs.SuspendedProcessType;
 import com.eucalyptus.autoscaling.common.msgs.SuspendedProcesses;
 import com.eucalyptus.autoscaling.common.msgs.TagType;
+import com.eucalyptus.autoscaling.common.msgs.TargetGroupArns;
 import com.eucalyptus.autoscaling.common.msgs.TerminationPolicies;
 import com.eucalyptus.autoscaling.common.internal.configurations.LaunchConfiguration;
 import com.eucalyptus.autoscaling.common.internal.instances.AutoScalingInstance;
@@ -169,6 +170,7 @@ public abstract class AutoScalingGroups {
       type.setHealthCheckType( Strings.toString( group.getHealthCheckType() ) );
       type.setLaunchConfigurationName( AutoScalingMetadatas.toDisplayName().apply( group.getLaunchConfiguration() ) );
       type.setLoadBalancerNames( new LoadBalancerNames( group.getLoadBalancerNames() ) );
+      type.setTargetGroupArns( new TargetGroupArns( group.getTargetGroupArns() ) );
       type.setMaxSize( group.getMaxSize() );
       type.setMinSize( group.getMinSize() );
       type.setNewInstancesProtectedFromScaleIn( group.getNewInstancesProtectedFromScaleIn( ) );

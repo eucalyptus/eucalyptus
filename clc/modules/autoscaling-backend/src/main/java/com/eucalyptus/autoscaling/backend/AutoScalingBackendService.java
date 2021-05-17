@@ -364,6 +364,7 @@ public class AutoScalingBackendService {
               Consumers.atomic( subnetsByZone ),
               request.availabilityZones(),
               request.loadBalancerNames(),
+              request.targetGroupArns(),
               subnetIds
           );
           verifyUnsupportedReferences( referenceErrors, request.getPlacementGroup( ) );
@@ -391,6 +392,7 @@ public class AutoScalingBackendService {
                   request.getHealthCheckType()==null ? null : HealthCheckType.valueOf( request.getHealthCheckType() ) )
               .withNewInstancesProtectedFromScaleIn( request.getNewInstancesProtectedFromScaleIn( ) )
               .withLoadBalancerNames( request.loadBalancerNames() )
+              .withTargetGroupArns( request.targetGroupArns() )
               .withTerminationPolicyTypes( request.terminationPolicies() == null ? null :
                   Collections2.filter( Collections2.transform(
                           request.terminationPolicies(), FUtils.valueOfFunction( TerminationPolicyType.class ) ),
@@ -985,6 +987,7 @@ public class AutoScalingBackendService {
                 Consumers.atomic( subnetsByZone ),
                 request.availabilityZones( ),
                 Collections.emptyList(), // load balancer names cannot be updated
+                Collections.emptyList(), // target group arns cannot be updated
                 subnetIds
             );
             verifyUnsupportedReferences( referenceErrors, request.getPlacementGroup() );

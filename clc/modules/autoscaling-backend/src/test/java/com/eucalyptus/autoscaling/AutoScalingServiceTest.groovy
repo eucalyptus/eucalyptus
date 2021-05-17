@@ -864,6 +864,7 @@ class AutoScalingServiceTest {
                                        Consumer<? super Map<String,String>> availabilityZoneToSubnetMapConsumer,
                                        Iterable<String> availabilityZones,
                                        Iterable<String> loadBalancerNames,
+                                       Iterable<String> targetGroupArns,
                                        Iterable<String> subnetIds ) {
         if ( subnetIds?.iterator( )?.hasNext( ) ) {
           availabilityZoneToSubnetMapConsumer.accept( ImmutableMap.of( subnetIds.iterator().next(), 'zone-1' ) )
