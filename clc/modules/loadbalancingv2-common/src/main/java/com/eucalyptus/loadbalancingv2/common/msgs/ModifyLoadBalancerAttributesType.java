@@ -12,7 +12,6 @@ import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2MessageValidation.Fi
 public class ModifyLoadBalancerAttributesType extends Loadbalancingv2Message {
 
   @Nonnull
-  @FieldRange(max = 20)
   private LoadBalancerAttributes attributes;
 
   @Nonnull

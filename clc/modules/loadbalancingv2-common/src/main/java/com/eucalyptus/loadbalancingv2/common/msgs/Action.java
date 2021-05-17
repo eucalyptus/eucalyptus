@@ -27,6 +27,7 @@ public class Action extends EucalyptusData {
 
   private RedirectActionConfig redirectConfig;
 
+  @FieldRegex(FieldRegexValue.LOADBALANCING_ARN)
   private String targetGroupArn;
 
   @Nonnull

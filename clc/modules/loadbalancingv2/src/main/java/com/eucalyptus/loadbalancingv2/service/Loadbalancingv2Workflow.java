@@ -22,37 +22,16 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.AddressInfoType;
 import com.eucalyptus.compute.common.AllocateAddressResponseType;
-import com.eucalyptus.compute.common.AllocateAddressType;
-import com.eucalyptus.compute.common.AssociateAddressResponseType;
 import com.eucalyptus.compute.common.AssociateAddressType;
-import com.eucalyptus.compute.common.AttachNetworkInterfaceResponseType;
-import com.eucalyptus.compute.common.AttachNetworkInterfaceType;
 import com.eucalyptus.compute.common.Compute;
-import com.eucalyptus.compute.common.CreateNetworkInterfaceResponseType;
+import com.eucalyptus.compute.common.ComputeApi;
 import com.eucalyptus.compute.common.CreateNetworkInterfaceType;
-import com.eucalyptus.compute.common.CreateTagsResponseType;
 import com.eucalyptus.compute.common.CreateTagsType;
-import com.eucalyptus.compute.common.DeleteNetworkInterfaceResponseType;
-import com.eucalyptus.compute.common.DeleteNetworkInterfaceType;
-import com.eucalyptus.compute.common.DeleteTagsResponseType;
-import com.eucalyptus.compute.common.DeleteTagsType;
 import com.eucalyptus.compute.common.DescribeAddressesResponseType;
-import com.eucalyptus.compute.common.DescribeAddressesType;
 import com.eucalyptus.compute.common.DescribeInstancesResponseType;
-import com.eucalyptus.compute.common.DescribeInstancesType;
-import com.eucalyptus.compute.common.DescribeNetworkInterfacesResponseType;
-import com.eucalyptus.compute.common.DescribeNetworkInterfacesType;
-import com.eucalyptus.compute.common.DescribeTagsResponseType;
-import com.eucalyptus.compute.common.DescribeTagsType;
-import com.eucalyptus.compute.common.DetachNetworkInterfaceResponseType;
-import com.eucalyptus.compute.common.DetachNetworkInterfaceType;
-import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.InstanceNetworkInterfaceSetItemType;
 import com.eucalyptus.compute.common.ModifyNetworkInterfaceAttachmentType;
-import com.eucalyptus.compute.common.ModifyNetworkInterfaceAttributeResponseType;
 import com.eucalyptus.compute.common.ModifyNetworkInterfaceAttributeType;
-import com.eucalyptus.compute.common.ReleaseAddressResponseType;
-import com.eucalyptus.compute.common.ReleaseAddressType;
 import com.eucalyptus.compute.common.ReservationInfoType;
 import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.RunningInstancesItemType;
@@ -257,16 +236,16 @@ public class Loadbalancingv2Workflow {
   private void loadBalancersLoad() {
     if (loaded.get()) return;
 
-    final LoadBalancingComputeApi ec2;
+    final ComputeApi ec2;
     final DescribeInstancesResponseType describeInstancesResponse;
     try {
-      ec2 = AsyncProxy.client(LoadBalancingComputeApi.class,
+      ec2 = AsyncProxy.client(ComputeApi.class,
           loadBalancingAuthTransform, () -> Topology.lookup(Compute.class));
-      final Map<String, String> filters = Maps.newHashMap();
-      filters.put("instance-state-name", "running");
-      filters.put("tag-key", "loadbalancer-id");
-      filters.put("tag:user-interface-status", "attached");
-      describeInstancesResponse = ec2.describeInstances(describeInstancesMessage(filters));
+      describeInstancesResponse = ec2.describeInstances(
+          ComputeApi.filter("instance-state-name", "running"),
+          ComputeApi.filter("tag-key", "loadbalancer-id"),
+          ComputeApi.filter("tag:user-interface-status", "attached")
+      );
     } catch (final Exception e) {
       logger.warn("Error describing instances to populate load balancer servos: " + e.getMessage());
       return;
@@ -328,16 +307,16 @@ public class Loadbalancingv2Workflow {
    * Track servo instances and configure them
    */
   private void loadBalancersTrack() {
-    final LoadBalancingComputeApi ec2;
+    final ComputeApi ec2;
     final DescribeInstancesResponseType describeInstancesResponse;
     try {
-      ec2 = AsyncProxy.client(LoadBalancingComputeApi.class,
+      ec2 = AsyncProxy.client(ComputeApi.class,
           loadBalancingAuthTransform, () -> Topology.lookup(Compute.class));
-      final Map<String, String> filters = Maps.newHashMap();
-      filters.put("instance-state-name", "running");
-      filters.put("tag-key", "loadbalancer-id");
-      filters.put("tag:user-interface-status", "pending");
-      describeInstancesResponse = ec2.describeInstances(describeInstancesMessage(filters));
+      describeInstancesResponse = ec2.describeInstances(
+          ComputeApi.filter("instance-state-name", "running"),
+          ComputeApi.filter("tag-key", "loadbalancer-id"),
+          ComputeApi.filter("tag:user-interface-status", "pending")
+      );
     } catch (final Exception e) {
       logger.warn("Error describing instances to setup load balancer servos: " + e.getMessage());
       return;
@@ -383,8 +362,7 @@ public class Loadbalancingv2Workflow {
                 ec2.createNetworkInterface(createNetworkInterfaceMessage(subnetId.get(0), securityGroupIds))
                     .getNetworkInterface().getNetworkInterfaceId();
 
-            attachmentId = ec2.attachNetworkInterface(
-                attachNetworkInterfaceMessage(instanceId, 1, networkInterfaceId)).getAttachmentId();
+            attachmentId = ec2.attachNetworkInterface(instanceId, 1, networkInterfaceId).getAttachmentId();
           }
 
           if (attachmentId != null) {
@@ -396,8 +374,7 @@ public class Loadbalancingv2Workflow {
             if (loadBalancer.getScheme() != LoadBalancer.Scheme.internal) {
               logger.info("Allocating public ip for servo instance: " + instanceId);
 
-              final AllocateAddressResponseType allocateResponse =
-                  ec2.allocateAddress(allocateAddressMessage());
+              final AllocateAddressResponseType allocateResponse = ec2.allocateAddress("vpc");
               final String allocationId = allocateResponse.getAllocationId();
               loadBalancerServoIp = allocateResponse.getPublicIp();
 
@@ -477,21 +454,6 @@ public class Loadbalancingv2Workflow {
     return deleteStack;
   }
 
-  private Filter filter(final String name, final String value) {
-    final Filter filter = new Filter();
-    filter.setName(name);
-    filter.setValueSet(Lists.newArrayList(value));
-    return filter;
-  }
-
-  private DescribeInstancesType describeInstancesMessage(final Map<String,String> filters) {
-    final DescribeInstancesType describeInstancesType = new DescribeInstancesType();
-    Stream.ofAll(filters.entrySet())
-        .map(entry -> filter(entry.getKey(), entry.getValue()))
-        .forEach(describeInstancesType.getFilterSet()::add);
-    return describeInstancesType;
-  }
-
   private CreateNetworkInterfaceType createNetworkInterfaceMessage(
       final String subnetId,
       final List<String> securityGroupIds
@@ -504,18 +466,6 @@ public class Loadbalancingv2Workflow {
         .forEach(groupSet.getItem()::add);
     createNetworkInterface.setGroupSet(groupSet);
     return createNetworkInterface;
-  }
-
-  private AttachNetworkInterfaceType attachNetworkInterfaceMessage(
-      final String instanceId,
-      final int deviceIndex,
-      final String networkInterfaceId
-  ) {
-    final AttachNetworkInterfaceType attachNetworkInterface = new AttachNetworkInterfaceType();
-    attachNetworkInterface.setInstanceId(instanceId);
-    attachNetworkInterface.setDeviceIndex(deviceIndex);
-    attachNetworkInterface.setNetworkInterfaceId(networkInterfaceId);
-    return attachNetworkInterface;
   }
 
   private ModifyNetworkInterfaceAttributeType modifyNetworkInterfaceAttributeMessage(
@@ -534,12 +484,6 @@ public class Loadbalancingv2Workflow {
     return modifyNetworkInterfaceAttribute;
   }
 
-  private AllocateAddressType allocateAddressMessage() {
-    final AllocateAddressType allocateAddress = new AllocateAddressType();
-    allocateAddress.setDomain("vpc");
-    return allocateAddress;
-  }
-
   private AssociateAddressType assocateAddressMessage(
       final String allocationId,
       final String networkInterfaceId
@@ -548,20 +492,6 @@ public class Loadbalancingv2Workflow {
     associateAddress.setAllocationId(allocationId);
     associateAddress.setNetworkInterfaceId(networkInterfaceId);
     return associateAddress;
-  }
-
-  private DescribeAddressesType describeAddressesMessage(final Map<String,String> filters) {
-    final DescribeAddressesType describeAddresses = new DescribeAddressesType();
-    Stream.ofAll(filters.entrySet())
-        .map(entry -> filter(entry.getKey(), entry.getValue()))
-        .forEach(describeAddresses.getFilterSet()::add);
-    return describeAddresses;
-  }
-
-  private ReleaseAddressType releaseAddressMessage(final String allocationId) {
-    final ReleaseAddressType releaseAddress = new ReleaseAddressType();
-    releaseAddress.setAllocationId(allocationId);
-    return releaseAddress;
   }
 
   private CreateTagsType createTagsMessage(final String resourceId, final Map<String,String> tags) {
@@ -653,19 +583,18 @@ public class Loadbalancingv2Workflow {
 
   private void addressesRelease() {
     try {
-      final LoadBalancingComputeApi ec2 = AsyncProxy.client(LoadBalancingComputeApi.class,
+      final ComputeApi ec2 = AsyncProxy.client(ComputeApi.class,
           loadBalancingAuthTransform, () -> Topology.lookup(Compute.class));
 
-      final Map<String,String> filters = Maps.newHashMap();
-      filters.put("tag-key", "loadbalancer-id");
-      final DescribeAddressesResponseType describeAddressesResponse =
-          ec2.describeAddresses(describeAddressesMessage(filters));
+      final DescribeAddressesResponseType describeAddressesResponse = ec2.describeAddresses(
+          ComputeApi.filter("tag-key", "loadbalancer-id")
+      );
 
       //TODO:STEVE: track addresses allocated for v2 elbs [need tags on allocate address]
       for (final AddressInfoType addressInfo : describeAddressesResponse.getAddressesSet()) {
         if (addressInfo.getAssociationId() == null) {
           logger.info("Releasing address: " + addressInfo.getAllocationId() + "/" + addressInfo.getPublicIp());
-          ec2.releaseAddress(releaseAddressMessage(addressInfo.getAllocationId()));
+          ec2.releaseAddressByAllocationId(addressInfo.getAllocationId());
         }
       }
     } catch (final Exception e) {
@@ -734,26 +663,6 @@ public class Loadbalancingv2Workflow {
         }
       }
     }
-  }
-
-  public interface LoadBalancingComputeApi {
-    DescribeInstancesResponseType describeInstances(DescribeInstancesType request);
-
-    AllocateAddressResponseType allocateAddress(AllocateAddressType request);
-    AssociateAddressResponseType associateAddress(AssociateAddressType request);
-    DescribeAddressesResponseType describeAddresses(DescribeAddressesType request);
-    ReleaseAddressResponseType releaseAddress(ReleaseAddressType request);
-
-    CreateNetworkInterfaceResponseType createNetworkInterface(CreateNetworkInterfaceType request);
-    AttachNetworkInterfaceResponseType attachNetworkInterface(AttachNetworkInterfaceType request);
-    DetachNetworkInterfaceResponseType detachNetworkInterface(DetachNetworkInterfaceType request);
-    DeleteNetworkInterfaceResponseType deleteNetworkInterface(DeleteNetworkInterfaceType request);
-    DescribeNetworkInterfacesResponseType describeNetworkInterfaces(DescribeNetworkInterfacesType request);
-    ModifyNetworkInterfaceAttributeResponseType modifyNetworkInterfaceAttribute(ModifyNetworkInterfaceAttributeType request);
-
-    CreateTagsResponseType createTags(CreateTagsType request);
-    DeleteTagsResponseType deleteTags(DeleteTagsType request);
-    DescribeTagsResponseType describeTags(DescribeTagsType request);
   }
 
   private static abstract class WorkflowTask {

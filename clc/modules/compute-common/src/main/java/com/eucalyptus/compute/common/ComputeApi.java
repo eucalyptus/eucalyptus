@@ -16,6 +16,28 @@ public interface ComputeApi {
 
   // API
 
+  DescribeInstancesResponseType describeInstances( DescribeInstancesType request );
+
+  AllocateAddressResponseType allocateAddress( AllocateAddressType request );
+
+  AssociateAddressResponseType associateAddress( AssociateAddressType request );
+
+  DescribeAddressesResponseType describeAddresses( DescribeAddressesType request );
+
+  ReleaseAddressResponseType releaseAddress( ReleaseAddressType request );
+
+  CreateNetworkInterfaceResponseType createNetworkInterface( CreateNetworkInterfaceType request );
+
+  AttachNetworkInterfaceResponseType attachNetworkInterface( AttachNetworkInterfaceType request );
+
+  DetachNetworkInterfaceResponseType detachNetworkInterface( DetachNetworkInterfaceType request );
+
+  DeleteNetworkInterfaceResponseType deleteNetworkInterface( DeleteNetworkInterfaceType request );
+
+  DescribeNetworkInterfacesResponseType describeNetworkInterfaces( DescribeNetworkInterfacesType request );
+
+  ModifyNetworkInterfaceAttributeResponseType modifyNetworkInterfaceAttribute( ModifyNetworkInterfaceAttributeType request );
+
   CreateTagsResponseType createTags( CreateTagsType request );
 
   DeleteTagsResponseType deleteTags( DeleteTagsType request );
@@ -35,6 +57,58 @@ public interface ComputeApi {
   DescribeVpcsResponseType describeVpcs( DescribeVpcsType request );
 
   // Helpers
+
+  default DescribeInstancesResponseType describeInstances() {
+    return describeInstances(new DescribeInstancesType());
+  }
+
+  default DescribeInstancesResponseType describeInstances(final Filter... filters) {
+    final DescribeInstancesType request = new DescribeInstancesType();
+    for (final Filter filter : filters) {
+      request.getFilterSet().add(filter);
+    }
+    return describeInstances(request);
+  }
+
+  default DescribeAddressesResponseType describeAddresses() {
+    return describeAddresses(new DescribeAddressesType());
+  }
+
+  default DescribeAddressesResponseType describeAddresses(final Filter... filters) {
+    final DescribeAddressesType request = new DescribeAddressesType();
+    for (final Filter filter : filters) {
+      request.getFilterSet().add(filter);
+    }
+    return describeAddresses(request);
+  }
+
+  default AllocateAddressResponseType allocateAddress(final String domain) {
+    final AllocateAddressType request = new AllocateAddressType();
+    request.setDomain(domain);
+    return allocateAddress(request);
+  }
+
+  default ReleaseAddressResponseType releaseAddressByAllocationId(final String allocationId){
+    final ReleaseAddressType releaseAddress = new ReleaseAddressType();
+    releaseAddress.setAllocationId(allocationId);
+    return releaseAddress(releaseAddress);
+  }
+
+  default DescribeNetworkInterfacesResponseType describeNetworkInterfaces() {
+    return describeNetworkInterfaces(new DescribeNetworkInterfacesType());
+  }
+
+  default AttachNetworkInterfaceResponseType attachNetworkInterface(
+      final String instanceId,
+      final int deviceIndex,
+      final String networkInterfaceId
+  ) {
+    final AttachNetworkInterfaceType request = new AttachNetworkInterfaceType();
+    request.setInstanceId(instanceId);
+    request.setDeviceIndex(deviceIndex);
+    request.setNetworkInterfaceId(networkInterfaceId);
+    return attachNetworkInterface(request);
+  }
 
   default DescribeSecurityGroupsResponseType describeSecurityGroups() {
     return describeSecurityGroups(new DescribeSecurityGroupsType());

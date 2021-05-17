@@ -5,8 +5,10 @@
  */
 package com.eucalyptus.loadbalancingv2.common.msgs;
 
-import javax.annotation.Nonnull;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2MessageValidation.FieldRange;
+import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2MessageValidation.FieldRegex;
+import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2MessageValidation.FieldRegexValue;
+import javax.annotation.Nonnull;
 
 
 public class CreateRuleType extends Loadbalancingv2Message {
@@ -18,6 +20,7 @@ public class CreateRuleType extends Loadbalancingv2Message {
   private RuleConditionList conditions;
 
   @Nonnull
+  @FieldRegex(FieldRegexValue.LOADBALANCING_ARN)
   private String listenerArn;
 
   @Nonnull

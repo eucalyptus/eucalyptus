@@ -5,11 +5,13 @@
  */
 package com.eucalyptus.loadbalancingv2.common.msgs;
 
+import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2MessageValidation.FieldRange;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
 
 public class HttpHeaderConditionConfig extends EucalyptusData {
 
+  @FieldRange(max = 40)
   private String httpHeaderName;
 
   private ListOfString values;

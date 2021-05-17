@@ -8,21 +8,20 @@ package com.eucalyptus.loadbalancingv2.service;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
-import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentNamed;
-import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.ComputeApi;
 import com.eucalyptus.compute.common.DescribeInstancesResponseType;
-import com.eucalyptus.compute.common.DescribeInstancesType;
-import com.eucalyptus.compute.common.Filter;
+import com.eucalyptus.compute.common.RunningInstancesItemType;
 import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.compute.common.SubnetType;
+import com.eucalyptus.compute.common.VpcType;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancingv2.common.msgs.Listeners;
 import com.eucalyptus.loadbalancingv2.common.msgs.Rules;
+import com.eucalyptus.loadbalancingv2.common.msgs.SubnetMapping;
 import com.eucalyptus.loadbalancingv2.common.msgs.TargetDescription;
 import com.eucalyptus.loadbalancingv2.service.persist.JsonEncoding;
 import com.eucalyptus.loadbalancingv2.service.persist.LoadBalancers;
@@ -115,7 +114,6 @@ import com.eucalyptus.util.CompatFunction;
 import com.eucalyptus.util.CompatSupplier;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.NonNullFunction;
-import com.eucalyptus.util.ThrowingFunction;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncProxy;
 import com.google.common.base.Enums;
@@ -124,7 +122,7 @@ import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import edu.ucsb.eucalyptus.msgs.CallerContext;
+import com.google.common.collect.Sets;
 import io.vavr.collection.Stream;
 import java.util.Collection;
 import java.util.Collections;
@@ -216,6 +214,10 @@ public class Loadbalancingv2Service {
     final CreateLoadBalancerResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup( );
 
+    if (request.getName().startsWith("internal-")) {
+      throw new Loadbalancingv2ClientException("ValidationError", "Name must not start with 'internal-'");
+    }
+
     final LoadBalancer.Type type =
         Enums.getIfPresent(LoadBalancer.Type.class, Objects.toString(request.getType(), "application"))
             .or(LoadBalancer.Type.application);
@@ -236,12 +238,37 @@ public class Loadbalancingv2Service {
       throw new Loadbalancingv2ClientException("InvalidConfigurationRequest", "Invalid security groups");
     }
 
-    final List<SubnetType> subnetItems =
-        request.getSubnets() != null && !request.getSubnets().getMember().isEmpty()?
-            computeApi.describeSubnets(request.getSubnets().getMember()).getSubnetSet().getItem() :
-            Collections.emptyList();
+    final Set<String> subnetIds;
+    if (request.getSubnets() != null && request.getSubnetMappings() != null) {
+      throw new Loadbalancingv2ClientException("InvalidConfigurationRequest", "Only one of Subnets or SubnetMappings should be present");
+    } else if (request.getSubnets() != null) {
+      subnetIds = Stream.ofAll(request.getSubnets().getMember())
+          .filter(Objects::nonNull).toJavaSet();
+    } else if (request.getSubnetMappings() != null) {
+      subnetIds = Stream.ofAll(request.getSubnetMappings().getMember())
+          .map(SubnetMapping::getSubnetId).filter(Objects::nonNull).toJavaSet();
+      //TODO:STEVE: subnet mapping AllocationIdNotFound
+      //TODO:STEVE: InvalidConfigurationRequest The specified mapping private ipv4 is not in the subnet.
+    } else {
+      throw new Loadbalancingv2ClientException("InvalidConfigurationRequest", "Either Subnets or SubnetMappings is required");
+    }
+
+    final List<SubnetType> subnetItems = !subnetIds.isEmpty() ?
+        computeApi.describeSubnets(subnetIds).getSubnetSet().getItem() :
+        Collections.emptyList();
     if (subnetItems.isEmpty()) {
       throw new Loadbalancingv2ClientException("InvalidConfigurationRequest", "Invalid subnets");
+    }
+    for (final SubnetType subnet : subnetItems) {
+      subnetIds.remove(subnet.getSubnetId());
+      if (subnet.getAvailableIpAddressCount() != null && subnet.getAvailableIpAddressCount() == 0) {
+        throw new Loadbalancingv2ClientException("InvalidSubnet",
+            "Invalid subnet, no available ips " + subnet.getSubnetId());
+      }
+    }
+    if (!subnetIds.isEmpty()) {
+      throw new Loadbalancingv2ClientException("SubnetNotFound",
+          "Subnet not found " + subnetIds);
     }
 
     final Set<String> vpcIds = Stream.ofAll(subnetItems).map(SubnetType::getVpcId).toJavaSet();
@@ -256,7 +283,7 @@ public class Loadbalancingv2Service {
         @Override public LoadBalancer get() {
           final LoadBalancer newLoadBalancer = LoadBalancer.create(
               ctx.getUserFullName(),
-              request.getName(),  //TODO:STEVE: validation
+              request.getName(),
               type,
               scheme
           );
@@ -360,6 +387,15 @@ public class Loadbalancingv2Service {
             .or(TargetGroup.ProtocolVersion.HTTP1);
     final Integer port = request.getPort();
 
+    final ComputeApi computeApi = AsyncProxy.client(ComputeApi.class);
+    final String vpcId = request.getVpcId();
+    if (vpcId != null) {
+      final List<VpcType> vpcItems = computeApi.describeVpcs(vpcId).getVpcSet().getItem();
+      if (vpcItems.size() != 1) {
+        throw new Loadbalancingv2ClientException("InvalidConfigurationRequest", "Invalid vpc");
+      }
+    }
+
     final TargetGroup targetGroup;
     try {
       @SuppressWarnings({"Guava", "Convert2Lambda"})
@@ -367,9 +403,9 @@ public class Loadbalancingv2Service {
         @Override public TargetGroup get() {
           final TargetGroup newTargetGroup = TargetGroup.create(
               ctx.getUserFullName(),
-              request.getName(),  // maximum of 32 characters, must contain only alphanumeric characters or hyphens, and must not begin or end with a hyphen.
+              request.getName(),
               targetType,
-              request.getVpcId(),  //TODO:STEVE: validate vpc etc
+              vpcId,
               protocol,
               protocolVersion,
               port
@@ -876,28 +912,29 @@ public class Loadbalancingv2Service {
               AccountFullName.getInstance(arn.getNamespace()) :
               ctx.getAccount();
 
-      //TODO:STEVE: instance targets must be running when registered
+      final Set<String> instanceVpcs = Sets.newHashSet();
       final Map<String,String> ipAddresses = Maps.newHashMap();
       for (final TargetDescription description : targetDescriptions) {
         if (description.getId().startsWith("i-")) {
           // resolve instance ip address
-          final Loadbalancingv2Workflow.LoadBalancingComputeApi ec2 =
-              AsyncProxy.client(Loadbalancingv2Workflow.LoadBalancingComputeApi.class,
-                  ThrowingFunction.undeclared( req -> {
-                    final CallerContext callerContext = new CallerContext( Contexts.lookup( ) );
-                    callerContext.apply( req );
-                    return req;
-                  } ), () -> Topology.lookup(Compute.class));
-
-          final DescribeInstancesType describeInstancesType = new DescribeInstancesType();
-          final Filter filter = new Filter();
-          filter.setName("instance-id");
-          filter.setValueSet(Lists.newArrayList(description.getId()));
-          describeInstancesType.getFilterSet().add(filter);
-          final DescribeInstancesResponseType response = ec2.describeInstances(describeInstancesType);
+          final ComputeApi ec2 = AsyncProxy.client(ComputeApi.class);
+          final DescribeInstancesResponseType response = ec2.describeInstances(
+              ComputeApi.filter("instance-id", description.getId())
+          );
+          if (response.getReservationSet().isEmpty()) {
+            throw new Loadbalancingv2ClientException("InvalidTarget", "Instance not found");
+          }
+          final RunningInstancesItemType instance =
+              response.getReservationSet().get(0).getInstancesSet().get(0);
+          if (!"running".equals(instance.getStateName())) {
+            throw new Loadbalancingv2ClientException("InvalidTarget", "Instance not in running state");
+          }
+          if (instance.getVpcId()==null || (instanceVpcs.add(instance.getVpcId()) && instanceVpcs.size()!=1)) {
+            throw new Loadbalancingv2ClientException("InvalidTarget", "Instance vpc invalid for target");
+          }
           ipAddresses.put(
               description.getId(),
-              response.getReservationSet().get(0).getInstancesSet().get(0).getPrivateIpAddress());
+              instance.getPrivateIpAddress());
         } else {
           ipAddresses.put(description.getId(), description.getId());
         }
@@ -909,6 +946,10 @@ public class Loadbalancingv2Service {
           arn.getName(),
           Loadbalancingv2Metadatas.filterPrivileged(),
           group -> {
+            if (!instanceVpcs.isEmpty() && group.getVpcId()!=null && !instanceVpcs.contains(group.getVpcId())) {
+              throw Exceptions.toUndeclared(new Loadbalancingv2ClientException("InvalidTarget",
+                  "Instance vpc invalid for target"));
+            }
             for (final TargetDescription description : targetDescriptions) {
               if (group.findTarget(description.getId()).isEmpty()) {
                 final Target target =

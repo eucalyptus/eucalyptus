@@ -35,6 +35,7 @@ public class CreateTargetGroupType extends Loadbalancingv2Message {
   private Matcher matcher;
 
   @Nonnull
+  @FieldRegex(FieldRegexValue.LOADBALANCING_NAME)
   private String name;
 
   @FieldRange(min = 1, max = 65535)
@@ -52,6 +53,7 @@ public class CreateTargetGroupType extends Loadbalancingv2Message {
   @FieldRange(min = 2, max = 10)
   private Integer unhealthyThresholdCount;
 
+  @FieldRegex(FieldRegexValue.EC2_VPC)
   private String vpcId;
 
   public Boolean getHealthCheckEnabled() {

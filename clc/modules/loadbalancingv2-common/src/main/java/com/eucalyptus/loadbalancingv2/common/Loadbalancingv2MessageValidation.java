@@ -24,8 +24,18 @@ public class Loadbalancingv2MessageValidation {
     // Generic
     STRING_128("(?s).{1,128}"),
     STRING_256("(?s).{1,256}"),
+    IP_ADDRESS( "(?:(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}(?:[0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])" ),
 
-    // Enums
+    // ELB
+    LOADBALANCING_ARN("arn:aws:elasticloadbalancing:[!-~]{1,2019}"),
+    LOADBALANCING_NAME("[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,30}[a-zA-Z0-9])?"),
+    SECURITY_POLICY("ELBSecurityPolicy-[a-zA-Z0-9-]{1,128}"),
+    HTTP_STATUSCODE("[245][0-9][0-9]"),
+    REDIRECT_PORT("[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]|#\\{port\\}"),
+    REDIRECT_PROTOCOL("HTTPS?|#\\{protocol\\}"),
+    CODE_VALUES_OR_RANGE("0|[1-9][0-9]{0,2}|(?:(?:0|[1-9][0-9]{0,2}),)+(?:0|[1-9][0-9]{0,2})|(?:0|[1-9][0-9]{0,2})-(?:0|[1-9][0-9]{0,2})"),
+
+    // ELB Enums
     ENUM_ACTIONTYPEENUM("forward|authenticate-oidc|authenticate-cognito|redirect|fixed-response"),
     ENUM_AUTHENTICATECOGNITOACTIONCONDITIONALBEHAVIORENUM("deny|allow|authenticate"),
     ENUM_AUTHENTICATEOIDCACTIONCONDITIONALBEHAVIORENUM("deny|allow|authenticate"),
@@ -39,6 +49,17 @@ public class Loadbalancingv2MessageValidation {
     ENUM_TARGETHEALTHREASONENUM("Elb.RegistrationInProgress|Elb.InitialHealthChecking|Target.ResponseCodeMismatch|Target.Timeout|Target.FailedHealthChecks|Target.NotRegistered|Target.NotInUse|Target.DeregistrationInProgress|Target.InvalidState|Target.IpUnusable|Target.HealthCheckDisabled|Elb.InternalError"),
     ENUM_TARGETHEALTHSTATEENUM("initial|healthy|unhealthy|unused|draining|unavailable"),
     ENUM_TARGETTYPEENUM("instance|ip|lambda"),
+
+    // EC2
+    EC2_EIPALLOC( "eipalloc-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?" ),
+    EC2_SECURITYGROUP( "sg-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?" ),
+    EC2_SUBNET( "subnet-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?" ),
+    EC2_VPC( "vpc-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?" ),
+
+
+    // IAM
+    IAM_ARN( "arn:aws:iam:[!-~]{1,1588}" ),
+
     ;
 
     private final Pattern pattern;

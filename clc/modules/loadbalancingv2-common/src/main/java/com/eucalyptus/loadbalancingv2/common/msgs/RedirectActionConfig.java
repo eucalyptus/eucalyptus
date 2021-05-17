@@ -20,8 +20,10 @@ public class RedirectActionConfig extends EucalyptusData {
   @FieldRange(min = 1, max = 128)
   private String path;
 
+  @FieldRegex(FieldRegexValue.REDIRECT_PORT)
   private String port;
 
+  @FieldRegex(FieldRegexValue.REDIRECT_PROTOCOL)
   private String protocol;
 
   @FieldRange(max = 128)
