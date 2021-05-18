@@ -673,6 +673,14 @@ public class Handlers {
     pipeline.addLast( "msg-component-check", new ComponentMessageCheckHandler( componentIdClass ) );
   }
 
+  public static void updateComponentHandlers( final Class<? extends ComponentId> componentIdClass,
+                                              final ChannelPipeline pipeline,
+                                              final String addAfter ) {
+    pipeline.remove( "msg-component-check" );
+    pipeline.addAfter( addAfter, "msg-component-check",
+        new ComponentMessageCheckHandler( componentIdClass ) );
+  }
+
   public static void addSystemHandlers( final ChannelPipeline pipeline ) {
     pipeline.addLast( "service-state-check", internalServiceStateHandler( ) );
     pipeline.addLast( "service-specific-mangling", ServiceHackeryHandler.INSTANCE );
