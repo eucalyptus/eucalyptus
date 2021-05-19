@@ -23,6 +23,7 @@ import com.eucalyptus.loadbalancingv2.common.msgs.Listeners;
 import com.eucalyptus.loadbalancingv2.common.msgs.Rules;
 import com.eucalyptus.loadbalancingv2.common.msgs.SubnetMapping;
 import com.eucalyptus.loadbalancingv2.common.msgs.TargetDescription;
+import com.eucalyptus.loadbalancingv2.common.msgs.TargetDescriptions;
 import com.eucalyptus.loadbalancingv2.service.persist.JsonEncoding;
 import com.eucalyptus.loadbalancingv2.service.persist.LoadBalancers;
 import com.eucalyptus.loadbalancingv2.service.persist.Loadbalancingv2MetadataException;
@@ -130,8 +131,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.apache.log4j.Logger;
+import org.hibernate.criterion.Conjunction;
+import org.hibernate.criterion.Restrictions;
 import org.hibernate.exception.ConstraintViolationException;
 
 /**
@@ -604,7 +610,7 @@ public class Loadbalancingv2Service {
           Loadbalancingv2Metadatas.filterPrivileged(),
           targetGroup -> {
             for (final TargetDescription description : targetDescriptions) {
-              final Target target = targetGroup.findTarget(description.getId())
+              final Target target = targetGroup.findTarget(description.getId()) //TODO:STEVE: port should be checked here too
                   .getOrElseThrow(runtime(targetInvalid()));
               Entities.delete(target);
               targetGroup.getTargets().remove(target);
@@ -715,9 +721,19 @@ public class Loadbalancingv2Service {
     try {
       final com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancers resultLoadBalancers =
           new com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancers();
-      resultLoadBalancers.getMember().addAll( loadBalancers.listByExample(
-          LoadBalancer.named(ownerFullName, null),
-          Loadbalancingv2Metadatas.filterPrivileged( ), //TODO:STEVE: filtering on request properties
+      final Conjunction conjunction = Restrictions.conjunction();
+      if (request.getNames() != null) {
+        conjunction.add(Restrictions.in("displayName", request.getNames().getMember()));
+      }
+      if (request.getLoadBalancerArns() != null) {
+        conjunction.add(Restrictions.in("naturalId",
+            ids(request.getLoadBalancerArns().getMember(),
+                Loadbalancingv2ResourceName.Type.loadbalancer)));
+      }
+      resultLoadBalancers.getMember().addAll( loadBalancers.list(
+          ownerFullName,
+          conjunction,
+          Loadbalancingv2Metadatas.filterPrivileged( ),
           TypeMappers.lookup(
               LoadBalancerView.class,
               com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancer.class ) ) );
@@ -825,9 +841,22 @@ public class Loadbalancingv2Service {
     try {
       final com.eucalyptus.loadbalancingv2.common.msgs.TargetGroups resultTargetGroups =
           new com.eucalyptus.loadbalancingv2.common.msgs.TargetGroups();
-      resultTargetGroups.getMember().addAll( targetGroups.listByExample(
-          TargetGroup.named(ownerFullName, null),
-          Loadbalancingv2Metadatas.filterPrivileged( ), //TODO:STEVE: filter by target group name/arn and loadBalancerArn
+      final Conjunction conjunction = Restrictions.conjunction();
+      if (request.getNames() != null) {
+        conjunction.add(Restrictions.in("displayName", request.getNames().getMember()));
+      }
+      if (request.getTargetGroupArns() != null) {
+        conjunction.add(Restrictions.in("naturalId",
+            ids(request.getTargetGroupArns().getMember(),
+                Loadbalancingv2ResourceName.Type.targetgroup)));
+      }
+      if (request.getLoadBalancerArn() != null) {
+        conjunction.add(Restrictions.eq("naturalId", "no-match")); //TODO:STEVE: filter by loadBalancerArn
+      }
+      resultTargetGroups.getMember().addAll( targetGroups.list(
+          ownerFullName,
+          conjunction,
+          Loadbalancingv2Metadatas.filterPrivileged( ),
           TypeMappers.lookup(
               TargetGroupView.class,
               com.eucalyptus.loadbalancingv2.common.msgs.TargetGroup.class ) ) );
@@ -861,14 +890,18 @@ public class Loadbalancingv2Service {
       final com.eucalyptus.loadbalancingv2.common.msgs.TargetHealthDescriptions  resultDescriptions =
           new com.eucalyptus.loadbalancingv2.common.msgs.TargetHealthDescriptions();
 
+      final AtomicInteger matchCount = new AtomicInteger(0);
       resultDescriptions.getMember().addAll(targetGroups.lookupByName(
           ownerFullName,
           arn.getName(),
           Loadbalancingv2Metadatas.filterPrivileged(),
           targetGroup -> Stream.ofAll(targetGroup.getTargets())
-              // TODO:STEVE: filter based on targetDescriptions
+              .filter(targetPredicate(request.getTargets(), matchCount::incrementAndGet))
               .map(TypeMappers.lookupF(TargetView.class,com.eucalyptus.loadbalancingv2.common.msgs.TargetHealthDescription.class))
               .toJavaList()));
+      if (request.getTargets() != null && request.getTargets().getMember().size()!=matchCount.get()) {
+        throw new Loadbalancingv2ClientException("InvalidTarget", "Invalid target");
+      }
       reply.getDescribeTargetHealthResult().setTargetHealthDescriptions(resultDescriptions);
     } catch ( Exception e ) {
       throw handleException( e );
@@ -994,6 +1027,23 @@ public class Loadbalancingv2Service {
     return request.getReply();
   }
 
+  private static Set<String> ids(
+      final Collection<String> arns,
+      final Loadbalancingv2ResourceName.Type type
+  ) throws Loadbalancingv2ClientException {
+    final Set<String> ids = Sets.newLinkedHashSet();
+    for ( final String arn : arns ) {
+      try {
+        final Loadbalancingv2ResourceName resourceName =
+            Loadbalancingv2ResourceName.parse(arn, type);
+        ids.add( resourceName.getId(type) );
+      } catch (final Loadbalancingv2ResourceName.InvalidResourceNameException e) {
+        throw new Loadbalancingv2ClientException("InvalidParameterValue", "Invalid arn");
+      }
+    }
+    return ids;
+  }
+
   private static CompatSupplier<Loadbalancingv2ClientException> loadbalancerNotFound() {
     return () -> new Loadbalancingv2ClientException("LoadBalancerNotFound", "Loadbalancer not found");
   }
@@ -1012,6 +1062,37 @@ public class Loadbalancingv2Service {
 
   private static CompatSupplier<RuntimeException> runtime(CompatSupplier<? extends Exception> supplier) {
     return () -> Exceptions.toUndeclared(supplier.get());
+  }
+
+  private static Predicate<Target> targetPredicate(
+      @Nullable final TargetDescriptions targetDescriptions,
+                final Runnable matchedRunnable
+  ) {
+    if (targetDescriptions != null) {
+      Predicate<Target> resultPredicate = __ -> false;
+      for (final TargetDescription targetDescription : targetDescriptions.getMember()) {
+        Predicate<Target> predicate = __ -> true;
+        final String idMatch = targetDescription.getId();
+        final String azMatch = targetDescription.getAvailabilityZone();
+        final Integer pMatch = targetDescription.getPort();
+        predicate = predicate.and((Target t) -> idMatch.equals(t.getTargetId()));
+        if (azMatch != null) {
+          predicate = predicate.and((Target t) -> azMatch.equals(t.getAvailabilityZone()));
+        } else {
+          predicate = predicate.and((Target t) -> t.getAvailabilityZone() == null);
+        }
+        if (pMatch != null) {
+          predicate = predicate.and((Target t) -> pMatch.equals(t.getPort()));
+        } else {
+          predicate = predicate.and((Target t) -> t.getPort() == null);
+        }
+        predicate = predicate.and( __ -> { matchedRunnable.run(); return true; });
+        resultPredicate = resultPredicate.or(predicate);
+      }
+      return resultPredicate;
+    } else {
+      return __ -> true;
+    }
   }
 
   /**

@@ -191,8 +191,8 @@ public class TargetGroup extends UserMetadata<TargetGroup.State> implements Load
     return group;
   }
 
-  public static TargetGroup named(final OwnerFullName userFullName, final String lbName) {
-    final TargetGroup example = new TargetGroup(null, lbName);
+  public static TargetGroup named(final OwnerFullName userFullName, final String name) {
+    final TargetGroup example = new TargetGroup(null, name);
     if (userFullName != null) {
       example.setOwnerAccountNumber(userFullName.getAccountNumber());
     }
