@@ -31,6 +31,8 @@ public interface LoadBalancerView {
 
   Date getCreationTimestamp();
 
+  Date getLastUpdateTimestamp();
+
   LoadBalancer.Type getType();
 
   LoadBalancer.Scheme getScheme();

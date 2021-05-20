@@ -92,6 +92,9 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.State>
     ipv4,
   }
 
+  @Column( name = "update_required" )
+  private Boolean updateRequired;
+
   @Column(name = "loadbalancer_type", nullable = false, updatable = false)
   @Enumerated(EnumType.STRING)
   private LoadBalancer.Type type;
@@ -142,6 +145,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.State>
     LoadBalancer loadBalancer = new LoadBalancer(owner, displayName);
     loadBalancer.setNaturalId(Loadbalancingv2ResourceName.generateId());
     loadBalancer.setState(State.provisioning);
+    loadBalancer.setUpdateRequired(false);
     loadBalancer.setType(type);
     loadBalancer.setScheme(scheme);
     return loadBalancer;
@@ -162,13 +166,26 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.State>
   }
 
   public static LoadBalancer exampleWithState(final LoadBalancer.State state) {
+    return exampleWithState(state, null);
+  }
+
+  public static LoadBalancer exampleWithState(final LoadBalancer.State state, final Boolean updateRequired) {
     final LoadBalancer example = new LoadBalancer();
     if (state != null) {
       example.setState(state);
       example.setLastState(null);
       example.setStateChangeStack(null);
     }
+    example.setUpdateRequired(updateRequired);
     return example;
+  }
+
+  public Boolean getUpdateRequired() {
+    return updateRequired;
+  }
+
+  public void setUpdateRequired(Boolean updateRequired) {
+    this.updateRequired = updateRequired;
   }
 
   public Type getType() {

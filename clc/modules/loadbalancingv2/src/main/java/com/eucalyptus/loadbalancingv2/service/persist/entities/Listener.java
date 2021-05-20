@@ -35,12 +35,27 @@ public class Listener extends AbstractOwnedPersistent implements Loadbalancingv2
 
   public enum Protocol {
     HTTP,
-    HTTPS,
+    HTTPS(true),
     TCP,
-    TLS,
+    TLS(true),
     UDP,
     TCP_UDP,
     GENEVE,
+    ;
+
+    private final boolean requiresCertificate;
+
+    Protocol() {
+      this(false);
+    }
+
+    Protocol(final boolean requiresCertificate) {
+      this.requiresCertificate = requiresCertificate;
+    }
+
+    public boolean requiresCertificate() {
+      return requiresCertificate;
+    }
   }
 
   @ManyToOne
@@ -63,6 +78,9 @@ public class Listener extends AbstractOwnedPersistent implements Loadbalancingv2
   @Column(name = "protocol")
   @Enumerated(EnumType.STRING)
   private Protocol protocol;
+
+  @Column(name = "default_server_certificate_arn", length = 1024)
+  private String defaultServerCertificateArn;
 
   @Column(name = "ssl_policy")
   private String sslPolicy;
@@ -154,6 +172,14 @@ public class Listener extends AbstractOwnedPersistent implements Loadbalancingv2
   public void setProtocol(
       Protocol protocol) {
     this.protocol = protocol;
+  }
+
+  public String getDefaultServerCertificateArn() {
+    return defaultServerCertificateArn;
+  }
+
+  public void setDefaultServerCertificateArn(String defaultServerCertificateArn) {
+    this.defaultServerCertificateArn = defaultServerCertificateArn;
   }
 
   public String getSslPolicy() {

@@ -19,6 +19,8 @@ import com.eucalyptus.loadbalancing.common.msgs.ListenerDescription;
 import com.eucalyptus.loadbalancing.common.msgs.ListenerDescriptions;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerAttributes;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerServoDescription;
+import com.eucalyptus.loadbalancing.common.msgs.PolicyAttributeDescription;
+import com.eucalyptus.loadbalancing.common.msgs.PolicyAttributeDescriptions;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyDescription;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyDescriptions;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyNames;
@@ -28,19 +30,25 @@ import com.eucalyptus.loadbalancingv2.common.msgs.Action;
 import com.eucalyptus.loadbalancingv2.service.persist.LoadBalancers;
 import com.eucalyptus.loadbalancingv2.service.persist.TargetGroups;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.Listener;
-import com.eucalyptus.loadbalancingv2.service.persist.entities.ListenerRule;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.LoadBalancer;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.PersistenceLoadBalancers;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.PersistenceTargetGroups;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.Target;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.TargetGroup;
 import com.eucalyptus.loadbalancingv2.service.persist.views.ServoView;
+import com.eucalyptus.util.CompatFunction;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Pair;
+import com.eucalyptus.util.Strings;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicates;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import io.vavr.collection.Stream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -51,23 +59,156 @@ public class Loadbalancingv2ServoMetadataSource implements LoadBalancerHelper.Se
 
   private static final Logger logger = Logger.getLogger(Loadbalancingv2ServoMetadataSource.class);
 
+  private static final String DEFAULT_SSL_POLICY = "ELBSecurityPolicy-2016-08";
+  private static final List<String> DEFAULT_SSL_POLICY_ATTRIBUTES = ImmutableList.<String>builder()
+      .add("Protocol-TLSv1")
+      .add("Protocol-TLSv1.1")
+      .add("Protocol-TLSv1.2")
+      .add("Server-Defined-Cipher-Order")
+      .add("ECDHE-ECDSA-AES128-GCM-SHA256")
+      .add("ECDHE-RSA-AES128-GCM-SHA256")
+      .add("ECDHE-ECDSA-AES128-SHA256")
+      .add("ECDHE-RSA-AES128-SHA256")
+      .add("ECDHE-ECDSA-AES128-SHA")
+      .add("ECDHE-RSA-AES128-SHA")
+      .add("ECDHE-ECDSA-AES256-GCM-SHA384")
+      .add("ECDHE-RSA-AES256-GCM-SHA384")
+      .add("ECDHE-ECDSA-AES256-SHA384")
+      .add("ECDHE-RSA-AES256-SHA384")
+      .add("ECDHE-RSA-AES256-SHA")
+      .add("ECDHE-ECDSA-AES256-SHA")
+      .add("AES128-GCM-SHA256")
+      .add("AES128-SHA256")
+      .add("AES128-SHA")
+      .add("AES256-GCM-SHA384")
+      .add("AES256-SHA256")
+      .add("AES256-SHA")
+      .build();
+
   private final LoadBalancers loadBalancers = new PersistenceLoadBalancers();
   private final TargetGroups targetGroups = new PersistenceTargetGroups();
 
   @Override
   public List<String> listPoliciesForLoadBalancer(
       final String accountNumber,
-      final String loadBalancerNameOrArn
+      final String loadBalancerArn
   ) {
-    return Lists.newArrayList();
+    final Loadbalancingv2ResourceName arn =
+        Loadbalancingv2ResourceName.parse(loadBalancerArn, Loadbalancingv2ResourceName.Type.loadbalancer);
+    final AccountFullName account = AccountFullName.getInstance(arn.getNamespace());
+
+    try {
+      return loadBalancers.lookupByName(
+          account,
+          arn.getName(),
+          Predicates.alwaysTrue(),
+          this::toPolicyNames
+      );
+    } catch (Exception e) {
+      throw Exceptions.toUndeclared(e);
+    }
   }
 
   @Override
   public PolicyDescription getLoadBalancerPolicy(
       final String accountNumber,
-      final String loadBalancerNameOrArn,
+      final String loadBalancerArn,
       final String policyName
   ) {
+    if (DEFAULT_SSL_POLICY.equals(policyName)) {
+      final PolicyDescription policy = new PolicyDescription();
+      policy.setPolicyName(DEFAULT_SSL_POLICY);
+      policy.setPolicyTypeName("SSLNegotiationPolicyType");
+
+      final ArrayList<PolicyAttributeDescription> attrDescs = Lists.newArrayList();
+      for (final String attributeName : DEFAULT_SSL_POLICY_ATTRIBUTES) {
+        final PolicyAttributeDescription desc = new PolicyAttributeDescription();
+        desc.setAttributeName(attributeName);
+        desc.setAttributeValue("true");
+        attrDescs.add(desc);
+      }
+      final PolicyAttributeDescriptions descs = new PolicyAttributeDescriptions();
+      descs.setMember(attrDescs);
+      descs.getMember()
+          .sort(Ordering.natural()
+              .onResultOf(Strings.nonNull(PolicyAttributeDescription::getAttributeName)));
+      policy.setPolicyAttributeDescriptions(descs);
+      return policy;
+    }
+    /* TODO:STEVE: add false attributes?
+    {attributeName=Protocol-SSLv3, attributeValue=false},
+    {attributeName=DHE-RSA-AES128-SHA, attributeValue=false},
+    {attributeName=DHE-DSS-AES128-SHA, attributeValue=false},
+    {attributeName=CAMELLIA128-SHA, attributeValue=false},
+    {attributeName=EDH-RSA-DES-CBC3-SHA, attributeValue=false},
+    {attributeName=DES-CBC3-SHA, attributeValue=false},
+    {attributeName=ECDHE-RSA-RC4-SHA, attributeValue=false},
+    {attributeName=RC4-SHA, attributeValue=false},
+    {attributeName=ECDHE-ECDSA-RC4-SHA, attributeValue=false},
+    {attributeName=DHE-DSS-AES256-GCM-SHA384, attributeValue=false},
+    {attributeName=DHE-RSA-AES256-GCM-SHA384, attributeValue=false},
+    {attributeName=DHE-RSA-AES256-SHA256, attributeValue=false},
+    {attributeName=DHE-DSS-AES256-SHA256, attributeValue=false},
+    {attributeName=DHE-RSA-AES256-SHA, attributeValue=false},
+    {attributeName=DHE-DSS-AES256-SHA, attributeValue=false},
+    {attributeName=DHE-RSA-CAMELLIA256-SHA, attributeValue=false},
+    {attributeName=DHE-DSS-CAMELLIA256-SHA, attributeValue=false},
+    {attributeName=CAMELLIA256-SHA, attributeValue=false},
+    {attributeName=EDH-DSS-DES-CBC3-SHA, attributeValue=false},
+    {attributeName=DHE-DSS-AES128-GCM-SHA256, attributeValue=false},
+    {attributeName=DHE-RSA-AES128-GCM-SHA256, attributeValue=false},
+    {attributeName=DHE-RSA-AES128-SHA256, attributeValue=false},
+    {attributeName=DHE-DSS-AES128-SHA256, attributeValue=false},
+    {attributeName=DHE-RSA-CAMELLIA128-SHA, attributeValue=false},
+    {attributeName=DHE-DSS-CAMELLIA128-SHA, attributeValue=false},
+    {attributeName=ADH-AES128-GCM-SHA256, attributeValue=false},
+    {attributeName=ADH-AES128-SHA, attributeValue=false},
+    {attributeName=ADH-AES128-SHA256, attributeValue=false},
+    {attributeName=ADH-AES256-GCM-SHA384, attributeValue=false},
+    {attributeName=ADH-AES256-SHA, attributeValue=false},
+    {attributeName=ADH-AES256-SHA256, attributeValue=false},
+    {attributeName=ADH-CAMELLIA128-SHA, attributeValue=false},
+    {attributeName=ADH-CAMELLIA256-SHA, attributeValue=false},
+    {attributeName=ADH-DES-CBC3-SHA, attributeValue=false},
+    {attributeName=ADH-DES-CBC-SHA, attributeValue=false},
+    {attributeName=ADH-RC4-MD5, attributeValue=false},
+    {attributeName=ADH-SEED-SHA, attributeValue=false},
+    {attributeName=DES-CBC-SHA, attributeValue=false},
+    {attributeName=DHE-DSS-SEED-SHA, attributeValue=false},
+    {attributeName=DHE-RSA-SEED-SHA, attributeValue=false},
+    {attributeName=EDH-DSS-DES-CBC-SHA, attributeValue=false},
+    {attributeName=EDH-RSA-DES-CBC-SHA, attributeValue=false},
+    {attributeName=IDEA-CBC-SHA, attributeValue=false},
+    {attributeName=RC4-MD5, attributeValue=false},
+    {attributeName=SEED-SHA, attributeValue=false},
+    {attributeName=DES-CBC3-MD5, attributeValue=false},
+    {attributeName=DES-CBC-MD5, attributeValue=false},
+    {attributeName=RC2-CBC-MD5, attributeValue=false},
+    {attributeName=PSK-AES256-CBC-SHA, attributeValue=false},
+    {attributeName=PSK-3DES-EDE-CBC-SHA, attributeValue=false},
+    {attributeName=KRB5-DES-CBC3-SHA, attributeValue=false},
+    {attributeName=KRB5-DES-CBC3-MD5, attributeValue=false},
+    {attributeName=PSK-AES128-CBC-SHA, attributeValue=false},
+    {attributeName=PSK-RC4-SHA, attributeValue=false},
+    {attributeName=KRB5-RC4-SHA, attributeValue=false},
+    {attributeName=KRB5-RC4-MD5, attributeValue=false},
+    {attributeName=KRB5-DES-CBC-SHA, attributeValue=false},
+    {attributeName=KRB5-DES-CBC-MD5, attributeValue=false},
+    {attributeName=EXP-EDH-RSA-DES-CBC-SHA, attributeValue=false},
+    {attributeName=EXP-EDH-DSS-DES-CBC-SHA, attributeValue=false},
+    {attributeName=EXP-ADH-DES-CBC-SHA, attributeValue=false},
+    {attributeName=EXP-DES-CBC-SHA, attributeValue=false},
+    {attributeName=EXP-RC2-CBC-MD5, attributeValue=false},
+    {attributeName=EXP-KRB5-RC2-CBC-SHA, attributeValue=false},
+    {attributeName=EXP-KRB5-DES-CBC-SHA, attributeValue=false},
+    {attributeName=EXP-KRB5-RC2-CBC-MD5, attributeValue=false},
+    {attributeName=EXP-KRB5-DES-CBC-MD5, attributeValue=false},
+    {attributeName=EXP-ADH-RC4-MD5, attributeValue=false},
+    {attributeName=EXP-RC4-MD5, attributeValue=false},
+    {attributeName=EXP-KRB5-RC4-SHA, attributeValue=false},
+    {attributeName=EXP-KRB5-RC4-MD5, attributeValue=false}
+     */
+
     throw new RuntimeException("Policy not found " + policyName);
   }
 
@@ -111,6 +252,16 @@ public class Loadbalancingv2ServoMetadataSource implements LoadBalancerHelper.Se
     }
   }
 
+  private List<String> toPolicyNames(final LoadBalancer loadBalancer) {
+    final Set<String> names = Sets.newTreeSet();
+    for (final Listener listener : loadBalancer.getListeners()) {
+      if (listener.getDefaultServerCertificateArn() != null) {
+        names.add(DEFAULT_SSL_POLICY);
+      }
+    }
+    return Lists.newArrayList(names);
+  }
+
   private Map<String, LoadBalancerServoDescription> toDescriptions(final LoadBalancer loadBalancer) {
     final Map<String, LoadBalancerServoDescription> descriptions = Maps.newHashMap();
 
@@ -137,40 +288,52 @@ public class Loadbalancingv2ServoMetadataSource implements LoadBalancerHelper.Se
     availabilityZones.getMember().add(availabilityZone);
     description.setAvailabilityZones(availabilityZones);
 
+    final Map<String, Pair<String,Integer>> listenerToBackendProtocolAndPort = Maps.newHashMap();
     final BackendInstances backendInstances = new BackendInstances();
-    final Consumer<Action> actionConsumer = action -> {
-      if ("forward".equals(action.getType()) && action.getTargetGroupArn() != null) {
-        try {
-          final Loadbalancingv2ResourceName arn =
-              Loadbalancingv2ResourceName.parse(action.getTargetGroupArn(),
-                  Loadbalancingv2ResourceName.Type.targetgroup);
-          final TargetGroup targetGroup = targetGroups.lookupByName(owner, arn.getName(),
-              Predicates.alwaysTrue(), Functions.identity());
-          final List<Target> targets = targetGroup.getTargets();
-          Stream.ofAll(targets)
-              .map(target -> {
-                final BackendInstance backendInstance = new BackendInstance();
-                backendInstance.setInstanceId(target.getTargetId());
-                backendInstance.setInstanceIpAddress(target.getIpAddress());
-                backendInstance.setReportHealthCheck(true);
-                return backendInstance;
-              })
-              .forEach(backendInstances.getMember()::add);
-        } catch (Exception ignore) {
-        }
-      }
-    };
     for (final Listener listener : loadBalancer.getListeners()) {
+      final Consumer<Action> actionConsumer = action -> {
+        if ("forward".equals(action.getType()) && action.getTargetGroupArn() != null) {
+          try {
+            final Loadbalancingv2ResourceName arn =
+                Loadbalancingv2ResourceName.parse(action.getTargetGroupArn(),
+                    Loadbalancingv2ResourceName.Type.targetgroup);
+            final TargetGroup targetGroup = targetGroups.lookupByName(owner, arn.getName(),
+                Predicates.alwaysTrue(), Functions.identity());
+            if (targetGroup.getPort() != null && targetGroup.getProtocol() != null) {
+              listenerToBackendProtocolAndPort.putIfAbsent(
+                  listener.getDisplayName(),
+                  Pair.of(targetGroup.getProtocol().name(), targetGroup.getPort()));
+            }
+            final List<Target> targets = targetGroup.getTargets();
+            Stream.ofAll(targets)
+                .map(target -> {
+                  final BackendInstance backendInstance = new BackendInstance();
+                  backendInstance.setInstanceId(target.getTargetId());
+                  backendInstance.setInstanceIpAddress(target.getIpAddress());
+                  backendInstance.setReportHealthCheck(true);
+                  return backendInstance;
+                })
+                .forEach(backendInstances.getMember()::add);
+          } catch (Exception ignore) {
+          }
+        }
+      };
       Stream.ofAll(listener.getListenerRules())
           .flatMap(rule -> rule.getRuleActions().getMember())
           .forEach(actionConsumer);
       Stream.ofAll(listener.getListenerDefaultActions().getMember())
           .forEach(actionConsumer);
+      listenerToBackendProtocolAndPort.putIfAbsent(
+          listener.getDisplayName(),
+          Pair.of(listener.getProtocol().name(), listener.getPort()));
     }
     description.setBackendInstances(backendInstances);
 
+    final int healthCheckPort = Stream.ofAll(listenerToBackendProtocolAndPort.values())
+        .map(CompatFunction.of(Pair.right()))
+        .sorted().headOption().getOrElse(() -> loadBalancer.getListeners().get(0).getPort());
     final HealthCheck healthCheck = new HealthCheck();
-    healthCheck.setTarget("TCP:" + loadBalancer.getListeners().get(0).getPort());
+    healthCheck.setTarget("TCP:" + healthCheckPort);
     healthCheck.setInterval(30);
     healthCheck.setTimeout(5);
     healthCheck.setHealthyThreshold(3);
@@ -183,9 +346,14 @@ public class Loadbalancingv2ServoMetadataSource implements LoadBalancerHelper.Se
       final com.eucalyptus.loadbalancing.common.msgs.Listener listener = new com.eucalyptus.loadbalancing.common.msgs.Listener();
       listener.setLoadBalancerPort(lbListener.getPort());
       listener.setProtocol(lbListener.getProtocol().toString());
-      listener.setInstancePort(lbListener.getPort()); //TODO:STEVE: target port and protocol
+      listener.setInstancePort(listenerToBackendProtocolAndPort.get(lbListener.getDisplayName()).getRight());
+      listener.setInstanceProtocol(listenerToBackendProtocolAndPort.get(lbListener.getDisplayName()).getLeft());
+      listener.setSSLCertificateId(lbListener.getDefaultServerCertificateArn());
       listenerDescription.setListener(listener);
       final PolicyNames policyNames = new PolicyNames();
+      if (listener.getSSLCertificateId()!=null) {
+        policyNames.getMember().add(DEFAULT_SSL_POLICY);
+      }
       listenerDescription.setPolicyNames(policyNames);
       listenerDescriptions.getMember().add(listenerDescription);
     }

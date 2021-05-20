@@ -18,6 +18,7 @@
 #
 # - Instance type
 # - SSH key name allowing debug connection to db instance
+# - Server certificate ARNs that the loadbalancer can use for TLS
 #
 AWSTemplateFormatVersion: 2010-09-09
 Description: Network LoadBalancer zone template
@@ -41,6 +42,11 @@ Parameters:
   SecurityGroupId:
     Description: The security group to use
     Type: String
+
+  ServerCertificateArns:
+    Description: The server certificates the loadbalancer is authorized to access
+    Type: List<String>
+    Default: ''
 
   SubnetId:
     Description: The subnet to use
@@ -79,11 +85,19 @@ Conditions:
       - !Ref KeyName
       - ''
 
+  UseServerCertificateArnsParameter: !Not
+    - !Equals
+      - !Join
+        - ''
+        - !Ref ServerCertificateArns
+      - ''
+
 Resources:
 
   Role:
     Type: AWS::IAM::Role
     Properties:
+      Path: !Sub /${ServoLoadBalancerId}/
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -111,10 +125,20 @@ Resources:
               - swf:RespondActivityTaskFailed
               - swf:RecordActivityTaskHeartbeat
             Resource: '*'
+          - Effect: !If
+              - UseServerCertificateArnsParameter
+              - Allow
+              - Deny
+            Action: iam:DownloadServerCertificate
+            Resource: !If
+              - UseServerCertificateArnsParameter
+              - !Ref ServerCertificateArns
+              - '*'
 
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
+      Path: !Sub /${ServoLoadBalancerId}/
       Roles:
         - !Ref Role
 
@@ -132,6 +156,7 @@ Resources:
         - !Ref SecurityGroupId
       UserData:
         Fn::Base64: !Sub |
+          euca-c2V0dXAtY3JlZGVudGlhbA==:3650
           #!/bin/bash
           # System generated Load Balancer Servo config
           mkdir -p /etc/load-balancer-servo/
