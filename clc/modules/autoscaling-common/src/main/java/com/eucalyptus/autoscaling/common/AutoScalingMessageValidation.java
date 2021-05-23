@@ -114,6 +114,7 @@ public class AutoScalingMessageValidation {
 
     // ELB
     ELB_NAME( "(?s).{1,255}" ),
+    ELB_TARGETGROUPARN( "arn:aws:elasticloadbalancing:[!-~]{1,483}" ),
 
     // IAM
     IAM_NAME_OR_ARN( "[a-zA-Z0-9+=,.@-]{1,128}|arn:aws:iam:[!-~]{1,1588}" ),

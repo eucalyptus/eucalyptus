@@ -43,6 +43,7 @@ public class AutoScalingGroupType extends EucalyptusData {
   private Integer defaultCooldown;
   private AvailabilityZones availabilityZones;
   private LoadBalancerNames loadBalancerNames;
+  private TargetGroupArns targetGroupArns;
   private String healthCheckType;
   private Integer healthCheckGracePeriod;
   private Instances instances;
@@ -130,6 +131,14 @@ public class AutoScalingGroupType extends EucalyptusData {
 
   public void setLoadBalancerNames( LoadBalancerNames loadBalancerNames ) {
     this.loadBalancerNames = loadBalancerNames;
+  }
+
+  public TargetGroupArns getTargetGroupArns() {
+    return targetGroupArns;
+  }
+
+  public void setTargetGroupArns(TargetGroupArns targetGroupArns) {
+    this.targetGroupArns = targetGroupArns;
   }
 
   public String getHealthCheckType( ) {
