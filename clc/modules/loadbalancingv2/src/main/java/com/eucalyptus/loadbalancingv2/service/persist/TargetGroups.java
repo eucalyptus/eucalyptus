@@ -22,12 +22,20 @@ import com.google.common.base.Predicate;
 import java.util.List;
 import java.util.Objects;
 import javax.annotation.Nullable;
+import org.hibernate.criterion.Criterion;
 
 public interface TargetGroups {
 
   <T> T lookupByName(
       @Nullable OwnerFullName ownerFullName,
       String name,
+      Predicate<? super TargetGroup> filter,
+      Function<? super TargetGroup, T> transform
+  ) throws Loadbalancingv2MetadataException;
+
+  <T> List<T> list(
+      @Nullable OwnerFullName ownerFullName,
+      Criterion criterion,
       Predicate<? super TargetGroup> filter,
       Function<? super TargetGroup, T> transform
   ) throws Loadbalancingv2MetadataException;

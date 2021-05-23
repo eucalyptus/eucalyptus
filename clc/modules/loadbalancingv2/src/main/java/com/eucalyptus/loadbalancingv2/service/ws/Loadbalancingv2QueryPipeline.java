@@ -65,11 +65,8 @@ public class Loadbalancingv2QueryPipeline extends QueryPipeline {
                 "loadbalancingv2-query-binding",
                 "loadbalancingv1-query-binding",
                 new LoadBalancingQueryBinding());
-            //TODO:STEVE: better api for this
-            ctx.getPipeline().remove("msg-component-check");
-            Handlers.addComponentHandlers(LoadBalancing.class, ctx.getPipeline());
-            final ChannelHandler componentCheck = ctx.getPipeline().remove("msg-component-check");
-            ctx.getPipeline().addAfter("loadbalancingv1-query-binding", "msg-component-check", componentCheck);
+            Handlers.updateComponentHandlers(
+                LoadBalancing.class, ctx.getPipeline(), "loadbalancingv1-query-binding");
           }
         }
       }
