@@ -64,6 +64,7 @@ import com.eucalyptus.compute.common.DhcpOptionsType;
 import com.eucalyptus.compute.common.InternetGatewayType;
 import com.eucalyptus.compute.common.NetworkAclType;
 import com.eucalyptus.compute.common.NetworkInterfaceType;
+import com.eucalyptus.compute.common.ResourceTag;
 import com.eucalyptus.compute.common.RouteTableType;
 import com.eucalyptus.compute.common.SubnetType;
 import com.eucalyptus.compute.common.VpcType;
@@ -93,6 +94,7 @@ import com.eucalyptus.compute.common.internal.vpc.Subnets;
 import com.eucalyptus.compute.common.internal.vpc.Vpc;
 import com.eucalyptus.compute.common.internal.vpc.VpcMetadataNotFoundException;
 import com.eucalyptus.compute.common.internal.vpc.Vpcs;
+import com.eucalyptus.compute.common.policy.ComputePolicySpec;
 import com.eucalyptus.compute.common.network.Networking;
 import com.eucalyptus.compute.common.network.NetworkingFeature;
 import com.eucalyptus.context.Context;
@@ -105,6 +107,7 @@ import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.compute.common.internal.network.NetworkPeer;
 import com.eucalyptus.compute.common.internal.network.NetworkRule;
 import com.eucalyptus.network.PrivateAddresses;
+import com.eucalyptus.tags.TagHelper;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Cidr;
 import com.eucalyptus.util.CollectionUtils;
@@ -466,7 +469,9 @@ public class VpcManager {
             }
             dhcpOptionSet.getDhcpOptions( ).add( DhcpOption.create( dhcpOptionSet, item.getKey(), item.values() ) );
           }
-          return dhcpOptionSets.save( dhcpOptionSet );
+          final List<ResourceTag> resourceTags = TagHelper.tagsForResourceWithValidation(
+              ctx, request.getTagSpecification( ), ComputePolicySpec.EC2_RESOURCE_DHCPOPTIONS );
+          return TagHelper.createOrUpdateTags( dhcpOptionSets.save( dhcpOptionSet ), resourceTags );
         } catch ( Exception ex ) {
           throw Exceptions.toUndeclared( ex );
         }
@@ -483,9 +488,13 @@ public class VpcManager {
       @Override
       public InternetGateway get( ) {
         try {
-          return internetGateways.save( InternetGateway.create( ctx.getUserFullName( ), Identifier.igw.generate( ctx.getUser( ) ) ) );
+          final List<ResourceTag> resourceTags = TagHelper.tagsForResourceWithValidation(
+              ctx, request.getTagSpecification( ), ComputePolicySpec.EC2_RESOURCE_INTERNETGATEWAY );
+          return TagHelper.createOrUpdateTags(
+              internetGateways.save( InternetGateway.create( ctx.getUserFullName( ), Identifier.igw.generate( ctx.getUser( ) ) ) ),
+              resourceTags );
         } catch ( Exception ex ) {
-          throw new RuntimeException( ex );
+          throw Exceptions.toUndeclared( ex );
         }
       }
     };
@@ -523,11 +532,14 @@ public class VpcManager {
             throw new ClientComputeException( "NatGatewayLimitExceeded",
                 "NAT gateway limit exceeded for availability zone " + subnet.getAvailabilityZone( ) );
           }
-
+          final List<ResourceTag> resourceTags = TagHelper.tagsForResourceWithValidation(
+              ctx, request.getTagSpecification( ), ComputePolicySpec.EC2_RESOURCE_NATGATEWAY );
           final String natGatewayId = Identifier.nat.generate( ctx.getUser( ) );
           final Vpc vpc = subnet.getVpc( );
-          return natGateways.save(
-              NatGateway.create( ctx.getUserFullName( ), vpc, subnet, natGatewayId, clientToken, allocationId ) );
+          return TagHelper.createOrUpdateTags(
+              natGateways.save( NatGateway.create(
+                  ctx.getUserFullName( ), vpc, subnet, natGatewayId, clientToken, allocationId ) ),
+              resourceTags );
         } catch ( final VpcMetadataNotFoundException e ) {
           throw Exceptions.toUndeclared(
               new ClientComputeException( "InvalidSubnetID.NotFound",  "Subnet not found '" + subnetId + "'" ) );
@@ -557,7 +569,12 @@ public class VpcManager {
           if ( networkAclsForVpc >= VpcConfiguration.getNetworkAclsPerVpc( ) ) {
             throw new ClientComputeException( "NetworkAclLimitExceeded", "Network ACL limit exceeded for " + vpc.getDisplayName( ) );
           }
-          return networkAcls.save( NetworkAcl.create( ctx.getUserFullName( ), vpc, Identifier.acl.generate( ctx.getUser( ) ), false ) );
+          final List<ResourceTag> resourceTags = TagHelper.tagsForResourceWithValidation(
+              ctx, request.getTagSpecification( ), ComputePolicySpec.EC2_RESOURCE_NETWORKACL );
+          return TagHelper.createOrUpdateTags(
+              networkAcls.save( NetworkAcl.create(
+                  ctx.getUserFullName( ), vpc, Identifier.acl.generate( ctx.getUser( ) ), false ) ),
+              resourceTags );
         } catch ( VpcMetadataNotFoundException ex ) {
           throw Exceptions.toUndeclared( new ClientComputeException( "InvalidVpcID.NotFound", "Vpc not found '" + request.getVpcId() + "'" ) );
         } catch ( Exception ex ) {
@@ -716,6 +733,8 @@ public class VpcManager {
               throw new ClientComputeException( "InvalidParameterValue", "Address is in subnet's reserved address range" );
             }
           }
+          final List<ResourceTag> resourceTags = TagHelper.tagsForResourceWithValidation(
+              ctx, request.getTagSpecification( ), ComputePolicySpec.EC2_RESOURCE_NETWORKINTERFACE );
           final String mac = NetworkInterfaceHelper.mac( identifier );
           final String ip = NetworkInterfaceHelper.allocate( vpc.getDisplayName( ), subnet.getDisplayName( ), identifier, mac, privateIp );
           final NetworkInterface networkInterface = networkInterfaces.save( NetworkInterface.create(
@@ -731,6 +750,7 @@ public class VpcManager {
                   null,
               firstNonNull( request.getDescription( ), "" ) ) );
           PrivateAddresses.associate( ip, networkInterface );
+          TagHelper.createOrUpdateTags( networkInterface, resourceTags );
           return networkInterface;
         } catch ( VpcMetadataNotFoundException ex ) {
           throw Exceptions.toUndeclared( new ClientComputeException( "InvalidSubnetID.NotFound", "Subnet not found '" + request.getSubnetId() + "'" ) );
@@ -882,7 +902,12 @@ public class VpcManager {
           if ( routeTablesForVpc >= VpcConfiguration.getRouteTablesPerVpc( ) ) {
             throw new ClientComputeException( " RouteTableLimitExceeded", "Route table limit exceeded for " + vpc.getDisplayName( ) );
           }
-          return routeTables.save( RouteTable.create( ctx.getUserFullName( ), vpc, Identifier.rtb.generate( ctx.getUser( ) ), vpc.getCidr(), false ) );
+          final List<ResourceTag> resourceTags = TagHelper.tagsForResourceWithValidation(
+              ctx, request.getTagSpecification( ), ComputePolicySpec.EC2_RESOURCE_ROUTETABLE );
+          return TagHelper.createOrUpdateTags(
+              routeTables.save( RouteTable.create(
+                  ctx.getUserFullName( ), vpc, Identifier.rtb.generate( ctx.getUser( ) ), vpc.getCidr(), false ) ),
+              resourceTags );
         } catch ( VpcMetadataNotFoundException ex ) {
           throw Exceptions.toUndeclared( new ClientComputeException( "InvalidVpcID.NotFound", "Vpc not found '" + request.getVpcId() + "'" ) );
         } catch ( Exception ex ) {
@@ -998,14 +1023,18 @@ public class VpcManager {
               Iterables.any( existingCidrs, subnetCidr.get( ).containedBy() ) ) {
             throw new ClientComputeException( "InvalidSubnet.Conflict", "Cidr conflict for " + request.getCidrBlock( ) );
           }
+          final List<ResourceTag> resourceTags = TagHelper.tagsForResourceWithValidation(
+              ctx, request.getTagSpecification( ), ComputePolicySpec.EC2_RESOURCE_SUBNET );
           final NetworkAcl networkAcl = networkAcls.lookupDefault( vpc.getDisplayName(), Functions.identity() );
-          return subnets.save( Subnet.create(
-              ctx.getUserFullName( ),
-              vpc,
-              networkAcl,
-              Identifier.subnet.generate( ctx.getUser( ) ),
-              subnetCidr.get( ).toString( ),
-              availabilityZone.get() ) );
+          return TagHelper.createOrUpdateTags(
+              subnets.save( Subnet.create(
+                  ctx.getUserFullName( ),
+                  vpc,
+                  networkAcl,
+                  Identifier.subnet.generate( ctx.getUser( ) ),
+                  subnetCidr.get( ).toString( ),
+                  availabilityZone.get() ) ),
+              resourceTags );
         } catch ( VpcMetadataNotFoundException ex ) {
           throw Exceptions.toUndeclared( new ClientComputeException( "InvalidVpcID.NotFound", "Vpc not found '" + request.getVpcId() + "'" ) );
         } catch ( Exception ex ) {
@@ -1130,6 +1159,7 @@ public class VpcManager {
           Vpc vpc = null;
           RouteTable routeTable = null;
           NetworkAcl networkAcl = null;
+          List<ResourceTag> resourceTags = Collections.emptyList();
           if ( createDefault ) {
             final UserPrincipal user = Accounts.lookupPrincipalByAccountNumber( request.getCidrBlock( ) );
             vpcCidr = VpcConfiguration.getDefaultVpcCidr( );
@@ -1148,6 +1178,8 @@ public class VpcManager {
             vpcCidr = requestedCidr.get( ).toString( );
             vpcAccountFullName = userFullName.asAccountFullName( );
             vpcOwnerFullName = userFullName;
+            resourceTags = TagHelper.tagsForResourceWithValidation(
+                ctx, request.getTagSpecification( ), ComputePolicySpec.EC2_RESOURCE_VPC );
           }
           if ( vpc == null ) {
             DhcpOptionSet options;
@@ -1183,6 +1215,7 @@ public class VpcManager {
                 NetworkRule.createEgress( null/*protocol name*/, -1, null/*low port*/, null/*high port*/, null/*peers*/, Collections.singleton( NetworkCidr.create(  "0.0.0.0/0" ) ) )
             ) );
             securityGroups.save( group );
+            TagHelper.createOrUpdateTags( vpc, resourceTags );
           }
           if ( createDefault && routeTable != null && networkAcl != null ) {
             // ensure there is an internet gateway for the vpc and a route in place

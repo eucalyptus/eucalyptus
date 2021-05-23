@@ -28,11 +28,34 @@
  ************************************************************************/
 package com.eucalyptus.compute.common;
 
-public class CreateSecurityGroupType extends VmSecurityMessage {
+import com.eucalyptus.binding.HttpEmbedded;
+import edu.ucsb.eucalyptus.msgs.HasTags;
+import java.util.ArrayList;
+import java.util.Set;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+public class CreateSecurityGroupType extends VmSecurityMessage implements HasTags {
 
   private String groupName;
   private String groupDescription;
   private String vpcId;
+  @HttpEmbedded( multiple = true )
+  private ArrayList<ResourceTagSpecification> tagSpecification = new ArrayList<ResourceTagSpecification>( );
+
+  @Override
+  public Set<String> getTagKeys( @Nullable String resourceType, @Nullable String resourceId ) {
+    return getTagKeys( tagSpecification, resourceType, resourceId );
+  }
+
+  @Override
+  public String getTagValue(
+      @Nullable String resourceType,
+      @Nullable String resourceId,
+      @Nonnull final String tagKey
+  ) {
+    return getTagValue( tagSpecification, resourceType, resourceId, tagKey );
+  }
 
   public String getGroupName( ) {
     return groupName;
@@ -56,5 +79,13 @@ public class CreateSecurityGroupType extends VmSecurityMessage {
 
   public void setVpcId( String vpcId ) {
     this.vpcId = vpcId;
+  }
+
+  public ArrayList<ResourceTagSpecification> getTagSpecification( ) {
+    return tagSpecification;
+  }
+
+  public void setTagSpecification( ArrayList<ResourceTagSpecification> tagSpecification ) {
+    this.tagSpecification = tagSpecification;
   }
 }

@@ -42,6 +42,7 @@ package com.eucalyptus.address;
 import static com.eucalyptus.compute.common.internal.address.AllocatedAddressEntity.FilterFunctions.*;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType;
 
+import com.eucalyptus.util.async.Callbacks;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -157,13 +158,19 @@ public class Addresses {
     return addressRegistry.lookup( ip );
   }
 
-  public Allocator allocator( final AddressDomain domain, final String address ) {
+  public Allocator allocator( final AddressDomain domain, final String address, final Callback<AllocatedAddressEntity> persistCallback ) {
     return new Allocator( this, domain, address==null ?
         Predicates.alwaysTrue() :
-        candidateAddress -> candidateAddress.getAddress().equals(address) );
+        candidateAddress -> candidateAddress.getAddress().equals(address),
+        persistCallback);
   }
 
-  public Address allocateNext( final UserFullName userId, final AddressDomain domain, final Predicate<Address> filter ) throws NotEnoughResourcesException {
+  public Address allocateNext(
+      final UserFullName userId,
+      final AddressDomain domain,
+      final Predicate<Address> filter,
+      final Callback<AllocatedAddressEntity> persistCallback
+  ) throws NotEnoughResourcesException {
     final Predicate<Address> predicate = Predicates.and(RestrictedTypes.filterPrivileged( ), filter);
     final Address address;
     try {
@@ -181,7 +188,11 @@ public class Addresses {
       call( new Callable<Void>( ) {
         @Override
         public Void call( ) throws Exception {
-          allocatedAddressPersistence.save( createEntity( transition.get( ).newAddressInfo( ) ) );
+          final AllocatedAddressEntity address = createEntity( transition.get( ).newAddressInfo( ) );
+          try ( final TransactionResource tx = Entities.transactionFor(AllocatedAddressEntity.class) ) {
+            persistCallback.fire( allocatedAddressPersistence.save(address) );
+            tx.commit();
+          }
           return null;
         }
       } );
@@ -859,18 +870,24 @@ public class Addresses {
     private final Addresses addresses;
     private final AddressDomain domain;
     private final Predicate<Address> predicate;
+    private final Callback<AllocatedAddressEntity> persistCallback;
 
-    private Allocator( final Addresses addresses, final AddressDomain domain, final Predicate<Address> predicate ) {
+    private Allocator(
+        final Addresses addresses,
+        final AddressDomain domain,
+        final Predicate<Address> predicate,
+        final Callback<AllocatedAddressEntity> persistCallback ) {
       this.addresses = addresses;
       this.domain = domain;
       this.predicate = predicate;
+      this.persistCallback = persistCallback==null ? Callbacks.noop() : persistCallback;
     }
 
     @Override
     public Address get( ) {
       final Context ctx = Contexts.lookup( );
       try {
-        return addresses.allocateNext( ctx.getUserFullName( ), domain, predicate );
+        return addresses.allocateNext( ctx.getUserFullName( ), domain, predicate, persistCallback );
       } catch ( final Exception ex ) {
         throw Exceptions.toUndeclared( ex );
       }

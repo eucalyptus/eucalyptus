@@ -30,8 +30,13 @@ package com.eucalyptus.compute.common;
 
 import com.eucalyptus.binding.HttpEmbedded;
 import edu.ucsb.eucalyptus.msgs.ComputeMessageValidation;
+import edu.ucsb.eucalyptus.msgs.HasTags;
+import java.util.ArrayList;
+import java.util.Set;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-public class CreateNetworkInterfaceType extends VpcMessage {
+public class CreateNetworkInterfaceType extends VpcMessage implements HasTags {
 
   private String subnetId;
   @ComputeMessageValidation.FieldRegex( ComputeMessageValidation.FieldRegexValue.STRING_255 )
@@ -43,6 +48,22 @@ public class CreateNetworkInterfaceType extends VpcMessage {
   @HttpEmbedded
   private PrivateIpAddressesSetRequestType privateIpAddressesSet;
   private Integer secondaryPrivateIpAddressCount;
+  @HttpEmbedded( multiple = true )
+  private ArrayList<ResourceTagSpecification> tagSpecification = new ArrayList<ResourceTagSpecification>( );
+
+  @Override
+  public Set<String> getTagKeys( @Nullable String resourceType, @Nullable String resourceId ) {
+    return getTagKeys( tagSpecification, resourceType, resourceId );
+  }
+
+  @Override
+  public String getTagValue(
+      @Nullable String resourceType,
+      @Nullable String resourceId,
+      @Nonnull final String tagKey
+  ) {
+    return getTagValue( tagSpecification, resourceType, resourceId, tagKey );
+  }
 
   public String getSubnetId( ) {
     return subnetId;
@@ -90,5 +111,13 @@ public class CreateNetworkInterfaceType extends VpcMessage {
 
   public void setSecondaryPrivateIpAddressCount( Integer secondaryPrivateIpAddressCount ) {
     this.secondaryPrivateIpAddressCount = secondaryPrivateIpAddressCount;
+  }
+
+  public ArrayList<ResourceTagSpecification> getTagSpecification( ) {
+    return tagSpecification;
+  }
+
+  public void setTagSpecification( ArrayList<ResourceTagSpecification> tagSpecification ) {
+    this.tagSpecification = tagSpecification;
   }
 }

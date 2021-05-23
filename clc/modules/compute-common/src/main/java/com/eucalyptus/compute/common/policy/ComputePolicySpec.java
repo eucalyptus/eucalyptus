@@ -95,6 +95,7 @@ public interface ComputePolicySpec {
   String EC2_RESOURCE_IMAGE = "image";
   String EC2_RESOURCE_SECURITYGROUP = "security-group";
   String EC2_RESOURCE_ADDRESS = "address";
+  String EC2_RESOURCE_ELASTICIP = "elastic-ip";
   String EC2_RESOURCE_AVAILABILITYZONE = "availabilityzone";
   String EC2_RESOURCE_INSTANCE = "instance";
   String EC2_RESOURCE_KEYPAIR = "key-pair";
@@ -107,6 +108,7 @@ public interface ComputePolicySpec {
   String EC2_RESOURCE_CUSTOMERGATEWAY = "customer-gateway";
   String EC2_RESOURCE_DHCPOPTIONS = "dhcp-options";
   String EC2_RESOURCE_INTERNETGATEWAY = "internet-gateway";
+  String EC2_RESOURCE_NATGATEWAY = "nat-gateway";
   String EC2_RESOURCE_NETWORKACL = "network-acl";
   String EC2_RESOURCE_NETWORKINTERFACE = "network-interface";
   String EC2_RESOURCE_ROUTETABLE = "route-table";
@@ -119,6 +121,7 @@ public interface ComputePolicySpec {
       .add( EC2_RESOURCE_SECURITYGROUP )
       .add( EC2_RESOURCE_SECURITYGROUP.replace( "-", "" ) ) // no '-' until v4.1
       .add( EC2_RESOURCE_ADDRESS )
+      .add( EC2_RESOURCE_ELASTICIP )
       .add( EC2_RESOURCE_AVAILABILITYZONE )
       .add( EC2_RESOURCE_INSTANCE )
       .add( EC2_RESOURCE_KEYPAIR )
@@ -132,6 +135,7 @@ public interface ComputePolicySpec {
       .add( EC2_RESOURCE_CUSTOMERGATEWAY )
       .add( EC2_RESOURCE_DHCPOPTIONS )
       .add( EC2_RESOURCE_INTERNETGATEWAY )
+      .add( EC2_RESOURCE_NATGATEWAY )
       .add( EC2_RESOURCE_NETWORKACL )
       .add( EC2_RESOURCE_NETWORKINTERFACE )
       .add( EC2_RESOURCE_ROUTETABLE )

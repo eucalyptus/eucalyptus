@@ -28,13 +28,17 @@
  ************************************************************************/
 package com.eucalyptus.tags;
 
+import com.eucalyptus.auth.type.RestrictedType;
+import com.eucalyptus.compute.ClientComputeException;
+import com.eucalyptus.compute.ClientUnauthorizedComputeException;
+import com.eucalyptus.compute.ComputeException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.AuthContextSupplier;
 import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.CloudMetadata;
@@ -203,6 +207,42 @@ public class TagHelper {
       }
     }
     return tags;
+  }
+
+  public static List<ResourceTag> tagsForResourceWithValidation(
+      @Nonnull  final Context ctx,
+      @Nullable final List<ResourceTagSpecification> tagSpecifications,
+      @Nonnull  final String resource
+  ) throws ComputeException {
+    try {
+      validateTagSpecifications( tagSpecifications );
+    } catch ( MetadataException e ) {
+      throw new ClientComputeException( "InvalidParameterValue", e.getMessage( ) );
+    }
+    final List<ResourceTag>
+        resourceTags = TagHelper.tagsForResource( tagSpecifications, resource );
+    if ( !resourceTags.isEmpty( ) ) {
+      if ( !TagHelper.createTagsAuthorized( ctx, resource ) ) {
+        throw new ClientUnauthorizedComputeException( "Not authorized to create tags by " + ctx.getUser( ).getName( ) );
+      }
+    }
+    return resourceTags;
+  }
+
+  /**
+   * Caller must have open transaction for resources.
+   *
+   * Caller must check permissions.
+   */
+  public static <R extends CloudMetadata & RestrictedType.UserRestrictedType> R createOrUpdateTags(
+      @Nonnull final R resource,
+      @Nonnull final List<ResourceTag> resourceTags
+  ) {
+    createOrUpdateTags(
+        UserFullName.getInstanceForAccount( resource.getOwnerAccountNumber(), resource.getOwnerUserId() ),
+        Lists.<CloudMetadata>newArrayList( resource ),
+        resourceTags );
+    return resource;
   }
 
   /**

@@ -29,11 +29,33 @@
 package com.eucalyptus.compute.common;
 
 import com.eucalyptus.binding.HttpEmbedded;
+import edu.ucsb.eucalyptus.msgs.HasTags;
+import java.util.ArrayList;
+import java.util.Set;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-public class CreateDhcpOptionsType extends VpcMessage {
+public class CreateDhcpOptionsType extends VpcMessage implements HasTags {
+
 
   @HttpEmbedded
   private DhcpConfigurationItemSetType dhcpConfigurationSet = new DhcpConfigurationItemSetType( );
+  @HttpEmbedded( multiple = true )
+  private ArrayList<ResourceTagSpecification> tagSpecification = new ArrayList<ResourceTagSpecification>( );
+
+  @Override
+  public Set<String> getTagKeys( @Nullable String resourceType, @Nullable String resourceId ) {
+    return getTagKeys( tagSpecification, resourceType, resourceId );
+  }
+
+  @Override
+  public String getTagValue(
+      @Nullable String resourceType,
+      @Nullable String resourceId,
+      @Nonnull final String tagKey
+  ) {
+    return getTagValue( tagSpecification, resourceType, resourceId, tagKey );
+  }
 
   public DhcpConfigurationItemSetType getDhcpConfigurationSet( ) {
     return dhcpConfigurationSet;
@@ -41,5 +63,13 @@ public class CreateDhcpOptionsType extends VpcMessage {
 
   public void setDhcpConfigurationSet( DhcpConfigurationItemSetType dhcpConfigurationSet ) {
     this.dhcpConfigurationSet = dhcpConfigurationSet;
+  }
+
+  public ArrayList<ResourceTagSpecification> getTagSpecification( ) {
+    return tagSpecification;
+  }
+
+  public void setTagSpecification( ArrayList<ResourceTagSpecification> tagSpecification ) {
+    this.tagSpecification = tagSpecification;
   }
 }

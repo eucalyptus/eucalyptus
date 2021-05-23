@@ -28,15 +28,37 @@
  ************************************************************************/
 package com.eucalyptus.compute.common;
 
+import com.eucalyptus.binding.HttpEmbedded;
 import edu.ucsb.eucalyptus.msgs.ComputeMessageValidation;
+import edu.ucsb.eucalyptus.msgs.HasTags;
+import java.util.ArrayList;
+import java.util.Set;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-public class CreateSubnetType extends VpcMessage {
+public class CreateSubnetType extends VpcMessage implements HasTags {
 
   private String vpcId;
   @ComputeMessageValidation.FieldRegex( ComputeMessageValidation.FieldRegexValue.CIDR )
   private String cidrBlock;
   @ComputeMessageValidation.FieldRegex( ComputeMessageValidation.FieldRegexValue.STRING_255 )
   private String availabilityZone;
+  @HttpEmbedded( multiple = true )
+  private ArrayList<ResourceTagSpecification> tagSpecification = new ArrayList<ResourceTagSpecification>( );
+
+  @Override
+  public Set<String> getTagKeys( @Nullable String resourceType, @Nullable String resourceId ) {
+    return getTagKeys( tagSpecification, resourceType, resourceId );
+  }
+
+  @Override
+  public String getTagValue(
+      @Nullable String resourceType,
+      @Nullable String resourceId,
+      @Nonnull final String tagKey
+  ) {
+    return getTagValue( tagSpecification, resourceType, resourceId, tagKey );
+  }
 
   public String getVpcId( ) {
     return vpcId;
@@ -60,5 +82,13 @@ public class CreateSubnetType extends VpcMessage {
 
   public void setAvailabilityZone( String availabilityZone ) {
     this.availabilityZone = availabilityZone;
+  }
+
+  public ArrayList<ResourceTagSpecification> getTagSpecification( ) {
+    return tagSpecification;
+  }
+
+  public void setTagSpecification( ArrayList<ResourceTagSpecification> tagSpecification ) {
+    this.tagSpecification = tagSpecification;
   }
 }

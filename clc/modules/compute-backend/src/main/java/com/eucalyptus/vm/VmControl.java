@@ -141,6 +141,7 @@ import com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
 import com.eucalyptus.compute.common.internal.vmtypes.VmType;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
+import com.eucalyptus.compute.common.policy.ComputePolicySpec;
 import com.eucalyptus.compute.vpc.*;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -156,6 +157,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.tracking.MessageContexts;
+import com.eucalyptus.tags.TagHelper;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
@@ -510,6 +512,8 @@ public class VmControl {
         // new client token, initial create
       }
       if ( launchTemplate == null ) {
+        final List<ResourceTag> resourceTags = TagHelper.tagsForResourceWithValidation(
+            context, request.getTagSpecification( ), ComputePolicySpec.EC2_RESOURCE_LAUNCHTEMPLATE );
         final Supplier<LaunchTemplate> allocator = new Supplier<LaunchTemplate>( ) {
           @Override
           public LaunchTemplate get() {
@@ -522,8 +526,13 @@ public class VmControl {
                   request.getVersionDescription()
               );
               launchTemplate.writeTemplateData(request.getLaunchTemplateData());
-              launchTemplates.save( launchTemplate );
-              return launchTemplate;
+              try ( final TransactionResource tx = Entities.transactionFor(LaunchTemplate.class) ) {
+                TagHelper.createOrUpdateTags(
+                    launchTemplates.save(launchTemplate),
+                    resourceTags);
+                tx.commit();
+                return launchTemplate;
+              }
             } catch (final Exception e) {
               throw Exceptions.toUndeclared(e);
             }
