@@ -5,7 +5,10 @@
  */
 package com.eucalyptus.loadbalancingv2.service;
 
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthQuotaException;
+import com.eucalyptus.auth.euare.common.EuareApi;
+import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.component.annotation.ComponentNamed;
@@ -19,6 +22,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.loadbalancingv2.common.msgs.CertificateList;
 import com.eucalyptus.loadbalancingv2.common.msgs.Listeners;
 import com.eucalyptus.loadbalancingv2.common.msgs.Rules;
 import com.eucalyptus.loadbalancingv2.common.msgs.SubnetMapping;
@@ -119,6 +123,7 @@ import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncProxy;
 import com.google.common.base.Enums;
 import com.google.common.base.Functions;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
@@ -131,6 +136,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import javax.annotation.Nullable;
@@ -187,10 +193,34 @@ public class Loadbalancingv2Service {
     final Integer port = request.getPort();
     final Listener.Protocol protocol = request.getProtocol()==null ?
         null :
-        Enums.getIfPresent(Listener.Protocol.class, request.getProtocol()).orNull();
+        get(Enums.getIfPresent(Listener.Protocol.class, request.getProtocol()), protocolUnsupported());
+
+    final String certificateArn;
+    if (protocol != null && protocol.requiresCertificate()) {
+      CertificateList certificateList = request.getCertificates();
+      if (certificateList==null ||
+          certificateList.getMember().size()!=1 ||
+          certificateList.getMember().get(0).getCertificateArn()==null) {
+        throw new Loadbalancingv2ClientException("InvalidConfigurationRequest", "One certificate ARN required");
+      }
+      certificateArn = certificateList.getMember().get(0).getCertificateArn();
+    } else {
+      certificateArn = null;
+    }
 
     final com.eucalyptus.loadbalancingv2.common.msgs.Listener resultListener;
     try {
+      if (certificateArn != null) {
+        final Ern ern = get(() -> Ern.parse(certificateArn), invalidCertificateArn());
+        final String certificateAccount = ern.getAccount();
+        final String certificateName = Accounts.getNameFromFullName(ern.getResourceName());
+        if (!"iam:server-certificate".equals(ern.getResourceType()) || !ctx.getAccountNumber().equals(certificateAccount)) {
+          throw invalidCertificateArn().get();
+        }
+        final EuareApi euareApi = AsyncProxy.client(EuareApi.class);
+        get(() -> euareApi.getServerCertificate(certificateName), certificateNotFound());
+      }
+
       resultListener = loadBalancers.updateByExample(
           LoadBalancer.named(ownerFullName, arn.getName()),
           ownerFullName,
@@ -198,8 +228,10 @@ public class Loadbalancingv2Service {
           Loadbalancingv2Metadatas.filterPrivileged(),
           loadbalancer -> {
             final Listener listener = Listener.create(loadbalancer, port, protocol);
+            listener.setDefaultServerCertificateArn(certificateArn);
             listener.setDefaultActions(JsonEncoding.write(request.getDefaultActions()));
             loadbalancer.getListeners().add(listener);
+            loadbalancer.setUpdateRequired(true);
             return TypeMappers.transform(
                 listener, com.eucalyptus.loadbalancingv2.common.msgs.Listener.class);
           }
@@ -1060,8 +1092,39 @@ public class Loadbalancingv2Service {
     return () -> new Loadbalancingv2ClientException("InvalidTarget", "Target invalid");
   }
 
+  private static CompatSupplier<Loadbalancingv2ClientException> protocolUnsupported() {
+    return () -> new Loadbalancingv2ClientException("UnsupportedProtocol", "Protocol not supported");
+  }
+
+  private static CompatSupplier<Loadbalancingv2ClientException> certificateNotFound() {
+    return () -> new Loadbalancingv2ClientException("CertificateNotFound", "Certificate not found");
+  }
+
+  private static CompatSupplier<Loadbalancingv2ClientException> invalidCertificateArn() {
+    return () -> new Loadbalancingv2ClientException("InvalidConfigurationRequest", "Invalid certificate ARN");
+  }
+
   private static CompatSupplier<RuntimeException> runtime(CompatSupplier<? extends Exception> supplier) {
     return () -> Exceptions.toUndeclared(supplier.get());
+  }
+
+  private static <V, T extends Throwable> V get(final Optional<V> optionalValue, Supplier<T> thrown) throws T {
+    if (optionalValue == null || !optionalValue.isPresent()) {
+      throw thrown.get();
+    }
+    return optionalValue.get();
+  }
+
+  private static <V, T extends Throwable> V get(final Callable<V> callable, Supplier<T> thrown) throws T {
+    if (callable == null) {
+      throw thrown.get();
+    } else {
+      try {
+        return callable.call();
+      } catch (final Exception e) {
+        throw thrown.get();
+      }
+    }
   }
 
   private static Predicate<Target> targetPredicate(

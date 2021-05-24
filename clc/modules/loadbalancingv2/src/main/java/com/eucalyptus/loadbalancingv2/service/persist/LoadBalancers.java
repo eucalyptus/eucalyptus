@@ -15,9 +15,14 @@ import com.eucalyptus.loadbalancingv2.common.msgs.AvailabilityZones;
 import com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancerState;
 import com.eucalyptus.loadbalancingv2.common.msgs.SecurityGroups;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.LoadBalancer;
+import com.eucalyptus.loadbalancingv2.service.persist.views.ImmutableListenerView;
+import com.eucalyptus.loadbalancingv2.service.persist.views.ImmutableLoadBalancerListenersView;
+import com.eucalyptus.loadbalancingv2.service.persist.views.ImmutableLoadBalancerView;
 import com.eucalyptus.loadbalancingv2.service.persist.views.ListenerRuleView;
 import com.eucalyptus.loadbalancingv2.service.persist.views.ListenerView;
+import com.eucalyptus.loadbalancingv2.service.persist.views.LoadBalancerListenersView;
 import com.eucalyptus.loadbalancingv2.service.persist.views.LoadBalancerView;
+import com.eucalyptus.util.CompatFunction;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
@@ -31,6 +36,12 @@ import org.hibernate.criterion.Criterion;
 public interface LoadBalancers {
 
   long EXPIRY_AGE = 900_000L;
+
+  CompatFunction<LoadBalancer, LoadBalancerListenersView> LISTENERS_VIEW =
+      loadBalancer -> ImmutableLoadBalancerListenersView.builder()
+          .loadBalancer(ImmutableLoadBalancerView.copyOf(loadBalancer))
+          .listeners(Stream.ofAll(loadBalancer.getListeners()).map(ImmutableListenerView::copyOf))
+          .build();
 
   <T> T lookupByExample(
       LoadBalancer example,

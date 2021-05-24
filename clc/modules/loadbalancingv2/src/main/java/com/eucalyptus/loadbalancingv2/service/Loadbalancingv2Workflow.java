@@ -18,6 +18,7 @@ import com.eucalyptus.cloudformation.common.msgs.DescribeStacksResponseType;
 import com.eucalyptus.cloudformation.common.msgs.DescribeStacksType;
 import com.eucalyptus.cloudformation.common.msgs.Parameter;
 import com.eucalyptus.cloudformation.common.msgs.Parameters;
+import com.eucalyptus.cloudformation.common.msgs.UpdateStackType;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.AddressInfoType;
@@ -52,6 +53,8 @@ import com.eucalyptus.loadbalancingv2.service.persist.Loadbalancingv2MetadataExc
 import com.eucalyptus.loadbalancingv2.service.persist.entities.LoadBalancer;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.PersistenceLoadBalancers;
 import com.eucalyptus.loadbalancingv2.service.persist.views.ImmutableLoadBalancerView;
+import com.eucalyptus.loadbalancingv2.service.persist.views.ListenerView;
+import com.eucalyptus.loadbalancingv2.service.persist.views.LoadBalancerListenersView;
 import com.eucalyptus.loadbalancingv2.service.persist.views.LoadBalancerView;
 import com.eucalyptus.loadbalancingv2.service.servo.ServoCache;
 import com.eucalyptus.loadbalancingv2.service.servo.SwitchedServoMetadataSource;
@@ -60,14 +63,17 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FUtils;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.ThrowingFunction;
+import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncProxy;
 import com.eucalyptus.ws.StackConfiguration;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
+import com.google.common.primitives.Longs;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import io.vavr.collection.Stream;
 import io.vavr.control.Option;
@@ -78,6 +84,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import org.apache.log4j.Logger;
@@ -88,16 +95,24 @@ public class Loadbalancingv2Workflow {
 
   private static final Logger logger = Logger.getLogger(Loadbalancingv2Workflow.class);
 
+  private static final long DEFAULT_UPDATE_RETRY_TIMEOUT = TimeUnit.MINUTES.toMillis(5);
+  private static final long UPDATE_RETRY_TIMEOUT = MoreObjects.firstNonNull(
+      Longs.tryParse(System.getProperty(
+          "com.eucalyptus.loadbalancingv2.workflowUpdateRetryTimeoutMillis",
+          String.valueOf(DEFAULT_UPDATE_RETRY_TIMEOUT))),
+      DEFAULT_UPDATE_RETRY_TIMEOUT);
+
   private final LoadBalancers loadBalancers;
   private final AtomicBoolean loaded = new AtomicBoolean(false);
 
   private final List<WorkflowTask> workflowTasks = ImmutableList.<WorkflowTask>builder()
       .add(new WorkflowTask( 10, "ELB.Provision")      {@Override void doWork() { loadBalancersProvision(); }})
+      .add(new WorkflowTask( 10, "ELB.Update")         {@Override void doWork() { loadBalancersUpdate(); }})
       .add(new WorkflowTask( 10, "ELB.Load")           {@Override void doWork() { loadBalancersLoad(); }})
       .add(new WorkflowTask( 10, "ELB.Track")          {@Override void doWork() { loadBalancersTrack(); }})
       .add(new WorkflowTask( 10, "ELB.Delete")         {@Override void doWork() { loadBalancersDelete(); }})
       .add(new WorkflowTask( 30, "ELB.ReleaseAddress") {@Override void doWork() { addressesRelease(); }})
-      .add(new WorkflowTask( 60, "ELB.Worflows")       {@Override void doWork() { loadBalancersWorkflow(); }})
+      .add(new WorkflowTask( 60, "ELB.Workflow")       {@Override void doWork() { loadBalancersWorkflow(); }})
       .add(new WorkflowTask(300, "ELB.Timeout")        {@Override void doWork() { loadBalancersTimeout(); }})
       .build();
 
@@ -131,10 +146,14 @@ public class Loadbalancingv2Workflow {
   }
 
   private List<String> listLoadBalancerIds(final LoadBalancer.State state) {
+    return listLoadBalancerIds(state, null);
+  }
+
+  private List<String> listLoadBalancerIds(final LoadBalancer.State state, final Boolean updateRequired) {
     List<String> loadBalancerIds = Collections.emptyList();
     try {
       loadBalancerIds = loadBalancers.listByExample(
-          LoadBalancer.exampleWithState(state),
+          LoadBalancer.exampleWithState(state, updateRequired),
           Predicates.alwaysTrue(),
           LoadBalancer::getNaturalId);
     } catch (final Loadbalancingv2MetadataException e) {
@@ -144,24 +163,69 @@ public class Loadbalancingv2Workflow {
   }
 
   private LoadBalancerView lookupLoadBalancerById(final String id) {
+    return lookupLoadBalancerById(id, ImmutableLoadBalancerView::copyOf);
+  }
+
+  private <T> T lookupLoadBalancerById(
+      final String id,
+      final CompatFunction<LoadBalancer, T> transform) {
     try {
-     return loadBalancers.lookupByExample(
+      return loadBalancers.lookupByExample(
           LoadBalancer.exampleWithId(id),
           null,
           id,
           Predicates.alwaysTrue(),
-          ImmutableLoadBalancerView::copyOf);
+          transform);
     } catch (final Loadbalancingv2MetadataException e) {
       logger.error("Error looking up load balancer", e);
       throw Exceptions.toUndeclared(e);
     }
   }
 
+  private Map<String,String> getStackParameters(
+      final LoadBalancerView loadBalancer,
+      final List<ListenerView> listeners
+  ) {
+    final String userSubnetId = loadBalancer.getSubnetIds().get(0);
+    final String subnetId = LoadBalancingSystemVpcs.getSystemVpcSubnetId(userSubnetId);
+    final String securityGroupId = LoadBalancingSystemVpcs.getSecurityGroupId(subnetId);
+    final String serverCertifcateArns = Stream.ofAll(listeners)
+        .map(ListenerView::getDefaultServerCertificateArn)
+        .filter(Objects::nonNull)
+        .intersperse(",").fold("", String::concat);
+    final String imageId = LoadBalancingWorkerProperties.IMAGE;
+    final String instanceType = LoadBalancingWorkerProperties.INSTANCE_TYPE;
+    final String keyName =
+        Strings.emptyToNull(Strings.nullToEmpty(LoadBalancingWorkerProperties.KEYNAME).trim());
+    final String servoEucalyptusHost = Internets.localHostAddress();
+    final String servoEucalyptusPort = Objects.toString(StackConfiguration.PORT, "8773");
+    final String servoNtpHost = LoadBalancingWorkerProperties.NTP_SERVER;
+    final String servoAccountNumber = loadBalancer.getOwnerAccountNumber();
+
+    final Map<String, String> parameters = Maps.newTreeMap();
+    parameters.put("ImageId", imageId);
+    parameters.put("InstanceType", instanceType);
+    parameters.put("SecurityGroupId", securityGroupId);
+    parameters.put("ServerCertificateArns", serverCertifcateArns);
+    parameters.put("SubnetId", subnetId);
+    parameters.put("KeyName", keyName);
+    parameters.put("ServoEucalyptusHost", servoEucalyptusHost);
+    parameters.put("ServoEucalyptusPort", servoEucalyptusPort);
+    parameters.put("ServoNtpHost", servoNtpHost);
+    parameters.put("ServoAccountNumber", servoAccountNumber);
+    parameters.put("ServoLoadBalancerId", loadBalancer.getNaturalId());
+    return parameters;
+  }
+
   private void loadBalancersProvision() {
     for (final String loadBalancerId : listLoadBalancerIds(LoadBalancer.State.provisioning)) {
       final LoadBalancerView loadBalancer;
+      final List<ListenerView> listeners;
       try {
-        loadBalancer = lookupLoadBalancerById(loadBalancerId);
+        final LoadBalancerListenersView loadBalancerWithListeners =
+            lookupLoadBalancerById(loadBalancerId, LoadBalancers.LISTENERS_VIEW);
+        loadBalancer = loadBalancerWithListeners.getLoadBalancer();
+        listeners = loadBalancerWithListeners.getListeners();
       } catch (final Exception e) {
         logger.error("Error provisioning load balancer " + loadBalancerId, e);
         continue;
@@ -173,18 +237,6 @@ public class Loadbalancingv2Workflow {
         continue;
       }
 
-      final String userSubnetId = subnetIds.get(0);
-      final String subnetId = LoadBalancingSystemVpcs.getSystemVpcSubnetId(userSubnetId);
-      final String securityGroupId = LoadBalancingSystemVpcs.getSecurityGroupId(subnetId);
-      final String imageId = LoadBalancingWorkerProperties.IMAGE;
-      final String instanceType = LoadBalancingWorkerProperties.INSTANCE_TYPE;
-      final String keyName =
-          Strings.emptyToNull(Strings.nullToEmpty(LoadBalancingWorkerProperties.KEYNAME).trim());
-      final String servoEucalyptusHost = Internets.localHostAddress();
-      final String servoEucalyptusPort = Objects.toString(StackConfiguration.PORT, "8773");
-      final String servoNtpHost = LoadBalancingWorkerProperties.NTP_SERVER;
-      final String servoAccountNumber = loadBalancer.getOwnerAccountNumber();
-      
       final CloudFormationApi cf = AsyncProxy.client(CloudFormationApi.class,
           loadBalancingAuthTransform, () -> Topology.lookup(CloudFormation.class));
 
@@ -193,17 +245,7 @@ public class Loadbalancingv2Workflow {
           stackStatus(cf.describeStacks(describeStacksMessage(stackName)));
       if (stackStatusOption.isEmpty()) {
         final String template = getTemplate(loadBalancer);
-        final Map<String, String> parameters = Maps.newTreeMap();
-        parameters.put("ImageId", imageId);
-        parameters.put("InstanceType", instanceType);
-        parameters.put("SecurityGroupId", securityGroupId);
-        parameters.put("SubnetId", subnetId);
-        parameters.put("KeyName", keyName);
-        parameters.put("ServoEucalyptusHost", servoEucalyptusHost);
-        parameters.put("ServoEucalyptusPort", servoEucalyptusPort);
-        parameters.put("ServoNtpHost", servoNtpHost);
-        parameters.put("ServoAccountNumber", servoAccountNumber);
-        parameters.put("ServoLoadBalancerId", loadBalancerId);
+        final Map<String, String> parameters = getStackParameters(loadBalancer, listeners);
         cf.createStack(createStackMessage(stackName, template, parameters));
         continue; // check for stack complete next time
       } else if (stackStatusOption.get().endsWith("_FAILED")) {
@@ -228,6 +270,68 @@ public class Loadbalancingv2Workflow {
           logger.debug("Conflict provisioning load balancer " + loadBalancerId + " (will retry)");
         } else {
           logger.error("Error provisioning load balancer " + loadBalancerId, e);
+        }
+      }
+    }
+  }
+
+  private void loadBalancersUpdate() {
+    for (final String loadBalancerId : listLoadBalancerIds(LoadBalancer.State.active, true)) {
+      final LoadBalancerView loadBalancer;
+      final List<ListenerView> listeners;
+      try {
+        final LoadBalancerListenersView loadBalancerWithListeners =
+            lookupLoadBalancerById(loadBalancerId, LoadBalancers.LISTENERS_VIEW);
+        loadBalancer = loadBalancerWithListeners.getLoadBalancer();
+        listeners = loadBalancerWithListeners.getListeners();
+      } catch (final Exception e) {
+        logger.error("Error updating load balancer " + loadBalancerId, e);
+        continue;
+      }
+
+      final List<String> subnetIds = loadBalancer.getSubnetIds();
+      if (subnetIds.isEmpty()) {
+        continue;
+      }
+
+      final CloudFormationApi cf = AsyncProxy.client(CloudFormationApi.class,
+          loadBalancingAuthTransform, () -> Topology.lookup(CloudFormation.class));
+
+      final String stackName = getStackName(loadBalancer, null);
+      final Map<String, String> parameters = getStackParameters(loadBalancer, listeners);
+      try {
+        cf.updateStack(updateStackMessage(stackName, parameters));
+      } catch (final Exception e) {
+        final boolean updateExpired = (loadBalancer.getLastUpdateTimestamp().getTime() + UPDATE_RETRY_TIMEOUT)
+            < System.currentTimeMillis();
+        final boolean isValidationError =
+            AsyncExceptions.isWebServiceErrorCode(e,"ValidationError");
+        final String message = AsyncExceptions.asWebServiceErrorMessage(e, e.getMessage());
+        if (isValidationError && message.toLowerCase().contains("no updates")) {
+          logger.debug("No changes for load balancer on update " + loadBalancerId);
+        } else if (isValidationError && message.contains("_IN_PROGRESS") && !updateExpired) {
+          logger.info("In progress update for load balancer " + loadBalancerId + " (will retry)");
+          continue; // try again next time
+        } else if (!updateExpired) {
+          logger.warn("Error in update for load balancer " + loadBalancerId + " (will retry): " + message);
+          continue; // try again next time
+        } else {
+          logger.warn("Update expired for load balancer " + loadBalancerId + ": " + message);
+        }
+      }
+
+      try {
+        loadBalancers.updateByView(loadBalancer, Predicates.alwaysTrue(), balancer -> {
+          if (loadBalancer.getLastUpdateTimestamp().equals(balancer.getLastUpdateTimestamp())) {
+            balancer.setUpdateRequired(false);
+          }
+          return null;
+        });
+      } catch (Exception e) {
+        if (PersistenceExceptions.isStaleUpdate(e)) {
+          logger.debug("Conflict updating load balancer " + loadBalancerId + " (will retry)");
+        } else {
+          logger.error("Error updating load balancer " + loadBalancerId, e);
         }
       }
     }
@@ -448,6 +552,24 @@ public class Loadbalancingv2Workflow {
     return createStack;
   }
 
+  private UpdateStackType updateStackMessage(
+      final String name,
+      final Map<String,String> parameterMap
+  ) {
+    final UpdateStackType updateStack = new UpdateStackType();
+    updateStack.setStackName(name);
+    updateStack.setUsePreviousTemplate(true);
+    final Parameters parameters = new Parameters();
+    Stream.ofAll(parameterMap.entrySet())
+        .map(entry -> new Parameter(entry.getKey(), entry.getValue()))
+        .forEach(parameters.getMember()::add);
+    updateStack.setParameters(parameters);
+    final Capabilities capabilities = new Capabilities();
+    capabilities.getMember().add("CAPABILITY_IAM");
+    updateStack.setCapabilities(capabilities);
+    return updateStack;
+  }
+
   private DeleteStackType deleteStackMessage(final String name) {
     final DeleteStackType deleteStack = new DeleteStackType();
     deleteStack.setStackName(name);
@@ -503,7 +625,7 @@ public class Loadbalancingv2Workflow {
     return createTags;
   }
 
-  //TODO:STEVE: role name length is an issue, can the stack name be shorter?
+  //TODO:STEVE: role name length is an issue, can the stack name be shorter? stack name should allow delete/recreate with the same elb name without conflict
   private String getStackName(final LoadBalancerView loadBalancer, final String zone) {  //TODO:STEVE: zone support
     final String userAccount = loadBalancer.getOwnerAccountNumber();
     final String name = loadBalancer.getDisplayName();

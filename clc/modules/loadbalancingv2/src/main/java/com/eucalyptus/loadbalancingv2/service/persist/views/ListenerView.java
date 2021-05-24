@@ -9,6 +9,7 @@ import com.eucalyptus.loadbalancingv2.common.msgs.Actions;
 import com.eucalyptus.loadbalancingv2.service.persist.JsonEncoding;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.Listener;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.LoadBalancer;
+import javax.annotation.Nullable;
 import org.immutables.value.Value;
 
 
@@ -48,9 +49,13 @@ public interface ListenerView {
 
   Listener.Protocol getProtocol();
 
+  @Nullable
   String getSslPolicy();
 
   String getDefaultActions();
+
+  @Nullable
+  String getDefaultServerCertificateArn();
 
   default Actions getListenerDefaultActions() {
     return JsonEncoding.read(Actions.class, getDefaultActions()).getOrElse(Actions::new);
