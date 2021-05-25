@@ -31,6 +31,7 @@ package com.eucalyptus.cloudformation.util;
 import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.InternalFailureException;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import java.util.function.Function;
 import org.apache.log4j.Logger;
 
 
@@ -61,4 +62,18 @@ public class MessageHelper {
     }
   }
 
+  public static Function<BaseMessage,BaseMessage> userIdentity(final String effectiveUserId) {
+    return message -> {
+      message.setEffectiveUserId(effectiveUserId);
+      return message;
+    };
+  }
+
+  public static Function<BaseMessage,BaseMessage> privilegedUserIdentity(final String effectiveUserId) {
+    return message -> {
+      message.setEffectiveUserId(effectiveUserId);
+      message.markPrivileged();
+      return message;
+    };
+  }
 }
