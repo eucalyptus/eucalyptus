@@ -540,7 +540,7 @@ public class Loadbalancingv2Service {
           }
       );
     } catch ( final Loadbalancingv2MetadataNotFoundException e ) {
-      throw listenerNotFound().get();
+      throw loadbalancerNotFound().get();
     } catch ( final Exception e ) {
       handleException( e, __ -> new Loadbalancingv2ClientException("ResourceInUse", "Loadbalancer in use") );
     }
