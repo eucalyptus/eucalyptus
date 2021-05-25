@@ -130,7 +130,7 @@ public class AWSIAMManagedPolicyResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSIAMManagedPolicyResourceAction action = (AWSIAMManagedPolicyResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        String policyName = action.properties.getManagedPolicyName() != null ? action.properties.getManagedPolicyName() : action.getDefaultPhysicalResourceId();
+        String policyName = action.properties.getManagedPolicyName() != null ? action.properties.getManagedPolicyName() : action.getDefaultPhysicalResourceId(128);
         CreatePolicyType createPolicyType = MessageHelper.createMessage(CreatePolicyType.class, action.info.getEffectiveUserId());
         if (action.properties.getDescription() != null) {
           createPolicyType.setDescription(action.properties.getDescription());

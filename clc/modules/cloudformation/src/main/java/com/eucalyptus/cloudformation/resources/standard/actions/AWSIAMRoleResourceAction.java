@@ -120,7 +120,7 @@ public class AWSIAMRoleResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSIAMRoleResourceAction action = (AWSIAMRoleResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        String roleName = action.properties.getRoleName() != null ? action.properties.getRoleName() : action.getDefaultPhysicalResourceId();
+        String roleName = action.properties.getRoleName() != null ? action.properties.getRoleName() : action.getDefaultPhysicalResourceId(64);
         CreateRoleType createRoleType = MessageHelper.createMessage(CreateRoleType.class, action.info.getEffectiveUserId());
         createRoleType.setRoleName(roleName);
         createRoleType.setPath(action.properties.getPath());

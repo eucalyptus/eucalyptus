@@ -108,7 +108,7 @@ public class AWSIAMPolicyResourceAction extends StepBasedResourceAction {
         AWSIAMPolicyResourceAction action = (AWSIAMPolicyResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
         // just get fields
-        action.info.setPhysicalResourceId(action.getDefaultPhysicalResourceId());
+        action.info.setPhysicalResourceId(action.getDefaultPhysicalResourceId(128));
         action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;

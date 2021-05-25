@@ -109,7 +109,7 @@ public class AWSIAMInstanceProfileResourceAction extends StepBasedResourceAction
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
         String instanceProfileName = action.properties.getInstanceProfileName() != null ?
             action.properties.getInstanceProfileName() :
-            action.getDefaultPhysicalResourceId();
+            action.getDefaultPhysicalResourceId(128);
         CreateInstanceProfileType createInstanceProfileType = MessageHelper.createMessage(CreateInstanceProfileType.class, action.info.getEffectiveUserId());
         createInstanceProfileType.setPath(MoreObjects.firstNonNull(action.properties.getPath(), DEFAULT_PATH));
         createInstanceProfileType.setInstanceProfileName(instanceProfileName);

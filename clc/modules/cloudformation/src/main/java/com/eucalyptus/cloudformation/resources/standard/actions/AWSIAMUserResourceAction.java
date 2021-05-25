@@ -142,7 +142,7 @@ public class AWSIAMUserResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSIAMUserResourceAction action = (AWSIAMUserResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        String userName = action.properties.getUserName() != null ? action.properties.getUserName() : action.getDefaultPhysicalResourceId();
+        String userName = action.properties.getUserName() != null ? action.properties.getUserName() : action.getDefaultPhysicalResourceId(64);
         CreateUserType createUserType = MessageHelper.createMessage(CreateUserType.class, action.info.getEffectiveUserId());
         createUserType.setUserName(userName);
         createUserType.setPath(MoreObjects.firstNonNull(action.properties.getPath(), DEFAULT_PATH));
