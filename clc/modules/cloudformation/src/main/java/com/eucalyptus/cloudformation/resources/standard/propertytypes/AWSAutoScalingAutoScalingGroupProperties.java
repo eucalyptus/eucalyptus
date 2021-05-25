@@ -61,6 +61,9 @@ public class AWSAutoScalingAutoScalingGroupProperties implements ResourcePropert
   @Property
   private ArrayList<String> loadBalancerNames = Lists.newArrayList( );
 
+  @Property( name = "TargetGroupARNs" )
+  private ArrayList<String> targetGroupArns = Lists.newArrayList( );
+
   @Required
   @Property
   private Integer maxSize;
@@ -145,6 +148,14 @@ public class AWSAutoScalingAutoScalingGroupProperties implements ResourcePropert
     this.loadBalancerNames = loadBalancerNames;
   }
 
+  public ArrayList<String> getTargetGroupArns() {
+    return targetGroupArns;
+  }
+
+  public void setTargetGroupArns(ArrayList<String> targetGroupArns) {
+    this.targetGroupArns = targetGroupArns;
+  }
+
   public Integer getMaxSize( ) {
     return maxSize;
   }
@@ -204,6 +215,7 @@ public class AWSAutoScalingAutoScalingGroupProperties implements ResourcePropert
         .add( "instanceId", instanceId )
         .add( "launchConfigurationName", launchConfigurationName )
         .add( "loadBalancerNames", loadBalancerNames )
+        .add( "targetGroupArns", targetGroupArns )
         .add( "maxSize", maxSize )
         .add( "minSize", minSize )
         .add( "notificationConfigurations", notificationConfigurations )
