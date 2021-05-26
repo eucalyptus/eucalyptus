@@ -25,4 +25,7 @@ public interface Loadbalancingv2Metadata extends RestrictedType {
   @PolicyResourceType( "targetgroup" )
   interface TargetgroupMetadata extends Loadbalancingv2Metadata {}
 
+  @PolicyResourceType( "tag" )
+  interface TagMetadata extends Loadbalancingv2Metadata {}
+
 }

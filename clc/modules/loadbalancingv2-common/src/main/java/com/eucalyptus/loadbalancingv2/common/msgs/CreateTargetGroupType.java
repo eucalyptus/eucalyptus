@@ -50,6 +50,8 @@ public class CreateTargetGroupType extends Loadbalancingv2Message {
   @FieldRegex(FieldRegexValue.ENUM_TARGETTYPEENUM)
   private String targetType;
 
+  private TagList tags;
+
   @FieldRange(min = 2, max = 10)
   private Integer unhealthyThresholdCount;
 
@@ -158,6 +160,14 @@ public class CreateTargetGroupType extends Loadbalancingv2Message {
 
   public void setTargetType(final String targetType) {
     this.targetType = targetType;
+  }
+
+  public TagList getTags() {
+    return tags;
+  }
+
+  public void setTags(final TagList tags) {
+    this.tags = tags;
   }
 
   public Integer getUnhealthyThresholdCount() {

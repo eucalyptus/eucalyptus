@@ -33,6 +33,8 @@ public class CreateListenerType extends Loadbalancingv2Message {
   @FieldRegex(FieldRegexValue.SECURITY_POLICY)
   private String sslPolicy;
 
+  private TagList tags;
+
   public CertificateList getCertificates() {
     return certificates;
   }
@@ -81,4 +83,11 @@ public class CreateListenerType extends Loadbalancingv2Message {
     this.sslPolicy = sslPolicy;
   }
 
+  public TagList getTags() {
+    return tags;
+  }
+
+  public void setTags(final TagList tags) {
+    this.tags = tags;
+  }
 }

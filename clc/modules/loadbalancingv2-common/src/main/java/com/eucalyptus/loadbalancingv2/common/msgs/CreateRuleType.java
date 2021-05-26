@@ -27,6 +27,8 @@ public class CreateRuleType extends Loadbalancingv2Message {
   @FieldRange(min = 1, max = 50000)
   private Integer priority;
 
+  private TagList tags;
+
   public Actions getActions() {
     return actions;
   }
@@ -59,4 +61,11 @@ public class CreateRuleType extends Loadbalancingv2Message {
     this.priority = priority;
   }
 
+  public TagList getTags() {
+    return tags;
+  }
+
+  public void setTags(final TagList tags) {
+    this.tags = tags;
+  }
 }

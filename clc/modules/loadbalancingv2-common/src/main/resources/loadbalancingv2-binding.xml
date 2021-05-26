@@ -57,6 +57,7 @@
     <value name="Port" get-method="getPort" set-method="setPort" usage="optional"/>
     <value name="Protocol" get-method="getProtocol" set-method="setProtocol" usage="optional"/>
     <value name="SslPolicy" get-method="getSslPolicy" set-method="setSslPolicy" usage="optional"/>
+    <structure get-method="getTags" set-method="setTags" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.TagList" name="Tags"/>
   </mapping>
   <mapping name="CreateListenerResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.CreateListenerResponseType">
     <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
@@ -91,6 +92,7 @@
     <structure get-method="getConditions" set-method="setConditions" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.RuleConditionList" name="Conditions"/>
     <value name="ListenerArn" get-method="getListenerArn" set-method="setListenerArn" usage="optional"/>
     <value name="Priority" get-method="getPriority" set-method="setPriority" usage="optional"/>
+    <structure get-method="getTags" set-method="setTags" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.TagList" name="Tags"/>
   </mapping>
   <mapping name="CreateRuleResponse" class="com.eucalyptus.loadbalancingv2.common.msgs.CreateRuleResponseType">
     <structure map-as="com.eucalyptus.loadbalancingv2.common.msgs.Loadbalancingv2Message"/>
@@ -114,6 +116,7 @@
     <value name="Port" get-method="getPort" set-method="setPort" usage="optional"/>
     <value name="Protocol" get-method="getProtocol" set-method="setProtocol" usage="optional"/>
     <value name="TargetType" get-method="getTargetType" set-method="setTargetType" usage="optional"/>
+    <structure get-method="getTags" set-method="setTags" usage="optional" type="com.eucalyptus.loadbalancingv2.common.msgs.TagList" name="Tags"/>
     <value name="UnhealthyThresholdCount" get-method="getUnhealthyThresholdCount" set-method="setUnhealthyThresholdCount" usage="optional"/>
     <value name="VpcId" get-method="getVpcId" set-method="setVpcId" usage="optional"/>
   </mapping>

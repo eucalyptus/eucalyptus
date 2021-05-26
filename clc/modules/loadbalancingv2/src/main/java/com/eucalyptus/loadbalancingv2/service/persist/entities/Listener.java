@@ -9,7 +9,9 @@ import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2Metadata;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2ResourceName;
+import com.eucalyptus.loadbalancingv2.service.persist.Taggable;
 import com.eucalyptus.loadbalancingv2.service.persist.views.ListenerView;
+import com.google.common.collect.Lists;
 import io.vavr.collection.Stream;
 import io.vavr.control.Option;
 import java.util.List;
@@ -18,6 +20,7 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
@@ -29,7 +32,8 @@ import org.hibernate.annotations.Type;
 @Entity
 @PersistenceContext(name = "eucalyptus_loadbalancing")
 @Table(name = "metadata_v2_listener")
-public class Listener extends AbstractOwnedPersistent implements Loadbalancingv2Metadata.ListenerMetadata, ListenerView {
+public class Listener extends AbstractOwnedPersistent
+    implements Loadbalancingv2Metadata.ListenerMetadata, ListenerView, Taggable<ListenerTag> {
 
   private static final long serialVersionUID = 1L;
 
@@ -93,6 +97,9 @@ public class Listener extends AbstractOwnedPersistent implements Loadbalancingv2
   @OrderBy("priority")
   private List<ListenerRule> listenerRules;
 
+  @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "listener")
+  private List<ListenerTag> tags = Lists.newArrayList();
+
   //TODO:STEVE: AlpnPolicy.member.N
   //TODO:STEVE: Certificates.member.N
 
@@ -117,6 +124,14 @@ public class Listener extends AbstractOwnedPersistent implements Loadbalancingv2
     listener.setPort(port);
     listener.setProtocol(protocol);
     return listener;
+  }
+
+  @Override public ListenerTag createTag(final String key, final String value) {
+    return ListenerTag.create(this, key, value);
+  }
+
+  @Override public void updateTag(final ListenerTag tag, final String value) {
+    tag.setValue(value);
   }
 
   public static Listener named(final OwnerFullName owner, final String displayName) {
@@ -208,5 +223,13 @@ public class Listener extends AbstractOwnedPersistent implements Loadbalancingv2
 
   public Option<ListenerRule> findListenerRule(final String naturalId) {
     return Stream.ofAll(getListenerRules()).find(rule -> naturalId.equals(rule.getNaturalId()));
+  }
+
+  @Override public List<ListenerTag> getTags() {
+    return tags;
+  }
+
+  @Override public void setTags(final List<ListenerTag> tags) {
+    this.tags = tags;
   }
 }
