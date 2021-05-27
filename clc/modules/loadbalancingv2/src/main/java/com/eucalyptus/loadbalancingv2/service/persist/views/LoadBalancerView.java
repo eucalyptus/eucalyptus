@@ -41,6 +41,8 @@ public interface LoadBalancerView {
 
   LoadBalancer.IpAddressType getIpAddressType();
 
+  String getCanonicalHostedZoneId();
+
   List<String> getSecurityGroupIds();
 
   List<String> getSubnetIds();

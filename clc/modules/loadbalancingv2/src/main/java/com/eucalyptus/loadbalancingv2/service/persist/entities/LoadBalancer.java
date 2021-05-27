@@ -110,6 +110,9 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.State>
   @Column(name = "loadbalancer_vpc_id")
   private String vpcId;
 
+  @Column(name = "loadbalancer_hosted_zone_id")
+  private String canonicalHostedZoneId;
+
   @ElementCollection
   @CollectionTable( name = "metadata_v2_loadbalancer_security_groups", joinColumns = @JoinColumn( name = "metadata_loadbalancer_id" ) )
   @Column( name = "metadata_security_group_id" )
@@ -219,6 +222,14 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.State>
 
   public void setVpcId(String vpcId) {
     this.vpcId = vpcId;
+  }
+
+  public String getCanonicalHostedZoneId() {
+    return canonicalHostedZoneId;
+  }
+
+  public void setCanonicalHostedZoneId(String canonicalHostedZoneId) {
+    this.canonicalHostedZoneId = canonicalHostedZoneId;
   }
 
   public List<String> getSecurityGroupIds() {
