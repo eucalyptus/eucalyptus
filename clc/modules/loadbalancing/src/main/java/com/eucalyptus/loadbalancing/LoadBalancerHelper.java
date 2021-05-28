@@ -34,6 +34,8 @@ import static com.eucalyptus.util.Strings.nonNull;
 
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerAutoScalingGroup;
+import com.eucalyptus.loadbalancing.service.persist.views.ImmutableLoadBalancerBackendInstanceView;
+import com.eucalyptus.loadbalancing.workflow.LoadBalancingWorkflows;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
@@ -1076,7 +1078,16 @@ public class LoadBalancerHelper {
     Map<String, LoadBalancerServoDescription> getLoadBalancerServoDescriptions(
         String accountNumber, String loadBalancerNameOrArn);
 
+    List<String> getServoInstances(String accountNumber, String loadBalancerNameOrArn);
+
+    HealthCheck getLoadBalancerHealthCheck(String accountNumber, String loadBalancerNameOrArn);
+
     Set<String> resolveIpsForLoadBalancer(String accountNumber, String loadBalancerName);
+
+    Map<String, String> filterInstanceStatus(String accountNumber, String loadBalancerNameOrArn,
+        String servoInstanceId, Map<String, String> statusMap);
+
+    void notifyBackendInstanceStatus(String accountNumber, String loadBalancerNameOrArn, Map<String, String> statusMap);
 
     void notifyServoInstanceFailure(String instanceId);
   }
@@ -1174,6 +1185,51 @@ public class LoadBalancerHelper {
     }
 
     @Override
+    public List<String> getServoInstances(
+        final String accountNumber,
+        final String lbName
+    ) {
+      final LoadBalancerZonesView lb = LoadBalancerHelper.getLoadbalancer(
+            persistence,
+            Predicates.alwaysTrue(),
+            LoadBalancers.ZONES_VIEW,
+            accountNumber,
+            lbName);
+
+      final List<String> instances = Lists.newArrayList();
+      for (final LoadBalancerZoneFullView zoneFullView : lb.getZones()) {
+        final LoadBalancerZoneView zoneView = zoneFullView.getZone();
+        if (LoadBalancerZone.STATE.OutOfService.equals(zoneView.getState())) {
+          continue;
+        }
+
+        instances.addAll(Collections2.transform(
+            zoneFullView.getServoInstances(),
+            LoadBalancerServoInstanceView::getInstanceId));
+      }
+      return instances;
+    }
+
+    @Override
+    public HealthCheck getLoadBalancerHealthCheck(
+        final String accountNumber,
+        final String lbName
+    ) {
+      final LoadBalancerView lb =
+          LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
+      if (!lb.hasHealthCheckConfig()) {
+        throw new IllegalStateException("health check is not configured");
+      }
+      final HealthCheck hc = new HealthCheck();
+      hc.setHealthyThreshold(lb.getHealthCheckConfig().getHealthyThreshold());
+      hc.setInterval(lb.getHealthCheckConfig().getInterval());
+      hc.setTarget(lb.getHealthCheckConfig().getTarget());
+      hc.setTimeout(lb.getHealthCheckConfig().getTimeout());
+      hc.setUnhealthyThreshold(lb.getHealthCheckConfig().getUnhealthyThreshold());
+      return hc;
+    }
+
+    @Override
     public Set<String> resolveIpsForLoadBalancer(
         final String accountNumber,
         final String loadBalancerName
@@ -1203,6 +1259,119 @@ public class LoadBalancerHelper {
             ipExtractor));
       }
       return ips;
+    }
+
+    @Override
+    public Map<String, String> filterInstanceStatus(
+        final String accountNumber,
+        final String lbName,
+        final String servoInstanceId,
+        final Map<String, String> statusMap
+    ) {
+      final LoadBalancerServoInstance servo;
+      try {
+        servo = LoadBalancerHelper.lookupServoInstance(servoInstanceId);
+      } catch (LoadBalancingException e) {
+        throw Exceptions.toUndeclared(e);
+      }
+      final String monitoringZone = servo.getAvailabilityZone().getName();
+
+      final Map<String, String> instanceToZone = Maps.newHashMap();
+      final Set<String> stoppedInstances = Sets.newHashSet();
+      final List<LoadBalancerBackendInstanceView> backendInstances =
+          LoadBalancerHelper.getLoadbalancer(
+              persistence,
+              Predicates.alwaysTrue(),
+              loadBalancer -> Stream.ofAll(loadBalancer.getBackendInstances())
+                  .<LoadBalancerBackendInstanceView>map(
+                      ImmutableLoadBalancerBackendInstanceView::copyOf)
+                  .toJavaList(),
+              accountNumber,
+              lbName);
+      backendInstances.stream()
+          .forEach(
+              instance -> instanceToZone.put(instance.getInstanceId(), instance.getPartition()));
+      stoppedInstances.addAll(Stream.ofAll(backendInstances)
+          .filter(LoadBalancerBackendInstanceStates.InstanceStopped::isInstanceState)
+          .map(LoadBalancerBackendInstanceView::getInstanceId)
+          .toJavaList());
+
+      final Map<String, String> instanceToStatus = Maps.newHashMap();
+      for (final String instanceId : statusMap.keySet()) {
+        final String instanceStatus = statusMap.get(instanceId);
+        if (!(instanceToZone.containsKey(instanceId) &&
+            instanceToZone.get(instanceId).equals(monitoringZone))) {
+          continue;
+        }
+        if (stoppedInstances.contains(instanceId)) {
+          continue; // EUCA-11859: do not update health check result if instance stopped
+        }
+        instanceToStatus.put(instanceId, instanceStatus);
+      }
+      return instanceToStatus;
+    }
+
+    @Override
+    public void notifyBackendInstanceStatus(
+        final String accountNumber,
+        final String lbName,
+        final Map<String, String> statusMap
+    ) {
+      boolean updated = false;
+      boolean committed = false;
+      final int TRANSACTION_RETRY = 5;
+      LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName); // fail if not found
+      for (int i = 1; i <= TRANSACTION_RETRY; i++) {
+        try (final TransactionResource db = Entities.transactionFor(
+            LoadBalancerBackendInstance.class)) {
+          final LoadBalancer lb =
+              LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
+          for (final String instanceId : statusMap.keySet()) {
+            final LoadBalancerBackendInstance sample =
+                LoadBalancerBackendInstance.named(lb, instanceId);
+            final LoadBalancerBackendInstance update = Entities.uniqueResult(sample);
+            final String newStatus = statusMap.get(instanceId);
+            final LoadBalancerBackendInstance.STATE oldState =
+                update.getBackendState();
+            final LoadBalancerBackendInstance.STATE newState =
+                LoadBalancerBackendInstance.STATE.valueOf(newStatus);
+            if (!oldState.equals(newState)) {
+              updated = true;
+            }
+            update.setBackendState(newState);
+            final LoadBalancerBackendInstanceStates failure =
+                LoadBalancerBackendInstanceStates.HealthCheckFailure;
+            final LoadBalancerBackendInstanceStates success =
+                LoadBalancerBackendInstanceStates.HealthCheckSuccess;
+            if (success.getState().equals(newState)) {
+              update.setReasonCode(success.getReasonCode());
+              update.setDescription(success.getDescription());
+            } else if (failure.getState().equals(newState)) {
+              update.setReasonCode(failure.getReasonCode());
+              update.setDescription(failure.getDescription());
+            }
+            update.updateInstanceStateTimestamp();
+          }
+          db.commit();
+        } catch (final Exception ex) {
+          try {
+            Thread.sleep((long) ((Math.random() * 100) * Math.pow(2, i)));
+          } catch (final Exception ex2) {
+            ;
+          }
+          continue;
+        }
+        committed = true;
+        break;
+      }
+
+      if (!committed) {
+        throw new RuntimeException("Failed to persist instance status");
+      }
+      // if changed, updating loadbalancer will cause registering instances in the servo VMs
+      if (updated) {
+        LoadBalancingWorkflows.updateLoadBalancer(accountNumber, lbName);
+      }
     }
 
     @Override

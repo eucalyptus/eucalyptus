@@ -493,11 +493,15 @@ public class LoadBalancingWorkflows {
   }
 
   public static void runInstanceStatusPolling(final String accountId, final String loadbalancer) {
-    final String workflowId = getInstanceStatusWorkflowId(accountId, loadbalancer);
+    runInstanceStatusPolling(accountId, loadbalancer, loadbalancer);
+  }
+
+  public static void runInstanceStatusPolling(final String accountId, final String loadbalancerDesc, final String loadbalancerNameOrArn) {
+    final String workflowId = getInstanceStatusWorkflowId(accountId, loadbalancerDesc);
     try {
       final InstanceStatusWorkflowClientExternal workflow =
-          WorkflowClients.getinstanceStatusWorkflowClient(accountId, loadbalancer, workflowId);
-      workflow.pollInstanceStatus(accountId, loadbalancer); // instances);
+          WorkflowClients.getinstanceStatusWorkflowClient(accountId, loadbalancerDesc, workflowId);
+      workflow.pollInstanceStatus(accountId, loadbalancerNameOrArn);
     } catch (final WorkflowExecutionAlreadyStartedException ex) {
       ;
     } catch (final Exception ex) {

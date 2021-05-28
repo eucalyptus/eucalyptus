@@ -43,7 +43,6 @@ import com.eucalyptus.loadbalancing.service.persist.ImmutableLoadBalancingPersis
 import com.eucalyptus.loadbalancing.service.persist.LoadBalancers;
 import com.eucalyptus.loadbalancing.service.persist.LoadBalancingMetadataNotFoundException;
 import com.eucalyptus.loadbalancing.service.persist.LoadBalancingPersistence;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerServoInstance.STATE;
 import com.eucalyptus.loadbalancing.common.LoadBalancing;
 import com.eucalyptus.loadbalancing.LoadBalancingSystemVpcs;
 
@@ -61,7 +60,6 @@ import com.eucalyptus.loadbalancing.common.msgs.HealthCheck;
 import com.eucalyptus.loadbalancing.common.msgs.PolicyDescription;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancer;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendInstance;
-import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerBackendServerDescription;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerListener;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerPolicyDescription;
 import com.eucalyptus.loadbalancing.service.persist.entities.LoadBalancerSecurityGroup;
@@ -79,14 +77,11 @@ import com.eucalyptus.loadbalancing.service.persist.views.ImmutableLoadBalancerZ
 import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerAutoScalingGroupView;
 import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerBackendInstanceView;
 import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerListenerView;
-import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerPolicyDescriptionFullView;
 import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerPolicyDescriptionView;
 import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerSecurityGroupView;
 import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerServoInstanceView;
 import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerView;
-import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerZoneFullView;
 import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerZoneView;
-import com.eucalyptus.loadbalancing.service.persist.views.LoadBalancerZonesView;
 import com.eucalyptus.objectstorage.client.EucaS3Client;
 import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import com.eucalyptus.util.async.AsyncExceptions;
@@ -1479,18 +1474,8 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   public HealthCheck lookupLoadBalancerHealthCheck(final String accountNumber, final String lbName)
       throws LoadBalancingActivityException {
     try {
-      final LoadBalancerView lb =
-          LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
-      if (!lb.hasHealthCheckConfig()) {
-        throw new IllegalStateException("health check is not configured");
-      }
-      final HealthCheck hc = new HealthCheck();
-      hc.setHealthyThreshold(lb.getHealthCheckConfig().getHealthyThreshold());
-      hc.setInterval(lb.getHealthCheckConfig().getInterval());
-      hc.setTarget(lb.getHealthCheckConfig().getTarget());
-      hc.setTimeout(lb.getHealthCheckConfig().getTimeout());
-      hc.setUnhealthyThreshold(lb.getHealthCheckConfig().getUnhealthyThreshold());
-      return hc;
+      return LoadBalancerHelper.getServoMetadataSource()
+          .getLoadBalancerHealthCheck(accountNumber, lbName);
     } catch (final Exception ex) {
       throw new LoadBalancingActivityException(String.format("Failed to lookup loadbalancer (%s:%s",
           accountNumber, lbName));
@@ -1505,41 +1490,6 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
       return Maps.newHashMap();
     }
 
-    String monitoringZone = null;
-    try {
-      final LoadBalancerServoInstance servo =
-          LoadBalancerHelper.lookupServoInstance(servoInstanceId);
-      monitoringZone = servo.getAvailabilityZone().getName();
-    } catch (final Exception ex) {
-      throw new LoadBalancingActivityException(
-          "Failed to lookup the servo instance with id=" + servoInstanceId);
-    }
-
-    final Map<String, String> instanceToZone = Maps.newHashMap();
-    final Set<String> stoppedInstances = Sets.newHashSet();
-    try {
-      final List<LoadBalancerBackendInstanceView> backendInstances =
-          LoadBalancerHelper.getLoadbalancer(
-              persistence,
-              Predicates.alwaysTrue(),
-              loadBalancer -> Stream.ofAll(loadBalancer.getBackendInstances())
-                  .<LoadBalancerBackendInstanceView>map(
-                      ImmutableLoadBalancerBackendInstanceView::copyOf)
-                  .toJavaList(),
-              accountNumber,
-              lbName);
-      backendInstances.stream()
-          .forEach(
-              instance -> instanceToZone.put(instance.getInstanceId(), instance.getPartition()));
-      stoppedInstances.addAll(Stream.ofAll(backendInstances)
-          .filter(LoadBalancerBackendInstanceStates.InstanceStopped::isInstanceState)
-          .map(LoadBalancerBackendInstanceView::getInstanceId)
-          .toJavaList());
-    } catch (final Exception ex) {
-      throw new LoadBalancingActivityException(
-          "Failed to lookup the loadbalancer with name=" + lbName, ex);
-    }
-
     final Set<String> validStates = Sets.newHashSet(
         LoadBalancerBackendInstance.STATE.InService.name(),
         LoadBalancerBackendInstance.STATE.OutOfService.name());
@@ -1552,20 +1502,19 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
         if (!validStates.contains(instanceStatus)) {
           continue;
         }
-        if (!(instanceToZone.containsKey(instanceId) &&
-            instanceToZone.get(instanceId).equals(monitoringZone))) {
-          continue;
-        }
-        if (stoppedInstances.contains(instanceId)) {
-          continue; // EUCA-11859: do not update health check result if instance stopped
-        }
         instanceToStatus.put(instanceId, instanceStatus);
       }
     } catch (final Exception ex) {
       throw new LoadBalancingActivityException("Failed unmarshalling instance status message", ex);
     }
 
-    return instanceToStatus;
+    try {
+      return LoadBalancerHelper.getServoMetadataSource()
+          .filterInstanceStatus(accountNumber, lbName, servoInstanceId, instanceToStatus);
+    } catch (final Exception ex) {
+      throw new LoadBalancingActivityException(String.format("Status filtering failed for loadbalancer servo (%s:%s:%s",
+          accountNumber, lbName, servoInstanceId));
+    }
   }
 
   //TODO: SCALE
@@ -1586,60 +1535,12 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
     if (verifiedStatusMap.isEmpty()) {
       return;
     }
-    boolean updated = false;
-    boolean committed = false;
-    final int TRANSACTION_RETRY = 5;
-    LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName); // fail if not found
-    for (int i = 1; i <= TRANSACTION_RETRY; i++) {
-      try (final TransactionResource db = Entities.transactionFor(
-          LoadBalancerBackendInstance.class)) {
-        final LoadBalancer lb =
-            LoadBalancerHelper.getLoadbalancer(persistence, accountNumber, lbName);
-        for (final String instanceId : verifiedStatusMap.keySet()) {
-          final LoadBalancerBackendInstance sample =
-              LoadBalancerBackendInstance.named(lb, instanceId);
-          final LoadBalancerBackendInstance update = Entities.uniqueResult(sample);
-          final String newStatus = verifiedStatusMap.get(instanceId);
-          final LoadBalancerBackendInstance.STATE oldState =
-              update.getBackendState();
-          final LoadBalancerBackendInstance.STATE newState =
-              LoadBalancerBackendInstance.STATE.valueOf(newStatus);
-          if (!oldState.equals(newState)) {
-            updated = true;
-          }
-          update.setBackendState(newState);
-          final LoadBalancerBackendInstanceStates failure =
-              LoadBalancerBackendInstanceStates.HealthCheckFailure;
-          final LoadBalancerBackendInstanceStates success =
-              LoadBalancerBackendInstanceStates.HealthCheckSuccess;
-          if (success.getState().equals(newState)) {
-            update.setReasonCode(success.getReasonCode());
-            update.setDescription(success.getDescription());
-          } else if (failure.getState().equals(newState)) {
-            update.setReasonCode(failure.getReasonCode());
-            update.setDescription(failure.getDescription());
-          }
-          update.updateInstanceStateTimestamp();
-        }
-        db.commit();
-      } catch (final Exception ex) {
-        try {
-          Thread.sleep((long) ((Math.random() * 100) * Math.pow(2, i)));
-        } catch (final Exception ex2) {
-          ;
-        }
-        continue;
-      }
-      committed = true;
-      break;
-    }
 
-    if (!committed) {
+    try {
+      LoadBalancerHelper.getServoMetadataSource()
+          .notifyBackendInstanceStatus(accountNumber, lbName, verifiedStatusMap);
+    } catch (final Exception ex) {
       throw new LoadBalancingActivityException("Failed to persist instance status");
-    }
-    // if changed, updating loadbalancer will cause registering instances in the servo VMs
-    if (updated) {
-      LoadBalancingWorkflows.updateLoadBalancer(accountNumber, lbName);
     }
   }
 
@@ -3600,35 +3501,12 @@ public class LoadBalancingActivitiesImpl implements LoadBalancingActivities {
   @Override
   public List<String> lookupServoInstances(final String accountNumber,
       final String lbName) throws LoadBalancingActivityException {
-    final LoadBalancerZonesView lb;
     try {
-      lb = LoadBalancerHelper.getLoadbalancer(
-          persistence,
-          Predicates.alwaysTrue(),
-          LoadBalancers.ZONES_VIEW,
-          accountNumber,
-          lbName);
-    } catch (final Exception ex) {
-      throw new LoadBalancingActivityException("Failed to lookup loadbalancer");
-    }
-
-    final List<String> instances = Lists.newArrayList();
-    try {
-      for (final LoadBalancerZoneFullView zoneFullView : lb.getZones()) {
-        final LoadBalancerZoneView zoneView = zoneFullView.getZone();
-        if (LoadBalancerZone.STATE.OutOfService.equals(zoneView.getState())) {
-          continue;
-        }
-
-        instances.addAll(Collections2.transform(
-            zoneFullView.getServoInstances(),
-            LoadBalancerServoInstanceView::getInstanceId));
-      }
+      return LoadBalancerHelper.getServoMetadataSource()
+          .getServoInstances(accountNumber, lbName);
     } catch (final Exception ex) {
       throw new LoadBalancingActivityException("Failed to lookup servo instance records", ex);
     }
-
-    return instances;
   }
 
   // to make sure that all ELB VMs have the right role policy
