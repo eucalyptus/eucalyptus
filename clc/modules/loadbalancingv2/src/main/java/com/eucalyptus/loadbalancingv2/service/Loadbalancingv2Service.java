@@ -20,18 +20,28 @@ import com.eucalyptus.compute.common.SubnetType;
 import com.eucalyptus.compute.common.VpcType;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.AbstractPersistent_;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.loadbalancing.LoadBalancingServiceProperties;
+import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2Metadata;
 import com.eucalyptus.loadbalancingv2.common.msgs.CertificateList;
 import com.eucalyptus.loadbalancingv2.common.msgs.Listeners;
 import com.eucalyptus.loadbalancingv2.common.msgs.Rules;
 import com.eucalyptus.loadbalancingv2.common.msgs.SubnetMapping;
+import com.eucalyptus.loadbalancingv2.common.msgs.Tag;
+import com.eucalyptus.loadbalancingv2.common.msgs.TagDescription;
+import com.eucalyptus.loadbalancingv2.common.msgs.TagDescriptions;
+import com.eucalyptus.loadbalancingv2.common.msgs.TagList;
 import com.eucalyptus.loadbalancingv2.common.msgs.TargetDescription;
 import com.eucalyptus.loadbalancingv2.common.msgs.TargetDescriptions;
 import com.eucalyptus.loadbalancingv2.service.persist.JsonEncoding;
 import com.eucalyptus.loadbalancingv2.service.persist.LoadBalancers;
 import com.eucalyptus.loadbalancingv2.service.persist.Loadbalancingv2MetadataException;
 import com.eucalyptus.loadbalancingv2.service.persist.Loadbalancingv2MetadataNotFoundException;
+import com.eucalyptus.loadbalancingv2.service.persist.Taggable;
+import com.eucalyptus.loadbalancingv2.service.persist.Tags;
 import com.eucalyptus.loadbalancingv2.service.persist.TargetGroups;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.Listener;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.ListenerRule;
@@ -43,6 +53,7 @@ import com.eucalyptus.loadbalancingv2.service.persist.entities.TargetGroup;
 import com.eucalyptus.loadbalancingv2.service.persist.views.ListenerRuleView;
 import com.eucalyptus.loadbalancingv2.service.persist.views.ListenerView;
 import com.eucalyptus.loadbalancingv2.service.persist.views.LoadBalancerView;
+import com.eucalyptus.loadbalancingv2.service.persist.views.TagView;
 import com.eucalyptus.loadbalancingv2.service.persist.views.TargetGroupView;
 import com.eucalyptus.loadbalancingv2.service.persist.views.TargetView;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2Metadatas;
@@ -115,6 +126,7 @@ import com.eucalyptus.loadbalancingv2.common.msgs.SetSecurityGroupsResponseType;
 import com.eucalyptus.loadbalancingv2.common.msgs.SetSecurityGroupsType;
 import com.eucalyptus.loadbalancingv2.common.msgs.SetSubnetsResponseType;
 import com.eucalyptus.loadbalancingv2.common.msgs.SetSubnetsType;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.CompatFunction;
 import com.eucalyptus.util.CompatSupplier;
 import com.eucalyptus.util.Exceptions;
@@ -134,10 +146,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -156,22 +170,61 @@ public class Loadbalancingv2Service {
 
   private final LoadBalancers loadBalancers;
   private final TargetGroups targetGroups;
+  private final Tags tags;
 
   @Inject
   public Loadbalancingv2Service(
       final LoadBalancers loadBalancers,
-      final TargetGroups targetGroups
+      final TargetGroups targetGroups,
+      final Tags tags
   ) {
     this.loadBalancers = loadBalancers;
     this.targetGroups = targetGroups;
+    this.tags = tags;
   }
 
   public AddListenerCertificatesResponseType addListenerCertificates(final AddListenerCertificatesType request) {
     return request.getReply();
   }
 
-  public AddTagsResponseType addTags(final AddTagsType request) {
-    return request.getReply();
+  public AddTagsResponseType addTags(final AddTagsType request) throws Loadbalancingv2Exception {
+    final AddTagsResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup( );
+    final OwnerFullName ownerFullName = ctx.getUserFullName().asAccountFullName();
+    validateTags(request.getTags());
+    try {
+      final Set<String> resourceArns = Sets.newHashSet(request.getResourceArns().getMember());
+      final List<Loadbalancingv2ResourceName> arns =
+          Stream.ofAll(resourceArns).map(Loadbalancingv2ResourceName::parse).toJavaList();
+      try (final TransactionResource tx =
+               Entities.transactionFor(
+                   com.eucalyptus.loadbalancingv2.service.persist.entities.Tag.class)) {
+        for (final Loadbalancingv2ResourceName arn : arns) {
+          switch(Loadbalancingv2ResourceName.Type.forResourceType(arn.getType()).getOrElseThrow(invalidArn())) {
+            case listener:
+              addTagsForEntity(listenerNotFound(), Listener.class, arn.getId(), request.getTags());
+              break;
+            case listener_rule:
+              addTagsForEntity(ruleNotFound(), ListenerRule.class, arn.getId(), request.getTags());
+              break;
+            case loadbalancer:
+              addTagsForEntity(loadbalancerNotFound(), LoadBalancer.class, arn.getId(), request.getTags());
+              break;
+            case targetgroup:
+              addTagsForEntity(targetNotFound(), TargetGroup.class, arn.getId(), request.getTags());
+              break;
+            default:
+              throw invalidArn().get();
+          }
+        }
+        tx.commit();
+      }
+    } catch ( final Loadbalancingv2ResourceName.InvalidResourceNameException ex) {
+      throw invalidArn().get();
+    } catch ( final Exception e ) {
+      throw handleException( e );
+    }
+    return reply;
   }
 
   public CreateListenerResponseType createListener(final CreateListenerType request) throws Loadbalancingv2Exception {
@@ -207,6 +260,7 @@ public class Loadbalancingv2Service {
     } else {
       certificateArn = null;
     }
+    validateTags(request.getTags());
 
     final com.eucalyptus.loadbalancingv2.common.msgs.Listener resultListener;
     try {
@@ -230,6 +284,7 @@ public class Loadbalancingv2Service {
             final Listener listener = Listener.create(loadbalancer, port, protocol);
             listener.setDefaultServerCertificateArn(certificateArn);
             listener.setDefaultActions(JsonEncoding.write(request.getDefaultActions()));
+            addTags(Entities.persist(listener), request.getTags());
             loadbalancer.getListeners().add(listener);
             loadbalancer.setUpdateRequired(true);
             return TypeMappers.transform(
@@ -265,6 +320,7 @@ public class Loadbalancingv2Service {
     final LoadBalancer.IpAddressType ipAddressType =
         Enums.getIfPresent(LoadBalancer.IpAddressType.class, Objects.toString(request.getIpAddressType(), "ipv4"))
             .or(LoadBalancer.IpAddressType.ipv4);
+    validateTags(request.getTags());
 
     final ComputeApi computeApi = AsyncProxy.client(ComputeApi.class);
 
@@ -333,8 +389,11 @@ public class Loadbalancingv2Service {
               Stream.ofAll(subnetItems).map(SubnetType::getSubnetId).toJavaList());
           newLoadBalancer.setVpcId(vpcIds.iterator().next());
 
-          try {
-            return loadBalancers.save(newLoadBalancer);
+          try (final TransactionResource tx = Entities.transactionFor(newLoadBalancer)) {
+            final LoadBalancer persisted = loadBalancers.save(newLoadBalancer);
+            addTags(persisted, request.getTags());
+            tx.commit();
+            return persisted;
           } catch (Loadbalancingv2MetadataException e) {
             throw Exceptions.toUndeclared(e);
           }
@@ -367,6 +426,7 @@ public class Loadbalancingv2Service {
     } catch (final Loadbalancingv2ResourceName.InvalidResourceNameException ex) {
       throw new Loadbalancingv2ClientException("InvalidParameterValue", "Invalid loadbalancer ARN");
     }
+    validateTags(request.getTags());
 
     final OwnerFullName ownerFullName =
         ctx.isAdministrator( ) ?
@@ -389,6 +449,7 @@ public class Loadbalancingv2Service {
             final ListenerRule rule = ListenerRule.create(listener, priority);
             rule.setActions(JsonEncoding.write(request.getActions()));
             rule.setConditions(JsonEncoding.write(request.getConditions()));
+            addTags(Entities.persist(rule), request.getTags());
             listener.getListenerRules().add(rule);
             listener.updateTimeStamps();
             loadbalancer.updateTimeStamps();
@@ -424,6 +485,7 @@ public class Loadbalancingv2Service {
         Enums.getIfPresent(TargetGroup.ProtocolVersion.class, request.getProtocolVersion())
             .or(TargetGroup.ProtocolVersion.HTTP1);
     final Integer port = request.getPort();
+    validateTags(request.getTags());
 
     final ComputeApi computeApi = AsyncProxy.client(ComputeApi.class);
     final String vpcId = request.getVpcId();
@@ -449,8 +511,11 @@ public class Loadbalancingv2Service {
               port
           );
 
-          try {
-            return targetGroups.save(newTargetGroup);
+          try (final TransactionResource tx = Entities.transactionFor(newTargetGroup)) {
+            final TargetGroup persisted = targetGroups.save(newTargetGroup);
+            addTags(persisted, request.getTags());
+            tx.commit();
+            return persisted;
           } catch (Loadbalancingv2MetadataException e) {
             throw Exceptions.toUndeclared(e);
           }
@@ -852,8 +917,28 @@ public class Loadbalancingv2Service {
     return request.getReply();
   }
 
-  public DescribeTagsResponseType describeTags(final DescribeTagsType request) {
-    return request.getReply();
+  public DescribeTagsResponseType describeTags(final DescribeTagsType request) throws Loadbalancingv2Exception {
+    final DescribeTagsResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup( );
+    final OwnerFullName ownerFullName = ctx.getUserFullName().asAccountFullName();
+    try {
+      final Conjunction conjunction = Restrictions.conjunction();
+      if (request.getResourceArns() != null) {
+        conjunction.add(Restrictions.in(
+            "resourceArn", Sets.newHashSet(request.getResourceArns().getMember())));
+      }
+      final List<TagDescription> tagDescriptionList = tags.list(
+          ownerFullName,
+          conjunction,
+          Loadbalancingv2Metadatas.filterPrivileged(),
+          TypeMappers.lookup(TagView.class, TagDescription.class ));
+      final TagDescriptions tagDescriptions = new TagDescriptions();
+      tagDescriptions.getMember().addAll(Tags.merge(tagDescriptionList));
+      reply.getDescribeTagsResult().setTagDescriptions(tagDescriptions);
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
+    return reply;
   }
 
   public DescribeTargetGroupAttributesResponseType describeTargetGroupAttributes(final DescribeTargetGroupAttributesType request) {
@@ -1039,8 +1124,31 @@ public class Loadbalancingv2Service {
     return request.getReply();
   }
 
-  public RemoveTagsResponseType removeTags(final RemoveTagsType request) {
-    return request.getReply();
+  public RemoveTagsResponseType removeTags(final RemoveTagsType request) throws Loadbalancingv2Exception {
+    final RemoveTagsResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup( );
+    final OwnerFullName ownerFullName = ctx.getUserFullName().asAccountFullName();
+    try {
+      final Set<String> resourceArns = Sets.newHashSet(request.getResourceArns().getMember());
+      final Set<String> tagKeys = Sets.newHashSet(request.getTagKeys().getMember());
+      try (final TransactionResource tx =
+               Entities.transactionFor(com.eucalyptus.loadbalancingv2.service.persist.entities.Tag.class)) {
+        final List<com.eucalyptus.loadbalancingv2.service.persist.entities.Tag<?>> tagList = tags.list(
+            ownerFullName,
+            Restrictions.conjunction(
+              Restrictions.in("resourceArn", resourceArns),
+              Restrictions.in( "displayName", tagKeys )),
+            Loadbalancingv2Metadatas.filterPrivileged(),
+            Functions.identity());
+        for (final com.eucalyptus.loadbalancingv2.service.persist.entities.Tag<?> tag : tagList) {
+          tags.delete(tag);
+        }
+        tx.commit();
+      }
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
+    return reply;
   }
 
   public SetIpAddressTypeResponseType setIpAddressType(final SetIpAddressTypeType request) {
@@ -1076,6 +1184,86 @@ public class Loadbalancingv2Service {
     return ids;
   }
 
+  private static void validateTags(final TagList tagList) throws Loadbalancingv2ClientException {
+    if (tagList != null) {
+      validateTags(tagList.getMember(), true,Tag::getKey, Tag::getValue);
+    }
+  }
+
+  private static void validateTags(final Taggable<?> taggable, boolean checkReserved) throws Loadbalancingv2ClientException {
+    validateTags(taggable.getTags(), checkReserved, TagView::getKey, TagView::getValue);
+  }
+
+  private static <T> void validateTags(
+      final List<T> tagItems,
+      final boolean checkReserved,
+      final Function<T,String> keyGetter,
+      final Function<T,String> valueGetter
+  ) throws Loadbalancingv2ClientException {
+    final Map<String, String> tags = Maps.newHashMap();
+    for (final T tag : tagItems) {
+      if (tags.put(keyGetter.apply(tag), Objects.toString(valueGetter.apply(tag), "")) != null) {
+        throw new Loadbalancingv2ClientException("DuplicateTagKeys",
+            "Duplicate tag key (" + keyGetter.apply(tag) + ")");
+      }
+    }
+    final int reservedTags = Stream.ofAll(tags.keySet())
+        .filter(key -> key.startsWith("euca:") || key.startsWith("aws:")).length();
+    if (reservedTags > 0 && checkReserved && !Contexts.lookup().isPrivileged()) {
+      throw new Loadbalancingv2ClientException("InvalidConfigurationRequest",
+          "Invalid tag key (reserved prefix)");
+    }
+    if ((tags.size() - reservedTags) > LoadBalancingServiceProperties.getMaxTags()) {
+      throw Exceptions.toUndeclared(
+          new Loadbalancingv2ClientException("TooManyTags", "Tag limit exceeded"));
+    }
+  }
+
+  private static <RT extends TagView, RTE extends AbstractPersistent & Loadbalancingv2Metadata & Taggable<RT>> void addTagsForEntity(
+      final CompatSupplier<Loadbalancingv2ClientException> notFound,
+      final Class<RTE> entityClass,
+      final String id,
+      final TagList tagList) throws Loadbalancingv2Exception {
+    try {
+      final RTE taggable = Entities.criteriaQuery(entityClass)
+          .whereEqual(AbstractPersistent_.naturalId, id).uniqueResult();
+      if (!Loadbalancingv2Metadatas.filterPrivileged().test(taggable)) {
+        notFound.get();
+      }
+      final List<RT> tags = taggable.getTags();
+      final Map<String,RT> tagMap =
+          CollectionUtils.putAll(tags, Maps.newHashMap(), TagView::getKey, Functions.identity());
+      for (final Tag tag : tagList.getMember()) {
+        if (tagMap.containsKey(tag.getKey())) {
+          taggable.updateTag(tagMap.get(tag.getKey()), tag.getValue());
+        } else {
+          final RT resourceTag = taggable.createTag(tag.getKey(), tag.getValue());
+          Entities.persist(resourceTag);
+          tags.add(resourceTag);
+        }
+      }
+      validateTags(taggable, false);
+    } catch (final NoSuchElementException e) {
+      throw notFound.get();
+    }
+  }
+
+  private static <RT extends TagView> void addTags(final Taggable<RT> resource, final TagList tags) {
+    if (tags != null) {
+      final List<RT> resourceTags = Lists.newArrayList();
+      for (final Tag tag : tags.getMember()) {
+        final RT resourceTag =
+            resource.createTag(tag.getKey(), Objects.toString(tag.getValue(), ""));
+        Entities.persist(resourceTag);
+      }
+      resource.setTags(resourceTags);
+    }
+  }
+
+  private static CompatSupplier<Loadbalancingv2ClientException> invalidArn() {
+    return () -> new Loadbalancingv2ClientException("InvalidParameterValue", "Invalid ARN");
+  }
+
   private static CompatSupplier<Loadbalancingv2ClientException> loadbalancerNotFound() {
     return () -> new Loadbalancingv2ClientException("LoadBalancerNotFound", "Loadbalancer not found");
   }
@@ -1086,6 +1274,10 @@ public class Loadbalancingv2Service {
 
   private static CompatSupplier<Loadbalancingv2ClientException> ruleNotFound() {
     return () -> new Loadbalancingv2ClientException("RuleNotFound", "Listener rule not found");
+  }
+
+  private static CompatSupplier<Loadbalancingv2ClientException> targetNotFound() {
+    return () -> new Loadbalancingv2ClientException("TargetGroupNotFound", "Target group not found\"");
   }
 
   private static CompatSupplier<Loadbalancingv2ClientException> targetInvalid() {

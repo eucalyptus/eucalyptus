@@ -208,6 +208,12 @@ public class Loadbalancingv2ResourceName {
     return name1;
   }
 
+  public String getId() {
+    return getId(
+        Type.forResourceType(getType())
+            .getOrElseThrow(() -> new IllegalStateException("Type error " + getType())));
+  }
+
   public String getId(final Type requestedType) {
     final Type arnType = Type.forResourceType(getType())
         .getOrElseThrow(() -> new IllegalStateException("Invalid type for arn"));

@@ -10,9 +10,11 @@ import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.UserMetadata;
+import com.eucalyptus.loadbalancingv2.service.persist.Taggable;
 import com.eucalyptus.loadbalancingv2.service.persist.views.TargetGroupView;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2Metadata;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2ResourceName;
+import com.google.common.collect.Lists;
 import io.vavr.collection.Stream;
 import io.vavr.control.Option;
 import java.util.List;
@@ -22,6 +24,7 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.FetchType;
 import javax.persistence.OneToMany;
 import javax.persistence.OrderBy;
 import javax.persistence.PersistenceContext;
@@ -30,7 +33,8 @@ import javax.persistence.Table;
 @Entity
 @PersistenceContext(name = "eucalyptus_loadbalancing")
 @Table(name = "metadata_v2_targetgroup")
-public class TargetGroup extends UserMetadata<TargetGroup.State> implements Loadbalancingv2Metadata.TargetgroupMetadata, TargetGroupView {
+public class TargetGroup extends UserMetadata<TargetGroup.State>
+    implements Loadbalancingv2Metadata.TargetgroupMetadata, TargetGroupView, Taggable<TargetGroupTag> {
 
   private static final long serialVersionUID = 1L;
 
@@ -160,6 +164,9 @@ public class TargetGroup extends UserMetadata<TargetGroup.State> implements Load
   @OrderBy("targetId")
   private List<Target> targets;
 
+  @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "targetGroup")
+  private List<TargetGroupTag> tags = Lists.newArrayList();
+
   protected TargetGroup() {
   }
 
@@ -189,6 +196,14 @@ public class TargetGroup extends UserMetadata<TargetGroup.State> implements Load
     group.setHealthCheckIntervalSeconds(protocol.getDefaultHealthCheckIntervalSeconds());
     group.setTargetType(targetType);
     return group;
+  }
+
+  @Override public TargetGroupTag createTag(final String key, final String value) {
+    return TargetGroupTag.create(this, key, value);
+  }
+
+  @Override public void updateTag(final TargetGroupTag tag, final String value) {
+    tag.setValue(value);
   }
 
   public static TargetGroup named(final OwnerFullName userFullName, final String name) {
@@ -329,6 +344,15 @@ public class TargetGroup extends UserMetadata<TargetGroup.State> implements Load
 
   public Option<Target> findTarget(final String id) {
     return Stream.ofAll(getTargets()).find(target -> target.getTargetId().equals(id));
+  }
+
+  @Override
+  public List<TargetGroupTag> getTags() {
+    return tags;
+  }
+
+  public void setTags(final List<TargetGroupTag> tags) {
+    this.tags = tags;
   }
 
   @Override

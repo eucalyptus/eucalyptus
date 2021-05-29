@@ -9,17 +9,23 @@ import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2Metadata;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2ResourceName;
+import com.eucalyptus.loadbalancingv2.service.persist.Taggable;
 import com.eucalyptus.loadbalancingv2.service.persist.views.ListenerRuleView;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import java.util.List;
 import java.util.Set;
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Type;
@@ -27,7 +33,8 @@ import org.hibernate.annotations.Type;
 @Entity
 @PersistenceContext(name = "eucalyptus_loadbalancing")
 @Table(name = "metadata_v2_listener_rule")
-public class ListenerRule extends AbstractOwnedPersistent implements Loadbalancingv2Metadata.ListenerRuleMetadata, ListenerRuleView {
+public class ListenerRule extends AbstractOwnedPersistent
+    implements Loadbalancingv2Metadata.ListenerRuleMetadata, ListenerRuleView, Taggable<ListenerRuleTag> {
 
   private static final long serialVersionUID = 1L;
 
@@ -71,6 +78,9 @@ public class ListenerRule extends AbstractOwnedPersistent implements Loadbalanci
   @Type(type="text")
   private String conditions;
 
+  @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "listenerRule")
+  private List<ListenerRuleTag> tags = Lists.newArrayList();
+
   protected ListenerRule(){
   }
 
@@ -92,6 +102,14 @@ public class ListenerRule extends AbstractOwnedPersistent implements Loadbalanci
     rule.setListenerId(listener.getNaturalId());
     rule.setPriority(priority);
     return rule;
+  }
+
+  @Override public ListenerRuleTag createTag(final String key, final String value) {
+    return ListenerRuleTag.create(this, key, value);
+  }
+
+  @Override public void updateTag(final ListenerRuleTag tag, final String value) {
+    tag.setValue(value);
   }
 
   public static Listener named(final OwnerFullName owner, final String displayName) {
@@ -177,5 +195,13 @@ public class ListenerRule extends AbstractOwnedPersistent implements Loadbalanci
 
   public void setConditions(String conditions) {
     this.conditions = conditions;
+  }
+
+  @Override public List<ListenerRuleTag> getTags() {
+    return tags;
+  }
+
+  @Override public void setTags(final List<ListenerRuleTag> tags) {
+    this.tags = tags;
   }
 }

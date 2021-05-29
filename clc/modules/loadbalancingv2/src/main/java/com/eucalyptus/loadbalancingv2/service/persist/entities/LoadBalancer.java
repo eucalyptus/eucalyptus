@@ -13,6 +13,7 @@ import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.loadbalancing.dns.LoadBalancerDomainName;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2Metadata;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2ResourceName;
+import com.eucalyptus.loadbalancingv2.service.persist.Taggable;
 import com.eucalyptus.loadbalancingv2.service.persist.views.LoadBalancerView;
 import com.google.common.collect.Lists;
 import io.vavr.collection.Stream;
@@ -37,11 +38,10 @@ import javax.persistence.Table;
 @PersistenceContext(name = "eucalyptus_loadbalancing")
 @Table(name = "metadata_v2_loadbalancer")
 public class LoadBalancer extends UserMetadata<LoadBalancer.State>
-    implements Loadbalancingv2Metadata.LoadbalancerMetadata, LoadBalancerView {
+    implements Loadbalancingv2Metadata.LoadbalancerMetadata, LoadBalancerView, Taggable<LoadBalancerTag> {
 
   private static final long serialVersionUID = 1L;
-
-
+  
   public enum State {
     provisioning,
     active,
@@ -126,6 +126,9 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.State>
   @OrderBy( "port" )
   private List<Listener> listeners;
 
+  @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "loadBalancer")
+  private List<LoadBalancerTag> tags = Lists.newArrayList();
+
   protected LoadBalancer() {
   }
 
@@ -149,6 +152,14 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.State>
     loadBalancer.setType(type);
     loadBalancer.setScheme(scheme);
     return loadBalancer;
+  }
+
+  @Override public LoadBalancerTag createTag(final String key, final String value) {
+    return LoadBalancerTag.create(this, key, value);
+  }
+
+  @Override public void updateTag(final LoadBalancerTag tag, final String value) {
+    tag.setValue(value);
   }
 
   public static LoadBalancer named(final OwnerFullName userFullName, final String lbName) {
@@ -247,6 +258,15 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.State>
 
   public Option<Listener> findListener(final String naturalId) {
     return Stream.ofAll(getListeners()).find(listener -> naturalId.equals(listener.getNaturalId()));
+  }
+
+  public List<LoadBalancerTag> getTags() {
+    return tags;
+  }
+
+  public void setTags(
+      List<LoadBalancerTag> tags) {
+    this.tags = tags;
   }
 
   @Override
