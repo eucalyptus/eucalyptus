@@ -37,6 +37,7 @@
         <dependency name="eucalyptus-cloudwatch-common" rev="latest.integration"/>
         <dependency name="eucalyptus-autoscaling-common" rev="latest.integration"/>
         <dependency name="eucalyptus-loadbalancing-common" rev="latest.integration"/>
+        <dependency name="eucalyptus-loadbalancingv2-common" rev="latest.integration"/>
         <dependency name="eucalyptus-object-storage-common" rev="latest.integration"/>
         <dependency name="eucalyptus-rds-common" rev="latest.integration"/>
         <dependency name="eucalyptus-route53-common" rev="latest.integration"/>

@@ -33,6 +33,9 @@ import java.util.List;
 import com.eucalyptus.cloudformation.entity.VersionedStackEntity;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
 
 public abstract class ResourceAction {
   public abstract ResourceProperties getResourceProperties();
@@ -80,5 +83,33 @@ public abstract class ResourceAction {
 
   public abstract List<String> getUpdateStepIds( final UpdateTypeAndDirection updateTypeAndDirection );
 
+  protected final <RP> UpdateType defaultUpdateType(
+      final boolean stackTagsChanged,
+      final RP properties,
+      final RP otherProperties,
+      final Set<Function<RP,Object>> propRequiresReplace,
+      final Set<Function<RP,Object>> propRequiresSomeInterruption,
+      final Set<Function<RP,Object>> propRequiresNoInterruption
+      ) {
+    UpdateType updateType = getResourceInfo().supportsTags() && stackTagsChanged ?
+        UpdateType.NO_INTERRUPTION :
+        UpdateType.NONE;
+    for (final Function<RP,Object> propertyGet : propRequiresReplace) {
+      if (!Objects.equals(propertyGet.apply(properties), propertyGet.apply(otherProperties))) {
+        updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+      }
+    }
+    for (final Function<RP,Object> propertyGet : propRequiresSomeInterruption) {
+      if (!Objects.equals(propertyGet.apply(properties), propertyGet.apply(otherProperties))) {
+        updateType = UpdateType.max(updateType, UpdateType.SOME_INTERRUPTION);
+      }
+    }
+    for (final Function<RP,Object> propertyGet : propRequiresNoInterruption) {
+      if (!Objects.equals(propertyGet.apply(properties), propertyGet.apply(otherProperties))) {
+        updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+      }
+    }
+    return updateType;
+  }
 }
 

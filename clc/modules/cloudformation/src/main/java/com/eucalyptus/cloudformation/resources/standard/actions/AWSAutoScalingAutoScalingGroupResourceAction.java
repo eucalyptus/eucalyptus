@@ -59,6 +59,7 @@ import com.eucalyptus.autoscaling.common.msgs.SuspendedProcessType;
 import com.eucalyptus.autoscaling.common.msgs.TagDescription;
 import com.eucalyptus.autoscaling.common.msgs.TagType;
 import com.eucalyptus.autoscaling.common.msgs.Tags;
+import com.eucalyptus.autoscaling.common.msgs.TargetGroupArns;
 import com.eucalyptus.autoscaling.common.msgs.TerminateInstanceInAutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.msgs.TerminationPolicies;
 import com.eucalyptus.autoscaling.common.msgs.UpdateAutoScalingGroupType;
@@ -225,6 +226,9 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
     if (!Objects.equals(properties.getLoadBalancerNames(), otherAction.properties.getLoadBalancerNames())) {
       updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
     }
+    if (!Objects.equals(properties.getTargetGroupArns(), otherAction.properties.getTargetGroupArns())) {
+      updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+    }
     if (!Objects.equals(properties.getMaxSize(), otherAction.properties.getMaxSize())) {
       updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
     }
@@ -269,8 +273,11 @@ public class AWSAutoScalingAutoScalingGroupResourceAction extends StepBasedResou
         createAutoScalingGroupType.setHealthCheckGracePeriod(action.properties.getHealthCheckGracePeriod());
         createAutoScalingGroupType.setHealthCheckType(action.properties.getHealthCheckType());
         createAutoScalingGroupType.setLaunchConfigurationName(action.properties.getLaunchConfigurationName());
-        if (action.properties.getLoadBalancerNames() != null) {
+        if (action.properties.getLoadBalancerNames() != null && !action.properties.getLoadBalancerNames().isEmpty()) {
           createAutoScalingGroupType.setLoadBalancerNames(new LoadBalancerNames(action.properties.getLoadBalancerNames()));
+        }
+        if (action.properties.getTargetGroupArns() != null && !action.properties.getTargetGroupArns().isEmpty()) {
+          createAutoScalingGroupType.setTargetGroupArns(new TargetGroupArns(action.properties.getTargetGroupArns()));
         }
         createAutoScalingGroupType.setMaxSize(0);
         createAutoScalingGroupType.setMinSize(0);
