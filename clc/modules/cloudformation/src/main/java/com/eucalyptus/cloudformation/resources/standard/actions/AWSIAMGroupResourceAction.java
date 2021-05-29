@@ -120,7 +120,7 @@ public class AWSIAMGroupResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSIAMGroupResourceAction action = (AWSIAMGroupResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        String groupName = action.properties.getGroupName() != null ? action.properties.getGroupName() : action.getDefaultPhysicalResourceId();
+        String groupName = action.properties.getGroupName() != null ? action.properties.getGroupName() : action.getDefaultPhysicalResourceId(128);
         CreateGroupType createGroupType = MessageHelper.createMessage(CreateGroupType.class, action.info.getEffectiveUserId());
         createGroupType.setGroupName(groupName);
         createGroupType.setPath(MoreObjects.firstNonNull(action.properties.getPath(), DEFAULT_PATH));
