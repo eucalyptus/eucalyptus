@@ -86,6 +86,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
@@ -625,7 +626,6 @@ public class Loadbalancingv2Workflow {
     return createTags;
   }
 
-  //TODO:STEVE: role name length is an issue, can the stack name be shorter? stack name should allow delete/recreate with the same elb name without conflict
   private String getStackName(final LoadBalancerView loadBalancer, final String zone) {  //TODO:STEVE: zone support
     final String userAccount = loadBalancer.getOwnerAccountNumber();
     final String name = loadBalancer.getDisplayName();
@@ -726,16 +726,29 @@ public class Loadbalancingv2Workflow {
 
   private void loadBalancersWorkflow() {
     try {
-      final List<LoadBalancerView> views = Lists.newArrayList(loadBalancers.listByExample(
-          LoadBalancer.named(null,null),
-          Predicates.alwaysTrue(),
-          ImmutableLoadBalancerView::copyOf));
-      for (final LoadBalancerView loadBalancer : views) {
-        LoadBalancingWorkflows.runUpdateLoadBalancer(
-            loadBalancer.getOwnerAccountNumber(),
-            loadBalancer.getDisplayName(),
-            loadBalancer.getArn());
-      }
+      final List<LoadBalancerView> loadBalancers =
+          Lists.newArrayList(this.loadBalancers.listByExample(
+              LoadBalancer.named(null,null),
+              Predicates.alwaysTrue(),
+              ImmutableLoadBalancerView::copyOf));
+
+      @SuppressWarnings("unchecked")
+      final List<Consumer<LoadBalancerView>> workflowRunners = Lists.newArrayList(
+          loadBalancer -> LoadBalancingWorkflows.runUpdateLoadBalancer(
+              loadBalancer.getOwnerAccountNumber(),
+              loadBalancer.getDisplayName(),
+              loadBalancer.getArn()),
+          loadBalancer -> LoadBalancingWorkflows.runInstanceStatusPolling(
+              loadBalancer.getOwnerAccountNumber(),
+              loadBalancer.getDisplayName(),
+              loadBalancer.getArn()));
+
+      Collections.shuffle(loadBalancers);
+      Collections.shuffle(workflowRunners);
+
+      loadBalancers.forEach(loadBalancer ->
+          workflowRunners.forEach(runner ->
+              runner.accept(loadBalancer)));
     } catch (final Exception e) {
       logger.warn("Error during continuous workflow start", e);
     }

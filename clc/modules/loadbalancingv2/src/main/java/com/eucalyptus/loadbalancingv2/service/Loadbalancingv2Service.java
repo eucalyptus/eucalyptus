@@ -27,7 +27,9 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancingHostedZoneManager;
 import com.eucalyptus.loadbalancing.LoadBalancingServiceProperties;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2Metadata;
+import com.eucalyptus.loadbalancingv2.common.msgs.Action;
 import com.eucalyptus.loadbalancingv2.common.msgs.CertificateList;
+import com.eucalyptus.loadbalancingv2.common.msgs.ForwardActionConfig;
 import com.eucalyptus.loadbalancingv2.common.msgs.Listeners;
 import com.eucalyptus.loadbalancingv2.common.msgs.Rules;
 import com.eucalyptus.loadbalancingv2.common.msgs.SubnetMapping;
@@ -37,6 +39,8 @@ import com.eucalyptus.loadbalancingv2.common.msgs.TagDescriptions;
 import com.eucalyptus.loadbalancingv2.common.msgs.TagList;
 import com.eucalyptus.loadbalancingv2.common.msgs.TargetDescription;
 import com.eucalyptus.loadbalancingv2.common.msgs.TargetDescriptions;
+import com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupList;
+import com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupTuple;
 import com.eucalyptus.loadbalancingv2.service.persist.JsonEncoding;
 import com.eucalyptus.loadbalancingv2.service.persist.LoadBalancers;
 import com.eucalyptus.loadbalancingv2.service.persist.Loadbalancingv2MetadataException;
@@ -145,6 +149,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.vavr.collection.Stream;
 import io.vavr.control.Option;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -265,6 +270,22 @@ public class Loadbalancingv2Service {
     }
     validateTags(request.getTags());
 
+    final Set<String> targetGroupArns = Sets.newHashSet();
+    for (final Action action : request.getDefaultActions().getMember()) {
+      Option.of(action.getTargetGroupArn()).forEach(targetGroupArns::add);
+      Option.of(action.getForwardConfig())
+          .map(ForwardActionConfig::getTargetGroups)
+          .map(TargetGroupList::getMember)
+          .map(Stream::ofAll)
+          .getOrElse(Stream.empty())
+          .map(TargetGroupTuple::getTargetGroupArn)
+          .filter(Objects::nonNull)
+          .forEach(targetGroupArns::add);
+    }
+    final Set<String> targetGroupIds = ids(targetGroupArns,
+        Loadbalancingv2ResourceName.Type.targetgroup, arn.getNamespace(),
+        targetNotFound());
+
     final com.eucalyptus.loadbalancingv2.common.msgs.Listener resultListener;
     try {
       if (certificateArn != null) {
@@ -284,11 +305,32 @@ public class Loadbalancingv2Service {
           arn.getName(),
           Loadbalancingv2Metadatas.filterPrivileged(),
           loadbalancer -> {
+            final List<TargetGroup> targetGroupList;
+            try {
+              targetGroupList = targetGroups.list(
+                  ownerFullName,
+                  Restrictions.in("naturalId", targetGroupIds),
+                  Loadbalancingv2Metadatas.filterPrivileged(),
+                  Functions.identity());
+              if (targetGroupList.size() != targetGroupIds.size()) {
+                throw targetNotFound().get();
+              }
+              targetGroupList.forEach(group -> group.getTargets().forEach(target -> {
+                if (target.getTargetHealthState() == Target.State.unused) {
+                  Target.State.initial.apply(target);
+                }
+              }));
+            } catch (final Exception ex) {
+              throw Exceptions.toUndeclared(ex);
+            }
+
             final Listener listener = Listener.create(loadbalancer, port, protocol);
             listener.setDefaultServerCertificateArn(certificateArn);
             listener.setDefaultActions(JsonEncoding.write(request.getDefaultActions()));
+            listener.getTargetGroups().addAll(targetGroupList);
             addTags(Entities.persist(listener), request.getTags());
             loadbalancer.getListeners().add(listener);
+            loadbalancer.getTargetGroups().addAll(targetGroupList);
             loadbalancer.setUpdateRequired(true);
             return TypeMappers.transform(
                 listener, com.eucalyptus.loadbalancingv2.common.msgs.Listener.class);
@@ -684,7 +726,7 @@ public class Loadbalancingv2Service {
               Functions.identity());
       targetGroups.delete( targetGroup );
     } catch ( final Loadbalancingv2MetadataNotFoundException e ) {
-      throw new Loadbalancingv2ClientException( "TargetGroupNotFound", "Target group not found" );
+      throw targetNotFound().get();
     } catch ( final Exception e ) {
       handleException( e, __ -> new Loadbalancingv2ClientException("ResourceInUse", "Target group in use") );
     }
@@ -723,7 +765,7 @@ public class Loadbalancingv2Service {
             return null;
           });
     } catch ( final Loadbalancingv2MetadataNotFoundException e ) {
-      throw new Loadbalancingv2ClientException( "TargetGroupNotFound", "Target group not found" );
+      throw targetNotFound().get();
     } catch ( final Exception e ) {
       throw handleException( e );
     }
@@ -965,26 +1007,48 @@ public class Loadbalancingv2Service {
     try {
       final com.eucalyptus.loadbalancingv2.common.msgs.TargetGroups resultTargetGroups =
           new com.eucalyptus.loadbalancingv2.common.msgs.TargetGroups();
-      final Conjunction conjunction = Restrictions.conjunction();
-      if (request.getNames() != null) {
-        conjunction.add(Restrictions.in("displayName", request.getNames().getMember()));
-      }
-      if (request.getTargetGroupArns() != null) {
-        conjunction.add(Restrictions.in("naturalId",
-            ids(request.getTargetGroupArns().getMember(),
-                Loadbalancingv2ResourceName.Type.targetgroup)));
-      }
       if (request.getLoadBalancerArn() != null) {
-        conjunction.add(Restrictions.eq("naturalId", "no-match")); //TODO:STEVE: filter by loadBalancerArn
+        final Loadbalancingv2ResourceName arn;
+        try {
+          arn = Loadbalancingv2ResourceName.parse(request.getLoadBalancerArn(), Loadbalancingv2ResourceName.Type.loadbalancer);
+        } catch (final Loadbalancingv2ResourceName.InvalidResourceNameException ex) {
+          throw new Loadbalancingv2ClientException("InvalidParameterValue", "Invalid loadbalancer ARN");
+        }
+        resultTargetGroups.getMember().addAll( loadBalancers.lookupByExample(
+            LoadBalancer.named(ownerFullName, arn.getName()),
+            ownerFullName,
+            arn.getName(),
+            Loadbalancingv2Metadatas.filterPrivileged( ),
+            loadBalancer ->
+                Stream.ofAll(loadBalancer.getTargetGroups())
+                    .filter(group ->
+                        request.getTargetGroupArns() == null ||
+                        request.getTargetGroupArns().getMember().contains(group.getArn()))
+                    .map(TypeMappers.lookupF(
+                        TargetGroupView.class,
+                        com.eucalyptus.loadbalancingv2.common.msgs.TargetGroup.class ))
+                    .toJavaList()));
+      } else {
+        final Conjunction conjunction = Restrictions.conjunction();
+        if (request.getNames() != null) {
+          conjunction.add(Restrictions.in("displayName", request.getNames().getMember()));
+        }
+        if (request.getTargetGroupArns() != null) {
+          conjunction.add(Restrictions.in("naturalId",
+              ids(request.getTargetGroupArns().getMember(),
+                  Loadbalancingv2ResourceName.Type.targetgroup)));
+        }
+        resultTargetGroups.getMember().addAll( targetGroups.list(
+            ownerFullName,
+            conjunction,
+            Loadbalancingv2Metadatas.filterPrivileged( ),
+            TypeMappers.lookup(
+                TargetGroupView.class,
+                com.eucalyptus.loadbalancingv2.common.msgs.TargetGroup.class ) ) );
       }
-      resultTargetGroups.getMember().addAll( targetGroups.list(
-          ownerFullName,
-          conjunction,
-          Loadbalancingv2Metadatas.filterPrivileged( ),
-          TypeMappers.lookup(
-              TargetGroupView.class,
-              com.eucalyptus.loadbalancingv2.common.msgs.TargetGroup.class ) ) );
       reply.getDescribeTargetGroupsResult().setTargetGroups(resultTargetGroups);
+    } catch ( Loadbalancingv2MetadataNotFoundException e ) {
+      throw loadbalancerNotFound().get(); // Load balancer looked up by arn
     } catch ( Exception e ) {
       throw handleException( e );
     }
@@ -1107,12 +1171,16 @@ public class Loadbalancingv2Service {
               throw Exceptions.toUndeclared(new Loadbalancingv2ClientException("InvalidTarget",
                   "Instance vpc invalid for target"));
             }
+            final Target.State state = group.getLoadBalancers().isEmpty() ?
+                Target.State.unused :
+                Target.State.initial;
             for (final TargetDescription description : targetDescriptions) {
               if (group.findTarget(description.getId()).isEmpty()) {
                 final Target target =
                     Target.create(group, description.getId(), ipAddresses.get(description.getId()));
                 target.setPort(description.getPort());
                 target.setAvailabilityZone(description.getAvailabilityZone());
+                state.apply(target);
                 group.getTargets().add(target);
               }
             }
@@ -1120,7 +1188,7 @@ public class Loadbalancingv2Service {
             return null;
           });
     } catch ( final Loadbalancingv2MetadataNotFoundException e ) {
-      throw new Loadbalancingv2ClientException( "TargetGroupNotFound", "Target group not found" );
+      throw targetNotFound().get();
     } catch ( final Exception e ) {
       throw handleException( e );
     }
@@ -1178,11 +1246,23 @@ public class Loadbalancingv2Service {
       final Collection<String> arns,
       final Loadbalancingv2ResourceName.Type type
   ) throws Loadbalancingv2ClientException {
+    return ids(arns, type, null, null);
+  }
+
+  private static Set<String> ids(
+      final Collection<String> arns,
+      final Loadbalancingv2ResourceName.Type type,
+      final String accountNumber,
+      final Supplier<Loadbalancingv2ClientException> accountExceptionSupplier
+  ) throws Loadbalancingv2ClientException {
     final Set<String> ids = Sets.newLinkedHashSet();
     for ( final String arn : arns ) {
       try {
         final Loadbalancingv2ResourceName resourceName =
             Loadbalancingv2ResourceName.parse(arn, type);
+        if (accountNumber != null && !accountNumber.equals(resourceName.getNamespace())) {
+          throw accountExceptionSupplier.get();
+        }
         ids.add( resourceName.getId(type) );
       } catch (final Loadbalancingv2ResourceName.InvalidResourceNameException e) {
         throw new Loadbalancingv2ClientException("InvalidParameterValue", "Invalid arn");
@@ -1284,7 +1364,7 @@ public class Loadbalancingv2Service {
   }
 
   private static CompatSupplier<Loadbalancingv2ClientException> targetNotFound() {
-    return () -> new Loadbalancingv2ClientException("TargetGroupNotFound", "Target group not found\"");
+    return () -> new Loadbalancingv2ClientException("TargetGroupNotFound", "Target group not found");
   }
 
   private static CompatSupplier<Loadbalancingv2ClientException> targetInvalid() {

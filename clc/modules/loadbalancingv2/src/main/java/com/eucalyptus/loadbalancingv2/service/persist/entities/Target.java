@@ -25,13 +25,35 @@ public class Target extends AbstractPersistent implements TargetView {
   private static final long serialVersionUID = 1L;
 
   public enum State {
-    initial,
+    initial("Elb.InitialHealthChecking"),
     healthy,
-    unhealthy,
-    unused,
+    unhealthy("Target.FailedHealthChecks", "Health check failing"),
+    unused("Target.NotInUse", "Target group not in use"),
     draining,
     unavailable,
     ;
+
+    private final String reason;
+    private final String description;
+
+    State() {
+      this(null, null);
+    }
+
+    State(String reason) {
+      this(reason, null);
+    }
+
+    State(String reason, String description) {
+      this.reason = reason;
+      this.description = description;
+    }
+
+    public void apply(final Target target) {
+      target.setTargetHealthState(this);
+      target.setTargetHealthReason(this.reason);
+      target.setTargetHealthDescription(this.description);
+    }
   }
 
   @ManyToOne
@@ -83,8 +105,7 @@ public class Target extends AbstractPersistent implements TargetView {
     target.setTargetGroupId(targetGroup.getNaturalId());
     target.setTargetId(id);
     target.setIpAddress(ipAddress);
-    target.setTargetHealthReason("Elb.InitialHealthChecking");
-    target.setTargetHealthState(State.initial);
+    State.unused.apply(target);
     return target;
   }
 

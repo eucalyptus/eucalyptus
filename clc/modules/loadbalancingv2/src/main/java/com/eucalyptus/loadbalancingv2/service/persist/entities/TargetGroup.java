@@ -25,6 +25,7 @@ import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
+import javax.persistence.ManyToMany;
 import javax.persistence.OneToMany;
 import javax.persistence.OrderBy;
 import javax.persistence.PersistenceContext;
@@ -163,6 +164,9 @@ public class TargetGroup extends UserMetadata<TargetGroup.State>
   @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, orphanRemoval = true, mappedBy = "targetGroup")
   @OrderBy("targetId")
   private List<Target> targets;
+
+  @ManyToMany(mappedBy = "targetGroups")
+  private List<LoadBalancer> loadBalancers = Lists.newArrayList();
 
   @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "targetGroup")
   private List<TargetGroupTag> tags = Lists.newArrayList();
@@ -344,6 +348,14 @@ public class TargetGroup extends UserMetadata<TargetGroup.State>
 
   public Option<Target> findTarget(final String id) {
     return Stream.ofAll(getTargets()).find(target -> target.getTargetId().equals(id));
+  }
+
+  public List<LoadBalancer> getLoadBalancers() {
+    return loadBalancers;
+  }
+
+  public void setLoadBalancers(List<LoadBalancer> loadBalancers) {
+    this.loadBalancers = loadBalancers;
   }
 
   @Override

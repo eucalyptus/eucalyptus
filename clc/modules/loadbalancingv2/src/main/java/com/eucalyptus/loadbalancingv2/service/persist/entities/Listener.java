@@ -12,9 +12,11 @@ import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2ResourceName;
 import com.eucalyptus.loadbalancingv2.service.persist.Taggable;
 import com.eucalyptus.loadbalancingv2.service.persist.views.ListenerView;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import io.vavr.collection.Stream;
 import io.vavr.control.Option;
 import java.util.List;
+import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -22,11 +24,15 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
+import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.OrderBy;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.annotations.Type;
 
 @Entity
@@ -95,7 +101,14 @@ public class Listener extends AbstractOwnedPersistent
 
   @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, orphanRemoval = true, mappedBy = "listener")
   @OrderBy("priority")
-  private List<ListenerRule> listenerRules;
+  private List<ListenerRule> listenerRules = Lists.newArrayList();
+
+  @ManyToMany
+  @NotFound( action = NotFoundAction.IGNORE )
+  @JoinTable( name = "metadata_v2_listener_to_targetgroup",
+      joinColumns =        @JoinColumn( name = "listener_id" ),
+      inverseJoinColumns = @JoinColumn( name = "targetgroup_id" ) )
+  private Set<TargetGroup> targetGroups = Sets.newHashSet();
 
   @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "listener")
   private List<ListenerTag> tags = Lists.newArrayList();
@@ -223,6 +236,14 @@ public class Listener extends AbstractOwnedPersistent
 
   public Option<ListenerRule> findListenerRule(final String naturalId) {
     return Stream.ofAll(getListenerRules()).find(rule -> naturalId.equals(rule.getNaturalId()));
+  }
+
+  public Set<TargetGroup> getTargetGroups() {
+    return targetGroups;
+  }
+
+  public void setTargetGroups(Set<TargetGroup> targetGroups) {
+    this.targetGroups = targetGroups;
   }
 
   @Override public List<ListenerTag> getTags() {
