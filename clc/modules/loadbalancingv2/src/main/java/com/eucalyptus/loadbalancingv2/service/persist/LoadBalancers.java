@@ -113,7 +113,7 @@ public interface LoadBalancers {
         balancer.setLoadBalancerName(view.getDisplayName());
         balancer.setLoadBalancerArn(view.getArn());
         balancer.setCreatedTime(view.getCreationTimestamp());
-        //balancer.setCanonicalHostedZoneId(); //TODO:STEVE: hosted zone id
+        balancer.setCanonicalHostedZoneId(view.getCanonicalHostedZoneId());
         balancer.setDNSName(view.getScheme().schemev1().generate(
             view.getDisplayName(),
             view.getOwnerAccountNumber()));

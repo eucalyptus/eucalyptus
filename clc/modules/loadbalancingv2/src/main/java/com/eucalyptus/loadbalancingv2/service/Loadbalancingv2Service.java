@@ -24,6 +24,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.AbstractPersistent_;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.loadbalancing.LoadBalancingHostedZoneManager;
 import com.eucalyptus.loadbalancing.LoadBalancingServiceProperties;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2Metadata;
 import com.eucalyptus.loadbalancingv2.common.msgs.CertificateList;
@@ -131,6 +132,7 @@ import com.eucalyptus.util.CompatFunction;
 import com.eucalyptus.util.CompatSupplier;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.NonNullFunction;
+import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncProxy;
 import com.google.common.base.Enums;
@@ -142,6 +144,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.vavr.collection.Stream;
+import io.vavr.control.Option;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -370,6 +373,9 @@ public class Loadbalancingv2Service {
       throw new Loadbalancingv2ClientException("InvalidConfigurationRequest", "Inconsistent subnet vpc");
     }
 
+    final Option<Pair<String, String>> hostedZoneNameAndId =
+        LoadBalancingHostedZoneManager.getHostedZoneNameAndId();
+
     final LoadBalancer loadBalancer;
     try {
       @SuppressWarnings({"Guava", "Convert2Lambda"})
@@ -383,6 +389,7 @@ public class Loadbalancingv2Service {
           );
 
           newLoadBalancer.setIpAddressType(ipAddressType);
+          hostedZoneNameAndId.map(Pair::getRight).forEach(newLoadBalancer::setCanonicalHostedZoneId);
           newLoadBalancer.setSecurityGroupIds(
               Stream.ofAll(securityGroupItems).map(SecurityGroupItemType::getGroupId).toJavaList());
           newLoadBalancer.setSubnetIds(
