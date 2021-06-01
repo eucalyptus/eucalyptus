@@ -10,10 +10,12 @@ import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSElasticLoadBalancingV2TargetGroupResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSElasticLoadBalancingV2TargetGroupProperties;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.CloudFormationResourceTag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2Api;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2ResourceName;
@@ -67,7 +69,11 @@ public class AWSElasticLoadBalancingV2TargetGroupResourceAction extends StepBase
   private AWSElasticLoadBalancingV2TargetGroupResourceInfo info = new AWSElasticLoadBalancingV2TargetGroupResourceInfo();
 
   public AWSElasticLoadBalancingV2TargetGroupResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null );
+    super(
+        fromEnum(CreateSteps.class),
+        fromEnum(DeleteSteps.class),
+        fromUpdateEnum(UpdateNoInterruptionSteps.class),
+        null );
   }
 
   @Override
@@ -129,6 +135,11 @@ public class AWSElasticLoadBalancingV2TargetGroupResourceAction extends StepBase
         createTargetGroup.setProtocol(action.properties.getProtocol());
         createTargetGroup.setTargetType(action.properties.getTargetType());
         createTargetGroup.setVpcId(action.properties.getVpcId());
+        final Set<CloudFormationResourceTag> tags =
+            AWSElasticLoadBalancingV2LoadBalancerResourceAction.getTags(action, action.properties.getTags());
+        if (!tags.isEmpty()) {
+          createTargetGroup.setTags(AWSElasticLoadBalancingV2LoadBalancerResourceAction.toTagList(tags));
+        }
         final CreateTargetGroupResponseType createResponse =
             elbv2.createTargetGroup(createTargetGroup);
         final TargetGroup targetGroup =
@@ -138,6 +149,13 @@ public class AWSElasticLoadBalancingV2TargetGroupResourceAction extends StepBase
         action.info.setTargetGroupFullName(JsonHelper.getStringFromJsonNode(new TextNode(arnToFullName(targetGroup.getTargetGroupArn()))));
         action.info.setTargetGroupName(JsonHelper.getStringFromJsonNode(new TextNode(targetGroup.getTargetGroupName())));
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        return action;
+      }
+    },
+    ADD_SYSTEM_TAGS {
+      @Override
+      public ResourceAction perform(ResourceAction action) throws Exception {
+        AWSElasticLoadBalancingV2LoadBalancerResourceAction.addSystemTags(action);
         return action;
       }
     },
@@ -170,6 +188,24 @@ public class AWSElasticLoadBalancingV2TargetGroupResourceAction extends StepBase
     //  loadBalancer.getSecurityGroups().getMember().forEach(securityGroupsArrayNode::add);
     //}
     //action.info.setLoadBalancerArns(JsonHelper.getStringFromJsonNode(loadBalancerArnsArrayNode));
+  }
+
+  private enum UpdateNoInterruptionSteps implements UpdateStep {
+    UPDATE_TAGS {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        final AWSElasticLoadBalancingV2TargetGroupResourceAction newAction =
+            (AWSElasticLoadBalancingV2TargetGroupResourceAction) newResourceAction;
+        final AWSElasticLoadBalancingV2TargetGroupResourceAction oldAction =
+            (AWSElasticLoadBalancingV2TargetGroupResourceAction) oldResourceAction;
+        AWSElasticLoadBalancingV2LoadBalancerResourceAction.updateTags(
+            oldAction,
+            oldAction.properties.getTags(),
+            newAction,
+            newAction.properties.getTags());
+        return newResourceAction;
+      }
+    }
   }
 
   private enum DeleteSteps implements Step {
