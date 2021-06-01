@@ -165,12 +165,15 @@ import com.eucalyptus.loadbalancingv2.common.msgs.DeregisterTargetsResponseType;
 import com.eucalyptus.loadbalancingv2.common.msgs.DeregisterTargetsType;
 import com.eucalyptus.loadbalancingv2.common.msgs.DescribeTargetGroupsResponseType;
 import com.eucalyptus.loadbalancingv2.common.msgs.DescribeTargetGroupsType;
+import com.eucalyptus.loadbalancingv2.common.msgs.DescribeTargetHealthResponseType;
+import com.eucalyptus.loadbalancingv2.common.msgs.DescribeTargetHealthType;
 import com.eucalyptus.loadbalancingv2.common.msgs.RegisterTargetsResponseType;
 import com.eucalyptus.loadbalancingv2.common.msgs.RegisterTargetsType;
 import com.eucalyptus.loadbalancingv2.common.msgs.TargetDescription;
 import com.eucalyptus.loadbalancingv2.common.msgs.TargetDescriptions;
 import com.eucalyptus.loadbalancingv2.common.msgs.TargetGroup;
 import com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupArns;
+import com.eucalyptus.loadbalancingv2.common.msgs.TargetHealthDescription;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.CollectionUtils;
@@ -998,6 +1001,12 @@ public class ActivityManager {
 
   private DescribeInstanceHealthType describeInstanceHealth( final String loadBalancerName ) {
     return new DescribeInstanceHealthType( loadBalancerName, Collections.emptyList() );
+  }
+
+  private DescribeTargetHealthType describeTargetHealth( final String targetGroupArn ) {
+    final DescribeTargetHealthType describeTargetHealthType = new DescribeTargetHealthType();
+    describeTargetHealthType.setTargetGroupArn( targetGroupArn );
+    return describeTargetHealthType;
   }
 
   private TargetDescriptions targetDescriptions(final List<String> instanceIds) {
@@ -2760,12 +2769,22 @@ public class ActivityManager {
 
     @Override
     ScalingProcessTask<?,?> onSuccess() {
-      return getGroup().getLoadBalancerNames().isEmpty() || HealthCheckType.ELB != getGroup().getHealthCheckType() ?
+      final boolean elbHealthCheck = HealthCheckType.ELB == getGroup().getHealthCheckType();
+      final boolean doElbClassicMonitoring = !getGroup().getLoadBalancerNames().isEmpty()
+          && elbHealthCheck;
+      final boolean doElbv2Monitoring = !getGroup().getTargetGroupArns().isEmpty()
+          && elbHealthCheck;
+      return  !doElbClassicMonitoring && !doElbv2Monitoring ?
           null :
-          new ElbMonitoringScalingProcessTask(
-              getGroup(),
-              getGroup().getLoadBalancerNames(),
-              expectedRunningInstanceIds );
+          doElbv2Monitoring ?
+              new Elbv2MonitoringScalingProcessTask(
+                  getGroup(),
+                  getGroup().getTargetGroupArns(),
+                  expectedRunningInstanceIds) :
+              new ElbMonitoringScalingProcessTask(
+                  getGroup(),
+                  getGroup().getLoadBalancerNames(),
+                  expectedRunningInstanceIds );
     }
 
     @Override
@@ -2982,6 +3001,108 @@ public class ActivityManager {
       final List<String> healthyInstanceIds = Lists.newArrayList( expectedInstanceIds );
 
       for ( final ElbMonitoringScalingActivityTask task : tasks ) {
+        healthyInstanceIds.removeAll( task.getUnhealthyInstanceIds() );
+      }
+
+      if ( logger.isTraceEnabled() ) {
+        logger.trace( "ELB health check healthy instances: " + healthyInstanceIds );
+      }
+
+      try {
+        autoScalingInstances.markMissingInstancesUnhealthy( getGroup(), healthyInstanceIds );
+      } catch ( AutoScalingMetadataException e ) {
+        logger.error( e, e );
+      }
+    }
+  }
+
+  private class Elbv2MonitoringScalingActivityTask extends ScalingActivityTask<AutoScalingGroupCoreView, DescribeTargetHealthResponseType> {
+    private final String targetGroupArn;
+    private final AtomicReference<List<String>> unhealthyInstanceIds = new AtomicReference<>(
+        Collections.emptyList()
+    );
+
+    private Elbv2MonitoringScalingActivityTask(
+        final AutoScalingGroupCoreView group,
+        final ScalingActivity activity,
+        final String targetGroupArn ) {
+      super( group, activity, false );
+      this.targetGroupArn = targetGroupArn;
+    }
+
+    @Override
+    void dispatchInternal(
+        final ActivityContext context,
+        final Callback.Checked<DescribeTargetHealthResponseType> callback
+    ) {
+      final Elbv2Client client = context.getElbv2Client();
+      client.dispatch( describeTargetHealth( targetGroupArn ), callback );
+    }
+
+    @Override
+    void dispatchSuccess(
+        final ActivityContext context,
+        final DescribeTargetHealthResponseType response
+    ) {
+      final List<String> unhealthyInstanceIds = Lists.newArrayList();
+      if ( response.getDescribeTargetHealthResult() != null &&
+          response.getDescribeTargetHealthResult().getTargetHealthDescriptions() != null &&
+          response.getDescribeTargetHealthResult().getTargetHealthDescriptions().getMember() != null) {
+        for ( final TargetHealthDescription description : response.getDescribeTargetHealthResult().getTargetHealthDescriptions().getMember() ){
+          if ( "unhealthy".equals( description.getTargetHealth().getState() ) ) {
+            unhealthyInstanceIds.add( description.getTarget().getId() );
+          }
+        }
+      }
+
+      this.unhealthyInstanceIds.set( ImmutableList.copyOf( unhealthyInstanceIds ) );
+
+      setActivityFinalStatus( ActivityStatusCode.Successful );
+    }
+
+    List<String> getUnhealthyInstanceIds() {
+      return unhealthyInstanceIds.get();
+    }
+  }
+
+  private class Elbv2MonitoringScalingProcessTask extends ScalingProcessTask<AutoScalingGroupCoreView,Elbv2MonitoringScalingActivityTask> {
+    private final List<String> targetGroupArns;
+    private final List<String> expectedInstanceIds;
+
+    Elbv2MonitoringScalingProcessTask(
+        final AutoScalingGroupCoreView group,
+        final List<String> targetGroupArns,
+        final List<String> expectedInstanceIds ) {
+      super( group.getArn() + "-elb-monitor", group, "ElbMonitor" );
+      this.targetGroupArns = targetGroupArns;
+      this.expectedInstanceIds = expectedInstanceIds;
+    }
+
+    @Override
+    boolean shouldRun() {
+      return !targetGroupArns.isEmpty() && !expectedInstanceIds.isEmpty();
+    }
+
+    @Override
+    List<Elbv2MonitoringScalingActivityTask> buildActivityTasks() throws AutoScalingMetadataException {
+      if ( logger.isDebugEnabled() ) {
+        logger.debug( "Performing ELB health check for group: " + getGroup().getArn() );
+      }
+      if ( logger.isTraceEnabled() ) {
+        logger.trace( "Expected instances: " + expectedInstanceIds );
+      }
+      final List<Elbv2MonitoringScalingActivityTask> activities = Lists.newArrayList();
+      for ( final String targetGroupArn : targetGroupArns ) {
+        activities.add( new Elbv2MonitoringScalingActivityTask( getGroup(), newActivity(), targetGroupArn ) );
+      }
+      return activities;
+    }
+
+    @Override
+    void partialSuccess( final List<Elbv2MonitoringScalingActivityTask> tasks ) {
+      final List<String> healthyInstanceIds = Lists.newArrayList( expectedInstanceIds );
+
+      for ( final Elbv2MonitoringScalingActivityTask task : tasks ) {
         healthyInstanceIds.removeAll( task.getUnhealthyInstanceIds() );
       }
 
