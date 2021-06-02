@@ -8,27 +8,40 @@ package com.eucalyptus.cloudformation.resources.standard.actions;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
+import com.eucalyptus.cloudformation.resources.standard.TagHelper;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSElasticLoadBalancingV2LoadBalancerResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSElasticLoadBalancingV2LoadBalancerProperties;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.CloudFormationResourceTag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
+import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2Api;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2ResourceName;
+import com.eucalyptus.loadbalancingv2.common.msgs.AddTagsType;
 import com.eucalyptus.loadbalancingv2.common.msgs.CreateLoadBalancerResponseType;
 import com.eucalyptus.loadbalancingv2.common.msgs.CreateLoadBalancerType;
 import com.eucalyptus.loadbalancingv2.common.msgs.DeleteLoadBalancerType;
 import com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancer;
+import com.eucalyptus.loadbalancingv2.common.msgs.RemoveTagsType;
+import com.eucalyptus.loadbalancingv2.common.msgs.ResourceArns;
 import com.eucalyptus.loadbalancingv2.common.msgs.SecurityGroups;
 import com.eucalyptus.loadbalancingv2.common.msgs.Subnets;
+import com.eucalyptus.loadbalancingv2.common.msgs.Tag;
+import com.eucalyptus.loadbalancingv2.common.msgs.TagKeys;
+import com.eucalyptus.loadbalancingv2.common.msgs.TagList;
 import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncProxy;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import io.vavr.collection.Stream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 import org.apache.log4j.Logger;
@@ -63,7 +76,11 @@ public class AWSElasticLoadBalancingV2LoadBalancerResourceAction extends StepBas
       new AWSElasticLoadBalancingV2LoadBalancerResourceInfo();
 
   public AWSElasticLoadBalancingV2LoadBalancerResourceAction() {
-    super(fromEnum(CreateSteps.class), fromEnum(DeleteSteps.class), null, null );
+    super(
+        fromEnum(CreateSteps.class),
+        fromEnum(DeleteSteps.class),
+        fromUpdateEnum(UpdateNoInterruptionSteps.class),
+        null );
   }
 
   @Override
@@ -134,6 +151,10 @@ public class AWSElasticLoadBalancingV2LoadBalancerResourceAction extends StepBas
           subnets.setMember(Lists.newArrayList(action.properties.getSubnets()));
           createLoadBalancer.setSubnets(subnets);
         }
+        final Set<CloudFormationResourceTag> tags = getTags(action, action.properties.getTags());
+        if (!tags.isEmpty()) {
+          createLoadBalancer.setTags(toTagList(tags));
+        }
         final CreateLoadBalancerResponseType createResponse =
             elbv2.createLoadBalancer(createLoadBalancer);
         final LoadBalancer loadBalancer =
@@ -151,6 +172,31 @@ public class AWSElasticLoadBalancingV2LoadBalancerResourceAction extends StepBas
         action.info.setSecurityGroups(JsonHelper.getStringFromJsonNode(securityGroupsArrayNode));
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
+      }
+    },
+    ADD_SYSTEM_TAGS {
+      @Override
+      public ResourceAction perform(ResourceAction action) throws Exception {
+        addSystemTags(action);
+        return action;
+      }
+    }
+  }
+
+  private enum UpdateNoInterruptionSteps implements UpdateStep {
+    UPDATE_TAGS {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        final AWSElasticLoadBalancingV2LoadBalancerResourceAction newAction =
+            (AWSElasticLoadBalancingV2LoadBalancerResourceAction) newResourceAction;
+        final AWSElasticLoadBalancingV2LoadBalancerResourceAction oldAction =
+            (AWSElasticLoadBalancingV2LoadBalancerResourceAction) oldResourceAction;
+        updateTags(
+            oldAction,
+            oldAction.properties.getTags(),
+            newAction,
+            newAction.properties.getTags());
+        return newResourceAction;
       }
     }
   }
@@ -176,5 +222,97 @@ public class AWSElasticLoadBalancingV2LoadBalancerResourceAction extends StepBas
         return action;
       }
     }
+  }
+
+  protected static void addSystemTags(final ResourceAction action) {
+    final List<CloudFormationResourceTag> tags =
+        TagHelper.getCloudFormationResourceSystemTags(action.getResourceInfo(), action.getStackEntity());
+    final Loadbalancingv2Api elbv2 = AsyncProxy.client(
+        Loadbalancingv2Api.class,
+        MessageHelper.privilegedUserIdentity(action.getResourceInfo().getEffectiveUserId()));
+    final AddTagsType addTags = new AddTagsType();
+    addTags.setResourceArns(toResourceArns(action.getResourceInfo().getPhysicalResourceId()));
+    addTags.setTags(toTagList(tags));
+    elbv2.addTags(addTags);
+  }
+
+  protected static void updateTags(
+      final ResourceAction oldAction,
+      final ArrayList<CloudFormationResourceTag> oldTagProperty,
+      final ResourceAction newAction,
+      final ArrayList<CloudFormationResourceTag> newTagProperty
+  ) throws Exception {
+    final Loadbalancingv2Api elbv2 = AsyncProxy.client(
+        Loadbalancingv2Api.class,
+        MessageHelper.userIdentity(newAction.getResourceInfo().getEffectiveUserId()));
+
+    final Set<CloudFormationResourceTag> oldTags = getTags(oldAction, oldTagProperty, false);
+    final Set<CloudFormationResourceTag> newTags = getTags(newAction, newTagProperty);
+
+    // remove tags
+    final Set<String> removedKeys = Sets.newHashSet();
+    removedKeys.addAll(Stream.ofAll(oldTags).map(CloudFormationResourceTag::getKey).toJavaList());
+    removedKeys.removeAll(Stream.ofAll(newTags).map(CloudFormationResourceTag::getKey).toJavaList());
+    if (!removedKeys.isEmpty()) {
+      final RemoveTagsType removeTags = new RemoveTagsType();
+      removeTags.setResourceArns(toResourceArns(newAction.getResourceInfo().getPhysicalResourceId()));
+      removeTags.setTagKeys(toTagKeys(removedKeys));
+      elbv2.removeTags(removeTags);
+    }
+
+    // add or update tags
+    newTags.removeAll(oldTags);
+    if (!newTags.isEmpty()) {
+      final AddTagsType addTags = new AddTagsType();
+      addTags.setResourceArns(toResourceArns(newAction.getResourceInfo().getPhysicalResourceId()));
+      addTags.setTags(toTagList(newTags));
+      elbv2.addTags(addTags);
+    }
+  }
+
+  protected static Set<CloudFormationResourceTag> getTags(
+      final ResourceAction action,
+      final ArrayList<CloudFormationResourceTag> tagProperty
+  ) throws Exception {
+    return getTags(action, tagProperty, true);
+  }
+
+  protected static Set<CloudFormationResourceTag> getTags(
+      final ResourceAction action,
+      final ArrayList<CloudFormationResourceTag> tagProperty,
+      final boolean checkReservedTags
+  ) throws Exception {
+    final Set<CloudFormationResourceTag> tags = Sets.newLinkedHashSet();
+    tags.addAll(TagHelper.getCloudFormationResourceStackTags(action.getStackEntity()));
+    if (tagProperty != null && !tagProperty.isEmpty()) {
+      if (checkReservedTags) {
+        TagHelper.checkReservedCloudFormationResourceTemplateTags(tagProperty);
+      }
+      tags.addAll(tagProperty);
+    }
+    return tags;
+  }
+
+  protected static ResourceArns toResourceArns(final String resourceArn) {
+    final ResourceArns resourceArns = new ResourceArns();
+    resourceArns.getMember().add(resourceArn);
+    return resourceArns;
+  }
+
+  protected static TagKeys toTagKeys(final Set<String> tags) {
+    final TagKeys tagKeys = new TagKeys();
+    tagKeys.getMember().addAll(tags);
+    return tagKeys;
+  }
+
+  protected static TagList toTagList(final Iterable<CloudFormationResourceTag> tags) {
+    final TagList tagList = new TagList();
+    tagList.getMember().addAll(Stream.ofAll(tags).map( cfTag -> {
+      Tag tag = new Tag();
+      tag.setKey(cfTag.getKey());
+      tag.setValue(cfTag.getValue());
+      return tag;
+    }).toJavaList());
+    return tagList;
   }
 }

@@ -71,7 +71,7 @@ public class MessageHelper {
 
   public static Function<BaseMessage,BaseMessage> privilegedUserIdentity(final String effectiveUserId) {
     return message -> {
-      message.setEffectiveUserId(effectiveUserId);
+      message.setUserId(effectiveUserId);
       message.markPrivileged();
       return message;
     };
