@@ -6,7 +6,9 @@
 package com.eucalyptus.loadbalancingv2.service;
 
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthContextSupplier;
 import com.eucalyptus.auth.AuthQuotaException;
+import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.euare.common.EuareApi;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.principal.AccountFullName;
@@ -30,6 +32,8 @@ import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2Metadata;
 import com.eucalyptus.loadbalancingv2.common.msgs.Action;
 import com.eucalyptus.loadbalancingv2.common.msgs.CertificateList;
 import com.eucalyptus.loadbalancingv2.common.msgs.ForwardActionConfig;
+import com.eucalyptus.loadbalancingv2.common.msgs.Limit;
+import com.eucalyptus.loadbalancingv2.common.msgs.Limits;
 import com.eucalyptus.loadbalancingv2.common.msgs.Listeners;
 import com.eucalyptus.loadbalancingv2.common.msgs.Rules;
 import com.eucalyptus.loadbalancingv2.common.msgs.SubnetMapping;
@@ -41,6 +45,7 @@ import com.eucalyptus.loadbalancingv2.common.msgs.TargetDescription;
 import com.eucalyptus.loadbalancingv2.common.msgs.TargetDescriptions;
 import com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupList;
 import com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupTuple;
+import com.eucalyptus.loadbalancingv2.common.policy.Loadbalancingv2PolicySpec;
 import com.eucalyptus.loadbalancingv2.service.persist.JsonEncoding;
 import com.eucalyptus.loadbalancingv2.service.persist.LoadBalancers;
 import com.eucalyptus.loadbalancingv2.service.persist.Loadbalancingv2MetadataException;
@@ -149,7 +154,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.vavr.collection.Stream;
 import io.vavr.control.Option;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -772,8 +777,15 @@ public class Loadbalancingv2Service {
     return reply;
   }
 
-  public DescribeAccountLimitsResponseType describeAccountLimits(final DescribeAccountLimitsType request) {
-    return request.getReply();
+  public DescribeAccountLimitsResponseType describeAccountLimits(final DescribeAccountLimitsType request) throws Loadbalancingv2Exception {
+    final DescribeAccountLimitsResponseType reply = request.getReply();
+    checkAuthorized( );
+    final Limits limits = new Limits();
+    limits.getMember().addAll(Stream.ofAll(Arrays.asList(Loadbalancingv2LimitProperties.Limit.values()))
+        .map(limit -> Limit.of(limit.display(), limit.value()))
+        .toJavaList());
+    reply.getDescribeAccountLimitsResult().setLimits(limits);
+    return reply;
   }
 
   public DescribeListenerCertificatesResponseType describeListenerCertificates(final DescribeListenerCertificatesType request) {
@@ -1435,6 +1447,24 @@ public class Loadbalancingv2Service {
     } else {
       return __ -> true;
     }
+  }
+
+  private static Context checkAuthorized( ) throws Loadbalancingv2Exception {
+    final Context ctx = Contexts.lookup( );
+    final AuthContextSupplier requestUserSupplier = ctx.getAuthContext( );
+
+    if ( !Permissions.isAuthorized(
+        Loadbalancingv2PolicySpec.VENDOR_LOADBALANCINGV2,
+        "",
+        "",
+        null,
+        Loadbalancingv2Metadatas.getIamActionByMessageType( ),
+        requestUserSupplier ) ) {
+      throw new Loadbalancingv2ClientException(
+          "NotAuthorized",
+          "You are not authorized to perform this operation." );
+    }
+    return ctx;
   }
 
   /**
