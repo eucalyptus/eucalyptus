@@ -41,6 +41,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.Strings;
 import com.google.common.base.Functions;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -234,6 +235,39 @@ public class Loadbalancingv2ServoMetadataSource implements LoadBalancerHelper.Se
   }
 
   @Override
+  public List<String> getServoInstances(
+      final String accountNumber,
+      final String loadBalancerArn
+  ) {
+    final Loadbalancingv2ResourceName arn =
+        Loadbalancingv2ResourceName.parse(loadBalancerArn, Loadbalancingv2ResourceName.Type.loadbalancer);
+    return Stream.ofAll(ServoCache.servosForLoadBalancer(accountNumber, arn.getName()))
+        .map(ServoView::getDisplayName)
+        .toJavaList();
+  }
+
+  @Override
+  public HealthCheck getLoadBalancerHealthCheck(
+      final String accountNumber,
+      final String loadBalancerArn
+  ) {
+    final Loadbalancingv2ResourceName arn =
+        Loadbalancingv2ResourceName.parse(loadBalancerArn, Loadbalancingv2ResourceName.Type.loadbalancer);
+    final AccountFullName account = AccountFullName.getInstance(arn.getNamespace());
+
+    try {
+      return loadBalancers.lookupByName(
+          account,
+          arn.getName(),
+          Predicates.alwaysTrue(),
+          this::toHealthCheck
+      );
+    } catch (Exception e) {
+      throw Exceptions.toUndeclared(e);
+    }
+  }
+
+  @Override
   public Set<String> resolveIpsForLoadBalancer(
       final String accountNumber,
       final String loadBalancerName
@@ -241,6 +275,50 @@ public class Loadbalancingv2ServoMetadataSource implements LoadBalancerHelper.Se
     return Stream.ofAll(ServoCache.servosForLoadBalancer(accountNumber, loadBalancerName))
         .map(ServoView::getIpAddress)
         .toJavaSet();
+  }
+
+  @Override
+  public Map<String, String> filterInstanceStatus(
+      final String accountNumber,
+      final String loadBalancerArn,
+      final String servoInstanceId,
+      final Map<String, String> statusMap) {
+    return statusMap;
+  }
+
+  @Override
+  public void notifyBackendInstanceStatus(
+      final String accountNumber,
+      final String loadBalancerArn,
+      final Map<String, String> statusMap
+  ) {
+    final Loadbalancingv2ResourceName arn =
+        Loadbalancingv2ResourceName.parse(loadBalancerArn, Loadbalancingv2ResourceName.Type.loadbalancer);
+    final AccountFullName account = AccountFullName.getInstance(arn.getNamespace());
+
+    try {
+      loadBalancers.updateByExample(
+          LoadBalancer.named(account, arn.getName()),
+          account,
+          arn.getName(),
+          Predicates.alwaysTrue(),
+          loadBalancer -> {
+            for (final TargetGroup targetGroup : loadBalancer.getTargetGroups()) {
+              for (final Target target : targetGroup.getTargets()) {
+                final String status = statusMap.get(target.getTargetId());
+                if ("InService".equals(status)) {
+                  Target.State.healthy.apply(target);
+                } else {
+                  Target.State.unhealthy.apply(target);
+                }
+              }
+            }
+            return loadBalancer;
+          }
+      );
+    } catch (Exception e) {
+      throw Exceptions.toUndeclared(e);
+    }
   }
 
   @Override
@@ -271,6 +349,41 @@ public class Loadbalancingv2ServoMetadataSource implements LoadBalancerHelper.Se
     return descriptions;
   }
 
+  private HealthCheck toHealthCheck(final LoadBalancer loadBalancer) {
+    final AccountFullName owner = AccountFullName.getInstance(loadBalancer.getOwnerAccountNumber());
+    final Map<Integer, HealthCheck> healthChecksByListenerPort = Maps.newTreeMap();
+    final Map<String, Pair<String,Integer>> listenerToBackendProtocolAndPort = Maps.newHashMap();
+    for (final Listener listener : loadBalancer.getListeners()) {
+      final Consumer<Action> actionConsumer = action -> {
+        if ("forward".equals(action.getType()) && action.getTargetGroupArn() != null) {
+          try {
+            final Loadbalancingv2ResourceName arn =
+                Loadbalancingv2ResourceName.parse(action.getTargetGroupArn(),
+                    Loadbalancingv2ResourceName.Type.targetgroup);
+            final TargetGroup targetGroup = targetGroups.lookupByName(owner, arn.getName(),
+                Predicates.alwaysTrue(), Functions.identity());
+            if (targetGroup.getPort() != null && targetGroup.getProtocol() != null) {
+              listenerToBackendProtocolAndPort.putIfAbsent(
+                  listener.getDisplayName(),
+                  Pair.of(targetGroup.getProtocol().name(), targetGroup.getPort()));
+            }
+            healthChecksByListenerPort.putIfAbsent(listener.getPort(), buildHealthCheck(loadBalancer, targetGroup));
+          } catch (Exception ignore) {
+          }
+        }
+      };
+      Stream.ofAll(listener.getListenerDefaultActions().getMember()).forEach(actionConsumer);
+    }
+
+    final int healthCheckPort = Stream.ofAll(listenerToBackendProtocolAndPort.values())
+        .map(CompatFunction.of(Pair.right()))
+        .sorted().headOption().getOrElse(() -> loadBalancer.getListeners().get(0).getPort());
+    final HealthCheck healthCheck = Stream.ofAll(healthChecksByListenerPort.values())
+        .headOption()
+        .getOrElse(buildDefaultHealthCheck(loadBalancer, healthCheckPort));
+    return healthCheck;
+  }
+
   private LoadBalancerServoDescription toDescription(
       final LoadBalancer loadBalancer,
       final String availabilityZone
@@ -289,6 +402,7 @@ public class Loadbalancingv2ServoMetadataSource implements LoadBalancerHelper.Se
     description.setAvailabilityZones(availabilityZones);
 
     final Map<String, Pair<String,Integer>> listenerToBackendProtocolAndPort = Maps.newHashMap();
+    final Set<String> backendIds = Sets.newHashSet();
     final BackendInstances backendInstances = new BackendInstances();
     for (final Listener listener : loadBalancer.getListeners()) {
       final Consumer<Action> actionConsumer = action -> {
@@ -313,14 +427,16 @@ public class Loadbalancingv2ServoMetadataSource implements LoadBalancerHelper.Se
                   backendInstance.setReportHealthCheck(true);
                   return backendInstance;
                 })
+                .filter(backendInstance -> backendIds.add(backendInstance.getInstanceId()))
                 .forEach(backendInstances.getMember()::add);
           } catch (Exception ignore) {
           }
         }
       };
-      Stream.ofAll(listener.getListenerRules())
-          .flatMap(rule -> rule.getRuleActions().getMember())
-          .forEach(actionConsumer);
+      // ignore rules with conditions as back-end does not check them
+      //Stream.ofAll(listener.getListenerRules())
+      //    .flatMap(rule -> rule.getRuleActions().getMember())
+      //    .forEach(actionConsumer);
       Stream.ofAll(listener.getListenerDefaultActions().getMember())
           .forEach(actionConsumer);
       listenerToBackendProtocolAndPort.putIfAbsent(
@@ -328,17 +444,7 @@ public class Loadbalancingv2ServoMetadataSource implements LoadBalancerHelper.Se
           Pair.of(listener.getProtocol().name(), listener.getPort()));
     }
     description.setBackendInstances(backendInstances);
-
-    final int healthCheckPort = Stream.ofAll(listenerToBackendProtocolAndPort.values())
-        .map(CompatFunction.of(Pair.right()))
-        .sorted().headOption().getOrElse(() -> loadBalancer.getListeners().get(0).getPort());
-    final HealthCheck healthCheck = new HealthCheck();
-    healthCheck.setTarget("TCP:" + healthCheckPort);
-    healthCheck.setInterval(30);
-    healthCheck.setTimeout(5);
-    healthCheck.setHealthyThreshold(3);
-    healthCheck.setUnhealthyThreshold(3);
-    description.setHealthCheck(healthCheck);
+    description.setHealthCheck(toHealthCheck(loadBalancer));
 
     final ListenerDescriptions listenerDescriptions = new ListenerDescriptions();
     for (final Listener lbListener : loadBalancer.getListeners()) {
@@ -379,4 +485,72 @@ public class Loadbalancingv2ServoMetadataSource implements LoadBalancerHelper.Se
 
     return description;
   }
+
+  private HealthCheck buildDefaultHealthCheck(
+      final LoadBalancer loadBalancer,
+      final Integer healthCheckPort
+  ) {
+    final HealthCheck healthCheck = new HealthCheck();
+    if (loadBalancer.getType() == LoadBalancer.Type.application) {
+      healthCheck.setTarget("HTTP:" + healthCheckPort + "/");
+    } else {
+      healthCheck.setTarget("TCP:" + healthCheckPort);
+    }
+    healthCheck.setInterval(30);
+    healthCheck.setTimeout(5);
+    healthCheck.setHealthyThreshold(3);
+    healthCheck.setUnhealthyThreshold(3);
+    return healthCheck;
+  }
+
+  private HealthCheck buildHealthCheck(
+      final LoadBalancer loadBalancer,
+      final TargetGroup targetGroup) {
+    final HealthCheck healthCheck = buildDefaultHealthCheck(loadBalancer, targetGroup.getPort());
+    final TargetGroup.Protocol defaultProtocol =
+        loadBalancer.getType() == LoadBalancer.Type.application ? TargetGroup.Protocol.HTTP : TargetGroup.Protocol.TCP;
+    final TargetGroup.Protocol protocol;
+    if (targetGroup.getHealthCheckProtocol() != null ||
+        targetGroup.getHealthCheckPath() != null ||
+        targetGroup.getHealthCheckPort() != null) {
+      protocol = MoreObjects.firstNonNull(targetGroup.getHealthCheckProtocol(), defaultProtocol);
+      final Integer healthCheckPort =
+          MoreObjects.firstNonNull(targetGroup.getHealthCheckPort(), targetGroup.getPort());
+      final String healthCheckPath =
+          MoreObjects.firstNonNull(targetGroup.getHealthCheckPath(), "/");
+      switch (protocol){
+        case HTTP:
+        case HTTPS:
+          healthCheck.setTarget(protocol.name() + ":" + healthCheckPort + healthCheckPath);
+          break;
+        default:
+          healthCheck.setTarget("TCP:" + healthCheckPort);
+          break;
+      }
+    } else {
+      protocol = defaultProtocol;
+    }
+
+    healthCheck.setInterval(MoreObjects.firstNonNull(
+        targetGroup.getHealthCheckIntervalSeconds(),
+        MoreObjects.firstNonNull(
+            protocol.getDefaultHealthCheckIntervalSeconds(),
+            healthCheck.getInterval())));
+    healthCheck.setTimeout(MoreObjects.firstNonNull(
+        targetGroup.getHealthCheckTimeoutSeconds(),
+        healthCheck.getTimeout()));
+    healthCheck.setHealthyThreshold(MoreObjects.firstNonNull(
+        targetGroup.getHealthyThresholdCount(),
+        MoreObjects.firstNonNull(
+            protocol.getDefaulHealthyThresholdCount(),
+            healthCheck.getHealthyThreshold())));
+    healthCheck.setUnhealthyThreshold(MoreObjects.firstNonNull(
+        targetGroup.getUnhealthyThresholdCount(),
+        MoreObjects.firstNonNull(
+            protocol.getDefaulUnhealthyThresholdCount(),
+            healthCheck.getUnhealthyThreshold())));
+
+    return healthCheck;
+  }
+
 }
