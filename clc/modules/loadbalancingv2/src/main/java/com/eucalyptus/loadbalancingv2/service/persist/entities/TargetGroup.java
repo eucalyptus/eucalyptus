@@ -163,7 +163,7 @@ public class TargetGroup extends UserMetadata<TargetGroup.State>
 
   @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, orphanRemoval = true, mappedBy = "targetGroup")
   @OrderBy("targetId")
-  private List<Target> targets;
+  private List<Target> targets = Lists.newArrayList();
 
   @ManyToMany(mappedBy = "targetGroups")
   private List<LoadBalancer> loadBalancers = Lists.newArrayList();

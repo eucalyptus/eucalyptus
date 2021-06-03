@@ -75,6 +75,26 @@ public class Loadbalancingv2LimitProperties {
     public int value() {
       return limitSupplier.get();
     }
+
+    private <T extends Throwable> void check(final long current, final Supplier<T> thrown) throws T {
+      if (current >= value()) {
+        throw thrown.get();
+      }
+    }
+  }
+
+  public static <T extends Throwable> void check(
+      final Limit limit,
+      final long current,
+      final Supplier<T> thrown
+  ) throws T {
+    if (limit != null) {
+      limit.check(current, thrown);
+    }
+  }
+
+  public static int getMaxTags() {
+    return MAX_TAGS;
   }
 
   @ConfigurableField(

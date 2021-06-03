@@ -98,6 +98,17 @@ public interface LoadBalancers {
 
   boolean delete(Loadbalancingv2Metadata.LoadbalancerMetadata metadata) throws Loadbalancingv2MetadataException;
 
+  long countByExample(LoadBalancer example) throws Loadbalancingv2MetadataException;
+
+  default long countByOwnerAndType(
+      final OwnerFullName ownerFullName,
+      final LoadBalancer.Type type
+  ) throws Loadbalancingv2MetadataException {
+    final LoadBalancer example = LoadBalancer.named(ownerFullName, null);
+    example.setType(type);
+    return countByExample(example);
+  }
+
   @TypeMapper
   enum LoadBalancerViewToLoadBalancerTransform
       implements Function<LoadBalancerView, com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancer> {

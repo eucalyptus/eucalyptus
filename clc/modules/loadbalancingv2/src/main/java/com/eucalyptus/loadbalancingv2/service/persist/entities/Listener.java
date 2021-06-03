@@ -238,6 +238,11 @@ public class Listener extends AbstractOwnedPersistent
     return Stream.ofAll(getListenerRules()).find(rule -> naturalId.equals(rule.getNaturalId()));
   }
 
+  /**
+   * Set of target groups referenced by the default actions
+   *
+   * This does not include groups referenced by rule actions.
+   */
   public Set<TargetGroup> getTargetGroups() {
     return targetGroups;
   }
