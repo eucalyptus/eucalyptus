@@ -6,6 +6,8 @@
 package com.eucalyptus.loadbalancingv2.service.persist.views;
 
 import com.eucalyptus.loadbalancingv2.service.persist.entities.LoadBalancer;
+import io.vavr.collection.Stream;
+import io.vavr.control.Option;
 import java.util.Date;
 import java.util.List;
 import org.immutables.value.Value;
@@ -45,7 +47,13 @@ public interface LoadBalancerView {
 
   List<String> getSecurityGroupIds();
 
-  List<String> getSubnetIds();
+  List<LoadBalancerSubnetView> getSubnetViews();
 
   String getVpcId();
+
+  default Option<LoadBalancerSubnetView> findSubnetView(final String availabilityZone) {
+    return Stream.ofAll(getSubnetViews())
+        .filter(view -> availabilityZone.equals(view.getAvailabilityZone()))
+        .headOption();
+  }
 }
