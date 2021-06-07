@@ -9,6 +9,8 @@ import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancingv2.common.msgs.TargetDescription;
+import com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupAttribute;
+import com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupAttributes;
 import com.eucalyptus.loadbalancingv2.common.msgs.TargetHealth;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.TargetGroup;
 import com.eucalyptus.loadbalancingv2.service.persist.views.TargetGroupView;
@@ -19,7 +21,9 @@ import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import io.vavr.collection.Stream;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nullable;
 import org.hibernate.criterion.Criterion;
@@ -94,6 +98,28 @@ public interface TargetGroups {
         targetGroup.setUnhealthyThresholdCount(view.getUnhealthyThresholdCount());
       }
       return targetGroup;
+    }
+  }
+
+  @TypeMapper
+  enum TargetGroupToTargetGroupAttributesTransform implements Function<TargetGroup, TargetGroupAttributes>{
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public TargetGroupAttributes apply(@Nullable final TargetGroup group) {
+      TargetGroupAttributes attributes = null;
+      if (group != null) {
+        attributes = new TargetGroupAttributes();
+        final Map<String,String> attributeMap = LoadBalancingAttribute.defaults(
+            Loadbalancingv2Metadata.TargetgroupMetadata.class);
+        attributeMap.putAll(group.getAttributes());
+        attributes.getMember().addAll(Stream.ofAll(attributeMap.entrySet())
+            .filter(entry -> entry.getValue() != null)
+            .map(entry -> TargetGroupAttribute.of(entry.getKey(), entry.getValue()))
+            .toJavaList());
+      }
+      return attributes;
     }
   }
 

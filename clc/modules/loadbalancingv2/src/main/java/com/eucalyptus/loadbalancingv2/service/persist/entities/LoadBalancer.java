@@ -16,10 +16,12 @@ import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2ResourceName;
 import com.eucalyptus.loadbalancingv2.service.persist.Taggable;
 import com.eucalyptus.loadbalancingv2.service.persist.views.LoadBalancerView;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.vavr.collection.Stream;
 import io.vavr.control.Option;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
@@ -32,6 +34,7 @@ import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
+import javax.persistence.MapKeyColumn;
 import javax.persistence.OneToMany;
 import javax.persistence.OrderBy;
 import javax.persistence.OrderColumn;
@@ -130,6 +133,13 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.State>
   @Column( name = "metadata_subnet_id" )
   @OrderColumn( name = "metadata_subnet_index")
   private List<String> subnetIds = Lists.newArrayList();
+
+  @ElementCollection
+  @CollectionTable(name = "metadata_v2_loadbalancer_attribute")
+  @MapKeyColumn(name = "metadata_key")
+  @Column(name = "metadata_value", length = 1024)
+  @JoinColumn(name = "loadbalancer_id")
+  private Map<String, String> attributes = Maps.newHashMap();
 
   @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, orphanRemoval = true, mappedBy = "loadbalancer")
   @OrderBy( "port" )
@@ -270,6 +280,14 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.State>
 
   public void setSubnetIds(List<String> subnetIds) {
     this.subnetIds = subnetIds;
+  }
+
+  public Map<String, String> getAttributes() {
+    return attributes;
+  }
+
+  public void setAttributes(Map<String, String> attributes) {
+    this.attributes = attributes;
   }
 
   public List<Listener> getListeners() {

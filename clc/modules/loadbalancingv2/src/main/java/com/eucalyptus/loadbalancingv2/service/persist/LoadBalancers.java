@@ -12,6 +12,8 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2Metadata;
 import com.eucalyptus.loadbalancingv2.common.msgs.AvailabilityZone;
 import com.eucalyptus.loadbalancingv2.common.msgs.AvailabilityZones;
+import com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancerAttribute;
+import com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancerAttributes;
 import com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancerState;
 import com.eucalyptus.loadbalancingv2.common.msgs.SecurityGroups;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.LoadBalancer;
@@ -29,6 +31,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import io.vavr.collection.Stream;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nullable;
 import org.hibernate.criterion.Criterion;
@@ -142,6 +145,28 @@ public interface LoadBalancers {
 
       }
       return balancer;
+    }
+  }
+
+  @TypeMapper
+  enum LoadBalancerToLoadBalancerAttributesTransform implements Function<LoadBalancer, LoadBalancerAttributes>{
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public LoadBalancerAttributes apply(@Nullable final LoadBalancer balancer) {
+      LoadBalancerAttributes attributes = null;
+      if (balancer != null) {
+        attributes = new LoadBalancerAttributes();
+        final Map<String,String> attributeMap = LoadBalancingAttribute.defaults(
+            Loadbalancingv2Metadata.LoadbalancerMetadata.class, balancer.getType());
+        attributeMap.putAll(balancer.getAttributes());
+        attributes.getMember().addAll(Stream.ofAll(attributeMap.entrySet())
+            .filter(entry -> entry.getValue() != null)
+            .map(entry -> LoadBalancerAttribute.of(entry.getKey(), entry.getValue()))
+            .toJavaList());
+      }
+      return attributes;
     }
   }
 

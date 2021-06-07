@@ -15,17 +15,23 @@ import com.eucalyptus.loadbalancingv2.service.persist.views.TargetGroupView;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2Metadata;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2ResourceName;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import io.vavr.collection.Stream;
 import io.vavr.control.Option;
 import java.util.List;
+import java.util.Map;
 import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
 import javax.persistence.ManyToMany;
+import javax.persistence.MapKeyColumn;
 import javax.persistence.OneToMany;
 import javax.persistence.OrderBy;
 import javax.persistence.PersistenceContext;
@@ -160,6 +166,13 @@ public class TargetGroup extends UserMetadata<TargetGroup.State>
 
   @Column(name = "targetgroup_unhealthy_threshold_count")
   private Integer unhealthyThresholdCount;
+
+  @ElementCollection
+  @CollectionTable(name = "metadata_v2_targetgroup_attribute")
+  @MapKeyColumn(name = "metadata_key")
+  @Column(name = "metadata_value", length = 1024)
+  @JoinColumn(name = "targetgroup_id")
+  private Map<String, String> attributes = Maps.newHashMap();
 
   @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, orphanRemoval = true, mappedBy = "targetGroup")
   @OrderBy("targetId")
@@ -336,6 +349,14 @@ public class TargetGroup extends UserMetadata<TargetGroup.State>
 
   public void setUnhealthyThresholdCount(Integer unhealthyThresholdCount) {
     this.unhealthyThresholdCount = unhealthyThresholdCount;
+  }
+
+  public Map<String, String> getAttributes() {
+    return attributes;
+  }
+
+  public void setAttributes(Map<String, String> attributes) {
+    this.attributes = attributes;
   }
 
   public List<Target> getTargets() {
