@@ -318,15 +318,15 @@ static FILE *get_file_impl(const char *log_file, FILE * fp, ino_t * log_inop, bo
 retry:
     // open unless it is already is open
     if (fp == NULL) {
-        mode_t old_umask = umask(~LOG_FILE_PERM);
+        umask(0022);
         fp = fopen(log_file, "a+");
         if (fp != NULL) {
             fd = fileno(fp);
             if (fd != -1) {
                 fcntl(fd, F_SETFD, FD_CLOEXEC);
+                fchmod(fd, LOG_FILE_PERM);
             }
         }
-        umask(old_umask);
         if (fp == NULL) {
             return NULL;
         }
@@ -1012,9 +1012,9 @@ int logprintfl(const char *func, const char *file, int line, log_level_e level, 
             l = LOG_INFO;
 
         if (custom_spec)
-            syslog(l, buf);
+            syslog(l, "%s", buf);
         else
-            syslog(l, buf + offset);
+            syslog(l, "%s", buf + offset);
     }
 
     if (is_corrid && log_file_path_req_track != NULL) {

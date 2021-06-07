@@ -38,25 +38,25 @@ import com.google.common.base.Supplier;
 
 public class LoadBalancingAWSCredentialsProvider extends SecurityTokenAWSCredentialsProvider {
 
-  public LoadBalancingAWSCredentialsProvider( ) {
-    super( LoadBalancingUserSupplier.INSTANCE );
+  public LoadBalancingAWSCredentialsProvider() {
+    super(LoadBalancingUserSupplier.INSTANCE);
   }
 
-  public LoadBalancingAWSCredentialsProvider( final int expirationSecs ) {
-    super( LoadBalancingUserSupplier.INSTANCE, expirationSecs );
+  public LoadBalancingAWSCredentialsProvider(final int expirationSecs) {
+    super(LoadBalancingUserSupplier.INSTANCE, expirationSecs);
   }
 
   public enum LoadBalancingUserSupplier implements Supplier<User> {
     INSTANCE;
 
     @Override
-    public User get( ) {
+    public User get() {
       try {
-        final String accountNumber = 
-            Accounts.lookupAccountIdByAlias( AccountIdentifiers.ELB_SYSTEM_ACCOUNT );
-        return Accounts.lookupPrincipalByAccountNumber( accountNumber );
-      } catch ( AuthException e ) {
-        throw Exceptions.toUndeclared( e );
+        final String accountNumber =
+            Accounts.lookupAccountIdByAlias(AccountIdentifiers.ELB_SYSTEM_ACCOUNT);
+        return Accounts.lookupPrincipalByAccountNumber(accountNumber);
+      } catch (AuthException e) {
+        throw Exceptions.toUndeclared(e);
       }
     }
   }

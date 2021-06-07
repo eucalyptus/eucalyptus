@@ -37,24 +37,24 @@ import groovy.sql.Sql;
 /**
  *
  */
-@Upgrades.PreUpgrade( value = LoadBalancing.class, since = Upgrades.Version.v4_2_0 )
+@Upgrades.PreUpgrade(value = LoadBalancing.class, since = Upgrades.Version.v4_2_0)
 public class Dns420Upgrade implements Callable<Boolean> {
-  private static final Logger logger = Logger.getLogger( Dns420Upgrade.class );
+  private static final Logger logger = Logger.getLogger(Dns420Upgrade.class);
 
   @Override
-  public Boolean call( ) throws Exception {
+  public Boolean call() throws Exception {
     Sql sql = null;
     try {
-      sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection( "eucalyptus_loadbalancing" );
-      sql.execute( "alter table metadata_servo_instance drop column if exists metadata_dns_fk" );
-      sql.execute( "drop table if exists metadata_dns" );
+      sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection("eucalyptus_loadbalancing");
+      sql.execute("alter table metadata_servo_instance drop column if exists metadata_dns_fk");
+      sql.execute("drop table if exists metadata_dns");
       return true;
-    } catch ( Exception ex ) {
-      logger.error( "Error updating load balancer dns metadata schema", ex );
+    } catch (Exception ex) {
+      logger.error("Error updating load balancer dns metadata schema", ex);
       return false;
     } finally {
-      if ( sql != null ) {
-        sql.close( );
+      if (sql != null) {
+        sql.close();
       }
     }
   }

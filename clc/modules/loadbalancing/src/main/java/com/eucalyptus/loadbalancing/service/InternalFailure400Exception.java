@@ -33,19 +33,21 @@ import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 /**
  * @author Sang-Min Park
- *
+ * <p>
  * Client should not repeat the request when the exception is thrown
  */
-@QueryBindingInfo( statusCode = 400 )
+@QueryBindingInfo(statusCode = 400)
 public class InternalFailure400Exception extends LoadBalancingException {
-	private static final long serialVersionUID = 1L;
-	  public InternalFailure400Exception( final String message ){
-	    super( "InternalFailure", Role.Receiver, message );
-	  }
-	  public InternalFailure400Exception( final String message, Throwable cause ){
-		    super( "InternalFailure", Role.Receiver, message );
-		    if(cause!=null)
-		    	this.initCause(cause);
-	  }
-		  
+  private static final long serialVersionUID = 1L;
+
+  public InternalFailure400Exception(final String message) {
+    super("InternalFailure", Role.Receiver, message);
+  }
+
+  public InternalFailure400Exception(final String message, Throwable cause) {
+    super("InternalFailure", Role.Receiver, message);
+    if (cause != null) {
+      this.initCause(cause);
+    }
+  }
 }

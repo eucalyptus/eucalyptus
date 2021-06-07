@@ -28,12 +28,13 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.activities;
 
-import com.eucalyptus.loadbalancing.LoadBalancers;
+import com.eucalyptus.loadbalancing.LoadBalancerDeploymentVersion;
 import com.eucalyptus.loadbalancing.service.LoadBalancingException;
 
 public class LoadBalancerVersionException extends LoadBalancingException {
-    public LoadBalancerVersionException( final LoadBalancers.DeploymentVersion minVersion ) {
-           super(String.format("The API is not supported for loadbalancers created prior to Eucalyptus %s. Please create a new loadbalancer.",
-                minVersion.toVersionString()));
-    }
+  public LoadBalancerVersionException(final LoadBalancerDeploymentVersion minVersion) {
+    super(String.format(
+        "The API is not supported for loadbalancers created prior to Eucalyptus %s. Please create a new loadbalancer.",
+        minVersion.toVersionString()));
+  }
 }

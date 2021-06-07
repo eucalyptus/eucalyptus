@@ -42,23 +42,23 @@ package com.eucalyptus.compute.common;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.policy.annotation.PolicyResourceType;
 import com.eucalyptus.bootstrap.SystemIds;
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
+import com.eucalyptus.util.CompatFunction;
+import com.eucalyptus.util.CompatPredicate;
 
-/** GRZE:WARN: values are intentionally opaque strings and /not/ a symbolic reference. **/
 @PolicyResourceType( "image" )
+@CloudMetadataLongIdentifierConfigurable( prefix = "ami", relatedPrefixes = {"aki", "ari", "emi", "eki", "eri" })
 public interface ImageMetadata extends CloudMetadata {
   
-  public static final String TYPE_MANIFEST_XPATH = "/manifest/image/type/text()";
+  String TYPE_MANIFEST_XPATH = "/manifest/image/type/text()";
   
-  public enum Type {
+  enum Type {
     machine {
       /**
        * @see CloudMetadatas#isMachineImageIdentifier
        */
       @Override
       public String getTypePrefix( ) {
-        return "emi";
+        return "ami";
       }
       
       @Override
@@ -72,7 +72,7 @@ public interface ImageMetadata extends CloudMetadata {
        */
       @Override
       public String getTypePrefix( ) {
-        return "eki";
+        return "aki";
       }
       
       @Override
@@ -91,7 +91,7 @@ public interface ImageMetadata extends CloudMetadata {
        */
       @Override
       public String getTypePrefix( ) {
-        return "eri";
+        return "ari";
       }
       
       @Override
@@ -113,7 +113,7 @@ public interface ImageMetadata extends CloudMetadata {
     }
   }
   
-  public enum State implements Predicate<ImageMetadata> {
+  enum State implements CompatPredicate<ImageMetadata> {
     pending("pending"), pending_available("available"), pending_conversion("available"), available("available"), 
     failed("failed"), deregistered( false , "deregistered"), deregistered_cleanup( false, "deregistered"),
     hidden( false , "hidden"), unavailable ( false, "unavailable");
@@ -121,11 +121,11 @@ public interface ImageMetadata extends CloudMetadata {
     private final boolean standardState;    
     private final String externalStateName;
     
-    private State( final String externalStateName){
+    State( final String externalStateName ){
       this(true, externalStateName);
     }
     
-    private State( final boolean standardState, final String externalStateName ){
+    State( final boolean standardState, final String externalStateName ){
       this.standardState = standardState;
       this.externalStateName = externalStateName;
     }
@@ -144,11 +144,11 @@ public interface ImageMetadata extends CloudMetadata {
     }
   }
   
-  public enum ImageFormat {
+  enum ImageFormat {
     fulldisk, partitioned
   }
   
-  public enum VirtualizationType {
+  enum VirtualizationType {
     paravirtualized {
       @Override
       public String toString() {
@@ -159,11 +159,11 @@ public interface ImageMetadata extends CloudMetadata {
     hvm
     ;
 
-    public static Function<String,VirtualizationType> fromString( ) {
+    public static CompatFunction<String,VirtualizationType> fromString( ) {
       return FromString.INSTANCE;
     }
 
-    private enum FromString implements Function<String,VirtualizationType> {
+    private enum FromString implements CompatFunction<String,VirtualizationType> {
       INSTANCE;
 
       @Nullable
@@ -177,19 +177,15 @@ public interface ImageMetadata extends CloudMetadata {
     }
   }
   
-  public enum Hypervisor {
-    xen, kvm, other
-  }
-  
-  public enum DeviceMappingType {
+  enum DeviceMappingType {
     root, swap, suppress, ephemeral, blockstorage, ami
   }
   
-  public enum Architecture {
+  enum Architecture {
     i386, x86_64, other
   }
   
-  public enum Platform {
+  enum Platform {
     linux {
       public String toString( ) {
         return "";

@@ -394,7 +394,12 @@ int encrypt_string_symmetric(char *in_buffer, char *key_buffer, char *iv_buffer,
     char *dec64_key = NULL;
     char *dec64_in = NULL;
     char encrypted[MAX_ENCRYPTED_STRING_LEN] = "";
-    EVP_CIPHER_CTX ctx = { 0 };
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+
+    if (!ctx) {
+        ret = EUCA_ERROR;
+        goto cleanup;
+    }
 
     if (!initialized) {
         if (euca_init_cert() != EUCA_OK) {
@@ -419,19 +424,19 @@ int encrypt_string_symmetric(char *in_buffer, char *key_buffer, char *iv_buffer,
     }
     in_len = len;
 
-    EVP_CIPHER_CTX_init(&ctx);
-    EVP_EncryptInit_ex(&ctx, EVP_aes_256_gcm(), NULL, (unsigned char *)dec64_key, (unsigned char *)iv_buffer);
-    EVP_CIPHER_CTX_set_key_length(&ctx, key_len);
-    EVP_CIPHER_CTX_ctrl(&ctx, EVP_CTRL_GCM_SET_IVLEN, IV_LENGTH, NULL);
-    EVP_CIPHER_CTX_set_padding(&ctx, 0);
+    EVP_CIPHER_CTX_init(ctx);
+    EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, (unsigned char *)dec64_key, (unsigned char *)iv_buffer);
+    EVP_CIPHER_CTX_set_key_length(ctx, key_len);
+    EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, IV_LENGTH, NULL);
+    EVP_CIPHER_CTX_set_padding(ctx, 0);
 
-    if (!EVP_EncryptUpdate(&ctx, (unsigned char *)encrypted + IV_LENGTH, out_len, (unsigned char *)dec64_in, in_len)) {
+    if (!EVP_EncryptUpdate(ctx, (unsigned char *)encrypted + IV_LENGTH, out_len, (unsigned char *)dec64_in, in_len)) {
         LOGERROR("Cipher update failed\n");
         ret = EUCA_ERROR;
         goto cleanup;
     }
 
-    if (!EVP_EncryptFinal_ex(&ctx, (unsigned char *)encrypted + IV_LENGTH, &len)) {
+    if (!EVP_EncryptFinal_ex(ctx, (unsigned char *)encrypted + IV_LENGTH, &len)) {
         ERR_print_errors_fp(stderr);
         ret = EUCA_ERROR;
         LOGERROR("Cipher final failed\n");
@@ -451,7 +456,8 @@ cleanup:
     if (ret != EUCA_OK) {
         EUCA_FREE(*out_buffer);
     }
-    EVP_CIPHER_CTX_cleanup(&ctx);
+    EVP_CIPHER_CTX_cleanup(ctx);
+    EVP_CIPHER_CTX_free(ctx);
     return ret;
 }
 
@@ -482,7 +488,12 @@ int decrypt_string_symmetric(char *in_buffer, char *key_buffer, char *iv_buffer,
     char decrypted_str[MAX_DECRYPTED_STRING_LEN] = "";  // MAX encrypted data length
     char *cipher_text = NULL;
     char *tag = NULL;
-    EVP_CIPHER_CTX ctx = { 0 };
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+
+    if (!ctx) {
+        ret = EUCA_ERROR;
+        goto cleanup;
+    }
 
     if (in_buffer == NULL || strlen(in_buffer) <= 0) {
         LOGERROR("No input string to decrypt\n");
@@ -525,27 +536,27 @@ int decrypt_string_symmetric(char *in_buffer, char *key_buffer, char *iv_buffer,
         goto cleanup;
     }
 
-    EVP_CIPHER_CTX_init(&ctx);
+    EVP_CIPHER_CTX_init(ctx);
     cipher_init = TRUE;
-    EVP_DecryptInit_ex(&ctx, EVP_aes_256_gcm(), NULL, (unsigned char *)dec64_key, (unsigned char *)iv_buffer);
-    EVP_CIPHER_CTX_set_key_length(&ctx, key_len);
-    EVP_CIPHER_CTX_ctrl(&ctx, EVP_CTRL_GCM_SET_IVLEN, IV_LENGTH, NULL);
-    EVP_CIPHER_CTX_set_padding(&ctx, 0);
+    EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, (unsigned char *)dec64_key, (unsigned char *)iv_buffer);
+    EVP_CIPHER_CTX_set_key_length(ctx, key_len);
+    EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, IV_LENGTH, NULL);
+    EVP_CIPHER_CTX_set_padding(ctx, 0);
 
-    if (!EVP_DecryptUpdate(&ctx, (unsigned char *)decrypted_str, &len, (unsigned char *)cipher_text, cipher_len)) {
+    if (!EVP_DecryptUpdate(ctx, (unsigned char *)decrypted_str, &len, (unsigned char *)cipher_text, cipher_len)) {
         ret = EUCA_ERROR;
         LOGERROR("Cipher update failed\n");
         goto cleanup;
     }
 
-    if (!EVP_CIPHER_CTX_ctrl(&ctx, EVP_CTRL_GCM_SET_TAG, TAG_LENGTH, tag)) {
+    if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, TAG_LENGTH, tag)) {
         ret = EUCA_ERROR;
         LOGERROR("Failed to set tag\n");
         goto cleanup;
     }
 
     *out_len = len;
-    if (!EVP_DecryptFinal_ex(&ctx, (unsigned char *)decrypted_str + len, &len)) {
+    if (!EVP_DecryptFinal_ex(ctx, (unsigned char *)decrypted_str + len, &len)) {
         ret = EUCA_ERROR;
         LOGERROR("Cipher final failed\n");
         goto cleanup;
@@ -576,7 +587,8 @@ cleanup:
     }
 
     if (cipher_init)
-        EVP_CIPHER_CTX_cleanup(&ctx);
+        EVP_CIPHER_CTX_cleanup(ctx);
+    EVP_CIPHER_CTX_free(ctx);
     return ret;
 }
 
@@ -736,7 +748,7 @@ int encrypt_string(char *in_buffer, char *cert_file, char **out_buffer)
         ret = EUCA_ERROR;
         goto cleanup;
     } else {
-        switch (pubkey->type) {
+        switch (EVP_PKEY_base_id(pubkey)) {
         case EVP_PKEY_RSA:
             key_bits = EVP_PKEY_bits(pubkey);
             if (key_bits != 1024 && key_bits != 2048 && key_bits != 4096) {

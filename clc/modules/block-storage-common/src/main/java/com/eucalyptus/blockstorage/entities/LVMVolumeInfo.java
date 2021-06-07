@@ -39,23 +39,12 @@
 
 package com.eucalyptus.blockstorage.entities;
 
-import java.util.List;
-
 import javax.persistence.Column;
-import javax.persistence.EntityTransaction;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.PersistenceContext;
 
-import org.apache.log4j.Logger;
-
-import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
-import com.eucalyptus.upgrade.Upgrades.Version;
-import com.eucalyptus.util.Exceptions;
-import com.google.common.base.Predicate;
 
 @PersistenceContext(name = "eucalyptus_storage")
 @MappedSuperclass
@@ -229,29 +218,6 @@ public class LVMVolumeInfo extends AbstractPersistent {
     } else if (!volumeId.equals(other.volumeId))
       return false;
     return true;
-  }
-
-  @EntityUpgrade(entities = {LVMVolumeInfo.class}, since = Version.v3_2_0, value = Storage.class)
-  public enum LVMVolumeInfoUpgrade implements Predicate<Class> {
-    INSTANCE;
-    private static Logger LOG = Logger.getLogger(LVMVolumeInfo.LVMVolumeInfoUpgrade.class);
-
-    @Override
-    public boolean apply(Class arg0) {
-      EntityTransaction db = Entities.get(LVMVolumeInfo.class);
-      try {
-        List<LVMVolumeInfo> entities = Entities.query(new LVMVolumeInfo());
-        for (LVMVolumeInfo entry : entities) {
-          LOG.debug("Upgrading: " + entry.getVolumeId());
-          entry.setCleanup(false);
-        }
-        db.commit();
-        return true;
-      } catch (Exception ex) {
-        db.rollback();
-        throw Exceptions.toUndeclared(ex);
-      }
-    }
   }
 
 }

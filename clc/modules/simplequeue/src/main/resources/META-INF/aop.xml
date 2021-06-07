@@ -6,7 +6,7 @@
      <aspect name="com.amazonaws.services.simpleworkflow.flow.aspectj.ExponentialRetryAspect"/>
    </aspects>
 
-   <weaver options="-verbose">
+   <weaver options="-warn:none">
      <include within="com.eucalyptus.simplequeue.workflow..*"/>
    </weaver>
 

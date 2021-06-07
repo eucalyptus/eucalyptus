@@ -45,12 +45,11 @@ import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Index;
 import javax.persistence.JoinColumn;
-import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import javax.persistence.Transient;
+
 import org.hibernate.annotations.Type;
 import com.eucalyptus.entities.AbstractPersistent;
 
@@ -65,7 +64,6 @@ import com.eucalyptus.entities.AbstractPersistent;
 } )
 public class PolicyEntity extends AbstractPersistent implements Serializable {
 
-  @Transient
   private static final long serialVersionUID = 1L;
   
   // The policy name
@@ -77,8 +75,7 @@ public class PolicyEntity extends AbstractPersistent implements Serializable {
   
   // The original policy text in JSON
   @Column( name = "auth_policy_text" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   String text;
   
   // The owning group

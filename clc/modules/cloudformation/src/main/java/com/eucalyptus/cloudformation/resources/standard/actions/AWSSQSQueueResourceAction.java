@@ -43,14 +43,14 @@ import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.simplequeue.Attribute;
-import com.eucalyptus.simplequeue.CreateQueueResponseType;
-import com.eucalyptus.simplequeue.CreateQueueType;
-import com.eucalyptus.simplequeue.DeleteQueueType;
-import com.eucalyptus.simplequeue.GetQueueAttributesResponseType;
-import com.eucalyptus.simplequeue.GetQueueAttributesType;
-import com.eucalyptus.simplequeue.SetQueueAttributesType;
-import com.eucalyptus.simplequeue.SimpleQueue;
+import com.eucalyptus.simplequeue.common.msgs.Attribute;
+import com.eucalyptus.simplequeue.common.msgs.CreateQueueResponseType;
+import com.eucalyptus.simplequeue.common.msgs.CreateQueueType;
+import com.eucalyptus.simplequeue.common.msgs.DeleteQueueType;
+import com.eucalyptus.simplequeue.common.msgs.GetQueueAttributesResponseType;
+import com.eucalyptus.simplequeue.common.msgs.GetQueueAttributesType;
+import com.eucalyptus.simplequeue.common.msgs.SetQueueAttributesType;
+import com.eucalyptus.simplequeue.common.SimpleQueue;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
@@ -133,12 +133,6 @@ public class AWSSQSQueueResourceAction extends StepBasedResourceAction {
         return action;
       }
     };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
-    }
   }
 
   private enum DeleteSteps implements Step {
@@ -153,12 +147,6 @@ public class AWSSQSQueueResourceAction extends StepBasedResourceAction {
         AsyncRequests.sendSync(configuration, deleteQueueType);
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -205,12 +193,6 @@ public class AWSSQSQueueResourceAction extends StepBasedResourceAction {
         AsyncRequests.sendSync(configuration, setQueueAttributesType);
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 

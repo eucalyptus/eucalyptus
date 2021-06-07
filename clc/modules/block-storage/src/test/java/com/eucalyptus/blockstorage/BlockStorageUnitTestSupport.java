@@ -240,11 +240,6 @@ public class BlockStorageUnitTestSupport {
       }
 
       @Override
-      public void resumeUpload(StorageResource storageResource) throws SnapshotTransferException {
-
-      }
-
-      @Override
       public void download(StorageResource storageResource) throws SnapshotTransferException {
 
       }
@@ -324,6 +319,11 @@ public class BlockStorageUnitTestSupport {
       @Override
       public int createVolume(String volumeId, String snapshotId, int size) throws EucalyptusCloudException {
         return 0;
+      }
+
+      @Override
+      public int resizeVolume(String volumeId, int size) throws EucalyptusCloudException {
+        return -1;
       }
 
       @Override

@@ -33,8 +33,6 @@ import com.eucalyptus.blockstorage.msgs.AttachStorageVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.AttachStorageVolumeType;
 import com.eucalyptus.blockstorage.msgs.CloneVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.CloneVolumeType;
-import com.eucalyptus.blockstorage.msgs.ConvertVolumesResponseType;
-import com.eucalyptus.blockstorage.msgs.ConvertVolumesType;
 import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotResponseType;
 import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotType;
 import com.eucalyptus.blockstorage.msgs.CreateStorageVolumeResponseType;
@@ -57,6 +55,8 @@ import com.eucalyptus.blockstorage.msgs.GetStorageVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.GetStorageVolumeType;
 import com.eucalyptus.blockstorage.msgs.GetVolumeTokenResponseType;
 import com.eucalyptus.blockstorage.msgs.GetVolumeTokenType;
+import com.eucalyptus.blockstorage.msgs.ModifyStorageVolumeResponseType;
+import com.eucalyptus.blockstorage.msgs.ModifyStorageVolumeType;
 import com.eucalyptus.blockstorage.msgs.UnexportVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.UnexportVolumeType;
 import com.eucalyptus.blockstorage.msgs.UpdateStorageConfigurationResponseType;
@@ -97,10 +97,11 @@ public interface BlockStorageService {
   CreateStorageVolumeResponseType CreateStorageVolume( CreateStorageVolumeType request )
       throws EucalyptusCloudException;
 
-  DescribeStorageVolumesResponseType DescribeStorageVolumes( DescribeStorageVolumesType request )
+  ModifyStorageVolumeResponseType ModifyStorageVolume( ModifyStorageVolumeType request )
       throws EucalyptusCloudException;
 
-  ConvertVolumesResponseType ConvertVolumes( ConvertVolumesType request ) throws EucalyptusCloudException;
+  DescribeStorageVolumesResponseType DescribeStorageVolumes( DescribeStorageVolumesType request )
+      throws EucalyptusCloudException;
 
   AttachStorageVolumeResponseType attachVolume( AttachStorageVolumeType request ) throws EucalyptusCloudException;
 

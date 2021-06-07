@@ -53,23 +53,11 @@ public class ResourceStateCallback extends StateUpdateMessageCallback<Cluster, D
   private static Logger LOG = Logger.getLogger( ResourceStateCallback.class );
   
   public ResourceStateCallback( ) {
-    super( new DescribeResourcesType( ) {
-      {
-        regarding( );
-        for ( VmType arg0 : new VmTypesSupplier( ).get( ) ) {
-          getInstanceTypes( ).add( new VmTypeInfo( arg0.getName( ), arg0.getMemory( ), arg0.getDisk( ), arg0.getCpu( ), "sda1" ) {
-            {
-              this.setSwap( "sda2", 512 * 1024l * 1024l, "none" );
-            }
-          } );
-        }
-      }
-    } );
+    super( describeResources( ) );
   }
   
   /**
    * @see com.eucalyptus.util.async.MessageCallback#fire(edu.ucsb.eucalyptus.msgs.BaseMessage)
-   * @param reply
    */
   @Override
   public void fire( final DescribeResourcesResponseType reply ) {
@@ -77,7 +65,7 @@ public class ResourceStateCallback extends StateUpdateMessageCallback<Cluster, D
       final Cluster cluster = this.getSubject();
       cluster.getNodeState().update( new VmTypesSupplier( ).get( ), reply.getResources( ) );
       LOG.debug( "Adding node service tags: " + Joiner.on( ", " ).join( reply.getNodes() ) );
-      cluster.updateNodeInfo( reply.getNodes( ) );
+      cluster.updateNodeInfo( System.currentTimeMillis( ), reply.getNodes( ) );
     } catch ( Exception e ) {
       LOG.error( e, e );
     }
@@ -85,11 +73,22 @@ public class ResourceStateCallback extends StateUpdateMessageCallback<Cluster, D
   
   /**
    * @see StateUpdateMessageCallback#fireException(com.eucalyptus.util.async.FailedRequestException)
-   * @param t
    */
   @Override
   public void fireException( FailedRequestException t ) {
     LOG.debug( "Request to " + this.getSubject( ).getName( ) + " failed: " + t.getMessage( ) );
   }
 
+  private static DescribeResourcesType describeResources( ) {
+    final DescribeResourcesType describeResourcesType = new DescribeResourcesType( ).regarding( );
+    for ( final VmType vmType : new VmTypesSupplier( ).get( ) ) {
+      describeResourcesType.getInstanceTypes( ).add( new VmTypeInfo(
+          vmType.getName( ),
+          vmType.getMemory( ),
+          vmType.getDisk( ),
+          vmType.getCpu( ),
+          "sda1" ) );
+    }
+    return describeResourcesType;
+  }
 }

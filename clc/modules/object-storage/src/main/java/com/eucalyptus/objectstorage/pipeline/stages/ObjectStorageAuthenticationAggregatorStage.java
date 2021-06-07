@@ -58,9 +58,4 @@ public class ObjectStorageAuthenticationAggregatorStage implements UnrollableSta
   public String getName() {
     return NAME;
   }
-
-  @Override
-  public int compareTo(UnrollableStage o) {
-    return getName().compareTo(o.getName());
-  }
 }

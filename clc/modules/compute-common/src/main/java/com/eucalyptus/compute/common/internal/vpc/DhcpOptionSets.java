@@ -58,14 +58,6 @@ public interface DhcpOptionSets extends Lister<DhcpOptionSet> {
   String DHCP_OPTION_NETBIOS_NAME_SERVERS = "netbios-name-servers";
   String DHCP_OPTION_NETBIOS_NODE_TYPE = "netbios-node-type";
 
-  Set<String> DHCP_OPTIONS = ImmutableSortedSet.of(
-      DHCP_OPTION_DOMAIN_NAME_SERVERS,
-      DHCP_OPTION_DOMAIN_NAME,
-      DHCP_OPTION_NTP_SERVERS,
-      DHCP_OPTION_NETBIOS_NAME_SERVERS,
-      DHCP_OPTION_NETBIOS_NODE_TYPE
-  );
-
   <T> List<T> list( OwnerFullName ownerFullName,
                     Criterion criterion,
                     Map<String,String> aliases,

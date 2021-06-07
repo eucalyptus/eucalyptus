@@ -44,7 +44,6 @@ import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.OneToMany;
 import javax.persistence.OrderColumn;
-import javax.persistence.Transient;
 import org.hibernate.annotations.Parent;
 import com.eucalyptus.compute.common.internal.vpc.NetworkInterface;
 import com.google.common.collect.Lists;
@@ -69,7 +68,7 @@ public class VmNetworkConfig {
   private String       privateDnsName;
   @Column( name = "metadata_vm_public_dns" )
   private String       publicDnsName;
-  @Transient
+
   public static String DEFAULT_IP = "0.0.0.0";
   
   VmNetworkConfig( VmInstance parent ) {

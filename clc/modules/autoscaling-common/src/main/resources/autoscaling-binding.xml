@@ -129,6 +129,7 @@
     <value name="DefaultCooldown" field="defaultCooldown" usage="optional"/>
     <structure name="AvailabilityZones" field="availabilityZones" usage="required" type="com.eucalyptus.autoscaling.common.msgs.AvailabilityZones"/>
     <structure name="LoadBalancerNames" field="loadBalancerNames" usage="optional" type="com.eucalyptus.autoscaling.common.msgs.LoadBalancerNames"/>
+    <structure name="TargetGroupARNs" field="targetGroupArns" usage="optional" type="com.eucalyptus.autoscaling.common.msgs.TargetGroupArns"/>
     <value name="HealthCheckType" field="healthCheckType" usage="optional"/>
     <value name="HealthCheckGracePeriod" field="healthCheckGracePeriod" usage="optional"/>
     <value name="PlacementGroup" field="placementGroup" usage="optional"/>
@@ -491,6 +492,11 @@
       <value name="member" type="java.lang.String"/>
     </collection>
   </mapping>
+  <mapping class="com.eucalyptus.autoscaling.common.msgs.TargetGroupArns" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.msgs.TagType" abstract="true">
     <value name="ResourceId" field="resourceId" usage="optional"/>
     <value name="ResourceType" field="resourceType" usage="optional"/>
@@ -545,6 +551,7 @@
     <value name="DefaultCooldown" field="defaultCooldown" usage="required"/>
     <structure name="AvailabilityZones" field="availabilityZones" usage="required" type="com.eucalyptus.autoscaling.common.msgs.AvailabilityZones"/>
     <structure name="LoadBalancerNames" field="loadBalancerNames" usage="optional" type="com.eucalyptus.autoscaling.common.msgs.LoadBalancerNames"/>
+    <structure name="TargetGroupARNs" field="targetGroupArns" usage="optional" type="com.eucalyptus.autoscaling.common.msgs.TargetGroupArns"/>
     <value name="HealthCheckType" field="healthCheckType" usage="required"/>
     <value name="HealthCheckGracePeriod" field="healthCheckGracePeriod" usage="optional"/>
     <structure name="Instances" field="instances" usage="optional" type="com.eucalyptus.autoscaling.common.msgs.Instances"/>

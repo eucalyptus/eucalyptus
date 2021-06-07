@@ -48,6 +48,7 @@ import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.CreateSnapshotResponseType;
 import com.eucalyptus.compute.common.CreateSnapshotType;
@@ -67,7 +68,6 @@ import com.eucalyptus.compute.common.DescribeVolumeAttributeResponseType;
 import com.eucalyptus.compute.common.DescribeVolumeAttributeType;
 import com.eucalyptus.compute.common.DescribeVolumesResponseType;
 import com.eucalyptus.compute.common.DescribeVolumesType;
-import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.ModifyVolumeAttributeType;
 import com.eucalyptus.compute.common.TagInfo;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -196,7 +196,7 @@ public class AWSEC2VolumeResourceAction extends StepBasedResourceAction {
         AWSEC2VolumeResourceAction action = (AWSEC2VolumeResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
-        describeVolumesType.getFilterSet( ).add( Filter.filter( "volume-id", action.info.getPhysicalResourceId( ) ) );
+        describeVolumesType.getFilterSet( ).add( CloudFilters.filter( "volume-id", action.info.getPhysicalResourceId( ) ) );
         DescribeVolumesResponseType describeVolumesResponseType;
         try {
           describeVolumesResponseType = AsyncRequests.sendSync( configuration, describeVolumesType);
@@ -243,12 +243,6 @@ public class AWSEC2VolumeResourceAction extends StepBasedResourceAction {
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -281,7 +275,7 @@ public class AWSEC2VolumeResourceAction extends StepBasedResourceAction {
         if (!("Snapshot".equals(action.info.getDeletionPolicy()))) return action;
         DescribeSnapshotsType describeSnapshotsType = MessageHelper.createMessage(DescribeSnapshotsType.class, action.info.getEffectiveUserId());
         String snapshotId = JsonHelper.getJsonNodeFromString(action.info.getSnapshotIdForDelete()).asText();
-        describeSnapshotsType.getFilterSet( ).add( Filter.filter( "snapshot-id", snapshotId ) );
+        describeSnapshotsType.getFilterSet( ).add( CloudFilters.filter( "snapshot-id", snapshotId ) );
         DescribeSnapshotsResponseType describeSnapshotsResponseType = AsyncRequests.sendSync(configuration, describeSnapshotsType);
         if (describeSnapshotsResponseType.getSnapshotSet() == null || describeSnapshotsResponseType.getSnapshotSet().isEmpty()) {
           throw new RetryAfterConditionCheckFailedException("Snapshot " + snapshotId + " not yet complete");
@@ -357,16 +351,10 @@ public class AWSEC2VolumeResourceAction extends StepBasedResourceAction {
       }
     };
 
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
-    }
-
     private static boolean volumeDeleted(AWSEC2VolumeResourceAction action, ServiceConfiguration configuration) throws Exception {
       if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return true;
       DescribeVolumesType describeVolumesType = MessageHelper.createMessage(DescribeVolumesType.class, action.info.getEffectiveUserId());
-      describeVolumesType.getFilterSet( ).add( Filter.filter( "volume-id", action.info.getPhysicalResourceId( ) ) );
+      describeVolumesType.getFilterSet( ).add( CloudFilters.filter( "volume-id", action.info.getPhysicalResourceId( ) ) );
       DescribeVolumesResponseType describeVolumesResponseType;
       try {
         describeVolumesResponseType = AsyncRequests.sendSync(configuration, describeVolumesType);
@@ -414,7 +402,7 @@ public class AWSEC2VolumeResourceAction extends StepBasedResourceAction {
         AWSEC2VolumeResourceAction newAction = (AWSEC2VolumeResourceAction) newResourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         DescribeTagsType describeTagsType = MessageHelper.createMessage(DescribeTagsType.class, newAction.info.getEffectiveUserId());
-        describeTagsType.setFilterSet(Lists.newArrayList(Filter.filter("resource-id", newAction.info.getPhysicalResourceId())));
+        describeTagsType.setFilterSet(Lists.newArrayList( CloudFilters.filter("resource-id", newAction.info.getPhysicalResourceId())));
         DescribeTagsResponseType describeTagsResponseType = AsyncRequests.sendSync(configuration, describeTagsType);
         Set<EC2Tag> existingTags = Sets.newLinkedHashSet();
         if (describeTagsResponseType != null && describeTagsResponseType.getTagSet() != null) {
@@ -462,12 +450,6 @@ public class AWSEC2VolumeResourceAction extends StepBasedResourceAction {
         }
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -490,9 +472,6 @@ public class AWSEC2VolumeResourceAction extends StepBasedResourceAction {
   public void setResourceInfo(ResourceInfo resourceInfo) {
     info = (AWSEC2VolumeResourceInfo) resourceInfo;
   }
-
-
-
 }
 
 

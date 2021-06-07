@@ -64,13 +64,6 @@ public class ValueCheckerFactory {
   
   public static final HashSet<Character> POLICYNAME_EXCLUDE = new HashSet<Character>( Arrays.asList( '/', '\\', '*', '?', ' ' ) );
 
-  public static final HashSet<Character> PASSWORD_SPECIAL = new HashSet<Character>( Arrays.asList( '`', '~', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '_', '=', '+', '[', ']', '{', '}', '\\', '|', ';', ':', '\'', '"', ',', '.', '<', '>', '/', '?' ) );
-
-  public static final HashSet<Character> NAME_SEPARATORS = new HashSet<Character>( Arrays.asList( ';' ) );
-
-  public static final String PASSWORDS_NOT_MATCH = "Passwords do not match";
-  public static final String PASSWORD_NOT_CHANGED = "New password must not be the same as old password";
-
   public static ValueChecker createAccountNameChecker( ) {
     return new ValueChecker( ) {
 

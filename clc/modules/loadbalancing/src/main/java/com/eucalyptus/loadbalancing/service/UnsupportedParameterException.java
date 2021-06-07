@@ -27,15 +27,18 @@
  * POSSIBILITY OF SUCH DAMAGE.
  ************************************************************************/
 package com.eucalyptus.loadbalancing.service;
+
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
-@QueryBindingInfo( statusCode = 400 )
-public class UnsupportedParameterException extends LoadBalancingException{
-	private static final long serialVersionUID = 1L;
-	public UnsupportedParameterException(){
-		super("The supplied parameters are not supported");
-	}
-	public UnsupportedParameterException(final String msg){
-		super(msg);
-	}
+@QueryBindingInfo(statusCode = 400)
+public class UnsupportedParameterException extends LoadBalancingException {
+  private static final long serialVersionUID = 1L;
+
+  public UnsupportedParameterException() {
+    super("The supplied parameters are not supported");
+  }
+
+  public UnsupportedParameterException(final String msg) {
+    super(msg);
+  }
 }

@@ -1,0 +1,180 @@
+# CloudFormation template for Accelerated EC2 InstanceTypes
+#
+# Parameters allow the enabled instance types to be customized:
+#
+#   euform-[create|update]-stack \
+#     --template-file ec2-instance-types-accelerated.yaml \
+#     -p EnableF1=True \
+#     ec2-instance-types-accelerated
+#
+# The eucalyptus account must be used for instance type resources.
+#
+AWSTemplateFormatVersion: 2010-09-09
+Description: EC2 Accelerated Instance Types
+Parameters:
+  EnableF1:
+    Description: Enable F1 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableG2:
+    Description: Enable G2 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableG3:
+    Description: Enable G3 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableP2:
+    Description: Enable P2 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+  EnableP3:
+    Description: Enable P3 instance types
+    Type: String
+    AllowedValues: [ "True", "False" ]
+    Default: "False"
+Resources:
+  F116XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: f1.16xlarge
+      Enabled: !Ref EnableF1
+      Cpu: 64
+      Disk: 3760
+      DiskCount: 4
+      Memory: 999424
+      NetworkInterfaces: 8
+  F12XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: F116XLARGE
+    Properties:
+      Name: f1.2xlarge
+      Enabled: !Ref EnableF1
+      Cpu: 8
+      Disk: 470
+      DiskCount: 1
+      Memory: 124928
+      NetworkInterfaces: 4
+  F14XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: F12XLARGE
+    Properties:
+      Name: f1.4xlarge
+      Enabled: !Ref EnableF1
+      Cpu: 16
+      Disk: 940
+      DiskCount: 1
+      Memory: 249856
+      NetworkInterfaces: 4
+  G22XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: g2.2xlarge
+      Enabled: !Ref EnableG2
+      Cpu: 8
+      Disk: 60
+      DiskCount: 1
+      Memory: 15360
+      NetworkInterfaces: 4
+  G28XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: G22XLARGE
+    Properties:
+      Name: g2.8xlarge
+      Enabled: !Ref EnableG2
+      Cpu: 32
+      Disk: 240
+      DiskCount: 2
+      Memory: 61440
+      NetworkInterfaces: 8
+  G316XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: g3.16xlarge
+      Enabled: !Ref EnableG3
+      Cpu: 64
+      Disk: 160
+      Memory: 499712
+      NetworkInterfaces: 15
+  G34XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: G316XLARGE
+    Properties:
+      Name: g3.4xlarge
+      Enabled: !Ref EnableG3
+      Cpu: 16
+      Disk: 40
+      Memory: 124928
+      NetworkInterfaces: 8
+  G38XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: G34XLARGE
+    Properties:
+      Name: g3.8xlarge
+      Enabled: !Ref EnableG3
+      Cpu: 32
+      Disk: 80
+      Memory: 249856
+      NetworkInterfaces: 8
+  P216XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: p2.16xlarge
+      Enabled: !Ref EnableP2
+      Cpu: 64
+      Disk: 60
+      Memory: 749568
+      NetworkInterfaces: 8
+  P28XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: P216XLARGE
+    Properties:
+      Name: p2.8xlarge
+      Enabled: !Ref EnableP2
+      Cpu: 32
+      Disk: 40
+      Memory: 499712
+      NetworkInterfaces: 8
+  P2XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: P28XLARGE
+    Properties:
+      Name: p2.xlarge
+      Enabled: !Ref EnableP2
+      Cpu: 4
+      Disk: 20
+      Memory: 62464
+      NetworkInterfaces: 4
+  P316XLARGE:
+    Type: AWS::EC2::InstanceType
+    Properties:
+      Name: p3.16xlarge
+      Enabled: !Ref EnableP3
+      Cpu: 64
+      Disk: 80
+      Memory: 499712
+      NetworkInterfaces: 8
+  P32XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: P316XLARGE
+    Properties:
+      Name: p3.2xlarge
+      Enabled: !Ref EnableP3
+      Cpu: 8
+      Disk: 20
+      Memory: 62464
+      NetworkInterfaces: 4
+  P38XLARGE:
+    Type: AWS::EC2::InstanceType
+    DependsOn: P32XLARGE
+    Properties:
+      Name: p3.8xlarge
+      Enabled: !Ref EnableP3
+      Cpu: 32
+      Disk: 40
+      Memory: 249856
+      NetworkInterfaces: 8

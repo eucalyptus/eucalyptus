@@ -116,6 +116,7 @@ public interface NatGateways extends Lister<NatGateway> {
   class NatGatewayFilterSupport extends FilterSupport<NatGateway> {
     public NatGatewayFilterSupport( ) {
       super( builderFor( NatGateway.class )
+          .withTagFiltering( NatGatewayTag.class, "natGateway" )
           .withStringProperty( "nat-gateway-id", CloudMetadatas.toDisplayName( ) )
           .withStringProperty( "state", FilterStringFunctions.STATE )
           .withStringProperty( "subnet-id", FilterStringFunctions.SUBNET_ID )

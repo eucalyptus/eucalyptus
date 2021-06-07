@@ -1,0 +1,12 @@
+<?xml version="1.0" standalone="yes"?>
+<!--
+  Copyright 2021 AppScale Systems, Inc
+
+  SPDX-License-Identifier: BSD-2-Clause
+-->
+<ivy-module version="2.0">
+  <info organisation="com.eucalyptus" module="eucalyptus-loadbalancingv2-common"/>
+  <dependencies>
+    <dependency name="eucalyptus-configuration" rev="latest.integration"/>
+  </dependencies>
+</ivy-module>

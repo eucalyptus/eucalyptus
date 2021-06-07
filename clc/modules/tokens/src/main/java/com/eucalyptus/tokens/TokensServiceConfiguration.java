@@ -142,7 +142,7 @@ public class TokensServiceConfiguration {
                             final Object newValue ) throws ConfigurablePropertyException {
       try {
         final Splitter splitter =
-            Splitter.on( CharMatcher.WHITESPACE.or( CharMatcher.anyOf( ",;|" ) ) ).trimResults( ).omitEmptyStrings( );
+            Splitter.on( CharMatcher.whitespace( ).or( CharMatcher.anyOf( ",;|" ) ) ).trimResults( ).omitEmptyStrings( );
         final String fieldName = configurableProperty.getField().getName() + "Set";
         final Field field = TokensServiceConfiguration.class.getDeclaredField( fieldName );
         field.setAccessible( true );
@@ -199,7 +199,7 @@ public class TokensServiceConfiguration {
       @Nonnull final String itemRegex
   ) throws ConfigurablePropertyException {
     final Splitter splitter =
-        Splitter.on( CharMatcher.WHITESPACE.or( CharMatcher.anyOf( ",;|" ) ) ).trimResults( ).omitEmptyStrings( );
+        Splitter.on( CharMatcher.whitespace( ).or( CharMatcher.anyOf( ",;|" ) ) ).trimResults( ).omitEmptyStrings( );
     final StringBuilder builder = new StringBuilder( );
     builder.append( "(-|" );
     for ( final String aliasWildcard : splitter.split( strValue ) ) {

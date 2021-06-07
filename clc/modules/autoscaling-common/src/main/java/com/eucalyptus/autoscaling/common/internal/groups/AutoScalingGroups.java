@@ -45,6 +45,7 @@ import com.eucalyptus.autoscaling.common.msgs.ProcessType;
 import com.eucalyptus.autoscaling.common.msgs.SuspendedProcessType;
 import com.eucalyptus.autoscaling.common.msgs.SuspendedProcesses;
 import com.eucalyptus.autoscaling.common.msgs.TagType;
+import com.eucalyptus.autoscaling.common.msgs.TargetGroupArns;
 import com.eucalyptus.autoscaling.common.msgs.TerminationPolicies;
 import com.eucalyptus.autoscaling.common.internal.configurations.LaunchConfiguration;
 import com.eucalyptus.autoscaling.common.internal.instances.AutoScalingInstance;
@@ -59,7 +60,7 @@ import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableSet;
@@ -169,6 +170,7 @@ public abstract class AutoScalingGroups {
       type.setHealthCheckType( Strings.toString( group.getHealthCheckType() ) );
       type.setLaunchConfigurationName( AutoScalingMetadatas.toDisplayName().apply( group.getLaunchConfiguration() ) );
       type.setLoadBalancerNames( new LoadBalancerNames( group.getLoadBalancerNames() ) );
+      type.setTargetGroupArns( new TargetGroupArns( group.getTargetGroupArns() ) );
       type.setMaxSize( group.getMaxSize() );
       type.setMinSize( group.getMinSize() );
       type.setNewInstancesProtectedFromScaleIn( group.getNewInstancesProtectedFromScaleIn( ) );
@@ -269,8 +271,8 @@ public abstract class AutoScalingGroups {
     public AutoScalingGroupTag apply( final TagType tagType ) {
       final AutoScalingGroupTag groupTag = AutoScalingGroupTag.createUnassigned();
       groupTag.setKey( tagType.getKey() );
-      groupTag.setValue( Objects.firstNonNull( tagType.getValue(), "" ) );
-      groupTag.setPropagateAtLaunch( Objects.firstNonNull( tagType.getPropagateAtLaunch(), Boolean.FALSE ) );
+      groupTag.setValue( MoreObjects.firstNonNull( tagType.getValue(), "" ) );
+      groupTag.setPropagateAtLaunch( MoreObjects.firstNonNull( tagType.getPropagateAtLaunch(), Boolean.FALSE ) );
       return groupTag;
     }
   }

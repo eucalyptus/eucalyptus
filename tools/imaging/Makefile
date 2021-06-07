@@ -41,6 +41,7 @@ build:
 install: build
 	@sed -e 's://*:/:g' setup.cfg.template > setup.cfg
 	$(PYTHON) setup.py install --root=$(DESTDIR)
+	@sed --in-place '1s/python$$/python2/' $(DESTDIR)/usr/libexec/eucalyptus/euca-run-workflow
 
 tags:
 	find bin -regex ".*\.\(h\|c\|py\|in\)" | xargs etags

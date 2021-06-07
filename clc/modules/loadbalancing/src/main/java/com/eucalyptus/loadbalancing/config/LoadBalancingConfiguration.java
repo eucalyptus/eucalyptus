@@ -39,16 +39,17 @@ import com.eucalyptus.config.ComponentConfiguration;
  *
  */
 @Entity
-@PersistenceContext( name="eucalyptus_config" )
-@ComponentPart( LoadBalancing.class )
+@PersistenceContext(name = "eucalyptus_config")
+@ComponentPart(LoadBalancing.class)
 public class LoadBalancingConfiguration extends ComponentConfiguration implements Serializable {
   private static final long serialVersionUID = 1L;
 
-  public static final String SERVICE_PATH= "/services/LoadBalancing";
+  public static final String SERVICE_PATH = "/services/LoadBalancing";
 
-  public LoadBalancingConfiguration() { }
+  public LoadBalancingConfiguration() {
+  }
 
-  public LoadBalancingConfiguration( String partition, String name, String hostName, Integer port ) {
-    super( partition, name, hostName, port, SERVICE_PATH );
+  public LoadBalancingConfiguration(String partition, String name, String hostName, Integer port) {
+    super(partition, name, hostName, port, SERVICE_PATH);
   }
 }

@@ -29,24 +29,24 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.amazonaws.services.simpleworkflow.flow.core.Promise;
-import com.eucalyptus.cloudformation.CloudFormation;
+import com.eucalyptus.cloudformation.common.CloudFormation;
 import com.eucalyptus.cloudformation.CloudFormationService;
-import com.eucalyptus.cloudformation.CreateStackResponseType;
-import com.eucalyptus.cloudformation.CreateStackType;
-import com.eucalyptus.cloudformation.DeleteStackResponseType;
-import com.eucalyptus.cloudformation.DeleteStackType;
-import com.eucalyptus.cloudformation.DescribeStacksResponseType;
-import com.eucalyptus.cloudformation.DescribeStacksType;
-import com.eucalyptus.cloudformation.Output;
-import com.eucalyptus.cloudformation.Outputs;
-import com.eucalyptus.cloudformation.Parameter;
-import com.eucalyptus.cloudformation.Parameters;
-import com.eucalyptus.cloudformation.ResourceList;
-import com.eucalyptus.cloudformation.Tag;
-import com.eucalyptus.cloudformation.Tags;
-import com.eucalyptus.cloudformation.UpdateStackResponseType;
-import com.eucalyptus.cloudformation.UpdateStackType;
+import com.eucalyptus.cloudformation.common.msgs.Capabilities;
+import com.eucalyptus.cloudformation.common.msgs.CreateStackResponseType;
+import com.eucalyptus.cloudformation.common.msgs.CreateStackType;
+import com.eucalyptus.cloudformation.common.msgs.DeleteStackResponseType;
+import com.eucalyptus.cloudformation.common.msgs.DeleteStackType;
+import com.eucalyptus.cloudformation.common.msgs.DescribeStacksResponseType;
+import com.eucalyptus.cloudformation.common.msgs.DescribeStacksType;
+import com.eucalyptus.cloudformation.common.msgs.NotificationARNs;
+import com.eucalyptus.cloudformation.common.msgs.Output;
+import com.eucalyptus.cloudformation.common.msgs.Outputs;
+import com.eucalyptus.cloudformation.common.msgs.Parameter;
+import com.eucalyptus.cloudformation.common.msgs.Parameters;
+import com.eucalyptus.cloudformation.common.msgs.Tag;
+import com.eucalyptus.cloudformation.common.msgs.Tags;
+import com.eucalyptus.cloudformation.common.msgs.UpdateStackResponseType;
+import com.eucalyptus.cloudformation.common.msgs.UpdateStackType;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.entity.StackEntityHelper;
 import com.eucalyptus.cloudformation.entity.StackUpdateInfoEntityManager;
@@ -62,12 +62,9 @@ import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.ResourceFailureException;
 import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
-import com.eucalyptus.cloudformation.workflow.StackActivityClient;
 import com.eucalyptus.cloudformation.workflow.UpdateStackPartsWorkflowKickOff;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
 import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
-import com.eucalyptus.cloudformation.workflow.steps.UpdateCleanupUpdateMultiStepPromise;
-import com.eucalyptus.cloudformation.workflow.steps.UpdateRollbackCleanupUpdateMultiStepPromise;
 import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection;
@@ -81,7 +78,6 @@ import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.netflix.glisten.WorkflowOperations;
 import org.apache.log4j.Logger;
 
 import javax.annotation.Nullable;
@@ -138,7 +134,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
           createStackType.setTimeoutInMinutes(action.properties.getTimeoutInMinutes());
         }
         if (action.properties.getNotificationARNs() != null) {
-          ResourceList notificationARNs = new ResourceList();
+          NotificationARNs notificationARNs = new NotificationARNs();
           notificationARNs.getMember().addAll(action.properties.getNotificationARNs());
           createStackType.setNotificationARNs(notificationARNs);
         }
@@ -150,7 +146,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
             tag.setValue(cloudFormationResourceTag.getValue());
             tags.getMember().add(tag);
           }
-          ResourceList notificationARNs = new ResourceList();
+          NotificationARNs notificationARNs = new NotificationARNs();
           notificationARNs.getMember().addAll(action.properties.getNotificationARNs());
           createStackType.setTags(tags);
         }
@@ -175,7 +171,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         }
         createStackType.setTemplateURL(action.properties.getTemplateURL());
         // inherit outer stack capabilities
-        ResourceList capabilities = new ResourceList();
+        Capabilities capabilities = new Capabilities();
         List<String> stackCapabilities = StackEntityHelper.jsonToCapabilities(action.getStackEntity().getCapabilitiesJson());
         if (stackCapabilities != null) {
           capabilities.getMember().addAll(stackCapabilities);
@@ -410,12 +406,6 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
       }
     };
 
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
-    }
-
     private static boolean alreadyDeletedOrNeverCreated(AWSCloudFormationStackResourceAction action, ServiceConfiguration configuration) throws Exception {
       if (!Boolean.TRUE.equals(action.info.getCreatedEnoughToDelete())) return true;
       // First see if stack exists or has been deleted
@@ -457,7 +447,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         String stackName = newAction.info.getPhysicalResourceId();
         updateStackType.setStackName(stackName);
         if (newAction.properties.getNotificationARNs() != null) {
-          ResourceList notificationARNs = new ResourceList();
+          NotificationARNs notificationARNs = new NotificationARNs();
           notificationARNs.getMember().addAll(newAction.properties.getNotificationARNs());
           updateStackType.setNotificationARNs(notificationARNs);
         }
@@ -469,7 +459,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
             tag.setValue(cloudFormationResourceTag.getValue());
             tags.getMember().add(tag);
           }
-          ResourceList notificationARNs = new ResourceList();
+          NotificationARNs notificationARNs = new NotificationARNs();
           notificationARNs.getMember().addAll(newAction.properties.getNotificationARNs());
           updateStackType.setTags(tags);
         }
@@ -493,7 +483,7 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         }
         updateStackType.setTemplateURL(newAction.properties.getTemplateURL());
         // inherit outer stack capabilities
-        ResourceList capabilities = new ResourceList();
+        Capabilities capabilities = new Capabilities();
         List<String> stackCapabilities = StackEntityHelper.jsonToCapabilities(newAction.getStackEntity().getCapabilitiesJson());
         if (stackCapabilities != null) {
           capabilities.getMember().addAll(stackCapabilities);
@@ -590,12 +580,6 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         newAction.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(newAction.info.getPhysicalResourceId())));
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -651,11 +635,6 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         // Wait as long as necessary for stacks
         return MAX_TIMEOUT;
       }
-    };
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
   private static StatusAndReason getStackStatusAndReason(AWSCloudFormationStackResourceAction action, ServiceConfiguration configuration) throws Exception {
@@ -740,11 +719,6 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         // Wait as long as necessary for stacks
         return MAX_TIMEOUT;
       }
-    };
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -797,12 +771,6 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
         // Wait as long as necessary for stacks
         return MAX_TIMEOUT;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -827,16 +795,13 @@ public class AWSCloudFormationStackResourceAction extends StepBasedResourceActio
     info = (AWSCloudFormationStackResourceInfo) resourceInfo;
   }
 
-  public Promise<String> getUpdateCleanupUpdatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
-    List<String> stepIds = Lists.newArrayList(updateCleanupUpdateSteps.keySet());
-    return new UpdateCleanupUpdateMultiStepPromise(workflowOperations, stepIds, this).getUpdateCleanupUpdatePromise(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
+  public List<String> getUpdateCleanupUpdateStepIds( ) {
+    return Lists.newArrayList(updateCleanupUpdateSteps.keySet());
   }
 
-  public Promise<String> getUpdateRollbackCleanupUpdatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion) {
-    List<String> stepIds = Lists.newArrayList(updateRollbackCleanupUpdateSteps.keySet());
-    return new UpdateRollbackCleanupUpdateMultiStepPromise(workflowOperations, stepIds, this).getUpdateRollbackCleanupUpdatePromise(resourceId, stackId, accountId, effectiveUserId, updatedResourceVersion);
+  public List<String> getUpdateRollbackCleanupUpdateStepIds( ) {
+    return Lists.newArrayList(updateRollbackCleanupUpdateSteps.keySet());
   }
-
 }
 
 

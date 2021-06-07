@@ -32,7 +32,7 @@
     <info organisation="com.eucalyptus" module="eucalyptus-simpleworkflow"/>
     <dependencies>
         <dependency name="eucalyptus-simpleworkflow-common" rev="latest.integration"/>
-        <dependency name="eucalyptus-ws" rev="latest.integration"/>
+        <dependency name="eucalyptus-core" rev="latest.integration"/>
     </dependencies>
 </ivy-module>
 

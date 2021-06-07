@@ -28,10 +28,10 @@
  ************************************************************************/
 package com.eucalyptus.simplequeue.persistence;
 
-import com.eucalyptus.simplequeue.Attribute;
-import com.eucalyptus.simplequeue.Message;
-import com.eucalyptus.simplequeue.MessageAttribute;
-import com.eucalyptus.simplequeue.MessageAttributeValue;
+import com.eucalyptus.simplequeue.common.msgs.Attribute;
+import com.eucalyptus.simplequeue.common.msgs.Message;
+import com.eucalyptus.simplequeue.common.msgs.MessageAttribute;
+import com.eucalyptus.simplequeue.common.msgs.MessageAttributeValue;
 import com.eucalyptus.simplequeue.exceptions.InternalFailureException;
 import com.eucalyptus.simplequeue.exceptions.SimpleQueueException;
 import com.fasterxml.jackson.databind.ObjectMapper;

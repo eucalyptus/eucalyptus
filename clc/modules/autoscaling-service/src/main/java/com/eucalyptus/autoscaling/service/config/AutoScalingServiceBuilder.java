@@ -29,11 +29,6 @@
 package com.eucalyptus.autoscaling.service.config;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.autoscaling.common.config.DeregisterAutoScalingType;
-import com.eucalyptus.autoscaling.common.config.DescribeAutoScalingType;
-import com.eucalyptus.autoscaling.common.config.ModifyAutoScalingAttributeType;
-import com.eucalyptus.autoscaling.common.config.RegisterAutoScalingType;
-import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
@@ -46,12 +41,6 @@ import com.eucalyptus.autoscaling.common.AutoScaling;
  *
  */
 @ComponentPart( AutoScaling.class )
-@Handles( {
-    DeregisterAutoScalingType.class,
-    DescribeAutoScalingType.class,
-    ModifyAutoScalingAttributeType.class,
-    RegisterAutoScalingType.class,
-} )
 public class AutoScalingServiceBuilder extends AbstractServiceBuilder<AutoScalingConfiguration> {
   private static final Logger LOG = Logger.getLogger( AutoScalingServiceBuilder.class );
 

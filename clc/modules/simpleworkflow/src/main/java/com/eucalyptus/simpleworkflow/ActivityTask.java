@@ -36,7 +36,6 @@ import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
-import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
@@ -53,6 +52,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -106,8 +106,7 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
   private String activityVersion;
 
   @Column( name = "input", updatable = false  )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   private String input;
 
   @Column( name = "schedule_to_close_timeout", updatable = false )
@@ -123,8 +122,7 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
   private Integer heartbeatTimeout;
 
   @Column( name = "heartbeat_details", updatable = false )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   private String heartbeatDetails;
 
   @Column( name = "started_timestamp" )
@@ -228,11 +226,12 @@ public class ActivityTask extends AbstractOwnedPersistent implements ActivityTas
   }
 
   public Pair<String,Date> calculateNextTimeout( ) {
+    @SuppressWarnings( "unchecked" )
     final Iterable<Pair<String,Optional<Long>>> taggedTimeouts = Iterables.filter( Lists.newArrayList(
         Pair.ropair( "SCHEDULE_TO_CLOSE", toTimeout( getCreationTimestamp( ), getScheduleToCloseTimeout( ) ) ),
         Pair.ropair( "SCHEDULE_TO_START", toTimeout( getCreationTimestamp( ), getScheduleToStartTimeout( ) ) ),
         getState( ) == State.Active ? Pair.ropair( "START_TO_CLOSE", toTimeout( getStartedTimestamp( ), getStartToCloseTimeout( ) ) ) : null,
-        getState( ) == State.Active ? Pair.ropair( "HEARTBEAT",  toTimeout( getLastUpdateTimestamp( ), getHeartbeatTimeout( ) ) ) : null
+        getState( ) == State.Active ? Pair.ropair( "HEARTBEAT", toTimeout( getLastUpdateTimestamp( ), getHeartbeatTimeout( ) ) ) : null
     ), Predicates.notNull( ) );
     final Function<Pair<String,Optional<Long>>,Long> timeExtractor = Functions.compose(
         CollectionUtils.<Long>optionalOrNull( ),

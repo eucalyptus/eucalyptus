@@ -34,10 +34,11 @@ import com.eucalyptus.ws.protocol.QueryBindingInfo;
 /**
  *
  */
-@QueryBindingInfo( statusCode = 500 )
+@QueryBindingInfo(statusCode = 500)
 public class InternalFailureException extends LoadBalancingException {
   private static final long serialVersionUID = 1L;
-  public InternalFailureException( final String message ){
-    super( "InternalFailure", Role.Receiver, message );
+
+  public InternalFailureException(final String message) {
+    super("InternalFailure", Role.Receiver, message);
   }
 }

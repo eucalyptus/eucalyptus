@@ -33,11 +33,11 @@ import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 /**
  * @author Sang-Min Park
- *
  */
-@QueryBindingInfo( statusCode = 400 )
+@QueryBindingInfo(statusCode = 400)
 public class ListenerNotFoundException extends LoadBalancingException {
-  public ListenerNotFoundException(){
-    super("ListenerNotFound", Role.Sender, "Load balancer does not have a listener configured at the given port.");
+  public ListenerNotFoundException() {
+    super("ListenerNotFound", Role.Sender,
+        "Load balancer does not have a listener configured at the given port.");
   }
 }

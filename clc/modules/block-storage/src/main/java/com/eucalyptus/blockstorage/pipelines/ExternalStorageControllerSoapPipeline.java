@@ -48,14 +48,14 @@ import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.ws.Handlers;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.server.FilteredPipeline;
-import com.eucalyptus.ws.stages.ExternalSCAuthenticationStage;
+import com.eucalyptus.ws.stages.NodeAuthenticationStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
 @ComponentPart(Storage.class)
 public class ExternalStorageControllerSoapPipeline extends FilteredPipeline {
   private static final String SC_EXTERNAL_SOAP_NAMESPACE = "storagecontroller_eucalyptus_ucsb_edu";
 
-  private final UnrollableStage auth = new ExternalSCAuthenticationStage();
+  private final UnrollableStage auth = new NodeAuthenticationStage();
 
   @Override
   public boolean checkAccepts(final HttpRequest message) {

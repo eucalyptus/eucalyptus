@@ -56,9 +56,8 @@ import javax.persistence.Index;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 
-import com.eucalyptus.compute.common.Compute;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
@@ -70,12 +69,8 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.UserMetadata;
-import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
-import com.eucalyptus.upgrade.Upgrades.Version;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.FullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
-import com.google.common.base.Predicate;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
@@ -85,8 +80,8 @@ import com.google.common.base.Predicate;
     @Index( name = "metadata_snapshots_display_name_idx", columnList = "metadata_display_name" ),
 }  )
 public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
-  @Transient
-  private static Logger LOG = Logger.getLogger( Snapshot.class );
+
+  private static final Logger LOG = Logger.getLogger( Snapshot.class );
 
   public static final String ID_PREFIX = "snap";
 
@@ -109,21 +104,21 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "snapshot" )
   private Collection<SnapshotTag> tags;
 
-    @ElementCollection
-    @CollectionTable( name = "metadata_snapshot_permissions" )
-    private Set<String> permissions = new HashSet<String>( );
+  @ElementCollection
+  @CollectionTable( name = "metadata_snapshot_permissions" )
+  private Set<String> permissions = new HashSet<String>( );
 
-    @ElementCollection
-    @CollectionTable( name = "metadata_snapshot_pcodes" )
-    private Set<String> productCodes = new HashSet<String>( );
+  @ElementCollection
+  @CollectionTable( name = "metadata_snapshot_pcodes" )
+  private Set<String> productCodes = new HashSet<String>( );
 
-    @Column( name = "metadata_snapshot_is_public", columnDefinition = "boolean default false" )
-    private Boolean snapshotPublic;
+  @Column( name = "metadata_snapshot_is_public", columnDefinition = "boolean default false" )
+  private Boolean snapshotPublic;
 
 
-    protected Snapshot( ) {
-    super( );
-  }
+  protected Snapshot( ) {
+  super( );
+}
   
   Snapshot( final OwnerFullName ownerFullName, final String displayName ) {
     super( ownerFullName, displayName );
@@ -158,6 +153,11 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     final Snapshot snapshot = new Snapshot();
     snapshot.setNaturalId( naturalId );
     return snapshot;
+  }
+
+  @Override
+  protected String createUniqueName( ) {
+    return ResourceIdentifiers.truncate( getDisplayName( ) );
   }
 
   public String mapState( ) {
@@ -355,27 +355,5 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     public void removePermissions( final List<String> accountIds ) {
         getPermissions( ).removeAll( accountIds );
     }
-  
-  @EntityUpgrade( entities = { Snapshot.class }, since = Version.v3_2_0, value = Compute.class )
-  public enum SnapshotUpgrade implements Predicate<Class> {
-    INSTANCE;
-    private static Logger LOG = Logger.getLogger( Snapshot.SnapshotUpgrade.class );
-    @Override
-    public boolean apply( Class arg0 ) {
-      EntityTransaction db = Entities.get( Snapshot.class );
-      try {
-        List<Snapshot> entities = Entities.query( new Snapshot( ) );
-        for ( Snapshot entry : entities ) {
-          LOG.debug( "Upgrading: " + entry.getDisplayName() );
-          entry.setDescription(null);
-        }
-        db.commit( );
-        return true;
-      } catch ( Exception ex ) {
-        db.rollback();
-        throw Exceptions.toUndeclared( ex );
-      }
-    }
-  }
-  
+
 }

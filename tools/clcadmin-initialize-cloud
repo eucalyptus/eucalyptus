@@ -1,4 +1,4 @@
-#!/usr/bin/python -tt
+#!/usr/bin/python2 -tt
 #
 # Copyright 2015-2016 Ent. Services Development Corporation LP
 #
@@ -28,18 +28,18 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import argparse
+import os
 import os.path
+import pwd
+import selinux
 import shlex
 import subprocess
 import sys
 
-import selinux
-
-
 CONF_PATH = 'etc/eucalyptus/eucalyptus.conf'
 CLC_EXE_PATH = 'usr/sbin/eucalyptus-cloud'
 CLC_SELINUX_CONTEXT = 'system_u:system_r:eucalyptus_cloud_t:s0'
-
+CLC_USER = 'eucalyptus'
 
 def get_cloud_opts():
     cloud_opts = []
@@ -57,6 +57,12 @@ def get_cloud_opts():
             os.path.basename(sys.argv[0]), err.filename, err.strerror))
     return cloud_opts
 
+def user(user_name):
+    pwentry = pwd.getpwnam(user_name)
+    def set_user_group():
+        os.setgid(pwentry.pw_gid)
+        os.setuid(pwentry.pw_uid)
+    return set_user_group
 
 def initialize_cloud(opts):
     exepath = os.path.join(os.getenv('EUCALYPTUS') or '/', CLC_EXE_PATH)
@@ -72,7 +78,7 @@ def initialize_cloud(opts):
                    'Initialization will proceed without selinux '
                    'support.').format(os.path.basename(sys.argv[0]))
     try:
-        subprocess.check_call([exepath, '--initialize'] + opts)
+        subprocess.check_call([exepath, '--initialize'] + opts, preexec_fn=user(CLC_USER))
     except subprocess.CalledProcessError:
         sys.exit('{0}: cloud initialization failed'.format(sys.argv[0]))
     finally:

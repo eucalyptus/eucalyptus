@@ -41,6 +41,7 @@ package com.eucalyptus.compute.common.internal.blockstorage;
 
 import java.util.Collection;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
@@ -48,8 +49,8 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Index;
-import javax.persistence.Lob;
 import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -61,7 +62,7 @@ import com.eucalyptus.compute.common.CloudMetadata.VolumeMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.compute.common.internal.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.auth.principal.FullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
@@ -78,6 +79,8 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
 
   @Column( name = "metadata_volume_size" )
   private Integer  size;
+  @Column( name = "metadata_pending_size" )
+  private Integer pendingSizeIncrement;
   @Deprecated
   @Column( name = "metadata_volume_sc_name" )
   private String   scName;
@@ -85,9 +88,8 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   private String   partition;     //TODO:GRZE: change to injected ref.
   @Column( name = "metadata_volume_parentsnapshot" )
   private String   parentSnapshot;
-  @Lob
   @Column( name = "metadata_volume_remotedevice" )
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   private String   remoteDevice;
   @Column( name = "metadata_volume_localdevice" )
   private String   localDevice;
@@ -97,6 +99,8 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   private FullName fullName;
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "volume" )
   private Collection<VolumeTag> tags;
+  @OneToOne( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "volume" )
+  private VolumeModification volumeModification;
 
   protected Volume( ) {
     super( );
@@ -143,6 +147,20 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
     };
   }
 
+  @Nullable
+  public VolumeModification getVolumeModification( ) {
+    return volumeModification;
+  }
+
+  public void setVolumeModification( final VolumeModification volumeModification ) {
+    this.volumeModification = volumeModification;
+  }
+
+  @Override
+  protected String createUniqueName( ) {
+    return ResourceIdentifiers.truncate( getDisplayName( ) );
+  }
+
   public String mapState( ) {
     switch ( this.getState( ) ) {
       case GENERATING:
@@ -163,7 +181,13 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
         return "unavailable";
     }
   }
-  
+
+  public synchronized long getSplitTime( final TimeUnit units ) {
+    final long time = System.currentTimeMillis( );
+    final long split = time - super.getLastUpdateTimestamp( ).getTime( );
+    return units.convert( split, TimeUnit.MILLISECONDS );
+  }
+
   public com.eucalyptus.compute.common.Volume morph( final com.eucalyptus.compute.common.Volume vol ) {
     vol.setAvailabilityZone( this.getPartition( ) );
     vol.setCreateTime( this.getCreationTimestamp( ) );
@@ -180,18 +204,27 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
     return this.size;
   }
   
-  public String getScName( ) {
-    return this.scName;
-  }
-  
   public void setSize( final Integer size ) {
     this.size = size;
   }
-  
+
+  @Nullable
+  public Integer getPendingSizeIncrement( ) {
+    return pendingSizeIncrement;
+  }
+
+  public void setPendingSizeIncrement( final Integer pendingSizeIncrement) {
+    this.pendingSizeIncrement = pendingSizeIncrement;
+  }
+
+  public String getScName( ) {
+    return this.scName;
+  }
+
   protected void setScName( final String scName ) {
     this.scName = scName;
   }
-  
+
   public String getParentSnapshot( ) {
     return this.parentSnapshot;
   }

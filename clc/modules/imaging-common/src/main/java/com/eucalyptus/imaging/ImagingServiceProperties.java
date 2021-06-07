@@ -36,20 +36,18 @@ import java.util.concurrent.Callable;
 import com.eucalyptus.resources.PropertyChangeListeners;
 import com.eucalyptus.resources.client.CloudFormationClient;
 import com.eucalyptus.resources.client.Ec2Client;
-import com.eucalyptus.util.EucalyptusCloudException;
 
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
-import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.cloudformation.CloudFormation;
-import com.eucalyptus.cloudformation.Stack;
+import com.eucalyptus.cloudformation.common.CloudFormation;
+import com.eucalyptus.cloudformation.common.msgs.Stack;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.Faults.CheckException;
@@ -81,9 +79,9 @@ public class ImagingServiceProperties {
 
   @ConfigurableField(displayName = "instance_type",
       description = "instance type for imaging worker",
-      initial = "m1.small", readonly = false, type = ConfigurableFieldType.KEYVALUE,
+      initial = "t2.nano", readonly = false, type = ConfigurableFieldType.KEYVALUE,
       changeListener = PropertyChangeListeners.InstanceTypeChangeListener.class)
-  public static String INSTANCE_TYPE = "m1.small";
+  public static String INSTANCE_TYPE = "t2.nano";
 
   @ConfigurableField(displayName = "availability_zones",
       description = "availability zones for imaging worker",

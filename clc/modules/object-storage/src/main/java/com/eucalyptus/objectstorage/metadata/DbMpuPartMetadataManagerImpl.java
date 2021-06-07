@@ -31,7 +31,6 @@ package com.eucalyptus.objectstorage.metadata;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -52,7 +51,6 @@ import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
-import com.eucalyptus.objectstorage.MpuPartMetadataManagers;
 import com.eucalyptus.objectstorage.ObjectState;
 import com.eucalyptus.objectstorage.PaginatedResult;
 import com.eucalyptus.objectstorage.entities.Bucket;
@@ -68,7 +66,7 @@ import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.msgs.s3.Part;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 
 /**
@@ -113,48 +111,6 @@ public class DbMpuPartMetadataManagerImpl implements MpuPartMetadataManager {
       return baseCriteria;
     }
   }
-
-  /**
-   * A more limited version of read-repair, it just modifies the 'islatest' tag, but will not mark any for deletion
-   */
-  private static final Predicate<PartEntity> SET_LATEST_PREDICATE = new Predicate<PartEntity>() {
-    public boolean apply(PartEntity example) {
-      try {
-        example.setIsLatest(true);
-        example = example.withState(ObjectState.extant);
-        Criteria search = Entities.createCriteria(PartEntity.class);
-        search.add(Example.create(example)).addOrder(Order.desc("objectModifiedTimestamp"));
-        search = getSearchByBucket(search, example.getBucket());
-        List<PartEntity> results = search.list();
-
-        if (results != null && results.size() > 1) {
-          try {
-            // Set all but the first element as not latest
-            for (PartEntity obj : results.subList(1, results.size())) {
-              obj.setIsLatest(false);
-            }
-          } catch (IndexOutOfBoundsException e) {
-            // Either 0 or 1 result, nothing to do
-          }
-        }
-      } catch (NoSuchElementException e) {
-        // Nothing to do.
-      } catch (Exception e) {
-        LOG.error("Error consolidating Object records for " + example.getResourceFullName(), e);
-        return false;
-      }
-      return true;
-
-    }
-  };
-
-  private static final Comparator timestampComparator = new Comparator<PartEntity>() {
-
-    @Override
-    public int compare(PartEntity objectEntity, PartEntity objectEntity2) {
-      return objectEntity2.getObjectModifiedTimestamp().compareTo(objectEntity.getObjectModifiedTimestamp());
-    }
-  };
 
   @Override
   public void cleanupInvalidParts(final Bucket bucket, final String objectKey, final String uploadId, final int partNumber) throws Exception {
@@ -263,7 +219,7 @@ public class DbMpuPartMetadataManagerImpl implements MpuPartMetadataManager {
           // Calculate the sum size of the parts to update the bucket size.
           PartEntity searchExample = new PartEntity().withUploadId(uploadId).withState(ObjectState.extant);
           long size =
-              Objects.firstNonNull(
+              MoreObjects.firstNonNull(
                   (Number) Entities.createCriteria(PartEntity.class).add(Example.create(searchExample)).setProjection(Projections.sum("size"))
                       .setReadOnly(true).uniqueResult(), 0).longValue();
 
@@ -366,46 +322,6 @@ public class DbMpuPartMetadataManagerImpl implements MpuPartMetadataManager {
     } catch (Exception e) {
       LOG.warn("Error looking up parts for MPU id : " + uploadId);
       throw e;
-    }
-  }
-
-  private void doConsolidateParts(Bucket bucket, String objectKey, String uploadId, Integer partNumber) {
-    PartEntity searchExample = new PartEntity(bucket, objectKey, uploadId).withPartNumber(partNumber);
-    searchExample = searchExample.withState(ObjectState.extant);
-
-    final Predicate<PartEntity> repairPredicate = new Predicate<PartEntity>() {
-      public boolean apply(PartEntity example) {
-        // Remove all but latest entry
-        try {
-          Criteria search = Entities.createCriteria(PartEntity.class);
-          List<PartEntity> results = search.add(Example.create(example)).addOrder(Order.desc("objectModifiedTimestamp")).list();
-
-          if (results != null && results.size() > 0) {
-            try {
-              for (PartEntity partEntity : results.subList(1, results.size())) {
-                LOG.trace("Marking part " + partEntity.getBucket().getBucketName() + " uploadId: " + partEntity.getUploadId() + " partNumber: "
-                    + partEntity.getPartNumber() + " for deletion because it is not latest.");
-                // partEntity.setState(ObjectState.deleting);
-                MpuPartMetadataManagers.getInstance().transitionPartToState(partEntity, ObjectState.deleting);
-              }
-            } catch (IndexOutOfBoundsException e) {
-              // Either 0 or 1 result, nothing to do
-            }
-          }
-        } catch (NoSuchElementException e) {
-          // Nothing to do.
-        } catch (Exception e) {
-          LOG.error("Error consolidationg Part records for " + example.getBucket().getBucketName() + " uploadId: " + example.getUploadId()
-              + " partNumber: " + example.getPartNumber());
-          return false;
-        }
-        return true;
-      }
-    };
-    try {
-      Entities.asTransaction(repairPredicate).apply(searchExample);
-    } catch (final Throwable f) {
-      LOG.error("Error in part repair", f);
     }
   }
 

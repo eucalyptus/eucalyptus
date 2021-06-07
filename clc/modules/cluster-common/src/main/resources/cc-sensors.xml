@@ -32,8 +32,8 @@
 <binding force-classes="true" add-constructors="true">
 
 	<mapping name="DescribeSensors" class="com.eucalyptus.cluster.common.msgs.DescribeSensorsType"
-		extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-		<structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+		extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+		<structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
 		<value name="historySize" field="historySize" type="java.lang.Integer" />
 		<value name="collectionIntervalTimeMs" field="collectionIntervalTimeMs"
 			type="java.lang.Integer" />
@@ -50,8 +50,8 @@
 	</mapping>
 
 	<mapping name="DescribeSensorsResponse"
-					 class="com.eucalyptus.cluster.common.msgs.DescribeSensorsResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-		<structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+					 class="com.eucalyptus.cluster.common.msgs.DescribeSensorsResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+		<structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
 		<collection field="sensorsResources"
 			factory="org.jibx.runtime.Utility.arrayListFactory">
 			<structure name="sensorsResources"

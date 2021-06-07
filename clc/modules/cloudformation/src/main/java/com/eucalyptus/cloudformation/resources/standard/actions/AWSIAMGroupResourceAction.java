@@ -29,22 +29,22 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.eucalyptus.auth.euare.AttachGroupPolicyType;
-import com.eucalyptus.auth.euare.AttachedPolicyType;
-import com.eucalyptus.auth.euare.CreateGroupResponseType;
-import com.eucalyptus.auth.euare.CreateGroupType;
-import com.eucalyptus.auth.euare.DeleteGroupPolicyResponseType;
-import com.eucalyptus.auth.euare.DeleteGroupPolicyType;
-import com.eucalyptus.auth.euare.DeleteGroupResponseType;
-import com.eucalyptus.auth.euare.DeleteGroupType;
-import com.eucalyptus.auth.euare.DetachGroupPolicyType;
-import com.eucalyptus.auth.euare.GroupType;
-import com.eucalyptus.auth.euare.ListAttachedGroupPoliciesResponseType;
-import com.eucalyptus.auth.euare.ListAttachedGroupPoliciesType;
-import com.eucalyptus.auth.euare.PutGroupPolicyResponseType;
-import com.eucalyptus.auth.euare.PutGroupPolicyType;
-import com.eucalyptus.auth.euare.UpdateGroupResponseType;
-import com.eucalyptus.auth.euare.UpdateGroupType;
+import com.eucalyptus.auth.euare.common.msgs.AttachGroupPolicyType;
+import com.eucalyptus.auth.euare.common.msgs.AttachedPolicyType;
+import com.eucalyptus.auth.euare.common.msgs.CreateGroupResponseType;
+import com.eucalyptus.auth.euare.common.msgs.CreateGroupType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteGroupPolicyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteGroupPolicyType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteGroupResponseType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteGroupType;
+import com.eucalyptus.auth.euare.common.msgs.DetachGroupPolicyType;
+import com.eucalyptus.auth.euare.common.msgs.GroupType;
+import com.eucalyptus.auth.euare.common.msgs.ListAttachedGroupPoliciesResponseType;
+import com.eucalyptus.auth.euare.common.msgs.ListAttachedGroupPoliciesType;
+import com.eucalyptus.auth.euare.common.msgs.PutGroupPolicyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.PutGroupPolicyType;
+import com.eucalyptus.auth.euare.common.msgs.UpdateGroupResponseType;
+import com.eucalyptus.auth.euare.common.msgs.UpdateGroupType;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.IAMHelper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
@@ -120,7 +120,7 @@ public class AWSIAMGroupResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSIAMGroupResourceAction action = (AWSIAMGroupResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        String groupName = action.properties.getGroupName() != null ? action.properties.getGroupName() : action.getDefaultPhysicalResourceId();
+        String groupName = action.properties.getGroupName() != null ? action.properties.getGroupName() : action.getDefaultPhysicalResourceId(128);
         CreateGroupType createGroupType = MessageHelper.createMessage(CreateGroupType.class, action.info.getEffectiveUserId());
         createGroupType.setGroupName(groupName);
         createGroupType.setPath(MoreObjects.firstNonNull(action.properties.getPath(), DEFAULT_PATH));
@@ -165,11 +165,6 @@ public class AWSIAMGroupResourceAction extends StepBasedResourceAction {
         }
         return action;
       }
-    };
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -200,12 +195,6 @@ public class AWSIAMGroupResourceAction extends StepBasedResourceAction {
         AsyncRequests.<DeleteGroupType,DeleteGroupResponseType> sendSync(configuration, deleteGroupType);
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -339,13 +328,6 @@ public class AWSIAMGroupResourceAction extends StepBasedResourceAction {
         }
         return newAction;
       }
-
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -360,16 +342,8 @@ public class AWSIAMGroupResourceAction extends StepBasedResourceAction {
         }
         return newAction;
       }
-
-      @Nullable
-      @Override
-      public Integer getTimeout() {
-        return null;
-      }
     }
   }
-
-  
 }
 
 

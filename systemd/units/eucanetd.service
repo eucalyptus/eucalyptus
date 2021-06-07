@@ -3,17 +3,17 @@ Description=Eucalyptus network daemon
 After=midolman.service network.target
 
 [Service]
-Type=forking
+Type=simple
 PIDFile=/run/eucalyptus/eucanetd.pid
-ExecStart=/usr/sbin/eucanetd
+ExecStart=/usr/sbin/eucanetd -s
+ExecStartPost=/bin/sh -c 'echo $MAINPID > /run/eucalyptus/eucanetd.pid'
 LimitNOFILE=10000
 LimitNPROC=100000
-# Need to come up with a better way of preserving nginx and dhcpd
-# processes across service restarts
-# https://eucalyptus.atlassian.net/browse/EUCA-12390
-#KillMode=process
-
-# KillMode removed per http://eucalyptus.atlassian.net/browse/EUCA-12424
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=true
+User=eucalyptus
+Group=eucalyptus
 
 [Install]
 WantedBy=multi-user.target

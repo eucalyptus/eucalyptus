@@ -38,11 +38,11 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.euare.ServerCertificateMetadataType;
+import com.eucalyptus.auth.euare.common.msgs.ServerCertificateMetadataType;
 import com.eucalyptus.auth.principal.AccountIdentifiers;
 import com.eucalyptus.auth.principal.UserPrincipal;
-import com.eucalyptus.cloudformation.CloudFormation;
-import com.eucalyptus.cloudformation.Parameter;
+import com.eucalyptus.cloudformation.common.CloudFormation;
+import com.eucalyptus.cloudformation.common.msgs.Parameter;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.network.Networking;
 import com.eucalyptus.compute.common.network.NetworkingFeature;

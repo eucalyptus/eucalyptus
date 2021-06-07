@@ -46,7 +46,6 @@ import com.google.common.collect.Lists;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Digest;
@@ -86,7 +85,6 @@ import com.eucalyptus.walrus.exceptions.InternalErrorException;
 import com.eucalyptus.walrus.exceptions.InvalidArgumentException;
 import com.eucalyptus.walrus.exceptions.InvalidPartException;
 import com.eucalyptus.walrus.exceptions.InvalidRangeException;
-import com.eucalyptus.walrus.exceptions.MethodNotAllowedException;
 import com.eucalyptus.walrus.exceptions.NoSuchBucketException;
 import com.eucalyptus.walrus.exceptions.NoSuchEntityException;
 import com.eucalyptus.walrus.exceptions.NoSuchUploadException;
@@ -127,10 +125,6 @@ import com.eucalyptus.walrus.msgs.PutObjectResponseType;
 import com.eucalyptus.walrus.msgs.PutObjectType;
 import com.eucalyptus.walrus.msgs.UploadPartResponseType;
 import com.eucalyptus.walrus.msgs.UploadPartType;
-import com.eucalyptus.walrus.msgs.WalrusDataMessage;
-import com.eucalyptus.walrus.msgs.WalrusDataMessenger;
-import com.eucalyptus.walrus.msgs.WalrusDataQueue;
-import com.eucalyptus.walrus.msgs.WalrusMonitor;
 import com.eucalyptus.walrus.pipeline.WalrusRESTBinding;
 import com.eucalyptus.walrus.util.WalrusProperties;
 
@@ -164,8 +158,6 @@ public class WalrusFSManager extends WalrusManager {
   private static Logger LOG = Logger.getLogger(WalrusFSManager.class);
 
   private StorageManager storageManager;
-
-  public static void configure() {}
 
   public WalrusFSManager(StorageManager storageManager) {
     this.storageManager = storageManager;
@@ -336,8 +328,6 @@ public class WalrusFSManager extends WalrusManager {
       throw new InternalErrorException("Failed to delete bucket=" + bucketName, e);
     }
 
-    reply.setStatus(HttpResponseStatus.NO_CONTENT);
-    reply.setStatusMessage("NO CONTENT");
     return reply;
   }
 
@@ -706,9 +696,6 @@ public class WalrusFSManager extends WalrusManager {
       throw new InternalErrorException("Failed to delete object-key=" + objectKey + ", bucket=" + bucketName, e);
     }
 
-    // Always set the response to 204 NO CONTENT
-    reply.setStatus(HttpResponseStatus.NO_CONTENT);
-    reply.setStatusMessage("NO CONTENT");
     return reply;
   }
 

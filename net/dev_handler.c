@@ -98,7 +98,6 @@
 \*----------------------------------------------------------------------------*/
 
 #define BRCTL_PATH                               "/usr/sbin/brctl"
-#define VCONFIG_PATH                             "/sbin/vconfig"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -153,9 +152,6 @@ const char *asDevTypeNames[] = {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-//! API to validate if a given VLAN is valid (i.e. between 0 and 4095)
-static inline boolean dev_is_vlan_valid(u16 vlan);
-
 //! API to force remove a bridge device
 static int dev_remove_bridge_forced(dev_handler *devh, const char *psBridgeName);
 
@@ -168,9 +164,6 @@ static inline void dev_in_addr_entry(in_addr_entry *pEntry, const char *psDevice
  |                                   MACROS                                   |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-
-//! Macro to validate if a VLAN is valid
-#define IS_VLAN_VALID(_vlan)                     dev_is_vlan_valid((_vlan))
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -630,240 +623,6 @@ int dev_rename(dev_handler *devh, const char *psDeviceName, const char *psNewDev
         LOGWARN("Fail to rename network device '%s' to '%s'. Fail to enable '%s'!\n", psDeviceName, psNewDevName, psNewDevName);
     }
 
-    return (0);
-}
-
-/**
- * Checks whether or not a given VLAN identifier is valid. It should be between 0 and 4095.
- *
- * @param vlan [in] the VLAN identifier to validate
- *
- * @return TRUE if the VLAN is valid otherwise FALSE is returned
- */
-static inline boolean dev_is_vlan_valid(u16 vlan) {
-    if ((vlan >= MIN_VLAN_802_1Q) && (vlan <= MAX_VLAN_802_1Q))
-        return (TRUE);
-    return (FALSE);
-}
-
-/**
- * This function retrieves the name of a VLAN device based on its given base name
- * and VLAN number. The return value is a pointer into a statically-allocated buffer.
- * Subsequent calls will overwrite the same buffer, so you should copy the string if
- * you need to save it.
- *
- * In multi-threaded programs each thread has its own 8 statically-allocated buffer. But
- * still more than 8 subsequent calls of euca_ntoa in the same thread will overwrite
- * the result of the previous calls. if the result isn't saved.
- *
- * @param devh [in] pointer to the device handler
- * @param psDeviceName [in] a string pointer to the base device name to which we will add the VLAN
- * @param vlan [in] the VLAN identifier
- *
- * @return A pointer to the statically-allocated buffer containing the dot representation
- *         of the address.
- */
-const char *dev_get_vlan_name(const char *psDeviceName, u16 vlan) {
-#define NB_BUFFERS                 8
-#define MAX_VDEV_LEN              32
-
-    char *psVlanDev = NULL;
-
-    static u32 bufferIdx = 0;
-    static char asVlanDev[NB_BUFFERS][MAX_VDEV_LEN] = { "" };
-
-    // Retrieve the next buffer in line
-    psVlanDev = asVlanDev[((bufferIdx++) % NB_BUFFERS)];
-
-    // Creating the vlan device resulting name
-    snprintf(psVlanDev, MAX_VDEV_LEN, "%s.%u", psDeviceName, vlan);
-
-    return (psVlanDev);
-
-#undef NB_BUFFERS
-#undef MAX_VDEV_LEN
-}
-
-/**
- * This function retrieves the VLAN identifier portion of a VLAN device name. A
- * VLAN device name is of the "[base_name].[vlanId]" format.
- *
- * @param psDeviceName [in] a string pointer to the VLAN device name
- *
- * @return The associated VLAN identifier if this is a valid VLAN device name or -1 on failure.
- */
-int dev_get_vlan_id(const char *psDeviceName) {
-    char *psVlanId = NULL;
-
-    // Make sure the given device name isn't NULL
-    if (!psDeviceName) {
-        return (-1);
-    }
-    // Does it have a valid format?
-    if ((psVlanId = strstr(psDeviceName, ".")) == NULL) {
-        return (-1);
-    }
-
-    return (atoi(psVlanId + 1));
-}
-
-/**
- * Checks whether or not a given VLAN is configured on a given device. Under Linux,
- * when adding a VLAN to a network device, this results in creating a new device
- * with the name set as [device_name].[vlan].
- *
- * @param psDeviceName [in] a constant string pointer to the base device name
- * @param vlan [in] the VLAN identifier to check
- *
- * @return TRUE if the given VLAN is configured on the given device otherwise FALSE
- *         is returned.
- *
- * @pre
- *     The psDeviceName parameter must not be NULL and the vlan parameter should be valid
- */
-boolean dev_has_vlan(const char *psDeviceName, u16 vlan) {
-    // Make sure the given string isn't NULL
-    if (!psDeviceName)
-        return (FALSE);
-
-    // Does this VLAN device exist?
-    return (dev_exist(dev_get_vlan_name(psDeviceName, vlan)));
-}
-
-/**
- * Configures a VLAN on a given device.
- *
- * @param devh [in] pointer to the device handler
- * @param psDeviceName [in] a constant string pointer to the device name on which we are adding the VLAN
- * @param vlan [in] the VLAN identifier to add on the device
- *
- * @return A pointer to the newly created VLAN device or NULL on failure.
- *
- * @see dev_has_vlan(), dev_remove_vlan()
- *
- * @pre
- *     - The psDeviceName must not be null and the device should exist
- *     - The VLAN identifier must be valid
- *
- * @post
- *     On success the VLAN has been configured on the device. On failure, the VLAN is not
- *     configured on the network device.
- *
- * @note
- *     Since the return value is dynamically allocated, caller is responsible for freeing the memory
- */
-dev_entry *dev_create_vlan(dev_handler *devh, const char *psDeviceName, u16 vlan) {
-    int rc = 0;
-    int nbDevices = 0;
-    char sVlan[8] = "";
-    dev_entry *pDevice = NULL;
-
-    if (!devh) {
-        LOGWARN("Invalid argument: null device handler\n");
-        return (NULL);
-    }
-    // Make sure the given string isn't NULL
-    if (!psDeviceName)
-        return (NULL);
-
-    // Make sure the VLAN is valid
-    if (!IS_VLAN_VALID(vlan))
-        return (NULL);
-
-    // Check if we already have the VLAN configured
-    if (dev_has_vlan(psDeviceName, vlan)) {
-        // This must work since we know the vlan exists
-        dev_get_list(devh, dev_get_vlan_name(psDeviceName, vlan), &pDevice, &nbDevices);
-        return (pDevice);
-    }
-    // Execute the request
-    snprintf(sVlan, 8, "%u", vlan);
-    if (euca_execlp(&rc, devh->cmdprefix, VCONFIG_PATH, "add", psDeviceName, sVlan, NULL) != EUCA_OK) {
-        LOGERROR("Fail to add VLAN '%s' to device '%s'. error=%d\n", sVlan, psDeviceName, rc);
-        return (NULL);
-    }
-    // If the device exist then success
-    if (!dev_has_vlan(psDeviceName, vlan))
-        return (NULL);
-
-    // This must work since we know the device exists
-    dev_get_list(devh, dev_get_vlan_name(psDeviceName, vlan), &pDevice, &nbDevices);
-    return (pDevice);
-}
-
-/**
- * Unconfigures a given VLAN from a given network device.
- *
- * @param devh [in] pointer to the device handler
- * @param psDeviceName [in] a constant string pointer to the device name on which we are removing the VLAN
- * @param vlan [in] the VLAN identifier to add on the device
- *
- * @return 0 on success or 1 if any failure occured
- *
- * @see dev_has_vlan(), dev_create_vlan(), dev_remove_vlan_interface()
- *
- * @pre
- *     - The psDeviceName must not be null and the device should exist
- *     - The VLAN identifier should be valid
- *
- * @post
- *     On success the VLAN has been removed from the device. On failure, the VLAN is not
- *     removed From the network device.
- */
-int dev_remove_vlan(dev_handler *devh, const char *psDeviceName, u16 vlan) {
-    // Make sure the given string isn't NULL
-    if (!psDeviceName)
-        return (1);
-
-    // Check if the device exists
-    return (dev_remove_vlan_interface(devh, dev_get_vlan_name(psDeviceName, vlan)));
-}
-
-/**
- * Removes a given VLAN interface
- *
- * @param devh [in] pointer to the device handler
- * @param " [in] psVlanInterfaceName a constant string pointer to the VLAN device name of the "[devname].[VLAN] format
- *
- * @return 0 on success or 1 if any failure occured
- *
- * @see dev_has_vlan(), dev_remove_vlan()
- *
- * @pre
- *     - The psVlanInterfaceName must not be null and the device should exist
- *     - The name should be of the "devname.VLAN" format.
- *
- * @post
- *     On success the VLAN has been removed from the device. On failure, the VLAN is not
- *     removed From the network device.
- */
-int dev_remove_vlan_interface(dev_handler *devh, const char *psVlanInterfaceName) {
-    int rc = 0;
-
-    if (!devh) {
-        LOGWARN("Invalid argument: null device handler\n");
-        return (1);
-    }
-    // Make sure the given string isn't NULL
-    if (!psVlanInterfaceName)
-        return (1);
-
-    // Make sure its of the peoper format. Lets not go too crazy
-    if (strstr(psVlanInterfaceName, ".") == NULL)
-        return (1);
-
-    // Check if the device exists
-    if (!dev_exist(psVlanInterfaceName))
-        return (0);
-
-    // Execute the request
-    if (euca_execlp(&rc, devh->cmdprefix, VCONFIG_PATH, "rem", psVlanInterfaceName, NULL) != EUCA_OK) {
-        LOGERROR("Fail to remove vlan interface '%s'. error=%d\n", psVlanInterfaceName, rc);
-        return (1);
-    }
-    // If the device does not exist then success
-    if (dev_exist(psVlanInterfaceName))
-        return (1);
     return (0);
 }
 

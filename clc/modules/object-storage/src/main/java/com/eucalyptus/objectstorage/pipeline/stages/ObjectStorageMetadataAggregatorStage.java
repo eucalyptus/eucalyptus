@@ -58,9 +58,4 @@ public class ObjectStorageMetadataAggregatorStage implements UnrollableStage {
   public String getName() {
     return NAME;
   }
-
-  @Override
-  public int compareTo(UnrollableStage o) {
-    return this.getName().compareTo(o.getName());
-  }
 }

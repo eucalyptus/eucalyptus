@@ -199,10 +199,11 @@ public class DbBucketCorsManagerImpl implements BucketCorsManager {
     return ruleResponse;
   }
 
-  private List<String> convertCorsJSONToList(String corsJSONString) {
+  @SuppressWarnings( "unchecked" )
+  private ArrayList<String> convertCorsJSONToList( String corsJSONString) {
     JSONArray corsJSON = JSONArray.fromObject(corsJSONString);
-    List<String> corsList = new ArrayList<String>();
-    corsList = (List<String>) corsJSON.toCollection(corsJSON, String.class);
+    ArrayList<String> corsList = new ArrayList<String>();
+    corsList.addAll( JSONArray.toCollection(corsJSON, String.class) );
     return corsList;
   }
 

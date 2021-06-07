@@ -109,14 +109,6 @@ public class Images {
     return img;
   }
 
-  public static ImageInfo exampleWithImageFormat( final ImageMetadata.ImageFormat format ) {
-    final ImageInfo img = new ImageInfo( );
-    img.setImageFormat(format.toString());
-    img.setStateChangeStack( null );
-    img.setLastState( null );
-    return img;
-  }
-
   public static MachineImageInfo exampleMachineWithImageId( final String imageId ) {
     return new MachineImageInfo( imageId );
   }

@@ -36,14 +36,17 @@ import com.eucalyptus.ws.protocol.OperationParameter;
 /**
  *
  */
-@ComponentPart( LoadBalancing.class )
+@ComponentPart(LoadBalancing.class)
 public class LoadBalancingQueryBinding extends BaseQueryBinding<OperationParameter> {
 
-  static final String BALANCING_NAMESPACE_PATTERN = "http://elasticloadbalancing.amazonaws.com/doc/%s/";
+  static final String BALANCING_NAMESPACE_PATTERN =
+      "http://elasticloadbalancing.amazonaws.com/doc/%s/";
   static final String BALANCING_DEFAULT_VERSION = "2012-06-01";
-  static final String BALANCING_DEFAULT_NAMESPACE = String.format( BALANCING_NAMESPACE_PATTERN, BALANCING_DEFAULT_VERSION );
+  static final String BALANCING_DEFAULT_NAMESPACE =
+      String.format(BALANCING_NAMESPACE_PATTERN, BALANCING_DEFAULT_VERSION);
 
   public LoadBalancingQueryBinding() {
-    super( BALANCING_NAMESPACE_PATTERN, BALANCING_DEFAULT_VERSION, OperationParameter.Action, OperationParameter.Operation );
+    super(BALANCING_NAMESPACE_PATTERN, BALANCING_DEFAULT_VERSION, OperationParameter.Action,
+        OperationParameter.Operation);
   }
 }

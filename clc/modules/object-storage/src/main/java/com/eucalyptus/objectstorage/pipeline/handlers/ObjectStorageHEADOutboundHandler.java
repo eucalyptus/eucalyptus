@@ -74,9 +74,7 @@ public class ObjectStorageHEADOutboundHandler extends MessageStackHandler {
 
         // Fix for euca-9081
         String contentType = headResponse.getContentType();
-        if (!Strings.isNullOrEmpty(contentType)) {
-          httpResponse.setHeader(HttpHeaders.Names.CONTENT_TYPE, contentType);
-        }
+        httpResponse.addHeader(HttpHeaders.Names.CONTENT_TYPE, contentType != null ? contentType : "binary/octet-stream");
 
         String contentLength = String.valueOf(headResponse.getSize());
         if (!Strings.isNullOrEmpty(contentLength)) {

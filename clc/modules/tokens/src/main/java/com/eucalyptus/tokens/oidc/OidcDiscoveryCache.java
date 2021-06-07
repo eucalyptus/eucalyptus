@@ -48,7 +48,7 @@ import com.google.common.cache.CacheBuilderSpec;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
 import com.google.common.net.HttpHeaders;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 /**
  *

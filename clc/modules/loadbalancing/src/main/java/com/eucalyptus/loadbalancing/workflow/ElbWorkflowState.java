@@ -30,7 +30,6 @@ package com.eucalyptus.loadbalancing.workflow;
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
 public enum ElbWorkflowState {
   WORKFLOW_RUNNING,
@@ -40,6 +39,7 @@ public enum ElbWorkflowState {
 
   private String reason = null;
   private int statusCode = 500;
+
   ElbWorkflowState() {
     this.reason = null;
   }
@@ -57,5 +57,8 @@ public enum ElbWorkflowState {
   public String getReason() {
     return this.reason;
   }
-  public int getStatusCode() { return this.statusCode; }
+
+  public int getStatusCode() {
+    return this.statusCode;
+  }
 }

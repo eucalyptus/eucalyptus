@@ -51,14 +51,12 @@ import com.eucalyptus.compute.common.UserIdGroupPairType
 import com.eucalyptus.ws.protocol.QueryBindingTestSupport
 import com.google.common.base.Splitter
 import edu.ucsb.eucalyptus.msgs.BaseMessage
-import groovy.transform.CompileStatic
 import org.junit.Test
 import static org.junit.Assert.*
 
 /**
  *
  */
-@CompileStatic
 class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     @Test
@@ -379,6 +377,8 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
       String actionsCopiedAndPastedFromAWSEC2Docs = '''
     AcceptReservedInstancesExchangeQuote
 
+    AcceptVpcEndpointConnections
+
     AcceptVpcPeeringConnection
 
     AllocateAddress
@@ -433,17 +433,27 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     ConfirmProductInstance
 
+    CopyFpgaImage
+
     CopyImage
 
     CopySnapshot
 
     CreateCustomerGateway
 
+    CreateDefaultSubnet
+
+    CreateDefaultVpc
+
     CreateDhcpOptions
 
     CreateEgressOnlyInternetGateway
 
+    CreateFleet
+
     CreateFlowLogs
+
+    CreateFpgaImage
 
     CreateImage
 
@@ -453,6 +463,10 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     CreateKeyPair
 
+    CreateLaunchTemplate
+
+    CreateLaunchTemplateVersion
+
     CreateNatGateway
 
     CreateNetworkAcl
@@ -460,6 +474,8 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
     CreateNetworkAclEntry
 
     CreateNetworkInterface
+
+    CreateNetworkInterfacePermission
 
     CreatePlacementGroup
 
@@ -485,6 +501,10 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     CreateVpcEndpoint
 
+    CreateVpcEndpointConnectionNotification
+
+    CreateVpcEndpointServiceConfiguration
+
     CreateVpcPeeringConnection
 
     CreateVpnConnection
@@ -499,11 +519,19 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     DeleteEgressOnlyInternetGateway
 
+    DeleteFleets
+
     DeleteFlowLogs
+
+    DeleteFpgaImage
 
     DeleteInternetGateway
 
     DeleteKeyPair
+
+    DeleteLaunchTemplate
+
+    DeleteLaunchTemplateVersions
 
     DeleteNatGateway
 
@@ -512,6 +540,8 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
     DeleteNetworkAclEntry
 
     DeleteNetworkInterface
+
+    DeleteNetworkInterfacePermission
 
     DeletePlacementGroup
 
@@ -533,7 +563,11 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     DeleteVpc
 
+    DeleteVpcEndpointConnectionNotifications
+
     DeleteVpcEndpoints
+
+    DeleteVpcEndpointServiceConfigurations
 
     DeleteVpcPeeringConnection
 
@@ -549,6 +583,8 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     DescribeAddresses
 
+    DescribeAggregateIdFormat
+
     DescribeAvailabilityZones
 
     DescribeBundleTasks
@@ -563,9 +599,21 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     DescribeEgressOnlyInternetGateways
 
+    DescribeElasticGpus
+
     DescribeExportTasks
 
+    DescribeFleetHistory
+
+    DescribeFleetInstances
+
+    DescribeFleets
+
     DescribeFlowLogs
+
+    DescribeFpgaImageAttribute
+
+    DescribeFpgaImages
 
     DescribeHostReservationOfferings
 
@@ -589,6 +637,8 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     DescribeInstanceAttribute
 
+    DescribeInstanceCreditSpecifications
+
     DescribeInstances
 
     DescribeInstanceStatus
@@ -596,6 +646,10 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
     DescribeInternetGateways
 
     DescribeKeyPairs
+
+    DescribeLaunchTemplates
+
+    DescribeLaunchTemplateVersions
 
     DescribeMovingAddresses
 
@@ -605,11 +659,15 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     DescribeNetworkInterfaceAttribute
 
+    DescribeNetworkInterfacePermissions
+
     DescribeNetworkInterfaces
 
     DescribePlacementGroups
 
     DescribePrefixLists
+
+    DescribePrincipalIdFormat
 
     DescribeRegions
 
@@ -657,6 +715,8 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     DescribeVolumes
 
+    DescribeVolumesModifications
+
     DescribeVolumeStatus
 
     DescribeVpcAttribute
@@ -665,7 +725,15 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     DescribeVpcClassicLinkDnsSupport
 
+    DescribeVpcEndpointConnectionNotifications
+
+    DescribeVpcEndpointConnections
+
     DescribeVpcEndpoints
+
+    DescribeVpcEndpointServiceConfigurations
+
+    DescribeVpcEndpointServicePermissions
 
     DescribeVpcEndpointServices
 
@@ -717,6 +785,8 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     GetHostReservationPurchasePreview
 
+    GetLaunchTemplateData
+
     GetPasswordData
 
     GetReservedInstancesExchangeQuote
@@ -731,6 +801,10 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     ImportVolume
 
+    ModifyFleet
+
+    ModifyFpgaImageAttribute
+
     ModifyHosts
 
     ModifyIdentityIdFormat
@@ -741,7 +815,11 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     ModifyInstanceAttribute
 
+    ModifyInstanceCreditSpecification
+
     ModifyInstancePlacement
+
+    ModifyLaunchTemplate
 
     ModifyNetworkInterfaceAttribute
 
@@ -753,13 +831,23 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
 
     ModifySubnetAttribute
 
+    ModifyVolume
+
     ModifyVolumeAttribute
 
     ModifyVpcAttribute
 
     ModifyVpcEndpoint
 
+    ModifyVpcEndpointConnectionNotification
+
+    ModifyVpcEndpointServiceConfiguration
+
+    ModifyVpcEndpointServicePermissions
+
     ModifyVpcPeeringConnectionOptions
+
+    ModifyVpcTenancy
 
     MonitorInstances
 
@@ -774,6 +862,8 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
     RebootInstances
 
     RegisterImage
+
+    RejectVpcEndpointConnections
 
     RejectVpcPeeringConnection
 
@@ -796,6 +886,8 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
     RequestSpotFleet
 
     RequestSpotInstances
+
+    ResetFpgaImageAttribute
 
     ResetImageAttribute
 
@@ -826,6 +918,10 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
     UnassignPrivateIpAddresses
 
     UnmonitorInstances
+
+    UpdateSecurityGroupRuleDescriptionsEgress
+
+    UpdateSecurityGroupRuleDescriptionsIngress
     '''
 
       List<String> whitelist = [

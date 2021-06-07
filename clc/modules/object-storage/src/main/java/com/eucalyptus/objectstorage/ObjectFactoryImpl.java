@@ -29,6 +29,11 @@
 
 package com.eucalyptus.objectstorage;
 
+import static java.lang.String.valueOf;
+import static java.lang.System.getProperty;
+import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.primitives.Ints.tryParse;
+
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Date;
@@ -69,7 +74,6 @@ import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType;
 import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadType;
 import com.eucalyptus.objectstorage.msgs.CopyObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.CopyObjectType;
-import com.eucalyptus.objectstorage.msgs.DeleteObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteObjectType;
 import com.eucalyptus.objectstorage.msgs.GetObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.GetObjectType;
@@ -78,6 +82,8 @@ import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.msgs.PutObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.PutObjectType;
+import com.eucalyptus.objectstorage.msgs.UploadPartCopyResponseType;
+import com.eucalyptus.objectstorage.msgs.UploadPartCopyType;
 import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
 import com.eucalyptus.objectstorage.msgs.UploadPartType;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient;
@@ -90,6 +96,7 @@ import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -100,11 +107,34 @@ public class ObjectFactoryImpl implements ObjectFactory {
    * The thread pool to handle the PUT operations to the backend. Use another thread to allow status updates on the object entity in the db to renew
    * the lease to prevent OSG object GC from occuring while the object is still uploading.
    */
-  private static final int CORE_POOL_SIZE = 10;
-  private static final int MAX_POOL_SIZE = 100;
-  private static final int MAX_QUEUE_SIZE = 2 * MAX_POOL_SIZE;
-  private static final ExecutorService PUT_OBJECT_SERVICE = new ThreadPoolExecutor(CORE_POOL_SIZE, MAX_POOL_SIZE, 60, TimeUnit.SECONDS,
-      new LinkedBlockingQueue<Runnable>(MAX_QUEUE_SIZE), Threads.threadFactory( "osg-object-factory-pool-%d" ));
+  private static final boolean DEFAULT_CORE_THREADS_TIMEOUT = true;
+  private static final int DEFAULT_CORE_POOL_SIZE = 100;
+  private static final int DEFAULT_MAX_POOL_SIZE = 100;
+  private static final int DEFAULT_MAX_QUEUE_SIZE = 2 * DEFAULT_MAX_POOL_SIZE;
+
+  private static final String PROP_PREFIX = "com.eucalyptus.objectstorage.putService";
+  private static final boolean CORE_THREADS_TIMEOUT =
+      Boolean.valueOf( getProperty( PROP_PREFIX + "CoreThreadsTimeout", valueOf( DEFAULT_CORE_THREADS_TIMEOUT ) ) );
+  private static final int CORE_POOL_SIZE =
+      firstNonNull( tryParse( getProperty( PROP_PREFIX + "CoreThreads", valueOf( DEFAULT_CORE_POOL_SIZE ) ) ), DEFAULT_CORE_POOL_SIZE);
+  private static final int MAX_POOL_SIZE =
+      firstNonNull( tryParse( getProperty( PROP_PREFIX + "MaxThreads", valueOf( DEFAULT_MAX_POOL_SIZE ) ) ), DEFAULT_MAX_POOL_SIZE);
+  private static final int MAX_QUEUE_SIZE =
+      firstNonNull( tryParse( getProperty( PROP_PREFIX + "QueueSize", valueOf( DEFAULT_MAX_QUEUE_SIZE ) ) ), DEFAULT_MAX_QUEUE_SIZE);
+  private static final ExecutorService PUT_OBJECT_SERVICE;
+
+  static {
+    final ThreadPoolExecutor executor = new ThreadPoolExecutor(
+        CORE_POOL_SIZE,
+        MAX_POOL_SIZE,
+        60,
+        TimeUnit.SECONDS,
+        new LinkedBlockingQueue<>(MAX_QUEUE_SIZE),
+        Threads.threadFactory( "osg-object-factory-pool-%d" )
+    );
+    executor.allowCoreThreadTimeOut( CORE_THREADS_TIMEOUT );
+    PUT_OBJECT_SERVICE = executor;
+  }
 
   public static long getPutTimeoutInMillis() {
     return ConfigurationCache.getConfiguration(ObjectStorageGlobalConfiguration.class).getFailed_put_timeout_hrs() * 60l * 60l * 1000l;
@@ -150,7 +180,6 @@ public class ObjectFactoryImpl implements ObjectFactory {
 
         @Override
         public CopyObjectResponseType call() throws Exception {
-          LOG.debug("calling copyObject");
           CopyObjectResponseType response;
           try {
             response = provider.copyObject(request);
@@ -162,7 +191,6 @@ public class ObjectFactoryImpl implements ObjectFactory {
               throw ex;
             }
           }
-          LOG.debug("Done with copyObject. " + response.getStatusMessage());
           return response;
         }
       };
@@ -235,7 +263,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
     pot.setMetaData(gort.getMetaData());
     pot.setUser(requestUser);
     pot.setContentLength(gort.getSize().toString());
-    if (metadataDirective != null && "REPLACE".equals(metadataDirective)) {
+    if ("REPLACE".equals(metadataDirective)) {
       pot.setMetaData(request.getMetaData());
     } else if (metadataDirective == null || "".equals(metadataDirective) || "COPY".equals(metadataDirective)) {
       pot.setMetaData(gort.getMetaData());
@@ -255,7 +283,6 @@ public class ObjectFactoryImpl implements ObjectFactory {
     response.setVersionId(port.getVersionId());
     response.setKey(request.getDestinationObject());
     response.setBucket(request.getDestinationBucket());
-    response.setStatusMessage(port.getStatusMessage());
     response.setEtag(port.getEtag());
     response.setMetaData(port.getMetaData());
     // Last modified date in copy response is in ISO8601 format as per S3 API
@@ -293,15 +320,13 @@ public class ObjectFactoryImpl implements ObjectFactory {
       putRequest.setKey(uploadingObject.getObjectUuid());
       putRequest.setUser(requestUser);
       putRequest.setContentLength(entity.getSize().toString());
-      putRequest.setMetaData(userMetadata);
+      putRequest.setMetaData(userMetadata==null ? null : Lists.newArrayList(userMetadata));
 
       Callable<PutObjectResponseType> putCallable = new Callable<PutObjectResponseType>() {
 
         @Override
         public PutObjectResponseType call() throws Exception {
-          LOG.debug("Putting data");
           PutObjectResponseType response = provider.putObject(putRequest, content);
-          LOG.debug("Done with put. Response status: " + response.getStatusMessage());
           return response;
         }
       };
@@ -510,7 +535,6 @@ public class ObjectFactoryImpl implements ObjectFactory {
 
     // Issue delete to backend
     DeleteObjectType deleteRequest;
-    DeleteObjectResponseType deleteResponse;
     LOG.trace("Deleting object " + entity.getObjectUuid() + ".");
     deleteRequest = new DeleteObjectType();
 
@@ -530,12 +554,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
       deleteRequest.setKey(entity.getObjectUuid());
 
       try {
-        deleteResponse = provider.deleteObject(deleteRequest);
-        if (!(HttpResponseStatus.NO_CONTENT.equals(deleteResponse.getStatus()) || HttpResponseStatus.OK.equals(deleteResponse.getStatus()))) {
-          LOG.trace("Backend did not confirm deletion of " + deleteRequest.getBucket() + "/" + deleteRequest.getKey() + " via request: "
-              + deleteRequest.toString());
-          throw new Exception("Object could not be confirmed as deleted.");
-        }
+        provider.deleteObject(deleteRequest);
       } catch (S3Exception e) {
         if (HttpResponseStatus.NOT_FOUND.equals(e.getStatus())) {
           // Ok, fall through.
@@ -559,7 +578,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
   /**
    * Create a multipart Upload (get an Id from the backend and initialize the metadata. Returns a persisted uploadId record as an ObjectEntity with
    * the uploadId in state 'mpu-pending'
-   * 
+   *
    * @param provider
    * @param upload
    * @param requestUser
@@ -591,11 +610,9 @@ public class ObjectFactoryImpl implements ObjectFactory {
       initRequest.setStorageClass(upload.getStorageClass());
       initRequest.setAccessControlList(upload.getAccessControlPolicy().getAccessControlList());
 
-      LOG.trace("Initiating MPU on backend");
       InitiateMultipartUploadResponseType response = provider.initiateMultipartUpload(initRequest);
       upload.setObjectModifiedTimestamp(response.getLastModified());
       upload.setUploadId(response.getUploadId());
-      LOG.trace("Done with MPU init on backend. " + response.getStatusMessage());
     } catch (Exception e) {
       LOG.error("InitiateMPU failure to backend for bucketuuid / objectuuid : " + upload.getBucket().getBucketUuid() + "/" + upload.getObjectUuid(),
           e);
@@ -622,7 +639,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
 
   /**
    * Create the named object part in metadata and on the backend.
-   * 
+   *
    * @return the ObjectEntity object representing the successfully created object
    */
   @Override
@@ -656,16 +673,14 @@ public class ObjectFactoryImpl implements ObjectFactory {
       putRequest.setKey(mpuEntity.getObjectUuid());
       putRequest.setUser(requestUser);
       putRequest.setContentLength(entity.getSize().toString());
-      putRequest.setPartNumber(String.valueOf(entity.getPartNumber()));
+      putRequest.setPartNumber( valueOf(entity.getPartNumber()));
       putRequest.setUploadId(entity.getUploadId());
 
       Callable<UploadPartResponseType> putCallable = new Callable<UploadPartResponseType>() {
 
         @Override
         public UploadPartResponseType call() throws Exception {
-          LOG.trace("Putting data");
           UploadPartResponseType response = provider.uploadPart(putRequest, content);
-          LOG.trace("Done with put. " + response.getStatusMessage());
           return response;
         }
       };
@@ -721,8 +736,84 @@ public class ObjectFactoryImpl implements ObjectFactory {
   }
 
   /**
+   * Create the named object part in metadata and on the backend.
+   *
+   * @return the PartEntity object representing the successfully created part
+   */
+  @Override
+  public PartEntity copyObjectPart(ObjectStorageProviderClient provider, ObjectEntity mpuEntity,
+      PartEntity entity, UploadPartCopyType request, User requestUser) throws S3Exception {
+      // Initialize metadata for the object
+      if (BucketState.extant.equals(entity.getBucket().getState())) {
+        // Initialize the object metadata.
+        try {
+          entity = MpuPartMetadataManagers.getInstance().initiatePartCreation(entity);
+        } catch (Exception e) {
+          // Metadata failure
+          LOG.error("Error initializing metadata for object creation: " + entity.getResourceFullName());
+          InternalErrorException ex = new InternalErrorException(entity.getResourceFullName());
+          ex.initCause(e);
+          throw ex;
+        }
+      } else {
+        throw new NoSuchBucketException(entity.getBucket().getBucketName());
+      }
+
+      final Date lastModified;
+      final String etag;
+      UploadPartCopyResponseType response;
+
+      try {
+        final PartEntity uploadingObject = entity;
+        request.setBucket(uploadingObject.getBucket().getBucketUuid());
+        request.setKey(mpuEntity.getObjectUuid());
+        request.setUser(requestUser);
+        request.setPartNumber(valueOf(entity.getPartNumber()));
+        request.setUploadId(entity.getUploadId());
+
+        Callable<UploadPartCopyResponseType> putCallable = () -> provider.uploadPartCopy(request);
+
+        // Send the data
+        final FutureTask<UploadPartCopyResponseType> putTask = new FutureTask<>(putCallable);
+        PUT_OBJECT_SERVICE.execute(putTask);
+        final long failTime = System.currentTimeMillis() + ObjectStorageProperties.OBJECT_CREATION_EXPIRATION_INTERVAL_SEC;
+        final long checkIntervalSec = ObjectStorageProperties.OBJECT_CREATION_EXPIRATION_INTERVAL_SEC + 10;
+        final AtomicReference<PartEntity> entityRef = new AtomicReference<>(uploadingObject);
+        Callable updateTimeout = () -> entityRef.get();
+
+        response = waitForCompletion(putTask, uploadingObject.getPartUuid(), updateTimeout, failTime, checkIntervalSec);
+        entity = entityRef.get(); // Get the latest if it was updated
+        lastModified = new Date();
+        etag = response.getEtag();
+
+      } catch (Exception e) {
+        LOG.error("Data PUT failure to backend for bucketuuid / objectuuid : " + entity.getBucket().getBucketUuid() + "/" + entity.getPartUuid(), e);
+
+        // Remove metadata and return failure
+        try {
+          MpuPartMetadataManagers.getInstance().transitionPartToState(entity, ObjectState.deleting);
+        } catch (Exception ex) {
+          LOG.error("Failed to mark failed object entity in deleting state on failure rollback. Will be cleaned later.", e);
+        }
+
+        // ObjectMetadataManagers.getInstance().delete(objectEntity);
+        throw new InternalErrorException(entity.getObjectKey());
+      }
+
+      try {
+        // Update metadata to "extant". Retry as necessary
+        return MpuPartMetadataManagers.getInstance().finalizeCreation(entity, lastModified, etag);
+      } catch (Exception e) {
+
+        // Return failure to user, let normal cleanup handle this case since we can't update the metadata
+        LOG.error("Failed to update object metadata for finalization. Failing PUT operation", e);
+        throw new InternalErrorException(entity.getResourceFullName());
+      }
+  }
+
+  /**
    * Commits a Multipart Upload into an extant object entity.
-   * 
+   *
    * @param provider
    * @param mpuEntity the ObjectEntity that is the upload parent record, as supplied by the ObjectMetadataManager.lookupUpload()
    * @param requestUser
@@ -749,7 +840,6 @@ public class ObjectFactoryImpl implements ObjectFactory {
         @Override
         public CompleteMultipartUploadResponseType call() throws Exception {
           CompleteMultipartUploadResponseType response = provider.completeMultipartUpload(commitRequest);
-          LOG.debug("Done with multipart upload. " + response.getStatusMessage());
           return response;
         }
       };
@@ -784,7 +874,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
 
   /**
    * Flushes the mulitpart upload and all artifacts that are not committed.
-   * 
+   *
    * @param entity ObjectEntity record for object to delete
    */
   @Override

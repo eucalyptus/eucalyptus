@@ -56,7 +56,7 @@ import com.google.common.collect.Maps;
 
 /**
  * Manages the set of installed provider clients, returning the currently selected item
- * 
+ *
  * @author zhill
  *
  */
@@ -69,7 +69,7 @@ public class ObjectStorageProviders extends ServiceJarDiscovery {
 
   /**
    * The annotation for indicating that a given class is an ObjectStorageProviderClient and to specify the name to use for configuring it.
-   * 
+   *
    * @author zhill
    *
    */
@@ -82,8 +82,9 @@ public class ObjectStorageProviders extends ServiceJarDiscovery {
   /*
    * The map of available client provider classes.
    */
-  private static final Map<String, Class> clients = Maps.newHashMap();
+  private static final Map<String, Class<? extends ObjectStorageProviderClient>> clients = Maps.newHashMap();
 
+  @SuppressWarnings( "unchecked" )
   @Override
   public boolean processClass(Class candidate) throws Exception {
     if (Ats.from(candidate).has(ObjectStorageProviderClientProperty.class) && !Modifier.isAbstract(candidate.getModifiers())
@@ -122,7 +123,7 @@ public class ObjectStorageProviders extends ServiceJarDiscovery {
 
   /**
    * Request the currently configured client
-   * 
+   *
    * @return
    */
   public static ObjectStorageProviderClient getInstance() throws NoSuchElementException {
@@ -149,7 +150,7 @@ public class ObjectStorageProviders extends ServiceJarDiscovery {
 
   /**
    * Request a specific instance based on name
-   * 
+   *
    * @param propertyBackend
    * @return
    * @throws InstantiationException

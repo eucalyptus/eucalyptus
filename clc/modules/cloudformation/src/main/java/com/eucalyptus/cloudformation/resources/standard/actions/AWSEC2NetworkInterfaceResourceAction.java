@@ -52,6 +52,7 @@ import com.eucalyptus.compute.common.AssignPrivateIpAddressesSetItemRequestType;
 import com.eucalyptus.compute.common.AssignPrivateIpAddressesSetRequestType;
 import com.eucalyptus.compute.common.AssignPrivateIpAddressesType;
 import com.eucalyptus.compute.common.AttributeBooleanValueType;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.CreateNetworkInterfaceResponseType;
 import com.eucalyptus.compute.common.CreateNetworkInterfaceType;
@@ -69,7 +70,6 @@ import com.eucalyptus.compute.common.DescribeSubnetsResponseType;
 import com.eucalyptus.compute.common.DescribeSubnetsType;
 import com.eucalyptus.compute.common.DescribeTagsResponseType;
 import com.eucalyptus.compute.common.DescribeTagsType;
-import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.ModifyNetworkInterfaceAttributeResponseType;
 import com.eucalyptus.compute.common.ModifyNetworkInterfaceAttributeType;
 import com.eucalyptus.compute.common.NetworkInterfacePrivateIpAddressesSetItemType;
@@ -82,6 +82,7 @@ import com.eucalyptus.compute.common.SubnetIdSetItemType;
 import com.eucalyptus.compute.common.SubnetIdSetType;
 import com.eucalyptus.compute.common.TagInfo;
 import com.eucalyptus.compute.common.UnassignPrivateIpAddressesType;
+import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -99,6 +100,7 @@ import java.util.Set;
 /**
  * Created by ethomas on 2/3/14.
  */
+@ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
 public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceAction {
 
   private AWSEC2NetworkInterfaceProperties properties = new AWSEC2NetworkInterfaceProperties();
@@ -221,7 +223,7 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
         // Note: this is done separately, because an exception is thrown if not exactly one item is primary and we won't persist the network interface id,
         // but it will have been created
         DescribeNetworkInterfacesType describeNetworkInterfacesType = MessageHelper.createMessage(DescribeNetworkInterfacesType.class, action.info.getEffectiveUserId());
-        describeNetworkInterfacesType.getFilterSet( ).add( Filter.filter( "network-interface-id", action.info.getPhysicalResourceId( ) ) );
+        describeNetworkInterfacesType.getFilterSet( ).add( CloudFilters.filter( "network-interface-id", action.info.getPhysicalResourceId( ) ) );
         DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.sendSync(configuration, describeNetworkInterfacesType);
         if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet() == null ||
             describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem() == null ||
@@ -258,7 +260,7 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
         AWSEC2NetworkInterfaceResourceAction action = (AWSEC2NetworkInterfaceResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         DescribeNetworkInterfacesType describeNetworkInterfacesType = MessageHelper.createMessage(DescribeNetworkInterfacesType.class, action.info.getEffectiveUserId());
-        describeNetworkInterfacesType.getFilterSet( ).add( Filter.filter( "network-interface-id", action.info.getPhysicalResourceId( ) ) );
+        describeNetworkInterfacesType.getFilterSet( ).add( CloudFilters.filter( "network-interface-id", action.info.getPhysicalResourceId( ) ) );
         DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.sendSync( configuration, describeNetworkInterfacesType );
         if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem().size() ==0) {
           throw new RetryAfterConditionCheckFailedException("Network interface " + action.info.getPhysicalResourceId() + " not yet available");
@@ -300,12 +302,6 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -339,16 +335,10 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
       }
     };
 
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
-    }
-
     private static boolean checkDeleted(AWSEC2NetworkInterfaceResourceAction action, ServiceConfiguration configuration) throws Exception {
       // check if network interface still exists (return otherwise)
       DescribeNetworkInterfacesType describeNetworkInterfacesType = MessageHelper.createMessage(DescribeNetworkInterfacesType.class, action.info.getEffectiveUserId());
-      describeNetworkInterfacesType.getFilterSet( ).add( Filter.filter( "network-interface-id", action.info.getPhysicalResourceId( ) ) );
+      describeNetworkInterfacesType.getFilterSet( ).add( CloudFilters.filter( "network-interface-id", action.info.getPhysicalResourceId( ) ) );
       DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.sendSync(configuration, describeNetworkInterfacesType);
       if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet() == null ||
           describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem() == null ||
@@ -410,7 +400,7 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
 
           Set<String> existingSecondaryAddresses = Sets.newLinkedHashSet();
           DescribeNetworkInterfacesType describeNetworkInterfacesType = MessageHelper.createMessage(DescribeNetworkInterfacesType.class, newAction.info.getEffectiveUserId());
-          describeNetworkInterfacesType.getFilterSet( ).add( Filter.filter( "network-interface-id", newAction.info.getPhysicalResourceId( ) ) );
+          describeNetworkInterfacesType.getFilterSet( ).add( CloudFilters.filter( "network-interface-id", newAction.info.getPhysicalResourceId( ) ) );
           DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.sendSync(configuration, describeNetworkInterfacesType);
           if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet() == null ||
           describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem() == null ||
@@ -461,7 +451,7 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
         // Note: this is done separately, because an exception is thrown if not exactly one item is primary and we won't persist the network interface id,
         // but it will have been created
         DescribeNetworkInterfacesType describeNetworkInterfacesType = MessageHelper.createMessage(DescribeNetworkInterfacesType.class, newAction.info.getEffectiveUserId());
-        describeNetworkInterfacesType.getFilterSet( ).add( Filter.filter("network-interface-id", newAction.info.getPhysicalResourceId()) );
+        describeNetworkInterfacesType.getFilterSet( ).add( CloudFilters.filter("network-interface-id", newAction.info.getPhysicalResourceId()) );
         DescribeNetworkInterfacesResponseType describeNetworkInterfacesResponseType = AsyncRequests.sendSync(configuration, describeNetworkInterfacesType);
         if (describeNetworkInterfacesResponseType.getNetworkInterfaceSet() == null ||
           describeNetworkInterfacesResponseType.getNetworkInterfaceSet().getItem() == null ||
@@ -500,7 +490,7 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
         AWSEC2NetworkInterfaceResourceAction newAction = (AWSEC2NetworkInterfaceResourceAction) newResourceAction;
         ServiceConfiguration configuration = Topology.lookup(Compute.class);
         DescribeTagsType describeTagsType = MessageHelper.createMessage(DescribeTagsType.class, newAction.info.getEffectiveUserId());
-        describeTagsType.setFilterSet(Lists.newArrayList(Filter.filter("resource-id", newAction.info.getPhysicalResourceId())));
+        describeTagsType.setFilterSet(Lists.newArrayList( CloudFilters.filter("resource-id", newAction.info.getPhysicalResourceId())));
         DescribeTagsResponseType describeTagsResponseType = AsyncRequests.sendSync(configuration, describeTagsType);
         Set<EC2Tag> existingTags = Sets.newLinkedHashSet();
         if (describeTagsResponseType != null && describeTagsResponseType.getTagSet() != null) {
@@ -548,12 +538,6 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
         }
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -567,8 +551,8 @@ public class AWSEC2NetworkInterfaceResourceAction extends StepBasedResourceActio
     }
     String vpcId = describeSubnetsResponseType.getSubnetSet().getItem().get(0).getVpcId();
     DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, info.getEffectiveUserId());
-    describeSecurityGroupsType.getFilterSet().add(Filter.filter("vpc-id", vpcId));
-    describeSecurityGroupsType.getFilterSet().add(Filter.filter("group-name", "default"));
+    describeSecurityGroupsType.getFilterSet().add( CloudFilters.filter("vpc-id", vpcId));
+    describeSecurityGroupsType.getFilterSet().add( CloudFilters.filter("group-name", "default"));
     DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.sendSync(configuration, describeSecurityGroupsType);
     if (describeSecurityGroupsResponseType == null || describeSecurityGroupsResponseType.getSecurityGroupInfo() == null ||
       describeSecurityGroupsResponseType.getSecurityGroupInfo().size() != 1) {

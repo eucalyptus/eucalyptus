@@ -29,12 +29,13 @@
 
 package com.eucalyptus.cloudformation.resources;
 
-import com.amazonaws.services.simpleworkflow.flow.core.Promise;
+import java.util.List;
 import com.eucalyptus.cloudformation.entity.VersionedStackEntity;
-import com.eucalyptus.cloudformation.workflow.StackActivityClient;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateTypeAndDirection;
-import com.netflix.glisten.WorkflowOperations;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
 
 public abstract class ResourceAction {
   public abstract ResourceProperties getResourceProperties();
@@ -67,15 +68,8 @@ public abstract class ResourceAction {
     return getDefaultPhysicalResourceId(Integer.MAX_VALUE);
   }
 
-  public abstract Promise<String> getCreatePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int createdResourceVersion);
-
-  public abstract Promise<String> getDeletePromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
-
-  public abstract Promise<String> getUpdateCleanupPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
-  public abstract Promise<String> getUpdateRollbackCleanupPromise(WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int rolledBackResourceVersion);
-
   public void refreshAttributes() throws Exception {
-    return; // Most resources will not support this action
+    // Most resources will not support this action
   }
   public abstract UpdateType getUpdateType(ResourceAction resourceAction, boolean stackTagsChanged) throws Exception;
 
@@ -83,7 +77,39 @@ public abstract class ResourceAction {
     return false;
   }
 
-  public abstract Promise<String> getUpdatePromise(UpdateTypeAndDirection updateTypeAndDirection, WorkflowOperations<StackActivityClient> workflowOperations, String resourceId, String stackId, String accountId, String effectiveUserId, int updatedResourceVersion);
+  public abstract List<String> getCreateStepIds( );
 
+  public abstract List<String> getDeleteStepIds( );
+
+  public abstract List<String> getUpdateStepIds( final UpdateTypeAndDirection updateTypeAndDirection );
+
+  protected final <RP> UpdateType defaultUpdateType(
+      final boolean stackTagsChanged,
+      final RP properties,
+      final RP otherProperties,
+      final Set<Function<RP,Object>> propRequiresReplace,
+      final Set<Function<RP,Object>> propRequiresSomeInterruption,
+      final Set<Function<RP,Object>> propRequiresNoInterruption
+      ) {
+    UpdateType updateType = getResourceInfo().supportsTags() && stackTagsChanged ?
+        UpdateType.NO_INTERRUPTION :
+        UpdateType.NONE;
+    for (final Function<RP,Object> propertyGet : propRequiresReplace) {
+      if (!Objects.equals(propertyGet.apply(properties), propertyGet.apply(otherProperties))) {
+        updateType = UpdateType.max(updateType, UpdateType.NEEDS_REPLACEMENT);
+      }
+    }
+    for (final Function<RP,Object> propertyGet : propRequiresSomeInterruption) {
+      if (!Objects.equals(propertyGet.apply(properties), propertyGet.apply(otherProperties))) {
+        updateType = UpdateType.max(updateType, UpdateType.SOME_INTERRUPTION);
+      }
+    }
+    for (final Function<RP,Object> propertyGet : propRequiresNoInterruption) {
+      if (!Objects.equals(propertyGet.apply(properties), propertyGet.apply(otherProperties))) {
+        updateType = UpdateType.max(updateType, UpdateType.NO_INTERRUPTION);
+      }
+    }
+    return updateType;
+  }
 }
 

@@ -28,10 +28,10 @@
  ************************************************************************/
 package com.eucalyptus.cluster.service.scheduler;
 
-import com.eucalyptus.cluster.common.msgs.VmTypeInfo;
 import com.eucalyptus.cluster.service.node.ClusterNode;
-import javaslang.collection.Stream;
-import javaslang.control.Option;
+import com.eucalyptus.cluster.service.vm.ClusterVmType;
+import io.vavr.collection.Stream;
+import io.vavr.control.Option;
 
 /**
  *
@@ -46,8 +46,8 @@ public class GreedyScheduler implements Scheduler {
   @Override
   public Option<ClusterNode> schedule(
       final Stream<ClusterNode> nodes,
-      final VmTypeInfo vmTypeInfo
+      final ClusterVmType vmTypeResources
   ) {
-    return nodes.find( Scheduler.reserve( vmTypeInfo ) );
+    return nodes.find( Scheduler.reserve( vmTypeResources ) );
   }
 }

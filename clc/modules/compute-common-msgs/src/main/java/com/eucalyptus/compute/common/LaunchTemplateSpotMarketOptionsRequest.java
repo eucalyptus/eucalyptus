@@ -1,0 +1,60 @@
+/*
+ * Copyright 2018 AppScale Systems, Inc
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+package com.eucalyptus.compute.common;
+
+import java.util.Date;
+import edu.ucsb.eucalyptus.msgs.EucalyptusData;
+
+
+public class LaunchTemplateSpotMarketOptionsRequest extends EucalyptusData {
+
+  private Integer blockDurationMinutes;
+  private String instanceInterruptionBehavior;
+  private String maxPrice;
+  private String spotInstanceType;
+  private Date validUntil;
+
+  public Integer getBlockDurationMinutes( ) {
+    return blockDurationMinutes;
+  }
+
+  public void setBlockDurationMinutes( final Integer blockDurationMinutes ) {
+    this.blockDurationMinutes = blockDurationMinutes;
+  }
+
+  public String getInstanceInterruptionBehavior( ) {
+    return instanceInterruptionBehavior;
+  }
+
+  public void setInstanceInterruptionBehavior( final String instanceInterruptionBehavior ) {
+    this.instanceInterruptionBehavior = instanceInterruptionBehavior;
+  }
+
+  public String getMaxPrice( ) {
+    return maxPrice;
+  }
+
+  public void setMaxPrice( final String maxPrice ) {
+    this.maxPrice = maxPrice;
+  }
+
+  public String getSpotInstanceType( ) {
+    return spotInstanceType;
+  }
+
+  public void setSpotInstanceType( final String spotInstanceType ) {
+    this.spotInstanceType = spotInstanceType;
+  }
+
+  public Date getValidUntil( ) {
+    return validUntil;
+  }
+
+  public void setValidUntil( final Date validUntil ) {
+    this.validUntil = validUntil;
+  }
+
+}

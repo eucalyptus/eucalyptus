@@ -40,21 +40,22 @@ import com.eucalyptus.loadbalancing.common.LoadBalancing;
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
 @ComponentPart(LoadBalancing.class)
 public class DisableAvailabilityZoneWorkflowImpl
     implements DisableAvailabilityZoneWorkflow {
-  private static Logger    LOG     = Logger.getLogger(  DisableAvailabilityZoneWorkflowImpl.class );
-  
-  final LoadBalancingActivitiesClient client = 
-      new LoadBalancingActivitiesClientImpl();
-  private ElbWorkflowState state = 
+  private static Logger LOG = Logger.getLogger(DisableAvailabilityZoneWorkflowImpl.class);
+
+  final LoadBalancingActivitiesClient client =
+      new LoadBalancingActivitiesClientImpl(null, LoadBalancingJsonDataConverter.getDefault(),
+          null);
+  private ElbWorkflowState state =
       ElbWorkflowState.WORKFLOW_RUNNING;
   TryCatchFinally task = null;
 
   private Promise<List<String>> updatedServos = null;
   private Promise<List<String>> updatedZones = null;
+
   @Override
   public void disableAvailabilityZone(final String accountId, final String loadbalancer,
       final List<String> availabilityZones) {
@@ -62,43 +63,48 @@ public class DisableAvailabilityZoneWorkflowImpl
     task = new TryCatchFinally() {
       @Override
       protected void doTry() throws Throwable {
-        updatedServos = client.disableAvailabilityZonesPersistRetiredServoInstances(accountId, 
+        updatedServos = client.disableAvailabilityZonesPersistRetiredServoInstances(accountId,
             loadbalancer, availabilityZones);
-        updatedZones = client.disableAvailabilityZonesUpdateAutoScalingGroup(accountId, 
+        updatedZones = client.disableAvailabilityZonesUpdateAutoScalingGroup(accountId,
             loadbalancer, availabilityZones);
-        Promise<Void> zoneUpdateActivity = client.disableAvailabilityZonesPersistUpdatedZones(Promise.asPromise(accountId), 
-            Promise.asPromise(loadbalancer), updatedZones);
-        Promise<Void> backendUpdateActivity = client.disableAvailabilityZonesPersistBackendInstanceState(Promise.asPromise(accountId), 
-            Promise.asPromise(loadbalancer), updatedZones);
+        Promise<Void> zoneUpdateActivity =
+            client.disableAvailabilityZonesPersistUpdatedZones(Promise.asPromise(accountId),
+                Promise.asPromise(loadbalancer), updatedZones);
+        Promise<Void> backendUpdateActivity =
+            client.disableAvailabilityZonesPersistBackendInstanceState(Promise.asPromise(accountId),
+                Promise.asPromise(loadbalancer), updatedZones);
       }
-      
+
       @Override
       protected void doCatch(Throwable e) throws Throwable {
-        if ( e instanceof CancellationException) {
+        if (e instanceof CancellationException) {
           LOG.warn("Workflow for disabling ELB availability zone is cancelled");
           state = ElbWorkflowState.WORKFLOW_CANCELLED;
           return;
         }
-        
-        if(updatedServos != null && updatedServos.isReady()) {
-          client.disableAvailabilityZonesPersistRetiredServoInstancesRollback(Promise.asPromise(accountId), 
+
+        if (updatedServos != null && updatedServos.isReady()) {
+          client.disableAvailabilityZonesPersistRetiredServoInstancesRollback(
+              Promise.asPromise(accountId),
               Promise.asPromise(loadbalancer), updatedServos);
         }
-        
-        if(updatedZones != null && updatedZones.isReady()) {
-          client.disableAvailabilityZonesUpdateAutoScalingGroupRollback(Promise.asPromise(accountId), 
+
+        if (updatedZones != null && updatedZones.isReady()) {
+          client.disableAvailabilityZonesUpdateAutoScalingGroupRollback(
+              Promise.asPromise(accountId),
               Promise.asPromise(loadbalancer), updatedZones);
         }
-        
+
         state = ElbWorkflowState.WORKFLOW_FAILED;
         LOG.error("Failed to disable ELB availability zone. Rollback complete.", e);
       }
 
       @Override
       protected void doFinally() throws Throwable {
-        if (state == ElbWorkflowState.WORKFLOW_RUNNING)
+        if (state == ElbWorkflowState.WORKFLOW_RUNNING) {
           state = ElbWorkflowState.WORKFLOW_SUCCESS;
-      }   
+        }
+      }
     };
   }
 
@@ -106,5 +112,4 @@ public class DisableAvailabilityZoneWorkflowImpl
   public ElbWorkflowState getState() {
     return state;
   }
-
 }

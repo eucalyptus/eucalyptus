@@ -38,6 +38,7 @@ public class AutoScalingGroupCoreView extends AutoScalingGroupMinimumView {
 
   private final ImmutableList<String> availabilityZones;
   private final ImmutableList<String> loadBalancerNames;
+  private final ImmutableList<String> targetGroupArns;
   private final ImmutableList<GroupScalingCause> scalingCauses;
   private final ImmutableList<SuspendedProcess> suspendedProcesses;
 
@@ -45,6 +46,7 @@ public class AutoScalingGroupCoreView extends AutoScalingGroupMinimumView {
     super( group );
     this.availabilityZones = ImmutableList.copyOf( group.getAvailabilityZones() );
     this.loadBalancerNames = ImmutableList.copyOf( group.getLoadBalancerNames() );
+    this.targetGroupArns = ImmutableList.copyOf( group.getTargetGroupArns() );
     this.scalingCauses = ImmutableList.copyOf( group.getScalingCauses() );
     this.suspendedProcesses = ImmutableList.copyOf( group.getSuspendedProcesses() );
   }
@@ -63,5 +65,9 @@ public class AutoScalingGroupCoreView extends AutoScalingGroupMinimumView {
 
   public List<String> getLoadBalancerNames() {
     return loadBalancerNames;
+  }
+
+  public ImmutableList<String> getTargetGroupArns() {
+    return targetGroupArns;
   }
 }

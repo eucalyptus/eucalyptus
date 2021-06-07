@@ -50,13 +50,12 @@ import com.google.common.collect.Lists;
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
 public class VmWorkflowMarshaller {
   private static final String LOADBALANCING_BINDING_NAME =
       "elasticloadbalancing_amazonaws_com_doc_2012_06_01";
-  private static Logger    LOG     =
-      Logger.getLogger(  VmWorkflowMarshaller.class );
+  private static Logger LOG =
+      Logger.getLogger(VmWorkflowMarshaller.class);
 
   public static String marshalPolicy(final PolicyDescription policy) {
     final LoadBalancerServoDescriptions descriptions = new LoadBalancerServoDescriptions();
@@ -76,9 +75,9 @@ public class VmWorkflowMarshaller {
     final Binding binding =
         BindingManager.getBinding(LOADBALANCING_BINDING_NAME);
     final ByteArrayOutputStream stream = new ByteArrayOutputStream();
-    try{
+    try {
       binding.toStream(stream, desc);
-    }catch(final BindingException ex) {
+    } catch (final BindingException ex) {
       LOG.error("Marshalling failed", ex);
       throw Exceptions.toUndeclared(ex);
     }
@@ -86,23 +85,23 @@ public class VmWorkflowMarshaller {
     return outString;
   }
 
-  public static Map<String,String> unmarshalInstances(final String encodedStatus) {
+  public static Map<String, String> unmarshalInstances(final String encodedStatus) {
     return decodeJsonStringMap(encodedStatus);
   }
 
   // only fill metric name and value;
   // dimension and unit is filled by caller
   public static MetricData unmarshalMetrics(final String metrics) {
-    final Map<String,String> metricMap = decodeJsonStringMap(metrics);
+    final Map<String, String> metricMap = decodeJsonStringMap(metrics);
     final MetricData data = new MetricData();
 
     data.setMember(Lists.<MetricDatum>newArrayList());
-    for(final String name: metricMap.keySet()) {
+    for (final String name : metricMap.keySet()) {
       final MetricDatum datum = new MetricDatum();
       datum.setMetricName(name);
-      try{
+      try {
         datum.setValue(Double.valueOf(metricMap.get(name)));
-      }catch(final NumberFormatException ex) {
+      } catch (final NumberFormatException ex) {
         LOG.warn("Failed to parse metric value: " + metricMap.get(name));
       }
       data.getMember().add(datum);
@@ -110,15 +109,15 @@ public class VmWorkflowMarshaller {
     return data;
   }
 
-  public static Map<String,String> decodeJsonStringMap(final String encodedMap) {
+  public static Map<String, String> decodeJsonStringMap(final String encodedMap) {
     final ObjectMapper mapper = new ObjectMapper();
-    final TypeReference<Map<String,String>> typeRef = new TypeReference<Map<String,String>>() {};
-    try{
-      final Map<String,String> decodedResult = mapper.readValue(encodedMap, typeRef);
+    final TypeReference<Map<String, String>> typeRef = new TypeReference<Map<String, String>>() {
+    };
+    try {
+      final Map<String, String> decodedResult = mapper.readValue(encodedMap, typeRef);
       return decodedResult;
-    }catch(final Exception ex) {
+    } catch (final Exception ex) {
       throw Exceptions.toUndeclared("Failed to decode String map in json", ex);
     }
   }
-
 }

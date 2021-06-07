@@ -40,26 +40,27 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
  */
 @ComponentNamed
 public class LoadBalancingErrorHandler extends ErrorHandlerSupport {
-  private static final Logger LOG = Logger.getLogger( LoadBalancingErrorHandler.class );
+  private static final Logger LOG = Logger.getLogger(LoadBalancingErrorHandler.class);
   private static final String INTERNAL_FAILURE = "InternalFailure";
 
   public LoadBalancingErrorHandler() {
-    super( LOG, LoadBalancingQueryBinding.BALANCING_DEFAULT_NAMESPACE, INTERNAL_FAILURE );
+    super(LOG, LoadBalancingQueryBinding.BALANCING_DEFAULT_NAMESPACE, INTERNAL_FAILURE);
   }
 
   @Override
-  protected BaseMessage buildErrorResponse( final String correlationId,
-                                            final Role role,
-                                            final String code,
-                                            final String message ) {
-    final ErrorResponse errorResp = new ErrorResponse( );
-    errorResp.setCorrelationId( correlationId );
-    errorResp.setRequestId( correlationId );
-    final com.eucalyptus.loadbalancing.common.msgs.Error error = new com.eucalyptus.loadbalancing.common.msgs.Error( );
-    error.setType( role == Role.Receiver ? "Receiver" : "Sender" );
-    error.setCode( code );
-    error.setMessage( message );
-    errorResp.getError().add( error );
+  protected BaseMessage buildErrorResponse(final String correlationId,
+      final Role role,
+      final String code,
+      final String message) {
+    final ErrorResponse errorResp = new ErrorResponse();
+    errorResp.setCorrelationId(correlationId);
+    errorResp.setRequestId(correlationId);
+    final com.eucalyptus.loadbalancing.common.msgs.Error error =
+        new com.eucalyptus.loadbalancing.common.msgs.Error();
+    error.setType(role == Role.Receiver ? "Receiver" : "Sender");
+    error.setCode(code);
+    error.setMessage(message);
+    errorResp.getError().add(error);
     return errorResp;
   }
 }

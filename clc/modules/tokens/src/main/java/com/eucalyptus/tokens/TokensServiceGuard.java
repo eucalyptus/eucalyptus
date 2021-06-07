@@ -33,6 +33,7 @@ import static com.eucalyptus.tokens.TokensServiceConfiguration.getEnabledActions
 import javax.annotation.Nonnull;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.context.ServiceAdvice;
+import com.eucalyptus.tokens.common.msgs.TokenMessage;
 import com.eucalyptus.util.RestrictedTypes;
 
 /**

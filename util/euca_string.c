@@ -648,6 +648,15 @@ char *euca_hex2dot(u32 hex)
     return (strdup(sDot));
 }
 
+//!
+//! Convert a binary IP address value to a human readable value.
+//!
+//! @param[in] hex the IP address value
+//!
+//! @return A human readable representation of the binary IP address value or NULL if we ran out of memory.
+//!
+//! @note The caller is responsible to free the allocated memory for the returned value
+//!
 /**
  * Convert a binary IP address value to a human readable value.
  * @param hex [in] the IP address value
@@ -660,83 +669,6 @@ char *euca_hex2dot_s(u32 hex) {
 
     snprintf(sDot, INET_ADDR_LEN, "%u.%u.%u.%u", ((hex & 0xFF000000) >> 24), ((hex & 0x00FF0000) >> 16), ((hex & 0x0000FF00) >> 8), (hex & 0x000000FF));
     return (sDot);
-}
-
-/**
- * Converts the IPv4 address ineta in numbers-and-dots notation into binary form
- * (network byte order).
- * @param inetn [in] the IPv4 address of interest
- * @return the binary representation, in network byte order, of ineta. ineta is
- * assumed to be a valid IPv4 address.
- */
-u32 euca_inet_aton(const char *ineta) {
-    if (ineta) {
-        struct in_addr buf;
-        if (inet_pton(AF_INET, ineta, (void *) &buf) == 1) {
-            return (buf.s_addr);
-        }
-    }
-    return (0);
-}
-
-/**
- * Converts the IPv4 address inetn in binary format (network byte order)
- * @param ineta [in] IPv4 address of interest - pointer to a valid in_addr structure
- * @return numbers-and-dots representation of the input IPv4 address inetn. Caller
- * is responsible to release the memory allocated for the return string.
- */
-char *euca_inet_ntoa(struct in_addr *inetn) {
-    if (inetn) {
-        char *ret = EUCA_ZALLOC(INET_ADDR_LEN, 1);
-        if (inet_ntop(AF_INET, inetn, ret, INET_ADDR_LEN) == NULL) {
-            EUCA_FREE(ret);            
-        }
-        return (ret);
-    }
-    return (NULL);
-}
-
-/**
- * Converts an IPv4 CIDR block in CIDR notation (numbers-and-dots) into network
- * address and network mask in binary form (network byte order).
- * @param cidr [in] string representing a CIDR block (subnet/mask)
- * @param outnet [out] extracted network address
- * @param outmask [out] extracted network mask
- * @return 0 on success. 1 on failure.
- */
-int euca_cidr_aton(char *cidr, struct in_addr *outnet, struct in_addr *outmask) {
-    char *tok = NULL;
-    char *cpy = NULL;
-    int slashnet = 0;
-
-    if (!cidr) {
-        return (1);
-    }
-
-    cpy = strdup(cidr);
-    tok = strchr(cpy, '/');
-    if (tok) {
-        *tok = '\0';
-        tok++;
-        slashnet = atoi(tok);
-    } else {
-        slashnet = 32;
-    }
-
-    if (outnet) {
-        outnet->s_addr = EUCA_DOT2INETA(cpy);
-    }
-    if (outmask) {
-        if ((slashnet < 0) || (slashnet > 32)) {
-            slashnet = 32;
-        }
-        u32 sn_hs = 0xffffffff;
-        sn_hs = (u32) 0xffffffff << (32 - slashnet);
-        outmask->s_addr = htonl(sn_hs);
-    }
-    EUCA_FREE(cpy);
-
-    return (0);
 }
 
 //!

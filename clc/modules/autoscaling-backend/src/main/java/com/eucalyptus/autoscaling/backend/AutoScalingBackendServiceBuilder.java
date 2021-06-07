@@ -29,7 +29,6 @@
 package com.eucalyptus.autoscaling.backend;
 
 import com.eucalyptus.autoscaling.common.AutoScalingBackend;
-import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.DistributedServiceBuilder;
 import com.eucalyptus.component.annotation.ComponentPart;
@@ -38,7 +37,6 @@ import com.eucalyptus.component.annotation.ComponentPart;
  *
  */
 @ComponentPart( AutoScalingBackend.class )
-@Handles({})
 public class AutoScalingBackendServiceBuilder extends DistributedServiceBuilder {
   public AutoScalingBackendServiceBuilder() {
     super( ComponentIds.lookup( AutoScalingBackend.class ) );

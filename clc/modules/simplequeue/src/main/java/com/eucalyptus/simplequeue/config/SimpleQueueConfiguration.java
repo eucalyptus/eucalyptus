@@ -30,7 +30,7 @@ package com.eucalyptus.simplequeue.config;
 
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.config.ComponentConfiguration;
-import com.eucalyptus.simplequeue.SimpleQueue;
+import com.eucalyptus.simplequeue.common.SimpleQueue;
 
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;

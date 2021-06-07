@@ -1,0 +1,9 @@
+<?xml version="1.0" standalone="yes"?>
+<!--
+  Copyright 2021 AppScale Systems, Inc
+
+  SPDX-License-Identifier: BSD-2-Clause
+-->
+<project name="eucalyptus-loadbalancingv2" basedir=".">
+  <import file="../module-inc.xml"/>
+</project>

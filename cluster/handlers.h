@@ -204,11 +204,11 @@ enum {
 
 typedef struct instance_t {
     char instanceId[INSTANCE_ID_LEN];
-    char reservationId[LID_LEN];
+    char reservationId[RESERVATION_ID_LEN];
 
-    char amiId[16];
-    char kernelId[16];
-    char ramdiskId[16];
+    char amiId[IMAGE_ID_LEN];
+    char kernelId[IMAGE_ID_LEN];
+    char ramdiskId[IMAGE_ID_LEN];
 
     char amiURL[512];
     char kernelURL[512];

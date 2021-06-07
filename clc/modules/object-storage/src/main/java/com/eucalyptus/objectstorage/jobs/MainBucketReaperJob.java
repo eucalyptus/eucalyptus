@@ -49,7 +49,7 @@ import org.quartz.UnableToInterruptJobException;
 
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.objectstorage.asynctask.BucketReaperTask;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 @DisallowConcurrentExecution
 public class MainBucketReaperJob implements InterruptableJob {

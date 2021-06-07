@@ -39,8 +39,6 @@
 
 package com.eucalyptus.blockstorage.entities;
 
-import java.util.List;
-
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
@@ -48,7 +46,6 @@ import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -56,13 +53,7 @@ import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
 import com.eucalyptus.configurable.ConfigurableInit;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
-import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
-import com.eucalyptus.upgrade.Upgrades.Version;
-import com.eucalyptus.util.Exceptions;
-import com.google.common.base.Predicate;
 
 @Entity
 @PersistenceContext(name = "eucalyptus_storage")
@@ -201,24 +192,4 @@ public class DirectStorageInfo extends AbstractPersistent {
     return this;
   }
 
-  @EntityUpgrade(entities = {DirectStorageInfo.class}, since = Version.v3_2_0, value = Storage.class)
-  public enum DirectStorageInfoUpgrade implements Predicate<Class> {
-    INSTANCE;
-    private static Logger LOG = Logger.getLogger(DirectStorageInfo.DirectStorageInfoUpgrade.class);
-
-    @Override
-    public boolean apply(Class arg0) {
-      try (TransactionResource tr = Entities.transactionFor(DirectStorageInfo.class)) {
-        List<DirectStorageInfo> entities = Entities.query(new DirectStorageInfo());
-        for (DirectStorageInfo entry : entities) {
-          LOG.debug("Upgrading: " + entry);
-          entry.setTimeoutInMillis(StorageProperties.timeoutInMillis);
-        }
-        tr.commit();
-        return true;
-      } catch (Exception ex) {
-        throw Exceptions.toUndeclared(ex);
-      }
-    }
-  }
 }

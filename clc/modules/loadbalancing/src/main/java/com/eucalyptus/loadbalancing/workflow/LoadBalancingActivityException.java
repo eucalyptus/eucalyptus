@@ -28,29 +28,35 @@
  ************************************************************************/
 
 package com.eucalyptus.loadbalancing.workflow;
+
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
 public class LoadBalancingActivityException extends Exception {
-	private static final long serialVersionUID = 1L;
-	public LoadBalancingActivityException() {  }
-	public LoadBalancingActivityException(String message){
-		super(message);
-	}
-	public LoadBalancingActivityException(String message, Throwable cause){
-		super(message, cause);
-	}
+  private static final long serialVersionUID = 1L;
+
+  public LoadBalancingActivityException() {
+  }
+
+  public LoadBalancingActivityException(String message) {
+    super(message);
+  }
+
+  public LoadBalancingActivityException(String message, Throwable cause) {
+    super(message, cause);
+  }
 }
 
 // failure due to bad request
 class InvalidConfigurationRequestException extends LoadBalancingActivityException {
-	InvalidConfigurationRequestException(String message) {
-		super(message);
-	}
-	InvalidConfigurationRequestException(String message, Throwable cause) {
-		super(message, cause);
-	}
+  InvalidConfigurationRequestException(String message) {
+    super(message);
+  }
+
+  InvalidConfigurationRequestException(String message, Throwable cause) {
+    super(message, cause);
+  }
 }
 
-class NotEnoughResourcesException extends LoadBalancingActivityException { }
+class NotEnoughResourcesException extends LoadBalancingActivityException {
+}

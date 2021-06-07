@@ -30,29 +30,18 @@ package com.eucalyptus.imaging.service.config;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.annotation.ComponentPart;
-import com.eucalyptus.imaging.common.config.DeregisterImagingType;
-import com.eucalyptus.imaging.common.config.DescribeImagingType;
-import com.eucalyptus.imaging.common.config.ModifyImagingAttributeType;
-import com.eucalyptus.imaging.common.config.RegisterImagingType;
 import com.eucalyptus.imaging.common.Imaging;
 
 /**
  *
  */
 @ComponentPart( Imaging.class )
-@Handles( {
-    DeregisterImagingType.class,
-    DescribeImagingType.class,
-    ModifyImagingAttributeType.class,
-    RegisterImagingType.class,
-} )
 public class ImagingServiceBuilder extends AbstractServiceBuilder<ImagingConfiguration> {
   private static final Logger LOG = Logger.getLogger( ImagingServiceBuilder.class );
 

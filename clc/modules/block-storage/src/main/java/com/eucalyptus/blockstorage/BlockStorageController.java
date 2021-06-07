@@ -63,7 +63,6 @@ import com.eucalyptus.blockstorage.async.ThreadPoolSizeUpdater;
 import com.eucalyptus.blockstorage.async.VolumeCreator;
 import com.eucalyptus.blockstorage.async.VolumeDeleter;
 import com.eucalyptus.blockstorage.async.VolumeStateChecker;
-import com.eucalyptus.blockstorage.async.VolumesConvertor;
 import com.eucalyptus.blockstorage.entities.BlockStorageGlobalConfiguration;
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.blockstorage.entities.StorageInfo;
@@ -77,8 +76,6 @@ import com.eucalyptus.blockstorage.msgs.AttachStorageVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.AttachStorageVolumeType;
 import com.eucalyptus.blockstorage.msgs.CloneVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.CloneVolumeType;
-import com.eucalyptus.blockstorage.msgs.ConvertVolumesResponseType;
-import com.eucalyptus.blockstorage.msgs.ConvertVolumesType;
 import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotResponseType;
 import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotType;
 import com.eucalyptus.blockstorage.msgs.CreateStorageVolumeResponseType;
@@ -101,6 +98,8 @@ import com.eucalyptus.blockstorage.msgs.GetStorageVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.GetStorageVolumeType;
 import com.eucalyptus.blockstorage.msgs.GetVolumeTokenResponseType;
 import com.eucalyptus.blockstorage.msgs.GetVolumeTokenType;
+import com.eucalyptus.blockstorage.msgs.ModifyStorageVolumeResponseType;
+import com.eucalyptus.blockstorage.msgs.ModifyStorageVolumeType;
 import com.eucalyptus.blockstorage.msgs.StorageSnapshot;
 import com.eucalyptus.blockstorage.msgs.StorageVolume;
 import com.eucalyptus.blockstorage.msgs.UnexportVolumeResponseType;
@@ -126,6 +125,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.metrics.MonitoredAction;
 import com.eucalyptus.util.metrics.ThruputMetrics;
 import com.google.common.base.Function;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -179,21 +179,6 @@ public class BlockStorageController implements BlockStorageService {
       return null;
     }
   };
-
-  // TODO: zhill, this can be added later for snapshot abort capabilities
-  // static ConcurrentHashMap<String,HttpTransfer> httpTransferMap; //To keep track of current transfers to support aborting
-
-  // Introduced for testing EUCA-9297 fix: allows artificial capacity changes of backend
-  static boolean setUseTestingDelegateManager(boolean enableDelegate) {
-    if (enableDelegate && !(blockManager instanceof StorageManagerTestingProxy)) {
-      LOG.info("Switching to use delegating storage manager for testing");
-      blockManager = new StorageManagerTestingProxy(blockManager);
-    } else if (!enableDelegate && (blockManager instanceof StorageManagerTestingProxy)) {
-      LOG.info("Switching to NOT use delegating storage manager anymore");
-      blockManager = ((StorageManagerTestingProxy) blockManager).getDelegateStorageManager();
-    }
-    return enableDelegate;
-  }
 
   public static void configure() throws EucalyptusCloudException {
     BlockStorageGlobalConfiguration.getInstance();
@@ -702,6 +687,41 @@ public class BlockStorageController implements BlockStorageService {
   }
 
   /**
+   * Enforce volume size limits when they are enabled.
+   *
+   * @param volumeId The volume being created or modified
+   * @param requestedVolumeSize The total size of the volume post operation
+   * @param requestedCapacity The requested storage capacity increase
+   * @throws VolumeSizeExceededException if a limit is exceeded
+   */
+  private static void checkEnforceUsageLimits(
+      final String volumeId,
+      final int requestedVolumeSize,
+      final int requestedCapacity
+  ) throws VolumeSizeExceededException {
+    if (StorageProperties.shouldEnforceUsageLimits) {
+      int totalVolumeSize = 0;
+      VolumeInfo volInfo = new VolumeInfo();
+      try (TransactionResource tran = Entities.transactionFor(VolumeInfo.class)) {
+        List<VolumeInfo> volInfos = Entities.query(volInfo);
+        for (VolumeInfo vInfo : volInfos) {
+          if (!vInfo.getStatus().equals(StorageProperties.Status.failed.toString())
+              && !vInfo.getStatus().equals(StorageProperties.Status.deleted.toString())) {
+            totalVolumeSize += vInfo.getSize();
+          }
+        }
+        tran.commit();
+      }
+      if (((totalVolumeSize + requestedCapacity) > StorageInfo.getStorageInfo().getMaxTotalVolumeSizeInGb())) {
+        throw new VolumeSizeExceededException(volumeId, "Total Volume Size Limit Exceeded");
+      }
+      if (requestedVolumeSize > StorageInfo.getStorageInfo().getMaxVolumeSizeInGB()) {
+        throw new VolumeSizeExceededException(volumeId, "Max Volume Size Limit Exceeded");
+      }
+    }
+  }
+
+  /**
    * Checks to see if a new snapshot of size volSize will exceed the quota
    * 
    * @param volSize
@@ -1051,27 +1071,8 @@ public class BlockStorageController implements BlockStorageService {
     if (size != null && sizeAsInt <= 0) {
       throw new InvalidParameterValueException("The parameter size (" + sizeAsInt + ") must be greater than zero.");
     }
-    if (StorageProperties.shouldEnforceUsageLimits) {
-      if (size != null) {
-        int totalVolumeSize = 0;
-        VolumeInfo volInfo = new VolumeInfo();
-        try (TransactionResource tran = Entities.transactionFor(VolumeInfo.class)) {
-          List<VolumeInfo> volInfos = Entities.query(volInfo);
-          for (VolumeInfo vInfo : volInfos) {
-            if (!vInfo.getStatus().equals(StorageProperties.Status.failed.toString())
-                && !vInfo.getStatus().equals(StorageProperties.Status.deleted.toString())) {
-              totalVolumeSize += vInfo.getSize();
-            }
-          }
-          tran.commit();
-        }
-        if (((totalVolumeSize + sizeAsInt) > StorageInfo.getStorageInfo().getMaxTotalVolumeSizeInGb())) {
-          throw new VolumeSizeExceededException(volumeId, "Total Volume Size Limit Exceeded");
-        }
-        if (sizeAsInt > StorageInfo.getStorageInfo().getMaxVolumeSizeInGB()) {
-          throw new VolumeSizeExceededException(volumeId, "Max Volume Size Limit Exceeded");
-        }
-      }
+    if (size != null) {
+        checkEnforceUsageLimits(volumeId, sizeAsInt, sizeAsInt);
     }
 
     try (TransactionResource tran = Entities.transactionFor(VolumeInfo.class)) {
@@ -1144,6 +1145,62 @@ public class BlockStorageController implements BlockStorageService {
   }
 
   @Override
+  public ModifyStorageVolumeResponseType ModifyStorageVolume(ModifyStorageVolumeType request) throws EucalyptusCloudException {
+    final ModifyStorageVolumeResponseType reply = request.getReply();
+    reply.set_return(false);
+    if (!StorageProperties.enableStorage) {
+      LOG.error("BlockStorage has been disabled. Please check your setup");
+      return reply;
+    }
+    final String volumeId = MoreObjects.firstNonNull(request.getVolumeId(), "none");
+    final int size = MoreObjects.firstNonNull(request.getSize(), -1);
+    LOG.info("Processing ModifyStorageVolume request for volume " + volumeId);
+
+    final VolumeInfo volumeInfo = new VolumeInfo();
+    volumeInfo.setVolumeId(volumeId);
+    try (TransactionResource tran = Entities.transactionFor(VolumeInfo.class)) {
+      VolumeInfo foundVolume = Entities.uniqueResult(volumeInfo);
+
+      // enforce limits
+      if (size > foundVolume.getSize()) {
+        checkEnforceUsageLimits(volumeId, size, size - foundVolume.getSize());
+      }
+
+      // check its status
+      String status = foundVolume.getStatus();
+      if (status == null) {
+        throw new EucalyptusCloudException("Invalid volume status: null");
+      } else if (status.equals(StorageProperties.Status.available.toString())) {
+        if (size == -1 || size > foundVolume.getSize()) {
+          int newSize = blockManager.resizeVolume(foundVolume.getVolumeId(), size);
+          if (newSize > 0) {
+            foundVolume.setSize(newSize);
+          } else if (newSize == -1){
+            throw new EucalyptusCloudException("Size modification not supported");
+          }
+        }
+      } else if (status.equals(StorageProperties.Status.deleting.toString())
+          || status.equals(StorageProperties.Status.deleted.toString())
+          || status.equals(StorageProperties.Status.failed.toString())) {
+        throw new EucalyptusCloudException("Invalid volume status: " + status);
+      } else {
+        throw new EucalyptusCloudException("Cannot modify volume in state: " + status + ". Please retry later");
+      }
+      reply.set_return(true);
+      tran.commit();
+    } catch (NoSuchElementException e) {
+      LOG.warn("Got modify request, but unable to find volume in SC database: " + volumeId);
+    } catch (EucalyptusCloudException e) {
+      LOG.error("Error modifying volume " + volumeId + ": " + e.getMessage());
+      throw e;
+    } catch (final Throwable e) {
+      LOG.error("Exception looking up volume for modification: " + volumeId, e);
+      throw new EucalyptusCloudException(e);
+    }
+    return reply;
+  }
+
+  @Override
   public DescribeStorageVolumesResponseType DescribeStorageVolumes(DescribeStorageVolumesType request) throws EucalyptusCloudException {
     DescribeStorageVolumesResponseType reply = (DescribeStorageVolumesResponseType) request.getReply();
 
@@ -1180,32 +1237,6 @@ public class BlockStorageController implements BlockStorageService {
     }
     return reply;
 
-  }
-
-  @Override
-  public ConvertVolumesResponseType ConvertVolumes(ConvertVolumesType request) throws EucalyptusCloudException {
-    ConvertVolumesResponseType reply = (ConvertVolumesResponseType) request.getReply();
-    String provider = request.getOriginalProvider();
-    provider = "com.eucalyptus.storage." + provider;
-    if (!blockManager.getClass().getName().equals(provider)) {
-      // different backend provider. Try upgrade
-      try {
-        LogicalStorageManager fromBlockManager = (LogicalStorageManager) ClassLoader.getSystemClassLoader().loadClass(provider).newInstance();
-        fromBlockManager.checkPreconditions();
-        // initialize fromBlockManager
-        new VolumesConvertor(fromBlockManager, blockManager).start();
-      } catch (InstantiationException e) {
-        LOG.error(e);
-        throw new EucalyptusCloudException(e);
-      } catch (ClassNotFoundException e) {
-        LOG.error(e);
-        throw new EucalyptusCloudException(e);
-      } catch (IllegalAccessException e) {
-        LOG.error(e);
-        throw new EucalyptusCloudException(e);
-      }
-    }
-    return reply;
   }
 
   /**

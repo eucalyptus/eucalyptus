@@ -614,6 +614,8 @@ public class SecurityTokenManagerImpl implements SecurityTokenManager.SecurityTo
 
     private byte[] toByteArray() throws IOException {
       out.flush();
+      out.finish();
+      deflater.end();
       out.close();
       return byteStream.toByteArray();
     }

@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2017 Ent. Services Development Corporation LP
+
+  Redistribution and use of this software in source and binary forms,
+  with or without modification, are permitted provided that the
+  following conditions are met:
+
+    Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+
+    Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer
+    in the documentation and/or other materials provided with the
+    distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  POSSIBILITY OF SUCH DAMAGE.
+-->
+<binding>
+
+  <mapping name="DescribeScheduledInstanceAvailabilityResponse" class="com.eucalyptus.compute.common.DescribeScheduledInstanceAvailabilityResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+  </mapping>
+  <mapping name="DescribeScheduledInstanceAvailability" class="com.eucalyptus.compute.common.DescribeScheduledInstanceAvailabilityType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <collection name="FilterSet" field="filterSet" usage="optional">>
+      <structure name="member" type="com.eucalyptus.compute.common.Filter"/>
+    </collection>
+    <structure name="FirstSlotStartTimeRange" field="firstSlotStartTimeRange" usage="optional" type="com.eucalyptus.compute.common.SlotDateTimeRangeRequest"/>
+    <value name="MinSlotDurationInHours" field="minSlotDurationInHours" usage="optional"/>
+    <value name="MaxSlotDurationInHours" field="maxSlotDurationInHours" usage="optional"/>
+    <structure name="Recurrence" field="recurrence" usage="optional" type="com.eucalyptus.compute.common.ScheduledInstanceRecurrenceRequest"/>
+    <value name="MaxResults" field="maxResults" usage="optional"/>
+    <value name="NextToken" field="nextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeScheduledInstancesResponse" class="com.eucalyptus.compute.common.DescribeScheduledInstancesResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+  </mapping>
+  <mapping name="DescribeScheduledInstances" class="com.eucalyptus.compute.common.DescribeScheduledInstancesType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <collection name="FilterSet" field="filterSet" usage="optional">>
+      <structure name="member" type="com.eucalyptus.compute.common.Filter"/>
+    </collection>
+    <collection name="ScheduledInstanceId" field="scheduledInstanceId" usage="optional">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+    <structure name="SlotStartTimeRange" field="slotStartTimeRange" usage="optional" type="com.eucalyptus.compute.common.SlotDateTimeRangeRequest"/>
+    <value name="MaxResults" field="maxResults" usage="optional"/>
+    <value name="NextToken" field="nextToken" usage="optional"/>
+  </mapping>
+  <mapping name="PurchaseScheduledInstancesResponse" class="com.eucalyptus.compute.common.PurchaseScheduledInstancesResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+  </mapping>
+  <mapping name="PurchaseScheduledInstances" class="com.eucalyptus.compute.common.PurchaseScheduledInstancesType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="ClientToken" field="clientToken" usage="optional"/>
+    <collection name="PurchaseRequest" field="purchaseRequest" usage="optional">>
+      <structure name="member" type="com.eucalyptus.compute.common.PurchaseRequest"/>
+    </collection>
+  </mapping>
+  <mapping name="RunScheduledInstancesResponse" class="com.eucalyptus.compute.common.RunScheduledInstancesResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+  </mapping>
+  <mapping name="RunScheduledInstances" class="com.eucalyptus.compute.common.RunScheduledInstancesType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="ClientToken" field="clientToken" usage="optional"/>
+    <value name="InstanceCount" field="instanceCount" usage="optional"/>
+    <structure name="LaunchSpecification" field="launchSpecification" usage="optional" type="com.eucalyptus.compute.common.ScheduledInstancesLaunchSpecification"/>
+    <value name="ScheduledInstanceId" field="scheduledInstanceId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.PurchaseRequest" abstract="true">
+    <value name="InstanceCount" field="instanceCount" usage="optional"/>
+    <value name="PurchaseToken" field="purchaseToken" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ScheduledInstanceRecurrenceRequest" abstract="true">
+    <value name="Frequency" field="frequency" usage="optional"/>
+    <value name="Interval" field="interval" usage="optional"/>
+    <collection name="OccurrenceDay" field="occurrenceDay" usage="optional">
+      <value name="member" type="java.lang.Integer"/>
+    </collection>
+    <value name="OccurrenceRelativeToEnd" field="occurrenceRelativeToEnd" usage="optional"/>
+    <value name="OccurrenceUnit" field="occurrenceUnit" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ScheduledInstancesLaunchSpecification" abstract="true">
+    <collection name="BlockDeviceMappings" field="blockDeviceMappings" usage="optional">>
+      <structure name="member" type="com.eucalyptus.compute.common.ScheduledInstancesBlockDeviceMapping"/>
+    </collection>
+    <value name="EbsOptimized" field="ebsOptimized" usage="optional"/>
+    <structure name="IamInstanceProfile" field="iamInstanceProfile" usage="optional" type="com.eucalyptus.compute.common.ScheduledInstancesIamInstanceProfile"/>
+    <value name="ImageId" field="imageId" usage="optional"/>
+    <value name="InstanceType" field="instanceType" usage="optional"/>
+    <value name="KernelId" field="kernelId" usage="optional"/>
+    <value name="KeyName" field="keyName" usage="optional"/>
+    <structure name="Monitoring" field="monitoring" usage="optional" type="com.eucalyptus.compute.common.ScheduledInstancesMonitoring"/>
+    <collection name="NetworkInterfaces" field="networkInterfaces" usage="optional">>
+      <structure name="member" type="com.eucalyptus.compute.common.ScheduledInstancesNetworkInterface"/>
+    </collection>
+    <structure name="Placement" field="placement" usage="optional" type="com.eucalyptus.compute.common.ScheduledInstancesPlacement"/>
+    <value name="RamdiskId" field="ramdiskId" usage="optional"/>
+    <collection name="SecurityGroupId" field="securityGroupId" usage="optional">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+    <value name="SubnetId" field="subnetId" usage="optional"/>
+    <value name="UserData" field="userData" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.SlotDateTimeRangeRequest" abstract="true">
+    <value name="EarliestTime" field="earliestTime" usage="optional"/>
+    <value name="LatestTime" field="latestTime" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ScheduledInstancesBlockDeviceMapping" abstract="true">
+    <value name="DeviceName" field="deviceName" usage="optional"/>
+    <structure name="Ebs" field="ebs" usage="optional" type="com.eucalyptus.compute.common.ScheduledInstancesEbs"/>
+    <value name="NoDevice" field="noDevice" usage="optional"/>
+    <value name="VirtualName" field="virtualName" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ScheduledInstancesIamInstanceProfile" abstract="true">
+    <value name="Arn" field="arn" usage="optional"/>
+    <value name="Name" field="name" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ScheduledInstancesMonitoring" abstract="true">
+    <value name="Enabled" field="enabled" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ScheduledInstancesNetworkInterface" abstract="true">
+    <value name="AssociatePublicIpAddress" field="associatePublicIpAddress" usage="optional"/>
+    <value name="DeleteOnTermination" field="deleteOnTermination" usage="optional"/>
+    <value name="Description" field="description" usage="optional"/>
+    <value name="DeviceIndex" field="deviceIndex" usage="optional"/>
+    <collection name="Groups" field="groups" usage="optional">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+    <collection name="Ipv6Addresses" field="ipv6Addresses" usage="optional">>
+      <structure name="member" type="com.eucalyptus.compute.common.ScheduledInstancesIpv6Address"/>
+    </collection>
+    <value name="Ipv6AddressCount" field="ipv6AddressCount" usage="optional"/>
+    <value name="NetworkInterfaceId" field="networkInterfaceId" usage="optional"/>
+    <value name="PrivateIpAddress" field="privateIpAddress" usage="optional"/>
+    <collection name="PrivateIpAddressConfigs" field="privateIpAddressConfigs" usage="optional">>
+      <structure name="member" type="com.eucalyptus.compute.common.ScheduledInstancesPrivateIpAddressConfig"/>
+    </collection>
+    <value name="SecondaryPrivateIpAddressCount" field="secondaryPrivateIpAddressCount" usage="optional"/>
+    <value name="SubnetId" field="subnetId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ScheduledInstancesPlacement" abstract="true">
+    <value name="AvailabilityZone" field="availabilityZone" usage="optional"/>
+    <value name="GroupName" field="groupName" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ScheduledInstancesEbs" abstract="true">
+    <value name="DeleteOnTermination" field="deleteOnTermination" usage="optional"/>
+    <value name="Encrypted" field="encrypted" usage="optional"/>
+    <value name="Iops" field="iops" usage="optional"/>
+    <value name="SnapshotId" field="snapshotId" usage="optional"/>
+    <value name="VolumeSize" field="volumeSize" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ScheduledInstancesIpv6Address" abstract="true">
+    <value name="Ipv6Address" field="ipv6Address" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ScheduledInstancesPrivateIpAddressConfig" abstract="true">
+    <value name="Primary" field="primary" usage="optional"/>
+    <value name="PrivateIpAddress" field="privateIpAddress" usage="optional"/>
+  </mapping>
+
+
+</binding>

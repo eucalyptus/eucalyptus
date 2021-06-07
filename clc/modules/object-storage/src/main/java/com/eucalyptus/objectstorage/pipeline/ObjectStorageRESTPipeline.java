@@ -47,11 +47,12 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.xbill.DNS.Name;
+import org.xbill.DNS.TextParseException;
 
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.util.OSGUtil;
-import com.eucalyptus.util.dns.DomainNames;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.server.FilteredPipeline;
 import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
@@ -145,7 +146,9 @@ public abstract class ObjectStorageRESTPipeline extends FilteredPipeline {
       final String host = Iterables.getFirst( hostSplitter.split( fullHostHeader ), fullHostHeader );
       final Name hostDnsName = Name.fromString( host, Name.root );
       return OSGUtil.isBucketName( hostDnsName, true );
-    } catch (Exception e) {
+    } catch (final TextParseException e) {
+      LOG.debug( "Invalid hostname in request: " + fullHostHeader + " " + Exceptions.getCauseMessage( e ) );
+    } catch (final Exception e) {
       LOG.error("Error parsing domain name from hostname: " + fullHostHeader, e);
     }
     return false;

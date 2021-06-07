@@ -42,38 +42,30 @@
 
 package com.eucalyptus.blockstorage.san.common.entities;
 
-import java.util.List;
-
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EntityTransaction;
-import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
-import org.apache.log4j.Logger;
 import org.hibernate.annotations.Type;
 
-import com.eucalyptus.blockstorage.Storage;
-import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
-import com.eucalyptus.upgrade.Upgrades.Version;
-import com.eucalyptus.util.Exceptions;
-import com.google.common.base.Predicate;
 
 @Entity
 @PersistenceContext(name = "eucalyptus_storage")
 @Table(name = "san_volume_info")
 public class SANVolumeInfo extends AbstractPersistent {
+  @Column(name = "volumeid")
   protected String volumeId;
+  @Column(name = "scname")
   private String scName;
+  @Column(name = "iqn")
   private String iqn;
+  @Column(name = "storeuser")
   private String storeUser;
-  @Type(type = "org.hibernate.type.StringClobType")
-  @Lob
+  @Column(name = "encryptedpassword")
+  @Type(type="text")
   private String encryptedPassword;
   @Column(name = "size")
   protected Integer size;
@@ -212,54 +204,4 @@ public class SANVolumeInfo extends AbstractPersistent {
     return true;
   }
 
-  /**
-   * This upgrade is to push the snapshot size from this entity to the SnapshoInfo entity because Snapshot info cannot have a dependency on the
-   * backend volume entities.
-   *
-   */
-  @EntityUpgrade(entities = {SANVolumeInfo.class}, since = Version.v3_4_0, value = Storage.class)
-  public enum SANSnapshotSizeUpgrade3_4 implements Predicate<Class> {
-    INSTANCE;
-    private static Logger LOG = Logger.getLogger(SANVolumeInfo.SANSnapshotSizeUpgrade3_4.class);
-
-    @Override
-    public boolean apply(Class arg0) {
-      EntityTransaction db = Entities.get(SANVolumeInfo.class);
-      try {
-        SANVolumeInfo example = new SANVolumeInfo();
-        example.setScName(null);
-        List<SANVolumeInfo> entities = Entities.query(example);
-        for (SANVolumeInfo entry : entities) {
-          if (entry.getVolumeId().startsWith("snap-")) {
-            EntityTransaction snapDb = Entities.get(SnapshotInfo.class);
-            try {
-              SnapshotInfo exampleSnap = new SnapshotInfo(entry.getVolumeId());
-              exampleSnap.setScName(null); // all clusters.
-              List<SnapshotInfo> snaps = Entities.query(exampleSnap);
-              for (SnapshotInfo snap : snaps) {
-                if (snap.getSizeGb() == null) {
-                  snap.setSizeGb(entry.getSize());
-                  LOG.debug("Upgrading: " + entry.getVolumeId() + " putting size from back-end to SnapshotInfo. Setting size to " + snap.getSizeGb());
-                } else {
-                  // Do nothing, already set.
-                }
-              }
-              snapDb.commit();
-            } finally {
-              snapDb.rollback();
-              snapDb = null;
-            }
-          } else {
-            // Skip because not a snapshot record
-            LOG.debug("Skipping snapshot upgrade of " + entry.getVolumeId() + " because not a snapshot");
-          }
-        }
-        db.commit();
-        return true;
-      } catch (Exception ex) {
-        db.rollback();
-        throw Exceptions.toUndeclared(ex);
-      }
-    }
-  }
 }

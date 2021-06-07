@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
@@ -57,20 +58,14 @@ import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.UserPrincipal;
 import com.eucalyptus.auth.type.RestrictedType;
-import com.eucalyptus.binding.Binding;
-import com.eucalyptus.binding.BindingException;
-import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.*;
-import com.eucalyptus.compute.common.internal.account.IdentityIdFormat;
-import com.eucalyptus.compute.common.internal.account.IdentityIdFormat.IdResource;
-import com.eucalyptus.compute.common.internal.account.IdentityIdFormat.IdType;
-import com.eucalyptus.compute.common.internal.account.IdentityIdFormats;
+import com.eucalyptus.compute.common.backend.ComputeBackendMessage;
 import com.eucalyptus.compute.common.internal.address.AddressI;
 import com.eucalyptus.compute.common.internal.address.AllocatedAddressEntity;
 import com.eucalyptus.compute.common.internal.blockstorage.Snapshot;
@@ -96,9 +91,13 @@ import com.eucalyptus.compute.common.internal.tags.Tag;
 import com.eucalyptus.compute.common.internal.tags.TagSupport;
 import com.eucalyptus.compute.common.internal.tags.Tags;
 import com.eucalyptus.compute.common.internal.util.MetadataException;
+import com.eucalyptus.compute.common.internal.vm.LaunchTemplates;
 import com.eucalyptus.compute.common.internal.vm.NetworkGroupId;
+import com.eucalyptus.compute.common.internal.vm.VmBootRecord;
 import com.eucalyptus.compute.common.internal.vm.VmBootVolumeAttachment;
+import com.eucalyptus.compute.common.internal.vm.VmIamInstanceProfileHelper;
 import com.eucalyptus.compute.common.internal.vm.VmInstance;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet;
 import com.eucalyptus.compute.common.internal.vm.VmInstances;
 import com.eucalyptus.compute.common.internal.vm.VmStandardVolumeAttachment;
 import com.eucalyptus.compute.common.internal.vm.VmVolumeAttachment;
@@ -131,11 +130,10 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.CollectionUtils;
+import com.eucalyptus.util.CompatFunction;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.OwnerFullName;
-import com.eucalyptus.util.FUtils;
-import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncExceptions;
@@ -147,12 +145,13 @@ import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -164,16 +163,19 @@ import com.google.common.collect.TreeMultimap;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.BaseMessages;
-import javaslang.control.Option;
+import io.vavr.Tuple2;
+import io.vavr.control.Option;
 
 
 /**
  *
  */
-@SuppressWarnings( { "UnusedDeclaration", "Guava", "StaticPseudoFunctionalStyleMethod" } )
+@SuppressWarnings( { "UnusedDeclaration", "Guava", "StaticPseudoFunctionalStyleMethod", "RedundantThrows", "Convert2Lambda", "deprecation" } )
 @ComponentNamed
 public class ComputeService {
   private static Logger LOG = Logger.getLogger( ComputeService.class );
+
+  private final LaunchTemplates launchTemplates;
 
   private final DhcpOptionSets dhcpOptionSets;
   private final InternetGateways internetGateways;
@@ -187,6 +189,7 @@ public class ComputeService {
   @Inject
   public ComputeService( final DhcpOptionSets dhcpOptionSets,
                          final InternetGateways internetGateways,
+                         final LaunchTemplates launchTemplates,
                          final NatGateways natGateways,
                          final NetworkAcls networkAcls,
                          final NetworkInterfaces networkInterfaces,
@@ -195,6 +198,7 @@ public class ComputeService {
                          final Vpcs vpcs ) {
     this.dhcpOptionSets = dhcpOptionSets;
     this.internetGateways = internetGateways;
+    this.launchTemplates = launchTemplates;
     this.natGateways = natGateways;
     this.networkAcls = networkAcls;
     this.networkInterfaces = networkInterfaces;
@@ -221,7 +225,7 @@ public class ComputeService {
         .byId( imageIds )
         .byOwningAccount( request.getOwnersSet() )
         .byPredicate( showAllStates ?
-            Predicates.<ImageInfo>alwaysTrue() :
+            Predicates.alwaysTrue() :
             Images.standardStatePredicate( ) )
         .byPredicate( Images.filterExecutableBy( request.getExecutableBySet() ) )
         .byPredicate( filter.asPredicate() )
@@ -232,7 +236,7 @@ public class ComputeService {
         new ImageInfo( ),
         persistenceFilter.asCriterion( ),
         persistenceFilter.getAliases( ),
-        Predicates.and( new TrackingPredicate<ImageInfo>( imageIds ), requestedAndAccessible ),
+        Predicates.and( new TrackingPredicate<>( imageIds ), requestedAndAccessible ),
         Images.TO_IMAGE_DETAILS );
 
     errorIfNotFound( "InvalidAMIID.NotFound", "image", imageIds );
@@ -362,6 +366,11 @@ public class ComputeService {
           TypeMappers.lookup( AddressI.class, AddressInfoType.class ) );
 
       Iterables.addAll( reply.getAddressesSet( ), addresses );
+      Tags.populateTags(
+          AccountFullName.getInstance( ctx.getAccountNumber() ),
+          AllocatedAddressEntity.class,
+          reply.getAddressesSet( ),
+          AddressInfoType::getAllocationId );
     } catch ( final Exception e ) {
       Exceptions.findAndRethrow( e, ComputeServiceException.class );
       LOG.error( e );
@@ -392,16 +401,16 @@ public class ComputeService {
     final Filter persistenceFilter = getPersistenceFilter( NetworkGroup.class, normalizedIds, "group-id", filter );
     final Predicate<? super NetworkGroup> requestedAndAccessible =
         CloudMetadatas.filteringFor( NetworkGroup.class )
-            .byPredicate( Predicates.or(
+            .byPredicate( Predicates.or( ImmutableList.of(
                 request.getSecurityGroupSet( ).isEmpty() && request.getSecurityGroupIdSet( ).isEmpty() ?
-                    Predicates.<NetworkGroup>alwaysTrue() :
-                    Predicates.<NetworkGroup>alwaysFalse(),
+                    Predicates.alwaysTrue() :
+                    Predicates.alwaysFalse(),
                 request.getSecurityGroupSet( ).isEmpty() ?
-                    Predicates.<NetworkGroup>alwaysFalse() :
-                    CloudMetadatas.<NetworkGroup>filterById( request.getSecurityGroupSet( ) ),
+                    Predicates.alwaysFalse() :
+                    CloudMetadatas.filterById( request.getSecurityGroupSet( ) ),
                 request.getSecurityGroupIdSet( ).isEmpty() ?
-                    Predicates.<NetworkGroup>alwaysFalse() :
-                    CloudMetadatas.filterByProperty( normalizeGroupIdentifiers( request.getSecurityGroupIdSet( ) ), NetworkGroup.groupId() ) ) )
+                    Predicates.alwaysFalse() :
+                    CloudMetadatas.filterByProperty( normalizeGroupIdentifiers( request.getSecurityGroupIdSet( ) ), NetworkGroup.groupId() ) ) ) )
             .byPredicate( filter.asPredicate( ) )
             .byPrivileges()
             .buildPredicate();
@@ -437,14 +446,16 @@ public class ComputeService {
 
     errorIfNotFound( "InvalidGroup.NotFound", "security group", normalizedIds );
 
-    final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( NetworkGroup.class )
-        .getResourceTagMap( AccountFullName.getInstance( ctx.getAccountNumber( ) ),
-            Iterables.transform( securityGroupItems, SecurityGroupItemToGroupId.INSTANCE ) );
-    for ( final SecurityGroupItemType securityGroupItem : securityGroupItems ) {
-      Tags.addFromTags( securityGroupItem.getTagSet(), ResourceTag.class, tagsMap.get( securityGroupItem.getGroupId() ) );
-    }
+    if ( securityGroupItems != null ) {
+      final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( NetworkGroup.class )
+          .getResourceTagMap( AccountFullName.getInstance( ctx.getAccountNumber( ) ),
+              Iterables.transform( securityGroupItems, SecurityGroupItemToGroupId.INSTANCE ) );
+      for ( final SecurityGroupItemType securityGroupItem : securityGroupItems ) {
+        Tags.addFromTags( securityGroupItem.getTagSet(), ResourceTag.class, tagsMap.get( securityGroupItem.getGroupId() ) );
+      }
 
-    Iterables.addAll( reply.getSecurityGroupInfo( ), securityGroupItems );
+      Iterables.addAll( reply.getSecurityGroupInfo( ), securityGroupItems );
+    }
 
     return reply;
   }
@@ -473,7 +484,7 @@ public class ComputeService {
           ownerFullName,
           persistenceFilter.asCriterionWithConjunction( Restrictions.not( VmInstance.criterion( VmInstance.VmState.BURIED ) ) ),
           persistenceFilter.getAliases( ),
-          Predicates.and( new TrackingPredicate<VmInstance>( identifiers ), requestedAndAccessible ) );
+          Predicates.and( new TrackingPredicate<>( identifiers ), requestedAndAccessible ) );
       errorIfNotFound( "InvalidInstanceID.NotFound", "instance ID", identifiers );
       final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( VmInstance.class )
           .getResourceTagMap(  AccountFullName.getInstance( ctx.getAccountNumber() ),
@@ -508,7 +519,7 @@ public class ComputeService {
     final DescribeInstanceStatusResponseType reply = msg.getReply();
     final Context ctx = Contexts.lookup();
     final boolean showAll = msg.getInstancesSet( ).remove( "verbose" ) || !msg.getInstancesSet( ).isEmpty( );
-    final boolean includeAllInstances = Objects.firstNonNull( msg.getIncludeAllInstances(), Boolean.FALSE );
+    final boolean includeAllInstances = MoreObjects.firstNonNull( msg.getIncludeAllInstances(), Boolean.FALSE );
     final Collection<String> identifiers = normalizeInstanceIdentifiers( msg.getInstancesSet() );
     final Filter filter = Filters.generateFor( msg.getFilterSet(), VmInstance.class, "status" )
         .withOptionalInternalFilter( "instance-id", identifiers )
@@ -516,7 +527,7 @@ public class ComputeService {
     final Filter persistenceFilter = getPersistenceFilter( VmInstance.class, "status", identifiers, "instance-id", filter );
     final Predicate<? super VmInstance> requestedAndAccessible = CloudMetadatas.filteringFor( VmInstance.class )
         .byId( identifiers ) // filters without wildcard support
-        .byPredicate( includeAllInstances ? Predicates.<VmInstance>alwaysTrue() : VmInstance.VmState.RUNNING )
+        .byPredicate( includeAllInstances ? Predicates.alwaysTrue() : VmInstance.VmState.RUNNING )
         .byPredicate( filter.asPredicate() )
         .byPrivileges()
         .buildPredicate();
@@ -528,7 +539,7 @@ public class ComputeService {
           ownerFullName,
           persistenceFilter.asCriterionWithConjunction( Restrictions.not( VmInstance.criterion( VmInstance.VmState.BURIED ) ) ),
           persistenceFilter.getAliases( ),
-          Predicates.and( new TrackingPredicate<VmInstance>( identifiers ), requestedAndAccessible ) );
+          Predicates.and( new TrackingPredicate<>( identifiers ), requestedAndAccessible ) );
       errorIfNotFound( "InvalidInstanceID.NotFound", "instance ID", identifiers );
       Iterables.addAll(
           reply.getInstanceStatusSet().getItem(),
@@ -617,7 +628,7 @@ public class ComputeService {
           reply.setUserData( vm.getUserData( ) == null ? "" : Base64.toBase64String( vm.getUserData() ) );
           break;
         default:
-          throw new ComputeServiceClientException( " InvalidParameterValue", "Invalid value for attribute ("+attribute+")" );
+          throw new ComputeServiceClientException( "InvalidParameterValue", "Invalid value for attribute ("+attribute+")" );
       }
     } catch ( Exception ex ) {
       LOG.error( ex );
@@ -641,7 +652,7 @@ public class ComputeService {
         .buildPredicate();
     final Iterable<SshKeyPair> keyPairs = KeyPairs.list(
         ownerFullName,
-        Predicates.and( new TrackingPredicate<SshKeyPair>( keyNames ), requestedAndAccessible ),
+        Predicates.and( new TrackingPredicate<>( keyNames ), requestedAndAccessible ),
         persistenceFilter.asCriterion( ),
         persistenceFilter.getAliases( ) );
     for ( final SshKeyPair kp : keyPairs ) {
@@ -652,13 +663,11 @@ public class ComputeService {
   }
 
   public CopySnapshotResponseType copySnapshot( final CopySnapshotType request ) {
-    final CopySnapshotResponseType reply = request.getReply( );
-    return reply;
+    return request.getReply( );
   }
 
   public DescribePlacementGroupsResponseType describePlacementGroups( final DescribePlacementGroupsType request ) {
-    final DescribePlacementGroupsResponseType reply = request.getReply( );
-    return reply;
+    return request.getReply( );
   }
 
   public DescribeReservedInstancesResponseType describeReservedInstances(
@@ -822,21 +831,20 @@ public class ComputeService {
           attachmentCriterion = Restrictions.conjunction( );
           attachmentAliases = Collections.emptyMap( );
         } else { // load all attachments for account
-          attachmentCriterion = Restrictions.eq( "vmInstance.ownerAccountNumber", ownerFullName.getAccountNumber( ) );;
+          attachmentCriterion = Restrictions.eq( "vmInstance.ownerAccountNumber", ownerFullName.getAccountNumber( ) );
           attachmentAliases = Collections.singletonMap( "vmInstance", "vmInstance" );
         }
         final Map<String,VmVolumeAttachment> attachmentMap = CollectionUtils.putAll(
             Iterables.concat(
                 Entities.query( VmBootVolumeAttachment.example( ), true, attachmentCriterion, attachmentAliases ),
                 Entities.query( VmStandardVolumeAttachment.example( ), true, attachmentCriterion, attachmentAliases ) ),
-            Maps.<String,VmVolumeAttachment>newHashMap( ),
+            Maps.newHashMap( ),
             VmVolumeAttachment.volumeId( ),
-            Functions.<VmVolumeAttachment>identity( ) );
+            Functions.identity( ) );
 
         // build response volumes
         for ( final Volume foundVol : filteredVolumes ) {
           if ( State.ANNIHILATED.equals( foundVol.getState( ) ) ) {
-            Entities.delete( foundVol );
             if ( filterPredicate.apply( foundVol ) ) {
               replyVolumes.add( foundVol.morph( new com.eucalyptus.compute.common.Volume( ) ) );
             }
@@ -912,11 +920,8 @@ public class ComputeService {
             persistenceFilter.getAliases( ) );
         final Iterable<Volume> filteredVolumes = Iterables.filter(
             volumes,
-            Predicates.and( new TrackingPredicate<Volume>( volumeIds ), requestedAndAccessible ) );
+            Predicates.and( new TrackingPredicate<>( volumeIds ), requestedAndAccessible ) );
         for ( final Volume foundVol : filteredVolumes ) {
-          if ( State.ANNIHILATED.equals( foundVol.getState( ) ) ) {
-            Entities.delete( foundVol );
-          }
           replyVolumes.add( volumeTransform.apply( foundVol ) );
         }
         return replyVolumes;
@@ -1102,8 +1107,7 @@ public class ComputeService {
   }
 
   public DescribeCustomerGatewaysResponseType describeCustomerGateways(DescribeCustomerGatewaysType request) throws EucalyptusCloudException {
-    DescribeCustomerGatewaysResponseType reply = request.getReply( );
-    return reply;
+    return request.getReply( );
   }
 
   public DescribeDhcpOptionsResponseType describeDhcpOptions( final DescribeDhcpOptionsType request ) throws EucalyptusCloudException {
@@ -1143,6 +1147,7 @@ public class ComputeService {
         NatGateway.class,
         NatGatewayType.class,
         reply.getNatGatewaySet( ).getItem( ),
+        NatGatewayType::getNatGatewayId,
         natGateways );
     return reply;
   }
@@ -1252,7 +1257,7 @@ public class ComputeService {
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
     try {
       final Vpc vpc =
-          vpcs.lookupByName( accountFullName, Identifier.vpc.normalize( request.getVpcId( ) ), Functions.<Vpc>identity() );
+          vpcs.lookupByName( accountFullName, Identifier.vpc.normalize( request.getVpcId( ) ), Functions.identity() );
       if ( RestrictedTypes.filterPrivileged( ).apply( vpc ) ) {
         reply.setVpcId( vpc.getDisplayName( ) );
         switch ( request.getAttribute( ) ) {
@@ -1275,23 +1280,19 @@ public class ComputeService {
   }
 
   public DescribeVpcPeeringConnectionsResponseType describeVpcPeeringConnections(DescribeVpcPeeringConnectionsType request) throws EucalyptusCloudException {
-    DescribeVpcPeeringConnectionsResponseType reply = request.getReply( );
-    return reply;
+    return request.getReply( );
   }
 
   public ModifyVpcPeeringConnectionOptionsResponseType modifyVpcPeeringConnectionOptions(ModifyVpcPeeringConnectionOptionsType request) throws EucalyptusCloudException {
-    ModifyVpcPeeringConnectionOptionsResponseType reply = request.getReply( );
-    return reply;
+    return request.getReply( );
   }
 
   public DescribeSecurityGroupReferencesResponseType describeSecurityGroupReferences(DescribeSecurityGroupReferencesType request) throws EucalyptusCloudException {
-    DescribeSecurityGroupReferencesResponseType reply = request.getReply( );
-    return reply;
+    return request.getReply( );
   }
 
   public DescribeStaleSecurityGroupsResponseType describeStaleSecurityGroups(DescribeStaleSecurityGroupsType request) throws EucalyptusCloudException {
-    DescribeStaleSecurityGroupsResponseType reply = request.getReply( );
-    return reply;
+    return request.getReply( );
   }
 
   public DescribeVpcsResponseType describeVpcs( final DescribeVpcsType request ) throws EucalyptusCloudException {
@@ -1309,13 +1310,11 @@ public class ComputeService {
   }
 
   public DescribeVpnConnectionsResponseType describeVpnConnections(DescribeVpnConnectionsType request) throws EucalyptusCloudException {
-    DescribeVpnConnectionsResponseType reply = request.getReply( );
-    return reply;
+    return request.getReply( );
   }
 
   public DescribeVpnGatewaysResponseType describeVpnGateways(DescribeVpnGatewaysType request) throws EucalyptusCloudException {
-    DescribeVpnGatewaysResponseType reply = request.getReply( );
-    return reply;
+    return request.getReply( );
   }
 
   public DescribeMovingAddressesResponseType describeMovingAddresses( DescribeMovingAddressesType request ) {
@@ -1407,17 +1406,15 @@ public class ComputeService {
   ) throws EucalyptusCloudException {
     final Context context = checkAuthorized( );
     final DescribeIdentityIdFormatResponseType response = request.getReply( );
-    final Pair<IdType,String> identity =
-        verifyIdentity( context.getAccountNumber( ), request.getPrincipalArn( ), false );
     final Optional<String> resource = Optional.fromNullable( verifyIdentifierResource( request.getResource( ) ) );
     response.setStatuses( Lists.newArrayList(
         Iterables.transform(
-            IdentityIdFormats.listIdFormatsWithDefaults(
-                context.getAccountNumber( ),
-                identity.getLeft( ),
-                identity.getRight( ),
-                resource.transform( FUtils.valueOfFunction( IdResource.class ) ) ),
-            TypeMappers.lookup( IdentityIdFormat.class, IdFormatItemType.class ) )
+            Iterables.filter(
+                ResourceIdentifiers.getLongIdentifierResources( ),
+                resource.transform( Predicates::equalTo ).or( Predicates.alwaysTrue( ) ) ),
+            longIdResource -> new IdFormatItemType(
+                longIdResource,
+                ResourceIdentifiers.useLongIdentifierForResource( longIdResource ) ) )
     ) );
     return response;
   }
@@ -1425,21 +1422,7 @@ public class ComputeService {
   public ModifyIdentityIdFormatResponseType modifyIdentityIdFormat(
       final ModifyIdentityIdFormatType request
   ) throws EucalyptusCloudException {
-    final ModifyIdentityIdFormatResponseType response = request.getReply( );
-    final Context context = checkAuthorized( );
-    final Pair<IdType,String> identity =
-        verifyIdentity( context.getAccountNumber( ), request.getPrincipalArn( ), true );
-    final Optional<String> resource = Optional.fromNullable( verifyIdentifierResource( request.getResource( ) ) );
-    final Boolean useLongIds = request.getUseLongIds( );
-    if ( !IdentityIdFormats.saveIdFormat(
-        context.getAccountNumber( ),
-        identity.getLeft( ),
-        identity.getRight( ),
-        IdResource.valueOf( resource.get( ) ),
-        useLongIds ) ) {
-      response.markFailed( );
-    }
-    return response;
+    return request.getReply( );
   }
 
   public DescribeIdFormatResponseType describeIdFormat(
@@ -1447,16 +1430,14 @@ public class ComputeService {
   ) throws EucalyptusCloudException {
     final Context context = checkAuthorized( );
     final DescribeIdFormatResponseType response = request.getReply( );
-    final Pair<IdType,String> identity = getRequestIdentity( context );
     final Optional<String> resource = Optional.fromNullable( verifyIdentifierResource( request.getResource( ) ) );
     response.setStatuses( Lists.newArrayList(
         Iterables.transform(
-            IdentityIdFormats.listIdFormatsWithDefaults(
-                context.getAccountNumber( ),
-                identity.getLeft( ),
-                identity.getRight( ),
-                resource.transform( FUtils.valueOfFunction( IdResource.class ) ) ),
-            TypeMappers.lookup( IdentityIdFormat.class, IdFormatItemType.class ) )
+            Iterables.filter( ResourceIdentifiers.getLongIdentifierResources( ),
+                resource.transform( Predicates::equalTo ).or( Predicates.alwaysTrue( ) ) ),
+            longIdResource -> new IdFormatItemType(
+                longIdResource,
+                ResourceIdentifiers.useLongIdentifierForResource( longIdResource ) ) )
     ) );
     return response;
   }
@@ -1464,18 +1445,270 @@ public class ComputeService {
   public ModifyIdFormatResponseType modifyIdFormat(
       final ModifyIdFormatType request
   ) throws EucalyptusCloudException {
-    final ModifyIdFormatResponseType response = request.getReply( );
+    return request.getReply( );
+  }
+
+  public DescribeAggregateIdFormatResponseType describeAggregateIdFormat(
+      DescribeAggregateIdFormatType request
+  ) throws EucalyptusCloudException {
     final Context context = checkAuthorized( );
-    final Pair<IdType,String> identity = getRequestIdentity( context );
-    final Optional<String> resource = Optional.fromNullable( verifyIdentifierResource( request.getResource( ) ) );
-    final Boolean useLongIds = request.getUseLongIds( );
-    if ( !IdentityIdFormats.saveIdFormat(
-        context.getAccountNumber( ),
-        identity.getLeft( ),
-        identity.getRight( ),
-        IdResource.valueOf( resource.get( ) ),
-        useLongIds ) ) {
-      response.markFailed( );
+    final DescribeAggregateIdFormatResponseType response = request.getReply( );
+    final IdFormatList idFormatList = new IdFormatList();
+    final AtomicBoolean aggregated = new AtomicBoolean( true );
+    idFormatList.setMember( Lists.newArrayList(
+        Iterables.transform(
+            ResourceIdentifiers.getLongIdentifierResources( ),
+            longIdResource -> {
+              boolean useLongId = ResourceIdentifiers.useLongIdentifierForResource( longIdResource );
+              if (!useLongId) aggregated.set( false );
+              return new IdFormatItemType(longIdResource, useLongId);
+            } )
+    ) );
+    response.setUseLongIdsAggregated( aggregated.get( ) );
+    response.setStatuses( idFormatList );
+    return response;
+  }
+
+  public DescribePrincipalIdFormatResponseType describePrincipalIdFormat(
+      DescribePrincipalIdFormatType request
+  ) throws EucalyptusCloudException {
+    final Context context = checkAuthorized( );
+    final DescribePrincipalIdFormatResponseType response = request.getReply( );
+    final PrincipalIdFormatList principals = new PrincipalIdFormatList( );
+    final PrincipalIdFormat principalIdFormat = new PrincipalIdFormat( );
+    final IdFormatList idFormatList = new IdFormatList();
+    final Predicate<String> resourcePredicate =
+        request.getResources( ) != null && !request.getResources( ).getMember( ).isEmpty( ) ?
+            Predicates.in( request.getResources( ).getMember( ) ) :
+            Predicates.alwaysTrue( );
+    idFormatList.setMember( Lists.newArrayList(
+        Iterables.transform(
+            Iterables.filter(
+                ResourceIdentifiers.getLongIdentifierResources( ),
+                resourcePredicate ),
+            longIdResource -> new IdFormatItemType(
+                longIdResource,
+                ResourceIdentifiers.useLongIdentifierForResource( longIdResource ) ) )
+    ) );
+    principalIdFormat.setStatuses( idFormatList );
+    try {
+      principalIdFormat.setArn( Accounts.getAccountArn( context.getAccountNumber( ) ) );
+    } catch ( AuthException ignore ) {
+    }
+    principals.getMember( ).add( principalIdFormat );
+    response.setPrincipals( principals );
+    return response;
+  }
+
+  public AssociateIamInstanceProfileResponseType associateIamInstanceProfile(
+      final AssociateIamInstanceProfileType request
+  ) throws EucalyptusCloudException {
+    final Context context = checkAuthorized( );
+    final AuthContextSupplier user = context.getAuthContext( );
+    final AssociateIamInstanceProfileResponseType response = request.getReply( );
+    final String instanceId = normalizeInstanceIdentifier( request.getInstanceId( ) );
+    try {
+      final OwnerFullName ownerFullName = context.getUserFullName( ).asAccountFullName( );
+      final String instanceProfileArn = request.getIamInstanceProfile().getArn();
+      final String instanceProfileName = request.getIamInstanceProfile().getName();
+      final Tuple2<String,String> profileAccountAndName;
+      try {
+        profileAccountAndName = VmIamInstanceProfileHelper.profileAccountAndName(
+            ownerFullName.getAccountNumber( ),
+            instanceProfileArn,
+            instanceProfileName );
+      } catch ( IllegalArgumentException e ) {
+        throw new ComputeServiceClientException( "InvalidIamInstanceProfileArn.Malformed", e.getMessage( ) );
+      }
+
+      try ( final TransactionResource tx = Entities.transactionFor( VmInstance.class ) ) {
+        final InstanceProfile profile;
+        try {
+          profile = VmIamInstanceProfileHelper.lookup( profileAccountAndName );
+        } catch ( NoSuchElementException e ) {
+          throw new ComputeServiceClientException( "InvalidTargetArn.Unknown", e.getMessage( ) );
+        }
+
+        if ( !Strings.isNullOrEmpty( instanceProfileName ) &&  !instanceProfileName.equals( profile.getName( ) ) ) {
+          throw new ComputeServiceClientException( "InvalidParameterValue", String.format(
+              "Invalid IAM instance profile name '%s' for ARN: %s", profileAccountAndName._2( ), instanceProfileArn) );
+        }
+
+        final String roleArn;
+        try {
+          roleArn = VmIamInstanceProfileHelper.checkAuthorized( profile, user, ownerFullName );
+        } catch ( IllegalStateException e ) {
+          throw new ComputeServiceAuthorizationException( "AuthFailure", e.getMessage( ) );
+        } catch ( IllegalArgumentException e ) {
+          throw new ComputeServiceClientException( "InvalidParameterValue", e.getMessage( ) );
+        }
+
+        final VmInstance vm;
+        try {
+          vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
+        } catch ( NoSuchElementException e ) {
+          throw new ComputeServiceClientException("InvalidInstanceID.NotFound", "The instance ID '" + instanceId + "' does not exist");
+        }
+        final VmBootRecord vmBootRecord = vm.getBootRecord( );
+        final String associationId = vmBootRecord.associateIamInstanceProfile(
+            null,
+            profile.getInstanceProfileArn( ),
+            profile.getInstanceProfileId( ),
+            roleArn );
+
+        final IamInstanceProfileAssociation association =
+            TypeMappers.transform( vm, IamInstanceProfileAssociation.class );
+        association.setState( "associating" );
+        association.setTimestamp( null );
+        response.setIamInstanceProfileAssociation( association );
+
+        tx.commit( );
+      }
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
+    return response;
+  }
+
+  public DescribeIamInstanceProfileAssociationsResponseType describeIamInstanceProfileAssociations(
+      final DescribeIamInstanceProfileAssociationsType request
+  ) throws EucalyptusCloudException {
+    final Context context = checkAuthorized( );
+    final boolean showAll = request.getAssociationId( ).remove( "verbose" );
+    final Collection<String> identifiers = normalizeIamInstanceProfileAssociationIdentifiers( request.getAssociationId( ) );
+    final Filter filter = Filters.generateFor( request.getFilterSet(), VmInstance.class, "instance-profile" )
+        .withOptionalInternalFilter( "iam-instance-profile.association-id", identifiers.isEmpty( ) ?
+            Collections.singleton( "iip-assoc-*" ) :
+            identifiers )
+        .generate();
+    final Predicate<? super VmInstance> requestedAndAccessible = CloudMetadatas.filteringFor( VmInstance.class )
+        .byPredicate( VmStateSet.DONE.not() )
+        .byPredicate( filter.asPredicate() )
+        .byPrivileges()
+        .buildPredicate();
+    final OwnerFullName ownerFullName = context.getUserFullName( ).asAccountFullName( );
+    final DescribeIamInstanceProfileAssociationsResponseType response = request.getReply( );
+    try ( final TransactionResource tx = Entities.readOnlyDistinctTransactionFor( VmInstance.class ) ) {
+      final List<VmInstance> instances = VmInstances.list(
+          showAll && context.isAdministrator( ) ? null : ownerFullName,
+          filter.asCriterionWithConjunction( Restrictions.not( VmInstance.criterion( VmInstance.VmState.BURIED ) ) ),
+          filter.getAliases( ),
+          Predicates.and( new TrackingPredicate<>(
+              VmInstance::getIamInstanceProfileAssociationId, identifiers ), requestedAndAccessible ) );
+      errorIfNotFound( "InvalidAssociationID.NotFound", "association ID", identifiers );
+
+      final IamInstanceProfileAssociationSet associations = new IamInstanceProfileAssociationSet();
+      Iterables.addAll(
+          associations.getMember( ),
+          Iterables.transform(
+              instances,
+              TypeMappers.lookup( VmInstance.class, IamInstanceProfileAssociation.class ) ) );
+      response.setIamInstanceProfileAssociations( associations );
+    } catch ( final Exception e ) {
+      throw handleException( e );
+    }
+    return response;
+  }
+
+  public DisassociateIamInstanceProfileResponseType disassociateIamInstanceProfile(
+      final DisassociateIamInstanceProfileType request
+  ) throws EucalyptusCloudException {
+    final Context context = checkAuthorized( );
+    final DisassociateIamInstanceProfileResponseType response = request.getReply( );
+    final String associationId = normalizeIamInstanceProfileAssociationIdentifier( request.getAssociationId( ) );
+    try {
+      final OwnerFullName ownerFullName = context.getUserFullName( ).asAccountFullName( );
+      try ( final TransactionResource tx = Entities.transactionFor( VmInstance.class ) ) {
+        final VmInstance vm = VmIamInstanceProfileHelper.lookupVmInstanceByIamInstanceProfileAssociationId(
+            context.isAdministrator( ) ? null : ownerFullName,
+            associationId
+        );
+
+        RestrictedTypes.doPrivileged( vm.getInstanceId( ), new VmInstanceResolver( vm ) );
+
+        final IamInstanceProfileAssociation association =
+            TypeMappers.transform( vm, IamInstanceProfileAssociation.class );
+        association.setState( "disassociating" );
+        association.setTimestamp( null );
+
+        vm.getBootRecord( ).disassociateIamInstanceProfile( associationId );
+
+        response.setIamInstanceProfileAssociation( association );
+
+        tx.commit( );
+      }
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
+    return response;
+  }
+
+  public ReplaceIamInstanceProfileAssociationResponseType replaceIamInstanceProfileAssociation(
+      final ReplaceIamInstanceProfileAssociationType request
+  ) throws EucalyptusCloudException {
+    final Context context = checkAuthorized( );
+    final ReplaceIamInstanceProfileAssociationResponseType response = request.getReply( );
+    final AuthContextSupplier user = context.getAuthContext( );
+    final String associationId = normalizeIamInstanceProfileAssociationIdentifier( request.getAssociationId( ) );
+    try {
+      final OwnerFullName ownerFullName = context.getUserFullName( ).asAccountFullName( );
+      final String instanceProfileArn = request.getIamInstanceProfile().getArn();
+      final String instanceProfileName = request.getIamInstanceProfile().getName();
+      final Tuple2<String,String> profileAccountAndName;
+      try {
+        profileAccountAndName = VmIamInstanceProfileHelper.profileAccountAndName(
+            ownerFullName.getAccountNumber( ),
+            instanceProfileArn,
+            instanceProfileName );
+      } catch ( IllegalArgumentException e ) {
+        throw new ComputeServiceClientException( "InvalidIamInstanceProfileArn.Malformed", e.getMessage( ) );
+      }
+
+      try ( final TransactionResource tx = Entities.transactionFor( VmInstance.class ) ) {
+        final InstanceProfile profile;
+        try {
+          profile = VmIamInstanceProfileHelper.lookup( profileAccountAndName );
+        } catch ( NoSuchElementException e ) {
+          throw new ComputeServiceClientException( "InvalidTargetArn.Unknown", e.getMessage( ) );
+        }
+
+        if ( !Strings.isNullOrEmpty( instanceProfileName ) &&  !instanceProfileName.equals( profile.getName( ) ) ) {
+          throw new ComputeServiceClientException( "InvalidParameterValue", String.format(
+              "Invalid IAM instance profile name '%s' for ARN: %s", profileAccountAndName._2( ), instanceProfileArn) );
+        }
+
+        final VmInstance vm = VmIamInstanceProfileHelper.lookupVmInstanceByIamInstanceProfileAssociationId(
+            context.isAdministrator( ) ? null : ownerFullName,
+            associationId
+        );
+
+        final String roleArn;
+        try {
+          roleArn = VmIamInstanceProfileHelper.checkAuthorized( profile, user, ownerFullName );
+        } catch ( IllegalStateException e ) {
+          throw new ComputeServiceAuthorizationException( "AuthFailure", e.getMessage( ) );
+        } catch ( IllegalArgumentException e ) {
+          throw new ComputeServiceClientException( "InvalidParameterValue", e.getMessage( ) );
+        }
+
+        final String newAssociationId = vm.getBootRecord( ).associateIamInstanceProfile(
+            associationId,
+            profile.getInstanceProfileArn( ),
+            profile.getInstanceProfileId( ),
+            roleArn );
+
+        RestrictedTypes.doPrivileged( vm.getInstanceId( ), new VmInstanceResolver( vm ) );
+        final IamInstanceProfileAssociation association =
+            TypeMappers.transform( vm, IamInstanceProfileAssociation.class );
+        association.setState( "associating" );
+        association.setTimestamp( null );
+
+        response.setIamInstanceProfileAssociation( association );
+
+        tx.commit( );
+      }
+    } catch ( Exception e ) {
+      throw handleException( e );
     }
     return response;
   }
@@ -1483,181 +1716,464 @@ public class ComputeService {
   public AllocateHostsResponseType allocateHosts(
       final AllocateHostsType request
   ) throws EucalyptusCloudException {
-    final AllocateHostsResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DescribeHostReservationOfferingsResponseType describeHostReservationOfferings(
       final DescribeHostReservationOfferingsType request
   ) throws EucalyptusCloudException {
-    final DescribeHostReservationOfferingsResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DescribeHostReservationsResponseType describeHostReservations(
       final DescribeHostReservationsType request
   ) throws EucalyptusCloudException {
-    final DescribeHostReservationsResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DescribeHostsResponseType describeHosts(
       final DescribeHostsType request
   ) throws EucalyptusCloudException {
-    final DescribeHostsResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public GetHostReservationPurchasePreviewResponseType getHostReservationPurchasePreview(
       final GetHostReservationPurchasePreviewType request
   ) throws EucalyptusCloudException {
-    final GetHostReservationPurchasePreviewResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public ModifyHostsResponseType modifyHosts(
       final ModifyHostsType request
   ) throws EucalyptusCloudException {
-    final ModifyHostsResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public PurchaseHostReservationResponseType purchaseHostReservation(
       final PurchaseHostReservationType request
   ) throws EucalyptusCloudException {
-    final PurchaseHostReservationResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public ReleaseHostsResponseType releaseHosts(
       final ReleaseHostsType request
   ) throws EucalyptusCloudException {
-    final ReleaseHostsResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DescribeScheduledInstanceAvailabilityResponseType describeScheduledInstanceAvailability(
       final DescribeScheduledInstanceAvailabilityType request
   ) throws EucalyptusCloudException {
-    final DescribeScheduledInstanceAvailabilityResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DescribeScheduledInstancesResponseType describeScheduledInstances(
       final DescribeScheduledInstancesType request
   ) throws EucalyptusCloudException {
-    final DescribeScheduledInstancesResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public PurchaseScheduledInstancesResponseType purchaseScheduledInstances(
       final PurchaseScheduledInstancesType request
   ) throws EucalyptusCloudException {
-    final PurchaseScheduledInstancesResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public RunScheduledInstancesResponseType runScheduledInstances(
       final RunScheduledInstancesType request
   ) throws EucalyptusCloudException {
-    final RunScheduledInstancesResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public AssignIpv6AddressesResponseType assignIpv6AddressesType(
       final AssignIpv6AddressesType request
   ) throws EucalyptusCloudException {
-    final AssignIpv6AddressesResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public AssociateSubnetCidrBlockResponseType associateSubnetCidrBlock(
       final AssociateSubnetCidrBlockType request
   ) throws EucalyptusCloudException {
-    final AssociateSubnetCidrBlockResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public AssociateVpcCidrBlockResponseType associateVpcCidrBlock(
       final AssociateVpcCidrBlockType request
   ) throws EucalyptusCloudException {
-    final AssociateVpcCidrBlockResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public CreateEgressOnlyInternetGatewayResponseType createEgressOnlyInternetGateway(
       final CreateEgressOnlyInternetGatewayType request
   ) throws EucalyptusCloudException {
-    final CreateEgressOnlyInternetGatewayResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DeleteEgressOnlyInternetGatewayResponseType deleteEgressOnlyInternetGateway(
       final DeleteEgressOnlyInternetGatewayType request
   ) throws EucalyptusCloudException {
-    final DeleteEgressOnlyInternetGatewayResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DescribeEgressOnlyInternetGatewaysResponseType describeEgressOnlyInternetGateways(
       final DescribeEgressOnlyInternetGatewaysType request
   ) throws EucalyptusCloudException {
-    final DescribeEgressOnlyInternetGatewaysResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DisassociateSubnetCidrBlockResponseType disassociateSubnetCidrBlock(
       final DisassociateSubnetCidrBlockType request
   ) throws EucalyptusCloudException {
-    final DisassociateSubnetCidrBlockResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public DisassociateVpcCidrBlockResponseType disassociateVpcCidrBlock(
       final DisassociateVpcCidrBlockType request
   ) throws EucalyptusCloudException {
-    final DisassociateVpcCidrBlockResponseType response = request.getReply( );
-    return response;
+    return request.getReply( );
   }
 
   public UnassignIpv6AddressesResponseType unassignIpv6Addresses(
       final UnassignIpv6AddressesType request
   ) throws EucalyptusCloudException {
-    final UnassignIpv6AddressesResponseType response = request.getReply( );
+    return request.getReply( );
+  }
+
+  public AcceptVpcEndpointConnectionsResponseType acceptVpcEndpointConnections(
+    AcceptVpcEndpointConnectionsType request
+  ) {
+    return request.getReply( );
+  }
+
+  public CopyFpgaImageResponseType copyFpgaImage(
+      CopyFpgaImageType request
+  ) {
+    return request.getReply( );
+  }
+
+  public CreateFleetResponseType createFleet(
+      CreateFleetType request
+  ) {
+    return request.getReply( );
+  }
+
+  public CreateFpgaImageResponseType createFpgaImage(
+      CreateFpgaImageType request
+  ) {
+    return request.getReply( );
+  }
+
+  public CreateLaunchTemplateVersionResponseType createLaunchTemplateVersion(
+      CreateLaunchTemplateVersionType request
+  ) {
+    return request.getReply( );
+  }
+
+  public CreateNetworkInterfacePermissionResponseType createNetworkInterfacePermission(
+      CreateNetworkInterfacePermissionType request
+  ) {
+    return request.getReply( );
+  }
+
+  public CreateVpcEndpointConnectionNotificationResponseType createVpcEndpointConnectionNotification(
+      CreateVpcEndpointConnectionNotificationType request
+  ) {
+    return request.getReply( );
+  }
+
+  public CreateVpcEndpointServiceConfigurationResponseType createVpcEndpointServiceConfiguration(
+      CreateVpcEndpointServiceConfigurationType request
+  ) {
+    return request.getReply( );
+  }
+
+  public DeleteFleetsResponseType deleteFleets(
+      DeleteFleetsType request
+  ) {
+    return request.getReply( );
+  }
+
+  public DeleteFpgaImageResponseType deleteFpgaImage(
+      DeleteFpgaImageType request
+  ) {
+    return request.getReply( );
+  }
+
+  public DeleteLaunchTemplateVersionsResponseType deleteLaunchTemplateVersions(
+      DeleteLaunchTemplateVersionsType request
+  ) {
+    return request.getReply( );
+  }
+
+  public DeleteNetworkInterfacePermissionResponseType deleteNetworkInterfacePermission(
+      DeleteNetworkInterfacePermissionType request
+  ) {
+    return request.getReply( );
+  }
+
+  public DeleteVpcEndpointConnectionNotificationsResponseType deleteVpcEndpointConnectionNotifications(
+      DeleteVpcEndpointConnectionNotificationsType request
+  ) {
+    return request.getReply( );
+  }
+
+  public DeleteVpcEndpointServiceConfigurationsResponseType deleteVpcEndpointServiceConfigurations(
+      DeleteVpcEndpointServiceConfigurationsType request
+  ) {
+    return request.getReply( );
+  }
+
+  public DescribeElasticGpusResponseType describeElasticGpus(
+      DescribeElasticGpusType request
+  ) {
+    return request.getReply( );
+  }
+
+  public DescribeFleetHistoryResponseType describeFleetHistory(
+      DescribeFleetHistoryType request
+  ) {
+    return request.getReply( );
+  }
+
+  public DescribeFleetInstancesResponseType describeFleetInstances(
+      DescribeFleetInstancesType request
+  ) {
+    return request.getReply( );
+  }
+
+  public DescribeFleetsResponseType describeFleets(
+      DescribeFleetsType request
+  ) {
+    return request.getReply( );
+  }
+
+  public DescribeFpgaImageAttributeResponseType describeFpgaImageAttribute(
+      DescribeFpgaImageAttributeType request
+  ) {
+    return request.getReply( );
+  }
+
+  public DescribeFpgaImagesResponseType describeFpgaImages(
+      DescribeFpgaImagesType request
+  ) {
+    return request.getReply( );
+  }
+
+  public DescribeInstanceCreditSpecificationsResponseType describeInstanceCreditSpecifications(
+      DescribeInstanceCreditSpecificationsType request
+  ) {
+    return request.getReply( );
+  }
+
+  public DescribeLaunchTemplatesResponseType describeLaunchTemplates(
+      final DescribeLaunchTemplatesType request
+  ) throws EucalyptusCloudException {
+    final Context context = Contexts.lookup( );
+    final DescribeLaunchTemplatesResponseType response = request.getReply( );
+    boolean showAll = request.getLaunchTemplateIds( ).getMember().remove( "verbose" ) ||
+        !request.getLaunchTemplateIds( ).getMember().isEmpty( );
+    final Collection<String> identifiers = normalizeLaunchTemplateIdentifiers(
+        request.getLaunchTemplateIds( ).getMember() );
+    final Collection<String> names = request.getLaunchTemplateNames( ).getMember( );
+    final Filter filter = Filters
+        .generateFor( request.getFilterSet(),
+                      com.eucalyptus.compute.common.internal.vm.LaunchTemplate.class )
+        .withOptionalInternalFilter("launch-template-id", identifiers )
+        .withOptionalInternalFilter("launch-template-name", names )
+        .generate();
+    final Filter persistenceFilter = getPersistenceFilter(
+        com.eucalyptus.compute.common.internal.vm.LaunchTemplate.class,
+        identifiers, "launch-template-id", filter );
+    final Predicate<? super com.eucalyptus.compute.common.internal.vm.LaunchTemplate> requestedAndAccessible =
+        CloudMetadatas.filteringFor( com.eucalyptus.compute.common.internal.vm.LaunchTemplate.class )
+        .byId( identifiers ) // filters without wildcard support
+        .byPredicate( Predicates.and(
+            new TrackingPredicate<>( identifiers ),
+            Predicates.and(
+                lt -> names.isEmpty( ) || names.contains( lt.getName( ) ),
+                filter.asPredicate( ) ) ) )
+        .byPrivileges()
+        .buildPredicate();
+    final OwnerFullName ownerFullName = ( context.isAdministrator( ) && showAll )
+        ? null
+        : context.getUserFullName( ).asAccountFullName( );
+    try ( final TransactionResource db = Entities.readOnlyDistinctTransactionFor( com.eucalyptus.compute.common.internal.vm.LaunchTemplate.class ) ) {
+      final List<com.eucalyptus.compute.common.internal.vm.LaunchTemplate> ltrs =
+          launchTemplates.list( ownerFullName, persistenceFilter.asCriterion(), Collections.emptyMap(), requestedAndAccessible, Functions.identity() );
+      errorIfNotFound( "InvalidLaunchTemplateID.NotFound", "launch template ID", identifiers );
+      final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( com.eucalyptus.compute.common.internal.vm.LaunchTemplate.class )
+          .getResourceTagMap(  AccountFullName.getInstance( context.getAccountNumber() ),
+              Iterables.transform( ltrs, CloudMetadatas.toDisplayName() ) );
+
+      for ( final com.eucalyptus.compute.common.internal.vm.LaunchTemplate lt : ltrs ) {
+        final LaunchTemplate ltr =  TypeMappers.transform( lt, LaunchTemplate.class );
+        Tags.addFromTags( ltr.getTagSet(), ResourceTag.class, tagsMap.get( lt.getDisplayName() ) );
+        response.getLaunchTemplates( ).getMember( ).add( ltr );
+      }
+    } catch ( final Exception e ) {
+      Exceptions.findAndRethrow( e, ComputeServiceException.class );
+      LOG.error( e );
+      LOG.debug( e, e );
+      throw new EucalyptusCloudException( e.getMessage( ) );
+    }
+
     return response;
   }
 
-  public AssociateIamInstanceProfileResponseType associateIamInstanceProfile(
-      final AssociateIamInstanceProfileType request
-  ) throws EucalyptusCloudException {
-    final AssociateIamInstanceProfileResponseType response = request.getReply( );
-    return response;
+  public DescribeLaunchTemplateVersionsResponseType describeLaunchTemplateVersions(
+      DescribeLaunchTemplateVersionsType request
+  ) {
+    return request.getReply( );
   }
 
-  public DescribeIamInstanceProfileAssociationsResponseType describeIamInstanceProfileAssociations(
-      final DescribeIamInstanceProfileAssociationsType request
-  ) throws EucalyptusCloudException {
-    final DescribeIamInstanceProfileAssociationsResponseType response = request.getReply( );
-    return response;
+  public DescribeNetworkInterfacePermissionsResponseType describeNetworkInterfacePermissions(
+      DescribeNetworkInterfacePermissionsType request
+  ) {
+    return request.getReply( );
   }
 
-  public DisassociateIamInstanceProfileResponseType disassociateIamInstanceProfile(
-      final DisassociateIamInstanceProfileType request
+  public DescribeVolumesModificationsResponseType describeVolumesModifications(
+      DescribeVolumesModificationsType request
   ) throws EucalyptusCloudException {
-    final DisassociateIamInstanceProfileResponseType response = request.getReply( );
-    return response;
+    final DescribeVolumesModificationsResponseType reply = request.getReply();
+    final Context ctx = checkAuthorized( );
+    final List<String> volumeIdList =
+        request.getVolumeIds() == null ? Lists.newArrayList() : request.getVolumeIds().getMember();
+    final boolean showAll = volumeIdList.remove( "verbose" );
+    final Set<String> volumeIds = Sets.newLinkedHashSet( normalizeVolumeIdentifiers( volumeIdList ) );
+    final AccountFullName ownerFullName = ( ctx.isAdministrator( ) && ( showAll || !volumeIds.isEmpty( ) ) ) ?
+        null :
+        ctx.getUserFullName( ).asAccountFullName( );
+    final Class<com.eucalyptus.compute.common.internal.blockstorage.VolumeModification> volumeModificationClass =
+        com.eucalyptus.compute.common.internal.blockstorage.VolumeModification.class;
+    final Filters.FiltersBuilder  filtersBuilder = Filters.generateFor(request.getFilterSet( ), volumeModificationClass);
+    final Filter filter = filtersBuilder.generate( );
+    final Filter persistenceFilter = getPersistenceFilter(volumeModificationClass, volumeIds, "volume-id", filter);
+    final Predicate<? super com.eucalyptus.compute.common.internal.blockstorage.VolumeModification> filterPredicate = filter.asPredicate( );
+    final Predicate<? super com.eucalyptus.compute.common.internal.blockstorage.VolumeModification> idPredicate =
+        CloudMetadatas.filterByProperty(volumeIdList, com.eucalyptus.compute.common.internal.blockstorage.VolumeModification::getVolumeId);
+    final VolumeModificationList modifications = new VolumeModificationList();
+    try {
+      final List<VolumeModification> volumeModifications = Transactions.filteredTransform(
+          com.eucalyptus.compute.common.internal.blockstorage.VolumeModification.exampleWithOwner(ownerFullName),
+          persistenceFilter.asCriterion( ),
+          persistenceFilter.getAliases( ),
+          Predicates.and(idPredicate, filterPredicate),
+          TypeMappers.lookup(volumeModificationClass, VolumeModification.class));
+      modifications.getMember().addAll(volumeModifications);
+    } catch (Exception e) {
+      throw handleException(e);
+    }
+    reply.setVolumesModifications(modifications);
+    return reply;
   }
 
-  public ReplaceIamInstanceProfileAssociationResponseType replaceIamInstanceProfileAssociation(
-      final ReplaceIamInstanceProfileAssociationType request
-  ) throws EucalyptusCloudException {
-    final ReplaceIamInstanceProfileAssociationResponseType response = request.getReply( );
-    return response;
+  public DescribeVpcEndpointConnectionNotificationsResponseType describeVpcEndpointConnectionNotifications(
+      DescribeVpcEndpointConnectionNotificationsType request
+  ) {
+    return request.getReply( );
+  }
+
+  public DescribeVpcEndpointConnectionsResponseType describeVpcEndpointConnections(
+      DescribeVpcEndpointConnectionsType request
+  ) {
+    return request.getReply( );
+  }
+
+  public DescribeVpcEndpointServiceConfigurationsResponseType describeVpcEndpointServiceConfigurations(
+      DescribeVpcEndpointServiceConfigurationsType request
+  ) {
+    return request.getReply( );
+  }
+
+  public DescribeVpcEndpointServicePermissionsResponseType describeVpcEndpointServicePermissions(
+      DescribeVpcEndpointServicePermissionsType request
+  ) {
+    return request.getReply( );
+  }
+
+  public GetLaunchTemplateDataResponseType getLaunchTemplateData(
+      GetLaunchTemplateDataType request
+  ) {
+    return request.getReply( );
+  }
+
+  public ModifyFleetResponseType modifyFleet(
+      ModifyFleetType request
+  ) {
+    return request.getReply( );
+  }
+
+  public ModifyFpgaImageAttributeResponseType modifyFpgaImageAttribute(
+      ModifyFpgaImageAttributeType request
+  ) {
+    return request.getReply( );
+  }
+
+  public ModifyInstanceCreditSpecificationResponseType modifyInstanceCreditSpecification(
+      ModifyInstanceCreditSpecificationType request
+  ) {
+    return request.getReply( );
+  }
+
+  public ModifyLaunchTemplateResponseType modifyLaunchTemplate(
+      ModifyLaunchTemplateType request
+  ) {
+    return request.getReply( );
+  }
+
+  public ModifyVpcEndpointConnectionNotificationResponseType modifyVpcEndpointConnectionNotification(
+      ModifyVpcEndpointConnectionNotificationType request
+  ) {
+    return request.getReply( );
+  }
+
+  public ModifyVpcEndpointServiceConfigurationResponseType modifyVpcEndpointServiceConfiguration(
+      ModifyVpcEndpointServiceConfigurationType request
+  ) {
+    return request.getReply( );
+  }
+
+  public ModifyVpcEndpointServicePermissionsResponseType modifyVpcEndpointServicePermissions(
+      ModifyVpcEndpointServicePermissionsType request
+  ) {
+    return request.getReply( );
+  }
+
+  public ModifyVpcTenancyResponseType modifyVpcTenancy(
+      ModifyVpcTenancyType request
+  ) {
+    return request.getReply( );
+  }
+
+  public RejectVpcEndpointConnectionsResponseType rejectVpcEndpointConnections(
+      RejectVpcEndpointConnectionsType request
+  ) {
+    return request.getReply( );
+  }
+
+  public ResetFpgaImageAttributeResponseType resetFpgaImageAttribute(
+      ResetFpgaImageAttributeType request
+  ) {
+    return request.getReply( );
+  }
+
+  public UpdateSecurityGroupRuleDescriptionsEgressResponseType updateSecurityGroupRuleDescriptionsEgress(
+      UpdateSecurityGroupRuleDescriptionsEgressType request
+  ) {
+    return request.getReply( );
+  }
+
+  public UpdateSecurityGroupRuleDescriptionsIngressResponseType updateSecurityGroupRuleDescriptionsIngress(
+      UpdateSecurityGroupRuleDescriptionsIngressType request
+  ) {
+    return request.getReply( );
   }
 
   public ComputeMessage proxy( final ComputeMessage request ) throws EucalyptusCloudException {
     // Dispatch
     try {
+      @SuppressWarnings( "unchecked" )
       BaseMessage backendRequest = BaseMessages.deepCopy( request, getBackendMessageClass( request ) );
       final BaseMessage backendResponse = send( backendRequest );
       final ComputeMessage response =
@@ -1679,7 +2195,7 @@ public class ComputeService {
       final Class<AT> api,
       final List<AT> results,
       final Lister<AP> lister ) throws EucalyptusCloudException {
-    describe( identifier, ids, filters, persistent, api, results, Callbacks.<AccountFullName>noop( ), lister );
+    describe( identifier, ids, filters, persistent, api, results, Callbacks.noop( ), lister );
   }
 
   private static <AP extends AbstractPersistent & CloudMetadata, AT> void describe(
@@ -1723,7 +2239,7 @@ public class ComputeService {
     }
   }
 
-  private static <AP extends AbstractPersistent & CloudMetadata, AT extends VpcTagged> void describe(
+  private static <AP extends AbstractPersistent & CloudMetadata, AT extends ResourceTagged> void describe(
       final Identifier identifier,
       final Collection<String> ids,
       final Collection<com.eucalyptus.compute.common.Filter> filters,
@@ -1735,7 +2251,7 @@ public class ComputeService {
     describe( identifier, ids, filters, persistent, api, results, new Callback<AccountFullName>( ) {
       @Override
       public void fire( final AccountFullName accountFullName ) {
-        populateTags( accountFullName, persistent, results, idFunction );
+        Tags.populateTags( accountFullName, persistent, results, idFunction );
       }
     }, lister );
   }
@@ -1758,7 +2274,7 @@ public class ComputeService {
   ) throws InvalidFilterException {
     return !identifiers.isEmpty( ) ?
         Filters.generateFor(
-            Collections.<com.eucalyptus.compute.common.Filter>emptySet( ),
+            Collections.emptySet( ),
             persistent,
             qualifier ).withOptionalInternalFilter( identifierFilterName, identifiers ).generate( ) :
         filter;
@@ -1791,63 +2307,8 @@ public class ComputeService {
             RestrictedTypes.filterPrivileged( ).apply( imgInfo );
   }
 
-  private static <VT extends VpcTagged> void populateTags( final AccountFullName accountFullName,
-                                                           final Class<? extends CloudMetadata> resourceType,
-                                                           final List<? extends VT> items,
-                                                           final Function<? super VT, String> idFunction ) {
-    final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( resourceType )
-        .getResourceTagMap( accountFullName, Iterables.transform( items, idFunction ) );
-    for ( final VT item : items ) {
-      final ResourceTagSetType tags = new ResourceTagSetType( );
-      Tags.addFromTags( tags.getItem(), ResourceTagSetItemType.class, tagsMap.get( idFunction.apply( item ) ) );
-      if ( !tags.getItem().isEmpty() ) {
-        item.setTagSet( tags );
-      }
-    }
-  }
-
-  private static Pair<IdType,String> getRequestIdentity( final Context context ) {
-    final UserPrincipal principal = context.getUser( );
-    return Accounts.isRoleIdentifier( principal.getAuthenticatedId( ) ) ?
-        Pair.pair( IdType.role, Accounts.getAuthenticatedFullName( principal ) ):
-        Pair.pair( IdType.user, Accounts.getUserFullName( principal ) );
-  }
-
-  private static Pair<IdType,String> verifyIdentity(
-      final String accountNumber,
-      final String arn,
-      final boolean checkExists
-  ) throws ComputeServiceClientException {
-    final Optional<Pair<IdType,String>> identityOption =
-        IdentityIdFormats.tryParseIdentity( accountNumber, arn ).transform( Pair.right( ) );
-    if ( !identityOption.isPresent( ) ) {
-      throw new ComputeServiceClientException(
-          "InvalidTargetArn.Unknown",
-          "Invalid TargetArn: " + arn );
-    }
-    final Pair<IdType,String> identity = identityOption.get( );
-    if ( checkExists ) {
-      try {
-        final String name = Accounts.getNameFromFullName( identity.getRight( ) );
-        switch ( identity.getLeft( ) ) {
-          case user:
-            Accounts.lookupPrincipalByAccountNumberAndUsername( accountNumber, name );
-            break;
-          case role:
-            Accounts.lookupRoleByName( accountNumber, name );
-            break;
-        }
-      } catch ( final AuthException e ) {
-        throw new ComputeServiceClientException(
-            "InvalidTargetArn.Unknown",
-            "Invalid TargetArn: " + arn );
-      }
-    }
-    return identity;
-  }
-
   private static String verifyIdentifierResource( final String resource ) throws ComputeServiceClientException {
-    if ( resource != null && !IdentityIdFormats.isValidResource( resource ) ) {
+    if ( resource != null && !ResourceIdentifiers.getLongIdentifierResources( ).contains( resource ) ) {
       throw new ComputeServiceClientException( "InvalidParameterValue", "Invalid resource type: " + resource );
     }
     return resource;
@@ -1886,6 +2347,24 @@ public class ComputeService {
     } catch ( final InvalidResourceIdentifier e ) {
       throw new ComputeServiceClientException( "InvalidParameterValue", String.format( message, e.getIdentifier( ) ) );
     }
+  }
+
+  private static List<String> normalizeIamInstanceProfileAssociationIdentifiers(
+      final List<String> identifiers
+  ) throws EucalyptusCloudException {
+    try {
+      return ResourceIdentifiers.normalize( "iip-assoc", identifiers );
+    } catch ( final InvalidResourceIdentifier e ) {
+      throw new ComputeServiceClientException( "InvalidParameterValue", "Invalid id: \""+e.getIdentifier()+"\"" );
+    }
+  }
+
+  private static String normalizeIamInstanceProfileAssociationIdentifier(
+      final String identifier
+  ) throws EucalyptusCloudException {
+    return normalizeIdentifier(
+        identifier, "iip-assoc", true,
+        "Value (%s) for parameter iam instance profile association is invalid." );
   }
 
   private static String normalizeImageIdentifier( final String identifier ) throws EucalyptusCloudException {
@@ -1939,6 +2418,31 @@ public class ComputeService {
       throw new ComputeServiceClientException(
           "InvalidParameterValue",
           "Value ("+e.getIdentifier()+") for parameter snapshots is invalid. Expected: 'snap-...'." );
+    }
+  }
+
+  private static List<String> normalizeLaunchTemplateIdentifiers( final List<String> identifiers ) throws EucalyptusCloudException {
+    try {
+      return ResourceIdentifiers.normalize(
+          com.eucalyptus.compute.common.internal.vm.LaunchTemplate.ID_PREFIX,
+          identifiers );
+    } catch ( final InvalidResourceIdentifier e ) {
+      throw new ComputeServiceClientException(
+          "InvalidParameterValue",
+          "Value ("+e.getIdentifier()+") for parameter launch template ids is invalid. Expected: 'lt-...'." );
+    }
+  }
+
+  private static class VmInstanceResolver implements CompatFunction<String,VmInstance> {
+    private final VmInstance instance;
+
+    private VmInstanceResolver( final VmInstance instance ) {
+      this.instance = instance;
+    }
+
+    @Override
+    public VmInstance apply( @Nullable final String identifier ) {
+      return instance;
     }
   }
 
@@ -2071,9 +2575,8 @@ public class ComputeService {
     }
   }
 
-  private static Class getBackendMessageClass( final BaseMessage request ) throws BindingException {
-    final Binding binding = BindingManager.getDefaultBinding( );
-    return binding.getElementClass( "Eucalyptus." + request.getClass( ).getSimpleName( ) );
+  private static Class getBackendMessageClass( final BaseMessage request ) throws ClassNotFoundException {
+    return Class.forName( ComputeBackendMessage.class.getPackage( ).getName( ) + "." + request.getClass( ).getSimpleName( ) );
   }
 
   private static BaseMessage send( final BaseMessage request ) throws Exception {

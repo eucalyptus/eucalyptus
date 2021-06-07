@@ -39,50 +39,43 @@ import com.google.common.base.Strings;
 public class CanonicalRbdObject {
   private static final Logger LOG = Logger.getLogger(CanonicalRbdObject.class);
 
-  private String pool;
-  private String image;
-  private String snapshot;
+  private final String pool;
+  private final String image;
+  private final String snapshot;
 
   public String getPool() {
     return pool;
   }
 
-  public void setPool(String pool) {
-    this.pool = pool;
-  }
-
   public CanonicalRbdObject withPool(String pool) {
-    this.pool = pool;
-    return this;
+    return new CanonicalRbdObject( pool, this.image, this.snapshot );
   }
 
   public String getImage() {
     return image;
   }
 
-  public void setImage(String image) {
-    this.image = image;
-  }
-
   public CanonicalRbdObject withImage(String image) {
-    this.image = image;
-    return this;
+    return new CanonicalRbdObject( this.pool, image, this.snapshot );
   }
 
   public String getSnapshot() {
     return snapshot;
   }
 
-  public void setSnapshot(String snapshot) {
-    this.snapshot = snapshot;
-  }
-
   public CanonicalRbdObject withSnapshot(String snapshot) {
-    this.snapshot = snapshot;
-    return this;
+    return new CanonicalRbdObject( this.pool, this.image, snapshot );
   }
 
-  public CanonicalRbdObject() {}
+  public CanonicalRbdObject( ) {
+    this( null, null, null );
+  }
+
+  public CanonicalRbdObject( final String pool, final String image, final String snapshot ) {
+    this.pool = pool;
+    this.image = image;
+    this.snapshot = snapshot;
+  }
 
   @Override
   public String toString() {

@@ -56,104 +56,120 @@ import java.util.concurrent.Callable;
 @RunDuring(Bootstrap.Stage.Final)
 @DependsLocal(LoadBalancing.class)
 public class LoadBalancingServiceBootstrapper extends Bootstrapper.Simple {
-    private static Logger LOG = Logger.getLogger(LoadBalancingServiceBootstrapper.class);
+  private static Logger LOG = Logger.getLogger(LoadBalancingServiceBootstrapper.class);
 
-    private static LoadBalancingServiceBootstrapper singleton;
-    private static final Callable<String> imageNotConfiguredFaultRunnable =
-            Faults.forComponent(LoadBalancing.class).havingId(1014).logOnFirstRun();
+  private static LoadBalancingServiceBootstrapper singleton;
+  private static final Callable<String> imageNotConfiguredFaultRunnable =
+      Faults.forComponent(LoadBalancing.class).havingId(1014).logOnFirstRun();
 
-    public static Bootstrapper getInstance() {
-        synchronized (LoadBalancingServiceBootstrapper.class) {
-            if (singleton == null) {
-                singleton = new LoadBalancingServiceBootstrapper();
-            }
-        }
-        return singleton;
+  public static Bootstrapper getInstance() {
+    synchronized (LoadBalancingServiceBootstrapper.class) {
+      if (singleton == null) {
+        singleton = new LoadBalancingServiceBootstrapper();
+      }
     }
+    return singleton;
+  }
 
-    private static int CheckCounter = 0;
-    private static boolean EmiCheckResult = true;
+  private static int CheckCounter = 0;
+  private static boolean EmiCheckResult = true;
 
-    @Override
-    public boolean check() throws Exception {
-        if (!super.check())
-            return false;
-        if (Topology.isEnabled( SimpleWorkflow.class ))  {
-            try {
-                if(!WorkflowClientManager.isRunning()) {
-                    WorkflowClientManager.start();
-                }
-            }catch(final Exception ex) {
-                LOG.error("Failed to start SWF workers for ELB", ex);
-                return false;
-            }
-        } else {
-            return false;
+  @Override
+  public boolean check() throws Exception {
+    if (!super.check()) {
+      return false;
+    }
+    throwIfNotEnabled(SimpleWorkflow.class);
+    if (Topology.isEnabled(SimpleWorkflow.class)) {
+      try {
+        if (!WorkflowClientManager.isRunning()) {
+          WorkflowClientManager.start();
         }
-        if (!isImageConfigured())
-            return false;
+      } catch (final Exception ex) {
+        LOG.error("Failed to start SWF workers for ELB", ex);
+        return false;
+      }
+    } else {
+      return false;
+    }
+    if (!isImageConfigured()) {
+      return false;
+    }
+    try {
+      LoadBalancerPolicyHelper.initialize();
+    } catch (final Exception ex) {
+      LOG.error("Unable to initialize ELB policy types", ex);
+      return false;
+    }
+    try {
+      if (LoadBalancingSystemVpcs.isCloudVpc().isPresent()) {
+        if (LoadBalancingSystemVpcs.isCloudVpc().get() &&
+            !LoadBalancingSystemVpcs.prepareSystemVpc()) {
+          return false;
+        }
+      } else {
+        return false;
+      }
+    } catch (final Exception ex) {
+      LOG.error("Failed to prepare system VPC for loadbalancing service", ex);
+      return false;
+    }
+    try {
+      if (!LoadBalancingHostedZoneManager.check()) {
+        return false;
+      }
+    } catch (final Exception ex) {
+      LOG.error("Failed to prepare system hosted zone for loadbalancing service", ex);
+      return false;
+    }
+    return true;
+  }
+
+  @Override
+  public boolean disable() throws Exception {
+    try {
+      WorkflowClientManager.stop();
+    } catch (final Exception ex) {
+      LOG.error("Failed to stop SWF workers for ELB", ex);
+      return false;
+    }
+    return true;
+  }
+
+  private boolean isImageConfigured() {
+    if (CloudMetadatas.isMachineImageIdentifier(LoadBalancingWorkerProperties.IMAGE)) {
+      if (CheckCounter >= 3 && Topology.isEnabled(Compute.class)) {
         try {
-            LoadBalancerPolicies.initialize();
+          final List<ImageDetails> emis =
+              EucalyptusActivityTasks.getInstance().describeImagesWithVerbose(
+                  Lists.newArrayList(LoadBalancingWorkerProperties.IMAGE));
+          EmiCheckResult = LoadBalancingWorkerProperties.IMAGE.equals(emis.get(0).getImageId());
+          EmiCheckResult = "available".equals(emis.get(0).getImageState());
         } catch (final Exception ex) {
-            LOG.error("Unable to initialize ELB policy types", ex);
-            return false;
+          EmiCheckResult = false;
         }
-        try{
-            if (LoadBalancingSystemVpcs.isCloudVpc().isPresent() ) {
-                if (LoadBalancingSystemVpcs.isCloudVpc().get() &&
-                        !LoadBalancingSystemVpcs.prepareSystemVpc())
-                    return false;
-            } else {
-                return false;
-            }
-        } catch (final Exception ex) {
-            LOG.error("Failed to prepare system VPC for loadbalancing service", ex);
-            return false;
-        }
-        return true;
+        CheckCounter = 0;
+      } else {
+        CheckCounter++;
+      }
+
+      if (!EmiCheckResult) {
+        return EmiCheckResult;
+      }
+
+      return true;
+    } else {
+      try {
+        //GRZE: do this bit in the way that it allows getting the information with out needing to spelunk log files.
+        final ServiceConfiguration localService =
+            Components.lookup(LoadBalancing.class).getLocalServiceConfiguration();
+        final Faults.CheckException ex =
+            Faults.failure(localService, imageNotConfiguredFaultRunnable.call().split("\n")[1]);
+        Faults.submit(localService, localService.lookupStateMachine().getTransitionRecord(), ex);
+      } catch (Exception e) {
+        LOG.debug(e);
+      }
+      return false;
     }
-
-    @Override
-    public boolean disable() throws Exception {
-        try {
-            WorkflowClientManager.stop();
-        }catch(final Exception ex) {
-            LOG.error("Failed to stop SWF workers for ELB", ex);
-            return false;
-        }
-        return true;
-    }
-
-    private boolean isImageConfigured() {
-        if ( CloudMetadatas.isMachineImageIdentifier( LoadBalancingWorkerProperties.IMAGE ) ) {
-            if( CheckCounter >= 3 && Topology.isEnabled( Compute.class ) ){
-                try{
-                    final List<ImageDetails> emis =
-                            EucalyptusActivityTasks.getInstance().describeImagesWithVerbose(
-                                    Lists.newArrayList(LoadBalancingWorkerProperties.IMAGE));
-                    EmiCheckResult = LoadBalancingWorkerProperties.IMAGE.equals( emis.get( 0 ).getImageId() );
-                    EmiCheckResult = "available".equals(emis.get(0).getImageState());
-                }catch(final Exception ex){
-                    EmiCheckResult=false;
-                }
-                CheckCounter = 0;
-            }else
-                CheckCounter++;
-
-            if (!EmiCheckResult)
-                return EmiCheckResult;
-
-            return true;
-        } else {
-            try {
-                //GRZE: do this bit in the way that it allows getting the information with out needing to spelunk log files.
-                final ServiceConfiguration localService = Components.lookup( LoadBalancing.class ).getLocalServiceConfiguration( );
-                final Faults.CheckException ex = Faults.failure( localService, imageNotConfiguredFaultRunnable.call( ).split("\n")[1] );
-                Faults.submit( localService, localService.lookupStateMachine().getTransitionRecord(), ex );
-            } catch ( Exception e ) {
-                LOG.debug( e );
-            }
-            return false;
-        }
-    }
+  }
 }

@@ -30,7 +30,7 @@ package com.eucalyptus.tokens.ws;
 
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
-import com.eucalyptus.tokens.TokensErrorResponseType;
+import com.eucalyptus.tokens.common.msgs.TokensErrorResponseType;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.ws.protocol.BaseQueryBinding;
 import com.eucalyptus.ws.protocol.OperationParameter;

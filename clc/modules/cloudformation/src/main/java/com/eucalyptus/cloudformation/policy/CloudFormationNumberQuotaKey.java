@@ -36,12 +36,12 @@ import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.auth.principal.PolicyScope;
-import com.eucalyptus.cloudformation.CloudFormationMetadata;
+import com.eucalyptus.cloudformation.common.CloudFormationMetadata;
+import com.eucalyptus.cloudformation.common.CloudFormationMetadatas;
 import com.eucalyptus.cloudformation.common.policy.CloudFormationPolicySpec;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
 import net.sf.json.JSONException;
 
@@ -83,11 +83,11 @@ public class CloudFormationNumberQuotaKey extends QuotaKey {
         throw new AuthException( "Invalid scope" );
     }
     return Long.toString(
-      RestrictedTypes.quantityMetricFunction(CloudFormationMetadata.StackMetadata.class).apply( name ) +
+        CloudFormationMetadatas.quantityMetricFunction(CloudFormationMetadata.StackMetadata.class).apply( name ) +
         quantity );
   }
 
-  @RestrictedTypes.QuantityMetricFunction( CloudFormationMetadata.StackMetadata.class )
+  @CloudFormationMetadatas.QuantityMetricFunction( CloudFormationMetadata.StackMetadata.class )
   public enum CountStacks implements Function<OwnerFullName, Long> {
     INSTANCE;
 

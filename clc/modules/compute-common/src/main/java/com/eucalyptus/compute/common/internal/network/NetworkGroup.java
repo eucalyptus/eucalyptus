@@ -40,14 +40,11 @@
 package com.eucalyptus.compute.common.internal.network;
 
 import static org.hamcrest.Matchers.notNullValue;
-import static com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import static com.eucalyptus.upgrade.Upgrades.PreUpgrade;
 import static com.eucalyptus.upgrade.Upgrades.Version;
 import static com.eucalyptus.util.Parameters.checkParam;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import javax.annotation.Nonnull;
@@ -55,7 +52,6 @@ import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.Index;
 import javax.persistence.JoinColumn;
@@ -66,25 +62,19 @@ import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.compute.common.CloudMetadata.NetworkGroupMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.CloudMetadatas;
-import com.eucalyptus.compute.common.internal.identifier.ResourceIdentifiers;
 import com.eucalyptus.compute.common.internal.vpc.Vpc;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.upgrade.Upgrades;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.auth.principal.FullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
-import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
 import groovy.sql.Sql;
 
 @Entity
@@ -365,85 +355,6 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     }
   }
 
-  @EntityUpgrade(entities = { NetworkGroup.class },  since = Version.v3_3_0, value = Eucalyptus.class)
-  public enum NetworkGroupUpgrade implements Predicate<Class> {
-    INSTANCE;
-    private static Logger LOG = Logger.getLogger( NetworkGroup.NetworkGroupUpgrade.class );
-    @Override
-    public boolean apply( Class arg0 ) {
-      addSecurityGroupIdentifiers( );
-      addSecurityGroupIdentifiersToRules( );
-      return true;
-    }
-
-    private void addSecurityGroupIdentifiers( ) {
-      final EntityTransaction db = Entities.get( NetworkGroup.class );
-      try {
-        final List<NetworkGroup> networkGroupList = Entities.query( new NetworkGroup( ) );
-        final Set<String> generatedIdentifiers = // ensure identifiers and names do not collide
-            Sets.newHashSet( Iterables.transform( networkGroupList, RestrictedTypes.toDisplayName() ) );
-        for ( final NetworkGroup networkGroup : networkGroupList ) {
-          LOG.debug( "Upgrading " + networkGroup.getDisplayName( ) );
-          if ( networkGroup.getGroupId( ) == null ) {
-            String networkGroupId = null;
-            while ( networkGroupId == null || generatedIdentifiers.contains( networkGroupId ) ) {
-              networkGroupId = ResourceIdentifiers.generateString( ID_PREFIX );
-            }
-            generatedIdentifiers.add( networkGroupId );
-            networkGroup.setGroupId( networkGroupId );
-          }
-        }
-        db.commit();
-      } catch (Exception ex ) {
-        throw Exceptions.toUndeclared( ex );
-      } finally {
-        if ( db.isActive() ) db.rollback();
-      }
-    }
-
-    private void addSecurityGroupIdentifiersToRules( ) {
-      final EntityTransaction db = Entities.get( NetworkRule.class );
-      try {
-        final List<NetworkRule> networkRuleList = Entities.query( NetworkRule.named() );
-        for ( final NetworkRule networkRule : networkRuleList ) {
-          LOG.debug( "Upgrading " + networkRule );
-          if ( networkRule.getNetworkPeers() != null && networkRule.getNetworkPeers().size() > 0 ) {
-            final Set<NetworkPeer> updatedPeers = Sets.newHashSet();
-            for ( final NetworkPeer networkPeer : networkRule.getNetworkPeers() ) {
-              if ( networkPeer.getGroupId() == null ) {
-                // find the corresponding network group from network groups
-                String groupId = null;
-                try {
-                  final NetworkGroup networkGroup =
-                      Entities.uniqueResult( NetworkGroup.named( AccountFullName.getInstance( networkPeer.getUserQueryKey() ), networkPeer.getGroupName() ) );
-                  groupId = networkGroup.getGroupId();
-                } catch ( final NoSuchElementException ex ) {
-                  LOG.error( String.format( "unable to find the network group (%s-%s)", networkPeer.getUserQueryKey(), networkPeer.getGroupName() ) );
-                } catch ( final Exception ex ) {
-                  LOG.error( "failed to query network group", ex );
-                }
-                if ( groupId != null ) {
-                  networkPeer.setGroupId( groupId );
-                  LOG.debug( "network peer upgraded: " + networkPeer );
-                }
-              }
-              updatedPeers.add( networkPeer );
-            }
-
-            networkRule.getNetworkPeers().clear();
-            networkRule.setNetworkPeers( updatedPeers );
-          }
-        }
-
-        db.commit();
-      } catch (Exception ex ) {
-        throw Exceptions.toUndeclared( ex );
-      } finally {
-        if ( db.isActive() ) db.rollback();
-      }
-    }
-  }
-  
   @PreUpgrade( value = Eucalyptus.class, since = Version.v4_1_0 ) // originally v3_4_0
   public static class NetworkGroupPreUpgrade34 implements Callable<Boolean> {
     @Override

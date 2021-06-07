@@ -66,6 +66,7 @@ import com.eucalyptus.objectstorage.msgs.SetBucketPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketTaggingResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketVersioningStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyResponseType;
+import com.eucalyptus.objectstorage.msgs.UploadPartCopyResponseType;
 import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.objectstorage.util.OSGUtil;
@@ -141,6 +142,10 @@ public class ObjectStorageOutboundHandler extends MessageStackHandler {
           httpResponse.addHeader("x-amz-version-id", copyResponse.getVersionId());
         if (copyResponse.getCopySourceVersionId() != null)
           httpResponse.addHeader("x-amz-copy-source-version-id", copyResponse.getCopySourceVersionId());
+      } else if (msg instanceof UploadPartCopyResponseType) {
+        UploadPartCopyResponseType uploadPartCopyResponse = (UploadPartCopyResponseType) msg;
+        if (uploadPartCopyResponse.getCopySourceVersionId() != null)
+          httpResponse.addHeader("x-amz-copy-source-version-id", uploadPartCopyResponse.getCopySourceVersionId());
       } else if (msg instanceof CreateBucketResponseType) {
         httpResponse.setStatus(HttpResponseStatus.OK);
         removeResponseBody(msg, httpResponse);

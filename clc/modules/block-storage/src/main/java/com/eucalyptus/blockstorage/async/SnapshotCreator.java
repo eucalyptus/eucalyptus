@@ -71,10 +71,9 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.metrics.MonitoredAction;
 import com.eucalyptus.util.metrics.ThruputMetrics;
 import com.google.common.base.Function;
-import com.google.common.base.Strings;
 
-import edu.ucsb.eucalyptus.util.EucaSemaphore;
-import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
+import com.eucalyptus.blockstorage.util.EucaSemaphore;
+import com.eucalyptus.blockstorage.util.EucaSemaphoreDirectory;
 
 public class SnapshotCreator implements Runnable {
   private static Logger LOG = Logger.getLogger(SnapshotCreator.class);

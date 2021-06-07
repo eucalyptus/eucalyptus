@@ -65,10 +65,12 @@ import org.apache.log4j.Logger;
 import org.apache.xml.dtm.ref.DTMNodeList;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.w3c.dom.Node;
@@ -94,7 +96,7 @@ import com.eucalyptus.objectstorage.exceptions.s3.MethodNotAllowedException;
 import com.eucalyptus.objectstorage.exceptions.s3.NotImplementedException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetRequestType;
-import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageDataPutRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
 import com.eucalyptus.objectstorage.pipeline.ObjectStorageRESTPipeline;
 import com.eucalyptus.objectstorage.util.AclUtils;
@@ -129,7 +131,9 @@ import com.eucalyptus.storage.msgs.s3.PreflightRequest;
 import com.eucalyptus.storage.msgs.s3.TaggingConfiguration;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.storage.msgs.s3.Transition;
+import com.eucalyptus.util.Beans;
 import com.eucalyptus.util.ChannelBufferStreamingInputStream;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
@@ -139,10 +143,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
-import groovy.lang.GroovyObject;
-import javaslang.Tuple2;
+import io.vavr.Tuple2;
 
 public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
   protected static Logger LOG = Logger.getLogger(ObjectStorageRESTBinding.class);
@@ -158,7 +159,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
   }
 
   public ObjectStorageRESTBinding() {
-    super("http://s3.amazonaws.com/doc/" + ObjectStorageProperties.NAMESPACE_VERSION);
+    super("http://s3.amazonaws.com/doc/" + ObjectStorageProperties.NAMESPACE_VERSION + "/");
     operationMap = populateOperationMap();
     unsupportedOperationMap = populateUnsupportedOperationMap();
   }
@@ -194,19 +195,18 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         ObjectStorageDataGetRequestType getObject = (ObjectStorageDataGetRequestType) msg;
         getObject.setChannel(ctx.getChannel());
       }
-      if (msg instanceof ObjectStorageDataRequestType) {
+      if (msg instanceof ObjectStorageDataPutRequestType ) {
+        ObjectStorageDataPutRequestType request = (ObjectStorageDataPutRequestType) msg;
         String expect = httpRequest.getHeader(HttpHeaders.Names.EXPECT);
         if (expect != null) {
           if (expect.toLowerCase().equals("100-continue")) {
-            ObjectStorageDataRequestType request = (ObjectStorageDataRequestType) msg;
             request.setExpectHeader(true);
           }
         }
 
         // handle the content.
-        ObjectStorageDataRequestType request = (ObjectStorageDataRequestType) msg;
         request.setIsChunked(httpRequest.isChunked());
-        handleData(request, httpRequest.getContent());
+        handleData(ctx.getChannel(), request, httpRequest.getContent());
       }
     }
   }
@@ -216,16 +216,10 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     if (event.getMessage() instanceof MappingHttpResponse) {
       MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
       BaseMessage msg = (BaseMessage) httpResponse.getMessage();
-      Binding binding;
-
-      String contentType;
-      if (!(msg instanceof EucalyptusErrorMessageType) && !(msg instanceof ExceptionResponseType)) {
-        binding = BindingManager.getBinding(super.getNamespace());
-      } else {
-        binding = BindingManager.getDefaultBinding();
-      }
+      Binding binding = BindingManager.getBinding(super.getNamespace());
       if (msg != null) {
         final Tuple2<String,byte[]> encoded = S3ResponseEncoders.encode( msg );
+        String contentType;
         ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
         if ( encoded != null ) {
           contentType = encoded._1( );
@@ -247,8 +241,12 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     }
   }
 
-  public void handleData(ObjectStorageDataRequestType dataRequest, ChannelBuffer content) {
-    ChannelBufferStreamingInputStream stream = new ChannelBufferStreamingInputStream(content);
+  public void handleData(Channel channel, ObjectStorageDataPutRequestType dataRequest, ChannelBuffer content) {
+    ChannelBufferStreamingInputStream stream = new ChannelBufferStreamingInputStream(channel, content, dataRequest.contentLength( ));
+    if ( !dataRequest.getIsChunked( ) ) try {
+      stream.putChunk( HttpChunk.LAST_CHUNK.getContent( ) );
+    } catch ( InterruptedException | EucalyptusCloudException ignore ) {
+    }
     dataRequest.setData(stream);
   }
 
@@ -267,31 +265,31 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
 
     OMElement msg;
 
-    GroovyObject groovyMsg;
+    ObjectStorageRequestType msgObject;
     Map<String, String> fieldMap;
     Class targetType;
     try {
       // :: try to create the target class :://
       targetType = ClassLoader.getSystemClassLoader().loadClass("com.eucalyptus.objectstorage.msgs.".concat(operationName).concat("Type"));
-      if (!GroovyObject.class.isAssignableFrom(targetType)) {
+      if (!ObjectStorageRequestType.class.isAssignableFrom(targetType)) {
         throw new Exception();
       }
       // :: get the map of parameters to fields :://
       fieldMap = this.buildFieldMap(targetType);
       // :: get an instance of the message :://
-      groovyMsg = (GroovyObject) targetType.newInstance();
+      msgObject = (ObjectStorageRequestType)targetType.newInstance();
     } catch (Exception e) {
-      throw new BindingException("Failed to construct message of type " + operationName);
+      throw new BindingException("Failed to construct message of type " + operationName, e);
     }
 
-    addLogData((BaseMessage) groovyMsg, bindingArguments);
+    addLogData((BaseMessage) msgObject, bindingArguments);
 
     // TODO: Refactor this to be more general
-    List<String> failedMappings = populateObject(groovyMsg, fieldMap, params);
-    populateObjectFromBindingMap(groovyMsg, fieldMap, httpRequest, bindingArguments);
+    List<String> failedMappings = populateObject(msgObject, fieldMap, params);
+    populateObjectFromBindingMap(msgObject, fieldMap, httpRequest, bindingArguments);
 
     User user = Contexts.lookup(httpRequest.getCorrelationId()).getUser();
-    setRequiredParams(groovyMsg, user);
+    setRequiredParams(msgObject, user);
 
     if (!params.isEmpty()) {
       // ignore params that are not consumed, EUCA-4840
@@ -308,16 +306,10 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     }
 
     if (Logs.extreme().isTraceEnabled()) {
-      Logs.extreme().trace(groovyMsg.toString());
-    }
-    try {
-      Binding binding = BindingManager.getDefaultBinding();
-      msg = binding.toOM(groovyMsg);
-    } catch (RuntimeException e) {
-      throw new BindingException("Failed to build a valid message: " + e.getMessage());
+      Logs.extreme().trace(msgObject.toString());
     }
 
-    return groovyMsg;
+    return msgObject;
 
   }
 
@@ -333,8 +325,8 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     }
   }
 
-  protected void setRequiredParams(final GroovyObject msg, User user) throws Exception {
-    msg.setProperty("timeStamp", new Date());
+  protected void setRequiredParams(final ObjectStorageRequestType msg, User user) throws Exception {
+    msg.setTimestamp(new Date());
   }
 
   protected String getOperation(MappingHttpRequest httpRequest, Map operationParams) throws Exception {
@@ -422,7 +414,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
             }
 
             if (formFields.get(ObjectStorageProperties.FormField.x_ignore_filecontentlength.toString()) != null) {
-              operationParams.put("ContentLength", (long) formFields.get(ObjectStorageProperties.FormField.x_ignore_filecontentlength.toString()));
+              operationParams.put("ContentLength", String.valueOf((long) formFields.get(ObjectStorageProperties.FormField.x_ignore_filecontentlength.toString())));
             } else {
               throw new MalformedPOSTRequestException(null, "Could not calculate upload content length from request");
               // if(contentLengthString != null) {
@@ -493,20 +485,29 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
 
               operationParams.put("SourceBucket", sourceTarget[0]);
               operationParams.put("SourceObject", sourceObjectKey);
-              operationParams.put("DestinationBucket", operationParams.remove("Bucket"));
-              operationParams.put("DestinationObject", operationParams.remove("Key"));
 
-              String metaDataDirective = httpRequest.getHeader(ObjectStorageProperties.METADATA_DIRECTIVE.toString());
-              if (metaDataDirective != null) {
-                operationParams.put("MetadataDirective", metaDataDirective);
+              final Object[] copyHeaders;
+              if (params.containsKey(ObjectStorageProperties.ObjectParameter.partNumber.toString())) {
+                copyHeaders = ObjectStorageProperties.PartCopyHeaders.values();
+              } else {
+                copyHeaders = ObjectStorageProperties.CopyHeaders.values();
+
+                operationParams.put("DestinationBucket", operationParams.remove("Bucket"));
+                operationParams.put("DestinationObject", operationParams.remove("Key"));
+
+                String metaDataDirective = httpRequest.getHeader(ObjectStorageProperties.METADATA_DIRECTIVE.toString());
+                if (metaDataDirective != null) {
+                  operationParams.put("MetadataDirective", metaDataDirective);
+                }
               }
 
               operationKey += ObjectStorageProperties.COPY_SOURCE.toString();
               Set<String> headerNames = httpRequest.getHeaderNames();
-              for (String key : headerNames) {
+              for (final String keyOrig : headerNames) {
+                final String key = keyOrig.toLowerCase();
                 if (key.startsWith("x-amz-")) {
                   String stripped = key.replaceFirst("x-amz-", "");
-                  for (ObjectStorageProperties.CopyHeaders header : ObjectStorageProperties.CopyHeaders.values()) {
+                  for (Object header : copyHeaders) {
                     if (stripped.replaceAll("-", "").equals(header.toString().toLowerCase())) {
                       String value = httpRequest.getHeader(key);
                       parseExtendedHeaders(operationParams, header.toString(), value);
@@ -583,6 +584,10 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         } else if (verb.equals(ObjectStorageProperties.HTTPVerb.POST.toString())) {
           if (params.containsKey("uploadId")) {
             operationParams.put("Parts", getPartsList(httpRequest));
+          } else if (params.containsKey("uploads")) {
+            String contentType = httpRequest.getHeader(HttpHeaders.Names.CONTENT_TYPE);
+            if (contentType != null)
+              operationParams.put("ContentType", contentType);
           }
         }
       }
@@ -676,8 +681,8 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         continue;
       // Add subresource params to the operationKey
       for (ObjectStorageProperties.SubResource subResource : ObjectStorageProperties.SubResource.values()) {
-        if (keyString.toLowerCase().equals(subResource.toString().toLowerCase())) {
-          operationKey += keyString.toLowerCase();
+        if (keyString.toLowerCase().replace('-','_').equals(subResource.toString().toLowerCase())) {
+          operationKey += keyString.toLowerCase().replace('-','_');
           if ( Strings.isNullOrEmpty( value ) ) {
             paramsToRemove.add(key);
             continue params;
@@ -720,11 +725,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
             delimiter = "/";
           }
         }
-        NotImplementedException e = new NotImplementedException();
-        e.setResource(resource);
-        e.setResourceType(resourceType);
-        e.setMessage(unsupportedOp + " is not implemented");
-        throw e;
+        throw buildUnsupportedOperationError( unsupportedOp, resource, resourceType );
       }
     }
 
@@ -734,6 +735,18 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         operationParams.put("LocationConstraint", locationConstraint);
     }
     return operationName;
+  }
+
+  protected S3Exception buildUnsupportedOperationError(
+      final String unsupportedOp,
+      final String resource,
+      final String resourceType
+  ) {
+    final NotImplementedException e = new NotImplementedException( );
+    e.setResource( resource );
+    e.setResourceType( resourceType );
+    e.setMessage( unsupportedOp + " is not implemented" );
+    return e;
   }
 
   private static final Ordering<String> STRING_COMPARATOR = Ordering.natural();
@@ -959,58 +972,6 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     return accessControlPolicy;
   }
 
-  protected AccessControlList getAccessControlList(MappingHttpRequest httpRequest) throws S3Exception, BindingException {
-    AccessControlList accessControlList = new AccessControlList();
-    ArrayList<Grant> grants = new ArrayList<Grant>();
-    String aclString = "";
-    try {
-      aclString = getMessageString(httpRequest);
-      if (aclString.length() > 0) {
-        XMLParser xmlParser = new XMLParser(aclString);
-        String ownerId = xmlParser.getValue("//Owner/ID");
-        String displayName = xmlParser.getValue("//Owner/DisplayName");
-
-        List<String> permissions = xmlParser.getValues("/AccessControlList/Grant/Permission");
-        if (permissions == null) {
-          throw new MalformedACLErrorException("/AccessControlList/Grant/Permission");
-        }
-        DTMNodeList grantees = xmlParser.getNodes("/AccessControlList/Grant/Grantee");
-        if (grantees == null) {
-          throw new MalformedACLErrorException("/AccessControlList/Grant/Grantee");
-        }
-
-        for (int i = 0; i < grantees.getLength(); ++i) {
-          String canonicalUserName = xmlParser.getValue(grantees.item(i), "DisplayName");
-          if (canonicalUserName.length() > 0) {
-            String id = xmlParser.getValue(grantees.item(i), "ID");
-            Grant grant = new Grant();
-            Grantee grantee = new Grantee();
-            grantee.setCanonicalUser(new CanonicalUser(id, canonicalUserName));
-            grant.setGrantee(grantee);
-            grant.setPermission(permissions.get(i));
-            grants.add(grant);
-          } else {
-            String groupUri = xmlParser.getValue(grantees.item(i), "URI");
-            if (groupUri.length() == 0)
-              throw new MalformedACLErrorException("Group-URI");
-            Grant grant = new Grant();
-            Grantee grantee = new Grantee();
-            grantee.setGroup(new Group(groupUri));
-            grant.setGrantee(grantee);
-            grant.setPermission(permissions.get(i));
-            grants.add(grant);
-          }
-        }
-      }
-    } catch (S3Exception e) {
-      throw e;
-    } catch (Exception ex) {
-      throw new MalformedACLErrorException("Unable to parse access control list: " + aclString);
-    }
-    accessControlList.setGrants(grants);
-    return accessControlList;
-  }
-
   private ArrayList<Part> getPartsList(MappingHttpRequest httpRequest) throws BindingException {
     ArrayList<Part> partList = new ArrayList<Part>();
     try {
@@ -1050,7 +1011,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     return locationConstraint;
   }
 
-  protected List<String> populateObject(final GroovyObject obj, final Map<String, String> paramFieldMap, final Map<String, String> params) {
+  protected List<String> populateObject(final Object obj, final Map<String, String> paramFieldMap, final Map<String, String> params) {
     List<String> failedMappings = new ArrayList<String>();
     for (Map.Entry<String, String> e : paramFieldMap.entrySet()) {
       try {
@@ -1067,7 +1028,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     return failedMappings;
   }
 
-  protected void populateObjectFromBindingMap(final GroovyObject obj, final Map<String, String> paramFieldMap, final MappingHttpRequest httpRequest,
+  protected void populateObjectFromBindingMap(final Object obj, final Map<String, String> paramFieldMap, final MappingHttpRequest httpRequest,
       final Map bindingMap) throws S3Exception, BindingException {
     // process headers
     // String aclString = httpRequest.getAndRemoveHeader(ObjectStorageProperties.AMZ_ACL);
@@ -1075,7 +1036,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     // addAccessControlList(obj, paramFieldMap, bindingMap, aclString);
     // }
     // above logic only accounts for x-amz-acl. x-amz-grant-* headers are dropped
-    processHeaderGrants(obj, paramFieldMap, bindingMap, httpRequest);
+    processHeaderGrants(paramFieldMap, bindingMap, httpRequest);
 
     // add meta data
     String metaDataString = paramFieldMap.remove("MetaData");
@@ -1090,34 +1051,34 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
           metaData.add(metaDataEntry);
         }
       }
-      obj.setProperty(metaDataString, metaData);
+      Beans.setObjectProperty( obj, metaDataString, metaData);
     }
 
     // populate from binding map (required params)
     Iterator bindingMapIterator = bindingMap.keySet().iterator();
     while (bindingMapIterator.hasNext()) {
       String key = (String) bindingMapIterator.next();
-      obj.setProperty(key.substring(0, 1).toLowerCase().concat(key.substring(1)), bindingMap.get(key));
+      Beans.setObjectProperty( obj, key.substring(0, 1).toLowerCase().concat(key.substring(1)), bindingMap.get(key));
     }
   }
 
-  protected boolean populateObjectField(final GroovyObject obj, final Map.Entry<String, String> paramFieldPair, final Map<String, String> params) {
+  protected boolean populateObjectField(final Object obj, final Map.Entry<String, String> paramFieldPair, final Map<String, String> params) {
     try {
       Class declaredType = obj.getClass().getDeclaredField(paramFieldPair.getValue()).getType();
       if (declaredType.equals(String.class))
-        obj.setProperty(paramFieldPair.getValue(), params.remove(paramFieldPair.getKey()));
+        Beans.setObjectProperty( obj, paramFieldPair.getValue(), params.remove(paramFieldPair.getKey()));
       else if (declaredType.getName().equals("int"))
-        obj.setProperty(paramFieldPair.getValue(), Integer.parseInt(params.remove(paramFieldPair.getKey())));
+        Beans.setObjectProperty( obj, paramFieldPair.getValue(), Integer.parseInt(params.remove(paramFieldPair.getKey())));
       else if (declaredType.equals(Integer.class))
-        obj.setProperty(paramFieldPair.getValue(), new Integer(params.remove(paramFieldPair.getKey())));
+        Beans.setObjectProperty( obj, paramFieldPair.getValue(), new Integer(params.remove(paramFieldPair.getKey())));
       else if (declaredType.getName().equals("boolean"))
-        obj.setProperty(paramFieldPair.getValue(), Boolean.parseBoolean(params.remove(paramFieldPair.getKey())));
+        Beans.setObjectProperty( obj, paramFieldPair.getValue(), Boolean.parseBoolean(params.remove(paramFieldPair.getKey())));
       else if (declaredType.equals(Boolean.class))
-        obj.setProperty(paramFieldPair.getValue(), new Boolean(params.remove(paramFieldPair.getKey())));
+        Beans.setObjectProperty( obj, paramFieldPair.getValue(), new Boolean(params.remove(paramFieldPair.getKey())));
       else if (declaredType.getName().equals("long"))
-        obj.setProperty(paramFieldPair.getValue(), Long.parseLong(params.remove(paramFieldPair.getKey())));
+        Beans.setObjectProperty( obj, paramFieldPair.getValue(), Long.parseLong(params.remove(paramFieldPair.getKey())));
       else if (declaredType.equals(Long.class))
-        obj.setProperty(paramFieldPair.getValue(), new Long(params.remove(paramFieldPair.getKey())));
+        Beans.setObjectProperty( obj, paramFieldPair.getValue(), new Long(params.remove(paramFieldPair.getKey())));
       else
         return false;
       return true;
@@ -1126,12 +1087,12 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     }
   }
 
-  protected List<String> populateObjectList(final GroovyObject obj, final Map.Entry<String, String> paramFieldPair, final Map<String, String> params,
+  protected List<String> populateObjectList(final Object obj, final Map.Entry<String, String> paramFieldPair, final Map<String, String> params,
       final int paramSize) {
     List<String> failedMappings = new ArrayList<String>();
     try {
       Field declaredField = obj.getClass().getDeclaredField(paramFieldPair.getValue());
-      ArrayList theList = (ArrayList) obj.getProperty(paramFieldPair.getValue());
+      ArrayList theList = (ArrayList) Beans.getObjectProperty(obj,paramFieldPair.getValue());
       Class genericType = (Class) ((ParameterizedType) declaredField.getGenericType()).getActualTypeArguments()[0];
       // :: simple case: FieldName.# :://
       if (String.class.equals(genericType)) {
@@ -1181,7 +1142,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
 
   protected List<String> populateEmbedded(final Class genericType, final Map<String, String> params, final ArrayList theList)
       throws InstantiationException, IllegalAccessException {
-    GroovyObject embedded = (GroovyObject) genericType.newInstance();
+    Object embedded = genericType.newInstance();
     Map<String, String> embeddedFields = buildFieldMap(genericType);
     int startSize = params.size();
     List<String> embeddedFailures = populateObject(embedded, embeddedFields, params);
@@ -1211,37 +1172,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     }
   }
 
-  protected static void addAccessControlList(final GroovyObject obj, final Map<String, String> paramFieldMap, Map bindingMap, String cannedACLString)
-      throws S3Exception {
-
-    AccessControlList accessControlList;
-    ArrayList<Grant> grants;
-
-    if (bindingMap.containsKey("AccessControlPolicy")) {
-      AccessControlPolicy accessControlPolicy = (AccessControlPolicy) bindingMap.get("AccessControlPolicy");
-      accessControlList = accessControlPolicy.getAccessControlList();
-      grants = accessControlList.getGrants();
-    } else {
-      accessControlList = new AccessControlList();
-      grants = new ArrayList<Grant>();
-    }
-
-    validateCannedAcl(cannedACLString);
-
-    CanonicalUser aws = new CanonicalUser();
-    aws.setDisplayName("");
-    Grant grant = new Grant(new Grantee(aws), cannedACLString);
-    grants.add(grant);
-
-    accessControlList.setGrants(grants);
-    // set obj property
-    String acl = paramFieldMap.remove("AccessControlList");
-    if (acl != null) {
-      obj.setProperty(acl, accessControlList);
-    }
-  }
-
-  protected static void processHeaderGrants(final GroovyObject obj, final Map<String, String> paramFieldMap, Map bindingMap,
+  protected static void processHeaderGrants(final Map<String, String> paramFieldMap, Map bindingMap,
       MappingHttpRequest httpRequest) throws S3Exception {
 
     if (paramFieldMap.containsKey("AccessControlList") || paramFieldMap.containsKey("AccessControlPolicy")) {
@@ -1554,7 +1485,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         }
       }
 
-      List<String> corsAllowedMethods = extractCorsElementList(parser, node, "AllowedMethod");
+      ArrayList<String> corsAllowedMethods = extractCorsElementList(parser, node, "AllowedMethod");
       if (corsAllowedMethods != null) {
         for (String corsAllowedMethod : corsAllowedMethods) {
           if (!AllowedCorsMethods.methodList.contains(HttpMethod.valueOf(corsAllowedMethod))) {
@@ -1582,8 +1513,8 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
     return corsRule;
   }
 
-  private List<String> extractCorsElementList(XMLParser parser, Node node, String element) throws S3Exception {
-      List<String> elementList = new ArrayList<String>();
+  private ArrayList<String> extractCorsElementList(XMLParser parser, Node node, String element) throws S3Exception {
+    ArrayList<String> elementList = new ArrayList<String>();
       try {
 
         DTMNodeList elementNodes = parser.getNodes(node, element);
@@ -1617,7 +1548,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
       String requestHeadersFromRequest = httpRequest.getHeader(HttpHeaders.Names.ACCESS_CONTROL_REQUEST_HEADERS);
       if (requestHeadersFromRequest != null) {
         String[] requestHeadersArrayFromRequest = requestHeadersFromRequest.split(",");
-        List<String> requestHeaders = new ArrayList<String>();
+        ArrayList<String> requestHeaders = new ArrayList<String>();
         for (int idx = 0; idx < requestHeadersArrayFromRequest.length; idx++) {
           requestHeaders.add(requestHeadersArrayFromRequest[idx].trim());
         }
@@ -1625,7 +1556,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
       }
       return preflightRequest;
     }
-    
+
   private DeleteMultipleObjectsMessage getMultiObjectDeleteMessage(MappingHttpRequest httpRequest) throws S3Exception {
     DeleteMultipleObjectsMessage message = new DeleteMultipleObjectsMessage();
     String rawMessage = httpRequest.getContent().toString(StandardCharsets.UTF_8);
@@ -1642,7 +1573,7 @@ public abstract class ObjectStorageRESTBinding extends RestfulMarshallingHandler
         if (deletes == null) {
           throw new MalformedXMLException("/Delete/Object");
         }
-        List<DeleteMultipleObjectsEntry> deleteObjList = Lists.newArrayList();
+        ArrayList<DeleteMultipleObjectsEntry> deleteObjList = Lists.newArrayList();
         for (int idx = 0; idx < deletes.getLength(); idx++) {
           // lifecycleConfigurationType.getRules().add( extractLifecycleRule( xmlParser, deletes.item(idx) ) );
           deleteObjList.add(extractDeleteObjectEntry(xmlParser, deletes.item(idx)));

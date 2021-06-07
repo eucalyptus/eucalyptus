@@ -54,6 +54,8 @@ import com.eucalyptus.objectstorage.msgs.DeleteObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteObjectType;
 import com.eucalyptus.objectstorage.msgs.DeleteVersionResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteVersionType;
+import com.eucalyptus.objectstorage.msgs.GetBucketAccelerateConfigurationResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketAccelerateConfigurationType;
 import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyType;
 import com.eucalyptus.objectstorage.msgs.GetBucketCorsResponseType;
@@ -64,8 +66,12 @@ import com.eucalyptus.objectstorage.msgs.GetBucketLocationResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLocationType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLoggingStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLoggingStatusType;
+import com.eucalyptus.objectstorage.msgs.GetBucketNotificationConfigurationResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketNotificationConfigurationType;
 import com.eucalyptus.objectstorage.msgs.GetBucketPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketPolicyType;
+import com.eucalyptus.objectstorage.msgs.GetBucketRequestPaymentResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketRequestPaymentType;
 import com.eucalyptus.objectstorage.msgs.GetBucketTaggingResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketTaggingType;
 import com.eucalyptus.objectstorage.msgs.GetBucketVersioningStatusResponseType;
@@ -118,6 +124,8 @@ import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyResponseTyp
 import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyType;
 import com.eucalyptus.objectstorage.msgs.UpdateObjectStorageConfigurationResponseType;
 import com.eucalyptus.objectstorage.msgs.UpdateObjectStorageConfigurationType;
+import com.eucalyptus.objectstorage.msgs.UploadPartCopyResponseType;
+import com.eucalyptus.objectstorage.msgs.UploadPartCopyType;
 import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
 import com.eucalyptus.objectstorage.msgs.UploadPartType;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -184,6 +192,8 @@ public interface ObjectStorageService {
 
   UploadPartResponseType uploadPart(UploadPartType request) throws S3Exception;
 
+  UploadPartCopyResponseType uploadPartCopy(UploadPartCopyType request) throws S3Exception;
+
   CompleteMultipartUploadResponseType completeMultipartUpload(CompleteMultipartUploadType request) throws S3Exception;
 
   AbortMultipartUploadResponseType abortMultipartUpload(AbortMultipartUploadType request) throws S3Exception;
@@ -219,4 +229,10 @@ public interface ObjectStorageService {
   DeleteBucketPolicyResponseType deleteBucketPolicy(DeleteBucketPolicyType request) throws S3Exception;
 
   DeleteMultipleObjectsResponseType deleteMultipleObjects(DeleteMultipleObjectsType request) throws S3Exception;
+
+  GetBucketAccelerateConfigurationResponseType getBucketAccelerateConfiguration(GetBucketAccelerateConfigurationType request) throws S3Exception;
+
+  GetBucketNotificationConfigurationResponseType getBucketNotificationConfiguration(GetBucketNotificationConfigurationType request) throws S3Exception;
+
+  GetBucketRequestPaymentResponseType getBucketRequestPayment(GetBucketRequestPaymentType request) throws S3Exception;
 }

@@ -51,7 +51,6 @@ import java.util.concurrent.Callable;
 import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.JoinColumn;
-import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.MappedSuperclass;
 
@@ -162,8 +161,7 @@ public abstract class VmVolumeAttachment extends AbstractPersistent implements C
   private String	volumeId;
   @Column( name = "metadata_vm_volume_device" )
   private String	device;
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Type(type="text")
   @Column( name = "metadata_vm_volume_remote_device", columnDefinition = "TEXT default ''"  )
   private String	remoteDevice;
   @Column( name = "metadata_vm_volume_status" )

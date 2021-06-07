@@ -29,7 +29,7 @@
 package com.eucalyptus.imaging.backend;
 
 import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_IMAGINGSERVICE;
-import static com.eucalyptus.auth.policy.PolicySpec.EC2_RESOURCE_INSTANCE;
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.EC2_RESOURCE_INSTANCE;
 
 import org.apache.log4j.Logger;
 

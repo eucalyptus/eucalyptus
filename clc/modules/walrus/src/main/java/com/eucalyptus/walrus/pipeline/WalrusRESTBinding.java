@@ -52,11 +52,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-
-import net.sf.json.JSONArray;
-import net.sf.json.JSONObject;
 
 import org.apache.axiom.om.OMElement;
 import org.apache.commons.httpclient.util.DateUtil;
@@ -91,7 +87,6 @@ import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.storage.msgs.BucketLogData;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
@@ -102,14 +97,15 @@ import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
+import com.eucalyptus.util.Beans;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.walrus.WalrusBackend;
 import com.eucalyptus.walrus.exceptions.NotImplementedException;
 import com.eucalyptus.walrus.msgs.WalrusDataGetRequestType;
-import com.eucalyptus.walrus.msgs.WalrusDataMessage;
-import com.eucalyptus.walrus.msgs.WalrusDataMessenger;
-import com.eucalyptus.walrus.msgs.WalrusDataQueue;
+import com.eucalyptus.walrus.WalrusDataMessage;
+import com.eucalyptus.walrus.WalrusDataMessenger;
+import com.eucalyptus.walrus.WalrusDataQueue;
 import com.eucalyptus.walrus.msgs.WalrusDataRequestType;
 import com.eucalyptus.walrus.msgs.WalrusRequestType;
 import com.eucalyptus.walrus.util.WalrusProperties;
@@ -121,9 +117,6 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
-import groovy.lang.GroovyObject;
 
 public class WalrusRESTBinding extends RestfulMarshallingHandler {
   private static Logger LOG = Logger.getLogger(WalrusRESTBinding.class);
@@ -134,7 +127,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
   private static final Map<String, String> unsupportedOperationMap = populateUnsupportedOperationMap();
   private static final Map<String, String> notAllowedOperationMap = populateNotAllowedOperationMap();
   private static WalrusDataMessenger putMessenger;
-  public static final int DATA_MESSAGE_SIZE = 102400;
   private String key;
   private String randomKey;
   private WalrusDataQueue<WalrusDataMessage> putQueue;
@@ -213,19 +205,8 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
     if (event.getMessage() instanceof MappingHttpResponse) {
       MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
       BaseMessage msg = (BaseMessage) httpResponse.getMessage();
-      Binding binding;
-
-      if (!(msg instanceof EucalyptusErrorMessageType) && !(msg instanceof ExceptionResponseType)) {
-        binding = BindingManager.getBinding(super.getNamespace());
-        if (putQueue != null) {
-          putQueue = null;
-        }
-      } else {
-        binding = BindingManager.getDefaultBinding();
-        if (putQueue != null) {
-          putQueue = null;
-        }
-      }
+      Binding binding = BindingManager.getBinding(super.getNamespace());
+      putQueue = null;
       if (msg != null) {
         ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
         binding.toStream(byteOut, msg);
@@ -372,31 +353,31 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
     OMElement msg;
 
-    GroovyObject groovyMsg;
+    WalrusRequestType msgObject;
     Map<String, String> fieldMap;
     Class targetType;
     try {
       // :: try to create the target class :://
       targetType = ClassLoader.getSystemClassLoader().loadClass("com.eucalyptus.walrus.msgs.".concat(operationName).concat("Type"));
-      if (!GroovyObject.class.isAssignableFrom(targetType)) {
+      if (!WalrusRequestType.class.isAssignableFrom(targetType)) {
         throw new Exception();
       }
       // :: get the map of parameters to fields :://
       fieldMap = this.buildFieldMap(targetType);
       // :: get an instance of the message :://
-      groovyMsg = (GroovyObject) targetType.newInstance();
+      msgObject = (WalrusRequestType) targetType.newInstance();
     } catch (Exception e) {
       throw new BindingException("Failed to construct message of type " + operationName);
     }
 
-    addLogData((BaseMessage) groovyMsg, bindingArguments);
+    addLogData(msgObject, bindingArguments);
 
     // TODO: Refactor this to be more general
-    List<String> failedMappings = populateObject(groovyMsg, fieldMap, params);
-    populateObjectFromBindingMap(groovyMsg, fieldMap, httpRequest, bindingArguments);
+    List<String> failedMappings = populateObject(msgObject, fieldMap, params);
+    populateObjectFromBindingMap(msgObject, fieldMap, httpRequest, bindingArguments);
 
     final Context context = Contexts.lookup(httpRequest.getCorrelationId());
-    setRequiredParams(groovyMsg, context);
+    setRequiredParams(msgObject, context);
 
     if (!params.isEmpty()) {
       // ignore params that are not consumed, EUCA-4840
@@ -412,15 +393,11 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
       throw new BindingException(errMsg.toString());
     }
 
-    LOG.trace(groovyMsg.toString());
-    try {
-      Binding binding = BindingManager.getDefaultBinding();
-      msg = binding.toOM(groovyMsg);
-    } catch (RuntimeException e) {
-      throw new BindingException("Failed to build a valid message: " + e.getMessage());
+    if ( LOG.isTraceEnabled( ) ) {
+      LOG.trace( msgObject.toString( ) );
     }
 
-    return groovyMsg;
+    return msgObject;
 
   }
 
@@ -433,8 +410,8 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
     }
   }
 
-  private void setRequiredParams(final GroovyObject msg, Context context) throws Exception {
-    msg.setProperty("timeStamp", new Date());
+  private void setRequiredParams(final WalrusRequestType msg, Context context) throws Exception {
+    msg.setTimestamp(new Date());
   }
 
   protected String getOperation(MappingHttpRequest httpRequest, Map operationParams) throws Exception,
@@ -1041,7 +1018,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
     return locationConstraint;
   }
 
-  private List<String> populateObject(final GroovyObject obj, final Map<String, String> paramFieldMap, final Map<String, String> params) {
+  private List<String> populateObject(final Object obj, final Map<String, String> paramFieldMap, final Map<String, String> params) {
     List<String> failedMappings = new ArrayList<String>();
     for (Map.Entry<String, String> e : paramFieldMap.entrySet()) {
       try {
@@ -1058,7 +1035,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
     return failedMappings;
   }
 
-  private void populateObjectFromBindingMap(final GroovyObject obj, final Map<String, String> paramFieldMap, final MappingHttpRequest httpRequest,
+  private void populateObjectFromBindingMap(final Object obj, final Map<String, String> paramFieldMap, final MappingHttpRequest httpRequest,
       final Map bindingMap) throws BindingException {
     // process headers
     String aclString = httpRequest.getAndRemoveHeader(WalrusProperties.AMZ_ACL);
@@ -1079,34 +1056,34 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
           metaData.add(metaDataEntry);
         }
       }
-      obj.setProperty(metaDataString, metaData);
+      Beans.setObjectProperty(obj, metaDataString, metaData);
     }
 
     // populate from binding map (required params)
     Iterator bindingMapIterator = bindingMap.keySet().iterator();
     while (bindingMapIterator.hasNext()) {
       String key = (String) bindingMapIterator.next();
-      obj.setProperty(key.substring(0, 1).toLowerCase().concat(key.substring(1)), bindingMap.get(key));
+      Beans.setObjectProperty(obj, key.substring(0, 1).toLowerCase().concat(key.substring(1)), bindingMap.get(key));
     }
   }
 
-  private boolean populateObjectField(final GroovyObject obj, final Map.Entry<String, String> paramFieldPair, final Map<String, String> params) {
+  private boolean populateObjectField(final Object obj, final Map.Entry<String, String> paramFieldPair, final Map<String, String> params) {
     try {
       Class declaredType = obj.getClass().getDeclaredField(paramFieldPair.getValue()).getType();
       if (declaredType.equals(String.class))
-        obj.setProperty(paramFieldPair.getValue(), params.remove(paramFieldPair.getKey()));
+        Beans.setObjectProperty(obj, paramFieldPair.getValue(), params.remove(paramFieldPair.getKey()));
       else if (declaredType.getName().equals("int"))
-        obj.setProperty(paramFieldPair.getValue(), Integer.parseInt(params.remove(paramFieldPair.getKey())));
+        Beans.setObjectProperty(obj, paramFieldPair.getValue(), Integer.parseInt(params.remove(paramFieldPair.getKey())));
       else if (declaredType.equals(Integer.class))
-        obj.setProperty(paramFieldPair.getValue(), new Integer(params.remove(paramFieldPair.getKey())));
+        Beans.setObjectProperty(obj, paramFieldPair.getValue(), new Integer(params.remove(paramFieldPair.getKey())));
       else if (declaredType.getName().equals("boolean"))
-        obj.setProperty(paramFieldPair.getValue(), Boolean.parseBoolean(params.remove(paramFieldPair.getKey())));
+        Beans.setObjectProperty(obj, paramFieldPair.getValue(), Boolean.parseBoolean(params.remove(paramFieldPair.getKey())));
       else if (declaredType.equals(Boolean.class))
-        obj.setProperty(paramFieldPair.getValue(), new Boolean(params.remove(paramFieldPair.getKey())));
+        Beans.setObjectProperty(obj, paramFieldPair.getValue(), new Boolean(params.remove(paramFieldPair.getKey())));
       else if (declaredType.getName().equals("long"))
-        obj.setProperty(paramFieldPair.getValue(), Long.parseLong(params.remove(paramFieldPair.getKey())));
+        Beans.setObjectProperty(obj, paramFieldPair.getValue(), Long.parseLong(params.remove(paramFieldPair.getKey())));
       else if (declaredType.equals(Long.class))
-        obj.setProperty(paramFieldPair.getValue(), new Long(params.remove(paramFieldPair.getKey())));
+        Beans.setObjectProperty(obj, paramFieldPair.getValue(), new Long(params.remove(paramFieldPair.getKey())));
       else
         return false;
       return true;
@@ -1115,12 +1092,12 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
     }
   }
 
-  private List<String> populateObjectList(final GroovyObject obj, final Map.Entry<String, String> paramFieldPair, final Map<String, String> params,
+  private List<String> populateObjectList(final Object obj, final Map.Entry<String, String> paramFieldPair, final Map<String, String> params,
       final int paramSize) {
     List<String> failedMappings = new ArrayList<String>();
     try {
       Field declaredField = obj.getClass().getDeclaredField(paramFieldPair.getValue());
-      ArrayList theList = (ArrayList) obj.getProperty(paramFieldPair.getValue());
+      ArrayList theList = (ArrayList) Beans.getObjectProperty(obj, paramFieldPair.getValue());
       Class genericType = (Class) ((ParameterizedType) declaredField.getGenericType()).getActualTypeArguments()[0];
       // :: simple case: FieldName.# :://
       if (String.class.equals(genericType)) {
@@ -1170,7 +1147,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
   private List<String> populateEmbedded(final Class genericType, final Map<String, String> params, final ArrayList theList)
       throws InstantiationException, IllegalAccessException {
-    GroovyObject embedded = (GroovyObject) genericType.newInstance();
+    Object embedded = genericType.newInstance();
     Map<String, String> embeddedFields = buildFieldMap(genericType);
     int startSize = params.size();
     List<String> embeddedFailures = populateObject(embedded, embeddedFields, params);
@@ -1194,7 +1171,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
     return fieldMap;
   }
 
-  private static void addAccessControlList(final GroovyObject obj, final Map<String, String> paramFieldMap, Map bindingMap, String cannedACLString) {
+  private static void addAccessControlList(final Object obj, final Map<String, String> paramFieldMap, Map bindingMap, String cannedACLString) {
 
     AccessControlList accessControlList;
     ArrayList<Grant> grants;
@@ -1217,58 +1194,12 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
     // set obj property
     String acl = paramFieldMap.remove("AccessControlList");
     if (acl != null) {
-      obj.setProperty(acl, accessControlList);
+      Beans.setObjectProperty(obj, acl, accessControlList);
     }
   }
 
   private String toUpperFirst(String string) {
     return string.substring(0, 1).toUpperCase().concat(string.substring(1));
-  }
-
-  private boolean exactMatch(JSONObject jsonObject, Map formFields, List<String> policyItemNames) {
-    Iterator<String> iterator = jsonObject.keys();
-    boolean returnValue = false;
-    while (iterator.hasNext()) {
-      String key = iterator.next();
-      key = key.replaceAll("\\$", "");
-      policyItemNames.add(key);
-      try {
-        if (jsonObject.get(key).equals(formFields.get(key)))
-          returnValue = true;
-        else
-          returnValue = false;
-      } catch (Exception ex) {
-        ex.printStackTrace();
-        return false;
-      }
-    }
-    return returnValue;
-  }
-
-  private boolean partialMatch(JSONArray jsonArray, Map<String, String> formFields, List<String> policyItemNames) {
-    boolean returnValue = false;
-    if (jsonArray.size() != 3)
-      return false;
-    try {
-      String condition = (String) jsonArray.get(0);
-      String key = (String) jsonArray.get(1);
-      key = key.replaceAll("\\$", "");
-      policyItemNames.add(key);
-      String value = (String) jsonArray.get(2);
-      if (condition.contains("eq")) {
-        if (value.equals(formFields.get(key)))
-          returnValue = true;
-      } else if (condition.contains("starts-with")) {
-        if (!formFields.containsKey(key))
-          return false;
-        if (formFields.get(key).startsWith(value))
-          returnValue = true;
-      }
-    } catch (Exception ex) {
-      ex.printStackTrace();
-      return false;
-    }
-    return returnValue;
   }
 
   private String getMessageString(MappingHttpRequest httpRequest) {
@@ -1330,35 +1261,4 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
     }
     return putMessenger;
   }
-
-  class Writer extends Thread {
-
-    private ChannelBuffer firstBuffer;
-    private long dataLength;
-
-    public Writer(ChannelBuffer firstBuffer, long dataLength) {
-      this.firstBuffer = firstBuffer;
-      this.dataLength = dataLength;
-    }
-
-    public void run() {
-      byte[] bytes = new byte[DATA_MESSAGE_SIZE];
-
-      try {
-        Logs.extreme().trace("Starting upload");
-        putQueue.put(WalrusDataMessage.StartOfData(dataLength));
-
-        firstBuffer.markReaderIndex();
-        byte[] read = new byte[firstBuffer.readableBytes()];
-        firstBuffer.readBytes(read);
-        putQueue.put(WalrusDataMessage.DataMessage(read));
-        // putQueue.put(WalrusDataMessage.EOF());
-
-      } catch (Exception ex) {
-        LOG.error("Error putting data into internal transfer queue in Walrus", ex);
-      }
-    }
-
-  }
-
 }

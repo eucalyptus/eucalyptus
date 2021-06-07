@@ -30,7 +30,7 @@ package com.eucalyptus.simplequeue.ws;
 
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.simplequeue.QueueUrlGetterSetter;
+import com.eucalyptus.simplequeue.common.msgs.QueueUrlGetterSetter;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpHeaders;

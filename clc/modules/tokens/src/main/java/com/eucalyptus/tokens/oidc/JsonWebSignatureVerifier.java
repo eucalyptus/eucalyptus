@@ -40,8 +40,8 @@ import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 import com.eucalyptus.util.Pair;
 import com.google.common.io.BaseEncoding;
-import javaslang.collection.Stream;
-import javaslang.control.Option;
+import io.vavr.collection.Stream;
+import io.vavr.control.Option;
 
 /**
  *

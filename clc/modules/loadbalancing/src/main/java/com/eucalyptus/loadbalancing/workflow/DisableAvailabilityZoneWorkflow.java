@@ -37,16 +37,15 @@ import com.amazonaws.services.simpleworkflow.flow.annotations.WorkflowRegistrati
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
 @Workflow
-@WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 120, 
-defaultTaskStartToCloseTimeoutSeconds = 60)
+@WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 120,
+    defaultTaskStartToCloseTimeoutSeconds = 60)
 public interface DisableAvailabilityZoneWorkflow {
   @Execute(name = "DisableAvailabilityZone", version = "1.0")
-  void disableAvailabilityZone(final String accountId, final String loadbalancer, 
-      final List<String> availabilityZones); 
-  
+  void disableAvailabilityZone(final String accountId, final String loadbalancer,
+      final List<String> availabilityZones);
+
   @GetState
   ElbWorkflowState getState();
 }

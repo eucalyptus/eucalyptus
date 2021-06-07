@@ -28,6 +28,8 @@
  ************************************************************************/
 package com.eucalyptus.cluster.service;
 
+import java.util.List;
+import com.eucalyptus.cluster.common.msgs.InstanceType;
 import com.eucalyptus.cluster.common.msgs.NcAssignAddressResponseType;
 import com.eucalyptus.cluster.common.msgs.NcAssignAddressType;
 import com.eucalyptus.cluster.common.msgs.NcAttachNetworkInterfaceResponseType;
@@ -75,10 +77,12 @@ import com.eucalyptus.cluster.common.msgs.NcStopInstanceType;
 import com.eucalyptus.cluster.common.msgs.NcTerminateInstanceResponseType;
 import com.eucalyptus.cluster.common.msgs.NcTerminateInstanceType;
 import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.google.common.collect.Lists;
 
 /**
  * Node service API
  */
+@SuppressWarnings( { "UnusedReturnValue", "unused" } )
 public interface NodeService {
 
   // sync
@@ -109,10 +113,12 @@ public interface NodeService {
 
   // selected async
 
+  CheckedListenableFuture<NcAssignAddressResponseType> assignAddressAsync( NcAssignAddressType request );
   CheckedListenableFuture<NcBroadcastNetworkInfoResponseType> broadcastNetworkInfoAsync( NcBroadcastNetworkInfoType request );
   CheckedListenableFuture<NcDescribeInstancesResponseType> describeInstancesAsync( NcDescribeInstancesType request );
   CheckedListenableFuture<NcDescribeResourceResponseType> describeResourceAsync( NcDescribeResourceType request );
   CheckedListenableFuture<NcDescribeSensorsResponseType> describeSensorsAsync( NcDescribeSensorsType request );
+  CheckedListenableFuture<NcMigrateInstancesResponseType> migrateInstancesAsync( NcMigrateInstancesType request );
 
   // convenience
 
@@ -124,6 +130,16 @@ public interface NodeService {
     assignAddress.setInstanceId( instanceId );
     assignAddress.setPublicIp( publicIp );
     return assignAddress( assignAddress );
+  }
+
+  default CheckedListenableFuture<NcAssignAddressResponseType> assignAddressAsync(
+      final String instanceId,
+      final String publicIp
+  ) {
+    final NcAssignAddressType assignAddress = new NcAssignAddressType( );
+    assignAddress.setInstanceId( instanceId );
+    assignAddress.setPublicIp( publicIp );
+    return assignAddressAsync( assignAddress );
   }
 
   default NcGetConsoleOutputResponseType getConsoleOutput(
@@ -158,6 +174,7 @@ public interface NodeService {
     return stopInstance( stopInstance );
   }
 
+  @SuppressWarnings( "SameParameterValue" )
   default NcTerminateInstanceResponseType terminateInstance(
       final String instanceId,
       final boolean force
@@ -168,4 +185,39 @@ public interface NodeService {
     return terminateInstance( terminateInstance );
   }
 
+  default NcMigrateInstancesResponseType migrateInstancesPrepare(
+      final String credentials,
+      final List<String> resourceLocation,
+      final List<InstanceType> instances
+  ) {
+    final NcMigrateInstancesType migrateInstances = new NcMigrateInstancesType( );
+    migrateInstances.setAction( "prepare" );
+    migrateInstances.setCredentials( credentials );
+    migrateInstances.setResourceLocation( Lists.newArrayList( resourceLocation ) );
+    migrateInstances.setInstances( Lists.newArrayList( instances ) );
+    return migrateInstances( migrateInstances );
+  }
+
+  default CheckedListenableFuture<NcMigrateInstancesResponseType> migrateInstancesPrepareAsync(
+      final String credentials,
+      final List<String> resourceLocation,
+      final List<InstanceType> instances
+  ) {
+    final NcMigrateInstancesType migrateInstances = new NcMigrateInstancesType( );
+    migrateInstances.setAction( "prepare" );
+    migrateInstances.setCredentials( credentials );
+    migrateInstances.setResourceLocation( Lists.newArrayList( resourceLocation ) );
+    migrateInstances.setInstances( Lists.newArrayList( instances ) );
+    return migrateInstancesAsync( migrateInstances );
+  }
+
+  default CheckedListenableFuture<NcMigrateInstancesResponseType> migrateInstancesActionAsync(
+      final String action,
+      final InstanceType instance
+  ) {
+    final NcMigrateInstancesType migrateInstances = new NcMigrateInstancesType( );
+    migrateInstances.setAction( action );
+    migrateInstances.setInstances( Lists.newArrayList( instance ) );
+    return migrateInstancesAsync( migrateInstances );
+  }
 }

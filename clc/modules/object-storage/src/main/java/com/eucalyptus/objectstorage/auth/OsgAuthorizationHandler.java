@@ -65,10 +65,10 @@ import com.eucalyptus.objectstorage.policy.ResourceType;
 import com.eucalyptus.objectstorage.policy.S3PolicySpec;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.system.Ats;
-import javaslang.Tuple;
-import javaslang.Tuple3;
-import javaslang.Tuple4;
-import javaslang.control.Option;
+import io.vavr.Tuple;
+import io.vavr.Tuple3;
+import io.vavr.Tuple4;
+import io.vavr.control.Option;
 
 @ComponentNamed
 public class OsgAuthorizationHandler implements RequestAuthorizationHandler {

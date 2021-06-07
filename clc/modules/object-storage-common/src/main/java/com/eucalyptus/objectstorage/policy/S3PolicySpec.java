@@ -48,11 +48,13 @@ public interface S3PolicySpec {
   String S3_DELETEBUCKETWEBSITE = "deletebucketwebsite";
   String S3_DELETEOBJECT = "deleteobject";
   String S3_DELETEOBJECTVERSION = "deleteobjectversion";
+  String S3_GETBUCKETACCELERATECONFIGURATION = "getbucketaccelerateconfiguration";
   String S3_GETBUCKETACL = "getbucketacl";
   String S3_GETBUCKETCORS = "getbucketcors";
   String S3_GETBUCKETLOCATION = "getbucketlocation";
   String S3_GETBUCKETLOGGING = "getbucketlogging";
   String S3_GETBUCKETNOTIFICATION = "getbucketnotification";
+  String S3_GETBUCKETNOTIFICATIONCONFIGURATION = "getbucketnotificationconfiguration";
   String S3_GETBUCKETPOLICY = "getbucketpolicy";
   String S3_GETBUCKETREQUESTPAYMENT = "getbucketrequestpayment";
   String S3_GETBUCKETTAGGING = "getbuckettagging";

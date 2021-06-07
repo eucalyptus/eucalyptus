@@ -39,13 +39,13 @@
 
 package com.eucalyptus.compute.conversion;
 
-import static com.eucalyptus.auth.policy.PolicySpec.EC2_IMPORTINSTANCE;
-import static com.eucalyptus.auth.policy.PolicySpec.EC2_IMPORTVOLUME;
-import static com.eucalyptus.auth.policy.PolicySpec.EC2_CANCELCONVERSIONTASK;
-import static com.eucalyptus.auth.policy.PolicySpec.EC2_DESCRIBECONVERSIONTASKS;
-import static com.eucalyptus.auth.policy.PolicySpec.EC2_RESOURCE_INSTANCE;
-import static com.eucalyptus.auth.policy.PolicySpec.EC2_RESOURCE_VOLUME;
 import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_EC2;
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.EC2_IMPORTINSTANCE;
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.EC2_IMPORTVOLUME;
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.EC2_CANCELCONVERSIONTASK;
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.EC2_DESCRIBECONVERSIONTASKS;
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.EC2_RESOURCE_INSTANCE;
+import static com.eucalyptus.compute.common.policy.ComputePolicySpec.EC2_RESOURCE_VOLUME;
 
 import java.util.Collection;
 import java.util.NoSuchElementException;

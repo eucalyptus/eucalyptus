@@ -29,12 +29,7 @@
 package com.eucalyptus.cloudwatch.service.config;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.cloudwatch.common.CloudWatch;
-import com.eucalyptus.cloudwatch.common.config.DeregisterCloudWatchType;
-import com.eucalyptus.cloudwatch.common.config.DescribeCloudWatchType;
-import com.eucalyptus.cloudwatch.common.config.ModifyCloudWatchAttributeType;
-import com.eucalyptus.cloudwatch.common.config.RegisterCloudWatchType;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
@@ -46,12 +41,6 @@ import com.eucalyptus.component.annotation.ComponentPart;
  *
  */
 @ComponentPart( CloudWatch.class )
-@Handles( {
-    DeregisterCloudWatchType.class,
-    DescribeCloudWatchType.class,
-    ModifyCloudWatchAttributeType.class,
-    RegisterCloudWatchType.class,
-} )
 public class CloudWatchServiceBuilder extends AbstractServiceBuilder<CloudWatchConfiguration> {
   private static final Logger LOG = Logger.getLogger( CloudWatchServiceBuilder.class );
 

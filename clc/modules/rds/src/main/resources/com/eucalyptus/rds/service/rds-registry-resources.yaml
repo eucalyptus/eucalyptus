@@ -1,0 +1,99 @@
+---
+# RDS container registry resources template.
+#
+# The stack owns the container registry bucket. All objects must be removed from the bucket before
+# the stack is deleted (e.g. aws s3 rb --force s3://BUCKETNAME)
+#
+AWSTemplateFormatVersion: 2010-09-09
+Description: RDS container registry bucket and related IAM resources
+
+Resources:
+
+  Bucket:
+    Type: AWS::S3::Bucket
+
+  AdminRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: registry-admin
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+
+  ReadOnlyRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: registry-read
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+
+  AdminBucketPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: registry-admin
+      Roles:
+        - !Ref AdminRole
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: s3:*
+            Resource:
+              - !Sub "arn:aws:s3:::${Bucket}/*"
+              - !Sub "arn:aws:s3:::${Bucket}"
+
+  ReadOnlyBucketPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: registry-read
+      Roles:
+        - !Ref ReadOnlyRole
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: s3:ListBucket
+            Resource: !Sub "arn:aws:s3:::${Bucket}"
+          - Effect: Allow
+            Action: s3:GetObject
+            Resource: !Sub "arn:aws:s3:::${Bucket}/*"
+
+  AdminInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: registry-admin
+      Roles:
+        - !Ref AdminRole
+
+  ReadOnlyInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: registry-read
+      Roles:
+        - !Ref ReadOnlyRole
+
+Outputs:
+
+  Bucket:
+    Description: Registry bucket
+    Value: !Ref Bucket
+
+  InstanceProfileAdmin:
+    Description: Name for the instance profile with registry administrative permissions
+    Value: !Ref AdminInstanceProfile
+
+  InstanceProfileRead:
+    Description: Name for the instance profile with registry read-only permissions
+    Value: !Ref ReadOnlyInstanceProfile
+

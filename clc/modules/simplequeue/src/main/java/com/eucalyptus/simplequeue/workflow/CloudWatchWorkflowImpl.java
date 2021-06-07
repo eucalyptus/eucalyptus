@@ -40,11 +40,7 @@ import com.amazonaws.services.simpleworkflow.flow.core.Promises;
 import com.amazonaws.services.simpleworkflow.flow.core.Settable;
 import com.amazonaws.services.simpleworkflow.flow.core.TryCatchFinally;
 import com.eucalyptus.component.annotation.ComponentPart;
-import com.eucalyptus.simplequeue.SimpleQueue;
-import com.eucalyptus.simplequeue.workflow.CloudWatchActivitiesClient;
-import com.eucalyptus.simplequeue.workflow.CloudWatchActivitiesClientImpl;
-import com.eucalyptus.simplequeue.workflow.CloudWatchWorkflowSelfClient;
-import com.eucalyptus.simplequeue.workflow.CloudWatchWorkflowSelfClientImpl;
+import com.eucalyptus.simplequeue.common.SimpleQueue;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 

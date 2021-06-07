@@ -53,7 +53,7 @@ import com.eucalyptus.event.Listeners;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Lists;
@@ -255,7 +255,7 @@ public class PolledNotificationService {
     }
 
     public String toString( ) {
-      return Objects.toStringHelper( this )
+      return MoreObjects.toStringHelper( this )
           .add( "channel", getChannel( ) )
           .add( "pollers", pollersQueue )
           .add( "timestamp", timestamp.get() )
@@ -293,7 +293,7 @@ public class PolledNotificationService {
     }
 
     public String toString( ) {
-      return Objects.toStringHelper( this )
+      return MoreObjects.toStringHelper( this )
           .add( "channel", getChannel() )
           .add( "details", getDetails() )
           .add( "timestamp", getTimestamp() )
@@ -353,7 +353,7 @@ public class PolledNotificationService {
     }
 
     public String toString( ) {
-      return Objects.toStringHelper( this )
+      return MoreObjects.toStringHelper( this )
         .add( "channel", getChannel( ) )
         .add( "correlationId", getCorrelationId( ) )
         .toString();

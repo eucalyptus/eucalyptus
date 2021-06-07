@@ -93,6 +93,7 @@ public class AlarmStateEvaluationDispatcher implements Runnable {
       List<List<AlarmEntity>> resultsList = null;
       try (final TransactionResource db = Entities.transactionFor(AlarmEntity.class)) {
         Criteria criteria = Entities.createCriteria(AlarmEntity.class);
+        @SuppressWarnings( "unchecked" )
         List<AlarmEntity> results = (List<AlarmEntity>) criteria.list();
         resultsList = makeResultsList(results);
         before = System.currentTimeMillis();
@@ -100,8 +101,8 @@ public class AlarmStateEvaluationDispatcher implements Runnable {
       }
       try {
         if (resultsList != null) {
-          ExecutorCompletionService executorCompletionService = new ExecutorCompletionService(executorService);
-          Set<Future> futures = Sets.newHashSet();
+          ExecutorCompletionService<Object> executorCompletionService = new ExecutorCompletionService<>(executorService);
+          Set<Future<?>> futures = Sets.newHashSet();
           for (List<AlarmEntity> alarmEntityList: resultsList) {
             futures.add(executorCompletionService.submit(new AlarmStateEvaluationWorker(alarmEntityList), new Object()));
           }

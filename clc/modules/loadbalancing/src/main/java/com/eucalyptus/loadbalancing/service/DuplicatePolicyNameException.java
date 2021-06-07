@@ -33,12 +33,13 @@ import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 /**
  * @author Sang-Min Park
- *
  */
-@QueryBindingInfo( statusCode = 400 )
+@QueryBindingInfo(statusCode = 400)
 public class DuplicatePolicyNameException extends LoadBalancingException {
   private static final long serialVersionUID = 1L;
-  public DuplicatePolicyNameException(){
-    super("DuplicatePolicyName", Role.Sender, "Policy with the same name exists for this load balancer. Please choose another name.");
+
+  public DuplicatePolicyNameException() {
+    super("DuplicatePolicyName", Role.Sender,
+        "Policy with the same name exists for this load balancer. Please choose another name.");
   }
 }

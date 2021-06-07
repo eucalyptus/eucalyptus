@@ -1,0 +1,281 @@
+/*************************************************************************
+ * Copyright 2009-2014 Ent. Services Development Corporation LP
+ *
+ * Redistribution and use of this software in source and binary forms,
+ * with or without modification, are permitted provided that the
+ * following conditions are met:
+ *
+ *   Redistributions of source code must retain the above copyright
+ *   notice, this list of conditions and the following disclaimer.
+ *
+ *   Redistributions in binary form must reproduce the above copyright
+ *   notice, this list of conditions and the following disclaimer
+ *   in the documentation and/or other materials provided with the
+ *   distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ ************************************************************************/
+plugins {
+  id 'idea'
+}
+
+subprojects {
+  apply plugin: 'groovy'
+  apply plugin: 'idea'
+  apply plugin: 'java'
+  apply plugin: 'java-library'
+
+  version = file('../../../VERSION').text.trim()
+  targetCompatibility = 1.8
+  sourceCompatibility = 1.8
+
+  sourceSets.main.java.srcDirs += ['src/generated/java']
+
+  sourceSets.test.java.srcDirs = []
+  sourceSets.test.groovy.srcDirs += ['src/test/java' ]
+
+  task testJar(type: Jar, dependsOn: testClasses) {
+    description 'Assembles a jar archive containing the test classes.'
+    group 'Build'
+    baseName = "test-${project.archivesBaseName}"
+    from sourceSets.test.output
+  }
+
+  task compileBindings {
+    description 'Compiles JiBX bindings.'
+    group 'Build'
+    dependsOn compileGroovy
+    dependsOn processResources
+    inputs.files( fileTree(sourceSets.main.output.resourcesDir){ include '**/*-binding.xml' } ).skipWhenEmpty()
+    doLast {
+      ant.taskdef(
+          name: 'bind',
+          classname: 'org.jibx.binding.ant.CompileTask',
+          classpath: configurations.jibx.asPath ) {
+      }
+      ant.bind( verbose: false, load: true ) {
+        bindingfileset( dir: sourceSets.main.output.resourcesDir ) {
+          include( name: '**/*-binding.xml' )
+        }
+        classpath {
+          pathelement( path: sourceSets.main.output.classesDirs.asPath )
+          pathelement( path: sourceSets.main.output.resourcesDir )
+          pathelement( path: sourceSets.main.compileClasspath.asPath )
+        }
+      }
+    }
+  }
+
+  classes {
+    dependsOn compileBindings
+  }
+
+  repositories {
+    mavenCentral( )
+    maven {
+      url 'https://pkgs.dev.azure.com/sjones4/eucalyptus/_packaging/maven/maven/v1'
+    }
+  }
+
+  configurations {
+    jibx
+
+    tests
+
+    apiElements { // known issue, configure the groovy plugin to work with java library plugin
+      outgoing.variants.getByName('classes').artifact(
+          file: compileGroovy.destinationDir,
+          type: ArtifactTypeDefinition.JVM_CLASS_DIRECTORY,
+          builtBy: compileBindings)
+      outgoing.variants.getByName('classes').artifact(
+          file: processResources.destinationDir,
+          type: ArtifactTypeDefinition.JVM_RESOURCES_DIRECTORY,
+          builtBy: compileBindings)
+    }
+  }
+
+  artifacts {
+    tests testJar
+  }
+
+  dependencies {
+    if ( file('ivy.xml').exists( ) ) {
+      def module = new XmlParser().parse( file('ivy.xml') )
+      module.dependencies.dependency.each {
+        api project(":${it.'@name'}")
+      }
+      module.dependencies.dependency.each {
+        testImplementation project(path: ":${it.'@name'}", configuration: 'tests')
+      }
+    }
+
+    testImplementation 'org.hamcrest:hamcrest-integration:1.3' // 1.2
+    testImplementation 'junit:junit:4.11'
+    testImplementation 'org.apache.derby:derby:10.8.3.0'
+    testImplementation 'org.jmock:jmock:2.6.0'
+    testImplementation 'org.jmock:jmock-junit4:2.6.0'
+    testImplementation('org.spockframework:spock-core:1.2-groovy-2.5') {
+      exclude module: 'groovy-json'
+      exclude module: 'groovy-nio'
+      exclude module: 'groovy-macro'
+    }
+
+    jibx 'org.apache.bcel:bcel:6.2'
+    jibx 'dom4j:dom4j:1.6.1'
+    jibx 'org.jibx:jibx-bind:1.3.1'
+    jibx 'org.jibx:jibx-extras:1.3.1'
+    jibx 'org.jibx:jibx-run:1.3.1'
+    jibx 'org.jibx:jibx-schema:1.3.1'
+    jibx('org.jibx:jibx-tools:1.3.1') {
+      exclude group: 'org.jibx.config.3rdparty.org.eclipse'
+    }
+    jibx 'joda-time:joda-time:2.9.9'
+    jibx 'log4j:log4j:1.2.17'
+    jibx 'xml-apis:xml-apis:1.4.01'
+    jibx 'xpp3:xpp3:1.1.4c'
+  }
+
+  compileJava {
+    options.compilerArgs << "-s"
+    options.compilerArgs << "$project.buildDir/src/main/java"
+    options.compilerArgs << "-Xbootclasspath:${System.properties['sun.boot.class.path']}"
+    options.compilerArgs << "-Xlint:divzero,finally,overrides,-deprecation,-unchecked"
+    options.compilerArgs << "-Werror"
+    options.compilerArgs << "-implicit:class"
+    options.debug = true
+    doFirst {
+        file("$project.buildDir/src/main/java").mkdirs()
+    }
+  }
+
+  compileGroovy {
+    options.compilerArgs << "-s"
+    options.compilerArgs << "$project.buildDir/src/main/java"
+    options.compilerArgs << "-implicit:class"
+    doFirst {
+      file("$project.buildDir/src/main/java").mkdirs()
+    }
+  }
+
+  test {
+    systemProperty 'log4j.configuration', 'log4j-test.xml'
+  }
+
+  idea {
+    module {
+      name -= ~/^eucalyptus-/
+
+      excludeDirs = [
+        file( "$buildDir/classes" ),
+        file( "$buildDir/test-classes" )
+      ]
+
+      iml {
+        beforeMerged { module ->
+          module.excludeFolders.clear( )
+        }
+
+        whenMerged { module ->
+          if ( name != 'core' ) {
+            def remove = module.dependencies.findAll{
+                it instanceof org.gradle.plugins.ide.idea.model.ModuleLibrary
+              }.findAll{ moduleLibrary ->
+                moduleLibrary.classes.find{ it.url.startsWith('jar:') }
+              }
+
+            module.dependencies.removeAll( remove )
+          }
+          module.dependencies*.exported = true
+        }
+      }
+    }
+  }
+}
+
+task copyJars(type: Copy) {
+  description 'Copies jar build artifacts to target directory.'
+  group 'Output'
+  from subprojects.collect{ it.tasks.withType(Jar) }
+  into "target"
+  exclude '**/test-eucalyptus-*.jar'
+}
+
+task copyDependencies(type: Copy) {
+  description 'Copies jar dependencies to target/lib directory.'
+  group 'Output'
+  from subprojects.collect{ it.configurations.runtimeClasspath }
+  into 'target/lib'
+  exclude '**/eucalyptus-*.jar'
+}
+
+task copyTestDependencies(type: Copy) {
+  description 'Copies test jar dependencies to target/lib/tests directory.'
+  group 'Output'
+  from subprojects.collect{ it.configurations.testRuntimeClasspath - it.configurations.runtimeClasspath }
+  into 'target/lib/tests'
+  exclude '**/eucalyptus-*.jar'
+  exclude '**/test-eucalyptus-*.jar'
+}
+
+task copyAllDependencies(dependsOn: [ 'copyDependencies', 'copyTestDependencies' ] ) {
+  description 'Copies main and test jar dependencies under target/lib directory.'
+  group 'Output'
+}
+
+task testReport(type: TestReport) {
+  description 'Generates HTML junit report under target/reports/tests directory.'
+  destinationDir = file("target/reports/tests")
+  mustRunAfter subprojects*.test
+  reportOn subprojects*.test
+}
+
+task test {
+  finalizedBy( testReport )
+}
+
+task build {
+  finalizedBy( testReport )
+}
+
+idea {
+  project {
+    jdkName = '1.8'
+    languageLevel = '1.8'
+    modules = subprojects.collect{ it.idea.module }
+
+    ipr {
+      withXml {
+        def projectNode = it.asNode( )
+        def componentNode = projectNode?.component?.getAt(0)
+        def annotationProcessingNode = componentNode?.annotationProcessing?.getAt(0)
+        if ( componentNode && componentNode['@name'] == 'CompilerConfiguration' &&
+            ( !annotationProcessingNode || annotationProcessingNode['@enabled'] == 'false' ) ) {
+          if ( annotationProcessingNode ) {
+            componentNode.remove( annotationProcessingNode )
+          }
+          componentNode.append( new groovy.util.XmlParser( ).parseText(
+            '''<annotationProcessing>
+                  <profile default="true" name="Default" enabled="true">
+                    <sourceOutputDir name="build/src/main/java" />
+                    <sourceTestOutputDir name="build/src/test/java" />
+                    <outputRelativeToContentRoot value="true" />
+                    <processorPath useClasspath="true" />
+                  </profile>
+                </annotationProcessing>'''
+          ) )
+        }
+      }
+    }
+  }
+}

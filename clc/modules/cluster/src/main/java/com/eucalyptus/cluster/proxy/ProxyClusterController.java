@@ -52,22 +52,25 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelOption;
 
 @Partition( value = { Eucalyptus.class } )
-@ComponentApi( ClusterController.class )
-@Description( "The Cluster Controller service" )
 public class ProxyClusterController extends ComponentId {
   
   private static final long       serialVersionUID = 1L;
   public static final ComponentId INSTANCE         = new ProxyClusterController( );
   
   public ProxyClusterController( ) {
-    super( "cluster" );
+    super( "proxy-cluster" );
   }
   
   @Override
   public Integer getPort( ) {
     return 8774;
   }
-  
+
+  @Override
+  public boolean isRegisterable( ) {
+    return false;
+  }
+
   @Override
   public String getServicePath( final String... pathParts ) {
     return "/axis2/services/EucalyptusCC";

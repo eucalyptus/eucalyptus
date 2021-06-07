@@ -38,7 +38,7 @@ import com.eucalyptus.util.Pair;
 import com.eucalyptus.util.Strings;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.MoreObjects;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 /**
  * JSON Web Key (JWK)

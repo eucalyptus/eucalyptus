@@ -34,11 +34,11 @@ import com.eucalyptus.ws.protocol.QueryBindingInfo;
 /**
  *
  */
-@QueryBindingInfo( statusCode = 400 )
+@QueryBindingInfo(statusCode = 400)
 public class LoadBalancingClientException extends LoadBalancingException {
   private static final long serialVersionUID = 1L;
 
-  public LoadBalancingClientException( final String code, final String message ) {
-    super( code, Role.Sender, message );
+  public LoadBalancingClientException(final String code, final String message) {
+    super(code, Role.Sender, message);
   }
 }

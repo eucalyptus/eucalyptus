@@ -33,6 +33,7 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableInit;
 import com.eucalyptus.entities.AbstractPersistent;
 
 /**
@@ -44,26 +45,59 @@ import com.eucalyptus.entities.AbstractPersistent;
 @ConfigurableClass( root = "cloud.cluster", description = "Configuration options controlling interactions with Cluster Controllers." )
 public class ProxyClusterConfiguration extends AbstractPersistent {
   private static final long serialVersionUID = 1L;
-  @ConfigurableField( description = "The number of concurrent requests which will be sent to a single Cluster Controller.", initial = "8" )
-  @Column( name = "config_cluster_workers", nullable = false )
-  private Integer requestWorkers = 8;
-  @ConfigurableField( description = "The time period between service state checks for a Cluster Controller which is PENDING.", initial = "3" )
-  @Column( name = "config_cluster_interval_pending", nullable = false )
-  private Long pendingInterval = 3l;
-  @ConfigurableField( description = "The time period between service state checks for a Cluster Controller which is NOTREADY.", initial = "10" )
-  @Column( name = "config_cluster_interval_notready", nullable = false )
-  private Long notreadyInterval = 10l;
-  @ConfigurableField( description = "The time period between service state checks for a Cluster Controller which is DISABLED.", initial = "15" )
-  @Column( name = "config_cluster_interval_disabled", nullable = false )
-  private Long disabledInterval = 15l;
-  @ConfigurableField( description = "The time period between service state checks for a Cluster Controller which is ENABLED.", initial = "15" )
-  @Column( name = "config_cluster_interval_enabled", nullable = false )
-  private Long enabledInterval = 15l;
-  @ConfigurableField( description = "The number of times a request will be retried while bootstrapping a Cluster Controller.", initial = "10" )
-  @Column( name = "config_cluster_startup_sync_retries", nullable = false )
-  private Integer startupSyncRetries = 10;
 
-  public ProxyClusterConfiguration() {
+  private static final String DEFAULT_REQUEST_WORKERS = "8";
+  private static final String DEFAULT_PENDING_INTERVAL = "3";
+  private static final String DEFAULT_NOTREADY_INTERVAL = "10";
+  private static final String DEFAULT_DISABLED_INTERVAL = "15";
+  private static final String DEFAULT_ENABLED_INTERVAL = "15";
+  private static final String DEFAULT_STARTUP_SYNC_RETRIES = "10";
+
+  @ConfigurableField(
+      description = "The number of concurrent requests which will be sent to a single Cluster Controller.",
+      initial = DEFAULT_REQUEST_WORKERS )
+  @Column( name = "config_cluster_workers", nullable = false )
+  private Integer requestWorkers;
+
+  @ConfigurableField(
+      description = "The time period between service state checks for a Cluster Controller which is PENDING.",
+      initial = DEFAULT_PENDING_INTERVAL )
+  @Column( name = "config_cluster_interval_pending", nullable = false )
+  private Long pendingInterval;
+
+  @ConfigurableField(
+      description = "The time period between service state checks for a Cluster Controller which is NOTREADY.",
+      initial = DEFAULT_NOTREADY_INTERVAL )
+  @Column( name = "config_cluster_interval_notready", nullable = false )
+
+  private Long notreadyInterval;
+  @ConfigurableField(
+      description = "The time period between service state checks for a Cluster Controller which is DISABLED.",
+      initial = DEFAULT_DISABLED_INTERVAL )
+  @Column( name = "config_cluster_interval_disabled", nullable = false )
+  private Long disabledInterval;
+
+  @ConfigurableField(
+      description = "The time period between service state checks for a Cluster Controller which is ENABLED.",
+      initial = DEFAULT_ENABLED_INTERVAL )
+  @Column( name = "config_cluster_interval_enabled", nullable = false )
+  private Long enabledInterval;
+
+  @ConfigurableField(
+      description = "The number of times a request will be retried while bootstrapping a Cluster Controller.",
+      initial = DEFAULT_STARTUP_SYNC_RETRIES )
+  @Column( name = "config_cluster_startup_sync_retries", nullable = false )
+  private Integer startupSyncRetries;
+
+  @ConfigurableInit
+  public ProxyClusterConfiguration init( ) {
+    setRequestWorkers( Integer.valueOf( DEFAULT_REQUEST_WORKERS ) );
+    setPendingInterval( Long.valueOf( DEFAULT_PENDING_INTERVAL ) );
+    setNotreadyInterval( Long.valueOf( DEFAULT_NOTREADY_INTERVAL ) );
+    setDisabledInterval( Long.valueOf( DEFAULT_DISABLED_INTERVAL ) );
+    setEnabledInterval( Long.valueOf( DEFAULT_ENABLED_INTERVAL ) );
+    setStartupSyncRetries( Integer.valueOf( DEFAULT_STARTUP_SYNC_RETRIES ) );
+    return this;
   }
 
   public Integer getRequestWorkers() {

@@ -51,7 +51,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <curl/curl.h>
-#include <json/json.h>
+#include <json-c/json.h>
 
 #include <pthread.h>
 

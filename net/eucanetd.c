@@ -333,7 +333,7 @@ int main(int argc, char **argv) {
 
     // parse commandline arguments
     config->flushmode = FLUSH_NONE;
-    while ((opt = getopt(argc, argv, "dhHlgfFmMuUCZT:v:V:z:")) != -1) {
+    while ((opt = getopt(argc, argv, "dhHlgfFmMsuUCZT:v:V:z:")) != -1) {
         switch (opt) {
         case 'd':
             config->debug = EUCANETD_DEBUG_TRACE;
@@ -372,6 +372,9 @@ int main(int argc, char **argv) {
         case 'M':
             config->flushmode = FLUSH_MIDO_DUPS;
             config->debug = EUCANETD_DEBUG_INFO;
+            break;
+        case 's':
+            config->systemd = TRUE;
             break;
         case 'u':
             config->flushmode = FLUSH_MIDO_CHECKUNCONNECTED;
@@ -455,11 +458,13 @@ int main(int argc, char **argv) {
         }
     }
 
-    // daemonize this process!
-    rc = eucanetd_daemonize();
-    if (rc) {
-        fprintf(stderr, "failed to eucanetd_daemonize eucanetd, exiting\n");
-        exit(1);
+    if (!config->systemd) {
+        // daemonize this process!
+        rc = eucanetd_daemonize();
+        if (rc) {
+            fprintf(stderr, "failed to eucanetd_daemonize eucanetd, exiting\n");
+            exit(1);
+        }
     }
 
     eucanetd_setlog_bootstrap();

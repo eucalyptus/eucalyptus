@@ -29,7 +29,8 @@
 package com.eucalyptus.simplequeue.ws;
 
 import com.eucalyptus.component.annotation.ComponentNamed;
-import com.eucalyptus.simplequeue.SimpleQueueErrorResponse;
+import com.eucalyptus.simplequeue.common.msgs.SimpleQueueErrorResponse;
+import com.eucalyptus.simplequeue.common.msgs.Error;
 import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.util.ErrorHandlerSupport;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -55,7 +56,7 @@ public class SimpleQueueErrorHandler extends ErrorHandlerSupport {
     final SimpleQueueErrorResponse errorResp = new SimpleQueueErrorResponse( );
     errorResp.setCorrelationId( correlationId );
     errorResp.setRequestId( correlationId );
-    final com.eucalyptus.simplequeue.Error error = new com.eucalyptus.simplequeue.Error( );
+    final Error error = new Error( );
     error.setType( role == Role.Receiver ? "Receiver" : "Sender" );
     error.setCode( code );
     error.setMessage( message );

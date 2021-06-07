@@ -38,16 +38,16 @@ import org.apache.log4j.Logger;
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
 @ComponentPart(LoadBalancing.class)
 public class ApplySecurityGroupsWorkflowImpl
     implements ApplySecurityGroupsWorkflow {
-  private static Logger LOG     = Logger.getLogger(  ApplySecurityGroupsWorkflowImpl.class );
+  private static Logger LOG = Logger.getLogger(ApplySecurityGroupsWorkflowImpl.class);
   final LoadBalancingActivitiesClient client =
-          new LoadBalancingActivitiesClientImpl();
+      new LoadBalancingActivitiesClientImpl(null, LoadBalancingJsonDataConverter.getDefault(),
+          null);
   private ElbWorkflowState state =
-          ElbWorkflowState.WORKFLOW_RUNNING;
+      ElbWorkflowState.WORKFLOW_RUNNING;
   TryCatchFinally task = null;
   private String accountNumber = null;
   private String loadbalancer = null;
@@ -61,7 +61,7 @@ public class ApplySecurityGroupsWorkflowImpl
       @Override
       protected void doTry() throws Throwable {
         client.applySecurityGroupUpdateSecurityGroup(accountId, loadbalancer,
-                groupIdToNameMap);
+            groupIdToNameMap);
       }
 
       @Override
@@ -78,8 +78,9 @@ public class ApplySecurityGroupsWorkflowImpl
 
       @Override
       protected void doFinally() throws Throwable {
-        if (state == ElbWorkflowState.WORKFLOW_RUNNING)
+        if (state == ElbWorkflowState.WORKFLOW_RUNNING) {
           state = ElbWorkflowState.WORKFLOW_SUCCESS;
+        }
       }
     };
   }

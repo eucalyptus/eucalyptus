@@ -70,9 +70,30 @@ public class ObjectStoragePUTBinding extends ObjectStorageRESTBinding {
 
     // Multipart Uploads
     .put(OBJECT + HttpMethod.PUT + ObjectParameter.partNumber.toString().toLowerCase()
-        + ObjectParameter.uploadId.toString().toLowerCase(), "UploadPart")
+        + ObjectParameter.uploadId.toString().toLowerCase() , "UploadPart")
     .put(OBJECT + HttpMethod.PUT + ObjectParameter.uploadId.toString().toLowerCase()
         + ObjectParameter.partNumber.toString().toLowerCase(), "UploadPart")
+
+    .put(OBJECT + HttpMethod.PUT + ObjectParameter.uploadId.toString().toLowerCase()
+        + ObjectParameter.partNumber.toString().toLowerCase() + ObjectStorageProperties.COPY_SOURCE,
+        "UploadPartCopy")
+    .put(OBJECT + HttpMethod.PUT + ObjectParameter.uploadId.toString().toLowerCase()
+        + ObjectStorageProperties.COPY_SOURCE + ObjectParameter.partNumber.toString().toLowerCase(),
+        "UploadPartCopy")
+    .put(OBJECT + HttpMethod.PUT + ObjectParameter.partNumber.toString().toLowerCase()
+        + ObjectParameter.uploadId.toString().toLowerCase() + ObjectStorageProperties.COPY_SOURCE,
+        "UploadPartCopy")
+    .put(OBJECT + HttpMethod.PUT + ObjectParameter.partNumber.toString().toLowerCase()
+        + ObjectStorageProperties.COPY_SOURCE + ObjectParameter.uploadId.toString().toLowerCase(),
+        "UploadPartCopy")
+    .put(OBJECT + HttpMethod.PUT + ObjectStorageProperties.COPY_SOURCE
+        + ObjectParameter.uploadId.toString().toLowerCase()
+        + ObjectParameter.partNumber.toString().toLowerCase(),
+        "UploadPartCopy")
+    .put(OBJECT + HttpMethod.PUT + ObjectStorageProperties.COPY_SOURCE
+        + ObjectParameter.partNumber.toString().toLowerCase()
+        + ObjectParameter.uploadId.toString().toLowerCase(),
+        "UploadPartCopy")
 
     .put(OBJECT + HttpMethod.POST + ObjectParameter.uploads.toString(), "InitiateMultipartUpload")
     .put(OBJECT + HttpMethod.POST + ObjectParameter.uploadId.toString().toLowerCase(), "CompleteMultipartUpload")

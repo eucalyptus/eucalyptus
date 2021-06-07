@@ -36,11 +36,10 @@ import com.amazonaws.services.simpleworkflow.flow.annotations.WorkflowRegistrati
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
 @Workflow
 @WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 300,
-        defaultTaskStartToCloseTimeoutSeconds = 60)
+    defaultTaskStartToCloseTimeoutSeconds = 60)
 public interface UpgradeLoadBalancerWorkflow {
   @Execute(name = "UpgradeLoadBalancer", version = "1.0")
   void upgradeLoadBalancer();

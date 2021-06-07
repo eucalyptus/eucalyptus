@@ -162,12 +162,6 @@ public class AWSAutoScalingLaunchConfigurationResourceAction extends StepBasedRe
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -184,12 +178,6 @@ public class AWSAutoScalingLaunchConfigurationResourceAction extends StepBasedRe
         return action;
       }
     };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
-    }
   }
 
 

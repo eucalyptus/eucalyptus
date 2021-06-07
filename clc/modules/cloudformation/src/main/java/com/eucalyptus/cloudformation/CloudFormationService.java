@@ -30,6 +30,7 @@
 package com.eucalyptus.cloudformation;
 
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflow;
+import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 import com.amazonaws.services.simpleworkflow.model.DescribeWorkflowExecutionRequest;
 import com.amazonaws.services.simpleworkflow.model.RequestCancelWorkflowExecutionRequest;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution;
@@ -40,6 +41,8 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.euare.identity.region.RegionConfigurations;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.tokens.SecurityTokenAWSCredentialsProvider;
+import com.eucalyptus.cloudformation.common.CloudFormationMetadatas;
+import com.eucalyptus.cloudformation.common.msgs.*;
 import com.eucalyptus.cloudformation.common.policy.CloudFormationPolicySpec;
 import com.eucalyptus.cloudformation.config.CloudFormationProperties;
 import com.eucalyptus.cloudformation.entity.DeleteStackWorkflowExtraInfoEntity;
@@ -68,20 +71,12 @@ import com.eucalyptus.cloudformation.template.url.WhiteListURLMatcher;
 import com.eucalyptus.cloudformation.util.CfnIdentityDocumentCredential;
 import com.eucalyptus.cloudformation.workflow.CommonDeleteRollbackKickoff;
 import com.eucalyptus.cloudformation.workflow.CreateStackWorkflow;
-import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowClient;
-import com.eucalyptus.cloudformation.workflow.CreateStackWorkflowDescriptionTemplate;
 import com.eucalyptus.cloudformation.workflow.MonitorCreateStackWorkflow;
-import com.eucalyptus.cloudformation.workflow.MonitorCreateStackWorkflowClient;
-import com.eucalyptus.cloudformation.workflow.MonitorCreateStackWorkflowDescriptionTemplate;
 import com.eucalyptus.cloudformation.workflow.MonitorUpdateStackWorkflow;
-import com.eucalyptus.cloudformation.workflow.MonitorUpdateStackWorkflowClient;
-import com.eucalyptus.cloudformation.workflow.MonitorUpdateStackWorkflowDescriptionTemplate;
-import com.eucalyptus.cloudformation.workflow.StartTimeoutPassableWorkflowClientFactory;
 import com.eucalyptus.cloudformation.workflow.UpdateStackPartsWorkflowKickOff;
 import com.eucalyptus.cloudformation.workflow.UpdateStackWorkflow;
-import com.eucalyptus.cloudformation.workflow.UpdateStackWorkflowClient;
-import com.eucalyptus.cloudformation.workflow.UpdateStackWorkflowDescriptionTemplate;
 import com.eucalyptus.cloudformation.workflow.WorkflowClientManager;
+import com.eucalyptus.cloudformation.workflow.WorkflowRegistry;
 import com.eucalyptus.cloudformation.ws.StackWorkflowTags;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.annotation.ComponentNamed;
@@ -97,7 +92,6 @@ import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.IO;
 import com.eucalyptus.util.Json;
-import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.dns.DomainNames;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Joiner;
@@ -112,9 +106,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteStreams;
-import com.netflix.glisten.InterfaceBasedWorkflowClient;
-import com.netflix.glisten.WorkflowDescriptionTemplate;
-import com.netflix.glisten.WorkflowTags;
 import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Name;
@@ -139,6 +130,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import io.vavr.Tuple2;
 
 @ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
 @ComponentNamed
@@ -175,7 +167,7 @@ public class CloudFormationService {
         throw new ValidationErrorException("Stack " + stackName + " does not exist");
       }
 
-      if ( !RestrictedTypes.filterPrivileged( ).apply( stackEntity ) ) {
+      if ( !CloudFormationMetadatas.filterPrivileged( ).apply( stackEntity ) ) {
         throw new AccessDeniedException( "Not authorized." );
       }
       if (stackEntity.getStackStatus() != Status.UPDATE_IN_PROGRESS) {
@@ -219,7 +211,7 @@ public class CloudFormationService {
     return reply;
   }
 
-  public ContinueUpdateRollbackResponseType continueUpdateRollbackStackResponseType (final ContinueUpdateRollbackType request ) throws CloudFormationException {
+  public ContinueUpdateRollbackResponseType continueUpdateRollback( final ContinueUpdateRollbackType request ) throws CloudFormationException {
     ContinueUpdateRollbackResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
@@ -236,7 +228,7 @@ public class CloudFormationService {
       if (stackEntity == null) {
         throw new ValidationErrorException("Stack " + stackName + " does not exist");
       }
-      if ( !RestrictedTypes.filterPrivileged( ).apply( stackEntity ) ) {
+      if ( !CloudFormationMetadatas.filterPrivileged( ).apply( stackEntity ) ) {
         throw new AccessDeniedException( "Not authorized." );
       }
 
@@ -317,7 +309,7 @@ public class CloudFormationService {
 
       final String stackIdLocal = UUID.randomUUID().toString();
       final String stackId = STACK_ID_PREFIX + REGION + ":" + accountId + ":stack/"+stackName+"/"+stackIdLocal;
-      final PseudoParameterValues pseudoParameterValues = new PseudoParameterValues();
+      final PseudoParameterValues pseudoParameterValues = populateRegionPseudoParameters(new PseudoParameterValues());
       pseudoParameterValues.setAccountId(accountId);
       pseudoParameterValues.setStackName(stackName);
       pseudoParameterValues.setStackId(stackId);
@@ -328,7 +320,6 @@ public class CloudFormationService {
         }
         pseudoParameterValues.setNotificationArns(notificationArns);
       }
-      pseudoParameterValues.setRegion(getRegion());
       final ArrayList<String> capabilities = Lists.newArrayList();
       if (request.getCapabilities() != null && request.getCapabilities().getMember() != null) {
         for (String capability: request.getCapabilities().getMember()) {
@@ -424,14 +415,13 @@ public class CloudFormationService {
               StackResourceEntityManager.addStackResource(stackResourceEntity);
             }
 
-            StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(stackId, stackName, accountId, accountAlias);
-            Long timeoutInSeconds = (request.getTimeoutInMinutes() != null && request.getTimeoutInMinutes()> 0 ? 60L * request.getTimeoutInMinutes() : null);
-            StartTimeoutPassableWorkflowClientFactory createStackWorkflowClientFactory = new StartTimeoutPassableWorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient( ), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
-            WorkflowDescriptionTemplate createStackWorkflowDescriptionTemplate = new CreateStackWorkflowDescriptionTemplate();
-            InterfaceBasedWorkflowClient<CreateStackWorkflow> createStackWorkflowClient = createStackWorkflowClientFactory
-              .getNewWorkflowClient(CreateStackWorkflow.class, createStackWorkflowDescriptionTemplate, stackWorkflowTags, timeoutInSeconds, null);
+            final StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(stackId, stackName, accountId, accountAlias);
 
-            CreateStackWorkflow createStackWorkflow = new CreateStackWorkflowClient(createStackWorkflowClient);
+            final Long timeoutInSeconds = (request.getTimeoutInMinutes() != null && request.getTimeoutInMinutes()> 0 ? 60L * request.getTimeoutInMinutes() : null);
+            final Tuple2<WorkflowClientExternal,CreateStackWorkflow> createStackWorkflowClients =
+                WorkflowRegistry.getWorkflowClient( WorkflowRegistry.CreateStackWorkflowKey, stackWorkflowTags, timeoutInSeconds );
+            final WorkflowClientExternal createStackWorkflowClient = createStackWorkflowClients._1();
+            final CreateStackWorkflow createStackWorkflow = createStackWorkflowClients._2( );
             createStackWorkflow.createStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), userId, onFailure, INIT_STACK_VERSION);
             StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
               StackWorkflowEntity.WorkflowType.CREATE_STACK_WORKFLOW,
@@ -439,15 +429,11 @@ public class CloudFormationService {
               createStackWorkflowClient.getWorkflowExecution().getWorkflowId(),
               createStackWorkflowClient.getWorkflowExecution().getRunId());
 
-            StartTimeoutPassableWorkflowClientFactory monitorCreateStackWorkflowClientFactory = new StartTimeoutPassableWorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient(), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
-            WorkflowDescriptionTemplate monitorCreateStackWorkflowDescriptionTemplate = new MonitorCreateStackWorkflowDescriptionTemplate();
-            InterfaceBasedWorkflowClient<MonitorCreateStackWorkflow> monitorCreateStackWorkflowClient = monitorCreateStackWorkflowClientFactory
-              .getNewWorkflowClient(MonitorCreateStackWorkflow.class, monitorCreateStackWorkflowDescriptionTemplate, stackWorkflowTags, null, null);
-
-            MonitorCreateStackWorkflow monitorCreateStackWorkflow = new MonitorCreateStackWorkflowClient(monitorCreateStackWorkflowClient);
+            final Tuple2<WorkflowClientExternal,MonitorCreateStackWorkflow> monitorCreateStackWorkflowClients =
+                WorkflowRegistry.getWorkflowClient( WorkflowRegistry.MonitorCreateStackWorkflowKey, stackWorkflowTags );
+            final WorkflowClientExternal monitorCreateStackWorkflowClient = monitorCreateStackWorkflowClients._1();
+            final MonitorCreateStackWorkflow monitorCreateStackWorkflow = monitorCreateStackWorkflowClients._2( );
             monitorCreateStackWorkflow.monitorCreateStack(stackId, stackName, accountId, accountAlias, stackEntity.getResourceDependencyManagerJson(), userId, onFailure, INIT_STACK_VERSION);
-
-
             StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
               StackWorkflowEntity.WorkflowType.MONITOR_CREATE_STACK_WORKFLOW,
               CloudFormationProperties.SWF_DOMAIN,
@@ -462,7 +448,7 @@ public class CloudFormationService {
       };
 
       try {
-        final StackEntity stackEntity = RestrictedTypes.allocateUnitlessResource(allocator);
+        final StackEntity stackEntity = CloudFormationMetadatas.allocateUnitlessResource(allocator);
       } catch (AuthQuotaException e) {
         throw new LimitExceededException(e.getMessage());
       }
@@ -582,7 +568,7 @@ public class CloudFormationService {
         stackEntity = StackEntityManager.getNonDeletedStackByNameOrId(stackName, null);
       }
       if ( stackEntity != null ) {
-        if ( !RestrictedTypes.filterPrivileged( ).apply( stackEntity ) ) {
+        if ( !CloudFormationMetadatas.filterPrivileged( ).apply( stackEntity ) ) {
           throw new AccessDeniedException( "Not authorized." );
         }
         final String stackAccountId = stackEntity.getAccountId( );
@@ -594,7 +580,7 @@ public class CloudFormationService {
           user.getUserId( );
 
         String stackId = stackEntity.getStackId();
-        
+
         if (inProgressCantDeleteStatuses.contains(stackEntity.getStackStatus())
           && hasOpenWorkflowOfType(stackEntity, updateOrMonitorUpdateWorkflowTypes)) {
           throw new ValidationErrorException("Stack " + stackEntity.getStackId() + " is in " + stackEntity.getStackStatus() + " state and can not be deleted.");
@@ -720,6 +706,26 @@ public class CloudFormationService {
     return currentWorkflowRetainedResources;
   }
 
+  public DescribeAccountLimitsResponseType describeAccountLimits(final DescribeAccountLimitsType request ) throws CloudFormationException {
+    final DescribeAccountLimitsResponseType reply = request.getReply();
+    try {
+      final Context ctx = Contexts.lookup();
+      checkActionPermission(CloudFormationPolicySpec.CLOUDFORMATION_DESCRIBEACCOUNTLIMITS, ctx);
+
+      final AccountLimitList accountLimitList = new AccountLimitList();
+      final AccountLimit accountLimit = new AccountLimit();
+      accountLimit.setName("StackOutputsLimit");
+      accountLimit.setValue((int)Limits.MAX_OUTPUTS_PER_TEMPLATE);
+      accountLimitList.getMember().add(accountLimit);
+      final DescribeAccountLimitsResult describeAccountLimitsResult = new DescribeAccountLimitsResult();
+      describeAccountLimitsResult.setAccountLimits(accountLimitList);
+      reply.setDescribeAccountLimitsResult(describeAccountLimitsResult);
+    } catch (final Exception ex) {
+      handleException(ex);
+    }
+    return reply;
+  }
+
   public DescribeStackEventsResponseType describeStackEvents( final DescribeStackEventsType request ) throws CloudFormationException {
     DescribeStackEventsResponseType reply = request.getReply();
     try {
@@ -744,7 +750,7 @@ public class CloudFormationService {
     return reply;
   }
 
-  public DescribeStackResourceResponseType describeStackResource(DescribeStackResourceType request)
+  public DescribeStackResourceResponseType describeStackResource( DescribeStackResourceType request)
       throws CloudFormationException {
     DescribeStackResourceResponseType reply = request.getReply();
     try {
@@ -780,7 +786,7 @@ public class CloudFormationService {
     return reply;
   }
 
-  public DescribeStackResourcesResponseType describeStackResources(final DescribeStackResourcesType request)
+  public DescribeStackResourcesResponseType describeStackResources( final DescribeStackResourcesType request)
       throws CloudFormationException {
     DescribeStackResourcesResponseType reply = request.getReply();
     try {
@@ -826,7 +832,7 @@ public class CloudFormationService {
     return reply;
   }
 
-  public DescribeStacksResponseType describeStacks(DescribeStacksType request)
+  public DescribeStacksResponseType describeStacks( DescribeStacksType request)
       throws CloudFormationException {
     DescribeStacksResponseType reply = request.getReply();
     try {
@@ -838,10 +844,10 @@ public class CloudFormationService {
           ctx.isAdministrator( ) && stackName!=null && ("verbose".equals(stackName) || stackName.startsWith( STACK_ID_PREFIX )) ? null : accountId,
           ctx.isAdministrator( ) && "verbose".equals(stackName) ? null : stackName );
       final ArrayList<Stack> stackList = new ArrayList<Stack>();
-      for ( final StackEntity stackEntity : Iterables.filter( stackEntities, RestrictedTypes.filterPrivileged( ) ) ) {
+      for ( final StackEntity stackEntity : Iterables.filter( stackEntities, CloudFormationMetadatas.filterPrivileged( ) ) ) {
         Stack stack = new Stack();
         if (stackEntity.getCapabilitiesJson() != null && !stackEntity.getCapabilitiesJson().isEmpty()) {
-          ResourceList capabilities = new ResourceList();
+          Capabilities capabilities = new Capabilities();
           ArrayList<String> member = StackEntityHelper.jsonToCapabilities(stackEntity.getCapabilitiesJson());
           capabilities.setMember(member);
           stack.setCapabilities(capabilities);
@@ -852,7 +858,7 @@ public class CloudFormationService {
         stack.setDisableRollback(stackEntity.getDisableRollback()); // TODO: how do we handle onFailure(?) field
         stack.setLastUpdatedTime(stackEntity.getLastUpdateTimestamp());
         if (stackEntity.getNotificationARNsJson() != null && !stackEntity.getNotificationARNsJson().isEmpty()) {
-          ResourceList notificationARNs = new ResourceList();
+          NotificationARNs notificationARNs = new NotificationARNs();
           ArrayList<String> member = StackEntityHelper.jsonToNotificationARNs(stackEntity.getNotificationARNsJson());
           notificationARNs.setMember(member);
           stack.setNotificationARNs(notificationARNs);
@@ -921,12 +927,12 @@ public class CloudFormationService {
     return reply;
   }
 
-  public EstimateTemplateCostResponseType estimateTemplateCost(EstimateTemplateCostType request)
+  public EstimateTemplateCostResponseType estimateTemplateCost( EstimateTemplateCostType request)
       throws CloudFormationException {
     return request.getReply();
   }
 
-  public GetStackPolicyResponseType getStackPolicy(final GetStackPolicyType request) throws CloudFormationException {
+  public GetStackPolicyResponseType getStackPolicy( final GetStackPolicyType request) throws CloudFormationException {
     GetStackPolicyResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
@@ -952,7 +958,7 @@ public class CloudFormationService {
     return reply;
   }
 
-  public GetTemplateResponseType getTemplate(final GetTemplateType request)
+  public GetTemplateResponseType getTemplate( final GetTemplateType request)
       throws CloudFormationException {
     GetTemplateResponseType reply = request.getReply();
     try {
@@ -979,7 +985,7 @@ public class CloudFormationService {
     return reply;
   }
 
-  public GetTemplateSummaryResponseType getTemplateSummary(GetTemplateSummaryType request)
+  public GetTemplateSummaryResponseType getTemplateSummary( GetTemplateSummaryType request)
     throws CloudFormationException {
     GetTemplateSummaryResponseType reply = request.getReply();
     try {
@@ -1018,12 +1024,10 @@ public class CloudFormationService {
       }
       final String stackIdLocal = UUID.randomUUID().toString();
       final String stackId = "arn:aws:cloudformation:" + REGION + ":" + accountId + ":stack/"+stackName+"/"+stackIdLocal;
-      final PseudoParameterValues pseudoParameterValues = new PseudoParameterValues();
+      final PseudoParameterValues pseudoParameterValues = populateRegionPseudoParameters(new PseudoParameterValues());
       pseudoParameterValues.setAccountId(accountId);
       pseudoParameterValues.setStackName(stackName);
       pseudoParameterValues.setStackId(stackId);
-      ArrayList<String> notificationArns = Lists.newArrayList();
-      pseudoParameterValues.setRegion(getRegion());
       List<Parameter> parameters = Lists.newArrayList();
       final GetTemplateSummaryResult getTemplateSummaryResult = new TemplateParser().getTemplateSummary(templateText, parameters, pseudoParameterValues, userId, CloudFormationProperties.ENFORCE_STRICT_RESOURCE_PROPERTIES);
       reply.setGetTemplateSummaryResult(getTemplateSummaryResult);
@@ -1033,7 +1037,7 @@ public class CloudFormationService {
     return reply;
   }
 
-  public ListStackResourcesResponseType listStackResources(ListStackResourcesType request)
+  public ListStackResourcesResponseType listStackResources( ListStackResourcesType request)
       throws CloudFormationException {
     ListStackResourcesResponseType reply = request.getReply();
     try {
@@ -1072,14 +1076,14 @@ public class CloudFormationService {
     return reply;
   }
 
-  public ListStacksResponseType listStacks(ListStacksType request)
+  public ListStacksResponseType listStacks( ListStacksType request)
       throws CloudFormationException {
     ListStacksResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
       final User user = ctx.getUser();
       final String accountId = user.getAccountNumber();
-      final ResourceList stackStatusFilter = request.getStackStatusFilter();
+      final StackStatusFilter stackStatusFilter = request.getStackStatusFilter();
       final List<Status> statusFilterList = Lists.newArrayList();
       if (stackStatusFilter != null && stackStatusFilter.getMember() != null) {
         for (String statusFilterStr: stackStatusFilter.getMember()) {
@@ -1094,7 +1098,7 @@ public class CloudFormationService {
       // TODO: support next token
       List<StackEntity> stackEntities = StackEntityManager.listStacks(accountId, statusFilterList);
       ArrayList<StackSummary> stackSummaryList = new ArrayList<StackSummary>();
-      for ( final StackEntity stackEntity : Iterables.filter( stackEntities, RestrictedTypes.filterPrivileged( ) ) ) {
+      for ( final StackEntity stackEntity : Iterables.filter( stackEntities, CloudFormationMetadatas.filterPrivileged( ) ) ) {
         StackSummary stackSummary = new StackSummary();
         stackSummary.setCreationTime(stackEntity.getCreateOperationTimestamp());
         stackSummary.setDeletionTime(stackEntity.getDeleteOperationTimestamp());
@@ -1116,7 +1120,7 @@ public class CloudFormationService {
     return reply;
   }
 
-  public SetStackPolicyResponseType setStackPolicy(SetStackPolicyType request)
+  public SetStackPolicyResponseType setStackPolicy( SetStackPolicyType request)
     throws CloudFormationException {
     SetStackPolicyResponseType reply = request.getReply();
     try {
@@ -1139,7 +1143,7 @@ public class CloudFormationService {
       if (stackEntity == null) {
         throw new ValidationErrorException("Stack " + stackName + " does not exist");
       }
-      if ( !RestrictedTypes.filterPrivileged( ).apply( stackEntity ) ) {
+      if ( !CloudFormationMetadatas.filterPrivileged( ).apply( stackEntity ) ) {
         throw new AccessDeniedException( "Not authorized." );
       }
       stackEntity.setStackPolicy(stackPolicyText);
@@ -1174,7 +1178,7 @@ public class CloudFormationService {
     return (stackPolicyDuringUpdateBody != null) ? stackPolicyDuringUpdateBody : (stackPolicyDuringUpdateUrl != null ? extractStackPolicyDuringUpdateFromURL(stackPolicyDuringUpdateUrl, user) : null);
   }
 
-  public SignalResourceResponseType signalResource(SignalResourceType request)
+  public SignalResourceResponseType signalResource( SignalResourceType request)
     throws CloudFormationException {
     SignalResourceResponseType reply = request.getReply();
     try {
@@ -1248,15 +1252,13 @@ public class CloudFormationService {
         signal.setStatus(SignalEntity.Status.valueOf(status));
         SignalEntityManager.addSignal(signal);
       }
-      SignalResourceResult signalResourceResult = new SignalResourceResult();
-      reply.setSignalResourceResult(signalResourceResult);
     } catch (Exception ex) {
       handleException(ex);
     }
     return reply;
   }
 
-  public UpdateStackResponseType updateStack(UpdateStackType request)
+  public UpdateStackResponseType updateStack( UpdateStackType request)
     throws CloudFormationException {
     UpdateStackResponseType reply = request.getReply();
     try {
@@ -1350,7 +1352,7 @@ public class CloudFormationService {
         }
       }
 
-      final PseudoParameterValues nextPseudoParameterValues = new PseudoParameterValues();
+      final PseudoParameterValues nextPseudoParameterValues = populateRegionPseudoParameters(new PseudoParameterValues());
       nextPseudoParameterValues.setAccountId(accountId);
       nextPseudoParameterValues.setStackName(stackName);
       nextPseudoParameterValues.setStackId(stackId);
@@ -1362,7 +1364,6 @@ public class CloudFormationService {
         }
         nextPseudoParameterValues.setNotificationArns(nextNotificationArns);
       }
-      nextPseudoParameterValues.setRegion(getRegion());
 
       final String nextTemplateText = (usePreviousTemplate ?
         previousStackEntity.getTemplateBody() :
@@ -1472,13 +1473,12 @@ public class CloudFormationService {
       String previousResourceDependencyManagerJson = StackEntityHelper.resourceDependencyManagerToJson(previousTemplate.getResourceDependencyManager());
       StackUpdateInfoEntityManager.createUpdateInfo(stackId, accountId, previousResourceDependencyManagerJson, nextStackEntity.getResourceDependencyManagerJson(), nextStackEntity.getStackVersion(), stackName, accountAlias);
 
-      StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(stackId, stackName, accountId, accountAlias);
-      StartTimeoutPassableWorkflowClientFactory updateStackWorkflowClientFactory = new StartTimeoutPassableWorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient( ), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
-      WorkflowDescriptionTemplate updateStackWorkflowDescriptionTemplate = new UpdateStackWorkflowDescriptionTemplate();
-      InterfaceBasedWorkflowClient<UpdateStackWorkflow> updateStackWorkflowClient = updateStackWorkflowClientFactory
-        .getNewWorkflowClient(UpdateStackWorkflow.class, updateStackWorkflowDescriptionTemplate, stackWorkflowTags, null, null);
+      final StackWorkflowTags stackWorkflowTags = new StackWorkflowTags(stackId, stackName, accountId, accountAlias);
 
-      UpdateStackWorkflow updateStackWorkflow = new UpdateStackWorkflowClient(updateStackWorkflowClient);
+      final Tuple2<WorkflowClientExternal,UpdateStackWorkflow> updateStackWorkflowClients =
+          WorkflowRegistry.getWorkflowClient( WorkflowRegistry.UpdateStackWorkflowKey, stackWorkflowTags );
+      final WorkflowClientExternal updateStackWorkflowClient = updateStackWorkflowClients._1();
+      final UpdateStackWorkflow updateStackWorkflow = updateStackWorkflowClients._2( );
       updateStackWorkflow.updateStack(nextStackEntity.getStackId(), nextStackEntity.getAccountId(), nextStackEntity.getResourceDependencyManagerJson(), userId, nextStackEntity.getStackVersion());
       StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
         StackWorkflowEntity.WorkflowType.UPDATE_STACK_WORKFLOW,
@@ -1486,28 +1486,21 @@ public class CloudFormationService {
         updateStackWorkflowClient.getWorkflowExecution().getWorkflowId(),
         updateStackWorkflowClient.getWorkflowExecution().getRunId());
 
-      StartTimeoutPassableWorkflowClientFactory monitorUpdateStackWorkflowClientFactory = new StartTimeoutPassableWorkflowClientFactory(WorkflowClientManager.getSimpleWorkflowClient(), CloudFormationProperties.SWF_DOMAIN, CloudFormationProperties.SWF_TASKLIST);
-      WorkflowDescriptionTemplate monitorUpdateStackWorkflowDescriptionTemplate = new MonitorUpdateStackWorkflowDescriptionTemplate();
-      InterfaceBasedWorkflowClient<MonitorUpdateStackWorkflow> monitorUpdateStackWorkflowClient = monitorUpdateStackWorkflowClientFactory
-        .getNewWorkflowClient(MonitorUpdateStackWorkflow.class, monitorUpdateStackWorkflowDescriptionTemplate, stackWorkflowTags, null, null);
-
-      MonitorUpdateStackWorkflow monitorUpdateStackWorkflow = new MonitorUpdateStackWorkflowClient(monitorUpdateStackWorkflowClient);
+      final Tuple2<WorkflowClientExternal,MonitorUpdateStackWorkflow> monitorUpdateStackWorkflowClients =
+          WorkflowRegistry.getWorkflowClient( WorkflowRegistry.MonitorUpdateStackWorkflowKey, stackWorkflowTags );
+      final WorkflowClientExternal monitorUpdateStackWorkflowClient = monitorUpdateStackWorkflowClients._1();
+      final MonitorUpdateStackWorkflow monitorUpdateStackWorkflow = monitorUpdateStackWorkflowClients._2( );
       monitorUpdateStackWorkflow.monitorUpdateStack(nextStackEntity.getStackId(),  nextStackEntity.getAccountId(),
         userId, nextStackEntity.getStackVersion(), outerStackArn);
-
-
       StackWorkflowEntityManager.addOrUpdateStackWorkflowEntity(stackId,
         StackWorkflowEntity.WorkflowType.MONITOR_UPDATE_STACK_WORKFLOW,
         CloudFormationProperties.SWF_DOMAIN,
         monitorUpdateStackWorkflowClient.getWorkflowExecution().getWorkflowId(),
         monitorUpdateStackWorkflowClient.getWorkflowExecution().getRunId());
 
-
       UpdateStackResult updateStackResult = new UpdateStackResult();
       updateStackResult.setStackId(stackId);
       reply.setUpdateStackResult(updateStackResult);
-
-
 
     } catch (Exception ex) {
       handleException(ex);
@@ -1635,11 +1628,18 @@ public class CloudFormationService {
     Map<String, String> pseudoParameterMap = StackEntityHelper.jsonToPseudoParameterMap(stackEntity.getPseudoParameterMapJson());
     if (pseudoParameterMap.containsKey(TemplateParser.AWS_REGION)) {
       JsonNode regionJsonNode = JsonHelper.getJsonNodeFromString(pseudoParameterMap.get(TemplateParser.AWS_REGION));
-
       if (regionJsonNode == null || !regionJsonNode.isValueNode()) {
         throw new ValidationErrorException(TemplateParser.AWS_REGION + " from stack is not a string.");
       }
       pseudoParameterValues.setRegion(regionJsonNode.asText());
+    }
+    JsonNode partitionJsonNode = JsonHelper.getJsonNodeFromString(pseudoParameterMap.get(TemplateParser.AWS_PARTITION));
+    if (partitionJsonNode != null && partitionJsonNode.isValueNode()) {
+      pseudoParameterValues.setPartition(partitionJsonNode.asText());
+    }
+    JsonNode urlSuffixJsonNode = JsonHelper.getJsonNodeFromString(pseudoParameterMap.get(TemplateParser.AWS_URL_SUFFIX));
+    if (urlSuffixJsonNode != null && urlSuffixJsonNode.isValueNode()) {
+      pseudoParameterValues.setUrlSuffix(urlSuffixJsonNode.asText());
     }
     return pseudoParameterValues;
   }
@@ -1676,7 +1676,7 @@ public class CloudFormationService {
     return parameters;
   }
 
-  public ValidateTemplateResponseType validateTemplate(ValidateTemplateType request)
+  public ValidateTemplateResponseType validateTemplate( ValidateTemplateType request)
     throws CloudFormationException {
     ValidateTemplateResponseType reply = request.getReply();
     try {
@@ -1700,12 +1700,10 @@ public class CloudFormationService {
       String templateText = (templateBody != null) ? templateBody : extractTemplateTextFromURL(templateUrl, user);
       final String stackIdLocal = UUID.randomUUID().toString();
       final String stackId = "arn:aws:cloudformation:" + REGION + ":" + accountId + ":stack/"+stackName+"/"+stackIdLocal;
-      final PseudoParameterValues pseudoParameterValues = new PseudoParameterValues();
+      final PseudoParameterValues pseudoParameterValues = populateRegionPseudoParameters(new PseudoParameterValues());
       pseudoParameterValues.setAccountId(accountId);
       pseudoParameterValues.setStackName(stackName);
       pseudoParameterValues.setStackId(stackId);
-      ArrayList<String> notificationArns = Lists.newArrayList();
-      pseudoParameterValues.setRegion(getRegion());
       List<Parameter> parameters = Lists.newArrayList();
       final ValidateTemplateResult validateTemplateResult = new TemplateParser().validateTemplate(templateText, parameters, pseudoParameterValues, userId, CloudFormationProperties.ENFORCE_STRICT_RESOURCE_PROPERTIES);
       reply.setValidateTemplateResult(validateTemplateResult);
@@ -1715,10 +1713,179 @@ public class CloudFormationService {
     return reply;
   }
 
+  public CreateChangeSetResponseType createChangeSet(final CreateChangeSetType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public CreateStackInstancesResponseType createStackInstances(final CreateStackInstancesType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public CreateStackSetResponseType createStackSet(final CreateStackSetType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DeleteChangeSetResponseType deleteChangeSet(final DeleteChangeSetType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DeleteStackInstancesResponseType deleteStackInstances(final DeleteStackInstancesType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DeleteStackSetResponseType deleteStackSet(final DeleteStackSetType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DeregisterTypeResponseType deregisterType(final DeregisterTypeType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DescribeChangeSetResponseType describeChangeSet(final DescribeChangeSetType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DescribeStackDriftDetectionStatusResponseType describeStackDriftDetectionStatus(final DescribeStackDriftDetectionStatusType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DescribeStackInstanceResponseType describeStackInstance(final DescribeStackInstanceType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DescribeStackResourceDriftsResponseType describeStackResourceDrifts(final DescribeStackResourceDriftsType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DescribeStackSetResponseType describeStackSet(final DescribeStackSetType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DescribeStackSetOperationResponseType describeStackSetOperation(final DescribeStackSetOperationType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DescribeTypeResponseType describeType( final DescribeTypeType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DescribeTypeRegistrationResponseType describeTypeRegistration( final DescribeTypeRegistrationType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DetectStackDriftResponseType detectStackDrift( final DetectStackDriftType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DetectStackResourceDriftResponseType detectStackResourceDrift( final DetectStackResourceDriftType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public DetectStackSetDriftResponseType detectStackSetDrift( final DetectStackSetDriftType request ) throws CloudFormationException {
+    return request.getReply( );
+  }
+
+  public ExecuteChangeSetResponseType executeChangeSet( final ExecuteChangeSetType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public ListChangeSetsResponseType listChangeSets( final ListChangeSetsType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public ListExportsResponseType listExports( final ListExportsType request ) throws CloudFormationException {
+    final ListExportsResponseType response = handleStub( request );
+    response.getListExportsResult().setExports(new Exports());
+    return response;
+  }
+
+  public ListImportsResponseType listImports( final ListImportsType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public ListStackInstancesResponseType listStackInstances( final ListStackInstancesType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public ListStackSetOperationResultsResponseType listStackSetOperationResults( final ListStackSetOperationResultsType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public ListStackSetOperationsResponseType listStackSetOperations( final ListStackSetOperationsType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public ListStackSetsResponseType listStackSets( final ListStackSetsType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public ListTypeRegistrationsResponseType listTypeRegistrations( final ListTypeRegistrationsType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public ListTypeVersionsResponseType listTypeVersions( final ListTypeVersionsType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public ListTypesResponseType listTypes( final ListTypesType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public RecordHandlerProgressResponseType recordHandlerProgress( final RecordHandlerProgressType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public RegisterTypeResponseType registerType( final RegisterTypeType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public SetTypeDefaultVersionResponseType setTypeDefaultVersion( final SetTypeDefaultVersionType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public StopStackSetOperationResponseType stopStackSetOperation( final StopStackSetOperationType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public UpdateStackInstancesResponseType updateStackInstances( final UpdateStackInstancesType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public UpdateStackSetResponseType updateStackSet( final UpdateStackSetType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
+  public UpdateTerminationProtectionResponseType updateTerminationProtection( final UpdateTerminationProtectionType request ) throws CloudFormationException {
+    return handleStub( request );
+  }
+
   public static String getRegion( ) {
     return Optional.fromNullable( Strings.emptyToNull( REGION ) )
         .or( RegionConfigurations.getRegionName( ) )
         .or( "eucalyptus" );
+  }
+
+  public static PseudoParameterValues populateRegionPseudoParameters(final PseudoParameterValues pseudoParameterValues) {
+    pseudoParameterValues.setRegion(getRegion( ));
+    pseudoParameterValues.setPartition(Objects.toString(
+        Strings.emptyToNull(CloudFormationProperties.PSEUDO_PARAM_PARTITION),
+        "eucalyptus"));
+    pseudoParameterValues.setUrlSuffix(Objects.toString(
+        Strings.emptyToNull(CloudFormationProperties.PSEUDO_PARAM_URLSUFFIX),
+        DomainNames.externalSubdomain().relativize(Name.root).toString()));
+    return pseudoParameterValues;
+  }
+
+  private static <RESPONSE extends CloudFormationMessage> RESPONSE handleStub(
+      final CloudFormationMessage request
+  ) throws CloudFormationException {
+    try {
+      final Context ctx = Contexts.lookup();
+      checkActionPermission(CloudFormationMetadatas.getIamActionByMessageType(request), ctx);
+    } catch (final Exception ex) {
+      handleException(ex);
+    }
+    return request.getReply( );
   }
 
   private static void handleException(final Exception e)
@@ -1753,7 +1920,7 @@ public class CloudFormationService {
     if ( stackEntity == null && ctx.isAdministrator( ) && stackName.startsWith( STACK_ID_PREFIX ) ) {
       stackEntity = StackEntityManager.getAnyStackByNameOrId(stackName, null);
     }
-    if ( stackEntity != null && !RestrictedTypes.filterPrivileged().apply( stackEntity ) ) {
+    if ( stackEntity != null && !CloudFormationMetadatas.filterPrivileged().apply( stackEntity ) ) {
       boolean instanceAccessPermitted = false;
       if ( allowInstance && ctx.getSubject( ) != null ) {
         final Set<CfnIdentityDocumentCredential> credentials =

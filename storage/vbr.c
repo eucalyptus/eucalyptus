@@ -91,7 +91,7 @@
 #define ART_SIG_MAX                              262144 //!< must be big enough for a digest and then some
 
 #define FIND_BLOB_TIMEOUT_USEC                   50000LL    //!< @TODO: use 100 or less to induce rare timeouts
-#define DELETE_BLOB_TIMEOUT_USEC                 50000LL
+#define DELETE_BLOB_TIMEOUT_USEC                 5000000LL
 
 #define FIND                                     0
 #define CREATE                                   1
@@ -368,7 +368,7 @@ static int prep_location(virtualBootRecord * vbr, ncMetadata * pMeta, const char
                 //Anything other than storage/ebs
                 char *l = vbr->resourceLocation + (strlen(typeName) + 3);   // +3 for "://", so 'l' points past, e.g., "objectstorage:"
                 snprintf(vbr->preparedResourceLocation, sizeof(vbr->preparedResourceLocation), "%s/%s", service->uris[0], l);   //! @TODO for now we just pick the first one
-                snprintf(vbr->resourceLocation, sizeof(vbr->resourceLocation), vbr->preparedResourceLocation);  //! @TODO trying this out
+                snprintf(vbr->resourceLocation, sizeof(vbr->resourceLocation), "%s", vbr->preparedResourceLocation);  //! @TODO trying this out
             } else {
                 //For storage, just copy the url for the SC into the preparedResourceLocation slot
                 snprintf(vbr->preparedResourceLocation, sizeof(vbr->preparedResourceLocation), "%s", service->uris[0]); //! @TODO for now we just pick the first one
@@ -664,6 +664,8 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
         vbr->format = NC_FORMAT_EXT3;
     } else if (strstr(vbr->formatName, "ntfs") == vbr->formatName) {
         vbr->format = NC_FORMAT_NTFS;
+    } else if (strstr(vbr->formatName, "swap") == vbr->formatName) {
+        vbr->format = NC_FORMAT_SWAP;
     } else {
         LOGERROR("failed to parse resource format '%s'\n", vbr->formatName);
         return (EUCA_ERROR);
@@ -1168,6 +1170,9 @@ blockmap map = { BLOBSTORE_SNAPSHOT, BLOBSTORE_ZERO, {blob:NULL}
     case NC_FORMAT_EXT3:
         format = diskutil_mkfs(dest_dev, a->size_bytes);
         break;
+    case NC_FORMAT_SWAP:
+        format = diskutil_mkswap(dest_dev, a->size_bytes);
+        break;
     default:
         LOGERROR("[%s] format of type %d/%s is NOT IMPLEMENTED\n", a->instanceId, vbr->format, vbr->formatName);
         break;
@@ -1550,6 +1555,7 @@ static int copy_creator(artifact * a)
     artifact *dep = a->deps[0];
     virtualBootRecord *vbr = a->vbr;
     assert(vbr);
+    unsigned long long dep_blocks, a_blocks = 0;
 
     if (a->do_not_download) {
         LOGINFO("[%s] skipping copying to %s\n", a->instanceId, a->bb->id);
@@ -1568,10 +1574,13 @@ static int copy_creator(artifact * a)
             if ((blobstore_snapshot_t) a->bb->store->snapshot_policy == BLOBSTORE_SNAPSHOT_NONE) {
                 op = BLOBSTORE_COPY;   // but fall back to copy when snapshots are not possible or desired
             }
-blockmap map[] = { {op, BLOBSTORE_BLOCKBLOB, {blob:dep->bb}
-                                , 0, 0, round_up_sec(dep->size_bytes) / 512}
+            dep_blocks = round_up_sec(dep->size_bytes) / 512;
+            a_blocks = round_up_sec(a->size_bytes) / 512;
+            blockmap map[] = {
+                {op, BLOBSTORE_BLOCKBLOB, {blob:dep->bb}, 0, 0,          dep_blocks},
+                {op, BLOBSTORE_ZERO,      {blob:NULL},    0, dep_blocks, a_blocks - dep_blocks}
             };
-            if (blockblob_clone(a->bb, map, 1) == -1) {
+            if (blockblob_clone(a->bb, map, 2) == -1) {
                 LOGERROR("[%s] failed to clone/copy blob %s to blob %s: %d %s\n", a->instanceId, dep->bb->id, a->bb->id, blobstore_get_error(), blobstore_get_last_msg());
                 return blobstore_get_error();
             }
@@ -1988,8 +1997,8 @@ w_out:
                 // the -1 is valid value during invocation from 'Downloads a file-system bundle, converting to a disk' work-flow
                 // and vbr->sizeBytes > bb_size_bytes case is possible in cases of image conversion where download manifest has
                 // size for converted image and VBR for original image
-                if (vbr->sizeBytes != -1 && vbr->sizeBytes > bb_size_bytes) {
-                    LOGERROR("[%s] image size in manifest (%lld) and in VBR (%lld) do not match\n", current_instanceId, bb_size_bytes, vbr->sizeBytes);
+                if (vbr->sizeBytes != -1 && bb_size_bytes > vbr->sizeBytes) {
+                    LOGERROR("[%s] image size in manifest (%lld) larger than in VBR (%lld)\n", current_instanceId, bb_size_bytes, vbr->sizeBytes);
                     goto i_out;
                 }
             } else {
@@ -2057,7 +2066,7 @@ f_out:
             char buf[32];              // first part of artifact ID
             char *art_pref;
             if (strcmp(vbr->id, "none") == 0) {
-                if (snprintf(buf, sizeof(buf), "prt-%05lld%s", vbr->sizeBytes / 1048576, vbr->formatName) >= sizeof(buf))   // output was truncated
+                if (snprintf(buf, sizeof(buf), "prt-%02d-%05lld%s", vbr->diskNumber, vbr->sizeBytes / 1048576, vbr->formatName) >= sizeof(buf))   // output was truncated
                     break;
                 art_pref = buf;
             } else {
@@ -2137,7 +2146,7 @@ f_out:
             }
         }
 
-        a2 = art_alloc(art_id, art_sig, a->size_bytes, !do_make_work_copy, must_be_file, FALSE, copy_creator, vbr);
+        a2 = art_alloc(art_id, art_sig, vbr->sizeBytes, !do_make_work_copy, must_be_file, FALSE, copy_creator, vbr);
         if (a2) {
             a2->do_not_download = a->do_not_download;
             if (sshkey)

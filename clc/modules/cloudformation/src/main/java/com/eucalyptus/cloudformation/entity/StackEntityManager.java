@@ -31,7 +31,7 @@ package com.eucalyptus.cloudformation.entity;
 import com.eucalyptus.cloudformation.AlreadyExistsException;
 import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.InternalFailureException;
-import com.eucalyptus.cloudformation.UpdateStackType;
+import com.eucalyptus.cloudformation.common.msgs.UpdateStackType;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.template.Template;
 import com.eucalyptus.entities.Entities;

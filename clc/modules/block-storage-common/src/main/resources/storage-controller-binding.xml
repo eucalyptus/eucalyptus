@@ -38,67 +38,40 @@
   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
 -->
 
-<binding force-classes="true" add-constructors="true"
-	xmlns:tns="http://storagecontroller.eucalyptus.ucsb.edu" name="storagecontroller_eucalyptus_ucsb_edu">
-	<namespace uri="http://storagecontroller.eucalyptus.ucsb.edu"
-		default="elements" />
-  	<mapping class="com.eucalyptus.empyrean.ServiceId" abstract="true">
-		<!--     <value name="uuid" field="uuid" usage="optional" /> -->
-    		<value name="partition" field="partition" usage="optional"/>
-    		<value name="type" field="type" usage="required" />
-    		<value name="name" field="name" usage="required" />
-    		<collection field="uris" factory="org.jibx.runtime.Utility.arrayListFactory">
-      			<value name="uris" type="java.lang.String" />
-    		</collection>
-  	</mapping>
-        <mapping class="edu.ucsb.eucalyptus.msgs.BaseMessage" abstract="true">
-            <value name="correlationId" field="correlationId" usage="optional" />
-            <value name="userId" field="userId" usage="optional" />
-            <value name="statusMessage" field="statusMessage" usage="optional" />
-            <value name="return" field="_return" usage="optional" />
-            <value name="epoch" field="_epoch" usage="optional" />
-    	    <collection field="_services" factory="org.jibx.runtime.Utility.arrayListFactory">
-      		<structure name="services" map-as="com.eucalyptus.empyrean.ServiceId" />
-    	    </collection>
-    	    <collection field="_disabledServices" factory="org.jibx.runtime.Utility.arrayListFactory">
-      		<structure name="disabledServices" map-as="com.eucalyptus.empyrean.ServiceId" />
-    	    </collection>
-    	    <collection field="_notreadyServices" factory="org.jibx.runtime.Utility.arrayListFactory">
-      		<structure name="notreadyServices" map-as="com.eucalyptus.empyrean.ServiceId" />
-    	    </collection>
-       </mapping>
-       <mapping class="com.eucalyptus.blockstorage.msgs.StorageRequestType"  extends="edu.ucsb.eucalyptus.msgs.BaseMessage"
-               abstract="true">
-            <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
-	</mapping> 
+<binding force-classes="true" add-constructors="true" name="storagecontroller_eucalyptus_ucsb_edu">
+	<namespace uri="http://storagecontroller.eucalyptus.ucsb.edu" default="elements" />
+
+	<mapping class="com.eucalyptus.blockstorage.msgs.StorageRequestType" abstract="true">
+		<value name="correlationId" get-method="getCorrelationId" set-method="setCorrelationId" usage="optional"/>
+	</mapping>
 	<mapping class="com.eucalyptus.blockstorage.msgs.StorageResponseType" abstract="true">
 	</mapping>
-	
+
 	<mapping name="ExportVolume" class="com.eucalyptus.blockstorage.msgs.ExportVolumeType"
 	extends="com.eucalyptus.blockstorage.msgs.StorageRequestType">
-                <structure map-as="com.eucalyptus.blockstorage.msgs.StorageRequestType" />
+		<structure map-as="com.eucalyptus.blockstorage.msgs.StorageRequestType" />
 		<value name="volumeId" field="volumeId" />
 		<value name="token" field="token"/>
 		<value name="ip" field="ip"/>
 		<value name="iqn" field="iqn"/>
 	</mapping>
 
-	<mapping name="ExportVolumeResponse" class="com.eucalyptus.blockstorage.msgs.ExportVolumeResponseType" 
+	<mapping name="ExportVolumeResponse" class="com.eucalyptus.blockstorage.msgs.ExportVolumeResponseType"
 	extends="com.eucalyptus.blockstorage.msgs.StorageResponseType">
 		<value name="volumeId" field="volumeId" />
 		<value name="connectionString" field="connectionString" />
 	</mapping>
-	
+
 <mapping name="UnexportVolume" class="com.eucalyptus.blockstorage.msgs.UnexportVolumeType"
 	extends="com.eucalyptus.blockstorage.msgs.StorageRequestType">
-                <structure map-as="com.eucalyptus.blockstorage.msgs.StorageRequestType" />
+		<structure map-as="com.eucalyptus.blockstorage.msgs.StorageRequestType" />
 		<value name="volumeId" field="volumeId" />
 		<value name="token" field="token"/>
 		<value name="ip" field="ip"/>
 		<value name="iqn" field="iqn"/>
 	</mapping>
 
-	<mapping name="UnexportVolumeResponse" class="com.eucalyptus.blockstorage.msgs.UnexportVolumeResponseType" 
+	<mapping name="UnexportVolumeResponse" class="com.eucalyptus.blockstorage.msgs.UnexportVolumeResponseType"
 	extends="com.eucalyptus.blockstorage.msgs.StorageResponseType">
 	</mapping>
 </binding>

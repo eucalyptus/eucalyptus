@@ -30,11 +30,6 @@ package com.eucalyptus.auth.euare.identity.config;
 
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.euare.common.identity.Identity;
-import com.eucalyptus.auth.euare.common.identity.config.DeregisterIdentityType;
-import com.eucalyptus.auth.euare.common.identity.config.DescribeIdentityType;
-import com.eucalyptus.auth.euare.common.identity.config.ModifyIdentityAttributeType;
-import com.eucalyptus.auth.euare.common.identity.config.RegisterIdentityType;
-import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
@@ -46,12 +41,6 @@ import com.eucalyptus.component.annotation.ComponentPart;
  *
  */
 @ComponentPart( Identity.class )
-@Handles( {
-    DeregisterIdentityType.class,
-    DescribeIdentityType.class,
-    ModifyIdentityAttributeType.class,
-    RegisterIdentityType.class,
-} )
 public class IdentityServiceBuilder extends AbstractServiceBuilder<IdentityConfiguration> {
   private static final Logger LOG = Logger.getLogger( IdentityServiceBuilder.class );
 

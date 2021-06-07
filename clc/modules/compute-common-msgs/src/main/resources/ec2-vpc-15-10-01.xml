@@ -1,0 +1,1472 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2011-2016 Ent. Services Development Corporation LP
+
+  Redistribution and use of this software in source and binary forms,
+  with or without modification, are permitted provided that the
+  following conditions are met:
+
+    Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+
+    Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer
+    in the documentation and/or other materials provided with the
+    distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  POSSIBILITY OF SUCH DAMAGE.
+-->
+<binding>
+  <mapping class="com.eucalyptus.compute.common.PrivateIpAddressesSetRequestType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.PrivateIpAddressesSetItemRequestType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.PrivateIpAddressesSetItemRequestType" abstract="true">
+    <value name="privateIpAddress" field="privateIpAddress" usage="required"/>
+    <value name="primary" field="primary" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.GroupSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.GroupItemType"/>
+    </collection>
+  </mapping>
+  <mapping name="DescribeAccountAttributes" class="com.eucalyptus.compute.common.DescribeAccountAttributesType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="accountAttributeNameSet" field="accountAttributeNameSet" usage="optional" type="com.eucalyptus.compute.common.AccountAttributeNameSetType"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="DescribeAccountAttributesResponse" class="com.eucalyptus.compute.common.DescribeAccountAttributesResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="accountAttributeSet" field="accountAttributeSet" usage="optional" type="com.eucalyptus.compute.common.AccountAttributeSetType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.AccountAttributeNameSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.AccountAttributeNameSetItemType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.AccountAttributeNameSetItemType" abstract="true">
+    <value name="attributeName" field="attributeName" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.AccountAttributeSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.AccountAttributeSetItemType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.AccountAttributeSetItemType" abstract="true">
+    <value name="attributeName" field="attributeName" usage="required"/>
+    <structure name="attributeValueSet" field="attributeValueSet" usage="required" type="com.eucalyptus.compute.common.AccountAttributeValueSetType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.AccountAttributeValueSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.AccountAttributeValueSetItemType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.AccountAttributeValueSetItemType" abstract="true">
+    <value name="attributeValue" field="attributeValue" usage="required"/>
+  </mapping>
+  <mapping name="DescribeVpcAttribute" class="com.eucalyptus.compute.common.DescribeVpcAttributeType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpcId" field="vpcId" usage="required"/>
+    <structure choice="true" ordered="false" usage="required">
+      <structure name="enableDnsSupport" usage="optional" flag-method="hasEnableDnsSupport" get-method="getAttrObject" set-method="setAttrObject"/>
+      <structure name="enableDnsHostnames" usage="optional" flag-method="hasEnableDnsHostnames" get-method="getAttrObject" set-method="setAttrObject"/>
+    </structure>
+  </mapping>
+  <mapping name="DescribeVpcAttributeResponse" class="com.eucalyptus.compute.common.DescribeVpcAttributeResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpcId" field="vpcId" usage="required"/>
+    <structure name="enableDnsSupport" field="enableDnsSupport" usage="optional" type="com.eucalyptus.compute.common.AttributeBooleanValueType"/>
+    <structure name="enableDnsHostnames" field="enableDnsHostnames" usage="optional" type="com.eucalyptus.compute.common.AttributeBooleanValueType"/>
+  </mapping>
+  <mapping name="ModifyVpcAttribute" class="com.eucalyptus.compute.common.ModifyVpcAttributeType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpcId" field="vpcId" usage="required"/>
+    <structure name="enableDnsSupport" field="enableDnsSupport" usage="optional" type="com.eucalyptus.compute.common.AttributeBooleanValueType"/>
+    <structure name="enableDnsHostnames" field="enableDnsHostnames" usage="optional" type="com.eucalyptus.compute.common.AttributeBooleanValueType"/>
+  </mapping>
+  <mapping name="ModifyVpcAttributeResponse" class="com.eucalyptus.compute.common.ModifyVpcAttributeResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.SecurityGroupIdSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.SecurityGroupIdSetItemType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.GroupIdSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.SecurityGroupIdSetItemType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.SecurityGroupIdSetItemType" abstract="true">
+    <value name="groupId" field="groupId" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.AttachmentType" abstract="true">
+    <value name="vpcId" field="vpcId" usage="required"/>
+    <value name="state" field="state" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.AttachmentSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.AttachmentType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpnGatewayType" abstract="true">
+    <value name="vpnGatewayId" field="vpnGatewayId" usage="required"/>
+    <value name="state" field="state" usage="required"/>
+    <value name="type" field="type" usage="required"/>
+    <value name="availabilityZone" field="availabilityZone" usage="optional"/>
+    <structure name="attachments" field="attachments" usage="required" type="com.eucalyptus.compute.common.AttachmentSetType"/>
+    <structure name="tagSet" field="tagSet" usage="optional" type="com.eucalyptus.compute.common.ResourceTagSetType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.CustomerGatewayType" abstract="true">
+    <value name="customerGatewayId" field="customerGatewayId" usage="required"/>
+    <value name="state" field="state" usage="required"/>
+    <value name="type" field="type" usage="required"/>
+    <value name="ipAddress" field="ipAddress" usage="required"/>
+    <value name="bgpAsn" field="bgpAsn" usage="optional"/>
+    <structure name="tagSet" field="tagSet" usage="optional" type="com.eucalyptus.compute.common.ResourceTagSetType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpnConnectionType" abstract="true">
+    <value name="vpnConnectionId" field="vpnConnectionId" usage="required"/>
+    <value name="state" field="state" usage="required"/>
+    <value name="customerGatewayConfiguration" field="customerGatewayConfiguration" usage="optional"/>
+    <value name="type" field="type" usage="optional"/>
+    <value name="customerGatewayId" field="customerGatewayId" usage="required"/>
+    <value name="vpnGatewayId" field="vpnGatewayId" usage="required"/>
+    <structure name="tagSet" field="tagSet" usage="optional" type="com.eucalyptus.compute.common.ResourceTagSetType"/>
+    <structure name="vgwTelemetry" field="vgwTelemetry" usage="optional" type="com.eucalyptus.compute.common.VgwTelemetryType"/>
+    <structure name="options" field="options" usage="optional" type="com.eucalyptus.compute.common.VpnConnectionOptionsResponseType"/>
+    <structure name="routes" field="routes" usage="optional" type="com.eucalyptus.compute.common.VpnStaticRoutesSetType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpnConnectionOptionsResponseType" abstract="true">
+    <value name="staticRoutesOnly" field="staticRoutesOnly" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpnStaticRoutesSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.VpnStaticRouteType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpnStaticRouteType" abstract="true">
+    <value name="destinationCidrBlock" field="destinationCidrBlock" usage="required"/>
+    <value name="source" field="source" usage="required"/>
+    <value name="state" field="state" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VgwTelemetryType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.VpnTunnelTelemetryType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpnTunnelTelemetryType" abstract="true">
+    <value name="outsideIpAddress" field="outsideIpAddress" usage="required"/>
+    <value name="status" field="status" usage="required"/>
+    <value name="lastStatusChange" field="lastStatusChange" usage="required"/>
+    <value name="statusMessage" field="statusMessage" usage="optional"/>
+    <value name="acceptedRouteCount" field="acceptedRouteCount" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpcType" abstract="true">
+    <value name="vpcId" field="vpcId" usage="required"/>
+    <value name="state" field="state" usage="optional"/>
+    <value name="cidrBlock" field="cidrBlock" usage="optional"/>
+    <value name="dhcpOptionsId" field="dhcpOptionsId" usage="optional"/>
+    <structure name="tagSet" field="tagSet" usage="optional" type="com.eucalyptus.compute.common.ResourceTagSetType"/>
+    <value name="instanceTenancy" field="instanceTenancy" usage="optional"/>
+    <value name="isDefault" field="isDefault" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.SubnetType" abstract="true">
+    <value name="subnetId" field="subnetId" usage="required"/>
+    <value name="state" field="state" usage="optional"/>
+    <value name="vpcId" field="vpcId" usage="optional"/>
+    <value name="cidrBlock" field="cidrBlock" usage="optional"/>
+    <value name="availableIpAddressCount" field="availableIpAddressCount" usage="optional"/>
+    <value name="availabilityZone" field="availabilityZone" usage="optional"/>
+    <value name="defaultForAz" field="defaultForAz" usage="optional"/>
+    <value name="mapPublicIpOnLaunch" field="mapPublicIpOnLaunch" usage="optional"/>
+    <structure name="tagSet" field="tagSet" usage="optional" type="com.eucalyptus.compute.common.ResourceTagSetType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.CustomerGatewaySetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.CustomerGatewayType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpnGatewaySetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.VpnGatewayType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpnConnectionSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.VpnConnectionType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpcSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.VpcType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.SubnetSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.SubnetType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.CustomerGatewayIdSetItemType" abstract="true">
+    <value name="customerGatewayId" field="customerGatewayId" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.CustomerGatewayIdSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.CustomerGatewayIdSetItemType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpnGatewayIdSetItemType" abstract="true">
+    <value name="vpnGatewayId" field="vpnGatewayId" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpnGatewayIdSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.VpnGatewayIdSetItemType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpnConnectionIdSetItemType" abstract="true">
+    <value name="vpnConnectionId" field="vpnConnectionId" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpnConnectionIdSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.VpnConnectionIdSetItemType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpcIdSetItemType" abstract="true">
+    <value name="vpcId" field="vpcId" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpcIdSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.VpcIdSetItemType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.SubnetIdSetItemType" abstract="true">
+    <value name="subnetId" field="subnetId" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.SubnetIdSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.SubnetIdSetItemType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.DhcpOptionsIdSetItemType" abstract="true">
+    <value name="dhcpOptionsId" field="dhcpOptionsId" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.DhcpOptionsIdSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.DhcpOptionsIdSetItemType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.DhcpConfigurationItemSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.DhcpConfigurationItemType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.DhcpOptionsSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.DhcpOptionsType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.DhcpConfigurationItemType" abstract="true">
+    <value name="key" field="key" usage="required"/>
+    <structure name="valueSet" field="valueSet" usage="required" type="com.eucalyptus.compute.common.DhcpValueSetType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.DhcpOptionsType" abstract="true">
+    <value name="dhcpOptionsId" field="dhcpOptionsId" usage="required"/>
+    <structure name="dhcpConfigurationSet" field="dhcpConfigurationSet" usage="required" type="com.eucalyptus.compute.common.DhcpConfigurationItemSetType"/>
+    <structure name="tagSet" field="tagSet" usage="optional" type="com.eucalyptus.compute.common.ResourceTagSetType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.DhcpValueType" abstract="true">
+    <value name="value" field="value" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.DhcpValueSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.DhcpValueType"/>
+    </collection>
+  </mapping>
+  <mapping name="CreateCustomerGateway" class="com.eucalyptus.compute.common.CreateCustomerGatewayType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="type" field="type" usage="required"/>
+    <value name="ipAddress" field="ipAddress" usage="required"/>
+    <value name="bgpAsn" field="bgpAsn" usage="optional"/>
+  </mapping>
+  <mapping name="CreateCustomerGatewayResponse" class="com.eucalyptus.compute.common.CreateCustomerGatewayResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="customerGateway" field="customerGateway" usage="required" type="com.eucalyptus.compute.common.CustomerGatewayType"/>
+  </mapping>
+  <mapping name="DeleteCustomerGateway" class="com.eucalyptus.compute.common.DeleteCustomerGatewayType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="customerGatewayId" field="customerGatewayId" usage="required"/>
+  </mapping>
+  <mapping name="DeleteCustomerGatewayResponse" class="com.eucalyptus.compute.common.DeleteCustomerGatewayResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="DescribeCustomerGateways" class="com.eucalyptus.compute.common.DescribeCustomerGatewaysType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="customerGatewaySet" field="customerGatewaySet" usage="optional" type="com.eucalyptus.compute.common.CustomerGatewayIdSetType"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="DescribeCustomerGatewaysResponse" class="com.eucalyptus.compute.common.DescribeCustomerGatewaysResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="customerGatewaySet" field="customerGatewaySet" usage="required" type="com.eucalyptus.compute.common.CustomerGatewaySetType"/>
+  </mapping>
+  <mapping name="CreateVpnGateway" class="com.eucalyptus.compute.common.CreateVpnGatewayType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="type" field="type" usage="required"/>
+    <value name="availabilityZone" field="availabilityZone" usage="optional"/>
+  </mapping>
+  <mapping name="CreateVpnGatewayResponse" class="com.eucalyptus.compute.common.CreateVpnGatewayResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="vpnGateway" field="vpnGateway" usage="required" type="com.eucalyptus.compute.common.VpnGatewayType"/>
+  </mapping>
+  <mapping name="DeleteVpnGateway" class="com.eucalyptus.compute.common.DeleteVpnGatewayType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpnGatewayId" field="vpnGatewayId" usage="required"/>
+  </mapping>
+  <mapping name="DeleteVpnGatewayResponse" class="com.eucalyptus.compute.common.DeleteVpnGatewayResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="DescribeVpnGateways" class="com.eucalyptus.compute.common.DescribeVpnGatewaysType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="vpnGatewaySet" field="vpnGatewaySet" usage="optional" type="com.eucalyptus.compute.common.VpnGatewayIdSetType"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="DescribeVpnGatewaysResponse" class="com.eucalyptus.compute.common.DescribeVpnGatewaysResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="vpnGatewaySet" field="vpnGatewaySet" usage="required" type="com.eucalyptus.compute.common.VpnGatewaySetType"/>
+  </mapping>
+  <mapping name="CreateVpnConnection" class="com.eucalyptus.compute.common.CreateVpnConnectionType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="type" field="type" usage="required"/>
+    <value name="customerGatewayId" field="customerGatewayId" usage="required"/>
+    <value name="vpnGatewayId" field="vpnGatewayId" usage="required"/>
+    <structure name="options" field="options" usage="optional" type="com.eucalyptus.compute.common.VpnConnectionOptionsRequestType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpnConnectionOptionsRequestType" abstract="true">
+    <value name="staticRoutesOnly" field="staticRoutesOnly" usage="optional"/>
+  </mapping>
+  <mapping name="CreateVpnConnectionResponse" class="com.eucalyptus.compute.common.CreateVpnConnectionResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="vpnConnection" field="vpnConnection" usage="required" type="com.eucalyptus.compute.common.VpnConnectionType"/>
+  </mapping>
+  <mapping name="CreateVpnConnectionRoute" class="com.eucalyptus.compute.common.CreateVpnConnectionRouteType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpnConnectionId" field="vpnConnectionId" usage="required"/>
+    <value name="destinationCidrBlock" field="destinationCidrBlock" usage="required"/>
+  </mapping>
+  <mapping name="CreateVpnConnectionRouteResponse" class="com.eucalyptus.compute.common.CreateVpnConnectionRouteResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="DeleteVpnConnectionRoute" class="com.eucalyptus.compute.common.DeleteVpnConnectionRouteType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpnConnectionId" field="vpnConnectionId" usage="required"/>
+    <value name="destinationCidrBlock" field="destinationCidrBlock" usage="required"/>
+  </mapping>
+  <mapping name="DeleteVpnConnectionRouteResponse" class="com.eucalyptus.compute.common.DeleteVpnConnectionRouteResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="DeleteVpnConnection" class="com.eucalyptus.compute.common.DeleteVpnConnectionType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpnConnectionId" field="vpnConnectionId" usage="required"/>
+  </mapping>
+  <mapping name="DeleteVpnConnectionResponse" class="com.eucalyptus.compute.common.DeleteVpnConnectionResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="DescribeVpnConnections" class="com.eucalyptus.compute.common.DescribeVpnConnectionsType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="vpnConnectionSet" field="vpnConnectionSet" usage="optional" type="com.eucalyptus.compute.common.VpnConnectionIdSetType"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="DescribeVpnConnectionsResponse" class="com.eucalyptus.compute.common.DescribeVpnConnectionsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="vpnConnectionSet" field="vpnConnectionSet" usage="required" type="com.eucalyptus.compute.common.VpnConnectionSetType"/>
+  </mapping>
+  <mapping name="AttachVpnGateway" class="com.eucalyptus.compute.common.AttachVpnGatewayType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpnGatewayId" field="vpnGatewayId" usage="required"/>
+    <value name="vpcId" field="vpcId" usage="required"/>
+  </mapping>
+  <mapping name="AttachVpnGatewayResponse" class="com.eucalyptus.compute.common.AttachVpnGatewayResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="attachment" field="attachment" usage="required" type="com.eucalyptus.compute.common.AttachmentType"/>
+  </mapping>
+  <mapping name="DetachVpnGateway" class="com.eucalyptus.compute.common.DetachVpnGatewayType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpnGatewayId" field="vpnGatewayId" usage="required"/>
+    <value name="vpcId" field="vpcId" usage="required"/>
+  </mapping>
+  <mapping name="DetachVpnGatewayResponse" class="com.eucalyptus.compute.common.DetachVpnGatewayResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="CreateVpc" class="com.eucalyptus.compute.common.CreateVpcType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="cidrBlock" field="cidrBlock" usage="required"/>
+    <value name="instanceTenancy" field="instanceTenancy" usage="optional"/>
+  </mapping>
+  <mapping name="CreateVpcResponse" class="com.eucalyptus.compute.common.CreateVpcResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="vpc" field="vpc" usage="required" type="com.eucalyptus.compute.common.VpcType"/>
+  </mapping>
+  <mapping name="DescribeVpcs" class="com.eucalyptus.compute.common.DescribeVpcsType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="vpcSet" field="vpcSet" usage="optional" type="com.eucalyptus.compute.common.VpcIdSetType"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="DescribeVpcsResponse" class="com.eucalyptus.compute.common.DescribeVpcsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="vpcSet" field="vpcSet" usage="required" type="com.eucalyptus.compute.common.VpcSetType"/>
+  </mapping>
+  <mapping name="DeleteVpc" class="com.eucalyptus.compute.common.DeleteVpcType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpcId" field="vpcId" usage="required"/>
+  </mapping>
+  <mapping name="DeleteVpcResponse" class="com.eucalyptus.compute.common.DeleteVpcResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="CreateSubnet" class="com.eucalyptus.compute.common.CreateSubnetType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpcId" field="vpcId" usage="required"/>
+    <value name="cidrBlock" field="cidrBlock" usage="required"/>
+    <value name="availabilityZone" field="availabilityZone" usage="optional"/>
+  </mapping>
+  <mapping name="CreateSubnetResponse" class="com.eucalyptus.compute.common.CreateSubnetResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="subnet" field="subnet" usage="required" type="com.eucalyptus.compute.common.SubnetType"/>
+  </mapping>
+  <mapping name="DescribeSubnets" class="com.eucalyptus.compute.common.DescribeSubnetsType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="subnetSet" field="subnetSet" usage="optional" type="com.eucalyptus.compute.common.SubnetIdSetType"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="DescribeSubnetsResponse" class="com.eucalyptus.compute.common.DescribeSubnetsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="subnetSet" field="subnetSet" usage="required" type="com.eucalyptus.compute.common.SubnetSetType"/>
+  </mapping>
+  <mapping name="ModifySubnetAttribute" class="com.eucalyptus.compute.common.ModifySubnetAttributeType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="subnetId" field="subnetId" usage="required"/>
+    <structure name="mapPublicIpOnLaunch" field="mapPublicIpOnLaunch" usage="optional" type="com.eucalyptus.compute.common.AttributeBooleanValueType"/>
+  </mapping>
+  <mapping name="ModifySubnetAttributeResponse" class="com.eucalyptus.compute.common.ModifySubnetAttributeResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="DeleteSubnet" class="com.eucalyptus.compute.common.DeleteSubnetType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="subnetId" field="subnetId" usage="required"/>
+  </mapping>
+  <mapping name="DeleteSubnetResponse" class="com.eucalyptus.compute.common.DeleteSubnetResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="DeleteDhcpOptions" class="com.eucalyptus.compute.common.DeleteDhcpOptionsType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="dhcpOptionsId" field="dhcpOptionsId" usage="required"/>
+  </mapping>
+  <mapping name="DeleteDhcpOptionsResponse" class="com.eucalyptus.compute.common.DeleteDhcpOptionsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="DescribeDhcpOptions" class="com.eucalyptus.compute.common.DescribeDhcpOptionsType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="dhcpOptionsSet" field="dhcpOptionsSet" usage="optional" type="com.eucalyptus.compute.common.DhcpOptionsIdSetType"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="DescribeDhcpOptionsResponse" class="com.eucalyptus.compute.common.DescribeDhcpOptionsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="dhcpOptionsSet" field="dhcpOptionsSet" usage="required" type="com.eucalyptus.compute.common.DhcpOptionsSetType"/>
+  </mapping>
+  <mapping name="CreateDhcpOptions" class="com.eucalyptus.compute.common.CreateDhcpOptionsType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="dhcpConfigurationSet" field="dhcpConfigurationSet" usage="required" type="com.eucalyptus.compute.common.DhcpConfigurationItemSetType"/>
+  </mapping>
+  <mapping name="CreateDhcpOptionsResponse" class="com.eucalyptus.compute.common.CreateDhcpOptionsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="dhcpOptions" field="dhcpOptions" usage="required" type="com.eucalyptus.compute.common.DhcpOptionsType"/>
+  </mapping>
+  <mapping name="AssociateDhcpOptions" class="com.eucalyptus.compute.common.AssociateDhcpOptionsType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="dhcpOptionsId" field="dhcpOptionsId" usage="required"/>
+    <value name="vpcId" field="vpcId" usage="required"/>
+  </mapping>
+  <mapping name="AssociateDhcpOptionsResponse" class="com.eucalyptus.compute.common.AssociateDhcpOptionsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ResourceTagSetItemType" abstract="true">
+    <value name="key" field="key" usage="required"/>
+    <value name="value" field="value" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ResourceTagSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.ResourceTagSetItemType"/>
+    </collection>
+  </mapping>
+  <mapping name="CreateInternetGateway" class="com.eucalyptus.compute.common.CreateInternetGatewayType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.InternetGatewayAttachmentSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.InternetGatewayAttachmentType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.InternetGatewayAttachmentType" abstract="true">
+    <value name="vpcId" field="vpcId" usage="required"/>
+    <value name="state" field="state" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.InternetGatewayType" abstract="true">
+    <value name="internetGatewayId" field="internetGatewayId" usage="required"/>
+    <structure name="attachmentSet" field="attachmentSet" usage="required" type="com.eucalyptus.compute.common.InternetGatewayAttachmentSetType"/>
+    <structure name="tagSet" field="tagSet" usage="optional" type="com.eucalyptus.compute.common.ResourceTagSetType"/>
+  </mapping>
+  <mapping name="CreateInternetGatewayResponse" class="com.eucalyptus.compute.common.CreateInternetGatewayResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="internetGateway" field="internetGateway" usage="required" type="com.eucalyptus.compute.common.InternetGatewayType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.InternetGatewayIdSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.InternetGatewayIdSetItemType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.InternetGatewayIdSetItemType" abstract="true">
+    <value name="internetGatewayId" field="internetGatewayId" usage="required"/>
+  </mapping>
+  <mapping name="DescribeInternetGateways" class="com.eucalyptus.compute.common.DescribeInternetGatewaysType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="internetGatewayIdSet" field="internetGatewayIdSet" usage="optional" type="com.eucalyptus.compute.common.InternetGatewayIdSetType"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.InternetGatewaySetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.InternetGatewayType"/>
+    </collection>
+  </mapping>
+  <mapping name="DescribeInternetGatewaysResponse" class="com.eucalyptus.compute.common.DescribeInternetGatewaysResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="internetGatewaySet" field="internetGatewaySet" usage="required" type="com.eucalyptus.compute.common.InternetGatewaySetType"/>
+  </mapping>
+  <mapping name="DeleteInternetGateway" class="com.eucalyptus.compute.common.DeleteInternetGatewayType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="internetGatewayId" field="internetGatewayId" usage="required"/>
+  </mapping>
+  <mapping name="DeleteInternetGatewayResponse" class="com.eucalyptus.compute.common.DeleteInternetGatewayResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="AttachInternetGateway" class="com.eucalyptus.compute.common.AttachInternetGatewayType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="internetGatewayId" field="internetGatewayId" usage="required"/>
+    <value name="vpcId" field="vpcId" usage="required"/>
+  </mapping>
+  <mapping name="AttachInternetGatewayResponse" class="com.eucalyptus.compute.common.AttachInternetGatewayResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="DetachInternetGateway" class="com.eucalyptus.compute.common.DetachInternetGatewayType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="internetGatewayId" field="internetGatewayId" usage="required"/>
+    <value name="vpcId" field="vpcId" usage="required"/>
+  </mapping>
+  <mapping name="DetachInternetGatewayResponse" class="com.eucalyptus.compute.common.DetachInternetGatewayResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="CreateRouteTable" class="com.eucalyptus.compute.common.CreateRouteTableType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpcId" field="vpcId" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.RouteSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.RouteType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.RouteType" abstract="true">
+    <value name="destinationCidrBlock" field="destinationCidrBlock" usage="required"/>
+    <value name="gatewayId" field="gatewayId" usage="optional"/>
+    <value name="instanceId" field="instanceId" usage="optional"/>
+    <value name="instanceOwnerId" field="instanceOwnerId" usage="optional"/>
+    <value name="natGatewayId" field="natGatewayId" usage="optional"/>
+    <value name="networkInterfaceId" field="networkInterfaceId" usage="optional"/>
+    <value name="vpcPeeringConnectionId" field="vpcPeeringConnectionId" usage="optional"/>
+    <value name="state" field="state" usage="required"/>
+    <value name="origin" field="origin" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.RouteTableAssociationSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.RouteTableAssociationType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.RouteTableAssociationType" abstract="true">
+    <value name="routeTableAssociationId" field="routeTableAssociationId" usage="required"/>
+    <value name="routeTableId" field="routeTableId" usage="required"/>
+    <value name="subnetId" field="subnetId" usage="optional"/>
+    <value name="main" field="main" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.PropagatingVgwSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.PropagatingVgwType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.PropagatingVgwType" abstract="true">
+    <value name="gatewayId" field="gatewayId" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.RouteTableType" abstract="true">
+    <value name="routeTableId" field="routeTableId" usage="required"/>
+    <value name="vpcId" field="vpcId" usage="required"/>
+    <structure name="routeSet" field="routeSet" usage="required" type="com.eucalyptus.compute.common.RouteSetType"/>
+    <structure name="associationSet" field="associationSet" usage="required" type="com.eucalyptus.compute.common.RouteTableAssociationSetType"/>
+    <structure name="propagatingVgwSet" field="propagatingVgwSet" usage="required" type="com.eucalyptus.compute.common.PropagatingVgwSetType"/>
+    <structure name="tagSet" field="tagSet" usage="optional" type="com.eucalyptus.compute.common.ResourceTagSetType"/>
+  </mapping>
+  <mapping name="CreateRouteTableResponse" class="com.eucalyptus.compute.common.CreateRouteTableResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="routeTable" field="routeTable" usage="required" type="com.eucalyptus.compute.common.RouteTableType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.RouteTableIdSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.RouteTableIdSetItemType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.RouteTableIdSetItemType" abstract="true">
+    <value name="routeTableId" field="routeTableId" usage="required"/>
+  </mapping>
+  <mapping name="DescribeRouteTables" class="com.eucalyptus.compute.common.DescribeRouteTablesType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="routeTableIdSet" field="routeTableIdSet" usage="optional" type="com.eucalyptus.compute.common.RouteTableIdSetType"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.RouteTableSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.RouteTableType"/>
+    </collection>
+  </mapping>
+  <mapping name="DescribeRouteTablesResponse" class="com.eucalyptus.compute.common.DescribeRouteTablesResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="routeTableSet" field="routeTableSet" usage="required" type="com.eucalyptus.compute.common.RouteTableSetType"/>
+  </mapping>
+  <mapping name="EnableVgwRoutePropagation" class="com.eucalyptus.compute.common.EnableVgwRoutePropagationType">
+    <value name="routeTableId" field="routeTableId" usage="required"/>
+    <value name="gatewayId" field="gatewayId" usage="required"/>
+  </mapping>
+  <mapping name="EnableVgwRoutePropagationResponse" class="com.eucalyptus.compute.common.EnableVgwRoutePropagationResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="DisableVgwRoutePropagation" class="com.eucalyptus.compute.common.DisableVgwRoutePropagationType">
+    <value name="routeTableId" field="routeTableId" usage="required"/>
+    <value name="gatewayId" field="gatewayId" usage="required"/>
+  </mapping>
+  <mapping name="DisableVgwRoutePropagationResponse" class="com.eucalyptus.compute.common.DisableVgwRoutePropagationResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="DeleteRouteTable" class="com.eucalyptus.compute.common.DeleteRouteTableType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="routeTableId" field="routeTableId" usage="required"/>
+  </mapping>
+  <mapping name="DeleteRouteTableResponse" class="com.eucalyptus.compute.common.DeleteRouteTableResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="AssociateRouteTable" class="com.eucalyptus.compute.common.AssociateRouteTableType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="routeTableId" field="routeTableId" usage="required"/>
+    <value name="subnetId" field="subnetId" usage="required"/>
+  </mapping>
+  <mapping name="AssociateRouteTableResponse" class="com.eucalyptus.compute.common.AssociateRouteTableResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="associationId" field="associationId" usage="required"/>
+  </mapping>
+  <mapping name="ReplaceRouteTableAssociation" class="com.eucalyptus.compute.common.ReplaceRouteTableAssociationType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="associationId" field="associationId" usage="required"/>
+    <value name="routeTableId" field="routeTableId" usage="required"/>
+  </mapping>
+  <mapping name="ReplaceRouteTableAssociationResponse" class="com.eucalyptus.compute.common.ReplaceRouteTableAssociationResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="newAssociationId" field="newAssociationId" usage="required"/>
+  </mapping>
+  <mapping name="DisassociateRouteTable" class="com.eucalyptus.compute.common.DisassociateRouteTableType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="associationId" field="associationId" usage="required"/>
+  </mapping>
+  <mapping name="DisassociateRouteTableResponse" class="com.eucalyptus.compute.common.DisassociateRouteTableResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="CreateRoute" class="com.eucalyptus.compute.common.CreateRouteType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="routeTableId" field="routeTableId" usage="required"/>
+    <value name="destinationCidrBlock" field="destinationCidrBlock" usage="required"/>
+    <value name="gatewayId" field="gatewayId" usage="optional"/>
+    <value name="instanceId" field="instanceId" usage="optional"/>
+    <value name="natGatewayId" field="natGatewayId" usage="optional"/>
+    <value name="networkInterfaceId" field="networkInterfaceId" usage="optional"/>
+    <value name="vpcPeeringConnectionId" field="vpcPeeringConnectionId" usage="optional"/>
+  </mapping>
+  <mapping name="CreateRouteResponse" class="com.eucalyptus.compute.common.CreateRouteResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="ReplaceRoute" class="com.eucalyptus.compute.common.ReplaceRouteType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="routeTableId" field="routeTableId" usage="required"/>
+    <value name="destinationCidrBlock" field="destinationCidrBlock" usage="required"/>
+    <value name="gatewayId" field="gatewayId" usage="optional"/>
+    <value name="instanceId" field="instanceId" usage="optional"/>
+    <value name="natGatewayId" field="natGatewayId" usage="optional"/>
+    <value name="networkInterfaceId" field="networkInterfaceId" usage="optional"/>
+    <value name="vpcPeeringConnectionId" field="vpcPeeringConnectionId" usage="optional"/>
+  </mapping>
+  <mapping name="ReplaceRouteResponse" class="com.eucalyptus.compute.common.ReplaceRouteResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="DeleteRoute" class="com.eucalyptus.compute.common.DeleteRouteType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="routeTableId" field="routeTableId" usage="required"/>
+    <value name="destinationCidrBlock" field="destinationCidrBlock" usage="required"/>
+  </mapping>
+  <mapping name="DeleteRouteResponse" class="com.eucalyptus.compute.common.DeleteRouteResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="CreateNetworkAcl" class="com.eucalyptus.compute.common.CreateNetworkAclType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpcId" field="vpcId" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NetworkAclEntrySetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.NetworkAclEntryType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.IcmpTypeCodeType" abstract="true">
+    <value name="code" field="code" usage="required"/>
+    <value name="type" field="type" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.PortRangeType" abstract="true">
+    <value name="from" field="from" usage="required"/>
+    <value name="to" field="to" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NetworkAclEntryType" abstract="true">
+    <value name="ruleNumber" field="ruleNumber" usage="required"/>
+    <value name="protocol" field="protocol" usage="required"/>
+    <value name="ruleAction" field="ruleAction" usage="required"/>
+    <value name="egress" field="egress" usage="required"/>
+    <value name="cidrBlock" field="cidrBlock" usage="required"/>
+    <structure name="icmpTypeCode" field="icmpTypeCode" usage="optional" type="com.eucalyptus.compute.common.IcmpTypeCodeType"/>
+    <structure name="portRange" field="portRange" usage="optional" type="com.eucalyptus.compute.common.PortRangeType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NetworkAclAssociationSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.NetworkAclAssociationType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NetworkAclAssociationType" abstract="true">
+    <value name="networkAclAssociationId" field="networkAclAssociationId" usage="required"/>
+    <value name="networkAclId" field="networkAclId" usage="required"/>
+    <value name="subnetId" field="subnetId" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NetworkAclType" abstract="true">
+    <value name="networkAclId" field="networkAclId" usage="required"/>
+    <value name="vpcId" field="vpcId" usage="required"/>
+    <value name="default" field="_default" usage="required"/>
+    <structure name="entrySet" field="entrySet" usage="required" type="com.eucalyptus.compute.common.NetworkAclEntrySetType"/>
+    <structure name="associationSet" field="associationSet" usage="required" type="com.eucalyptus.compute.common.NetworkAclAssociationSetType"/>
+    <structure name="tagSet" field="tagSet" usage="optional" type="com.eucalyptus.compute.common.ResourceTagSetType"/>
+  </mapping>
+  <mapping name="CreateNetworkAclResponse" class="com.eucalyptus.compute.common.CreateNetworkAclResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="networkAcl" field="networkAcl" usage="required" type="com.eucalyptus.compute.common.NetworkAclType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NetworkAclIdSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.NetworkAclIdSetItemType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NetworkAclIdSetItemType" abstract="true">
+    <value name="networkAclId" field="networkAclId" usage="required"/>
+  </mapping>
+  <mapping name="DescribeNetworkAcls" class="com.eucalyptus.compute.common.DescribeNetworkAclsType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="networkAclIdSet" field="networkAclIdSet" usage="optional" type="com.eucalyptus.compute.common.NetworkAclIdSetType"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NetworkAclSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.NetworkAclType"/>
+    </collection>
+  </mapping>
+  <mapping name="DescribeNetworkAclsResponse" class="com.eucalyptus.compute.common.DescribeNetworkAclsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="networkAclSet" field="networkAclSet" usage="required" type="com.eucalyptus.compute.common.NetworkAclSetType"/>
+  </mapping>
+  <mapping name="DeleteNetworkAcl" class="com.eucalyptus.compute.common.DeleteNetworkAclType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="networkAclId" field="networkAclId" usage="required"/>
+  </mapping>
+  <mapping name="DeleteNetworkAclResponse" class="com.eucalyptus.compute.common.DeleteNetworkAclResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="ReplaceNetworkAclAssociation" class="com.eucalyptus.compute.common.ReplaceNetworkAclAssociationType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="associationId" field="associationId" usage="required"/>
+    <value name="networkAclId" field="networkAclId" usage="required"/>
+  </mapping>
+  <mapping name="ReplaceNetworkAclAssociationResponse" class="com.eucalyptus.compute.common.ReplaceNetworkAclAssociationResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="newAssociationId" field="newAssociationId" usage="required"/>
+  </mapping>
+  <mapping name="CreateNetworkAclEntry" class="com.eucalyptus.compute.common.CreateNetworkAclEntryType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="networkAclId" field="networkAclId" usage="required"/>
+    <value name="ruleNumber" field="ruleNumber" usage="required"/>
+    <value name="protocol" field="protocol" usage="required"/>
+    <value name="ruleAction" field="ruleAction" usage="required"/>
+    <value name="egress" field="egress" usage="required"/>
+    <value name="cidrBlock" field="cidrBlock" usage="required"/>
+    <structure name="icmpTypeCode" field="icmpTypeCode" usage="optional" type="com.eucalyptus.compute.common.IcmpTypeCodeType"/>
+    <structure name="portRange" field="portRange" usage="optional" type="com.eucalyptus.compute.common.PortRangeType"/>
+  </mapping>
+  <mapping name="CreateNetworkAclEntryResponse" class="com.eucalyptus.compute.common.CreateNetworkAclEntryResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="ReplaceNetworkAclEntry" class="com.eucalyptus.compute.common.ReplaceNetworkAclEntryType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="networkAclId" field="networkAclId" usage="required"/>
+    <value name="ruleNumber" field="ruleNumber" usage="required"/>
+    <value name="protocol" field="protocol" usage="required"/>
+    <value name="ruleAction" field="ruleAction" usage="required"/>
+    <value name="egress" field="egress" usage="required"/>
+    <value name="cidrBlock" field="cidrBlock" usage="required"/>
+    <structure name="icmpTypeCode" field="icmpTypeCode" usage="optional" type="com.eucalyptus.compute.common.IcmpTypeCodeType"/>
+    <structure name="portRange" field="portRange" usage="optional" type="com.eucalyptus.compute.common.PortRangeType"/>
+  </mapping>
+  <mapping name="ReplaceNetworkAclEntryResponse" class="com.eucalyptus.compute.common.ReplaceNetworkAclEntryResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="DeleteNetworkAclEntry" class="com.eucalyptus.compute.common.DeleteNetworkAclEntryType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="networkAclId" field="networkAclId" usage="required"/>
+    <value name="ruleNumber" field="ruleNumber" usage="required"/>
+    <value name="egress" field="egress" usage="required"/>
+  </mapping>
+  <mapping name="DeleteNetworkAclEntryResponse" class="com.eucalyptus.compute.common.DeleteNetworkAclEntryResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="CreateNatGateway" class="com.eucalyptus.compute.common.CreateNatGatewayType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="allocationId" field="allocationId" usage="optional"/>
+    <value name="clientToken" field="clientToken" usage="optional"/>
+    <value name="subnetId" field="subnetId" usage="optional"/>
+  </mapping>
+  <mapping name="CreateNatGatewayResponse" class="com.eucalyptus.compute.common.CreateNatGatewayResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="natGateway" field="natGateway" usage="required" type="com.eucalyptus.compute.common.NatGatewayType"/>
+  </mapping>
+  <mapping name="DescribeNatGateways" class="com.eucalyptus.compute.common.DescribeNatGatewaysType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+    <collection name="natGatewayId" factory="org.jibx.runtime.Utility.arrayListFactory" field="natGatewayId" usage="optional" item-type="java.lang.String">
+      <structure name="item">
+        <value name="natGatewayId" />
+      </structure>
+    </collection>
+    <value name="maxResults" field="maxResults" usage="optional"/>
+    <value name="nextToken" field="nextToken" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NatGatewayAddressSetItemType" abstract="true">
+    <value name="networkInterfaceId" field="networkInterfaceId" usage="optional"/>
+    <value name="publicIp" field="publicIp" usage="optional"/>
+    <value name="allocationId" field="allocationId" usage="optional"/>
+    <value name="privateIp" field="privateIp" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NatGatewayAddressSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.NatGatewayAddressSetItemType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NatGatewayType" abstract="true">
+    <value name="subnetId" field="subnetId" usage="optional"/>
+    <structure name="natGatewayAddressSet" field="natGatewayAddressSet" usage="optional" type="com.eucalyptus.compute.common.NatGatewayAddressSetType"/>
+    <value name="failureCode" field="failureCode" usage="optional"/>
+    <value name="createTime" field="createTime" usage="optional"/>
+    <value name="deleteTime" field="deleteTime" usage="optional"/>
+    <value name="vpcId" field="vpcId" usage="optional"/>
+    <value name="natGatewayId" field="natGatewayId" usage="required"/>
+    <value name="state" field="state" usage="optional"/>
+    <value name="failureMessage" field="failureMessage" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NatGatewaySetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.NatGatewayType"/>
+    </collection>
+  </mapping>
+  <mapping name="DescribeNatGatewaysResponse" class="com.eucalyptus.compute.common.DescribeNatGatewaysResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="natGatewaySet" field="natGatewaySet" usage="required" type="com.eucalyptus.compute.common.NatGatewaySetType"/>
+  </mapping>
+  <mapping name="DescribeNetworkInterfaces" class="com.eucalyptus.compute.common.DescribeNetworkInterfacesType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="networkInterfaceIdSet" field="networkInterfaceIdSet" usage="optional" type="com.eucalyptus.compute.common.NetworkInterfaceIdSetType"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="DeleteNatGateway" class="com.eucalyptus.compute.common.DeleteNatGatewayType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="natGatewayId" field="natGatewayId" usage="optional"/>
+  </mapping>
+  <mapping name="DeleteNatGatewayResponse" class="com.eucalyptus.compute.common.DeleteNatGatewayResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="natGatewayId" field="natGatewayId" usage="optional"/>
+  </mapping>
+  <mapping name="CreateNetworkInterface" class="com.eucalyptus.compute.common.CreateNetworkInterfaceType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="subnetId" field="subnetId" usage="required"/>
+    <value name="description" field="description" usage="optional"/>
+    <value name="privateIpAddress" field="privateIpAddress" usage="optional"/>
+    <structure name="groupSet" field="groupSet" usage="optional" type="com.eucalyptus.compute.common.SecurityGroupIdSetType"/>
+    <structure name="privateIpAddressesSet" field="privateIpAddressesSet" usage="optional" type="com.eucalyptus.compute.common.PrivateIpAddressesSetRequestType"/>
+    <value name="secondaryPrivateIpAddressCount" field="secondaryPrivateIpAddressCount" usage="optional"/>
+  </mapping>
+  <mapping name="CreateNetworkInterfaceResponse" class="com.eucalyptus.compute.common.CreateNetworkInterfaceResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="networkInterface" field="networkInterface" usage="required" type="com.eucalyptus.compute.common.NetworkInterfaceType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NetworkInterfaceIdSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.NetworkInterfaceIdSetItemType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NetworkInterfaceIdSetItemType" abstract="true">
+    <value name="networkInterfaceId" field="networkInterfaceId" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NetworkInterfaceType" abstract="true">
+    <value name="networkInterfaceId" field="networkInterfaceId" usage="required"/>
+    <value name="subnetId" field="subnetId" usage="optional"/>
+    <value name="vpcId" field="vpcId" usage="optional"/>
+    <value name="availabilityZone" field="availabilityZone" usage="optional"/>
+    <value name="description" field="description" usage="optional"/>
+    <value name="ownerId" field="ownerId" usage="required"/>
+    <value name="requesterId" field="requesterId" usage="optional"/>
+    <value name="requesterManaged" field="requesterManaged" usage="optional"/>
+    <value name="status" field="status" usage="required"/>
+    <value name="macAddress" field="macAddress" usage="required"/>
+    <value name="privateIpAddress" field="privateIpAddress" usage="required"/>
+    <value name="privateDnsName" field="privateDnsName" usage="optional"/>
+    <value name="sourceDestCheck" field="sourceDestCheck" usage="required"/>
+    <structure name="groupSet" field="groupSet" usage="required" type="com.eucalyptus.compute.common.GroupSetType"/>
+    <structure name="attachment" field="attachment" usage="optional" type="com.eucalyptus.compute.common.NetworkInterfaceAttachmentType"/>
+    <structure name="association" field="association" usage="optional" type="com.eucalyptus.compute.common.NetworkInterfaceAssociationType"/>
+    <structure name="tagSet" field="tagSet" usage="optional" type="com.eucalyptus.compute.common.ResourceTagSetType"/>
+    <structure name="privateIpAddressesSet" field="privateIpAddressesSet" usage="optional" type="com.eucalyptus.compute.common.NetworkInterfacePrivateIpAddressesSetType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NetworkInterfacePrivateIpAddressesSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.NetworkInterfacePrivateIpAddressesSetItemType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NetworkInterfacePrivateIpAddressesSetItemType" abstract="true">
+    <value name="privateIpAddress" field="privateIpAddress" usage="required"/>
+    <value name="privateDnsName" field="privateDnsName" usage="optional"/>
+    <value name="primary" field="primary" usage="required"/>
+    <structure name="association" field="association" usage="optional" type="com.eucalyptus.compute.common.NetworkInterfaceAssociationType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NetworkInterfaceAttachmentType" abstract="true">
+    <value name="attachmentId" field="attachmentId" usage="required"/>
+    <value name="instanceId" field="instanceId" usage="optional"/>
+    <value name="instanceOwnerId" field="instanceOwnerId" usage="optional"/>
+    <value name="deviceIndex" field="deviceIndex" usage="required"/>
+    <value name="status" field="status" usage="required"/>
+    <value name="attachTime" field="attachTime" usage="optional"/>
+    <value name="deleteOnTermination" field="deleteOnTermination" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NetworkInterfaceAssociationType" abstract="true">
+    <value name="publicIp" field="publicIp" usage="required"/>
+    <value name="publicDnsName" field="publicDnsName" usage="optional"/>
+    <value name="ipOwnerId" field="ipOwnerId" usage="optional"/>
+    <value name="allocationId" field="allocationId" usage="optional"/>
+    <value name="associationId" field="associationId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.NetworkInterfaceSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.NetworkInterfaceType"/>
+    </collection>
+  </mapping>
+  <mapping name="DescribeNetworkInterfacesResponse" class="com.eucalyptus.compute.common.DescribeNetworkInterfacesResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="networkInterfaceSet" field="networkInterfaceSet" usage="required" type="com.eucalyptus.compute.common.NetworkInterfaceSetType"/>
+  </mapping>
+  <mapping name="DeleteNetworkInterface" class="com.eucalyptus.compute.common.DeleteNetworkInterfaceType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="networkInterfaceId" field="networkInterfaceId" usage="required"/>
+  </mapping>
+  <mapping name="DeleteNetworkInterfaceResponse" class="com.eucalyptus.compute.common.DeleteNetworkInterfaceResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="AttachNetworkInterface" class="com.eucalyptus.compute.common.AttachNetworkInterfaceType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="networkInterfaceId" field="networkInterfaceId" usage="required"/>
+    <value name="instanceId" field="instanceId" usage="required"/>
+    <value name="deviceIndex" field="deviceIndex" usage="required"/>
+  </mapping>
+  <mapping name="AttachNetworkInterfaceResponse" class="com.eucalyptus.compute.common.AttachNetworkInterfaceResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="attachmentId" field="attachmentId" usage="required"/>
+  </mapping>
+  <mapping name="DetachNetworkInterface" class="com.eucalyptus.compute.common.DetachNetworkInterfaceType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="attachmentId" field="attachmentId" usage="required"/>
+    <value name="force" field="force" usage="optional"/>
+  </mapping>
+  <mapping name="DetachNetworkInterfaceResponse" class="com.eucalyptus.compute.common.DetachNetworkInterfaceResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="DescribeNetworkInterfaceAttribute" class="com.eucalyptus.compute.common.DescribeNetworkInterfaceAttributeType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="networkInterfaceId" field="networkInterfaceId" usage="required"/>
+    <structure choice="true" ordered="false" usage="required">
+      <structure name="attachment" usage="optional" flag-method="hasAttachment" get-method="getAttrObject" set-method="setAttrObject"/>
+      <structure name="description" usage="optional" flag-method="hasDescription" get-method="getAttrObject" set-method="setAttrObject"/>
+      <structure name="groupSet" usage="optional" flag-method="hasGroupSet" get-method="getAttrObject" set-method="setAttrObject"/>
+      <structure name="sourceDestCheck" usage="optional" flag-method="hasSourceDestCheck" get-method="getAttrObject" set-method="setAttrObject"/>
+    </structure>
+  </mapping>
+  <mapping name="DescribeNetworkInterfaceAttributeResponse" class="com.eucalyptus.compute.common.DescribeNetworkInterfaceAttributeResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="networkInterfaceId" field="networkInterfaceId" usage="required"/>
+    <structure name="description" field="description" usage="optional" type="com.eucalyptus.compute.common.NullableAttributeValueType"/>
+    <structure name="sourceDestCheck" field="sourceDestCheck" usage="optional" type="com.eucalyptus.compute.common.AttributeBooleanValueType"/>
+    <structure name="groupSet" field="groupSet" usage="optional" type="com.eucalyptus.compute.common.GroupSetType"/>
+    <structure name="attachment" field="attachment" usage="optional" type="com.eucalyptus.compute.common.NetworkInterfaceAttachmentType"/>
+  </mapping>
+  <mapping name="ModifyNetworkInterfaceAttribute" class="com.eucalyptus.compute.common.ModifyNetworkInterfaceAttributeType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="networkInterfaceId" field="networkInterfaceId" usage="required"/>
+    <structure name="description" field="description" usage="optional" type="com.eucalyptus.compute.common.NullableAttributeValueType"/>
+    <structure name="sourceDestCheck" field="sourceDestCheck" usage="optional" type="com.eucalyptus.compute.common.AttributeBooleanValueType"/>
+    <structure name="groupSet" field="groupSet" usage="optional" type="com.eucalyptus.compute.common.SecurityGroupIdSetType"/>
+    <structure name="attachment" field="attachment" usage="optional" type="com.eucalyptus.compute.common.ModifyNetworkInterfaceAttachmentType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ModifyNetworkInterfaceAttachmentType" abstract="true">
+    <value name="attachmentId" field="attachmentId" usage="required"/>
+    <value name="deleteOnTermination" field="deleteOnTermination" usage="required"/>
+  </mapping>
+  <mapping name="ModifyNetworkInterfaceAttributeResponse" class="com.eucalyptus.compute.common.ModifyNetworkInterfaceAttributeResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="ResetNetworkInterfaceAttribute" class="com.eucalyptus.compute.common.ResetNetworkInterfaceAttributeType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="networkInterfaceId" field="networkInterfaceId" usage="required"/>
+    <structure choice="true" ordered="false" usage="required">
+      <structure name="sourceDestCheck" usage="optional" flag-method="hasSourceDestCheck" get-method="getAttrObject" set-method="setAttrObject"/>
+    </structure>
+  </mapping>
+  <mapping name="ResetNetworkInterfaceAttributeResponse" class="com.eucalyptus.compute.common.ResetNetworkInterfaceAttributeResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="AssignPrivateIpAddresses" class="com.eucalyptus.compute.common.AssignPrivateIpAddressesType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="networkInterfaceId" field="networkInterfaceId" usage="required"/>
+    <structure name="privateIpAddressesSet" field="privateIpAddressesSet" usage="optional" type="com.eucalyptus.compute.common.AssignPrivateIpAddressesSetRequestType"/>
+    <value name="secondaryPrivateIpAddressCount" field="secondaryPrivateIpAddressCount" usage="optional"/>
+    <value name="allowReassignment" field="allowReassignment" usage="optional"/>
+  </mapping>
+  <mapping name="AssignPrivateIpAddressesResponse" class="com.eucalyptus.compute.common.AssignPrivateIpAddressesResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="UnassignPrivateIpAddresses" class="com.eucalyptus.compute.common.UnassignPrivateIpAddressesType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="networkInterfaceId" field="networkInterfaceId" usage="required"/>
+    <structure name="privateIpAddressesSet" field="privateIpAddressesSet" usage="required" type="com.eucalyptus.compute.common.AssignPrivateIpAddressesSetRequestType"/>
+  </mapping>
+  <mapping name="UnassignPrivateIpAddressesResponse" class="com.eucalyptus.compute.common.UnassignPrivateIpAddressesResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.AssignPrivateIpAddressesSetRequestType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.AssignPrivateIpAddressesSetItemRequestType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.AssignPrivateIpAddressesSetItemRequestType" abstract="true">
+    <value name="privateIpAddress" field="privateIpAddress" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpcPeeringConnectionIdSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.VpcPeeringConnectionIdSetItemType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpcPeeringConnectionIdSetItemType" abstract="true">
+    <value name="vpcPeeringConnectionId" field="vpcPeeringConnectionId" usage="required"/>
+  </mapping>
+  <mapping name="DescribeVpcPeeringConnections" class="com.eucalyptus.compute.common.DescribeVpcPeeringConnectionsType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="vpcPeeringConnectionIdSet" field="vpcPeeringConnectionIdSet" usage="optional" type="com.eucalyptus.compute.common.VpcPeeringConnectionIdSetType"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpcPeeringConnectionType" abstract="true">
+    <value name="vpcPeeringConnectionId" field="vpcPeeringConnectionId" usage="required"/>
+    <structure name="requesterVpcInfo" field="requesterVpcInfo" usage="required" type="com.eucalyptus.compute.common.VpcPeeringConnectionVpcInfoType"/>
+    <structure name="accepterVpcInfo" field="accepterVpcInfo" usage="required" type="com.eucalyptus.compute.common.VpcPeeringConnectionVpcInfoType"/>
+    <structure name="status" field="status" usage="required" type="com.eucalyptus.compute.common.VpcPeeringConnectionStateReasonType"/>
+    <value name="expirationTime" field="expirationTime" usage="optional"/>
+    <structure name="tagSet" field="tagSet" usage="required" type="com.eucalyptus.compute.common.ResourceTagSetType"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpcPeeringConnectionStateReasonType" abstract="true">
+    <value name="code" field="code" usage="required"/>
+    <value name="message" field="message" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpcPeeringConnectionVpcInfoType" abstract="true">
+    <value name="ownerId" field="ownerId" usage="required"/>
+    <value name="vpcId" field="vpcId" usage="required"/>
+    <value name="cidrBlock" field="cidrBlock" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpcPeeringConnectionSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.VpcPeeringConnectionType"/>
+    </collection>
+  </mapping>
+  <mapping name="DescribeVpcPeeringConnectionsResponse" class="com.eucalyptus.compute.common.DescribeVpcPeeringConnectionsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="vpcPeeringConnectionSet" field="vpcPeeringConnectionSet" usage="required" type="com.eucalyptus.compute.common.VpcPeeringConnectionSetType"/>
+  </mapping>
+  <mapping name="CreateVpcPeeringConnection" class="com.eucalyptus.compute.common.CreateVpcPeeringConnectionType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpcId" field="vpcId" usage="required"/>
+    <value name="peerVpcId" field="peerVpcId" usage="required"/>
+    <value name="peerOwnerId" field="peerOwnerId" usage="optional"/>
+  </mapping>
+  <mapping name="CreateVpcPeeringConnectionResponse" class="com.eucalyptus.compute.common.CreateVpcPeeringConnectionResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="vpcPeeringConnection" field="vpcPeeringConnection" usage="required" type="com.eucalyptus.compute.common.VpcPeeringConnectionType"/>
+  </mapping>
+  <mapping name="AcceptVpcPeeringConnection" class="com.eucalyptus.compute.common.AcceptVpcPeeringConnectionType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpcPeeringConnectionId" field="vpcPeeringConnectionId" usage="required"/>
+  </mapping>
+  <mapping name="AcceptVpcPeeringConnectionResponse" class="com.eucalyptus.compute.common.AcceptVpcPeeringConnectionResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="vpcPeeringConnection" field="vpcPeeringConnection" usage="required" type="com.eucalyptus.compute.common.VpcPeeringConnectionType"/>
+  </mapping>
+  <mapping name="RejectVpcPeeringConnection" class="com.eucalyptus.compute.common.RejectVpcPeeringConnectionType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpcPeeringConnectionId" field="vpcPeeringConnectionId" usage="required"/>
+  </mapping>
+  <mapping name="RejectVpcPeeringConnectionResponse" class="com.eucalyptus.compute.common.RejectVpcPeeringConnectionResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping name="DeleteVpcPeeringConnection" class="com.eucalyptus.compute.common.DeleteVpcPeeringConnectionType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpcPeeringConnectionId" field="vpcPeeringConnectionId" usage="required"/>
+  </mapping>
+  <mapping name="DeleteVpcPeeringConnectionResponse" class="com.eucalyptus.compute.common.DeleteVpcPeeringConnectionResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.PeeringConnectionOptionsRequestType" abstract="true">
+    <value name="allowDnsResolutionFromRemoteVpc" field="allowDnsResolutionFromRemoteVpc" usage="optional"/>
+    <value name="allowEgressFromLocalClassicLinkToRemoteVpc" field="allowEgressFromLocalClassicLinkToRemoteVpc" usage="optional"/>
+    <value name="allowEgressFromLocalVpcToRemoteClassicLink" field="allowEgressFromLocalVpcToRemoteClassicLink" usage="optional"/>
+  </mapping>
+  <mapping name="ModifyVpcPeeringConnectionOptions" class="com.eucalyptus.compute.common.ModifyVpcPeeringConnectionOptionsType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpcPeeringConnectionId" field="vpcPeeringConnectionId" usage="required"/>
+    <structure name="accepterPeeringConnectionOptions" field="accepterPeeringConnectionOptions" usage="optional" type="com.eucalyptus.compute.common.PeeringConnectionOptionsRequestType"/>
+    <structure name="requesterPeeringConnectionOptions" field="requesterPeeringConnectionOptions" usage="optional" type="com.eucalyptus.compute.common.PeeringConnectionOptionsRequestType"/>
+  </mapping>
+  <mapping name="ModifyVpcPeeringConnectionOptionsResponse" class="com.eucalyptus.compute.common.ModifyVpcPeeringConnectionOptionsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="accepterPeeringConnectionOptions" field="accepterPeeringConnectionOptions" usage="optional" type="com.eucalyptus.compute.common.PeeringConnectionOptionsRequestType"/>
+    <structure name="requesterPeeringConnectionOptions" field="requesterPeeringConnectionOptions" usage="optional" type="com.eucalyptus.compute.common.PeeringConnectionOptionsRequestType"/>
+  </mapping>
+  <mapping name="DescribeSecurityGroupReferences" class="com.eucalyptus.compute.common.DescribeSecurityGroupReferencesType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <collection name="groupId" factory="org.jibx.runtime.Utility.arrayListFactory" field="groupId" usage="optional">
+      <structure name="item" />
+    </collection>
+  </mapping>
+  <mapping name="DescribeSecurityGroupReferencesResponse" class="com.eucalyptus.compute.common.DescribeSecurityGroupReferencesResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="securityGroupReferenceSet"/>
+  </mapping>
+  <mapping name="DescribeStaleSecurityGroups" class="com.eucalyptus.compute.common.DescribeStaleSecurityGroupsType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpcId" field="vpcId" usage="required"/>
+    <value name="maxResults" field="maxResults" usage="required"/>
+    <value name="nextToken" field="nextToken" usage="required"/>
+  </mapping>
+  <mapping name="DescribeStaleSecurityGroupsResponse" class="com.eucalyptus.compute.common.DescribeStaleSecurityGroupsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="staleSecurityGroupSet"/>
+  </mapping>
+
+  <mapping name="AttachClassicLinkVpc" class="com.eucalyptus.compute.common.AttachClassicLinkVpcType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <collection name="securityGroupId" factory="org.jibx.runtime.Utility.arrayListFactory" field="securityGroupId" usage="optional">
+      <structure name="item" />
+    </collection>
+    <value name="instanceId" field="instanceId" usage="optional"/>
+    <value name="vpcId" field="vpcId" usage="optional"/>
+  </mapping>
+  <mapping name="AttachClassicLinkVpcResponse" class="com.eucalyptus.compute.common.AttachClassicLinkVpcResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" constant="false" />
+  </mapping>
+
+  <mapping name="DescribeClassicLinkInstances" class="com.eucalyptus.compute.common.DescribeClassicLinkInstancesType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+    <collection name="instanceId" factory="org.jibx.runtime.Utility.arrayListFactory" field="instanceId" usage="optional">
+      <structure name="item" />
+    </collection>
+    <value name="maxResults" field="maxResults" usage="optional"/>
+    <value name="nextToken" field="nextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeClassicLinkInstancesResponse" class="com.eucalyptus.compute.common.DescribeClassicLinkInstancesResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="instancesSet"/>
+  </mapping>
+
+  <mapping name="DescribeVpcClassicLink" class="com.eucalyptus.compute.common.DescribeVpcClassicLinkType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+    <value name="vpcId" field="vpcId" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeVpcClassicLinkResponse" class="com.eucalyptus.compute.common.DescribeVpcClassicLinkResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="vpcSet"/>
+  </mapping>
+
+  <mapping name="DetachClassicLinkVpc" class="com.eucalyptus.compute.common.DetachClassicLinkVpcType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpcId" field="vpcId" usage="optional"/>
+    <value name="instanceId" field="instanceId" usage="optional"/>
+  </mapping>
+  <mapping name="DetachClassicLinkVpcResponse" class="com.eucalyptus.compute.common.DetachClassicLinkVpcResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" constant="false" />
+  </mapping>
+
+  <mapping name="DisableVpcClassicLink" class="com.eucalyptus.compute.common.DisableVpcClassicLinkType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpcId" field="vpcId" usage="optional"/>
+  </mapping>
+  <mapping name="DisableVpcClassicLinkResponse" class="com.eucalyptus.compute.common.DisableVpcClassicLinkResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" constant="false" />
+  </mapping>
+
+  <mapping name="EnableVpcClassicLink" class="com.eucalyptus.compute.common.EnableVpcClassicLinkType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpcId" field="vpcId" usage="optional"/>
+  </mapping>
+  <mapping name="EnableVpcClassicLinkResponse" class="com.eucalyptus.compute.common.EnableVpcClassicLinkResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" constant="false" />
+  </mapping>
+
+  <mapping name="DescribeVpcClassicLinkDnsSupport" class="com.eucalyptus.compute.common.DescribeVpcClassicLinkDnsSupportType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <collection name="vpcIds" factory="org.jibx.runtime.Utility.arrayListFactory" field="vpcIds" usage="optional">
+      <structure name="item" />
+    </collection>
+    <value name="maxResults" field="maxResults" usage="optional"/>
+    <value name="nextToken" field="nextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeVpcClassicLinkDnsSupportResponse" class="com.eucalyptus.compute.common.DescribeVpcClassicLinkDnsSupportResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="vpcs"/>
+  </mapping>
+
+  <mapping name="DisableVpcClassicLinkDnsSupport" class="com.eucalyptus.compute.common.DisableVpcClassicLinkDnsSupportType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpcId" field="vpcId" usage="optional"/>
+  </mapping>
+  <mapping name="DisableVpcClassicLinkDnsSupportResponse" class="com.eucalyptus.compute.common.DisableVpcClassicLinkDnsSupportResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" constant="false" />
+  </mapping>
+
+  <mapping name="EnableVpcClassicLinkDnsSupport" class="com.eucalyptus.compute.common.EnableVpcClassicLinkDnsSupportType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="vpcId" field="vpcId" usage="optional"/>
+  </mapping>
+  <mapping name="EnableVpcClassicLinkDnsSupportResponse" class="com.eucalyptus.compute.common.EnableVpcClassicLinkDnsSupportResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="return" constant="false" />
+  </mapping>
+
+  <mapping name="CreateVpcEndpoint" class="com.eucalyptus.compute.common.CreateVpcEndpointType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="clientToken" field="clientToken" usage="optional"/>
+    <value name="policyDocument" field="policyDocument" usage="optional"/>
+    <collection name="routeTableId" factory="org.jibx.runtime.Utility.arrayListFactory" field="routeTableId" usage="optional">
+      <structure name="item" />
+    </collection>
+    <value name="serviceName" field="serviceName" usage="optional"/>
+    <value name="vpcId" field="vpcId" usage="optional"/>
+  </mapping>
+  <mapping name="CreateVpcEndpointResponse" class="com.eucalyptus.compute.common.CreateVpcEndpointResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+  </mapping>
+
+  <mapping name="DeleteVpcEndpoints" class="com.eucalyptus.compute.common.DeleteVpcEndpointsType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <collection name="vpcEndpointId" factory="org.jibx.runtime.Utility.arrayListFactory" field="vpcEndpointId" usage="optional">
+      <structure name="item" />
+    </collection>
+  </mapping>
+  <mapping name="DeleteVpcEndpointsResponse" class="com.eucalyptus.compute.common.DeleteVpcEndpointsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+  </mapping>
+
+  <mapping name="DescribePrefixLists" class="com.eucalyptus.compute.common.DescribePrefixListsType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+    <value name="maxResults" field="maxResults" usage="optional"/>
+    <value name="nextToken" field="nextToken" usage="optional"/>
+    <collection name="prefixListId" factory="org.jibx.runtime.Utility.arrayListFactory" field="prefixListId" usage="optional">
+      <structure name="item" />
+    </collection>
+  </mapping>
+  <mapping name="DescribePrefixListsResponse" class="com.eucalyptus.compute.common.DescribePrefixListsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="prefixListSet"/>
+  </mapping>
+
+  <mapping name="DescribeVpcEndpointServices" class="com.eucalyptus.compute.common.DescribeVpcEndpointServicesType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <value name="maxResults" field="maxResults" usage="optional"/>
+    <value name="nextToken" field="nextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeVpcEndpointServicesResponse" class="com.eucalyptus.compute.common.DescribeVpcEndpointServicesResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="serviceNameSet"/>
+  </mapping>
+
+  <mapping name="DescribeVpcEndpoints" class="com.eucalyptus.compute.common.DescribeVpcEndpointsType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+    <value name="maxResults" field="maxResults" usage="optional"/>
+    <value name="nextToken" field="nextToken" usage="optional"/>
+    <collection name="vpcEndpointId" factory="org.jibx.runtime.Utility.arrayListFactory" field="vpcEndpointId" usage="optional">
+      <structure name="item" />
+    </collection>
+  </mapping>
+  <mapping name="DescribeVpcEndpointsResponse" class="com.eucalyptus.compute.common.DescribeVpcEndpointsResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="vpcEndpointSet"/>
+  </mapping>
+
+  <mapping name="ModifyVpcEndpoint" class="com.eucalyptus.compute.common.ModifyVpcEndpointType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <collection name="addRouteTableId" factory="org.jibx.runtime.Utility.arrayListFactory" field="addRouteTableId" usage="optional">
+      <structure name="item" />
+    </collection>
+    <value name="policyDocument" field="policyDocument" usage="optional"/>
+    <collection name="removeRouteTableId" factory="org.jibx.runtime.Utility.arrayListFactory" field="removeRouteTableId" usage="optional">
+      <structure name="item" />
+    </collection>
+    <value name="resetPolicy" field="resetPolicy" usage="optional"/>
+    <value name="vpcEndpointId" field="vpcEndpointId" usage="optional"/>
+  </mapping>
+  <mapping name="ModifyVpcEndpointResponse" class="com.eucalyptus.compute.common.ModifyVpcEndpointResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+  </mapping>
+
+</binding>

@@ -32,15 +32,15 @@
 <binding force-classes="true" add-constructors="true">
 
 	<mapping name="ModifyNode" class="com.eucalyptus.cluster.common.msgs.ModifyNodeType"
-		extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-		<structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+		extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+		<structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
 		<value name="stateName" field="stateName" type="java.lang.String" />
-	        <value name="nodeName" field="nodeName" type="java.lang.String" />	
+	        <value name="nodeName" field="nodeName" type="java.lang.String" />
 	</mapping>
 
 	<mapping name="ModifyNodeResponse"
-					 class="com.eucalyptus.cluster.common.msgs.ModifyNodeResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-		<structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+					 class="com.eucalyptus.cluster.common.msgs.ModifyNodeResponseType" extends="com.eucalyptus.cluster.common.msgs.CloudClusterMessage">
+		<structure map-as="com.eucalyptus.cluster.common.msgs.CloudClusterMessage" />
 	</mapping>
 
 </binding>

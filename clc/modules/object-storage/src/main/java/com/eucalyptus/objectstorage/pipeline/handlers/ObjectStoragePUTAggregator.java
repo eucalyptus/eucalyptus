@@ -47,7 +47,7 @@
 package com.eucalyptus.objectstorage.pipeline.handlers;
 
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageDataPutRequestType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Assert;
 import com.eucalyptus.util.ChannelBufferStreamingInputStream;
@@ -57,7 +57,6 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpMessage;
 
 /**
  * Aggregates chunks into a single channelbuffer, which is expected to be drained at the end of the pipeline by the service
@@ -71,8 +70,8 @@ public class ObjectStoragePUTAggregator extends SimpleChannelUpstreamHandler {
     if (event.getMessage() instanceof MappingHttpRequest) {
       MappingHttpRequest httpRequest = (MappingHttpRequest) event.getMessage();
 
-      if (httpRequest.getMessage() instanceof ObjectStorageDataRequestType && httpRequest.isChunked()) {
-        ObjectStorageDataRequestType putDataRequest = (ObjectStorageDataRequestType) httpRequest.getMessage();
+      if (httpRequest.getMessage() instanceof ObjectStorageDataPutRequestType && httpRequest.isChunked()) {
+        ObjectStorageDataPutRequestType putDataRequest = (ObjectStorageDataPutRequestType) httpRequest.getMessage();
         inputStream = putDataRequest.getData();
       }
     } else if (event.getMessage() instanceof HttpChunk) {

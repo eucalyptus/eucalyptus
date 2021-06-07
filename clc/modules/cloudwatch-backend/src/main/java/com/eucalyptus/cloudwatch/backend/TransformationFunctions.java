@@ -38,18 +38,18 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.cloudwatch.common.CloudWatchMetadata;
-import com.eucalyptus.cloudwatch.common.backend.msgs.AlarmHistoryItem;
-import com.eucalyptus.cloudwatch.common.backend.msgs.Dimension;
-import com.eucalyptus.cloudwatch.common.backend.msgs.DimensionFilter;
-import com.eucalyptus.cloudwatch.common.backend.msgs.DimensionFilters;
-import com.eucalyptus.cloudwatch.common.backend.msgs.Dimensions;
-import com.eucalyptus.cloudwatch.common.backend.msgs.Metric;
-import com.eucalyptus.cloudwatch.common.backend.msgs.MetricAlarm;
-import com.eucalyptus.cloudwatch.common.backend.msgs.ResourceList;
 import com.eucalyptus.cloudwatch.common.internal.domain.DimensionEntity;
 import com.eucalyptus.cloudwatch.common.internal.domain.alarms.AlarmEntity;
 import com.eucalyptus.cloudwatch.common.internal.domain.alarms.AlarmHistory;
 import com.eucalyptus.cloudwatch.common.internal.domain.listmetrics.ListMetric;
+import com.eucalyptus.cloudwatch.common.msgs.AlarmHistoryItem;
+import com.eucalyptus.cloudwatch.common.msgs.Dimension;
+import com.eucalyptus.cloudwatch.common.msgs.DimensionFilter;
+import com.eucalyptus.cloudwatch.common.msgs.DimensionFilters;
+import com.eucalyptus.cloudwatch.common.msgs.Dimensions;
+import com.eucalyptus.cloudwatch.common.msgs.Metric;
+import com.eucalyptus.cloudwatch.common.msgs.MetricAlarm;
+import com.eucalyptus.cloudwatch.common.msgs.ResourceList;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
@@ -185,7 +185,7 @@ public class TransformationFunctions {
     }
   }
 
-  enum AlarmHistoryToAlarmHistoryItem implements 
+  enum AlarmHistoryToAlarmHistoryItem implements
   Function<AlarmHistory, AlarmHistoryItem> {
     INSTANCE {
       @Override

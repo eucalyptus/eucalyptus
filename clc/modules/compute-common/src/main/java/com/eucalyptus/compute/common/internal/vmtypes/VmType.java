@@ -47,8 +47,8 @@ import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PostLoad;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.compute.common.CloudMetadata.VmTypeMetadata;
@@ -63,6 +63,7 @@ import com.eucalyptus.auth.principal.FullName;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.google.common.base.Function;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
@@ -104,7 +105,7 @@ import com.google.common.collect.Sets;
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "cloud_vm_type" )
 public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFullName<VmTypeMetadata> {
-  @Transient
+
   private static final long  serialVersionUID = 1L;
   
   @Column( name = "config_vm_type_name" )
@@ -115,7 +116,10 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
   
   @Column( name = "config_vm_type_disk" )
   private Integer            disk;
-  
+
+  @Column( name = "config_vm_type_disk_count" )
+  private Integer            diskCount;
+
   @Column( name = "config_vm_type_memory" )
   private Integer            memory;
   
@@ -130,6 +134,9 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
 
   @Column( name = "config_vm_type_enis" )
   private Integer            networkInterfaces;
+
+  @Column( name = "config_vm_enabled" )
+  private Boolean            enabled;
 
   @ElementCollection
   @CollectionTable( name = "config_vm_types_ephemeral_disks" )
@@ -146,14 +153,18 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
       final String name,
       final Integer cpu,
       final Integer disk,
+      final Integer diskCount,
       final Integer memory,
-      final Integer networkInterfaces
+      final Integer networkInterfaces,
+      final Boolean enabled
   ) {
     this( name );
     this.cpu = cpu;
     this.disk = disk;
+    this.diskCount = diskCount;
     this.memory = memory;
     this.networkInterfaces = networkInterfaces;
+    this.enabled = enabled;
   }
   
   public static VmType create( ) {
@@ -191,7 +202,18 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
   public void setDisk( final Integer disk ) {
     this.disk = disk;
   }
-  
+
+  /**
+   * A disk count of zero means there is no ephemeral disk when used with an ebs image.
+   */
+  public Integer getDiskCount( ) {
+    return diskCount;
+  }
+
+  public void setDiskCount( final Integer diskCount ) {
+    this.diskCount = diskCount;
+  }
+
   @Override
   public Integer getMemory( ) {
     return this.memory;
@@ -200,7 +222,15 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
   public void setMemory( final Integer memory ) {
     this.memory = memory;
   }
-  
+
+  public Boolean getEnabled( ) {
+    return enabled;
+  }
+
+  public void setEnabled( final Boolean enabled ) {
+    this.enabled = enabled;
+  }
+
   @SuppressWarnings( "RedundantIfStatement" )
   @Override
   public boolean equals( final Object o ) {
@@ -269,7 +299,14 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
   public OwnerFullName getOwner( ) {
     return Principals.nobodyFullName( );
   }
-  
+
+  @PostLoad
+  private void onLoad( ) {
+    if ( enabled == null ) {
+      enabled = true;
+    }
+  }
+
   public Supplier<VmType> allocator( ) {
     return new Supplier<VmType>( ) {
       
@@ -388,8 +425,8 @@ public class VmType extends AbstractPersistent implements VmTypeMetadata, HasFul
     return new VmType.EphemeralBuilder( this );
   }
   
-  public static VmType create( String name, Integer cpu, Integer disk, Integer memory, Integer networkInterfaces ) {
-    return new VmType( name, cpu, disk, memory, networkInterfaces );
+  public static VmType create( String name, Integer cpu, Integer disk, Integer diskCount, Integer memory, Integer networkInterfaces, Boolean enabled ) {
+    return new VmType( name, cpu, disk, diskCount, memory, networkInterfaces, enabled );
   }
   
   public static VmType named( String name ) {

@@ -1,0 +1,264 @@
+---
+# RDS DB Instance template for PostgreSQL
+#
+# Required:
+#
+# - Eucalyptus container image
+# - Bucket name for container registry storage
+# - Instance profile for bucket read
+# - VPC and subnet for creating resources in
+# - Volume for data
+#
+# Optional:
+#
+# - Postgres parameters
+# - Instance type
+# - SSH key name allowing debug connection to db instance
+#
+# PostgreSQL parameters as per RDS.
+#
+AWSTemplateFormatVersion: 2010-09-09
+Description: PostgreSQL database instance template
+
+Parameters:
+
+  PostgresUser:
+    Description: Postgres user
+    Type: String
+    Default: postgres
+
+  PostgresPassword:
+    Description: Postgres password
+    Type: String
+    Default: changeme
+
+  PostgresDatabase:
+    Description: Postgres database
+    Type: String
+    Default: postgres
+
+  PostgresVersion:
+    Description: Postgres version
+    Type: String
+    Default: 12
+
+  PostgresPort:
+    Description: Postgres listen port
+    Type: String
+    Default: 5432
+
+  BucketName:
+    Description: S3 bucket for container registry storage
+    Type: String
+
+  ImageId:
+    Description: Identifier for the Eucalyptus Container image
+    Type: String
+
+  InstanceProfile:
+    Description: Instance profile to use
+    Type: String
+
+  InstanceType:
+    Description: Instance type to use
+    Type: String
+    Default: t2.small
+
+  KeyName:
+    Description: EC2 keypair for instance SSH access
+    Type: String
+    Default: ''
+
+  SubnetId:
+    Description: The subnet to use
+    Type: String
+
+  VolumeId:
+    Description: The volume to use for database content
+    Type: String
+
+  VpcId:
+    Description: The vpc to use
+    Type: String
+
+Conditions:
+  
+  UseKeyNameParameter: !Not
+    - !Equals
+      - !Ref KeyName
+      - ''
+
+Resources:
+
+  WaitConditionHandle:
+    Type: AWS::CloudFormation::WaitConditionHandle
+
+  WaitCondition:
+    Type: AWS::CloudFormation::WaitCondition
+    Properties:
+      Handle: !Ref WaitConditionHandle
+      Timeout: 1800
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Postgres security group
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: "22"
+          ToPort: "22"
+          CidrIp: "0.0.0.0/0"
+        - IpProtocol: tcp
+          FromPort: !Ref PostgresPort
+          ToPort: !Ref PostgresPort
+          CidrIp: "0.0.0.0/0"
+
+  Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      IamInstanceProfile: !Ref InstanceProfile
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      KeyName: !If
+        - UseKeyNameParameter
+        - !Ref 'KeyName'
+        - !Ref 'AWS::NoValue'
+      NetworkInterfaces:
+        - DeviceIndex: 0
+          SubnetId: !Ref SubnetId
+          GroupSet:
+            - !Ref SecurityGroup
+      Volumes:
+        - VolumeId: !Ref VolumeId
+          Device: /dev/sdf
+      UserData:
+        Fn::Base64: !Sub |
+          #cloud-config
+          bootcmd:
+          - test ! -z "$(blkid /dev/vdb)" || mkfs -t ext4 -L euca-rdsfs /dev/vdb
+          - test -d /var/mnt/rds || mkdir -pv /var/mnt/rds
+          mounts:
+          - ["/dev/vdb", "/var/mnt/rds", "ext4", "defaults,nofail", "0", "2"]
+          write_files:
+          - path: /etc/udev/rules.d/53-ec2-network-interfaces.rules
+            permissions: "0644"
+            owner: root
+            content: |
+              ACTION=="add", SUBSYSTEM=="net", KERNEL=="eth*", TAG+="systemd", ENV{SYSTEMD_WANTS}+="ec2net-ifup@$env{INTERFACE}"
+              ACTION=="remove", SUBSYSTEM=="net", KERNEL=="eth*", RUN+="/usr/sbin/ec2ifdown $env{INTERFACE}"
+          - path: /etc/systemd/system/ec2net-ifup@.service
+            permissions: "0644"
+            owner: root
+            content: |
+              [Unit]
+              Description=Enable elastic network interfaces %i
+              After=network-online.target
+              BindsTo=sys-subsystem-net-devices-%i.device
+              ConditionPathExists=!/var/run/dhclient-%i.pid
+              [Service]
+              RemainAfterExit=true
+              ExecStart=/usr/sbin/ec2ifup %i
+              ExecStop=/usr/sbin/ec2ifdown %i
+          - path: /etc/containers/registries.conf
+            permissions: "0644"
+            owner: root
+            content: |
+              [[registry]]
+              prefix = "docker.io"
+              location = "127.0.0.1:5000"
+              insecure = true
+          - path: /etc/sysconfig/registry-container-bucket
+            permissions: "0644"
+            owner: root
+            content: |
+              REGISTRY_STORAGE_S3_BUCKET=${BucketName}
+          - path: /usr/local/bin/registry-container-start
+            permissions: "0755"
+            owner: root
+            content: |
+              #!/bin/bash
+              # Load registry image and start system registry service
+              set -eux
+              podman load docker.io/library/registry:2 < \
+                  /usr/local/share/registry-container/registry.tar
+              podman create --name registry \
+                  --env-file /etc/sysconfig/registry-container \
+                  --env-file /etc/sysconfig/registry-container-bucket \
+                  --env-file /etc/sysconfig/registry-container-readonly \
+                  --publish 127.0.0.1:5000:5000 \
+                  docker.io/library/registry:2
+              podman generate systemd --name --timeout 60 --restart-policy always registry > \
+                  /etc/systemd/system/registry-container.service
+              systemctl enable --now registry-container.service
+          - path: /etc/sysconfig/postgres-container
+            permissions: "0644"
+            owner: root
+            content: |
+              POSTGRES_VERSION=${PostgresVersion}
+              POSTGRES_DB=${PostgresDatabase}
+              POSTGRES_PORT=${PostgresPort}
+              POSTGRES_USER=${PostgresUser}
+              POSTGRES_PASSWORD=${PostgresPassword}
+          - path: /usr/local/bin/postgres-container-start
+            permissions: "0755"
+            owner: root
+            content: |
+              #!/bin/bash
+              # Create postgres container and systemd service
+              set -eux
+              source /etc/sysconfig/postgres-container
+              mkdir -pv /var/mnt/rds/data
+              podman create --name postgres \
+                  --env-file /etc/sysconfig/postgres-container \
+                  --env PGDATA=/var/lib/postgres/rds/pgdata \
+                  --env PGPORT=${!POSTGRES_PORT} \
+                  --network host \
+                  --volume /var/mnt/rds/data:/var/lib/postgres/rds:z \
+                  docker.io/library/postgres:${!POSTGRES_VERSION}
+              podman generate systemd --name --timeout 60 --restart-policy always postgres > \
+                  /etc/systemd/system/postgres-container.service
+              systemctl enable --now postgres-container.service
+          - path: /usr/local/bin/rds-up
+            permissions: "0755"
+            owner: root
+            content: |
+              #!/bin/bash
+              set -eux
+              WAITCONDURL="${WaitConditionHandle}"
+              COND_STATUS="FAILURE"
+              COND_DATA="unknown"
+              COND_REASON="Initialization failure"
+              function cleanup {
+                curl -s -X PUT -H "Content-Type:" \
+                  --data-binary '{"Status": "'"${!COND_STATUS}"'", "UniqueId": "init", "Data": "'"${!COND_DATA}"'", "Reason": "'"${!COND_REASON}"'" }' \
+                  ${!WAITCONDURL}
+              }
+              trap cleanup EXIT
+              COND_DATA="registry-container"
+              systemctl is-active --quiet registry-container.service
+              COND_DATA="postgres-container"
+              systemctl is-active --quiet postgres-container.service
+              COND_DATA="ec2net-ifup@eth1"
+              [ ! -r /etc/udev/rules.d/75-persistent-net-generator.rules ] || rm -fv /etc/udev/rules.d/75-persistent-net-generator.rules
+              [ ! -r /sys/class/net/eth1 ] || systemctl enable --now ec2net-ifup@eth1.service
+              COND_REASON="Cleanup failure"
+              COND_DATA="registry-container"
+              systemctl stop registry-container.service
+              COND_STATUS="SUCCESS"
+              COND_DATA="none"
+              COND_REASON="completed"
+          runcmd:
+          - /usr/local/bin/registry-container-start
+          - /usr/local/bin/postgres-container-start
+          - /usr/local/bin/rds-up
+
+Outputs:
+
+  InstanceId:
+    Description: PostgreSQL instance identifier
+    Value: !Ref Instance
+    
+  PrivateIp:
+    Description: PostgreSQL instance private ip
+    Value: !GetAtt Instance.PrivateIp

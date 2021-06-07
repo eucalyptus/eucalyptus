@@ -129,12 +129,6 @@ public class AWSAutoScalingScalingPolicyResourceAction extends StepBasedResource
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -163,12 +157,6 @@ public class AWSAutoScalingScalingPolicyResourceAction extends StepBasedResource
         return action;
       }
     };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
-    }
   }
 
   private enum UpdateNoInterruptionSteps implements UpdateStep {
@@ -196,11 +184,6 @@ public class AWSAutoScalingScalingPolicyResourceAction extends StepBasedResource
         newAction.info.setCreatedEnoughToDelete(true);
         newAction.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(newAction.info.getPhysicalResourceId())));
         return newAction;
-      }
-      @Nullable
-      @Override
-      public Integer getTimeout() {
-        return null;
       }
     };
 

@@ -39,27 +39,15 @@
 
 package com.eucalyptus.compute.common.internal.images;
 
-import java.util.List;
-
-import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
-import javax.persistence.EntityTransaction;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.PersistenceContext;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.ImageMetadata;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
-import com.eucalyptus.upgrade.Upgrades.Version;
-import com.eucalyptus.util.Exceptions;
-import com.google.common.base.Predicate;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
@@ -136,16 +124,6 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
   }
   
   @Override
-  public boolean hasKernel( ) {
-    return this.getKernelId( ) != null;
-  }
-  
-  @Override
-  public boolean hasRamdisk( ) {
-    return this.getRamdiskId( ) != null;
-  }
-
-  @Override
   public String getRootDeviceName( ) {
     return this.rootDeviceName;
   }
@@ -163,72 +141,5 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
   public void setRootDeviceName(String rootDeviceName) {
 	this.rootDeviceName = rootDeviceName;
   }
-  
-  @EntityUpgrade( entities = { BlockStorageImageInfo.class }, since = Version.v3_3_0, value = Eucalyptus.class )
-  public enum BlockStorageImageInfo330Upgrade implements Predicate<Class> {
-    INSTANCE;
-    private static Logger LOG = Logger.getLogger( BlockStorageImageInfo.BlockStorageImageInfo330Upgrade.class );
-    @Override
-    public boolean apply( Class arg0 ) {
-      EntityTransaction db = Entities.get( BlockStorageImageInfo.class );
-      try {
-        List<BlockStorageImageInfo> images = Entities.query( new BlockStorageImageInfo( ) );
-        for ( BlockStorageImageInfo image : images ) {
-          LOG.info("Upgrading BlockStorageImageInfo: " + image.toString());
-          if (StringUtils.isBlank(image.getRootDeviceName())) {
-        	LOG.info("Setting the root device name to " + Images.DEFAULT_ROOT_DEVICE);
-            image.setRootDeviceName(Images.DEFAULT_ROOT_DEVICE);
-          }
-          DeviceMapping mapping = null;
-          if ( image.getDeviceMappings().size() == 1 && (mapping = image.getDeviceMappings().iterator().next()) != null 
-        		  && mapping instanceof BlockStorageDeviceMapping ) {
-            LOG.info("Setting the device mapping name to " + Images.DEFAULT_ROOT_DEVICE);
-            mapping.setDeviceName(Images.DEFAULT_ROOT_DEVICE);
-            LOG.info("Adding ephemeral disk at " + Images.DEFAULT_EPHEMERAL_DEVICE);
-        	image.getDeviceMappings().add(new EphemeralDeviceMapping( image, Images.DEFAULT_EPHEMERAL_DEVICE, "ephemeral0" ));
-          } else {
-        	LOG.error("Expected to see only the root block device mapping but encountered " + image.getDeviceMappings().size() + " device mappings.");
-          }
-          Entities.persist(image);
-        }
-        db.commit( );
-        return true;
-      } catch ( Exception ex ) {
-    	LOG.error("Error upgrading BlockStorageImageInfo: ", ex);
-    	db.rollback();
-        throw Exceptions.toUndeclared( ex );
-      }
-    }
-  }
 
-  @EntityUpgrade( entities = { BlockStorageImageInfo.class }, since = Version.v3_4_0, value = Eucalyptus.class )
-  public enum BlockStorageImageInfo340Upgrade implements Predicate<Class> {
-	  INSTANCE;
-	  private static Logger LOG = Logger.getLogger( BlockStorageImageInfo.BlockStorageImageInfo340Upgrade.class );
-
-	  @Override
-	  public boolean apply(@Nullable Class arg0) {
-		  // TODO Auto-generated method stub
-		  EntityTransaction db = Entities.get( BlockStorageImageInfo.class );
-		  try {
-			  List<BlockStorageImageInfo> images = Entities.query( new BlockStorageImageInfo( ) );
-			  for ( BlockStorageImageInfo image : images ) {
-				  LOG.info("Upgrading BlockStorageImageInfo: " + image.toString());
-				  if(image.virtType == null){
-					  image.virtType = ImageMetadata.VirtualizationType.hvm;
-					  Entities.persist(image);
-				  }
-			  }
-			  db.commit( );
-			  return true;
-		  } catch ( Exception ex ) {
-			  LOG.error("Error upgrading BlockStorageImageInfo: ", ex);
-			  db.rollback();
-			  throw Exceptions.toUndeclared( ex );
-		  } finally{
-			  if(db.isActive())
-				  db.rollback();
-		  }
-	  } 
-  }
 }

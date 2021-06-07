@@ -86,7 +86,6 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
   private static final String AWS_AUTH_TYPE = "AWS";
   private static final String EUCA_AUTH_TYPE = "EUCA2-RSA-SHA256";
   private static final String EUCA_OLD_AUTH_TYPE = "Euca";
-  protected static final String ISO_8601_FORMAT = "yyyyMMdd'T'HHmmss'Z'"; //Use the ISO8601 format
 
   public static enum SecurityParameter {
     AWSAccessKeyId,
@@ -275,18 +274,6 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
     }
 
     /**
-     * See if the expires string indicates the message is expired.
-     */
-    private static boolean checkExpires(String expires) {
-      Long expireTime = Long.parseLong(expires);
-      Long currentTime = new Date().getTime() / 1000;
-      if (currentTime > expireTime) {
-        return false;
-      }
-      return true;
-    }
-
-    /**
      * Gets the date for S3-spec authentication
      */
     private static String getDate(MappingHttpRequest httpRequest) throws AccessDeniedException {
@@ -352,13 +339,6 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
         result += key + ":" + value + "\n";
       }
       return result;
-    }
-
-    //Old method for getting signature info from Auth header
-    private static String[] getSigInfo(String auth_part) {
-      int index = auth_part.lastIndexOf(" ");
-      String sigString = auth_part.substring(index + 1);
-      return sigString.split(":");
     }
 
     /**
@@ -431,13 +411,5 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
       throw new MethodNotAllowedException();
     }
     throw new AccessDeniedException("Invalid Authentication Scheme");
-  }
-
-  public void exceptionCaught(final ChannelHandlerContext ctx, final ExceptionEvent exceptionEvent) throws Exception {
-    LOG.info("[exception " + exceptionEvent + "]");
-    final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR);
-    DownstreamMessageEvent newEvent = new DownstreamMessageEvent(ctx.getChannel(), ctx.getChannel().getCloseFuture(), response, null);
-    ctx.sendDownstream(newEvent);
-    newEvent.getFuture().addListener(ChannelFutureListener.CLOSE);
   }
 }

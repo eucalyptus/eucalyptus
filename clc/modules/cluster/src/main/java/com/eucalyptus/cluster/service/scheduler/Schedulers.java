@@ -31,9 +31,9 @@ package com.eucalyptus.cluster.service.scheduler;
 import java.util.concurrent.ConcurrentMap;
 import javax.annotation.Nonnull;
 import org.apache.log4j.Logger;
-import com.eucalyptus.cluster.service.node.ClusterNode;
 import com.eucalyptus.util.Assert;
 import com.google.common.collect.Maps;
+import groovy.lang.Closure;
 
 /**
  *
@@ -66,6 +66,20 @@ public class Schedulers {
    */
   public static ScheduleResource context( ) {
     return new ScheduleResource( );
+  }
+
+  public static <R> R withContext( final Closure<R> closure ) {
+    try ( final ScheduleResource context = context( ) ) {
+      return closure.call( context );
+    }
+  }
+
+  public static <R> R withAutoCommitContext( final Closure<R> closure ) {
+    try ( final ScheduleResource context = context( ) ) {
+      R r = closure.call( context );
+      context.commit( );
+      return r;
+    }
   }
 
   static void register( final String name, final Class<? extends Scheduler> scheduler ) {;

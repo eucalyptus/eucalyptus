@@ -29,91 +29,91 @@
 -->
 <binding name="www_eucalyptus_com_ns_identity_2016_10_01">
   <namespace uri="http://www.eucalyptus.com/ns/identity/2016-10-01/" default="elements"/>
-  <mapping class="com.eucalyptus.auth.euare.common.identity.IdentityMessage" abstract="true">
+  <mapping class="com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage" abstract="true">
   </mapping>
-  <mapping type-name="IdentityResponseMessage" class="com.eucalyptus.auth.euare.common.identity.IdentityMessage" abstract="true">
+  <mapping type-name="IdentityResponseMessage" class="com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage" abstract="true">
     <structure name="ResponseMetadata">
       <value name="RequestId" get-method="getCorrelationId" set-method="setCorrelationId" usage="required"/>
     </structure>
   </mapping>
-  <mapping name="DecodeSecurityTokenResponse" class="com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenResponseType">
-    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
-    <structure name="DecodeSecurityTokenResult" field="decodeSecurityTokenResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenResult"/>
+  <mapping name="DecodeSecurityTokenResponse" class="com.eucalyptus.auth.euare.common.identity.msgs.DecodeSecurityTokenResponseType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage"/>
+    <structure name="DecodeSecurityTokenResult" field="decodeSecurityTokenResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.msgs.DecodeSecurityTokenResult"/>
     <structure map-as="IdentityResponseMessage"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenResult" abstract="true">
-    <structure name="SecurityToken" field="securityToken" usage="optional" type="com.eucalyptus.auth.euare.common.identity.SecurityToken"/>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.msgs.DecodeSecurityTokenResult" abstract="true">
+    <structure name="SecurityToken" field="securityToken" usage="optional" type="com.eucalyptus.auth.euare.common.identity.msgs.SecurityToken"/>
   </mapping>
-  <mapping name="DecodeSecurityToken" class="com.eucalyptus.auth.euare.common.identity.DecodeSecurityTokenType">
-    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+  <mapping name="DecodeSecurityToken" class="com.eucalyptus.auth.euare.common.identity.msgs.DecodeSecurityTokenType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage"/>
     <value name="AccessKeyId" field="accessKeyId" usage="optional"/>
     <value name="SecurityToken" field="securityToken" usage="optional"/>
   </mapping>
-  <mapping name="DescribeAccountsResponse" class="com.eucalyptus.auth.euare.common.identity.DescribeAccountsResponseType">
-    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
-    <structure name="DescribeAccountsResult" field="describeAccountsResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.DescribeAccountsResult"/>
+  <mapping name="DescribeAccountsResponse" class="com.eucalyptus.auth.euare.common.identity.msgs.DescribeAccountsResponseType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage"/>
+    <structure name="DescribeAccountsResult" field="describeAccountsResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.msgs.DescribeAccountsResult"/>
     <structure map-as="IdentityResponseMessage"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.common.identity.DescribeAccountsResult" abstract="true">
+  <mapping class="com.eucalyptus.auth.euare.common.identity.msgs.DescribeAccountsResult" abstract="true">
     <collection name="Accounts" field="accounts" usage="optional">>
-      <structure name="member" type="com.eucalyptus.auth.euare.common.identity.Account"/>
+      <structure name="member" type="com.eucalyptus.auth.euare.common.identity.msgs.Account"/>
     </collection>
   </mapping>
-  <mapping name="DescribeAccounts" class="com.eucalyptus.auth.euare.common.identity.DescribeAccountsType">
-    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+  <mapping name="DescribeAccounts" class="com.eucalyptus.auth.euare.common.identity.msgs.DescribeAccountsType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage"/>
     <value name="Alias" field="alias" usage="optional"/>
     <value name="AliasLike" field="aliasLike" usage="optional"/>
     <value name="CanonicalId" field="canonicalId" usage="optional"/>
     <value name="Email" field="email" usage="optional"/>
   </mapping>
-  <mapping name="DescribeCertificateResponse" class="com.eucalyptus.auth.euare.common.identity.DescribeCertificateResponseType">
-    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
-    <structure name="DescribeCertificateResult" field="describeCertificateResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.DescribeCertificateResult"/>
+  <mapping name="DescribeCertificateResponse" class="com.eucalyptus.auth.euare.common.identity.msgs.DescribeCertificateResponseType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage"/>
+    <structure name="DescribeCertificateResult" field="describeCertificateResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.msgs.DescribeCertificateResult"/>
     <structure map-as="IdentityResponseMessage"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.common.identity.DescribeCertificateResult" abstract="true">
+  <mapping class="com.eucalyptus.auth.euare.common.identity.msgs.DescribeCertificateResult" abstract="true">
     <value name="Pem" field="pem" usage="optional"/>
   </mapping>
-  <mapping name="DescribeCertificate" class="com.eucalyptus.auth.euare.common.identity.DescribeCertificateType">
-    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+  <mapping name="DescribeCertificate" class="com.eucalyptus.auth.euare.common.identity.msgs.DescribeCertificateType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage"/>
   </mapping>
-  <mapping name="DescribeInstanceProfileResponse" class="com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResponseType">
-    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
-    <structure name="DescribeInstanceProfileResult" field="describeInstanceProfileResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResult"/>
+  <mapping name="DescribeInstanceProfileResponse" class="com.eucalyptus.auth.euare.common.identity.msgs.DescribeInstanceProfileResponseType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage"/>
+    <structure name="DescribeInstanceProfileResult" field="describeInstanceProfileResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.msgs.DescribeInstanceProfileResult"/>
     <structure map-as="IdentityResponseMessage"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileResult" abstract="true">
-    <structure name="InstanceProfile" field="instanceProfile" usage="optional" type="com.eucalyptus.auth.euare.common.identity.InstanceProfile"/>
-    <structure name="Role" field="role" usage="optional" type="com.eucalyptus.auth.euare.common.identity.Role"/>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.msgs.DescribeInstanceProfileResult" abstract="true">
+    <structure name="InstanceProfile" field="instanceProfile" usage="optional" type="com.eucalyptus.auth.euare.common.identity.msgs.InstanceProfile"/>
+    <structure name="Role" field="role" usage="optional" type="com.eucalyptus.auth.euare.common.identity.msgs.Role"/>
   </mapping>
-  <mapping name="DescribeInstanceProfile" class="com.eucalyptus.auth.euare.common.identity.DescribeInstanceProfileType">
-    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+  <mapping name="DescribeInstanceProfile" class="com.eucalyptus.auth.euare.common.identity.msgs.DescribeInstanceProfileType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage"/>
     <value name="AccountId" field="accountId" usage="optional"/>
     <value name="InstanceProfileName" field="instanceProfileName" usage="optional"/>
   </mapping>
-  <mapping name="DescribeOidcProviderResponse" class="com.eucalyptus.auth.euare.common.identity.DescribeOidcProviderResponseType">
-    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
-    <structure name="DescribeOidcProviderResult" field="describeOidcProviderResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.DescribeOidcProviderResult"/>
+  <mapping name="DescribeOidcProviderResponse" class="com.eucalyptus.auth.euare.common.identity.msgs.DescribeOidcProviderResponseType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage"/>
+    <structure name="DescribeOidcProviderResult" field="describeOidcProviderResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.msgs.DescribeOidcProviderResult"/>
     <structure map-as="IdentityResponseMessage"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.common.identity.DescribeOidcProviderResult" abstract="true">
-    <structure name="OidcProvider" field="oidcProvider" usage="optional" type="com.eucalyptus.auth.euare.common.identity.OidcProvider"/>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.msgs.DescribeOidcProviderResult" abstract="true">
+    <structure name="OidcProvider" field="oidcProvider" usage="optional" type="com.eucalyptus.auth.euare.common.identity.msgs.OidcProvider"/>
   </mapping>
-  <mapping name="DescribeOidcProvider" class="com.eucalyptus.auth.euare.common.identity.DescribeOidcProviderType">
-    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+  <mapping name="DescribeOidcProvider" class="com.eucalyptus.auth.euare.common.identity.msgs.DescribeOidcProviderType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage"/>
     <value name="AccountId" field="accountId" usage="optional"/>
     <value name="ProviderUrl" field="providerUrl" usage="optional"/>
   </mapping>
-  <mapping name="DescribePrincipalResponse" class="com.eucalyptus.auth.euare.common.identity.DescribePrincipalResponseType">
-    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
-    <structure name="DescribePrincipalResult" field="describePrincipalResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.DescribePrincipalResult"/>
+  <mapping name="DescribePrincipalResponse" class="com.eucalyptus.auth.euare.common.identity.msgs.DescribePrincipalResponseType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage"/>
+    <structure name="DescribePrincipalResult" field="describePrincipalResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.msgs.DescribePrincipalResult"/>
     <structure map-as="IdentityResponseMessage"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.common.identity.DescribePrincipalResult" abstract="true">
-    <structure name="Principal" field="principal" usage="optional" type="com.eucalyptus.auth.euare.common.identity.Principal"/>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.msgs.DescribePrincipalResult" abstract="true">
+    <structure name="Principal" field="principal" usage="optional" type="com.eucalyptus.auth.euare.common.identity.msgs.Principal"/>
   </mapping>
-  <mapping name="DescribePrincipal" class="com.eucalyptus.auth.euare.common.identity.DescribePrincipalType">
-    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+  <mapping name="DescribePrincipal" class="com.eucalyptus.auth.euare.common.identity.msgs.DescribePrincipalType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage"/>
     <value name="AccessKeyId" field="accessKeyId" usage="optional"/>
     <value name="CertificateId" field="certificateId" usage="optional"/>
     <value name="UserId" field="userId" usage="optional"/>
@@ -124,69 +124,69 @@
     <value name="Nonce" field="nonce" usage="optional"/>
     <value name="Ptag" field="ptag" usage="optional"/>
   </mapping>
-  <mapping name="DescribeRoleResponse" class="com.eucalyptus.auth.euare.common.identity.DescribeRoleResponseType">
-    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
-    <structure name="DescribeRoleResult" field="describeRoleResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.DescribeRoleResult"/>
+  <mapping name="DescribeRoleResponse" class="com.eucalyptus.auth.euare.common.identity.msgs.DescribeRoleResponseType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage"/>
+    <structure name="DescribeRoleResult" field="describeRoleResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.msgs.DescribeRoleResult"/>
     <structure map-as="IdentityResponseMessage"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.common.identity.DescribeRoleResult" abstract="true">
-    <structure name="Role" field="role" usage="optional" type="com.eucalyptus.auth.euare.common.identity.Role"/>
+  <mapping class="com.eucalyptus.auth.euare.common.identity.msgs.DescribeRoleResult" abstract="true">
+    <structure name="Role" field="role" usage="optional" type="com.eucalyptus.auth.euare.common.identity.msgs.Role"/>
   </mapping>
-  <mapping name="DescribeRole" class="com.eucalyptus.auth.euare.common.identity.DescribeRoleType">
-    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+  <mapping name="DescribeRole" class="com.eucalyptus.auth.euare.common.identity.msgs.DescribeRoleType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage"/>
     <value name="AccountId" field="accountId" usage="optional"/>
     <value name="RoleName" field="roleName" usage="optional"/>
   </mapping>
-  <mapping name="ReserveNameResponse" class="com.eucalyptus.auth.euare.common.identity.ReserveNameResponseType">
-    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
-    <structure name="ReserveNameResult" field="reserveNameResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.ReserveNameResult"/>
+  <mapping name="ReserveNameResponse" class="com.eucalyptus.auth.euare.common.identity.msgs.ReserveNameResponseType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage"/>
+    <structure name="ReserveNameResult" field="reserveNameResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.msgs.ReserveNameResult"/>
     <structure map-as="IdentityResponseMessage"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.common.identity.ReserveNameResult" abstract="true">
+  <mapping class="com.eucalyptus.auth.euare.common.identity.msgs.ReserveNameResult" abstract="true">
   </mapping>
-  <mapping name="ReserveName" class="com.eucalyptus.auth.euare.common.identity.ReserveNameType">
-    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+  <mapping name="ReserveName" class="com.eucalyptus.auth.euare.common.identity.msgs.ReserveNameType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage"/>
     <value name="Namespace" field="namespace" usage="optional"/>
     <value name="Name" field="name" usage="optional"/>
     <value name="Duration" field="duration" usage="optional"/>
     <value name="ClientToken" field="clientToken" usage="optional"/>
   </mapping>
-  <mapping name="SignCertificateResponse" class="com.eucalyptus.auth.euare.common.identity.SignCertificateResponseType">
-    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
-    <structure name="SignCertificateResult" field="signCertificateResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.SignCertificateResult"/>
+  <mapping name="SignCertificateResponse" class="com.eucalyptus.auth.euare.common.identity.msgs.SignCertificateResponseType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage"/>
+    <structure name="SignCertificateResult" field="signCertificateResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.msgs.SignCertificateResult"/>
     <structure map-as="IdentityResponseMessage"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.common.identity.SignCertificateResult" abstract="true">
+  <mapping class="com.eucalyptus.auth.euare.common.identity.msgs.SignCertificateResult" abstract="true">
     <value name="Pem" field="pem" usage="optional"/>
   </mapping>
-  <mapping name="SignCertificate" class="com.eucalyptus.auth.euare.common.identity.SignCertificateType">
-    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+  <mapping name="SignCertificate" class="com.eucalyptus.auth.euare.common.identity.msgs.SignCertificateType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage"/>
     <value name="Key" field="key" usage="optional"/>
     <value name="Principal" field="principal" usage="optional"/>
     <value name="ExpirationDays" field="expirationDays" usage="optional"/>
   </mapping>
-  <mapping name="TunnelActionResponse" class="com.eucalyptus.auth.euare.common.identity.TunnelActionResponseType">
-    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
-    <structure name="TunnelActionResult" field="tunnelActionResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.TunnelActionResult"/>
+  <mapping name="TunnelActionResponse" class="com.eucalyptus.auth.euare.common.identity.msgs.TunnelActionResponseType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage"/>
+    <structure name="TunnelActionResult" field="tunnelActionResult" usage="required" type="com.eucalyptus.auth.euare.common.identity.msgs.TunnelActionResult"/>
     <structure map-as="IdentityResponseMessage"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.common.identity.TunnelActionResult" abstract="true">
+  <mapping class="com.eucalyptus.auth.euare.common.identity.msgs.TunnelActionResult" abstract="true">
     <value name="Content" field="content" usage="optional"/>
   </mapping>
-  <mapping name="TunnelAction" class="com.eucalyptus.auth.euare.common.identity.TunnelActionType">
-    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>
+  <mapping name="TunnelAction" class="com.eucalyptus.auth.euare.common.identity.msgs.TunnelActionType">
+    <structure map-as="com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage"/>
     <value name="Content" field="content" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.common.identity.Account" abstract="true">
+  <mapping class="com.eucalyptus.auth.euare.common.identity.msgs.Account" abstract="true">
     <value name="AccountNumber" field="accountNumber" usage="optional"/>
     <value name="Alias" field="alias" usage="optional"/>
     <value name="CanonicalId" field="canonicalId" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.common.identity.InstanceProfile" abstract="true">
+  <mapping class="com.eucalyptus.auth.euare.common.identity.msgs.InstanceProfile" abstract="true">
     <value name="InstanceProfileId" field="instanceProfileId" usage="optional"/>
     <value name="InstanceProfileArn" field="instanceProfileArn" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.common.identity.OidcProvider" abstract="true">
+  <mapping class="com.eucalyptus.auth.euare.common.identity.msgs.OidcProvider" abstract="true">
     <value name="ProviderArn" field="providerArn" usage="optional"/>
     <value name="Port" field="port" usage="optional"/>
     <collection name="ClientIds" field="clientIds" usage="optional">
@@ -196,7 +196,7 @@
       <value name="member" type="java.lang.String"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.common.identity.Principal" abstract="true">
+  <mapping class="com.eucalyptus.auth.euare.common.identity.msgs.Principal" abstract="true">
     <value name="Enabled" field="enabled" usage="optional"/>
     <value name="Arn" field="arn" usage="optional"/>
     <value name="UserId" field="userId" usage="optional"/>
@@ -207,23 +207,23 @@
     <value name="PasswordHash" field="passwordHash" usage="optional"/>
     <value name="PasswordExpiry" field="passwordExpiry" usage="optional"/>
     <collection name="AccessKeys" field="accessKeys" usage="optional">>
-      <structure name="member" type="com.eucalyptus.auth.euare.common.identity.AccessKey"/>
+      <structure name="member" type="com.eucalyptus.auth.euare.common.identity.msgs.AccessKey"/>
     </collection>
     <collection name="Certificates" field="certificates" usage="optional">>
-      <structure name="member" type="com.eucalyptus.auth.euare.common.identity.Certificate"/>
+      <structure name="member" type="com.eucalyptus.auth.euare.common.identity.msgs.Certificate"/>
     </collection>
     <collection name="Policies" field="policies" usage="optional">>
-      <structure name="member" type="com.eucalyptus.auth.euare.common.identity.Policy"/>
+      <structure name="member" type="com.eucalyptus.auth.euare.common.identity.msgs.Policy"/>
     </collection>
     <value name="Ptag" field="ptag" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.common.identity.Role" abstract="true">
+  <mapping class="com.eucalyptus.auth.euare.common.identity.msgs.Role" abstract="true">
     <value name="RoleId" field="roleId" usage="optional"/>
     <value name="RoleArn" field="roleArn" usage="optional"/>
     <value name="Secret" field="secret" usage="optional"/>
-    <structure name="AssumeRolePolicy" field="assumeRolePolicy" usage="optional" type="com.eucalyptus.auth.euare.common.identity.Policy"/>
+    <structure name="AssumeRolePolicy" field="assumeRolePolicy" usage="optional" type="com.eucalyptus.auth.euare.common.identity.msgs.Policy"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.common.identity.SecurityToken" abstract="true">
+  <mapping class="com.eucalyptus.auth.euare.common.identity.msgs.SecurityToken" abstract="true">
     <value name="OriginatingAccessKeyId" field="originatingAccessKeyId" usage="optional"/>
     <value name="OriginatingUserId" field="originatingUserId" usage="optional"/>
     <value name="OriginatingRoleId" field="originatingRoleId" usage="optional"/>
@@ -231,25 +231,25 @@
     <value name="Created" field="created" usage="optional"/>
     <value name="Expires" field="expires" usage="optional"/>
     <collection name="Attributes" field="attributes" usage="optional">>
-      <structure name="member" type="com.eucalyptus.auth.euare.common.identity.SecurityTokenAttribute"/>
+      <structure name="member" type="com.eucalyptus.auth.euare.common.identity.msgs.SecurityTokenAttribute"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.common.identity.AccessKey" abstract="true">
+  <mapping class="com.eucalyptus.auth.euare.common.identity.msgs.AccessKey" abstract="true">
     <value name="AccessKeyId" field="accessKeyId" usage="optional"/>
     <value name="SecretAccessKey" field="secretAccessKey" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.common.identity.Certificate" abstract="true">
+  <mapping class="com.eucalyptus.auth.euare.common.identity.msgs.Certificate" abstract="true">
     <value name="CertificateId" field="certificateId" usage="optional"/>
     <value name="CertificateBody" field="certificateBody" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.common.identity.Policy" abstract="true">
+  <mapping class="com.eucalyptus.auth.euare.common.identity.msgs.Policy" abstract="true">
     <value name="VersionId" field="versionId" usage="optional"/>
     <value name="Name" field="name" usage="optional"/>
     <value name="Scope" field="scope" usage="optional"/>
     <value name="Policy" field="policy" usage="optional"/>
     <value name="Hash" field="hash" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.auth.euare.common.identity.SecurityTokenAttribute" abstract="true">
+  <mapping class="com.eucalyptus.auth.euare.common.identity.msgs.SecurityTokenAttribute" abstract="true">
     <value name="Key" field="key" usage="optional"/>
     <value name="Value" field="value" usage="optional"/>
   </mapping>

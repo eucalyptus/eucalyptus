@@ -33,12 +33,13 @@ import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 /**
  * @author Sang-Min Park
- *
  */
-@QueryBindingInfo( statusCode = 400 )
+@QueryBindingInfo(statusCode = 400)
 public class DuplicateAccessPointName extends LoadBalancingException {
-	private static final long serialVersionUID = 1L;
-	public DuplicateAccessPointName(){
-		super("DuplicateAccessPointName", Role.Sender, "LoadBalancer name already exists for this account. Please choose another name.");
-	}
+  private static final long serialVersionUID = 1L;
+
+  public DuplicateAccessPointName() {
+    super("DuplicateAccessPointName", Role.Sender,
+        "LoadBalancer name already exists for this account. Please choose another name.");
+  }
 }

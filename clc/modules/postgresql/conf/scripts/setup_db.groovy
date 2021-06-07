@@ -41,6 +41,7 @@
 import com.eucalyptus.bootstrap.BootstrapArgs
 import com.eucalyptus.component.id.Eucalyptus
 import com.eucalyptus.crypto.Signatures
+import com.eucalyptus.util.Exceptions
 import com.google.common.base.Optional
 import com.google.common.base.Predicate
 import com.google.common.base.Strings
@@ -50,6 +51,8 @@ import groovy.transform.Immutable
 import java.nio.file.Files
 import java.nio.file.attribute.PosixFilePermissions
 import java.sql.ResultSet
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import com.eucalyptus.bootstrap.Bootstrapper
 import com.eucalyptus.bootstrap.DatabaseBootstrapper
 import com.eucalyptus.bootstrap.OrderedShutdown
@@ -62,6 +65,7 @@ import com.eucalyptus.component.id.Database
 import com.eucalyptus.crypto.util.PEMFiles
 import com.eucalyptus.entities.PersistenceContexts
 import com.eucalyptus.system.SubDirectory
+import com.eucalyptus.util.Internets
 import com.eucalyptus.util.Pair
 import com.google.common.base.Joiner
 import com.google.common.collect.Iterables
@@ -87,6 +91,7 @@ class PostgresqlBootstrapper extends Bootstrapper.Simple implements DatabaseBoot
   
   // Static definitions of postgres commands and options
   private static final String EUCA_OLD_HOME = System.getProperty( 'euca.upgrade.old.dir' )
+  private static final String EUCA_DB_USER  = System.getProperty( 'euca.db.user', DatabaseBootstrapper.DB_USERNAME )
   private static final String EUCA_DB_DIR  = 'data'
   private static final String EUCA_TX_DIR  = 'tx'
   private static final String PG_BIN = 'bin'
@@ -100,15 +105,15 @@ class PostgresqlBootstrapper extends Bootstrapper.Simple implements DatabaseBoot
   private static final String PG_STOP = 'stop'
   private static final String PG_STATUS = 'status'
   private static final String PG_MODE = '-mf'
-  private static final String PG_PORT = 8777
+  private static final Integer PG_PORT = 8777
   private static final String PG_HOST = BootstrapArgs.isInitializeSystem() || BootstrapArgs.isUpgradeSystem() ?
       '127.0.0.1' :
-      '0.0.0.0' // or "127.0.0.1,${Internets.localHostAddress( )}"
+      System.getProperty( 'euca.db.host', "127.0.0.1,${Internets.localHostAddress( )}")
   private static final String PG_PORT_OPTS2 = "-o -h${PG_HOST} -p${PG_PORT}"
   private static final String PG_DB_OPT = '-D'
   private static final String PG_X_OPT = '-X'
   private static final String PG_X_DIR =  SubDirectory.DB.getChildFile( EUCA_TX_DIR ).getAbsolutePath()
-  private static final String PG_USER_OPT = "-U${DatabaseBootstrapper.DB_USERNAME}"
+  private static final String PG_USER_OPT = "-U${EUCA_DB_USER}"
   private static final String PG_TRUST_OPT = '--auth=password'
   private static final String PG_PASSFILE = SubDirectory.DB.getChildPath( 'pgpass.txt' )
   private static final String PG_PASSWORDFILE = SubDirectory.DB.getChildPath( 'pass.txt' )
@@ -232,10 +237,6 @@ class PostgresqlBootstrapper extends Bootstrapper.Simple implements DatabaseBoot
     try {
       kernelParametersCheck( )
       
-      if ( !versionCheck( ) ){
-        throw new RuntimeException("Postgres versions less than 9.1.X are not supported")
-      }
-      
       if ( !initDatabase( ) ) {
         throw new RuntimeException("Unable to initialize the postgres database")
       }
@@ -244,7 +245,7 @@ class PostgresqlBootstrapper extends Bootstrapper.Simple implements DatabaseBoot
         throw new RuntimeException("Unable to start the postgres database")
       }
       
-      if ( !createSchema( ) ) {
+      if ( !createSchemas( ) ) {
         throw new RuntimeException("Unable to create the eucalyptus database tables")
       }
       
@@ -300,18 +301,6 @@ class PostgresqlBootstrapper extends Bootstrapper.Simple implements DatabaseBoot
       }
     }  catch ( Exception e ) {
       LOG.error("Error checking kernel parameters: " + e.message )
-    }
-  }
-  
-  // Version check to ensure only Postgres 9.X creates the db.
-  private boolean versionCheck( ) {
-    try {
-      String cmd = newCommands.initdb + " --version"
-      def pattern = ~/.*\s+9\.[1-9]\d*(\.\d+)*$/
-      pattern.matcher( cmd.execute( ).text.trim( ) ).matches( )
-    } catch ( Exception e ) {
-      LOG.fatal("Unable to find the initdb command")
-      false
     }
   }
   
@@ -402,7 +391,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
         pgconfText = pgconfText.replaceAll( "#(?=\\s{0,128}"+quote(property.key)+"\\s{0,128}=)", "" ) // ensure enabled
         pgconfText = pgconfText.replaceAll(
             "(?<=\\s{0,128}"+ quote(property.key) +"\\s{0,128}=\\s{0,128})\\S.*",
-            quoteReplacement(property.value) + " # Updated by setup_db.groovy (${new Date().format( 'yyyy-MM-dd' )})")
+            quoteReplacement(property.value) + " # Updated by setup_db.groovy (${LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)})")
       }
       
       orgPGCONF.write( pgconfText )
@@ -453,14 +442,12 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   }
 
   private Iterable<Pair<String,Optional<String>>> databases( ) {
-    final List<String> contexts = PersistenceContexts.list();
-    contexts.addAll(PersistenceContexts.listRemotable());
     Iterables.transform(
-        contexts,
+        PersistenceContexts.list( ),
         Pair.robuilder( PersistenceContexts.toDatabaseName( ), PersistenceContexts.toSchemaName( ) ) )
   }
   
-  private boolean createSchema( ) throws Exception {
+  private boolean createSchemas( ) throws Exception {
     if ( !isRunning( ) ) {
       throw new Exception("The database must be running to create the tables")
     }
@@ -553,7 +540,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
 
       perhapsUpdateDbPassword( )
     } catch ( DatabaseProcessException ex ) {
-      String postgresVersionError = 'database files are incompatible with server';
+      String postgresVersionError = 'database files are incompatible with server'
       if ( BootstrapArgs.isUpgradeSystem( ) && Iterables.tryFind(
           Iterables.concat( ex.processErr, ex.processOut ),
           { String line -> line.contains( postgresVersionError ) } as Predicate<String> ).isPresent( ) ) try {
@@ -573,20 +560,29 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   }
 
   private void perhapsUpdateDbPassword( ) {
-    try {
-      dbExecute( 'postgres', PG_TEST_QUERY )
-    } catch ( Exception e ) {
-      if ( e.message?.contains('authentication') ) {
-        LOG.info( "Updating database password" )
-        String oldPassword = Signatures.SHA256withRSA.trySign( Eucalyptus.class, "eucalyptus".getBytes( ) )
-        try {
-          withConnection( getConnectionInternal( InetAddress.getByName('127.0.0.1'), 'postgres', null, userName, oldPassword ) ) { Sql sql ->
-            sql.execute( "ALTER ROLE " + getUserName( ) + " WITH PASSWORD \'" + getPassword( ) + "\'" )
-          }
-          dbExecute( 'postgres', PG_TEST_QUERY )
-        } catch ( Exception e2 ) {
-          LOG.warn( "Unable to update database password: ${e2.message}" )
+    for ( int i in 1..30 ) {
+      try {
+        dbExecute( 'postgres', PG_TEST_QUERY )
+        break
+      } catch ( Exception e ) {
+        if ( Exceptions.isCausedBy( e, ConnectException ) ) {
+          LOG.info( "Waiting for database to be available." )
+          Thread.sleep( 1000L )
+          continue
         }
+        if ( e.message?.contains('authentication') ) {
+          LOG.info( "Updating database password" )
+          String oldPassword = Signatures.SHA256withRSA.trySign( Eucalyptus.class, "eucalyptus".getBytes( ) )
+          try {
+            withConnection( getConnectionInternal( new InetSocketAddress( InetAddress.getByName( '127.0.0.1' ), PG_PORT ), 'postgres', null, userName, oldPassword ) ) { Sql sql ->
+              sql.execute( "ALTER ROLE " + getUserName( ) + " WITH PASSWORD \'" + getPassword( ) + "\'" )
+            }
+            dbExecute( 'postgres', PG_TEST_QUERY )
+          } catch ( Exception e2 ) {
+            LOG.warn( "Unable to update database password: ${e2.message}" )
+          }
+        }
+        break
       }
     }
   }
@@ -600,7 +596,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
       LOG.fatal( "Cannot upgrade databases to current postgres version, old postgres version unknown." )
       return false
     }
-    CommandResult versionCommandResult = runProcess( [ oldCommands.initdb, PG_VERSION_OPT ] );
+    CommandResult versionCommandResult = runProcess( [ oldCommands.initdb, PG_VERSION_OPT ] )
     if ( versionCommandResult.code == 0 ) {
       LOG.info( "Old postgres version: ${versionCommandResult.processOut.getAt( 0 )}" )
     } else {
@@ -717,7 +713,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
       throw new Exception("Unable to start postgresql")
     }
     
-    if ( !createSchema( ) ) {
+    if ( !createSchemas( ) ) {
       throw new Exception("Unable to create the eucalyptus database tables")
     }
     
@@ -742,15 +738,16 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   }
 
   Sql getConnection( String database, String schema ) throws Exception {
-    getConnectionInternal( InetAddress.getByName('127.0.0.1'), database, schema )
+    getConnectionInternal( new InetSocketAddress( InetAddress.getByName( '127.0.0.1' ), PG_PORT ), database, schema )
   }
 
-  private Sql getConnectionInternal( InetAddress host, String database, String schema ) throws Exception {
-    getConnectionInternal( host, database, schema, userName, password )
+  private Sql getConnectionInternal( InetSocketAddress address, String database, String schema ) throws Exception {
+    getConnectionInternal( address, database, schema, userName, password )
   }
 
-  private Sql getConnectionInternal( InetAddress host, String database, String schema, String connUserName, String connPassword ) throws Exception {
-    String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, host, database ) )
+  private Sql getConnectionInternal( InetSocketAddress address, String database, String schema, String connUserName, String connPassword ) throws Exception {
+    if ( !database ) throw new Exception("Database is required")
+    String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, address, database ) )
     Sql sql = Sql.newInstance( url, connUserName, connPassword, driverName )
     if ( schema ) sql.execute( "SET search_path TO ${schema}" as String )
     sql
@@ -783,16 +780,16 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   
   @Override
   List<String> listDatabases( ) {
-    listDatabases( InetAddress.getByName('127.0.0.1') )
+    listDatabases( new InetSocketAddress( InetAddress.getByName( '127.0.0.1' ), PG_PORT ) )
   }
 
   @SuppressWarnings("GroovyAssignabilityCheck")
   @Override
-  List<String> listDatabases( InetAddress host ) {
+  List<String> listDatabases( InetSocketAddress address ) {
     List<String> lines = []
     Sql sql = null
     try {
-      sql = getConnectionInternal( host, "postgres", null )
+      sql = getConnectionInternal( address, "postgres", null )
       sql.query("select datname from pg_database") { ResultSet rs ->
         while (rs.next()) lines.add(rs.toRowResult().datname)
       }
@@ -804,16 +801,16 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
 
   @Override
   List<String> listSchemas( String database ) {
-    listSchemas( InetAddress.getByName('127.0.0.1'), database )
+    listSchemas( new InetSocketAddress( InetAddress.getByName( '127.0.0.1' ), PG_PORT ), database )
   }
 
   @SuppressWarnings("GroovyAssignabilityCheck")
   @Override
-  List<String> listSchemas( InetAddress host, String database ) {
+  List<String> listSchemas( InetSocketAddress address, String database ) {
     List<String> lines = []
     Sql sql = null
     try {
-      sql = getConnectionInternal( host, database, null )
+      sql = getConnectionInternal( address, database, null )
       sql.connection.metaData.schemas.with{ ResultSet rs ->
         while (rs.next()) lines.add(rs.toRowResult().table_schem )
       }
@@ -840,10 +837,24 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   }
 
   @Override
+  void createSchema( String database, String schema ) {
+    LOG.info("Creating schema ${schema} in database ${database}")
+    try {
+      dbExecute(database, "CREATE SCHEMA \"${schema}\" AUTHORIZATION \"${userName}\"" )
+    } catch( Exception ex ) {
+      if ( !ex.getMessage().contains("already exists") ) {
+        LOG.error( "Creating schema ${schema} failed because of: ${ex.message}" )
+        throw ex
+      }
+    }
+    LOG.info("Scheama ${schema} created successfully")
+  }
+
+  @Override
   void createDatabase( String name ) {
     LOG.info("Creating database ${name}")
     try {
-      dbExecute("postgres", "CREATE DATABASE \"${name}\" OWNER \"${getUserName()}\"" )
+      dbExecute("postgres", "CREATE DATABASE \"${name}\" OWNER \"${userName}\"" )
     } catch( Exception ex ) {
       LOG.error( "Creating database ${name} failed because of: ${ex.message}" )
       throw ex
@@ -867,10 +878,10 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   void copyDatabase( String from, String to ) {
     LOG.info("Copying database ${from} to ${to}")
     try {
-      dbExecute("postgres", "CREATE DATABASE \"${to}\" TEMPLATE \"${from}\" OWNER \"${getUserName()}\"" )
+      dbExecute("postgres", "CREATE DATABASE \"${to}\" TEMPLATE \"${from}\" OWNER \"${userName}\"" )
     } catch( Exception ex ) {
       LOG.error( "Copying database ${from} to ${to} failed because of: ${ex.message}" )
-      throw ex;
+      throw ex
     }
     LOG.info("Database ${from} copied to ${to} successfully")
   }
@@ -969,7 +980,11 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
     }
     true
   }
-  
+
+  boolean isLocal( ) {
+    true
+  }
+
   void hup( ) {
     if( !stop() ) {
       LOG.fatal("Unable to stop the postgresql server")
@@ -1019,7 +1034,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   
   @Override
   String getUserName( ) {
-    DatabaseBootstrapper.DB_USERNAME
+    EUCA_DB_USER
   }
 
   @Override
@@ -1051,6 +1066,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   Map<String, String> getJdbcUrlQueryParameters() {
     PG_USE_SSL ? [
       ssl:'true',
+      sslmode:'require',
       sslfactory: 'com.eucalyptus.postgresql.PostgreSQLSSLSocketFactory'
     ] : emptyMap()
   }

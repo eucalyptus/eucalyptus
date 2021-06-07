@@ -49,7 +49,7 @@ import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.pipeline.auth.S3V4Authentication.V4AuthComponent;
 import com.eucalyptus.util.Assert;
 import com.eucalyptus.ws.util.HmacUtils.SignatureCredential;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 import java.util.Date;
 import java.util.Map;

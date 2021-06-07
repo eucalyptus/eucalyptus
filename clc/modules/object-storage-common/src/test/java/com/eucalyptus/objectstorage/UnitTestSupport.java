@@ -52,7 +52,6 @@ import com.eucalyptus.objectstorage.entities.PartEntity;
 import com.eucalyptus.objectstorage.entities.S3AccessControlledEntity;
 import com.eucalyptus.objectstorage.entities.S3ProviderConfiguration;
 import com.eucalyptus.objectstorage.entities.ScheduledJob;
-import com.eucalyptus.objectstorage.entities.TorrentInfo;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 
@@ -78,7 +77,7 @@ public class UnitTestSupport {
     PersistenceContextConfiguration config = new PersistenceContextConfiguration(
         "eucalyptus_osg",
         ImmutableList.<Class<?>>builder( ).add(Bucket.class).add(ObjectEntity.class)
-            .add(PartEntity.class).add(TorrentInfo.class).add(BucketTags.class)
+            .add(PartEntity.class).add(BucketTags.class)
             .add(LifecycleRule.class).add(ScheduledJob.class).add(ObjectStorageGlobalConfiguration.class)
             .add( S3AccessControlledEntity.class ).add( S3ProviderConfiguration.class ).build( ),
         props

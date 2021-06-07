@@ -28,6 +28,7 @@
  ************************************************************************/
 package com.eucalyptus.auth.euare.common.identity
 
+import com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage
 import com.google.common.collect.Lists
 import com.google.common.collect.Sets
 import org.junit.Ignore
@@ -49,7 +50,7 @@ class IdentityBindingGenerator {
     ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider( false )
     scanner.addIncludeFilter( new AssignableTypeFilter( IdentityMessage ) );
     Set<String> messageClasses = Sets.newTreeSet( scanner.findCandidateComponents( IdentityMessage.package.name )*.beanClassName )
-    messageClasses.removeAll( [ 'com.eucalyptus.auth.euare.common.identity.IdentityMessage' ] )
+    messageClasses.removeAll( [ 'com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage' ] )
     Set<String> beanClasses = Sets.newTreeSet( )
     Set<String> printedBeanClasses = Sets.newHashSet( )
     for ( String messageclass : messageClasses ) {
@@ -57,7 +58,7 @@ class IdentityBindingGenerator {
 
       if ( messageclass.endsWith( "ResponseType" ) ) {
         println """  <mapping name="${simpleName.substring(0,simpleName.length()-4)}" class="${messageclass}">"""
-        println """    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>"""
+        println """    <structure map-as="com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage"/>"""
         println """    <structure name="${simpleName.substring(0,simpleName.length()-12)}Result" field="${simpleName.substring(0,1).toLowerCase()}${simpleName.substring(1,simpleName.length()-12)}Result" usage="required" type="${messageclass.replace("ResponseType", "Result")}"/>"""
         println """    <structure map-as="IdentityResponseMessage"/>"""
         println """  </mapping>"""
@@ -66,7 +67,7 @@ class IdentityBindingGenerator {
         println """  </mapping>"""
       } else if ( messageclass.endsWith( "Type" ) ) {
         println """  <mapping name="${simpleName.substring(0,simpleName.length()-4)}" class="${messageclass}">"""
-        println """    <structure map-as="com.eucalyptus.auth.euare.common.identity.IdentityMessage"/>"""
+        println """    <structure map-as="com.eucalyptus.auth.euare.common.identity.msgs.IdentityMessage"/>"""
         printFields( messageclass, beanClasses )
         println """  </mapping>"""
       } else {

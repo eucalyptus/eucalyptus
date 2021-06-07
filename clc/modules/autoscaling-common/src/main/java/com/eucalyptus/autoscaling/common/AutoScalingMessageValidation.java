@@ -98,13 +98,13 @@ public class AutoScalingMessageValidation {
     TAG_FILTER( "auto-scaling-group|key|value|propagate-at-launch" ),
     TAG_RESOURCE( "auto-scaling-group" ),
     TERMINATION_POLICY( "OldestInstance|NewestInstance|OldestLaunchConfiguration|ClosestToNextInstanceHour|Default" ),
-    VPC_ZONE_IDENTIFIER( "subnet-[0-9a-fA-F]{8}(?: *, *subnet-[0-9a-fA-F]{8})*" ),
+    VPC_ZONE_IDENTIFIER( "subnet-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?(?: *, *subnet-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?)*" ),
 
     // EC2
     EC2_NAME( "(?s).{1,255}" ),
-    EC2_MACHINE_IMAGE( "[ae]mi-[0-9a-fA-F]{8}" ),
-    EC2_KERNEL_IMAGE( "[ae]ki-[0-9a-fA-F]{8}" ),
-    EC2_RAMDISK_IMAGE( "[ae]ri-[0-9a-fA-F]{8}" ),
+    EC2_MACHINE_IMAGE( "[ae]mi-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?" ),
+    EC2_KERNEL_IMAGE( "[ae]ki-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?" ),
+    EC2_RAMDISK_IMAGE( "[ae]ri-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?" ),
     EC2_SNAPSHOT( "snap-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?" ),
     EC2_INSTANCE( "i-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?" ),
     EC2_INSTANCE_VERBOSE( "i-[0-9a-fA-F]{8}(?:[0-9a-fA-F]{9})?|verbose" ),
@@ -114,6 +114,7 @@ public class AutoScalingMessageValidation {
 
     // ELB
     ELB_NAME( "(?s).{1,255}" ),
+    ELB_TARGETGROUPARN( "arn:aws:elasticloadbalancing:[!-~]{1,483}" ),
 
     // IAM
     IAM_NAME_OR_ARN( "[a-zA-Z0-9+=,.@-]{1,128}|arn:aws:iam:[!-~]{1,1588}" ),

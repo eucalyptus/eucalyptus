@@ -38,42 +38,51 @@ import org.apache.log4j.Logger;
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
-@Upgrades.PreUpgrade( value = LoadBalancing.class, since = Upgrades.Version.v4_4_0 )
+@Upgrades.PreUpgrade(value = LoadBalancing.class, since = Upgrades.Version.v4_4_0)
 public class Properties440Upgrade implements Callable<Boolean> {
-  private static final Logger LOG = 
-      Logger.getLogger( Properties440Upgrade.class );
+  private static final Logger LOG =
+      Logger.getLogger(Properties440Upgrade.class);
 
-  private final static Map<String,String> propNameToFieldName = ImmutableMap.<String,String>builder()
-      .put("services.loadbalancing.worker.ntp_server", "com.eucalyptus.loadbalancing.LoadBalancingWorkerProperties.ntp_server")
-      .put("services.loadbalancing.worker.init_script","com.eucalyptus.loadbalancing.LoadBalancingWorkerProperties.init_script")
-      .put("services.loadbalancing.worker.expiration_days", "com.eucalyptus.loadbalancing.LoadBalancingWorkerProperties.expiration_days")
-      .put("services.loadbalancing.worker.keyname","com.eucalyptus.loadbalancing.LoadBalancingWorkerProperties.keyname")
-      .put("services.loadbalancing.vm_per_zone", "com.eucalyptus.loadbalancing.LoadBalancingServiceProperties.vm_per_zone")
-      .put("services.loadbalancing.worker.instance_type", "com.eucalyptus.loadbalancing.LoadBalancingWorkerProperties.instance_type")
-      .put("services.loadbalancing.worker.app_cookie_duration", "com.eucalyptus.loadbalancing.LoadBalancingWorkerProperties.app_cookie_duration")
-      .put("services.loadbalancing.worker.image", "com.eucalyptus.loadbalancing.LoadBalancingWorkerProperties.image")
-      .build();
-      
+  private final static Map<String, String> propNameToFieldName =
+      ImmutableMap.<String, String>builder()
+          .put("services.loadbalancing.worker.ntp_server",
+              "com.eucalyptus.loadbalancing.LoadBalancingWorkerProperties.ntp_server")
+          .put("services.loadbalancing.worker.init_script",
+              "com.eucalyptus.loadbalancing.LoadBalancingWorkerProperties.init_script")
+          .put("services.loadbalancing.worker.expiration_days",
+              "com.eucalyptus.loadbalancing.LoadBalancingWorkerProperties.expiration_days")
+          .put("services.loadbalancing.worker.keyname",
+              "com.eucalyptus.loadbalancing.LoadBalancingWorkerProperties.keyname")
+          .put("services.loadbalancing.vm_per_zone",
+              "com.eucalyptus.loadbalancing.LoadBalancingServiceProperties.vm_per_zone")
+          .put("services.loadbalancing.worker.instance_type",
+              "com.eucalyptus.loadbalancing.LoadBalancingWorkerProperties.instance_type")
+          .put("services.loadbalancing.worker.app_cookie_duration",
+              "com.eucalyptus.loadbalancing.LoadBalancingWorkerProperties.app_cookie_duration")
+          .put("services.loadbalancing.worker.image",
+              "com.eucalyptus.loadbalancing.LoadBalancingWorkerProperties.image")
+          .build();
+
   @Override
   public Boolean call() throws Exception {
     Sql sql = null;
     try {
-      sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection( "eucalyptus_loadbalancing" );
-      for(final String propName : propNameToFieldName.keySet()) {
+      sql = Upgrades.DatabaseFilters.NEWVERSION.getConnection("eucalyptus_loadbalancing");
+      for (final String propName : propNameToFieldName.keySet()) {
         final String fieldName = propNameToFieldName.get(propName);
-        final String query = String.format("update eucalyptus_config.config_static_property set config_static_field_name='%s' where config_static_prop_name='%s'", 
+        final String query = String.format(
+            "update eucalyptus_config.config_static_property set config_static_field_name='%s' where config_static_prop_name='%s'",
             fieldName, propName);
         sql.execute(query);
       }
       return true;
-    } catch ( Exception ex ) {
-      LOG.error( "Error updating loadbalancer properties field names", ex );
+    } catch (Exception ex) {
+      LOG.error("Error updating loadbalancer properties field names", ex);
       return false;
     } finally {
-      if ( sql != null ) {
-        sql.close( );
+      if (sql != null) {
+        sql.close();
       }
     }
   }

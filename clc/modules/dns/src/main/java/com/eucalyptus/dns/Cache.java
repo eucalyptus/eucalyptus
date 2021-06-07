@@ -60,6 +60,7 @@ import org.xbill.DNS.SOARecord;
 import org.xbill.DNS.Section;
 import org.xbill.DNS.SetResponse;
 import org.xbill.DNS.Type;
+import com.eucalyptus.util.dns.SetResponses;
 
 /**
  * A cache of DNS records.  The cache obeys TTLs, so items are purged after
@@ -259,12 +260,13 @@ public class Cache {
 		data.remove(name);
 	}
 
-	private synchronized Element []
+	@SuppressWarnings( "unchecked" )
+  private synchronized Element []
 	                              allElements(Object types) {
 		if (types instanceof List) {
-			List typelist = (List) types;
+			List<Element> typelist = (List<Element>) types;
 			int size = typelist.size();
-			return (Element []) typelist.toArray(new Element[size]);
+			return typelist.toArray(new Element[size]);
 		} else {
 			Element set = (Element) types;
 			return new Element[] {set};
@@ -310,7 +312,8 @@ public class Cache {
 		return oneElement(name, types, type, minCred);
 	}
 
-	private synchronized void
+	@SuppressWarnings( "unchecked" )
+  private synchronized void
 	addElement(Name name, Element element) {
 		Object types = data.get(name);
 		if (types == null) {
@@ -484,7 +487,7 @@ public class Cache {
 
 			/* If this is an ANY lookup, return everything. */
 			if (isExact && type == Type.ANY) {
-				sr = new SetResponse(SetResponse.SUCCESSFUL);
+				sr = SetResponses.ofType( SetResponses.SetResponseType.successful);
 				Element [] elements = allElements(types);
 				int added = 0;
 				for (int i = 0; i < elements.length; i++) {
@@ -497,7 +500,7 @@ public class Cache {
 						continue;
 					if (element.compareCredibility(minCred) < 0)
 						continue;
-					sr.addRRset((CacheRRset)element);
+					SetResponses.addRRset( sr, (CacheRRset)element);
 					added++;
 				}
 				/* There were positive entries */
@@ -514,11 +517,11 @@ public class Cache {
 				if (element != null &&
 						element instanceof CacheRRset)
 				{
-					sr = new SetResponse(SetResponse.SUCCESSFUL);
-					sr.addRRset((CacheRRset) element);
+					sr = SetResponses.ofType( SetResponses.SetResponseType.successful);
+					SetResponses.addRRset( sr, (CacheRRset) element);
 					return sr;
 				} else if (element != null) {
-					sr = new SetResponse(SetResponse.NXRRSET);
+					sr = SetResponses.ofType( SetResponses.SetResponseType.nxrrset);
 					return sr;
 				}
 
@@ -526,7 +529,7 @@ public class Cache {
 				if (element != null &&
 						element instanceof CacheRRset)
 				{
-					return new SetResponse(SetResponse.CNAME,
+					return SetResponses.newInstance( SetResponses.SetResponseType.cname,
 							(CacheRRset) element);
 				}
 			} else {
@@ -534,7 +537,7 @@ public class Cache {
 				if (element != null &&
 						element instanceof CacheRRset)
 				{
-					return new SetResponse(SetResponse.DNAME,
+					return SetResponses.newInstance( SetResponses.SetResponseType.dname,
 							(CacheRRset) element);
 				}
 			}
@@ -542,18 +545,18 @@ public class Cache {
 			/* Look for an NS */
 			element = oneElement(tname, types, Type.NS, minCred);
 			if (element != null && element instanceof CacheRRset)
-				return new SetResponse(SetResponse.DELEGATION,
+				return SetResponses.newInstance( SetResponses.SetResponseType.delegation,
 						(CacheRRset) element);
 
 			/* Check for the special NXDOMAIN element. */
 			if (isExact) {
 				element = oneElement(tname, types, 0, minCred);
 				if (element != null)
-					return SetResponse.ofType(SetResponse.NXDOMAIN);
+					return SetResponses.ofType( SetResponses.SetResponseType.nxdomain);
 			}
 
 		}
-		return SetResponse.ofType(SetResponse.UNKNOWN);
+		return SetResponses.ofType( SetResponses.SetResponseType.unknown);
 	}
 
 	/**
@@ -624,7 +627,8 @@ public class Cache {
 			throw new IllegalArgumentException("getCred: invalid section");
 	}
 
-	private static void
+	@SuppressWarnings( "unchecked" )
+  private static void
 	markAdditional(RRset rrset, Set names) {
 		Record first = rrset.first();
 		if (first.getAdditionalName() == null)
@@ -689,16 +693,15 @@ public class Cache {
 				completed = true;
 				if (curname != null && curname.equals(qname)) {
 					if (response == null)
-						response = new SetResponse(
-								SetResponse.SUCCESSFUL);
-					response.addRRset(answers[i]);
+						response = SetResponses.ofType( SetResponses.SetResponseType.successful);
+					SetResponses.addRRset( response, answers[i]);
 				}
 				markAdditional(answers[i], additionalNames);
 			} else if (type == Type.CNAME && name.equals(curname)) {
 				CNAMERecord cname;
 				addRRset(answers[i], cred);
 				if (curname != null && curname.equals(qname))
-					response = new SetResponse(SetResponse.CNAME,
+					response = SetResponses.newInstance( SetResponses.SetResponseType.cname,
 							answers[i]);
 				cname = (CNAMERecord) answers[i].first();
 				curname = cname.getTarget();
@@ -706,7 +709,7 @@ public class Cache {
 				DNAMERecord dname;
 				addRRset(answers[i], cred);
 				if (curname.equals(qname))
-					response = new SetResponse(SetResponse.DNAME,
+					response = SetResponses.newInstance( SetResponses.SetResponseType.dname,
 							answers[i]);
 				dname = (DNAMERecord) answers[i].first();
 				try {
@@ -742,12 +745,12 @@ public class Cache {
 				if(curname != null)
 					addNegative(curname, cachetype, soarec, cred);
 				if (response == null) {
-					int responseType;
+					SetResponses.SetResponseType responseType;
 					if (rcode == Rcode.NXDOMAIN)
-						responseType = SetResponse.NXDOMAIN;
+						responseType = SetResponses.SetResponseType.nxdomain;
 					else
-						responseType = SetResponse.NXRRSET;
-					response = SetResponse.ofType(responseType);
+						responseType = SetResponses.SetResponseType.nxrrset;
+					response = SetResponses.ofType( responseType);
 				}
 				/* DNSSEC records are not cached. */
 			} else {
@@ -756,8 +759,7 @@ public class Cache {
 				addRRset(ns, cred);
 				markAdditional(ns, additionalNames);
 				if (response == null)
-					response = new SetResponse(
-							SetResponse.DELEGATION,
+					response = SetResponses.newInstance( SetResponses.SetResponseType.delegation,
 							ns);
 			}
 		} else if (rcode == Rcode.NOERROR && ns != null) {
@@ -887,7 +889,7 @@ public class Cache {
 
 	/**
 	 * Returns the contents of the Cache as a string.
-	 */ 
+	 */
 	public String
 	toString() {
 		StringBuffer sb = new StringBuffer();

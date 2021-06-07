@@ -74,8 +74,8 @@ import com.eucalyptus.util.metrics.MonitoredAction;
 import com.eucalyptus.util.metrics.ThruputMetrics;
 import com.google.common.base.Strings;
 
-import edu.ucsb.eucalyptus.util.EucaSemaphore;
-import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
+import com.eucalyptus.blockstorage.util.EucaSemaphore;
+import com.eucalyptus.blockstorage.util.EucaSemaphoreDirectory;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 import edu.ucsb.eucalyptus.util.SystemUtil.CommandOutput;
 

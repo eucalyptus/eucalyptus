@@ -28,14 +28,12 @@
  ************************************************************************/
 package com.eucalyptus.imaging.backend;
 
-import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.DistributedServiceBuilder;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.imaging.common.ImagingBackend;
 
 @ComponentPart( ImagingBackend.class )
-@Handles({})
 public class ImagingBackendServiceBuilder extends DistributedServiceBuilder {
   public ImagingBackendServiceBuilder() {
     super( ComponentIds.lookup(ImagingBackend.class));

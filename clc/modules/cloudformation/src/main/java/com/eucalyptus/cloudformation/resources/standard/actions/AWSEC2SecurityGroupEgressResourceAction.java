@@ -44,21 +44,22 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupEgressResponseType;
 import com.eucalyptus.compute.common.AuthorizeSecurityGroupEgressType;
+import com.eucalyptus.compute.common.CidrIpType;
+import com.eucalyptus.compute.common.CloudFilters;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType;
 import com.eucalyptus.compute.common.DescribeSecurityGroupsType;
-import com.eucalyptus.compute.common.Filter;
 import com.eucalyptus.compute.common.IpPermissionType;
 import com.eucalyptus.compute.common.RevokeSecurityGroupEgressResponseType;
 import com.eucalyptus.compute.common.RevokeSecurityGroupEgressType;
 import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.compute.common.UserIdGroupPairType;
+import com.eucalyptus.compute.common.internal.network.NetworkCidr;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Objects;
 
@@ -116,7 +117,7 @@ public class AWSEC2SecurityGroupEgressResourceAction extends StepBasedResourceAc
         action.validateProperties();
         // Make sure security group exists.
         DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, action.info.getEffectiveUserId());
-        describeSecurityGroupsType.setFilterSet( Lists.newArrayList( Filter.filter( "group-id", action.properties.getGroupId( ) ) ) );
+        describeSecurityGroupsType.setFilterSet( Lists.newArrayList( CloudFilters.filter( "group-id", action.properties.getGroupId( ) ) ) );
         DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.sendSync(configuration, describeSecurityGroupsType);
         ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
         boolean hasDefaultEgressRule = false;
@@ -143,20 +144,20 @@ public class AWSEC2SecurityGroupEgressResourceAction extends StepBasedResourceAc
           action.properties.getToPort()
         );
         if (!Strings.isNullOrEmpty(action.properties.getCidrIp())) {
-          ipPermissionType.setCidrIpRanges(Lists.newArrayList(action.properties.getCidrIp()));
+          ipPermissionType.setIpRanges(Lists.newArrayList(new CidrIpType(action.properties.getCidrIp(), action.properties.getDescription())));
         }
         if (!Strings.isNullOrEmpty(action.properties.getDestinationSecurityGroupId())) {
-          ipPermissionType.setGroups(Lists.newArrayList(new UserIdGroupPairType(null, null, action.properties.getDestinationSecurityGroupId())));
+          ipPermissionType.setGroups(Lists.newArrayList(new UserIdGroupPairType(null, null, action.properties.getDestinationSecurityGroupId(), action.properties.getDescription())));
         }
         authorizeSecurityGroupEgressType.setIpPermissions(Lists.newArrayList(ipPermissionType));
-        AuthorizeSecurityGroupEgressResponseType authorizeSecurityGroupIngressResponseType = AsyncRequests.<AuthorizeSecurityGroupEgressType, AuthorizeSecurityGroupEgressResponseType> sendSync(configuration, authorizeSecurityGroupEgressType);
+        AsyncRequests.<AuthorizeSecurityGroupEgressType, AuthorizeSecurityGroupEgressResponseType> sendSync(configuration, authorizeSecurityGroupEgressType);
 
         // remove default (if there)
         if (hasDefaultEgressRule) {
           RevokeSecurityGroupEgressType revokeSecurityGroupEgressType = MessageHelper.createMessage(RevokeSecurityGroupEgressType.class, action.info.getEffectiveUserId());
           revokeSecurityGroupEgressType.setGroupId(action.properties.getGroupId());
           revokeSecurityGroupEgressType.setIpPermissions(Lists.newArrayList(DEFAULT_EGRESS_RULE()));
-          RevokeSecurityGroupEgressResponseType revokeSecurityGroupEgressResponseType = AsyncRequests.<RevokeSecurityGroupEgressType, RevokeSecurityGroupEgressResponseType> sendSync(configuration, revokeSecurityGroupEgressType);
+          AsyncRequests.<RevokeSecurityGroupEgressType, RevokeSecurityGroupEgressResponseType> sendSync(configuration, revokeSecurityGroupEgressType);
         }
 
         action.info.setPhysicalResourceId(action.getDefaultPhysicalResourceId());
@@ -164,12 +165,6 @@ public class AWSEC2SecurityGroupEgressResourceAction extends StepBasedResourceAc
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -185,7 +180,7 @@ public class AWSEC2SecurityGroupEgressResourceAction extends StepBasedResourceAc
         action.validateProperties();
         // Make sure security group exists.
         DescribeSecurityGroupsType describeSecurityGroupsType = MessageHelper.createMessage(DescribeSecurityGroupsType.class, action.info.getEffectiveUserId());
-        describeSecurityGroupsType.setFilterSet( Lists.newArrayList( Filter.filter( "group-id", action.properties.getGroupId( ) ) ) );
+        describeSecurityGroupsType.setFilterSet( Lists.newArrayList( CloudFilters.filter( "group-id", action.properties.getGroupId( ) ) ) );
         DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType = AsyncRequests.sendSync(configuration, describeSecurityGroupsType);
         ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
         if (securityGroupItemTypeArrayList == null || securityGroupItemTypeArrayList.isEmpty()) {
@@ -210,7 +205,7 @@ public class AWSEC2SecurityGroupEgressResourceAction extends StepBasedResourceAc
         RevokeSecurityGroupEgressResponseType revokeSecurityGroupEgressResponseType = AsyncRequests.<RevokeSecurityGroupEgressType, RevokeSecurityGroupEgressResponseType> sendSync(configuration, revokeSecurityGroupEgressType);
         // do one last check, if there and no egress rules, re-add default rule
         DescribeSecurityGroupsType describeSecurityGroupsType2 = MessageHelper.createMessage(DescribeSecurityGroupsType.class, action.info.getEffectiveUserId());
-        describeSecurityGroupsType2.setFilterSet( Lists.newArrayList( Filter.filter( "group-id", action.properties.getGroupId( ) ) ) );
+        describeSecurityGroupsType2.setFilterSet( Lists.newArrayList( CloudFilters.filter( "group-id", action.properties.getGroupId( ) ) ) );
         DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType2 = AsyncRequests.sendSync(configuration, describeSecurityGroupsType);
         ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList2 = describeSecurityGroupsResponseType2.getSecurityGroupInfo();
         if (securityGroupItemTypeArrayList2 == null || securityGroupItemTypeArrayList2.isEmpty()) {
@@ -224,12 +219,6 @@ public class AWSEC2SecurityGroupEgressResourceAction extends StepBasedResourceAc
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -261,9 +250,10 @@ public class AWSEC2SecurityGroupEgressResourceAction extends StepBasedResourceAc
   }
 
   private boolean isDefaultEgressRule(IpPermissionType ipPermissionType) {
-    return ipPermissionType.getIpProtocol().equals("-1") && ipPermissionType.getFromPort() == null
-      && ipPermissionType.getToPort() == null && ipPermissionType.getCidrIpRanges() != null &&
-      ipPermissionType.getCidrIpRanges().size() == 1 && ipPermissionType.getCidrIpRanges().get(0).equals("0.0.0.0/0");
+    return ipPermissionType.getIpProtocol().equals("-1") && ipPermissionType.getFromPort() == null &&
+      ipPermissionType.getToPort() == null && ipPermissionType.getIpRanges() != null &&
+      ipPermissionType.getIpRanges().size() == 1 && ipPermissionType.getIpRanges().get(0) != null &&
+      ipPermissionType.getIpRanges().get(0).getCidrIp().equals("0.0.0.0/0");
   }
 
   private void validateProperties() throws ValidationErrorException {

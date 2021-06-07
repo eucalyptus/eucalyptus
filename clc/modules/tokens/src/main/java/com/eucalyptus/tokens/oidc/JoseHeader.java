@@ -35,7 +35,7 @@ import com.eucalyptus.util.Json;
 import com.eucalyptus.util.Parameters;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.MoreObjects;
-import javaslang.control.Option;
+import io.vavr.control.Option;
 
 /**
  *  The JOSE (JSON Object Signing and Encryption) Header is comprised of a set of Header Parameters.

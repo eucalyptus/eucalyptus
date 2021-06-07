@@ -29,27 +29,22 @@
 package com.eucalyptus.cluster.service.config;
 
 import java.util.NoSuchElementException;
-import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.cluster.common.Cluster;
 import com.eucalyptus.cluster.common.ClusterRegistry;
 import com.eucalyptus.cluster.service.ClusterServiceId;
 import com.eucalyptus.component.AbstractServiceBuilder;
+import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.annotation.ComponentPart;
+import com.eucalyptus.context.ServiceStateException;
 
 /**
  *
  */
 @ComponentPart( ClusterServiceId.class )
-@Handles( {
-    RegisterClusterServiceType.class,
-    DeregisterClusterServiceType.class,
-    DescribeClusterServicesType.class,
-    ModifyClusterServiceAttributeType.class
-} )
 public class ClusterServiceBuilder extends AbstractServiceBuilder<ClusterServiceConfiguration> {
 
   @Override
@@ -85,7 +80,7 @@ public class ClusterServiceBuilder extends AbstractServiceBuilder<ClusterService
   }
 
   @Override
-  public void fireEnable( final ServiceConfiguration config ) throws ServiceRegistrationException {
+  public void fireEnable( final ServiceConfiguration config ) {
     try {
       registry( ).lookupDisabled( config.getName( ) ).enable( );
     } catch ( final NoSuchElementException ignore ) {
@@ -93,7 +88,7 @@ public class ClusterServiceBuilder extends AbstractServiceBuilder<ClusterService
   }
 
   @Override
-  public void fireDisable( final ServiceConfiguration config ) throws ServiceRegistrationException {
+  public void fireDisable( final ServiceConfiguration config ) {
     try {
       registry( ).lookup( config.getName( ) ).disable( );
     } catch ( final NoSuchElementException ignore ) {
@@ -101,13 +96,13 @@ public class ClusterServiceBuilder extends AbstractServiceBuilder<ClusterService
   }
 
   @Override
-  public void fireCheck( final ServiceConfiguration config ) throws ServiceRegistrationException {
-    try {
-      registry( ).lookup( config.getName( ) ).enable( );
-    } catch ( final NoSuchElementException e ) {
+  public void fireCheck( final ServiceConfiguration config ) {
+    if ( config.lookupState( ).ordinal( ) > State.DISABLED.ordinal( ) ) {
       try {
-        registry( ).lookupDisabled( config.getName( ) ).enable( );
+        registry( ).lookup( config.getName( ) ).check( );
       } catch ( final NoSuchElementException ignore ) {
+      } catch ( InterruptedException ignore ) {
+      } catch ( ServiceStateException ignore ) {
       }
     }
   }

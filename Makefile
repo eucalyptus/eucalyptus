@@ -136,7 +136,6 @@ install: deploy
 	$(INSTALL) -d -m 0700 $(DESTDIR)$(vardir)/lib/eucalyptus/upgrade
 	$(INSTALL) -d -m 0700 $(DESTDIR)$(vardir)/lib/eucalyptus/volumes
 	$(INSTALL) -d -m 0700 $(DESTDIR)$(vardir)/lib/eucalyptus/webapps
-	touch $(DESTDIR)$(vardir)/lib/eucalyptus/services
 	$(INSTALL) -d -m 0755 $(DESTDIR)$(vardir)/run/eucalyptus/net
 	$(INSTALL) -d -m 0750 $(DESTDIR)$(vardir)/run/eucalyptus/status
 	@$(INSTALL) -d $(DESTDIR)$(vardir)/log/eucalyptus -m 750

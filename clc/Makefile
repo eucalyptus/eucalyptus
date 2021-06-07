@@ -47,7 +47,7 @@ include ../Makedefs
 #
 CLOUD_LIBS_BRANCH ?= master
 ifeq ($(USE_BUNDLED_JARS), no)
-    CLOUD_LIBS_DIR ?= ${datarootdir}/eucalyptus
+    CLOUD_LIBS_DIR ?= ${datarootdir}/eucalyptus/lib
 else
     CLOUD_LIBS_DIR ?= $(CURDIR)/lib
 endif
@@ -135,24 +135,21 @@ build: deps
 	@# we need JAVA_HOME
 	@if test -z "${JAVA_HOME}" ; then \
 		echo "You need to define JAVA_HOME!"; exit 1; fi
-	ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) build-all
-	ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) jar
-	make -C eucadmin
+	ANT_OPTS="-Xmx2g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) build-all
+	ANT_OPTS="-Xmx2g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) jar
 
 build-test: deps
 	@# we need JAVA_HOME
 	@if test -z "${JAVA_HOME}" ; then \
 		echo "You need to define JAVA_HOME!"; exit 1; fi
-	ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) build-test
-	ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) jar
-	make -C eucadmin
+	ANT_OPTS="-Xmx2g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) build-test
+	ANT_OPTS="-Xmx2g -noverify" $(ANT) -Dlib.dir=${CLOUD_LIBS_DIR} -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) jar
 
 indent:
 	$(ANT) -Dlib.dir=$(CLOUD_LIBS_DIR) -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) indent
 	
 clean: deps
 	$(ANT) -Dlib.dir=$(CLOUD_LIBS_DIR) -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) clean
-	make -C eucadmin clean
 	rm -f .nogit
 ifeq ($(DISABLEGIT), 0)
 	if grep -q eucalyptus-cloud-libs lib/.git/config 2>/dev/null; then \
@@ -166,26 +163,21 @@ endif
 distclean: clean
 	rm -rf ${TOP}/{deps,lib}
 	$(ANT) -Dlib.dir=$(CLOUD_LIBS_DIR) -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) distclean
-	make -C eucadmin distclean
 
 install: build
 	ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=$(CLOUD_LIBS_DIR) -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) install
-	make -C eucadmin install
 ifneq ($(USE_BUNDLED_JARS), no)
-	install -D -m 0644 $(CLOUD_LIBS_DIR)/*.jar $(DESTDIR)$(datarootdir)/eucalyptus
+	install -D -m 0644 $(CLOUD_LIBS_DIR)/*.jar $(DESTDIR)$(datarootdir)/eucalyptus/lib
 endif
 
 install-test: build-test
 	ANT_OPTS="-Xmx1g -noverify" $(ANT) -Dlib.dir=$(CLOUD_LIBS_DIR) -Ddeps.lib.dir=$(CLOUD_LIBS_DIR) install
-	make -C eucadmin install
 
 deploy: install
 
 uninstall:
-	make -C eucadmin uninstall
 	$(RM) -rf $(DESTDIR)$(etcdir)/eucalyptus/cloud.d
 	$(RM) -rf $(DESTDIR)$(datarootdir)/eucalyptus/*jar
-	$(RM) -rf $(DESTDIR)$(vardir)/eucalyptus/webapps
 
 # cleaning up after run-test currently requires a few iterations of:
 #   dmsetup table | cut -d':' -f 1 | sort | uniq | xargs -L 1 dmsetup remove ; losetup -a | cut -d':' -f 1 | xargs -L 1 losetup -d; losetup -a

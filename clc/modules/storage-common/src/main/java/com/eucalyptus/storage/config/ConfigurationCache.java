@@ -53,7 +53,8 @@ public class ConfigurationCache {
         }
       });
 
-  public static <T extends CacheableConfiguration> T getConfiguration(Class<T> configType) {
+  @SuppressWarnings( "unchecked" )
+  public static <T extends CacheableConfiguration> T getConfiguration( Class<T> configType) {
     try {
       return (T) configCache.get(configType);
     } catch (Throwable f) {

@@ -35,80 +35,80 @@
             deserializer="org.jibx.runtime.Utility.deserializeDateTime"
             serializer="com.eucalyptus.ws.util.SerializationUtils.serializeDateTime"/>
 
-    <mapping class="com.eucalyptus.tokens.TokenMessage" abstract="true"/>
-    <mapping class="com.eucalyptus.tokens.TokensResponseMetadataType" abstract="true">
+    <mapping class="com.eucalyptus.tokens.common.msgs.TokenMessage" abstract="true"/>
+    <mapping class="com.eucalyptus.tokens.common.msgs.TokensResponseMetadataType" abstract="true">
         <value name="RequestId" field="requestId"/>
     </mapping>
-    <mapping name="Error" class="com.eucalyptus.tokens.TokensErrorType">
+    <mapping name="Error" class="com.eucalyptus.tokens.common.msgs.TokensErrorType">
         <value name="Type" field="type" usage="required"/>
         <value name="Code" field="code" usage="required"/>
         <value name="Message" field="message" usage="required"/>
-        <structure field="detail" usage="required" map-as="com.eucalyptus.tokens.TokensErrorDetailType"/>
+        <structure field="detail" usage="required" map-as="com.eucalyptus.tokens.common.msgs.TokensErrorDetailType"/>
     </mapping>
-    <mapping name="Detail" class="com.eucalyptus.tokens.TokensErrorDetailType">
+    <mapping name="Detail" class="com.eucalyptus.tokens.common.msgs.TokensErrorDetailType">
     </mapping>
-    <mapping name="ErrorResponse" class="com.eucalyptus.tokens.TokensErrorResponseType" extends="com.eucalyptus.tokens.TokenMessage">
-        <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
+    <mapping name="ErrorResponse" class="com.eucalyptus.tokens.common.msgs.TokensErrorResponseType" extends="com.eucalyptus.tokens.common.msgs.TokenMessage">
+        <structure map-as="com.eucalyptus.tokens.common.msgs.TokenMessage"/>
         <collection field="errors">
-            <structure map-as="com.eucalyptus.tokens.TokensErrorType"/>
+            <structure map-as="com.eucalyptus.tokens.common.msgs.TokensErrorType"/>
         </collection>
         <value name="RequestId" field="requestId" usage="required"/>
     </mapping>
-    <mapping class="com.eucalyptus.tokens.GetCallerIdentityResultType" abstract="true">
+    <mapping class="com.eucalyptus.tokens.common.msgs.GetCallerIdentityResultType" abstract="true">
         <value name="Arn" field="arn" usage="optional"/>
         <value name="Account" field="account" usage="optional"/>
         <value name="UserId" field="userId" usage="optional"/>
     </mapping>
-    <mapping name="GetCallerIdentity" class="com.eucalyptus.tokens.GetCallerIdentityType" extends="com.eucalyptus.tokens.TokenMessage">
-        <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
+    <mapping name="GetCallerIdentity" class="com.eucalyptus.tokens.common.msgs.GetCallerIdentityType" extends="com.eucalyptus.tokens.common.msgs.TokenMessage">
+        <structure map-as="com.eucalyptus.tokens.common.msgs.TokenMessage"/>
     </mapping>
-    <mapping name="GetCallerIdentityResponse" class="com.eucalyptus.tokens.GetCallerIdentityResponseType" extends="com.eucalyptus.tokens.TokenMessage">
-        <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
-        <structure name="GetCallerIdentityResult" field="result" type="com.eucalyptus.tokens.GetCallerIdentityResultType"/>
-        <structure name="ResponseMetadata" field="responseMetadata" type="com.eucalyptus.tokens.TokensResponseMetadataType"/>
+    <mapping name="GetCallerIdentityResponse" class="com.eucalyptus.tokens.common.msgs.GetCallerIdentityResponseType" extends="com.eucalyptus.tokens.common.msgs.TokenMessage">
+        <structure map-as="com.eucalyptus.tokens.common.msgs.TokenMessage"/>
+        <structure name="GetCallerIdentityResult" field="result" type="com.eucalyptus.tokens.common.msgs.GetCallerIdentityResultType"/>
+        <structure name="ResponseMetadata" field="responseMetadata" type="com.eucalyptus.tokens.common.msgs.TokensResponseMetadataType"/>
     </mapping>
-    <mapping class="com.eucalyptus.tokens.CredentialsType" abstract="true">
+    <mapping class="com.eucalyptus.tokens.common.msgs.CredentialsType" abstract="true">
         <value name="AccessKeyId" field="accessKeyId"/>
         <value name="SecretAccessKey" field="secretAccessKey"/>
         <value name="SessionToken" field="sessionToken"/>
         <value name="Expiration" field="expiration"/>
     </mapping>
-    <mapping class="com.eucalyptus.tokens.GetSessionTokenResultType" abstract="true">
-        <structure name="Credentials" field="credentials" usage="optional" type="com.eucalyptus.tokens.CredentialsType"/>
+    <mapping class="com.eucalyptus.tokens.common.msgs.GetSessionTokenResultType" abstract="true">
+        <structure name="Credentials" field="credentials" usage="optional" type="com.eucalyptus.tokens.common.msgs.CredentialsType"/>
     </mapping>
-    <mapping name="GetSessionToken" class="com.eucalyptus.tokens.GetSessionTokenType" extends="com.eucalyptus.tokens.TokenMessage">
-        <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
+    <mapping name="GetSessionToken" class="com.eucalyptus.tokens.common.msgs.GetSessionTokenType" extends="com.eucalyptus.tokens.common.msgs.TokenMessage">
+        <structure map-as="com.eucalyptus.tokens.common.msgs.TokenMessage"/>
         <value name="DurationSeconds" field="durationSeconds" usage="optional"/>
     </mapping>
-    <mapping name="GetSessionTokenResponse" class="com.eucalyptus.tokens.GetSessionTokenResponseType" extends="com.eucalyptus.tokens.TokenMessage">
-        <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
-        <structure name="GetSessionTokenResult" field="result" type="com.eucalyptus.tokens.GetSessionTokenResultType"/>
-        <structure name="ResponseMetadata" field="responseMetadata" type="com.eucalyptus.tokens.TokensResponseMetadataType"/>
+    <mapping name="GetSessionTokenResponse" class="com.eucalyptus.tokens.common.msgs.GetSessionTokenResponseType" extends="com.eucalyptus.tokens.common.msgs.TokenMessage">
+        <structure map-as="com.eucalyptus.tokens.common.msgs.TokenMessage"/>
+        <structure name="GetSessionTokenResult" field="result" type="com.eucalyptus.tokens.common.msgs.GetSessionTokenResultType"/>
+        <structure name="ResponseMetadata" field="responseMetadata" type="com.eucalyptus.tokens.common.msgs.TokensResponseMetadataType"/>
     </mapping>
-    <mapping name="AssumeRole" class="com.eucalyptus.tokens.AssumeRoleType" extends="com.eucalyptus.tokens.TokenMessage">
-        <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
+    <mapping name="AssumeRole" class="com.eucalyptus.tokens.common.msgs.AssumeRoleType" extends="com.eucalyptus.tokens.common.msgs.TokenMessage">
+        <structure map-as="com.eucalyptus.tokens.common.msgs.TokenMessage"/>
         <value name="RoleArn" field="roleArn" usage="required"/>
         <value name="RoleSessionName" field="roleSessionName" usage="required"/>
         <value name="Policy" field="policy" usage="optional"/>
         <value name="DurationSeconds" field="durationSeconds" usage="optional"/>
         <value name="ExternalId" field="externalId" usage="optional"/>
     </mapping>
-    <mapping name="AssumeRoleResponse" class="com.eucalyptus.tokens.AssumeRoleResponseType" extends="com.eucalyptus.tokens.TokenMessage">
-        <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
-        <structure name="AssumeRoleResult" field="assumeRoleResult" usage="required" type="com.eucalyptus.tokens.AssumeRoleResultType"/>
-        <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.tokens.TokensResponseMetadataType"/>
+    <mapping name="AssumeRoleResponse" class="com.eucalyptus.tokens.common.msgs.AssumeRoleResponseType" extends="com.eucalyptus.tokens.common.msgs.TokenMessage">
+        <structure map-as="com.eucalyptus.tokens.common.msgs.TokenMessage"/>
+        <structure name="AssumeRoleResult" field="assumeRoleResult" usage="required" type="com.eucalyptus.tokens.common.msgs.AssumeRoleResultType"/>
+        <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.tokens.common.msgs.TokensResponseMetadataType"/>
     </mapping>
-    <mapping class="com.eucalyptus.tokens.AssumeRoleResultType" abstract="true">
-        <structure name="Credentials" field="credentials" usage="optional" type="com.eucalyptus.tokens.CredentialsType"/>
-        <structure name="AssumedRoleUser" field="assumedRoleUser" usage="optional" type="com.eucalyptus.tokens.AssumedRoleUserType"/>
+    <mapping class="com.eucalyptus.tokens.common.msgs.AssumeRoleResultType" abstract="true">
+        <structure name="Credentials" field="credentials" usage="optional" type="com.eucalyptus.tokens.common.msgs.CredentialsType"/>
+        <structure name="AssumedRoleUser" field="assumedRoleUser" usage="optional" type="com.eucalyptus.tokens.common.msgs.AssumedRoleUserType"/>
         <value name="PackedPolicySize" field="packedPolicySize" usage="optional"/>
     </mapping>
-    <mapping class="com.eucalyptus.tokens.AssumedRoleUserType" abstract="true">
+    <mapping class="com.eucalyptus.tokens.common.msgs.AssumedRoleUserType" abstract="true">
         <value name="AssumedRoleId" field="assumedRoleId" usage="required"/>
         <value name="Arn" field="arn" usage="required"/>
     </mapping>
-    <mapping name="AssumeRoleWithWebIdentity" class="com.eucalyptus.tokens.AssumeRoleWithWebIdentityType" extends="com.eucalyptus.tokens.TokenMessage">
-        <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
+    <mapping name="AssumeRoleWithWebIdentity" class="com.eucalyptus.tokens.common.msgs.AssumeRoleWithWebIdentityType" extends="com.eucalyptus.tokens.common.msgs.TokenMessage">
+        <structure map-as="com.eucalyptus.tokens.common.msgs.TokenMessage"/>
         <value name="RoleArn" field="roleArn" usage="required"/>
         <value name="RoleSessionName" field="roleSessionName" usage="required"/>
         <value name="Policy" field="policy" usage="optional"/>
@@ -116,45 +116,45 @@
         <value name="DurationSeconds" field="durationSeconds" usage="optional"/>
         <value name="WebIdentityToken" field="webIdentityToken" usage="required"/>
     </mapping>
-    <mapping name="AssumeRoleWithWebIdentityResponse" class="com.eucalyptus.tokens.AssumeRoleWithWebIdentityResponseType" extends="com.eucalyptus.tokens.TokenMessage">
-        <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
-        <structure name="AssumeRoleWithWebIdentityResult" field="assumeRoleWithWebIdentityResult" usage="required" type="com.eucalyptus.tokens.AssumeRoleWithWebIdentityResultType"/>
-        <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.tokens.TokensResponseMetadataType"/>
+    <mapping name="AssumeRoleWithWebIdentityResponse" class="com.eucalyptus.tokens.common.msgs.AssumeRoleWithWebIdentityResponseType" extends="com.eucalyptus.tokens.common.msgs.TokenMessage">
+        <structure map-as="com.eucalyptus.tokens.common.msgs.TokenMessage"/>
+        <structure name="AssumeRoleWithWebIdentityResult" field="assumeRoleWithWebIdentityResult" usage="required" type="com.eucalyptus.tokens.common.msgs.AssumeRoleWithWebIdentityResultType"/>
+        <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.tokens.common.msgs.TokensResponseMetadataType"/>
     </mapping>
-    <mapping class="com.eucalyptus.tokens.AssumeRoleWithWebIdentityResultType" abstract="true">
-        <structure name="Credentials" field="credentials" usage="optional" type="com.eucalyptus.tokens.CredentialsType"/>
-        <structure name="AssumedRoleUser" field="assumedRoleUser" usage="optional" type="com.eucalyptus.tokens.AssumedRoleUserType"/>
+    <mapping class="com.eucalyptus.tokens.common.msgs.AssumeRoleWithWebIdentityResultType" abstract="true">
+        <structure name="Credentials" field="credentials" usage="optional" type="com.eucalyptus.tokens.common.msgs.CredentialsType"/>
+        <structure name="AssumedRoleUser" field="assumedRoleUser" usage="optional" type="com.eucalyptus.tokens.common.msgs.AssumedRoleUserType"/>
         <value name="PackedPolicySize" field="packedPolicySize" usage="optional"/>
         <value name="Audience" field="audience" usage="optional"/>
         <value name="Provider" field="provider" usage="optional"/>
         <value name="SubjectFromWebIdentityToken" field="subjectFromWebIdentityToken" usage="optional"/>
     </mapping>
-    <mapping name="GetAccessToken" class="com.eucalyptus.tokens.GetAccessTokenType" extends="com.eucalyptus.tokens.TokenMessage">
-        <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
+    <mapping name="GetAccessToken" class="com.eucalyptus.tokens.common.msgs.GetAccessTokenType" extends="com.eucalyptus.tokens.common.msgs.TokenMessage">
+        <structure map-as="com.eucalyptus.tokens.common.msgs.TokenMessage"/>
         <value name="DurationSeconds" field="durationSeconds" usage="optional"/>
     </mapping>
-    <mapping name="GetAccessTokenResponse" class="com.eucalyptus.tokens.GetAccessTokenResponseType" extends="com.eucalyptus.tokens.TokenMessage">
-        <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
-        <structure name="GetAccessTokenResult" field="result" type="com.eucalyptus.tokens.GetAccessTokenResultType"/>
-        <structure name="ResponseMetadata" field="responseMetadata" type="com.eucalyptus.tokens.TokensResponseMetadataType"/>
+    <mapping name="GetAccessTokenResponse" class="com.eucalyptus.tokens.common.msgs.GetAccessTokenResponseType" extends="com.eucalyptus.tokens.common.msgs.TokenMessage">
+        <structure map-as="com.eucalyptus.tokens.common.msgs.TokenMessage"/>
+        <structure name="GetAccessTokenResult" field="result" type="com.eucalyptus.tokens.common.msgs.GetAccessTokenResultType"/>
+        <structure name="ResponseMetadata" field="responseMetadata" type="com.eucalyptus.tokens.common.msgs.TokensResponseMetadataType"/>
     </mapping>
-    <mapping class="com.eucalyptus.tokens.GetAccessTokenResultType" abstract="true">
-        <structure name="Credentials" field="credentials" usage="optional" type="com.eucalyptus.tokens.CredentialsType"/>
+    <mapping class="com.eucalyptus.tokens.common.msgs.GetAccessTokenResultType" abstract="true">
+        <structure name="Credentials" field="credentials" usage="optional" type="com.eucalyptus.tokens.common.msgs.CredentialsType"/>
     </mapping>
-    <mapping name="GetImpersonationToken" class="com.eucalyptus.tokens.GetImpersonationTokenType" extends="com.eucalyptus.tokens.TokenMessage">
-        <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
+    <mapping name="GetImpersonationToken" class="com.eucalyptus.tokens.common.msgs.GetImpersonationTokenType" extends="com.eucalyptus.tokens.common.msgs.TokenMessage">
+        <structure map-as="com.eucalyptus.tokens.common.msgs.TokenMessage"/>
         <value name="UserId" field="impersonatedUserId" usage="optional"/>
         <value name="AccountAlias" field="accountAlias" usage="optional"/>
         <value name="UserName" field="userName" usage="optional"/>
         <value name="DurationSeconds" field="durationSeconds" usage="optional"/>
     </mapping>
-    <mapping name="GetImpersonationTokenResponse" class="com.eucalyptus.tokens.GetImpersonationTokenResponseType" extends="com.eucalyptus.tokens.TokenMessage">
-        <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
-        <structure name="GetImpersonationTokenResult" field="result" type="com.eucalyptus.tokens.GetImpersonationTokenResultType"/>
-        <structure name="ResponseMetadata" field="responseMetadata" type="com.eucalyptus.tokens.TokensResponseMetadataType"/>
+    <mapping name="GetImpersonationTokenResponse" class="com.eucalyptus.tokens.common.msgs.GetImpersonationTokenResponseType" extends="com.eucalyptus.tokens.common.msgs.TokenMessage">
+        <structure map-as="com.eucalyptus.tokens.common.msgs.TokenMessage"/>
+        <structure name="GetImpersonationTokenResult" field="result" type="com.eucalyptus.tokens.common.msgs.GetImpersonationTokenResultType"/>
+        <structure name="ResponseMetadata" field="responseMetadata" type="com.eucalyptus.tokens.common.msgs.TokensResponseMetadataType"/>
     </mapping>
-    <mapping class="com.eucalyptus.tokens.GetImpersonationTokenResultType" abstract="true">
-        <structure name="Credentials" field="credentials" usage="optional" type="com.eucalyptus.tokens.CredentialsType"/>
+    <mapping class="com.eucalyptus.tokens.common.msgs.GetImpersonationTokenResultType" abstract="true">
+        <structure name="Credentials" field="credentials" usage="optional" type="com.eucalyptus.tokens.common.msgs.CredentialsType"/>
     </mapping>
 
 </binding>

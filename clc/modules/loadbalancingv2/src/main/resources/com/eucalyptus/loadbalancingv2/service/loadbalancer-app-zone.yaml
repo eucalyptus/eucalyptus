@@ -1,0 +1,197 @@
+---
+# ELB Application LoadBalancer for an availability zone
+#
+# Required:
+#
+# - Eucalyptus service image
+# - Subnet for creating resources in
+# - Security group to use
+# - Servo parameters
+#   - Eucalyptus host
+#   - Eucalyptus port
+#   - NTP host
+#   - Account number
+#   - Load balancer identifier
+#   - Cookie expiration period
+#
+# Optional:
+#
+# - Instance type
+# - SSH key name allowing debug connection to db instance
+# - Server certificate ARNs that the loadbalancer can use for HTTPS
+#
+AWSTemplateFormatVersion: 2010-09-09
+Description: Application LoadBalancer zone template
+
+Parameters:
+
+  ImageId:
+    Description: Identifier for the Eucalyptus Service image
+    Type: String
+
+  InstanceType:
+    Description: Instance type to use
+    Type: String
+    Default: t2.small
+
+  KeyName:
+    Description: EC2 keypair for instance SSH access
+    Type: String
+    Default: ''
+
+  SecurityGroupId:
+    Description: The security group to use
+    Type: String
+
+  ServerCertificateArns:
+    Description: The server certificates the loadbalancer is authorized to access
+    Type: List<String>
+    Default: ''
+
+  SubnetId:
+    Description: The subnet to use
+    Type: String
+
+  ServoEucalyptusHost:
+    Description: The services ip
+    Type: String
+
+  ServoEucalyptusPort:
+    Description: The services port
+    Type: String
+    Default: '8773'
+
+  ServoNtpHost:
+    Description: The NTP server to use
+    Type: String
+
+  ServoAccountNumber:
+    Description: The account number to use
+    Type: String
+
+  ServoLoadBalancerId:
+    Description: The LoadBalancer identifier
+    Type: String
+
+  ServoCookieExpirationPeriod:
+    Description: The LoadBalancer cookie expiry duration
+    Type: String
+    Default: '24'
+
+Conditions:
+
+  UseKeyNameParameter: !Not
+    - !Equals
+      - !Ref KeyName
+      - ''
+
+  UseServerCertificateArnsParameter: !Not
+    - !Equals
+      - !Join
+        - ''
+        - !Ref ServerCertificateArns
+      - ''
+
+Resources:
+
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: !Sub /${ServoLoadBalancerId}/
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+
+  Policy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: loadbalancer-vm-policy
+      Roles:
+        - !Ref Role
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - swf:PollForActivityTask
+              - swf:RegisterActivityType
+              - swf:RespondActivityTaskCanceled
+              - swf:RespondActivityTaskCompleted
+              - swf:RespondActivityTaskFailed
+              - swf:RecordActivityTaskHeartbeat
+            Resource: '*'
+          - Effect: !If
+              - UseServerCertificateArnsParameter
+              - Allow
+              - Deny
+            Action: iam:DownloadServerCertificate
+            Resource: !If
+              - UseServerCertificateArnsParameter
+              - !Ref ServerCertificateArns
+              - '*'
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: !Sub /${ServoLoadBalancerId}/
+      Roles:
+        - !Ref Role
+
+  LaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      IamInstanceProfile: !GetAtt InstanceProfile.Arn
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      KeyName: !If
+        - UseKeyNameParameter
+        - !Ref KeyName
+        - !Ref AWS::NoValue
+      SecurityGroups:
+        - !Ref SecurityGroupId
+      UserData:
+        Fn::Base64: !Sub |
+          euca-c2V0dXAtY3JlZGVudGlhbA==:3650
+          #!/bin/bash
+          # System generated Load Balancer Servo config
+          mkdir -p /etc/load-balancer-servo/
+          yum -y --disablerepo \* --enablerepo eucalyptus-service-image install load-balancer-servo
+          echo "
+          euare_service_url=euare.${AWS::URLSuffix}
+          simpleworkflow_service_url=simpleworkflow.${AWS::URLSuffix}
+          webservice_port=${ServoEucalyptusPort}
+          objectstorage_service_url=objectstorage.${AWS::URLSuffix}
+          elb_service_url=loadbalancing.${AWS::URLSuffix}
+          eucalyptus_port=${ServoEucalyptusPort}
+          eucalyptus_host=${ServoEucalyptusHost}
+          ntp_server=${ServoNtpHost}
+          eucalyptus_path=services/Eucalyptus
+          app-cookie-duration=${ServoCookieExpirationPeriod}
+          loadbalancer_owner_account=${ServoAccountNumber}" > /etc/load-balancer-servo/servo.conf
+          chown -R servo:servo /etc/load-balancer-servo
+          service load-balancer-servo start
+
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      LaunchConfigurationName: !Ref LaunchConfiguration
+      DesiredCapacity: 1
+      MinSize: 0
+      MaxSize: 1
+      VPCZoneIdentifier:
+        - !Ref SubnetId
+      Tags:
+        - Key: service-type
+          Value: loadbalancing
+          PropagateAtLaunch: true
+        - Key: user-interface-status
+          Value: pending
+          PropagateAtLaunch: true
+        - Key: loadbalancer-id
+          Value: !Ref ServoLoadBalancerId
+          PropagateAtLaunch: true

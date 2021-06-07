@@ -29,26 +29,21 @@
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
 
-import com.eucalyptus.auth.euare.AttachRolePolicyType;
-import com.eucalyptus.auth.euare.AttachUserPolicyType;
-import com.eucalyptus.auth.euare.AttachedPolicyType;
-import com.eucalyptus.auth.euare.CreateRoleResponseType;
-import com.eucalyptus.auth.euare.CreateRoleType;
-import com.eucalyptus.auth.euare.DeleteRolePolicyResponseType;
-import com.eucalyptus.auth.euare.DeleteRolePolicyType;
-import com.eucalyptus.auth.euare.DeleteRoleResponseType;
-import com.eucalyptus.auth.euare.DeleteRoleType;
-import com.eucalyptus.auth.euare.DetachRolePolicyType;
-import com.eucalyptus.auth.euare.ListAttachedGroupPoliciesResponseType;
-import com.eucalyptus.auth.euare.ListAttachedRolePoliciesResponseType;
-import com.eucalyptus.auth.euare.ListAttachedRolePoliciesType;
-import com.eucalyptus.auth.euare.PutRolePolicyResponseType;
-import com.eucalyptus.auth.euare.PutRolePolicyType;
-import com.eucalyptus.auth.euare.RemoveUserFromGroupResponseType;
-import com.eucalyptus.auth.euare.RemoveUserFromGroupType;
-import com.eucalyptus.auth.euare.UpdateAssumeRolePolicyResponseType;
-import com.eucalyptus.auth.euare.UpdateAssumeRolePolicyType;
-import com.eucalyptus.cloudformation.CloudFormationException;
+import com.eucalyptus.auth.euare.common.msgs.AttachRolePolicyType;
+import com.eucalyptus.auth.euare.common.msgs.AttachedPolicyType;
+import com.eucalyptus.auth.euare.common.msgs.CreateRoleResponseType;
+import com.eucalyptus.auth.euare.common.msgs.CreateRoleType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteRolePolicyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteRolePolicyType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteRoleResponseType;
+import com.eucalyptus.auth.euare.common.msgs.DeleteRoleType;
+import com.eucalyptus.auth.euare.common.msgs.DetachRolePolicyType;
+import com.eucalyptus.auth.euare.common.msgs.ListAttachedRolePoliciesResponseType;
+import com.eucalyptus.auth.euare.common.msgs.ListAttachedRolePoliciesType;
+import com.eucalyptus.auth.euare.common.msgs.PutRolePolicyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.PutRolePolicyType;
+import com.eucalyptus.auth.euare.common.msgs.UpdateAssumeRolePolicyResponseType;
+import com.eucalyptus.auth.euare.common.msgs.UpdateAssumeRolePolicyType;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.IAMHelper;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
@@ -125,7 +120,7 @@ public class AWSIAMRoleResourceAction extends StepBasedResourceAction {
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
         AWSIAMRoleResourceAction action = (AWSIAMRoleResourceAction) resourceAction;
         ServiceConfiguration configuration = Topology.lookup(Euare.class);
-        String roleName = action.properties.getRoleName() != null ? action.properties.getRoleName() : action.getDefaultPhysicalResourceId();
+        String roleName = action.properties.getRoleName() != null ? action.properties.getRoleName() : action.getDefaultPhysicalResourceId(64);
         CreateRoleType createRoleType = MessageHelper.createMessage(CreateRoleType.class, action.info.getEffectiveUserId());
         createRoleType.setRoleName(roleName);
         createRoleType.setPath(action.properties.getPath());
@@ -171,12 +166,6 @@ public class AWSIAMRoleResourceAction extends StepBasedResourceAction {
         }
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -205,12 +194,6 @@ public class AWSIAMRoleResourceAction extends StepBasedResourceAction {
         AsyncRequests.<DeleteRoleType,DeleteRoleResponseType> sendSync(configuration, deleteRoleType);
         return action;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -344,12 +327,6 @@ public class AWSIAMRoleResourceAction extends StepBasedResourceAction {
         }
         return newAction;
       }
-    };
-
-    @Nullable
-    @Override
-    public Integer getTimeout() {
-      return null;
     }
   }
 
@@ -363,12 +340,6 @@ public class AWSIAMRoleResourceAction extends StepBasedResourceAction {
           throw new ValidationErrorException("CloudFormation cannot update a stack when a custom-named resource requires replacing. Rename "+oldAction.properties.getRoleName()+" and update the stack again.");
         }
         return newAction;
-      }
-
-      @Nullable
-      @Override
-      public Integer getTimeout() {
-        return null;
       }
     }
   }

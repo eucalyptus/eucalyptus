@@ -53,6 +53,7 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.Projection;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.compute.common.CloudMetadata;
+import com.eucalyptus.compute.common.internal.vm.VmInstance.VmStateSet;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.records.Logs;
@@ -64,6 +65,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -75,7 +77,7 @@ public class VmInstances {
   private static final Logger LOG = Logger.getLogger( VmInstances.class );
 
 
-  protected static final AtomicReference<String> ebsRootDeviceName = new AtomicReference<String>( "emi" );
+  protected static final AtomicReference<String> ebsRootDeviceName = new AtomicReference<String>( "ami" );
 
   public static String getEbsRootDeviceName( ) {
     return ebsRootDeviceName.get( );
@@ -128,12 +130,25 @@ public class VmInstances {
    */
   @Nonnull
   public static VmInstance lookupByPublicIp( final String ip ) throws NoSuchElementException {
+    return lookupByPublicIp( ip, VmStateSet.RUN );
+  }
+
+  /**
+   * Function for lookup of VM instance by public IP and desired states.
+   *
+   * @param ip The public/elastic IP for the instance
+   * @param stateSet The state set for the instance
+   * @return The instance
+   * @throws NoSuchElementException if an instance was not found with the IP
+   */
+  @Nonnull
+  public static VmInstance lookupByPublicIp(final String ip, final VmStateSet stateSet) throws NoSuchElementException {
     try ( TransactionResource db =
               Entities.transactionFor( VmInstance.class ) ) {
       VmInstance vmExample = VmInstance.exampleWithPublicIp( ip );
       VmInstance vm = ( VmInstance ) Entities.createCriteriaUnique( VmInstance.class )
           .add( Example.create( vmExample ) )
-          .add( VmInstance.criterion( VmInstance.VmState.RUNNING, VmInstance.VmState.PENDING ) )
+          .add( VmInstance.criterion( stateSet.array( ) ) )
           .uniqueResult();
       if ( vm == null ) {
         throw new NoSuchElementException( "VmInstance with public ip: " + ip );
@@ -218,11 +233,11 @@ public class VmInstances {
       public List<VmInstance> get() {
         return Entities.query( VmInstance.withToken( ownerFullName, clientToken ) );
       }
-    }, Predicates.and(
+    }, Predicates.and( ImmutableList.of(
         CollectionUtils.propertyPredicate( clientToken, VmInstance.clientToken( ) ),
         RestrictedTypes.filterByOwner( ownerFullName ),
         checkPredicate( predicate )
-    ) );
+    ) ) );
   }
 
   private static List<VmInstance> list( @Nonnull Supplier<List<VmInstance>> instancesSupplier,
@@ -276,9 +291,9 @@ public class VmInstances {
     },
     ;
 
+    @SuppressWarnings( "unchecked" )
     @Override
     public List<String> results( final List<?> listing ) {
-      //noinspection unchecked
       return ( List<String> ) listing;
     }
   }
@@ -301,28 +316,6 @@ public class VmInstances {
     return predicate == null ?
         Predicates.<T>alwaysTrue() :
         predicate;
-  }
-
-  public static VmVolumeAttachment lookupVolumeAttachment( final String volumeId , final List<VmInstance> vms ) {
-    VmVolumeAttachment ret = null;
-    try {
-      for ( VmInstance vm : vms ) {
-        try {
-          ret = vm.lookupVolumeAttachment( volumeId );
-          if ( ret.getVmInstance( ) == null ) {
-            ret.setVmInstance( vm );
-          }
-        } catch ( NoSuchElementException ex ) {
-          continue;
-        }
-      }
-      if ( ret == null ) {
-        throw new NoSuchElementException( "VmVolumeAttachment: no volume attachment for " + volumeId );
-      }
-      return ret;
-    } catch ( Exception ex ) {
-      throw new NoSuchElementException( ex.getMessage( ) );
-    }
   }
 
   @RestrictedTypes.Resolver( CloudMetadata.VmInstanceMetadata.class )

@@ -42,7 +42,6 @@ package com.eucalyptus.compute.common.internal.keys;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Index;
-import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Type;
@@ -66,9 +65,8 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements KeyPai
   enum State {
     available, removing
   }
-  
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+
+  @Type(type="text")
   @Column( name = "metadata_keypair_public_key" )
   private String publicKey;
   @Column( name = "metadata_keypair_finger_print" )

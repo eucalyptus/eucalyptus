@@ -36,14 +36,14 @@ import com.eucalyptus.loadbalancing.common.msgs.LoadBalancerAttributes;
 
 /**
  * @author Sang-Min Park (sangmin.park@hpe.com)
- *
  */
 @Workflow
-@WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 120, 
-defaultTaskStartToCloseTimeoutSeconds = 60)
+@WorkflowRegistrationOptions(defaultExecutionStartToCloseTimeoutSeconds = 120,
+    defaultTaskStartToCloseTimeoutSeconds = 60)
 public interface ModifyLoadBalancerAttributesWorkflow {
   @Execute(name = "ModifyLoadBalancerAttributes", version = "1.0")
-  void modifyLoadBalancerAttributes(String accountNumber, String loadbalancer, LoadBalancerAttributes attributes);
+  void modifyLoadBalancerAttributes(String accountNumber, String loadbalancer,
+      LoadBalancerAttributes attributes);
 
   @GetState
   ElbWorkflowState getState();

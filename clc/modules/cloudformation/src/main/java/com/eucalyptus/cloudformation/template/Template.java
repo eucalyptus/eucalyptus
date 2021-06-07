@@ -28,7 +28,7 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.template;
 
-import com.eucalyptus.cloudformation.ParameterDeclaration;
+import com.eucalyptus.cloudformation.common.msgs.ParameterDeclaration;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.template.dependencies.DependencyManager;

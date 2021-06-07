@@ -55,7 +55,6 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
-import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
@@ -326,27 +325,22 @@ public class AlarmEntity extends AbstractPersistentWithDimensions implements Clo
   }
 
   @Column( name = "ok_action_1" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")  
+  @Type(type="text")
   private String okAction1;
 
   @Column( name = "ok_action_2" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")  
+  @Type(type="text")
   private String okAction2;
 
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")  
+  @Type(type="text")
   @Column( name = "ok_action_3" )
   private String okAction3;
 
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")  
+  @Type(type="text")
   @Column( name = "ok_action_4" )
   private String okAction4;
 
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")  
+  @Type(type="text")
   @Column( name = "ok_action_5" )
   private String okAction5;
 
@@ -446,27 +440,22 @@ public class AlarmEntity extends AbstractPersistentWithDimensions implements Clo
   }
 
   @Column( name = "alarm_action_1" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")  
+  @Type(type="text")
   private String alarmAction1;
 
   @Column( name = "alarm_action_2" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")  
+  @Type(type="text")
   private String alarmAction2;
 
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")  
+  @Type(type="text")
   @Column( name = "alarm_action_3" )
   private String alarmAction3;
 
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")  
+  @Type(type="text")
   @Column( name = "alarm_action_4" )
   private String alarmAction4;
 
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")  
+  @Type(type="text")
   @Column( name = "alarm_action_5" )
   private String alarmAction5;
 
@@ -566,27 +555,22 @@ public class AlarmEntity extends AbstractPersistentWithDimensions implements Clo
   }
 
   @Column( name = "insufficient_data_action_1" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")  
+  @Type(type="text")
   private String insufficientDataAction1;
 
   @Column( name = "insufficient_data_action_2" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")  
+  @Type(type="text")
   private String insufficientDataAction2;
 
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")  
+  @Type(type="text")
   @Column( name = "insufficient_data_action_3" )
   private String insufficientDataAction3;
 
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")  
+  @Type(type="text")
   @Column( name = "insufficient_data_action_4" )
   private String insufficientDataAction4;
 
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")  
+  @Type(type="text")
   @Column( name = "insufficient_data_action_5" )
   private String insufficientDataAction5;
 
