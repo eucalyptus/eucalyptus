@@ -12,6 +12,7 @@ import com.eucalyptus.cloudformation.resources.standard.TagHelper;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSElasticLoadBalancingV2LoadBalancerResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSElasticLoadBalancingV2LoadBalancerProperties;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.CloudFormationResourceTag;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.ElasticLoadBalancingV2LoadBalancerAttributeProperties;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
@@ -25,6 +26,9 @@ import com.eucalyptus.loadbalancingv2.common.msgs.CreateLoadBalancerResponseType
 import com.eucalyptus.loadbalancingv2.common.msgs.CreateLoadBalancerType;
 import com.eucalyptus.loadbalancingv2.common.msgs.DeleteLoadBalancerType;
 import com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancer;
+import com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancerAttribute;
+import com.eucalyptus.loadbalancingv2.common.msgs.LoadBalancerAttributes;
+import com.eucalyptus.loadbalancingv2.common.msgs.ModifyLoadBalancerAttributesType;
 import com.eucalyptus.loadbalancingv2.common.msgs.RemoveTagsType;
 import com.eucalyptus.loadbalancingv2.common.msgs.ResourceArns;
 import com.eucalyptus.loadbalancingv2.common.msgs.SecurityGroups;
@@ -67,6 +71,7 @@ public class AWSElasticLoadBalancingV2LoadBalancerResourceAction extends StepBas
 
   private static final Set<Function<AWSElasticLoadBalancingV2LoadBalancerProperties,Object>> PROP_NOINTER =
       ImmutableSet.<Function<AWSElasticLoadBalancingV2LoadBalancerProperties,Object>>builder()
+          .add(AWSElasticLoadBalancingV2LoadBalancerProperties::getLoadBalancerAttributes)
           .add(AWSElasticLoadBalancingV2LoadBalancerProperties::getTags)
           .build();
 
@@ -180,10 +185,24 @@ public class AWSElasticLoadBalancingV2LoadBalancerResourceAction extends StepBas
         addSystemTags(action);
         return action;
       }
-    }
+    },
+    MODIFY_ATTRIBUTES {
+      @Override
+      public ResourceAction perform(ResourceAction action) throws Exception {
+        modifyAttributes(action);
+        return action;
+      }
+    },
   }
 
   private enum UpdateNoInterruptionSteps implements UpdateStep {
+    MODIFY_ATTRIBUTES {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        modifyAttributes(newResourceAction);
+        return newResourceAction;
+      }
+    },
     UPDATE_TAGS {
       @Override
       public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
@@ -222,6 +241,26 @@ public class AWSElasticLoadBalancingV2LoadBalancerResourceAction extends StepBas
         return action;
       }
     }
+  }
+
+  private static void modifyAttributes(final ResourceAction resourceAction) {
+    final AWSElasticLoadBalancingV2LoadBalancerResourceAction action =
+        (AWSElasticLoadBalancingV2LoadBalancerResourceAction) resourceAction;
+    if (action.properties.getLoadBalancerAttributes().isEmpty()) return;
+    final Loadbalancingv2Api elbv2 = AsyncProxy.client(
+        Loadbalancingv2Api.class, MessageHelper.userIdentity(action.info.getEffectiveUserId()));
+    final ModifyLoadBalancerAttributesType modifyAttributes = new ModifyLoadBalancerAttributesType();
+    modifyAttributes.setLoadBalancerArn(action.info.getPhysicalResourceId());
+    final LoadBalancerAttributes loadBalancerAttributes = new LoadBalancerAttributes();
+    for (final ElasticLoadBalancingV2LoadBalancerAttributeProperties attributeProperties :
+        action.properties.getLoadBalancerAttributes()) {
+      final LoadBalancerAttribute attribute = new LoadBalancerAttribute();
+      attribute.setKey(attributeProperties.getKey());
+      attribute.setValue(attributeProperties.getValue());
+      loadBalancerAttributes.getMember().add(attribute);
+    }
+    modifyAttributes.setAttributes(loadBalancerAttributes);
+    elbv2.modifyLoadBalancerAttributes(modifyAttributes);
   }
 
   protected static void addSystemTags(final ResourceAction action) {

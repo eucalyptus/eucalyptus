@@ -11,6 +11,7 @@ import com.eucalyptus.cloudformation.resources.ResourceProperties;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSElasticLoadBalancingV2TargetGroupResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSElasticLoadBalancingV2TargetGroupProperties;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.CloudFormationResourceTag;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.ElasticLoadBalancingV2TargetGroupAttributeProperties;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
@@ -22,10 +23,13 @@ import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2ResourceName;
 import com.eucalyptus.loadbalancingv2.common.msgs.CreateTargetGroupResponseType;
 import com.eucalyptus.loadbalancingv2.common.msgs.CreateTargetGroupType;
 import com.eucalyptus.loadbalancingv2.common.msgs.DeleteTargetGroupType;
+import com.eucalyptus.loadbalancingv2.common.msgs.ModifyTargetGroupAttributesType;
 import com.eucalyptus.loadbalancingv2.common.msgs.RegisterTargetsType;
 import com.eucalyptus.loadbalancingv2.common.msgs.TargetDescription;
 import com.eucalyptus.loadbalancingv2.common.msgs.TargetDescriptions;
 import com.eucalyptus.loadbalancingv2.common.msgs.TargetGroup;
+import com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupAttribute;
+import com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupAttributes;
 import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncProxy;
 import com.fasterxml.jackson.databind.node.TextNode;
@@ -63,6 +67,7 @@ public class AWSElasticLoadBalancingV2TargetGroupResourceAction extends StepBase
   private static final Set<Function<AWSElasticLoadBalancingV2TargetGroupProperties,Object>> PROP_NOINTER =
       ImmutableSet.<Function<AWSElasticLoadBalancingV2TargetGroupProperties,Object>>builder()
           .add(AWSElasticLoadBalancingV2TargetGroupProperties::getTags)
+          .add(AWSElasticLoadBalancingV2TargetGroupProperties::getTargetGroupAttributes)
           .build();
 
   private AWSElasticLoadBalancingV2TargetGroupProperties properties = new AWSElasticLoadBalancingV2TargetGroupProperties();
@@ -159,6 +164,13 @@ public class AWSElasticLoadBalancingV2TargetGroupResourceAction extends StepBase
         return action;
       }
     },
+    MODIFY_ATTRIBUTES {
+      @Override
+      public ResourceAction perform(ResourceAction action) throws Exception {
+        modifyAttributes(action);
+        return action;
+      }
+    },
     REGISTER_TARGETS {
       @Override
       public ResourceAction perform(ResourceAction resourceAction) throws Exception {
@@ -191,6 +203,13 @@ public class AWSElasticLoadBalancingV2TargetGroupResourceAction extends StepBase
   }
 
   private enum UpdateNoInterruptionSteps implements UpdateStep {
+    MODIFY_ATTRIBUTES {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        modifyAttributes(newResourceAction);
+        return newResourceAction;
+      }
+    },
     UPDATE_TAGS {
       @Override
       public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
@@ -229,5 +248,25 @@ public class AWSElasticLoadBalancingV2TargetGroupResourceAction extends StepBase
         return action;
       }
     }
+  }
+
+  private static void modifyAttributes(final ResourceAction resourceAction) throws Exception {
+      final AWSElasticLoadBalancingV2TargetGroupResourceAction action =
+          (AWSElasticLoadBalancingV2TargetGroupResourceAction) resourceAction;
+      if (action.properties.getTargetGroupAttributes().isEmpty()) return;
+      final Loadbalancingv2Api elbv2 = AsyncProxy.client(
+          Loadbalancingv2Api.class, MessageHelper.userIdentity(action.info.getEffectiveUserId()));
+      final ModifyTargetGroupAttributesType modifyAttributes = new ModifyTargetGroupAttributesType();
+      modifyAttributes.setTargetGroupArn(action.info.getPhysicalResourceId());
+      final TargetGroupAttributes targetGroupAttributes = new TargetGroupAttributes();
+      for (final ElasticLoadBalancingV2TargetGroupAttributeProperties attributeProperties :
+          action.properties.getTargetGroupAttributes()) {
+        final TargetGroupAttribute attribute = new TargetGroupAttribute();
+        attribute.setKey(attributeProperties.getKey());
+        attribute.setValue(attributeProperties.getValue());
+        targetGroupAttributes.getMember().add(attribute);
+      }
+      modifyAttributes.setAttributes(targetGroupAttributes);
+      elbv2.modifyTargetGroupAttributes(modifyAttributes);
   }
 }
