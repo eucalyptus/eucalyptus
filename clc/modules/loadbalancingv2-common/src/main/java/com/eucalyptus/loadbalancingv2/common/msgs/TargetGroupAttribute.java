@@ -14,7 +14,15 @@ public class TargetGroupAttribute extends EucalyptusData {
   @FieldRange(max = 256)
   private String key;
 
+  @FieldRange(max = 1024)
   private String value;
+
+  public static TargetGroupAttribute of(final String key, final String value) {
+    final TargetGroupAttribute attribute = new TargetGroupAttribute();
+    attribute.setKey(key);
+    attribute.setValue(value);
+    return attribute;
+  }
 
   public String getKey() {
     return key;

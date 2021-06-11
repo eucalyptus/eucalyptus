@@ -28,6 +28,7 @@ import com.eucalyptus.loadbalancing.dns.LoadBalancerDomainName;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2ResourceName;
 import com.eucalyptus.loadbalancingv2.common.msgs.Action;
 import com.eucalyptus.loadbalancingv2.service.persist.LoadBalancers;
+import com.eucalyptus.loadbalancingv2.service.persist.LoadBalancingAttribute.Attribute;
 import com.eucalyptus.loadbalancingv2.service.persist.TargetGroups;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.Listener;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.LoadBalancer;
@@ -49,17 +50,23 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import io.vavr.collection.Stream;
+import io.vavr.control.Option;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import org.apache.log4j.Logger;
 
 public class Loadbalancingv2ServoMetadataSource implements LoadBalancerHelper.ServoMetadataSource {
 
   private static final Logger logger = Logger.getLogger(Loadbalancingv2ServoMetadataSource.class);
 
+  private static final String POLICY_STICKINESS_APP = "StickinessPolicy-Application";
+  private static final String POLICY_STICKINESS_LB = "StickinessPolicy-LoadBalancer";
   private static final String DEFAULT_SSL_POLICY = "ELBSecurityPolicy-2016-08";
   private static final List<String> DEFAULT_SSL_POLICY_ATTRIBUTES = ImmutableList.<String>builder()
       .add("Protocol-TLSv1")
@@ -116,6 +123,28 @@ public class Loadbalancingv2ServoMetadataSource implements LoadBalancerHelper.Se
       final String loadBalancerArn,
       final String policyName
   ) {
+    final Supplier<Map<String,String>> targetGroupAttributes = () -> {
+      try {
+        final Loadbalancingv2ResourceName arn =
+            Loadbalancingv2ResourceName.parse(loadBalancerArn, Loadbalancingv2ResourceName.Type.loadbalancer);
+        final AccountFullName account = AccountFullName.getInstance(arn.getNamespace());
+        return loadBalancers.lookupByName(
+            account,
+            arn.getName(),
+            Predicates.alwaysTrue(),
+            loadBalancer -> {
+              final Map<String,String> attributes = Maps.newHashMap();
+              for (final TargetGroup targetGroup : loadBalancer.getTargetGroups()) {
+                attributes.putAll(targetGroup.getAttributes());
+              }
+              return attributes;
+            }
+        );
+      } catch (Exception e) {
+        return Collections.emptyMap();
+      }
+    };
+
     if (DEFAULT_SSL_POLICY.equals(policyName)) {
       final PolicyDescription policy = new PolicyDescription();
       policy.setPolicyName(DEFAULT_SSL_POLICY);
@@ -133,6 +162,30 @@ public class Loadbalancingv2ServoMetadataSource implements LoadBalancerHelper.Se
       descs.getMember()
           .sort(Ordering.natural()
               .onResultOf(Strings.nonNull(PolicyAttributeDescription::getAttributeName)));
+      policy.setPolicyAttributeDescriptions(descs);
+      return policy;
+    } else if (POLICY_STICKINESS_APP.equals(policyName)) {
+      final PolicyDescription policy = new PolicyDescription();
+      policy.setPolicyName(POLICY_STICKINESS_APP);
+      policy.setPolicyTypeName("AppCookieStickinessPolicyType");
+      final PolicyAttributeDescriptions descs = new PolicyAttributeDescriptions();
+      final PolicyAttributeDescription desc = new PolicyAttributeDescription();
+      desc.setAttributeName("CookieName");
+      desc.setAttributeValue(Attribute.TargetGroupStickinessAppCookieName
+          .stringValue(targetGroupAttributes.get()));
+      descs.getMember().add(desc);
+      policy.setPolicyAttributeDescriptions(descs);
+      return policy;
+    } else if (POLICY_STICKINESS_LB.equals(policyName)) {
+      final PolicyDescription policy = new PolicyDescription();
+      policy.setPolicyName(POLICY_STICKINESS_LB);
+      policy.setPolicyTypeName("LBCookieStickinessPolicyType");
+      final PolicyAttributeDescriptions descs = new PolicyAttributeDescriptions();
+      final PolicyAttributeDescription desc = new PolicyAttributeDescription();
+      desc.setAttributeName("CookieExpirationPeriod");
+      desc.setAttributeValue(Attribute.TargetGroupStickinessLbCookieSeconds
+          .stringValue(targetGroupAttributes.get()));
+      descs.getMember().add(desc);
       policy.setPolicyAttributeDescriptions(descs);
       return policy;
     }
@@ -330,12 +383,27 @@ public class Loadbalancingv2ServoMetadataSource implements LoadBalancerHelper.Se
     }
   }
 
+  private Option<String> stickinessPolicyName(final TargetGroup targetGroup) {
+    if (Attribute.TargetGroupStickinessEnabled.booleanValue(targetGroup.getAttributes())) {
+      switch (Objects.toString(Attribute.TargetGroupAppStickinessType.stringValue(targetGroup.getAttributes()), "")) {
+        case "app_cookie":
+          return Option.of(POLICY_STICKINESS_APP);
+        case "lb_cookie":
+          return Option.of(POLICY_STICKINESS_LB);
+      }
+    }
+    return Option.none();
+  }
+
   private List<String> toPolicyNames(final LoadBalancer loadBalancer) {
     final Set<String> names = Sets.newTreeSet();
     for (final Listener listener : loadBalancer.getListeners()) {
       if (listener.getDefaultServerCertificateArn() != null) {
         names.add(DEFAULT_SSL_POLICY);
       }
+    }
+    for (final TargetGroup targetGroup : loadBalancer.getTargetGroups()) {
+      stickinessPolicyName(targetGroup).forEach(names::add);
     }
     return Lists.newArrayList(names);
   }
@@ -404,6 +472,7 @@ public class Loadbalancingv2ServoMetadataSource implements LoadBalancerHelper.Se
     final Map<String, Pair<String,Integer>> listenerToBackendProtocolAndPort = Maps.newHashMap();
     final Set<String> backendIds = Sets.newHashSet();
     final BackendInstances backendInstances = new BackendInstances();
+    final Map<String,String> listenerToStickinessPolicyName = Maps.newHashMap();
     for (final Listener listener : loadBalancer.getListeners()) {
       final Consumer<Action> actionConsumer = action -> {
         if ("forward".equals(action.getType()) && action.getTargetGroupArn() != null) {
@@ -413,6 +482,9 @@ public class Loadbalancingv2ServoMetadataSource implements LoadBalancerHelper.Se
                     Loadbalancingv2ResourceName.Type.targetgroup);
             final TargetGroup targetGroup = targetGroups.lookupByName(owner, arn.getName(),
                 Predicates.alwaysTrue(), Functions.identity());
+            stickinessPolicyName(targetGroup).forEach(policyName -> {
+              listenerToStickinessPolicyName.putIfAbsent(listener.getDisplayName(), policyName);
+            });
             if (targetGroup.getPort() != null && targetGroup.getProtocol() != null) {
               listenerToBackendProtocolAndPort.putIfAbsent(
                   listener.getDisplayName(),
@@ -460,6 +532,9 @@ public class Loadbalancingv2ServoMetadataSource implements LoadBalancerHelper.Se
       if (listener.getSSLCertificateId()!=null) {
         policyNames.getMember().add(DEFAULT_SSL_POLICY);
       }
+      if (listenerToStickinessPolicyName.containsKey(lbListener.getDisplayName())) {
+        policyNames.getMember().add(listenerToStickinessPolicyName.get(lbListener.getDisplayName()));
+      }
       listenerDescription.setPolicyNames(policyNames);
       listenerDescriptions.getMember().add(listenerDescription);
     }
@@ -467,16 +542,23 @@ public class Loadbalancingv2ServoMetadataSource implements LoadBalancerHelper.Se
 
     final LoadBalancerAttributes loadBalancerAttributes = new LoadBalancerAttributes();
     final AccessLog accessLog = new AccessLog();
-    accessLog.setEnabled(false);
+    accessLog.setEnabled(
+        Attribute.LoadBalancerAccessLogsS3Enabled.booleanValue(loadBalancer.getAttributes()));
+    accessLog.setS3BucketName(
+        Attribute.LoadBalancerAccessLogsS3Bucket.stringValue(loadBalancer.getAttributes()));
+    accessLog.setS3BucketPrefix(
+        Attribute.LoadBalancerAccessLogsS3Prefix.stringValue(loadBalancer.getAttributes()));
     loadBalancerAttributes.setAccessLog(accessLog);
     final ConnectionDraining connectionDraining = new ConnectionDraining();
     connectionDraining.setEnabled(false);
     loadBalancerAttributes.setConnectionDraining(connectionDraining);
     final ConnectionSettings connectionSettings = new ConnectionSettings();
-    connectionSettings.setIdleTimeout(60);
+    connectionSettings.setIdleTimeout(
+        Attribute.LoadBalancerIdleTimeoutSeconds.integerValue(loadBalancer.getAttributes()));
     loadBalancerAttributes.setConnectionSettings(connectionSettings);
     final CrossZoneLoadBalancing crossZoneLoadBalancing = new CrossZoneLoadBalancing();
-    crossZoneLoadBalancing.setEnabled(false);
+    crossZoneLoadBalancing.setEnabled(
+        Attribute.LoadBalancerCrossZoneEnabled.booleanValue(loadBalancer.getAttributes()));
     loadBalancerAttributes.setCrossZoneLoadBalancing(crossZoneLoadBalancing);
     description.setLoadBalancerAttributes(loadBalancerAttributes);
 

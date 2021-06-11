@@ -17,6 +17,13 @@ public class LoadBalancerAttribute extends EucalyptusData {
   @FieldRange(max = 1024)
   private String value;
 
+  public static LoadBalancerAttribute of(final String key, final String value) {
+    final LoadBalancerAttribute attribute = new LoadBalancerAttribute();
+    attribute.setKey(key);
+    attribute.setValue(value);
+    return attribute;
+  }
+
   public String getKey() {
     return key;
   }
