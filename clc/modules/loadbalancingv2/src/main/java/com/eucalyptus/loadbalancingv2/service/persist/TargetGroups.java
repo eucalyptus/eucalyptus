@@ -54,9 +54,17 @@ public interface TargetGroups {
       Function<? super TargetGroup, T> updateTransform
   ) throws Loadbalancingv2MetadataException;
 
-  TargetGroup save(TargetGroup loadBalancer) throws Loadbalancingv2MetadataException;
+  TargetGroup save(TargetGroup targetGroup) throws Loadbalancingv2MetadataException;
 
   boolean delete(Loadbalancingv2Metadata.TargetgroupMetadata metadata) throws Loadbalancingv2MetadataException;
+
+  long countByExample(TargetGroup targetGroup) throws Loadbalancingv2MetadataException;
+
+  default long countByOwner(
+      final OwnerFullName ownerFullName
+  ) throws Loadbalancingv2MetadataException {
+    return countByExample(TargetGroup.named(ownerFullName, null));
+  }
 
   @TypeMapper
   enum TargetGroupViewToTargetGroupTransform

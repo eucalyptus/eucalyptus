@@ -6,7 +6,9 @@
 package com.eucalyptus.loadbalancingv2.service;
 
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthContextSupplier;
 import com.eucalyptus.auth.AuthQuotaException;
+import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.euare.common.EuareApi;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.principal.AccountFullName;
@@ -25,13 +27,25 @@ import com.eucalyptus.entities.AbstractPersistent_;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.loadbalancing.LoadBalancingHostedZoneManager;
-import com.eucalyptus.loadbalancing.LoadBalancingServiceProperties;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2Metadata;
 import com.eucalyptus.loadbalancingv2.common.msgs.Action;
+import com.eucalyptus.loadbalancingv2.common.msgs.Actions;
 import com.eucalyptus.loadbalancingv2.common.msgs.CertificateList;
 import com.eucalyptus.loadbalancingv2.common.msgs.ForwardActionConfig;
+import com.eucalyptus.loadbalancingv2.common.msgs.HostHeaderConditionConfig;
+import com.eucalyptus.loadbalancingv2.common.msgs.HttpHeaderConditionConfig;
+import com.eucalyptus.loadbalancingv2.common.msgs.HttpRequestMethodConditionConfig;
+import com.eucalyptus.loadbalancingv2.common.msgs.Limit;
+import com.eucalyptus.loadbalancingv2.common.msgs.Limits;
+import com.eucalyptus.loadbalancingv2.common.msgs.ListOfString;
 import com.eucalyptus.loadbalancingv2.common.msgs.Listeners;
+import com.eucalyptus.loadbalancingv2.common.msgs.PathPatternConditionConfig;
+import com.eucalyptus.loadbalancingv2.common.msgs.QueryStringConditionConfig;
+import com.eucalyptus.loadbalancingv2.common.msgs.QueryStringKeyValuePairList;
+import com.eucalyptus.loadbalancingv2.common.msgs.RuleCondition;
+import com.eucalyptus.loadbalancingv2.common.msgs.RuleConditionList;
 import com.eucalyptus.loadbalancingv2.common.msgs.Rules;
+import com.eucalyptus.loadbalancingv2.common.msgs.SourceIpConditionConfig;
 import com.eucalyptus.loadbalancingv2.common.msgs.SubnetMapping;
 import com.eucalyptus.loadbalancingv2.common.msgs.Tag;
 import com.eucalyptus.loadbalancingv2.common.msgs.TagDescription;
@@ -41,6 +55,7 @@ import com.eucalyptus.loadbalancingv2.common.msgs.TargetDescription;
 import com.eucalyptus.loadbalancingv2.common.msgs.TargetDescriptions;
 import com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupList;
 import com.eucalyptus.loadbalancingv2.common.msgs.TargetGroupTuple;
+import com.eucalyptus.loadbalancingv2.common.policy.Loadbalancingv2PolicySpec;
 import com.eucalyptus.loadbalancingv2.service.persist.JsonEncoding;
 import com.eucalyptus.loadbalancingv2.service.persist.LoadBalancers;
 import com.eucalyptus.loadbalancingv2.service.persist.Loadbalancingv2MetadataException;
@@ -149,7 +164,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.vavr.collection.Stream;
 import io.vavr.control.Option;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -332,6 +347,7 @@ public class Loadbalancingv2Service {
             loadbalancer.getListeners().add(listener);
             loadbalancer.getTargetGroups().addAll(targetGroupList);
             loadbalancer.setUpdateRequired(true);
+            validateLimits(loadbalancer);
             return TypeMappers.transform(
                 listener, com.eucalyptus.loadbalancingv2.common.msgs.Listener.class);
           }
@@ -418,6 +434,10 @@ public class Loadbalancingv2Service {
     final Option<Pair<String, String>> hostedZoneNameAndId =
         LoadBalancingHostedZoneManager.getHostedZoneNameAndId();
 
+    final Loadbalancingv2LimitProperties.Limit limit = type == LoadBalancer.Type.application ?
+        Loadbalancingv2LimitProperties.Limit.application_load_balancers :
+        Loadbalancingv2LimitProperties.Limit.network_load_balancers;
+
     final LoadBalancer loadBalancer;
     try {
       @SuppressWarnings({"Guava", "Convert2Lambda"})
@@ -439,8 +459,12 @@ public class Loadbalancingv2Service {
           newLoadBalancer.setVpcId(vpcIds.iterator().next());
 
           try (final TransactionResource tx = Entities.transactionFor(newLoadBalancer)) {
+            Loadbalancingv2LimitProperties.check(limit,
+                loadBalancers.countByOwnerAndType(ctx.getUserFullName(), type),
+                runtime(limitExceeded("TooManyLoadBalancers")));
             final LoadBalancer persisted = loadBalancers.save(newLoadBalancer);
             addTags(persisted, request.getTags());
+            validateLimits(persisted);
             tx.commit();
             return persisted;
           } catch (Loadbalancingv2MetadataException e) {
@@ -485,6 +509,22 @@ public class Loadbalancingv2Service {
 
     final Integer priority = request.getPriority();
 
+    final Set<String> targetGroupArns = Sets.newHashSet();
+    for (final Action action : request.getActions().getMember()) {
+      Option.of(action.getTargetGroupArn()).forEach(targetGroupArns::add);
+      Option.of(action.getForwardConfig())
+          .map(ForwardActionConfig::getTargetGroups)
+          .map(TargetGroupList::getMember)
+          .map(Stream::ofAll)
+          .getOrElse(Stream.empty())
+          .map(TargetGroupTuple::getTargetGroupArn)
+          .filter(Objects::nonNull)
+          .forEach(targetGroupArns::add);
+    }
+    final Set<String> targetGroupIds = ids(targetGroupArns,
+        Loadbalancingv2ResourceName.Type.targetgroup, arn.getNamespace(),
+        targetNotFound());
+
     final com.eucalyptus.loadbalancingv2.common.msgs.Rule resultRule;
     try {
       resultRule = loadBalancers.updateByExample(
@@ -495,13 +535,43 @@ public class Loadbalancingv2Service {
           loadbalancer -> {
             final Listener listener =
                 loadbalancer.findListener(listenerId).getOrElseThrow(runtime(listenerNotFound()));
+
+            final List<TargetGroup> targetGroupList;
+            try {
+              targetGroupList = targetGroups.list(
+                  ownerFullName,
+                  Restrictions.in("naturalId", targetGroupIds),
+                  Loadbalancingv2Metadatas.filterPrivileged(),
+                  Functions.identity());
+              if (targetGroupList.size() != targetGroupIds.size()) {
+                throw targetNotFound().get();
+              }
+              //TODO when rule targets are used update state here
+              //targetGroupList.forEach(group -> group.getTargets().forEach(target -> {
+              //  if (target.getTargetHealthState() == Target.State.unused) {
+              //    Target.State.initial.apply(target);
+              //  }
+              //}));
+            } catch (final Exception ex) {
+              throw Exceptions.toUndeclared(ex);
+            }
+
             final ListenerRule rule = ListenerRule.create(listener, priority);
             rule.setActions(JsonEncoding.write(request.getActions()));
             rule.setConditions(JsonEncoding.write(request.getConditions()));
+            rule.getTargetGroups().addAll(targetGroupList);
             addTags(Entities.persist(rule), request.getTags());
+            listener.getListenerRules().forEach(existing -> {
+              if (Objects.equals(priority, existing.getPriority())) {
+                throw Exceptions.toUndeclared(
+                    new Loadbalancingv2ClientException("PriorityInUse", "Priority in use"));
+              }
+            });
             listener.getListenerRules().add(rule);
             listener.updateTimeStamps();
+            loadbalancer.getTargetGroups().addAll(targetGroupList);
             loadbalancer.updateTimeStamps();
+            validateLimits(loadbalancer);
             return TypeMappers.transform(
                 rule, com.eucalyptus.loadbalancingv2.common.msgs.Rule.class);
           }
@@ -561,8 +631,12 @@ public class Loadbalancingv2Service {
           );
 
           try (final TransactionResource tx = Entities.transactionFor(newTargetGroup)) {
+            Loadbalancingv2LimitProperties.check(Loadbalancingv2LimitProperties.Limit.target_groups,
+                targetGroups.countByOwner(ctx.getUserFullName()),
+                runtime(limitExceeded("TooManyTargetGroups")));
             final TargetGroup persisted = targetGroups.save(newTargetGroup);
             addTags(persisted, request.getTags());
+            validateLimits(persisted);
             tx.commit();
             return persisted;
           } catch (Loadbalancingv2MetadataException e) {
@@ -615,6 +689,13 @@ public class Loadbalancingv2Service {
                 loadbalancer.findListener(listenerId).getOrElseThrow(runtime(listenerNotFound()));
             Entities.delete(listener);
             loadbalancer.getListeners().remove(listener);
+            final Set<TargetGroup> updatedTargetGroups = Sets.newHashSet();
+            loadbalancer.getListeners().forEach(tgl -> {
+              updatedTargetGroups.addAll(tgl.getTargetGroups());
+              tgl.getListenerRules().forEach(tglr -> updatedTargetGroups.addAll(tglr.getTargetGroups()));
+            });
+            loadbalancer.getTargetGroups().addAll(updatedTargetGroups);
+            loadbalancer.getTargetGroups().retainAll(updatedTargetGroups);
             loadbalancer.updateTimeStamps();
             return null;
           }
@@ -691,6 +772,13 @@ public class Loadbalancingv2Service {
             Entities.delete(rule);
             listener.getListenerRules().remove(rule);
             listener.updateTimeStamps();
+            final Set<TargetGroup> updatedTargetGroups = Sets.newHashSet();
+            loadbalancer.getListeners().forEach(tgl -> {
+              updatedTargetGroups.addAll(tgl.getTargetGroups());
+              tgl.getListenerRules().forEach(tglr -> updatedTargetGroups.addAll(tglr.getTargetGroups()));
+            });
+            loadbalancer.getTargetGroups().addAll(updatedTargetGroups);
+            loadbalancer.getTargetGroups().retainAll(updatedTargetGroups);
             loadbalancer.updateTimeStamps();
             return null;
           }
@@ -772,8 +860,15 @@ public class Loadbalancingv2Service {
     return reply;
   }
 
-  public DescribeAccountLimitsResponseType describeAccountLimits(final DescribeAccountLimitsType request) {
-    return request.getReply();
+  public DescribeAccountLimitsResponseType describeAccountLimits(final DescribeAccountLimitsType request) throws Loadbalancingv2Exception {
+    final DescribeAccountLimitsResponseType reply = request.getReply();
+    checkAuthorized( );
+    final Limits limits = new Limits();
+    limits.getMember().addAll(Stream.ofAll(Arrays.asList(Loadbalancingv2LimitProperties.Limit.values()))
+        .map(limit -> Limit.of(limit.display(), limit.value()))
+        .toJavaList());
+    reply.getDescribeAccountLimitsResult().setLimits(limits);
+    return reply;
   }
 
   public DescribeListenerCertificatesResponseType describeListenerCertificates(final DescribeListenerCertificatesType request) {
@@ -1185,6 +1280,7 @@ public class Loadbalancingv2Service {
               }
             }
             group.updateTimeStamps();
+            validateLimits(group);
             return null;
           });
     } catch ( final Loadbalancingv2MetadataNotFoundException e ) {
@@ -1300,10 +1396,183 @@ public class Loadbalancingv2Service {
       throw new Loadbalancingv2ClientException("InvalidConfigurationRequest",
           "Invalid tag key (reserved prefix)");
     }
-    if ((tags.size() - reservedTags) > LoadBalancingServiceProperties.getMaxTags()) {
+    if ((tags.size() - reservedTags) > Loadbalancingv2LimitProperties.getMaxTags()) {
       throw Exceptions.toUndeclared(
           new Loadbalancingv2ClientException("TooManyTags", "Tag limit exceeded"));
     }
+  }
+
+  /**
+   * Caller must hold tx for balancer
+   */
+  private static void validateLimits(final LoadBalancer loadBalancer) {
+    final Loadbalancingv2LimitProperties.Limit listenersLimit;
+    final Loadbalancingv2LimitProperties.Limit certificatesLimit;
+    final Loadbalancingv2LimitProperties.Limit targetGroupLimit;
+    final Loadbalancingv2LimitProperties.Limit targetGroupPerActionLimit;
+    final Loadbalancingv2LimitProperties.Limit rulesLimit;
+    final Loadbalancingv2LimitProperties.Limit targetLimit;
+    final Loadbalancingv2LimitProperties.Limit targetsPerZoneLimit;
+    if ( loadBalancer.getType() == LoadBalancer.Type.application ) {
+      listenersLimit = Loadbalancingv2LimitProperties.Limit.listeners_per_application_load_balancer;
+      rulesLimit = Loadbalancingv2LimitProperties.Limit.rules_per_application_load_balancer;
+      targetGroupLimit = Loadbalancingv2LimitProperties.Limit.target_groups_per_application_load_balancer;
+      targetGroupPerActionLimit = Loadbalancingv2LimitProperties.Limit.target_groups_per_action_on_application_load_balancer;
+      targetLimit = Loadbalancingv2LimitProperties.Limit.targets_per_application_load_balancer;
+      targetsPerZoneLimit = null;
+      certificatesLimit = Loadbalancingv2LimitProperties.Limit.certificates_per_application_load_balancer;
+    } else {
+      listenersLimit = Loadbalancingv2LimitProperties.Limit.listeners_per_network_load_balancer;
+      rulesLimit = null;
+      targetGroupLimit = null;
+      targetGroupPerActionLimit = Loadbalancingv2LimitProperties.Limit.target_groups_per_action_on_network_load_balancer;
+      targetLimit = Loadbalancingv2LimitProperties.Limit.targets_per_network_load_balancer;
+      targetsPerZoneLimit = Loadbalancingv2LimitProperties.Limit.targets_per_availability_zone_per_network_load_balancer;
+      certificatesLimit = Loadbalancingv2LimitProperties.Limit.certificates_per_network_load_balancer;
+    }
+
+    Loadbalancingv2LimitProperties.check(
+        listenersLimit,
+        loadBalancer.getListeners().size(),
+        runtime(limitExceeded("TooManyListeners")));
+
+    Loadbalancingv2LimitProperties.check(
+        targetGroupLimit,
+        loadBalancer.getTargetGroups().size(),
+        runtime(limitExceeded("TooManyUniqueTargetGroupsPerLoadBalancer")));
+
+    Loadbalancingv2LimitProperties.check(
+        targetLimit,
+        Stream.ofAll(loadBalancer.getTargetGroups())
+            .map(TargetGroup::getTargets)
+            .map(List::size)
+            .sum().intValue() ,
+        runtime(limitExceeded("TooManyTargets")));
+
+    Loadbalancingv2LimitProperties.check(
+        targetLimit,
+        Stream.ofAll(
+            Stream.ofAll(loadBalancer.getTargetGroups())
+                .flatMap(TargetGroup::getTargets)
+                .foldLeft(Maps.<String,Integer>newConcurrentMap(), (counts, target) -> {
+                  counts.compute(target.getTargetId(), (key, value) -> value==null? 1 : ++value );
+                  return counts;
+                }).values())
+            .max()
+            .getOrElse(0),
+        runtime(limitExceeded("TooManyRegistrationsForTargetId")));
+
+    Loadbalancingv2LimitProperties.check(
+        rulesLimit,
+        Stream.ofAll(loadBalancer.getListeners())
+            .map(Listener::getListenerRules)
+            .map(List::size)
+            .sum().intValue() ,
+        runtime(limitExceeded("TooManyRules")));
+
+    Stream.ofAll(loadBalancer.getListeners())
+        .flatMap(Listener::getListenerRules)
+        .forEach(rule -> {
+          final Actions actions = rule.getRuleActions();
+          if (actions.getMember().size() > 100) { //TODO configurable limit?
+            throw runtime(limitExceeded("TooManyActions")).get();
+          }
+
+          final Function<RuleCondition,Stream<String>> valuesFunc = condition -> {
+            final List<ListOfString> valueLists = Lists.newArrayList();
+            Option.of(condition.getHostHeaderConfig())
+                .map(HostHeaderConditionConfig::getValues).forEach(valueLists::add);
+            Option.of(condition.getHttpHeaderConfig())
+                .map(HttpHeaderConditionConfig::getValues).forEach(valueLists::add);
+            Option.of(condition.getHttpRequestMethodConfig())
+                .map(HttpRequestMethodConditionConfig::getValues).forEach(valueLists::add);
+            Option.of(condition.getPathPatternConfig())
+                .map(PathPatternConditionConfig::getValues).forEach(valueLists::add);
+            Option.of(condition.getSourceIpConfig())
+                .map(SourceIpConditionConfig::getValues).forEach(valueLists::add);
+            valueLists.add(condition.getValues());
+            return Stream.ofAll(valueLists)
+                .filter(Objects::nonNull)
+                .flatMap(ListOfString::getMember);
+          };
+
+          final Function<String, Integer> wildcardsFunc = value -> {
+            int wildCardCount = 0;
+            if (value != null) {
+              for (final int character : Stream.of('?', '*')) {
+                int index = -1;
+                while((index = value.indexOf(character, index+1)) > -1) {
+                  if (index == 0 || value.charAt(index -1) != '\\') {
+                    wildCardCount++;
+                  }
+                }
+              }
+            }
+            return wildCardCount;
+          };
+
+          final RuleConditionList conditions = rule.getRuleConditions();
+          Loadbalancingv2LimitProperties.check(
+              Loadbalancingv2LimitProperties.Limit.condition_values_per_alb_rule,
+              Stream.ofAll(conditions.getMember())
+                  .map(condition -> {
+                    final int valueCount = valuesFunc.apply(condition).count(__ -> true);
+                    int queryValueCount = 0;
+                    if (condition.getQueryStringConfig() != null &&
+                        condition.getQueryStringConfig().getValues() != null) {
+                      queryValueCount = condition.getQueryStringConfig().getValues().getMember().size();
+                    }
+                    return valueCount + queryValueCount;
+                  })
+                  .sum().intValue(),
+              runtime(invalidAction("Too many values for rule")));
+
+          Loadbalancingv2LimitProperties.check(
+              Loadbalancingv2LimitProperties.Limit.condition_wildcards_per_alb_rule,
+              Stream.ofAll(conditions.getMember())
+                  .map(condition -> {
+                    final int valueWildcardCount =
+                        valuesFunc.apply(condition).map(wildcardsFunc).sum().intValue();
+                    int queryWildcardCount =
+                        Option.of(condition.getQueryStringConfig())
+                            .map(QueryStringConditionConfig::getValues)
+                            .map(QueryStringKeyValuePairList::getMember)
+                            .map(Stream::ofAll)
+                            .getOrElse(Stream.empty())
+                            .flatMap(pair -> Lists.newArrayList(pair.getKey(), pair.getValue()))
+                            .map(wildcardsFunc)
+                            .sum().intValue();
+                    return valueWildcardCount + queryWildcardCount;
+                  })
+                  .sum().intValue(),
+              runtime(invalidAction("Too many values for rule")));
+        });
+
+    Stream.ofAll(loadBalancer.getListeners())
+        .flatMap(Listener::getListenerRules)
+        .map(ListenerRule::getRuleActions)
+        .flatMap(Actions::getMember)
+        .forEach(action -> {
+          int targetGroupCount = 0;
+          if (action.getForwardConfig() != null &&
+              action.getForwardConfig().getTargetGroups() != null) {
+            targetGroupCount += action.getForwardConfig().getTargetGroups().getMember().size();
+          }
+          Loadbalancingv2LimitProperties.check(
+              targetGroupPerActionLimit,
+              targetGroupCount,
+              runtime(limitExceeded("TooManyTargetGroups")));
+        });
+  }
+
+  /**
+   * Caller must hold tx for target group
+   */
+  private static void validateLimits(final TargetGroup targetGroup) {
+    Loadbalancingv2LimitProperties.check(
+        Loadbalancingv2LimitProperties.Limit.targets_per_target_group,
+        targetGroup.getTargets().size(),
+        runtime(limitExceeded("TooManyTargets")));
   }
 
   private static <RT extends TagView, RTE extends AbstractPersistent & Loadbalancingv2Metadata & Taggable<RT>> void addTagsForEntity(
@@ -1383,6 +1652,14 @@ public class Loadbalancingv2Service {
     return () -> new Loadbalancingv2ClientException("InvalidConfigurationRequest", "Invalid certificate ARN");
   }
 
+  private static CompatSupplier<Loadbalancingv2ClientException> invalidAction(final String message) {
+    return () -> new Loadbalancingv2ClientException("InvalidLoadBalancerAction", message);
+  }
+
+  private static CompatSupplier<Loadbalancingv2ClientException> limitExceeded(final String code) {
+    return () -> new Loadbalancingv2ClientException(code, "Request would exceed limit");
+  }
+
   private static CompatSupplier<RuntimeException> runtime(CompatSupplier<? extends Exception> supplier) {
     return () -> Exceptions.toUndeclared(supplier.get());
   }
@@ -1437,6 +1714,24 @@ public class Loadbalancingv2Service {
     }
   }
 
+  private static Context checkAuthorized( ) throws Loadbalancingv2Exception {
+    final Context ctx = Contexts.lookup( );
+    final AuthContextSupplier requestUserSupplier = ctx.getAuthContext( );
+
+    if ( !Permissions.isAuthorized(
+        Loadbalancingv2PolicySpec.VENDOR_LOADBALANCINGV2,
+        "",
+        "",
+        null,
+        Loadbalancingv2Metadatas.getIamActionByMessageType( ),
+        requestUserSupplier ) ) {
+      throw new Loadbalancingv2ClientException(
+          "NotAuthorized",
+          "You are not authorized to perform this operation." );
+    }
+    return ctx;
+  }
+
   /**
    * Method always throws, signature allows use of "throw handleException ..."
    */
@@ -1447,7 +1742,7 @@ public class Loadbalancingv2Service {
   ) throws Loadbalancingv2Exception {
     final AuthQuotaException quotaCause = Exceptions.findCause( e, AuthQuotaException.class );
     if ( quotaCause != null ) {
-      throw new Loadbalancingv2ClientException( quotaCode, "Request would exceed limit" );
+      throw limitExceeded(quotaCode).get();
     }
 
     return handleException(e, constraintExceptionBuilder);
