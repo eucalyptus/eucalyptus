@@ -1306,7 +1306,7 @@ public class Loadbalancingv2Service {
                 Loadbalancingv2Metadata.LoadbalancerMetadata.class,
                 loadbalancer.getType(),
                 loadbalancer.getAttributes());
-            loadbalancer.updateTimeStamps();
+            loadbalancer.setUpdateRequired(true);
             return TypeMappers.transform(loadbalancer, LoadBalancerAttributes.class);
           }
       );

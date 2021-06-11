@@ -43,6 +43,7 @@ public interface LoadBalancers {
   CompatFunction<LoadBalancer, LoadBalancerListenersView> LISTENERS_VIEW =
       loadBalancer -> ImmutableLoadBalancerListenersView.builder()
           .loadBalancer(ImmutableLoadBalancerView.copyOf(loadBalancer))
+          .loadBalancerAttributes(loadBalancer.getAttributes())
           .listeners(Stream.ofAll(loadBalancer.getListeners()).map(ImmutableListenerView::copyOf))
           .build();
 
