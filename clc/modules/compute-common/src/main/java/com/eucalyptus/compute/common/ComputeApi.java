@@ -7,6 +7,8 @@ package com.eucalyptus.compute.common;
 
 import com.eucalyptus.component.annotation.ComponentPart;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
 
 /**
  *
@@ -83,8 +85,20 @@ public interface ComputeApi {
   }
 
   default AllocateAddressResponseType allocateAddress(final String domain) {
+    return allocateAddress(domain, Collections.emptyMap());
+  }
+
+  default AllocateAddressResponseType allocateAddress(final String domain, final Map<String,String> tags) {
     final AllocateAddressType request = new AllocateAddressType();
     request.setDomain(domain);
+    if (tags != null && !tags.isEmpty()) {
+      final ResourceTagSpecification specification = new ResourceTagSpecification();
+      specification.setResourceType("elastic-ip");
+      for (final Map.Entry<String, String> entry : tags.entrySet()) {
+        specification.getTagSet().add(new ResourceTag(entry.getKey(), entry.getValue()));
+      }
+      request.getTagSpecification().add(specification);
+    }
     return allocateAddress(request);
   }
 

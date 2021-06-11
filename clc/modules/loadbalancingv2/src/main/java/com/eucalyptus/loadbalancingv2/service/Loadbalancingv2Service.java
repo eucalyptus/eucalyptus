@@ -68,6 +68,7 @@ import com.eucalyptus.loadbalancingv2.service.persist.entities.ListenerRule;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.ListenerRule_;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.Listener_;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.LoadBalancer;
+import com.eucalyptus.loadbalancingv2.service.persist.entities.LoadBalancerSubnet;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.Target;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.TargetGroup;
 import com.eucalyptus.loadbalancingv2.service.persist.views.ListenerRuleView;
@@ -454,8 +455,11 @@ public class Loadbalancingv2Service {
           hostedZoneNameAndId.map(Pair::getRight).forEach(newLoadBalancer::setCanonicalHostedZoneId);
           newLoadBalancer.setSecurityGroupIds(
               Stream.ofAll(securityGroupItems).map(SecurityGroupItemType::getGroupId).toJavaList());
-          newLoadBalancer.setSubnetIds(
-              Stream.ofAll(subnetItems).map(SubnetType::getSubnetId).toJavaList());
+          newLoadBalancer.setSubnets(Stream.ofAll(subnetItems)
+              .map(subnet -> LoadBalancerSubnet.create(
+                  subnet.getSubnetId(),
+                  subnet.getAvailabilityZone()))
+              .toJavaList());
           newLoadBalancer.setVpcId(vpcIds.iterator().next());
 
           try (final TransactionResource tx = Entities.transactionFor(newLoadBalancer)) {

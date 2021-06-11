@@ -55,6 +55,7 @@ import com.eucalyptus.loadbalancingv2.service.persist.entities.PersistenceLoadBa
 import com.eucalyptus.loadbalancingv2.service.persist.views.ImmutableLoadBalancerView;
 import com.eucalyptus.loadbalancingv2.service.persist.views.ListenerView;
 import com.eucalyptus.loadbalancingv2.service.persist.views.LoadBalancerListenersView;
+import com.eucalyptus.loadbalancingv2.service.persist.views.LoadBalancerSubnetView;
 import com.eucalyptus.loadbalancingv2.service.persist.views.LoadBalancerView;
 import com.eucalyptus.loadbalancingv2.service.servo.ServoCache;
 import com.eucalyptus.loadbalancingv2.service.servo.SwitchedServoMetadataSource;
@@ -72,6 +73,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
 import com.google.common.primitives.Longs;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -84,6 +86,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -92,6 +95,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.Restrictions;
 
+@SuppressWarnings({"Guava", "UnstableApiUsage", "unused"})
 public class Loadbalancingv2Workflow {
 
   private static final Logger logger = Logger.getLogger(Loadbalancingv2Workflow.class);
@@ -121,6 +125,7 @@ public class Loadbalancingv2Workflow {
       FUtils.memoizeLast( ThrowingFunction.undeclared( Accounts::lookupAccountIdByAlias ) );
 
   private final Function<BaseMessage,BaseMessage> loadBalancingAuthTransform = ThrowingFunction.undeclared(request -> {
+    //noinspection deprecation
     request.setUserId(loadbalancingAccountLookup.apply(AccountIdentifiers.ELB_SYSTEM_ACCOUNT));
     request.markPrivileged();
     return request;
@@ -185,9 +190,10 @@ public class Loadbalancingv2Workflow {
 
   private Map<String,String> getStackParameters(
       final LoadBalancerView loadBalancer,
+      final LoadBalancerSubnetView subnet,
       final List<ListenerView> listeners
   ) {
-    final String userSubnetId = loadBalancer.getSubnetIds().get(0);
+    final String userSubnetId = subnet.getSubnetId();
     final String subnetId = LoadBalancingSystemVpcs.getSystemVpcSubnetId(userSubnetId);
     final String securityGroupId = LoadBalancingSystemVpcs.getSecurityGroupId(subnetId);
     final String serverCertifcateArns = Stream.ofAll(listeners)
@@ -232,8 +238,8 @@ public class Loadbalancingv2Workflow {
         continue;
       }
 
-      final List<String> subnetIds = loadBalancer.getSubnetIds();
-      if (subnetIds.isEmpty()) {
+      final List<LoadBalancerSubnetView> subnets = loadBalancer.getSubnetViews();
+      if (subnets.isEmpty()) {
         loadBalancerSetupFailure(loadBalancer, "No subnets");
         continue;
       }
@@ -241,20 +247,25 @@ public class Loadbalancingv2Workflow {
       final CloudFormationApi cf = AsyncProxy.client(CloudFormationApi.class,
           loadBalancingAuthTransform, () -> Topology.lookup(CloudFormation.class));
 
-      final String stackName = getStackName(loadBalancer, null);
-      final Option<String> stackStatusOption =
-          stackStatus(cf.describeStacks(describeStacksMessage(stackName)));
-      if (stackStatusOption.isEmpty()) {
-        final String template = getTemplate(loadBalancer);
-        final Map<String, String> parameters = getStackParameters(loadBalancer, listeners);
-        cf.createStack(createStackMessage(stackName, template, parameters));
-        continue; // check for stack complete next time
-      } else if (stackStatusOption.get().endsWith("_FAILED")) {
-        loadBalancerSetupFailure(loadBalancer, "Stack failed");
-        continue;
-      } else if (!stackStatusOption.get().equals("CREATE_COMPLETE")) {
-        continue; // check for stack complete next time
+      final Set<String> allZones = Sets.newHashSet();
+      final Set<String> completedZones = Sets.newHashSet();
+      for (final LoadBalancerSubnetView subnet : subnets) {
+        allZones.add(subnet.getAvailabilityZone());
+        final String stackName = getStackName(loadBalancer, subnet.getAvailabilityZone());
+        final Option<String> stackStatusOption =
+            stackStatus(cf.describeStacks(describeStacksMessage(stackName)));
+        if (stackStatusOption.isEmpty()) {
+          final String template = getTemplate(loadBalancer);
+          final Map<String, String> parameters =
+              getStackParameters(loadBalancer, subnet, listeners);
+          cf.createStack(createStackMessage(stackName, template, parameters));
+        } else if (stackStatusOption.get().endsWith("_FAILED")) {
+          loadBalancerSetupFailure(loadBalancer, "Stack failed");
+        } else if (stackStatusOption.get().equals("CREATE_COMPLETE")) {
+          completedZones.add(subnet.getAvailabilityZone());
+        }
       }
+      if (!completedZones.containsAll(allZones)) continue;
 
       LoadBalancingWorkflows.runUpdateLoadBalancer(
           loadBalancer.getOwnerAccountNumber(),
@@ -263,6 +274,7 @@ public class Loadbalancingv2Workflow {
 
       try {
         loadBalancers.updateByView(loadBalancer, Predicates.alwaysTrue(), balancer -> {
+          //noinspection ConstantConditions
           balancer.setState(LoadBalancer.State.active);
           return null;
         });
@@ -290,39 +302,51 @@ public class Loadbalancingv2Workflow {
         continue;
       }
 
-      final List<String> subnetIds = loadBalancer.getSubnetIds();
-      if (subnetIds.isEmpty()) {
+      final List<LoadBalancerSubnetView> subnets = loadBalancer.getSubnetViews();
+      if (subnets.isEmpty()) {
         continue;
       }
 
       final CloudFormationApi cf = AsyncProxy.client(CloudFormationApi.class,
           loadBalancingAuthTransform, () -> Topology.lookup(CloudFormation.class));
 
-      final String stackName = getStackName(loadBalancer, null);
-      final Map<String, String> parameters = getStackParameters(loadBalancer, listeners);
-      try {
-        cf.updateStack(updateStackMessage(stackName, parameters));
-      } catch (final Exception e) {
-        final boolean updateExpired = (loadBalancer.getLastUpdateTimestamp().getTime() + UPDATE_RETRY_TIMEOUT)
-            < System.currentTimeMillis();
-        final boolean isValidationError =
-            AsyncExceptions.isWebServiceErrorCode(e,"ValidationError");
-        final String message = AsyncExceptions.asWebServiceErrorMessage(e, e.getMessage());
-        if (isValidationError && message.toLowerCase().contains("no updates")) {
-          logger.debug("No changes for load balancer on update " + loadBalancerId);
-        } else if (isValidationError && message.contains("_IN_PROGRESS") && !updateExpired) {
-          logger.info("In progress update for load balancer " + loadBalancerId + " (will retry)");
-          continue; // try again next time
-        } else if (!updateExpired) {
-          logger.warn("Error in update for load balancer " + loadBalancerId + " (will retry): " + message);
-          continue; // try again next time
-        } else {
-          logger.warn("Update expired for load balancer " + loadBalancerId + ": " + message);
+      final Set<String> allZones = Sets.newHashSet();
+      final Set<String> updatedZones = Sets.newHashSet();
+      for (final LoadBalancerSubnetView subnet : subnets) {
+        allZones.add(subnet.getAvailabilityZone());
+        final String stackName = getStackName(loadBalancer, subnet.getAvailabilityZone());
+        final Map<String, String> parameters = getStackParameters(loadBalancer, subnet, listeners);
+        try {
+          cf.updateStack(updateStackMessage(stackName, parameters));
+          updatedZones.add(subnet.getAvailabilityZone());
+        } catch (final Exception e) {
+          final boolean updateExpired =
+              (loadBalancer.getLastUpdateTimestamp().getTime() + UPDATE_RETRY_TIMEOUT)
+                  < System.currentTimeMillis();
+          final boolean isValidationError =
+              AsyncExceptions.isWebServiceErrorCode(e, "ValidationError");
+          final String message = AsyncExceptions.asWebServiceErrorMessage(e, e.getMessage());
+          if (isValidationError && message.toLowerCase().contains("no updates")) {
+            logger.debug("No changes for load balancer on update " + loadBalancerId);
+            updatedZones.add(subnet.getAvailabilityZone());
+          } else if (isValidationError && message.contains("_IN_PROGRESS") && !updateExpired) {
+            logger.info("In progress update for load balancer " + loadBalancerId + " (will retry)");
+          } else if (!updateExpired) {
+            logger.warn("Error in update for load balancer "
+                + loadBalancerId
+                + " (will retry): "
+                + message);
+          } else {
+            logger.warn("Update expired for load balancer " + loadBalancerId + ": " + message);
+            updatedZones.add(subnet.getAvailabilityZone());
+          }
         }
       }
+      if (!updatedZones.containsAll(allZones)) continue;
 
       try {
         loadBalancers.updateByView(loadBalancer, Predicates.alwaysTrue(), balancer -> {
+          //noinspection ConstantConditions
           if (loadBalancer.getLastUpdateTimestamp().equals(balancer.getLastUpdateTimestamp())) {
             balancer.setUpdateRequired(false);
           }
@@ -460,14 +484,21 @@ public class Loadbalancingv2Workflow {
               }
             }
             loadBalancer = lookupLoadBalancerById(loadBalancerId);
-            final List<String> subnetId = loadBalancer.getSubnetIds();
+            final Option<LoadBalancerSubnetView> subnet =
+                loadBalancer.findSubnetView(runningInstance.getPlacement());
             final List<String> securityGroupIds = loadBalancer.getSecurityGroupIds();
 
-            networkInterfaceId =
-                ec2.createNetworkInterface(createNetworkInterfaceMessage(subnetId.get(0), securityGroupIds))
-                    .getNetworkInterface().getNetworkInterfaceId();
+            if (subnet.isDefined()) {
+              networkInterfaceId =
+                  ec2.createNetworkInterface(
+                      createNetworkInterfaceMessage(subnet.get().getSubnetId(), securityGroupIds))
+                      .getNetworkInterface().getNetworkInterfaceId();
 
-            attachmentId = ec2.attachNetworkInterface(instanceId, 1, networkInterfaceId).getAttachmentId();
+              attachmentId =
+                  ec2.attachNetworkInterface(instanceId, 1, networkInterfaceId).getAttachmentId();
+            } else {
+              logger.warn("Subnet not found for servo instance: " + instanceId);
+            }
           }
 
           if (attachmentId != null) {
@@ -475,17 +506,15 @@ public class Loadbalancingv2Workflow {
               loadBalancer = lookupLoadBalancerById(loadBalancerId);
             }
 
-            String loadBalancerServoIp = null;
+            String loadBalancerServoIp;
             if (loadBalancer.getScheme() != LoadBalancer.Scheme.internal) {
               logger.info("Allocating public ip for servo instance: " + instanceId);
 
-              final AllocateAddressResponseType allocateResponse = ec2.allocateAddress("vpc");
-              final String allocationId = allocateResponse.getAllocationId();
-              loadBalancerServoIp = allocateResponse.getPublicIp();
-
               final Map<String,String> tags = Maps.newHashMap();
               tags.put("loadbalancer-id", loadBalancerId);
-              ec2.createTags(createTagsMessage(allocationId, tags));
+              final AllocateAddressResponseType allocateResponse = ec2.allocateAddress("vpc", tags);
+              final String allocationId = allocateResponse.getAllocationId();
+              loadBalancerServoIp = allocateResponse.getPublicIp();
 
               ec2.associateAddress(assocateAddressMessage(allocationId, networkInterfaceId));
             } else {
@@ -591,6 +620,7 @@ public class Loadbalancingv2Workflow {
     return createNetworkInterface;
   }
 
+  @SuppressWarnings("SameParameterValue")
   private ModifyNetworkInterfaceAttributeType modifyNetworkInterfaceAttributeMessage(
       final String networkInterfaceId,
       final String attachmentId,
@@ -626,10 +656,10 @@ public class Loadbalancingv2Workflow {
     return createTags;
   }
 
-  private String getStackName(final LoadBalancerView loadBalancer, final String zone) {  //TODO:STEVE: zone support
+  private String getStackName(final LoadBalancerView loadBalancer, final String zone) {
     final String userAccount = loadBalancer.getOwnerAccountNumber();
     final String name = loadBalancer.getDisplayName();
-    return "loadbalancer-" + loadBalancer.getType().getCode() + "-" + userAccount + "-" + name;
+    return "loadbalancer-" + loadBalancer.getType().getCode() + "-" + userAccount + "-" + zone + "-" + name;
   }
 
   private String getTemplate(final LoadBalancerView loadBalancer) {
@@ -679,6 +709,7 @@ public class Loadbalancingv2Workflow {
       logger.info(
           "Marking load balancer " + loadBalancer.getDisplayName() + " failed due to " + reason);
       loadBalancers.updateByView(loadBalancer, Predicates.alwaysTrue(), instance -> {
+        //noinspection ConstantConditions
         instance.setState(LoadBalancer.State.failed);
         return null;
       });
@@ -698,7 +729,9 @@ public class Loadbalancingv2Workflow {
 
     final CloudFormationApi cf = AsyncProxy.client(CloudFormationApi.class,
         loadBalancingAuthTransform, () -> Topology.lookup(CloudFormation.class));
-    cf.deleteStack(deleteStackMessage(getStackName(loadBalancer, null)));
+    for (final LoadBalancerSubnetView subnet : loadBalancer.getSubnetViews()) {
+      cf.deleteStack(deleteStackMessage(getStackName(loadBalancer, subnet.getAvailabilityZone())));
+    }
 
     return releasedAll;
   }
@@ -712,7 +745,6 @@ public class Loadbalancingv2Workflow {
           ComputeApi.filter("tag-key", "loadbalancer-id")
       );
 
-      //TODO:STEVE: track addresses allocated for v2 elbs [need tags on allocate address]
       for (final AddressInfoType addressInfo : describeAddressesResponse.getAddressesSet()) {
         if (addressInfo.getAssociationId() == null) {
           logger.info("Releasing address: " + addressInfo.getAllocationId() + "/" + addressInfo.getPublicIp());
@@ -782,6 +814,7 @@ public class Loadbalancingv2Workflow {
               + " failed from state "
               + loadBalancer.getState());
           loadBalancers.updateByView(loadBalancer, Predicates.alwaysTrue(), balancer -> {
+            //noinspection ConstantConditions
             balancer.setState(LoadBalancer.State.failed);
             return null;
           });
@@ -818,6 +851,7 @@ public class Loadbalancingv2Workflow {
     }
 
     protected final void perhapsWork() throws Exception {
+      //noinspection NonAtomicOperationOnVolatileField
       if (++count % calcFactor() == 0) {
         logger.trace("Running ELBv2 workflow task: " + task);
         doWork();

@@ -14,7 +14,9 @@ import com.eucalyptus.loadbalancing.dns.LoadBalancerDomainName;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2Metadata;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2ResourceName;
 import com.eucalyptus.loadbalancingv2.service.persist.Taggable;
+import com.eucalyptus.loadbalancingv2.service.persist.views.LoadBalancerSubnetView;
 import com.eucalyptus.loadbalancingv2.service.persist.views.LoadBalancerView;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.vavr.collection.Stream;
@@ -127,9 +129,8 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.State>
 
   @ElementCollection
   @CollectionTable( name = "metadata_v2_loadbalancer_subnets", joinColumns = @JoinColumn( name = "metadata_loadbalancer_id" ) )
-  @Column( name = "metadata_subnet_id" )
   @OrderColumn( name = "metadata_subnet_index")
-  private List<String> subnetIds = Lists.newArrayList();
+  private List<LoadBalancerSubnet> subnets = Lists.newArrayList();
 
   @OneToMany(cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, orphanRemoval = true, mappedBy = "loadbalancer")
   @OrderBy( "port" )
@@ -264,12 +265,16 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.State>
     this.securityGroupIds = securityGroupIds;
   }
 
-  public List<String> getSubnetIds() {
-    return subnetIds;
+  public List<LoadBalancerSubnetView> getSubnetViews() {
+    return ImmutableList.copyOf(getSubnets());
   }
 
-  public void setSubnetIds(List<String> subnetIds) {
-    this.subnetIds = subnetIds;
+  public List<LoadBalancerSubnet> getSubnets() {
+    return subnets;
+  }
+
+  public void setSubnets(List<LoadBalancerSubnet> subnets) {
+    this.subnets = subnets;
   }
 
   public List<Listener> getListeners() {

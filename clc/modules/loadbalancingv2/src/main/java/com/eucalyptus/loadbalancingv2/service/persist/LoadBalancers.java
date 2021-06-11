@@ -144,9 +144,10 @@ public interface LoadBalancers {
         balancer.setVpcId(view.getVpcId());
 
         final AvailabilityZones availabilityZones = new AvailabilityZones();
-        availabilityZones.getMember().addAll(Stream.ofAll(view.getSubnetIds()).map( subnetId -> {
+        availabilityZones.getMember().addAll(Stream.ofAll(view.getSubnetViews()).map( subnetView -> {
           AvailabilityZone zone = new AvailabilityZone();
-          zone.setSubnetId(subnetId);
+          zone.setSubnetId(subnetView.getSubnetId());
+          zone.setZoneName(subnetView.getAvailabilityZone());
           return zone;
         }).toJavaList());
         balancer.setAvailabilityZones(availabilityZones);
