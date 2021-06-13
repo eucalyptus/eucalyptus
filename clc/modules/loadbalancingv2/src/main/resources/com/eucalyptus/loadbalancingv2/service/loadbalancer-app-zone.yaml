@@ -52,6 +52,11 @@ Parameters:
     Description: The subnet to use
     Type: String
 
+  S3BucketArns:
+    Description: The objects the loadbalancer is authorized to write access logs
+    Type: List<String>
+    Default: ''
+
   ServoEucalyptusHost:
     Description: The services ip
     Type: String
@@ -90,6 +95,13 @@ Conditions:
       - !Join
         - ''
         - !Ref ServerCertificateArns
+      - ''
+
+  UseS3BucketArnsParameter: !Not
+    - !Equals
+      - !Join
+        - ''
+        - !Ref S3BucketArns
       - ''
 
 Resources:
@@ -133,6 +145,15 @@ Resources:
             Resource: !If
               - UseServerCertificateArnsParameter
               - !Ref ServerCertificateArns
+              - '*'
+          - Effect: !If
+              - UseS3BucketArnsParameter
+              - Allow
+              - Deny
+            Action: s3:PutObject
+            Resource: !If
+              - UseS3BucketArnsParameter
+              - !Ref S3BucketArns
               - '*'
 
   InstanceProfile:

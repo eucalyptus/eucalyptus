@@ -49,6 +49,7 @@ import com.eucalyptus.loadbalancing.LoadBalancingWorkerProperties;
 import com.eucalyptus.loadbalancing.workflow.LoadBalancingWorkflows;
 import com.eucalyptus.loadbalancingv2.common.Loadbalancingv2;
 import com.eucalyptus.loadbalancingv2.service.persist.LoadBalancers;
+import com.eucalyptus.loadbalancingv2.service.persist.LoadBalancingAttribute.Attribute;
 import com.eucalyptus.loadbalancingv2.service.persist.Loadbalancingv2MetadataException;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.LoadBalancer;
 import com.eucalyptus.loadbalancingv2.service.persist.entities.PersistenceLoadBalancers;
@@ -190,6 +191,7 @@ public class Loadbalancingv2Workflow {
 
   private Map<String,String> getStackParameters(
       final LoadBalancerView loadBalancer,
+      final Map<String,String> loadBalancerAttributes,
       final LoadBalancerSubnetView subnet,
       final List<ListenerView> listeners
   ) {
@@ -200,6 +202,7 @@ public class Loadbalancingv2Workflow {
         .map(ListenerView::getDefaultServerCertificateArn)
         .filter(Objects::nonNull)
         .intersperse(",").fold("", String::concat);
+    final String s3BucketArns = buildBucketArnsParameter(loadBalancerAttributes);
     final String imageId = LoadBalancingWorkerProperties.IMAGE;
     final String instanceType = LoadBalancingWorkerProperties.INSTANCE_TYPE;
     final String keyName =
@@ -215,6 +218,7 @@ public class Loadbalancingv2Workflow {
     parameters.put("SecurityGroupId", securityGroupId);
     parameters.put("ServerCertificateArns", serverCertifcateArns);
     parameters.put("SubnetId", subnetId);
+    parameters.put("S3BucketArns", s3BucketArns);
     parameters.put("KeyName", keyName);
     parameters.put("ServoEucalyptusHost", servoEucalyptusHost);
     parameters.put("ServoEucalyptusPort", servoEucalyptusPort);
@@ -224,14 +228,32 @@ public class Loadbalancingv2Workflow {
     return parameters;
   }
 
+  private String buildBucketArnsParameter(final Map<String,String> attributes) {
+    String parameter = "";
+    if (Attribute.LoadBalancerAccessLogsS3Enabled.booleanValue(attributes)) {
+      final String bucket = Attribute.LoadBalancerAccessLogsS3Bucket.stringValue(attributes);
+      final String prefix = Attribute.LoadBalancerAccessLogsS3Prefix.stringValue(attributes);
+      if (bucket != null && !bucket.isEmpty()) {
+        if (prefix != null && !prefix.isEmpty()) {
+          parameter = String.format("arn:aws:s3:::%s/%s/*", bucket, prefix);
+        } else {
+          parameter = String.format("arn:aws:s3:::%s/*", bucket);
+        }
+      }
+    }
+    return parameter;
+  }
+
   private void loadBalancersProvision() {
     for (final String loadBalancerId : listLoadBalancerIds(LoadBalancer.State.provisioning)) {
       final LoadBalancerView loadBalancer;
+      final Map<String,String> loadBalancerAttributes;
       final List<ListenerView> listeners;
       try {
         final LoadBalancerListenersView loadBalancerWithListeners =
             lookupLoadBalancerById(loadBalancerId, LoadBalancers.LISTENERS_VIEW);
         loadBalancer = loadBalancerWithListeners.getLoadBalancer();
+        loadBalancerAttributes = loadBalancerWithListeners.getLoadBalancerAttributes();
         listeners = loadBalancerWithListeners.getListeners();
       } catch (final Exception e) {
         logger.error("Error provisioning load balancer " + loadBalancerId, e);
@@ -257,7 +279,7 @@ public class Loadbalancingv2Workflow {
         if (stackStatusOption.isEmpty()) {
           final String template = getTemplate(loadBalancer);
           final Map<String, String> parameters =
-              getStackParameters(loadBalancer, subnet, listeners);
+              getStackParameters(loadBalancer, loadBalancerAttributes, subnet, listeners);
           cf.createStack(createStackMessage(stackName, template, parameters));
         } else if (stackStatusOption.get().endsWith("_FAILED")) {
           loadBalancerSetupFailure(loadBalancer, "Stack failed");
@@ -291,11 +313,13 @@ public class Loadbalancingv2Workflow {
   private void loadBalancersUpdate() {
     for (final String loadBalancerId : listLoadBalancerIds(LoadBalancer.State.active, true)) {
       final LoadBalancerView loadBalancer;
+      final Map<String,String> loadBalancerAttributes;
       final List<ListenerView> listeners;
       try {
         final LoadBalancerListenersView loadBalancerWithListeners =
             lookupLoadBalancerById(loadBalancerId, LoadBalancers.LISTENERS_VIEW);
         loadBalancer = loadBalancerWithListeners.getLoadBalancer();
+        loadBalancerAttributes = loadBalancerWithListeners.getLoadBalancerAttributes();
         listeners = loadBalancerWithListeners.getListeners();
       } catch (final Exception e) {
         logger.error("Error updating load balancer " + loadBalancerId, e);
@@ -315,7 +339,8 @@ public class Loadbalancingv2Workflow {
       for (final LoadBalancerSubnetView subnet : subnets) {
         allZones.add(subnet.getAvailabilityZone());
         final String stackName = getStackName(loadBalancer, subnet.getAvailabilityZone());
-        final Map<String, String> parameters = getStackParameters(loadBalancer, subnet, listeners);
+        final Map<String, String> parameters =
+            getStackParameters(loadBalancer, loadBalancerAttributes, subnet, listeners);
         try {
           cf.updateStack(updateStackMessage(stackName, parameters));
           updatedZones.add(subnet.getAvailabilityZone());
