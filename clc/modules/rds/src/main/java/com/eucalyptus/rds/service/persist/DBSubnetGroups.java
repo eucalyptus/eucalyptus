@@ -5,7 +5,10 @@
  */
 package com.eucalyptus.rds.service.persist;
 
+import com.eucalyptus.util.CompatFunction;
 import java.util.List;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.entities.AbstractPersistentSupport;
@@ -18,8 +21,6 @@ import com.eucalyptus.rds.service.persist.entities.DBSubnet;
 import com.eucalyptus.rds.service.persist.entities.DBSubnetGroup;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 
 /**
  *
@@ -52,7 +53,7 @@ public interface DBSubnetGroups {
   AbstractPersistentSupport<RdsMetadata.DBSubnetGroupMetadata,DBSubnetGroup,RdsMetadataException> withRetries( );
 
   @TypeMapper
-  public enum DBSubnetTransform implements Function<DBSubnet, com.eucalyptus.rds.common.msgs.Subnet> {
+  enum DBSubnetTransform implements CompatFunction<DBSubnet, com.eucalyptus.rds.common.msgs.Subnet> {
     INSTANCE;
 
     @Override
@@ -68,7 +69,7 @@ public interface DBSubnetGroups {
   }
 
   @TypeMapper
-  public enum DBSubnetGroupTransform implements Function<DBSubnetGroup, com.eucalyptus.rds.common.msgs.DBSubnetGroup> {
+  enum DBSubnetGroupTransform implements CompatFunction<DBSubnetGroup, com.eucalyptus.rds.common.msgs.DBSubnetGroup> {
     INSTANCE;
 
     @Override

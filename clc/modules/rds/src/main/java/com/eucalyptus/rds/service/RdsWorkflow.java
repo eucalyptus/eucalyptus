@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.Restrictions;
@@ -53,8 +54,6 @@ import com.eucalyptus.rds.service.persist.views.ImmutableDBInstanceView;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Strings;
 import com.google.common.base.Charsets;
-import com.google.common.base.Function;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -112,7 +111,7 @@ public class RdsWorkflow {
     try {
       dbInstanceUuids = dbInstances.listByExample(
           DBInstance.exampleWithStatus(status),
-          Predicates.alwaysTrue(),
+          __ -> true,
           DBInstance::getNaturalId);
     } catch (final RdsMetadataException e) {
       logger.error("Error listing db instances", e);
@@ -129,7 +128,7 @@ public class RdsWorkflow {
         DBInstance.exampleWithUuid(dbInstanceUuid),
         null,
         dbInstanceUuid,
-        Predicates.alwaysTrue(),
+        __ -> true,
         transform );
   }
 
@@ -473,7 +472,7 @@ public class RdsWorkflow {
               Restrictions.isNotNull( "dbInstanceRuntime.systemVolumeId" )
           ),
           Collections.emptyMap( ),
-          Predicates.alwaysTrue( ),
+          __ -> true,
           DBInstances.COMPOSITE_RUNTIME
       );
     } catch ( final Exception e ) {
@@ -599,7 +598,7 @@ public class RdsWorkflow {
               Restrictions.lt( "lastUpdateTimestamp", new Date( System.currentTimeMillis( ) - DBInstances.EXPIRY_AGE ) )
           ),
           Collections.emptyMap( ),
-          Predicates.alwaysTrue( ),
+          __ -> true,
           ImmutableDBInstanceView::copyOf
       );
     } catch ( final Exception e ) {

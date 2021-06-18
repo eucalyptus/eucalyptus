@@ -106,7 +106,7 @@ public class RdsDnsResolver  extends DnsResolvers.DnsResolver {
           DBInstance.exampleWithName(ownerName, dbIdentifer),
           ownerName,
           dbIdentifer,
-          Predicates.alwaysTrue(),
+          __ -> true,
           instance ->
               instance.getPubliclyAccessible() && instance.getDbInstanceRuntime().getPublicIp()!=null ?
               instance.getDbInstanceRuntime().getPublicIp() :

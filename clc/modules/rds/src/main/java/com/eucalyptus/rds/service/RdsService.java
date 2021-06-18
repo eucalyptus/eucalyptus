@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import javax.inject.Inject;
 import org.apache.log4j.Logger;
 import org.hibernate.exception.ConstraintViolationException;
@@ -26,23 +27,22 @@ import com.eucalyptus.rds.service.engine.RdsEngine;
 import com.eucalyptus.rds.service.persist.RdsMetadataNotFoundException;
 import com.eucalyptus.rds.service.persist.entities.DBInstance.Status;
 import com.eucalyptus.rds.service.persist.entities.DBSubnet;
+import com.eucalyptus.util.CompatSupplier;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncProxy;
-import com.google.common.base.Functions;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 
+
 /**
  *
  */
 @ComponentNamed
+@SuppressWarnings({"unused", "Convert2Lambda"})
 public class RdsService {
   private static final Logger logger = Logger.getLogger( RdsService.class );
 
@@ -143,8 +143,8 @@ public class RdsService {
           Collections.emptySet() :
           Sets.newTreeSet(request.getVpcSecurityGroupIds().getMember());
 
-      final Supplier<com.eucalyptus.rds.service.persist.entities.DBInstance> allocator =
-          new Supplier<com.eucalyptus.rds.service.persist.entities.DBInstance>( ) {
+      final CompatSupplier<com.eucalyptus.rds.service.persist.entities.DBInstance> allocator =
+          new CompatSupplier<com.eucalyptus.rds.service.persist.entities.DBInstance>( ) {
             @Override
             public com.eucalyptus.rds.service.persist.entities.DBInstance get( ) {
               try {
@@ -155,7 +155,7 @@ public class RdsService {
                             ctx.getUserFullName( ).asAccountFullName(),
                             subnetGroupName,
                             RdsMetadatas.filterPrivileged( ),
-                            Functions.identity( ));
+                            Function.identity( ));
 
                 final com.eucalyptus.rds.service.persist.entities.DBInstance instance =
                     com.eucalyptus.rds.service.persist.entities.DBInstance.create(
@@ -240,8 +240,8 @@ public class RdsService {
         throw new RdsClientException("InvalidSubnet", "Subnets vpc invalid");
       }
 
-      final Supplier<com.eucalyptus.rds.service.persist.entities.DBSubnetGroup> allocator =
-          new Supplier<com.eucalyptus.rds.service.persist.entities.DBSubnetGroup>( ) {
+      final CompatSupplier<com.eucalyptus.rds.service.persist.entities.DBSubnetGroup> allocator =
+          new CompatSupplier<com.eucalyptus.rds.service.persist.entities.DBSubnetGroup>( ) {
         @Override
         public com.eucalyptus.rds.service.persist.entities.DBSubnetGroup get( ) {
           try {
@@ -362,7 +362,7 @@ public class RdsService {
       final String name = request.getDBSubnetGroupName();
 
       final com.eucalyptus.rds.service.persist.entities.DBSubnetGroup group =
-          dbSubnetGroups.lookupByName( ownerFullName, name, RdsMetadatas.filterPrivileged(), Functions.identity());
+          dbSubnetGroups.lookupByName( ownerFullName, name, RdsMetadatas.filterPrivileged(), Function.identity());
 
       dbSubnetGroups.deleteByExample( group );
     } catch ( final RdsMetadataNotFoundException e ) {
@@ -468,18 +468,16 @@ public class RdsService {
 
     try {
       final Predicate<com.eucalyptus.rds.service.persist.entities.DBInstance> requestedAndAccessible =
-          Predicates.and(
-              RdsMetadatas.filterPrivileged( ),
+          RdsMetadatas.<com.eucalyptus.rds.service.persist.entities.DBInstance>filterPrivileged( ).and(
               RdsMetadatas.filterById( request.getDBInstanceIdentifier() == null ?
                   Collections.emptySet() :
-                  Collections.singleton( request.getDBInstanceIdentifier( )  ) )
-          );
+                  Collections.singleton( request.getDBInstanceIdentifier( )  ) ) );
 
       final DBInstanceList resultDBInstances = new DBInstanceList();
       resultDBInstances.getMember().addAll( dbInstances.list(
           ownerFullName,
           requestedAndAccessible,
-          TypeMappers.lookup( com.eucalyptus.rds.service.persist.entities.DBInstance.class, DBInstance.class ) ) );
+          TypeMappers.lookupF( com.eucalyptus.rds.service.persist.entities.DBInstance.class, DBInstance.class ) ) );
       reply.getDescribeDBInstancesResult().setDBInstances(resultDBInstances);
     } catch ( Exception e ) {
       handleException( e );
@@ -535,18 +533,16 @@ public class RdsService {
 
     try {
       final Predicate<com.eucalyptus.rds.service.persist.entities.DBSubnetGroup> requestedAndAccessible =
-          Predicates.and(
-              RdsMetadatas.filterPrivileged( ),
+          RdsMetadatas.<com.eucalyptus.rds.service.persist.entities.DBSubnetGroup>filterPrivileged( ).and(
               RdsMetadatas.filterById( request.getDBSubnetGroupName() == null ?
                   Collections.emptySet() :
-                  Collections.singleton( request.getDBSubnetGroupName( )  ) )
-          );
+                  Collections.singleton( request.getDBSubnetGroupName( )  ) ) );
 
       final DBSubnetGroups resultSubnetGroups = new DBSubnetGroups();
       resultSubnetGroups.getMember().addAll( dbSubnetGroups.list(
           ownerFullName,
           requestedAndAccessible,
-          TypeMappers.lookup( com.eucalyptus.rds.service.persist.entities.DBSubnetGroup.class, DBSubnetGroup.class ) ) );
+          TypeMappers.lookupF( com.eucalyptus.rds.service.persist.entities.DBSubnetGroup.class, DBSubnetGroup.class ) ) );
       reply.getDescribeDBSubnetGroupsResult().setDBSubnetGroups(resultSubnetGroups);
     } catch ( Exception e ) {
       handleException( e );
