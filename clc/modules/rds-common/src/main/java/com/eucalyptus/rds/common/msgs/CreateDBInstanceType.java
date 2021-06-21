@@ -5,43 +5,57 @@
  */
 package com.eucalyptus.rds.common.msgs;
 
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRange;
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRegex;
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRegexValue;
 import javax.annotation.Nonnull;
 
 
 public class CreateDBInstanceType extends RdsMessage {
 
+  @FieldRange(min=1, max=65536)
   private Integer allocatedStorage;
 
   private Boolean autoMinorVersionUpgrade;
 
+  @FieldRegex(FieldRegexValue.STRING_128)
   private String availabilityZone;
 
+  @FieldRange(min=0, max=35)
   private Integer backupRetentionPeriod;
 
   private String characterSetName;
 
   private Boolean copyTagsToSnapshot;
 
+  @FieldRegex(FieldRegexValue.RDS_DB_CLUSTER_ID)
   private String dBClusterIdentifier;
 
   @Nonnull
+  @FieldRegex(FieldRegexValue.STRING_128)
   private String dBInstanceClass;
 
   @Nonnull
+  @FieldRegex(FieldRegexValue.RDS_DB_INSTANCE_ID)
   private String dBInstanceIdentifier;
 
+  @FieldRegex(FieldRegexValue.STRING_64)
   private String dBName;
 
+  @FieldRegex(FieldRegexValue.RDS_DB_PARAMETER_GROUP_NAME)
   private String dBParameterGroupName;
 
   private DBSecurityGroupNameList dBSecurityGroups;
 
+  @FieldRegex(FieldRegexValue.RDS_DB_SUBNET_GROUP_NAME)
   private String dBSubnetGroupName;
 
   private Boolean deletionProtection;
 
+  @FieldRegex(FieldRegexValue.STRING_256)
   private String domain;
 
+  @FieldRegex(FieldRegexValue.STRING_256)
   private String domainIAMRoleName;
 
   private LogTypeList enableCloudwatchLogsExports;
@@ -51,56 +65,77 @@ public class CreateDBInstanceType extends RdsMessage {
   private Boolean enablePerformanceInsights;
 
   @Nonnull
+  @FieldRegex(FieldRegexValue.RDS_DB_ENGINE)
   private String engine;
 
+  @FieldRegex(FieldRegexValue.RDS_DB_ENGINE_VERION)
   private String engineVersion;
 
+  @FieldRange(min=100, max=1_000_000)
   private Integer iops;
 
+  @FieldRegex(FieldRegexValue.KMS_NAME_OR_ARN)
   private String kmsKeyId;
 
+  @FieldRegex(FieldRegexValue.ENUM_LICENSEMODEL)
   private String licenseModel;
 
+  @FieldRegex(FieldRegexValue.RDS_DB_MASTERPASSWORD)
   private String masterUserPassword;
 
+  @FieldRegex(FieldRegexValue.RDS_DB_MASTERUSERNAME)
   private String masterUsername;
 
+  @FieldRange(min=0, max=1_000_000)
   private Integer maxAllocatedStorage;
 
+  @FieldRange(max=60)
   private Integer monitoringInterval;
 
+  @FieldRegex(FieldRegexValue.IAM_NAME_OR_ARN)
   private String monitoringRoleArn;
 
   private Boolean multiAZ;
 
+  @FieldRegex(FieldRegexValue.RDS_DB_OPTION_GROUP_NAME)
   private String optionGroupName;
 
+  @FieldRegex(FieldRegexValue.KMS_NAME_OR_ARN)
   private String performanceInsightsKMSKeyId;
 
+  @FieldRange(max=1000)
   private Integer performanceInsightsRetentionPeriod;
 
+  @FieldRange(min=1150, max=65535)
   private Integer port;
 
+  @FieldRegex(FieldRegexValue.STRING_64)
   private String preferredBackupWindow;
 
+  @FieldRegex(FieldRegexValue.STRING_64)
   private String preferredMaintenanceWindow;
 
   private ProcessorFeatureList processorFeatures;
 
+  @FieldRange(min=0, max=15)
   private Integer promotionTier;
 
   private Boolean publiclyAccessible;
 
   private Boolean storageEncrypted;
 
+  @FieldRegex(FieldRegexValue.ENUM_STORAGETYPE)
   private String storageType;
 
   private TagList tags;
 
+  @FieldRegex(FieldRegexValue.KMS_NAME_OR_ARN)
   private String tdeCredentialArn;
 
+  @FieldRegex(FieldRegexValue.ESTRING_1024)
   private String tdeCredentialPassword;
 
+  @FieldRegex(FieldRegexValue.ESTRING_1024)
   private String timezone;
 
   private VpcSecurityGroupIdList vpcSecurityGroupIds;

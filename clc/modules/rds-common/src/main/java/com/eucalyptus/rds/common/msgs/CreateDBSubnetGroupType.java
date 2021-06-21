@@ -5,15 +5,18 @@
  */
 package com.eucalyptus.rds.common.msgs;
 
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRegex;
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRegexValue;
 import javax.annotation.Nonnull;
-
 
 public class CreateDBSubnetGroupType extends RdsMessage {
 
   @Nonnull
+  @FieldRegex(FieldRegexValue.ESTRING_1024)
   private String dBSubnetGroupDescription;
 
   @Nonnull
+  @FieldRegex(FieldRegexValue.RDS_DB_SUBNET_GROUP_NAME)
   private String dBSubnetGroupName;
 
   @Nonnull

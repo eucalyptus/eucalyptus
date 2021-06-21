@@ -5,13 +5,16 @@
  */
 package com.eucalyptus.rds.common.msgs;
 
-import javax.annotation.Nonnull;
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRegex;
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRegexValue;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
+import javax.annotation.Nonnull;
 
 
 public class Filter extends EucalyptusData {
 
   @Nonnull
+  @FieldRegex(FieldRegexValue.STRING_128)
   private String name;
 
   @Nonnull

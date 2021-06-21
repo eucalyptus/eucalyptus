@@ -222,6 +222,9 @@ public class RdsService {
       final String desc = request.getDBSubnetGroupDescription();
       final Collection<String> subnetIds = request.getSubnetIds().getMember();
 
+      if ("default".equals(name)) {
+        throw new RdsClientException("InvalidParameterValue", "Invalid name");
+      }
       if (subnetIds.isEmpty()) {
         throw new RdsClientException("DBSubnetGroupDoesNotCoverEnoughAZs", "No subnets");
       }

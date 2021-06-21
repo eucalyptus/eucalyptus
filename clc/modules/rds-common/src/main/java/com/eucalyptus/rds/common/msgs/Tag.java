@@ -5,13 +5,17 @@
  */
 package com.eucalyptus.rds.common.msgs;
 
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRegex;
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRegexValue;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
 
 public class Tag extends EucalyptusData {
 
+  @FieldRegex(FieldRegexValue.STRING_128)
   private String key;
 
+  @FieldRegex(FieldRegexValue.STRING_256)
   private String value;
 
   public String getKey() {

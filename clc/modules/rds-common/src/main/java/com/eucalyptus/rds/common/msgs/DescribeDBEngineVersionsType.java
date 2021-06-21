@@ -5,14 +5,22 @@
  */
 package com.eucalyptus.rds.common.msgs;
 
+import com.eucalyptus.rds.common.RdsMessageValidation;
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRange;
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRegex;
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRegexValue;
+
 public class DescribeDBEngineVersionsType extends RdsMessage {
 
+  @FieldRegex(FieldRegexValue.STRING_128)
   private String dBParameterGroupFamily;
 
   private Boolean defaultOnly;
 
+  @FieldRegex(FieldRegexValue.RDS_DB_ENGINE)
   private String engine;
 
+  @FieldRegex(FieldRegexValue.RDS_DB_ENGINE_VERION)
   private String engineVersion;
 
   private FilterList filters;
@@ -23,8 +31,10 @@ public class DescribeDBEngineVersionsType extends RdsMessage {
 
   private Boolean listSupportedTimezones;
 
+  @FieldRegex(FieldRegexValue.STRING_128)
   private String marker;
 
+  @FieldRange(min = 20, max = 100)
   private Integer maxRecords;
 
   public String getDBParameterGroupFamily() {

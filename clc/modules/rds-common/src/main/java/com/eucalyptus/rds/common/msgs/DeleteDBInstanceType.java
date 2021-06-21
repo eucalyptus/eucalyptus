@@ -5,6 +5,8 @@
  */
 package com.eucalyptus.rds.common.msgs;
 
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRegex;
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRegexValue;
 import javax.annotation.Nonnull;
 
 
@@ -15,6 +17,7 @@ public class DeleteDBInstanceType extends RdsMessage {
 
   private Boolean deleteAutomatedBackups;
 
+  @FieldRegex(FieldRegexValue.RDS_DB_SNAPSHOT_ID)
   private String finalDBSnapshotIdentifier;
 
   private Boolean skipFinalSnapshot;
