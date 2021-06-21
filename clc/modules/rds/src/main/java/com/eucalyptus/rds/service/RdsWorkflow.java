@@ -6,6 +6,7 @@
 package com.eucalyptus.rds.service;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -53,7 +54,7 @@ import com.eucalyptus.rds.service.persist.views.ImmutableDBInstanceRuntimeView;
 import com.eucalyptus.rds.service.persist.views.ImmutableDBInstanceView;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Strings;
-import com.google.common.base.Charsets;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -66,7 +67,7 @@ import io.vavr.Tuple3;
 /**
  *
  */
-@SuppressWarnings("Guava")
+@SuppressWarnings({"UnstableApiUsage", "unused"})
 public class RdsWorkflow {
 
   private static final Logger logger = Logger.getLogger(RdsWorkflow.class);
@@ -165,7 +166,7 @@ public class RdsWorkflow {
       final String userSubnetId = subnetViewOptional.get().getSubnetId();
       final Tuple3<String,String,String> vpcInfo = RdsSystemVpcs.getSystemVpcSubnetId(userSubnetId);
       final String dbIdentifier = dbInstance.getDisplayName();
-      final int dbAllocatedStorage = dbInstance.getAllocatedStorage();
+      final int dbAllocatedStorage = MoreObjects.firstNonNull(dbInstance.getAllocatedStorage(), 1);
       final String dbVpcId = vpcInfo._1();
       final String dbSubnetId = vpcInfo._2();
       final String dbAvailablityZone = vpcInfo._3();
@@ -321,7 +322,7 @@ public class RdsWorkflow {
     try {
       return Resources.toString(
           Resources.getResource( RdsWorkflow.class, name + ".yaml" ),
-          Charsets.UTF_8 );
+          StandardCharsets.UTF_8 );
     } catch (IOException e) {
       throw Exceptions.toUndeclared(e);
     }
@@ -376,7 +377,8 @@ public class RdsWorkflow {
         networkInterfaceId = dbInstanceRuntime.getUserNetworkInterfaceId();
       }
 
-      if (dbInstance.getPubliclyAccessible() && dbInstanceRuntime.getPublicIp()==null) {
+      if (dbInstance.getPubliclyAccessible() != null && dbInstance.getPubliclyAccessible() &&
+          dbInstanceRuntime.getPublicIp() == null) {
         final String allocationId;
         String publicIp;
         if (dbInstanceRuntime.getPublicIpAllocationId() == null) {
@@ -710,6 +712,7 @@ public class RdsWorkflow {
     }
 
     protected final void perhapsWork() throws Exception {
+      //noinspection NonAtomicOperationOnVolatileField
       if (++count % calcFactor() == 0) {
         logger.trace("Running RDS workflow task: " + task);
         doWork();

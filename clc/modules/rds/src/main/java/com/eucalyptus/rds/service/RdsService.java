@@ -18,6 +18,7 @@ import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.common.ComputeApi;
+import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.compute.common.SubnetType;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -34,6 +35,7 @@ import com.eucalyptus.util.async.AsyncProxy;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import io.vavr.collection.Stream;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 
@@ -137,11 +139,28 @@ public class RdsService {
     try {
       final String instanceName = request.getDBInstanceIdentifier();
       final String instanceClass = request.getDBInstanceClass();
+      final String availabilityZone = request.getAvailabilityZone();
       final String subnetGroupName = request.getDBSubnetGroupName();
       final RdsEngine engine = RdsEngine.valueOf(request.getEngine());
       final Set<String> vpcSecurityGroups = request.getVpcSecurityGroupIds()==null ?
           Collections.emptySet() :
           Sets.newTreeSet(request.getVpcSecurityGroupIds().getMember());
+
+      final ComputeApi computeApi = AsyncProxy.client(ComputeApi.class);
+
+      if (availabilityZone != null) {
+        final List<SubnetType> subnetItems = computeApi.describeSubnets(
+            ComputeApi.filter("availability-zone", availabilityZone)).getSubnetSet().getItem();
+        if (subnetItems.isEmpty()) {
+          throw new RdsClientException("ValidationError", "Availabilty zone not found");
+        }
+      }
+      final List<SecurityGroupItemType> securityGroupItems = vpcSecurityGroups.isEmpty() ?
+          Collections.emptyList() :
+          computeApi.describeSecurityGroups(Lists.newArrayList(vpcSecurityGroups)).getSecurityGroupInfo();
+      if (securityGroupItems.size() != vpcSecurityGroups.size()) {
+        throw new RdsClientException("ValidationError", "Security group not found");
+      }
 
       final CompatSupplier<com.eucalyptus.rds.service.persist.entities.DBInstance> allocator =
           new CompatSupplier<com.eucalyptus.rds.service.persist.entities.DBInstance>( ) {
@@ -157,6 +176,12 @@ public class RdsService {
                             RdsMetadatas.filterPrivileged( ),
                             Function.identity( ));
 
+                if (availabilityZone != null && group != null && Stream.ofAll(group.getSubnets())
+                    .filter(subnet -> availabilityZone.equals(subnet.getAvailabilityZone())).isEmpty()) {
+                  throw Exceptions.toUndeclared(
+                      new RdsClientException("ValidationError", "DB subnet group invalid for availability zone"));
+                }
+
                 final com.eucalyptus.rds.service.persist.entities.DBInstance instance =
                     com.eucalyptus.rds.service.persist.entities.DBInstance.create(
                         ownerFullName,
@@ -171,14 +196,14 @@ public class RdsService {
                         MoreObjects.firstNonNull(request.getPubliclyAccessible(), Boolean.FALSE)
                     );
 
-                instance.setAvailabilityZone(request.getAvailabilityZone());
+                instance.setAvailabilityZone(availabilityZone);
                 instance.setMasterUsername(request.getMasterUsername());
                 instance.setMasterUserPassword(request.getMasterUserPassword());
                 instance.setVpcSecurityGroups(Lists.newArrayList(vpcSecurityGroups));
                 instance.setDbSubnetGroup(group);
                 return dbInstances.save(instance);
               } catch ( Exception ex ) {
-                throw new RuntimeException( ex );
+                throw Exceptions.toUndeclared( ex );
               }
             }
           };
