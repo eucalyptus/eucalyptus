@@ -248,6 +248,7 @@ public class Pipelines {
 
     @Override
     public ChannelPipeline addHandlers( final ChannelPipeline pipeline ) {
+      pipeline.addLast( "aggregator", Handlers.newQueryHttpChunkAggregator( ) );
       pipeline.addLast( "deserialize", Handlers.soapMarshalling( ) );
       pipeline.addLast( "security-detection-handler", new MessageStackHandler( ) {
         @Override
