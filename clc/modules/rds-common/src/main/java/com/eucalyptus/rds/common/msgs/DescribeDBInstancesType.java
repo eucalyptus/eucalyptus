@@ -5,14 +5,22 @@
  */
 package com.eucalyptus.rds.common.msgs;
 
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRange;
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRegex;
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRegexValue;
+
+
 public class DescribeDBInstancesType extends RdsMessage {
 
+  @FieldRegex(FieldRegexValue.RDS_DB_INSTANCE_ID)
   private String dBInstanceIdentifier;
 
   private FilterList filters;
 
+  @FieldRegex(FieldRegexValue.STRING_128)
   private String marker;
 
+  @FieldRange(min = 20, max = 100)
   private Integer maxRecords;
 
   public String getDBInstanceIdentifier() {

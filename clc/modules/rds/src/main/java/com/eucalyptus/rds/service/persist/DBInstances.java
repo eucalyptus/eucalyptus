@@ -5,9 +5,12 @@
  */
 package com.eucalyptus.rds.service.persist;
 
+import com.eucalyptus.util.CompatFunction;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import org.hibernate.criterion.Criterion;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.NameTooLongException;
@@ -33,8 +36,7 @@ import com.eucalyptus.rds.service.persist.views.ImmutableDBInstanceView;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.dns.DomainNames;
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
+
 
 /**
  *
@@ -107,7 +109,7 @@ public interface DBInstances {
   AbstractPersistentSupport<DBInstanceMetadata, DBInstance, RdsMetadataException> withRetries();
 
   @TypeMapper
-  enum DBInstanceTransform implements Function<DBInstance, com.eucalyptus.rds.common.msgs.DBInstance> {
+  enum DBInstanceTransform implements CompatFunction<DBInstance, com.eucalyptus.rds.common.msgs.DBInstance> {
     INSTANCE;
 
     @Override

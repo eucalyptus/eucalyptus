@@ -5,12 +5,15 @@
  */
 package com.eucalyptus.rds.common.msgs;
 
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRegex;
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRegexValue;
 import javax.annotation.Nonnull;
 
 
 public class DeleteDBSubnetGroupType extends RdsMessage {
 
   @Nonnull
+  @FieldRegex(FieldRegexValue.STRING_255)
   private String dBSubnetGroupName;
 
   public String getDBSubnetGroupName() {

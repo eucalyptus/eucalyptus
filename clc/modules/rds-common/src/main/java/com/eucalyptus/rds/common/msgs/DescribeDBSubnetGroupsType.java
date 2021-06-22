@@ -5,14 +5,21 @@
  */
 package com.eucalyptus.rds.common.msgs;
 
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRange;
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRegex;
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRegexValue;
+
 public class DescribeDBSubnetGroupsType extends RdsMessage {
 
+  @FieldRegex(FieldRegexValue.STRING_255)
   private String dBSubnetGroupName;
 
   private FilterList filters;
 
+  @FieldRegex(FieldRegexValue.STRING_128)
   private String marker;
 
+  @FieldRange(min = 20, max = 100)
   private Integer maxRecords;
 
   public String getDBSubnetGroupName() {
