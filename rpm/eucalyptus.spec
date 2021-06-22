@@ -373,8 +373,8 @@ Requires:       ebtables
 Requires:       eucalyptus-selinux >= %{version_selinux}
 Requires:       ipset
 Requires:       iptables
-# nginx 1.9.13 added perl as a loadable module (EUCA-12734)
 Requires:       nginx >= 1.9.13
+Requires:       nginx-mod-http-perl >= 1.9.13
 Requires:       /usr/bin/which
 %{?systemd_requires}
 
