@@ -5,16 +5,22 @@
  */
 package com.eucalyptus.rds.service;
 
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.rds.common.policy.RdsPolicySpec;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import javax.inject.Inject;
 import org.apache.log4j.Logger;
+import org.hibernate.criterion.Conjunction;
+import org.hibernate.criterion.Restrictions;
 import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.common.ComputeApi;
@@ -24,6 +30,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.rds.common.RdsMetadatas;
 import com.eucalyptus.rds.common.msgs.*;
+import com.eucalyptus.rds.common.policy.RdsResourceName;
 import com.eucalyptus.rds.service.engine.RdsEngine;
 import com.eucalyptus.rds.service.persist.RdsMetadataNotFoundException;
 import com.eucalyptus.rds.service.persist.entities.DBInstance.Status;
@@ -488,13 +495,34 @@ public class RdsService {
     final DescribeDBInstancesResponseType reply = request.getReply();
 
     final Context ctx = Contexts.lookup( );
-    //TODO describe db instances filters - request.getFilters()
     final boolean showAll = "verbose".equals( request.getDBInstanceIdentifier() );
     final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll ?
         null :
         ctx.getUserFullName( ).asAccountFullName( );
 
     try {
+      final Conjunction conjunction = Restrictions.conjunction();
+      final FilterList filters = request.getFilters();
+      if (filters != null) {
+        for (final Filter filter : filters.getMember()) {
+          switch (Objects.toString(filter.getName(), "")) {
+            case "db-instance-id":
+              conjunction.add(Restrictions.in("displayName",
+                  dbIdentifiers(filter.getValues().getMember(), Collections.singleton("--"))));
+              break;
+            case "engine":
+              conjunction.add(Restrictions.in("engine", filter.getValues().getMember()));
+              break;
+            case "db-cluster-id":
+            case "dbi-resource-id":
+            case "domain":
+              conjunction.add(Restrictions.eq("displayName", "")); // match nothing
+              break;
+            default: throw new RdsClientException("ValidationError", "Invalid filter");
+          }
+        }
+      }
+
       final Predicate<com.eucalyptus.rds.service.persist.entities.DBInstance> requestedAndAccessible =
           RdsMetadatas.<com.eucalyptus.rds.service.persist.entities.DBInstance>filterPrivileged( ).and(
               RdsMetadatas.filterById( request.getDBInstanceIdentifier() == null ?
@@ -504,6 +532,8 @@ public class RdsService {
       final DBInstanceList resultDBInstances = new DBInstanceList();
       resultDBInstances.getMember().addAll( dbInstances.list(
           ownerFullName,
+          conjunction,
+          Collections.emptyMap(),
           requestedAndAccessible,
           TypeMappers.lookupF( com.eucalyptus.rds.service.persist.entities.DBInstance.class, DBInstance.class ) ) );
       reply.getDescribeDBInstancesResult().setDBInstances(resultDBInstances);
@@ -825,6 +855,45 @@ public class RdsService {
 
   public StopDBInstanceResponseType stopDBInstance(final StopDBInstanceType request) {
     return request.getReply();
+  }
+
+  private static Set<String> dbIdentifiers(
+      final Iterable<String> values,
+      final Set<String> onEmpty
+  ) {
+    final Set<String> ids = Sets.newHashSet();
+    for (final String idOrArn : values) {
+      if (idOrArn.startsWith("arn:")) {
+        resourceName("db", idOrArn)
+            .map(RdsResourceName::getResourceName)
+            .forEach(ids::add);
+      } else {
+        ids.add(idOrArn);
+      }
+    }
+    if (ids.isEmpty()) {
+      return onEmpty;
+    } else {
+      return ids;
+    }
+  }
+
+  private static io.vavr.control.Option<RdsResourceName> resourceName(
+      final String type,
+      final String arn
+  ) {
+    io.vavr.control.Option<RdsResourceName> resourceName = io.vavr.control.Option.none();
+    try {
+      final Ern ern = Ern.parse(arn);
+      if (ern instanceof RdsResourceName) {
+        final RdsResourceName rdsErn = (RdsResourceName) ern;
+        if (type == null ||
+            PolicySpec.qualifiedName(RdsPolicySpec.VENDOR_RDS, type).equals(rdsErn.getResourceType())) {
+          resourceName = io.vavr.control.Option.of(rdsErn);
+        }
+      }
+    } catch (final Exception ignore) {}
+    return resourceName;
   }
 
   private static void handleException( final Exception e ) throws RdsException {
