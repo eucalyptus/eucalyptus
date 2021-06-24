@@ -116,7 +116,7 @@ public interface DBInstances {
     public com.eucalyptus.rds.common.msgs.DBInstance apply(final DBInstance instance) {
       final com.eucalyptus.rds.common.msgs.DBInstance result = new com.eucalyptus.rds.common.msgs.DBInstance();
       result.setDBInstanceIdentifier(instance.getDisplayName());
-      result.setDBInstanceArn(RdsMetadatas.toArn(instance));
+      result.setDBInstanceArn(instance.getArn());
       result.setDBInstanceStatus(instance.getState().toString());
       result.setInstanceCreateTime(instance.getCreationTimestamp());
       result.setAllocatedStorage(instance.getAllocatedStorage());

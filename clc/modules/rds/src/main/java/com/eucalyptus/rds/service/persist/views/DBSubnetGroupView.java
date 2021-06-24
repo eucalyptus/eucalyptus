@@ -6,6 +6,7 @@
 package com.eucalyptus.rds.service.persist.views;
 
 import org.immutables.value.Value.Immutable;
+import com.eucalyptus.rds.common.policy.RdsResourceName;
 import com.eucalyptus.rds.service.persist.entities.DBSubnetGroup;
 
 /**
@@ -25,4 +26,13 @@ public interface DBSubnetGroupView {
   String getDescription();
 
   String getVpcId();
+
+  default String getArn() {
+    return new RdsResourceName(
+        "",
+        getOwnerAccountNumber(),
+        "subgrp",
+        getDisplayName()
+    ).toString();
+  }
 }

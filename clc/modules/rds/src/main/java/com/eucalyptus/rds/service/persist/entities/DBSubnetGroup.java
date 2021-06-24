@@ -5,6 +5,7 @@
  */
 package com.eucalyptus.rds.service.persist.entities;
 
+import com.google.common.collect.Lists;
 import java.util.List;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -20,6 +21,7 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.rds.common.Rds;
 import com.eucalyptus.rds.common.RdsMetadata.DBSubnetGroupMetadata;
+import com.eucalyptus.rds.service.persist.Taggable;
 import com.eucalyptus.rds.service.persist.views.DBSubnetGroupView;
 
 /**
@@ -28,7 +30,7 @@ import com.eucalyptus.rds.service.persist.views.DBSubnetGroupView;
 @Entity
 @PersistenceContext( name = "eucalyptus_rds" )
 @Table( name = "rds_db_subnet_group" )
-public class DBSubnetGroup extends UserMetadata<DBSubnetGroup.Status> implements DBSubnetGroupMetadata, DBSubnetGroupView {
+public class DBSubnetGroup extends UserMetadata<DBSubnetGroup.Status> implements DBSubnetGroupMetadata, DBSubnetGroupView, Taggable<DBSubnetGroupTag> {
   private static final long serialVersionUID = 1L;
 
   public enum Status {
@@ -44,6 +46,9 @@ public class DBSubnetGroup extends UserMetadata<DBSubnetGroup.Status> implements
   @OneToMany( fetch = FetchType.EAGER, cascade = { CascadeType.PERSIST, CascadeType.REMOVE }, orphanRemoval = true, mappedBy = "dbSubnetGroup" )
   @OrderBy( "subnetId" )
   private List<DBSubnet> subnets;
+
+  @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "dbSubnetGroup")
+  private List<DBSubnetGroupTag> tags = Lists.newArrayList();
 
   protected DBSubnetGroup( ) {
   }
@@ -62,6 +67,14 @@ public class DBSubnetGroup extends UserMetadata<DBSubnetGroup.Status> implements
     group.setDescription(description);
     group.setState(Status.Complete);
     return group;
+  }
+
+  @Override public DBSubnetGroupTag createTag(final String key, final String value) {
+    return DBSubnetGroupTag.create(this, key, value);
+  }
+
+  @Override public void updateTag(final DBSubnetGroupTag tag, final String value) {
+    tag.setValue(value);
   }
 
   public static DBSubnetGroup exampleWithOwner( final OwnerFullName owner ) {
@@ -94,6 +107,14 @@ public class DBSubnetGroup extends UserMetadata<DBSubnetGroup.Status> implements
 
   public void setSubnets(final List<DBSubnet> subnets) {
     this.subnets = subnets;
+  }
+
+  public List<DBSubnetGroupTag> getTags() {
+    return tags;
+  }
+
+  public void setTags(List<DBSubnetGroupTag> tags) {
+    this.tags = tags;
   }
 
   @Override

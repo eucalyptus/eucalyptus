@@ -5,6 +5,7 @@
  */
 package com.eucalyptus.rds.service.persist.entities;
 
+import java.io.Serializable;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import org.hibernate.annotations.Parent;
@@ -14,7 +15,8 @@ import com.eucalyptus.rds.service.persist.views.DBInstanceRuntimeView;
  *
  */
 @Embeddable
-public class DBInstanceRuntime implements DBInstanceRuntimeView {
+public class DBInstanceRuntime implements DBInstanceRuntimeView, Serializable {
+  private static final long serialVersionUID = 1L;
 
   @Parent
   private DBInstance parent;
