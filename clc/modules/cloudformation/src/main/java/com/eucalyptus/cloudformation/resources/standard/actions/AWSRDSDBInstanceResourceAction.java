@@ -5,12 +5,13 @@
  */
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
-import java.util.function.Function;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
+import com.eucalyptus.cloudformation.resources.standard.TagHelper;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSRDSDBInstanceResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSRDSDBInstanceProperties;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.CloudFormationResourceTag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.RetryAfterConditionCheckFailedException;
@@ -19,18 +20,30 @@ import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
 import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.rds.common.RdsApi;
+import com.eucalyptus.rds.common.msgs.AddTagsToResourceType;
+import com.eucalyptus.rds.common.msgs.CreateDBInstanceResponseType;
 import com.eucalyptus.rds.common.msgs.CreateDBInstanceType;
 import com.eucalyptus.rds.common.msgs.DBInstance;
 import com.eucalyptus.rds.common.msgs.DeleteDBInstanceType;
 import com.eucalyptus.rds.common.msgs.DescribeDBInstancesResponseType;
 import com.eucalyptus.rds.common.msgs.DescribeDBInstancesType;
+import com.eucalyptus.rds.common.msgs.KeyList;
+import com.eucalyptus.rds.common.msgs.RemoveTagsFromResourceType;
+import com.eucalyptus.rds.common.msgs.Tag;
+import com.eucalyptus.rds.common.msgs.TagList;
 import com.eucalyptus.rds.common.msgs.VpcSecurityGroupIdList;
 import com.eucalyptus.util.async.AsyncExceptions;
 import com.eucalyptus.util.async.AsyncProxy;
 import com.fasterxml.jackson.databind.node.IntNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.base.Strings;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import io.vavr.collection.Stream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Function;
 
 /**
  *
@@ -90,15 +103,30 @@ public class AWSRDSDBInstanceResourceAction extends StepBasedResourceAction {
           securityGroupIdList.getMember().addAll(action.properties.getVpcSecurityGroups());
           createDBInstance.setVpcSecurityGroupIds(securityGroupIdList);
         }
-        // createDBSubnetGroup.setTags();
-        rds.createDBInstance(createDBInstance);
+        final Set<CloudFormationResourceTag> tags = getTags(action, action.properties.getTags());
+        if (!tags.isEmpty()) {
+          createDBInstance.setTags(toTagList(tags));
+        }
+        final CreateDBInstanceResponseType response = rds.createDBInstance(createDBInstance);
         action.info.setPhysicalResourceId(action.properties.getDbInstanceIdentifier());
         action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        if (response.getCreateDBInstanceResult() != null &&
+            response.getCreateDBInstanceResult().getDBInstance() != null &&
+            response.getCreateDBInstanceResult().getDBInstance().getDBInstanceArn() != null) {
+          action.info.setArn(response.getCreateDBInstanceResult().getDBInstance().getDBInstanceArn());
+        }
         return action;
       }
-    }
-    ,
+    },
+    ADD_SYSTEM_TAGS {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) {
+        final AWSRDSDBInstanceResourceAction action = (AWSRDSDBInstanceResourceAction) resourceAction;
+        addSystemTags(action.info.getArn(), action);
+        return action;
+      }
+    },
     WAIT_UNTIL_AVAILABLE {
       @Override
       public ResourceAction perform(final ResourceAction resourceAction) throws Exception {
@@ -127,8 +155,36 @@ public class AWSRDSDBInstanceResourceAction extends StepBasedResourceAction {
       public Integer getTimeout() {
         return INSTANCE_CREATE_MAX_CREATE_RETRY_SECS;
       }
-    }
-    // TODO system tags via AddTagsToResource
+    },
+  }
+
+  private enum UpdateNoInterruptionSteps implements UpdateStep {
+    UPDATE_DBINSTANCE {
+      @Override
+      public ResourceAction perform(
+          final ResourceAction oldResourceAction,
+          final ResourceAction newResourceAction
+      ) {
+        final AWSRDSDBInstanceResourceAction oldAction = (AWSRDSDBInstanceResourceAction) oldResourceAction;
+        final AWSRDSDBInstanceResourceAction newAction = (AWSRDSDBInstanceResourceAction) newResourceAction;
+        //TODO updates ?
+        return newAction;
+      }
+    },
+    UPDATE_TAGS {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        final AWSRDSDBInstanceResourceAction oldAction = (AWSRDSDBInstanceResourceAction) oldResourceAction;
+        final AWSRDSDBInstanceResourceAction newAction = (AWSRDSDBInstanceResourceAction) newResourceAction;
+        updateTags(
+            oldAction.info.getArn(),
+            oldAction,
+            oldAction.properties.getTags(),
+            newAction,
+            newAction.properties.getTags());
+        return newResourceAction;
+      }
+    },
   }
 
   private enum DeleteSteps implements Step {
@@ -203,18 +259,90 @@ public class AWSRDSDBInstanceResourceAction extends StepBasedResourceAction {
   }
 
 
-  private enum UpdateNoInterruptionSteps implements UpdateStep {
-    UPDATE_DBINSTANCE {
-      @Override
-      public ResourceAction perform(
-          final ResourceAction oldResourceAction,
-          final ResourceAction newResourceAction
-      ) throws Exception {
-        final AWSRDSDBInstanceResourceAction oldAction = (AWSRDSDBInstanceResourceAction) oldResourceAction;
-        final AWSRDSDBInstanceResourceAction newAction = (AWSRDSDBInstanceResourceAction) newResourceAction;
-        //TODO updates ?
-        return newAction;
-      }
+    protected static void addSystemTags(final String arn, final ResourceAction action) {
+    final List<CloudFormationResourceTag> tags =
+        TagHelper.getCloudFormationResourceSystemTags(action.getResourceInfo(), action.getStackEntity());
+    final RdsApi rds = AsyncProxy.client(
+        RdsApi.class,
+        MessageHelper.privilegedUserIdentity(action.getResourceInfo().getEffectiveUserId()));
+    final AddTagsToResourceType addTags = new AddTagsToResourceType();
+    addTags.setResourceName(arn);
+    addTags.setTags(toTagList(tags));
+    rds.addTagsToResource(addTags);
+  }
+
+  protected static void updateTags(
+      final String arn,
+      final ResourceAction oldAction,
+      final ArrayList<CloudFormationResourceTag> oldTagProperty,
+      final ResourceAction newAction,
+      final ArrayList<CloudFormationResourceTag> newTagProperty
+  ) throws Exception {
+    final RdsApi rds = AsyncProxy.client(
+        RdsApi.class,
+        MessageHelper.userIdentity(newAction.getResourceInfo().getEffectiveUserId()));
+
+    final Set<CloudFormationResourceTag> oldTags = getTags(oldAction, oldTagProperty, false);
+    final Set<CloudFormationResourceTag> newTags = getTags(newAction, newTagProperty);
+
+    // remove tags
+    final Set<String> removedKeys = Sets.newHashSet();
+    removedKeys.addAll(Stream.ofAll(oldTags).map(CloudFormationResourceTag::getKey).toJavaList());
+    removedKeys.removeAll(Stream.ofAll(newTags).map(CloudFormationResourceTag::getKey).toJavaList());
+    if (!removedKeys.isEmpty()) {
+      final RemoveTagsFromResourceType removeTags = new RemoveTagsFromResourceType();
+      removeTags.setResourceName(arn);
+      removeTags.setTagKeys(toTagKeys(removedKeys));
+      rds.removeTagsFromResource(removeTags);
     }
+
+    // add or update tags
+    newTags.removeAll(oldTags);
+    if (!newTags.isEmpty()) {
+      final AddTagsToResourceType addTags = new AddTagsToResourceType();
+      addTags.setResourceName(arn);
+      addTags.setTags(toTagList(newTags));
+      rds.addTagsToResource(addTags);
+    }
+  }
+
+  protected static Set<CloudFormationResourceTag> getTags(
+      final ResourceAction action,
+      final ArrayList<CloudFormationResourceTag> tagProperty
+  ) throws Exception {
+    return getTags(action, tagProperty, true);
+  }
+
+  protected static Set<CloudFormationResourceTag> getTags(
+      final ResourceAction action,
+      final ArrayList<CloudFormationResourceTag> tagProperty,
+      final boolean checkReservedTags
+  ) throws Exception {
+    final Set<CloudFormationResourceTag> tags = Sets.newLinkedHashSet();
+    tags.addAll(TagHelper.getCloudFormationResourceStackTags(action.getStackEntity()));
+    if (tagProperty != null && !tagProperty.isEmpty()) {
+      if (checkReservedTags) {
+        TagHelper.checkReservedCloudFormationResourceTemplateTags(tagProperty);
+      }
+      tags.addAll(tagProperty);
+    }
+    return tags;
+  }
+
+  protected static KeyList toTagKeys(final Set<String> tags) {
+    final KeyList tagKeys = new KeyList();
+    tagKeys.getMember().addAll(tags);
+    return tagKeys;
+  }
+
+  protected static TagList toTagList(final Iterable<CloudFormationResourceTag> tags) {
+    final TagList tagList = new TagList();
+    tagList.getMember().addAll(Stream.ofAll(tags).map( cfTag -> {
+      Tag tag = new Tag();
+      tag.setKey(cfTag.getKey());
+      tag.setValue(cfTag.getValue());
+      return tag;
+    }).toJavaList());
+    return tagList;
   }
 }

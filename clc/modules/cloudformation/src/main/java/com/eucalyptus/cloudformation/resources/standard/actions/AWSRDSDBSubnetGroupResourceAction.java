@@ -5,12 +5,12 @@
  */
 package com.eucalyptus.cloudformation.resources.standard.actions;
 
-import java.util.function.Function;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceProperties;
 import com.eucalyptus.cloudformation.resources.standard.info.AWSRDSDBSubnetGroupResourceInfo;
 import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSRDSDBSubnetGroupProperties;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.CloudFormationResourceTag;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.util.MessageHelper;
 import com.eucalyptus.cloudformation.workflow.steps.Step;
@@ -18,11 +18,19 @@ import com.eucalyptus.cloudformation.workflow.steps.StepBasedResourceAction;
 import com.eucalyptus.cloudformation.workflow.steps.UpdateStep;
 import com.eucalyptus.cloudformation.workflow.updateinfo.UpdateType;
 import com.eucalyptus.rds.common.RdsApi;
+import com.eucalyptus.rds.common.msgs.CreateDBSubnetGroupResponseType;
 import com.eucalyptus.rds.common.msgs.CreateDBSubnetGroupType;
 import com.eucalyptus.rds.common.msgs.DeleteDBSubnetGroupType;
 import com.eucalyptus.rds.common.msgs.SubnetIdentifierList;
 import com.eucalyptus.util.async.AsyncProxy;
 import com.fasterxml.jackson.databind.node.TextNode;
+import java.util.Set;
+import java.util.function.Function;
+
+import static com.eucalyptus.cloudformation.resources.standard.actions.AWSRDSDBInstanceResourceAction.addSystemTags;
+import static com.eucalyptus.cloudformation.resources.standard.actions.AWSRDSDBInstanceResourceAction.getTags;
+import static com.eucalyptus.cloudformation.resources.standard.actions.AWSRDSDBInstanceResourceAction.toTagList;
+import static com.eucalyptus.cloudformation.resources.standard.actions.AWSRDSDBInstanceResourceAction.updateTags;
 
 /**
  *
@@ -65,15 +73,59 @@ public class AWSRDSDBSubnetGroupResourceAction extends StepBasedResourceAction {
         final SubnetIdentifierList subnetIdentifierList = new SubnetIdentifierList();
         subnetIdentifierList.setMember(action.properties.getSubnetIds());
         createDBSubnetGroup.setSubnetIds(subnetIdentifierList);
-        // createDBSubnetGroup.setTags();
-        rds.createDBSubnetGroup(createDBSubnetGroup);
+        final Set<CloudFormationResourceTag> tags = getTags(action, action.properties.getTags());
+        if (!tags.isEmpty()) {
+          createDBSubnetGroup.setTags(toTagList(tags));
+        }
+        final CreateDBSubnetGroupResponseType response = rds.createDBSubnetGroup(createDBSubnetGroup);
         action.info.setPhysicalResourceId(action.properties.getDBSubnetGroupName());
         action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
+        if (response.getCreateDBSubnetGroupResult() != null &&
+            response.getCreateDBSubnetGroupResult().getDBSubnetGroup() != null &&
+            response.getCreateDBSubnetGroupResult().getDBSubnetGroup().getDBSubnetGroupArn() != null) {
+          action.info.setArn(response.getCreateDBSubnetGroupResult().getDBSubnetGroup().getDBSubnetGroupArn());
+        }
         return action;
       }
-    }
-    // TODO system tags via AddTagsToResource
+    },
+    ADD_SYSTEM_TAGS {
+      @Override
+      public ResourceAction perform(ResourceAction resourceAction) {
+        final AWSRDSDBSubnetGroupResourceAction action = (AWSRDSDBSubnetGroupResourceAction) resourceAction;
+        addSystemTags(action.info.getArn(), action);
+        return action;
+      }
+    },
+  }
+
+  private enum UpdateNoInterruptionSteps implements UpdateStep {
+    UPDATE_DBSUBNETGROUP {
+      @Override
+      public ResourceAction perform(
+          final ResourceAction oldResourceAction,
+          final ResourceAction newResourceAction
+      ) {
+        final AWSRDSDBSubnetGroupResourceAction oldAction = (AWSRDSDBSubnetGroupResourceAction) oldResourceAction;
+        final AWSRDSDBSubnetGroupResourceAction newAction = (AWSRDSDBSubnetGroupResourceAction) newResourceAction;
+        //TODO updates ?
+        return newAction;
+      }
+    },
+    UPDATE_TAGS {
+      @Override
+      public ResourceAction perform(ResourceAction oldResourceAction, ResourceAction newResourceAction) throws Exception {
+        final AWSRDSDBSubnetGroupResourceAction oldAction = (AWSRDSDBSubnetGroupResourceAction) oldResourceAction;
+        final AWSRDSDBSubnetGroupResourceAction newAction = (AWSRDSDBSubnetGroupResourceAction) newResourceAction;
+        updateTags(
+            oldAction.info.getArn(),
+            oldAction,
+            oldAction.properties.getTags(),
+            newAction,
+            newAction.properties.getTags());
+        return newResourceAction;
+      }
+    },
   }
 
   private enum DeleteSteps implements Step {
@@ -110,21 +162,5 @@ public class AWSRDSDBSubnetGroupResourceAction extends StepBasedResourceAction {
   @Override
   public void setResourceInfo(ResourceInfo resourceInfo) {
     info = (AWSRDSDBSubnetGroupResourceInfo) resourceInfo;
-  }
-
-
-  private enum UpdateNoInterruptionSteps implements UpdateStep {
-    UPDATE_DBSUBNETGROUP {
-      @Override
-      public ResourceAction perform(
-          final ResourceAction oldResourceAction,
-          final ResourceAction newResourceAction
-      ) throws Exception {
-        final AWSRDSDBSubnetGroupResourceAction oldAction = (AWSRDSDBSubnetGroupResourceAction) oldResourceAction;
-        final AWSRDSDBSubnetGroupResourceAction newAction = (AWSRDSDBSubnetGroupResourceAction) newResourceAction;
-        //TODO updates ?
-        return newAction;
-      }
-    }
   }
 }
