@@ -987,6 +987,7 @@ public class Addresses {
           .withPersistenceFilter( "association-id", "associationId" )
           .withPersistenceFilter( "domain", "domain", FUtils.valueOfFunction( AddressDomain.class ) )
           .withPersistenceFilter( "instance-id", "instanceId" )
+          .withUnsupportedProperty( "network-border-group" )
           .withPersistenceFilter( "network-interface-id", "networkInterfaceId" )
           .withPersistenceFilter( "network-interface-owner-id", "networkInterfaceOwnerId" )
           .withPersistenceFilter( "private-ip-address", "privateAddress" )

@@ -96,6 +96,7 @@ public interface InternetGateways extends Lister<InternetGateway> {
           .withStringProperty( "attachment.state", FilterStringFunctions.STATE )
           .withStringProperty( "attachment.vpc-id", FilterStringFunctions.VPC_ID )
           .withStringProperty( "internet-gateway-id", CloudMetadatas.toDisplayName( ) )
+          .withStringProperty( "owner-id", FilterStringFunctions.ACCOUNT_ID )
           .withPersistenceAlias( "vpc", "vpc" )
           .withPersistenceFilter( "attachment.state", "vpc.displayName", new Function<String, String>() {
             @Nullable
@@ -107,11 +108,18 @@ public interface InternetGateways extends Lister<InternetGateway> {
           } )
           .withPersistenceFilter( "vpc-id", "vpc.displayName" )
           .withPersistenceFilter( "internet-gateway-id", "displayName" )
+          .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
       );
     }
   }
 
   public enum FilterStringFunctions implements Function<InternetGateway,String> {
+    ACCOUNT_ID {
+      @Override
+      public String apply( final InternetGateway internetGateway ) {
+        return internetGateway.getOwnerAccountNumber( );
+      }
+    },
     STATE {
       @Override
       public String apply( final InternetGateway internetGateway ){

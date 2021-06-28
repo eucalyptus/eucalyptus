@@ -161,12 +161,14 @@ public interface NetworkAcls extends Lister<NetworkAcl> {
               .withBooleanSetProperty( "entry.egress", FilterBooleanSetFunctions.ENTRY_EGRESS )
               .withIntegerSetProperty( "entry.icmp.code", FilterIntegerSetFunctions.ICMP_CODE )
               .withIntegerSetProperty( "entry.icmp.type", FilterIntegerSetFunctions.ICMP_TYPE )
+              .withUnsupportedProperty( "entry.ipv6-cidr" )
               .withIntegerSetProperty( "entry.port-range.from", FilterIntegerSetFunctions.PORT_FROM )
               .withIntegerSetProperty( "entry.port-range.to", FilterIntegerSetFunctions.PORT_TO )
               .withIntegerSetProperty( "entry.protocol", FilterIntegerSetFunctions.PROTOCOL, ProtocolValueFunction.INSTANCE )
               .withStringSetProperty( "entry.rule-action", FilterStringSetFunctions.ENTRY_RULE_ACTION )
               .withIntegerSetProperty( "entry.rule-number", FilterIntegerSetFunctions.RULE_NUMBER )
               .withStringProperty( "network-acl-id", CloudMetadatas.toDisplayName() )
+              .withStringProperty( "owner-id", FilterStringFunctions.ACCOUNT_ID )
               .withStringProperty( "vpc-id", FilterStringFunctions.VPC_ID )
               .withPersistenceAlias( "subnets", "subnets" )
               .withPersistenceAlias( "entries", "entries" )
@@ -184,6 +186,7 @@ public interface NetworkAcls extends Lister<NetworkAcl> {
               .withPersistenceFilter( "entry.rule-action", "entries.ruleAction", FUtils.valueOfFunction( NetworkAclEntry.RuleAction.class ) )
               .withPersistenceFilter( "entry.rule-number", "entries.ruleNumber", PersistenceFilter.Type.Integer )
               .withPersistenceFilter( "network-acl-id", "displayName" )
+              .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
               .withPersistenceFilter( "vpc-id", "vpc.displayName" )
       );
     }
@@ -209,6 +212,12 @@ public interface NetworkAcls extends Lister<NetworkAcl> {
   }
 
   public enum FilterStringFunctions implements Function<NetworkAcl,String> {
+    ACCOUNT_ID {
+      @Override
+      public String apply( final NetworkAcl networkAcl ){
+        return networkAcl.getOwnerAccountNumber();
+      }
+    },
     ASSOCIATION_NETWORK_ACL_ID {
       @Override
       public String apply( final NetworkAcl networkAcl ){

@@ -166,14 +166,18 @@ public interface RouteTables extends Lister<RouteTable> {
               .withStringSetProperty( "association.route-table-id", FilterStringSetFunctions.ASSOCIATION_ROUTE_TABLE_ID )
               .withStringSetProperty( "association.subnet-id", FilterStringSetFunctions.ASSOCIATION_SUBNET_ID )
               .withBooleanSetProperty( "association.main", FilterBooleanSetFunctions.ASSOCIATION_MAIN )
+              .withStringProperty( "owner-id", FilterStringFunctions.ACCOUNT_ID )
               .withStringSetProperty( "route.destination-cidr-block", FilterStringSetFunctions.ROUTE_DESTINATION_CIDR )
+              .withUnsupportedProperty( "route.destination-ipv6-cidr-block" )
               .withUnsupportedProperty( "route.destination-prefix-list-id" )
+              .withUnsupportedProperty( "route.egress-only-internet-gateway-id" )
               .withStringSetProperty( "route.gateway-id", FilterStringSetFunctions.ROUTE_GATEWAY_ID )
               .withStringSetProperty( "route.instance-id", FilterStringSetFunctions.ROUTE_INSTANCE_ID )
               .withStringSetProperty( "route.nat-gateway-id", FilterStringSetFunctions.ROUTE_NAT_GATEWAY_ID )
-              .withUnsupportedProperty( "route.vpc-peering-connection-id" )
               .withStringSetProperty( "route.origin", FilterStringSetFunctions.ROUTE_ORIGIN )
+              .withUnsupportedProperty( "route.transit-gateway-id" )
               .withStringSetProperty( "route.state", FilterStringSetFunctions.ROUTE_STATE )
+              .withUnsupportedProperty( "route.vpc-peering-connection-id" )
               .withStringProperty( "route-table-id", CloudMetadatas.toDisplayName() )
               .withStringProperty( "vpc-id", FilterStringFunctions.VPC_ID )
               .withPersistenceAlias( "routeTableAssociations", "routeTableAssociations" )
@@ -183,6 +187,7 @@ public interface RouteTables extends Lister<RouteTable> {
               .withPersistenceFilter( "association.route-table-id", "routeTableAssociations.routeTableId" )
               .withPersistenceFilter( "association.subnet-id", "routeTableAssociations.subnetId" )
               .withPersistenceFilter( "association.main", "routeTableAssociations.main", PersistenceFilter.Type.Boolean )
+              .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
               .withPersistenceFilter( "route.destination-cidr-block", "routes.destinationCidr" )
               .withPersistenceFilter( "route.gateway-id", "routes.internetGatewayId" )
               .withPersistenceFilter( "route.instance-id", "routes.instanceId" )
@@ -195,6 +200,12 @@ public interface RouteTables extends Lister<RouteTable> {
   }
 
   enum FilterStringFunctions implements Function<RouteTable, String> {
+    ACCOUNT_ID {
+      @Override
+      public String apply( final RouteTable routeTable ) {
+        return routeTable.getOwnerAccountNumber( );
+      }
+    },
     VPC_ID {
       @Override
       public String apply( final RouteTable routeTable ) {
