@@ -201,6 +201,7 @@ public interface NetworkInterfaces extends Lister<NetworkInterface> {
               .withStringProperty( "description", FilterStringFunctions.DESCRIPTION )
               .withStringSetProperty( "group-id", FilterStringSetFunctions.GROUP_ID )
               .withStringSetProperty( "group-name", FilterStringSetFunctions.GROUP_NAME )
+              .withUnsupportedProperty( "ipv6-addresses.ipv6-address" )
               .withStringProperty( "mac-address", FilterStringFunctions.MAC_ADDRESS )
               .withStringProperty( "network-interface-id", CloudMetadatas.toDisplayName() )
               .withStringProperty( "owner-id", FilterStringFunctions.OWNER_ID )

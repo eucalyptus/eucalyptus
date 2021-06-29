@@ -29,6 +29,9 @@
 package com.eucalyptus.compute.common.internal.vpc;
 
 import static com.eucalyptus.compute.common.CloudMetadata.VpcMetadata;
+
+import com.eucalyptus.compute.common.internal.blockstorage.Snapshot;
+import com.eucalyptus.compute.common.internal.blockstorage.Snapshots;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -134,10 +137,12 @@ public interface Vpcs extends Lister<Vpc> {
       super( builderFor(Vpc.class)
           .withTagFiltering( VpcTag.class, "vpc" )
           .withStringProperty( "cidr", FilterStringFunctions.CIDR )
+          .withStringProperty( "cidr-block", FilterStringFunctions.CIDR )
           .withStringProperty( "cidrBlock", FilterStringFunctions.CIDR )
           .withStringProperty( "dhcp-options-id", FilterStringFunctions.DHCP_OPTIONS_ID )
           .withStringProperty( "dhcpOptionsId", FilterStringFunctions.DHCP_OPTIONS_ID )
           .withBooleanProperty( "isDefault", FilterBooleanFunctions.IS_DEFAULT )
+          .withStringProperty( "owner-id", FilterStringFunctions.ACCOUNT_ID )
           .withStringProperty( "state", FilterStringFunctions.STATE )
           .withStringProperty( "vpc-id", FilterStringFunctions.VPC_ID )
           .withPersistenceAlias( "dhcpOptionSet", "dhcpOptionSet" )
@@ -146,13 +151,27 @@ public interface Vpcs extends Lister<Vpc> {
           .withPersistenceFilter( "dhcp-options-id", "dhcpOptionSet.displayName", ignoredValueFunction( "default" ) )
           .withPersistenceFilter( "dhcpOptionsId", "dhcpOptionSet.displayName", ignoredValueFunction( "default" ) )
           .withPersistenceFilter( "isDefault", "defaultVpc", Collections.<String>emptySet(), PersistenceFilter.Type.Boolean )
+          .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
           .withPersistenceFilter( "state", "state", FUtils.valueOfFunction( Vpc.State.class ) )
           .withPersistenceFilter( "vpc-id", "displayName" )
+          .withUnsupportedProperty("cidr-block-association.cidr-block")
+          .withUnsupportedProperty("cidr-block-association.association-id")
+          .withUnsupportedProperty("cidr-block-association.state")
+          .withUnsupportedProperty("ipv6-cidr-block-association.ipv6-cidr-block")
+          .withUnsupportedProperty("ipv6-cidr-block-association.ipv6-pool")
+          .withUnsupportedProperty("ipv6-cidr-block-association.association-id")
+          .withUnsupportedProperty("ipv6-cidr-block-association.state")
       );
     }
   }
 
-  public enum FilterStringFunctions implements Function<Vpc,String> {
+  enum FilterStringFunctions implements Function<Vpc,String> {
+    ACCOUNT_ID {
+      @Override
+      public String apply( final Vpc vpc ) {
+        return vpc.getOwnerAccountNumber( );
+      }
+    },
     CIDR {
       @Override
       public String apply( final Vpc vpc ){

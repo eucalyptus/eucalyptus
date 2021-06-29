@@ -130,6 +130,7 @@ public interface Subnets extends Lister<Subnet> {
           .withStringProperty( "cidrBlock", FilterStringFunctions.CIDR )
           .withBooleanProperty( "default-for-az", FilterBooleanFunctions.DEFAULT_FOR_AZ )
           .withBooleanProperty( "defaultForAz", FilterBooleanFunctions.DEFAULT_FOR_AZ )
+          .withStringProperty( "owner-id", FilterStringFunctions.ACCOUNT_ID )
           .withStringProperty( "state", FilterStringFunctions.STATE )
           .withStringProperty( "subnet-id", CloudMetadatas.toDisplayName( ) )
           .withStringProperty( "vpc-id", FilterStringFunctions.VPC_ID )
@@ -143,15 +144,26 @@ public interface Subnets extends Lister<Subnet> {
           .withPersistenceFilter( "cidrBlock", "cidr" )
           .withPersistenceFilter( "default-for-az", "defaultForAz", Collections.<String>emptySet(), PersistenceFilter.Type.Boolean )
           .withPersistenceFilter( "defaultForAz", "defaultForAz", Collections.<String>emptySet(), PersistenceFilter.Type.Boolean )
+          .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
           .withPersistenceFilter( "state", "state", FUtils.valueOfFunction( Subnet.State.class ) )
           .withPersistenceFilter( "subnet-id", "displayName" )
           .withPersistenceFilter( "vpc-id", "vpc.displayName" )
           .withPersistenceFilter( "vpcId", "vpc.displayName" )
+          .withUnsupportedProperty("ipv6-cidr-block-association.ipv6-cidr-block")
+          .withUnsupportedProperty("ipv6-cidr-block-association.association-id")
+          .withUnsupportedProperty("ipv6-cidr-block-association.state")
+          .withUnsupportedProperty("outpost-arn")
       );
     }
   }
 
   public enum FilterStringFunctions implements Function<Subnet,String> {
+    ACCOUNT_ID {
+      @Override
+      public String apply( final Subnet subnet ) {
+        return subnet.getOwnerAccountNumber( );
+      }
+    },
     AVAILABILITY_ZONE {
       @Override
       public String apply( final Subnet subnet ){

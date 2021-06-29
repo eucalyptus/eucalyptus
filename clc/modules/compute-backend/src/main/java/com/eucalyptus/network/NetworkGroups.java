@@ -429,6 +429,13 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
       super( builderFor( NetworkGroup.class )
           .withTagFiltering( NetworkGroupTag.class, "networkGroup" )
           .withStringProperty( "description", NetworkGroup.description( ) )
+          .withStringSetProperty( "egress.ip-permission.cidr", FilterSetFunctions.EGRESS_PERMISSION_CIDR )
+          .withStringSetProperty( "egress.ip-permission.from-port", FilterSetFunctions.EGRESS_PERMISSION_FROM_PORT )
+          .withStringSetProperty( "egress.ip-permission.group-id", FilterSetFunctions.EGRESS_PERMISSION_GROUP_ID )
+          .withStringSetProperty( "egress.ip-permission.group-name", FilterSetFunctions.EGRESS_PERMISSION_GROUP )
+          .withStringSetProperty( "egress.ip-permission.protocol", FilterSetFunctions.EGRESS_PERMISSION_PROTOCOL )
+          .withStringSetProperty( "egress.ip-permission.to-port", FilterSetFunctions.EGRESS_PERMISSION_TO_PORT )
+          .withStringSetProperty( "egress.ip-permission.user-id", FilterSetFunctions.EGRESS_PERMISSION_ACCOUNT_ID )
           .withStringProperty( "group-id", NetworkGroup.groupId() )
           .withStringProperty( "group-name", CloudMetadatas.toDisplayName( ) )
           .withStringSetProperty( "ip-permission.cidr", FilterSetFunctions.PERMISSION_CIDR )
@@ -449,16 +456,96 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
           .withPersistenceFilter( "ip-permission.to-port", "networkRules.highPort", PersistenceFilter.Type.Integer )
           .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
           .withPersistenceFilter( "vpc-id", "vpcId" )
+          .withUnsupportedProperty("egress.ip-permission.ipv6-cidr")
+          .withUnsupportedProperty("egress.ip-permission.prefix-list-id")
+          .withUnsupportedProperty("ip-permission.ipv6-cidr")
+          .withUnsupportedProperty("ip-permission.prefix-list-id")
       );
     }
   }
 
   private enum FilterSetFunctions implements CompatFunction<NetworkGroup,Set<String>> {
+    EGRESS_PERMISSION_CIDR {
+      @Override
+      public Set<String> apply( final NetworkGroup group ) {
+        final Set<String> result = Sets.newHashSet();
+        for ( final NetworkRule rule : group.getEgressNetworkRules() ) {
+          result.addAll( rule.getIpRanges( ).stream( ).map( NetworkCidr::getCidrIp ).collect( Collectors.toList( ) ) );
+        }
+        return result;
+      }
+    },
+    EGRESS_PERMISSION_FROM_PORT {
+      @Override
+      public Set<String> apply( final NetworkGroup group ) {
+        final Set<String> result = Sets.newHashSet();
+        for ( final NetworkRule rule : group.getEgressNetworkRules() ) {
+          result.addAll( Optional.fromNullable( rule.getLowPort() ).transform( Functions.toStringFunction() ).asSet() );
+        }
+        return result;
+      }
+    },
+    EGRESS_PERMISSION_GROUP {
+      @Override
+      public Set<String> apply( final NetworkGroup group ) {
+        final Set<String> result = Sets.newHashSet();
+        for ( final NetworkRule rule : group.getEgressNetworkRules() ) {
+          for ( final NetworkPeer peer : rule.getNetworkPeers() ) {
+            if ( peer.getGroupName() != null ) result.add( peer.getGroupName() );
+          }
+        }
+        return result;
+      }
+    },
+    EGRESS_PERMISSION_GROUP_ID {
+      @Override
+      public Set<String> apply( final NetworkGroup group ) {
+        final Set<String> result = Sets.newHashSet();
+        for ( final NetworkRule rule : group.getEgressNetworkRules() ) {
+          for ( final NetworkPeer peer : rule.getNetworkPeers() ) {
+            if ( peer.getGroupId() != null ) result.add( peer.getGroupId() );
+          }
+        }
+        return result;
+      }
+    },
+    EGRESS_PERMISSION_PROTOCOL {
+      @Override
+      public Set<String> apply( final NetworkGroup group ) {
+        final Set<String> result = Sets.newHashSet();
+        for ( final NetworkRule rule : group.getEgressNetworkRules() ) {
+          result.add( rule.getDisplayProtocol( ) );
+        }
+        return result;
+      }
+    },
+    EGRESS_PERMISSION_TO_PORT {
+      @Override
+      public Set<String> apply( final NetworkGroup group ) {
+        final Set<String> result = Sets.newHashSet();
+        for ( final NetworkRule rule : group.getEgressNetworkRules() ) {
+          result.addAll( Optional.fromNullable( rule.getHighPort() ).transform( Functions.toStringFunction() ).asSet() );
+        }
+        return result;
+      }
+    },
+    EGRESS_PERMISSION_ACCOUNT_ID {
+      @Override
+      public Set<String> apply( final NetworkGroup group ) {
+        final Set<String> result = Sets.newHashSet();
+        for ( final NetworkRule rule : group.getEgressNetworkRules() ) {
+          for ( final NetworkPeer peer : rule.getNetworkPeers() ) {
+            if ( peer.getUserQueryKey() != null ) result.add( peer.getUserQueryKey() );
+          }
+        }
+        return result;
+      }
+    },
     PERMISSION_CIDR {
       @Override
       public Set<String> apply( final NetworkGroup group ) {
         final Set<String> result = Sets.newHashSet();
-        for ( final NetworkRule rule : group.getNetworkRules() ) {
+        for ( final NetworkRule rule : group.getIngressNetworkRules() ) {
           result.addAll( rule.getIpRanges( ).stream( ).map( NetworkCidr::getCidrIp ).collect( Collectors.toList( ) ) );
         }
         return result;
@@ -468,7 +555,7 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
       @Override
       public Set<String> apply( final NetworkGroup group ) {
         final Set<String> result = Sets.newHashSet();
-        for ( final NetworkRule rule : group.getNetworkRules() ) {
+        for ( final NetworkRule rule : group.getIngressNetworkRules() ) {
           result.addAll( Optional.fromNullable( rule.getLowPort() ).transform( Functions.toStringFunction() ).asSet() );
         }
         return result;
@@ -478,7 +565,7 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
       @Override
       public Set<String> apply( final NetworkGroup group ) {
         final Set<String> result = Sets.newHashSet();
-        for ( final NetworkRule rule : group.getNetworkRules() ) {
+        for ( final NetworkRule rule : group.getIngressNetworkRules() ) {
           for ( final NetworkPeer peer : rule.getNetworkPeers() ) {
             if ( peer.getGroupName() != null ) result.add( peer.getGroupName() );
           }
@@ -490,7 +577,7 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
       @Override
       public Set<String> apply( final NetworkGroup group ) {
         final Set<String> result = Sets.newHashSet();
-        for ( final NetworkRule rule : group.getNetworkRules() ) {
+        for ( final NetworkRule rule : group.getIngressNetworkRules() ) {
           for ( final NetworkPeer peer : rule.getNetworkPeers() ) {
             if ( peer.getGroupId() != null ) result.add( peer.getGroupId() );
           }
@@ -502,7 +589,7 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
       @Override
       public Set<String> apply( final NetworkGroup group ) {
         final Set<String> result = Sets.newHashSet();
-        for ( final NetworkRule rule : group.getNetworkRules() ) {
+        for ( final NetworkRule rule : group.getIngressNetworkRules() ) {
           result.add( rule.getDisplayProtocol( ) );
         }
         return result;
@@ -512,7 +599,7 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
       @Override
       public Set<String> apply( final NetworkGroup group ) {
         final Set<String> result = Sets.newHashSet();
-        for ( final NetworkRule rule : group.getNetworkRules() ) {
+        for ( final NetworkRule rule : group.getIngressNetworkRules() ) {
           result.addAll( Optional.fromNullable( rule.getHighPort() ).transform( Functions.toStringFunction() ).asSet() );
         }
         return result;
@@ -522,7 +609,7 @@ public class NetworkGroups extends com.eucalyptus.compute.common.internal.networ
       @Override
       public Set<String> apply( final NetworkGroup group ) {
         final Set<String> result = Sets.newHashSet();
-        for ( final NetworkRule rule : group.getNetworkRules() ) {
+        for ( final NetworkRule rule : group.getIngressNetworkRules() ) {
           for ( final NetworkPeer peer : rule.getNetworkPeers() ) {
             if ( peer.getUserQueryKey() != null ) result.add( peer.getUserQueryKey() );
           }
