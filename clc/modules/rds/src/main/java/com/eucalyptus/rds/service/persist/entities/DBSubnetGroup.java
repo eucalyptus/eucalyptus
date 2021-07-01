@@ -34,7 +34,7 @@ public class DBSubnetGroup extends UserMetadata<DBSubnetGroup.Status> implements
   private static final long serialVersionUID = 1L;
 
   public enum Status {
-    Complete,
+    available,
   }
 
   @Column( name = "rds_dsg_description", length = 1024, updatable = false )
@@ -57,7 +57,6 @@ public class DBSubnetGroup extends UserMetadata<DBSubnetGroup.Status> implements
     super( owner, displayName );
   }
 
-
   public static DBSubnetGroup create(
       final OwnerFullName owner,
       final String name,
@@ -65,7 +64,7 @@ public class DBSubnetGroup extends UserMetadata<DBSubnetGroup.Status> implements
   ) {
     final DBSubnetGroup group = new DBSubnetGroup( owner, name );
     group.setDescription(description);
-    group.setState(Status.Complete);
+    group.setState(Status.available);
     return group;
   }
 

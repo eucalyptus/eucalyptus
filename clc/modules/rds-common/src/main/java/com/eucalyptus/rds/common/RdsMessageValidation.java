@@ -27,7 +27,9 @@ public class RdsMessageValidation {
     STRING_255("(?s).{1,255}"),
     STRING_256("(?s).{1,256}"),
 
+    ESTRING_255("(?s).{0,255}"),
     ESTRING_1024("(?s).{0,1024}"),
+    ESTRING_4096("(?s).{0,4096}"),
 
     // RDS
 
@@ -41,7 +43,7 @@ public class RdsMessageValidation {
     RDS_DB_SNAPSHOT_ID("[a-zA-Z](?:([a-zA-Z0-9]|[-](?=[a-zA-Z0-9])){0,254})?"),
     RDS_DB_SECURITY_GROUP_NAME("[a-z0-9._ -]{1,255}"),
     RDS_DB_SUBNET_GROUP_NAME("[a-z0-9._ -]{1,255}"),
-    RDS_DB_PARAMETER_GROUP_NAME("[a-zA-Z](?:([a-zA-Z0-9]|[-](?=[a-zA-Z0-9])){0,254})?"),
+    RDS_DB_PARAMETER_GROUP_NAME("(?:[a-zA-Z]|default\\.)(?:([a-zA-Z0-9]|[-](?=[a-zA-Z0-9])){0,254})?"),
 
     // RDS Enums
     ENUM_ACTIVITYSTREAMMODE("sync|async"),
@@ -52,6 +54,7 @@ public class RdsMessageValidation {
     ENUM_ENGINEFAMILY("MYSQL"),
     ENUM_IAMAUTHMODE("DISABLED|REQUIRED"),
     ENUM_LICENSEMODEL("license-included|bring-your-own-license|general-public-license"),
+    ENUM_SOURCE("user|system|engine-default"),
     ENUM_SOURCETYPE("db-instance|db-parameter-group|db-security-group|db-snapshot|db-cluster|db-cluster-snapshot"),
     ENUM_STORAGETYPE("standard|gp2|io1"),
     ENUM_TARGETTYPE("RDS_INSTANCE|RDS_SERVERLESS_ENDPOINT|TRACKED_CLUSTER"),

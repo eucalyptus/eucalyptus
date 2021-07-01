@@ -47,6 +47,11 @@ Parameters:
     Type: String
     Default: 3306
 
+  ParameterHandle:
+    Description: User database parameter reference
+    Type: String
+    Default: ''
+
   BucketName:
     Description: S3 bucket for container registry storage
     Type: String
@@ -209,17 +214,27 @@ Resources:
               set -eux
               source /etc/sysconfig/mariadb-container
               mkdir -pv /var/mnt/rds/data
+              echo "[mariadb]" > /var/mnt/rds/data/db-parameters.cnf
+              [ -n "$(</etc/rds/rds-db-parameters.json)" ] && cat /etc/rds/rds-db-parameters.json \
+                | python -c 'import json; import sys; data = json.load(sys.stdin); print "\n".join([key + " = \x27" + value + "\x27"  for key, value in data.items()])' \
+                >> /var/mnt/rds/data/db-parameters.cnf
               podman create --name mariadb \
                   --env MYSQL_RANDOM_ROOT_PASSWORD="yes" \
                   --env MYSQL_DATABASE="${!MARIADB_DB}" \
                   --env MYSQL_USER="${!MARIADB_USER}" \
                   --env MYSQL_PASSWORD="${!MARIADB_PASSWORD}" \
                   --network host \
+                  --volume /var/mnt/rds/data/db-parameters.cnf:/etc/mysql/conf.d/db-parameters.cnf:ro,z \
                   --volume /var/mnt/rds/data:/var/lib/mysql:z \
                   docker.io/library/mariadb:${!MARIADB_VERSION}
               podman generate systemd --name --timeout 60 --restart-policy always mariadb > \
                   /etc/systemd/system/mariadb-container.service
               systemctl enable --now mariadb-container.service
+          - path: /etc/rds/rds-db-parameters.json
+            permissions: "0644"
+            owner: root
+            content: |
+              ${ParameterHandle}
           - path: /usr/local/bin/rds-up
             permissions: "0755"
             owner: root

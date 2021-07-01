@@ -61,6 +61,9 @@ public interface DBInstanceView {
 
   List<String> getVpcSecurityGroups();
 
+  @Nullable
+  String getDbParameterHandle();
+
   default String getArn() {
     return new RdsResourceName(
         "",

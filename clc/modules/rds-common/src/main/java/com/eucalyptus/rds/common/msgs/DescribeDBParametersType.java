@@ -5,6 +5,8 @@
  */
 package com.eucalyptus.rds.common.msgs;
 
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRegex;
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRegexValue;
 import javax.annotation.Nonnull;
 
 
@@ -19,6 +21,7 @@ public class DescribeDBParametersType extends RdsMessage {
 
   private Integer maxRecords;
 
+  @FieldRegex(FieldRegexValue.ENUM_SOURCE)
   private String source;
 
   public String getDBParameterGroupName() {

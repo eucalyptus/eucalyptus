@@ -12,25 +12,33 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
 public class Parameter extends EucalyptusData {
 
+  @FieldRegex(FieldRegexValue.ESTRING_4096)
   private String allowedValues;
 
   @FieldRegex(FieldRegexValue.ENUM_APPLYMETHOD)
   private String applyMethod;
 
+  @FieldRegex(FieldRegexValue.ESTRING_255)
   private String applyType;
 
+  @FieldRegex(FieldRegexValue.ESTRING_255)
   private String dataType;
 
+  @FieldRegex(FieldRegexValue.ESTRING_1024)
   private String description;
 
   private Boolean isModifiable;
 
+  @FieldRegex(FieldRegexValue.ESTRING_255)
   private String minimumEngineVersion;
 
+  @FieldRegex(FieldRegexValue.STRING_255)
   private String parameterName;
 
+  @FieldRegex(FieldRegexValue.ESTRING_1024)
   private String parameterValue;
 
+  @FieldRegex(FieldRegexValue.ENUM_SOURCE)
   private String source;
 
   private EngineModeList supportedEngineModes;

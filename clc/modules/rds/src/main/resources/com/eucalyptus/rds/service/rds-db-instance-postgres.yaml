@@ -47,6 +47,11 @@ Parameters:
     Type: String
     Default: 5432
 
+  ParameterHandle:
+    Description: User database parameter reference
+    Type: String
+    Default: ''
+
   BucketName:
     Description: S3 bucket for container registry storage
     Type: String
@@ -209,17 +214,33 @@ Resources:
               set -eux
               source /etc/sysconfig/postgres-container
               mkdir -pv /var/mnt/rds/data
+              mkdir -pv /var/mnt/rds/data/postgresql.conf.d
+              [ -n "$(</etc/rds/rds-db-parameters.json)" ] && cat /etc/rds/rds-db-parameters.json \
+                | python -c 'import json; import sys; data = json.load(sys.stdin); print "\n".join([key + " = \x27" + value + "\x27"  for key, value in data.items()])' \
+                > /var/mnt/rds/data/postgresql.conf.d/50-db-parameters.conf
               podman create --name postgres \
                   --env-file /etc/sysconfig/postgres-container \
                   --env PGDATA=/var/lib/postgres/rds/pgdata \
                   --env PGPORT=${!POSTGRES_PORT} \
                   --network host \
+                  --volume /usr/local/bin/rds-init:/docker-entrypoint-initdb.d/rds-init.sh:ro,z \
                   --volume /var/mnt/rds/data:/var/lib/postgres/rds:z \
-                  docker.io/library/postgres:${!POSTGRES_VERSION} \
-                    -c include_dir '/etc/postgres/conf.d'
+                  docker.io/library/postgres:${!POSTGRES_VERSION}
               podman generate systemd --name --timeout 60 --restart-policy always postgres > \
                   /etc/systemd/system/postgres-container.service
               systemctl enable --now postgres-container.service
+          - path: /etc/rds/rds-db-parameters.json
+            permissions: "0644"
+            owner: root
+            content: |
+              ${ParameterHandle}
+          - path: /usr/local/bin/rds-init
+            permissions: "0755"
+            owner: root
+            content: |
+              #!/bin/bash
+              set -eux
+              echo "include_dir = '/var/lib/postgres/rds/postgresql.conf.d/'" >> '/var/lib/postgres/rds/pgdata/postgresql.conf'
           - path: /usr/local/bin/rds-up
             permissions: "0755"
             owner: root

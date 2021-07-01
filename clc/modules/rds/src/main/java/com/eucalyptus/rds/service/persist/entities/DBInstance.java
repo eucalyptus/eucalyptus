@@ -82,6 +82,10 @@ public class DBInstance extends UserMetadata<Status> implements DBInstanceMetada
   }
 
   @ManyToOne( fetch = FetchType.LAZY )
+  @JoinColumn( name = "rds_db_parameter_group_id" )
+  private DBParameterGroup dbParameterGroup;
+
+  @ManyToOne( fetch = FetchType.LAZY )
   @JoinColumn( name = "rds_db_subnet_group_id" )
   private DBSubnetGroup dbSubnetGroup;
 
@@ -191,6 +195,14 @@ public class DBInstance extends UserMetadata<Status> implements DBInstanceMetada
     final DBInstance dbInstance = new DBInstance();
     dbInstance.setNaturalId( uuid );
     return dbInstance;
+  }
+
+  public DBParameterGroup getDbParameterGroup() {
+    return dbParameterGroup;
+  }
+
+  public void setDbParameterGroup(final DBParameterGroup dbParameterGroup) {
+    this.dbParameterGroup = dbParameterGroup;
   }
 
   public DBSubnetGroup getDbSubnetGroup() {
@@ -303,6 +315,10 @@ public class DBInstance extends UserMetadata<Status> implements DBInstanceMetada
 
   public void setDbInstanceRuntime(final DBInstanceRuntime dbInstanceRuntime) {
     this.dbInstanceRuntime = dbInstanceRuntime;
+  }
+
+  public String getDbParameterHandle() {
+    return getDbInstanceRuntime().getDbParameterHandle();
   }
 
   @Override public List<DBInstanceTag> getTags() {
