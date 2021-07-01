@@ -215,7 +215,8 @@ Resources:
                   --env PGPORT=${!POSTGRES_PORT} \
                   --network host \
                   --volume /var/mnt/rds/data:/var/lib/postgres/rds:z \
-                  docker.io/library/postgres:${!POSTGRES_VERSION}
+                  docker.io/library/postgres:${!POSTGRES_VERSION} \
+                    -c include_dir '/etc/postgres/conf.d'
               podman generate systemd --name --timeout 60 --restart-policy always postgres > \
                   /etc/systemd/system/postgres-container.service
               systemctl enable --now postgres-container.service
