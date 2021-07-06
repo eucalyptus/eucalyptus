@@ -22,7 +22,7 @@ public class AWSRDSDBSubnetGroupProperties implements ResourceProperties {
   private String dbSubnetGroupDescription;
 
   @Property(name="DBSubnetGroupName")
-  private String DBSubnetGroupName;
+  private String dbSubnetGroupName;
 
   @Required
   @Property
@@ -39,12 +39,12 @@ public class AWSRDSDBSubnetGroupProperties implements ResourceProperties {
     this.dbSubnetGroupDescription = dbSubnetGroupDescription;
   }
 
-  public String getDBSubnetGroupName() {
-    return DBSubnetGroupName;
+  public String getDbSubnetGroupName() {
+    return dbSubnetGroupName;
   }
 
-  public void setDBSubnetGroupName(final String DBSubnetGroupName) {
-    this.DBSubnetGroupName = DBSubnetGroupName;
+  public void setDbSubnetGroupName(final String dbSubnetGroupName) {
+    this.dbSubnetGroupName = dbSubnetGroupName;
   }
 
   public ArrayList<String> getSubnetIds() {
@@ -67,7 +67,7 @@ public class AWSRDSDBSubnetGroupProperties implements ResourceProperties {
   public String toString() {
     return MoreObjects.toStringHelper(this)
         .add("dbSubnetGroupDescription", dbSubnetGroupDescription)
-        .add("DBSubnetGroupName", DBSubnetGroupName)
+        .add("dbSubnetGroupName", dbSubnetGroupName)
         .add("subnetIds", subnetIds)
         .add("tags", tags)
         .toString();
