@@ -92,6 +92,7 @@ public class AWSRDSDBInstanceResourceAction extends StepBasedResourceAction {
         createDBInstance.setDBInstanceClass(action.properties.getDbInstanceClass());
         createDBInstance.setDBName(action.properties.getDbName());
         createDBInstance.setPort(Ints.tryParse(Strings.nullToEmpty(action.properties.getPort())));
+        createDBInstance.setDBParameterGroupName(action.properties.getDbParameterGroupName());
         createDBInstance.setDBSubnetGroupName(action.properties.getDbSubnetGroupName());
         createDBInstance.setAllocatedStorage(Ints.tryParse(Strings.nullToEmpty(action.properties.getAllocatedStorage())));
         createDBInstance.setAvailabilityZone(action.properties.getAvailabilityZone());
