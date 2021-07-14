@@ -79,7 +79,7 @@ public interface DBSubnetGroups {
       result.setDBSubnetGroupDescription( group.getDescription() );
       result.setSubnetGroupStatus( group.getState().name() );
       result.setVpcId( group.getVpcId() );
-      result.setDBSubnetGroupArn(RdsMetadatas.toArn(group));
+      result.setDBSubnetGroupArn( group.getArn() );
       final SubnetList subnetList = new SubnetList();
       subnetList.getMember().addAll(
           group.getSubnets().stream()

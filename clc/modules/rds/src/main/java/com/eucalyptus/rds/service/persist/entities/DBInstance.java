@@ -5,7 +5,9 @@
  */
 package com.eucalyptus.rds.service.persist.entities;
 
+import com.eucalyptus.rds.service.persist.Taggable;
 import java.util.List;
+import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
@@ -14,6 +16,7 @@ import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
 import javax.persistence.OrderColumn;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PostLoad;
@@ -34,7 +37,7 @@ import com.google.common.collect.Lists;
 @Entity
 @PersistenceContext( name = "eucalyptus_rds" )
 @Table( name = "rds_db_instance" )
-public class DBInstance extends UserMetadata<Status> implements DBInstanceMetadata, DBInstanceView {
+public class DBInstance extends UserMetadata<Status> implements DBInstanceMetadata, DBInstanceView, Taggable<DBInstanceTag> {
   private static final long serialVersionUID = 1L;
 
   public enum Status {
@@ -68,6 +71,7 @@ public class DBInstance extends UserMetadata<Status> implements DBInstanceMetada
     upgrading,
     ;
 
+    @SuppressWarnings("unused")
     public static Status fromString(final String value) {
       return Status.valueOf( value.replace('-', '_') );
     }
@@ -123,6 +127,9 @@ public class DBInstance extends UserMetadata<Status> implements DBInstanceMetada
   @Embedded
   private DBInstanceRuntime dbInstanceRuntime;
 
+  @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "dbInstance")
+  private List<DBInstanceTag> tags = Lists.newArrayList();
+
   protected DBInstance( ) {
   }
 
@@ -154,6 +161,14 @@ public class DBInstance extends UserMetadata<Status> implements DBInstanceMetada
     instance.setEngineVersion(engineVersion);
     instance.setPubliclyAccessible(publiclyAccessible);
     return instance;
+  }
+
+  @Override public DBInstanceTag createTag(final String key, final String value) {
+    return DBInstanceTag.create(this, key, value);
+  }
+
+  @Override public void updateTag(final DBInstanceTag tag, final String value) {
+    tag.setValue(value);
   }
 
   public static DBInstance exampleWithOwner( final OwnerFullName owner ) {
@@ -288,6 +303,14 @@ public class DBInstance extends UserMetadata<Status> implements DBInstanceMetada
 
   public void setDbInstanceRuntime(final DBInstanceRuntime dbInstanceRuntime) {
     this.dbInstanceRuntime = dbInstanceRuntime;
+  }
+
+  @Override public List<DBInstanceTag> getTags() {
+    return tags;
+  }
+
+  @Override public void setTags(List<DBInstanceTag> tags) {
+    this.tags = tags;
   }
 
   @Override

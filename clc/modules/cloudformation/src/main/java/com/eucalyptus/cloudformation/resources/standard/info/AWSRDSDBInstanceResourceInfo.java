@@ -14,6 +14,9 @@ import com.google.common.base.MoreObjects;
  */
 public class AWSRDSDBInstanceResourceInfo  extends ResourceInfo {
 
+  @AttributeJson
+  private String arn;
+
   @AttributeJson(name="Endpoint.Address")
   private String endpointAddress;
 
@@ -27,6 +30,14 @@ public class AWSRDSDBInstanceResourceInfo  extends ResourceInfo {
   @Override
   public boolean supportsTags( ) {
     return true;
+  }
+
+  public String getArn() {
+    return arn;
+  }
+
+  public void setArn(String arn) {
+    this.arn = arn;
   }
 
   public String getEndpointAddress() {
@@ -48,6 +59,7 @@ public class AWSRDSDBInstanceResourceInfo  extends ResourceInfo {
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this)
+        .add( "arn", arn )
         .add("endpointAddress", endpointAddress)
         .add("endpointPort", endpointPort)
         .toString();

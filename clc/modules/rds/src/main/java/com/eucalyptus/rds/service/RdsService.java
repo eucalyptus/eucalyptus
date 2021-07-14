@@ -5,11 +5,10 @@
  */
 package com.eucalyptus.rds.service;
 
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.rds.common.policy.RdsPolicySpec;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
@@ -21,6 +20,7 @@ import org.hibernate.criterion.Conjunction;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.policy.ern.Ern;
+import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.OwnerFullName;
 import com.eucalyptus.component.annotation.ComponentNamed;
 import com.eucalyptus.compute.common.ComputeApi;
@@ -28,19 +28,32 @@ import com.eucalyptus.compute.common.SecurityGroupItemType;
 import com.eucalyptus.compute.common.SubnetType;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.entities.AbstractStatefulPersistent;
+import com.eucalyptus.entities.AbstractStatefulPersistent_;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.rds.common.RdsMetadata;
 import com.eucalyptus.rds.common.RdsMetadatas;
 import com.eucalyptus.rds.common.msgs.*;
+import com.eucalyptus.rds.common.policy.RdsPolicySpec;
 import com.eucalyptus.rds.common.policy.RdsResourceName;
+import com.eucalyptus.rds.common.policy.RdsResourceNameException;
 import com.eucalyptus.rds.service.engine.RdsEngine;
 import com.eucalyptus.rds.service.persist.RdsMetadataNotFoundException;
 import com.eucalyptus.rds.service.persist.entities.DBInstance.Status;
 import com.eucalyptus.rds.service.persist.entities.DBSubnet;
+import com.eucalyptus.rds.service.persist.Taggable;
+import com.eucalyptus.rds.service.persist.Tags;
+import com.eucalyptus.rds.service.persist.views.TagView;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.CompatSupplier;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncProxy;
+import com.google.common.base.Functions;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.vavr.collection.Stream;
 import io.vavr.Tuple;
@@ -57,14 +70,17 @@ public class RdsService {
 
   private final com.eucalyptus.rds.service.persist.DBInstances dbInstances;
   private final com.eucalyptus.rds.service.persist.DBSubnetGroups dbSubnetGroups;
+  private final com.eucalyptus.rds.service.persist.Tags tags;
 
   @Inject
   public RdsService(
       final com.eucalyptus.rds.service.persist.DBInstances dbInstances,
-      final com.eucalyptus.rds.service.persist.DBSubnetGroups dbSubnetGroups
+      final com.eucalyptus.rds.service.persist.DBSubnetGroups dbSubnetGroups,
+      final com.eucalyptus.rds.service.persist.Tags tags
   ) {
     this.dbInstances = dbInstances;
     this.dbSubnetGroups = dbSubnetGroups;
+    this.tags = tags;
   }
 
   public AddRoleToDBClusterResponseType addRoleToDBCluster(final AddRoleToDBClusterType request) {
@@ -79,8 +95,43 @@ public class RdsService {
     return request.getReply();
   }
 
-  public AddTagsToResourceResponseType addTagsToResource(final AddTagsToResourceType request) {
-    return request.getReply();
+  public AddTagsToResourceResponseType addTagsToResource(final AddTagsToResourceType request) throws RdsException {
+    final AddTagsToResourceResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup( );
+    final OwnerFullName ownerFullName = ctx.getUserFullName().asAccountFullName();
+    validateTags(request.getTags());
+    try {
+      final String resourceArn = request.getResourceName();
+      final RdsResourceName arn = RdsResourceName.parse(resourceArn);
+      try (final TransactionResource tx =
+               Entities.transactionFor(
+                   com.eucalyptus.rds.service.persist.entities.Tag.class)) {
+        switch(arn.getResourceType()) {
+          case "rds:db":
+            addTagsForEntity(
+                dbInstanceNotFound(),
+                com.eucalyptus.rds.service.persist.entities.DBInstance.class,
+                arn.getResourceName(),
+                request.getTags());
+            break;
+          case "rds:subgrp":
+            addTagsForEntity(
+                dbSubnetGroupNotFound(),
+                com.eucalyptus.rds.service.persist.entities.DBSubnetGroup.class,
+                arn.getResourceName(),
+                request.getTags());
+            break;
+          default:
+            throw invalidArn().get();
+        }
+        tx.commit();
+      }
+    } catch ( final RdsResourceNameException ex) {
+      throw invalidArn().get();
+    } catch ( final Exception e ) {
+      throw handleException( e );
+    }
+    return reply;
   }
 
   public ApplyPendingMaintenanceActionResponseType applyPendingMaintenanceAction(final ApplyPendingMaintenanceActionType request) {
@@ -152,6 +203,7 @@ public class RdsService {
       final Set<String> vpcSecurityGroups = request.getVpcSecurityGroupIds()==null ?
           Collections.emptySet() :
           Sets.newTreeSet(request.getVpcSecurityGroupIds().getMember());
+      validateTags(request.getTags());
 
       final ComputeApi computeApi = AsyncProxy.client(ComputeApi.class);
 
@@ -208,7 +260,14 @@ public class RdsService {
                 instance.setMasterUserPassword(request.getMasterUserPassword());
                 instance.setVpcSecurityGroups(Lists.newArrayList(vpcSecurityGroups));
                 instance.setDbSubnetGroup(group);
-                return dbInstances.save(instance);
+
+                try (final TransactionResource tx = Entities.transactionFor(instance)) {
+                  final com.eucalyptus.rds.service.persist.entities.DBInstance persisted =
+                      dbInstances.save(instance);
+                  addTags(persisted, request.getTags());
+                  tx.commit();
+                  return persisted;
+                }
               } catch ( Exception ex ) {
                 throw Exceptions.toUndeclared( ex );
               }
@@ -220,7 +279,7 @@ public class RdsService {
       reply.getCreateDBInstanceResult().setDBInstance(
           TypeMappers.transform(instance, DBInstance.class));
     } catch ( final Exception e ) {
-      handleException( e, __ -> new RdsClientException("DBInstanceAlreadyExists", "Instance already exists"));
+      throw handleException( e, __ -> new RdsClientException("DBInstanceAlreadyExists", "Instance already exists"));
     }
     return reply;
   }
@@ -274,6 +333,7 @@ public class RdsService {
       if (vpcIds.size()!=1) {
         throw new RdsClientException("InvalidSubnet", "Subnets vpc invalid");
       }
+      validateTags(request.getTags());
 
       final CompatSupplier<com.eucalyptus.rds.service.persist.entities.DBSubnetGroup> allocator =
           new CompatSupplier<com.eucalyptus.rds.service.persist.entities.DBSubnetGroup>( ) {
@@ -293,7 +353,13 @@ public class RdsService {
             }
             group.setVpcId(vpcIds.iterator().next());
             group.setSubnets(dbSubnets);
-            return dbSubnetGroups.save(group);
+            try (final TransactionResource tx = Entities.transactionFor(group)) {
+              final com.eucalyptus.rds.service.persist.entities.DBSubnetGroup persisted =
+                  dbSubnetGroups.save(group);
+              addTags(persisted, request.getTags());
+              tx.commit();
+              return persisted;
+            }
           } catch ( Exception ex ) {
             throw new RuntimeException( ex );
           }
@@ -305,7 +371,7 @@ public class RdsService {
       reply.getCreateDBSubnetGroupResult().setDBSubnetGroup(
           TypeMappers.transform(group, DBSubnetGroup.class));
     } catch ( final Exception e ) {
-      handleException( e, __ -> new RdsClientException("DBSubnetGroupAlreadyExists", "Group already exists"));
+      throw handleException( e, __ -> new RdsClientException("DBSubnetGroupAlreadyExists", "Group already exists"));
     }
     return reply;
   }
@@ -362,9 +428,9 @@ public class RdsService {
           });
       reply.getDeleteDBInstanceResult().setDBInstance(instance);
     } catch ( final RdsMetadataNotFoundException e ) {
-      throw new RdsClientException( "DBInstanceNotFound", "DB Instance Not Found" );
+      throw dbInstanceNotFound().get();
     } catch ( final Exception e ) {
-      handleException( e, __ -> new RdsClientException("InvalidDBInstanceState", "Invalid state for delete") );
+      throw handleException( e, __ -> new RdsClientException("InvalidDBInstanceState", "Invalid state for delete") );
     }
     return reply;
   }
@@ -401,9 +467,9 @@ public class RdsService {
 
       dbSubnetGroups.deleteByExample( group );
     } catch ( final RdsMetadataNotFoundException e ) {
-      throw new RdsClientException( "DBSubnetGroupNotFoundFault", "DB Subnet Group Not Found" );
+      throw dbSubnetGroupNotFound().get();
     } catch ( final Exception e ) {
-      handleException( e, __ -> new RdsClientException("InvalidDBSubnetGroupStateFault", "Group in use") );
+      throw handleException( e, __ -> new RdsClientException("InvalidDBSubnetGroupStateFault", "Group in use") );
     }
     return reply;
   }
@@ -482,7 +548,7 @@ public class RdsService {
       }
       reply.getDescribeDBEngineVersionsResult().setDBEngineVersions(versionList);
     } catch ( Exception e ) {
-      handleException( e );
+      throw handleException( e );
     }
     return reply;
   }
@@ -538,7 +604,7 @@ public class RdsService {
           TypeMappers.lookupF( com.eucalyptus.rds.service.persist.entities.DBInstance.class, DBInstance.class ) ) );
       reply.getDescribeDBInstancesResult().setDBInstances(resultDBInstances);
     } catch ( Exception e ) {
-      handleException( e );
+      throw handleException( e );
     }
 
     return reply;
@@ -603,7 +669,7 @@ public class RdsService {
           TypeMappers.lookupF( com.eucalyptus.rds.service.persist.entities.DBSubnetGroup.class, DBSubnetGroup.class ) ) );
       reply.getDescribeDBSubnetGroupsResult().setDBSubnetGroups(resultSubnetGroups);
     } catch ( Exception e ) {
-      handleException( e );
+      throw handleException( e );
     }
 
     return reply;
@@ -685,8 +751,24 @@ public class RdsService {
     return request.getReply();
   }
 
-  public ListTagsForResourceResponseType listTagsForResource(final ListTagsForResourceType request) {
-    return request.getReply();
+  public ListTagsForResourceResponseType listTagsForResource(final ListTagsForResourceType request) throws RdsException {
+    final ListTagsForResourceResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup( );
+    final OwnerFullName ownerFullName = ctx.getUserFullName().asAccountFullName();
+    try {
+      final List<Tag> resourceTags = tags.list(
+          ownerFullName,
+          Restrictions.eq("resourceArn", request.getResourceName()),
+          Collections.emptyMap(),
+          RdsMetadatas.filterPrivileged(),
+          TypeMappers.lookupF(TagView.class, Tag.class));
+      final TagList tagList = new TagList();
+      tagList.getMember().addAll(Tags.sort(resourceTags));
+      reply.getListTagsForResourceResult().setTagList(tagList);
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
+    return reply;
   }
 
   public ModifyCertificatesResponseType modifyCertificates(final ModifyCertificatesType request) {
@@ -789,8 +871,32 @@ public class RdsService {
     return request.getReply();
   }
 
-  public RemoveTagsFromResourceResponseType removeTagsFromResource(final RemoveTagsFromResourceType request) {
-    return request.getReply();
+  public RemoveTagsFromResourceResponseType removeTagsFromResource(final RemoveTagsFromResourceType request) throws RdsException {
+    final RemoveTagsFromResourceResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup( );
+    final OwnerFullName ownerFullName = ctx.getUserFullName().asAccountFullName();
+    try {
+      final String resourceArn = request.getResourceName();
+      final Set<String> tagKeys = Sets.newHashSet(request.getTagKeys().getMember());
+      try (final TransactionResource tx =
+               Entities.transactionFor(com.eucalyptus.rds.service.persist.entities.Tag.class)) {
+        final List<com.eucalyptus.rds.service.persist.entities.Tag<?>> tagList = tags.list(
+            ownerFullName,
+            Restrictions.conjunction(
+              Restrictions.eq("resourceArn", resourceArn),
+              Restrictions.in( "displayName", tagKeys )),
+            Collections.emptyMap(),
+            RdsMetadatas.filterPrivileged(),
+            Function.identity());
+        for (final com.eucalyptus.rds.service.persist.entities.Tag<?> tag : tagList) {
+          tags.delete(tag);
+        }
+        tx.commit();
+      }
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
+    return reply;
   }
 
   public ResetDBClusterParameterGroupResponseType resetDBClusterParameterGroup(final ResetDBClusterParameterGroupType request) {
@@ -896,11 +1002,102 @@ public class RdsService {
     return resourceName;
   }
 
-  private static void handleException( final Exception e ) throws RdsException {
-    handleException( e,  null );
+  private static void validateTags(final TagList tagList) throws RdsClientException {
+    if (tagList != null) {
+      validateTags(tagList.getMember(), true,Tag::getKey, Tag::getValue);
+    }
   }
 
-  private static void handleException(
+  private static void validateTags(
+      final Taggable<?> taggable,
+      final boolean checkReserved
+  ) throws RdsClientException {
+    validateTags(taggable.getTags(), checkReserved, TagView::getKey, TagView::getValue);
+  }
+
+  private static <T> void validateTags(
+      final List<T> tagItems,
+      final boolean checkReserved,
+      final Function<T,String> keyGetter,
+      final Function<T,String> valueGetter
+  ) throws RdsClientException {
+    final Map<String, String> tags = Maps.newHashMap();
+    for (final T tag : tagItems) {
+      if (tags.put(keyGetter.apply(tag), Objects.toString(valueGetter.apply(tag), "")) != null) {
+        throw new RdsClientException("ValidationError",
+            "Duplicate tag key (" + keyGetter.apply(tag) + ")");
+      }
+    }
+    final int reservedTags = Stream.ofAll(tags.keySet())
+        .filter(key -> key.startsWith("euca:") || key.startsWith("aws:")).length();
+    if (reservedTags > 0 && checkReserved && !Contexts.lookup().isPrivileged()) {
+      throw new RdsClientException("ValidationError",
+          "Invalid tag key (reserved prefix)");
+    }
+    if ((tags.size() - reservedTags) > 50) {
+      throw Exceptions.toUndeclared(
+          new RdsClientException("ValidationError", "Tag limit exceeded"));
+    }
+  }
+
+  private static <RT extends TagView, RTE extends AbstractStatefulPersistent<?> & RdsMetadata & Taggable<RT>> void addTagsForEntity(
+      final CompatSupplier<RdsClientException> notFound,
+      final Class<RTE> entityClass,
+      final String id,
+      final TagList tagList) throws RdsClientException {
+    try {
+      final RTE taggable = Entities.criteriaQuery(entityClass)
+          .whereEqual(AbstractStatefulPersistent_.displayName, id).uniqueResult();
+      if (!RdsMetadatas.filterPrivileged().test(taggable)) {
+        notFound.get();
+      }
+      final List<RT> tags = taggable.getTags();
+      final Map<String,RT> tagMap =
+          CollectionUtils.putAll(tags, Maps.newHashMap(), TagView::getKey, Functions.identity());
+      for (final Tag tag : tagList.getMember()) {
+        if (tagMap.containsKey(tag.getKey())) {
+          taggable.updateTag(tagMap.get(tag.getKey()), tag.getValue());
+        } else {
+          final RT resourceTag = taggable.createTag(tag.getKey(), tag.getValue());
+          Entities.persist(resourceTag);
+          tags.add(resourceTag);
+        }
+      }
+      validateTags(taggable, false);
+    } catch (final NoSuchElementException e) {
+      throw notFound.get();
+    }
+  }
+
+  private static <RT extends TagView> void addTags(final Taggable<RT> resource, final TagList tags) {
+    if (tags != null) {
+      final List<RT> resourceTags = Lists.newArrayList();
+      for (final Tag tag : tags.getMember()) {
+        final RT resourceTag =
+            resource.createTag(tag.getKey(), Objects.toString(tag.getValue(), ""));
+        Entities.persist(resourceTag);
+      }
+      resource.setTags(resourceTags);
+    }
+  }
+
+  private static CompatSupplier<RdsClientException> invalidArn() {
+    return () -> new RdsClientException("ValidationError", "Invalid resource ARN");
+  }
+
+  private static CompatSupplier<RdsClientException> dbInstanceNotFound() {
+    return () -> new RdsClientException("DBInstanceNotFound", "Database instance not found");
+  }
+
+  private static CompatSupplier<RdsClientException> dbSubnetGroupNotFound() {
+    return () -> new RdsClientException( "DBSubnetGroupNotFoundFault", "DB Subnet Group Not Found" );
+  }
+
+  private static RdsException handleException( final Exception e ) throws RdsException {
+    return handleException( e,  null );
+  }
+
+  private static RdsException handleException(
       final Exception e,
       final Function<ConstraintViolationException, RdsException> constraintExceptionBuilder
   ) throws RdsException {

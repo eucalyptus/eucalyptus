@@ -33,4 +33,7 @@ public interface RdsMetadata extends RestrictedType {
 
   @PolicyResourceType( "ri" )
   interface ReservedDBInstanceMetadata extends RdsMetadata {}
+
+  @PolicyResourceType( "tag" )
+  interface TagMetadata extends RdsMetadata {}
 }

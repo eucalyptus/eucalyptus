@@ -5,6 +5,8 @@
  */
 package com.eucalyptus.rds.service.persist.views;
 
+import com.eucalyptus.rds.common.RdsMetadatas;
+import com.eucalyptus.rds.common.policy.RdsResourceName;
 import java.util.List;
 import javax.annotation.Nullable;
 import org.immutables.value.Value.Immutable;
@@ -58,4 +60,13 @@ public interface DBInstanceView {
   Boolean getPubliclyAccessible();
 
   List<String> getVpcSecurityGroups();
+
+  default String getArn() {
+    return new RdsResourceName(
+        "",
+        getOwnerAccountNumber(),
+        "db",
+        getDisplayName()
+    ).toString();
+  }
 }
