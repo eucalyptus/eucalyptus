@@ -29,5 +29,13 @@
 package com.eucalyptus.compute.common;
 
 public class DescribeVpcClassicLinkResponseType extends VpcMessage {
+  private VpcClassicLinkSetType vpcSet = new VpcClassicLinkSetType( );
 
+  public VpcClassicLinkSetType getVpcSet( ) {
+    return vpcSet;
+  }
+
+  public void setVpcSet( VpcClassicLinkSetType vpcSet ) {
+    this.vpcSet = vpcSet;
+  }
 }
