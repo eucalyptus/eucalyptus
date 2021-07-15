@@ -1312,12 +1312,12 @@
 
   <mapping name="DescribeVpcClassicLink" class="com.eucalyptus.compute.common.DescribeVpcClassicLinkType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="vpcSet" field="vpcSet" usage="optional" type="com.eucalyptus.compute.common.VpcIdSetType"/>
     <structure name="filterSet" usage="optional">
       <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
         <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
       </collection>
     </structure>
-    <value name="vpcId" field="vpcId" usage="optional"/>
   </mapping>
   <mapping name="DescribeVpcClassicLinkResponse" class="com.eucalyptus.compute.common.DescribeVpcClassicLinkResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>

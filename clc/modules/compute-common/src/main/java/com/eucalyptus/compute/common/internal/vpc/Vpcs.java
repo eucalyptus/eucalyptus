@@ -41,6 +41,7 @@ import javax.annotation.Nullable;
 import org.hibernate.criterion.Criterion;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ResourceTagSetItemType;
+import com.eucalyptus.compute.common.VpcClassicLinkType;
 import com.eucalyptus.compute.common.VpcType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
@@ -118,6 +119,19 @@ public interface Vpcs extends Lister<Vpc> {
               vpc.getCidr( ),
               MoreObjects.firstNonNull( CloudMetadatas.toDisplayName().apply( vpc.getDhcpOptionSet() ), "default" ),
               vpc.getDefaultVpc( ) );
+    }
+  }
+
+  @TypeMapper
+  public enum VpcToVpcClassicLinkTypeTransform implements Function<Vpc, VpcClassicLinkType> {
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public VpcClassicLinkType apply( @Nullable final Vpc vpc ) {
+      return vpc == null ?
+          null :
+          new VpcClassicLinkType(vpc.getDisplayName( ));
     }
   }
 

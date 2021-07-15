@@ -1337,8 +1337,18 @@ public class ComputeService {
     return request.getReply( );
   }
 
-  public DescribeVpcClassicLinkResponseType describeVpcClassicLink( DescribeVpcClassicLinkType request ) {
-    return request.getReply( );
+  public DescribeVpcClassicLinkResponseType describeVpcClassicLink( DescribeVpcClassicLinkType request ) throws EucalyptusCloudException {
+    final DescribeVpcClassicLinkResponseType reply = request.getReply( );
+    describe(
+        Identifier.vpc,
+        request.vpcIds( ),
+        request.getFilterSet( ),
+        Vpc.class,
+        VpcClassicLinkType.class,
+        reply.getVpcSet( ).getItem( ),
+        VpcClassicLinkType.id( ),
+        vpcs );
+    return reply;
   }
 
   public DetachClassicLinkVpcResponseType detachClassicLinkVpc( DetachClassicLinkVpcType request ) {

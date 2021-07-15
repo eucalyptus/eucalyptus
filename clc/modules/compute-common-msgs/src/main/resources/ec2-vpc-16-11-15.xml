@@ -1623,6 +1623,11 @@
     <value name="instanceTenancy" field="instanceTenancy" usage="optional"/>
     <value name="isDefault" field="isDefault" usage="optional"/>
   </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpcClassicLinkType" abstract="true">
+    <value name="vpcId" field="vpcId" usage="required"/>
+    <value name="classicLinkEnabled" field="classicLinkEnabled" usage="optional"/>
+    <structure name="tagSet" field="tagSet" usage="optional" type="com.eucalyptus.compute.common.ResourceTagSetType"/>
+  </mapping>
   <mapping class="com.eucalyptus.compute.common.SubnetType" abstract="true">
     <value name="subnetId" field="subnetId" usage="required"/>
     <value name="state" field="state" usage="optional"/>
@@ -1652,6 +1657,11 @@
   <mapping class="com.eucalyptus.compute.common.VpcSetType" abstract="true">
     <collection field="item">
       <structure name="item" type="com.eucalyptus.compute.common.VpcType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VpcClassicLinkSetType" abstract="true">
+    <collection field="item">
+      <structure name="item" type="com.eucalyptus.compute.common.VpcClassicLinkType"/>
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.compute.common.SubnetSetType" abstract="true">
@@ -2751,16 +2761,16 @@
   </mapping>
   <mapping name="DescribeVpcClassicLink" class="com.eucalyptus.compute.common.DescribeVpcClassicLinkType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    <structure name="vpcSet" field="vpcSet" usage="optional" type="com.eucalyptus.compute.common.VpcIdSetType"/>
     <structure name="filterSet" usage="optional">
       <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
         <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
       </collection>
     </structure>
-    <value name="vpcId" field="vpcId" usage="optional"/>
   </mapping>
   <mapping name="DescribeVpcClassicLinkResponse" class="com.eucalyptus.compute.common.DescribeVpcClassicLinkResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
-    <structure name="vpcSet"/>
+    <structure name="vpcSet" field="vpcSet" usage="required" type="com.eucalyptus.compute.common.VpcClassicLinkSetType"/>
   </mapping>
   <mapping name="DetachClassicLinkVpc" class="com.eucalyptus.compute.common.DetachClassicLinkVpcType" extends="com.eucalyptus.compute.common.ComputeMessage">
     <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>

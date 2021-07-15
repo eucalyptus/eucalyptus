@@ -28,16 +28,41 @@
  ************************************************************************/
 package com.eucalyptus.compute.common;
 
+import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.binding.HttpParameterMapping;
+import java.util.Collection;
+import java.util.List;
 
 public class DescribeVpcClassicLinkType extends VpcMessage {
+
+  @HttpEmbedded
+  private VpcIdSetType vpcSet;
 
   @HttpParameterMapping( parameter = "Filter" )
   @HttpEmbedded( multiple = true )
   private ArrayList<Filter> filterSet = new ArrayList<Filter>( );
-  private String vpcId;
+
+  public Collection<String> vpcIds( ) {
+    List<String> vpcIds = Lists.newArrayList( );
+    if ( vpcSet != null && vpcSet.getItem( ) != null ) {
+      for ( VpcIdSetItemType item : vpcSet.getItem( ) ) {
+        if ( item != null ) {
+          vpcIds.add( item.getVpcId( ) );
+        }
+      }
+    }
+    return vpcIds;
+  }
+
+  public VpcIdSetType getVpcSet( ) {
+    return vpcSet;
+  }
+
+  public void setVpcSet( VpcIdSetType vpcSet ) {
+    this.vpcSet = vpcSet;
+  }
 
   public ArrayList<Filter> getFilterSet( ) {
     return filterSet;
@@ -45,13 +70,5 @@ public class DescribeVpcClassicLinkType extends VpcMessage {
 
   public void setFilterSet( ArrayList<Filter> filterSet ) {
     this.filterSet = filterSet;
-  }
-
-  public String getVpcId( ) {
-    return vpcId;
-  }
-
-  public void setVpcId( String vpcId ) {
-    this.vpcId = vpcId;
   }
 }
