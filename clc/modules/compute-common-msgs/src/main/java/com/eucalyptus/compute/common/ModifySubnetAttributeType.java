@@ -31,6 +31,8 @@ package com.eucalyptus.compute.common;
 public class ModifySubnetAttributeType extends VpcMessage {
 
   private String subnetId;
+  private AttributeBooleanValueType assignIpv6AddressOnCreation;
+  private AttributeBooleanValueType mapCustomerOwnedIpOnLaunch;
   private AttributeBooleanValueType mapPublicIpOnLaunch;
 
   public String getSubnetId( ) {
@@ -39,6 +41,24 @@ public class ModifySubnetAttributeType extends VpcMessage {
 
   public void setSubnetId( String subnetId ) {
     this.subnetId = subnetId;
+  }
+
+  public AttributeBooleanValueType getAssignIpv6AddressOnCreation() {
+    return assignIpv6AddressOnCreation;
+  }
+
+  public void setAssignIpv6AddressOnCreation(
+      AttributeBooleanValueType assignIpv6AddressOnCreation) {
+    this.assignIpv6AddressOnCreation = assignIpv6AddressOnCreation;
+  }
+
+  public AttributeBooleanValueType getMapCustomerOwnedIpOnLaunch() {
+    return mapCustomerOwnedIpOnLaunch;
+  }
+
+  public void setMapCustomerOwnedIpOnLaunch(
+      AttributeBooleanValueType mapCustomerOwnedIpOnLaunch) {
+    this.mapCustomerOwnedIpOnLaunch = mapCustomerOwnedIpOnLaunch;
   }
 
   public AttributeBooleanValueType getMapPublicIpOnLaunch( ) {
