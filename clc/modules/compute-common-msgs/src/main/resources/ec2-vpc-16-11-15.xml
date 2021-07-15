@@ -1618,6 +1618,15 @@
     <value name="vpcId" field="vpcId" usage="required"/>
     <value name="state" field="state" usage="optional"/>
     <value name="cidrBlock" field="cidrBlock" usage="optional"/>
+    <structure name="cidrBlockAssociationSet" usage="optional">
+      <structure name="item" usage="optional">
+        <value name="cidrBlock" field="cidrBlock" usage="optional"/>
+        <value name="associationId" field="cidrBlockAssociationId" usage="optional"/>
+        <structure name="cidrBlockState" usage="optional">
+          <value name="state" constant="associated"/>
+        </structure>
+      </structure>
+    </structure>
     <value name="dhcpOptionsId" field="dhcpOptionsId" usage="optional"/>
     <structure name="tagSet" field="tagSet" usage="optional" type="com.eucalyptus.compute.common.ResourceTagSetType"/>
     <value name="instanceTenancy" field="instanceTenancy" usage="optional"/>
