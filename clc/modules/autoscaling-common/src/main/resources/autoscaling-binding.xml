@@ -127,7 +127,7 @@
     <value name="MaxSize" field="maxSize" usage="optional"/>
     <value name="DesiredCapacity" field="desiredCapacity" usage="optional"/>
     <value name="DefaultCooldown" field="defaultCooldown" usage="optional"/>
-    <structure name="AvailabilityZones" field="availabilityZones" usage="required" type="com.eucalyptus.autoscaling.common.msgs.AvailabilityZones"/>
+    <structure name="AvailabilityZones" field="availabilityZones" usage="optional" type="com.eucalyptus.autoscaling.common.msgs.AvailabilityZones"/>
     <structure name="LoadBalancerNames" field="loadBalancerNames" usage="optional" type="com.eucalyptus.autoscaling.common.msgs.LoadBalancerNames"/>
     <value name="HealthCheckType" field="healthCheckType" usage="optional"/>
     <value name="HealthCheckGracePeriod" field="healthCheckGracePeriod" usage="optional"/>
