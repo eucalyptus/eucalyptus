@@ -36,6 +36,7 @@ public class VpcType extends EucalyptusData implements ResourceTagged {
   private String vpcId;
   private String state;
   private String cidrBlock;
+  private String cidrBlockAssociationId;
   private String dhcpOptionsId;
   private ResourceTagSetType tagSet;
   private String instanceTenancy;
@@ -48,6 +49,7 @@ public class VpcType extends EucalyptusData implements ResourceTagged {
     this.vpcId = vpcId;
     this.state = state;
     this.cidrBlock = cidrBlock;
+    this.cidrBlockAssociationId = vpcId == null ? null : vpcId.replace("vpc-", "vpc-cidr-assoc-");
     this.dhcpOptionsId = dhcpOptionsId;
     this.instanceTenancy = "default";
     this.isDefault = isDefault;
@@ -84,6 +86,14 @@ public class VpcType extends EucalyptusData implements ResourceTagged {
 
   public void setCidrBlock( String cidrBlock ) {
     this.cidrBlock = cidrBlock;
+  }
+
+  public String getCidrBlockAssociationId() {
+    return cidrBlockAssociationId;
+  }
+
+  public void setCidrBlockAssociationId(String cidrBlockAssociationId) {
+    this.cidrBlockAssociationId = cidrBlockAssociationId;
   }
 
   public String getDhcpOptionsId( ) {

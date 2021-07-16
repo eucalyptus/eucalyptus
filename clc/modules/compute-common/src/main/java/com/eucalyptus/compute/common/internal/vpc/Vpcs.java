@@ -32,6 +32,7 @@ import static com.eucalyptus.compute.common.CloudMetadata.VpcMetadata;
 
 import com.eucalyptus.compute.common.internal.blockstorage.Snapshot;
 import com.eucalyptus.compute.common.internal.blockstorage.Snapshots;
+import com.eucalyptus.util.Strings;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -159,6 +160,9 @@ public interface Vpcs extends Lister<Vpc> {
           .withStringProperty( "owner-id", FilterStringFunctions.ACCOUNT_ID )
           .withStringProperty( "state", FilterStringFunctions.STATE )
           .withStringProperty( "vpc-id", FilterStringFunctions.VPC_ID )
+          .withStringProperty("cidr-block-association.cidr-block", FilterStringFunctions.CIDR )
+          .withStringProperty("cidr-block-association.association-id", FilterStringFunctions.CIDR_BLOCK_ASSOCIATION_ID )
+          .withConstantProperty("cidr-block-association.state", "associated")
           .withPersistenceAlias( "dhcpOptionSet", "dhcpOptionSet" )
           .withPersistenceFilter( "cidr" )
           .withPersistenceFilter( "cidrBlock", "cidr" )
@@ -168,9 +172,6 @@ public interface Vpcs extends Lister<Vpc> {
           .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
           .withPersistenceFilter( "state", "state", FUtils.valueOfFunction( Vpc.State.class ) )
           .withPersistenceFilter( "vpc-id", "displayName" )
-          .withUnsupportedProperty("cidr-block-association.cidr-block")
-          .withUnsupportedProperty("cidr-block-association.association-id")
-          .withUnsupportedProperty("cidr-block-association.state")
           .withUnsupportedProperty("ipv6-cidr-block-association.ipv6-cidr-block")
           .withUnsupportedProperty("ipv6-cidr-block-association.ipv6-pool")
           .withUnsupportedProperty("ipv6-cidr-block-association.association-id")
@@ -190,6 +191,12 @@ public interface Vpcs extends Lister<Vpc> {
       @Override
       public String apply( final Vpc vpc ){
         return vpc.getCidr( );
+      }
+    },
+    CIDR_BLOCK_ASSOCIATION_ID {
+      @Override
+      public String apply( final Vpc vpc ){
+        return "vpc-cidr-assoc-" + Strings.trimPrefix("vpc-", vpc.getDisplayName( ));
       }
     },
     DHCP_OPTIONS_ID {
