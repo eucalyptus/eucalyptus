@@ -35,7 +35,7 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
 public class Values extends EucalyptusData {
 
-  @AutoScalingMessageValidation.FieldRegex( AutoScalingMessageValidation.FieldRegexValue.STRING_256 )
+  @AutoScalingMessageValidation.FieldRegex( AutoScalingMessageValidation.FieldRegexValue.ESTRING_256)
   @HttpParameterMapping( parameter = "member" )
   private ArrayList<String> member = new ArrayList<String>( );
 
