@@ -41,6 +41,8 @@ public class SubnetType extends EucalyptusData implements ResourceTagged {
   private String availabilityZone;
   private Boolean defaultForAz;
   private Boolean mapPublicIpOnLaunch;
+  private Boolean mapCustomerOwnedIpOnLaunch;
+  private Boolean assignIpv6AddressOnCreation;
   private ResourceTagSetType tagSet;
 
   public SubnetType( ) {
@@ -55,6 +57,8 @@ public class SubnetType extends EucalyptusData implements ResourceTagged {
     this.availabilityZone = availabilityZone;
     this.defaultForAz = defaultForAz;
     this.mapPublicIpOnLaunch = mapPublicIpOnLaunch;
+    this.mapCustomerOwnedIpOnLaunch = false;
+    this.assignIpv6AddressOnCreation = false;
   }
 
   public static CompatFunction<SubnetType, String> id( ) {
@@ -137,6 +141,22 @@ public class SubnetType extends EucalyptusData implements ResourceTagged {
 
   public void setMapPublicIpOnLaunch( Boolean mapPublicIpOnLaunch ) {
     this.mapPublicIpOnLaunch = mapPublicIpOnLaunch;
+  }
+
+  public Boolean getMapCustomerOwnedIpOnLaunch() {
+    return mapCustomerOwnedIpOnLaunch;
+  }
+
+  public void setMapCustomerOwnedIpOnLaunch(Boolean mapCustomerOwnedIpOnLaunch) {
+    this.mapCustomerOwnedIpOnLaunch = mapCustomerOwnedIpOnLaunch;
+  }
+
+  public Boolean getAssignIpv6AddressOnCreation() {
+    return assignIpv6AddressOnCreation;
+  }
+
+  public void setAssignIpv6AddressOnCreation(Boolean assignIpv6AddressOnCreation) {
+    this.assignIpv6AddressOnCreation = assignIpv6AddressOnCreation;
   }
 
   public ResourceTagSetType getTagSet( ) {
