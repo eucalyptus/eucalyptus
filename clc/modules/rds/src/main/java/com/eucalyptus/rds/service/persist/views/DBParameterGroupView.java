@@ -5,14 +5,14 @@
  */
 package com.eucalyptus.rds.service.persist.views;
 
-import org.immutables.value.Value.Immutable;
 import com.eucalyptus.rds.common.policy.RdsResourceName;
+import org.immutables.value.Value;
 
 /**
  *
  */
-@Immutable
-public interface DBSubnetGroupView {
+@Value.Immutable
+public interface DBParameterGroupView {
 
   String getNaturalId();
 
@@ -20,15 +20,13 @@ public interface DBSubnetGroupView {
 
   String getOwnerAccountNumber();
 
-  String getDescription();
-
-  String getVpcId();
+  String getFamily();
 
   default String getArn() {
     return new RdsResourceName(
         "",
         getOwnerAccountNumber(),
-        "subgrp",
+        "pg",
         getDisplayName()
     ).toString();
   }

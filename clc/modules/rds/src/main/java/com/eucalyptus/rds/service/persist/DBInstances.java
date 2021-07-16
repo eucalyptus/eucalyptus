@@ -5,6 +5,9 @@
  */
 package com.eucalyptus.rds.service.persist;
 
+import com.eucalyptus.rds.common.msgs.DBParameterGroupList;
+import com.eucalyptus.rds.common.msgs.DBParameterGroupStatus;
+import com.eucalyptus.rds.common.msgs.DBParameterGroupStatusList;
 import com.eucalyptus.util.CompatFunction;
 import java.util.List;
 import java.util.Map;
@@ -128,6 +131,15 @@ public interface DBInstances {
       result.setEngineVersion(instance.getEngineVersion());
       result.setDBName(instance.getDbName());
       result.setPubliclyAccessible(instance.getPubliclyAccessible());
+
+      if ( Entities.isReadable( instance.getDbParameterGroup( ) ) ) {
+        final DBParameterGroupStatusList dbParameterGroupStatusList = new DBParameterGroupStatusList();
+        final DBParameterGroupStatus dbParameterGroupStatus = new DBParameterGroupStatus();
+        dbParameterGroupStatus.setDBParameterGroupName(instance.getDbParameterGroup().getName());
+        dbParameterGroupStatus.setParameterApplyStatus("in-sync");
+        dbParameterGroupStatusList.getMember().add(dbParameterGroupStatus);
+        result.setDBParameterGroups(dbParameterGroupStatusList);
+      }
 
       if ( Entities.isReadable( instance.getDbSubnetGroup( ) ) ) {
         result.setDBSubnetGroup(TypeMappers.transform(

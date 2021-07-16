@@ -5,18 +5,23 @@
  */
 package com.eucalyptus.rds.common.msgs;
 
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRegex;
+import com.eucalyptus.rds.common.RdsMessageValidation.FieldRegexValue;
 import javax.annotation.Nonnull;
 
 
 public class CreateDBParameterGroupType extends RdsMessage {
 
   @Nonnull
+  @FieldRegex(FieldRegexValue.STRING_64)
   private String dBParameterGroupFamily;
 
   @Nonnull
+  @FieldRegex(FieldRegexValue.RDS_DB_PARAMETER_GROUP_NAME)
   private String dBParameterGroupName;
 
   @Nonnull
+  @FieldRegex(FieldRegexValue.ESTRING_1024)
   private String description;
 
   private TagList tags;

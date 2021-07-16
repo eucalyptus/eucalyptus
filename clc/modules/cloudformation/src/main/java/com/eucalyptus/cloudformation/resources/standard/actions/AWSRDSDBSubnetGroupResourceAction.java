@@ -65,10 +65,13 @@ public class AWSRDSDBSubnetGroupResourceAction extends StepBasedResourceAction {
       @Override
       public ResourceAction perform(final ResourceAction resourceAction) throws Exception {
         final AWSRDSDBSubnetGroupResourceAction action = (AWSRDSDBSubnetGroupResourceAction) resourceAction;
+        final String subnetGroupName = action.properties.getDbSubnetGroupName() != null ?
+            action.properties.getDbSubnetGroupName() :
+            action.getDefaultPhysicalResourceId(255).toLowerCase();
         final RdsApi rds = AsyncProxy.client( RdsApi.class, Function.identity( ) );
         final CreateDBSubnetGroupType createDBSubnetGroup =
             MessageHelper.createMessage(CreateDBSubnetGroupType.class, action.info.getEffectiveUserId());
-        createDBSubnetGroup.setDBSubnetGroupName(action.properties.getDBSubnetGroupName());
+        createDBSubnetGroup.setDBSubnetGroupName(subnetGroupName);
         createDBSubnetGroup.setDBSubnetGroupDescription(action.properties.getDbSubnetGroupDescription());
         final SubnetIdentifierList subnetIdentifierList = new SubnetIdentifierList();
         subnetIdentifierList.setMember(action.properties.getSubnetIds());
@@ -78,7 +81,7 @@ public class AWSRDSDBSubnetGroupResourceAction extends StepBasedResourceAction {
           createDBSubnetGroup.setTags(toTagList(tags));
         }
         final CreateDBSubnetGroupResponseType response = rds.createDBSubnetGroup(createDBSubnetGroup);
-        action.info.setPhysicalResourceId(action.properties.getDBSubnetGroupName());
+        action.info.setPhysicalResourceId(subnetGroupName);
         action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         if (response.getCreateDBSubnetGroupResult() != null &&

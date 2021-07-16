@@ -51,6 +51,9 @@ public class DBInstanceRuntime implements DBInstanceRuntimeView, Serializable {
   @Column( name = "rds_db_run_private_ip" )
   private String privateIp;
 
+  @Column( name = "rds_db_parameter_handle", length = 4096 )
+  private String dbParameterHandle;
+
   protected DBInstanceRuntime() {
   }
 
@@ -144,5 +147,13 @@ public class DBInstanceRuntime implements DBInstanceRuntimeView, Serializable {
 
   public void setPrivateIp(final String privateIp) {
     this.privateIp = privateIp;
+  }
+
+  public String getDbParameterHandle() {
+    return dbParameterHandle;
+  }
+
+  public void setDbParameterHandle(String dbParameterHandle) {
+    this.dbParameterHandle = dbParameterHandle;
   }
 }

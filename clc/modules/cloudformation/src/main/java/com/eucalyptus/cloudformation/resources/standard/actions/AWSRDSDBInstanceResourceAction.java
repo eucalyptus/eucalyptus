@@ -82,13 +82,17 @@ public class AWSRDSDBInstanceResourceAction extends StepBasedResourceAction {
       @Override
       public ResourceAction perform(final ResourceAction resourceAction) throws Exception {
         final AWSRDSDBInstanceResourceAction action = (AWSRDSDBInstanceResourceAction) resourceAction;
+        final String dbInstanceIdentifier = action.properties.getDbInstanceIdentifier() != null ?
+            action.properties.getDbInstanceIdentifier() :
+            action.getDefaultPhysicalResourceId(255).toLowerCase();
         final RdsApi rds = AsyncProxy.client( RdsApi.class, Function.identity( ) );
         final CreateDBInstanceType createDBInstance =
             MessageHelper.createMessage(CreateDBInstanceType.class, action.info.getEffectiveUserId());
-        createDBInstance.setDBInstanceIdentifier(action.properties.getDbInstanceIdentifier());
+        createDBInstance.setDBInstanceIdentifier(dbInstanceIdentifier);
         createDBInstance.setDBInstanceClass(action.properties.getDbInstanceClass());
         createDBInstance.setDBName(action.properties.getDbName());
         createDBInstance.setPort(Ints.tryParse(Strings.nullToEmpty(action.properties.getPort())));
+        createDBInstance.setDBParameterGroupName(action.properties.getDbParameterGroupName());
         createDBInstance.setDBSubnetGroupName(action.properties.getDbSubnetGroupName());
         createDBInstance.setAllocatedStorage(Ints.tryParse(Strings.nullToEmpty(action.properties.getAllocatedStorage())));
         createDBInstance.setAvailabilityZone(action.properties.getAvailabilityZone());
@@ -108,7 +112,7 @@ public class AWSRDSDBInstanceResourceAction extends StepBasedResourceAction {
           createDBInstance.setTags(toTagList(tags));
         }
         final CreateDBInstanceResponseType response = rds.createDBInstance(createDBInstance);
-        action.info.setPhysicalResourceId(action.properties.getDbInstanceIdentifier());
+        action.info.setPhysicalResourceId(dbInstanceIdentifier);
         action.info.setCreatedEnoughToDelete(true);
         action.info.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(action.info.getPhysicalResourceId())));
         if (response.getCreateDBInstanceResult() != null &&

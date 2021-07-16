@@ -5,7 +5,6 @@
  */
 package com.eucalyptus.rds.service.persist.entities;
 
-import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;

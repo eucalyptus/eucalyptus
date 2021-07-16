@@ -168,6 +168,7 @@ class RdsMessageValidationSpecification extends Specification {
     _ | 'a-b-c'
     _ | 'abcdefghijklmnopqrstuvwzyz0'
     _ | 'abcdefghijklmnopqrstuvwzyz012345'
+    _ | 'default.postgres10'
   }
 
   def 'should reject invalid database parameter group names'() {

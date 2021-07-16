@@ -52,16 +52,16 @@ Parameters:
     Description: Container images for registry
     Type: String
     Default: >-2
-      docker.io/library/mariadb:10.5,
-      docker.io/library/mariadb:10.4,
-      docker.io/library/mariadb:10.3,
-      docker.io/library/mariadb:10.2,
       docker.io/library/mariadb:10.1,
-      docker.io/library/postgres:9.5,
+      docker.io/library/mariadb:10.2,
+      docker.io/library/mariadb:10.3,
+      docker.io/library/mariadb:10.4,
+      docker.io/library/mariadb:10.5,
       docker.io/library/postgres:9.6,
       docker.io/library/postgres:10,
       docker.io/library/postgres:11,
-      docker.io/library/postgres:12
+      docker.io/library/postgres:12,
+      docker.io/library/postgres:13
 
 Conditions:
 

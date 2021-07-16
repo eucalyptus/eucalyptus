@@ -5,8 +5,15 @@
  */
 package com.eucalyptus.rds.service;
 
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.rds.service.persist.DBParameterGroups;
+import com.eucalyptus.rds.service.persist.DefaultDBGroupParameters;
+import com.eucalyptus.rds.service.persist.entities.DBParameter;
+import com.eucalyptus.rds.service.persist.views.DBParameterView;
+import io.vavr.CheckedFunction0;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -69,16 +76,19 @@ public class RdsService {
   private static final Logger logger = Logger.getLogger( RdsService.class );
 
   private final com.eucalyptus.rds.service.persist.DBInstances dbInstances;
+  private final com.eucalyptus.rds.service.persist.DBParameterGroups dbParameterGroups;
   private final com.eucalyptus.rds.service.persist.DBSubnetGroups dbSubnetGroups;
   private final com.eucalyptus.rds.service.persist.Tags tags;
 
   @Inject
   public RdsService(
       final com.eucalyptus.rds.service.persist.DBInstances dbInstances,
+      final com.eucalyptus.rds.service.persist.DBParameterGroups dbParameterGroups,
       final com.eucalyptus.rds.service.persist.DBSubnetGroups dbSubnetGroups,
       final com.eucalyptus.rds.service.persist.Tags tags
   ) {
     this.dbInstances = dbInstances;
+    this.dbParameterGroups = dbParameterGroups;
     this.dbSubnetGroups = dbSubnetGroups;
     this.tags = tags;
   }
@@ -111,6 +121,13 @@ public class RdsService {
             addTagsForEntity(
                 dbInstanceNotFound(),
                 com.eucalyptus.rds.service.persist.entities.DBInstance.class,
+                arn.getResourceName(),
+                request.getTags());
+            break;
+          case "rds:pg":
+            addTagsForEntity(
+                dbParameterGroupNotFound(),
+                com.eucalyptus.rds.service.persist.entities.DBParameterGroup.class,
                 arn.getResourceName(),
                 request.getTags());
             break;
@@ -158,8 +175,84 @@ public class RdsService {
     return request.getReply();
   }
 
-  public CopyDBParameterGroupResponseType copyDBParameterGroup(final CopyDBParameterGroupType request) {
-    return request.getReply();
+  public CopyDBParameterGroupResponseType copyDBParameterGroup(final CopyDBParameterGroupType request) throws RdsException {
+    final CopyDBParameterGroupResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final OwnerFullName ownerFullName = ctx.getUserFullName( );
+    try {
+      final String sourceIdentifierOrArn = request.getSourceDBParameterGroupIdentifier();
+      final String name = request.getTargetDBParameterGroupIdentifier().toLowerCase();
+      final String desc = request.getTargetDBParameterGroupDescription();
+
+      final String sourceName = sourceIdentifierOrArn.startsWith("arn:") ?
+          resourceName("pg", sourceIdentifierOrArn).getOrElseThrow(invalidArn()).getResourceName() :
+          sourceIdentifierOrArn;
+
+      if (name.equals("default") || name.startsWith("default.")) {
+        throw new RdsClientException("InvalidParameterValue", "Invalid name");
+      }
+
+      validateTags(request.getTags());
+
+      final CompatSupplier<com.eucalyptus.rds.service.persist.entities.DBParameterGroup> allocator =
+          new CompatSupplier<com.eucalyptus.rds.service.persist.entities.DBParameterGroup>( ) {
+            @Override
+            public com.eucalyptus.rds.service.persist.entities.DBParameterGroup get( ) {
+              try {
+                try (final TransactionResource tx =
+                         Entities.transactionFor(com.eucalyptus.rds.service.persist.entities.DBParameterGroup.class)) {
+
+                  final com.eucalyptus.rds.service.persist.entities.DBParameterGroup sourceGroup =
+                      dbParameterGroups.lookupByName(
+                          AccountFullName.getInstance(ownerFullName.getAccountNumber()),
+                          sourceName,
+                          RdsMetadatas.filterPrivileged(),
+                          Function.identity());
+
+                  final com.eucalyptus.rds.service.persist.entities.DBParameterGroup group =
+                      com.eucalyptus.rds.service.persist.entities.DBParameterGroup.create(
+                          ownerFullName,
+                          name,
+                          desc,
+                          sourceGroup.getFamily()
+                      );
+                  final com.eucalyptus.rds.service.persist.entities.DBParameterGroup persisted =
+                      dbParameterGroups.save(group);
+                  final List<DBParameter> parameters = Lists.newArrayList();
+                  for (final DBParameter parameter : sourceGroup.getParameters()) {
+                    final DBParameter dbParameter = DBParameter.create(persisted, parameter.getParameterName());
+                    dbParameter.setParameterValue(parameter.getParameterValue());
+                    dbParameter.setAllowedValues(parameter.getAllowedValues());
+                    dbParameter.setApplyMethod(parameter.getApplyMethod());
+                    dbParameter.setApplyType(parameter.getApplyType());
+                    dbParameter.setDataType(parameter.getDataType());
+                    dbParameter.setDescription(parameter.getDescription());
+                    dbParameter.setMinimumEngineVersion(parameter.getMinimumEngineVersion());
+                    dbParameter.setModifiable(parameter.isModifiable());
+                    dbParameter.setSource(parameter.getSource());
+                    parameters.add(dbParameter);
+                  }
+                  persisted.setParameters(parameters);
+                  addTags(persisted, request.getTags());
+                  tx.commit();
+                  return persisted;
+                }
+              } catch ( final RdsMetadataNotFoundException e ) {
+                throw Exceptions.toUndeclared(dbParameterGroupNotFound().get());
+              } catch ( Exception ex ) {
+                throw new RuntimeException( ex );
+              }
+            }
+          };
+
+      final com.eucalyptus.rds.service.persist.entities.DBParameterGroup group =
+          RdsMetadatas.allocateUnitlessResource( allocator );
+      reply.getCopyDBParameterGroupResult().setDBParameterGroup(
+          TypeMappers.transform(group, DBParameterGroup.class));
+    } catch ( final Exception e ) {
+      throw handleException( e, __ -> new RdsClientException("DBParameterGroupAlreadyExists", "Group already exists"));
+    }
+    return reply;
   }
 
   public CopyDBSnapshotResponseType copyDBSnapshot(final CopyDBSnapshotType request) {
@@ -198,6 +291,7 @@ public class RdsService {
       final String instanceName = request.getDBInstanceIdentifier();
       final String instanceClass = request.getDBInstanceClass();
       final String availabilityZone = request.getAvailabilityZone();
+      final String parameterGroupName = request.getDBParameterGroupName();
       final String subnetGroupName = request.getDBSubnetGroupName();
       final RdsEngine engine = RdsEngine.valueOf(request.getEngine());
       final Set<String> vpcSecurityGroups = request.getVpcSecurityGroupIds()==null ?
@@ -226,49 +320,64 @@ public class RdsService {
             @Override
             public com.eucalyptus.rds.service.persist.entities.DBInstance get( ) {
               try {
-                final com.eucalyptus.rds.service.persist.entities.DBSubnetGroup group =
-                    subnetGroupName == null ?
-                        null :
-                        dbSubnetGroups.lookupByName(
-                            ctx.getUserFullName( ).asAccountFullName(),
-                            subnetGroupName,
-                            RdsMetadatas.filterPrivileged( ),
-                            Function.identity( ));
+                try (final TransactionResource tx = Entities.transactionFor(com.eucalyptus.rds.service.persist.entities.DBInstance.class)) {
+                  final com.eucalyptus.rds.service.persist.entities.DBParameterGroup parameterGroup =
+                      parameterGroupName == null ?
+                          null :
+                          handleNotFound(dbParameterGroupNotFound(), () -> dbParameterGroups.lookupByName(
+                              ctx.getUserFullName( ).asAccountFullName(),
+                              parameterGroupName,
+                              RdsMetadatas.filterPrivileged( ),
+                              Function.identity( )));
 
-                if (availabilityZone != null && group != null && Stream.ofAll(group.getSubnets())
-                    .filter(subnet -> availabilityZone.equals(subnet.getAvailabilityZone())).isEmpty()) {
-                  throw Exceptions.toUndeclared(
-                      new RdsClientException("ValidationError", "DB subnet group invalid for availability zone"));
-                }
+                  final com.eucalyptus.rds.service.persist.entities.DBSubnetGroup subnetGroup =
+                      subnetGroupName == null ?
+                          null :
+                          handleNotFound(dbSubnetGroupNotFound(), () -> dbSubnetGroups.lookupByName(
+                              ctx.getUserFullName( ).asAccountFullName(),
+                              subnetGroupName,
+                              RdsMetadatas.filterPrivileged( ),
+                              Function.identity( )));
 
-                final com.eucalyptus.rds.service.persist.entities.DBInstance instance =
-                    com.eucalyptus.rds.service.persist.entities.DBInstance.create(
-                        ownerFullName,
-                        instanceName,
-                        MoreObjects.firstNonNull( request.getAllocatedStorage(), 20 ),
-                        MoreObjects.firstNonNull( request.getCopyTagsToSnapshot(), Boolean.FALSE ),
-                        MoreObjects.firstNonNull( request.getDBName(), engine.getDefaultDatabaseName()),
-                        MoreObjects.firstNonNull(request.getPort(), engine.getDefaultDatabasePort()),
-                         instanceClass,
-                        engine.name(),
-                        MoreObjects.firstNonNull(request.getEngineVersion(), engine.getDefaultDatabaseVersion()),
-                        MoreObjects.firstNonNull(request.getPubliclyAccessible(), Boolean.FALSE)
-                    );
+                  if (availabilityZone != null && subnetGroup != null && Stream.ofAll(subnetGroup.getSubnets())
+                      .filter(subnet -> availabilityZone.equals(subnet.getAvailabilityZone())).isEmpty()) {
+                    throw Exceptions.toUndeclared(
+                        new RdsClientException("ValidationError", "DB subnet group invalid for availability zone"));
+                  }
 
-                instance.setAvailabilityZone(availabilityZone);
-                instance.setMasterUsername(request.getMasterUsername());
-                instance.setMasterUserPassword(request.getMasterUserPassword());
-                instance.setVpcSecurityGroups(Lists.newArrayList(vpcSecurityGroups));
-                instance.setDbSubnetGroup(group);
+                  final com.eucalyptus.rds.service.persist.entities.DBInstance instance =
+                      com.eucalyptus.rds.service.persist.entities.DBInstance.create(
+                          ownerFullName,
+                          instanceName,
+                          MoreObjects.firstNonNull( request.getAllocatedStorage(), 20 ),
+                          MoreObjects.firstNonNull( request.getCopyTagsToSnapshot(), Boolean.FALSE ),
+                          MoreObjects.firstNonNull( request.getDBName(), engine.getDefaultDatabaseName()),
+                          MoreObjects.firstNonNull(request.getPort(), engine.getDefaultDatabasePort()),
+                           instanceClass,
+                          engine.name(),
+                          MoreObjects.firstNonNull(request.getEngineVersion(), engine.getDefaultDatabaseVersion()),
+                          MoreObjects.firstNonNull(request.getPubliclyAccessible(), Boolean.FALSE)
+                      );
 
-                try (final TransactionResource tx = Entities.transactionFor(instance)) {
+                  instance.setAvailabilityZone(availabilityZone);
+                  instance.setMasterUsername(request.getMasterUsername());
+                  instance.setMasterUserPassword(request.getMasterUserPassword());
+                  instance.setVpcSecurityGroups(Lists.newArrayList(vpcSecurityGroups));
+                  instance.setDbSubnetGroup(subnetGroup);
+                  instance.setDbParameterGroup(parameterGroup);
+                  if (parameterGroup != null) {
+                    instance.getDbInstanceRuntime().setDbParameterHandle(engine.buildHandle(
+                        parameterGroup,
+                        parameterGroup.getParameters()
+                    ));
+                  }
                   final com.eucalyptus.rds.service.persist.entities.DBInstance persisted =
                       dbInstances.save(instance);
                   addTags(persisted, request.getTags());
                   tx.commit();
                   return persisted;
                 }
-              } catch ( Exception ex ) {
+              } catch ( Throwable ex ) {
                 throw Exceptions.toUndeclared( ex );
               }
             }
@@ -288,8 +397,80 @@ public class RdsService {
     return request.getReply();
   }
 
-  public CreateDBParameterGroupResponseType createDBParameterGroup(final CreateDBParameterGroupType request) {
-    return request.getReply();
+  public CreateDBParameterGroupResponseType createDBParameterGroup(final CreateDBParameterGroupType request) throws RdsException {
+    final CreateDBParameterGroupResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final OwnerFullName ownerFullName = ctx.getUserFullName( );
+    try {
+      final String name = request.getDBParameterGroupName().toLowerCase();
+      final String family = request.getDBParameterGroupFamily();
+      final String desc = request.getDescription();
+
+      if ("default".equals(name)) {
+        throw new RdsClientException("InvalidParameterValue", "Invalid name");
+      }
+
+      final DefaultDBGroupParameters defaultParameters =
+          DBParameterGroups.loadDefaultParameters(family);
+      if (defaultParameters.getParameters().isEmpty()) {
+        throw new RdsClientException("InvalidParameterValue", "Invalid family");
+      }
+
+      if (name.startsWith("default.") && !name.equals("default." + family)) {
+        throw new RdsClientException("InvalidParameterValue", "Invalid name for family default");
+      }
+
+      validateTags(request.getTags());
+
+      final CompatSupplier<com.eucalyptus.rds.service.persist.entities.DBParameterGroup> allocator =
+          new CompatSupplier<com.eucalyptus.rds.service.persist.entities.DBParameterGroup>( ) {
+            @Override
+            public com.eucalyptus.rds.service.persist.entities.DBParameterGroup get( ) {
+              try {
+                final com.eucalyptus.rds.service.persist.entities.DBParameterGroup group =
+                    com.eucalyptus.rds.service.persist.entities.DBParameterGroup.create(
+                        ownerFullName,
+                        name,
+                        desc,
+                        family
+                    );
+
+                try (final TransactionResource tx = Entities.transactionFor(group)) {
+                  final com.eucalyptus.rds.service.persist.entities.DBParameterGroup persisted =
+                      dbParameterGroups.save(group);
+                  final List<DBParameter> parameters = Lists.newArrayList();
+                  for (final Parameter parameter : defaultParameters.getParameters()) {
+                    final DBParameter dbParameter = DBParameter.create(persisted, parameter.getParameterName());
+                    dbParameter.setParameterValue(parameter.getParameterValue());
+                    dbParameter.setAllowedValues(parameter.getAllowedValues());
+                    dbParameter.setApplyMethod(DBParameter.ApplyMethod.fromString(parameter.getApplyMethod()));
+                    dbParameter.setApplyType(parameter.getApplyType());
+                    dbParameter.setDataType(parameter.getDataType());
+                    dbParameter.setDescription(parameter.getDescription());
+                    dbParameter.setMinimumEngineVersion(parameter.getMinimumEngineVersion());
+                    dbParameter.setModifiable(parameter.getIsModifiable());
+                    dbParameter.setSource(DBParameter.Source.fromString(parameter.getSource()));
+                    parameters.add(dbParameter);
+                  }
+                  persisted.setParameters(parameters);
+                  addTags(persisted, request.getTags());
+                  tx.commit();
+                  return persisted;
+                }
+              } catch ( Exception ex ) {
+                throw new RuntimeException( ex );
+              }
+            }
+          };
+
+      final com.eucalyptus.rds.service.persist.entities.DBParameterGroup group =
+          RdsMetadatas.allocateUnitlessResource( allocator );
+      reply.getCreateDBParameterGroupResult().setDBParameterGroup(
+          TypeMappers.transform(group, DBParameterGroup.class));
+    } catch ( final Exception e ) {
+      throw handleException( e, __ -> new RdsClientException("DBParameterGroupAlreadyExists", "Group already exists"));
+    }
+    return reply;
   }
 
   public CreateDBProxyResponseType createDBProxy(final CreateDBProxyType request) {
@@ -439,8 +620,23 @@ public class RdsService {
     return request.getReply();
   }
 
-  public DeleteDBParameterGroupResponseType deleteDBParameterGroup(final DeleteDBParameterGroupType request) {
-    return request.getReply();
+  public DeleteDBParameterGroupResponseType deleteDBParameterGroup(final DeleteDBParameterGroupType request) throws RdsException {
+    final DeleteDBParameterGroupResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    try {
+      final OwnerFullName ownerFullName = ctx.getUserFullName( ).asAccountFullName( );
+      final String name = request.getDBParameterGroupName();
+
+      final com.eucalyptus.rds.service.persist.entities.DBParameterGroup group =
+          dbParameterGroups.lookupByName( ownerFullName, name, RdsMetadatas.filterPrivileged(), Function.identity());
+
+      dbParameterGroups.deleteByExample( group );
+    } catch ( final RdsMetadataNotFoundException e ) {
+      throw dbParameterGroupNotFound().get();
+    } catch ( final Exception e ) {
+      throw handleException( e, __ -> new RdsClientException("InvalidDBParameterGroupState", "Group in use") );
+    }
+    return reply;
   }
 
   public DeleteDBProxyResponseType deleteDBProxy(final DeleteDBProxyType request) {
@@ -539,12 +735,15 @@ public class RdsService {
     try {
       final DBEngineVersionList versionList = new DBEngineVersionList();
       for (final RdsEngine engine : RdsEngine.values()) {
-        final DBEngineVersion engineVersion = new DBEngineVersion();
-        engineVersion.setEngine(engine.toString());
-        engineVersion.setDBEngineDescription(engine.getDescription());
-        engineVersion.setEngineVersion(engine.getDefaultDatabaseVersion());
-        engineVersion.setDBEngineVersionDescription(engine.getDefaultDatabaseVersionDescription());
-        versionList.getMember().add(engineVersion);
+        for (final RdsEngine.Version version : engine.getVersions()) {
+          final DBEngineVersion engineVersion = new DBEngineVersion();
+          engineVersion.setEngine(engine.toString());
+          engineVersion.setEngineVersion(version.getVersion());
+          engineVersion.setDBEngineDescription(engine.getDescription());
+          engineVersion.setDBEngineVersionDescription(version.getVersionDescription());
+          engineVersion.setDBParameterGroupFamily(version.getFamily());
+          versionList.getMember().add(engineVersion);
+        }
       }
       reply.getDescribeDBEngineVersionsResult().setDBEngineVersions(versionList);
     } catch ( Exception e ) {
@@ -614,12 +813,66 @@ public class RdsService {
     return request.getReply();
   }
 
-  public DescribeDBParameterGroupsResponseType describeDBParameterGroups(final DescribeDBParameterGroupsType request) {
-    return request.getReply();
+  public DescribeDBParameterGroupsResponseType describeDBParameterGroups(final DescribeDBParameterGroupsType request) throws RdsException {
+    final DescribeDBParameterGroupsResponseType reply = request.getReply();
+
+    final Context ctx = Contexts.lookup( );
+    final boolean showAll = "verbose".equals( request.getDBParameterGroupName() );
+    final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll ?
+        null :
+        ctx.getUserFullName( ).asAccountFullName( );
+
+    try {
+      final Predicate<com.eucalyptus.rds.service.persist.entities.DBParameterGroup> requestedAndAccessible =
+          RdsMetadatas.<com.eucalyptus.rds.service.persist.entities.DBParameterGroup>filterPrivileged( ).and(
+              RdsMetadatas.filterById( request.getDBParameterGroupName() == null ?
+                  Collections.emptySet() :
+                  Collections.singleton( request.getDBParameterGroupName( )  ) ) );
+
+      final DBParameterGroupList resultParameterGroups = new DBParameterGroupList();
+      resultParameterGroups.getMember().addAll( dbParameterGroups.list(
+          ownerFullName,
+          requestedAndAccessible,
+          TypeMappers.lookupF( com.eucalyptus.rds.service.persist.entities.DBParameterGroup.class, DBParameterGroup.class ) ) );
+      reply.getDescribeDBParameterGroupsResult().setDBParameterGroups(resultParameterGroups);
+    } catch ( Exception e ) {
+      throw handleException( e );
+    }
+
+    return reply;
   }
 
-  public DescribeDBParametersResponseType describeDBParameters(final DescribeDBParametersType request) {
-    return request.getReply();
+  public DescribeDBParametersResponseType describeDBParameters(final DescribeDBParametersType request) throws RdsException {
+    final DescribeDBParametersResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    try {
+      final OwnerFullName ownerFullName = ctx.getUserFullName( ).asAccountFullName( );
+      final String name = request.getDBParameterGroupName();
+      final String source = request.getSource();
+      final EnumSet<DBParameterView.Source> sources = source == null ?
+          EnumSet.allOf(DBParameterView.Source.class) :
+          EnumSet.of(DBParameterView.Source.fromString(source));
+      final ParametersList parametersList = dbParameterGroups.lookupByName(
+          ownerFullName,
+          name,
+          RdsMetadatas.filterPrivileged(),
+          dbParameterGroup -> {
+            final ParametersList parameters = new ParametersList();
+            final List<Parameter> parameterCollection = parameters.getMember();
+            Stream.ofAll(dbParameterGroup.getParameters())
+                .filter(dbParam -> sources.contains(dbParam.getSource()))
+                .map(TypeMappers.lookupF(DBParameter.class, Parameter.class))
+                .forEach(parameterCollection::add);
+            return parameters;
+          });
+
+      reply.getDescribeDBParametersResult().setParameters(parametersList);
+    } catch ( final RdsMetadataNotFoundException e ) {
+      throw dbParameterGroupNotFound().get();
+    } catch ( final Exception e ) {
+      throw handleException( e );
+    }
+    return reply;
   }
 
   public DescribeDBProxiesResponseType describeDBProxies(final DescribeDBProxiesType request) {
@@ -799,8 +1052,41 @@ public class RdsService {
     return request.getReply();
   }
 
-  public ModifyDBParameterGroupResponseType modifyDBParameterGroup(final ModifyDBParameterGroupType request) {
-    return request.getReply();
+  public ModifyDBParameterGroupResponseType modifyDBParameterGroup(final ModifyDBParameterGroupType request) throws RdsException {
+    final ModifyDBParameterGroupResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    try {
+      final OwnerFullName ownerFullName = ctx.getUserFullName( ).asAccountFullName( );
+      final String name = request.getDBParameterGroupName();
+
+      dbParameterGroups.updateByExample(
+          com.eucalyptus.rds.service.persist.entities.DBParameterGroup.exampleWithName( ownerFullName, name ),
+          ownerFullName,
+          name,
+          dbParameterGroup -> {
+            if (!RdsMetadatas.filterPrivileged().apply(dbParameterGroup)) {
+              throw new NoSuchElementException();
+            }
+
+            for (final Parameter parameter : request.getParameters().getMember()) {
+              for (final DBParameter dbParameter : dbParameterGroup.getParameters()) {
+                if (dbParameter.getParameterName().equals(parameter.getParameterName())) {
+                  dbParameter.setParameterValue(parameter.getParameterValue());
+                  dbParameter.setSource(DBParameter.Source.user);
+                }
+              }
+            }
+
+            return dbParameterGroup;
+          });
+
+      reply.getModifyDBParameterGroupResult().setDBParameterGroupName(name);
+    } catch ( final RdsMetadataNotFoundException e ) {
+      throw dbParameterGroupNotFound().get();
+    } catch ( final Exception e ) {
+      throw handleException( e, __ -> new RdsClientException("InvalidDBParameterGroupState", "Group conflict") );
+    }
+    return reply;
   }
 
   public ModifyDBProxyResponseType modifyDBProxy(final ModifyDBProxyType request) {
@@ -903,8 +1189,50 @@ public class RdsService {
     return request.getReply();
   }
 
-  public ResetDBParameterGroupResponseType resetDBParameterGroup(final ResetDBParameterGroupType request) {
-    return request.getReply();
+  public ResetDBParameterGroupResponseType resetDBParameterGroup(final ResetDBParameterGroupType request) throws RdsException {
+    final ResetDBParameterGroupResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    try {
+      final OwnerFullName ownerFullName = ctx.getUserFullName( ).asAccountFullName( );
+      final String name = request.getDBParameterGroupName();
+
+      dbParameterGroups.updateByExample(
+          com.eucalyptus.rds.service.persist.entities.DBParameterGroup.exampleWithName( ownerFullName, name ),
+          ownerFullName,
+          name,
+          dbParameterGroup -> {
+            if (!RdsMetadatas.filterPrivileged().apply(dbParameterGroup)) {
+              throw new NoSuchElementException();
+            }
+
+            final DefaultDBGroupParameters defaultParameters =
+                DBParameterGroups.loadDefaultParameters(dbParameterGroup.getFamily());
+
+            parameters:
+            for (final Parameter parameter : request.getParameters().getMember()) {
+              for (final DBParameter dbParameter : dbParameterGroup.getParameters()) {
+                if (dbParameter.getParameterName().equals(parameter.getParameterName())) {
+                  for (final Parameter defaultParameter : defaultParameters.getParameters()) {
+                    if (defaultParameter.getParameterName().equals(parameter.getParameterName())) {
+                      dbParameter.setParameterValue(defaultParameter.getParameterValue());
+                      dbParameter.setSource(DBParameter.Source.fromString(defaultParameter.getSource()));
+                      continue parameters;
+                    }
+                  }
+                }
+              }
+            }
+
+            return dbParameterGroup;
+          });
+
+      reply.getResetDBParameterGroupResult().setDBParameterGroupName(name);
+    } catch ( final RdsMetadataNotFoundException e ) {
+      throw dbParameterGroupNotFound().get();
+    } catch ( final Exception e ) {
+      throw handleException( e, __ -> new RdsClientException("InvalidDBParameterGroupState", "Group conflict") );
+    }
+    return reply;
   }
 
   public RestoreDBClusterFromS3ResponseType restoreDBClusterFromS3(final RestoreDBClusterFromS3Type request) {
@@ -1008,6 +1336,7 @@ public class RdsService {
     }
   }
 
+  @SuppressWarnings("SameParameterValue")
   private static void validateTags(
       final Taggable<?> taggable,
       final boolean checkReserved
@@ -1086,15 +1415,30 @@ public class RdsService {
   }
 
   private static CompatSupplier<RdsClientException> dbInstanceNotFound() {
-    return () -> new RdsClientException("DBInstanceNotFound", "Database instance not found");
+    return () -> new RdsClientNotFoundException("DBInstanceNotFound", "Database instance not found");
+  }
+
+  private static CompatSupplier<RdsClientException> dbParameterGroupNotFound() {
+    return () -> new RdsClientNotFoundException( "DBParameterGroupNotFound", "Database parameter group not found" );
   }
 
   private static CompatSupplier<RdsClientException> dbSubnetGroupNotFound() {
-    return () -> new RdsClientException( "DBSubnetGroupNotFoundFault", "DB Subnet Group Not Found" );
+    return () -> new RdsClientNotFoundException( "DBSubnetGroupNotFoundFault", "Database subnet group not found" );
   }
 
   private static RdsException handleException( final Exception e ) throws RdsException {
     return handleException( e,  null );
+  }
+
+  private static <T> T handleNotFound(
+      final CompatSupplier<RdsClientException> notFoundSuppler,
+      final CheckedFunction0<T> supplier
+  ) throws Throwable {
+    try {
+      return supplier.apply();
+    } catch (RdsMetadataNotFoundException e) {
+      throw  notFoundSuppler.get();
+    }
   }
 
   private static RdsException handleException(
