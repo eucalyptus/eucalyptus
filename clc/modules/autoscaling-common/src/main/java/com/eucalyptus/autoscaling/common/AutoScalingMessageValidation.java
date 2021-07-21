@@ -82,7 +82,7 @@ public class AutoScalingMessageValidation {
   public enum FieldRegexValue {
     // Generic
     STRING_128( "(?s).{1,128}" ),
-    STRING_256( "(?s).{1,256}" ),
+    ESTRING_256( "(?s).{0,256}" ),
     UUID_VERBOSE( "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|verbose" ),
 
     // Auto scaling

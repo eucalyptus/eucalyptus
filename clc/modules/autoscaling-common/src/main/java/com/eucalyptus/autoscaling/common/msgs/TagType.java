@@ -41,7 +41,7 @@ public class TagType extends EucalyptusData {
   @Nonnull
   @AutoScalingMessageValidation.FieldRegex( AutoScalingMessageValidation.FieldRegexValue.STRING_128 )
   private String key;
-  @AutoScalingMessageValidation.FieldRegex( AutoScalingMessageValidation.FieldRegexValue.STRING_256 )
+  @AutoScalingMessageValidation.FieldRegex( AutoScalingMessageValidation.FieldRegexValue.ESTRING_256)
   private String value;
   private Boolean propagateAtLaunch;
 
